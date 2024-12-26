@@ -11,11 +11,11 @@ ParkingSwitchDecider::ParkingSwitchDecider(
     : Task(config_builder, session) {
   config_ = config_builder->cast<HppParkingSwitchConfig>();
   name_ = "ParkingSwitchDecider";
+  Clear();
 }
 
 bool ParkingSwitchDecider::Execute() {
   Clear();
-
   // get distance_to_target_slot
   const EnvironmentalModel &env = session_->environmental_model();
   const auto &current_reference_path =
@@ -49,8 +49,8 @@ bool ParkingSwitchDecider::Execute() {
     parking_switch_info_.is_selected_slot_allowed_to_park = true;
   } else if ((distance_to_target_slot < config_.dist_to_parking_space_thr) &&
              (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
-    for (const auto &slot_info : successful_slot_info_list) {
-      if ((target_slot_id == slot_info.id) && (target_slot_id != 0)) {
+    for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
+      if ((target_slot_id == successful_slot_info_list[i].id) && (target_slot_id > 0)) {
         parking_switch_info_.is_memory_slot_allowed_to_park = true;
         break;
       }

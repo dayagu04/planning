@@ -43,7 +43,7 @@ struct LaneChangeGapInfo {
   int rear_node_id = -1;
 };
 struct RouteInfoOutput {
-  // for NOA output
+  //for NOA output
   int split_seg_forward_lane_nums = 0;
   int split_next_seg_forward_lane_nums = 0;
   int lc_nums_for_split = 0;
@@ -627,7 +627,7 @@ struct CoarsePlanningInfo {
   int source_lane_id;
   int target_lane_id;
   bool bind_end_state;
-  std::shared_ptr<ReferencePath> reference_path;
+  std::shared_ptr<ReferencePath> reference_path = nullptr;
   TrajectoryPoints trajectory_points;
   // overtake_obstacles and yield_obstacles are used only under wait state
   std::vector<int> overtake_obstacles;

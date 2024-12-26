@@ -16,7 +16,6 @@
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
-#include "occupancy_object_manager.h"
 #include "parking_slot_manager.h"
 // #include "prediction_c.h"
 #include "prediction_c.h"
@@ -224,17 +223,7 @@ class EnvironmentalModel {
     dynamic_world_ = dynamic_world;
   }
 
-  const std::shared_ptr<OccupancyObjectManager> &get_occupancy_object_manager()
-      const {
-    return occupancy_object_manager_;
-  }
-
-  void set_occupancy_object_manager(
-      const std::shared_ptr<OccupancyObjectManager> occupancy_object_manager) {
-    occupancy_object_manager_ = occupancy_object_manager;
-  }
-
-  void set_route_info(const std::shared_ptr<RouteInfo> route_info) {
+  void set_route_info (const std::shared_ptr<RouteInfo> route_info) {
     route_info_ = route_info;
   }
 
@@ -329,7 +318,6 @@ class EnvironmentalModel {
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_ = nullptr;
   std::shared_ptr<GroundLineManager> ground_line_manager_ = nullptr;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
-  std::shared_ptr<OccupancyObjectManager> occupancy_object_manager_ = nullptr;
   std::shared_ptr<RouteInfo> route_info_ = nullptr;
   bool location_valid_{true};
   // planning::VehicleParam vehicle_param_;

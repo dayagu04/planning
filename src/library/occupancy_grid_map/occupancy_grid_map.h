@@ -27,7 +27,9 @@ class OccupancyGridMap : public OccupancyGridCoordinate {
   template <typename T>
   void AddSlotPoint(const T &point);
 
-  void AddSlotCoordinatePoints(const std::vector<Position2D> &points);
+  void AddSlotCoordinatePoint(const Position2D &points);
+
+  void AddSlotCoordinatePoints(const std::vector<Position2D> &point);
 
   void AddSlotCoordinatePointCloud(
       const std::vector<PointCloudObstacle> &point_cloud_list);

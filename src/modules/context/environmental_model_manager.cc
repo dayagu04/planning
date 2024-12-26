@@ -132,9 +132,6 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_agent_node_manager(
       agent_node_mgr_ptr_);
 
-  ground_line_manager_ptr_ = std::make_shared<GroundLineManager>();
-  session_->mutable_environmental_model()->set_ground_line_manager(
-      ground_line_manager_ptr_);
   parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
   session_->mutable_environmental_model()->set_parking_slot_manager(
       parking_slot_manager_ptr_);
@@ -159,11 +156,6 @@ void EnvironmentalModelManager::InitContext() {
   route_info_ptr_ =
       std::make_shared<planning::RouteInfo>(config_builder, session_);
   session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
-
-  occupancy_object_manager_ptr_ =
-      std::make_shared<OccupancyObjectManager>(session_);
-  session_->mutable_environmental_model()->set_occupancy_object_manager(
-      occupancy_object_manager_ptr_);
 }
 
 void EnvironmentalModelManager::SetConfig(
@@ -330,17 +322,6 @@ bool EnvironmentalModelManager::Run() {
   JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
 
   if (session_->is_hpp_scene()) {
-    ground_line_manager_ptr_->SetIsCluster(ego_config_.is_ground_line_cluster);
-    time_start = IflyTime::Now_ms();
-    if (ego_config_.enable_fusion_ground_line) {  // fusion ground line
-      ground_line_manager_ptr_->Update(local_view.ground_line_perception);
-    } else {  // ehr ground line
-      ground_line_manager_ptr_->Update(local_view.static_map_info);
-    }
-    time_end = IflyTime::Now_ms();
-    LOG_DEBUG("ground_line_obstacles update cost:%f\n", time_end - time_start);
-    JSON_DEBUG_VALUE("ground_line_obstacles_cost", time_end - time_start);
-
     time_start = IflyTime::Now_ms();
     if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
       parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
@@ -350,17 +331,6 @@ bool EnvironmentalModelManager::Run() {
     time_end = IflyTime::Now_ms();
     LOG_DEBUG("parking_slot_manager update cost:%f\n", time_end - time_start);
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
-
-    if (ego_config_
-            .enable_fusion_occupancy_objects) {  // fusion occupancy objects
-      time_start = IflyTime::Now_ms();
-      occupancy_object_manager_ptr_->Update(
-          local_view.fusion_occupancy_objects_info);
-      time_end = IflyTime::Now_ms();
-      LOG_DEBUG("occupancy_object_manager update cost:%f\n",
-                time_end - time_start);
-      JSON_DEBUG_VALUE(" occupancy_object_manager_cost", time_end - time_start);
-    }
   }
 
   time_start = IflyTime::Now_ms();

@@ -18,7 +18,7 @@ ReferencePath::ReferencePath() { init(); }
 
 void ReferencePath::init() {
   valid_ = false;
-
+  frenet_coord_ = nullptr;
   // init frenet parameters
   // frenet_parameters_.zero_speed_threshold = 0.1;
   // frenet_parameters_.coord_transform_precision = 0.01;
@@ -119,7 +119,7 @@ void ReferencePath::update_refpath_points_in_hpp(
       2.0);
 
   const float kPreviewTime = 10.0;
-  const double kMinPreviewLength = 25.0;
+  const double kMinPreviewLength = 30.0;
   const double kMaxRearDistance = 25.0;
   double drop_length =
       std::max(ego_projection_length_in_reference_path - kMaxRearDistance, 0.0);

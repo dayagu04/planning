@@ -9,6 +9,7 @@
 #include "lateral_behavior_planner.pb.h"
 #include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
+#include "math/polygon2d.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
 #include "quintic_poly_path.h"
@@ -25,9 +26,8 @@ namespace planning {
 
 class HppGeneralLateralDecider : public Task {
  public:
-  explicit HppGeneralLateralDecider(
-      const EgoPlanningConfigBuilder *config_builder,
-      framework::Session *session);
+  explicit HppGeneralLateralDecider(const EgoPlanningConfigBuilder *config_builder,
+                                 framework::Session *session);
 
   virtual ~HppGeneralLateralDecider() = default;
 
@@ -37,7 +37,6 @@ class HppGeneralLateralDecider : public Task {
 
   bool InitInfo();
   void UnitTest();
-
  private:
   bool CalCruiseVelByCurvature(const double ego_v,
                                const std::vector<double> &d_poly,
@@ -55,8 +54,8 @@ class HppGeneralLateralDecider : public Task {
   void GenerateLaneSoftBoundary();
   void GenerateGroundLineAndParkingSpaceBoundary();
   void ConstructStaticObstacleTotalPolygons(
-      std::array<vector<std::pair<int, Polygon2d>>, 2> &groundline_polygons,
-      std::array<vector<std::pair<int, Polygon2d>>, 2> &parking_space_polygons);
+    std::array<vector<std::pair<int, Polygon2d>>, 2> &groundline_polygons,
+    std::array<vector<std::pair<int, Polygon2d>>, 2> &parking_space_polygons);
   void GetDesireRoadExtraBuffer(double *const left_road_extra_buffer,
                                 double *const right_road_extra_buffer);
   void GetLateralTTCToRoad(double *max_collision_t,
@@ -77,8 +76,7 @@ class HppGeneralLateralDecider : public Task {
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
-  double CalculateExtraDecreaseBuffer(
-      const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
+  double CalculateExtraDecreaseBuffer(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
   bool CheckObstacleNudgeDecision(
       const std::shared_ptr<FrenetObstacle> &obstacle);
 
@@ -87,14 +85,9 @@ class HppGeneralLateralDecider : public Task {
 
   void RefineConflictLatDecisions(const double &ego_l,
                                   ObstacleDecision &obstacle_decision);
-  bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
-                           bool is_nudge_left, double &limit_overlap_min_y,
-                           double &limit_overlap_max_y);
-  bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
-                            double &limit_overlap_min_y,
-                            double &limit_overlap_max_y);
-  void PostProcessReferenceTrajBySoftBound(
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds);
+  bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left, Polygon2d &overlap_polygon);
+  bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, Polygon2d &overlap_polygon);
+  void PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -105,10 +98,11 @@ class HppGeneralLateralDecider : public Task {
   void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
   void ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision);
 
-  void PostProcessBound(const double planning_init_point_l,
-                        const std::vector<WeightedBound> &bounds_input,
-                        std::pair<double, double> &bound_output,
-                        std::pair<BoundInfo, BoundInfo> &bound_info);
+  void PostProcessBound(
+    const double planning_init_point_l,
+    const std::vector<WeightedBound> &bounds_input,
+    std::pair<double, double> &bound_output,
+    std::pair<BoundInfo, BoundInfo> &bound_info);
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -118,17 +112,15 @@ class HppGeneralLateralDecider : public Task {
 
   void GenerateObstaclePreliminaryDecision(
       double ego_l, double distance_to_right_lane_border,
-      double distance_to_left_lane_border, double overlap_min_y,
-      double overlap_max_y, double lat_buf_dis, bool b_overlap_side,
+      double distance_to_left_lane_border, const Polygon2d &overlap_polygon, double lat_buf_dis, bool b_overlap_side,
       bool init_lon_no_overlap, bool is_nudge_left, bool is_cross_obj,
       LatObstacleDecisionType pre_lateral_decision,
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
 
-  void AddObstacleDecisionBound(size_t point_index, int id, double t,
-                                BoundType bound_type, double overlap_min_y,
-                                double overlap_max_y, double lat_buf_dis,
+  void AddObstacleDecisionBound(int id, double t, BoundType bound_type,
+                                const Polygon2d &overlap_polygon, double lat_buf_dis,
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
@@ -153,8 +145,7 @@ class HppGeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
-  void HandleAvoidScene(TrajectoryPoints &traj_points,
-                        double dynamic_ref_buffer);
+  void HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer);
   void CalcLateralBehaviorOutput();
   bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
@@ -182,10 +173,9 @@ class HppGeneralLateralDecider : public Task {
 
   std::vector<WeightedBounds> soft_bounds_;
   std::vector<WeightedBounds> hard_bounds_;
-  std::vector<std::pair<double, double>>
-      vehicle_static_buffer_;  // <left, right>
-  std::vector<std::pair<double, double>>
-      vehicle_dynamic_buffer_;  // <left, right>
+  std::vector<std::pair<double, double>> vehicle_dynamic_buffer_;  // <left, right>
+  pnc::mathlib::spline lbuffer_s_spline_;
+  pnc::mathlib::spline rbuffer_s_spline_;
 
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;

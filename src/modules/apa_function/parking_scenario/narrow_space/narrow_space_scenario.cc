@@ -1760,12 +1760,6 @@ void NarrowSpaceScenario::ScenarioTry() {
     return;
   }
 
-  // 如果规则不释放，就不需要继续尝试
-  // 规则释放了，几何不释放，可以继续尝试
-  if (!slot_manager->IsReleaseByRuleBased()) {
-    return;
-  }
-
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     ego_info_under_slot.slot.release_info_

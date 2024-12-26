@@ -1,11 +1,13 @@
 #include "obstacle_manager.h"
 
+#include <cstddef>
 #include <tuple>
 
 #include "ego_state_manager.h"
 #include "interface/src/c/common_c.h"
 #include "math/math_utils.h"
 #include "parking_slot_manager.h"
+#include "planning_context.h"
 #include "reference_path_manager.h"
 #include "virtual_lane_manager.h"
 namespace planning {
@@ -14,18 +16,112 @@ ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
     : session_(session) {
   SetConfig(config_builder);
+  InitEDT();
 }
 
 void ObstacleManager::SetConfig(
     const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
+  ground_line_manager_ptr_ = std::make_shared<GroundLineManager>();
+}
+
+void ObstacleManager::InitEDT() {
+  is_edt_valid_ = false;
+  resolution_ = 0.05;  // 5cm
+  ogm_.Clear();
+  ogm_.Init();  // is null
+  edt_.Init(config_.car_body_lat_safe_buffer,
+            config_.lon_safe_buffer,
+            config_.mirror_buffer);
+  // edt_.UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer, mirror_buffer);
+}
+
+OccupancyGridBound ObstacleManager::GenerateOGM(
+    const Pose2D& base_pose) {
+  ogm_.Clear();
+  Transform2d ego_base;
+  ego_base.SetBasePose(base_pose);
+  // base grid bound
+  const auto &motion_planner_output =
+      session_->planning_context().motion_planner_output();
+  double final_t = 5.0;
+  double tmp_t = 0.0;
+  double front_x = 0.0;
+  double back_x = 0.0;
+  double left_y = 0.0;
+  double right_y = 0.0;
+  double last_end_x = 0.0;
+  double last_end_y = 0.0;
+  for (size_t i = 0; i < motion_planner_output.s_lat_vec.size(); ++i) {
+    tmp_t = std::fmin(0.1 + i * 0.2, final_t);
+    double last_lat_path_x = motion_planner_output.lateral_x_t_spline(tmp_t);
+    double last_lat_path_y = motion_planner_output.lateral_y_t_spline(tmp_t);
+    Pose2D local;
+    ego_base.GlobalPointToULFLocal(
+        &local,
+        Pose2D(last_lat_path_x, last_lat_path_y, 0));
+    last_end_x = local.x;
+    last_end_y = local.y;
+    front_x = std::max(front_x, local.x);
+    back_x = std::min(back_x, local.x);
+    left_y = std::max(left_y, local.y);
+    right_y = std::min(right_y, local.y);
+  }
+  //
+  if ((last_end_x < front_x) && (last_end_x > back_x)) {
+    // front_x += 3.0;
+    back_x -= 5.0;
+  }
+  // if (last_end_x == front_x) {
+  //   front_x += 3.0;
+  // }
+  if (last_end_x == back_x) {
+    back_x -= 5.0;
+  }
+  // if ((last_end_y < left_y) && (last_end_y > right_y)) {
+  //   left_y += 3.0;
+  //   right_y -= 3.0;
+  // }
+  // if (last_end_y == left_y) {
+  //   left_y += 3.0;
+  // }
+  // if (last_end_y == right_y) {
+  //   right_y -= 3.0;
+  // }
+  //
+  if (front_x >= 0.0) {
+    front_x += 7.0;
+  }
+  if (back_x <= 0.0) {
+    back_x -= 2.0;
+  }
+  if (left_y >= 0.0) {
+    left_y += 7.0;
+  }
+  if (right_y <= 0.0) {
+    right_y -= 7.0;
+  }
+
+  OccupancyGridBound grid_bound(
+    back_x,
+    right_y,
+    front_x,
+    left_y);
+  // reload grid bound
+  ogm_.Process(grid_bound, resolution_);
+  return grid_bound;
 }
 
 void ObstacleManager::update() {
   const double HALF_FOV = 25.0;
   clear();
+  is_edt_valid_ = false;
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
+  OccupancyGridBound grid_bound =
+      GenerateOGM(Pose2D(ego_state.ego_pose().x,
+                         ego_state.ego_pose().y,
+                     ego_state.ego_pose().theta));
   double ego_init_relative_time = ego_state.planning_init_point().relative_time;
   const auto &prediction_objects =
       session_->environmental_model().get_prediction_info();
@@ -51,6 +147,57 @@ void ObstacleManager::update() {
       LOG_DEBUG("[ObstacleManager Update] ignore obstacle! : [%d] \n",
                 prediction_object.id);
       continue;
+    }
+
+    // hpp中过滤近处的OD
+    if (session_->is_hpp_scene()) {
+      constexpr int kSLowerLimitForOD = -3;
+      constexpr int kSUpperLimitForOD = 7;
+
+      const auto &reference_path =
+          session_->planning_context()
+              .lane_change_decider_output()
+              .coarse_planning_info.reference_path;
+
+      bool has_target_lane = session_->planning_context()
+              .lane_change_decider_output().has_target_lane;
+      if (has_target_lane) {
+        if (reference_path != nullptr) {
+          const auto &frenet_coord = reference_path->get_frenet_coord();
+          if (frenet_coord != nullptr) {
+            // 自车sl
+            Point2D ego_point;
+            if (!frenet_coord->XYToSL(
+                    Point2D(ego_state.ego_carte().x, ego_state.ego_carte().y),
+                    ego_point) ||
+                std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+              continue;
+            }
+            bool in_range = true;
+            Box2d bounding_box(
+                {prediction_object.position_x, prediction_object.position_y},
+                prediction_object.yaw, prediction_object.length,
+                prediction_object.width);
+            std::vector<planning_math::Vec2d> polygon_points;
+            bounding_box.GetAllCorners(&polygon_points);
+            for (auto &point : polygon_points) {
+              Point2D frenet_point;
+              if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
+                                        frenet_point) ||
+                  std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
+                  ((frenet_point.x > ego_point.x + kSLowerLimitForOD) &&
+                  (frenet_point.x < ego_point.x + kSUpperLimitForOD))) {
+                in_range = false;
+                break;
+              }
+            }
+            if (!in_range) {
+              continue;
+            }
+            AddODPoint(prediction_object);
+          }
+        }
+      }
     }
 
     double prediction_relative_time =
@@ -108,90 +255,373 @@ void ObstacleManager::update() {
     }
   } else {
     // ground line
-    static constexpr int kGroundLineIdOffset = 5000000;
-    const std::shared_ptr<GroundLineManager> ground_line_manager =
-        session_->environmental_model().get_ground_line_manager();
-    const std::vector<GroundLinePoints> &ground_line_points =
-        ground_line_manager->GetPoints();
-    std::cout << "ground_line_points.size = " << ground_line_points.size()
-              << std::endl;
-    // LOG_DEBUG("ground_line_points.size = %lu", ground_line_points.size());
-    int ground_line_id = kGroundLineIdOffset;
-    for (const auto &ground_line_point : ground_line_points) {
-      if (ground_line_point.size() >= 3) {
-        ground_line_id += 1;
-        Obstacle obstacle(ground_line_id, ground_line_point);
-        add_groundline_obstacle(obstacle);
-      }
-    }
+    double time_start = IflyTime::Now_ms();
+    UpdateGroundLineObstacle();
+    double time_end = IflyTime::Now_ms();
+    LOG_DEBUG("UpdateGroundLineObstacle cost:%f\n",
+              time_end - time_start);
+    JSON_DEBUG_VALUE("UpdateGroundLineObstacleCost", time_end - time_start);
 
     // parking space
-    static constexpr int kParkingSlotIdOffset = 6000000;
-    const std::shared_ptr<ParkingSlotManager> parking_slot_manager =
-        session_->environmental_model().get_parking_slot_manager();
-    const std::vector<ParkingSlotPoints> &parking_slot_points =
-        parking_slot_manager->GetPoints();
-    int parking_slot_id = kParkingSlotIdOffset;
-    for (const auto &parking_slot_point : parking_slot_points) {
-      if (parking_slot_point.size() != 4U) {
-        LOG_DEBUG("invalid parking_slot_point.size = %lu",
-                  parking_slot_point.size());
-        continue;
-      }
-      parking_slot_id += 1;
-      Obstacle obstacle(parking_slot_id, parking_slot_point);
-      add_parking_space(obstacle);
+    time_start = IflyTime::Now_ms();
+    if (config_.enable_fusion_parking_slot) {  // fusion parking slot
+      UpdateParkingSpaceObstacle();
+    } else {  // ehr parking space
     }
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("UpdateParkingSpaceObstacle cost:%f\n",
+              time_end - time_start);
+    JSON_DEBUG_VALUE("UpdateParkingSpaceObstacleCost", time_end - time_start);
 
     // occupancy objects
-    // static constexpr int kOccupancyObjectIdOffset = 7000000;
-    // const std::shared_ptr<OccupancyObjectManager> occupancy_object_manager =
-    //     session_->environmental_model().get_occupancy_object_manager();
-    // const auto &occupancy_objects_points =
-    //     occupancy_object_manager->occupancy_object();
-    // int occupancy_object_id = kOccupancyObjectIdOffset;
-    // for (auto &object_points : occupancy_objects_points) {
-    //   if (object_points.second.size() >= 3) {
-    //     // occupancy_object_id += 1;
-    //     Obstacle obstacle(occupancy_object_id +, object_points.second,
-    //                       object_points.first);
-    //     add_occupancy_obstacle(obstacle);
-    //   }
-    // }
-
-    static constexpr int kOccupancyObjectIdOffset = 7000000;
-    const auto &local_view = session_->environmental_model().get_local_view();
-    if (local_view.fusion_occupancy_objects_info.local_point_valid) {
-      const size_t occupancy_objects_size =
-          local_view.fusion_occupancy_objects_info.fusion_object_size;
-      const auto occupancy_objects =
-          local_view.fusion_occupancy_objects_info.fusion_object;
-      for (uint8 i = 0; i < occupancy_objects_size; i++) {
-        std::vector<planning_math::Vec2d> object_points;
-        size_t polygon_points_size =
-            occupancy_objects[i].additional_occupancy_info.polygon_points_size;
-        if (polygon_points_size >= 3) {
-          auto polygon_points =
-              occupancy_objects[i].additional_occupancy_info.polygon_points;
-          for (uint j = 0; j < polygon_points_size; j++) {
-            object_points.emplace_back(
-                planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
-          }
-          Obstacle obstacle(
-              kOccupancyObjectIdOffset +
-                  occupancy_objects[i].additional_occupancy_info.track_id,
-              std::move(object_points),
-              occupancy_objects[i].common_occupancy_info.type);
-          add_occupancy_obstacle(obstacle);
-        }
-      }
+    time_start = IflyTime::Now_ms();
+    if (config_.enable_fusion_occupancy_objects) {
+      UpdateOccObstacle();
     }
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("UpdateOccObstacle cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE(" UpdateOccObstacleCost", time_end - time_start);
+
+    // ehr column box
+    time_start = IflyTime::Now_ms();
+    if (config_.enable_ehr_column_box) {
+      UpdateMapStaticObstacle();
+    }
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("UpdateMapStaticObstacle cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE(" UpdateMapStaticObstacleCost", time_end - time_start);
 
     // update uss
     uss_obstacle_.SetLocalView(
         &session_->environmental_model().get_local_view());
     uss_obstacle_.Update();
+
+    // ehr column box
+
+    // look path in ogm
+    // const auto &motion_planner_output =
+    //     session_->planning_context().motion_planner_output();
+    // double final_t = 5.0;
+    // double tmp_t = 0.0;
+    // std::vector<planning_math::Vec2d> last_lat_path;
+    // for (size_t i = 0; i < motion_planner_output.s_lat_vec.size(); ++i) {
+    //   tmp_t = std::fmin(0.1 + i * 0.2, final_t);
+    //   double last_lat_path_x = motion_planner_output.lateral_x_t_spline(tmp_t);
+    //   double last_lat_path_y = motion_planner_output.lateral_y_t_spline(tmp_t);
+    //   last_lat_path.emplace_back(planning_math::Vec2d(last_lat_path_x, last_lat_path_y));
+    // }
+    // AddPointClouds(last_lat_path);
+
+    time_start = IflyTime::Now_ms();
+    is_edt_valid_ = UpdateEDT(grid_bound);
+    time_end = IflyTime::Now_ms();
+    LOG_DEBUG("EulerDistanceTransform cost:%f\n", time_end - time_start);
+    JSON_DEBUG_VALUE("UpdateEulerDistanceTransformCost", time_end - time_start);
   }
+}
+
+void ObstacleManager::AddPointClouds(
+    const std::vector<planning_math::Vec2d>& point_clouds,
+    size_t step) {  // can be sparse
+  const auto &ego_state_manager = session_->environmental_model().get_ego_state_manager();
+  // method 1:  // time-cost more
+  // const auto &enu2car_matrix = ego_state_manager->get_enu2car();
+
+  // method 2:  // time-cost less
+  Transform2d ego_base;
+  ego_base.SetBasePose(
+    Pose2D(ego_state_manager->ego_pose().x,
+                     ego_state_manager->ego_pose().y,
+                 ego_state_manager->ego_pose().theta));
+  for (size_t i = 0; i < point_clouds.size(); i += step) {
+    // method 1:
+    // Eigen::Vector3d v;
+    // v.x() = point_clouds[i].x();
+    // v.y() = point_clouds[i].y();
+    // v.z() = 0;
+    // const auto& polygon_point_car = enu2car_matrix(v);
+    // ogm_.AddSlotCoordinatePoint(Position2D(polygon_point_car.x(), polygon_point_car.y()));
+
+    // method 2:
+    Pose2D local;
+    ego_base.GlobalPointToULFLocal(
+      &local,
+      Pose2D(point_clouds[i].x(), point_clouds[i].y(), 0));
+    ogm_.AddSlotCoordinatePoint(Position2D(local.x, local.y));
+  }
+}
+
+void ObstacleManager::AddODPoint(
+    const PredictionObject &prediction_object) {
+  planning_math::Box2d object_box(
+    {prediction_object.position_x, prediction_object.position_y},
+    prediction_object.yaw,
+     prediction_object.length,
+      prediction_object.width);
+  std::vector<planning_math::Vec2d> polygon_points;
+  object_box.GetAllCorners(&polygon_points);
+  AddPointClouds(polygon_points);
+  std::vector<planning_math::Vec2d> extracted_polygon_points;
+  if (polygon_points.size() > 1) {
+    for (size_t i = 0; i < polygon_points.size() - 1; ++i) {
+      double mid_x = 0.5 * (polygon_points[i].x() + polygon_points[i + 1].x());
+      double mid_y = 0.5 * (polygon_points[i].y() + polygon_points[i + 1].y());
+      extracted_polygon_points.emplace_back(planning_math::Vec2d(mid_x, mid_y));
+    }
+    if (polygon_points.size() > 2) {
+      double mid_x = 0.5 * (polygon_points.front().x() + polygon_points.back().x());
+      double mid_y = 0.5 * (polygon_points.front().y() + polygon_points.back().y());
+      extracted_polygon_points.emplace_back(planning_math::Vec2d(mid_x, mid_y));
+    }
+    AddPointClouds(extracted_polygon_points);
+  }
+}
+
+void ObstacleManager::UpdateParkingSpaceObstacle() {
+  const double kMaxDistanceY = 5;
+  const double kMaxDistanceFrontX = 40;  // 后续根据实际需求更改
+  const double kMaxDistanceBackX = 30;
+  static constexpr int kParkingSlotIdOffset = 6000000;
+  int parking_slot_id = kParkingSlotIdOffset;
+  const auto &local_view = session_->environmental_model().get_local_view();
+  const auto &ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  Pose2D base_pose(ego_state_manager->ego_pose().x,
+                   ego_state_manager->ego_pose().y,
+                   ego_state_manager->ego_pose().theta);
+  Transform2d ego_base;
+  ego_base.SetBasePose(base_pose);
+  const size_t parking_slot_lists_size =
+      local_view.parking_fusion_info.parking_fusion_slot_lists_size;
+  const auto &parking_slot_lists =
+      local_view.parking_fusion_info.parking_fusion_slot_lists;
+  // const auto &enu2car_matrix = ego_state_manager->get_enu2car();
+  // Eigen::Vector3d v;
+  double min_x, min_y, max_x, max_y;
+  for (uint8 i = 0; i < parking_slot_lists_size; i++) {
+    std::vector<planning_math::Vec2d> slot_point;
+    const auto &parking_slot = parking_slot_lists[i];
+
+    // TBD: 这里没有判断size, c结构体没有设置size，默认4
+    min_x = std::numeric_limits<double>::max();
+    min_y = std::numeric_limits<double>::max();
+    max_x = std::numeric_limits<double>::lowest();
+    max_y = std::numeric_limits<double>::lowest();
+    for (const auto &corner_point : parking_slot.corner_points) {
+      // v.x() = corner_point.x;
+      // v.y() = corner_point.y;
+      // v.z() = corner_point.z;
+      // auto park_space_point_car = enu2car_matrix(v);
+      // min_x = std::fmin(min_x, park_space_point_car.x());
+      // min_y = std::fmin(min_y, park_space_point_car.y());
+      // max_x = std::fmax(max_x, park_space_point_car.x());
+      // max_y = std::fmax(max_y, park_space_point_car.y());
+      Pose2D local;
+      ego_base.GlobalPointToULFLocal(
+          &local,
+          Pose2D(corner_point.x, corner_point.y, 0));
+      min_x = std::fmin(min_x, local.x);
+      min_y = std::fmin(min_y, local.y);
+      max_x = std::fmax(max_x, local.x);
+      max_y = std::fmax(max_y, local.y);
+      slot_point.emplace_back(
+          planning_math::Vec2d(corner_point.x, corner_point.y));
+    }
+    if (((min_y > 0 && min_y < kMaxDistanceY) ||
+         (max_y < 0 && max_y > -kMaxDistanceY) || (min_y <= 0 && max_y >= 0)) &&
+        min_x < kMaxDistanceFrontX && max_x > -kMaxDistanceBackX) {
+      parking_slot_id += 1;
+      Obstacle obstacle(parking_slot_id, std::move(slot_point));
+      add_parking_space(obstacle);
+    }
+  }
+}
+
+void ObstacleManager::UpdateOccObstacle() {
+  static constexpr int kOccupancyObjectIdOffset = 7000000;
+  const auto &local_view = session_->environmental_model().get_local_view();
+  if (local_view.fusion_occupancy_objects_info.local_point_valid) {
+    const size_t occupancy_objects_size =
+        local_view.fusion_occupancy_objects_info.fusion_object_size;
+    const auto occupancy_objects =
+        local_view.fusion_occupancy_objects_info.fusion_object;
+    for (uint8 i = 0; i < occupancy_objects_size; i++) {
+      std::vector<planning_math::Vec2d> object_points;
+      size_t polygon_points_size =
+          occupancy_objects[i].additional_occupancy_info.polygon_points_size;
+      auto polygon_points =
+          occupancy_objects[i].additional_occupancy_info.polygon_points;
+      object_points.reserve(polygon_points_size);
+      for (uint j = 0; j < polygon_points_size; j++) {
+        object_points.emplace_back(
+            planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
+      }
+      if (polygon_points_size >= 5) {
+        AddPointClouds(object_points);
+        Obstacle obstacle(
+            kOccupancyObjectIdOffset +
+                occupancy_objects[i].additional_occupancy_info.track_id,
+            std::move(object_points),
+            occupancy_objects[i].common_occupancy_info.type);
+        add_occupancy_obstacle(obstacle);
+      }
+    }
+  }
+}
+
+void ObstacleManager::UpdateGroundLineObstacle() {
+  static constexpr int kGroundLineIdOffset = 5000000;
+  int ground_line_id = kGroundLineIdOffset;
+  const auto &local_view = session_->environmental_model().get_local_view();
+  if (local_view.ground_line_perception.groundline_size > 0) {
+    // 是否自行聚类成多个小矩形
+    if (config_.is_ground_line_cluster) {
+      ground_line_manager_ptr_->Update(local_view.ground_line_perception);
+      const std::vector<GroundLinePoints> &ground_line_points =
+          ground_line_manager_ptr_->GetPoints();
+      std::cout << "ground_line_points.size = " << ground_line_points.size()
+                << std::endl;
+      for (const auto &ground_line_point : ground_line_points) {
+        ground_line_id += 1;
+        if (ground_line_point.size() >= 3) {
+          AddPointClouds(ground_line_point);
+          Obstacle obstacle(ground_line_id, ground_line_point);
+          add_groundline_obstacle(obstacle);
+        }
+      }
+    } else {
+      bool has_target_lane = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .has_target_lane;
+      const auto &ref_path_ptr = session_->planning_context()
+                                .lane_change_decider_output()
+                                .coarse_planning_info.reference_path;
+      const auto &ego_state =
+          session_->environmental_model().get_ego_state_manager();
+      const size_t groundline_size = local_view.ground_line_perception.groundline_size;
+      for (size_t i = 0; i < groundline_size; ++i) {
+        const auto &groundline = local_view.ground_line_perception.groundline[i];
+        ground_line_id += 1;
+        bool in_range = true;
+        std::vector<planning_math::Vec2d> points;
+        points.reserve(groundline.groundline_point_size);
+        for (size_t j = 0; j < groundline.groundline_point_size; ++j) {
+          // filter
+          if (has_target_lane) {
+            if (ref_path_ptr != nullptr) {
+              const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+              if (frenet_coord != nullptr) {
+                // 自车sl
+                Point2D ego_point;
+                if (!frenet_coord->XYToSL(
+                        Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
+                        ego_point) ||
+                    std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+                  continue;
+                }
+                Point2D sl_point;
+                if (!frenet_coord->XYToSL(
+                        Point2D(groundline.shape[j].x, groundline.shape[j].y),
+                        sl_point) ||
+                    std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
+                    groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
+                    sl_point.x < ego_point.x + 7 ||
+                    ((sl_point.x < ego_point.x + 9) &&
+                     groundline.resource_type ==
+                         iflyauto::ResourceType::RESOURCE_TYPE_MAP)) {
+                  in_range = false;
+                  break;
+                }
+              }
+            }
+          }
+          points.emplace_back(planning_math::Vec2d(groundline.shape[j].x,
+                                                  groundline.shape[j].y));
+        }
+        if (!in_range) {
+          continue;
+        }
+        if (groundline.groundline_point_size >= 3) {
+          AddPointClouds(points);
+          Obstacle obstacle(ground_line_id, std::move(points));
+          add_groundline_obstacle(obstacle);
+        }
+      }
+    }
+  }
+}
+
+void ObstacleManager::UpdateMapStaticObstacle() {
+  // todo select
+  // ehr column box
+  static constexpr int kEHRColumnIdOffset = 8000000;
+  const auto &local_view = session_->environmental_model().get_local_view();
+  const size_t polygon_obstacles_size = local_view.static_map_info.parking_assist_info().polygon_obstacles_size();
+  bool has_target_lane = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .has_target_lane;
+  const auto &ref_path_ptr = session_->planning_context()
+                                     .lane_change_decider_output()
+                                     .coarse_planning_info.reference_path;
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  if (polygon_obstacles_size > 0) {
+    const auto& polygon_obstacles = local_view.static_map_info.parking_assist_info().polygon_obstacles();
+    int ehr_column_id = kEHRColumnIdOffset;
+    for (const Map::PolygonObject &polygon_object : polygon_obstacles) {
+      ehr_column_id += 1;
+      if (polygon_object.shape_size() != 4U) {
+        LOG_DEBUG("invalid polygon_object.shape_size = %d",
+                  polygon_object.shape_size());
+        continue;
+      }
+      bool in_range = true;
+      std::vector<planning::planning_math::Vec2d> column_box;
+      column_box.reserve(polygon_object.shape_size());
+      for (const auto& shape : polygon_object.shape()) {
+        // filter
+        if (has_target_lane) {
+          if (ref_path_ptr != nullptr) {
+            const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+            if (frenet_coord != nullptr) {
+              // 自车sl
+              Point2D ego_point;
+              if (!frenet_coord->XYToSL(
+                      Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
+                      ego_point) ||
+                  std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+                continue;
+              }
+              Point2D sl_point;
+              if (!frenet_coord->XYToSL(
+                      Point2D(shape.x(), shape.y()),
+                      sl_point) ||
+                  std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
+                  sl_point.x < ego_point.x + 9 ||
+                  sl_point.x > ego_point.x + 50 ||
+                  std::fabs(sl_point.y - ego_point.y) > 5) {
+                in_range = false;
+                break;
+              }
+            }
+          }
+        }
+        column_box.emplace_back(planning::planning_math::Vec2d(shape.x(), shape.y()));
+      }
+      if (!in_range) {
+        continue;
+      }
+      AddPointClouds(column_box);
+      Obstacle obstacle(ehr_column_id, column_box);
+      add_map_static_obstacle(obstacle);
+    }
+  }
+}
+
+bool ObstacleManager::UpdateEDT(const OccupancyGridBound& grid_bound) {
+  // edt handle
+  edt_.Excute(ogm_, grid_bound, resolution_);
+  return true;
 }
 
 void ObstacleManager::clear() {
@@ -235,14 +665,20 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
 
   if (session_->is_hpp_scene()) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
-                             groundline_obstacles_.Items().size());
+                             groundline_obstacles_.Items().size() +
+                             occupancy_obstacles_.Items().size() +
+                             map_static_obstacles_.Items().size());
     obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
-                                      groundline_obstacles_.Items().size());
+                                      groundline_obstacles_.Items().size() +
+                                      occupancy_obstacles_.Items().size() +
+                                      map_static_obstacles_.Items().size());
     add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map, obstacles_ids_in_lane_map);
     add_frenet_obstacle(groundline_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map, obstacles_ids_in_lane_map);
     add_frenet_obstacle(occupancy_obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+    add_frenet_obstacle(map_static_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map, obstacles_ids_in_lane_map);
   } else {
     frenet_obstacles.reserve(obstacles_.Items().size());
@@ -347,7 +783,8 @@ void ObstacleManager::add_frenet_obstacle(
 //     }
 
 //     frenet_ob_map.emplace(
-//         std::piecewise_construct, std::forward_as_tuple(obstacle_ptr->id()),
+//         std::piecewise_construct,
+//         std::forward_as_tuple(obstacle_ptr->id()),
 //         std::forward_as_tuple(std::make_shared<FrenetObstacle>(
 //             obstacle_ptr, reference_path,
 //             session_->environmental_model().get_ego_state_manager())));

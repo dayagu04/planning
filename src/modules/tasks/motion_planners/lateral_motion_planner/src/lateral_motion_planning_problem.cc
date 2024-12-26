@@ -286,6 +286,10 @@ uint8_t LateralMotionPlanningProblem::Update(
     iter_info->set_du_norm(soler_info_ptr->iteration_info_vec[i].du_norm);
   }
 
+  // temp debug
+  if (planning_output_.solver_info().iter_info(planning_output_.solver_info().iter_info_size()-1).cost() > 10000) {
+    return 9;
+  }
   return solver_condition;
 }
 

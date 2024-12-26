@@ -3,6 +3,7 @@
 #include <memory>
 #include "ego_planning_config.h"
 #include "environmental_model.h"
+#include "euler_distance_transform.h"
 #include "frenet_obstacle.h"
 #include "fusion_objects_c.h"
 #include "obstacle.h"
@@ -11,6 +12,7 @@
 #include "uss_obstacle.h"
 #include "utils/index_list.h"
 
+using namespace planning::planning_math;
 namespace planning {
 
 class ObstacleManager {
@@ -100,10 +102,31 @@ class ObstacleManager {
           &frenet_obstacles_map,
       std::vector<int> &obstacles_ids_in_lane_map);
 
+  void UpdateOccObstacle();
+
+  void UpdateGroundLineObstacle();
+
+  void UpdateParkingSpaceObstacle();
+
+  void UpdateMapStaticObstacle();
+
+  const EulerDistanceTransform* GetEulerDistanceTransform() const {
+    return &edt_;
+  }
+
+  const bool GetIsEulerDistanceTransformValid() const { return is_edt_valid_; }
+
  private:
   void clear();
   // bool is_potential_current_leadone_leadtwo_to_ego(const
   // std::shared_ptr<FrenetObstacle> &frenet_obstacle);
+
+  void InitEDT();
+  OccupancyGridBound GenerateOGM(const Pose2D& base_pose);
+  void AddPointClouds(const std::vector<planning_math::Vec2d>& point_clouds, size_t step = 1);
+  void AddODPoint(const PredictionObject &prediction_object);
+  bool UpdateEDT(const OccupancyGridBound& grid_bound);
+
  private:
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;
@@ -117,6 +140,13 @@ class ObstacleManager {
   // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
   UssObstacle uss_obstacle_;
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
+  std::shared_ptr<planning::GroundLineManager> ground_line_manager_ptr_ =
+      nullptr;
+
+  OccupancyGridMap ogm_;
+  EulerDistanceTransform edt_;
+  bool is_edt_valid_;
+  double resolution_;
 };
 
 }  // namespace planning

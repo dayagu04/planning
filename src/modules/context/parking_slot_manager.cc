@@ -79,16 +79,9 @@ bool ParkingSlotManager::Update(
   target_slot_.clear();
   points_.clear();
   limiters_.clear();
-  const auto& ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  const size_t parking_slot_lists_size =
-      parking_fusion_info.parking_fusion_slot_lists_size;
-  const auto& parking_slot_lists =
-      parking_fusion_info.parking_fusion_slot_lists;
+  const size_t parking_slot_lists_size = parking_fusion_info.parking_fusion_slot_lists_size;
+  const auto& parking_slot_lists = parking_fusion_info.parking_fusion_slot_lists;
   target_slot_id_ = parking_fusion_info.select_slot_id;
-  const auto& enu2car_matrix = ego_state_manager->get_enu2car();
-  Eigen::Vector3d v;
-  double min_x, min_y, max_x, max_y;
   for (uint8 i = 0; i < parking_slot_lists_size; i++) {
     ParkingSlotPoints slot_point;
     const auto& parking_slot = parking_slot_lists[i];
@@ -98,33 +91,13 @@ bool ParkingSlotManager::Update(
     if ((slot_id == target_slot_id_) && (resource_type == 2)) {
       is_exist_target_slot = true;
     }
-
-    // TBD: 这里没有判断size, c结构体没有设置size，默认4
-    min_x = std::numeric_limits<double>::max();
-    min_y = std::numeric_limits<double>::max();
-    max_x = std::numeric_limits<double>::lowest();
-    max_y = std::numeric_limits<double>::lowest();
     for (const auto& corner_point : parking_slot.corner_points) {
-      v.x() = corner_point.x;
-      v.y() = corner_point.y;
-      v.z() = 0;
-      auto park_space_point_car = enu2car_matrix(v);
-      min_x = std::fmin(min_x, park_space_point_car.x());
-      min_y = std::fmin(min_y, park_space_point_car.y());
-      max_x = std::fmax(max_x, park_space_point_car.x());
-      max_y = std::fmax(max_y, park_space_point_car.y());
-      slot_point.emplace_back(
-          planning_math::Vec2d(corner_point.x, corner_point.y));
       if (is_exist_target_slot) {
         target_slot_.emplace_back(
             planning_math::Vec2d(corner_point.x, corner_point.y));
       }
     }
-    if (((min_y > 0 && min_y < kMaxDistanceY) ||
-         (max_y < 0 && max_y > -kMaxDistanceY) || (min_y <= 0 && max_y >= 0)) &&
-        min_x < kMaxDistanceFrontX && max_x > -kMaxDistanceBackX) {
-      points_.emplace_back(std::move(slot_point));
-    }
+
     // limiter
     const size_t limiters_size = parking_slot.limiters_size;
     const auto& limiters = parking_slot.limiters;  // line segment

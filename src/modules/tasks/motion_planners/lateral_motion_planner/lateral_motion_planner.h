@@ -37,7 +37,7 @@ class LateralMotionPlanner : public Task {
 
  private:
   bool AssembleInput();
-  void Update();
+  bool Update();
   std::shared_ptr<planning_math::KDPath> ConstructLateralKDPath(
       const std::vector<double>& x_vec, const std::vector<double>& y_vec);
 

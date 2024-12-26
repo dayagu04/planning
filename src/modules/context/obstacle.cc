@@ -398,8 +398,14 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_points_(points) {
   velocity_ = 0.0;
   acc_ = 0.0;
+  fusion_source_ = 1;
 
-  if (id_ > 6000000) {  // parking space
+  if (id_ > 8000000) {  // ehr column box
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN;
+    source_type_ = SourceType::MAP;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  } else if (id_ > 6000000) {  // parking space
     type_ = iflyauto::ObjectType::OBJECT_TYPE_SOLT;
     source_type_ = SourceType::ParkingSlot;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
@@ -419,7 +425,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
                              perception_points_.front().y()),
         planning_math::Vec2d(perception_points_.back().x(),
                              perception_points_.back().y()));
-    perception_bounding_box_ = planning_math::Box2d(axis, 0.2);
+    perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
     perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
   }
   x_center_ = perception_bounding_box_.center_x();
@@ -447,9 +453,13 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
       perception_points_(points) {
   velocity_ = 0.0;
   acc_ = 0.0;
+  fusion_source_ = 1;
 
   if (id_ > 7000000) {  // occupancy object
     type_ = type;
+    if (type_ < iflyauto::OBJECT_TYPE_OCC_EMPTY) {
+      type_ = iflyauto::OBJECT_TYPE_OCC_EMPTY;
+    }
     source_type_ = SourceType::OCC;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
@@ -463,7 +473,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
                              perception_points_.front().y()),
         planning_math::Vec2d(perception_points_.back().x(),
                              perception_points_.back().y()));
-    perception_bounding_box_ = planning_math::Box2d(axis, 0.2);
+    perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
     perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
   }
   x_center_ = perception_bounding_box_.center_x();

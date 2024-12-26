@@ -10,7 +10,6 @@
 #include "ifly_time.h"
 #include "local_view.h"
 #include "obstacle_manager.h"
-#include "occupancy_object_manager.h"
 #include "parking_slot_manager.h"
 #include "prediction_object.h"
 #include "route_info.h"
@@ -96,8 +95,6 @@ class EnvironmentalModelManager {
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ObstacleManager> obstacle_manager_ptr_ = nullptr;
-  std::shared_ptr<planning::GroundLineManager> ground_line_manager_ptr_ =
-      nullptr;
   std::shared_ptr<planning::ParkingSlotManager> parking_slot_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ =
@@ -114,8 +111,6 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::agent::AgentManager> agent_manager_ptr_ = nullptr;
   std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world_ =
       nullptr;
-  std::shared_ptr<planning::OccupancyObjectManager>
-      occupancy_object_manager_ptr_ = nullptr;
   std::shared_ptr<planning::RouteInfo> route_info_ptr_ = nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;

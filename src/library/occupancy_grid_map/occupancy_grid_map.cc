@@ -47,6 +47,23 @@ void OccupancyGridMap::AddSlotPoint(const T &point) {
   return;
 }
 
+void OccupancyGridMap::AddSlotCoordinatePoint(
+    const Position2D &point) {
+  Pose2D local;
+
+  local.x = point.x - bound_.min_x;
+  local.y = point.y - bound_.min_y;
+
+  OgmIndex index;
+  OgmPoseToIndex(&index, local);
+
+  if (IsIndexValid(index)) {
+    ogm[index.x][index.y] = true;
+  }
+
+  return;
+}
+
 void OccupancyGridMap::AddSlotCoordinatePoints(
     const std::vector<Position2D> &points) {
   Pose2D local;

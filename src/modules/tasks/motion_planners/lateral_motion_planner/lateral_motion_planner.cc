@@ -96,7 +96,10 @@ bool LateralMotionPlanner::Execute() {
     return false;
   }
   // update
-  Update();
+  if (!Update()) {
+    LOG_DEBUG("LateralMotionPlanner Solve failed\n");
+    return false;
+  }
 
   // record input and output
   DebugInfoManager::GetInstance()
@@ -516,7 +519,7 @@ bool LateralMotionPlanner::AssembleInput() {
   return true;
 }
 
-void LateralMotionPlanner::Update() {
+bool LateralMotionPlanner::Update() {
   const double concerned_start_q_jerk =
       planning_weight_ptr_->GetConcernedStartQJerk();
   JSON_DEBUG_VALUE("concerned_start_q_jerk", concerned_start_q_jerk);
@@ -536,6 +539,9 @@ void LateralMotionPlanner::Update() {
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
 
+  if (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL) {
+    return false;
+  }
   // update planning_output
   const auto &planning_output = planning_problem_ptr_->GetOutput();
 
@@ -723,6 +729,7 @@ void LateralMotionPlanner::Update() {
           i, traj_points[i].s, traj_points[i].l);
     }
   }
+  return true;
 }
 
 std::shared_ptr<planning_math::KDPath>

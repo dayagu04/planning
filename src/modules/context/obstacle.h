@@ -17,10 +17,12 @@
 namespace planning {
 
 enum class SourceType {
-  OD,
-  GroundLine,
-  OCC,
-  ParkingSlot,
+    NONE,
+    OD,
+    GroundLine,
+    OCC,
+    ParkingSlot,
+    MAP,
 };
 
 class Obstacle {

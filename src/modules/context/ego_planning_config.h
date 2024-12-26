@@ -226,6 +226,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_fusion_ground_line");
     is_ground_line_cluster =
         read_json_key<bool>(json, "is_ground_line_cluster");
+    enable_ehr_column_box =
+        read_json_key<bool>(json, "enable_ehr_column_box");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -249,6 +251,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_fusion_parking_slot = false;
   bool enable_fusion_ground_line = true;
   bool is_ground_line_cluster = false;
+  bool enable_ehr_column_box = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -1233,10 +1236,7 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double care_lon_area_road_border = 100;
   double ramp_limit_v = 19.44;
   bool ramp_limit_v_valid = false;
-  double lc_second_dist_thr = 1.5;
-  std::vector<double> dynamic_ref_buffer{0.0, 0.1, 0.2, 0.3};
-  bool not_use_gap_flag = true;
-  double min_v_cruise = 5.0;
+  double min_v_cruise  = 5.0;
 
   std::vector<double> lateral_road_boader_collision_ttc_bp{0, 1.5, 3, 4.5, 5};
   std::vector<double> extra_collision_lateral_buffer{0.1, 0.0, 0.0, 0.0, 0.0};
@@ -2479,6 +2479,15 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
         enable_bbox_mode);  // obstacle boundary construction
     max_speed_static_obstacle =
         read_json_key<double>(json, "max_speed_static_obstacle");
+    car_body_lat_safe_buffer = read_json_key<double>(
+        json, "car_body_lat_safe_buffer",
+         car_body_lat_safe_buffer);
+    lon_safe_buffer = read_json_key<double>(
+        json, "lon_safe_buffer",
+        lon_safe_buffer);
+    mirror_buffer = read_json_key<double>(
+        json, "mirror_buffer",
+        mirror_buffer);
   }
   double frenet_obstacle_range_s_min = -50.0;
   double frenet_obstacle_range_s_max = 180.0;
@@ -2486,6 +2495,9 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double frenet_obstacle_range_l_max = 50.0;
   bool enable_bbox_mode = true;
   double max_speed_static_obstacle = 0.5;
+  double car_body_lat_safe_buffer = 0.2;
+  double lon_safe_buffer = 0.2;
+  double mirror_buffer = 0.2;
 };
 
 struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {

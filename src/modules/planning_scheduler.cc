@@ -599,18 +599,20 @@ void PlanningScheduler::FillPlanningHmiInfo(
   }
 
   // hpp状态切park_in状态
-  const auto &parking_switch_info = session_.planning_context()
-                                        .parking_switch_decider_output()
-                                        .parking_switch_info;
-  if (parking_switch_info.is_memory_slot_allowed_to_park) {
-    hpp_info->hpp_state_switch =
-        iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
-  } else if (parking_switch_info.is_memory_slot_occupied) {
-    hpp_info->is_parking_space_occupied = true;
-  } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
-    hpp_info->is_new_parking_space_found = true;
-    hpp_info->hpp_state_switch =
-        iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+  if (session_.is_hpp_scene()) {
+    const auto &parking_switch_info = session_.planning_context()
+                                          .parking_switch_decider_output()
+                                          .parking_switch_info;
+    if (parking_switch_info.is_memory_slot_allowed_to_park) {
+      hpp_info->hpp_state_switch =
+          iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    } else if (parking_switch_info.is_memory_slot_occupied) {
+      hpp_info->is_parking_space_occupied = true;
+    } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
+      hpp_info->is_new_parking_space_found = true;
+      hpp_info->hpp_state_switch =
+          iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    }
   }
 
   return;
@@ -900,9 +902,9 @@ const bool PlanningScheduler::ExcuteParkingFunction(
   bool planning_success = apa_function_->Plan();
 
   // todo: hpp 巡库阶段，不要填充轨迹, 不要覆盖行车轨迹.
-  if (function_type == common::SceneType::PARKING_APA) {
-    *planning_output = session_.planning_context().planning_output();
-  }
+  // if (function_type == common::SceneType::PARKING_APA) {
+  *planning_output = session_.planning_context().planning_output();
+  // }
 
   return planning_success;
 }

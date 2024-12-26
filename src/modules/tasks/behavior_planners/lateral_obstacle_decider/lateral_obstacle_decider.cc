@@ -837,6 +837,18 @@ void LateralObstacleDecider::Log(
         static_cast<uint32_t>(lat_obstacle_decision[obstacle->id()]));
     obstacle_log->set_vs_lat_relative(obstacle->frenet_velocity_l());
     obstacle_log->set_vs_lon_relative(obstacle->frenet_velocity_s());
+    if (obstacle->source_type() == SourceType::GroundLine ||
+        obstacle->source_type() == SourceType::OCC ||
+        obstacle->source_type() == SourceType::OD ||
+        obstacle->source_type() == SourceType::MAP) {
+      for (const auto &polygon :
+           obstacle->obstacle()->perception_polygon().points()) {
+        planning::common::Point2d *obstacle_polygon =
+            obstacle_log->add_polygon_points();
+        obstacle_polygon->set_x(polygon.x());
+        obstacle_polygon->set_y(polygon.y());
+      }
+    }
   }
 }
 }  // namespace planning

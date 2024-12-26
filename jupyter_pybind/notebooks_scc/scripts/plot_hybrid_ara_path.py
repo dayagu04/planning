@@ -24,7 +24,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1000
+fig1.height = 1400
 fig_lat_offset = load_lateral_offset(bag_loader)
 
 # load lateral planning (behavior and motion)
@@ -48,14 +48,19 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.1, max=max_time, value=0.1, step=frame_dt)
     self.expand_step_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='75%'), description= "expand_step",min=1, max=max_expand_step, value=1, step=1)
-    ipywidgets.interact(slider_callback, bag_time = self.time_slider, expand_step = self.expand_step_slider)
+    self.expand_open_list_node_idx = ipywidgets.Text(description='expand_open_list_node_idx:')
+
+    ipywidgets.interact(slider_callback,
+                        bag_time = self.time_slider,
+                        expand_step = self.expand_step_slider,
+                        expand_open_list_node_idx = self.expand_open_list_node_idx)
 
 
 ### sliders callback
-def slider_callback(bag_time, expand_step):
+def slider_callback(bag_time, expand_step, expand_open_list_node_idx):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hybrid_ara_path_data, expand_step, g_is_display_enu)
+  update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hybrid_ara_path_data, expand_step, expand_open_list_node_idx, g_is_display_enu)
 
   push_notebook()
 

@@ -2,7 +2,7 @@
 
 namespace planning {
 #define ogm_resolution (0.05)
-#define ogm_grid_x_max (512)
+#define ogm_grid_x_max (800)
 #define ogm_grid_y_max (800)
 
 struct OgmIndex {
