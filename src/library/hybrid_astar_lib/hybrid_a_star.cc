@@ -3831,6 +3831,10 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer,
   GenerateVehCompactPolygon(lat_buffer, config_.lon_min_safe_buffer,
                             &cvx_hull_foot_print_);
 
+  // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
+  // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
+  // PolygonDebugString(&cvx_hull_foot_print_.mirror_right, "right mirror");
+
   ILOG_INFO << "lat buffer = " << lat_buffer;
 
   return;

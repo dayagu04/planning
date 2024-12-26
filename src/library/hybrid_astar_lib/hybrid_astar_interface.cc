@@ -262,7 +262,7 @@ int HybridAStarInterface::UpdateOutput() {
     }
 
     for (size_t i = 0; i < config_.lat_hierarchy_safe_buffer.size(); i++) {
-      lat_buffer = config_.lat_hierarchy_safe_buffer[i];
+      lat_buffer = config_.lat_safe_buffer_for_inside[i];
       lon_buffer = config_.lon_hierarchy_safe_buffer[i];
       edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
                             static_cast<float>(lon_buffer),
