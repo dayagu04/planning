@@ -375,6 +375,8 @@ bool LaneBorrowDecider::ObstacleDecision() {
   static_blocked_obj_id_vec_.clear();
   bypass_direction_ = NO_BORROW;
   if (static_blocked_obstacles_.empty()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        NO_PASSABLE_OBSTACLE;
     return false;
   } else if (static_blocked_obstacles_.size() > 1) {
     std::sort(static_blocked_obstacles_.begin(),
