@@ -87,7 +87,8 @@ namespace speed {
 
 StGraphInput::StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                            planning::framework::Session* session)
-    : session_(session) {
+    : session_(session),
+      cipv_info_(&(session_->planning_context().cipv_decider_output())) {
   config_ = config_builder->cast<STGraphConfig>();
 }
 
@@ -107,7 +108,6 @@ void StGraphInput::Update() {
   const auto& init_point = ego_state_manager->planning_init_point();
   PlanningInitPointToTrajectoryPoint(init_point);
   MakeBuffer(lane_change_status, lane_change_request, config_);
-
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
   ego_lane_ = virtual_lane_manager_->get_current_lane();

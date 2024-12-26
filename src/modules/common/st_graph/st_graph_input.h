@@ -6,6 +6,7 @@
 #include "agent/agent.h"
 #include "agent/agent_manager.h"
 #include "dynamic_world/dynamic_world.h"
+#include "src/modules/tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "st_graph/path_border_querier.h"
 #include "trajectory/trajectory_point.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
@@ -18,10 +19,12 @@ namespace speed {
 
 class StGraphInput {
  public:
-  StGraphInput() = default;
+  using CIPVInfo = ClosestInPathVehicleDeciderOutput;
 
   StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                planning::framework::Session* session);
+
+  StGraphInput() = default;
 
   ~StGraphInput() = default;
 
@@ -137,10 +140,13 @@ class StGraphInput {
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<EgoStateManager>& ego_state_manager);
 
+  const CIPVInfo* cipv_info() const { return cipv_info_; };
+
   void Reset();
 
  private:
   planning::framework::Session* session_ = nullptr;
+  const CIPVInfo* cipv_info_ = nullptr;
   STGraphConfig config_;
   trajectory::TrajectoryPoint planning_init_point_;
   trajectory::TrajectoryPoint time_aligned_ego_state_;

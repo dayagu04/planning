@@ -731,10 +731,21 @@ void STGraph::BackwardExtendSingleStBoundary(
 void STGraph::SetStSearchFailSafeDecisionTable(
     std::unordered_map<int64_t, STBoundary::DecisionType>* succ_decision_table)
     const {
-  // No fail safe for lane keeping.
+  const auto& cipv_info = st_graph_input_.cipv_info();
+  // make cipv yield decision when lane keep
+  int64_t cipv_boundary_id = -1;
   if (st_graph_input_.is_lane_keeping()) {
+    const auto cipv_id = cipv_info->cipv_id();
+    if (cipv_id != -1 && agent_id_st_boundaries_map_.find(cipv_id) !=
+                             agent_id_st_boundaries_map_.end()) {
+      // only use one cipv prediction trajectory
+      cipv_boundary_id = agent_id_st_boundaries_map_.at(cipv_id).front();
+      succ_decision_table->insert(
+          std::make_pair(cipv_boundary_id, STBoundary::DecisionType::YIELD));
+    }
     return;
   }
+
   // Set rear target as overtake.
   const auto rear_st_id = StGraphUtils::GetAgentStBoundaryId(
       st_graph_input_.rear_agent_of_target(), agent_id_st_boundaries_map_);

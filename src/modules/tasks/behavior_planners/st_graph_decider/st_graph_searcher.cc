@@ -240,6 +240,7 @@ bool StGraphSearcher::Execute() {
     session_->mutable_planning_context()
         ->mutable_st_graph_searcher_output()
         ->set_is_search_success(false);
+    AddStGraphSearcherDataToProto(st_path);
     return true;
   }
 
@@ -1153,8 +1154,10 @@ void StGraphSearcher::AddStGraphSearcherDataToProto(
       p->set_s(search_node.s());
       p->set_t(search_node.t());
     }
+    mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
+  } else {
+    mutable_st_graph_searcher_data->clear_st_search_path();
   }
-  mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
 }
 
 void StGraphSearcher::AddAStarSearchCostDebugInfo(
