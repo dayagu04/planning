@@ -646,10 +646,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   } else if (lc_request_source == INT_REQUEST) {
     planning_hmi_info->ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_MANUAL;
-  } else if (lc_request_source == ACT_REQUEST ||
-             lc_request_source == OVERTAKE_REQUEST ||
-             lc_request_source == CONE_REQUEST ||
-             lc_request_source == EMERGENCE_AVOID_REQUEST) {
+  } else if (lc_request_source == OVERTAKE_REQUEST) {
     planning_hmi_info->ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
