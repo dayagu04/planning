@@ -379,8 +379,8 @@ bool GeneralLongitudinalDecider::Execute() {
     size_t i = 0;
     for (auto collision_result : hpp_collision_results) {
       Point2D pt_catresian, pt_frenet;
-      pt_catresian.x = collision_result.ego_poit.x;
-      pt_catresian.y = collision_result.ego_poit.y;
+      pt_catresian.x = collision_result.ego_point.x;
+      pt_catresian.y = collision_result.ego_point.y;
       // if (frenet_coord->CartCoord2FrenetCoord(pt_catresian, pt_frenet) !=
       //     TRANSFORM_SUCCESS) {
       //   // Cart --> Frenet failed
@@ -1259,6 +1259,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
           ? std::max(1.0, std::max(0.0, GetRSSDistance(obstacle, ego_velocity,
                                                        config_acc_)))
           : 0.0;
+  // TODO: hack no soft distance buffer because of perception issue
+  distance_buff = 0.0;
   auto ini_ds = obstacle_sl_boundary.s_start - ego_sl_boundary.s_end;
   auto lat_overlap_ratio =
       is_CIPV

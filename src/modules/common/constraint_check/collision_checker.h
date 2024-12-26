@@ -21,7 +21,7 @@ struct CollisionCheckStatus {
   // distance to collision or distance to the traj point closest to obstacle
   double s = 0.0;
   double min_distance = 0.0;  // minimum distacne to obstacles (>=0)
-  Pose2D ego_poit{0, 0, 0};
+  Pose2D ego_point{0, 0, 0};
   int16_t point_index = 0;
   int obstacle_id = 0;
   CollisionType collision_type = CollisionType::NONE_COLLISION;

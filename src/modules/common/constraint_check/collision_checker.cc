@@ -78,9 +78,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
         if (min_dis < collision_threshold) {
           result.is_collision = true;
           result.min_distance = min_dis;
-          result.ego_poit.x = point.x();
-          result.ego_poit.y = point.y();
-          result.ego_poit.theta = point.theta();
+          result.ego_point.x = point.x();
+          result.ego_point.y = point.y();
+          result.ego_point.theta = point.theta();
           result.collision_type = collision_type;
           result.collision_object_position.x = box.center().x();
           result.collision_object_position.y = box.center().y();
@@ -104,9 +104,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
       if (min_dis < collision_threshold) {
         result.is_collision = true;
         result.min_distance = min_dis;
-        result.ego_poit.x = point_.x();
-        result.ego_poit.y = point_.y();
-        result.ego_poit.theta = point_.theta();
+        result.ego_point.x = point_.x();
+        result.ego_point.y = point_.y();
+        result.ego_point.theta = point_.theta();
         result.collision_type = collision_type;
         result.collision_object_position.x = box.center().x();
         result.collision_object_position.y = box.center().y();
@@ -145,9 +145,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
         if (min_dis < collision_threshold) {
           result.is_collision = true;
           result.min_distance = min_dis;
-          result.ego_poit.x = point.x();
-          result.ego_poit.y = point.y();
-          result.ego_poit.theta = point.theta();
+          result.ego_point.x = point.x();
+          result.ego_point.y = point.y();
+          result.ego_point.theta = point.theta();
           result.collision_type = collision_type;
           result.collision_object_position.x =
               0.5 * (polygon.min_x() + polygon.max_x());
@@ -176,9 +176,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
       if (min_dis < collision_threshold) {
         result.is_collision = true;
         result.min_distance = min_dis;
-        result.ego_poit.x = point_.x();
-        result.ego_poit.y = point_.y();
-        result.ego_poit.theta = point_.theta();
+        result.ego_point.x = point_.x();
+        result.ego_point.y = point_.y();
+        result.ego_point.theta = point_.theta();
         result.collision_type = collision_type;
         result.collision_object_position.x =
             0.5 * (polygon.min_x() + polygon.max_x());
@@ -219,9 +219,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
         if (min_dis < collision_threshold) {
           result.is_collision = true;
           result.min_distance = min_dis;
-          result.ego_poit.x = point.x();
-          result.ego_poit.y = point.y();
-          result.ego_poit.theta = point.theta();
+          result.ego_point.x = point.x();
+          result.ego_point.y = point.y();
+          result.ego_point.theta = point.theta();
           result.collision_type = collision_type;
           result.collision_object_position.x =
               0.5 * (line.start().x() + line.end().x());
@@ -246,9 +246,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
     if (min_dis < collision_threshold) {
       result.is_collision = true;
       result.min_distance = min_dis;
-      result.ego_poit.x = point_.x();
-      result.ego_poit.y = point_.y();
-      result.ego_poit.theta = point_.theta();
+      result.ego_point.x = point_.x();
+      result.ego_point.y = point_.y();
+      result.ego_point.theta = point_.theta();
       result.collision_type = collision_type;
       result.collision_object_position.x =
           0.5 * (line.start().x() + line.end().x());
@@ -287,9 +287,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
         if (min_dis < collision_threshold) {
           result.is_collision = true;
           result.min_distance = min_dis;
-          result.ego_poit.x = point.x();
-          result.ego_poit.y = point.y();
-          result.ego_poit.theta = point.theta();
+          result.ego_point.x = point.x();
+          result.ego_point.y = point.y();
+          result.ego_point.theta = point.theta();
           result.collision_type = collision_type;
           result.collision_object_position.x = single_point.x();
           result.collision_object_position.y = single_point.y();
@@ -310,9 +310,9 @@ CollisionCheckStatus CollisionChecker::collision_check(
     if (min_dis < collision_threshold) {
       result.is_collision = true;
       result.min_distance = min_dis;
-      result.ego_poit.x = point_.x();
-      result.ego_poit.y = point_.y();
-      result.ego_poit.theta = point_.theta();
+      result.ego_point.x = point_.x();
+      result.ego_point.y = point_.y();
+      result.ego_point.theta = point_.theta();
       result.collision_type = collision_type;
       result.collision_object_position.x = single_point.x();
       result.collision_object_position.y = single_point.y();
