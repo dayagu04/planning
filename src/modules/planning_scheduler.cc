@@ -615,8 +615,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
   hpp_info->distance_to_parking_space =
       route_info_output.distance_to_target_slot;
-  // hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
-  hpp_info->is_on_hpp_lane = true;  // hack
+  hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
+  // hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
       route_info_output.is_reached_hpp_start_point;
   hpp_info->accumulated_driving_distance =

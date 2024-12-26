@@ -639,7 +639,7 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   if (session_->planning_context()
           .lane_change_decider_output()
           .hpp_turn_signal == NO_CHANGE) {
-    kFilterLBuffer = 0.0;
+    kFilterLBuffer = 0.0; // 0.28
   } else {
     kFilterLBuffer = 0.0;
   }
@@ -821,9 +821,9 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
   const double half_ego_width = vehicle_param.max_width * 0.5;
   vehicle_static_buffer_.clear();
   vehicle_static_buffer_.reserve(ref_traj_points_.size());
-  const auto& general_lateral_decider_output =
-      session_->mutable_planning_context()->general_lateral_decider_output();
-  if ((general_lateral_decider_output.enable_ara_ref) && (config_.enable_last_lat_path)) {
+  // const auto& general_lateral_decider_output =
+  //     session_->mutable_planning_context()->general_lateral_decider_output();
+  if (config_.enable_last_lat_path) {
     const auto &motion_planner_output =
         session_->planning_context().motion_planner_output();
     double final_t = 5.0;
