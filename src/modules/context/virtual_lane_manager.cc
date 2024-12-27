@@ -546,6 +546,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   ego_lane_track_manager_.SetLastZeroRelativeIdNums(
       origin_relative_id_zero_nums_);
+  JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
+                    origin_relative_id_zero_nums_);
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
