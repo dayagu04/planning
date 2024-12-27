@@ -46,16 +46,17 @@ void ParallelParkOutScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-void ParallelParkOutScenario::PlanCore() {
+void ParallelParkOutScenario::ExcutePathPlanningTask() {
   ILOG_INFO << "---------------------parallel out ---------------------------";
   // init simulation
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan &&
-      CheckPlanSkip()) {
+  if (!apa_world_ptr_->GetSimuParam().force_plan && CheckPlanSkip()) {
     return;
   }
+
+  UpdateStuckTime();
 
   if (CheckPaused()) {
     SetParkingStatus(PARKING_PAUSED);
@@ -95,7 +96,7 @@ void ParallelParkOutScenario::PlanCore() {
   }
 
   // check replan
-  if (CheckReplan() || apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
+  if (CheckReplan() || apa_world_ptr_->GetSimuParam().force_plan) {
     DEBUG_PRINT("replan is required!");
 
     // generate t-lane
@@ -340,10 +341,10 @@ const bool ParallelParkOutScenario::CheckFinished() {
             << std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg);
 
   return frame_.ego_slot_info.slot_occupied_ratio < 0.1 &&
-         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 8.0;
+         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 5.0;
 }
 
-void ParallelParkOutScenario::GenTlane() {
+const bool ParallelParkOutScenario::GenTlane() {
   // Todo: generate t-lane according to nearby obstacles
   const auto& ego_slot_info = frame_.ego_slot_info;
 
@@ -771,11 +772,10 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   // construct input
   ParallelOutPathGenerator::Input path_planner_input;
   path_planner_input.tlane = tlane_;
-  path_planner_input.sample_ds =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
+  path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = frame_.is_replan_first;
   path_planner_input.is_complete_path =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.is_complete_path;
+      apa_world_ptr_->GetSimuParam().is_complete_path;
 
   const auto& ego_slot_info = frame_.ego_slot_info;
   path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
@@ -879,7 +879,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
 
 const bool ParallelParkOutScenario::CheckReplan() {
   if (frame_.is_replan_first == true ||
-      apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
+      apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "first plan";
     frame_.replan_reason = FIRST_PLAN;
     return true;
@@ -1055,7 +1055,7 @@ void ParallelParkOutScenario::Log() const {
   // }
 }
 
-void ParallelParkOutScenario::GenObstacles(){};
+const bool ParallelParkOutScenario::GenObstacles() { return true; };
 
 }  // namespace apa_planner
 }  // namespace planning

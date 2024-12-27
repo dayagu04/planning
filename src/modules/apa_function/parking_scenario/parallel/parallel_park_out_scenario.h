@@ -20,8 +20,8 @@ class ParallelParkOutScenario : public ParkingScenario {
 
   virtual void Reset() override;
 
-  virtual void PlanCore() override;
-  virtual void GenTlane() override;
+  virtual void ExcutePathPlanningTask() override;
+  virtual const bool GenTlane() override;
   virtual const bool CheckFinished() override;
   virtual const uint8_t PathPlanOnce() override;
   virtual const bool UpdateEgoSlotInfo() override;
@@ -37,10 +37,11 @@ class ParallelParkOutScenario : public ParkingScenario {
   }
 
  private:
+  void Log() const override;
   const bool CheckReplan() override;
   const bool CheckSegCompleted();
-  void Log() const override;
-  virtual void GenObstacles() override;
+
+  virtual const bool GenObstacles() override;
 
   ParallelOutPathGenerator::Tlane tlane_;
   ParallelOutPathGenerator parallel_out_path_planner_;

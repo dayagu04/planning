@@ -160,9 +160,11 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   ILOG_INFO << "obs_y_vec.size() = " << obs_y_vec.size();
 
   std::shared_ptr<ApaWorld> apa_world_ptr = std::make_shared<ApaWorld>();
-  apa_world_ptr->GetApaDataPtr()->simu_param.sample_ds = path_ds;
-  apa_world_ptr->GetApaDataPtr()->simu_param.is_simulation = true;
-  apa_world_ptr->GetApaDataPtr()->simu_param.is_complete_path = true;
+  SimulationParam simu_param;
+  simu_param.sample_ds = path_ds;
+  simu_param.is_simulation = true;
+  simu_param.is_complete_path = true;
+  apa_world_ptr->SetSimuParam(simu_param);
 
   apa_world_ptr->GetMeasureDataManagerPtr()->SetPose(
       Eigen::Vector2d(ego_x, ego_y), ego_heading);
