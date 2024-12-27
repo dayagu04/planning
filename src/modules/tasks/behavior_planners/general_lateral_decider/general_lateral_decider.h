@@ -91,8 +91,8 @@ class GeneralLateralDecider : public Task {
                             double &limit_overlap_min_y,
                             double &limit_overlap_max_y);
   double CalLaneWidth();
-  iflyauto::LaneBoundaryType CalLaneBoundaryType(
-      const LineDirection direction, const double s) const;
+  iflyauto::LaneBoundaryType CalLaneBoundaryType(const LineDirection direction,
+                                                 const double s) const;
   void PostProcessReferenceTrajBySoftBound(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds);
   void ExtractBoundary(

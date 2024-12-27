@@ -7,9 +7,9 @@
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
+#include "collision_detection/path_safe_checker.h"
 #include "ifly_time.h"
 #include "log_glog.h"
-#include "collision_detection/path_safe_checker.h"
 
 namespace planning {
 namespace apa_planner {
@@ -274,7 +274,7 @@ const bool ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(
       const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
       const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
       if (safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
-                                     lat_buffer, lon_buffer)) {
+                                      lat_buffer, lon_buffer)) {
         col = true;
         break;
       }

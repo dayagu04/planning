@@ -1,37 +1,36 @@
-#include <array>
-#include <vector>
-#include <cstddef>
-#include <memory>
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
+#include <memory>
+#include <vector>
 
 #include "../../common/planning_gflags.h"
 #include "debug_info_log.h"
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
-#include "planning_context.h"
 #include "lateral_obstacle_decider.h"
+#include "planning_context.h"
 
 namespace planning {
 
 LateralObstacleDecider::LateralObstacleDecider(
-  const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
-  : Task(config_builder, session),
-  session_ (session),
-  config_ (config_builder->cast<PotentialAvoidDeciderConfig>()),
-  output_ (session_->mutable_planning_context()
-          ->mutable_lateral_obstacle_decider_output()
-          .lat_obstacle_decision) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : Task(config_builder, session),
+      session_(session),
+      config_(config_builder->cast<PotentialAvoidDeciderConfig>()),
+      output_(session_->mutable_planning_context()
+                  ->mutable_lateral_obstacle_decider_output()
+                  .lat_obstacle_decision) {
   VehicleParam vehicle_param =
-                          VehicleConfigurationContext::Instance()->get_vehicle_param();
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
   ego_length_ = vehicle_param.length;
   ego_width_ = vehicle_param.width;
 }
 
 bool LateralObstacleDecider::Execute() {
-
   // get info of ego
   // const auto& reference_path_ptr = session_->planning_context().
   //                     lane_change_decider_output().coarse_planning_info.reference_path;
@@ -49,13 +48,17 @@ bool LateralObstacleDecider::Execute() {
   ego_v_l_ = reference_path_ptr->get_frenet_ego_state().velocity_l();
 
   // lane_width
-  const auto &coarse_planning_info =
-      session_->planning_context().lane_change_decider_output().coarse_planning_info;
-  auto lane_width = session_->environmental_model().get_virtual_lane_manager()
-      ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)->width();
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  auto lane_width =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
+          ->width();
   // rightest_lane
   const std::shared_ptr<VirtualLaneManager> virtual_lane_manager =
-                              session_->environmental_model().get_virtual_lane_manager();
+      session_->environmental_model().get_virtual_lane_manager();
   bool rightest_lane;
   if (((virtual_lane_manager->current_lane_virtual_id() ==
         virtual_lane_manager->get_lane_num() - 1) ||
@@ -71,8 +74,8 @@ bool LateralObstacleDecider::Execute() {
   }
 
   // farthest_distance
-  auto &last_traj_points = session_->planning_context()
-                                                    .last_planning_result().traj_points;
+  auto &last_traj_points =
+      session_->planning_context().last_planning_result().traj_points;
   double farthest_distance = DBL_MAX;
   if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
     farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
@@ -90,8 +93,9 @@ bool LateralObstacleDecider::Execute() {
   // determine is_avd_car
   std::vector<double> avd_car_id;
   for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
-    const Obstacle* obs = frenet_obs->obstacle();
-    LateralObstacleHistoryInfo& history = lateral_obstacle_history_info_[obs->id()];
+    const Obstacle *obs = frenet_obs->obstacle();
+    LateralObstacleHistoryInfo &history =
+        lateral_obstacle_history_info_[obs->id()];
 
     // ignore obj without camera source
     if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
@@ -130,8 +134,8 @@ bool LateralObstacleDecider::Execute() {
       history.rear_car = true;
     }
 
-    history.is_avd_car = IsPotentialAvoidingCar(*frenet_obs, lane_width,
-                                                rightest_lane, farthest_distance);
+    history.is_avd_car = IsPotentialAvoidingCar(
+        *frenet_obs, lane_width, rightest_lane, farthest_distance);
 
     if (history.is_avd_car) {
       avd_car_id.emplace_back(obs->id());
@@ -141,8 +145,9 @@ bool LateralObstacleDecider::Execute() {
   // write decider output info
   output_.clear();
   for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
-    const Obstacle* obs = frenet_obs->obstacle();
-    LateralObstacleHistoryInfo& history = lateral_obstacle_history_info_[obs->id()];
+    const Obstacle *obs = frenet_obs->obstacle();
+    LateralObstacleHistoryInfo &history =
+        lateral_obstacle_history_info_[obs->id()];
     // ignore obj without camera source
     if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
         !frenet_obs->b_frenet_valid()) {
@@ -162,11 +167,13 @@ bool LateralObstacleDecider::Execute() {
   return true;
 }
 
-bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle,
-                    double lane_width, bool rightest_lane, double farthest_distance) {
+bool LateralObstacleDecider::IsPotentialAvoidingCar(
+    FrenetObstacle &frenet_obstacle, double lane_width, bool rightest_lane,
+    double farthest_distance) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
-  LateralObstacleHistoryInfo& history = lateral_obstacle_history_info_[obstacle.id()];
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[obstacle.id()];
   double near_car_thr = config_.near_car_thr;
   double lat_safety_buffer = config_.lat_safety_buffer;
   double oversize_veh_addition_buffer = config_.oversize_veh_addition_buffer;
@@ -298,20 +305,19 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
         dist_limit = lane_width * 0.5 - traffic_cone_thr;
       }
       bool is_same_side = ((d_min_cpath > 0 && d_max_cpath > 0) ||
-                            (d_min_cpath <= 0 && d_max_cpath <= 0));
+                           (d_min_cpath <= 0 && d_max_cpath <= 0));
 
       double potential_dist_limit = lane_width * 0.5 + potential_near_car_thr;
       // need avoid flag
       bool is_need_avoid =
-          (d_max_cpath < 0 &&  std::fabs(d_max_cpath) < dist_limit) ||
+          (d_max_cpath < 0 && std::fabs(d_max_cpath) < dist_limit) ||
           (d_min_cpath > 0 && d_min_cpath < dist_limit) ||
-          (d_max_cpath < 0 &&
-            std::fabs(d_max_cpath) < potential_dist_limit &&
-            v_lat < potential_near_car_v_lb &&
-            v_lat > potential_near_car_v_ub) ||
+          (d_max_cpath < 0 && std::fabs(d_max_cpath) < potential_dist_limit &&
+           v_lat < potential_near_car_v_lb &&
+           v_lat > potential_near_car_v_ub) ||
           (d_min_cpath > 0 && d_min_cpath < potential_dist_limit &&
-            v_lat < potential_near_car_v_lb &&
-            v_lat > potential_near_car_v_ub) ||
+           v_lat < potential_near_car_v_lb &&
+           v_lat > potential_near_car_v_ub) ||
           (d_max_cpath > 0 && d_min_cpath < 0 && v_s < 0.5);
 
       double d_max_cpath_recursion = d_max_cpath;
@@ -327,15 +333,15 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
 
       // can avoid flag
       bool can_avoid =
-        (d_min_cpath_recursion >
-          std::min((ego_width_ + lat_safety_buffer) - lane_width / 2, 1.8)) ||
-        (d_max_cpath_recursion <
-          std::max(lane_width / 2 - (ego_width_ + lat_safety_buffer), -1.8)) ||
-        ((obstacle.is_static()) && (
-          (d_min_cpath_recursion > (ego_width_ + static_obs_buffer) - lane_width / 2) ||
-          (d_max_cpath_recursion < lane_width / 2 - (ego_width_ + static_obs_buffer))
-          )
-        );
+          (d_min_cpath_recursion >
+           std::min((ego_width_ + lat_safety_buffer) - lane_width / 2, 1.8)) ||
+          (d_max_cpath_recursion <
+           std::max(lane_width / 2 - (ego_width_ + lat_safety_buffer), -1.8)) ||
+          ((obstacle.is_static()) &&
+           ((d_min_cpath_recursion >
+             (ego_width_ + static_obs_buffer) - lane_width / 2) ||
+            (d_max_cpath_recursion <
+             lane_width / 2 - (ego_width_ + static_obs_buffer))));
 
       if (is_need_avoid && !can_avoid) {
         history.can_not_avoid = true;
@@ -349,8 +355,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
       double distance_to_right_road_border = 100;
       if (reference_path_ptr != nullptr &&
           reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
-        distance_to_left_road_border =
-            refpath_pt.distance_to_left_road_border;
+        distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
         distance_to_right_road_border =
             refpath_pt.distance_to_right_road_border;
       }
@@ -359,25 +364,23 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
       bool lane_borrow =
           enable_static_scene && is_need_avoid && can_avoid &&
           (obstacle.is_static()) &&
-          ((d_min_cpath > 0 &&
-            d_min_cpath < lane_width / 2 - encroach_thr) ||
-            (d_max_cpath < 0 &&
+          ((d_min_cpath > 0 && d_min_cpath < lane_width / 2 - encroach_thr) ||
+           (d_max_cpath < 0 &&
             std::fabs(d_max_cpath) < lane_width / 2 - encroach_thr)) &&
           ((d_min_cpath > 0 &&
             d_min_cpath > (ego_width_ + static_obs_buffer) -
-                                    distance_to_right_road_border) ||
-            (d_max_cpath < 0 &&
+                              distance_to_right_road_border) ||
+           (d_max_cpath < 0 &&
             d_max_cpath < distance_to_left_road_border -
-                                    (ego_width_ + static_obs_buffer)));
-      history.lane_borrow =lane_borrow;
+                              (ego_width_ + static_obs_buffer)));
+      history.lane_borrow = lane_borrow;
 
-      is_ncar =
-          (is_same_side && is_need_avoid && can_avoid) ||
-          (can_avoid && d_max_cpath > 0 &&
-            d_max_cpath < dist_limit + 2.2 && v_s < 0.5) ||
-          (rightest_lane && d_max_cpath < 0 &&
-            std::fabs(d_max_cpath) < dist_limit && v_s < 0.5) ||
-          cross_solid_line;
+      is_ncar = (is_same_side && is_need_avoid && can_avoid) ||
+                (can_avoid && d_max_cpath > 0 &&
+                 d_max_cpath < dist_limit + 2.2 && v_s < 0.5) ||
+                (rightest_lane && d_max_cpath < 0 &&
+                 std::fabs(d_max_cpath) < dist_limit && v_s < 0.5) ||
+                cross_solid_line;
     }
   }
 
@@ -409,8 +412,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
     std::array<double, 4> xp4{0, 0.4, 0.8};
     std::array<double, 4> fp4{30, 20, 5};
     ncar_count += interp(
-        std::min(std::fabs(d_min_cpath), std::fabs(d_max_cpath)), xp4,
-        fp4);
+        std::min(std::fabs(d_min_cpath), std::fabs(d_max_cpath)), xp4, fp4);
   }
 
   double gap = (history.last_recv_time == 0.0)
@@ -441,17 +443,19 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
     // if (item.trajectory.intersection == 0 &&
     if ((v_lat > -0.3 && v_lat < 0.3) ||
         // 静止的车
-        (obstacle.is_car() && std::fabs(v_s) < 0.5 && v_lat > -0.3 && v_lat < 0.3) ||
+        (obstacle.is_car() && std::fabs(v_s) < 0.5 && v_lat > -0.3 &&
+         v_lat < 0.3) ||
         // 横向无运动的人或锥桶 || 自车在最右车道
         (!obstacle.is_car() && (std::fabs(v_lat) < 0.3)) || rightest_lane) {
       // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
       if (((v_lat > -0.3 && v_lat < 0.3 && obstacle.is_car()) ||
            (std::fabs(v_lat) < 0.3 && !obstacle.is_car()))) {
-        history.ncar_count = std::min(history.ncar_count + gap, 100 * planning_cycle_time);
+        history.ncar_count =
+            std::min(history.ncar_count + gap, 100 * planning_cycle_time);
       }
     } else {
       history.ncar_count = std::max(
-        history.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
+          history.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
     }
 
     if (history.ncar_count < ncar_count * planning_cycle_time &&
@@ -469,12 +473,12 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
   } else {
     if (!in_lon_near_area || !in_lat_near_area) {
       history.ncar_count =
-        std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
+          std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
     }
 
     if (v_s_rel > 1.5) {
       history.ncar_count =
-        std::max(history.ncar_count - 5 * count * planning_cycle_time, 0.0);
+          std::max(history.ncar_count - 5 * count * planning_cycle_time, 0.0);
     }
 
     // if (item.trajectory.intersection > 0) {
@@ -485,7 +489,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
     // for cut in and cut out
     if (!in_lon_near_area && (v_lat > 0.3 || v_lat < -0.3)) {
       history.ncar_count = std::max(
-        history.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
+          history.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
     }
 
     if (d_max_cpath > 0 && d_min_cpath < 0) {
@@ -505,10 +509,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(FrenetObstacle &frenet_obsta
   return false;
 }
 
-void LateralObstacleDecider::LateralObstacleDecision(FrenetObstacle &frenet_obstacle,
-                                              double lane_width, double expand_length){
+void LateralObstacleDecider::LateralObstacleDecision(
+    FrenetObstacle &frenet_obstacle, double lane_width, double expand_length) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
-  LateralObstacleHistoryInfo& history = lateral_obstacle_history_info_[obstacle.id()];
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[obstacle.id()];
 
   // calculate info of obstacle
   int id = obstacle.id();
@@ -522,7 +527,8 @@ void LateralObstacleDecider::LateralObstacleDecision(FrenetObstacle &frenet_obst
   double ref_dis = 1;
   double avoid_front_buffer = 0.0;
 
-  bool lat_overlap = fabs(ego_head_l_ - l) < (ego_width_ + obstacle.width()) / 2;
+  bool lat_overlap =
+      fabs(ego_head_l_ - l) < (ego_width_ + obstacle.width()) / 2;
   // 前方车辆
   if (history.is_avd_car) {
     if (d_max_cpath > 0 && d_min_cpath < 0) {
@@ -544,7 +550,7 @@ void LateralObstacleDecider::LateralObstacleDecision(FrenetObstacle &frenet_obst
     } else {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
-  // 平行车辆
+    // 平行车辆
   } else if (d_s_rel <= expand_length && d_s_rel > -ego_length_) {
     if (ego_head_l_ < l) {
       output_[id] = LatObstacleDecisionType::RIGHT;
@@ -555,12 +561,11 @@ void LateralObstacleDecider::LateralObstacleDecision(FrenetObstacle &frenet_obst
     if (lat_overlap) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
-  // 后方车辆
+    // 后方车辆
   } else {
     if (d_max_cpath < 0 && !lat_overlap && d_max_cpath < -ref_dis) {
       output_[id] = LatObstacleDecisionType::LEFT;
-    } else if (d_min_cpath > 0 && !lat_overlap &&
-                d_min_cpath > ref_dis) {
+    } else if (d_min_cpath > 0 && !lat_overlap && d_min_cpath > ref_dis) {
       output_[id] = LatObstacleDecisionType::RIGHT;
     } else {
       output_[id] = LatObstacleDecisionType::IGNORE;
@@ -568,13 +573,12 @@ void LateralObstacleDecider::LateralObstacleDecision(FrenetObstacle &frenet_obst
   }
   // log
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::EnvironmentModelInfo * environment_model_debug_info =
-                                  planning_debug_data->mutable_environment_model_info();
+  common::EnvironmentModelInfo *environment_model_debug_info =
+      planning_debug_data->mutable_environment_model_info();
   for (size_t i = 0; i < environment_model_debug_info->obstacle_size(); ++i) {
     auto obstacle_new = environment_model_debug_info->mutable_obstacle(i);
     if (obstacle_new->id() == id) {
-      obstacle_new->set_lat_decision(
-          static_cast<uint32_t>(output_[id]));
+      obstacle_new->set_lat_decision(static_cast<uint32_t>(output_[id]));
     } else {
       continue;
     }

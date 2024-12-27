@@ -137,7 +137,6 @@ void OccupancyGridMap::TransformToMatrix(cv::Mat *mat) const {
     uchar *data = mat->ptr<uchar>(i);
 
     for (int32_t j = 0; j < column_num; j++) {
-
       index.x = i;
       index.y = j;
       if (IsIndexValid(index)) {

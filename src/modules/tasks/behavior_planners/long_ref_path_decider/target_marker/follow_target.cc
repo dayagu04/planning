@@ -192,8 +192,8 @@ void FollowTarget::GenerateFollowTarget() {
     double target_s_disatnce = std::max(
         vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
 
-    double upper_bound_s = std::max(
-        upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
+    double upper_bound_s =
+        std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
     double target_s =
         std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
     const double s_target_value = std::min(upper_bound_s, target_s);

@@ -1,7 +1,7 @@
 #include "scc_function.h"
 
-#include "src/longtime_task_pipeline_v3.h"
 #include "src/longtime_task_pipeline_v2.h"
+#include "src/longtime_task_pipeline_v3.h"
 #include "src/realtime_task_pipeline_v1.h"
 
 namespace planning {

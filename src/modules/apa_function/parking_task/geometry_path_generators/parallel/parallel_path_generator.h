@@ -10,10 +10,10 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "geometry_path_generator.h"
 #include "collision_detection/collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
+#include "geometry_path_generator.h"
 
 namespace planning {
 namespace apa_planner {

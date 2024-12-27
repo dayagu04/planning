@@ -97,8 +97,7 @@ void BoundMaker::MakeAccBound() {
       plan_points_num_,
       std::fmax(init_lon_state_[2], acc_upper_bound_with_speed_));
   acc_lower_bound_ = std::vector<double>(
-      plan_points_num_, std::fmin(init_lon_state_[2],
-      config_acc_lower_bound));
+      plan_points_num_, std::fmin(init_lon_state_[2], config_acc_lower_bound));
 }
 
 void BoundMaker::MakeAccBound(const double& v_ego,

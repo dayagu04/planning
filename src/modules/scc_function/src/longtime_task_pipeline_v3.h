@@ -30,13 +30,13 @@
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
+#include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/behavior_planners/truck_longitudinal_avoid_decider/truck_longitudinal_avoid_decider.h"
 #include "tasks/behavior_planners/virtual_obstacle_decider/virtual_obstacle_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
-#include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 
 namespace planning {
 

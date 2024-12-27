@@ -147,7 +147,8 @@ void LateralMotionPlanner::AssembleInput() {
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
   // static const double min_v_cruise = 0.5;
-  const double ref_vel = std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
+  const double ref_vel =
+      std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
   planning_input_.set_ref_vel(ref_vel);
 
   // set reference trajectory
@@ -364,7 +365,8 @@ void LateralMotionPlanner::AssembleInput() {
       intersection_state ==
       planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
-  if ((is_approach_intersection || is_in_intersection || is_off_intersection) && is_ref_consistent) {
+  if ((is_approach_intersection || is_in_intersection || is_off_intersection) &&
+      is_ref_consistent) {
     planning_weight_ptr_->SetIsInIntersection(true);
   } else {
     planning_weight_ptr_->SetIsInIntersection(false);
@@ -574,12 +576,14 @@ void LateralMotionPlanner::Update() {
   t_vec[0] = -0.2;
 
   const double concerned_index = planning_input_.motion_plan_concerned_index();
-  double concerned_dis_to_ref =
-      std::hypot(x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
-                y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
+  double concerned_dis_to_ref = std::hypot(
+      x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
+      y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
   const double end_points_size = concerned_index + 1;
   if ((!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
-      (!session_->planning_context().general_lateral_decider_output().lane_change_scene)) {
+      (!session_->planning_context()
+            .general_lateral_decider_output()
+            .lane_change_scene)) {
     const double end_points_size = concerned_index + 1;
     std::vector<double> end_x_vec(end_points_size + 1);
     std::vector<double> end_y_vec(end_points_size + 1);

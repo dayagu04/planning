@@ -15,7 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/modules/apa_function/apa_param_config.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
 #include "common_c.h"
@@ -26,6 +25,7 @@
 #include "log_glog.h"
 #include "math_lib.h"
 #include "planning_plan_c.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "utils/cartesian_coordinate_system.h"
 
 namespace planning {

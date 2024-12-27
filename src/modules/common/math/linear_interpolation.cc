@@ -95,7 +95,7 @@ PncTrajectoryPoint InterpolateUsingLinearApproximation(
   path_point->set_x(lerp(pp0.x(), t0, pp1.x(), t1, t));
   path_point->set_y(lerp(pp0.y(), t0, pp1.y(), t1, t));
   path_point->set_theta(slerp(pp0.theta(), t0, pp1.theta(), t1, t));
-  path_point->set_kappa(lerp(pp0.kappa(), t0, pp1.kappa(), t1, t)) ;
+  path_point->set_kappa(lerp(pp0.kappa(), t0, pp1.kappa(), t1, t));
   path_point->set_dkappa(lerp(pp0.dkappa(), t0, pp1.dkappa(), t1, t));
   path_point->set_ddkappa(lerp(pp0.ddkappa(), t0, pp1.ddkappa(), t1, t));
   path_point->set_s(lerp(pp0.s(), t0, pp1.s(), t1, t));

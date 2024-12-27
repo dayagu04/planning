@@ -434,8 +434,8 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
 
     // if (StGraphUtils::CheckLonFarPositionSTBoundary(
-    //         agent, st_point_pairs, st_graph_input_, is_parallel, ptr_ego_lane,
-    //         ptr_obj_lane, ptr_virtual_lane_manager)) {
+    //         agent, st_point_pairs, st_graph_input_, is_parallel,
+    //         ptr_ego_lane, ptr_obj_lane, ptr_virtual_lane_manager)) {
     //   ignore_agent_ids_.push_back(agent.agent_id());
     //   continue;
     // }
@@ -850,9 +850,7 @@ bool STGraph::CalculateStPassCorridor() {
   return true;
 }
 
-const StGraphInput& STGraph::st_graph_input() const {
-  return st_graph_input_;
-}
+const StGraphInput& STGraph::st_graph_input() const { return st_graph_input_; }
 
 const std::pair<double, double> STGraph::path_range() const {
   return st_graph_input_.path_range();
@@ -901,7 +899,8 @@ STGraph::close_pass_agent_id_st_boundaries_map() const {
   return close_pass_agent_id_st_boundaries_map_;
 }
 
-const std::vector<std::vector<std::pair<STPoint, STPoint>>>& STGraph::st_points_table() const {
+const std::vector<std::vector<std::pair<STPoint, STPoint>>>&
+STGraph::st_points_table() const {
   return st_points_table_;
 }
 

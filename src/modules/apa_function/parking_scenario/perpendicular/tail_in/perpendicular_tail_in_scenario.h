@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <memory>
 
-
 #include "geometry_math.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"

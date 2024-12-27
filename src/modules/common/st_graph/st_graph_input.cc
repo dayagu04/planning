@@ -190,8 +190,7 @@ void StGraphInput::FilterAgentsByDecisionType(
 }
 
 void StGraphInput::ExtendProcessedPath(
-    const std::string lane_change_status,
-    const std::string lane_change_request,
+    const std::string lane_change_status, const std::string lane_change_request,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path) {
   std::vector<planning_math::PathPoint> path_points;
@@ -215,8 +214,7 @@ void StGraphInput::ExtendProcessedPath(
 }
 
 void StGraphInput::ForwardExtendPlannedPath(
-    const std::string lane_change_status,
-    const std::string lane_change_request,
+    const std::string lane_change_status, const std::string lane_change_request,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path,
     std::vector<planning_math::PathPoint>* const ptr_path_points) {
@@ -816,9 +814,7 @@ StGraphInput::GenerateMaxAccelerationCurve(
                                                             state_limit);
 }
 
-void StGraphInput::Reset() {
-  is_parallel_lane_map_.clear();
-}
+void StGraphInput::Reset() { is_parallel_lane_map_.clear(); }
 
 }  // namespace speed
 }  // namespace planning

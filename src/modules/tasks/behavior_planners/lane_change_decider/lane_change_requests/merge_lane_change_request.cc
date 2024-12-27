@@ -507,14 +507,12 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     merge_lane_change_direction_ = NO_CHANGE;
     both_lane_line_exist_virtual_or_not_ = true;
   } else if (left_boundary_exist_virtual_type &&
-             !target_right_boundary_exist_virtual_type && 
-             is_right_edge_side_lane &&
-             is_merge_region) {
+             !target_right_boundary_exist_virtual_type &&
+             is_right_edge_side_lane && is_merge_region) {
     merge_lane_change_direction_ = LEFT_CHANGE;
   } else if (right_boundary_exist_virtual_type &&
-             !target_left_boundary_exist_virtual_type && 
-             is_left_edge_side_lane &&
-             is_merge_region) {
+             !target_left_boundary_exist_virtual_type &&
+             is_left_edge_side_lane && is_merge_region) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
   } else if (!right_boundary_exist_virtual_type &&
              !left_boundary_exist_virtual_type) {

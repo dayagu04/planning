@@ -118,8 +118,9 @@ planning::SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0,
                                                       const SLPoint &p1,
                                                       const double w);
 
-PathPoint InterpolateUsingLinearApproximation(
-    const PathPoint &p0, const PathPoint &p1, const double s);
+PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
+                                              const PathPoint &p1,
+                                              const double s);
 
 planning::PncTrajectoryPoint InterpolateUsingLinearApproximation(
     const PncTrajectoryPoint &tp0, const PncTrajectoryPoint &tp1,

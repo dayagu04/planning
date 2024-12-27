@@ -1,10 +1,10 @@
 #pragma once
 
+#include "apa_obstacle_manager.h"
+#include "common/speed/apa_speed_decision.h"
 #include "parking_task.h"
 #include "point_cloud_obstacle.h"
 #include "speed_limit_profile.h"
-#include "common/speed/apa_speed_decision.h"
-#include "apa_obstacle_manager.h"
 
 namespace planning {
 
@@ -55,7 +55,7 @@ class ParkSpeedLimitDecider : public ParkingTask {
 
   // parameter: if gap is big, ego need speed down.
   double kappa_gap_in_path_point_ = 0.128;
-  double kappa_gap_in_path_with_wheel_= 0.045;
+  double kappa_gap_in_path_with_wheel_ = 0.045;
   double obs_dist_for_speed_limit_;
 
   // for keep a safe lon buffer with obstacles, stop decision need a lon buffer.

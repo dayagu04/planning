@@ -39,7 +39,8 @@ struct LaneChangeDeciderOutput {
   int lc_back_cnt;
   std::string lc_back_invalid_reason;
 
-  bool turn_signal = false;  // session_->mutable_planning_context()->mutable_planning_result().turn_signal
+  bool turn_signal =
+      false;  // session_->mutable_planning_context()->mutable_planning_result().turn_signal
 
   bool s_search_status = false;
   std::vector<double> st_search_vec;

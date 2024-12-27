@@ -146,7 +146,8 @@ class HybridAStarInterface {
   Pose2D ego_pose_;
   Pose2D initial_state_;
   // astar searching goal.
-  // 对于垂直车位，goal_state位于中心线上. 位姿调节器依赖这个pose重新计算搜索目标点.
+  // 对于垂直车位，goal_state位于中心线上.
+  // 位姿调节器依赖这个pose重新计算搜索目标点.
   // 对于平行车位，goal_state位于车辆起点
   Pose2D goal_state_;
 

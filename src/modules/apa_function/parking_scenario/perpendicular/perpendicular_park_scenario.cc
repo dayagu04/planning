@@ -2,7 +2,8 @@
 
 namespace planning {
 namespace apa_planner {
-void PerpendicularParkScenario::Reset() { frame_.Reset();
+void PerpendicularParkScenario::Reset() {
+  frame_.Reset();
   ParkingScenario::Reset();
 }
 
@@ -10,9 +11,9 @@ void PerpendicularParkScenario::ExcutePathPlanningTask() {}
 
 const bool PerpendicularParkScenario::UpdateEgoSlotInfo() { return false; }
 
-const bool PerpendicularParkScenario::GenTlane() {return true;}
+const bool PerpendicularParkScenario::GenTlane() { return true; }
 
-const bool PerpendicularParkScenario::GenObstacles() {return true;}
+const bool PerpendicularParkScenario::GenObstacles() { return true; }
 
 const uint8_t PerpendicularParkScenario::PathPlanOnce() {
   return PathPlannerResult::PLAN_FAILED;

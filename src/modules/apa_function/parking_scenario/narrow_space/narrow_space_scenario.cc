@@ -5,6 +5,7 @@
 #include <cstdio>
 
 #include "apa_slot.h"
+#include "collision_detection/path_safe_checker.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "geometry_math.h"
@@ -17,7 +18,6 @@
 #include "math_utils.h"
 #include "narrow_space_decider.h"
 #include "parking_scenario.h"
-#include "collision_detection/path_safe_checker.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
@@ -570,8 +570,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     virtual_wall_decider_.Init(start);
   }
   virtual_wall_decider_.Process(obs.virtual_obs, ego_slot_info.slot_width,
-                        ego_slot_info.slot_length, start, real_end, slot_type,
-                        slot_side_);
+                                ego_slot_info.slot_length, start, real_end,
+                                slot_type, slot_side_);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_slot_info.g2l_tf);

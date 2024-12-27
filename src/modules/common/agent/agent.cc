@@ -152,12 +152,9 @@ const AgentType Agent::type() const { return type_; }
 void Agent::set_type(const AgentType type) { type_ = type; }
 
 bool Agent::is_vehicle_type() const {
-  return type_ == AgentType::BUS ||
-         type_ == AgentType::COUPE ||
-         type_ == AgentType::MINIBUS ||
-         type_ == AgentType::VAN ||
-         type_ == AgentType::TRAILER ||
-         type_ == AgentType::TRUCK;
+  return type_ == AgentType::BUS || type_ == AgentType::COUPE ||
+         type_ == AgentType::MINIBUS || type_ == AgentType::VAN ||
+         type_ == AgentType::TRAILER || type_ == AgentType::TRUCK;
 }
 
 bool Agent::is_static() const { return is_static_; }
@@ -251,7 +248,7 @@ void Agent::set_is_vru(const bool is_vru) { is_vru_ = is_vru; }
 
 const bool Agent::is_sod() const { return is_sod_; }
 
-void Agent::set_is_sod(const bool is_sod) { is_sod_ = is_sod; } // cone
+void Agent::set_is_sod(const bool is_sod) { is_sod_ = is_sod; }  // cone
 
 const bool Agent::need_backward_extend() const { return need_backward_extend_; }
 

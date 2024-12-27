@@ -387,9 +387,9 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
 }
 
 void PathSafeChecker::GenerateMirrorPolygon(Polygon2D* box,
-                                           const double x_length,
-                                           const double y_length,
-                                           const Position2D& center) {
+                                            const double x_length,
+                                            const double y_length,
+                                            const Position2D& center) {
   box->vertexes[0].x = center.x + x_length / 2;
   box->vertexes[0].y = center.y - y_length / 2;
 

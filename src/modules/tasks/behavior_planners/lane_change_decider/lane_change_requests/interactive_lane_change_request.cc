@@ -28,8 +28,7 @@ void IntRequest::Update(int lc_status) {
                                   .lane_change_decider_output()
                                   .lc_request_source;
   //其他变道进行到execution状态中，则抑制拨杆变道
-  if (lc_status != kLaneKeeping && 
-      lc_status != kLaneChangePropose &&
+  if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
       lc_req_source != INT_REQUEST) {
     LOG_DEBUG("IntRequest::Update: ego not in lane keeping!");
     return;

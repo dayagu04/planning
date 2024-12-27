@@ -1500,8 +1500,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop &&
-        lead_one != nullptr && lead_one->type == 20001))) {
+      ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
     lateral_output.borrow_bicycle_lane = false;

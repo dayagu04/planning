@@ -6,7 +6,8 @@
 #include "func_state_machine_c.h"
 
 #ifndef GENERAL_PLANNING_CONTEXT
-#define GENERAL_PLANNING_CONTEXT planning::context::GeneralPlanningContext::GetInstance()
+#define GENERAL_PLANNING_CONTEXT \
+  planning::context::GeneralPlanningContext::GetInstance()
 #endif
 
 namespace planning {

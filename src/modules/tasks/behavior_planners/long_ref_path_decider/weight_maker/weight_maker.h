@@ -14,7 +14,7 @@ class WeightMaker {
               framework::Session* session);
   ~WeightMaker() = default;
 
-  common::Status Run(const TargetMaker &target_maker);
+  common::Status Run(const TargetMaker& target_maker);
 
   void Reset();
 

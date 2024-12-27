@@ -1,13 +1,13 @@
 #pragma once
 
 #include <cstddef>
-#include "src/modules/apa_function/apa_param_config.h"
-#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "apa_obstacle_manager.h"
 #include "geometry_math.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
-#include "apa_obstacle_manager.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 
@@ -69,7 +69,7 @@ class PathSafeChecker {
       const Pose2D& pose);
 
   void GenerateMirrorPolygon(Polygon2D* box, const double x_length,
-                            const double y_length, const Position2D& center);
+                             const double y_length, const Position2D& center);
 
   const bool IsVehicleCollision(const Transform2d& tf,
                                 PolygonFootPrint* foot_print,

@@ -3,13 +3,13 @@
 #include <unordered_map>
 
 #include "ego_state_manager.h"
-#include "session.h"
-#include "utils/kd_path.h"
-#include "obstacle.h"
 #include "frenet_obstacle.h"
+#include "obstacle.h"
+#include "session.h"
 #include "tasks/task.h"
+#include "utils/kd_path.h"
 
-namespace planning{
+namespace planning {
 
 struct LateralObstacleHistoryInfo {
   bool lane_borrow = false;
@@ -25,24 +25,26 @@ struct LateralObstacleHistoryInfo {
 };
 
 class LateralObstacleDecider : public Task {
-  public:
+ public:
   LateralObstacleDecider(const EgoPlanningConfigBuilder *config_builder,
-                                            framework::Session *session);
+                         framework::Session *session);
   virtual ~LateralObstacleDecider() = default;
 
   bool Execute() override;
 
-  private:
-  bool IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle, double lane_width,
-                              bool rightest_lane, double farthest_distance);
-  void LateralObstacleDecision(FrenetObstacle &frenet_obstacle, double lane_width,
-                              double expand_length);
+ private:
+  bool IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle,
+                              double lane_width, bool rightest_lane,
+                              double farthest_distance);
+  void LateralObstacleDecision(FrenetObstacle &frenet_obstacle,
+                               double lane_width, double expand_length);
 
   planning::framework::Session *session_;
   PotentialAvoidDeciderConfig config_;
 
-  std::unordered_map<int, LateralObstacleHistoryInfo> lateral_obstacle_history_info_;
-  std::unordered_map<uint16_t, LatObstacleDecisionType>& output_;
+  std::unordered_map<int, LateralObstacleHistoryInfo>
+      lateral_obstacle_history_info_;
+  std::unordered_map<uint16_t, LatObstacleDecisionType> &output_;
 
   // ego info
   double ego_rear_axis_to_front_edge_;

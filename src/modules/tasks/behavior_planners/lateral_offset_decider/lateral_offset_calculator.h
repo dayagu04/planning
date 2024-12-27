@@ -55,8 +55,7 @@ class LateralOffsetCalculator {
       const std::array<std::vector<double>, 2> &avd_car_past);
 
   bool update_avoidance_path(
-      int status, bool flag_avd, bool should_premove,
-      double dist_rblane,
+      int status, bool flag_avd, bool should_premove, double dist_rblane,
       const std::array<std::vector<double>, 2> &avd_car_past,
       const std::array<std::vector<double>, 2> &avd_sp_car_past);
 
@@ -69,8 +68,8 @@ class LateralOffsetCalculator {
                                  const std::vector<double> &right_poly,
                                  const double &dist_x);
 
-  bool update(int lane_status, bool flag_avoid,
-              bool execute_premove, double dist_rblane,
+  bool update(int lane_status, bool flag_avoid, bool execute_premove,
+              double dist_rblane,
               const std::array<std::vector<double>, 2> &avoid_car_info,
               const std::array<std::vector<double>, 2> &avoid_sp_car_info);
 

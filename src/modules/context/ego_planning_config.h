@@ -746,11 +746,10 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "extra_buffer_for_lane_width_bp"},
         extra_buffer_for_lane_width_bp);
-    read_json_vec<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "extra_lane_width_buffer"},
-        extra_lane_width_buffer);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "extra_lane_width_buffer"},
+                          extra_lane_width_buffer);
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
                                                    "lateral_road_boader_v_bp"},

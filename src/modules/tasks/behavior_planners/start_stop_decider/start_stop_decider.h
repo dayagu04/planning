@@ -9,7 +9,6 @@ namespace planning {
 
 class StartStopDecider : public Task {
  public:
-  
   StartStopDecider(const EgoPlanningConfigBuilder* config_builder,
                    framework::Session* session);
   ~StartStopDecider() = default;

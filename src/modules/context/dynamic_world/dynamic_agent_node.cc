@@ -359,9 +359,7 @@ const std::vector<trajectory::Trajectory>& DynamicAgentNode::node_trajectories()
   return agent_->trajectories();
 }
 
-const agent::AgentType DynamicAgentNode::type() const {
-  return agent_->type();
-}
+const agent::AgentType DynamicAgentNode::type() const { return agent_->type(); }
 
 bool DynamicAgentNode::is_agent_within_lane() const {
   return is_agent_within_lane_;

@@ -13,13 +13,13 @@
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "log_glog.h"
-#include "src/modules/apa_function/apa_param_config.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
+#include "src/modules/apa_function/apa_param_config.h"
+#include "target_pose_regulator.h"
 #include "transform2d.h"
 #include "utils_math.h"
-#include "target_pose_regulator.h"
 
 namespace planning {
 #define DEBUG_HYBRID_ASTAR_INTERFACE (0)

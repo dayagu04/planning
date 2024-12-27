@@ -59,14 +59,16 @@ double DiscretizedPath::QueryMatchedS(const PathPoint& path_point) const {
         std::hypot((matched_iter + 1)->x() - path_point.x(),
                    (matched_iter + 1)->y() - path_point.y())) {
       matched_seg = planning_math::LineSegment2d(
-          planning_math::Vec2d((matched_iter - 1)->x(), (matched_iter - 1)->y()),
+          planning_math::Vec2d((matched_iter - 1)->x(),
+                               (matched_iter - 1)->y()),
           planning_math::Vec2d(matched_iter->x(), matched_iter->y()));
       begin_s = (matched_iter - 1)->s();
       end_s = matched_iter->s();
     } else {
       matched_seg = planning_math::LineSegment2d(
           planning_math::Vec2d(matched_iter->x(), matched_iter->y()),
-          planning_math::Vec2d((matched_iter + 1)->x(), (matched_iter + 1)->y()));
+          planning_math::Vec2d((matched_iter + 1)->x(),
+                               (matched_iter + 1)->y()));
       begin_s = matched_iter->s();
       end_s = (matched_iter + 1)->s();
     }

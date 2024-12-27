@@ -16,9 +16,9 @@
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
-#include "parking_task/parking_task.h"
-#include "parking_stop_decider.h"
 #include "park_speed_limit_decider.h"
+#include "parking_stop_decider.h"
+#include "parking_task/parking_task.h"
 #include "pose2d.h"
 
 namespace planning {

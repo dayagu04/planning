@@ -39,7 +39,7 @@ bool Session::Init() {
   environmental_model_ = alloc<EnvironmentalModel>();
   (void)environmental_model_->Init(scene_type_);
   planning_context_ = alloc<PlanningContext>();
-  
+
   environmental_model_->set_module_config_file_dir(module_config_file_dir);
   simulation_context_ = SimulationContext::Instance();
   return true;

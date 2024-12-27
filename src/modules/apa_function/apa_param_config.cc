@@ -878,8 +878,8 @@ void SyncParkingParameters(const bool is_simulation) {
   ILOG_INFO << "vertical_slot_end_straight_dist "
             << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
 
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan,
-                  bool, "enable_apa_speed_plan");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
+                  "enable_apa_speed_plan");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.default_cruise_speed, double,
                   "default_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.min_cruise_speed, double,

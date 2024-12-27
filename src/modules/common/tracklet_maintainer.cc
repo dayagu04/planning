@@ -151,8 +151,8 @@ void TrackletMaintainer::apply_update(
        lateral_output.lat_offset, lateral_output.borrow_bicycle_lane,
        lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
        lateral_output.tleft_lane, lateral_output.rightest_lane,
-       lateral_output.dist_intersect, lateral_output.intersect_length,
-       leadcars, isRedLightStop, lateral_output.isOnHighway, lateral_output.d_poly,
+       lateral_output.dist_intersect, lateral_output.intersect_length, leadcars,
+       isRedLightStop, lateral_output.isOnHighway, lateral_output.d_poly,
        lateral_output.c_poly);
 
   set_default_value(objects);
@@ -1453,10 +1453,11 @@ double TrackletMaintainer::calc_ignorance_threshold(
   return sgn * ignorance_threshold;
 }
 
-void TrackletMaintainer::check_accident_car(
-    TrackedObject &item, double v_ego, int scenario, double dist_intersect,
-    double intersect_length,
-    bool isRedLightStop, bool isOnHighway) {
+void TrackletMaintainer::check_accident_car(TrackedObject &item, double v_ego,
+                                            int scenario, double dist_intersect,
+                                            double intersect_length,
+                                            bool isRedLightStop,
+                                            bool isOnHighway) {
   LOG_DEBUG("----check_accident_car-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp{0, 10, 15, 20, 30};

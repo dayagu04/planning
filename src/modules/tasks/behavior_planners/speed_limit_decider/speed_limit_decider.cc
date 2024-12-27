@@ -1,7 +1,7 @@
 #include "speed_limit_decider.h"
 #include "ego_state_manager.h"
-#include "planning_context.h"
 #include "environmental_model.h"
+#include "planning_context.h"
 namespace {
 constexpr double kHighVel = 100 / 3.6;
 }
@@ -32,7 +32,8 @@ bool SpeedLimitDecider::Execute() {
   // 6. speed limit from POI
   CalculatePOISpeedLimit();
 
-  auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
   return true;
 }
@@ -66,7 +67,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
-  double preview_x = speed_limit_config_.dis_curv + speed_limit_config_.t_curv * v_ego;
+  double preview_x =
+      speed_limit_config_.dis_curv + speed_limit_config_.t_curv * v_ego;
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
@@ -76,7 +78,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     double curv;
     ReferencePathPoint refpath_pt;
     if (reference_path_ptr->get_reference_point_by_lon(
-          frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
+            frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
       curv = std::fabs(refpath_pt.path_point.kappa);
     } else {
       curv = 0.0001;
@@ -96,9 +98,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
   LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
             acc_lat_max);
-  LOG_DEBUG(
-      "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
-      angle_steers, angle_steers_deg, v_limit_road);
+  LOG_DEBUG("angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
+            angle_steers, angle_steers_deg, v_limit_road);
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
   if (v_limit_in_turns < v_target_) {
@@ -107,25 +108,28 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
-  auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns, SpeedLimitType::CURVATURE);
-
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns,
+                                           SpeedLimitType::CURVATURE);
 }
 
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
   LOG_DEBUG("----CalculateMapSpeedLimit for ramp--- \n");
   const auto &environmental_model = session_->environmental_model();
-  const auto& route_info_output = environmental_model.get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      environmental_model.get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
-  const auto virtual_lane_manager = environmental_model.get_virtual_lane_manager();
+  const auto virtual_lane_manager =
+      environmental_model.get_virtual_lane_manager();
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
 
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
   double pre_acc_dis = speed_limit_config_.pre_accelerate_distance_for_merge;
-  bool sdmap_has_curv = true; //先不考虑匝道内小曲率的情况，后面补充
+  bool sdmap_has_curv = true;  //先不考虑匝道内小曲率的情况，后面补充
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
@@ -143,22 +147,25 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
     JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
-    auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-    speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp, SpeedLimitType::MAP_ON_RAMP);
+    auto speed_limit_output = session_->mutable_planning_context()
+                                  ->mutable_speed_limit_decider_output();
+    speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
+                                             SpeedLimitType::MAP_ON_RAMP);
     return;
   }
   if (dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) {
-    double pre_brake_dis_near_ramp_zone =
-        std::max(dis_to_ramp - speed_limit_config_.brake_dis_near_ramp_zone, 0.0);
-    v_target_near_ramp_zone =
-        std::pow(std::pow(speed_limit_config_.v_limit_near_ramp_zone, 2.0) -
-                     2 * pre_brake_dis_near_ramp_zone * speed_limit_config_.acc_to_ramp,
-                 0.5);
+    double pre_brake_dis_near_ramp_zone = std::max(
+        dis_to_ramp - speed_limit_config_.brake_dis_near_ramp_zone, 0.0);
+    v_target_near_ramp_zone = std::pow(
+        std::pow(speed_limit_config_.v_limit_near_ramp_zone, 2.0) -
+            2 * pre_brake_dis_near_ramp_zone * speed_limit_config_.acc_to_ramp,
+        0.5);
   }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
-  v_target_ramp = std::pow(
-      std::pow(speed_limit_config_.v_limit_ramp, 2.0) - 2 * pre_brake_dis_to_ramp * speed_limit_config_.acc_to_ramp,
-      0.5);
+  v_target_ramp =
+      std::pow(std::pow(speed_limit_config_.v_limit_ramp, 2.0) -
+                   2 * pre_brake_dis_to_ramp * speed_limit_config_.acc_to_ramp,
+               0.5);
   v_target_ramp = std::min(v_target_near_ramp_zone, v_target_ramp);
   if (v_target_ramp < v_target_) {
     v_target_ = v_target_ramp;
@@ -169,8 +176,10 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
-  auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp, SpeedLimitType::MAP_NEAR_RAMP);
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
+                                           SpeedLimitType::MAP_NEAR_RAMP);
 }
 
 void SpeedLimitDecider::CalculateStaticAgentLimit() {}
@@ -181,11 +190,13 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
   double v_target_intersection = 40.0;
-  const auto virtual_lane_manager = environmental_model.get_virtual_lane_manager();
+  const auto virtual_lane_manager =
+      environmental_model.get_virtual_lane_manager();
   current_intersection_state_ = virtual_lane_manager->GetIntersectionState();
   if (current_intersection_state_ == planning::common::APPROACH_INTERSECTION ||
       current_intersection_state_ == planning::common::IN_INTERSECTION) {
-    if (v_limit_with_intersection_ < speed_limit_config_.v_intersection_min_limit) {
+    if (v_limit_with_intersection_ <
+        speed_limit_config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
       v_limit_with_intersection_ =
           std::max(v_ego - 3.0, speed_limit_config_.v_intersection_min_limit);
@@ -203,8 +214,10 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
                    int(current_intersection_state_));
   JSON_DEBUG_VALUE("last_intersection_state", int(last_intersection_state_));
   last_intersection_state_ = current_intersection_state_;
-  auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output->SetSpeedLimitIntoMap(v_target_intersection, SpeedLimitType::INTERSECTION);
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_intersection,
+                                           SpeedLimitType::INTERSECTION);
 }
 
 void SpeedLimitDecider::CalculatePerceptVisibSpeedLimit() {}

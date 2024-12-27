@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"

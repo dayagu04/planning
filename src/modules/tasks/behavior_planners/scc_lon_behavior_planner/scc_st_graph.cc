@@ -610,8 +610,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
 
   // temp leadone
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
-      is_tlead_too_close &&
-      !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+      is_tlead_too_close && !is_reverse_obs_in_large_curv &&
+      !is_far_obs_in_large_curv &&
       (is_left_right_front_agent || is_in_cone_emergency_lc) &&
       temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
@@ -2966,9 +2966,9 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
   if (agent_manager == nullptr) {
     return;
   }
-  const auto* lead_one_agent = agent_manager->GetAgent(lead_one_id);
-  const auto* lead_two_agent = agent_manager->GetAgent(lead_two_id);
-  std::vector<const agent::Agent*> lead_agent;
+  const auto *lead_one_agent = agent_manager->GetAgent(lead_one_id);
+  const auto *lead_two_agent = agent_manager->GetAgent(lead_two_id);
+  std::vector<const agent::Agent *> lead_agent;
   if (lead_one_agent != nullptr) {
     lead_agent.emplace_back(lead_one_agent);
   }
@@ -2996,7 +2996,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
     if (borrow_direction == LEFT_BORROW) {
       min_lat_l_by_lat_path = max_l_by_lat_path;
       // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
-    } else if(borrow_direction == RIGHT_BORROW) {
+    } else if (borrow_direction == RIGHT_BORROW) {
       min_lat_l_by_lat_path = min_l_by_lat_path;
       // (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
     } else {

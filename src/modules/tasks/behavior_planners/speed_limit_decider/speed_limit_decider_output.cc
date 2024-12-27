@@ -14,14 +14,14 @@ bool SpeedLimitDeciderOutput::GetSpeedLimit(
   return true;
 }
 
-void SpeedLimitDeciderOutput::SetSpeedLimit(const double limited_speed,
-                     const SpeedLimitType& speed_limit_type) {
+void SpeedLimitDeciderOutput::SetSpeedLimit(
+    const double limited_speed, const SpeedLimitType& speed_limit_type) {
   speed_limit_type_final_.first = speed_limit_type;
   speed_limit_type_final_.second = limited_speed;
 }
 
-void SpeedLimitDeciderOutput::SetSpeedLimitIntoMap(const double limited_speed,
-                     const SpeedLimitType& speed_limit_type) {
+void SpeedLimitDeciderOutput::SetSpeedLimitIntoMap(
+    const double limited_speed, const SpeedLimitType& speed_limit_type) {
   if (speed_limit_map_.find(speed_limit_type) == speed_limit_map_.end()) {
     speed_limit_map_.insert(std::make_pair(speed_limit_type, limited_speed));
   } else {

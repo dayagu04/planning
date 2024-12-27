@@ -5,7 +5,6 @@
 #include "lon_target_maker.pb.h"
 #include "session.h"
 #include "target.h"
-#include "lon_target_maker.pb.h"
 
 namespace planning {
 
@@ -70,7 +69,7 @@ class CruiseTarget : public Target {
   bool MakeSpeedLimitKinematicTable(
       const double ego_speed,
       const SpeedLimitDeciderOutput& speed_limit_decider_output);
-  
+
   void AddCruiseTargetDataToProto();
 
  private:

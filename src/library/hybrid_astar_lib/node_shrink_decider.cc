@@ -105,8 +105,7 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
 const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
                                              const Node3d *old_node) const {
-
-   if (new_node == nullptr || old_node == nullptr) {
+  if (new_node == nullptr || old_node == nullptr) {
     return false;
   }
 

@@ -583,7 +583,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     }
   }
 
-  // interpolation
+    // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -890,7 +890,7 @@ bool HybridAStar::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
     return false;
   }
 
-  // collision check
+    // collision check
 #if LOG_TIME_PROFILE
   double check_start_time = IflyTime::Now_ms();
 #endif
@@ -1962,7 +1962,7 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     }
   }
 
-  // safe dist cost
+    // safe dist cost
 #if ENABLE_OBS_DIST_G_COST
   double safe_punish = 0.0;
   safe_punish = CalcSafeDistCost(next_node);
@@ -2761,7 +2761,7 @@ void HybridAStar::GearRerversePathAttempt(
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3230,7 +3230,7 @@ bool HybridAStar::AstarSearch(
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif

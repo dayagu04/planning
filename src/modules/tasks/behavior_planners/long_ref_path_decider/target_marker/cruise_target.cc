@@ -72,7 +72,8 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
       is_in_lane_change_execution
           ? config_.lane_change_upper_speed_limit_kph / 3.6
           : std::numeric_limits<double>::max();
-  speed_limit_normal = std::fmin(speed_limit_normal, speed_limit_from_lane_change);
+  speed_limit_normal =
+      std::fmin(speed_limit_normal, speed_limit_from_lane_change);
   double speed_limit_ref = kNoSpeedLimit;
   auto speed_limit_type_ref = SpeedLimitType::NONE;
   speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
