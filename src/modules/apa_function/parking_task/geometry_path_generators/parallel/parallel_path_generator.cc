@@ -995,9 +995,9 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   ego_to_prepare_seg_vec.clear();
   ego_to_prepare_seg_vec.reserve(6);
 
-  // ILOG_INFO << "---------------------------------PlanToPreparingLine "
-  //              "---------------------------------";
-  // pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
+  ILOG_INFO << "---------------------------------PlanToPreparingLine "
+               "---------------------------------";
+  pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
 
   pnc::geometry_lib::PathSegment line_seg;
   if (OneLinePlan(line_seg, ego_pose, prepare_line)) {
@@ -1044,7 +1044,7 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
       path_vec.emplace_back(path);
     }
   }
-  // ILOG_INFO <<"path_vec size = " << path_vec.size());
+  ILOG_INFO << "path_vec size = " << path_vec.size();
   if (path_vec.size() == 0) {
     return false;
   }
@@ -3710,8 +3710,8 @@ const bool ParallelPathGenerator::LineArcPlan(
 
     if (tmp_arc.pA.x() < kMinXInTBoundary ||
         tmp_arc.pB.x() < kMinXInTBoundary ||
-        tmp_arc.pA.x() < ego_pose.pos.x() - 1.5 ||
-        tmp_arc.pB.x() < ego_pose.pos.x() - 1.5) {
+        tmp_arc.pA.x() < ego_pose.pos.x() - 2.5 ||
+        tmp_arc.pB.x() < ego_pose.pos.x() - 2.5) {
       continue;
     }
 

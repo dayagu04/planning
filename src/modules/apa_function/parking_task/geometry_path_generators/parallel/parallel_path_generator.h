@@ -170,6 +170,11 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     return obs_vec;
   }
 
+  const bool PlanToPreparingLine(
+      std::vector<pnc::geometry_lib::PathSegment> &ego_to_prepare_seg_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &prepare_line);
+
  protected:
   virtual void Preprocess() override;
 
@@ -249,10 +254,6 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool SelectBestPathOutsideSlot(
       const std::vector<GeometryPath> &path_vec, size_t &best_path_idx);
 
-  const bool PlanToPreparingLine(
-      std::vector<pnc::geometry_lib::PathSegment> &ego_to_prepare_seg_vec,
-      const pnc::geometry_lib::PathPoint &ego_pose,
-      const pnc::geometry_lib::LineSegment &prepare_line);
   const std::vector<double> GetMinDistOfEgoToObs();
 
   const bool GenAlignedPreparingLine(

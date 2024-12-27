@@ -106,14 +106,14 @@ target_link_libraries(parallel_planning_out_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
-pybind11_add_module(prepareplan_py MODULE src/parallel_planning_pybind.cc)
-  target_link_libraries(prepareplan_py PRIVATE
-    autoplt
-    modules
-    modules_common
-    modules_context
-    modules_tasks
-    legacy_c_interface)
+pybind11_add_module(parallel_preparing_planning_py MODULE src/parallel_preparing_plan_pybind.cc)
+target_link_libraries(parallel_preparing_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(uss_obstacle_avoidance_py MODULE src/uss_obstacle_avoidance_pybind.cc)
 target_link_libraries(uss_obstacle_avoidance_py PRIVATE
@@ -149,7 +149,7 @@ target_link_libraries(replay_simulation_hybrid_astar PRIVATE
   reeds_shepp
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
-  )
+)
 
 pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
 target_link_libraries(geometry_math_validation_py PRIVATE
