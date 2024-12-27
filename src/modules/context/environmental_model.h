@@ -221,12 +221,13 @@ class EnvironmentalModel {
     dynamic_world_ = dynamic_world;
   }
 
-  void set_route_info (const std::shared_ptr<RouteInfo> route_info) {
+  void set_route_info(const std::shared_ptr<RouteInfo> route_info) {
     route_info_ = route_info;
   }
 
-  const std::shared_ptr<RouteInfo> &get_route_info() const { 
-      return route_info_; }
+  const std::shared_ptr<RouteInfo> &get_route_info() const {
+    return route_info_;
+  }
 
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;

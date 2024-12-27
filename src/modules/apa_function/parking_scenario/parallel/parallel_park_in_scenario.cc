@@ -10,7 +10,6 @@
 #include <utility>
 #include <vector>
 
-
 #include "apa_param_config.h"
 #include "apa_utils.h"
 #include "apa_world.h"

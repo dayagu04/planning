@@ -39,7 +39,7 @@ enum SplitRelativeDirection {
 };
 
 struct RouteInfoOutput {
-  //for NOA output 
+  // for NOA output
   int split_seg_forward_lane_nums = 0;
   int split_next_seg_forward_lane_nums = 0;
   int lc_nums_for_split = 0;
@@ -59,7 +59,7 @@ struct RouteInfoOutput {
   bool is_ramp_merge_to_ramp_on_expressway = false;
   bool is_nearing_other_lane_merge_to_road_point = false;
   bool is_on_highway = false;
-  bool is_continuous_ramp = false;//for jwliu23
+  bool is_continuous_ramp = false;  // for jwliu23
   bool is_nearing_ramp = false;
   bool is_ego_on_split_region = false;
   double dis_to_ramp = NL_NMAX;
@@ -73,10 +73,11 @@ struct RouteInfoOutput {
   double accumulate_dis_ego_to_last_split_point = NL_NMAX;
   double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
   double distance_to_toll_station = NL_NMAX;
-  double current_segment_passed_distance = 0.0;//for xykuai
-  std::pair<SplitRelativeDirection, double> first_split_dir_dis_info;//for xykuai
+  double current_segment_passed_distance = 0.0;  // for xykuai
+  std::pair<SplitRelativeDirection, double>
+      first_split_dir_dis_info;  // for xykuai
   std::vector<std::pair<SplitRelativeDirection, double>>
-      split_dir_dis_info_list;//for xykuai
+      split_dir_dis_info_list;  // for xykuai
   RampDirection ramp_direction = RampDirection::RAMP_NONE;
   RampDirection first_split_direction = RampDirection::RAMP_NONE;
   RampDirection first_merge_direction = RampDirection::RAMP_NONE;
@@ -85,7 +86,7 @@ struct RouteInfoOutput {
   RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
   RampDirection last_split_seg_dir = RAMP_NONE;
 
-  //for hpp output
+  // for hpp output
   bool is_on_hpp_lane = false;
   bool is_reached_hpp_start_point = false;
   double sum_distance_driving = -1;
@@ -134,7 +135,7 @@ struct RouteInfoOutput {
     is_ego_on_split_region = false;
     need_continue_lc_num_on_off_ramp_region = 0;
     lane_num_except_emergency = 0;
-    //for hpp
+    // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;
     sum_distance_driving = -1;

@@ -18,10 +18,10 @@
 #include "general_lateral_decider_utils.h"
 #include "log.h"
 #include "task_basic_types.h"
+#include "utils/hysteresis_decision.h"
 #include "utils/kd_path.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
-#include "utils/hysteresis_decision.h"
 
 namespace planning {
 
@@ -974,9 +974,9 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
     for (size_t i = 1; i < ref_path_points_.size(); i++) {
       if (!is_left_overlap) {
         const auto left_road_line_segment = LineSegment2d(
-            Vec2d(ref_path_points_.at(i - 1).path_point.s,
+            Vec2d(ref_path_points_.at(i - 1).path_point.s(),
                   ref_path_points_.at(i - 1).distance_to_left_road_border),
-            Vec2d(ref_path_points_.at(i).path_point.s,
+            Vec2d(ref_path_points_.at(i).path_point.s(),
                   ref_path_points_.at(i).distance_to_left_road_border));
         if (ego_box.HasOverlap(left_road_line_segment)) {
           is_left_overlap = true;
@@ -986,9 +986,9 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
 
       if (!is_right_overlap) {
         const auto right_road_line_segment = LineSegment2d(
-            Vec2d(ref_path_points_.at(i - 1).path_point.s,
+            Vec2d(ref_path_points_.at(i - 1).path_point.s(),
                   -ref_path_points_.at(i - 1).distance_to_right_road_border),
-            Vec2d(ref_path_points_.at(i).path_point.s,
+            Vec2d(ref_path_points_.at(i).path_point.s(),
                   -ref_path_points_.at(i).distance_to_right_road_border));
         if (ego_box.HasOverlap(right_road_line_segment)) {
           is_right_overlap = true;
@@ -1084,8 +1084,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lat_obstacle_decision = session_->planning_context()
-                                              .lateral_obstacle_decider_output()
-                                              .lat_obstacle_decision;
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow_status =
@@ -1199,7 +1199,9 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     }
 
     if (!is_in_lane_borrow_status) {
-      lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ - extra_lane_type_decrease_buffer, 0.);
+      lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
+                                  extra_lane_type_decrease_buffer,
+                              0.);
     }
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1338,17 +1340,20 @@ double GeneralLateralDecider::CalculateExtraLaneTypeDecreaseBuffer(
   const auto current_right_boundary_type =
       CalLaneBoundaryType(RIGHT, ego_frenet_state_.s());
 
-  if ((is_nudge_left) && (current_right_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
+  if ((is_nudge_left) &&
+      (current_right_boundary_type ==
+       iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
     lane_type_decrease_buffer = config_.extra_lane_type_decrease_buffer;
   }
 
-  if ((!is_nudge_left) && (current_left_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
+  if ((!is_nudge_left) &&
+      (current_left_boundary_type ==
+       iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
     lane_type_decrease_buffer = config_.extra_lane_type_decrease_buffer;
   }
 
   if (lane_type_decrease_buffer > 0.0) {
-    JSON_DEBUG_VALUE("lane_type_decrease_buffer",
-                     lane_type_decrease_buffer);
+    JSON_DEBUG_VALUE("lane_type_decrease_buffer", lane_type_decrease_buffer);
   }
 
   return lane_type_decrease_buffer;
@@ -1363,14 +1368,18 @@ void GeneralLateralDecider::CalculateExtraLaneWidthDecreaseBuffer() {
 
   double extra_lane_width_decrease_buffer = 0.0;
 
-  if (current_left_boundary_type != iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL &&
-      current_right_boundary_type != iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
+  if (current_left_boundary_type !=
+          iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL &&
+      current_right_boundary_type !=
+          iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
     double lane_mean_width = CalLaneWidth();
     extra_lane_width_decrease_buffer =
         interp(lane_mean_width, config_.extra_buffer_for_lane_width_bp,
-             config_.extra_lane_width_buffer);
-  } else if (current_left_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL &&
-      current_right_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
+               config_.extra_lane_width_buffer);
+  } else if (current_left_boundary_type ==
+                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL &&
+             current_right_boundary_type ==
+                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
     extra_lane_width_decrease_buffer = 0.0;
   } else {
     extra_lane_width_decrease_buffer = extra_lane_width_decrease_buffer_;
@@ -1394,14 +1403,14 @@ double GeneralLateralDecider::CalLaneWidth() {
   int point_num = 1;
 
   for (double s = start_s + interval_s; s <= preview_s; s += interval_s) {
-    auto left_boundary_type =
-        CalLaneBoundaryType(LEFT, s);
+    auto left_boundary_type = CalLaneBoundaryType(LEFT, s);
 
-    auto right_boundary_type =
-        CalLaneBoundaryType(RIGHT, s);
+    auto right_boundary_type = CalLaneBoundaryType(RIGHT, s);
 
-    if (left_boundary_type != iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL &&
-        right_boundary_type != iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
+    if (left_boundary_type !=
+            iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL &&
+        right_boundary_type !=
+            iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
       width += flane->width_by_s(s);
       point_num += 1;
     } else {
@@ -1457,8 +1466,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lat_obstacle_decision = session_->planning_context()
-                                              .lateral_obstacle_decider_output()
-                                              .lat_obstacle_decision;
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
   bool in_intersection = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->GetIntersectionState() ==
@@ -1604,7 +1613,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     }
 
     if (!is_in_lane_borrow_status) {
-      lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ - extra_lane_type_decrease_buffer, 0.);
+      lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
+                                  extra_lane_type_decrease_buffer,
+                              0.);
     }
 
     // todo: high speed vehicle
@@ -1832,8 +1843,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
 bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     const std::shared_ptr<FrenetObstacle> &obstacle) {
   const auto &lat_obstacle_decision = session_->planning_context()
-                                              .lateral_obstacle_decider_output()
-                                              .lat_obstacle_decision;
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
   if (lat_obstacle_decision.find(obstacle->id()) !=
       lat_obstacle_decision.end()) {
     if (lat_obstacle_decision.at(obstacle->id()) ==
@@ -2419,7 +2430,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
       session_->environmental_model().get_virtual_lane_manager();
 
   // path points
-  std::vector<planning::PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
   if (flane != nullptr && flane->get_reference_path() != nullptr) {
     auto &ref_path = flane->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
@@ -2489,8 +2500,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop &&
-        lead_one != nullptr && lead_one->type == 20001))) {
+      ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
     lateral_output.borrow_bicycle_lane = false;
@@ -2663,7 +2673,7 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
   }
 
   if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
+                                                                // obstacle type
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
@@ -2699,7 +2709,7 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   }
 
   if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
+                                                                // obstacle type
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or

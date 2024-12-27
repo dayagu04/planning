@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-
 #include "apa_param_config.h"
 #include "apa_world.h"
 #include "common/config_context.h"

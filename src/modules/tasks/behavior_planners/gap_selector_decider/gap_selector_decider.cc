@@ -204,7 +204,7 @@ void GapSelectorDecider::Preprocessor() {
       const ReferencePathPoint &ref_path_point =
           target_refline->get_points()[i];
       target_lane_s_width_.emplace_back(std::make_pair(
-          ref_path_point.path_point.s, ref_path_point.lane_width));
+          ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
   } else {
     ids_obstacle_in_target_lane_.emplace_back(-1);  // no obstacle in targe lane
@@ -236,7 +236,7 @@ void GapSelectorDecider::Preprocessor() {
       const ReferencePathPoint &ref_path_point =
           origin_refline->get_points()[i];
       origin_lane_s_width_.emplace_back(std::make_pair(
-          ref_path_point.path_point.s, ref_path_point.lane_width));
+          ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
   } else {
     ids_obstacle_in_origin_lane_.emplace_back(-1);  // no obstacle in targe lane

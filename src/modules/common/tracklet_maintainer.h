@@ -69,8 +69,7 @@ class TrackletMaintainer {
             double lane_width, double lat_offset, bool borrow_bicycle_lane,
             bool enable_intersection_planner, double dist_rblane,
             bool tleft_lane, bool rightest_lane, double dist_intersect,
-            double intersect_length,
-            LeadCars &lead_cars, bool isRedLightStop,
+            double intersect_length, LeadCars &lead_cars, bool isRedLightStop,
             bool isOnHighway, const std::vector<double> &d_poly,
             const std::vector<double> &c_poly);
 

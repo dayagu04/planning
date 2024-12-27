@@ -31,7 +31,7 @@ class SpeedLimitDeciderOutput {
   void SetSpeedLimit(const double limited_speed,
                      const SpeedLimitType& speed_limit_type);
   void SetSpeedLimitIntoMap(const double limited_speed,
-                     const SpeedLimitType& speed_limit_type);
+                            const SpeedLimitType& speed_limit_type);
 
   bool GetSpeedLimit(double* const limited_speed,
                      SpeedLimitType* const speed_limit_type) const;
@@ -71,8 +71,10 @@ class SpeedLimitDeciderOutput {
       const std::string& cipv_lost_speed_limit_debug_string_);
 
  private:
-  std::map<SpeedLimitType, double> speed_limit_map_; //(type, speedlimit) for all scenes one by one
-  std::pair<SpeedLimitType, double> speed_limit_type_final_; //final speed limit and type
+  std::map<SpeedLimitType, double>
+      speed_limit_map_;  //(type, speedlimit) for all scenes one by one
+  std::pair<SpeedLimitType, double>
+      speed_limit_type_final_;  // final speed limit and type
   int32_t roundabout_speed_limit_type_ = 0;
   int32_t not_overtake_from_right_speed_limit_type_ = 0;
   int32_t merge_alc_speed_limit_type_ = 0;

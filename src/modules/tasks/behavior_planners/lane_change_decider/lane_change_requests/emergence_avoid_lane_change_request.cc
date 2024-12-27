@@ -87,8 +87,8 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
 
   UpdateEmergencyAvoidanceSituation(lc_status);
   LOG_DEBUG(

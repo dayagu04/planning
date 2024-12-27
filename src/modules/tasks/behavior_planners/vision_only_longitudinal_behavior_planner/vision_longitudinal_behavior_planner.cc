@@ -948,8 +948,8 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   // config
   double dece_to_ramp = config_.dece_to_ramp;  // -1.0
   v_limit_ramp_ = config_.v_limit_ramp;        // 60km/h
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   is_on_ramp_ = route_info_output.is_on_ramp;
 

@@ -527,10 +527,11 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
     if (reference_path_ptr->get_reference_point_by_lon(
             frenet_ego_state.s() + kVelocityPreviewDistance, refpath_pt)) {
       user_velocity_limit = map_velocity_limit;
-      if (std::fabs(refpath_pt.path_point.kappa) > 0.1) {
-        user_velocity_limit = std::min(
-            (1.0 - std::fabs(refpath_pt.path_point.kappa)) * map_velocity_limit,
-            5 / 3.6);
+      if (std::fabs(refpath_pt.path_point.kappa()) > 0.1) {
+        user_velocity_limit =
+            std::min((1.0 - std::fabs(refpath_pt.path_point.kappa())) *
+                         map_velocity_limit,
+                     5 / 3.6);
         user_velocity_limit = std::max(user_velocity_limit, 2.0);
       }
       vel_limit_info_.v_limit_usr = user_velocity_limit;
@@ -538,7 +539,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
     }
     final_velocity_limit = std::min(final_velocity_limit, narrow_area_velocity);
     LOG_DEBUG("curvature: %f, curvature_velocity_limit:%f",
-              refpath_pt.path_point.kappa, user_velocity_limit);
+              refpath_pt.path_point.kappa(), user_velocity_limit);
   }
 
   vel_limit_info_.v_limit_final = final_velocity_limit;
@@ -1840,8 +1841,8 @@ bool GeneralLongitudinalDecider::check_obstacle_both_sides(
 double GeneralLongitudinalDecider::get_distance_to_destination() {
   // WB: 暂无地图，终点距离无穷大
   double distance_to_destination = 2000.0;
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   distance_to_destination = route_info_output.distance_to_target_slot;
   // auto distance_to_destination = std::numeric_limits<double>::max();
   // if (dest.isValid()) {

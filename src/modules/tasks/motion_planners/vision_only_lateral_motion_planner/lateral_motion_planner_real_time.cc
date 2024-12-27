@@ -82,9 +82,8 @@ bool VisionLateralMotionPlanner::Execute() {
   set_left_lane_boundary_poly();   // hack left_lane_boundary_poly
   set_right_lane_boundary_poly();  // hack right_lane_boundary_poly
 
-  b_success =
-      update(status, flag_avd, should_premove,
-             dist_rblane, avd_car_past, avd_sp_car_past);
+  b_success = update(status, flag_avd, should_premove, dist_rblane,
+                     avd_car_past, avd_sp_car_past);
 
   if (!b_success) {
     // TBD : add logs
@@ -101,8 +100,7 @@ bool VisionLateralMotionPlanner::Execute() {
 }
 
 bool VisionLateralMotionPlanner::update(
-    int status, bool flag_avd, bool should_premove,
-    double dist_rblane,
+    int status, bool flag_avd, bool should_premove, double dist_rblane,
     const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past) {
   std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
@@ -132,8 +130,8 @@ bool VisionLateralMotionPlanner::update(
   }
   lat_motion_plan->set_premove_dpoly_c0(d_poly_[3]);
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
-    update_avoidance_path(status, flag_avd, should_premove,
-                          dist_rblane, avd_car_past, avd_sp_car_past);
+    update_avoidance_path(status, flag_avd, should_premove, dist_rblane,
+                          avd_car_past, avd_sp_car_past);
   } else {
     lat_offset_ = 0;
   }
@@ -361,8 +359,7 @@ void VisionLateralMotionPlanner::update_premove_path(
   double temp_ego = std::min(10.0 / std::max(v_ego, 0.1), 1.0);
   double temp_poly = std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
 
-  if ((status == is_LC_LWAIT_ && (should_premove)) ||
-      status == is_LC_LBACK_) {
+  if ((status == is_LC_LWAIT_ && (should_premove)) || status == is_LC_LBACK_) {
     premoving_ = true;
 
     if (avd_car_past[0].size() > 0 && avd_car_past[0][5] > 0 &&
@@ -413,8 +410,8 @@ void VisionLateralMotionPlanner::update_premove_path(
 }
 
 bool VisionLateralMotionPlanner::update_avoidance_path(
-    int status, bool flag_avd, bool should_premove,
-    double dist_rblane, const std::array<std::vector<double>, 2> &avd_car_past,
+    int status, bool flag_avd, bool should_premove, double dist_rblane,
+    const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past) {
   double lane_width = flane_->width();
   const auto &min_width = flane_->min_width();
@@ -1230,10 +1227,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     virtual_lane_manager_->get_right_lane()->get_lane_type() ==
                         iflyauto::LANETYPE_NON_MOTOR))) {
                 if ((!session_->environmental_model().is_on_highway()
-                      //    &&  // hack
-                      //  map_info.dist_to_intsect() > 80 &&
-                      //  map_info.dist_to_intsect() - avd_car_past[0][3] > 80
-                      ) &&
+                     //    &&  // hack
+                     //  map_info.dist_to_intsect() > 80 &&
+                     //  map_info.dist_to_intsect() - avd_car_past[0][3] > 80
+                     ) &&
                     ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                      (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                      avd_car_past[0][3] < 1)) {
@@ -2531,8 +2528,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
         virtual_lane_manager_->get_right_lane() != nullptr &&
         virtual_lane_manager_->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop &&
-        lead_one != nullptr && lead_one->type == 20001))) {
+      ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
     lateral_output.borrow_bicycle_lane = false;
@@ -2591,8 +2587,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   } else {
     lateral_output.lc_end_dis = 10000;
   }
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   if (route_info_output.dis_to_ramp != DBL_MAX) {  // attention !
     lateral_output.dis_to_ramp = route_info_output.dis_to_ramp;
   } else {

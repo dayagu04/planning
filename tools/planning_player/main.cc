@@ -157,8 +157,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
-                             scene_type, mileage_path, no_debug,
-                             interface_check, no_version_check, car,
-                             play_in_loop);
+  return run_planning_player(
+      bag_path, out_bag, is_close_loop, auto_time_sec, scene_type, mileage_path,
+      no_debug, interface_check, no_version_check, car, play_in_loop);
 }

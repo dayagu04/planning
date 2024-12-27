@@ -52,8 +52,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   LOG_DEBUG("LaneChangeRequestManager.Update() \n");
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
   // TBD： 后续考虑json形式进行数据存储
-  const auto& route_info_output = session_->environmental_model().
-      get_route_info()->get_route_info_output();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   auto mrc_condition = session_->mutable_planning_context()->mrc_condition();
   const bool location_valid = session_->environmental_model().location_valid();
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
@@ -86,7 +86,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const double dis_to_first_merge =
       route_info_output.distance_to_first_road_merge;
-  const double distance_to_first_road_split = 
+  const double distance_to_first_road_split =
       route_info_output.distance_to_first_road_split;
   const int origin_relative_id_zero_nums =
       virtual_lane_mgr_->origin_relative_id_zero_nums();

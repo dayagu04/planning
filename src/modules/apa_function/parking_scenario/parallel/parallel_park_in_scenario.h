@@ -4,10 +4,10 @@
 #include <cstdint>
 #include <memory>
 
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "dubins_lib.h"
 #include "parallel_path_generator.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {

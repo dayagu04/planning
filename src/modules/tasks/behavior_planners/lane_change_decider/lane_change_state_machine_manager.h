@@ -144,7 +144,6 @@ class LaneChangeStateMachineManager {
   bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
   void CalculateLatCloseValue();
 
-
  private:
   ScenarioStateMachineConfig config_;
   framework::Session* session_;

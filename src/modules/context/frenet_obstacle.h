@@ -27,8 +27,12 @@ class FrenetObstacle {
   double frenet_velocity_s() const { return frenet_velocity_s_; }
   double frenet_velocity_l() const { return frenet_velocity_l_; }
   double frenet_velocity_lateral() const { return frenet_velocity_lateral_; };
-  double frenet_relative_velocity_s() const { return frenet_relative_velocity_s_; };
-  double frenet_relative_velocity_l() const { return frenet_relative_velocity_l_; };
+  double frenet_relative_velocity_s() const {
+    return frenet_relative_velocity_s_;
+  };
+  double frenet_relative_velocity_l() const {
+    return frenet_relative_velocity_l_;
+  };
   double frenet_relative_velocity_angle() const {
     return frenet_relative_velocity_angle_;
   }

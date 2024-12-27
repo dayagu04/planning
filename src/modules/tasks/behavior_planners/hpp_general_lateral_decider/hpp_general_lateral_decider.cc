@@ -503,7 +503,7 @@ void HppGeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     double static_obstacle_safe_center_distance =
         config_.static_obj_safe_buffer + vehicle_param.width / 2;
     double static_obstacle_buffer_extra =
-        std::fabs(ref_path_points_[i].path_point.kappa) /
+        std::fabs(ref_path_points_[i].path_point.kappa()) /
         config_.max_ref_curvature * 0.2;
     double static_obstacle_safe_buffer_extra = 0.2;
 
@@ -1433,7 +1433,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
       session_->environmental_model().get_virtual_lane_manager();
 
   // path points
-  std::vector<planning::PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
   if (flane != nullptr) {
     auto &ref_path = flane->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
@@ -1500,8 +1500,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop &&
-        lead_one != nullptr && lead_one->type == 20001))) {
+      ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
     lateral_output.borrow_bicycle_lane = false;

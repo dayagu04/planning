@@ -135,7 +135,8 @@ void AgentManager::Update(const double start_timestamp_s) {
 //   constexpr double kTooOldThreshold = 2.0;
 //   for (auto iter = historical_agents_.begin();
 //        iter != historical_agents_.end();) {
-//     bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s() >
+//     bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s()
+//     >
 //                       kTooOldThreshold;
 //     bool is_del = is_too_old;
 //     if (is_del) {

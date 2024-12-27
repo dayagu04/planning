@@ -72,8 +72,9 @@ void EgoLaneTrackManger::TrackEgoLane(
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const bool is_in_lane_borrow_status =
-      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
+  const bool is_in_lane_borrow_status = session_->planning_context()
+                                            .lane_borrow_decider_output()
+                                            .is_in_lane_borrow_status;
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const bool lane_keep_status = lane_change_status == kLaneKeeping;
 
@@ -112,7 +113,8 @@ void EgoLaneTrackManger::TrackEgoLane(
         return;
       }
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2 && !is_in_lane_borrow_status) {
+        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2 &&
+            !is_in_lane_borrow_status) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -167,7 +169,8 @@ void EgoLaneTrackManger::TrackEgoLane(
         }
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
-        if (zero_relative_id_nums > 1 && lane_keep_status && !is_in_lane_borrow_status) {
+        if (zero_relative_id_nums > 1 && lane_keep_status &&
+            !is_in_lane_borrow_status) {
           PreprocessIntersectionSplit(relative_id_lanes,
                                       order_ids_of_same_zero_relative_id);
           LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
@@ -252,8 +255,8 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
         }
       }
 
-      auto compare_lane_mapping_cost = [&](std::pair<int, double> &pair1,
-                                           std::pair<int, double> &pair2) {
+      auto compare_lane_mapping_cost = [&](std::pair<int, double>& pair1,
+                                           std::pair<int, double>& pair2) {
         return pair1.second < pair2.second;
       };
       std::sort(target_lane_mapping_cost.begin(),
@@ -412,16 +415,22 @@ void EgoLaneTrackManger::Update(const RouteInfoOutput& route_info_output) {
   is_on_ramp_ = route_info_output.is_on_ramp;
   dis_to_ramp_ = route_info_output.dis_to_ramp;
   is_leaving_ramp_ = false;
-  first_split_dir_dis_info_.first = route_info_output.first_split_dir_dis_info.first;
-  first_split_dir_dis_info_.second = route_info_output.first_split_dir_dis_info.second;
-  distance_to_first_road_merge_ = route_info_output.distance_to_first_road_merge;
-  distance_to_first_road_split_ = route_info_output.distance_to_first_road_split;
-  current_segment_passed_distance_ = route_info_output.current_segment_passed_distance;
+  first_split_dir_dis_info_.first =
+      route_info_output.first_split_dir_dis_info.first;
+  first_split_dir_dis_info_.second =
+      route_info_output.first_split_dir_dis_info.second;
+  distance_to_first_road_merge_ =
+      route_info_output.distance_to_first_road_merge;
+  distance_to_first_road_split_ =
+      route_info_output.distance_to_first_road_split;
+  current_segment_passed_distance_ =
+      route_info_output.current_segment_passed_distance;
   sum_dis_to_last_split_point_ = route_info_output.sum_dis_to_last_split_point;
   split_direction_dis_info_list_.clear();
 
   for (int i = 0; i < route_info_output.split_dir_dis_info_list.size(); i++) {
-    split_direction_dis_info_list_.emplace_back(route_info_output.split_dir_dis_info_list[i]);
+    split_direction_dis_info_list_.emplace_back(
+        route_info_output.split_dir_dis_info_list[i]);
   }
 }
 
@@ -508,8 +517,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         virtual_id_mapped_lane) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const bool is_in_lane_borrow_status =
-      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
+  const bool is_in_lane_borrow_status = session_->planning_context()
+                                            .lane_borrow_decider_output()
+                                            .is_in_lane_borrow_status;
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;

@@ -92,9 +92,9 @@ bool LaneChangeRequest::IsDashedLineEnough(
   std::cout << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
             << "origin_lane_order_id_: " << origin_lane_virtual_id_
             << std::endl;
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
-        
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+
   // HACK RUI
   if (route_info_output.dis_to_ramp < 500.) return true;
   if (direction == LEFT_CHANGE && left_dash_line_len > 0.) {
@@ -454,8 +454,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
   const std::shared_ptr<VirtualLane> current_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
 
   const auto &plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();

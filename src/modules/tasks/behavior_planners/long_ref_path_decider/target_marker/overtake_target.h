@@ -1,13 +1,13 @@
 #pragma once
 
-#include "target.h"
-#include "follow_target.h"
 #include "ego_planning_config.h"
+#include "follow_target.h"
+#include "target.h"
 
 namespace planning {
 
 class OvertakeTarget : public Target {
-public:
+ public:
   OvertakeTarget(const SpeedPlannerConfig& config, framework::Session* session,
                  const FollowTarget& follow_target);
   ~OvertakeTarget() = default;
@@ -20,13 +20,13 @@ public:
     int32_t overtake_agent_id = -1;
   };
 
-private:
+ private:
   void MakeOvertakeBoundsWithStCorridor();
 
   void MakeOvertakeTarget(const FollowTarget& follow_target);
 
-private:
+ private:
   std::vector<OvertakeBound> overtake_bounds_;
 };
 
-} // namespace planning
+}  // namespace planning

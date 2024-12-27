@@ -48,7 +48,8 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
-  std::unique_ptr<SccLongitudinalMotionPlanner> scc_longitudinal_motion_planner_;
+  std::unique_ptr<SccLongitudinalMotionPlanner>
+      scc_longitudinal_motion_planner_;
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<CipvLostProhibitAccelerationDecider>

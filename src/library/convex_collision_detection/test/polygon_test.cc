@@ -3,8 +3,8 @@
 
 #include "polygon_base.h"
 #include "pose2d.h"
-#include "src/library/convex_collision_detection/gjk2d_interface.h"
 #include "src/library/convex_collision_detection/cdl_math.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
 
 using namespace planning;
 

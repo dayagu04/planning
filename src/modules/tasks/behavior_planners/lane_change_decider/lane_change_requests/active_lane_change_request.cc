@@ -55,8 +55,8 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
     default_ma_delay = 0.;
   }
 
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
 
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
   if (lane_change_lane_mgr_->has_origin_lane()) {
@@ -132,8 +132,7 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
               .orientation == iflyauto::LaneOrientation_ORIENTATION_RIGHT &&
       distance_to_merge_point > 0 &&
       distance_to_merge_point < kDistanceBuffer &&
-      distance_to_merge_point + kDistanceBuffer <
-          route_info_output.dis_to_ramp;
+      distance_to_merge_point + kDistanceBuffer < route_info_output.dis_to_ramp;
 
   bool is_nearby_right_merge_point_lc_valid =
       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&

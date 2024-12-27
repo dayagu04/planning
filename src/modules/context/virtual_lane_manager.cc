@@ -54,8 +54,7 @@ constexpr double kEpsilon = 1.0e-4;
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session* session)
-    : session_(session),
-      ego_lane_track_manager_(session) {
+    : session_(session), ego_lane_track_manager_(session) {
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
 }
@@ -528,8 +527,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_start = IflyTime::Now_ms();
   if (location_valid) {
     ego_lane_track_manager_.TrackEgoLane(relative_id_lanes_,
-                                          order_ids_of_same_zero_relative_id_,
-                                          virtual_id_mapped_lane_);
+                                         order_ids_of_same_zero_relative_id_,
+                                         virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_.is_select_ego_lane_without_plan();
     LOG_DEBUG("select_ego_lane_without_plan: %d \n",

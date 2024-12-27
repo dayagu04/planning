@@ -150,18 +150,23 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   // for (size_t i = 0; i < sv_bounds.size(); ++i) {
   //   planning_input_.mutable_sv_bound_s_0()->Set(i, sv_bounds[0].s);
   //   planning_input_.mutable_sv_bound_s_1()->Set(i,
-  //                                               sv_bounds[1 * sample_step].s);
+  //                                               sv_bounds[1 *
+  //                                               sample_step].s);
   //   planning_input_.mutable_sv_bound_s_2()->Set(i,
-  //                                               sv_bounds[2 * sample_step].s);
+  //                                               sv_bounds[2 *
+  //                                               sample_step].s);
   //   planning_input_.mutable_sv_bound_s_3()->Set(i,
-  //                                               sv_bounds[3 * sample_step].s);
+  //                                               sv_bounds[3 *
+  //                                               sample_step].s);
   //   planning_input_.mutable_sv_bound_s_4()->Set(i,
-  //                                               sv_bounds[4 * sample_step].s);
+  //                                               sv_bounds[4 *
+  //                                               sample_step].s);
   //   planning_input_.mutable_sv_bound_s_5()->Set(i,
-  //                                               sv_bounds[5 * sample_step].s);
+  //                                               sv_bounds[5 *
+  //                                               sample_step].s);
 
-  //   planning_input_.mutable_sv_bound_v_0()->Set(i, sv_bounds[0].v_bound.upper);
-  //   planning_input_.mutable_sv_bound_v_1()->Set(
+  //   planning_input_.mutable_sv_bound_v_0()->Set(i,
+  //   sv_bounds[0].v_bound.upper); planning_input_.mutable_sv_bound_v_1()->Set(
   //       i, sv_bounds[1 * sample_step].v_bound.upper);
   //   planning_input_.mutable_sv_bound_v_2()->Set(
   //       i, sv_bounds[2 * sample_step].v_bound.upper);

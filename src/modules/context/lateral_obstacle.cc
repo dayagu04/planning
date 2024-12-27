@@ -175,7 +175,8 @@ void LateralObstacle::LateralObstacleDecision(
       }
     }
     // // log
-    // for (size_t i = 0; i < environment_model_debug_info->obstacle_size(); ++i) {
+    // for (size_t i = 0; i < environment_model_debug_info->obstacle_size();
+    // ++i) {
     //   auto obstacle = environment_model_debug_info->mutable_obstacle(i);
     //   if (obstacle->id() == item.track_id) {
     //     obstacle->set_lat_decision(

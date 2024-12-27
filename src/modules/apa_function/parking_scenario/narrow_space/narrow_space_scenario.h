@@ -2,11 +2,11 @@
 #define __HYBRID_ASTAR_PARK_H__
 
 #include <cstddef>
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
-#include "virtual_wall_decider.h"
 #include "narrow_space_decider.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "virtual_wall_decider.h"
 
 namespace planning {
 namespace apa_planner {

@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <memory>
 
-
 #include "apa_measure_data_manager.h"
 #include "apa_obstacle_manager.h"
 #include "apa_predict_path_manager.h"

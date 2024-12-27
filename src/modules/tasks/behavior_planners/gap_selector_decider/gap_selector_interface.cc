@@ -96,8 +96,8 @@ void GapSelectorInterface::Store(
 
   for (const auto &refpath_point : cur_reference_path->get_points()) {
     planning::common::Point2d *x_width = origin_lane_s_width->Add();
-    x_width->set_x(refpath_point.path_point.s);
-    x_width->set_y(current_lane->width_by_s(refpath_point.path_point.s));
+    x_width->set_x(refpath_point.path_point.s());
+    x_width->set_y(current_lane->width_by_s(refpath_point.path_point.s()));
   }
 
   auto origin_refline_points =
@@ -153,8 +153,8 @@ void GapSelectorInterface::Store(
 
     for (const auto &refpath_point : tar_reference_path->get_points()) {
       planning::common::Point2d *x_width = target_lane_s_width->Add();
-      x_width->set_x(refpath_point.path_point.s);
-      x_width->set_y(target_lane->width_by_s(refpath_point.path_point.s));
+      x_width->set_x(refpath_point.path_point.s());
+      x_width->set_y(target_lane->width_by_s(refpath_point.path_point.s()));
     }
   }
 

@@ -1,10 +1,11 @@
 #include "math/linear_interpolation.h"
-#include "common.h"
-#include "math/math_utils.h"
 
 #include <cmath>
 #include <iostream>
+
 #include "assert.h"
+#include "common.h"
+#include "math/math_utils.h"
 
 namespace planning {
 namespace planning_math {
@@ -42,24 +43,24 @@ SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0,
 PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
                                               const PathPoint &p1,
                                               const double s) {
-  double s0 = p0.s;
-  double s1 = p1.s;
+  double s0 = p0.s();
+  double s1 = p1.s();
 
   PathPoint path_point;
   double weight = (s - s0) / (s1 - s0);
-  double x = (1 - weight) * p0.x + weight * p1.x;
-  double y = (1 - weight) * p0.y + weight * p1.y;
-  double theta = slerp(p0.theta, p0.s, p1.theta, p1.s, s);
-  double kappa = (1 - weight) * p0.kappa + weight * p1.kappa;
-  double dkappa = (1 - weight) * p0.dkappa + weight * p1.dkappa;
-  double ddkappa = (1 - weight) * p0.ddkappa + weight * p1.ddkappa;
-  path_point.x = x;
-  path_point.y = y;
-  path_point.theta = theta;
-  path_point.kappa = kappa;
-  path_point.dkappa = dkappa;
-  path_point.ddkappa = ddkappa;
-  path_point.s = s;
+  double x = (1 - weight) * p0.x() + weight * p1.x();
+  double y = (1 - weight) * p0.y() + weight * p1.y();
+  double theta = slerp(p0.theta(), p0.s(), p1.theta(), p1.s(), s);
+  double kappa = (1 - weight) * p0.kappa() + weight * p1.kappa();
+  double dkappa = (1 - weight) * p0.dkappa() + weight * p1.dkappa();
+  double ddkappa = (1 - weight) * p0.ddkappa() + weight * p1.ddkappa();
+  path_point.set_x(x);
+  path_point.set_y(y);
+  path_point.set_theta(theta);
+  path_point.set_kappa(kappa);
+  path_point.set_dkappa(dkappa);
+  path_point.set_ddkappa(ddkappa);
+  path_point.set_s(s);
   return path_point;
 }
 
@@ -91,13 +92,13 @@ PncTrajectoryPoint InterpolateUsingLinearApproximation(
   // tp.steer = slerp(tp0.steer, t0, tp1.steer, t1, t);
 
   PathPoint *path_point = &tp.path_point;
-  path_point->x = lerp(pp0.x, t0, pp1.x, t1, t);
-  path_point->y = lerp(pp0.y, t0, pp1.y, t1, t);
-  path_point->theta = slerp(pp0.theta, t0, pp1.theta, t1, t);
-  path_point->kappa = lerp(pp0.kappa, t0, pp1.kappa, t1, t);
-  path_point->dkappa = lerp(pp0.dkappa, t0, pp1.dkappa, t1, t);
-  path_point->ddkappa = lerp(pp0.ddkappa, t0, pp1.ddkappa, t1, t);
-  path_point->s = lerp(pp0.s, t0, pp1.s, t1, t);
+  path_point->set_x(lerp(pp0.x(), t0, pp1.x(), t1, t));
+  path_point->set_y(lerp(pp0.y(), t0, pp1.y(), t1, t));
+  path_point->set_theta(slerp(pp0.theta(), t0, pp1.theta(), t1, t));
+  path_point->set_kappa(lerp(pp0.kappa(), t0, pp1.kappa(), t1, t));
+  path_point->set_dkappa(lerp(pp0.dkappa(), t0, pp1.dkappa(), t1, t));
+  path_point->set_ddkappa(lerp(pp0.ddkappa(), t0, pp1.ddkappa(), t1, t));
+  path_point->set_s(lerp(pp0.s(), t0, pp1.s(), t1, t));
   tp.relative_ego_x = lerp(tp0.relative_ego_x, t0, tp1.relative_ego_x, t1, t);
   tp.relative_ego_y = lerp(tp0.relative_ego_y, t0, tp1.relative_ego_y, t1, t);
   tp.relative_ego_yaw =

@@ -417,7 +417,7 @@ bool ConeRequest::GetOriginLaneWidthByCone(
       const ReferencePathPoint& ref_path_point =
           origin_refline->get_points()[i];
       origin_lane_s_width_.emplace_back(std::make_pair(
-          ref_path_point.path_point.s, ref_path_point.lane_width));
+          ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
     origin_lane_width = QueryLaneWidth(cone_s, origin_lane_s_width_);
   }
@@ -564,7 +564,7 @@ void ConeRequest::ConeDir() {
               const ReferencePathPoint& ref_path_point =
                   target_refline->get_points()[i];
               right_lane_s_width_.emplace_back(std::make_pair(
-                  ref_path_point.path_point.s, ref_path_point.lane_width));
+                  ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
           if (CheckTargetLaneAvailable(false, rlane)) {
@@ -590,7 +590,7 @@ void ConeRequest::ConeDir() {
               const ReferencePathPoint& ref_path_point =
                   target_refline->get_points()[i];
               left_lane_s_width_.emplace_back(std::make_pair(
-                  ref_path_point.path_point.s, ref_path_point.lane_width));
+                  ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
           if (CheckTargetLaneAvailable(true, llane)) {

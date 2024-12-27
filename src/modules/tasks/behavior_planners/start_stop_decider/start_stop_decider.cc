@@ -87,8 +87,8 @@ void StartStopDecider::SaveToSession() {
       session_->mutable_planning_context()->mutable_start_stop_decider_output();
   start_stop_decider_output.mutable_ego_start_stop_info() =
       start_stop_status_manager_.ego_start_stop_info();
-   start_stop_decider_output.mutable_stop_speed_decision_info() =
-      stop_speed_decision_info_; 
+  start_stop_decider_output.mutable_stop_speed_decision_info() =
+      stop_speed_decision_info_;
 
   auto& start_stop_state_result =
       session_->mutable_planning_context()->mutable_start_stop_result();

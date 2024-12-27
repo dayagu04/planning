@@ -1,8 +1,8 @@
 #pragma once
 
+#include "src/modules/common/agent/agent.h"
 #include "tasks/task.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
-#include "src/modules/common/agent/agent.h"
 
 namespace planning {
 

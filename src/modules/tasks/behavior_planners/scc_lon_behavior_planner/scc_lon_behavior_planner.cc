@@ -130,7 +130,7 @@ bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
             << "ego_pose_y_:" << pose.position.y << std::endl;
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
-  const auto &sd_map = 
+  const auto &sd_map =
       session_->environmental_model().get_route_info()->get_sd_map();
   double nearest_s = 0;
   double nearest_l = 0;
@@ -483,16 +483,14 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   for (auto &point : fix_ref_points) {
     common::ReferencePathPoint *ref_path_point = ref_path_points->Add();
     auto *path_point = ref_path_point->mutable_path_point();
-    path_point->set_x(point.path_point.x);
-    path_point->set_y(point.path_point.y);
-    path_point->set_z(point.path_point.z);
-    path_point->set_theta(point.path_point.theta);
-    path_point->set_kappa(point.path_point.kappa);
-    path_point->set_s(point.path_point.s);
-    path_point->set_dkappa(point.path_point.dkappa);
-    path_point->set_ddkappa(point.path_point.ddkappa);
-    path_point->set_x_derivative(point.path_point.x_derivative);
-    path_point->set_y_derivative(point.path_point.y_derivative);
+    path_point->set_x(point.path_point.x());
+    path_point->set_y(point.path_point.y());
+    path_point->set_z(point.path_point.z());
+    path_point->set_theta(point.path_point.theta());
+    path_point->set_kappa(point.path_point.kappa());
+    path_point->set_s(point.path_point.s());
+    path_point->set_dkappa(point.path_point.dkappa());
+    path_point->set_ddkappa(point.path_point.ddkappa());
 
     ref_path_point->set_distance_to_left_lane_border(
         point.distance_to_left_lane_border);
@@ -515,8 +513,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   // 6. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;

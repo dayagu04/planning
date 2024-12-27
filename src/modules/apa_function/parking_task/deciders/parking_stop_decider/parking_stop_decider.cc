@@ -1,8 +1,8 @@
 #include "parking_stop_decider.h"
 #include <cstddef>
 #include "collision_detection/path_safe_checker.h"
-#include "obstacle_manager.h"
 #include "debug_info_log.h"
+#include "obstacle_manager.h"
 
 namespace planning {
 
@@ -74,11 +74,10 @@ void ParkingStopDecider::AddDebugInfo(
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
   speed_debug->Clear();
-  common::SVGraphSpeedConstraint *speed_limit_debug =
+  common::SVGraphSpeedConstraint* speed_limit_debug =
       speed_debug->mutable_speed_limit();
 
   for (size_t i = 0; i < path.size(); i++) {
-
     speed_limit_debug->add_obs_dist(path[i].dist_to_obs);
 
 #if DECIDER_DEBUG
@@ -92,7 +91,8 @@ void ParkingStopDecider::AddDebugInfo(
 
 void ParkingStopDecider::AddStopDecisionByPredictedPath(
     const std::vector<pnc::geometry_lib::PathPoint>& path,
-    const double tracking_path_collision_dist, SpeedDecisions* speed_decisions) {
+    const double tracking_path_collision_dist,
+    SpeedDecisions* speed_decisions) {
   if (path.empty()) {
     return;
   }

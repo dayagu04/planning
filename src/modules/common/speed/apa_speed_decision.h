@@ -34,7 +34,7 @@ enum class SpeedLimitReason {
 struct StopDecision {
   StopDecisionReason reason_code;
   // If caused by obs, add this id.
-  int32_t  perception_id;
+  int32_t perception_id;
 
   // s from path start. ego is nearby path start.
   double path_s;

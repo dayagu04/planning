@@ -862,10 +862,10 @@ bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
   // const double heading_diff_with_ego = planning_math::NormalizeAngle(
   //     ptr_agent->theta() - init_point.heading_angle);
   constexpr double kSmallHeadingDiff = 3 / 57.3;
-  const bool small_heading_diff = agent_l < kEpsilon
-                                      ? (heading_diff_with_lane < kSmallHeadingDiff/* &&
+  const bool small_heading_diff =
+      agent_l < kEpsilon ? (heading_diff_with_lane < kSmallHeadingDiff /* &&
                                          heading_diff_with_ego < kSmallHeadingDiff*/)
-                                      : (heading_diff_with_lane > -kSmallHeadingDiff /*&&
+                         : (heading_diff_with_lane > -kSmallHeadingDiff /*&&
                                          heading_diff_with_ego > -kSmallHeadingDiff*/);
   if (!small_heading_diff) {
     return false;

@@ -21,7 +21,7 @@ class EgoLaneTrackManger {
   // EgoLaneTrackManger() = default;
   ~EgoLaneTrackManger(){};
 
-  void Update(const RouteInfoOutput& route_info_output);
+  void Update(const RouteInfoOutput &route_info_output);
 
   void Reset();
 
