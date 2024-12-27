@@ -79,7 +79,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     ReferencePathPoint refpath_pt;
     if (reference_path_ptr->get_reference_point_by_lon(
             frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
-      curv = std::fabs(refpath_pt.path_point.kappa);
+      curv = std::fabs(refpath_pt.path_point.kappa());
     } else {
       curv = 0.0001;
     }
