@@ -55,8 +55,8 @@ struct PlannerOpenSpaceConfig {
   double expect_dist_penalty;
   double gear_switch_penalty_heu;
 
-  double lon_front_safe_buffer = 0.5;
-  double lon_back_safe_buffer = 0.1;
+  double lon_front_safe_buffer;
+  double lon_back_safe_buffer;
   double lon_min_safe_buffer;
 
   double rs_path_seg_advised_dist = 0.35;
@@ -76,6 +76,10 @@ struct PlannerOpenSpaceConfig {
   double tie_breaker_;
 
   double single_shot_path_end_straight_dist;
+
+  // scenario try: add more safe buffer than parking in state.
+  double scenario_try_lat_buffer;
+  double scenario_try_lon_buffer;
 
   // todo: 为了增加成功率，4米内的不换档路径可以使用精细碰撞检测.
 

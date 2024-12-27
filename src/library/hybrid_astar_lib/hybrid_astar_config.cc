@@ -70,6 +70,9 @@ void PlannerOpenSpaceConfig::InitConfig() {
   lat_safe_buffer_for_inside.emplace_back(0.15);
   lat_safe_buffer_for_inside.emplace_back(0.06);
 
+  scenario_try_lat_buffer = 0.15;
+  scenario_try_lon_buffer = 0.4;
+
   return;
 }
 

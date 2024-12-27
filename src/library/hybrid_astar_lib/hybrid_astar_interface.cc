@@ -234,10 +234,10 @@ int HybridAStarInterface::UpdateOutput() {
     }
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::TRY_SEARCHING) {
-    lat_buffer = 0.11;
-    lon_buffer = 0.4;
+    lat_buffer = config_.scenario_try_lat_buffer;
+    lon_buffer = config_.scenario_try_lon_buffer;
     edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
-                          static_cast<float>(config_.lon_front_safe_buffer),
+                          static_cast<float>(lon_buffer),
                           static_cast<float>(lat_buffer));
 
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
