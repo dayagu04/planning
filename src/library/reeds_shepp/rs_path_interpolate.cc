@@ -501,7 +501,7 @@ int RSPathInterpolator::PathSegmentInterpolateByLine(
     }
 
     if (path->size >= RS_PATH_MAX_POINT) {
-      ILOG_INFO << "rs path segment point size too big";
+      // ILOG_INFO << "rs path segment point size too big";
 
       break;
     }
