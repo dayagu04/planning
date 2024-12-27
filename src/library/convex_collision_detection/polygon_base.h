@@ -3,6 +3,7 @@
 
 #include <Eigen/Core>
 #include <iostream>
+#include <string>
 
 #include "aabb2d.h"
 #include "ad_common/math/vec2d.h"
@@ -113,7 +114,7 @@ int GeneratePolygonByAABB(Polygon2D *polygon, const cdl::AABB &box);
 
 int GetBoundingBoxByPolygon(cdl::AABB *box, const Polygon2D *polygon);
 
-int PolygonDebugString(const Polygon2D *polygon);
+void PolygonDebugString(const Polygon2D *polygon, const std::string &name);
 
 // up left frame
 int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,

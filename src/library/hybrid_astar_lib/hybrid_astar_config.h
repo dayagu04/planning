@@ -43,8 +43,13 @@ struct PlannerOpenSpaceConfig {
   double traj_steer_penalty = 0.0;
   double traj_steer_change_penalty = 0.0;
   double ref_line_heading_penalty = 0.0;
+
+  // 车在车位外部的横向安全buffer，需要设定大一些
   std::vector<double> lat_hierarchy_safe_buffer;
   std::vector<double> lon_hierarchy_safe_buffer;
+
+  // 车在车位内部的横向安全buffer，需要设定小一些
+  std::vector<double> lat_safe_buffer_for_inside;
 
   double expect_gear_penalty;
   double expect_dist_penalty;
@@ -71,6 +76,8 @@ struct PlannerOpenSpaceConfig {
   double tie_breaker_;
 
   double single_shot_path_end_straight_dist;
+
+  // todo: 为了增加成功率，4米内的不换档路径可以使用精细碰撞检测.
 
   void InitConfig();
 };

@@ -242,7 +242,7 @@ void PathSafeChecker::GenerateVehCompactPolygon(
       config.max_car_width / 2.0 + max_bbox_lat_buffer);
 
 #if DEBUG_PATH_CHECKER
-  PolygonDebugString(&polygon_foot_print_.max_polygon);
+  PolygonDebugString(&polygon_foot_print_.max_polygon, "max_polygon");
   ILOG_INFO << "config.max_car_width = " << config.max_car_width;
 #endif
 
@@ -537,12 +537,9 @@ void PathSafeChecker::DebugCollisionInfo(
 
   ego_pose.DebugString();
 
-  ILOG_INFO << "body";
-  PolygonDebugString(&polygon_foot_print_.body);
-  ILOG_INFO << "max bounding box";
-  PolygonDebugString(&polygon_foot_print_.max_polygon);
-  ILOG_INFO << "left mirror";
-  PolygonDebugString(&polygon_foot_print_.mirror_left);
+  PolygonDebugString(&polygon_foot_print_.body, "body");
+  PolygonDebugString(&polygon_foot_print_.max_polygon, "max bounding box");
+  PolygonDebugString(&polygon_foot_print_.mirror_left, "left mirror");
 
   Pose2D tmp;
   for (size_t i = 0; i < path.size(); i++) {
