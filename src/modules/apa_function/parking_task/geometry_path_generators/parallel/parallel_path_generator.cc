@@ -1882,7 +1882,7 @@ const bool ParallelPathGenerator::CalcParkOutPose(
 
 const bool ParallelPathGenerator::ReversePathSegVec(
     std::vector<pnc::geometry_lib::PathSegment>& park_out_res) {
-  if (park_out_res.size() <= 1) {
+  if (park_out_res.size() < 1) {
     return false;
   }
 
