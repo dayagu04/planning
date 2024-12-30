@@ -225,7 +225,25 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
                    (ego_slot_info.terminal_err.pos.x() < 0.568);
 
-  return parking_finish;
+  if (parking_finish) {
+    return true;
+  }
+
+  // 车辆不压线，车头基本摆正，就认定完成泊车
+  if (static_condition && remain_s_condition && lon_condition &&
+      heading_condition_2) {
+    Pose2D ego;
+    ego.x = frame_.ego_slot_info.ego_pos_slot[0];
+    ego.y = frame_.ego_slot_info.ego_pos_slot[1];
+    ego.theta = frame_.ego_slot_info.ego_heading_slot;
+    if (!IsVehicleOverlapWithSlotLine(frame_.ego_slot_info.slot_length,
+                                     frame_.ego_slot_info.slot_width, ego)) {
+      ILOG_INFO << "vehicle is inside slot line, finish";
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void NarrowSpaceScenario::ExcutePathPlanningTask() {
@@ -1131,9 +1149,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         apa_param.GetParam().terminal_target_heading;
   }
 
-  ILOG_INFO << "limiter x=" << ego_slot_info.target_ego_pos_slot[0]
-            << ",y=" << ego_slot_info.target_ego_pos_slot[1];
-
   // cal terminal error
   ego_slot_info.terminal_err.Set(
       ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
@@ -1224,8 +1239,9 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   Eigen::Vector2d point_local;
   point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
 
-  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
-            << ", y=" << point_local[1];
+  ILOG_INFO << "targer point x = " << limiter_x
+            << ", path end x = " << point_local[0]
+            << ", path end y=" << point_local[1];
 
   if (point_local[0] >= limiter_x) {
     return;
@@ -1761,6 +1777,51 @@ void NarrowSpaceScenario::ScenarioTry() {
 void NarrowSpaceScenario::ThreadClear() {
   thread_.Clear();
   return;
+}
+
+const bool NarrowSpaceScenario::IsVehicleOverlapWithSlotLine(
+    const double slot_length, const double slot_width,
+    const Pose2D& ego_start) {
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
+  Polygon2D local_polygon;
+  Polygon2D ego_global_polygon;
+
+  double lat_buffer = 0.03;
+  GenerateUpLeftFrameBox(&local_polygon, -config.rear_overhanging,
+                         -config.car_width / 2 - lat_buffer,
+                         config.car_length - config.rear_overhanging,
+                         config.car_width / 2 + lat_buffer);
+  ULFLocalPolygonToGlobal(&ego_global_polygon, &local_polygon, ego_start);
+
+  // slot polygon
+  Polygon2D slot_left_line;
+  GenerateLineSegmentPolygon(&slot_left_line,
+                             Position2D(slot_length, slot_width / 2),
+                             Position2D(0, slot_width / 2));
+
+  Polygon2D slot_right_line;
+  GenerateLineSegmentPolygon(&slot_right_line,
+                             Position2D(slot_length, -slot_width / 2),
+                             Position2D(0, -slot_width / 2));
+
+  bool is_collision;
+  GJK2DInterface gjk;
+  gjk.PolygonCollisionByCircleCheck(&is_collision, &ego_global_polygon,
+                                    &slot_left_line, 0.1);
+  if (is_collision) {
+
+    ILOG_INFO <<"collision";
+    return true;
+  }
+
+  gjk.PolygonCollisionByCircleCheck(&is_collision, &ego_global_polygon,
+                                    &slot_right_line, 0.1);
+  if (is_collision) {
+
+    ILOG_INFO <<"collision";
+    return true;
+  }
+  return false;
 }
 
 }  // namespace apa_planner

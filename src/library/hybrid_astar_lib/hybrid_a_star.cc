@@ -3908,7 +3908,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
       }
     }
     if (has_reverse) {
-      ILOG_INFO << "gear is invalid";
+      // ILOG_INFO << "gear is invalid";
       continue;
     }
 
@@ -3974,8 +3974,8 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
 
     path_valid_point_size = std::min(path_valid_point_size, collision_id);
     if (path_valid_point_size <= 1) {
-      ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
-                << ", max_sampling_num=" << max_sampling_num;
+      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+      //           << ", max_sampling_num=" << max_sampling_num;
       continue;
     }
 

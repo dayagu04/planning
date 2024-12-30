@@ -131,6 +131,13 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool UpdateParallelSlotInfo();
 
+  // ego_start: slot coordination for ego
+  // If ego is not cross with slot line, parking is finished.
+  const bool IsVehicleOverlapWithSlotLine(const double slot_length,
+                                          const double slot_width,
+                                          const Pose2D& ego_start);
+
+ private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 
