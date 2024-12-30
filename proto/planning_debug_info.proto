@@ -121,5 +121,5 @@ message PlanningDebugInfo {
   optional LaneBorrowDeciderInfo lane_borrow_decider_info = 34;
   optional ApaSpeedDebug apa_speed_debug = 35;
   optional WeightMaker weight_maker = 36;
-  optional HybridARAInfo hybrid_ara_info = 34;
+  optional HybridARAInfo hybrid_ara_info = 37;
 }
