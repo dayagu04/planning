@@ -76,28 +76,29 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
-    DEBUG_PRINT("update ego slot info");
+    ILOG_INFO << "update ego slot info failed!";
     SetParkingStatus(PARKING_FAILED);
     return;
   }
+  ILOG_INFO << "update ego slot info success!";
 
   // check finish
   if (CheckFinished()) {
-    DEBUG_PRINT("check apa finished!");
+    ILOG_INFO << "check apa finished!";
     SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
   // check failed
   if (CheckStuckFailed()) {
-    DEBUG_PRINT("check stuck failed!");
+    ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
     return;
   }
 
   // check replan
   if (CheckReplan() || apa_world_ptr_->GetSimuParam().force_plan) {
-    DEBUG_PRINT("replan is required!");
+    ILOG_INFO << "replan is required!";
 
     // generate t-lane
     GenTlane();
@@ -112,32 +113,32 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
       if (PostProcessPath()) {
         SetParkingStatus(PARKING_GEARCHANGE);
-        DEBUG_PRINT("replan from PARKING_GEARCHANGE!");
+        ILOG_INFO << "replan from PARKING_GEARCHANGE!";
       } else {
         SetParkingStatus(PARKING_FAILED);
-        DEBUG_PRINT("replan failed from PLAN_HOLD!");
+        ILOG_INFO << "replan failed from PLAN_HOLD!";
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
       if (PostProcessPath()) {
         SetParkingStatus(PARKING_PLANNING);
-        DEBUG_PRINT("replan from PARKING_PLANNING!");
+        ILOG_INFO << "replan from PARKING_PLANNING!";
       } else {
         SetParkingStatus(PARKING_FAILED);
-        DEBUG_PRINT("replan failed from PARKING_PLANNING!");
+        ILOG_INFO << "replan failed from PARKING_PLANNING!";
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
       SetParkingStatus(PARKING_FAILED);
     }
 
-    DEBUG_PRINT("pathplan_result = " << static_cast<int>(pathplan_result));
+    ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
   } else {
-    DEBUG_PRINT("replan is not required!");
+    ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
   }
 
   // print planning status
-  DEBUG_PRINT("parking status = "
-              << static_cast<int>(GetPlannerStates().planning_status));
+  ILOG_INFO << "parking status = "
+            << static_cast<int>(GetPlannerStates().planning_status);
 }
 
 const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
@@ -149,12 +150,12 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
       slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
 
   if (!select_slot_slm.has_corner_points()) {
-    DEBUG_PRINT("no selected corner pts in slm!");
+    ILOG_INFO << "no selected corner pts in slm!";
     return false;
   }
 
   if (select_slot_slm.corner_points().corner_point_size() != 4) {
-    DEBUG_PRINT("select slot in slm corner points size != 4!");
+    ILOG_INFO << "select slot in slm corner points size != 4!";
     return false;
   }
 
@@ -309,8 +310,9 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
       // in_ego_cnt++;
       continue;
     }
-    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_local));
+    ego_slot_info.obs_pt_vec_slot.emplace_back((obs_pt_local));
   }
+  ILOG_INFO << "after obs filter";
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
@@ -323,6 +325,7 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   } else {
     frame_.stuck_time = 0.0;
   }
+  ILOG_INFO << "frame_.stuck_time = " << frame_.stuck_time;
 
   // update pause time
   if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
@@ -330,6 +333,7 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   } else {
     frame_.pause_time = 0.0;
   }
+  ILOG_INFO << "frame_.pause_time = " << frame_.pause_time;
 
   return true;
 }
@@ -345,6 +349,7 @@ const bool ParallelParkOutScenario::CheckFinished() {
 }
 
 const bool ParallelParkOutScenario::GenTlane() {
+  ILOG_INFO << "--------------- GenTlane ------------------------";
   // Todo: generate t-lane according to nearby obstacles
   const auto& ego_slot_info = frame_.ego_slot_info;
 
@@ -572,6 +577,7 @@ const bool ParallelParkOutScenario::GenTlane() {
   JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
   JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
   JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
+  return true;
 }
 
 void ParallelParkOutScenario::GenTBoundaryObstacles() {
