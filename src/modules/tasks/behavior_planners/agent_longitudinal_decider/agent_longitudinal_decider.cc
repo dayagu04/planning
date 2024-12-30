@@ -290,8 +290,8 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
       &large_lateral_distance);
 
   // drel
-  std::array<double, 5> xp{0, 30, 60};
-  std::array<double, 5> fp{1, 2, kRuleBasedCutInCount};
+  std::array<double, 3> xp{0, 30, 60};
+  std::array<double, 3> fp{1, 2, kRuleBasedCutInCount};
   double min_dis_to_front_bump = std::max(min_s - ego_s - ego_half_length, 0.0);
   double rule_base_cut_in_count = interp(min_dis_to_front_bump, xp, fp);
 
