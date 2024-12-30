@@ -22,7 +22,7 @@ const bool PerpendicularPathOutPlanner::Update() {
   // reset output
   output_.Reset();
 
-  if (input_.is_replan_first) {
+  if (input_.ego_pose.pos.x() < 3.0) {
     if (PreparePlan()) {
       ILOG_INFO << "parking out prepare plan success";
     } else {
@@ -122,21 +122,25 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   const double slant_angle_rad = (input_.origin_pt_0_heading) * kDeg2Rad;
   const double cos_slant_angle = cos(input_.origin_pt_0_heading * kDeg2Rad);
-  double x_min = 0.7;
-  double x_max = 3.7;
+  double x_min = 2.8;
+  double x_max = 4.8;
+  const double max_plan_num = 20;
 
   if (input_.origin_pt_0_heading != 0) {
     x_min = 4.0 / cos_slant_angle;
     x_max = 5.0 / cos_slant_angle;
   }
 
-  double x_offset = x_min;
-  const double sampling_step = 0.15;
-  const size_t x_offset_vec_num = std::ceil((x_max - x_min) / sampling_step);
-  for (size_t i = 0; i < x_offset_vec_num; i++) {
-    x_offset_vec.emplace_back(x_offset);
-    x_offset += sampling_step;
+  double x_offset = 0.0;
+  if (std::abs(current_pose.pos.x()) < x_min) {
+    x_offset = x_min - current_pose.pos.x();
   }
+  const double sampling_step = 0.15;
+  // const size_t x_offset_vec_num = std::ceil((x_max - x_min) / sampling_step);
+  // for (size_t i = 0; i < x_offset_vec_num; i++) {
+  //   x_offset_vec.emplace_back(x_offset);
+  //   x_offset += sampling_step;
+  // }
 
   bool flag = false;
   bool prepare_success = false;
@@ -148,14 +152,15 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
       flag = true;
     }
   } else {
-    for (size_t j = 0; j < x_offset_vec.size() && !flag; ++j) {
-      const double& x_offset = x_offset_vec[j];
+    for (size_t j = 0; j < max_plan_num && !flag; ++j) {
+      ILOG_INFO << "x_offset = " << x_offset
+                << ", (slot) ego x  = " << current_pose.pos.x();
       path_seg_vec.clear();
       if (PreparePlanOnce(path_seg_vec, x_offset, calc_params_.turn_radius,
                           current_gear, current_arc_steer, current_pose)) {
         prepare_success = true;
-        ILOG_INFO << "x_offset = " << x_offset;
       }
+      x_offset += sampling_step;
       flag = prepare_success;
     }
   }
