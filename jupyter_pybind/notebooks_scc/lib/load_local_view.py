@@ -666,6 +666,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       replan_status = plan_debug_json_msg["replan_status"]
       init_pos_point_x = []
       init_pos_point_y = []
+      init_pos_line_x = []
+      init_pos_line_y = []
       ego_pos_compensation_x_ = []
       ego_pos_compensation_y_ = []
       init_pos_point_theta = []
@@ -678,6 +680,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
         temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
         init_pos_point_theta.append(temp_theta)
+
+      for i in range(len(bag_loader.plan_debug_msg['data'])):
+        init_pos_xn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.x
+        init_pos_yn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.y
+
+        if g_is_display_enu:
+          local_init_x.append(init_pos_xn_i)
+          local_init_y.append(init_pos_yn_i)
+        else:
+         local_init_x, local_init_y = coord_tf.global_to_local([init_pos_xn_i], [init_pos_yn_i])
+
+        init_pos_line_x.append(local_init_x)
+        init_pos_line_y.append(local_init_y)
+
+      local_view_data['data_init_line'].data.update({
+        'init_pos_line_x': init_pos_line_x,
+        'init_pos_line_y': init_pos_line_y,
+       })
 
       local_view_data['data_init_pos_point'].data.update({
         'init_pos_point_y': init_pos_point_y,
@@ -1156,6 +1176,7 @@ def load_local_view_figure():
                                                  'replan_status':[],
                                                  'ego_pos_compensation_x': [],
                                                  'ego_pos_compensation_y': []})
+  data_init_line = ColumnDataSource(data = {'init_pos_line_x':[], 'init_pos_line_y':[]})
   data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
   macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
@@ -1417,6 +1438,7 @@ def load_local_view_figure():
                      'origin_data_ego':origin_data_ego, \
                      'data_ego_pos_point': data_ego_pos_point, \
                      'data_init_pos_point': data_init_pos_point, \
+                     'data_init_line': data_init_line, \
                      'data_merge_point': data_merge_point, \
                      'macroeconomic_decider_data_merge_point': macroeconomic_decider_data_merge_point, \
                      'boundary_line_merge_point': boundary_line_merge_point, \
@@ -1698,6 +1720,9 @@ def load_local_view_figure():
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
+
+  fig1.line('init_pos_line_y', 'init_pos_line_x', source = data_init_line, line_width = 3, line_color = 'purple', line_dash = 'solid', legend_label = 'init_point_line')
+
 
   if is_vis_map:
     for i in range (len(ehr_data_lanes)):
