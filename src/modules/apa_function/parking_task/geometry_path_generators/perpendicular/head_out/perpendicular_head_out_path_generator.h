@@ -136,7 +136,7 @@ class PerpendicularPathOutPlanner : public PerpendicularPathGenerator {
   const bool PreparePlan();
   const bool PreparePlanOnce(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const double &y_offset, const double &radius, const uint8_t current_gear,
+      const double &x_offset, const double &radius, const uint8_t current_gear,
       const uint8_t current_arc_steer,
       pnc::geometry_lib::PathPoint current_pose);
   const bool AdjustPlan();
