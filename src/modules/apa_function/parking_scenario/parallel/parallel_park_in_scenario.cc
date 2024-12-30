@@ -1425,7 +1425,7 @@ const bool ParallelParkInScenario::CheckReplan() {
   }
 
   if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    DEBUG_PRINT("replan by stuck!");
+    ILOG_INFO << "replan by stuck!";
     frame_.replan_reason = STUCKED;
     return true;
   }

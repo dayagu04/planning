@@ -171,7 +171,7 @@
   "obstacle_ds": 0.1568,
   "col_obs_safe_dist_normal": 0.268,
   "col_obs_safe_dist_strict": 0.328,
-  "car_lat_inflation_dynamic_col": 0.05,
+  "car_lat_inflation_dynamic_col": 0.06,
   "car_lat_inflation_normal": 0.08,
   "car_lat_inflation_strict": 0.1586,
   "safe_threshold": 0.08,
