@@ -48,7 +48,7 @@ void ParallelOutPathGenerator::Preprocess() {
 
   ILOG_INFO << "calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn;
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.06, false));
 }
 
 const bool ParallelOutPathGenerator::Update(

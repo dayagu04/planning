@@ -25,12 +25,8 @@ static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
 
-static double kMaxDistDeleteObsToEgoInSlot = 0.3;
-static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
-
 static double kMinChannelYMagIdentification = 3.3;
 
-static double kExtendLengthOutsideSlot = 0.4;
 static double kTBoundarySampleDist = 0.38;
 static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
@@ -69,7 +65,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   const double safe_uss_remain_dist =
       (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : 0.25;
+          : 0.3;
 
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
