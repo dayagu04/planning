@@ -297,14 +297,6 @@ class PlanningContext {
     return lateral_behavior_planner_output_;
   }
 
-  const LateralObstacleDeciderOutput &lateral_obstacle_decider_output() const {
-    return lateral_obstacle_decider_output_;
-  }
-
-  LateralObstacleDeciderOutput &mutable_lateral_obstacle_decider_output() {
-    return lateral_obstacle_decider_output_;
-  }
-
   const LateralOffsetDeciderOutput &lateral_offset_decider_output() const {
     return lateral_offset_decider_output_;
   }
@@ -481,7 +473,6 @@ class PlanningContext {
   // used in HppGeneralLateralDecider and GeneralLateralDecider
   GeneralLateralDeciderOutput general_lateral_decider_output_;
   HppGeneralLateralDeciderOutput hpp_general_lateral_decider_output_;
-  LateralObstacleDeciderOutput lateral_obstacle_decider_output_;
   ParkingSwitchDeciderOutput parking_switch_decider_output_;
 
   // longitudinal task pipeline

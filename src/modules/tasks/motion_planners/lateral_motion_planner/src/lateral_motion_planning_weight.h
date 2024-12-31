@@ -26,8 +26,6 @@ class LateralMotionPlanningWeight {
 
   void Init();
 
-  void Init();
-
   void CalculateInitInfo(
       const planning::common::LateralPlanningInput &planning_input);
 

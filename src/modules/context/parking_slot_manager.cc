@@ -167,7 +167,7 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
   const auto& points = reference_path->get_points();
   if (distance_to_target_slot_ < 10.0) {
     distance_to_target_slot_ = std::min(
-     std::fabs(points.back().path_point.s - ego_s),
+     std::fabs(points.back().path_point.s() - ego_s),
      distance_to_target_slot_);
   }
   return true;

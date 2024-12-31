@@ -53,8 +53,7 @@ constexpr double kEpsilon = 1.0e-4;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
-    planning::framework::Session* session) {
-  session_ = session;
+    planning::framework::Session* session): session_(session) {
   SetConfig(config_builder);
   ego_lane_track_manager_ = std::make_shared<EgoLaneTrackManger>(config_builder, session);
 }
@@ -562,7 +561,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
     LOG_ERROR("!!!current_lane is empty!!!");
-    ego_lane_track_manager_->Reset();
+    ego_lane_track_manager_.Reset();
     return false;
   }
 

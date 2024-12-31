@@ -171,7 +171,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-      # loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+      loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
         if t > 1e-3:
           self.loc_msg['t'].append(t)
@@ -204,7 +204,7 @@ class LoadCyberbag:
       vs_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
         vs_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
+      vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vs_msg_dict.items():
         if t > 1e-3:
           self.vs_msg['t'].append(t)
@@ -229,7 +229,7 @@ class LoadCyberbag:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
         plan_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
+      plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
         if t > 1e-3:
           self.plan_msg['t'].append(t)
@@ -282,7 +282,7 @@ class LoadCyberbag:
         planning_debug_output = PlanningDebugInfo()
         planning_debug_output.ParseFromString(msg.debug_info)
         plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
-      # plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_debug_msg_dict.items():
         if t > 1e-3:
           self.plan_debug_msg['t'].append(t)
@@ -331,7 +331,7 @@ class LoadCyberbag:
       ctrl_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
         ctrl_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
+      ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_msg_dict.items():
         if t > 1e-3:
           self.ctrl_msg['t'].append(t)
@@ -369,7 +369,7 @@ class LoadCyberbag:
         ctrl_debug_output = ControlDebugInfo()
         ctrl_debug_output.ParseFromString(msg.debug_info)
         ctrl_debug_msg_dict[ctrl_debug_output.timestamp / 1e6] = ctrl_debug_output
-      # ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_debug_msg_dict.items():
         if t > 1e-3:
           self.ctrl_debug_msg['t'].append(t)
@@ -403,7 +403,7 @@ class LoadCyberbag:
       fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
         fus_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
+      fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_parking_msg_dict.items():
         if t > 1e-3:
           self.fus_parking_msg['t'].append(t)
@@ -432,7 +432,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
         fusion_ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-      # fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fusion_ground_line_msg_dict.items():
         if t > 1e-3:
           self.fus_ground_line_msg['t'].append(t)
@@ -463,7 +463,7 @@ class LoadCyberbag:
         for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
             fus_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-        # fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
+        fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in fus_objects_msg_dict.items():
           if t > 1e-3:
             self.fus_objects_msg['t'].append(t)
@@ -491,7 +491,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
         fus_occupancy_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-      # fus_occupancy_objects_msg_dict = {key: val for key, val in sorted(fus_occupancy_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      fus_occupancy_objects_msg_dict = {key: val for key, val in sorted(fus_occupancy_objects_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_occupancy_objects_msg_dict.items():
         if t > 1e-3:
           self.fus_occupancy_objects_msg['t'].append(t)
@@ -519,7 +519,7 @@ class LoadCyberbag:
       # new visula parking slot proto
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
         vis_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
+      vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vis_parking_msg_dict.items():
         if t > 1e-3:
           self.vis_parking_msg['t'].append(t)
@@ -549,7 +549,7 @@ class LoadCyberbag:
       soc_state_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fsm/soc_state"):
         soc_state_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
+      soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
       global enter_parking_time
       enter_parking_time = 0.0
       first_enter_apa = False
@@ -630,7 +630,7 @@ class LoadCyberbag:
       wave_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
         wave_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
+      wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
         if t > 1e-3:
           self.wave_msg['t'].append(t)
@@ -655,7 +655,7 @@ class LoadCyberbag:
       adas_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/adas_function_debug"):
         adas_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in adas_debug_msg_dict.items():
         if t > 1e-3:
           self.adas_debug_msg['t'].append(t)
@@ -681,7 +681,7 @@ class LoadCyberbag:
       wave_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
         wave_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      # wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_debug_msg_dict.items():
         if t > 1e-3:
           self.wave_debug_msg['t'].append(t)
@@ -708,7 +708,7 @@ class LoadCyberbag:
         uss_percept_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
           uss_percept_msg_dict[msg.msg_header.stamp / 1e6] = msg
-        # uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
+        uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in uss_percept_msg_dict.items():
           if t > 0.0:
             self.uss_percept_msg['t'].append(t)
@@ -838,12 +838,6 @@ class LoadCyberbag:
           uss_percept_msg_idx = uss_percept_msg_idx + 1
     out['uss_percept_msg_idx'] = uss_percept_msg_idx
 
-    ehr_parking_map_msg_idx = 0
-    if self.ehr_parking_map_msg['enable'] == True:
-      while self.ehr_parking_map_msg['abs_t'][ehr_parking_map_msg_idx] <= abs_t and ehr_parking_map_msg_idx < (len(self.ehr_parking_map_msg['abs_t'])-1):
-        ehr_parking_map_msg_idx = ehr_parking_map_msg_idx + 1
-    out['ehr_parking_map_msg_idx'] = ehr_parking_map_msg_idx
-
     return out
 
   def get_localization_msg_index(self, bag_time):
@@ -945,13 +939,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     while bag_loader.uss_percept_msg['abs_t'][uss_percept_msg_idx] <= abs_t and uss_percept_msg_idx < (len(bag_loader.uss_percept_msg['abs_t'])-1):
         uss_percept_msg_idx = uss_percept_msg_idx + 1
   local_view_data['data_index']['uss_percept_msg_idx'] = uss_percept_msg_idx
-
-
-  ehr_parking_map_msg_idx = 0
-  if bag_loader.ehr_parking_map_msg['enable'] == True:
-      while bag_loader.ehr_parking_map_msg['abs_t'][ehr_parking_map_msg_idx] <= abs_t and ehr_parking_map_msg_idx < (len(bag_loader.ehr_parking_map_msg['abs_t'])-1):
-        ehr_parking_map_msg_idx = ehr_parking_map_msg_idx + 1
-  local_view_data['data_index']['ehr_parking_map_msg_idx'] = ehr_parking_map_msg_idx
 
   ### step 2: load positioning information
   cur_pos_xn0 = 0
@@ -2440,7 +2427,6 @@ def load_local_view_figure_parking():
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_ehr_slot, line_width = 2, line_color = 'SlateBlue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'ehr_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot0, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 0.6, legend_label = 'map_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot1, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot2, line_width = 2, line_color = 'cyan', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)

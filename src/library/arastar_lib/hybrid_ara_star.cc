@@ -295,7 +295,7 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
     ReferencePathPoint temp_ref_path_point;
     if (reference_path_ptr_->get_reference_point_by_lon(s,
                                                         temp_ref_path_point)) {
-      if (std::abs(temp_ref_path_point.path_point.kappa) > 1 / kBendRadius) {
+      if (std::abs(temp_ref_path_point.path_point.kappa()) > 1 / kBendRadius) {
         one_shot_distance_update = 0.5;
         break;
       }
@@ -1202,17 +1202,17 @@ bool HybridARAStar::Init() {
     return false;
   }
 
-  double x_dist = reference_path_ptr_->get_points().front().path_point.x -
+  double x_dist = reference_path_ptr_->get_points().front().path_point.x() -
                   ref_init_point_x_;
-  double y_dist = reference_path_ptr_->get_points().front().path_point.y -
+  double y_dist = reference_path_ptr_->get_points().front().path_point.y() -
                   ref_init_point_y_;
   if (ego_s_ < last_ego_s_) {
     compensation_s_ = std::hypot(x_dist, y_dist);
   } else {
     compensation_s_ = -1 * std::hypot(x_dist, y_dist);
   }
-  ref_init_point_x_ = reference_path_ptr_->get_points().front().path_point.x;
-  ref_init_point_y_ = reference_path_ptr_->get_points().front().path_point.y;
+  ref_init_point_x_ = reference_path_ptr_->get_points().front().path_point.x();
+  ref_init_point_y_ = reference_path_ptr_->get_points().front().path_point.y();
   last_ego_s_ = ego_s_;
 
   const double target_vel = session_->mutable_environmental_model()

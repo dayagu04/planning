@@ -694,8 +694,8 @@ void TrackletMaintainer::calc(
   std::vector<double> avd_car_id;
   auto config_builder =
       session_->environmental_model().highway_config_builder();
-  PotentialAvoidDeciderConfig config =
-      config_builder->cast<PotentialAvoidDeciderConfig>();
+  LateralObstacleDeciderConfig config =
+      config_builder->cast<LateralObstacleDeciderConfig>();
   double expand_vel = interp(ego_state_->ego_v(), config.expand_ego_vel,
                              config.expand_obs_rel_vel);
   for (auto tr : tracked_objects) {

@@ -19,7 +19,7 @@ LateralObstacleDecider::LateralObstacleDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session),
       session_(session),
-      config_(config_builder->cast<PotentialAvoidDeciderConfig>()),
+      config_(config_builder->cast<LateralObstacleDeciderConfig>()),
       lateral_obstacle_history_info_(
           session_->mutable_planning_context()
               ->mutable_lateral_obstacle_decider_output()
@@ -138,7 +138,7 @@ bool LateralObstacleDecider::Execute() {
       }
       continue;
     }
-    
+
     history.is_avd_car = IsPotentialAvoidingCar(
         *frenet_obs, lane_width, rightest_lane, farthest_distance);
 

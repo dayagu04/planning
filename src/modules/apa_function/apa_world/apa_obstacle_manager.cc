@@ -137,13 +137,13 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
   // 读取接地线障碍物点云
   const uint8 ground_lines_size =
-      std::min(local_view->ground_line_perception.ground_lines_size,
+      std::min(local_view->ground_line_perception.groundline_size,
                static_cast<uint8>(GROUND_LINES_NUM));
   for (uint8 i = 0; i < ground_lines_size; ++i) {
-    const iflyauto::GroundLine& gl =
-        local_view->ground_line_perception.ground_lines[i];
+    const iflyauto::FusionGroundLine& gl =
+        local_view->ground_line_perception.groundline[i];
     const uint8 points_3d_size =
-        std::min(gl.points_3d_size, static_cast<uint8>(GROUND_LINE_POINTS_NUM));
+        std::min(gl.groundline_point_size, static_cast<uint8>(GROUND_LINE_POINTS_NUM));
     if (points_3d_size < 1) {
       continue;
     }
@@ -152,7 +152,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     Polygon2D polygon;
     cdl::AABB box = cdl::AABB();
     for (uint8 j = 0; j < points_3d_size; ++j) {
-      const Eigen::Vector2d gl_pt(gl.points_3d[j].x, gl.points_3d[j].y);
+      const Eigen::Vector2d gl_pt(gl.shape[j].x, gl.shape[j].y);
       box.MergePoint(cdl::Vector2r(gl_pt.x(), gl_pt.y()));
       gl_pt_clout_2d.emplace_back(std::move(gl_pt));
     }

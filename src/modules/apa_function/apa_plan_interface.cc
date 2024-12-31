@@ -35,8 +35,6 @@ ApaPlanInterface::ApaPlanInterface() {
 
   scenario_manager_.Init(apa_world_ptr_);
 
-  Init();
-
   return;
 }
 

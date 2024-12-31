@@ -800,8 +800,8 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     double point_s = traj_point.s;
-    if (traj_point.s > reference_path_ptr_->get_points().back().path_point.s) {
-      point_s = reference_path_ptr_->get_points().back().path_point.s;
+    if (traj_point.s > reference_path_ptr_->get_points().back().path_point.s()) {
+      point_s = reference_path_ptr_->get_points().back().path_point.s();
     }
     if (!reference_path_ptr_->get_reference_point_by_lon(point_s,
                                                          refpath_pt)) {
@@ -1072,9 +1072,9 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
 
     // double extra_soft_buffer = config_.extra_soft_buffer2groundline;
-    // double extra_hard_buffer = std::fabs(ref_path_points_[i].path_point.kappa) /
+    // double extra_hard_buffer = std::fabs(ref_path_points_[i].path_point.kappa()) /
     //     config_.max_ref_curvature * 0.2;
-    double extra_soft_buffer = std::max(std::fabs(ref_path_points_[i].path_point.kappa) / config_.max_ref_curvature,
+    double extra_soft_buffer = std::max(std::fabs(ref_path_points_[i].path_point.kappa()) / config_.max_ref_curvature,
         config_.extra_soft_buffer2groundline);
     double extra_hard_buffer = config_.extra_hard_buffer2groundline;
 
@@ -1152,9 +1152,9 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
     Bound hard_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    double road_radius = 1 / std::fabs(ref_path_points_[i].path_point.kappa);
+    double road_radius = 1 / std::fabs(ref_path_points_[i].path_point.kappa());
     if (road_radius < kDefaultDistanceToRoad) {
-      if (ref_path_points_[i].path_point.kappa > 0.0) {
+      if (ref_path_points_[i].path_point.kappa() > 0.0) {
         soft_bound_road.upper = road_radius;
         hard_bound_road.upper = road_radius;
       } else {
@@ -1344,9 +1344,9 @@ void HppGeneralLateralDecider::GetLateralTTCToRoad(
     for (size_t i = 1; i < ref_path_points_.size(); i++) {
       if (!is_left_overlap) {
         const auto left_road_line_segment = LineSegment2d(
-            Vec2d(ref_path_points_.at(i - 1).path_point.s,
+            Vec2d(ref_path_points_.at(i - 1).path_point.s(),
                   ref_path_points_.at(i - 1).distance_to_left_road_border),
-            Vec2d(ref_path_points_.at(i).path_point.s,
+            Vec2d(ref_path_points_.at(i).path_point.s(),
                   ref_path_points_.at(i).distance_to_left_road_border));
         if (ego_box.HasOverlap(left_road_line_segment)) {
           is_left_overlap = true;
@@ -1356,9 +1356,9 @@ void HppGeneralLateralDecider::GetLateralTTCToRoad(
 
       if (!is_right_overlap) {
         const auto right_road_line_segment = LineSegment2d(
-            Vec2d(ref_path_points_.at(i - 1).path_point.s,
+            Vec2d(ref_path_points_.at(i - 1).path_point.s(),
                   -ref_path_points_.at(i - 1).distance_to_right_road_border),
-            Vec2d(ref_path_points_.at(i).path_point.s,
+            Vec2d(ref_path_points_.at(i).path_point.s(),
                   -ref_path_points_.at(i).distance_to_right_road_border));
         if (ego_box.HasOverlap(right_road_line_segment)) {
           is_right_overlap = true;

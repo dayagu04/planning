@@ -234,16 +234,6 @@ class EnvironmentalModel {
     occupancy_object_manager_ = occupancy_object_manager;
   }
 
-  const std::shared_ptr<OccupancyObjectManager> &get_occupancy_object_manager()
-      const {
-    return occupancy_object_manager_;
-  }
-
-  void set_occupancy_object_manager(
-      const std::shared_ptr<OccupancyObjectManager> occupancy_object_manager) {
-    occupancy_object_manager_ = occupancy_object_manager;
-  }
-
   void set_route_info(const std::shared_ptr<RouteInfo> route_info) {
     route_info_ = route_info;
   }

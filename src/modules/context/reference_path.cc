@@ -130,24 +130,24 @@ void ReferencePath::update_refpath_points_in_hpp(
   size_t start_index = 0;
   size_t end_index = raw_ref_path_points.size();
   for (size_t i = 0; i < raw_ref_path_points.size(); ++i) {
-    if (std::isnan(raw_ref_path_points[i].path_point.x) || std::isnan(raw_ref_path_points[i].path_point.y)) {
+    if (std::isnan(raw_ref_path_points[i].path_point.x()) || std::isnan(raw_ref_path_points[i].path_point.y())) {
       LOG_ERROR("update_refpath_points: skip NaN point");
       continue;
     }
-    auto pt = planning_math::PathPoint(raw_ref_path_points[i].path_point.x, raw_ref_path_points[i].path_point.y);
+    auto pt = planning_math::PathPoint(raw_ref_path_points[i].path_point.x(), raw_ref_path_points[i].path_point.y());
     // std ::cout << "path_point: " << pt.x() << "," << pt.y() <<std::endl;
     if (i > 1) {
       const auto& last_pt = raw_ref_path_points[i - 1].path_point;
-      double diff_s = planning_math::Vec2d(last_pt.x - pt.x(), last_pt.y - pt.y()).Length();
+      double diff_s = planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y()).Length();
       ref_length += diff_s;
       if (diff_s < 1e-2) {
         continue;
       }
       // check direction
       Vec2d last_direction =
-          Vec2d::CreateUnitVec2d(last_pt.theta);
+          Vec2d::CreateUnitVec2d(last_pt.theta());
       Vec2d cur_direction =
-          Vec2d::CreateUnitVec2d(raw_ref_path_points[i].path_point.theta);
+          Vec2d::CreateUnitVec2d(raw_ref_path_points[i].path_point.theta());
       if (cur_direction.InnerProd(last_direction) < 0) {
         if (ref_length > init_length) {
           end_index = i;
@@ -184,21 +184,21 @@ void ReferencePath::update_refpath_points_in_hpp(
   refined_ref_path_points_.reserve(raw_ref_path_points.size());
   for (size_t i = start_index; i < end_index; ++i) {
     auto pt = raw_ref_path_points[i];
-    if (std::isnan(pt.path_point.x) || std::isnan(pt.path_point.y)) {
+    if (std::isnan(pt.path_point.x()) || std::isnan(pt.path_point.y())) {
       LOG_ERROR("raw_ref_path_points: skip NaN point");
       continue;
     }
     Point2D frenet_point;
-    if (frenet_coord_->XYToSL(pt.path_point.x, pt.path_point.y, &frenet_point.x,
+    if (frenet_coord_->XYToSL(pt.path_point.x(), pt.path_point.y(), &frenet_point.x,
                               &frenet_point.y)) {
-      pt.path_point.s = frenet_point.x;
+      pt.path_point.set_s(frenet_point.x);
       if (!refined_ref_path_points_.empty() &&
-          pt.path_point.s < refined_ref_path_points_.back().path_point.s) {
+          pt.path_point.s() < refined_ref_path_points_.back().path_point.s()) {
         continue;
       }
       auto kd_path_point = frenet_coord_->GetPathPointByS(frenet_point.x);
-      pt.path_point.kappa = kd_path_point.kappa();
-      pt.path_point.theta = kd_path_point.theta();
+      pt.path_point.set_kappa(kd_path_point.kappa());
+      pt.path_point.set_theta(kd_path_point.theta());
 
       refined_ref_path_points_.emplace_back(pt);
     }

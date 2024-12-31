@@ -21,7 +21,7 @@ FrenetObstacle::FrenetObstacle(
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid),
       is_static_(obstacle_ptr->is_static()) {
-  compute_frenet_obstacle(reference_path);
+  compute_frenet_obstacle(reference_path, ego_state_info);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
     compute_frenet_polygon_sequence(reference_path);
@@ -137,11 +137,7 @@ void FrenetObstacle::compute_frenet_obstacle(
   max_s = *std::max_element(corners_s.begin(), corners_s.end());
   min_l = s_with_min_l_.x;
   max_l = s_with_max_l_.x;
-  double min_s, max_s, min_l, max_l;
-  min_s = *std::min_element(corners_s.begin(), corners_s.end());
-  max_s = *std::max_element(corners_s.begin(), corners_s.end());
-  min_l = s_with_min_l_.x;
-  max_l = s_with_max_l_.x;
+
   if (frenet_s_ > frenet_ego_state.s()) {
     rel_s_ =
         (min_s > frenet_ego_state.s()) ? (min_s - frenet_ego_state.s()) : 0;

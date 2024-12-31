@@ -28,7 +28,7 @@ class LateralObstacleDecider : public Task {
                                double lane_width, double expand_length);
 
   planning::framework::Session *session_;
-  PotentialAvoidDeciderConfig config_;
+  LateralObstacleDeciderConfig config_;
 
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       &lateral_obstacle_history_info_;

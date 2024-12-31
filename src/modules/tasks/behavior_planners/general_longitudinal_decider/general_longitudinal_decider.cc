@@ -680,9 +680,9 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
     if (reference_path_ptr->get_reference_point_by_lon(
             frenet_ego_state.s() + kVelocityPreviewDistance, refpath_pt)) {
       user_velocity_limit = map_velocity_limit;
-      if (std::fabs(refpath_pt.path_point.kappa) > 0.07) {
+      if (std::fabs(refpath_pt.path_point.kappa()) > 0.07) {
         user_velocity_limit = std::min(
-            (1.0 - std::fabs(refpath_pt.path_point.kappa)) * map_velocity_limit,
+            (1.0 - std::fabs(refpath_pt.path_point.kappa())) * map_velocity_limit,
             5 / 3.6);
         user_velocity_limit = std::max(user_velocity_limit, 2.0);
       }
