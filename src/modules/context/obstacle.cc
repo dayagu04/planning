@@ -266,7 +266,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
 Obstacle::Obstacle(const Obstacle *obstacle) {
   id_ = obstacle->id();
   perception_id_ = obstacle->perception_id_;
-  timestamp_ = obstacle->timestamp_;
+  timestamp_ = obstacle->timestamp();
   is_static_ = obstacle->is_static();
   x_center_ = obstacle->x_center();
   y_center_ = obstacle->y_center();

@@ -24,6 +24,7 @@
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
@@ -53,6 +54,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
+  std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
