@@ -24,7 +24,6 @@ static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
-
 static double kMinChannelYMagIdentification = 3.3;
 
 static double kTBoundarySampleDist = 0.38;

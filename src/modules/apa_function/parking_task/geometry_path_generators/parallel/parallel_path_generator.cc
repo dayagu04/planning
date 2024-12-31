@@ -313,7 +313,7 @@ const bool ParallelPathGenerator::Update(
 // park out from target pose with two arc to ego line.
 const bool ParallelPathGenerator::PlanFromTargetToLine(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
-    const pnc::geometry_lib::PathPoint& start_pose) {
+    const pnc::geometry_lib::PathPoint& start_pose, const bool is_park_out) {
   // ILOG_INFO <<"------PlanFromTargetToLine-------");
   using namespace pnc::mathlib;
   using namespace pnc::geometry_lib;
@@ -364,27 +364,29 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       }
     }
 
-    ego_line.heading = start_pose.heading;
-    ego_line.SetPoints(start_pose.pos, arc_2.pB);
-    const auto ego_line_gear = CalLineSegGear(ego_line);
-    if (ego_line_gear == SEG_GEAR_DRIVE) {
-      const double heading_mag_deg = std::fabs(start_pose.heading) * kRad2Deg;
-      if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
-          ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+    if (!is_park_out) {
+      ego_line.heading = start_pose.heading;
+      ego_line.SetPoints(start_pose.pos, arc_2.pB);
+      const auto ego_line_gear = CalLineSegGear(ego_line);
+      if (ego_line_gear == SEG_GEAR_DRIVE) {
+        const double heading_mag_deg = std::fabs(start_pose.heading) * kRad2Deg;
+        if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
+            ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+          continue;
+        }
+      }
+
+      collision_detector_ptr_->SetParam(
+          CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
+
+      auto col_res =
+          collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
+      if (col_res.collision_flag ||
+          col_res.remain_car_dist >
+              col_res.remain_obstacle_dist - kColBufferOutSlot) {
+        ILOG_INFO << "ego line collided!";
         continue;
       }
-    }
-
-    collision_detector_ptr_->SetParam(
-        CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
-
-    auto col_res =
-        collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
-    if (col_res.collision_flag ||
-        col_res.remain_car_dist >
-            col_res.remain_obstacle_dist - kColBufferOutSlot) {
-      ILOG_INFO << "ego line collided!";
-      continue;
     }
 
     // if (!CheckParkOutCornerSafeWithObsPin(arc_1)) {
@@ -392,7 +394,8 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     //   continue;
     // }
 
-    col_res = collision_detector_ptr_->UpdateByObsMap(arc_2, arc_2.headingA);
+    auto col_res =
+        collision_detector_ptr_->UpdateByObsMap(arc_2, arc_2.headingA);
     if (col_res.collision_flag ||
         col_res.remain_car_dist >
             col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
@@ -1044,6 +1047,7 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
       path_vec.emplace_back(path);
     }
   }
+
   ILOG_INFO << "path_vec size = " << path_vec.size();
   if (path_vec.size() == 0) {
     return false;
@@ -3554,9 +3558,9 @@ const bool ParallelPathGenerator::TwoArcPath(
     const Arc arc2 = arc_pair.second;
 
     if (arc1.pB.x() < kMinXInTBoundary ||
-        arc1.pB.x() < start_pose.pos.x() - 1.5 ||
+        arc1.pB.x() < start_pose.pos.x() - 2.5 ||
         arc2.pB.x() < kMinXInTBoundary ||
-        arc2.pB.x() < start_pose.pos.x() - 1.5) {
+        arc2.pB.x() < start_pose.pos.x() - 2.5) {
       continue;
     }
 
