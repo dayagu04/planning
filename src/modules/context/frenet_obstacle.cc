@@ -21,7 +21,7 @@ FrenetObstacle::FrenetObstacle(
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid),
       is_static_(obstacle_ptr->is_static()) {
-  compute_frenet_obstacle(reference_path, ego_state_info);
+  compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
     compute_frenet_polygon_sequence(reference_path);
