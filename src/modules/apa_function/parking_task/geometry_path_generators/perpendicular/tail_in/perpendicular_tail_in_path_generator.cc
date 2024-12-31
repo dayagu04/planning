@@ -1290,7 +1290,8 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
   geometry_lib::GeometryPath geometry_path;
   geometry_lib::GeometryPath geometry_path_copy;
 
-  const double rough_lat_buffer_penalty_value = 0.0268;
+  // const double rough_lat_buffer_penalty_value = 0.0268;
+  const double rough_lat_buffer_penalty_value = 0.0;
 
   for (size_t i = 0; i < 8 && success_geometry_path_vec.size() < 1; ++i) {
     ILOG_INFO_IF(enable_log) << i << "th try RoughMultiAdjustPathPlan ";
