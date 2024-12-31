@@ -6,9 +6,12 @@
 #include "camera_preception_tsr_c.h"
 #include "component_intf.h"
 #include "control_command_c.h"
+#include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
 #include "fm_info_c.h"
 #include "func_state_machine_c.h"
+#include "fusion_deceler_c.h"
+#include "fusion_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
@@ -40,7 +43,9 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::FusionOccupancyObjectsInfo& data) = 0;
   virtual void Feed_IflytekFusionRoadFusion(const iflyauto::RoadInfo& data) = 0;
   virtual void Feed_IflytekFusionGroundLine(
-      const iflyauto::GroundLinePerceptionInfo& data) = 0;
+      const iflyauto::FusionGroundLineInfo& data) = 0;
+  virtual void Feed_IflytekFusionSpeedBump(
+      const iflyauto::FusionDecelerInfo& data) = 0;
   virtual void Feed_IflytekLocalizationEgomotion(
       const iflyauto::IFLYLocalization& data) = 0;
   virtual void Feed_IflytekPredictionPredictionResult(
@@ -58,6 +63,7 @@ class PlanningInterface : public ComponentInterface {
   virtual void Feed_IflytekUssUssPerceptionInfo(
       const iflyauto::UssPerceptInfo& data) = 0;
   virtual void Feed_IflytekEhrSdmapInfo(const SdMapSwtx::SdMap& data) = 0;
+  virtual void Feed_IflytekEhrStaticMap(const Map::StaticMap& data) = 0;
 
   virtual void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput&)>& writer) = 0;

@@ -42,24 +42,16 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_road_info_msg_updated_.store(true);
   }
 
-  // void FeedGroundLinePerception(
-  //     const iflyauto::FusionGroundLineInfo& ground_line_perception_msg) {
-  //   std::lock_guard<std::mutex> lock(msg_mutex_);
-  //   ground_line_perception_msg_ = ground_line_perception_msg;
-  //   ground_line_perception_msg_recv_time_ = IflyTime::Now_ms();
-  //   is_ground_line_perception_msg_updated_.store(true);
-  // }
-
-  void FeedGroundLine(
-      const iflyauto::FusionGroundLineInfo& ground_line_msg) {
+  void Feed_IflytekFusionGroundLine(
+      const iflyauto::FusionGroundLineInfo& ground_line_msg) override {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     ground_line_perception_msg_ = ground_line_msg;
     ground_line_perception_msg_recv_time_ = IflyTime::Now_ms();
     is_ground_line_perception_msg_updated_.store(true);
   }
 
-  void FeedFusionSpeedBump(
-      const iflyauto::FusionDecelerInfo& fusion_speed_bump_msg) {
+  void Feed_IflytekFusionSpeedBump(
+      const iflyauto::FusionDecelerInfo& fusion_speed_bump_msg) override {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     fusion_speed_bump_msg_ = fusion_speed_bump_msg;
     fusion_speed_bump_msg_recv_time_ = IflyTime::Now_ms();
@@ -160,9 +152,9 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_uss_percept_info_msg_updated_.store(true);
   }
 
-  void FeedMap(const std::shared_ptr<Map::StaticMap>& map_msg) {
+  void Feed_IflytekEhrStaticMap(const Map::StaticMap& map_msg) override {
     std::lock_guard<std::mutex> lock(msg_mutex_);
-    map_info_msg_.CopyFrom(*map_msg);
+    map_info_msg_.CopyFrom(map_msg);
     map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_map_info_msg_updated_.store(true);
     std::cout << "feed static map_info_msg_ end" << std::endl;

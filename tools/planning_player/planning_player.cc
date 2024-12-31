@@ -839,7 +839,7 @@ void PlanningPlayer::PlayOneFrame(
       auto static_map = std::make_shared<Map::StaticMap>();
       static_map->ParseFromString(static_map_str);
       if (static_map->header().timestamp() == input_time_list_map_) {
-        planning_adapter_->FeedMap(static_map);
+        planning_adapter_->Feed_IflytekEhrStaticMap(*static_map);
         break;
       }
     }
@@ -886,7 +886,7 @@ void PlanningPlayer::PlayOneFrame(
   if (ground_line_ros_msg) {
     iflyauto::FusionGroundLineInfo ground_line_msg{};
     convert(ground_line_msg, *ground_line_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedGroundLine(ground_line_msg);
+    planning_adapter_->Feed_IflytekFusionGroundLine(ground_line_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/fusion/ground_line" << std::endl;
@@ -899,7 +899,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::FusionDecelerInfo speed_bump_msg{};
     convert(speed_bump_msg, *speed_bump_ros_msg,
     ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedFusionSpeedBump(speed_bump_msg);
+    planning_adapter_->Feed_IflytekFusionSpeedBump(speed_bump_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
@@ -1945,7 +1945,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       auto sd_map = std::make_shared<SdMapSwtx::SdMap>();
       sd_map->ParseFromString(sd_map_str);
       if (sd_map->header().timestamp() >= start_time) {
-        planning_adapter_->FeedSdMap(sd_map);
+        planning_adapter_->Feed_IflytekEhrSdmapInfo(*sd_map);
         break;
       }
     }
@@ -1959,7 +1959,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       auto static_map = std::make_shared<Map::StaticMap>();
       static_map->ParseFromString(static_map_str);
       if (static_map->header().timestamp() >= start_time) {
-        planning_adapter_->FeedMap(static_map);
+        planning_adapter_->Feed_IflytekEhrStaticMap(*static_map);
         break;
       }
     }
@@ -1970,7 +1970,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::FusionGroundLineInfo ground_line_msg{};
       convert(ground_line_msg, *ground_line_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedGroundLine(ground_line_msg);
+      planning_adapter_->Feed_IflytekFusionGroundLine(ground_line_msg);
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing /iflytek/fusion/ground_line" << std::endl;
@@ -1981,7 +1981,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     if (speed_bump_ros_msg) {
       iflyauto::FusionDecelerInfo speed_bump_msg{};
       convert(speed_bump_msg, *speed_bump_ros_msg, ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedFusionSpeedBump(speed_bump_msg);
+      planning_adapter_->Feed_IflytekFusionSpeedBump(speed_bump_msg);
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
