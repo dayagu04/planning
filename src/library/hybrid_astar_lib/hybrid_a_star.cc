@@ -18,6 +18,8 @@
 #include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
 #include "src/common/ifly_time.h"
+#include "src/library/spiral/cubic_spiral_interface.h"
+#include "src/library/spiral/spiral_path.h"
 #include "src/modules/common/math/curve1d/quintic_polynomial_curve1d.h"
 #include "transform2d.h"
 #include "utils_math.h"
@@ -482,6 +484,263 @@ bool HybridAStar::SamplingByCubicPolyForVerticalSlot(
   return true;
 }
 
+bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
+    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+    const double lon_min_sampling_length, const MapBound& XYbounds,
+    const ParkObstacleList& obstacles, const AstarRequest& request,
+    EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+    ParkReferenceLine* ref_line) {
+  double astar_start_time = IflyTime::Now_ms();
+  ILOG_INFO << "hybrid astar begin, by cubic spiral";
+
+  // init
+  obstacles_ = &obstacles;
+  edt_ = edt;
+  ref_line_ = ref_line;
+
+  // load XYbounds
+  XYbounds_ = XYbounds;
+
+  request_ = request;
+  DebugAstarRequestString(request_);
+
+  clear_zone_ = clear_zone;
+
+  const AstarPathGear spiral_gear = AstarPathGear::DRIVE;
+
+  // sampling for path end
+  // sampling start point: move start point forward dist
+  // (lon_min_sampling_length)
+  Pose2D sampling_end = start;
+  sampling_end.y = 0.0;
+  sampling_end.theta = 0.0;
+  sampling_end.x = start.x + lon_min_sampling_length;
+
+  double sampling_step = 0.1;
+  size_t max_sampling_num = 30;
+
+  ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
+            << ", lon_min_sampling_length = " << lon_min_sampling_length
+            << ", start.x " << start.x << ", start.y " << start.y
+            << ", start.theta " << start.theta << ", end.x " << end.x
+            << ", end.y " << end.y << ", end.theta " << end.theta
+            << ", sampling_step " << sampling_step;
+
+  size_t plan_num = 0;
+  HybridAStarResult path;
+  path.Clear();
+  size_t path_points_size = 1000;
+  size_t expected_dist_id = 0;
+
+  spiral_path_point_t start_spiral;
+  start_spiral.x = start.x;
+  start_spiral.y = start.y;
+  start_spiral.theta = start.theta;
+  start_spiral.kappa = 0.0;
+  start_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
+  spiral_path_point_t goal_spiral;
+  goal_spiral.x = 1.1;
+  goal_spiral.y = 0.0;
+  goal_spiral.theta = 0.0;
+  goal_spiral.kappa = 0.0;
+  goal_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
+  bool constrain_start_k = true;
+  bool constrain_goal_k = true;
+  const double spiral_step_length = 0.1;
+  std::vector<AStarPathPoint> cubic_spiral_path;
+  cubic_spiral_path.reserve(UOS_MAX_STEER_STATE_NUM);
+
+  for (size_t k = 0; k < max_sampling_num; k++) {
+    cubic_spiral_path.clear();
+    plan_num = k;
+    goal_spiral.x = sampling_end.x;
+    std::vector<spiral_path_point_t> states;
+    states.reserve(UOS_MAX_STEER_STATE_NUM);
+
+    DEBUG_PRINT("start is " << start_spiral.x << ", " << start_spiral.y << ", "
+                            << start_spiral.theta * 57.3);
+    DEBUG_PRINT("goal is " << goal_spiral.x << ", " << goal_spiral.y << ", "
+                           << goal_spiral.theta * 57.3);
+
+    solution_cubic_t sol;
+
+    double spiral_start_time = IflyTime::Now_us();
+    if (CubicSpiralStrictSolve(&sol, &start_spiral, &goal_spiral)) {
+      sampling_end.x += sampling_step;
+    } else {
+      sampling_end.x += sampling_step;
+      ILOG_INFO << "cubic spiral solve failed !";
+      continue;
+    }
+
+    bool solution_usable = (bool)(sol.solve_status);
+
+    // std::vector<spiral_path_point_t> states;
+    // states.reserve(UOS_MAX_STEER_STATE_NUM);
+    if (solution_usable) /* usable */
+    {
+      auto ret = SampleCubicSpiralStatesBySol(states, &sol, spiral_step_length);
+      if (!ret) {
+        ILOG_INFO << "cubic spiral sample failed !";
+        continue;
+      }
+
+      DEBUG_PRINT("states size is " << states.size());
+
+      std::cout << " Cubic Spiral Strict Solve ret " << static_cast<int>(ret)
+                << std::endl;
+    }
+
+    double s = 0.0;
+
+    for (auto& state : states) {
+      cubic_spiral_path.emplace_back(state.x, state.y, state.theta, spiral_gear,
+                                     s, AstarPathType::SPIRAL, state.kappa);
+      s += spiral_step_length;
+    }
+
+    double spiral_end_time = IflyTime::Now_us();
+    ILOG_INFO << "sample cubic spiral time (us): "
+              << (spiral_end_time - spiral_start_time);
+
+    auto last_state = states.back();
+    double end_point_error_x = last_state.x - goal_spiral.x;
+    double end_point_error_y = last_state.y - goal_spiral.y;
+    double end_point_error_theta = last_state.theta - goal_spiral.theta;
+
+    if (std::fabs(end_point_error_x) >= 1e-2 ||
+        std::fabs(end_point_error_y) >= 1e-2 ||
+        std::fabs(end_point_error_theta) >= 1e-3) {
+      ILOG_INFO << "spiral path end point insufficient accuracy";
+      continue;
+    }
+
+    path.Clear();
+    result->Clear();
+
+    for (int i = 0; i < cubic_spiral_path.size(); i++) {
+      path.x.emplace_back(cubic_spiral_path[i].x);
+      path.y.emplace_back(cubic_spiral_path[i].y);
+      path.phi.emplace_back(cubic_spiral_path[i].phi);
+      path.gear.emplace_back(cubic_spiral_path[i].gear);
+      path.type.emplace_back(AstarPathType::CUBIC_POLYNOMIAL);
+      path.kappa.emplace_back(cubic_spiral_path[i].kappa);
+    }
+
+    // get path lengh
+    path_points_size = path.x.size();
+
+    double accumulated_s = 0.0;
+    path.accumulated_s.clear();
+    auto last_x = path.x.front();
+    auto last_y = path.y.front();
+    double x_diff;
+    double y_diff;
+
+    for (size_t i = 0; i < path_points_size; ++i) {
+      x_diff = path.x[i] - last_x;
+      y_diff = path.y[i] - last_y;
+      accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
+      path.accumulated_s.emplace_back(accumulated_s);
+
+      if (accumulated_s <= lon_min_sampling_length) {
+        expected_dist_id = i;
+      }
+
+      last_x = path.x[i];
+      last_y = path.y[i];
+    }
+
+    path_points_size = std::min(path_points_size, expected_dist_id);
+
+    // collision check
+    size_t collision_id = GetPathCollisionIDByEDT(&path);
+    if (collision_id > 2) {
+      collision_id -= 2;
+    }
+
+    path_points_size = std::min(path_points_size, collision_id);
+    if (path_points_size <= 1) {
+      ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+                << ", max_sampling_num=" << max_sampling_num;
+      continue;
+    }
+
+    ILOG_INFO << plan_num << " point size = " << path.x.size()
+              << ", expected_dist_id = " << expected_dist_id
+              << ", path_points_size = " << path_points_size
+              << ", path len= " << path.accumulated_s.back()
+              << ", collision_id is " << collision_id;
+
+    if (path_points_size >= expected_dist_id) {
+      break;
+    }
+  }
+
+  result->base_pose = request.base_pose_;
+
+  // if (plan_num > max_sampling_num - 1 || plan_num == max_sampling_num - 1) {
+  //   ILOG_INFO << "cubic plan fail";
+  //   return false;
+  // }
+
+  // path_points_size = path.x.size();
+  ILOG_INFO << "path_points_size is " << path_points_size;
+
+  path_points_size = std::min(path_points_size, path.x.size());
+
+  if (path_points_size < 2) {
+    return false;
+  }
+
+  double valid_dist = 0.0;
+  if (path_points_size > 0) {
+    valid_dist = path.accumulated_s[path_points_size - 1];
+  }
+  if (valid_dist >= 1.2) {
+    for (size_t i = 0; i < path_points_size; i++) {
+      result->x.emplace_back(path.x[i]);
+      result->y.emplace_back(path.y[i]);
+      result->phi.emplace_back(path.phi[i]);
+      result->gear.emplace_back(path.gear[i]);
+      result->type.emplace_back(path.type[i]);
+      result->kappa.emplace_back(path.kappa[i]);
+      result->accumulated_s.emplace_back(path.accumulated_s[i]);
+    }
+    result->base_pose = request.base_pose_;
+
+    ILOG_INFO << "path valid, point size= " << result->x.size();
+  } else {
+    // if path is too short by collision check or gear check, use a fallback
+    // path with no collision check.
+    fallback_path_.Clear();
+    for (size_t i = 0; i < expected_dist_id; i++) {
+      fallback_path_.x.emplace_back(path.x[i]);
+      fallback_path_.y.emplace_back(path.y[i]);
+      fallback_path_.phi.emplace_back(path.phi[i]);
+      fallback_path_.gear.emplace_back(path.gear[i]);
+      fallback_path_.type.emplace_back(path.type[i]);
+      fallback_path_.kappa.emplace_back(path.kappa[i]);
+      fallback_path_.accumulated_s.emplace_back(path.accumulated_s[i]);
+    }
+    fallback_path_.base_pose = request.base_pose_;
+    ILOG_INFO << "cubic spiral path invalid, point size = " << path.x.size();
+    return false;
+  }
+
+  for (int i = 0; i < result->x.size(); i++) {
+    ILOG_INFO << "[ " << i << " ] " << static_cast<int>(result->gear[i])
+              << ", ( " << result->x[i] << ", " << result->y[i] << ", "
+              << result->phi[i] << " )";
+  }
+
+  double astar_end_time = IflyTime::Now_ms();
+  ILOG_INFO << "hybrid astar total time (ms): "
+            << astar_end_time - astar_start_time;
+
+  return true;
+}
+
 bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
                                         const PathGearRequest gear_request_info,
                                         Node3d* rs_node_to_goal) {
@@ -583,7 +842,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     }
   }
 
-    // interpolation
+  // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -890,7 +1149,7 @@ bool HybridAStar::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
     return false;
   }
 
-    // collision check
+  // collision check
 #if LOG_TIME_PROFILE
   double check_start_time = IflyTime::Now_ms();
 #endif
@@ -1962,7 +2221,7 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     }
   }
 
-    // safe dist cost
+  // safe dist cost
 #if ENABLE_OBS_DIST_G_COST
   double safe_punish = 0.0;
   safe_punish = CalcSafeDistCost(next_node);
@@ -2761,7 +3020,7 @@ void HybridAStar::GearRerversePathAttempt(
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3230,7 +3489,7 @@ bool HybridAStar::AstarSearch(
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3974,7 +4233,8 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
 
     path_valid_point_size = std::min(path_valid_point_size, collision_id);
     if (path_valid_point_size <= 1) {
-      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " <<
+      // k
       //           << ", max_sampling_num=" << max_sampling_num;
       continue;
     }
@@ -4129,6 +4389,74 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
 
   return;
 }
+
+/**
+ * This function is a general function for generating a cubic spiral.Originally,
+ *it was intended to generate a cubic spiral in Analytic Expansion to connect
+ *the endpoints. It is not needed for the time being.
+ *
+ **/
+// const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+//                                            const Pose2D& start,
+//                                            const Pose2D& end) {
+//   ILOG_INFO << "---- generate cubic spiral path ----";
+//   CubicSpiralInterface cubic_spiral_interface;
+//   spiral_path_point_t start_spiral;
+//   start_spiral.x = start.x;
+//   start_spiral.y = start.y;
+//   start_spiral.theta = start.theta + M_PI;
+//   start_spiral.kappa = 0.0;
+//   start_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
+//   ILOG_INFO << "start_spiral ( " << start_spiral.x << ", " << start_spiral.y
+//             << ", " << start_spiral.theta << " ) ";
+//   spiral_path_point_t goal_spiral;
+//   goal_spiral.x = 1.1;
+//   goal_spiral.y = 0.0;
+//   goal_spiral.theta = -M_PI;
+//   goal_spiral.kappa = 0.0;
+//   goal_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
+//   bool constrain_start_k = true;
+//   bool constrain_goal_k = true;
+//   const double spiral_step_length = 0.1;
+//   std::vector<AStarPathPoint> cubic_spiral_path;
+//   cubic_spiral_path.reserve(UOS_MAX_STEER_STATE_NUM);
+
+//   std::vector<spiral_path_point_t> states;
+//   states.reserve(UOS_MAX_STEER_STATE_NUM);
+
+//   solution_cubic_t solution;
+//   const bool is_drive = false;
+
+//   bool success = cubic_spiral_interface.GenerateCubicSpiralPathByStrictSolve(
+//       &solution, states, &start_spiral, &goal_spiral, spiral_step_length,
+//       is_drive);
+
+//   if (!success) {
+//     ILOG_INFO << "generate cubic spiral path failed ";
+//     return false;
+//   }
+
+//   AStarPathPoint point;
+//   double accumulated_s = 0.0;
+
+//   for (auto& state : states) {
+//     point.x = state.x;
+//     point.y = state.y;
+//     point.phi = state.theta - M_PI;
+//     point.gear = AstarPathGear::REVERSE;
+//     point.type = AstarPathType::SPIRAL;
+//     point.kappa = state.kappa;
+//     point.accumulated_s = accumulated_s;
+//     path.emplace_back(point);
+//     accumulated_s += spiral_step_length;
+
+//     ILOG_INFO << "spiral s: " << point.accumulated_s << ", ( " << point.x
+//               << ", " << point.y << ", " << point.phi << " ) ";
+//   }
+//   ILOG_INFO << "expansion cubic spiral path size " << path.size();
+
+//   return true;
+// }
 
 void HybridAStar::DebugPolynomialPath(
     const std::vector<AStarPathPoint>& poly_path) {

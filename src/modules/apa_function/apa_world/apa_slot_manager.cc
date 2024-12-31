@@ -36,9 +36,6 @@ void ApaSlotManager::Update(
 
   dist_id_map_.clear();
   slots_map_.clear();
-  ILOG_INFO
-      << "local_view->parking_fusion_info.parking_fusion_slot_lists_size = "
-      << local_view->parking_fusion_info.parking_fusion_slot_lists_size;
 
   for (uint8_t i = 0;
        i < local_view->parking_fusion_info.parking_fusion_slot_lists_size;
