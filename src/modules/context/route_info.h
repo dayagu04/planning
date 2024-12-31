@@ -81,6 +81,10 @@ class RouteInfo {
                          const SdMapSwtx::Segment& segment,
                          const double nearest_s,
                          const double max_search_length);
+  void CaculateDistanceToLastMergePointByInlink(const ad_common::sdmap::SDMap& sdmap,
+                                        const SdMapSwtx::Segment& segment,
+                                        const double nearest_s,
+                                        const double max_search_length);
   void CaculateDistanceToLastMergePoint(const ad_common::sdmap::SDMap& sdmap,
                                         const SdMapSwtx::Segment& segment,
                                         const double nearest_s,
@@ -97,12 +101,22 @@ class RouteInfo {
                                      const SdMapSwtx::Segment& segment,
                                      const double nearest_s,
                                      const double max_search_length);
-  SplitSegInfo MakesureSplitDirection(const ::SdMapSwtx::Segment& split_segment,
+  SplitSegInfo MakesureSplitDirectionByOutlink(const ::SdMapSwtx::Segment& split_segment,
                                       const ad_common::sdmap::SDMap& sd_map);
+  SplitSegInfo MakesureSplitDirection(const ad_common::sdmap::SDMap& sd_map, const ::SdMapSwtx::Segment& split_segment);
+  RampDirection MakesureMergeDirectionByInlink(
+      const ::SdMapSwtx::Segment& merge_segment,
+      const ad_common::sdmap::SDMap& sd_map);
   RampDirection MakesureMergeDirection(
       const ::SdMapSwtx::Segment& merge_segment,
       const ad_common::sdmap::SDMap& sd_map);
 
+  double CrossProduct(const Point2D& first_pt_2d, const Point2D& second_pt_2d,
+                      const Point2D& third_pt_2d) const;
+  RampDirection JudgeABvsBC(const Point2D& A, const Point2D& B,
+                            const Point2D& C) const;
+  RampDirection JudgeBCvsAB(const Point2D& A, const Point2D& B,
+                            const Point2D& C) const;
   // for HPP function
   void UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hdmap);
   bool UpdateStaticMap(const LocalView& local_view);

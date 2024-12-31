@@ -3,7 +3,10 @@
 #include <memory>
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
+#include "ehr_sdmap.pb.h"
 #include "environmental_model.h"
+#include "sdmap/sdmap.h"
 
 namespace planning {
 
@@ -113,7 +116,7 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdmap::SDMap& sd_map,
         sd_map.GetPreviousRoadSegment(ramp_info.first->id());
     if (previous_seg) {
       SplitSegInfo split_seg_info;
-      split_seg_info = MakesureSplitDirection(*previous_seg, sd_map);
+      split_seg_info = MakesureSplitDirection(sd_map, *previous_seg);
       route_info_output_.ramp_direction = split_seg_info.split_direction;
     } else {
       std::cout << "previous_seg is nullprt!!!!!" << std::endl;
@@ -122,7 +125,7 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdmap::SDMap& sd_map,
   }
 }
 
-SplitSegInfo RouteInfo::MakesureSplitDirection(
+SplitSegInfo RouteInfo::MakesureSplitDirectionByOutlink(
     const ::SdMapSwtx::Segment& split_segment,
     const ad_common::sdmap::SDMap& sd_map) {
   const auto out_link_size = split_segment.out_link_size();
@@ -179,84 +182,125 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
   }
   return split_seg_info;
 }
+SplitSegInfo RouteInfo::MakesureSplitDirection(const ad_common::sdmap::SDMap& sd_map, const ::SdMapSwtx::Segment& split_segment) {
+  SplitSegInfo split_seg_info;
+  split_seg_info.split_direction = RAMP_NONE;
+  split_seg_info.split_next_seg_forward_lane_nums = 0;
+  split_seg_info.split_seg_forward_lane_nums = 0;
+
+  if (split_segment.direction() == SdMapSwtx::GO_STRAIGHT &&
+      !split_segment.lane_info_list().empty()) {
+    //目前这里面只有一个元素,表示导航路线的可通行方向
+    const auto& lane_info = split_segment.lane_info_list()[0];
+
+    const int total_lane_num = lane_info.total_lane_num();
+
+    //lane_positon_nums的值肯定大于1，且小于等于总的车道数，否则地图数据错误
+    if (lane_info.lane_positon().empty() ||
+        lane_info.lane_positon().size() > total_lane_num) {
+      return split_seg_info;
+    }
+
+    const int& lane_positon_nums = lane_info.lane_positon().size();
+
+    const auto& lane_positon = lane_info.lane_positon();
+
+    if (lane_positon_nums == total_lane_num) {
+      split_seg_info.split_direction = RAMP_NONE;
+    } else if (lane_positon[0] > 1) {
+      split_seg_info.split_direction = RAMP_ON_RIGHT;
+    } else if (lane_positon[lane_positon_nums - 1] < total_lane_num) {
+      split_seg_info.split_direction = RAMP_ON_LEFT;
+    }
+  }
+
+  if (split_segment.direction() == SdMapSwtx::RIGTH_30_DEGREE ||
+      split_segment.direction() == SdMapSwtx::MERGE_RIGHT ||
+      split_segment.direction() == SdMapSwtx::TURN_RIGHT) {
+    split_seg_info.split_direction = RAMP_ON_RIGHT;
+  } else if (split_segment.direction() == SdMapSwtx::LEFT_30_DEGREE ||
+              split_segment.direction() == SdMapSwtx::MERGE_LEFT ||
+              split_segment.direction() == SdMapSwtx::TURN_LEFT) {
+    split_seg_info.split_direction = RAMP_ON_LEFT;
+  }
+
+  const auto& next_road_segment = sd_map.GetNextRoadSegment(split_segment.id());
+  if (next_road_segment == nullptr) {
+    return split_seg_info;
+  }
+
+  if (!((ad_common::sdmap::IsHighWay(split_segment) ||
+         ad_common::sdmap::IsElevated(split_segment)) &&
+        ad_common::sdmap::IsRamp(*next_road_segment))) {
+    return split_seg_info;
+  }
+
+  if (split_segment.enu_points_size() < 2 ||
+      next_road_segment->enu_points_size() < 2) {
+    return split_seg_info;
+  }
+
+  int spl_pt_size = split_segment.enu_points_size();
+
+  const auto& first_pt = split_segment.enu_points()[spl_pt_size - 2];
+  const auto& second_pt = split_segment.enu_points()[spl_pt_size - 1];
+  const auto& third_pt = next_road_segment->enu_points()[1];
+  Point2D first_pt_2d(first_pt.x(), first_pt.y());
+  Point2D second_pt_2d(second_pt.x(), second_pt.y());
+  Point2D third_pt_2d(third_pt.x(), third_pt.y());
+
+  split_seg_info.split_direction =
+      JudgeBCvsAB(first_pt_2d, second_pt_2d, third_pt_2d);
+
+  return split_seg_info;
+}
+
+double RouteInfo::CrossProduct(const Point2D& A, const Point2D& B,
+                               const Point2D& C) const {
+  // 向量 AB = (B.x - A.x, B.y - A.y)
+  // 向量 BC = (C.x - B.x, C.y - B.y)
+  return (B.x - A.x) * (C.y - B.y) - (B.y - A.y) * (C.x - B.x);
+}
+
+// 判断 AB 在 BC 的左边还是右边（图1、2场景）
+// 等价于：判断 BA 和 BC 的叉乘
+RampDirection RouteInfo::JudgeABvsBC(const Point2D& A, const Point2D& B,
+                                     const Point2D& C) const {
+  double cross = CrossProduct(B, A, C);  // 等价于向量 BA × 向量 BC
+  if (cross > 0) {
+    return RampDirection::RAMP_ON_LEFT;
+  } else if (cross < 0) {
+    return RampDirection::RAMP_ON_RIGHT;
+  } else {
+    return RampDirection::RAMP_NONE;
+  }
+  return RampDirection::RAMP_NONE;
+}
+
+// 判断 BC 在 AB 的左边还是右边（图3、4场景）
+RampDirection RouteInfo::JudgeBCvsAB(const Point2D& A, const Point2D& B,
+                                     const Point2D& C) const {
+  double cross = CrossProduct(A, B, C);  // 向量 AB × 向量 BC
+  if (cross > 0) {
+    return RampDirection::RAMP_ON_LEFT;
+  } else if (cross < 0) {
+    return RampDirection::RAMP_ON_RIGHT;
+  } else {
+    return RampDirection::RAMP_NONE;
+  }
+  return RampDirection::RAMP_NONE;
+}
 
 void RouteInfo::CaculateMergeInfo(const ad_common::sdmap::SDMap& sd_map,
                                   const SdMapSwtx::Segment& segment,
                                   const double nearest_s,
                                   const double max_search_length) {
   const auto& merge_info =
-      sd_map.GetMergeInfoList(segment.id(), nearest_s, max_search_length);
-  if (!merge_info.empty()) {
-    const auto seg_of_first_road_merge = merge_info.begin()->first;
-    const auto next_seg_of_first_road_merge =
-        sd_map.GetNextRoadSegment(merge_info.begin()->first->id());
-    int traverse_num = 0;
-    bool is_find_first_merge_onfo = false;
-    for (int i = 0; i < merge_info.size(); i++) {
-      const auto& merge_info_temp = merge_info[i];
-      if (merge_info_temp.second > kEpsilon) {
-        const auto& merge_seg = merge_info_temp.first;
-        if (!merge_seg) {
-          break;
-        }
-        const auto& merge_seg_last_seg =
-            sd_map.GetPreviousRoadSegment(merge_seg->id());
-        if (!merge_seg_last_seg) {
-          break;
-        }
-
-        if (!is_find_first_merge_onfo) {
-          if (merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
-              merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-              route_info_output_.is_on_ramp) {
-            route_info_output_.is_ramp_merge_to_road_on_expressway = true;
-          }
-          if (merge_seg_last_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-              merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-              !route_info_output_.is_on_ramp &&
-              route_info_output_.is_ego_on_expressway) {
-            route_info_output_.is_road_merged_by_other_lane = true;
-          }
-          if (merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
-              merge_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
-              route_info_output_.is_on_ramp) {
-            route_info_output_.is_ramp_merge_to_ramp_on_expressway = true;
-          }
-          route_info_output_.first_merge_direction =
-              MakesureMergeDirection(*merge_seg, sd_map);
-          route_info_output_.distance_to_first_road_merge =
-              merge_info_temp.second;
-          route_info_output_.merge_seg_forward_lane_nums =
-              merge_seg->forward_lane_num();
-          route_info_output_.merge_last_seg_forward_lane_nums =
-              merge_seg_last_seg->forward_lane_num();
-          is_find_first_merge_onfo = true;
-          traverse_num++;
-        } else if (is_find_first_merge_onfo) {
-          route_info_output_.second_merge_direction =
-              MakesureMergeDirection(*merge_seg, sd_map);
-          route_info_output_.distance_to_second_road_merge =
-              merge_info_temp.second;
-          traverse_num++;
-        }
-
-        if (traverse_num >= 2) {
-          break;
-        }
-      } else {
-        continue;
-      }
-    }
-
-    if (next_seg_of_first_road_merge != nullptr) {
-      if (seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP &&
-          next_seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP) {
-        route_info_output_.is_continuous_ramp = true;
-      }
-    }
-  } else {
-    route_info_output_.distance_to_first_road_merge = NL_NMAX;
-    std::cout << "merge_info.empty()!!!!!!!" << std::endl;
+      sd_map.GetMainRoadMergeInfo(segment.id(), nearest_s, max_search_length);
+  if (merge_info.first) {
+    route_info_output_.distance_to_first_road_merge = merge_info.second;
+    route_info_output_.first_merge_direction = MakesureMergeDirection(*merge_info.first, sd_map);
+    route_info_output_.is_ramp_merge_to_road_on_expressway = true;
   }
 }
 
@@ -277,13 +321,31 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
           route_info_output_.distance_to_first_road_split =
               split_info[i].second;
           SplitSegInfo split_seg_info;
-          split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
+          split_seg_info = MakesureSplitDirection(sd_map, *split_segment);
+
+          // SdMapSwtx::BranchInfo::BranchDirection split_direction =
+          //     SdMapSwtx::BranchInfo::BranchDirectionNull;
+          // if (ad_common::sdmap::CalcSplitDirectionByLaneInfo(*split_segment,
+          //                                                    split_direction)) {
+          //   if (split_direction == SdMapSwtx::BranchInfo::BranchDirectionLeft) {
+          //     route_info_output_.first_split_direction = RAMP_ON_RIGHT;
+          //   } else if (split_direction ==
+          //              SdMapSwtx::BranchInfo::BranchDirectionRight) {
+          //     route_info_output_.first_split_direction = RAMP_ON_LEFT;
+          //   }
+          // } else {
+          //   route_info_output_.first_split_direction = RAMP_NONE;
+          // }
+
           route_info_output_.first_split_direction =
               split_seg_info.split_direction;
+
           route_info_output_.split_seg_forward_lane_nums =
               split_seg_info.split_seg_forward_lane_nums;
+
           route_info_output_.split_next_seg_forward_lane_nums =
               split_seg_info.split_next_seg_forward_lane_nums;
+
           is_find_first_split_info = true;
           traverse_num++;
           route_info_output_.first_split_dir_dis_info =
@@ -294,7 +356,7 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
           route_info_output_.distance_to_second_road_split =
               split_info[i].second;
           SplitSegInfo split_seg_info;
-          split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
+          split_seg_info = MakesureSplitDirection(sd_map, *split_segment);
           route_info_output_.second_split_direction =
               split_seg_info.split_direction;
           traverse_num++;
@@ -321,7 +383,7 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
         if (split_info[i].second > 0 && split_segment) {
           distance_to_road_split = split_info[i].second;
           SplitSegInfo split_seg_info;
-          split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
+          split_seg_info = MakesureSplitDirection(sd_map, *split_segment);
           split_direction = split_seg_info.split_direction;
         } else {
           distance_to_road_split = NL_NMAX;
@@ -341,7 +403,7 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
   }
 }
 
-void RouteInfo::CaculateDistanceToLastMergePoint(
+void RouteInfo::CaculateDistanceToLastMergePointByInlink(
     const ad_common::sdmap::SDMap& sd_map, const SdMapSwtx::Segment& segment,
     const double nearest_s, const double max_search_length) {
   const SdMapSwtx::Segment* last_merge_seg = &segment;
@@ -376,6 +438,35 @@ void RouteInfo::CaculateDistanceToLastMergePoint(
   }
 }
 
+void RouteInfo::CaculateDistanceToLastMergePoint(
+    const ad_common::sdmap::SDMap& sd_map, const SdMapSwtx::Segment& segment,
+    const double nearest_s, const double max_search_length) {
+  is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
+  double sum_dis_to_last_merge_point = nearest_s;
+  route_info_output_.sum_dis_to_last_merge_point = NL_NMAX;
+  const SdMapSwtx::Segment* last_merge_seg = sd_map.GetPreviousRoadSegment(segment.id());
+  if (!route_info_output_.is_on_ramp && last_merge_seg) {
+    while ((ad_common::sdmap::IsHighWay(*last_merge_seg) && !ad_common::sdmap::IsRamp(*last_merge_seg)) ||
+           ad_common::sdmap::IsElevated(*last_merge_seg)) {
+      sum_dis_to_last_merge_point =
+          sum_dis_to_last_merge_point + last_merge_seg->dis();
+      last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
+      // 判断是否为nullptr
+      if (!last_merge_seg) {
+        break;
+      }
+    }
+    if (last_merge_seg &&
+        ad_common::sdmap::IsRamp(*last_merge_seg)) {
+      route_info_output_.sum_dis_to_last_merge_point =
+          sum_dis_to_last_merge_point;
+      if (route_info_output_.sum_dis_to_last_merge_point <
+          dis_threshold_to_last_merge_point_) {
+        is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
+      }
+    }
+  }
+}
 void RouteInfo::CaculateDistanceToLastSplitPoint(
     const ad_common::sdmap::SDMap& sd_map, const SdMapSwtx::Segment& segment,
     const double nearest_s, const double max_search_length) {
@@ -422,7 +513,7 @@ void RouteInfo::CaculateDistanceToLastSplitPoint(
       route_info_output_.accumulate_dis_ego_to_last_split_point =
           accumulate_dis_ego_to_last_split_point;
       SplitSegInfo split_seg_info;
-      split_seg_info = MakesureSplitDirection(*temp_last_split_seg, sd_map);
+      split_seg_info = MakesureSplitDirection(sd_map, *temp_last_split_seg);
       route_info_output_.last_split_seg_dir = split_seg_info.split_direction;
     }
   }
@@ -457,7 +548,7 @@ void RouteInfo::CaculateDistanceToTollStation(
   }
 }
 
-RampDirection RouteInfo::MakesureMergeDirection(
+RampDirection RouteInfo::MakesureMergeDirectionByInlink(
     const ::SdMapSwtx::Segment& merge_segment,
     const ad_common::sdmap::SDMap& sd_map) {
   const auto in_link_size = merge_segment.in_link_size();
@@ -511,6 +602,52 @@ RampDirection RouteInfo::MakesureMergeDirection(
   return merge_direction;
 }
 
+RampDirection RouteInfo::MakesureMergeDirection(
+    const ::SdMapSwtx::Segment& merge_segment,
+    const ad_common::sdmap::SDMap& sd_map) {
+  RampDirection merge_direction = RAMP_NONE;
+
+    const auto merge_last_segment =
+        sd_map.GetPreviousRoadSegment(merge_segment.id());
+    if (!merge_last_segment) {
+      std::cout << "in segment is nullptr!!!!!!!!" << std::endl;
+      return merge_direction;
+    }
+    ad_common::math::Vec2d segment_in_road_dir_vec;
+    ad_common::math::Vec2d segment_not_in_road_dir_vec;
+    Point2D anchor_point_of_cur_seg_to_last_seg = {
+        merge_segment.enu_points().begin()->x(),
+        merge_segment.enu_points().begin()->y()};
+
+    const auto& merge_segment_enu_point = merge_segment.enu_points();
+    const auto& merge_last_segment_enu_point = merge_last_segment->enu_points();
+    const int merge_point_num = merge_segment_enu_point.size();
+    const int merge_last_other_point_num = merge_last_segment_enu_point.size();
+    if (merge_point_num > 1 && merge_last_other_point_num > 1) {
+      segment_in_road_dir_vec.set_x(
+          merge_segment_enu_point[1].x() -
+          anchor_point_of_cur_seg_to_last_seg.x);
+      segment_in_road_dir_vec.set_y(
+          merge_segment_enu_point[1].y() -
+          anchor_point_of_cur_seg_to_last_seg.y);
+      segment_not_in_road_dir_vec.set_x(
+          merge_last_segment_enu_point[merge_last_other_point_num - 2].x() -
+          anchor_point_of_cur_seg_to_last_seg.x);
+      segment_not_in_road_dir_vec.set_y(
+          merge_last_segment_enu_point[merge_last_other_point_num - 2].y() -
+          anchor_point_of_cur_seg_to_last_seg.y);
+      if (segment_in_road_dir_vec.CrossProd(segment_not_in_road_dir_vec) >
+          0.0) {
+        merge_direction = RampDirection::RAMP_ON_LEFT;
+      } else {
+        merge_direction = RampDirection::RAMP_ON_RIGHT;
+      }
+    } else {
+      std::cout << "enu points error!!!!!!!!!!" << std::endl;
+    }
+  return merge_direction;
+}
+
 const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
     const ad_common::sdmap::SDMap& sd_map, double* nearest_s) {
   const SdMapSwtx::Segment* segment = nullptr;
@@ -554,10 +691,11 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   JSON_DEBUG_VALUE("forward_lane_num", current_segment->forward_lane_num());
 
   //判断自车当前是否在高速或者高架上
-  if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
-      current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+  if (ad_common::sdmap::IsHighWay(*current_segment) ||
+      ad_common::sdmap::IsElevated(*current_segment) ||
+      ad_common::sdmap::IsRamp(*current_segment)) {
     route_info_output_.is_ego_on_expressway = true;
-    if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY) {
+    if (ad_common::sdmap::IsHighWay(*current_segment)) {
       route_info_output_.is_ego_on_expressway_hmi = true;
     } else {
       route_info_output_.is_ego_on_city_expressway_hmi = true;
@@ -571,9 +709,9 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   segment = current_segment;
   *nearest_s = temp_nearest_s;
   route_info_output_.is_on_highway =
-      current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
+      ad_common::sdmap::IsHighWay(*current_segment);
   route_info_output_.is_on_ramp =
-      current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
+      ad_common::sdmap::IsRamp(*current_segment);
   route_info_output_.cur_seg_forward_lane_num =
       current_segment->forward_lane_num();
   route_info_output_.is_update_segment_success = true;
@@ -665,18 +803,17 @@ void RouteInfo::UpdateMLCInfoDecider(
   // 判断ego是否在最右边车道上
   bool is_ego_on_rightest_lane = true;
   bool is_ego_on_leftest_lane = true;
-  for (const auto& relative_id_lane : relative_id_lanes) {
-    if (relative_id_lane->get_relative_id() > 0) {
-      is_ego_on_rightest_lane = false;
-    }
-    if (relative_id_lane->get_relative_id() < 0) {
-      is_ego_on_leftest_lane = false;
-    }
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager->get_left_lane()) {
+    is_ego_on_leftest_lane = false;
+  }
+  if (virtual_lane_manager->get_right_lane()){
+    is_ego_on_rightest_lane = false;
   }
   // 为了临时hack处理在匝道延长车道上的case，使得自车能在匝道延长车道上也能变道至lane上。
   // 同时满足以下4个条件则认为，还在匝道延长线上：
   //  1、自车当前不在匝道上；
-  //  2、且距离下一个匝道距离在1300m以上,距离上一个merge点在700m以内；
+  //  2、距离上一个merge点在600m以内；
   //  3、当前在最右边车道上；
   //  4、当前是在expressway上。
   if (!route_info_output_.is_on_ramp &&
@@ -685,7 +822,7 @@ void RouteInfo::UpdateMLCInfoDecider(
       is_ego_on_rightest_lane && route_info_output_.is_on_highway) {
     route_info_output_.is_leaving_ramp = true;
   }
-  //这里是hack匝道延长线800m范围内不在最右侧车道，如果也接近匝道了
+  //这里是hack匝道延长线600m范围内不在最右侧车道，如果也接近匝道了
   //根据到匝道的距离判断是匝道延长线汇入在前还是匝道在前
   if (route_info_output_.is_nearing_ramp &&
       !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
@@ -787,8 +924,6 @@ void RouteInfo::UpdateMLCInfoDecider(
                  : !is_ego_on_rightest_lane);
   const int cur_seg_forward_lane_num =
       route_info_output_.cur_seg_forward_lane_num;
-  const auto& virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
   const auto& curret_lane = virtual_lane_manager->get_current_lane();
   const auto& right_lane = virtual_lane_manager->get_right_lane();
   bool is_need_continue_lc_on_off_ramp_region = false;

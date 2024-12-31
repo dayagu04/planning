@@ -518,30 +518,18 @@ void VirtualLane::ProcessEgoOnRampMLC(
     }
   } else if (is_ramp_merge_to_road_on_expressway &&
              is_leaving_ramp) {  // 处理匝道汇入主路的场景
-    //在匝道汇入主路一般有两种：
-    // 1、从右边汇入主路，一般是右边车道数较少，汇入主路车道数较多的场景，
-    // 2、从左边汇入主路，目前出现的case中，左边汇入时，车道都是continue，没有左侧车道被汇入截断，因此在处理左侧汇入场景时，初步加一个车道数判断
-    if (first_merge_direction == RAMP_ON_RIGHT) {
-      // 右边汇入
-      for (int i = order_id_; i > 0; i--) {
-        current_tasks_.emplace_back(-1);
-      }
-    } else if (first_merge_direction == RAMP_ON_LEFT) {
-      // 左边汇入
-      if (merge_seg_forward_lane_nums > 1 &&
-          merge_last_seg_forward_lane_nums == 1) {
-        // 只有一条车道汇入时，正常往主路变道
-        for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-          current_tasks_.emplace_back(1);
-        }
-      } else if (merge_seg_forward_lane_nums >= 2 &&
-                 merge_last_seg_forward_lane_nums >= 2) {
-        // 有2条及以上车道往主路汇，且主路的车道数也大于等于2条时，说明当前车道大概率是continue的，那么自车不呆在最左侧车道即可。
-        // 如果两条都不是continue，那么靠汇流变道了，或者后期加上前方收窄的信息后优化
-        if (order_id_ == 0) {
-          current_tasks_.emplace_back(1);
-        }
-      }
+    //高德sdmap暂时没有merge方向，所以暂时先默认都是从右边向左边汇入主路
+    // if (first_merge_direction == RAMP_ON_RIGHT) {
+    //   for (int i = order_id_; i > 0; i--) {
+    //     current_tasks_.emplace_back(-1);
+    //   }
+    // } else if (first_merge_direction == RAMP_ON_LEFT) {
+    //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+    //     current_tasks_.emplace_back(1);
+    //   }
+    // }
+    for (int i = order_id_; i > 0; i--) {
+      current_tasks_.emplace_back(-1);
     }
   } else if (is_ramp_merge_to_ramp_on_expressway &&  // 匝道汇入匝道的scean
              !is_ego_on_split_region &&
