@@ -52,8 +52,6 @@ void NarrowSpaceScenario::Reset() {
                    params.min_turn_radius,
                    (params.max_car_width - params.car_width) * 0.5);
       thread_.Start();
-    } else {
-      thread_.Clear();
     }
   }
 
@@ -335,10 +333,9 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
         SetParkingStatus(PARKING_FAILED);
         break;
       default:
-        SetParkingStatus(PARKING_PLANNING);
+        SetParkingStatus(PARKING_RUNNING);
         break;
     }
-
   } else {
     SetParkingStatus(PARKING_RUNNING);
     HybridAstarDebugInfoClear();
