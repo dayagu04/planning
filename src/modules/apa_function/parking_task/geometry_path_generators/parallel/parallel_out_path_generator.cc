@@ -77,10 +77,18 @@ const bool ParallelOutPathGenerator::Update() {
   if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
     success = InverseSearchLoopInSlot(inversed_path_seg_vec, input_.ego_pose);
 
-    const auto &start_seg = inversed_path_seg_vec.front();
-    if (start_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
-        start_seg.Getlength() < apa_param.GetParam().min_path_length) {
-      ILOG_INFO << "first line is too short!";
+    if (success) {
+      const auto &start_seg = inversed_path_seg_vec.front();
+      if (start_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
+          start_seg.Getlength() < apa_param.GetParam().min_path_length) {
+        success = false;
+        ILOG_INFO << "first line is too short!";
+      }
+    } else {
+      ILOG_INFO << "calc InverseSearchLoopInSlot failed!";
+    }
+
+    if (!success) {
       inversed_path_seg_vec.clear();
       success =
           InversedTrialsByGivenGear(inversed_path_seg_vec, input_.ego_pose,

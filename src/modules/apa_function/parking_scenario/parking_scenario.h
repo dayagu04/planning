@@ -324,7 +324,7 @@ class ParkingScenario {
   }
 
   const Frame &GetFrame() const { return frame_; }
-  Frame &SetFrame() { return frame_; }
+  Frame *GetMutableFrame() { return &frame_; }
 
   const iflyauto::PlanningOutput &GetOutput() const { return planning_output_; }
 

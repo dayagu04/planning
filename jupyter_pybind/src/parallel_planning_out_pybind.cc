@@ -110,15 +110,15 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
   parallel_park_planner.UpdateEgoSlotInfo();
 
-  auto &park_planner_frame = parallel_park_planner.SetFrame();
-  park_planner_frame.ego_slot_info.obs_pt_vec_slot = slm_frame.obs_pt_vec;
+  auto park_planner_frame = parallel_park_planner.GetMutableFrame();
+  park_planner_frame->ego_slot_info.obs_pt_vec_slot = slm_frame.obs_pt_vec;
 
   if (ref_gear == 0) {
-    park_planner_frame.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    park_planner_frame->current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
   } else if (ref_gear == 1) {
-    park_planner_frame.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+    park_planner_frame->current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
   } else {
-    park_planner_frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+    park_planner_frame->current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
   parallel_park_planner.GenTlane();
   parallel_park_planner.GenTBoundaryObstacles();
@@ -127,8 +127,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
 
   ParallelOutPathGenerator::Input path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
-  path_planner_input.sample_ds =
-      apa_world_ptr->GetSimuParam().sample_ds;
+  path_planner_input.sample_ds = apa_world_ptr->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = (ref_gear == 0);
   path_planner_input.is_complete_path = true;
 
@@ -137,14 +136,14 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
                                   ego_slot_info.ego_heading_slot);
 
-  auto &path_planner = parallel_park_planner.SetPathPlanner();
-  path_planner.SetInput(path_planner_input);
+  auto path_planner = parallel_park_planner.GetMutablePathPlanner();
+  path_planner->SetInput(path_planner_input);
 
-  const bool path_plan_success = path_planner.Update(
+  const bool path_plan_success = path_planner->Update(
       parallel_park_planner.GetApaWorldPtr()->GetCollisionDetectorPtr());
   if (path_plan_success) {
-    path_planner.SetCurrentPathSegIndex();
-    path_planner.SampleCurrentPathSeg();
+    path_planner->SetCurrentPathSegIndex();
+    path_planner->SampleCurrentPathSeg();
   }
 
   return path_plan_success;

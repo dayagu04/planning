@@ -1,5 +1,4 @@
-#ifndef __PARALLEL_OUT_PATH_GENERATOR__
-#define __PARALLEL_OUT_PATH_GENERATOR__
+#pragma once
 
 #include "parallel_path_generator.h"
 namespace planning {
@@ -18,5 +17,3 @@ class ParallelOutPathGenerator : public ParallelPathGenerator {
 
 }  // namespace apa_planner
 }  // namespace planning
-
-#endif
