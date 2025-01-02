@@ -3,8 +3,8 @@
 #include <cstddef>
 #include <vector>
 
-#include "fusion_parking_slot_c.h"
 #include "ehr.pb.h"
+#include "fusion_parking_slot_c.h"
 #include "math/line_segment2d.h"
 #include "reference_path.h"
 #include "session.h"
@@ -24,13 +24,12 @@ class ParkingSlotManager {
 
   bool Update(const iflyauto::ParkingFusionInfo &parking_fusion_info);
 
-  bool CalculateDistanceToTargetSlot(const std::shared_ptr<ReferencePath> &reference_path);
+  bool CalculateDistanceToTargetSlot(
+      const std::shared_ptr<ReferencePath> &reference_path);
 
-  const std::vector<ParkingSlotPoints>& GetPoints() const { return points_; };
+  const std::vector<ParkingSlotPoints> &GetPoints() const { return points_; };
 
-  const size_t GetTargetSlotId() const {
-    return target_slot_id_;
-  }
+  const size_t GetTargetSlotId() const { return target_slot_id_; }
 
   const double GetDistanceToTargetSlot() const {
     return distance_to_target_slot_;

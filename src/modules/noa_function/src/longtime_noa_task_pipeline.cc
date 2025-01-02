@@ -8,7 +8,7 @@ LongtimeNoaTaskPipeline::LongtimeNoaTaskPipeline(
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
   lateral_obstacle_decider_ =
-    std::make_unique<LateralObstacleDecider>(config_builder, session);
+      std::make_unique<LateralObstacleDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =

@@ -239,7 +239,8 @@ class EnvironmentalModel {
   }
 
   const std::shared_ptr<RouteInfo> &get_route_info() const {
-      return route_info_; }
+    return route_info_;
+  }
 
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;

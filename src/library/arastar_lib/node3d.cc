@@ -1,6 +1,5 @@
 #include "node3d.h"
 
-
 namespace planning {
 
 Node3D::Node3D(double x, double y, double phi) {
@@ -9,8 +8,9 @@ Node3D::Node3D(double x, double y, double phi) {
   phi_ = phi;
 }
 
-Node3D::Node3D(double x, double y, double phi, const std::vector<double>& XYbounds,
-               double x_grid_resolution, double y_grid_resolution, double phi_grid_resolution) {
+Node3D::Node3D(double x, double y, double phi,
+               const std::vector<double>& XYbounds, double x_grid_resolution,
+               double y_grid_resolution, double phi_grid_resolution) {
   // CHECK_EQ(XYbounds.size(), 4U)
   //     << "XYbounds size is not 4, but" << XYbounds.size();
 
@@ -30,9 +30,11 @@ Node3D::Node3D(double x, double y, double phi, const std::vector<double>& XYboun
   index_ = ComputeStringIndex(x_grid_, y_grid_, phi_grid_);
 }
 
-Node3D::Node3D(const std::vector<double>& traversed_x, const std::vector<double>& traversed_y,
-               const std::vector<double>& traversed_phi, const std::vector<double>& XYbounds,
-               double x_grid_resolution, double y_grid_resolution, double phi_grid_resolution) {
+Node3D::Node3D(const std::vector<double>& traversed_x,
+               const std::vector<double>& traversed_y,
+               const std::vector<double>& traversed_phi,
+               const std::vector<double>& XYbounds, double x_grid_resolution,
+               double y_grid_resolution, double phi_grid_resolution) {
   // CHECK_EQ(XYbounds.size(), 4U)
   //     << "XYbounds size is not 4, but" << XYbounds.size();
   // CHECK_EQ(traversed_x.size(), traversed_y.size());
@@ -70,4 +72,4 @@ std::string Node3D::ComputeStringIndex(int x_grid, int y_grid, int phi_grid) {
   return result;
 }
 
-} // namespace planning
+}  // namespace planning

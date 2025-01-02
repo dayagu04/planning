@@ -104,7 +104,9 @@ class PlanningScheduler {
   // hpp searching state: need apa search slot.
   bool IsHppSlotSearchingByDistance();
 
-  planning::common::SceneType DetermineSceneType(const iflyauto::FuncStateMachine &func_state_machine);
+  planning::common::SceneType DetermineSceneType(
+      const iflyauto::FuncStateMachine &func_state_machine);
+
  private:
   enum FeedType {
     FEED_VEHICLE_DBW_STATUS = 0,

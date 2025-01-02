@@ -1,7 +1,7 @@
 #pragma once
 
-#include "tasks/task.h"
 #include "hpp_switch_info.h"
+#include "tasks/task.h"
 
 namespace planning {
 
@@ -11,7 +11,7 @@ namespace planning {
 class ParkingSwitchDecider : public Task {
  public:
   ParkingSwitchDecider(const EgoPlanningConfigBuilder *config_builder,
-                    framework::Session *session);
+                       framework::Session *session);
   virtual ~ParkingSwitchDecider() = default;
 
   bool Execute() override;

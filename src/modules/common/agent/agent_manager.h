@@ -17,7 +17,7 @@ class AgentManager {
 
   ~AgentManager() = default;
 
-  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+  void SetConfig(const EgoPlanningConfigBuilder* config_builder);
 
   void Update(const double start_timestamp_s);
 

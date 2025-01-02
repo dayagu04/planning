@@ -40,7 +40,7 @@ GeometryObject::GeometryObject(const Box2d& box, const int index,
       index_(index),
       track_id_(track_id),
       obstacle_ptr_(obstacle_ptr),
-      type_(Type::BOX){}
+      type_(Type::BOX) {}
 GeometryObject::GeometryObject(const Polygon2d& polygon, const int index,
                                const int32_t track_id)
     : ptr_polygon_(std::make_shared<Polygon2d>(polygon)),

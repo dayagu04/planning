@@ -27,7 +27,8 @@ HistoryObstacleManager::~HistoryObstacleManager() {
   new_obstacles_.clear();
 }
 
-void HistoryObstacleManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void HistoryObstacleManager::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<HistoryObstacleConfig>();
 }
 

@@ -2,7 +2,7 @@
 
 namespace planning {
 
-enum HppTrajectoryType {
+enum class HppTrajectoryType {
   NONE = 0,
   ON_LANE_DRIVING,
   PARKING,

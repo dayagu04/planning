@@ -7,18 +7,18 @@
 #include <vector>
 
 #include "hybrid_ara_data.h"
+#include "ifly_time.h"
 #include "node3d.h"
+#include "src/framework/session.h"
 #include "src/library/arastar_lib/cost/agent_cost.h"
 #include "src/library/arastar_lib/cost/boundary_cost.h"
 #include "src/library/arastar_lib/cost/center_cost.h"
 #include "src/library/arastar_lib/cost/cost_manager.h"
 #include "src/library/arastar_lib/cost/motion_cost.h"
-#include "ifly_time.h"
-#include "src/modules/context/lateral_obstacle.h"
-#include "src/framework/session.h"
-#include "src/modules/tasks/task.h"
 #include "src/modules/common/utils/index_list.h"
+#include "src/modules/context/lateral_obstacle.h"
 #include "src/modules/context/virtual_lane_manager.h"
+#include "src/modules/tasks/task.h"
 
 namespace planning {
 
@@ -47,8 +47,7 @@ class HybridARAStar {
   bool ImprovePath();
   void RegisterCost(ara_star::CostManager& cost_manager) const;
   std::shared_ptr<Node3D> NextNodeGenerator(
-      const std::shared_ptr<Node3D> current_node,
-      const size_t next_node_index);
+      const std::shared_ptr<Node3D> current_node, const size_t next_node_index);
   bool ReachDestination(const std::shared_ptr<Node3D> node) const;
   void SetMiddleFinalNode();
   bool GetResult(ara_star::HybridARAStarResult& result) const;
@@ -119,11 +118,9 @@ class HybridARAStar {
 
   // bounding box for cost
   std::vector<ara_star::SLBox2d> bounding_box_vec_;
-  std::shared_ptr<planning_math::AABoxKDTree2d<
-      planning_math::GeometryObject>>
+  std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>
       agent_box_tree_;
-  std::shared_ptr<planning_math::AABoxKDTree2d<
-      planning_math::GeometryObject>>
+  std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>
       virtual_lineseg_tree_;
 
   struct cmp {

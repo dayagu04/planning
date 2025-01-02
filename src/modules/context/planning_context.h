@@ -12,7 +12,6 @@
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
-#include "../tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
 #include "../tasks/task_interface/lane_borrow_decider_output.h"
@@ -193,8 +192,7 @@ class PlanningContext {
     return hpp_general_lateral_decider_output_;
   }
 
-  const ParkingSwitchDeciderOutput &parking_switch_decider_output()
-      const {
+  const ParkingSwitchDeciderOutput &parking_switch_decider_output() const {
     return parking_switch_decider_output_;
   }
 

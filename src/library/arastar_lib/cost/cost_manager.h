@@ -11,7 +11,7 @@ namespace planning {
 namespace ara_star {
 
 class CostManager {
-public:
+ public:
   CostManager() = default;
   ~CostManager() = default;
 
@@ -19,9 +19,9 @@ public:
 
   double ComputeCost(Node3D& vertex) const;
 
-private:
+ private:
   std::vector<std::shared_ptr<BaseCost>> cost_ptrs_;
 };
 
-} // namespace ara_star
-} // namespace planning
+}  // namespace ara_star
+}  // namespace planning

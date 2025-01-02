@@ -127,8 +127,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     }
   }
 
-  uint8 ground_line_number =
-      local_view->ground_line_perception.groundline_size;
+  uint8 ground_line_number = local_view->ground_line_perception.groundline_size;
   for (uint8 i = 0; i < ground_line_number; i++) {
     const iflyauto::FusionGroundLine& gl =
         local_view->ground_line_perception.groundline[i];

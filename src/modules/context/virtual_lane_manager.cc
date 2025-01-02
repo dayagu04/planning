@@ -58,7 +58,8 @@ VirtualLaneManager::VirtualLaneManager(
   ego_lane_track_manager_ = std::make_shared<EgoLaneTrackManger>(config_builder, session);
 }
 
-void VirtualLaneManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void VirtualLaneManager::SetConfig(
+    const EgoPlanningConfigBuilder* config_builder) {
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
 }
@@ -450,7 +451,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   //     current_lane_virtual_poly = construct_reference_line_acc();
   //     construct_reference_line_msg(current_lane_virtual_poly,
   //                                  current_lane_virtual);
-  //     LOG_WARNING("[VirtualLaneManager::update] ACC construct reference line");
+  //     LOG_WARNING("[VirtualLaneManager::update] ACC construct reference
+  //     line");
   //   } else if (session_->environmental_model()
   //                  .function_info()
   //                  .function_mode() == common::DrivingFunctionInfo::SCC) {
@@ -463,7 +465,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   //     } else {
   //       current_lane_virtual = intersection_lane_generated_;
   //     }
-  //     LOG_WARNING("[VirtualLaneManager::update] SCC construct reference line");
+  //     LOG_WARNING("[VirtualLaneManager::update] SCC construct reference
+  //     line");
   //   } else if (session_->environmental_model()
   //                  .function_info()
   //                  .function_mode() == common::DrivingFunctionInfo::HPP) {
@@ -995,9 +998,7 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
 }
 
 bool VirtualLaneManager::UpdateIntersectionState() {
-  if (session_->environmental_model()
-              .function_info()
-              .function_mode() == common::DrivingFunctionInfo::HPP) {
+  if (session_->is_hpp_scene()) {
     Intersection_state_ = planning::common::NO_INTERSECTION;
     return true;
   }

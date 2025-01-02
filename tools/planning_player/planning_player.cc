@@ -232,8 +232,8 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
   }
 
   planning_adapter_->RegWriter_IflytekPlanningPlan(
-      [this, is_close_loop, no_debug, ros_start_time](
-          const iflyauto::PlanningOutput& planning_output) {
+      [this, is_close_loop, no_debug,
+       ros_start_time](const iflyauto::PlanningOutput& planning_output) {
         auto planning_output_struct = planning_output;
         if (planning_output_struct.planning_status.apa_planning_status >
             iflyauto::ApaPlanningStatus::APA_IN_PROGRESS) {
@@ -262,8 +262,7 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
 
   planning_adapter_->RegWriter_IflytekPlanningDebugInfo(
       [this, no_debug,
-       ros_start_time](const iflyauto::StructContainer&
-                           planning_debug_info) {
+       ros_start_time](const iflyauto::StructContainer& planning_debug_info) {
         ros::Time ros_time;
         planning::common::PlanningDebugInfo planning_debug_info_proto;
         planning_debug_info_proto.ParseFromString(
@@ -292,9 +291,8 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
       });
 
   planning_adapter_->RegWriter_IflytekPlanningHmi(
-      [this, no_debug,
-       ros_start_time](const iflyauto::PlanningHMIOutputInfoStr&
-                           planning_hmi_ouput_info) {
+      [this, no_debug, ros_start_time](
+          const iflyauto::PlanningHMIOutputInfoStr& planning_hmi_ouput_info) {
         auto planning_hmi_ouput_info_struct = planning_hmi_ouput_info;
         ros::Time ros_time;
         if (no_debug) {
@@ -465,8 +463,7 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
       cache_with_ros_msg_and_header_time<struct_msgs::FusionGroundLineInfo>(
           msg);
     } else if (msg.getTopic() == TOPIC_SPEED_BUMP) {
-      cache_with_ros_msg_and_header_time<struct_msgs::FusionDecelerInfo>(
-          msg);
+      cache_with_ros_msg_and_header_time<struct_msgs::FusionDecelerInfo>(msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
     } else if (msg.getTopic() == TOPIC_TRAFFIC_SIGN) {
@@ -572,9 +569,10 @@ void PlanningPlayer::StoreRosBag() {
       } else if (it_msg.first == TOPIC_SD_MAP) {
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
                                                         TOPIC_SD_MAP, bag);
-      // } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
-      //   write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
-      //                                                   TOPIC_EHR_PARKING_MAP, bag);
+        // } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
+        //   write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
+        //                                                   TOPIC_EHR_PARKING_MAP,
+        //                                                   bag);
       } else if (it_msg.first == TOPIC_GROUND_LINE) {
         write_ros_msg<struct_msgs::FusionGroundLineInfo::Ptr>(
             it_msg.second, TOPIC_GROUND_LINE, bag);
@@ -671,7 +669,8 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::FusionOccupancyObjectsInfo fusion_occ_object_msg{};
     convert(fusion_occ_object_msg, *fusion_occ_object_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->Feed_IflytekFusionOccupancyObjects(fusion_occ_object_msg);
+    planning_adapter_->Feed_IflytekFusionOccupancyObjects(
+        fusion_occ_object_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/occupancy/objects" << std::endl;
@@ -796,7 +795,8 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::CameraPerceptionTsrInfo perception_tsr_msg{};
     convert(perception_tsr_msg, *perception_tsr_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->Feed_IflytekCameraPerceptionTrafficSignRecognition(perception_tsr_msg);
+    planning_adapter_->Feed_IflytekCameraPerceptionTrafficSignRecognition(
+        perception_tsr_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/camera_perception/traffic_sign_recognition"
@@ -862,13 +862,15 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
-  // if (input_time_list_ehr_parking_map_ != input_time_list.ehr_parking_map()) {
+  // if (input_time_list_ehr_parking_map_ != input_time_list.ehr_parking_map())
+  // {
   //   input_time_list_ehr_parking_map_ = input_time_list.ehr_parking_map();
   //   for (auto it = msg_cache_[TOPIC_EHR_PARKING_MAP].begin();
   //        it != msg_cache_[TOPIC_EHR_PARKING_MAP].end(); it++) {
   //     auto ehr_parking_map_msg_i =
   //         boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
-  //     std::string ehr_parking_map_str(ehr_parking_map_msg_i->debug_info.begin(),
+  //     std::string
+  //     ehr_parking_map_str(ehr_parking_map_msg_i->debug_info.begin(),
   //                                     ehr_parking_map_msg_i->debug_info.end());
   //     auto ehr_parking_map = std::make_shared<IFLYParkingMap::ParkingInfo>();
   //     ehr_parking_map->ParseFromString(ehr_parking_map_str);
@@ -897,8 +899,7 @@ void PlanningPlayer::PlayOneFrame(
           TOPIC_SPEED_BUMP, input_time_list.fusion_speed_bump());
   if (speed_bump_ros_msg) {
     iflyauto::FusionDecelerInfo speed_bump_msg{};
-    convert(speed_bump_msg, *speed_bump_ros_msg,
-    ConvertTypeInfo::TO_STRUCT);
+    convert(speed_bump_msg, *speed_bump_ros_msg, ConvertTypeInfo::TO_STRUCT);
     planning_adapter_->Feed_IflytekFusionSpeedBump(speed_bump_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
@@ -1787,7 +1788,8 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::FusionOccupancyObjectsInfo fusion_occ_object_msg{};
       convert(fusion_occ_object_msg, *fusion_occ_object_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->Feed_IflytekFusionOccupancyObjects(fusion_occ_object_msg);
+      planning_adapter_->Feed_IflytekFusionOccupancyObjects(
+          fusion_occ_object_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/occupancy/objects" << std::endl;
@@ -1926,7 +1928,8 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     //      it != msg_cache_[TOPIC_EHR_PARKING_MAP].end(); it++) {
     //   auto ehr_parking_map_msg_i =
     //       boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
-    //   std::string ehr_parking_map_str(ehr_parking_map_msg_i->debug_info.begin(),
+    //   std::string
+    //   ehr_parking_map_str(ehr_parking_map_msg_i->debug_info.begin(),
     //                                   ehr_parking_map_msg_i->debug_info.end());
     //   auto ehr_parking_map = std::make_shared<IFLYParkingMap::ParkingInfo>();
     //   ehr_parking_map->ParseFromString(ehr_parking_map_str);

@@ -124,7 +124,7 @@ class ReferencePath {
       const ReferencePathPoints &raw_reference_path_points);
 
   void update_refpath_points_in_hpp(
-      const double ego_projection_length_in_reference_path, 
+      const double ego_projection_length_in_reference_path,
       const ReferencePathPoints &raw_reference_path_points);
 
   bool get_reference_point_by_lon_from_raw_ref_path_points(

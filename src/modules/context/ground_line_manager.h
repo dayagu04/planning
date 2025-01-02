@@ -37,17 +37,13 @@ class GroundLineManager {
   GroundLineManager();
   ~GroundLineManager() = default;
 
-  bool Update(
-    const Map::StaticMap &static_map_info);
+  bool Update(const Map::StaticMap &static_map_info);
 
-  bool Update(
-    const iflyauto::FusionGroundLineInfo &fusion_ground_line_info);
+  bool Update(const iflyauto::FusionGroundLineInfo &fusion_ground_line_info);
 
   void UpdateParams(const int min_pts, const double eps);
 
-  void SetIsCluster(bool is_cluster) {
-    is_cluster_ = is_cluster;
-  }
+  void SetIsCluster(bool is_cluster) { is_cluster_ = is_cluster; }
 
   const std::vector<GroundLinePoints> &GetPoints() const { return points_; };
 
@@ -57,12 +53,11 @@ class GroundLineManager {
   std::vector<std::vector<planning_math::Vec2d>> Execute(
       const std::vector<GroundLinePoint> &ground_line_points);
 
-  void UpdatePoints(
-      const std::vector<GroundLinePoint> &ground_line_points,
-      std::vector<GroundLinePoint> &points);
+  void UpdatePoints(const std::vector<GroundLinePoint> &ground_line_points,
+                    std::vector<GroundLinePoint> &points);
 
   std::vector<int> CalcCluster(GroundLinePoint &point,
-                                       std::vector<GroundLinePoint> &points);
+                               std::vector<GroundLinePoint> &points);
 
   std::vector<planning_math::Vec2d> ExpandCluster(
       GroundLinePoint &point, std::vector<GroundLinePoint> &points);

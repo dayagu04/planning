@@ -919,7 +919,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   } else {
     lane_change_decider_output.hpp_turn_signal = NO_CHANGE;
   }
-  JSON_DEBUG_VALUE("HPP turn signal", int(lane_change_decider_output.hpp_turn_signal))
+  JSON_DEBUG_VALUE("HPP turn signal",
+                   int(lane_change_decider_output.hpp_turn_signal))
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     LaneChangeStageInfo *const lc_state_info) {
@@ -1933,8 +1934,11 @@ void LaneChangeStateMachineManager::UpdateHMIInfo() {
 
 
 RequestType LaneChangeStateMachineManager::CalculaTurnSignalForHPP() {
-  const auto& cur_reference_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane();
-  const auto& ego_state = session_->environmental_model().get_ego_state_manager();
+  const auto &cur_reference_path = session_->environmental_model()
+                                       .get_reference_path_manager()
+                                       ->get_reference_path_by_current_lane();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
   const double ego_v = ego_state->ego_v();
   const double t_defuault_pre_light = 1.0;
   const double defuault_road_radius = 20.0;
@@ -1942,20 +1946,25 @@ RequestType LaneChangeStateMachineManager::CalculaTurnSignalForHPP() {
   const double ego_s = cur_reference_path->get_frenet_ego_state().s();
 
   ReferencePathPoint front_reference_path_point;
-  if (!cur_reference_path->get_reference_point_by_lon(ego_s + pre_dis, front_reference_path_point)) {
+  if (!cur_reference_path->get_reference_point_by_lon(
+          ego_s + pre_dis, front_reference_path_point)) {
     std::cout << "get front_reference_path_point failed!!!" << std::endl;
     return NO_CHANGE;
   }
   //以0.5m为间隔，判断前方2.5m的距离内，是否车道线半径小于defuault_road_radius
-  for (int i = 0; i < 5; i++) {
-    double s = front_reference_path_point.path_point.s() + i * 0.5;
+  const double s_interval = 0.5;
+  const double s_start = front_reference_path_point.path_point.s();
+  const double s_end = s_start + 5 * s_interval;
+  for (double s = s_start; s <= s_end + 1e-6 ; s += s_interval) {
     ReferencePathPoint temp_ref_path_point;
-    if (!cur_reference_path->get_reference_point_by_lon(s, temp_ref_path_point)) {
+    if (!cur_reference_path->get_reference_point_by_lon(s,
+                                                        temp_ref_path_point)) {
       std::cout << "get front_reference_path_point failed!!!" << std::endl;
       return NO_CHANGE;
     }
 
-    if (std::abs(temp_ref_path_point.path_point.kappa()) < 1 / defuault_road_radius) {
+    if (std::abs(temp_ref_path_point.path_point.kappa()) <
+        1 / defuault_road_radius) {
       std::cout << "front no turn" << std::endl;
       return NO_CHANGE;
     }

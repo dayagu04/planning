@@ -17,10 +17,10 @@
 #include "fusion_parking_slot_c.h"
 #include "fusion_road_c.h"
 #include "ifly_localization_c.h"
-#include "struct_container.hpp"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
 #include "prediction_c.h"
+#include "struct_container.hpp"
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
 #include "vehicle_service_c.h"
@@ -71,8 +71,7 @@ class PlanningInterface : public ComponentInterface {
       const std::function<void(const iflyauto::PlanningHMIOutputInfoStr&)>&
           writer) = 0;
   virtual void RegWriter_IflytekPlanningDebugInfo(
-      const std::function<void(const iflyauto::StructContainer &)>&
-          writer) = 0;
+      const std::function<void(const iflyauto::StructContainer&)>& writer) = 0;
 
   virtual void RegFmWriter_IflytekAlarmInfoPlanning(
       const std::function<void(const iflyauto::FmInfo&)>& fm_writer) = 0;

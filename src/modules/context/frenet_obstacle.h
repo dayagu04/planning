@@ -50,7 +50,9 @@ class FrenetObstacle {
   double velocity() const { return obstacle_ptr_->velocity(); }
   const bool b_frenet_valid() const { return b_frenet_valid_; }
 
-  const bool b_frenet_polygon_sequence_invalid() const { return b_frenet_polygon_sequence_invalid_; }
+  const bool b_frenet_polygon_sequence_invalid() const {
+    return b_frenet_polygon_sequence_invalid_;
+  }
   const bool is_static() const { return is_static_; }
   SourceType source_type() const { return source_type_; }
   const FrenetObstacleBoundary& frenet_obstacle_boundary() const {
@@ -65,9 +67,7 @@ class FrenetObstacle {
     return frenet_polygon_sequence_;
   }
 
-  const std::vector<Vec2d>& corner_points() const {
-    return corner_points_;
-  }
+  const std::vector<Vec2d>& corner_points() const { return corner_points_; }
 
   bool get_polygon_at_time(const double relative_time,
                            const std::shared_ptr<ReferencePath>& reference_path,

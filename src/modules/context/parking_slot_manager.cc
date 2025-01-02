@@ -15,7 +15,7 @@ const double kMaxDistanceY = 5;
 const double kMaxDistanceFrontX = 40;  // 后续根据实际需求更改
 const double kMaxDistanceBackX = 30;
 
-ParkingSlotManager::ParkingSlotManager(planning::framework::Session *session)
+ParkingSlotManager::ParkingSlotManager(planning::framework::Session* session)
     : session_(session) {
   Init();
 }
@@ -28,13 +28,13 @@ void ParkingSlotManager::Init() {
   distance_to_target_slot_ = NL_NMAX;
 }
 
-bool ParkingSlotManager::Update(const Map::StaticMap &static_map) {
+bool ParkingSlotManager::Update(const Map::StaticMap& static_map) {
   points_.clear();
   const auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto park_spaces = static_map.parking_assist_info().parking_spaces();
   const size_t park_spaces_size = park_spaces.size();
-  const auto &enu2car_matrix = ego_state_manager->get_enu2car();
+  const auto& enu2car_matrix = ego_state_manager->get_enu2car();
   Eigen::Vector3d v;
   double min_x, min_y, max_x, max_y;
   for (uint8 i = 0; i < park_spaces_size; i++) {
@@ -74,16 +74,19 @@ bool ParkingSlotManager::Update(const Map::StaticMap &static_map) {
   return true;
 }
 
-bool ParkingSlotManager::Update(const iflyauto::ParkingFusionInfo &parking_fusion_info) {
+bool ParkingSlotManager::Update(
+    const iflyauto::ParkingFusionInfo& parking_fusion_info) {
   target_slot_.clear();
   points_.clear();
   limiters_.clear();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  const size_t parking_slot_lists_size = parking_fusion_info.parking_fusion_slot_lists_size;
-  const auto& parking_slot_lists = parking_fusion_info.parking_fusion_slot_lists;
+  const size_t parking_slot_lists_size =
+      parking_fusion_info.parking_fusion_slot_lists_size;
+  const auto& parking_slot_lists =
+      parking_fusion_info.parking_fusion_slot_lists;
   target_slot_id_ = parking_fusion_info.select_slot_id;
-  const auto &enu2car_matrix = ego_state_manager->get_enu2car();
+  const auto& enu2car_matrix = ego_state_manager->get_enu2car();
   Eigen::Vector3d v;
   double min_x, min_y, max_x, max_y;
   for (uint8 i = 0; i < parking_slot_lists_size; i++) {
@@ -114,7 +117,7 @@ bool ParkingSlotManager::Update(const iflyauto::ParkingFusionInfo &parking_fusio
           planning_math::Vec2d(corner_point.x, corner_point.y));
       if (is_exist_target_slot) {
         target_slot_.emplace_back(
-          planning_math::Vec2d(corner_point.x, corner_point.y));
+            planning_math::Vec2d(corner_point.x, corner_point.y));
       }
     }
     if (((min_y > 0 && min_y < kMaxDistanceY) ||
@@ -127,10 +130,10 @@ bool ParkingSlotManager::Update(const iflyauto::ParkingFusionInfo &parking_fusio
     const auto& limiters = parking_slot.limiters;  // line segment
     for (const auto& limiter : limiters) {
       planning_math::LineSegment2d limiter_axis(
-        planning_math::Vec2d(limiter.end_points[0].x,
-                             limiter.end_points[0].y),
-        planning_math::Vec2d(limiter.end_points[1].x,
-                             limiter.end_points[1].y));
+          planning_math::Vec2d(limiter.end_points[0].x,
+                               limiter.end_points[0].y),
+          planning_math::Vec2d(limiter.end_points[1].x,
+                               limiter.end_points[1].y));
       limiters_.emplace_back(std::move(limiter_axis));
     }
   }
@@ -138,16 +141,14 @@ bool ParkingSlotManager::Update(const iflyauto::ParkingFusionInfo &parking_fusio
 }
 
 bool ParkingSlotManager::CalculateDistanceToTargetSlot(
-    const std::shared_ptr<ReferencePath> &reference_path) {
+    const std::shared_ptr<ReferencePath>& reference_path) {
   distance_to_target_slot_ = -1;
-  const double distance_to_target_slot =
-      session_->environmental_model()
-              .get_route_info()
-              ->get_route_info_output()
-              .distance_to_target_slot;
+  const double distance_to_target_slot = session_->environmental_model()
+                                             .get_route_info()
+                                             ->get_route_info_output()
+                                             .distance_to_target_slot;
   const double ego_s = reference_path->get_frenet_ego_state().s();
-  const auto& frenet_coord =
-      reference_path->get_frenet_coord();
+  const auto& frenet_coord = reference_path->get_frenet_coord();
   if ((target_slot_.empty()) || (frenet_coord == nullptr)) {
     distance_to_target_slot_ = distance_to_target_slot;
     return false;
@@ -155,9 +156,9 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
   for (const auto& slot_point : target_slot_) {
     Point2D cart_pt(slot_point.x(), slot_point.y());
     Point2D frenet_pt{0.0, 0.0};
-    if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      distance_to_target_slot_ = std::max(std::fabs(frenet_pt.x - ego_s),
-                                          distance_to_target_slot_);
+    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      distance_to_target_slot_ =
+          std::max(std::fabs(frenet_pt.x - ego_s), distance_to_target_slot_);
     } else {
       distance_to_target_slot_ = distance_to_target_slot;
       break;
@@ -166,9 +167,9 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
 
   const auto& points = reference_path->get_points();
   if (distance_to_target_slot_ < 10.0) {
-    distance_to_target_slot_ = std::min(
-     std::fabs(points.back().path_point.s() - ego_s),
-     distance_to_target_slot_);
+    distance_to_target_slot_ =
+        std::min(std::fabs(points.back().path_point.s() - ego_s),
+                 distance_to_target_slot_);
   }
   return true;
 }

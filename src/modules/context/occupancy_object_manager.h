@@ -11,7 +11,8 @@
 
 namespace planning {
 using OccupancyObject =
-    std::unordered_multimap<iflyauto::ObjectType, std::vector<planning_math::Vec2d>>;
+    std::unordered_multimap<iflyauto::ObjectType,
+                            std::vector<planning_math::Vec2d>>;
 
 class OccupancyObjectManager {
  public:

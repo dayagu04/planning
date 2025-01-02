@@ -47,8 +47,9 @@ int Viz2dComponent::Init() {
   ground_line_reader_ =
       node_->CreateReader<GroundLinePerception::FusionGroundLineInfo>(
           "/iflytek/fusion/ground_line",
-          [this](const std::shared_ptr<
-                 GroundLinePerception::FusionGroundLineInfo>& gl) {
+          [this](
+              const std::shared_ptr<GroundLinePerception::FusionGroundLineInfo>&
+                  gl) {
             ILOG_DEBUG << "Received groud line";
             std::lock_guard<std::mutex> lock(mutex_);
             ground_line_.CopyFrom(*gl);

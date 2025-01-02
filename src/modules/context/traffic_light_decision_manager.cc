@@ -10,7 +10,8 @@ TrafficLightDecisionManager::TrafficLightDecisionManager(
   SetConfig(config_builder);
 }
 
-void TrafficLightDecisionManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void TrafficLightDecisionManager::SetConfig(
+    const EgoPlanningConfigBuilder* config_builder) {
   config_ =
       config_builder->cast<EgoPlanningTrafficLightDecisionManagerConfig>();
 }

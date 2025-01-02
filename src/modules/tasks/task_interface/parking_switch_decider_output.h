@@ -5,8 +5,6 @@
 namespace planning {
 struct ParkingSwitchDeciderOutput {
   HppParkingSwitchInfo parking_switch_info;
-  void Clear() {
-    parking_switch_info.Clear();
-  }
+  void Clear() { parking_switch_info.Clear(); }
 };
 }  // namespace planning

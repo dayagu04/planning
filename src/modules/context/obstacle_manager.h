@@ -94,11 +94,11 @@ class ObstacleManager {
   }
 
   void add_frenet_obstacle(
-    IndexedList<int, Obstacle> &obstacles, ReferencePath &reference_path,
-    std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
-    std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
-        &frenet_obstacles_map,
-    std::vector<int> &obstacles_ids_in_lane_map);
+      IndexedList<int, Obstacle> &obstacles, ReferencePath &reference_path,
+      std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
+      std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+          &frenet_obstacles_map,
+      std::vector<int> &obstacles_ids_in_lane_map);
 
  private:
   void clear();

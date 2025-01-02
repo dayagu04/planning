@@ -33,7 +33,8 @@ class CollisionChecker {
  public:
   CollisionChecker();
 
-  // deviation_length : the distance between trajectory point and center of ego vehicle
+  // deviation_length : the distance between trajectory point and center of ego
+  // vehicle
   bool set_params(const double deviation_length);
 
   // set ego position/trajectory

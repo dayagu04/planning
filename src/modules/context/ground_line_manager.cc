@@ -2,9 +2,7 @@
 #include <utility>
 
 namespace planning {
-GroundLineManager::GroundLineManager() {
-  Init();
-}
+GroundLineManager::GroundLineManager() { Init(); }
 
 void GroundLineManager::Init() {
   points_.clear();
@@ -13,8 +11,7 @@ void GroundLineManager::Init() {
   is_cluster_ = false;
 }
 
-bool GroundLineManager::Update(
-    const Map::StaticMap &static_map_info) {
+bool GroundLineManager::Update(const Map::StaticMap &static_map_info) {
   points_.clear();
   const Map::ParkingAssistInfo &groundline_data =
       static_map_info.parking_assist_info();
@@ -24,9 +21,8 @@ bool GroundLineManager::Update(
       for (auto &groundline : groundline_data.road_obstacles()) {
         for (size_t i = 0; i < groundline.shape_size(); ++i) {
           GroundLinePoint point;
-          point.point =
-              planning_math::Vec2d(groundline.shape(i).x(),
-                                   groundline.shape(i).y());
+          point.point = planning_math::Vec2d(groundline.shape(i).x(),
+                                             groundline.shape(i).y());
           point.status = GroundLinePoint::Status::UNCLASSIFIED;
           ground_line_point.emplace_back(point);
         }
@@ -38,9 +34,8 @@ bool GroundLineManager::Update(
         if (groundline.shape_size() >= 3) {
           GroundLinePoints point;
           for (size_t i = 0; i < groundline.shape_size(); ++i) {
-            point.emplace_back(
-                planning_math::Vec2d(groundline.shape(i).x(),
-                                     groundline.shape(i).y()));
+            point.emplace_back(planning_math::Vec2d(groundline.shape(i).x(),
+                                                    groundline.shape(i).y()));
           }
           points_.emplace_back(point);
         }
@@ -59,9 +54,8 @@ bool GroundLineManager::Update(
       for (auto &groundline : fusion_ground_line_info.groundline) {
         for (size_t i = 0; i < groundline.groundline_point_size; ++i) {
           GroundLinePoint point;
-          point.point =
-              planning_math::Vec2d(groundline.shape[i].x,
-                                   groundline.shape[i].y);
+          point.point = planning_math::Vec2d(groundline.shape[i].x,
+                                             groundline.shape[i].y);
           point.status = GroundLinePoint::Status::UNCLASSIFIED;
           ground_line_point.emplace_back(point);
         }
@@ -73,9 +67,8 @@ bool GroundLineManager::Update(
         if (groundline.groundline_point_size >= 3) {
           GroundLinePoints point;
           for (size_t i = 0; i < groundline.groundline_point_size; ++i) {
-            point.emplace_back(
-                planning_math::Vec2d(groundline.shape[i].x,
-                                     groundline.shape[i].y));
+            point.emplace_back(planning_math::Vec2d(groundline.shape[i].x,
+                                                    groundline.shape[i].y));
           }
           points_.emplace_back(point);
         }

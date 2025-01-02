@@ -46,7 +46,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   if (ok) {
     auto current_time = IflyTime::Now_ms();
     if (session_->is_hpp_scene()) {
-      update_refpath_points_in_hpp(ego_projection_length_in_reference_path_, raw_reference_path_points);
+      update_refpath_points_in_hpp(ego_projection_length_in_reference_path_,
+                                   raw_reference_path_points);
     } else {
       update_refpath_points(raw_reference_path_points);
     }
@@ -177,8 +178,8 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     //   Vec2d cur_direction =
     //       Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta());
     //   if (cur_direction.InnerProd(delta) < 0) {
-        // temporaly skip direction check since input data is bad @clren
-        // continue;
+    // temporaly skip direction check since input data is bad @clren
+    // continue;
     //   }
     // }
     ref_path_points.emplace_back(std::move(ref_path_pt));
@@ -193,8 +194,9 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
         pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
   }
   origin_reference_path_length_ = origin_reference_path_total_length;
-  // ego_projection_length_in_reference_path_ = CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
-  // const bool is_highway =
+  // ego_projection_length_in_reference_path_ =
+  // CalculateEgoProjectionDistanceInReferencePath(ref_path_points); const bool
+  // is_highway =
   //     session_->get_scene_type() == planning::common::SceneType::HIGHWAY;
   // if (ref_path_points.size() >= 2 && is_highway) {
   if (ref_path_points.size() >= 2) {

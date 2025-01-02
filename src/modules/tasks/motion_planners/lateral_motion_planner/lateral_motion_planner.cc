@@ -148,7 +148,8 @@ bool LateralMotionPlanner::AssembleInput() {
   const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
-  if (enu_ref_path.size() == 0 || enu_ref_theta.size() == 0 || !session_->environmental_model().location_valid()) {
+  if (enu_ref_path.size() == 0 || enu_ref_theta.size() == 0 ||
+      !session_->environmental_model().location_valid()) {
     return false;
   }
 
@@ -330,14 +331,15 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_wheel_angle_rate =
       240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc/noa
   if (session_->is_hpp_scene()) {
-    max_wheel_angle =
-        540.0 / 13.0 / 57.3;  // 360 deg steering angle for hpp
+    max_wheel_angle = 540.0 / 13.0 / 57.3;  // 360 deg steering angle for hpp
     max_wheel_angle_rate =
         360.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for hpp
   }
-  const double kv2 = config_.curv_factor * std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
+  const double kv2 =
+      config_.curv_factor *
+      std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
   planning_weight_ptr_->SetMaxAcc(max_wheel_angle * kv2);
-  planning_weight_ptr_->SetMaxJerk( max_wheel_angle_rate* kv2);
+  planning_weight_ptr_->SetMaxJerk(max_wheel_angle_rate * kv2);
   // split
   bool split_scene = false;
   // NOA split

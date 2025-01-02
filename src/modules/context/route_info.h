@@ -18,8 +18,8 @@ class RouteInfo {
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
             planning::framework::Session* session);
   ~RouteInfo() = default;
-  
-  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
+  void SetConfig(const EgoPlanningConfigBuilder* config_builder);
 
   void Update();
 

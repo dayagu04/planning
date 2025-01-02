@@ -21,7 +21,7 @@ AgentManager::AgentManager(const EgoPlanningConfigBuilder* config_builder,
   SetConfig(config_builder);
 }
 
-void AgentManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void AgentManager::SetConfig(const EgoPlanningConfigBuilder* config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
 }
 

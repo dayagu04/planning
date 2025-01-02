@@ -55,7 +55,7 @@ void ApaPlanInterface::Reset() {
   apa_world_ptr_->Reset();
   scenario_manager_.Reset();
 
-  ILOG_INFO <<"reset apa plan interface";
+  ILOG_INFO << "reset apa plan interface";
   return;
 }
 

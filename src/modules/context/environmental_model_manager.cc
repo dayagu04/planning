@@ -160,12 +160,14 @@ void EnvironmentalModelManager::InitContext() {
       std::make_shared<planning::RouteInfo>(config_builder, session_);
   session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
 
-  occupancy_object_manager_ptr_ = std::make_shared<OccupancyObjectManager>(session_);
+  occupancy_object_manager_ptr_ =
+      std::make_shared<OccupancyObjectManager>(session_);
   session_->mutable_environmental_model()->set_occupancy_object_manager(
       occupancy_object_manager_ptr_);
 }
 
-void EnvironmentalModelManager::SetConfig(const planning::common::SceneType scene_type) {
+void EnvironmentalModelManager::SetConfig(
+    const planning::common::SceneType scene_type) {
   auto config_builder =
       session_->environmental_model().config_builder(scene_type);
   ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
@@ -225,7 +227,7 @@ bool EnvironmentalModelManager::Run() {
   //   LOG_ERROR("hpp location invalid\n");
   //   return false;
   // }
-  location_valid = localization_valid; //hack
+  location_valid = localization_valid;  // hack
 
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);
@@ -237,8 +239,10 @@ bool EnvironmentalModelManager::Run() {
                   (fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE);
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
-  bool hpp_mode = (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
-                  (fsm_state <= iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu):set hpp mode range
+  bool hpp_mode =
+      (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
+      (fsm_state <=
+       iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu):set hpp mode range
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
@@ -347,11 +351,14 @@ bool EnvironmentalModelManager::Run() {
     LOG_DEBUG("parking_slot_manager update cost:%f\n", time_end - time_start);
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
 
-    if (ego_config_.enable_fusion_occupancy_objects) {  // fusion occupancy objects
+    if (ego_config_
+            .enable_fusion_occupancy_objects) {  // fusion occupancy objects
       time_start = IflyTime::Now_ms();
-      occupancy_object_manager_ptr_->Update(local_view.fusion_occupancy_objects_info);
+      occupancy_object_manager_ptr_->Update(
+          local_view.fusion_occupancy_objects_info);
       time_end = IflyTime::Now_ms();
-      LOG_DEBUG("occupancy_object_manager update cost:%f\n", time_end - time_start);
+      LOG_DEBUG("occupancy_object_manager update cost:%f\n",
+                time_end - time_start);
       JSON_DEBUG_VALUE(" occupancy_object_manager_cost", time_end - time_start);
     }
   }
@@ -477,7 +484,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       local_view.prediction_result_recv_time;
   return true;
 }
-
 
 void EnvironmentalModelManager::vehicle_status_adaptor(
     double current_time, const LocalView &local_view,

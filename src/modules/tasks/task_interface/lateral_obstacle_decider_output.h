@@ -35,6 +35,5 @@ struct LateralObstacleDeciderOutput {
     lat_obstacle_decision.clear();
     search_success = false;
   }
-
 };
 }  // namespace planning

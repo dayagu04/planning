@@ -681,9 +681,10 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
             frenet_ego_state.s() + kVelocityPreviewDistance, refpath_pt)) {
       user_velocity_limit = map_velocity_limit;
       if (std::fabs(refpath_pt.path_point.kappa()) > 0.07) {
-        user_velocity_limit = std::min(
-            (1.0 - std::fabs(refpath_pt.path_point.kappa())) * map_velocity_limit,
-            5 / 3.6);
+        user_velocity_limit =
+            std::min((1.0 - std::fabs(refpath_pt.path_point.kappa())) *
+                         map_velocity_limit,
+                     5 / 3.6);
         user_velocity_limit = std::max(user_velocity_limit, 2.0);
       }
       vel_limit_info_.v_limit_usr = user_velocity_limit;
@@ -2302,7 +2303,7 @@ void GeneralLongitudinalDecider::GetHppCollisionCheckResult(
                   std::min(std::fabs(pre_curvature) * ego_velocity, 1.0);
   // NLOGD("The lon_expansion is%f, ego_velocity is: %f, ego_velocity is: %f",
   //       lon_expansion, ego_velocity, pre_curvature);
-  //TODO: hack for the expansion
+  // TODO: hack for the expansion
   lon_expansion = 0.0;
   ego_model->set_expansion(0.0, lon_expansion);
   lon_collision_checker_->set_params(deviation_length);

@@ -317,16 +317,17 @@ bool PlanningAdapter::Proc() {
       start_time, local_view_ptr_->sd_map_info.header().timestamp()));
 
   // 1.13 receive parking_map
-//   if (is_parking_map_info_msg_updated_) {
-//     std::lock_guard<std::mutex> lock(msg_mutex_);
-//     local_view_ptr_->parking_map_info = parking_map_info_msg_;
-//     local_view_ptr_->parking_map_info_recv_time = parking_map_info_msg_recv_time_;
-//     is_parking_map_info_msg_updated_.store(false);
-//   }
-//   input_topic_timestamp->set_ehr_parking_map(
-//       local_view_ptr_->parking_map_info.header().timestamp());
-//   input_topic_latency->set_ehr_parking_map(get_latency(
-//       start_time, local_view_ptr_->parking_map_info.header().timestamp()));
+  //   if (is_parking_map_info_msg_updated_) {
+  //     std::lock_guard<std::mutex> lock(msg_mutex_);
+  //     local_view_ptr_->parking_map_info = parking_map_info_msg_;
+  //     local_view_ptr_->parking_map_info_recv_time =
+  //     parking_map_info_msg_recv_time_;
+  //     is_parking_map_info_msg_updated_.store(false);
+  //   }
+  //   input_topic_timestamp->set_ehr_parking_map(
+  //       local_view_ptr_->parking_map_info.header().timestamp());
+  //   input_topic_latency->set_ehr_parking_map(get_latency(
+  //       start_time, local_view_ptr_->parking_map_info.header().timestamp()));
 
   if (is_perception_tsr_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -394,7 +395,7 @@ bool PlanningAdapter::Proc() {
     } else {
       // use last succ planning output when planning not succ
       // if never succeed, output will bi empty
-    //   planning_output = last_planning_output_;
+      //   planning_output = last_planning_output_;
       LOG_WARNING("planning failed, use last planning output\n");
     }
     // update msg_header & msg_meta

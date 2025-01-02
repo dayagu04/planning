@@ -161,9 +161,12 @@ void FrenetObstacle::compute_frenet_obstacle(
         min_corners_l_relative_ego < 0 ? min_corners_l_relative_ego : 0;
   }
 
-  frenet_relative_velocity_s_ = frenet_velocity_s_ - frenet_ego_state.velocity_s();
-  frenet_relative_velocity_l_ = frenet_velocity_l_ - frenet_ego_state.velocity_l();
-  frenet_velocity_lateral_ = (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
+  frenet_relative_velocity_s_ =
+      frenet_velocity_s_ - frenet_ego_state.velocity_s();
+  frenet_relative_velocity_l_ =
+      frenet_velocity_l_ - frenet_ego_state.velocity_l();
+  frenet_velocity_lateral_ =
+      (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
 
   // calculate d_rel, d_min_cpath, d_max_cpath
   double half_length = length_ * 0.5;
@@ -182,29 +185,33 @@ void FrenetObstacle::compute_frenet_obstacle(
   }
 
   // recalculate min_s, max_s, min_l, max_l
-  if(std::fabs(half_width - width_ * 0.5) > 1e-6) {
+  if (std::fabs(half_width - width_ * 0.5) > 1e-6) {
     std::array<int, 2> sgn_list{1, -1};
     std::array<std::vector<double>, 2> obstacle_box;
-    enum box_corner {box_s, box_l};
+    enum box_corner { box_s, box_l };
 
     for (int sgn_length : sgn_list) {
       for (int sgn_width : sgn_list) {
-        double _s =
-                frenet_s_ + sgn_length * std::cos(obs_relative_heading) * half_length -
-                            sgn_width * std::sin(obs_relative_heading) * half_width;
+        double _s = frenet_s_ +
+                    sgn_length * std::cos(obs_relative_heading) * half_length -
+                    sgn_width * std::sin(obs_relative_heading) * half_width;
         if ((frenet_s_ - ego_head_s) * (_s - ego_head_s) <= 0) {
           half_width = width_ * 0.5;
           break;
         }
       }
     }
-    if(std::fabs(half_width - width_ * 0.5) > 1e-6) {
+    if (std::fabs(half_width - width_ * 0.5) > 1e-6) {
       for (int sgn_length : sgn_list) {
         for (int sgn_width : sgn_list) {
-          double _s = frenet_s_ + sgn_length * std::cos(obs_relative_heading) * half_length -
-                                sgn_width * std::sin(obs_relative_heading) * half_width;
-          double _l = frenet_l_ + sgn_length * std::sin(obs_relative_heading) * half_length +
-                                sgn_width * std::cos(obs_relative_heading) * half_width;
+          double _s =
+              frenet_s_ +
+              sgn_length * std::cos(obs_relative_heading) * half_length -
+              sgn_width * std::sin(obs_relative_heading) * half_width;
+          double _l =
+              frenet_l_ +
+              sgn_length * std::sin(obs_relative_heading) * half_length +
+              sgn_width * std::cos(obs_relative_heading) * half_width;
           obstacle_box[box_s].push_back(_s);
           obstacle_box[box_l].push_back(_l);
           // update min_s, max_s, min_l, max_l
@@ -221,9 +228,9 @@ void FrenetObstacle::compute_frenet_obstacle(
   d_max_cpath_ = max_l;
   d_s_rel_ = 0;
   if (frenet_s_ > ego_head_s && min_s > ego_head_s) {
-    d_s_rel_ = min_s - ego_head_s; // obstacle in front of ego
+    d_s_rel_ = min_s - ego_head_s;  // obstacle in front of ego
   } else if (frenet_s_ < ego_head_s && max_s < ego_head_s) {
-    d_s_rel_ = max_s - ego_head_s; // obstacle behind ego
+    d_s_rel_ = max_s - ego_head_s;  // obstacle behind ego
   }
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(

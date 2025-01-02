@@ -33,7 +33,8 @@ LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
 
 LateralObstacle::~LateralObstacle() { lead_cars_.clear(); }
 
-void LateralObstacle::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void LateralObstacle::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<LateralObstacleConfig>();
   maintainer_->SetConfig(config_);
 }

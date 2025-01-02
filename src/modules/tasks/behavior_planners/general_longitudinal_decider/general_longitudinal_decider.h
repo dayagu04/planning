@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "common/constraint_check/collision_checker.h"
 #include "lon_behavior_planner.pb.h"
 #include "planning_context.h"
 #include "reference_path.h"
@@ -19,7 +20,6 @@
 #include "task_basic_types.h"
 #include "tasks/task.h"
 #include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
-#include"common/constraint_check/collision_checker.h"
 
 namespace planning {
 

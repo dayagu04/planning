@@ -146,7 +146,7 @@ class LaneChangeStateMachineManager {
 
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request) const;
-  RequestType CalculaTurnSignalForHPP ();
+  RequestType CalculaTurnSignalForHPP();
 
   bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
   void CalculateLatCloseValue();

@@ -634,8 +634,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const double kCheckTurnDistance = 15.0;
   const double kEgoIsOnTurnDistance1 = -3.0;
   const double kEgoIsOnTurnDistance2 = 5.0;
-  auto& frenet_ego_state = current_reference_path->get_frenet_ego_state();
-  auto& points = current_reference_path->get_points();
+  auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
+  auto &points = current_reference_path->get_points();
   double ego_s = frenet_ego_state.s();
   if (current_reference_path != nullptr) {
     for (auto &point : points) {
@@ -659,14 +659,18 @@ void PlanningScheduler::FillPlanningHmiInfo(
   }
 
   // hpp状态切park_in状态
-  const auto& parking_switch_info = session_.planning_context().parking_switch_decider_output().parking_switch_info;
+  const auto &parking_switch_info = session_.planning_context()
+                                        .parking_switch_decider_output()
+                                        .parking_switch_info;
   if (parking_switch_info.is_memory_slot_allowed_to_park) {
-    hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    hpp_info->hpp_state_switch =
+        iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
   } else if (parking_switch_info.is_memory_slot_occupied) {
     hpp_info->is_parking_space_occupied = true;
   } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
     hpp_info->is_new_parking_space_found = true;
-    hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    hpp_info->hpp_state_switch =
+        iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
   }
 }
 
@@ -751,7 +755,8 @@ void PlanningScheduler::interpolate_with_last_trajectory_points() {
 
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
-  auto start_time = (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
+  auto start_time =
+      (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
   assert(start_time >= 0);
   planning_result.traj_points.clear();
   auto backup_num_points = 201;
@@ -815,7 +820,8 @@ bool PlanningScheduler::UpdateFailedPlanningResult() {
   if (last_planning_result.target_lane_id ==
           coarse_planning_info.target_lane_id &&
       last_planning_result.use_backup_cnt <= config_.failure_counter_thrshld) {
-    auto delta_time = (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
+    auto delta_time =
+        (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
     if (0.0 < delta_time && delta_time < 1.0) {
       interpolate_with_last_trajectory_points();
       planning_result.use_backup_cnt = last_planning_result.use_backup_cnt + 1;
@@ -914,9 +920,11 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
   }
 
   // check dist
-  if (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
-    double dist =
-        session_.environmental_model().get_parking_slot_manager()->GetDistanceToTargetSlot();
+  if (state_machine.current_state ==
+      iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    double dist = session_.environmental_model()
+                      .get_parking_slot_manager()
+                      ->GetDistanceToTargetSlot();
     const double kdistance_thresh = 10.0;
     if (dist > kdistance_thresh) {
       return false;

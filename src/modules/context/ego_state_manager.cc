@@ -37,7 +37,8 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
   v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }
 
-void EgoStateManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void EgoStateManager::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
   steer_ratio_ = config_.steer_ratio;
   cruise_routing_speed_ = config_.cruise_routing_speed;
@@ -134,9 +135,8 @@ void EgoStateManager::set_ego_v_cruise(
   ego_v_cruise_ = v_cruise_filter_.GetOutput();
   if (session_->is_hpp_scene()) {
     if (session_->environmental_model()
-                .get_local_view()
-                .function_state_machine_info
-                .current_state ==
+            .get_local_view()
+            .function_state_machine_info.current_state ==
         iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
       const double kMaxSearchingSpeed = 15 / 3.6;
       ego_v_cruise_ = std::min(cruise_searching_speed_, kMaxSearchingSpeed);
