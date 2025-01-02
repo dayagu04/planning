@@ -42,10 +42,7 @@ class VirtualWallDecider : public ParkingTask {
  public:
   VirtualWallDecider() = default;
 
-  void Init(const Pose2D& ego_pose) {
-    channel_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
-    return;
-  }
+  void Init(const Pose2D& ego_pose);
 
   void Process(std::vector<Position2D>& points, const double slot_width,
                const double slot_length, const Pose2D& ego_pose,
@@ -92,6 +89,11 @@ class VirtualWallDecider : public ParkingTask {
   VehRelativePosition relative_position_;
   Polygon2D ego_polygon_in_slot_;
   GJK2DInterface gjk_interface_;
+
+  // 感知存在盲区，规划认为盲区外存在障碍物. 车辆坐标系.
+  Polygon2D blind_local_box_;
+  // 车位坐标系
+  Polygon2D blind_global_box_;
 
   VirtualWallBoundary channel_bound_;
 };
