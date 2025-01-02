@@ -24,7 +24,7 @@ from bokeh.io import export_png
 kRad2Deg = 180.0 / pi
 kDeg2Rad = pi / 180.0
 
-case = 'SCC'
+case = 'test'
 
 if case == 'S-C':
   prepare_x0 = 2.6
@@ -82,13 +82,27 @@ elif case == 'SCC':
   ego_x0 = 3.13
   ego_y0 = 2.87
   ego_heading0 = 4.40
+elif case == 'C-CC':
+  prepare_x0 = 7.05
+  prepare_y0 = 3.13
+  prepare_heading0_deg = 2.18
+  ego_x0 = 1.9
+  ego_y0 = 1.76
+  ego_heading0 = -22.9
 elif case == 'CCC':
-  prepare_x0 = 7.31
-  prepare_y0 = 2.79
-  prepare_heading0_deg = 10.01
-  ego_x0 = 3.13
-  ego_y0 = 2.87
-  ego_heading0 = 4.40
+  prepare_x0 = 7.05
+  prepare_y0 = 3.13
+  prepare_heading0_deg = 2.18
+  ego_x0 = 6.16
+  ego_y0 = 3.1
+  ego_heading0 = 38.9
+elif case == 'test':
+  prepare_x0 = 7.05
+  prepare_y0 = 3.13
+  prepare_heading0_deg = 10.88
+  ego_x0 = -0.25
+  ego_y0 = 3.05
+  ego_heading0 = -4.8
 
 def load_car_box(path_x_vec, path_y_vec, path_theta_vec, car_xb, car_yb):
   car_box_x_vec = []
@@ -350,7 +364,7 @@ class LocalViewSlider:
     self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb offset ",min=-1.0, max=1.0, value=0.3, step=0.01)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=4.34, step=0.01) # 3.14
 
-    self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=0.65, step=0.01)
+    self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=0.58, step=0.01)
     self.front_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs heading",min=-180.0, max=180.0, value=-13.0, step=0.1)
 
     self.rear_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs y",min=-2.0, max=4.0, value=0.2, step=0.01)
@@ -533,6 +547,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, preparing_
         idx_vec = [0, 5, 8, 17]
       elif case == 'S-CC':
         idx_vec = [0, 5, 8, 10, 15, 17]
+      elif case == 'C-CC':
+        idx_vec = [0, 5, 10, 15, 17]
+      elif case == 'CCC':
+        idx_vec = [0, 5, 10]
 
       corner_x_vec, corner_y_vec = load_ego_car_given_corner_path(preparing_x_vec, preparing_y_vec, preparing_theta_vec, car_xb, car_yb, idx_vec)
 
@@ -545,7 +563,7 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, preparing_
         corner_x_vec.append(rs_x_vec)
         corner_y_vec.append(rs_y_vec)
 
-      print("corner_x_vec = ", corner_x_vec)
+      # print("corner_x_vec = ", corner_x_vec)
       data_corner_path.data.update({
         'x_vec': corner_x_vec,
         'y_vec': corner_y_vec

@@ -376,6 +376,12 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
       const pnc::geometry_lib::LineSegment &target_line);
 
+  const bool SearchToTargetLine(
+      std::vector<std::vector<geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &prepare_line, const double radius,
+      const double lon_buffer);
+
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
