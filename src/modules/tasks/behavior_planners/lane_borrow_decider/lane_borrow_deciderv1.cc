@@ -1,10 +1,6 @@
 #include "lane_borrow_deciderv1.h"
 #include <Eigen/src/Core/Matrix.h>
-#include <math.h>
-
 #include <cmath>
-#include <limits>
-
 #include "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 #include "behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "common_c.h"
@@ -917,26 +913,17 @@ bool LaneBorrowDecider::IsSafeForTurn() {
                                &back_right_corner.y);
   current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
                                &back_left_corner.y);
-  double corner_angle = std::tan((vehicle_param.max_width / 2) /
+  double corner_angle = std::tan((vehicle_param.max_width * 0.5) /
                                  vehicle_param.front_edge_to_rear_axle);
-  double corner_length =
-      std::sqrt((vehicle_param.max_width / 2) * (vehicle_param.max_width / 2) +
-                (vehicle_param.front_edge_to_rear_axle) *
-                    (vehicle_param.front_edge_to_rear_axle));
+  double corner_length = std::hypot(vehicle_param.max_width * 0.5, vehicle_param.front_edge_to_rear_axle);
   double corner_radius_square =
       corner_length * corner_length + max_current_radius * max_current_radius -
-      2 * corner_length * max_current_radius * std::cos(corner_angle + PI / 2);
+      2 * corner_length * max_current_radius * std::cos(corner_angle + M_PI_2);
   double corner_radius = std::sqrt(corner_radius_square);
 
-  double square_distance_to_left = (turning_center.x - back_left_corner.x) *
-                                       (turning_center.x - back_left_corner.x) +
-                                   (turning_center.y - back_left_corner.y) *
-                                       (turning_center.y - back_left_corner.y);
-  double square_distance_to_right =
-      (turning_center.x - back_right_corner.x) *
-          (turning_center.x - back_right_corner.x) +
-      (turning_center.y - back_right_corner.y) *
-          (turning_center.y - back_right_corner.y);
+
+  double distance_to_left = std::hypot(turning_center.x - back_left_corner.x,turning_center.y - back_left_corner.y);
+  double distance_to_right = std::hypot(turning_center.x - back_right_corner.x,turning_center.y - back_right_corner.y);
   // log
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
@@ -947,8 +934,8 @@ bool LaneBorrowDecider::IsSafeForTurn() {
       turning_center.y);
   lane_borrow_pb_info->mutable_borrow_turn_circle()->set_corner_radius(
       corner_radius);
-  if (sqrt(square_distance_to_left) > corner_radius &&
-      sqrt(square_distance_to_right) > corner_radius) {
+  if (distance_to_left > corner_radius &&
+      distance_to_right > corner_radius) {
     return true;
   } else {
     return false;
