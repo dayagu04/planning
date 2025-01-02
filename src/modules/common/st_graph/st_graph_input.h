@@ -6,7 +6,6 @@
 #include "agent/agent.h"
 #include "agent/agent_manager.h"
 #include "dynamic_world/dynamic_world.h"
-#include "src/modules/tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "st_graph/path_border_querier.h"
 #include "trajectory/trajectory_point.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
