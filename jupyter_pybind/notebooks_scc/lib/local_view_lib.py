@@ -1408,7 +1408,7 @@ def draw_local_view(dataLoader, layer_manager):
     # # # 加载雷达障碍物
     load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
 
-    # # 加载hpp ehr
+    # 加载hpp ehr
     load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
     load_ground_line(dataLoader, layer_manager, fig_local_view)
 

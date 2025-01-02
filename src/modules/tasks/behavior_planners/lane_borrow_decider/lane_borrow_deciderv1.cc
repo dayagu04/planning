@@ -30,7 +30,7 @@ constexpr double kMinDisToStopLine = 50.0;
 constexpr double kMinDisToCrossWalk = 50.0;
 constexpr double kMinDisToTrafficLight = 120.0;
 constexpr double kInfDisToTrafficLight = 10000.0;
-constexpr double kSafeBackDistance = 3.0;
+constexpr double kSafeBackDistance = 2.0;
 constexpr double kDefaultStopLineAreaDistance = 5.0;
 constexpr double kFilterStopObsDistance = 25.0;
 constexpr double kObsSpeedLimit = 3.0;
@@ -43,6 +43,7 @@ constexpr double kObsLatExpendBuffer = 0.4;
 constexpr double kObsLonDisBuffer = 2.0;
 constexpr double kObsFilterVel = 2.5;
 constexpr double kBlockHeading = 0.17;
+constexpr double kCheckTurningDistance = 10.0;
 };  // namespace
 
 namespace planning {
@@ -769,24 +770,12 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
   //    too close to area but no borrow enough
   bool is_safe_for_turn = IsSafeForTurn();
-  if (left_borrow_) {
-    if (obs_start_s_ - ego_frenet_boundary_.s_end > 0 &&
-        obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer &&
-        ego_frenet_boundary_.l_start < (obs_right_l_ + obs_left_l_) * 0.5 &&
-        abs(heading_angle_) < kBlockHeading) {
-      lane_borrow_decider_output_.lane_borrow_failed_reason =
-          STATIC_AREA_TOO_CLOSE;
-      return false;
-    }
-  } else {
-    if (obs_start_s_ - ego_frenet_boundary_.s_end > 0 &&
-        obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer &&
-        ego_frenet_boundary_.l_end > (obs_right_l_ + obs_left_l_) * 0.5 &&
-        abs(heading_angle_) < kBlockHeading) {
-      lane_borrow_decider_output_.lane_borrow_failed_reason =
-          STATIC_AREA_TOO_CLOSE;
-      return false;
-    }
+  if (obs_start_s_ - ego_frenet_boundary_.s_end > 0 &&
+      obs_start_s_ - ego_frenet_boundary_.s_end < kCheckTurningDistance &&
+      is_safe_for_turn == false) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        STATIC_AREA_TOO_CLOSE;
+    return false;
   }
   // turn radius calculate
 
@@ -894,65 +883,82 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   }
   return true;
 }
-bool LaneBorrowDecider::IsSafeForTurn(){
-    //radius
-    if (obs_left_l_ <= obs_right_l_) {
-      lane_borrow_decider_output_.lane_borrow_failed_reason =
-          NO_PASSABLE_OBSTACLE;
-      return false;
-    }
-    const auto& vehicle_param =
-        VehicleConfigurationContext::Instance()->get_vehicle_param();
-    double wheel_base = vehicle_param.wheel_base;
-    double front_angle = vehicle_param.max_front_wheel_angle; // relative to ego_speed_?
-    double max_current_radius = wheel_base / std::tan(front_angle);
-    // turn center
-    Pose2D rear_center_pose =  session_->environmental_model().get_ego_state_manager()->ego_pose();
-    Point2D rear_center_cart = session_->environmental_model().get_ego_state_manager()->ego_carte();
-    double  heading_angle = session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
-    Point2D turning_center = CalTurningCenter(rear_center_cart,heading_angle,max_current_radius);
-    // sl static area overlap circle
-    // sl to SLToXY
-    auto current_reference_path = session_->environmental_model()
-                                  .get_reference_path_manager()
-                                  ->get_reference_path_by_current_lane();
-    const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
+bool LaneBorrowDecider::IsSafeForTurn() {
+  // radius
+  if (obs_left_l_ <= obs_right_l_) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        NO_PASSABLE_OBSTACLE;
+    return false;
+  }
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double wheel_base = vehicle_param.wheel_base;
+  double front_angle =
+      vehicle_param.max_front_wheel_angle;  // relative to ego_speed_?
+  double max_current_radius = wheel_base / std::tan(front_angle);
+  // turn center
+  Pose2D rear_center_pose =
+      session_->environmental_model().get_ego_state_manager()->ego_pose();
+  Point2D rear_center_cart =
+      session_->environmental_model().get_ego_state_manager()->ego_carte();
+  double heading_angle =
+      session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
+  Point2D turning_center =
+      CalTurningCenter(rear_center_cart, heading_angle, max_current_radius);
+  // sl static area overlap circle
+  // sl to SLToXY
+  auto current_reference_path = session_->environmental_model()
+                                    .get_reference_path_manager()
+                                    ->get_reference_path_by_current_lane();
+  const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
 
-    Point2D back_right_corner, back_left_corner;
-    current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x,
-                                &back_right_corner.y);
-    current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
-                                &back_left_corner.y);
-    double corner_angle = std::tan((vehicle_param.max_width/2) / vehicle_param.front_edge_to_rear_axle);
-    double corner_length = std::sqrt((vehicle_param.max_width/2)*(vehicle_param.max_width/2)
-        + (vehicle_param.front_edge_to_rear_axle)*(vehicle_param.front_edge_to_rear_axle));
-    double corner_radius_square = corner_length*corner_length + max_current_radius*max_current_radius
-        - 2* corner_length* max_current_radius*std::cos(corner_angle+PI/2);
-    double corner_radius = std::sqrt(corner_radius_square);
+  Point2D back_right_corner, back_left_corner;
+  current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x,
+                               &back_right_corner.y);
+  current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
+                               &back_left_corner.y);
+  double corner_angle = std::tan((vehicle_param.max_width / 2) /
+                                 vehicle_param.front_edge_to_rear_axle);
+  double corner_length =
+      std::sqrt((vehicle_param.max_width / 2) * (vehicle_param.max_width / 2) +
+                (vehicle_param.front_edge_to_rear_axle) *
+                    (vehicle_param.front_edge_to_rear_axle));
+  double corner_radius_square =
+      corner_length * corner_length + max_current_radius * max_current_radius -
+      2 * corner_length * max_current_radius * std::cos(corner_angle + PI / 2);
+  double corner_radius = std::sqrt(corner_radius_square);
 
-    double square_distance_to_left = (turning_center.x - back_left_corner.x)*(turning_center.y - back_left_corner.y);
-    double square_distance_to_right = (turning_center.x - back_right_corner.x)*(turning_center.y - back_right_corner.y);
-    // log
-    auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+  double square_distance_to_left = (turning_center.x - back_left_corner.x) *
+                                       (turning_center.x - back_left_corner.x) +
+                                   (turning_center.y - back_left_corner.y) *
+                                       (turning_center.y - back_left_corner.y);
+  double square_distance_to_right =
+      (turning_center.x - back_right_corner.x) *
+          (turning_center.x - back_right_corner.x) +
+      (turning_center.y - back_right_corner.y) *
+          (turning_center.y - back_right_corner.y);
+  // log
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
                                  ->mutable_lane_borrow_decider_info();
-    lane_borrow_pb_info->mutable_borrow_turn_circle()->mutable_center()->set_x(turning_center.x);
-    lane_borrow_pb_info->mutable_borrow_turn_circle()->mutable_center()->set_y(turning_center.y);
-    lane_borrow_pb_info->mutable_borrow_turn_circle()->set_corner_radius(corner_radius);
-    if(square_distance_to_left > corner_radius_square
-    &&square_distance_to_right> corner_radius_square)
-    {
-      return true;
-    }else {
-      return false;
-    }
-
+  lane_borrow_pb_info->mutable_borrow_turn_circle()->mutable_center()->set_x(
+      turning_center.x);
+  lane_borrow_pb_info->mutable_borrow_turn_circle()->mutable_center()->set_y(
+      turning_center.y);
+  lane_borrow_pb_info->mutable_borrow_turn_circle()->set_corner_radius(
+      corner_radius);
+  if (sqrt(square_distance_to_left) > corner_radius &&
+      sqrt(square_distance_to_right) > corner_radius) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
-
-const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos, const double& theta, const double& radius) const {
-  Eigen::Vector2d ego_heading_vec(std::cos(theta),
-                                  std::sin(theta));
+const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos,
+                                                  const double& theta,
+                                                  const double& radius) const {
+  Eigen::Vector2d ego_heading_vec(std::cos(theta), std::sin(theta));
   Eigen::Vector2d rear_pos(ego_pos.x, ego_pos.y);
   Eigen::Vector2d ego_n_vec(-ego_heading_vec.y(), ego_heading_vec.x());
 
@@ -960,9 +966,8 @@ const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos, const 
     ego_n_vec *= -1.0;
   }
   Eigen::Vector2d center = rear_pos + ego_n_vec * radius;
-  return Point2D(center.x(),center.y());
+  return Point2D(center.x(), center.y());
 }
-
 
 void LaneBorrowDecider::LogDebugInfo() {
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
