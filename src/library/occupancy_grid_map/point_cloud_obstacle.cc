@@ -138,8 +138,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     cdl::AABB box = cdl::AABB();
 
     for (uint8 j = 0; j < gl.groundline_point_size; j++) {
-      global.x = gl.shape[j].x;
-      global.y = gl.shape[j].y;
+      global.x = gl.groundline_point[j].x;
+      global.y = gl.groundline_point[j].y;
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 

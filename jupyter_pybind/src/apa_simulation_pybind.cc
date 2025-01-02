@@ -15,7 +15,7 @@
 #include "apa_debug_data.pb.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "config_context.h"
 #include "control_command_c.h"
 #include "debug_info_log.h"
@@ -29,7 +29,7 @@
 #include "planning_plan_c.h"
 #include "serialize_utils.h"
 #include "spline.h"
-#include "struct_convert/camera_preception_groundline_c.h"
+#include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/control_command_c.h"
 #include "struct_convert/func_state_machine_c.h"
@@ -259,8 +259,8 @@ const bool InterfaceUpdateParam(
   //   ground_line_info.groundline[i].groundline_point_size = gl_coord[i].size();
   //   for (size_t j = 0; j < ground_line_info.groundline[i].groundline_point_size;
   //        ++j) {
-  //     ground_line_info.groundline[i].shape[j].x = gl_coord[i][j].x();
-  //     ground_line_info.groundline[i].shape[j].y = gl_coord[i][j].y();
+  //     ground_line_info.groundline[i].groundline_point[j].x = gl_coord[i][j].x();
+  //     ground_line_info.groundline[i].groundline_point[j].y = gl_coord[i][j].y();
   //   }
   // }
   // fus_obj_info.fusion_object_size = fus_obj_coord.size();

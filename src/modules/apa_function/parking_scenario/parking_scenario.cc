@@ -196,7 +196,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
   if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
       frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
       frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    apa_hmi_.distance_to_parking_space = frame_.remain_dist;
+    apa_hmi_.remain_dist = frame_.remain_dist;
   }
   return;
 }
@@ -214,9 +214,9 @@ void ParkingScenario::GenPlanningPath() {
   trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
 
   size_t N = current_path_point_global_vec_.size();
-  if (N > PLANNING_TRAJ_POINTS_NUM - 1) {
+  if (N > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
     ILOG_INFO << "sample ds is possible err";
-    N = PLANNING_TRAJ_POINTS_NUM - 1;
+    N = PLANNING_TRAJ_POINTS_MAX_NUM - 1;
   }
   trajectory->trajectory_points_size = N;
 

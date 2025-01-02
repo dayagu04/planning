@@ -64,7 +64,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
   if (apa_param.GetParam().use_fus_occ_obj) {
     const uint8 fusion_obs_size =
         std::min(local_view->fusion_occupancy_objects_info.fusion_object_size,
-                 static_cast<uint8>(FUSION_OCCUPANCY_OBJECT_MAX_NUM));
+                 static_cast<uint8>(FUSION_OCCUPANCY_OBJECTS_MAX_NUM));
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
       // [hack]: need to retire in published version.
       if (local_view->fusion_occupancy_objects_info.fusion_object[i]
@@ -75,9 +75,10 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       const iflyauto::FusionOccupancyAdditional& fusion_occupancy_object =
           local_view->fusion_occupancy_objects_info.fusion_object[i]
               .additional_occupancy_info;
-      const uint32 polygon_points_size = std::min(
-          fusion_occupancy_object.polygon_points_size,
-          static_cast<uint32>(FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_NUM));
+      const uint32 polygon_points_size =
+          std::min(fusion_occupancy_object.polygon_points_size,
+                   static_cast<uint32>(
+                       FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_MAX_NUM));
       if (polygon_points_size < 1) {
         continue;
       }
@@ -111,9 +112,9 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
       const iflyauto::FusionObjectsAdditional& fusion_object =
           local_view->fusion_objects_info.fusion_object[i].additional_info;
-      const uint8 polygon_points_size =
-          std::min(fusion_object.polygon_points_size,
-                   static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_NUM));
+      const uint8 polygon_points_size = std::min(
+          fusion_object.polygon_points_size,
+          static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_MAX_NUM));
       if (polygon_points_size < 1) {
         continue;
       }
@@ -184,12 +185,13 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
   // 读取超声波障碍物点云
   if (apa_param.GetParam().use_uss_pt_clound) {
-    const uint8 uss_obs_size = std::min(1, NUM_OF_OUTLINE_DATAORI);
+    const uint8 uss_obs_size = std::min(1, USS_PERCEPTION_OUTLINE_DATAORI_NUM);
     for (uint8 i = 0; i < uss_obs_size; ++i) {
       const iflyauto::ApaSlotOutlineCoordinateDataType& obj_info =
           local_view->uss_percept_info.out_line_dataori[i];
       const uint32 pt_cloud_size = std::min(
-          obj_info.obj_pt_cnt, static_cast<uint32>(NUM_OF_APA_SLOT_OBJ));
+          obj_info.obj_pt_cnt,
+                 static_cast<uint32>(USS_PERCEPTION_APA_SLOT_OBJ_MAX_NUM));
       if (pt_cloud_size < 1) {
         continue;
       }

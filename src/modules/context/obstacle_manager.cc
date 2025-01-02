@@ -369,7 +369,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         points.reserve(groundline_point_size);
         for (size_t j = 0; j < groundline_point_size; ++j) {
           // filter
-          if ((groundline.shape[j].x == 0) && (groundline.shape[j].y == 0)) {
+          if ((groundline.groundline_point[j].x == 0) && (groundline.groundline_point[j].y == 0)) {
             continue;
           }
           if (ref_path_ptr != nullptr) {
@@ -385,14 +385,14 @@ void ObstacleManager::UpdateGroundLineObstacle() {
               }
               Point2D sl_point;
               if (!frenet_coord->XYToSL(
-                      Point2D(groundline.shape[j].x, groundline.shape[j].y),
+                      Point2D(groundline.groundline_point[j].x, groundline.groundline_point[j].y),
                       sl_point) ||
                   std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
                   groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
                   sl_point.x < ego_point.x + 6 ||
                   ((sl_point.x < ego_point.x + 9) &&
                    groundline.resource_type ==
-                       iflyauto::ResourceType::RESOURCE_TYPE_MAP)) {
+                       iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
                 in_range = false;
                 break;
               } else {
@@ -401,8 +401,8 @@ void ObstacleManager::UpdateGroundLineObstacle() {
               }
             }
           }
-          points.emplace_back(planning_math::Vec2d(groundline.shape[j].x,
-                                                  groundline.shape[j].y));
+          points.emplace_back(planning_math::Vec2d(groundline.groundline_point[j].x,
+                                                  groundline.groundline_point[j].y));
         }
         if (!in_range) {
           continue;

@@ -1,8 +1,8 @@
 #pragma once
 
 // c struct
-#include "interface/src/c/camera_preception_parking_slot_c.h"
-#include "interface/src/c/camera_preception_tsr_c.h"
+#include "interface/src/c/camera_perception_parking_slot_c.h"
+#include "interface/src/c/camera_perception_tsr_c.h"
 #include "interface/src/c/common_c.h"
 #include "interface/src/c/control_command_c.h"
 #include "interface/src/c/func_state_machine_c.h"
@@ -53,8 +53,8 @@
 #include "struct_msgs_legacy_v2_4_6/LocalizationEstimate.h"
 
 // struct schema
-#include "interface/type_convert/struct_convert/camera_preception_parking_slot_c.h"
-#include "interface/type_convert/struct_convert/camera_preception_tsr_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_parking_slot_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_tsr_c.h"
 #include "interface/type_convert/struct_convert/common_c.h"
 #include "interface/type_convert/struct_convert/control_command_c.h"
 #include "interface/type_convert/struct_convert/func_state_machine_c.h"

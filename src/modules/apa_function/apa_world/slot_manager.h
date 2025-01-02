@@ -19,7 +19,7 @@
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
-#include "camera_preception_parking_slot_c.h"
+#include "camera_perception_parking_slot_c.h"
 #include "collision_detection/collision_detection.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"

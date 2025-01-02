@@ -175,7 +175,7 @@ void VirtualLaneManager::construct_reference_line_msg(
       session_->environmental_model().get_ego_state_manager()->heading_angle();
   auto& car2enu =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
-  for (size_t i = 0; i < NUM_OF_REFLINE_POINT; ++i) {
+  for (size_t i = 0; i < FUSION_ROAD_REFLINE_POINT_MAX_NUM; ++i) {
     iflyauto::ReferencePoint* current_lane_virtual_ref_point =
         &(current_lane_virtual_ref->virtual_lane_refline_points[i]);
 
@@ -250,7 +250,7 @@ void VirtualLaneManager::construct_reference_line_msg(
     y_delay = y;
   }
   current_lane_virtual_ref->virtual_lane_refline_points_size =
-      NUM_OF_REFLINE_POINT;
+      FUSION_ROAD_REFLINE_POINT_MAX_NUM;
 
   LOG_DEBUG(
       "current_lane_virtual_ref->virtual_lane_refline_points_size =  %d\n",
@@ -356,7 +356,7 @@ void VirtualLaneManager::construct_reference_line_msg(
 void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
     const iflyauto::LaneReferenceLine& refline) {
   planning::common::ReferenceLine refline_to_debug;
-  for (int i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+  for (int i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
     refline_to_debug.add_poly_coefficient_car(refline.poly_coefficient_car[i]);
   }
 

@@ -49,20 +49,33 @@ bool GroundLineManager::Update(const Map::StaticMap &static_map_info) {
 bool GroundLineManager::Update(
     const iflyauto::FusionGroundLineInfo &fusion_ground_line_info) {
   points_.clear();
-  const size_t groundline_size = fusion_ground_line_info.groundline_size;
-  if (groundline_size > 0) {
-    std::vector<GroundLinePoint> ground_line_point;
-    for (size_t i = 0; i < groundline_size; ++i) {
-      const auto &groundline = fusion_ground_line_info.groundline[i];
-      for (size_t j = 0; j < groundline.groundline_point_size; ++j) {
-        GroundLinePoint point;
-        point.point =
-            planning_math::Vec2d(groundline.shape[j].x, groundline.shape[j].y);
-        point.status = GroundLinePoint::Status::UNCLASSIFIED;
-        ground_line_point.emplace_back(point);
+  if (fusion_ground_line_info.groundline_size > 0) {
+    if (is_cluster_) {
+      std::vector<GroundLinePoint> ground_line_point;
+      for (auto &groundline : fusion_ground_line_info.groundline) {
+        for (size_t i = 0; i < groundline.groundline_point_size; ++i) {
+          GroundLinePoint point;
+          point.point = planning_math::Vec2d(groundline.groundline_point[i].x,
+                                             groundline.groundline_point[i].y);
+          point.status = GroundLinePoint::Status::UNCLASSIFIED;
+          ground_line_point.emplace_back(point);
+        }
+      }
+      points_ = Execute(ground_line_point);
+    } else {
+      std::vector<GroundLinePoints> ground_line_point;
+      for (auto &groundline : fusion_ground_line_info.groundline) {
+        if (groundline.groundline_point_size >= 3) {
+          GroundLinePoints point;
+          for (size_t i = 0; i < groundline.groundline_point_size; ++i) {
+            point.emplace_back(
+                planning_math::Vec2d(groundline.groundline_point[i].x,
+                                     groundline.groundline_point[i].y));
+          }
+          points_.emplace_back(point);
+        }
       }
     }
-    points_ = Execute(ground_line_point);
   }
   return true;
 }

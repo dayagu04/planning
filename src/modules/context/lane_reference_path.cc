@@ -47,6 +47,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   } else {
     ok = get_ref_points(raw_reference_path_points);
   }
+  
   // Step 3) update
   if (ok) {
     auto current_time = IflyTime::Now_ms();

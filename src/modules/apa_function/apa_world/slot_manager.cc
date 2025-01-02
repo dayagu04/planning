@@ -19,7 +19,7 @@
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "common.h"
 #include "common.pb.h"
 #include "common_c.h"
@@ -359,7 +359,7 @@ const bool SlotManager::SlotInfoTransfer(
   double accumulated_x = 0.0;
   double accumulated_y = 0.0;
   static const int fusion_slots_size = 4;
-  if (NUM_OF_CORNER_POINT_NUM != fusion_slots_size) {
+  if (FUSION_PARKING_SLOT_CORNER_POINT_NUM != fusion_slots_size) {
     return false;
   }
   for (int j = 0; j < fusion_slots_size; j++) {

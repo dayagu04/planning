@@ -123,7 +123,7 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
   }
 
   output_.path_point_vec.clear();
-  output_.path_point_vec.reserve(PLANNING_TRAJ_POINTS_NUM);
+  output_.path_point_vec.reserve(PLANNING_TRAJ_POINTS_MAX_NUM);
 
   std::vector<pnc::geometry_lib::PathSegment> cur_gear_path_segment_vec;
   double length = 0.0;
@@ -135,8 +135,8 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
   double sample_ds = std::max(input_.sample_ds, ginput_.sample_ds);
   size_t N = std::ceil(length / sample_ds);
   const size_t max_seg_count = 7;
-  if (N >= PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count) {
-    N = PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count;
+  if (N >= PLANNING_TRAJ_POINTS_MAX_NUM - 26 - max_seg_count) {
+    N = PLANNING_TRAJ_POINTS_MAX_NUM - 26 - max_seg_count;
     sample_ds = length / static_cast<double>(N);
   }
   output_.actual_ds = sample_ds;

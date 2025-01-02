@@ -2,8 +2,8 @@
 
 #include <functional>
 
-#include "camera_preception_groundline_c.h"
-#include "camera_preception_tsr_c.h"
+#include "camera_perception_groundline_c.h"
+#include "camera_perception_tsr_c.h"
 #include "component_intf.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
