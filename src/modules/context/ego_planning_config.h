@@ -2753,7 +2753,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double dt = 0.2;
   double cutin_headway_threshold = 1.0;
   double smallest_headway_threshold = 1.2;
-  double headway_step = 0.025;
+  double headway_step = 0.1;
   std::vector<std::pair<int32_t, double>> normal_headway_table = {
       {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
   std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
