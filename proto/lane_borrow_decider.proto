@@ -12,7 +12,10 @@ message BlockedObsArea {
   optional double obs_start_s = 7;
   optional double obs_end_s = 8;
 };
-
+message BorrowTurnCircle {
+  optional Point2d center = 1;
+  optional double corner_radius = 2;
+};
 message LaneBorrowDeciderInfo {
   optional BlockedObsArea block_obs_area = 1;
   optional int32 lane_borrow_decider_status = 2;
@@ -27,4 +30,5 @@ message LaneBorrowDeciderInfo {
   optional bool intersection_state = 11;
   optional double ego_l = 12;
   optional double dis_to_traffic_lights = 13;
+  optional BorrowTurnCircle borrow_turn_circle = 14;
 };

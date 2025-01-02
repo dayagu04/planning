@@ -89,7 +89,13 @@ lane_borrow_obstacle_params = {
   'line_dash': 'dashed',
   'legend_label': 'lane_borrow_static_area'
 }
-
+lane_borrow_turn_circle_params = {
+  'line_color' : "blue",
+  'line_width' : 2.0,
+  # 'fill_alpha' : 0.3,
+  'line_dash': 'dashed',
+  'legend_label': 'lane_borrow_turn_circle'
+}
 def isINJupyter():
     try:
         __file__
@@ -434,6 +440,7 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
   loc_msg = dataLoader.loc_msg
   ts = []
   xys = []
+  circle_xys=[]
   coord_tf = coord_transformer()
   for i, debug_info in enumerate(dataLoader.plan_debug_msg["data"]):
     input_topic_timestamp = debug_info.input_topic_timestamp
@@ -455,6 +462,16 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
       coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
 
     ts.append(dataLoader.plan_debug_msg["t"][i])
+
+    rel_center_x, rel_center_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.borrow_turn_circle.center.x,\
+                                                                                debug_info.lane_borrow_decider_info.borrow_turn_circle.center.y)
+    corner_radius = debug_info.lane_borrow_decider_info.borrow_turn_circle.corner_radius
+    num_points = 100
+    theta = np.linspace(0, 2 * np.pi, num_points)
+    circle_x = rel_center_x + corner_radius * np.cos(theta)
+    circle_y = rel_center_y + corner_radius * np.sin(theta)
+    circle_xys.append((circle_y,circle_x))
+
     corner_point_x = []
     corner_point_y = []
     rel_front_left_corner_x, rel_front_left_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.front_left_corner.x,\
@@ -483,6 +500,13 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
   lane_borrow_base_static_obs_area_layer = CurveLayer(fig_local_view, lane_borrow_obstacle_params)
   layer_manager.AddLayer(lane_borrow_base_static_obs_area_layer, 'lane_borrow_base_static_obs_area_layer', lane_borrow_base_static_obs_area_generator, 'lane_borrow_base_static_obs_area_generator', 2)
 
+  lane_borrow_base_turn_circle_generator = CommonGenerator()
+  lane_borrow_base_turn_circle_generator.xys = circle_xys
+  lane_borrow_base_turn_circle_generator.ts = ts
+  lane_borrow_base_turn_circle_layer = CurveLayer(fig_local_view, lane_borrow_turn_circle_params)
+  layer_manager.AddLayer(lane_borrow_base_turn_circle_layer, 'lane_borrow_base_turn_circle_layer', lane_borrow_base_turn_circle_generator, 'lane_borrow_base_turn_circle_generator', 2)
+
+
 def load_lane_borrow_tab_info(dataLoader, layer_manager):
   lane_borrow_decider_table = TextGenerator()
   plan_debug_ts = []
@@ -492,7 +516,7 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
     lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
     vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
             'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
-              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason']
+              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle']
     names  = []
     datas = []
     for name in vars:
@@ -503,12 +527,18 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
           for value_i in value:
             data_i.append(value_i)
           datas.append(data_i)
+        elif name == 'borrow_turn_circle':
+          data_i =[]
+          data_i.append(value.corner_radius)
+          data_i.append(value.center.x)
+          data_i.append(value.center.y)
+          datas.append(data_i)
         else:
           datas.append(value)
-
         names.append(name)
       except:
         pass
+
     lane_borrow_decider_table.xys.append((names, datas, [None] * len(names)))
   lane_borrow_decider_table.ts = plan_debug_ts
   tab_attr_list = ['Attr', 'Val']

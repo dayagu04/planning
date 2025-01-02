@@ -51,6 +51,9 @@ class LaneBorrowDecider : public Task {
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
   bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
+  bool IsSafeForTurn();
+  const Point2D CalTurningCenter(const Point2D& ego_pos, const double& theta,
+                                 const double& radius) const;
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
