@@ -152,6 +152,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
 
   for (size_t i = 0; i < s_weights.size(); ++i) {
     // planning_input.mutable_s_weights()->Set(i, const_s);
+    planning_input.mutable_s_weights()->Set(i, s_weights[i]);
     planning_input.mutable_v_weights()->Set(i, v_weights[i]);
   }
 

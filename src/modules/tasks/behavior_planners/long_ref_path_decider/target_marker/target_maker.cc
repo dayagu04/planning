@@ -133,7 +133,7 @@ common::Status TargetMaker::Run() {
         Target::TargetMin(final_lower_bound_value, upper_target_value);
     target_values_.push_back(std::move(final_target_value));
   }
-  RefineStarget();
+  // RefineStarget();
   AddFinalTargetDataToProto();
   return common::Status::OK();
 }

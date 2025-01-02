@@ -553,6 +553,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
 
+  weight_maker_replay_info = plan_debug_info.weight_maker.weight_maker_replay_info
+  ## print(weight_maker_replay_info)
+  s_weight_vec = []
+  for item in (weight_maker_replay_info.target_point):
+    s_weight_vec.append(item.s_weight)
+  print(s_weight_vec)
+
   # print("lon_motion_plan_output:=", lon_motion_plan_output)
   motion_solver_info = lon_motion_plan_output.solver_info
   iter_count = motion_solver_info.iter_count

@@ -2203,6 +2203,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
     q_acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
+    q_acc_bound_v3 = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound_v3"});
     q_jerk_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
     q_stop_s = read_json_keys<double>(
@@ -2293,6 +2295,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_sv_bound = 1000.0;
   double q_vel_bound = 400.0;
   double q_acc_bound = 400.0;
+  double q_acc_bound_v3 = 3200.0;
   double q_jerk_bound = 100.0;
   double q_stop_s = 2000.0;
 
@@ -3292,7 +3295,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double v_weight = 0.0;
     double a_weight = 10.0;
     double jerk_weight = 100.0;
-    double cruise_v_weight = 40.0;
+    double cruise_v_weight = 20.0;
     double follow_s_weight = 1.0;
     double overtake_s_weight = 1.0;
     double neighbor_s_weight = 1.0;
@@ -3300,11 +3303,11 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double max_s_weight_time = 3.0;
     double front_lower_weight = 0.5;
     double back_upper_weight = 1.5;
-    double max_s_weight = 10.0;
+    double max_s_weight = 2.0;
     double s_speed_upper_weight_v = 8.33;
     double s_speed_lower_weight_v = 2.78;
-    double s_speed_upper_weight = 5.0;
-    double s_speed_lower_weight = 2.5;
+    double s_speed_upper_weight = 2.0;
+    double s_speed_lower_weight = 1.0;
   };
   WeightConfig weight_maker_config;
 };
