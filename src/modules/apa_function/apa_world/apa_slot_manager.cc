@@ -36,6 +36,9 @@ void ApaSlotManager::Update(
 
   dist_id_map_.clear();
   slots_map_.clear();
+  ILOG_INFO
+      << "local_view->parking_fusion_info.parking_fusion_slot_lists_size = "
+      << local_view->parking_fusion_info.parking_fusion_slot_lists_size;
 
   for (uint8_t i = 0;
        i < local_view->parking_fusion_info.parking_fusion_slot_lists_size;
@@ -61,6 +64,11 @@ void ApaSlotManager::Update(
   // 泊出
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
+      ILOG_INFO << "dist_id_map_.begin()->second = "
+                << dist_id_map_.begin()->second;
+      ILOG_INFO << "slots_map_[ego_info_under_slot_.id].slot_type_ = "
+                << static_cast<int>(
+                       slots_map_[ego_info_under_slot_.id].slot_type_);
       ego_info_under_slot_.id = dist_id_map_.begin()->second;
       ego_info_under_slot_.slot_type =
           slots_map_[ego_info_under_slot_.id].slot_type_;

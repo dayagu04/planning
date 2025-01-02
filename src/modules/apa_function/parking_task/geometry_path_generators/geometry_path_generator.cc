@@ -147,6 +147,8 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
 
   output_.path_point_vec =
       pnc::geometry_lib::SamplePathSegVec(cur_gear_path_segment_vec, sample_ds);
+  ILOG_INFO << "current_gear_length = " << length;
+  ILOG_INFO << "current_gear_pt_size" << output_.path_point_vec.size();
 
   for (size_t i = 0; i < output_.path_point_vec.size(); ++i) {
     output_.path_point_vec[i].s = sample_ds * i;

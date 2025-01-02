@@ -291,6 +291,8 @@ void ParkingScenario::GenPlanningPath() {
   } else {
     gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
   }
+  ILOG_INFO << "gear command in planning output = "
+            << static_cast<int>(gear_command->gear_command_value);
 
   return;
 }

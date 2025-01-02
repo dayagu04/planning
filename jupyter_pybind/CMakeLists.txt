@@ -97,6 +97,24 @@ target_link_libraries(parallel_planning_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
+pybind11_add_module(parallel_planning_out_py MODULE src/parallel_planning_out_pybind.cc)
+target_link_libraries(parallel_planning_out_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)
+
+pybind11_add_module(parallel_preparing_planning_py MODULE src/parallel_preparing_plan_pybind.cc)
+target_link_libraries(parallel_preparing_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)
+
 pybind11_add_module(uss_obstacle_avoidance_py MODULE src/uss_obstacle_avoidance_pybind.cc)
 target_link_libraries(uss_obstacle_avoidance_py PRIVATE
   autoplt
@@ -116,7 +134,7 @@ target_link_libraries(apa_simulation_py PRIVATE
   modules_tasks
   legacy_c_interface
   common
-  )
+)
 
 pybind11_add_module(replay_simulation_hybrid_astar MODULE src/apa_replay_simulation_hybrid_astar.cc)
 target_link_libraries(replay_simulation_hybrid_astar PRIVATE
@@ -131,7 +149,7 @@ target_link_libraries(replay_simulation_hybrid_astar PRIVATE
   reeds_shepp
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
-  )
+)
 
 pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
 target_link_libraries(geometry_math_validation_py PRIVATE
@@ -153,12 +171,12 @@ target_link_libraries(lateral_path_optimizer_py PRIVATE
 
 pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulation_pybind.cc)
 target_link_libraries(optimizer_apa_simulation_py PRIVATE
-    autoplt
-    modules
-    modules_common
-    modules_context
-    modules_tasks
-    legacy_c_interface)
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(jerk_limited_trajectory_py MODULE src/jerk_limited_trajectory_pybind.cc)
 target_link_libraries(jerk_limited_trajectory_py PRIVATE
@@ -191,7 +209,7 @@ target_link_libraries(hybrid_astar_py PRIVATE
   reeds_shepp
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
-  )
+)
 
 pybind11_add_module(astar_parallel_py MODULE src/astar_parallel_pybind.cc)
 target_link_libraries(astar_parallel_py PRIVATE
@@ -206,7 +224,7 @@ target_link_libraries(astar_parallel_py PRIVATE
   reeds_shepp
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
-  )
+)
 
 pybind11_add_module(astar_parallel_replay_py MODULE src/astar_parallel_pybind_replay.cc)
 target_link_libraries(astar_parallel_replay_py PRIVATE
@@ -224,7 +242,7 @@ target_link_libraries(astar_parallel_replay_py PRIVATE
   )
 
 pybind11_add_module(headin_planning_py MODULE src/headin_planning_pybind.cc)
-  target_link_libraries(headin_planning_py PRIVATE
+target_link_libraries(headin_planning_py PRIVATE
   autoplt
   modules
   modules_common

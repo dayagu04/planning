@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -2739,6 +2740,36 @@ void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
                const double heading) {
   ILOG_INFO << str << "= " << pos.x() << ", " << pos.y()
             << ", heading(deg): " << heading * kRad2Deg;
+}
+
+void PrintGear(const std::string &str, const uint8_t gear) {
+  std::string full_str = str;
+  if (gear == SEG_GEAR_DRIVE) {
+    full_str += " = Drive gear!";
+  } else if (gear == SEG_GEAR_REVERSE) {
+    full_str += " = Reverse gear!";
+  } else if (gear == SEG_GEAR_INVALID) {
+    full_str += " = Invalid gear!";
+  } else if (gear == SEG_GEAR_COUNT) {
+    full_str += " = Count gear!";
+  }
+  ILOG_INFO << full_str;
+}
+
+void PrintSteer(const std::string &str, const uint8_t steer) {
+  std::string full_str = str;
+  if (steer == SEG_STEER_STRAIGHT) {
+    full_str += " = Straight steer!";
+  } else if (steer == SEG_STEER_LEFT) {
+    full_str += " = Left steer!";
+  } else if (steer == SEG_STEER_RIGHT) {
+    full_str += " = Right steer!";
+  } else if (steer == SEG_STEER_INVALID) {
+    full_str += " = Invalid steer!";
+  } else if (steer == SEG_STEER_COUNT) {
+    full_str += " = Count steer!";
+  }
+  ILOG_INFO << full_str;
 }
 
 void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {

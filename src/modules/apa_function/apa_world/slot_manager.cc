@@ -1266,15 +1266,7 @@ const bool SlotManager::UpdateEgoParallelSlotInfo(
             << ego_slot_info.slot_occupied_ratio;
 
   // set obs
-  ego_slot_info.obs_pt_vec_slot.clear();
-
-  // const auto &obs_pt_vec = frame_.obs_pt_map[select_slot.id()];
-  // ego_slot_info.obs_pt_vec_slot.reserve(obs_pt_vec.size());
-
-  // for (const auto &obs_pt : obs_pt_vec) {
-  //   const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-  //   ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-  // }
+  ego_slot_info.obs_pt_vec_slot = frame_.obs_pt_vec;
 
   return true;
 }

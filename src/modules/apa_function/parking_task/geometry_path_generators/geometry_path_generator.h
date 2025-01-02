@@ -181,7 +181,7 @@ class GeometryPathGenerator : public ParkingTask {
     collision_detector_ptr_ = collision_detector_ptr;
   }
   const GeometryPathOutput &GetOutput() const { return output_; }
-  const GeometryPathOutput *GetOutputPtr() const { return &output_; }
+  GeometryPathOutput *GetOutputPtr() { return &output_; }
   const std::vector<double> GetPathEle(size_t index) const;
 
  protected:

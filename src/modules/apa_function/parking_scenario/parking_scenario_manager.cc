@@ -15,6 +15,7 @@
 #include "narrow_space_decider.h"
 #include "narrow_space_scenario.h"
 #include "parallel_park_in_scenario.h"
+#include "parallel_park_out_scenario.h"
 #include "parking_scenario.h"
 #include "perpendicular_head_in_scenario.h"
 #include "perpendicular_head_out_scenario.h"
@@ -89,6 +90,9 @@ bool ParkingScenarioManager::Init(
   scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_IN] =
       std::make_shared<ParallelParkInScenario>(apa_world);
 
+  scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_OUT] =
+      std::make_shared<ParallelParkOutScenario>(apa_world);
+
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT] =
       std::make_shared<PerpendicularHeadOutScenario>(apa_world);
 
@@ -108,6 +112,7 @@ bool ParkingScenarioManager::Init(
 }
 
 void ParkingScenarioManager::Excute() {
+  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute";
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
@@ -120,6 +125,10 @@ void ParkingScenarioManager::Excute() {
 
   const auto &ego_info_under_slot =
       apa_world_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+
+  ILOG_INFO << "cur_state = " << static_cast<int>(cur_state);
+  ILOG_INFO << "ego_info_under_slot.slot_type = "
+            << static_cast<int>(ego_info_under_slot.slot_type);
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
@@ -160,6 +169,8 @@ void ParkingScenarioManager::Excute() {
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
+    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
+      scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
     }
   }
 
@@ -200,6 +211,7 @@ void ParkingScenarioManager::Reset() {
 
 std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
     const ParkingScenarioType type) {
+  ILOG_INFO << "GetScenarioByType type = " << static_cast<int>(type);
   auto it = scenario_list_.find(type);
   if (it != scenario_list_.end()) {
     return scenario_list_[type];

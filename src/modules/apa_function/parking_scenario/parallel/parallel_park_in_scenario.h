@@ -31,20 +31,18 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const uint8_t PathPlanOnce() override;
   const ParallelPathGenerator::Tlane& GetTlane() { return t_lane_; }
 
+  const bool CheckSegCompleted();
+  virtual const bool CheckReplan() override;
+  virtual const bool CheckFinished() override;
+
  private:
   // virtual func
 
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
-  virtual const bool CheckReplan() override;
-  virtual const bool CheckFinished() override;
 
   void UpdateTlaneOnceInSlot();
-
-  const bool IsEgoInSlot() const;
-  const bool IsEgoInSlot(const pnc::geometry_lib::PathPoint& pose) const;
-  const bool CheckSegCompleted();
 
   ParallelPathGenerator::Tlane t_lane_;
   ParallelPathGenerator parallel_path_planner_;

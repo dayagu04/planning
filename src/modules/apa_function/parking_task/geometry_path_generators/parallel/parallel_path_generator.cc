@@ -36,7 +36,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kLonBufferTrippleStep = 0.2;
 // static const double kLatBufferTrippleStep = 0.05;
-static const double kColBufferInSlot = 0.2;
+static const double kColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.3;
 static const double kColLargeLatBufferOutSlot = 0.3;
 static const double kColSmallLatBufferOutSlot = 0.1;
@@ -178,9 +178,8 @@ void ParallelPathGenerator::RecorverChannelObstacles() {
   collision_detector_ptr_->DeleteGivenTypeObstacles(
       CollisionDetector::CHANNEL_OBS);
 
-  collision_detector_ptr_->AddObstacles(
-      calc_params_.channel_obs_vec,
-      CollisionDetector::CollisionDetector::CHANNEL_OBS);
+  collision_detector_ptr_->AddObstacles(calc_params_.channel_obs_vec,
+                                        CollisionDetector::CHANNEL_OBS);
 }
 
 const bool ParallelPathGenerator::Update() {
@@ -220,6 +219,7 @@ const bool ParallelPathGenerator::Update() {
     if (success) {
       ILOG_INFO << "OutsideSlotPlan success!";
       if (calc_params_.park_out_path_in_slot.size() > 1) {
+        calc_params_.park_out_path_in_slot.pop_back();
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
       }
@@ -300,22 +300,20 @@ const bool ParallelPathGenerator::Update(
   collision_detector_ptr_ = collision_detector_ptr;
   const bool success = Update();
   RecorverChannelObstacles();
-
-  geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
-
+  pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
   const auto time1 = std::chrono::high_resolution_clock::now();
   const auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(time1 - time0)
           .count();
-  ILOG_INFO << "parallel cost time(ms) = " << duration << "\n";
   JSON_DEBUG_VALUE("path_plan_time_ms", duration);
+  ILOG_INFO << "parallel cost time(ms) = " << duration;
   return success;
 }
 
 // park out from target pose with two arc to ego line.
 const bool ParallelPathGenerator::PlanFromTargetToLine(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
-    const pnc::geometry_lib::PathPoint& start_pose) {
+    const pnc::geometry_lib::PathPoint& start_pose, const bool is_park_out) {
   // ILOG_INFO <<"------PlanFromTargetToLine-------");
   using namespace pnc::mathlib;
   using namespace pnc::geometry_lib;
@@ -366,27 +364,29 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       }
     }
 
-    ego_line.heading = start_pose.heading;
-    ego_line.SetPoints(start_pose.pos, arc_2.pB);
-    const auto ego_line_gear = CalLineSegGear(ego_line);
-    if (ego_line_gear == SEG_GEAR_DRIVE) {
-      const double heading_mag_deg = std::fabs(start_pose.heading) * kRad2Deg;
-      if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
-          ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+    if (!is_park_out) {
+      ego_line.heading = start_pose.heading;
+      ego_line.SetPoints(start_pose.pos, arc_2.pB);
+      const auto ego_line_gear = CalLineSegGear(ego_line);
+      if (ego_line_gear == SEG_GEAR_DRIVE) {
+        const double heading_mag_deg = std::fabs(start_pose.heading) * kRad2Deg;
+        if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
+            ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+          continue;
+        }
+      }
+
+      collision_detector_ptr_->SetParam(
+          CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
+
+      auto col_res =
+          collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
+      if (col_res.collision_flag ||
+          col_res.remain_car_dist >
+              col_res.remain_obstacle_dist - kColBufferOutSlot) {
+        ILOG_INFO << "ego line collided!";
         continue;
       }
-    }
-
-    collision_detector_ptr_->SetParam(
-        CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
-
-    auto col_res =
-        collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
-    if (col_res.collision_flag ||
-        col_res.remain_car_dist >
-            col_res.remain_obstacle_dist - kColBufferOutSlot) {
-      ILOG_INFO << "ego line collided!";
-      continue;
     }
 
     // if (!CheckParkOutCornerSafeWithObsPin(arc_1)) {
@@ -394,7 +394,8 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     //   continue;
     // }
 
-    col_res = collision_detector_ptr_->UpdateByObsMap(arc_2, arc_2.headingA);
+    auto col_res =
+        collision_detector_ptr_->UpdateByObsMap(arc_2, arc_2.headingA);
     if (col_res.collision_flag ||
         col_res.remain_car_dist >
             col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
@@ -928,6 +929,15 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     const auto prepare_line = pnc::geometry_lib::BuildLineSegByPose(
         prepare_pose.pos, prepare_pose.heading);
 
+    // search min dist of ego corner to obs, which is used the minimal value
+    // with
+    // 0.36 as buffer
+    const double min_lat_buffer =
+        std::min(calc_params_.lat_outside_slot_buffer_vec[0],
+                 calc_params_.lat_outside_slot_buffer_vec[1]);
+    collision_detector_ptr_->SetParam(
+        CollisionDetector::Paramters(min_lat_buffer, false));
+
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
     if (!PlanToPreparingLine(prepare_seg_vec, input_.ego_pose, prepare_line)) {
       ILOG_INFO << "PlanToPreparingLine fail!";
@@ -987,17 +997,10 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   using namespace pnc::geometry_lib;
   ego_to_prepare_seg_vec.clear();
   ego_to_prepare_seg_vec.reserve(6);
-  // search min dist of ego corner to obs, which is used the minimal value with
-  // 0.36 as buffer
-  const double min_lat_buffer =
-      std::min(calc_params_.lat_outside_slot_buffer_vec[0],
-               calc_params_.lat_outside_slot_buffer_vec[1]);
-  collision_detector_ptr_->SetParam(
-      CollisionDetector::Paramters(min_lat_buffer, false));
 
-  // ILOG_INFO << "---------------------------------PlanToPreparingLine "
-  //              "---------------------------------";
-  // pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
+  ILOG_INFO << "---------------------------------PlanToPreparingLine "
+               "---------------------------------";
+  pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
 
   pnc::geometry_lib::PathSegment line_seg;
   if (OneLinePlan(line_seg, ego_pose, prepare_line)) {
@@ -1044,7 +1047,8 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
       path_vec.emplace_back(path);
     }
   }
-  // ILOG_INFO <<"path_vec size = " << path_vec.size());
+
+  ILOG_INFO << "path_vec size = " << path_vec.size();
   if (path_vec.size() == 0) {
     return false;
   }
@@ -1175,18 +1179,31 @@ const bool ParallelPathGenerator::GenAlignedPreparingLine(
 }
 
 const bool ParallelPathGenerator::GenParallelPreparingLineVec(
-    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec,
+    const bool is_ref_slot_line) {
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
 
-  const double tlane_outer_y =
+  ILOG_INFO << " calc_params_.slot_side_sgn in GenParallelPreparingLineVec= "
+            << calc_params_.slot_side_sgn;
+
+  double tlane_outer_y =
       std::fabs(input_.tlane.obs_pt_inside.y()) > half_slot_width
           ? input_.tlane.obs_pt_inside.y()
           : (half_slot_width + std::fabs(input_.tlane.obs_pt_inside.y())) *
                 0.5 * calc_params_.slot_side_sgn;
-
-  const double rac_tlane_bound =
+  double rac_tlane_bound =
       tlane_outer_y +
       calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+
+  if (is_ref_slot_line) {
+    tlane_outer_y =
+        std::max(input_.tlane.obs_pt_inside.y() * calc_params_.slot_side_sgn,
+                 half_slot_width) *
+        calc_params_.slot_side_sgn;
+    rac_tlane_bound =
+        tlane_outer_y + calc_params_.slot_side_sgn *
+                            (0.5 * apa_param.GetParam().car_width + 0.5);
+  }
 
   const double rac_channel_bound =
       input_.tlane.channel_y -
@@ -1194,6 +1211,9 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
 
   if (calc_params_.slot_side_sgn * (rac_channel_bound - rac_tlane_bound) <
       0.0) {
+    ILOG_ERROR << "rac_channel_bound - rac_tlane_bound "
+               << rac_channel_bound - rac_tlane_bound;
+    ILOG_ERROR << "SGN DIFFERENT!";
     return false;
   }
 
@@ -1866,10 +1886,10 @@ const bool ParallelPathGenerator::CalcParkOutPose(
 
 const bool ParallelPathGenerator::ReversePathSegVec(
     std::vector<pnc::geometry_lib::PathSegment>& park_out_res) {
-  if (park_out_res.size() <= 1) {
+  if (park_out_res.size() < 1) {
     return false;
   }
-  park_out_res.pop_back();
+
   for (auto& path_seg : park_out_res) {
     pnc::geometry_lib::ReversePathSegInfo(path_seg);
   }
@@ -3538,9 +3558,9 @@ const bool ParallelPathGenerator::TwoArcPath(
     const Arc arc2 = arc_pair.second;
 
     if (arc1.pB.x() < kMinXInTBoundary ||
-        arc1.pB.x() < start_pose.pos.x() - 1.5 ||
+        arc1.pB.x() < start_pose.pos.x() - 2.5 ||
         arc2.pB.x() < kMinXInTBoundary ||
-        arc2.pB.x() < start_pose.pos.x() - 1.5) {
+        arc2.pB.x() < start_pose.pos.x() - 2.5) {
       continue;
     }
 
@@ -3694,8 +3714,8 @@ const bool ParallelPathGenerator::LineArcPlan(
 
     if (tmp_arc.pA.x() < kMinXInTBoundary ||
         tmp_arc.pB.x() < kMinXInTBoundary ||
-        tmp_arc.pA.x() < ego_pose.pos.x() - 1.5 ||
-        tmp_arc.pB.x() < ego_pose.pos.x() - 1.5) {
+        tmp_arc.pA.x() < ego_pose.pos.x() - 2.5 ||
+        tmp_arc.pB.x() < ego_pose.pos.x() - 2.5) {
       continue;
     }
 
