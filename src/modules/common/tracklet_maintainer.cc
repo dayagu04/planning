@@ -706,7 +706,7 @@ void TrackletMaintainer::calc(
 
     // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
     double expend_length = 0.0;
-    if (tr->side_car && tr->rear_car && tr->v_rel < expand_vel) {
+    if (tr->side_car && tr->v_rel < expand_vel) {
       expend_length = 1.5;
     }
     if (tr->d_rel > expend_length) {

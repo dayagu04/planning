@@ -18,7 +18,7 @@ FrenetObstacle::FrenetObstacle(
     : id_(obstacle_ptr->id()),
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid) {
-  compute_frenet_obstacle(reference_path, ego_state_info);
+  compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
     compute_frenet_polygon_sequence(reference_path);
@@ -26,11 +26,12 @@ FrenetObstacle::FrenetObstacle(
 }
 
 void FrenetObstacle::compute_frenet_obstacle(
-    const ReferencePath &reference_path,
-    const std::shared_ptr<EgoStateManager> ego_state_info) {
+    const ReferencePath &reference_path) {
   FrenetEgoState frenet_ego_state = reference_path.get_frenet_ego_state();
   double ego_s = frenet_ego_state.s();
   double ego_l = frenet_ego_state.l();
+  double ego_head_s = frenet_ego_state.head_s();
+  double ego_head_l = frenet_ego_state.head_l();
 
   const auto &frenet_coord = reference_path.get_frenet_coord();
   // center frenet
@@ -158,21 +159,7 @@ void FrenetObstacle::compute_frenet_obstacle(
   frenet_velocity_lateral_ =
       (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
 
-  const double front_edge_to_rear_axle = VehicleConfigurationContext::Instance()
-                                             ->get_vehicle_param()
-                                             .front_edge_to_rear_axle;
-  double ego_x = ego_state_info->ego_carte().x;
-  double ego_y = ego_state_info->ego_carte().y;
-  double ego_heading = frenet_ego_state.planning_init_point().heading_angle;
-  double ego_head_x = ego_x + front_edge_to_rear_axle * std::cos(ego_heading);
-  double ego_head_y = ego_y + front_edge_to_rear_axle * std::sin(ego_heading);
-  double ego_head_s = 0;
-  double ego_head_l = 0;
-  if (frenet_coord->XYToSL(Point2D(ego_head_x, ego_head_y), frenet_point)) {
-    ego_head_s = frenet_point.x;
-    ego_head_l = frenet_point.y;
-  }
-
+  // calculate d_rel, d_min_cpath, d_max_cpath
   double half_length = obs_length * 0.5;
   double half_width = obs_width * 0.5;
   // 对车辆障碍物half_width限定在1-2m以内

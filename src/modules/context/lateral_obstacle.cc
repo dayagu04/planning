@@ -126,7 +126,7 @@ void LateralObstacle::LateralObstacleDecision(
     }
 
     double expend_length = 0.0;
-    if (item.side_car && item.rear_car && item.v_rel < expand_vel) {
+    if (item.side_car && item.v_rel < expand_vel) {
       expend_length = 1.5;
     }
 

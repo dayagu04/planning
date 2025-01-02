@@ -106,18 +106,10 @@ bool LateralObstacleDecider::Execute() {
       history.ncar_count_in = false;
       continue;
     }
-    if (frenet_obs->d_s_rel() <= 0) {
-      history.is_avd_car = false;
-      if (frenet_obs->d_s_rel() <= -1 * (obs->length() + ego_length_)) {
-        history.ncar_count = 0;
-        history.ncar_count_in = false;
-      }
-      continue;
-    }
 
     // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
     double expand_length = 0.0;
-    if (history.side_car && history.rear_car &&
+    if (history.side_car &&
         frenet_obs->frenet_relative_velocity_s() < expand_vel) {
       expand_length = 1.5;
     }
@@ -134,6 +126,15 @@ bool LateralObstacleDecider::Execute() {
       history.rear_car = true;
     }
 
+    if (frenet_obs->d_s_rel() <= 0) {
+      history.is_avd_car = false;
+      if (frenet_obs->d_s_rel() <= -1 * (obs->length() + ego_length_)) {
+        history.ncar_count = 0;
+        history.ncar_count_in = false;
+      }
+      continue;
+    }
+    
     history.is_avd_car = IsPotentialAvoidingCar(
         *frenet_obs, lane_width, rightest_lane, farthest_distance);
 
@@ -155,7 +156,7 @@ bool LateralObstacleDecider::Execute() {
     }
 
     double expand_length = 0.0;
-    if (history.side_car && history.rear_car &&
+    if (history.side_car &&
         frenet_obs->frenet_relative_velocity_s() < expand_vel) {
       expand_length = 1.5;
     }

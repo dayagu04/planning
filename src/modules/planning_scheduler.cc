@@ -830,6 +830,8 @@ void PlanningScheduler::ClearParkingInfo(
       ->mutable_planning_output()
       .successful_slot_info_list_size = 0;
 
+  planning_output->successful_slot_info_list_size = 0;
+
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
 }
 
