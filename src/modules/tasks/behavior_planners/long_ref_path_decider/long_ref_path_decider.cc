@@ -59,6 +59,8 @@ void LongRefPathDecider::UpdateLonRefPath() {
   if (st_graph_helper == nullptr) {
     return;
   }
+  const auto &lane_change_info =
+      session_->planning_context().lane_change_decider_output();
 
   lon_behavior_output_.t_list.resize(plan_points_num_);
   lon_behavior_output_.s_refs.resize(plan_points_num_);
@@ -112,11 +114,33 @@ void LongRefPathDecider::UpdateLonRefPath() {
     lon_a_bound.lower = bound_maker_->a_lower_bound(t);
     lon_a_bound.upper = bound_maker_->a_upper_bound(t);
     lon_behavior_output_.lon_bound_a[i] = lon_a_bound;
-    // 8.update jerk bounds
+
+    // 7.update jerk bounds
     Bound lon_j_bound;
-    lon_j_bound.lower = bound_maker_->jerk_lower_bound(t);
-    lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
+    if (lane_change_info.s_search_status &&
+        speed_planning_config_.enable_speed_adjust) {
+      lon_j_bound.lower = -1.0;
+      lon_j_bound.upper = 1.0;
+    } else {
+      lon_j_bound.lower = bound_maker_->jerk_lower_bound(t);
+      lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
+    }
     lon_behavior_output_.lon_bound_jerk[i] = lon_j_bound;
+
+    // 8. use speed adjust s search ref
+    if (lane_change_info.s_search_status &&
+        speed_planning_config_.enable_speed_adjust) {
+      if (lane_change_info.st_search_vec.size() == plan_points_num_ + 1) {
+        for (size_t i = 0; i <= plan_points_num_; i++) {
+          lon_behavior_output_.s_refs[i].first =
+              lane_change_info.st_search_vec[i];
+        }
+        std::cout << "use search path in lc wait!" << std::endl;
+      } else {
+        std::cout << "search path num is error:  "
+                  << lane_change_info.st_search_vec.size() << std::endl;
+      }
+    }
   }
 }
 

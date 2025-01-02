@@ -3210,6 +3210,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_planning",
                                  "lane_change_upper_speed_limit_kph"},
         lane_change_upper_speed_limit_kph);
+    enable_speed_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
   }
 
   double planning_time = 5.0;
@@ -3229,6 +3231,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double stop_acc_lower_bound = -0.3;
   double stop_jerk_upper_bound = 0.8;
   double stop_jerk_lower_bound = -0.8;
+  bool enable_speed_adjust = true;
 
   // follow target
   double lower_speed_min_follow_distance_gap = 3.0;
