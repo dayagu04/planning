@@ -164,9 +164,10 @@ void ParkingScenario::GenPlanningOutput() {
             << "  plan path pt size = "
             << current_path_point_global_vec_.size();
 
-  // bool is_hpp = IsHppParkingStage(
-  //     apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine().current_state);
-  bool is_hpp = false;
+  bool is_hpp =
+      IsHppParkingStage(apa_world_ptr_->GetLocalViewPtr()
+                            ->function_state_machine_info.current_state);
+
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose, is_hpp);
   } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
