@@ -1,6 +1,15 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
+#include "behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
+#include "common/st_graph/st_boundary.h"
+#include "common/st_graph/st_graph_input.h"
 #include "ego_planning_config.h"
+#include "session.h"
 #include "st_graph_searcher.pb.h"
 #include "st_search_input.h"
 #include "st_search_node.h"
@@ -10,6 +19,8 @@
 namespace planning {
 
 class StGraphSearcher : public Task {
+  using CIPVInfo = ClosestInPathVehicleDeciderOutput;
+
  public:
   StGraphSearcher(const EgoPlanningConfigBuilder* config_builder,
                   framework::Session* session);
@@ -84,6 +95,15 @@ class StGraphSearcher : public Task {
 
   double ComputeHeuristicCost(const StSearchInput& input_info,
                               const StSearchNode& node) const;
+
+  void SetStSearchFailSafeDecisionTable(
+      const std::unordered_map<int64_t, std::unique_ptr<speed::STBoundary>>&
+          boundary_id_st_boundaries_map,
+      const std::unordered_map<int32_t, std::vector<int64_t>>&
+          agent_id_st_boundaries_map,
+      const speed::StGraphInput& st_graph_input, const CIPVInfo& cipv_info,
+      std::unordered_map<int64_t, speed::STBoundary::DecisionType>*
+          succ_decision_table) const;
 
   void AddAStarSearchCostDebugInfo(
       std::vector<StSearchNode>* const searched_path) const;

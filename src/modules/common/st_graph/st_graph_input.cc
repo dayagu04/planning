@@ -87,8 +87,7 @@ namespace speed {
 
 StGraphInput::StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                            planning::framework::Session* session)
-    : session_(session),
-      cipv_info_(&(session_->planning_context().cipv_decider_output())) {
+    : session_(session) {
   config_ = config_builder->cast<STGraphConfig>();
 }
 

@@ -728,63 +728,6 @@ void STGraph::BackwardExtendSingleStBoundary(
   }
 }
 
-void STGraph::SetStSearchFailSafeDecisionTable(
-    std::unordered_map<int64_t, STBoundary::DecisionType>* succ_decision_table)
-    const {
-  const auto& cipv_info = st_graph_input_.cipv_info();
-  // make cipv yield decision when lane keep
-  int64_t cipv_boundary_id = -1;
-  if (st_graph_input_.is_lane_keeping()) {
-    const auto cipv_id = cipv_info->cipv_id();
-    if (cipv_id != -1 && agent_id_st_boundaries_map_.find(cipv_id) !=
-                             agent_id_st_boundaries_map_.end()) {
-      // only use one cipv prediction trajectory
-      cipv_boundary_id = agent_id_st_boundaries_map_.at(cipv_id).front();
-      succ_decision_table->insert(
-          std::make_pair(cipv_boundary_id, STBoundary::DecisionType::YIELD));
-    }
-    return;
-  }
-
-  // Set rear target as overtake.
-  const auto rear_st_id = StGraphUtils::GetAgentStBoundaryId(
-      st_graph_input_.rear_agent_of_target(), agent_id_st_boundaries_map_);
-  const speed::STBoundary* rear_st_boundary = nullptr;
-  if (boundary_id_st_boundaries_map_.find(rear_st_id) !=
-      boundary_id_st_boundaries_map_.end()) {
-    rear_st_boundary = boundary_id_st_boundaries_map_.at(rear_st_id).get();
-    succ_decision_table->insert(
-        std::make_pair(rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
-    // std::cout << "Set rear target agent as OVERTAKE "
-    //           << st_graph_input_.rear_agent_of_target()->agent_id() <<
-    //           std::endl;
-  }
-  // Won't trigger if has no rear agent.
-  if (nullptr == rear_st_boundary) {
-    return;
-  }
-  for (const auto& st_boundary_entry : boundary_id_st_boundaries_map_) {
-    const auto boundary_id = st_boundary_entry.first;
-    const auto& st_boundary = *st_boundary_entry.second;
-    if (boundary_id == rear_st_id || boundary_id == speed::kNoAgentId) {
-      continue;
-    }
-    if (st_boundary.IsEmpty()) {
-      continue;
-    }
-    // Only consider time overlapping.
-    if (st_boundary.min_t() > rear_st_boundary->max_t()) {
-      continue;
-    }
-    if (StGraphUtils::IsBoundaryAboveRearTargetBoundary(st_boundary,
-                                                        rear_st_boundary)) {
-      succ_decision_table->insert(
-          std::make_pair(boundary_id, speed::STBoundary::DecisionType::YIELD));
-      // std::cout << "Set boundary as YIELD: " << boundary_id << std::endl;
-    }
-  }
-}
-
 bool STGraph::UpdateStBoundaryDecisionResults(
     const std::unordered_map<int64_t, STBoundary::DecisionType>&
         decision_table) {

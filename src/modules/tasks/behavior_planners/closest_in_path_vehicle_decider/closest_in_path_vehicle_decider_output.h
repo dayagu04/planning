@@ -8,6 +8,9 @@ class ClosestInPathVehicleDeciderOutput {
   ClosestInPathVehicleDeciderOutput() = default;
   ~ClosestInPathVehicleDeciderOutput() = default;
 
+  ClosestInPathVehicleDeciderOutput& operator=(
+      const ClosestInPathVehicleDeciderOutput& other) = delete;
+
   void Reset();
 
   const int32_t cipv_id() const;
@@ -29,8 +32,6 @@ class ClosestInPathVehicleDeciderOutput {
 
  private:
   // TODO:Enrich the cipv info, or create a cipv_class later.
-  ClosestInPathVehicleDeciderOutput& operator=(
-      const ClosestInPathVehicleDeciderOutput& other);
   int32_t cipv_id_ = -1;
   double relative_s_ = 0.0;
   double v_frenet_ = 0.0;

@@ -19,7 +19,6 @@ namespace speed {
 
 class StGraphInput {
  public:
-  using CIPVInfo = ClosestInPathVehicleDeciderOutput;
 
   StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                planning::framework::Session* session);
@@ -140,13 +139,10 @@ class StGraphInput {
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<EgoStateManager>& ego_state_manager);
 
-  const CIPVInfo* cipv_info() const { return cipv_info_; };
-
   void Reset();
 
  private:
   planning::framework::Session* session_ = nullptr;
-  const CIPVInfo* cipv_info_ = nullptr;
   STGraphConfig config_;
   trajectory::TrajectoryPoint planning_init_point_;
   trajectory::TrajectoryPoint time_aligned_ego_state_;
