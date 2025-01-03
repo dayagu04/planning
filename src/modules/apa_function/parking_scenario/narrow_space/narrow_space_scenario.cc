@@ -1004,6 +1004,11 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
   const auto& slot_points =
       ego_slot_info.target_managed_slot.corner_points().corner_point();
+  if (slot_points.size() != 4) {
+    ILOG_INFO << "slot point is not 4";
+    return false;
+  }
+
   std::vector<Eigen::Vector2d> pt;
   pt.resize(4);
   for (size_t i = 0; i < 4; ++i) {
