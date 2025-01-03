@@ -149,7 +149,8 @@ target_link_libraries(replay_simulation_hybrid_astar PRIVATE
   reeds_shepp
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
-)
+  spiral
+  )
 
 pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
 target_link_libraries(geometry_math_validation_py PRIVATE
@@ -209,7 +210,8 @@ target_link_libraries(hybrid_astar_py PRIVATE
   reeds_shepp
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
-)
+  spiral
+  )
 
 pybind11_add_module(astar_parallel_py MODULE src/astar_parallel_pybind.cc)
 target_link_libraries(astar_parallel_py PRIVATE
@@ -272,3 +274,13 @@ pybind11_add_module(scc_lon_motion_planning_v3_py MODULE src/scc_lon_motion_plan
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(spiral_py MODULE src/spiral_pybind.cc)
+target_link_libraries(spiral_py PRIVATE
+  spiral
+# autoplt
+# modules
+# modules_common
+# modules_context
+# modules_tasks
+)

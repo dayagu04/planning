@@ -16,4 +16,5 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   reeds_shepp
   occupancy_grid_map
   pthread
+  spiral
   )

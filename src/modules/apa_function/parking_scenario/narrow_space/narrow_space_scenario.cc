@@ -655,6 +655,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
+
     if (apa_param.GetParam().astar_config.cubic_polynomial_pose_adjustment) {
       cur_request.path_generate_method =
           planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;

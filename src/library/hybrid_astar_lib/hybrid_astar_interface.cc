@@ -256,7 +256,7 @@ int HybridAStarInterface::UpdateOutput() {
     double lon_min_sampling_length;
     if (request_.space_type == ParkSpaceType::VERTICAL ||
         request_.space_type == ParkSpaceType::SLANTING) {
-      lon_min_sampling_length = std::max(2.0, dist_to_slot_up_edge);
+      lon_min_sampling_length = std::max(3.0, dist_to_slot_up_edge);
     } else {
       lon_min_sampling_length = 0.4;
     }
@@ -279,7 +279,7 @@ int HybridAStarInterface::UpdateOutput() {
               lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
               &clear_zone_, &ref_line_);
         } else {
-          if (hybrid_astar_->SamplingByCubicPolyForVerticalSlot(
+          if (hybrid_astar_->SamplingByCubicSpiralForVerticalSlot(
                   &coarse_traj_, initial_state_, goal_state_,
                   lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
                   &clear_zone_, &ref_line_)) {

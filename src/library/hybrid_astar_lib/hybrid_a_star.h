@@ -91,6 +91,14 @@ class HybridAStar {
       EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
       ParkReferenceLine* ref_line);
 
+  // use cubic spiral path sampling to link start point and end point.
+  bool SamplingByCubicSpiralForVerticalSlot(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      const double lon_min_sampling_length, const MapBound& XYbounds,
+      const ParkObstacleList& obstacles, const AstarRequest& request,
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
+
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);
 
@@ -292,6 +300,9 @@ class HybridAStar {
   void GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
                                const Pose2D& start, const double start_kappa,
                                const Pose2D& end);
+
+//   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+//                           const Pose2D& start, const Pose2D& end);
 
   const bool BackwardPassByPolynomialPath(
       HybridAStarResult* result, Node3d* poly_node,

@@ -8,11 +8,13 @@ from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../')
 
+# +
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241218/20241218-15-05-03/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-18-15-05-03_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
+# -
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

@@ -663,7 +663,7 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
   //                       ? offset_y
   //                       : -offset_y;
   s_end_point.y() = offset_y;
-  ILOG_INFO << "offset_y is " << offset_y;
+
   pnc::geometry_lib::Arc arc_s_2;
   arc_s_2.circle_info.radius = real_steer_change_radius;
   arc_s_2.pB = s_end_point;
