@@ -331,6 +331,6 @@
 
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,
-  "min_cruise_speed" : 0.3,
+  "min_cruise_speed" : 0.4,
   "obs_dist_for_speed_limit" : 0.4
 }
