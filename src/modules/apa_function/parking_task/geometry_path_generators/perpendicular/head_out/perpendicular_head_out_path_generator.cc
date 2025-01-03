@@ -293,10 +293,12 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
 
   // param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.08));
-
   bool prepare_success = true;
   // collision detect
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
+    if (&tmp_path_seg == &tmp_path_seg_vec.back()) {
+      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
+    }
     const PathColDetRes path_col_det_res =
         TrimPathByCollisionDetection(tmp_path_seg, 0.08);
     // path_seg_vec.emplace_back(tmp_path_seg);
@@ -811,7 +813,11 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
   }
 
   // collision detect
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.08));
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
+    if (&tmp_path_seg == &tmp_path_seg_vec.back()) {
+      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
+    }
     const PathColDetRes path_col_det_res =
         TrimPathByCollisionDetection(tmp_path_seg, 0.08);
     // path_seg_vec.emplace_back(tmp_path_seg);
