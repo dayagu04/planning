@@ -339,8 +339,12 @@ const bool ParallelParkOutScenario::CheckFinished() {
   ILOG_INFO << "std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) = "
             << std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg);
 
+  const bool static_condition =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
   return frame_.ego_slot_info.slot_occupied_ratio < 0.1 &&
-         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 5.0;
+         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 5.0 &&
+         static_condition;
 }
 
 const bool ParallelParkOutScenario::GenTlane() {

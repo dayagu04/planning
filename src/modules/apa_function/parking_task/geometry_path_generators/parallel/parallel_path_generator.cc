@@ -49,7 +49,7 @@ static const size_t kMaxParallelShiftNums = 6;
 
 static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
-static const double kMaxHeadingFirstStepForwardLine = 30.0;
+static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
@@ -873,7 +873,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   if (input_.ego_pose.pos.x() > input_.tlane.slot_length - 2.0) {
     GeometryPath ego_line_geo_path;
     std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
-    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
     if (BackwardNormalPlan(tmp_path_seg_vec, input_.ego_pose)) {
       AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
 
