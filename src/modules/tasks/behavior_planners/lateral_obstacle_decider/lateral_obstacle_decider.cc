@@ -20,6 +20,10 @@ LateralObstacleDecider::LateralObstacleDecider(
     : Task(config_builder, session),
       session_(session),
       config_(config_builder->cast<PotentialAvoidDeciderConfig>()),
+      lateral_obstacle_history_info_(
+          session_->mutable_planning_context()
+              ->mutable_lateral_obstacle_decider_output()
+              .lateral_obstacle_history_info),
       output_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
                   .lat_obstacle_decision) {
@@ -138,6 +142,8 @@ bool LateralObstacleDecider::Execute() {
     history.is_avd_car = IsPotentialAvoidingCar(
         *frenet_obs, lane_width, rightest_lane, farthest_distance);
 
+    history.last_recv_time = obs->timestamp();
+
     if (history.is_avd_car) {
       avd_car_id.emplace_back(obs->id());
     }
@@ -195,6 +201,9 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   bool is_ncar = false;
   double dist_limit;
+  // TODO(zkxie): 暂时关闭
+  bool borrow_bicycle_lane = false;
+  bool cross_solid_line = false;
 
   const auto &state =
       session_->planning_context().lane_change_decider_output().curr_state;
@@ -289,7 +298,6 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   bool is_about_to_enter_range =
       (d_s_rel < std::min(std::fabs(10.0 * v_s_rel), max_enter_range) &&
        v_s_rel < -2.5);
-  bool cross_solid_line = false;
 
   // decre lat_safety_buffer
   std::array<double, 3> x_lat_buffer{3.2, 3.5, 3.8};
@@ -319,7 +327,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
           (d_min_cpath > 0 && d_min_cpath < potential_dist_limit &&
            v_lat < potential_near_car_v_lb &&
            v_lat > potential_near_car_v_ub) ||
-          (d_max_cpath > 0 && d_min_cpath < 0 && v_s < 0.5);
+          (borrow_bicycle_lane && d_max_cpath > 0 && d_min_cpath < 0 &&
+           v_s < 0.5);
 
       double d_max_cpath_recursion = d_max_cpath;
       double d_min_cpath_recursion = d_min_cpath;
@@ -377,7 +386,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
       history.lane_borrow = lane_borrow;
 
       is_ncar = (is_same_side && is_need_avoid && can_avoid) ||
-                (can_avoid && d_max_cpath > 0 &&
+                (can_avoid && borrow_bicycle_lane && d_max_cpath > 0 &&
                  d_max_cpath < dist_limit + 2.2 && v_s < 0.5) ||
                 (rightest_lane && d_max_cpath < 0 &&
                  std::fabs(d_max_cpath) < dist_limit && v_s < 0.5) ||
