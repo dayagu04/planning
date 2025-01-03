@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/st_graph/st_graph_utils.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -240,6 +241,7 @@ bool StGraphSearcher::Execute() {
     session_->mutable_planning_context()
         ->mutable_st_graph_searcher_output()
         ->set_is_search_success(false);
+    AddStGraphSearcherDataToProto(st_path);
     return true;
   }
 
@@ -979,12 +981,81 @@ double StGraphSearcher::ComputeHeuristicCost(const StSearchInput& input_info,
 void StGraphSearcher::SetSearchFailSafe() const {
   std::unordered_map<int64_t, speed::STBoundary::DecisionType>
       succ_decision_table;
-  session_->mutable_planning_context()
-      ->st_graph()
-      ->SetStSearchFailSafeDecisionTable(&succ_decision_table);
+  const auto& st_graph = session_->planning_context().st_graph();
+  const auto& boundary_id_st_boundaries_map =
+      st_graph->boundary_id_st_boundaries_map();
+  const auto& agent_id_st_boundaries_map =
+      st_graph->agent_id_st_boundaries_map();
+  const auto& st_graph_input =
+      session_->planning_context().st_graph()->st_graph_input();
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  SetStSearchFailSafeDecisionTable(boundary_id_st_boundaries_map,
+                                   agent_id_st_boundaries_map, st_graph_input,
+                                   cipv_info, &succ_decision_table);
   session_->mutable_planning_context()
       ->st_graph()
       ->UpdateStBoundaryDecisionResults(succ_decision_table);
+}
+
+void StGraphSearcher::SetStSearchFailSafeDecisionTable(
+    const std::unordered_map<int64_t, std::unique_ptr<speed::STBoundary>>&
+        boundary_id_st_boundaries_map,
+    const std::unordered_map<int32_t, std::vector<int64_t>>&
+        agent_id_st_boundaries_map,
+    const speed::StGraphInput& st_graph_input, const CIPVInfo& cipv_info,
+    std::unordered_map<int64_t, speed::STBoundary::DecisionType>*
+        succ_decision_table) const {
+  // make cipv yield decision when lane keep
+  int64_t cipv_boundary_id = -1;
+  if (st_graph_input.is_lane_keeping()) {
+    const auto cipv_id = cipv_info.cipv_id();
+    if (cipv_id != -1 && agent_id_st_boundaries_map.find(cipv_id) !=
+                             agent_id_st_boundaries_map.end()) {
+      // only use one cipv prediction trajectory
+      cipv_boundary_id = agent_id_st_boundaries_map.at(cipv_id).front();
+      succ_decision_table->insert(std::make_pair(
+          cipv_boundary_id, speed::STBoundary::DecisionType::YIELD));
+    }
+    return;
+  }
+
+  // Set rear target as overtake.
+  const auto rear_st_id = speed::StGraphUtils::GetAgentStBoundaryId(
+      st_graph_input.rear_agent_of_target(), agent_id_st_boundaries_map);
+  const speed::STBoundary* rear_st_boundary = nullptr;
+  if (boundary_id_st_boundaries_map.find(rear_st_id) !=
+      boundary_id_st_boundaries_map.end()) {
+    rear_st_boundary = boundary_id_st_boundaries_map.at(rear_st_id).get();
+    succ_decision_table->insert(
+        std::make_pair(rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
+    // std::cout << "Set rear target agent as OVERTAKE "
+    //           << st_graph_input_.rear_agent_of_target()->agent_id() <<
+    //           std::endl;
+  }
+  // Won't trigger if has no rear agent.
+  if (nullptr == rear_st_boundary) {
+    return;
+  }
+  for (const auto& st_boundary_entry : boundary_id_st_boundaries_map) {
+    const auto boundary_id = st_boundary_entry.first;
+    const auto& st_boundary = *st_boundary_entry.second;
+    if (boundary_id == rear_st_id || boundary_id == speed::kNoAgentId) {
+      continue;
+    }
+    if (st_boundary.IsEmpty()) {
+      continue;
+    }
+    // Only consider time overlapping.
+    if (st_boundary.min_t() > rear_st_boundary->max_t()) {
+      continue;
+    }
+    if (speed::StGraphUtils::IsBoundaryAboveRearTargetBoundary(
+            st_boundary, rear_st_boundary)) {
+      succ_decision_table->insert(
+          std::make_pair(boundary_id, speed::STBoundary::DecisionType::YIELD));
+      // std::cout << "Set boundary as YIELD: " << boundary_id << std::endl;
+    }
+  }
 }
 
 bool StGraphSearcher::CheckYieldBackVehicle(
@@ -1153,8 +1224,10 @@ void StGraphSearcher::AddStGraphSearcherDataToProto(
       p->set_s(search_node.s());
       p->set_t(search_node.t());
     }
+    mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
+  } else {
+    mutable_st_graph_searcher_data->clear_st_search_path();
   }
-  mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
 }
 
 void StGraphSearcher::AddAStarSearchCostDebugInfo(

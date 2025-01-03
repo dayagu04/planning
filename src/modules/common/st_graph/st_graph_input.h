@@ -18,10 +18,11 @@ namespace speed {
 
 class StGraphInput {
  public:
-  StGraphInput() = default;
 
   StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                planning::framework::Session* session);
+
+  StGraphInput() = default;
 
   ~StGraphInput() = default;
 

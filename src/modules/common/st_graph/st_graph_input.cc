@@ -107,7 +107,6 @@ void StGraphInput::Update() {
   const auto& init_point = ego_state_manager->planning_init_point();
   PlanningInitPointToTrajectoryPoint(init_point);
   MakeBuffer(lane_change_status, lane_change_request, config_);
-
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
   ego_lane_ = virtual_lane_manager_->get_current_lane();
