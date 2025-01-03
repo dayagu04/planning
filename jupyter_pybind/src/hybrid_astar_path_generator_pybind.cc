@@ -332,7 +332,7 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   const EulerDistanceTransform *edt_ =
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::REVERSE);
+      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 

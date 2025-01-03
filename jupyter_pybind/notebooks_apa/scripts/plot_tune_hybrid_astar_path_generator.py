@@ -222,13 +222,15 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
   # vehicle_type = 'CHERY_T26'
   vehicle_type = 'CHERY_E0X'
-  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, 0.0)
+  lat_buffer = 0.2
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, lat_buffer)
 
   car_xn = []
   car_yn = []
 
   for i in range(len(car_xb)):
-      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y, ego_heading/57.3)
+      tmp_x, tmp_y = local2global(
+          car_xb[i], car_yb[i], ego_x, ego_y, ego_heading * math.pi/180.0)
       car_xn.append(tmp_x)
       car_yn.append(tmp_y)
       print('y', car_yb[i])
@@ -709,7 +711,6 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
   #   'car_yn': car_yn,
   # })
 
-
   # vehicle_type = 'CHERY_T26'
   footprint_model = hybrid_astar_py.GetFootPrintModel()
 
@@ -725,12 +726,26 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
       y = ego_pose[1]
       heading = ego_pose[2]
 
-      tmp_x, tmp_y = local2global(
+      if i == 1 or i==5:
+        tmp_x, tmp_y = local2global(
+          car_circle_x[i], car_circle_y[i]+lat_buffer, x, y, heading)
+      elif i==2 or i==4:
+        tmp_x, tmp_y = local2global(
+            car_circle_x[i], car_circle_y[i]-lat_buffer, x, y, heading)
+      else:
+        tmp_x, tmp_y = local2global(
           car_circle_x[i], car_circle_y[i], x, y, heading)
-
       car_circle_xn.append(tmp_x)
       car_circle_yn.append(tmp_y)
-      car_circle_rn.append(car_circle_r[i])
+
+      if i == 0:
+        car_circle_rn.append(car_circle_r[i]+lat_buffer)
+      elif i == 3 or i == 6:
+        car_circle_rn.append(car_circle_r[i]+lat_buffer)
+      elif i ==1 or i==2 or i==4 or i==5:
+        car_circle_rn.append(car_circle_r[i])
+      else:
+        car_circle_rn.append(car_circle_r[i]+lat_buffer)
 
     data_veh_circle.data.update({
         'car_circle_xn': car_circle_xn,
