@@ -58,6 +58,9 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
 
   GenerateVehPolygonInSlot(ego_pose);
   GenerateCarRelativePosition(ego_pose);
+  ULFLocalPolygonToGlobal(&blind_global_box_, &blind_local_box_,
+                          ego_pose);
+
   points.clear();
 
   if (slot_type == ParkSpaceType::VERTICAL ||
@@ -88,7 +91,7 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
   double len = line.norm();
 
   double s = 0.0;
-  double ds = 0.2;
+  double ds = 0.4;
 
   Eigen::Vector2d point;
   while (s < len) {
@@ -144,9 +147,15 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   tmp_channel_boundary.x_lower = slot_length - SLOT_VIRTUAL_WALL_X_OFFSET;
 
   // channel up bound
-  double channel_up_bound_x;
-  double veh_up_x = ego_pose.x + 5.0 * std::fabs(std::cos(ego_pose.theta));
-  channel_up_bound_x = veh_up_x + 8.0;
+  double veh_up_x = ego_pose.x;
+  for (int i = 0; i < ego_polygon_in_slot_.vertex_num; i++) {
+    veh_up_x = std::max(veh_up_x, ego_polygon_in_slot_.vertexes[i].x);
+  }
+  double car_buffer = 0.5;
+  veh_up_x += car_buffer;
+
+  double channel_up_bound_x = slot_length + 10.0;
+  channel_up_bound_x = std::max(veh_up_x, channel_up_bound_x);
   tmp_channel_boundary.x_upper = channel_up_bound_x;
 
   // channel left/right bound
@@ -231,6 +240,27 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   SampleInLineSegment(
       Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
       Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), &points);
+
+  // perception blind zone
+  int point_a_idx;
+  int point_b_idx;
+  for (int i = 0; i < blind_global_box_.vertex_num; i++) {
+    if (i == blind_global_box_.vertex_num - 1) {
+      point_a_idx = i;
+      point_b_idx = 0;
+
+    } else {
+      point_a_idx = i;
+      point_b_idx = i + 1;
+    }
+
+    SampleInLineSegment(
+        Eigen::Vector2d(blind_global_box_.vertexes[point_a_idx].x,
+                        blind_global_box_.vertexes[point_a_idx].y),
+        Eigen::Vector2d(blind_global_box_.vertexes[point_b_idx].x,
+                        blind_global_box_.vertexes[point_b_idx].y),
+        &points);
+  }
 
   return;
 }
@@ -475,6 +505,13 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
                       &points);
   SampleInLineSegment(channel_left_bound_pt1, channel_left_bound_pt2, &points);
   SampleInLineSegment(channel_left_bound_pt3, channel_left_bound_pt4, &points);
+
+  return;
+}
+
+void VirtualWallDecider::Init(const Pose2D& ego_pose) {
+  channel_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
+  GetUpLeftCoordinatePolygonByParam(&blind_local_box_, 15, 15, 15);
 
   return;
 }
