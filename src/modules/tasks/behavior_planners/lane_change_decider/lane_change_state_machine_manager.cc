@@ -848,6 +848,11 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_valid_cnt = lc_valid_cnt_;
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
 
+  lane_change_decider_output.is_ego_on_leftmost_lane = 
+      is_ego_on_leftmost_lane_;
+  lane_change_decider_output.is_ego_on_rightmost_lane =
+      is_ego_on_rightmost_lane_;
+
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp =
       road_to_ramp_turn_signal_;
@@ -1449,6 +1454,8 @@ LaneChangeStateMachineManager::MakesureCurrentBoundaryType(
 }
 
 void LaneChangeStateMachineManager::PreProcess() {
+  IsEgoOnSideLane();
+
   target_lane_front_node_ = nullptr;
   target_lane_middle_node_ = nullptr;
   target_lane_rear_node_ = nullptr;
@@ -1541,6 +1548,26 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
             : -lat_offset_value;
   } else {
     lat_close_boundary_offset_ = 0;
+  }
+}
+
+void LaneChangeStateMachineManager::IsEgoOnSideLane() {
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  auto &lane_change_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lane_change_decider_output();
+  const auto &left_lane = virtual_lane_manager->get_left_lane();
+  const auto &right_lane = virtual_lane_manager->get_right_lane();
+  if (!left_lane) {
+    is_ego_on_leftmost_lane_ = true;
+  } else {
+    is_ego_on_leftmost_lane_ = false;  
+  }
+  if (!right_lane) {
+    is_ego_on_rightmost_lane_ = true;
+  } else {
+    is_ego_on_rightmost_lane_ = false;  
   }
 }
 }  // namespace planning

@@ -50,6 +50,8 @@ struct LaneChangeDeciderOutput {
   IntCancelReasonType int_request_cancel_reason = NO_CANCEL;
   RequestType ilc_virtual_req = NO_CHANGE;
   double lateral_close_boundary_offset = 0.0;
+  bool is_ego_on_leftmost_lane = false;
+  bool is_ego_on_rightmost_lane = false;
 };
 
 }  // namespace planning
