@@ -38,6 +38,10 @@ enum SplitRelativeDirection {
   ON_RIGHT = 2,
 };
 
+struct LaneChangeGapInfo {
+  int front_agent_id = -1;
+  int rear_agent_id = -1;
+};
 struct RouteInfoOutput {
   // for NOA output
   int split_seg_forward_lane_nums = 0;
