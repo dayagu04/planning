@@ -90,7 +90,6 @@ int HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
 
   // start state
   initial_state_ = request.start_;
-  ego_pose_ = initial_state_;
 
   // end state
   goal_state_ = request.goal_;
@@ -172,7 +171,7 @@ int HybridAStarInterface::UpdateOutput() {
   edt_.UpdateSafeBuffer(0.2, 0.4, 0.2);
   FuturePathDecider future_path_decider;
   future_path_decider.Process(
-      &coarse_traj_, request_.plan_reason, ego_pose_, &edt_, &ref_line_,
+      &coarse_traj_, request_.plan_reason, request_.start_, &edt_, &ref_line_,
       vehicle_param_.min_turn_radius, request_.swap_start_goal,
       request_.path_generate_method, &request_.first_action_request);
   bool next_path_no_gear_switch =
@@ -183,6 +182,8 @@ int HybridAStarInterface::UpdateOutput() {
       &request_);
 
   TargetPoseRegulator target_pose_regulator;
+  target_pose_regulator.Process(&edt_, &request_, request_.start_, goal_state_,
+                                vehicle_param_);
 
   double lat_buffer;
   double lon_buffer;
@@ -196,14 +197,14 @@ int HybridAStarInterface::UpdateOutput() {
                             static_cast<float>(lat_buffer));
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
 
-      target_pose_regulator.Process(&edt_, &request_, ego_pose_, goal_state_);
+      target_regulator_goal_ =
+          target_pose_regulator.GetCandidatePose(lat_buffer);
 
       // search single shot path.
       if (lat_buffer > 0.2 - 1e-4) {
         hybrid_astar_->GearRerversePathAttempt(
             map_bounds_, obs_, request_, &clear_zone_, initial_state_,
-            target_pose_regulator.GetTargetPose(), &coarse_traj_, &edt_,
-            &ref_line_);
+            target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
 
         // check path
         if (coarse_traj_.x.size() > 2) {
@@ -216,9 +217,9 @@ int HybridAStarInterface::UpdateOutput() {
 
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
-      hybrid_astar_->AstarSearch(
-          initial_state_, target_pose_regulator.GetTargetPose(), map_bounds_,
-          obs_, request_, &clear_zone_, &coarse_traj_, &edt_, &ref_line_);
+      hybrid_astar_->AstarSearch(initial_state_, target_regulator_goal_,
+                                 map_bounds_, obs_, request_, &clear_zone_,
+                                 &coarse_traj_, &edt_, &ref_line_);
 
       ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
 
@@ -244,11 +245,10 @@ int HybridAStarInterface::UpdateOutput() {
 
     // todo: 需要限制搜索时间
     ILOG_INFO << "scenario try planning";
-    target_pose_regulator.Process(&edt_, &request_, ego_pose_, goal_state_);
-    hybrid_astar_->AstarSearch(
-        initial_state_, target_pose_regulator.GetTargetPose(), map_bounds_,
-        obs_, request_, &clear_zone_, &coarse_traj_, &edt_, &ref_line_);
-
+    target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
+    hybrid_astar_->AstarSearch(initial_state_, target_regulator_goal_,
+                               map_bounds_, obs_, request_, &clear_zone_,
+                               &coarse_traj_, &edt_, &ref_line_);
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
     double dist_to_slot_up_edge =
@@ -327,13 +327,13 @@ int HybridAStarInterface::UpdateOutput() {
   return 0;
 }
 
-int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
-                                       const Eigen::Vector3d& end,
-                                       const ParkObstacleList& obs_list,
-                                       const AstarRequest& request) {
+void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
+                                        const Eigen::Vector3d& end,
+                                        const ParkObstacleList& obs_list,
+                                        const AstarRequest& request) {
   if (search_state_ == AstarSearchState::SEARCHING) {
     ILOG_INFO << "path searching, please wait";
-    return 0;
+    return;
   }
   request_ = request;
   hybrid_astar_->UpdateConfig(request);
@@ -350,8 +350,6 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   initial_state_.y = start[1];
   initial_state_.theta = start[2];
 
-  ego_pose_ = initial_state_;
-
   // end state
   goal_state_.x = end[0];
   goal_state_.y = end[1];
@@ -366,7 +364,7 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   if (hybrid_astar_ == nullptr) {
     ILOG_ERROR << "hybrid_astar_ is nullptr";
 
-    return 0;
+    return;
   }
 
   PathClear(&coarse_traj_);
@@ -386,35 +384,37 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   }
 
   TargetPoseRegulator target_pose_regulator;
+  target_pose_regulator.Process(&edt_, &request_, request_.start_, goal_state_,
+                                vehicle_param_);
 
+  double lat_buffer = 0.1;
+  double lon_buffer = 0.2;
   if (request_.space_type == ParkSpaceType::PARALLEL) {
-    double lat_buffer = 0.1;
-    double lon_buffer = 0.2;
+    lat_buffer = 0.1;
+    lon_buffer = 0.2;
     edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
                           static_cast<float>(lon_buffer),
                           static_cast<float>(lat_buffer));
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
   } else {
-    double lat_buffer = 0.2;
-    double lon_buffer = 0.4;
+    lat_buffer = 0.2;
+    lon_buffer = 0.4;
     edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
                           static_cast<float>(lon_buffer),
                           static_cast<float>(lat_buffer));
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
   }
-  target_pose_regulator.Process(&edt_, &request_, ego_pose_, goal_state_);
 
+  target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(
-        initial_state_, target_pose_regulator.GetTargetPose(), map_bounds_,
+        initial_state_, target_regulator_goal_, map_bounds_,
         obs_list, request, &clear_zone_, &coarse_traj_, &edt_, &ref_line_);
   } else if (request.path_generate_method ==
              AstarPathGenerateType::GEAR_REVERSE_DYNAMIC_PROGRAMMING) {
     hybrid_astar_->GearRerversePathAttempt(
         map_bounds_, obs_list, request, &clear_zone_, initial_state_,
-        target_pose_regulator.GetTargetPose(), &coarse_traj_, &edt_,
-        &ref_line_);
-
+        target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
   } else {
     Pose2D start_pose;
     Pose2D end_pose;
@@ -446,7 +446,7 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   search_state_ = AstarSearchState::SUCCESS;
   ILOG_INFO << "hybrid astar finish, point size " << coarse_traj_.x.size();
 
-  return 0;
+  return;
 }
 
 const AstarSearchState HybridAStarInterface::GetFullLengthPath(
@@ -457,7 +457,6 @@ const AstarSearchState HybridAStarInterface::GetFullLengthPath(
     return AstarSearchState::FAILURE;
   }
 
-  // *result = std::move(coarse_traj_);
   *result = coarse_traj_;
 
   AstarSearchState search_state = AstarSearchState::SUCCESS;
@@ -718,7 +717,7 @@ const AstarSearchState HybridAStarInterface::TransformFirstSegmentPath(
 }
 
 const bool HybridAStarInterface::IsSelectedRealTargetPose() const {
-  double y_diff = std::fabs(ego_pose_.y);
+  double y_diff = std::fabs(request_.start_.y);
 
   // car heading and car position is near ref_line_
   if (y_diff < request_.slot_width * 0.5) {

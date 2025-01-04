@@ -107,6 +107,7 @@ Eigen::Vector3d coordinate_system_;
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
 AstarPathGear history_gear_request_;
+std::vector<Eigen::Vector3d> footprint_circle_model_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -135,6 +136,27 @@ int Init() {
 int StopPybind() {
   StopGlog();
   return 0;
+}
+
+void UpdateFootprintCircle() {
+  const EulerDistanceTransform *edt_ =
+      hybrid_astar_interface_->GetEulerDistanceTransform();
+  const FootPrintCircleList circle_footprint =
+      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
+  footprint_circle_model_.clear();
+  const FootPrintCircle *circle = &circle_footprint.max_circle;
+
+  footprint_circle_model_.push_back(
+      Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
+
+  for (int i = 0; i < circle_footprint.size; i++) {
+    circle = &circle_footprint.circles[i];
+
+    footprint_circle_model_.push_back(
+        Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
+  }
+
+  return;
 }
 
 int GetPathFromHybridAstar() {
@@ -316,6 +338,8 @@ int GetPathFromHybridAstar() {
 
   AstarRequest request = thread_solver_->GetAstarRequest();
   history_gear_request_ = request.first_action_request.gear_request;
+
+  UpdateFootprintCircle();
 
   ILOG_INFO << "receive finish";
 
@@ -865,6 +889,10 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
   return speed_limit_profile;
 }
 
+const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
+  return footprint_circle_model_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -892,5 +920,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetAllSearchNode", &GetAllSearchNode)
       .def("GetApaSpeedLimit", &GetApaSpeedLimit)
+      .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetDynamicState", &GetDynamicState);
 }

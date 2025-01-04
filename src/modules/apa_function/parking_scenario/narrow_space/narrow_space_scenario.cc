@@ -548,6 +548,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   Pose2D end = real_end;
   double end_straight_len;
   ParkSpaceType slot_type;
+  ApaStateMachine fsm =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+
   if (apa_world_ptr_->GetNewSlotManagerPtr()
           ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
     end_straight_len =
@@ -559,10 +562,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     slot_type = ParkSpaceType::SLANTING;
   } else {
-    if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
-        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_len =
           apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     } else {
@@ -605,11 +606,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   cur_request.space_type = slot_type;
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
     cur_request.direction_request = ParkingVehDirection::HEAD_IN;
-  } else if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-             ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+  } else if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+             fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     cur_request.direction_request = ParkingVehDirection::TAIL_IN;
   }
 
@@ -1133,7 +1134,9 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
   // cal target pos
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
     ego_slot_info.target_ego_pos_slot << (ego_slot_info.limiter.first.x() +
                                           ego_slot_info.limiter.second.x()) /
                                              2.0,
