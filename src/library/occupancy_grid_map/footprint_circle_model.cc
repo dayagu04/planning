@@ -53,12 +53,20 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + mirror_buffer;
       local_circles_.circles[local_circles_.size].safe_buffer = mirror_buffer;
-    } else if (i == 1 || i == 2 || i == 7) {
+    } else if (i == 1 || i == 5) {
+      local_circles_.circles[local_circles_.size].radius = (float)circle_r[i];
+      local_circles_.circles[local_circles_.size].pos.y += lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
+    } else if (i == 7) {
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + lat_safe_buffer;
       local_circles_.circles[local_circles_.size].pos.x -= lat_safe_buffer;
       local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
-    } else if (i == 4 || i == 5 || i == 10) {
+    } else if (i == 4 || i == 2) {
+      local_circles_.circles[local_circles_.size].radius = (float)circle_r[i];
+      local_circles_.circles[local_circles_.size].pos.y -= lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
+    } else if (i == 10) {
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + lat_safe_buffer;
       local_circles_.circles[local_circles_.size].pos.x += lat_safe_buffer;
