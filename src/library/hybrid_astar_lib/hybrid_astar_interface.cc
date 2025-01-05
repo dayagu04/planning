@@ -411,7 +411,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
         initial_state_, target_regulator_goal_, map_bounds_,
         obs_list, request, &clear_zone_, &coarse_traj_, &edt_, &ref_line_);
   } else if (request.path_generate_method ==
-             AstarPathGenerateType::GEAR_REVERSE_DYNAMIC_PROGRAMMING) {
+             AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
     hybrid_astar_->GearRerversePathAttempt(
         map_bounds_, obs_list, request, &clear_zone_, initial_state_,
         target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);

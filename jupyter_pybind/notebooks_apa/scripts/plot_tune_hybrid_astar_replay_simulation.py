@@ -18,7 +18,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250103/20250103-14-39-08/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-01-03-14-39-09_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250103/20250103-19-19-12/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-03-19-19-13_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -864,7 +864,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     car_circle_x.append(footprint_model[i][0])
     car_circle_y.append(footprint_model[i][1])
     car_circle_r.append(footprint_model[i][2])
-    print("i", i, "r", footprint_model[i][2])
 
   for i in range(len(car_circle_x)):
     tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], pose[0], pose[1], pose[2])

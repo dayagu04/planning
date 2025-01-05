@@ -35,6 +35,18 @@ struct VirtualWallBoundary {
     x_upper = std::max(x_upper, a.x_upper);
     y_upper = std::max(y_upper, a.y_upper);
   }
+
+  bool Contain(const Position2D& p) const {
+    if (x_lower > p.x || y_lower > p.y) {
+      return false;
+    }
+
+    if (x_upper < p.x || y_upper < p.y) {
+      return false;
+    }
+
+    return true;
+  }
 };
 
 // generate virtual wall by ego pose and slot, used by astar, need refact.
@@ -50,7 +62,7 @@ class VirtualWallDecider : public ParkingTask {
                const SlotRelativePosition slot_side);
 
   void Reset(const Pose2D& ego_pose) {
-    channel_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
+    passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
     return;
   }
 
@@ -77,16 +89,16 @@ class VirtualWallDecider : public ParkingTask {
 
   void SampleInLineSegment(const Eigen::Vector2d& start,
                            const Eigen::Vector2d& end,
+                           const bool delete_blind_zone_point,
                            std::vector<Position2D>* points);
 
-  void GenerateCarRelativePosition(const Pose2D& ego_pose);
+  void GetVehicleBound();
 
  private:
   std::string name_;
   Pose2D start_;
   Pose2D end_;
 
-  VehRelativePosition relative_position_;
   Polygon2D ego_polygon_in_slot_;
   GJK2DInterface gjk_interface_;
 
@@ -95,7 +107,11 @@ class VirtualWallDecider : public ParkingTask {
   // 车位坐标系
   Polygon2D blind_global_box_;
 
-  VirtualWallBoundary channel_bound_;
+  // 感知范围6x6meter，所以passage范围尽量设置小一些，否则path经常穿墙、穿车而过.
+  VirtualWallBoundary passage_bound_;
+
+  // vehicle boundary
+  VirtualWallBoundary veh_boundary_;
 };
 
 }  // namespace planning

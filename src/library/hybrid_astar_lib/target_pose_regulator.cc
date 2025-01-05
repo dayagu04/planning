@@ -12,7 +12,7 @@
 
 namespace planning {
 
-#define DEBUG_DECIDER (1)
+#define DEBUG_DECIDER (0)
 
 void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
                                   const AstarRequest *request,
