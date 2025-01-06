@@ -469,8 +469,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
       is_ncar = (is_same_side && is_need_avoid && can_avoid) ||
                 (can_avoid && borrow_bicycle_lane && d_max_cpath > 0 &&
                  d_max_cpath < dist_limit + 2.2 && v_s < 0.5) ||
-                (rightest_lane && d_max_cpath < 0 &&
-                 std::fabs(d_max_cpath) < dist_limit && v_s < 0.5) ||
+                // (rightest_lane && d_max_cpath < 0 &&
+                //  std::fabs(d_max_cpath) < dist_limit && v_s < 0.5) ||
                 cross_solid_line;
     }
   }

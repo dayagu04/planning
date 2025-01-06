@@ -329,7 +329,8 @@ bool HasOverlap(const framework::Session *session,
 
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle) {
   return (avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_BUS ||
-          avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRUCK);
+          (avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRUCK &&
+          avoid_obstacle.length > 6));
 }
 
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle) {
