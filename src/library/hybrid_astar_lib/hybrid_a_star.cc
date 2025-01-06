@@ -1118,10 +1118,10 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
       }
       i--;
       const auto first_path_size = reeds_shepp_to_end->paths[i].size - 1;
-      const auto fisrt_drive_path_end_pos =
+      const auto first_drive_path_end_pos =
           reeds_shepp_to_end->paths[i].points[first_path_size];
-      if (fisrt_drive_path_end_pos.x < astar_end_node_->GetX() &&
-          std::fabs(fisrt_drive_path_end_pos.y) <
+      if (first_drive_path_end_pos.x < astar_end_node_->GetX() &&
+          std::fabs(first_drive_path_end_pos.y) <
               config_.headin_limit_y_shrink) {
         return false;
       }
