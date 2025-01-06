@@ -134,6 +134,15 @@ class HybridAStar {
       const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
       EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
 
+  void GearDrivePathAttempt(const MapBound& XYbounds,
+                               const ParkObstacleList& obstacles,
+                               const AstarRequest& request,
+                               const ObstacleClearZone* clear_zone,
+                               const Pose2D& start, const Pose2D& target,
+                               HybridAStarResult* result,
+                               EulerDistanceTransform* edt,
+                               ParkReferenceLine* ref_line);
+
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
 

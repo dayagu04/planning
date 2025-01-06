@@ -72,6 +72,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   scenario_try_lat_buffer = 0.15;
   scenario_try_lon_buffer = 0.4;
+  // headin node shrink condition
+  headin_limit_y_shrink = 1.2;
 
   return;
 }

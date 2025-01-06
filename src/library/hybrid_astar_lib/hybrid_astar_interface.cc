@@ -202,9 +202,15 @@ int HybridAStarInterface::UpdateOutput() {
 
       // search single shot path.
       if (lat_buffer > 0.2 - 1e-4) {
-        hybrid_astar_->GearRerversePathAttempt(
-            map_bounds_, obs_, request_, &clear_zone_, initial_state_,
-            target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
+        if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+          hybrid_astar_->GearDrivePathAttempt(
+              map_bounds_, obs_, request_, &clear_zone_, initial_state_,
+              target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
+        } else {
+          hybrid_astar_->GearRerversePathAttempt(
+              map_bounds_, obs_, request_, &clear_zone_, initial_state_,
+              target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
+        }
 
         // check path
         if (coarse_traj_.x.size() > 2) {
@@ -407,12 +413,18 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
   target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
-    hybrid_astar_->AstarSearch(
-        initial_state_, target_regulator_goal_, map_bounds_,
-        obs_list, request, &clear_zone_, &coarse_traj_, &edt_, &ref_line_);
+    hybrid_astar_->AstarSearch(initial_state_, target_regulator_goal_,
+                               map_bounds_, obs_list, request, &clear_zone_,
+                               &coarse_traj_, &edt_, &ref_line_);
   } else if (request.path_generate_method ==
              AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
     hybrid_astar_->GearRerversePathAttempt(
+        map_bounds_, obs_list, request, &clear_zone_, initial_state_,
+        target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
+
+  } else if (request.path_generate_method ==
+             AstarPathGenerateType::GEAR_DRIVE_SEARCHING) {
+    hybrid_astar_->GearDrivePathAttempt(
         map_bounds_, obs_list, request, &clear_zone_, initial_state_,
         target_regulator_goal_, &coarse_traj_, &edt_, &ref_line_);
   } else {

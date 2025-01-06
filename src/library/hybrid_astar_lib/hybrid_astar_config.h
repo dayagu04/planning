@@ -18,6 +18,8 @@ struct PlannerOpenSpaceConfig {
   bool enable_ref_line_h_cost_for_vertical_park = false;
   bool enable_rs_path_h_cost_for_vertical_park = false;
 
+  // headin vertical parking
+  double headin_limit_y_shrink = 1.2;
   // parallel parking
 
   // a star search resolution

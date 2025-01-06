@@ -29,6 +29,7 @@ namespace apa_planner {
 
 struct SimulationParam {
   bool is_simulation = false;
+  int plan_type = 0;
   bool is_complete_path = false;
   bool force_plan = false;
   bool sim_to_target = false;

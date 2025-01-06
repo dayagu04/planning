@@ -133,6 +133,7 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
+    self.plan_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "plan_type",min=0, max=1, value=0, step=1)
     self.use_slot_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_slot_in_bag",min=0, max=1, value=1, step=1)
     self.use_obs_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_obs_in_bag",min=0, max=1, value=1, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
@@ -160,6 +161,7 @@ class LocalViewSlider:
                         bag_time = self.time_slider,
                         vehicle_type = self.vehicle_type_slider,
                         sim_to_target = self.sim_to_target_slider,
+                        plan_type = self.plan_type_slider,
                         use_slot_in_bag = self.use_slot_in_bag_slider,
                         use_obs_in_bag = self.use_obs_in_bag_slider,
                         select_id = self.select_id_slider,
@@ -183,7 +185,7 @@ class LocalViewSlider:
                         q_u_bound=self.q_u_bound,)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif, q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound):
+def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif, q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -363,6 +365,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
                                     fus_obj_msg_bytes,
                                     fus_occ_obj_msg_bytes,
                                     control_msg_bytes,
+                                    plan_type,
                                     select_id, force_plan, is_path_optimization,
                                     is_cilqr_enable, is_reset, is_complete_path,
                                     sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,

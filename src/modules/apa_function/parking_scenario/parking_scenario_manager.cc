@@ -158,10 +158,15 @@ void ParkingScenarioManager::Excute() {
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
-
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::SEARCH_BASED) {
-        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      if (apa_world_->GetSimuParam().is_simulation) {
+        if (apa_world_->GetSimuParam().plan_type ==
+            static_cast<int>(ParkPathGenerationType::SEARCH_BASED))
+            scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      } else {
+        if (apa_param.GetParam().path_generator_type ==
+            ParkPathGenerationType::SEARCH_BASED) {
+          scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+        }
       }
     }
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
