@@ -568,6 +568,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       pass
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
     try:
       intersection_state = plan_debug_msg.real_time_lon_behavior_planning_input.intersection_state
       print("intersection_state: ", intersection_state)
@@ -686,10 +689,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         init_pos_yn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.y
 
         if g_is_display_enu:
-          local_init_x.append(init_pos_xn_i)
-          local_init_y.append(init_pos_yn_i)
+          local_init_x = init_pos_xn_i
+          local_init_y = init_pos_yn_i
         else:
-         local_init_x, local_init_y = coord_tf.global_to_local([init_pos_xn_i], [init_pos_yn_i])
+         local_init_x, local_init_y = global2local(init_pos_xn_i, init_pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
         init_pos_line_x.append(local_init_x)
         init_pos_line_y.append(local_init_y)
