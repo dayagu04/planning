@@ -105,11 +105,14 @@ void RSExpansionDecider::UpdateRSPathRequest(
   } else {
     // check rs last path gear
     request->rs_request = RSPathRequestType::none;
-    if (request->space_type == ParkSpaceType::VERTICAL &&
-        request->direction_request == ParkingVehDirection::TAIL_IN) {
-      request->rs_request = RSPathRequestType::last_path_forbid_forward;
-
-      ILOG_INFO << "last rs path forbid forward";
+    if (request->space_type == ParkSpaceType::VERTICAL) {
+      if (request->direction_request == ParkingVehDirection::TAIL_IN) {
+        request->rs_request = RSPathRequestType::last_path_forbid_forward;
+        ILOG_INFO << "last rs path forbid forward";
+      } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
+        request->rs_request = RSPathRequestType::last_path_forbid_reverse;
+        ILOG_INFO << "last rs path forbid reverse";
+      }
     }
   }
 

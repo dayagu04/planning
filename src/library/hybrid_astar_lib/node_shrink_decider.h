@@ -26,6 +26,9 @@ class NodeShrinkDecider : public AstarDecider {
 
   bool IsLegalForHeading(const double heading);
 
+  bool IsLegalForPos(const double x, const double y, const double x_limit,
+                     const double y_limit);
+
   bool IsShrinkByParent(const Node3d *parent, const Node3d *child_node);
 
   bool IsShrinkByStartNode(const size_t start_id, Node3d *child);

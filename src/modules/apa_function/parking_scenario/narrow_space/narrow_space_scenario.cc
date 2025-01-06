@@ -307,7 +307,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
 
   ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
-            << ",is_replan = " << is_replan;
+            << " ,is_replan = " << is_replan;
 
   // check replan
   if (apa_world_ptr_->GetSimuParam().force_plan || is_replan ||
@@ -671,7 +671,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   } else {
     // gear need be different with history in next replanning
-    if (frame_.replan_reason != 1) {
+    if (frame_.replan_reason != FIRST_PLAN) {
       switch (current_gear_) {
         case AstarPathGear::REVERSE:
           cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
@@ -1158,12 +1158,16 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // cal terminal error
   ego_slot_info.terminal_err.Set(
       ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-      ego_slot_info.ego_heading_slot - ego_slot_info.target_ego_heading_slot);
+      geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
+                                   ego_slot_info.target_ego_heading_slot));
+
+  // std::cout << "ternimal headin error = "
+  //           << ego_slot_info.terminal_err.heading * kRad2Deg << std::endl;
 
   // cal slot occupied ratio
   if (std::fabs(ego_slot_info.terminal_err.pos.y()) <
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
-      std::fabs(ego_slot_info.ego_heading_slot) <
+      std::fabs(ego_slot_info.terminal_err.heading) <
           apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     const std::vector<double> x_bound = {
         ego_slot_info.target_ego_pos_slot.x(),

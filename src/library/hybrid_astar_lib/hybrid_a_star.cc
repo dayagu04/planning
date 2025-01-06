@@ -1093,20 +1093,38 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
     return true;
   }
 
-  AstarPathGear gear = reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
+  AstarPathGear first_gear = reeds_shepp_to_end->paths[0].gear;
+  AstarPathGear last_gear =
+      reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
   if (request_.space_type == ParkSpaceType::VERTICAL &&
       request_.direction_request == ParkingVehDirection::TAIL_IN &&
       request_.rs_request == RSPathRequestType::last_path_forbid_forward) {
-    if (gear == AstarPathGear::DRIVE) {
+    if (last_gear == AstarPathGear::DRIVE) {
       // ILOG_INFO << " rs path last seg len is drive gear ";
 
       return false;
     }
   } else if (request_.space_type == ParkSpaceType::VERTICAL &&
              request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    if (gear == AstarPathGear::REVERSE) {
+    if (last_gear == AstarPathGear::REVERSE) {
+      // ILOG_INFO << " rs path last seg len is reverse gear ";
       return false;
+    } else if (first_gear == AstarPathGear::DRIVE) {
+      int i = 1;
+      while (i < rs_path_seg_size && first_gear == AstarPathGear::DRIVE) {
+        first_gear = reeds_shepp_to_end->paths[i].gear;
+        i++;
+      }
+      i--;
+      const auto first_path_size = reeds_shepp_to_end->paths[i].size - 1;
+      const auto fisrt_drive_path_end_pos =
+          reeds_shepp_to_end->paths[i].points[first_path_size];
+      if (fisrt_drive_path_end_pos.x < astar_end_node_->GetX() &&
+          std::fabs(fisrt_drive_path_end_pos.y) <
+              config_.headin_limit_y_shrink) {
+        return false;
+      }
     }
   }
 
@@ -1994,9 +2012,20 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   heading_legal = node_shrink_decider_.IsLegalForHeading(new_node->GetPhi());
   if (!heading_legal) {
     new_node->ClearPath();
-
     // ILOG_INFO << "heading is illegal";
     return NodeShrinkType::UNEXPECTED_HEADING;
+  }
+
+  // headin shrink limit pose
+  bool position_legal = false;
+  position_legal = node_shrink_decider_.IsLegalForPos(
+      new_node->GetX(), new_node->GetY(), astar_end_node_->GetX(),
+      config_.headin_limit_y_shrink);
+
+  if (!position_legal) {
+    new_node->ClearPath();
+    // ILOG_INFO << "pos is illegal";
+    return NodeShrinkType::UNEXPECTED_POS;
   }
 
   new_node->SetPre(parent_node);
@@ -3202,6 +3231,460 @@ void HybridAStar::GearRerversePathAttempt(
   return;
 }
 
+void HybridAStar::GearDrivePathAttempt(
+    const MapBound& XYbounds, const ParkObstacleList& obstacles,
+    const AstarRequest& request, const ObstacleClearZone* clear_zone,
+    const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
+    EulerDistanceTransform* edt, ParkReferenceLine* ref_line) {
+  result->Clear();
+  if (request.direction_request != ParkingVehDirection::HEAD_IN) {
+    return;
+  }
+
+  if (request.history_gear == AstarPathGear::DRIVE) {
+    ILOG_INFO << "history gear is drive";
+    return;
+  }
+
+  if (start.GetX() < 5.0) {
+    ILOG_INFO << "start.GetX() =" << start.GetX();
+    return;
+  }
+
+  if (start.GetY() < -3.0 || start.GetY() > 3.0) {
+    ILOG_INFO << "start.GetY() =" << start.GetY();
+    return;
+  }
+
+  double heading = IflyUnifyTheta(start.GetPhi(), M_PI);
+  if (std::fabs(heading) < (M_PI_2 + 0.001)) {
+    ILOG_INFO << "start.GetPhi() =" << heading * 57.4;
+    return;
+  }
+
+  // clear containers
+  ResetNodePool();
+  open_pq_.clear();
+  node_set_.clear();
+
+  // debug
+  child_node_debug_.clear();
+  queue_path_debug_.clear();
+  rs_path_h_cost_debug_.clear();
+  rs_path_.Clear();
+
+  collision_check_time_ms_ = 0.0;
+  rs_time_ms_ = 0.0;
+  rs_interpolate_time_ms_ = 0.0;
+  ILOG_INFO << "gear drive searching";
+
+  obstacles_ = &obstacles;
+  edt_ = edt;
+  request_ = request;
+  ref_line_ = ref_line;
+
+  // load XYbounds
+  XYbounds_ = XYbounds;
+  clear_zone_ = clear_zone;
+
+  // check bound
+  NodeGridIndex grid_index;
+  Node3d::CoordinateToGridIndex(XYbounds_.x_max, XYbounds_.y_max, M_PI,
+                                &grid_index, XYbounds_, config_);
+
+  if (!NodeInSearchBound(grid_index)) {
+    ILOG_ERROR << "search bound size too big, please change range "
+               << grid_index.x << " " << grid_index.y << " " << grid_index.phi;
+
+    result->fail_type = AstarFailType::OUT_OF_BOUND;
+    return;
+  }
+
+  // start
+  start_node_ = node_pool_.AllocateNode();
+
+  // load nodes and obstacles
+  if (start_node_ == nullptr) {
+    ILOG_ERROR << "start node nullptr";
+
+    result->fail_type = AstarFailType::ALLOCATE_NODE_FAIL;
+    return;
+  }
+
+  start_node_->Set(NodePath(start), XYbounds_, config_, 0.0);
+  if (!start_node_->IsNodeValid()) {
+    ILOG_ERROR << "start_node invalid";
+
+    result->fail_type = AstarFailType::OUT_OF_BOUND;
+    return;
+  }
+
+  // in searching, start node gear is forward or backward which will be ok.
+  start_node_->SetGearType(AstarPathGear::NONE);
+  start_node_->SetSteer(0.0);
+  start_node_->SetIsStartNode(true);
+  start_node_->SetPathType(AstarPathType::START_NODE);
+  start_node_->SetDistToStart(0.0);
+  start_node_->SetGearSwitchNum(0);
+  start_node_->DebugString();
+  // start node gcost is 0
+
+  // check start
+  double check_start_time = IflyTime::Now_ms();
+  if (!ValidityCheckByEDT(start_node_)) {
+    // double check
+    if (IsFootPrintCollision(Transform2d(start_node_->GetPose()))) {
+      ILOG_ERROR << "start_node in collision with obstacles "
+                 << static_cast<int>(start_node_->GetConstCollisionType());
+
+      // start_node_->DebugString();
+      result->fail_type = AstarFailType::START_COLLISION;
+      return;
+    }
+  }
+
+  double check_end_time = IflyTime::Now_ms();
+  collision_check_time_ms_ += check_end_time - check_start_time;
+
+  // allocate end
+  astar_end_node_ = node_pool_.AllocateNode();
+  if (astar_end_node_ == nullptr) {
+    ILOG_ERROR << "end node nullptr";
+
+    result->fail_type = AstarFailType::OUT_OF_BOUND;
+    return;
+  }
+  astar_end_node_->Set(NodePath(target), XYbounds_, config_, 0.0);
+  astar_end_node_->SetGearType(AstarPathGear::NONE);
+  astar_end_node_->SetPathType(AstarPathType::END_NODE);
+  astar_end_node_->DebugString();
+
+  if (!astar_end_node_->IsNodeValid()) {
+    ILOG_ERROR << "end_node invalid";
+
+    result->fail_type = AstarFailType::OUT_OF_BOUND;
+    return;
+  }
+
+  // check end
+  check_start_time = IflyTime::Now_ms();
+  if (!ValidityCheckByEDT(astar_end_node_)) {
+    ILOG_INFO << "end_node in collision with obstacles "
+              << static_cast<int>(astar_end_node_->GetConstCollisionType());
+
+    astar_end_node_->DebugString();
+    result->fail_type = AstarFailType::GOAL_COLLISION;
+    return;
+  }
+
+  check_end_time = IflyTime::Now_ms();
+  collision_check_time_ms_ += check_end_time - check_start_time;
+
+  // node shrink related
+  node_shrink_decider_.Process(start, target, request_.direction_request);
+  rs_expansion_decider_.Process(
+      vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
+      start, target, vehicle_param_.width, request_.space_type,
+      request_.direction_request);
+
+  // load open set, pq
+  start_node_->SetMultiMapIter(
+      open_pq_.insert(std::make_pair(0.0, start_node_)));
+
+  node_set_.emplace(start_node_->GetGlobalID(), start_node_);
+
+  // a star searching
+  size_t explored_node_num = 0;
+  size_t explored_rs_path_num = 0;
+  size_t h_cost_rs_path_num = 0;
+  double astar_search_start_time = IflyTime::Now_ms();
+  double astar_search_time;
+  heuristic_time_ = 0.0;
+  // 100 ms
+  constexpr double astar_max_search_time = 100.0;
+
+  Node3d* current_node = nullptr;
+  Node3d* next_node_in_pool = nullptr;
+  Node3d new_node;
+  Node3d rs_node_to_goal;
+  rs_node_to_goal.Clear();
+
+  AstarNodeVisitedType vis_type;
+  PathGearRequest gear_request = PathGearRequest::GEAR_DRIVE_ONLY;
+  bool is_safe = false;
+  double child_node_dist;
+  double father_node_dist;
+  NodeShrinkType node_shrink_type;
+  std::vector<AStarPathPoint> poly_path;
+  Node3d polynomial_node;
+  PolynomialPathErrorCode poly_path_fail_type;
+  polynomial_node.Clear();
+
+  while (!open_pq_.empty()) {
+    // take out the lowest cost neighboring node
+
+    current_node = open_pq_.begin()->second;
+    open_pq_.erase(open_pq_.begin());
+    if (current_node == nullptr) {
+      ILOG_INFO << "pq is null node";
+      continue;
+    }
+
+    current_node->SetVisitedType(AstarNodeVisitedType::IN_CLOSE);
+
+#if DEBUG_ONE_SHOT_PATH
+    if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+      ILOG_INFO << "****************************";
+      ILOG_INFO << "cycle, explored_node_num " << explored_node_num
+                << " open set size for now " << open_pq_.size();
+      current_node->DebugString();
+    }
+#endif
+
+#if PLOT_SEARCH_SEQUENCE
+    queue_path_debug_.emplace_back(
+        ad_common::math::Vec2d(current_node->GetX(), current_node->GetY()));
+#endif
+
+    // check if an analystic curve could be connected from current
+    // configuration to the end configuration without collision. if so,
+    // search ends.
+    double current_time = IflyTime::Now_ms();
+
+    // if bigger than 100 ms，break
+    astar_search_time = current_time - astar_search_start_time;
+    if (astar_search_time > astar_max_search_time) {
+      ILOG_INFO << "time out " << astar_search_time;
+      break;
+    }
+
+    if (ExpansionByQunticPolynomial(current_node, poly_path, &polynomial_node,
+                                    &poly_path_fail_type)) {
+      ILOG_INFO << "polynomial success";
+
+      current_node->DebugPoseString();
+
+      ILOG_INFO << "path " << poly_path[0].x << ",y " << poly_path[0].y
+                << ",heading = " << poly_path[0].phi * 57.4
+                << ",radius = " << current_node->GetRadius();
+
+      break;
+    } else if (AnalyticExpansionByRS(current_node, gear_request,
+                                     &rs_node_to_goal)) {
+      ILOG_INFO << "RS success";
+      break;
+    }
+
+    explored_rs_path_num++;
+
+    for (size_t i = 0; i < next_node_num_; ++i) {
+      node_shrink_type =
+          NextNodeGenerator(&new_node, current_node, i, gear_request);
+      explored_node_num++;
+
+      if (!new_node.IsNodeValid()) {
+        continue;
+      }
+
+      child_node_dist = new_node.DistToPose(astar_end_node_->GetPose());
+      father_node_dist = current_node->DistToPose(astar_end_node_->GetPose());
+
+      // dist is bigger
+      if (child_node_dist > father_node_dist - 0.001) {
+        continue;
+      }
+
+      if (node_shrink_decider_.IsShrinkByStartNode(start_node_->GetGlobalID(),
+                                                   &new_node)) {
+        continue;
+      }
+
+      if (node_shrink_decider_.IsShrinkByParent(current_node, &new_node)) {
+        continue;
+      }
+
+      // collision check
+#if LOG_TIME_PROFILE
+      check_start_time = IflyTime::Now_ms();
+#endif
+
+      is_safe = ValidityCheckByEDT(&new_node);
+
+#if LOG_TIME_PROFILE
+      check_end_time = IflyTime::Now_ms();
+      collision_check_time_ms_ += check_end_time - check_start_time;
+#endif
+
+      if (!is_safe) {
+#if PLOT_CHILD_NODE
+        // if node is unsafe, plot it also.
+        if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+          child_node_debug_.emplace_back(
+              DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), false));
+        }
+#endif
+
+        continue;
+      }
+
+#if DEBUG_ONE_SHOT_PATH
+      if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+        ILOG_INFO << "  ======================== ";
+        ILOG_INFO << "  search child node cycle, open set size "
+                  << open_pq_.size()
+                  << " ,gear change num:" << current_node->GetGearSwitchNum();
+        current_node->DebugString();
+        new_node.DebugString();
+      }
+#endif
+
+      // allocate new node
+      if (node_set_.find(new_node.GetGlobalID()) == node_set_.end()) {
+        next_node_in_pool = node_pool_.AllocateNode();
+
+        vis_type = AstarNodeVisitedType::NOT_VISITED;
+      } else {
+        next_node_in_pool = node_set_[new_node.GetGlobalID()];
+
+        vis_type = next_node_in_pool->GetVisitedType();
+      }
+
+      // check null
+      if (next_node_in_pool == nullptr) {
+        continue;
+      }
+
+      GetSingleShotNodeGCost(current_node, &new_node);
+
+#if DEBUG_ONE_SHOT_PATH
+      if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+        ILOG_INFO << "  vis type " << static_cast<int>(vis_type)
+                  << " new node g " << new_node.GetGCost() << " pool node g "
+                  << next_node_in_pool->GetGCost()
+                  << " ,safe dist: " << new_node.GetDistToObs();
+      }
+#endif
+
+      // find a new node
+      if (vis_type == AstarNodeVisitedType::NOT_VISITED) {
+        GetSingleShotNodeHeuCost(current_node, &new_node);
+
+        h_cost_rs_path_num++;
+
+        // next_node_in_pool->CopyNode(&new_node);
+        *next_node_in_pool = new_node;
+        next_node_in_pool->SetFCost();
+        next_node_in_pool->SetVisitedType(AstarNodeVisitedType::IN_OPEN);
+
+        next_node_in_pool->SetMultiMapIter(open_pq_.insert(
+            std::make_pair(next_node_in_pool->GetFCost(), next_node_in_pool)));
+
+        node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
+
+#if DEBUG_ONE_SHOT_PATH
+        if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+          ILOG_INFO << "new point";
+          next_node_in_pool->DebugCost();
+        }
+#endif
+
+      } else if (vis_type == AstarNodeVisitedType::IN_OPEN) {
+        // in open set and need update
+        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
+          GetSingleShotNodeHeuCost(current_node, &new_node);
+
+          h_cost_rs_path_num++;
+
+          open_pq_.erase(next_node_in_pool->GetMultiMapIter());
+
+          *next_node_in_pool = new_node;
+          next_node_in_pool->SetFCost();
+          next_node_in_pool->SetVisitedType(AstarNodeVisitedType::IN_OPEN);
+
+          // put node in open set again and record it.
+          next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
+              next_node_in_pool->GetFCost(), next_node_in_pool)));
+
+#if DEBUG_ONE_SHOT_PATH
+          if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+            ILOG_INFO << "node has in open, open set size= " << open_pq_.size();
+            next_node_in_pool->DebugCost();
+          }
+#endif
+        }
+      } else {
+        // in close set and need update
+        if (new_node.GetGCost() < next_node_in_pool->GetGCost() + 1e-1) {
+          if (node_shrink_decider_.IsLoopBackNode(&new_node,
+                                                  next_node_in_pool)) {
+            continue;
+          }
+
+          if (!node_shrink_decider_.IsSameGridNodeContinuous(
+                  &new_node, next_node_in_pool)) {
+            continue;
+          }
+
+          GetSingleShotNodeHeuCost(current_node, &new_node);
+
+          h_cost_rs_path_num++;
+
+          *next_node_in_pool = new_node;
+          next_node_in_pool->SetFCost();
+          next_node_in_pool->SetVisitedType(AstarNodeVisitedType::IN_OPEN);
+
+          // put node in open set again and record it.
+          next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
+              next_node_in_pool->GetFCost(), next_node_in_pool)));
+
+#if DEBUG_ONE_SHOT_PATH
+          if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+            ILOG_INFO << "node has in close";
+            next_node_in_pool->DebugCost();
+          }
+#endif
+        }
+      }
+
+#if PLOT_CHILD_NODE
+      if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+        child_node_debug_.emplace_back(
+            DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), true));
+      }
+#endif
+    }
+
+    // search neighbor nodes  over
+  }
+
+  // todo, use all astar node, maybe no need use rs path.
+  if (polynomial_node.IsNodeValid()) {
+    BackwardPassByPolynomialPath(result, &polynomial_node, poly_path);
+  } else if (rs_node_to_goal.IsNodeValid()) {
+    BackwardPassByRSPath(result, &rs_node_to_goal, &rs_path_);
+  } else {
+    result->fail_type = AstarFailType::SEARCH_TOO_MUCH_NODE;
+  }
+
+  ILOG_INFO << "explored node num is " << explored_node_num
+            << " ,rs path size is: " << explored_rs_path_num
+            << " ,h cost rs num " << h_cost_rs_path_num
+            << " ,node pool size:" << node_pool_.PoolSize()
+            << " ,open_pq_.size=" << open_pq_.size();
+
+  ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
+            << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
+            << " ,collision time " << collision_check_time_ms_
+            << ", search fail= " << static_cast<int>(result->fail_type)
+            << ", hybrid astar search time (ms)= " << astar_search_time;
+
+  double astar_end_time = IflyTime::Now_ms();
+  result->time_ms = astar_end_time - check_start_time;
+  ILOG_INFO << "hybrid astar total time (ms) = " << result->time_ms;
+
+  return;
+}
+
 bool HybridAStar::AstarSearch(
     const Pose2D& start, const Pose2D& end, const MapBound& XYbounds,
     const ParkObstacleList& obstacles, const AstarRequest& request,
@@ -4361,7 +4844,11 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
     point.x = end.x + ref_s;
     point.y = y;
     point.phi = theta;
-    point.gear = AstarPathGear::REVERSE;
+
+    point.gear = request_.direction_request == ParkingVehDirection::TAIL_IN
+                     ? AstarPathGear::REVERSE
+                     : AstarPathGear::DRIVE;
+
     point.type = AstarPathType::QUNTIC_POLYNOMIAL;
     point.kappa = kappa;
 
@@ -4464,7 +4951,8 @@ void HybridAStar::DebugPolynomialPath(
     ILOG_INFO << "x = " << poly_path[i].x << ",y=" << poly_path[i].y
               << ",theta=" << poly_path[i].phi
               << ",kappa=" << poly_path[i].kappa
-              << ",s = " << poly_path[i].accumulated_s;
+              << ",s = " << poly_path[i].accumulated_s
+              << ", gear = " << static_cast<int>(poly_path[i].gear);
   }
 
   return;
