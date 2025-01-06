@@ -410,11 +410,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
     BorrowDirection obs_bypass_direction =
         GetBypassDirection(frenet_obstacle_sl);
 
-    if (obs_bypass_direction == NO_BORROW) {
-      bypass_direction_ = NO_BORROW;
-      lane_borrow_decider_output_.lane_borrow_failed_reason = CENTER_OBSTACLE;
-      return false;
-    } else if (obs_bypass_direction == bypass_direction_) {
+    if (obs_bypass_direction == bypass_direction_) {
       obs_left_l_ = std::max(obs_left_l_, frenet_obstacle_sl.l_end);
       obs_right_l_ = std::min(obs_right_l_, frenet_obstacle_sl.l_start);
       obs_start_s_ = std::min(obs_start_s_, frenet_obstacle_sl.s_start);
@@ -450,16 +446,15 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
 BorrowDirection LaneBorrowDecider::GetBypassDirection(
     const FrenetObstacleBoundary& frenet_obstacle_sl) {
-  if (frenet_obstacle_sl.l_start * frenet_obstacle_sl.l_end <= 0) {
+      double obs_center_l = 0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
+      double max_offset = 0.75;
+  if (std::fabs(obs_center_l) <= max_offset) {
     return NO_BORROW;
-  }
-  if (frenet_obstacle_sl.l_start < 0 && frenet_obstacle_sl.l_end < 0) {
+  }else if (obs_center_l<-max_offset) {
     return LEFT_BORROW;
-  }
-  if (frenet_obstacle_sl.l_start > 0 && frenet_obstacle_sl.l_end > 0) {
+  }else {
     return RIGHT_BORROW;
   }
-  return NO_BORROW;
 }
 
 bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
