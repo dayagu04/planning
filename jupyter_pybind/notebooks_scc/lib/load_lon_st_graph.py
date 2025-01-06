@@ -327,6 +327,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     s_neighbor_target_vec.append(item.s)
   print("neighbor_target_s_ref: ", s_neighbor_target_vec)
 
+  lon_plan_data['data_target_s_neighbor'].data.update({
+    't_neighbor_target': t_neighbor_target_vec,
+    's_neighbor_target': s_neighbor_target_vec,
+  })
+
   ## follow target
   t_follow_target_vec = []
   s_follow_target_vec = []
@@ -341,9 +346,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     't_follow_target': t_follow_target_vec,
     's_follow_target': s_follow_target_vec,
     't_cruise_target': t_cruise_target_vec,
-    's_cruise_target': s_cruise_target_vec,
-    't_neighbor_target': t_neighbor_target_vec,
-    's_neighbor_target': s_neighbor_target_vec,
+    's_cruise_target': s_cruise_target_vec
   })
 
   # behavior planning
@@ -1143,8 +1146,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                               })
   data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 
                                          't_cruise_target':[], 's_cruise_target':[], 
-                                         't_follow_target':[], 's_follow_target':[],
-                                         't_neighbor_target':[], 's_neighbor_target':[],})
+                                         't_follow_target':[], 's_follow_target':[]})
+  data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -1188,6 +1191,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_st_search_history_cur_nodes' : data_st_search_history_cur_nodes, \
                    'data_st_search_path_final_nodes_cost' : data_st_search_path_final_nodes_cost, \
                    'data_target': data_target, \
+                   'data_target_s_neighbor': data_target_s_neighbor, \
                    'data_st_search_text' : data_st_search_text, \
   }
 
@@ -1315,7 +1319,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=5, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
-  fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
+  fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
 
   # fig8 bar chart
   fig8 = bkp.figure(x_axis_label='time', y_axis_label='cost', width=600, height=400, title="Cost Over Time")
