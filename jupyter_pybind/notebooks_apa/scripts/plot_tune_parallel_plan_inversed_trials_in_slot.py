@@ -24,6 +24,25 @@ from bokeh.io import export_png
 kRad2Deg = 180.0 / pi
 kDeg2Rad = pi / 180.0
 
+def find_shift_points(path_x_vec, path_y_vec, path_heading_vec):
+  x_vec_size = len(path_x_vec)
+  y_vec_size = len(path_y_vec)
+  heading_vec_size = len(path_heading_vec)
+  if x_vec_size != y_vec_size or x_vec_size != heading_vec_size or x_vec_size < 3:
+    return [],[]
+
+  x_res_vec = []
+  y_res_vec = []
+  heading_res_vec = []
+  for i in range(1, x_vec_size - 1):
+    v_1 = np.array([path_x_vec[i+1] - path_x_vec[i], path_y_vec[i+1] - path_y_vec[i]])
+    v_0 = np.array([path_x_vec[i] - path_x_vec[i-1], path_y_vec[i] - path_y_vec[i-1]])
+    if np.dot(v_1, v_0) < 1e-9:
+      x_res_vec.append(path_x_vec[i])
+      y_res_vec.append(path_y_vec[i])
+      heading_res_vec.append(path_heading_vec[i])
+  return x_res_vec, y_res_vec, heading_res_vec
+
 def load_car_box(path_x_vec, path_y_vec, path_theta_vec, car_xb, car_yb):
   car_box_x_vec = []
   car_box_y_vec = []
@@ -47,6 +66,16 @@ def load_ego_car_corner_path(path_x_vec, path_y_vec, path_heading_vec, car_local
     corner_path_y_vec.append(tmp_y)
   return corner_path_x_vec, corner_path_y_vec
 
+def load_ego_car_given_corner_path(path_x_vec, path_y_vec, path_heading_vec, car_local_x, car_local_y, idx_vec):
+  corner_path_x_vec = []
+  corner_path_y_vec = []
+  for idx in idx_vec:
+    tmp_x_vec, tmp_y_vec = load_ego_car_corner_path(path_x_vec, path_y_vec, path_heading_vec, car_local_x[idx], car_local_y[idx])
+    corner_path_x_vec.append(tmp_x_vec)
+    corner_path_y_vec.append(tmp_y_vec)
+  return corner_path_x_vec, corner_path_y_vec
+
+
 def load_ego_car_box(ego_x, ego_y, ego_heading, car_xb, car_yb):
   car_xn = []
   car_yn = []
@@ -60,6 +89,7 @@ def load_ego_car_box(ego_x, ego_y, ego_heading, car_xb, car_yb):
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
+car_idx_vec = [5]
 car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0)
 coord_tf = coord_transformer()
 
@@ -205,13 +235,13 @@ fig1.plot_height = int(fig1.plot_width / aspect_ratio)
 # fig1.js_on_event(Tap, callback)
 
 # fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = False)
-fig1.patches('x_vec', 'y_vec', source = data_tra_car_box, fill_color = None, fill_alpha = 0.0, line_color = "green", line_width = 0.3, visible = True)
-fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = None, fill_alpha = 0.0, line_color = "black", line_width = 0.3, visible = True)
+fig1.patches('x_vec', 'y_vec', source = data_tra_car_box, fill_color = None, fill_alpha = 0.0, line_color = "green", line_width = 1.0, visible = True)
+fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = None, fill_alpha = 0.0, line_color = "blue", line_width = 1.0, visible = True)
 
 fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.5, line_color = 'green', line_dash = 'dashed',legend_label = 'Traditional method', visible = True)
-fig1.line('x_vec','y_vec',source =data_tra_corner_search_out_path,  line_width = 3.5, line_color = 'green', line_dash = 'dashed',legend_label = 'Traditional method', visible = True)
-fig1.line('x_vec','y_vec',source =data_corner_path, line_width = 3.0, line_color = 'black', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
-fig1.line('x_vec','y_vec',source =data_path, line_width = 3.0, line_color = 'black', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
+fig1.multi_line('x_vec','y_vec',source =data_tra_corner_search_out_path,  line_width = 3.5, line_color = 'green', line_dash = 'dashed',legend_label = 'Traditional method', visible = True)
+fig1.multi_line('x_vec','y_vec',source =data_corner_path, line_width = 3.0, line_color = 'blue', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
+fig1.line('x_vec','y_vec',source =data_path, line_width = 3.0, line_color = 'blue', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
 
 # target slot
 # fig1.line('x_vec','y_vec',source =data_slot,  line_width = 1.0, line_color = 'black', line_dash = 'solid',legend_label = 'slot', visible = True)
@@ -233,8 +263,8 @@ fig1.circle('x', 'y', source = data_start_pos, size=8, color='lightskyblue', vis
 fig1.patch( 'car_xn', 'car_yn', source = data_start_car, fill_color = "lightskyblue", fill_alpha = 0.2, line_color = "black", line_width = 0.5, visible = True)
 
 # target pose
-fig1.circle('x', 'y', source = data_target_pos, size=8, color='black')
-fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = None, fill_alpha = 0.0, line_color = "black", line_width = 1.0)
+fig1.circle('x', 'y', source = data_target_pos, size=8, color='blue')
+fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = None, fill_alpha = 0.0, line_color = "blue", line_width = 1.5)
 
 # fig1.scatter("x_vec", "y_vec", source=data_virtual_obs_pt, size=8, color='red', marker='star', visible = False)
 fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_debug_arc, line_alpha = 1, line_width = 2, line_color = "red", fill_alpha=0, visible = False)
@@ -269,7 +299,7 @@ class LocalViewSlider:
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot length",min=5.0, max=8.0, value=6.0, step=0.01)
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "width",min=2.0, max=3.0, value=2.2, step=0.01)
     # obs
-    self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=0.0, step=0.01)
+    self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=0.9, step=0.01)
     self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb offset ",min=-1.0, max=1.0, value=0.3, step=0.01)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=4.72, step=0.01)
 
@@ -279,7 +309,7 @@ class LocalViewSlider:
     self.rear_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs y",min=-2.0, max=4.0, value=0.2, step=0.01)
     self.rear_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
 
-    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.3, step=0.001)
+    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.03, step=0.001)
     ipywidgets.interact(slider_callback,
                                          is_front_occupied = self.is_front_occupied_slider,
                                          is_rear_occupied = self.is_rear_occupied_slider,
@@ -427,12 +457,15 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       'x_vec': tra_path_x_vec,
       'y_vec': tra_path_y_vec,
     })
-    tra_corner_x_vec, tra_corner_y_vec = load_ego_car_corner_path(tra_path_x_vec, tra_path_y_vec, tra_path_heading_vec, car_xb[5], car_yb[5])
+
+    tra_corner_x_vec, tra_corner_y_vec = load_ego_car_given_corner_path(tra_path_x_vec,  tra_path_y_vec, tra_path_heading_vec, car_xb, car_yb, car_idx_vec)
     data_tra_corner_search_out_path.data.update({
       'x_vec': tra_corner_x_vec,
       'y_vec': tra_corner_y_vec,
     })
-    tra_car_box_x_vec, tra_car_box_y_vec = load_car_box(tra_path_x_vec, tra_path_y_vec, tra_path_heading_vec, car_xb, car_yb)
+
+    tra_shift_x_vec, tra_shift_y_vec, tra_shift_heading_vec = find_shift_points(tra_path_x_vec, tra_path_y_vec, tra_path_heading_vec)
+    tra_car_box_x_vec, tra_car_box_y_vec = load_car_box(tra_shift_x_vec, tra_shift_y_vec, tra_shift_heading_vec, car_xb, car_yb)
     data_tra_car_box.data.update({
       'x_vec': tra_car_box_x_vec,
       'y_vec': tra_car_box_y_vec
@@ -474,16 +507,39 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       'y_vec': adv_y_vec,
       'theta_vec': adv_heading_vec,
     })
-    corner_x_vec, corner_y_vec = load_ego_car_corner_path(adv_x_vec, adv_y_vec, adv_heading_vec, car_xb[5], car_yb[5])
+
+    adv_corner_x_vec, adv_corner_y_vec = load_ego_car_given_corner_path(adv_x_vec, adv_y_vec, adv_heading_vec, car_xb, car_yb, car_idx_vec)
     data_corner_path.data.update({
-      'x_vec': corner_x_vec,
-      'y_vec': corner_y_vec,
+      'x_vec': adv_corner_x_vec,
+      'y_vec': adv_corner_y_vec,
     })
-    car_box_x_vec, car_box_y_vec = load_car_box(adv_x_vec, adv_y_vec, adv_heading_vec, car_xb, car_yb)
+
+    adv_shift_x_vec, adv_shift_y_vec, adv_shift_heading_vec = find_shift_points(adv_x_vec, adv_y_vec, adv_heading_vec)
+    car_box_x_vec, car_box_y_vec = load_car_box(adv_shift_x_vec, adv_shift_y_vec, adv_shift_heading_vec, car_xb, car_yb)
     data_car_box.data.update({
       'x_vec': car_box_x_vec,
       'y_vec': car_box_y_vec,
     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     #path in different step
     preparing_step_end_idx = 0
@@ -705,17 +761,17 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
 bkp.show(row(fig1), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
 
-# os.environ['WEB_BROWSER'] = 'chrome'
-# fig1.output_backend = "svg"
-# name = 'inversed_0p0'
+os.environ['WEB_BROWSER'] = 'chrome'
+fig1.output_backend = "svg"
+name = 'inversed_0p9'
 
-# svg_file_path = name +'.svg'
-# eps_file_path = name +'.eps'
-# export_svgs(fig1, filename=svg_file_path)
+svg_file_path = name +'.svg'
+eps_file_path = name +'.eps'
+export_svgs(fig1, filename=svg_file_path)
 
-# # 使用 CairoSVG 直接转换
-# cairosvg.svg2eps(url=svg_file_path, write_to=eps_file_path)
+# 使用 CairoSVG 直接转换
+cairosvg.svg2eps(url=svg_file_path, write_to=eps_file_path)
 
-# print(f"SVG 文件已直接转换为 EPS：'{eps_file_path}'")
+print(f"SVG 文件已直接转换为 EPS：'{eps_file_path}'")
 
-# cairosvg.svg2pdf(url=svg_file_path, write_to=name +'.pdf')
+cairosvg.svg2pdf(url=svg_file_path, write_to=name +'.pdf')
