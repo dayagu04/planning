@@ -18,7 +18,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250102/20250102-11-02-21/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-02-11-02-21_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250103/20250103-19-19-12/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-03-19-19-13_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -854,65 +854,43 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   car_circle_xn = []
   car_circle_yn = []
   car_circle_rn = []
+
+  car_circle_x = []
+  car_circle_y = []
+  car_circle_r = []
+
+  footprint_model = replay_simulation_hybrid_astar.GetFootPrintModel()
+  for i in range(len(footprint_model)):
+    car_circle_x.append(footprint_model[i][0])
+    car_circle_y.append(footprint_model[i][1])
+    car_circle_r.append(footprint_model[i][2])
+
   for i in range(len(car_circle_x)):
     tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], pose[0], pose[1], pose[2])
     car_circle_xn.append(tmp_x)
     car_circle_yn.append(tmp_y)
+    car_circle_rn.append(car_circle_r[i])
 
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-
-
+  # ego pose circle list
   for i in range(len(car_circle_x)):
 
     x = loc_msg.position.position_boot.x
     y = loc_msg.position.position_boot.y
     heading = loc_msg.orientation.euler_boot.yaw
-
-    if i == 1 or i==2:
-      tmp_x, tmp_y = local2global(
-        car_circle_x[i]+0.2, car_circle_y[i], x, y, heading)
-    elif i==4 or i==5:
-     tmp_x, tmp_y = local2global(
-        car_circle_x[i]-0.2, car_circle_y[i], x, y, heading)
-    else:
-      tmp_x, tmp_y = local2global(
+    tmp_x, tmp_y = local2global(
         car_circle_x[i], car_circle_y[i], x, y, heading)
     car_circle_xn.append(tmp_x)
     car_circle_yn.append(tmp_y)
+    car_circle_rn.append(car_circle_r[i])
 
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-
+  # astar current gear path target
   for i in range(len(car_circle_x)):
-    if i == 1 or i==2:
-      tmp_x, tmp_y = local2global(
-        car_circle_x[i]+0.2, car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
-    elif i==4 or i==5:
-     tmp_x, tmp_y = local2global(
-        car_circle_x[i]-0.2, car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
-    else:
-      tmp_x, tmp_y = local2global(
+    tmp_x, tmp_y = local2global(
         car_circle_x[i], car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
 
     car_circle_xn.append(tmp_x)
     car_circle_yn.append(tmp_y)
-
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif  i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-
+    car_circle_rn.append(car_circle_r[i])
 
   data_veh_circle.data.update({
     'car_circle_xn': car_circle_xn,

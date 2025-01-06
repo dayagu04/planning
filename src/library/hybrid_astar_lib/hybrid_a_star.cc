@@ -4310,23 +4310,23 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
 
   // attention: ref line is slot center line
   // polynomial start
-  double x0 = end.y;
-  double dx0 = 0.0;
-  double ddx0 = 0.0;
+  double y0 = end.y;
+  double dy0 = 0.0;
+  double ddy0 = 0.0;
 
   // polynomial end
-  double x1 = start.y;
-  double dx1 = std::tan(start.theta);
-  double ddx1;
+  double y1 = start.y;
+  double dy1 = std::tan(start.theta);
+  double ddy1;
   if (std::fabs(start_radius > 1000.0)) {
-    ddx1 = 0.0;
+    ddy1 = 0.0;
   } else {
-    ddx1 = std::pow((1.0 + dx1 * dx1), 1.5) / start_radius;
+    ddy1 = std::pow((1.0 + dy1 * dy1), 1.5) / start_radius;
   }
 
   // ref s
   double total_ref_s = start.x - end.x;
-  curve.SetParam(x0, dx0, ddx0, x1, dx1, ddx1, total_ref_s);
+  curve.SetParam(y0, dy0, ddy0, y1, dy1, ddy1, total_ref_s);
 
   int point_num = std::ceil(total_ref_s / 0.05);
   double ref_s = 0;
@@ -4342,9 +4342,9 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
   double theta;
 
   for (int i = 0; i <= point_num; i++) {
-    const double x = curve.Evaluate(0, ref_s);
-    const double dx = curve.Evaluate(1, ref_s);
-    theta = std::atan(dx);
+    const double y = curve.Evaluate(0, ref_s);
+    const double dy = curve.Evaluate(1, ref_s);
+    theta = std::atan(dy);
     kappa = curve.EvaluateKappa(ref_s);
 
     if (kappa > max_kappa || kappa < -max_kappa) {
@@ -4359,7 +4359,7 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
     }
 
     point.x = end.x + ref_s;
-    point.y = x;
+    point.y = y;
     point.phi = theta;
     point.gear = AstarPathGear::REVERSE;
     point.type = AstarPathType::QUNTIC_POLYNOMIAL;

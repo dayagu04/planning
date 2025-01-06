@@ -70,6 +70,8 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   const FootPrintCircleList GetCircleFootPrint(const AstarPathGear gear) const;
 
+  const double GetLatetalSafeBuffer() const { return latetal_safe_buffer_; }
+
  private:
   EDTData data_;
 

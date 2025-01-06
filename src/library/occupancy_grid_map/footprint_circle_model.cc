@@ -260,7 +260,7 @@ const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircle() {
 
 void FootPrintCircleModel::DebugCircle(FootPrintCircle *circle) {
   ILOG_INFO << "x " << circle->pos.x << " y " << circle->pos.y << " r "
-            << circle->radius;
+            << circle->radius << ",safe buffer = " << circle->safe_buffer;
 }
 
 void FootPrintCircleModel::DebugCircles(FootPrintCircleList *circles) {
