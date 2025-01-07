@@ -80,7 +80,7 @@
   "finish_heading_err_loose": 2.868,
   "finish_parallel_lat_err": 0.1,
   "finish_parallel_lat_rac_err": 0.7,
-  "finish_parallel_lon_err": 0.3,
+  "finish_parallel_lon_err": 0.25,
   "finish_parallel_lon_overhaing_error": 0.22,
   "finish_parallel_heading_err": 1.98,
   "finish_parallel_rear_stop_buffer": 0.45,

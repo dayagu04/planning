@@ -114,46 +114,46 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   // check replan
-  if (CheckReplan() || apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "replan is required!";
-
-    // generate t-lane
-    GenTlane();
-
-    // update obstacles
-    GenTBoundaryObstacles();
-    // GenObstacles();
-
-    // path plan
-    const auto pathplan_result = PathPlanOnce();
-    frame_.pathplan_result = pathplan_result;
-
-    if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
-      if (PostProcessPath()) {
-        SetParkingStatus(PARKING_GEARCHANGE);
-        ILOG_INFO << "replan from PARKING_GEARCHANGE!";
-      } else {
-        SetParkingStatus(PARKING_FAILED);
-        ILOG_INFO << "replan failed from PLAN_HOLD!";
-      }
-    } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
-      if (PostProcessPath()) {
-        SetParkingStatus(PARKING_PLANNING);
-        ILOG_INFO << "replan from PARKING_PLANNING!";
-      } else {
-        SetParkingStatus(PARKING_FAILED);
-        ILOG_INFO << "replan failed from PARKING_PLANNING!";
-      }
-    } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-      SetParkingStatus(PARKING_FAILED);
-    }
-
-    ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
-  } else {
+  if (!CheckReplan()) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
+    return;
   }
 
+  ILOG_INFO << "replan is required!";
+
+  // generate t-lane
+  GenTlane();
+
+  // update obstacles
+  GenTBoundaryObstacles();
+  // GenObstacles();
+
+  // path plan
+  const auto pathplan_result = PathPlanOnce();
+  frame_.pathplan_result = pathplan_result;
+
+  if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
+    if (PostProcessPath()) {
+      SetParkingStatus(PARKING_GEARCHANGE);
+      ILOG_INFO << "replan from PARKING_GEARCHANGE!";
+    } else {
+      SetParkingStatus(PARKING_FAILED);
+      ILOG_INFO << "replan failed from PLAN_HOLD!";
+    }
+  } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
+    if (PostProcessPath()) {
+      SetParkingStatus(PARKING_PLANNING);
+      ILOG_INFO << "replan from PARKING_PLANNING!";
+    } else {
+      SetParkingStatus(PARKING_FAILED);
+      ILOG_INFO << "replan failed from PARKING_PLANNING!";
+    }
+  } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    SetParkingStatus(PARKING_FAILED);
+  }
+
+  ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
   // print planning status
   // ILOG_INFO << "parking status = "
   //           << static_cast<int>(GetPlannerStates().planning_status)
