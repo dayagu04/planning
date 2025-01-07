@@ -764,6 +764,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
+  // todo: move to rs link decision
   // request check
   if (request_.first_action_request.has_request) {
     // start node rs gear is not expectation
