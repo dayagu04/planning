@@ -26,6 +26,7 @@ ClosestInPathVehicleDecider::ClosestInPathVehicleDecider(
 }
 
 bool ClosestInPathVehicleDecider::Execute() {
+  Reset();
   auto res = CipvDecision();
   if (!res) {
     JSON_DEBUG_VALUE("cipv_id_st", -1.0)
@@ -201,5 +202,17 @@ void ClosestInPathVehicleDecider::Reset(int32_t *const cipv_id,
   *cipv_ttc = std::numeric_limits<double>::max();
   *dangerous_level = -1;
   *is_virtual = true;
+}
+
+void ClosestInPathVehicleDecider::Reset() {
+  auto &mutable_cipv_decider_output =
+      session_->mutable_planning_context()->mutable_cipv_decider_output();
+  mutable_cipv_decider_output.set_cipv_id(kInvalidId);
+  mutable_cipv_decider_output.set_relative_s(
+      std::numeric_limits<double>::max());
+  mutable_cipv_decider_output.set_v_frenet(std::numeric_limits<double>::max());
+  mutable_cipv_decider_output.set_ttc(std::numeric_limits<double>::max());
+  mutable_cipv_decider_output.set_dangerous_level(-1);
+  mutable_cipv_decider_output.set_is_virtual(true);
 }
 }  // namespace planning
