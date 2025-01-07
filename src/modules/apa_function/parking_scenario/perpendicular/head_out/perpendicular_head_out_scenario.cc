@@ -393,7 +393,7 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
         apa_param.GetParam().channel_width);
   } else {
     // use fus obs
-    ego_slot_info.channel_width = apa_param.GetParam().channel_width;
+    ego_slot_info.channel_width = apa_param.GetParam().channel_width - 1.5;
   }
 
   ILOG_INFO << "channel_width = " << ego_slot_info.channel_width;
@@ -1368,12 +1368,12 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
     return true;
   }
 
-  // if (!apa_world_ptr_->GetSimuParam().sim_to_target &&
-  //     CheckDynamicUpdate()) {
-  //   ILOG_INFO << "replan by dynamic!";
-  //   frame_.replan_reason = DYNAMIC;
-  //   return true;
-  // }
+  if (!apa_world_ptr_->GetSimuParam().sim_to_target &&
+      CheckDynamicUpdate()) {
+    ILOG_INFO << "replan by dynamic!";
+    frame_.replan_reason = DYNAMIC;
+    return true;
+  }
 
   frame_.replan_reason = NOT_REPLAN;
 
