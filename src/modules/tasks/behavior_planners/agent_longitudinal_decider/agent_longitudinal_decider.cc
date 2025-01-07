@@ -58,6 +58,22 @@ constexpr int32_t kDefaultCutInCount = 4;
 // constexpr double kFilterUltraDistanceMiddleThd = 165.0;
 constexpr double kFilterUltraDistanceHighThd = 300.0;
 
+// param for reverse agent filter
+constexpr double kReverseHeadingThreshold = 2.09;
+constexpr double kLowSpeedThreshold = 3.0;
+constexpr double kMinFilterDistance = 30.0;
+constexpr double kLowSpeedLateralIgnoreDist = 10.0;
+// constexpr double kLongitudalTtc = 5.0; // too radicalness
+constexpr double kLongitudalTtc = 8.0;
+constexpr double kDefaultLaneHalfWidth = 1.875;
+constexpr double kCrossLaneThreshold = 0.1;
+constexpr double kHightSpeedLateralIgnoreDist = 15.0;
+constexpr double kLanesDistanceThr = 5.0;
+constexpr double kIntersectionFactor = 0.3;
+constexpr double kconsideredLonDistanceInCurve = 80.0;
+constexpr double kDistanceCurvature = 30.0;
+constexpr double kTimeCurvature = 2.0;
+
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath>& planned_path,
                               const planning_math::Box2d& agent_box,
                               double* const ptr_min_s, double* const ptr_max_s,
@@ -139,7 +155,7 @@ bool AgentLongitudinalDecider::Update() {
 
   FilterUltradistantObs();
 
-  // FilterReverseAgents();
+  FilterReverseAgents();
 
   // Check cut in/out agent.
   DeciderCutInAndOutAgents();
@@ -1019,7 +1035,270 @@ void AgentLongitudinalDecider::FilterUltradistantObs() {
   }
 }
 
-// void AgentLongitudinalDecider::FilterReverseAgents() {}
+void AgentLongitudinalDecider::FilterReverseAgents() {
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  auto mutable_agent_manager =
+      session_->mutable_environmental_model()->mutable_agent_manager();
+  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
+    LOG_ERROR("[FilterReverseAgents] agent manager is empty");
+    return;
+  }
+
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  if (agents.empty()) {
+    return;
+  }
+
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = session_->environmental_model()
+                                 .get_virtual_lane_manager()
+                                 ->get_current_lane();
+  if (current_lane == nullptr) {
+    return;
+  }
+  const auto& current_lane_coord = current_lane->get_lane_frenet_coord();
+  if (current_lane_coord == nullptr) {
+    return;
+  }
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  if (ego_state_manager == nullptr) {
+    return;
+  }
+  const auto planning_init_point = ego_state_manager->planning_init_point();
+  const double v_ego = ego_state_manager->ego_v();
+  const double road_curvature_radius = CalculateRoadCurvature(v_ego);
+  JSON_DEBUG_VALUE("road_curvature_radius", road_curvature_radius)
+
+  double planning_init_point_s = 0.0;
+  double planning_init_point_l = 0.0;
+  current_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+                             &planning_init_point_s, &planning_init_point_l);
+
+  for (const auto* agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+
+    if (agent->type() == agent::AgentType::VIRTUAL) {
+      continue;
+    }
+
+    // ignored agent
+    auto* mutable_agent =
+        mutable_agent_manager->mutable_agent(agent->agent_id());
+    if (mutable_agent == nullptr ||
+        mutable_agent->agent_decision().agent_decision_type() ==
+            agent::AgentDecisionType::IGNORE) {
+      continue;
+    }
+
+    const auto agent_box_center = agent->box().center();
+
+    // only consider reverse agent
+    if (!IsReverseAgent(agent, current_lane)) {
+      continue;
+    }
+    mutable_agent->set_is_reverse(true);
+
+    const auto& corners = agent->box().GetAllCorners();
+    double agent_max_l = std::numeric_limits<double>::lowest();
+    double agent_min_l = std::numeric_limits<double>::max();
+    double agent_max_s = std::numeric_limits<double>::lowest();
+    double agent_min_s = std::numeric_limits<double>::max();
+    for (const auto& corner : corners) {
+      double project_l = 0.0;
+      double projrct_s = 0.0;
+      if (!current_lane_coord->XYToSL(corner.x(), corner.y(), &projrct_s,
+                                      &project_l)) {
+        continue;
+      }
+      agent_max_l = std::fmax(agent_max_l, project_l);
+      agent_min_l = std::fmin(agent_min_l, project_l);
+      agent_max_s = std::fmax(agent_max_s, projrct_s);
+      agent_min_s = std::fmin(agent_min_s, projrct_s);
+    }
+
+    // calculate agent center s and l
+    double agent_s_in_ego_lane = 0.0;
+    double agent_l_in_ego_lane = 0.0;
+    current_lane_coord->XYToSL(agent_box_center.x(), agent_box_center.y(),
+                               &agent_s_in_ego_lane, &agent_l_in_ego_lane);
+
+    // calculate agent end point s and l
+    double agent_end_point_s = 0.0;
+    double agent_end_point_l = 0.0;
+    const bool has_trajectory = !agent->trajectories().empty() &&
+                                !agent->trajectories().front().empty();
+    double end_point_heading_from_start = 0.0;
+    if (has_trajectory) {
+      const auto& end_point = agent->trajectories().front().back();
+      current_lane_coord->XYToSL(end_point.x(), end_point.y(),
+                                 &agent_end_point_s, &agent_end_point_l);
+      end_point_heading_from_start = Vec2d(end_point.x() - agent_box_center.x(),
+                                           end_point.y() - agent_box_center.y())
+                                         .Angle();
+    }
+
+    double half_lane_width =
+        0.5 * current_lane->width_by_s(agent_s_in_ego_lane);
+    const auto current_lane_path_point =
+        current_lane_coord->GetPathPointByS(agent_s_in_ego_lane);
+    const double mathed_point_heading = current_lane_path_point.theta();
+
+    // 1. ignore low speed agent
+    if (agent->speed() < kLowSpeedThreshold) {
+      if (IsIgnoredLowSpeedReverseAgent(
+              *agent, planning_init_point_s, planning_init_point.v, agent_max_s,
+              agent_min_s, agent_max_l, agent_min_l)) {
+        mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+            agent::AgentDecisionType::IGNORE);
+      }
+      continue;
+    }
+
+    // 2. not ignore large heading diff cross agent
+    const double crossing_dist_thr =
+        planning_init_point_s +
+        std::fmax(kMinFilterDistance, planning_init_point.v * kLongitudalTtc);
+
+    if (has_trajectory && agent_end_point_l * agent_l_in_ego_lane < kEpsilon &&
+        agent_s_in_ego_lane < crossing_dist_thr) {
+      const double heading_diff = std::fabs(planning_math::NormalizeAngle(
+          end_point_heading_from_start - (mathed_point_heading + M_PI)));
+      // agent's trajectory cross the planned path,and the heading diff is large
+      constexpr double kLargeCrossHeadingDiff = 30.0 / 57.3;
+      if (heading_diff > kLargeCrossHeadingDiff) {
+        continue;
+      }
+    }
+
+    // 3. ignore far reverse agent by vel
+    const double considered_lon_distance =
+        std::fmax(planning_init_point_s + kMinFilterDistance,
+                  std::fmin(planning_init_point_s +
+                                planning_init_point.v * kLongitudalTtc,
+                            current_lane_coord->Length()));
+    if (considered_lon_distance < agent_s_in_ego_lane) {
+      mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+          agent::AgentDecisionType::IGNORE);
+      continue;
+    }
+
+    // // 3*. HACK: ignore reverse agent in curvature
+    // if (agent_s_in_ego_lane > kconsideredLonDistanceInCurve &&
+    //     road_curvature_radius < 2000.0) {
+    //   mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+    //       agent::AgentDecisionType::IGNORE);
+    //   continue;
+    // }
+
+    // 3**. not ignore intersection_length > 0.3 * lane_width
+    const double intersection_length = CalculateIntersectionLength(
+        agent_min_l, agent_max_l, -half_lane_width, half_lane_width);
+    if (intersection_length > kIntersectionFactor * half_lane_width * 2) {
+      continue;
+    }
+
+    // 4. ignore agent_l and agent_l_end > LateralIgnoreDist(15m)
+    if (has_trajectory) {
+      if ((agent_l_in_ego_lane > kHightSpeedLateralIgnoreDist &&
+           agent_end_point_l > kHightSpeedLateralIgnoreDist) ||
+          (agent_l_in_ego_lane < -kHightSpeedLateralIgnoreDist &&
+           agent_end_point_l < -kHightSpeedLateralIgnoreDist)) {
+        mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+            agent::AgentDecisionType::IGNORE);
+        continue;
+      }
+    }
+
+    // 5. ignore agent_min_l > half_lane_width
+    if ((agent_min_l > half_lane_width - kCrossLaneThreshold) ||
+        (agent_max_l < -half_lane_width + kCrossLaneThreshold)) {
+      mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+          agent::AgentDecisionType::IGNORE);
+    }
+  }
+}
+
+bool AgentLongitudinalDecider::IsReverseAgent(
+    const agent::Agent* agent,
+    const std::shared_ptr<VirtualLane> ego_lane) const {
+  double agent_s = 0.0;
+  double agent_l = 0.0;
+  const auto agent_box_center = agent->box().center();
+  const auto& ego_lane_coord = ego_lane->get_lane_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return false;
+  }
+  ego_lane_coord->XYToSL(agent_box_center.x(), agent_box_center.y(), &agent_s,
+                         &agent_l);
+  const auto matched_path_point = ego_lane_coord->GetPathPointByS(agent_s);
+  const double heading_diff = std::fabs(planning_math::NormalizeAngle(
+      matched_path_point.theta() - agent->box().heading()));
+  const bool is_perception_reverse = heading_diff > kReverseHeadingThreshold;
+  bool is_prediction_reverse = false;
+
+  if (!agent->trajectories().empty() &&
+      !agent->trajectories().front().empty()) {
+    const auto& end_point = agent->trajectories().front().back();
+    double end_s = 0.0;
+    double end_l = 0.0;
+    ego_lane_coord->XYToSL(end_point.x(), end_point.y(), &end_s, &end_l);
+    is_prediction_reverse = end_s < agent_s;
+  }
+  return is_perception_reverse || is_prediction_reverse;
+}
+
+bool AgentLongitudinalDecider::IsIgnoredLowSpeedReverseAgent(
+    const agent::Agent& agent, const double init_point_s,
+    const double init_point_spd, const double agent_max_s,
+    const double agent_min_s, const double agent_max_l,
+    const double agent_min_l) const {
+  if (agent.speed() > kLowSpeedThreshold) {
+    return false;
+  }
+  constexpr double KEgoTtc = 6.0;
+  const double low_speed_lon_ignore_dist =
+      std::max(init_point_s + kMinFilterDistance,
+               init_point_s + init_point_spd * KEgoTtc);
+  if (agent_max_l < -kLowSpeedLateralIgnoreDist ||
+      agent_min_l > kLowSpeedLateralIgnoreDist ||
+      agent_min_s > low_speed_lon_ignore_dist) {
+    return true;
+  }
+  return false;
+}
+
+double AgentLongitudinalDecider::CalculateRoadCurvature(const double v_ego) {
+  double preview_x = kDistanceCurvature + kTimeCurvature * v_ego;
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  std::vector<double> curv_window_vec;
+  for (int idx = -3; idx <= 3; ++idx) {
+    double curv;
+    ReferencePathPoint refpath_pt;
+    if (reference_path_ptr->get_reference_point_by_lon(
+            frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
+      curv = std::fabs(refpath_pt.path_point.kappa());
+    } else {
+      curv = 0.0001;
+    }
+    curv_window_vec.emplace_back(curv);
+  }
+  double curv_sum = 0.0;
+  for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
+    curv_sum = curv_sum + curv_window_vec[ind];
+  }
+  double avg_curv = curv_sum / curv_window_vec.size();
+  double road_radius = 1 / std::max(avg_curv, 0.0001);
+  return road_radius;
+}
 
 double AgentLongitudinalDecider::GetFilterUltraDistanceWithEgoVel(
     const double ego_vel) const {
@@ -1028,6 +1307,29 @@ double AgentLongitudinalDecider::GetFilterUltraDistanceWithEgoVel(
   const double mps_to_kph = 3.6;
   double distance = interp(ego_vel * mps_to_kph, speed, max_distance);  // kmph
   return distance;
+}
+
+double AgentLongitudinalDecider::CalculateIntersectionLength(
+    const double start_1, const double end_1, const double start_2,
+    const double end_2) const {
+  double a1 = start_1;
+  double b1 = end_1;
+  double a2 = start_2;
+  double b2 = end_2;
+
+  if (a1 > b1) {
+    std::swap(a1, b1);
+  }
+  if (a2 > b2) {
+    std::swap(a2, b2);
+  }
+  if (b1 < a2 || b2 < a1) {
+    return 0.0;
+  }
+
+  double lower = std::max(a1, a2);
+  double upper = std::min(b1, b2);
+  return upper - lower;
 }
 
 }  // namespace planning

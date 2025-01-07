@@ -95,6 +95,23 @@ class AgentLongitudinalDecider : public Task {
 
   double GetFilterUltraDistanceWithEgoVel(const double ego_vel) const;
 
+  bool IsReverseAgent(const agent::Agent* agent,
+                      const std::shared_ptr<VirtualLane> ego_lane) const;
+
+  bool IsIgnoredLowSpeedReverseAgent(const agent::Agent& agent,
+                                     const double init_point_s,
+                                     const double init_point_spd,
+                                     const double agent_max_s,
+                                     const double agent_min_s,
+                                     const double agent_max_l,
+                                     const double agent_min_l) const;
+
+  double CalculateRoadCurvature(const double v_ego);
+
+  double CalculateIntersectionLength(const double start_1, const double end_1,
+                                     const double start_2,
+                                     const double end_2) const;
+
  private:
   // framework::Session *session_ = nullptr;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
