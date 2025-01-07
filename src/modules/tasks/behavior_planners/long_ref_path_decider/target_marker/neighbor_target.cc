@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
+#include "log.h"
 #include "math/linear_interpolation.h"
 #include "planning_context.h"
 #include "st_graph/st_point.h"
@@ -52,9 +53,9 @@ void NeighborTarget::GenerateNeighborTarget() {
 }
 
 void NeighborTarget::GenerateNeighborTargetCurve() {
-  if (!IsNeighborTargetValid()) {
-    return;
-  }
+  // if (!IsNeighborTargetValid()) {
+  //   return;
+  // }
 
   auto* st_graph_helper = session_->planning_context().st_graph_helper();
   if (st_graph_helper == nullptr) {
@@ -66,6 +67,12 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
   speed::STPoint first_neighbor_lower_bound = speed::STPoint::LowestSTPoint();
   bool is_overtake_valid =
       st_graph_helper->GetFirstNeighborLowerBound(&first_neighbor_lower_bound);
+  if (is_yield_valid == false && is_overtake_valid == false) {
+    LOG_DEBUG(
+        "GenerateNeighborTargetCurve(): both yield and overtake are invalid "
+        "\n");
+    return;
+  }
 
   double yield_s =
       first_neighbor_upper_bound.s() -
@@ -73,6 +80,12 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
   double overtake_s =
       first_neighbor_lower_bound.s() +
       first_neighbor_lower_bound.velocity() * first_neighbor_lower_bound.t();
+  if (yield_s < overtake_s) {
+    LOG_DEBUG(
+        "GenerateNeighborTargetCurve(): yield_s < overtake_s, invalid "
+        "\n");
+    return;
+  }
 
   const double max_acc = planning_math::LerpWithLimit(
       config_.neighbor_target_max_acc_upper,
@@ -137,7 +150,7 @@ void NeighborTarget::AddNeighborTargetDataToProto() {
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_neighbor_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_neighbor_target();
-  if (!target_values_.empty()) {
+  if (neighbor_target_curve_) {
     for (const auto& value : target_values_) {
       auto* ptr = neighbor_target_pb_.add_neighbor_target_s_ref();
       ptr->set_s(value.s_target_val());

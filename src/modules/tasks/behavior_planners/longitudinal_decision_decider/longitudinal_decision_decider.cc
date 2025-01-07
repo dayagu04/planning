@@ -412,53 +412,55 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
       st_graph->agent_id_st_boundaries_map();
   const auto neighbor_agent_id_st_boundraies_map =
       st_graph->neighbor_agent_id_st_boundaries_map();
-
-  const auto lane_change_status = lane_change_decider_output.curr_state;
-  if (lane_change_status !=
-          StateMachineLaneChangeStatus::kLaneChangeExecution &&
-      lane_change_status != StateMachineLaneChangeStatus::kLaneChangeComplete) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No "
-        "LaneChangeExecution and No LaneChangeComplete\n");
-    int default_value = -1;
-    JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
-    JSON_DEBUG_VALUE("gap_front_agent_id", default_value)
-    JSON_DEBUG_VALUE("gap_rear_agent_id", default_value)
-    return;
-  }
-
   const int32_t gap_front_agent_id =
       lane_change_decider_output.gap_info.front_agent_id;
   const int32_t gap_rear_agent_id =
       lane_change_decider_output.gap_info.rear_agent_id;
+
+  const auto lane_change_status = lane_change_decider_output.curr_state;
+  JSON_DEBUG_VALUE("lane_change_status", static_cast<int>(lane_change_status))
+  JSON_DEBUG_VALUE("gap_front_agent_id", gap_front_agent_id & 0xFFFF)
+  JSON_DEBUG_VALUE("gap_rear_agent_id", gap_rear_agent_id & 0xFFFF)
+
+  if (config_.enable_skip_neighbor_corridor_update) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: skip "
+        "neighbor corridor update\n");
+    int default_value = -1;
+    JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
+  }
+
   if (gap_front_agent_id == -1 && gap_rear_agent_id == -1) {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No gap "
         "agents\n");
     int default_value = -1;
     JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
-    JSON_DEBUG_VALUE("gap_front_agent_id", default_value)
-    JSON_DEBUG_VALUE("gap_rear_agent_id", default_value)
     return;
   }
   const auto gap_front_agent = agent_manager->GetAgent(gap_front_agent_id);
   const auto gap_rear_agent = agent_manager->GetAgent(gap_rear_agent_id);
   std::unordered_map<int32_t, speed::STBoundary::DecisionType>
       neighbor_agents_decision_table;
-  if (gap_front_agent_id != -1 &&
+  if (lane_change_status ==
+          StateMachineLaneChangeStatus::kLaneChangeExecution ||
+      lane_change_status == StateMachineLaneChangeStatus::kLaneChangeComplete) {
+    if (gap_front_agent_id != -1 &&
       neighbor_agent_id_st_boundraies_map.count(gap_front_agent_id) == 0 /*&&
       agent_id_st_boundaries_map.count(gap_front_agent_id) == 0*/) {
-    ConstructNeighborLaneStGraph(gap_front_agent);
-    neighbor_agents_decision_table[gap_front_agent_id] =
-        speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
-  }
-  if (gap_rear_agent_id != -1 &&
+      ConstructNeighborLaneStGraph(gap_front_agent);
+      neighbor_agents_decision_table[gap_front_agent_id] =
+          speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
+    }
+    if (gap_rear_agent_id != -1 &&
       neighbor_agent_id_st_boundraies_map.count(gap_rear_agent_id) == 0 /*&&
       agent_id_st_boundaries_map.count(gap_rear_agent_id) == 0*/) {
-    ConstructNeighborLaneStGraph(gap_rear_agent);
-    neighbor_agents_decision_table[gap_rear_agent_id] =
-        speed::STBoundary::DecisionType::NEIGHBOR_OVERTAKE;
+      ConstructNeighborLaneStGraph(gap_rear_agent);
+      neighbor_agents_decision_table[gap_rear_agent_id] =
+          speed::STBoundary::DecisionType::NEIGHBOR_OVERTAKE;
+    }
   }
+
   if (!neighbor_agents_decision_table.empty()) {
     mutable_st_graph->UpdateNeighborAgentResults(
         neighbor_agents_decision_table);
@@ -467,9 +469,7 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
         "neighbor agents decision table\n");
   }
   JSON_DEBUG_VALUE("gap_lon_decision_update",
-                   neighbor_agents_decision_table.empty())
-  JSON_DEBUG_VALUE("gap_front_agent_id", gap_front_agent_id & 0xFFFF)
-  JSON_DEBUG_VALUE("gap_rear_agent_id", gap_rear_agent_id & 0xFFFF)
+                   !neighbor_agents_decision_table.empty())
 }
 
 bool LongitudinalDecisionDecider::ConstructNeighborLaneStGraph(
