@@ -60,6 +60,21 @@ struct RSPath {
     size = 0;
     return;
   }
+
+
+  void FirstPathEndPoint(RSPoint *point) {
+    if (size < 1) {
+      return;
+    }
+
+    RSPathSegment *seg = &paths[0];
+    if (seg->size < 1) {
+      return;
+    }
+    *point = seg->points[0];
+
+    return;
+  }
 };
 
 struct VehicleCircle {
