@@ -6,6 +6,7 @@ message TargetPoint {
   optional double s = 1;
   optional double t = 2;
   optional int32 target_type = 3;
+  optional double s_weight = 4;
 }
 
 message TargetMaker {

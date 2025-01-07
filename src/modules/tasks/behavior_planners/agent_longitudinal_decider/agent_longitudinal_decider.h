@@ -86,8 +86,8 @@ class AgentLongitudinalDecider : public Task {
   bool IsConsiderBackObs(const std::shared_ptr<KDPath> planned_path,
                          const PlanningInitPoint& init_point,
                          const agent::Agent* agent, const double ego_front_s,
-                         const double ego_back_s, const double ego_center_s,
-                         const double agent_s, const double agent_l) const;
+                         const double front_corner_s, const double ego_center_s,
+                         const double front_edge_s_diff) const;
 
   bool FilterRearNoCutInAgent(const std::shared_ptr<KDPath> planned_path,
                               const PlanningInitPoint& init_point,

@@ -275,9 +275,9 @@ const double Agent::d_rel() const { return d_rel_; }
 
 void Agent::set_d_rel(double d_rel) { d_rel_ = d_rel; };
 
-const double Agent::d_path() const { return d_rel_; }
+const double Agent::d_path() const { return d_path_; }
 
-void Agent::set_d_path(double d_rel) { d_rel_ = d_rel; };
+void Agent::set_d_path(double d_path) { d_path_ = d_path; };
 
 void Agent::RecalculateLowSpeedTrajectories() {
   const double init_accel = accel_;

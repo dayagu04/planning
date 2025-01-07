@@ -16,8 +16,8 @@ constexpr double lower_urgent_distance = 0.5;
 constexpr double upper_urgent_distance = 1.5;
 constexpr double lower_urgent_speed = 20.0 / 3.6;
 constexpr double upper_urgent_speed = 80.0 / 3.6;
-constexpr double upper_urgent_scale = 35.0;
-constexpr double lower_urgent_scale = 25.0;
+constexpr double upper_urgent_scale = 7.0;
+constexpr double lower_urgent_scale = 5.0;
 }  // namespace
 
 WeightMaker::WeightMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -274,6 +274,7 @@ void WeightMaker::CollectDataToProto(const TargetMaker& target_maker) {
     ptr->set_s(target_value.s_target_val());
     ptr->set_t(target_value.relative_t());
     ptr->set_target_type(static_cast<int32_t>(target_value.target_type()));
+    ptr->set_s_weight(s_weight_[i]);
   }
   mutable_weight_data->CopyFrom(weight_maker_replay_info_);
 }

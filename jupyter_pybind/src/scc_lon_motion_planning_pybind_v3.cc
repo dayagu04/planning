@@ -19,14 +19,14 @@ constexpr double plan_time = 5.0;
 constexpr double dt = 0.2;
 constexpr double max_s_weight_time = 3.0;
 constexpr double front_lower_weight = 0.5;
-constexpr double max_s_weight = 10.0;
+constexpr double max_s_weight = 2.0;
 constexpr double back_upper_weight = 1.5;
 constexpr double kUrgentWeightStartTime = 0.0;
 constexpr double kAddUrgentWeightEndTime = 1.5;
 constexpr double s_speed_upper_weight_v = 8.33;
 constexpr double s_speed_lower_weight_v = 2.78;
-constexpr double s_speed_upper_weight = 5.0;
-constexpr double s_speed_lower_weight = 2.5;
+constexpr double s_speed_upper_weight = 2.0;
+constexpr double s_speed_lower_weight = 1.0;
 
 int Init() {
   pBase = new SccLongitudinalMotionPlanningProblemV3();
@@ -152,6 +152,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
 
   for (size_t i = 0; i < s_weights.size(); ++i) {
     // planning_input.mutable_s_weights()->Set(i, const_s);
+    planning_input.mutable_s_weights()->Set(i, s_weights[i]);
     planning_input.mutable_v_weights()->Set(i, v_weights[i]);
   }
 

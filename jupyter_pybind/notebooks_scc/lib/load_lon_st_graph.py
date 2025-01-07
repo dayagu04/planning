@@ -188,7 +188,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','cipv_id_st', 'cipv_relative_s','cipv_relative_s_ego_stop',"distance_to_go_condition",
                           "cipv_vel_frenet","traffic_light_can_pass"]
-                          
+
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
@@ -526,6 +526,25 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'cutinVal': cutin_attr_vec
   })
 
+  try:
+    # print("obstacle st info: ",plan_debug_info.st_search_decider_info.obstacle_st_infos)
+    for idx in range(len(plan_debug_info.st_search_decider_info.obstacle_st_infos)):
+      print("idx: ",idx)
+      obj_s_upper_vec =[]
+      obj_s_lower_vec =[]
+      obj_t_vec =[]
+      obj_s_upper_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].s_vec_upper)
+      obj_s_lower_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].s_vec_lower)
+      obj_t_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].t_vec)
+      print("s_upper: ", obj_s_upper_vec)
+      print("s_lower: ", obj_s_lower_vec)
+      try:
+        lon_plan_data['data_search_obj_{}'.format(idx)].data.update({'t': obj_t_vec,'s_upper':obj_s_upper_vec,'s_lower':obj_s_lower_vec})
+      except:
+        print("update speed search st failed, obj idx:", idx)
+  except:
+    print("update speed search obj failed!")
+
   # motion planning
   lon_motion_plan_input = plan_debug_info.longitudinal_motion_planning_input
   lon_motion_plan_output = plan_debug_info.longitudinal_motion_planning_output
@@ -552,6 +571,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   vel_vec = lon_motion_plan_output.vel_vec
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
+
+  weight_maker_replay_info = plan_debug_info.weight_maker.weight_maker_replay_info
+  ## print(weight_maker_replay_info)
+  s_weight_vec = []
+  for item in (weight_maker_replay_info.target_point):
+    s_weight_vec.append(item.s_weight)
+  print(s_weight_vec)
 
   # print("lon_motion_plan_output:=", lon_motion_plan_output)
   motion_solver_info = lon_motion_plan_output.solver_info

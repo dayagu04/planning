@@ -2203,6 +2203,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
     q_acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
+    q_acc_bound_v3 = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound_v3"});
     q_jerk_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
     q_stop_s = read_json_keys<double>(
@@ -2293,6 +2295,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_sv_bound = 1000.0;
   double q_vel_bound = 400.0;
   double q_acc_bound = 400.0;
+  double q_acc_bound_v3 = 3200.0;
   double q_jerk_bound = 100.0;
   double q_stop_s = 2000.0;
 
@@ -2753,7 +2756,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double dt = 0.2;
   double cutin_headway_threshold = 1.0;
   double smallest_headway_threshold = 1.2;
-  double headway_step = 0.025;
+  double headway_step = 0.1;
   std::vector<std::pair<int32_t, double>> normal_headway_table = {
       {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
   std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
@@ -3207,6 +3210,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_planning",
                                  "lane_change_upper_speed_limit_kph"},
         lane_change_upper_speed_limit_kph);
+    enable_speed_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
   }
 
   double planning_time = 5.0;
@@ -3226,6 +3231,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double stop_acc_lower_bound = -0.3;
   double stop_jerk_upper_bound = 0.8;
   double stop_jerk_lower_bound = -0.8;
+  bool enable_speed_adjust = true;
 
   // follow target
   double lower_speed_min_follow_distance_gap = 3.0;
@@ -3292,7 +3298,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double v_weight = 0.0;
     double a_weight = 10.0;
     double jerk_weight = 100.0;
-    double cruise_v_weight = 40.0;
+    double cruise_v_weight = 20.0;
     double follow_s_weight = 1.0;
     double overtake_s_weight = 1.0;
     double neighbor_s_weight = 1.0;
@@ -3300,11 +3306,11 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double max_s_weight_time = 3.0;
     double front_lower_weight = 0.5;
     double back_upper_weight = 1.5;
-    double max_s_weight = 10.0;
+    double max_s_weight = 2.0;
     double s_speed_upper_weight_v = 8.33;
     double s_speed_lower_weight_v = 2.78;
-    double s_speed_upper_weight = 5.0;
-    double s_speed_lower_weight = 2.5;
+    double s_speed_upper_weight = 2.0;
+    double s_speed_lower_weight = 1.0;
   };
   WeightConfig weight_maker_config;
 };
