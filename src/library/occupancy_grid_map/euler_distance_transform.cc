@@ -161,13 +161,13 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
   }
 
   dist = data_.dist[index.x][index.y] - circle->radius;
-  if (dist > 0.0f) {
+  if (dist > 1.0f) {
 #if DEBUG_EDT
     ILOG_INFO << "dist " << dist << " r " << circle->radius << " ,safe "
               << circle->safe_buffer;
 #endif
 
-    *min_dist = dist + circle->safe_buffer;
+    *min_dist = dist;
 
     return false;
   }
@@ -200,13 +200,13 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
                 << circle->radius;
 #endif
 
-      *min_dist = dist + circle->safe_buffer;
+      *min_dist = dist;
 
       return true;
     }
 
-    if ((dist + circle->safe_buffer) < close_dist) {
-      close_dist = dist + circle->safe_buffer;
+    if (dist  < close_dist) {
+      close_dist = dist;
 
 #if DEBUG_EDT
       ILOG_INFO << "dist " << dist << " r " << circle->radius << " ,safe "

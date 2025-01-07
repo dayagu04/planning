@@ -1379,58 +1379,30 @@ void HybridAStar::DebugEDTCheck(HybridAStarResult* path) {
     return;
   }
 
-  size_t node_step_size = path->x.size();
-
-  // The first {x, y, phi} is collision free unless they are start and end
-  // configuration of search problem
-  size_t check_start_index = 0;
-
-  Polygon2D global_polygon;
   Pose2D global_pose;
   // bool is_collision = false;
-  cdl::AABB path_point_aabb;
   Transform2d tf;
-  AstarPathGear first_gear = path->gear[0];
-  AstarPathGear gear = path->gear[0];
+  AstarPathGear gear = AstarPathGear::NONE;
 
-  Polygon2D* veh_local_polygon = GetVehPolygon(gear);
-
-  for (size_t i = check_start_index; i < node_step_size; ++i) {
-    // check bound
-    if (IsPointBeyondBound(path->x[i], path->y[i])) {
-      ILOG_INFO << "no coll";
-      continue;
-    }
-
+  float min_dist = 100;
+  float dist;
+  size_t point_size = path->x.size();
+  for (size_t i = 0; i < point_size; ++i) {
     global_pose.x = path->x[i];
     global_pose.y = path->y[i];
     global_pose.theta = path->phi[i];
     tf.SetBasePose(global_pose);
 
-    RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon, &global_pose,
-                               tf.GetCosTheta(), tf.GetSinTheta());
-
-    GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
-      ILOG_INFO << "clear";
-      continue;
-    }
-
-    gear = path->gear[i];
-
-    if (gear != first_gear) {
-      break;
-    }
-
-    if (edt_->IsCollisionForPoint(&tf, gear)) {
+    if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
       ILOG_INFO << "collision";
-
-      break;
     }
 
-    ILOG_INFO << "path size " << node_step_size << " ,pt id " << i
-              << " , no collision ";
+    min_dist = std::min(dist, min_dist);
+    ILOG_INFO << "path size " << point_size << ", pt id " << i
+              << ", dist= " << dist;
   }
+
+  ILOG_INFO << "min_dist = " << min_dist;
 
   return;
 }
