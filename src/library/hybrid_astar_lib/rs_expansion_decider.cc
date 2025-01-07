@@ -82,6 +82,10 @@ bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
     if (!NeedRsLinkByOffset(node)) {
       return false;
     }
+
+    if (!NeedRsLinkByRequestDist(node, request)) {
+      return false;
+    }
   }
 
   return true;
@@ -154,6 +158,16 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeading(
 
 const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) const {
   if (std::fabs(node->GetY()) > 10.0 || std::fabs(node->GetX()) > 15.0) {
+    return false;
+  }
+
+  return true;
+}
+
+const bool RSExpansionDecider::NeedRsLinkByRequestDist(
+    const Node3d *node, const AstarRequest *request) const {
+  if (request->first_action_request.has_request &&
+      node->GetDistToStart() < request->first_action_request.dist_request) {
     return false;
   }
 
