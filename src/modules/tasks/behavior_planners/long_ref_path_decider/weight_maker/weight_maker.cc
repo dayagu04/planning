@@ -85,6 +85,9 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
       s_speed_lower_weight, s_speed_lower_weight_v, s_speed_upper_weight,
       s_speed_upper_weight_v, init_lon_state_[1]);
 
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+
   int closest_index = -1;
   double min_urgent_dist = std::numeric_limits<double>::max();
   for (int i = 0; i < plan_points_num_; ++i) {
@@ -102,10 +105,11 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
       // }
       const double agent_speed = corridor_upper_point.velocity();
       const double ego_s = virtual_acc_curve->Evaluate(0, relative_t);
+      const double ego_s_to_front = ego_s + vehicle_param.front_edge_to_rear_axle;
       const double agent_s = corridor_upper_point.s();
       if (relative_t >= kUrgentWeightStartTime &&
           relative_t <= kUrgentWeightEndTime) {
-        const double curr_dist = agent_s - ego_s;
+        const double curr_dist = agent_s - ego_s_to_front;
         if (curr_dist < min_urgent_dist) {
           min_urgent_dist = curr_dist;
           closest_index = i;
@@ -123,16 +127,17 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     const double ego_speed = virtual_acc_curve->Evaluate(1, relative_t);
     const double agent_speed = corridor_upper_point.velocity();
     const double ego_s = virtual_acc_curve->Evaluate(0, relative_t);
+    const double ego_s_to_front = ego_s + vehicle_param.front_edge_to_rear_axle;
     const double agent_s = corridor_upper_point.s();
     const double urgent_distance = planning_math::LerpWithLimit(
         lower_urgent_distance, lower_urgent_speed, upper_urgent_distance,
         upper_urgent_speed, ego_speed);
     if (agent_speed - ego_speed < kUrgentSpeedThres &&
-        agent_s - ego_s < urgent_distance) {
+        agent_s - ego_s_to_front < urgent_distance) {
       is_urgent_ = true;
       urgent_scale = planning_math::LerpWithLimit(
           upper_urgent_scale, 0.0, lower_urgent_scale, urgent_distance,
-          agent_s - ego_s);
+          agent_s - ego_s_to_front);
     }
   }
 
