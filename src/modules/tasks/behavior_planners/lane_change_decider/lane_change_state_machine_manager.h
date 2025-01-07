@@ -148,6 +148,8 @@ class LaneChangeStateMachineManager {
   bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
   void CalculateLatCloseValue();
   void IsEgoOnSideLane();
+  bool IsLCFeasibleForTrafficCone(
+      const planning_data::DynamicAgentNode* traffic_cone) const;
 
   bool IsLatOffsetValid() const;
 

@@ -923,7 +923,6 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     LaneChangeStageInfo *const lc_state_info) {
   const double v_ego =
       session_->environmental_model().get_ego_state_manager()->ego_v();
-  double safety_dist = v_ego * v_ego * 0.02 + 2.0;
   const double distance_rel =
       target_lane_front_node_->node_back_edge_to_ego_front_edge_distance();
   const double node_v = target_lane_front_node_->node_speed();
@@ -946,13 +945,23 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     const double ego_front_node_v = ego_lane_front_node_->node_speed();
     const double ego_front_node_a = ego_lane_front_node_->node_accel();
 
-    const double ego_lane_need_safety_dist = planning::CalcGapObjSafeDistance(
-        v_ego, ego_front_node_v, ego_front_node_a, false, true);
-    if (ego_lane_distance_rel < ego_lane_need_safety_dist) {
-      lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
-                                  ego_lane_distance_rel, ego_front_node_v);
-      lc_state_info->gap_insertable = false;
-      lc_state_info->lc_invalid_reason = "front view invalid";
+    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+      if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
+        lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
+                                    ego_lane_distance_rel, ego_front_node_v);
+        lc_state_info->gap_insertable = false;
+        lc_state_info->lc_invalid_reason = "front view invalid";
+      }
+    } else {
+      const double ego_lane_need_safety_dist = planning::CalcGapObjSafeDistance(
+          v_ego, ego_front_node_v, ego_front_node_a, false,
+          true);
+      if (ego_lane_distance_rel < ego_lane_need_safety_dist) {
+        lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
+                                    ego_lane_distance_rel, ego_front_node_v);
+        lc_state_info->gap_insertable = false;
+        lc_state_info->lc_invalid_reason = "front view invalid";
+      }
     }
   }
 }
@@ -1584,6 +1593,38 @@ bool LaneChangeStateMachineManager::IsLatOffsetValid() const {
   const double lat_offset = std::abs(ego_l);
   if (lat_offset < lat_offset_threshold) {
     return true;
+  }
+  return false;
+}
+bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
+  const planning_data::DynamicAgentNode *traffic_cone) const {
+  const auto &current_lane = session_->environmental_model()
+                                  .get_reference_path_manager()
+                                  ->get_reference_path_by_current_lane();
+  const auto &current_lane_coord = current_lane->get_frenet_coord();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_need_dis = ego_state->ego_v() * kEgoReachBoundaryTime;
+  Point2D frenet_point;
+  Point2D traffic_cone_pt{traffic_cone->node_x(), traffic_cone->node_y()};
+  if (!current_lane_coord->XYToSL(traffic_cone_pt, frenet_point)) {
+    return false;
+  }
+
+  if (frenet_point.x - current_lane->get_frenet_ego_state().s() >
+      ego_need_dis) {
+    // 在变道所需的纵向距离之外，可以不用考虑，可以直接变道
+    return true;
+  } else {
+    //TODO(fengwang31):暂时把traffic_cone的横向距离限制距离中心线在1m以外则认为安全
+    //后续根据自车的轨迹点是否与锥桶有overlap来判断是否安全
+    if (transition_info_.lane_change_direction == RIGHT_CHANGE &&
+        frenet_point.y > 1.0) {
+      return true;
+    } else if (transition_info_.lane_change_direction == LEFT_CHANGE &&
+                frenet_point.y < -1.0) {
+      return true;
+    }
   }
   return false;
 }
