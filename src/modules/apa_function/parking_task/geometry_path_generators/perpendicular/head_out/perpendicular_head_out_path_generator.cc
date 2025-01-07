@@ -300,7 +300,7 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
       collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
     }
     const PathColDetRes path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg, 0.08);
+        TrimPathByCollisionDetection(tmp_path_seg, 0.20);
     // path_seg_vec.emplace_back(tmp_path_seg);
     if (path_col_det_res == PathColDetRes::NORMAL) {
       path_seg_vec.emplace_back(tmp_path_seg);
@@ -464,9 +464,9 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   const Eigen::Vector2d line_tangent_vec =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-      current_pose.pos.x() < 5.2) {
+      current_pose.pos.x() < 6.2) {
     const double move_lon =
-        6.5 - current_pose.pos.x();  // Two meters higher than the slot
+        7.0 - current_pose.pos.x();  // Two meters higher than the slot
     const double need_move_length = move_lon / cos(current_pose.heading);
     pnc::geometry_lib::PathPoint tmp_pose;
     Eigen::Vector2d tmp_pos =
