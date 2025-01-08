@@ -91,10 +91,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   double avg_curv = curv_sum / curv_window_vec.size();
   double road_radius = 1 / std::max(avg_curv, 0.0001);
-  if (road_radius < 750) {
+  if (road_radius < 400) {
     acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
   }
-  double v_limit_road = std::sqrt(acc_lat_max * road_radius) * 0.9;
+  double v_limit_road = std::sqrt(acc_lat_max * road_radius);
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
   LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
             acc_lat_max);

@@ -33,8 +33,8 @@ class SpeedLimitDecider : public Task {
   const std::vector<double> _A_TOTAL_MAX_V{1.5, 1.9, 3.2};
   const std::vector<double> _AY_MAX_ABS_BP{5.0, 10.0, 15.0, 30.0};
   const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.6, 1.6};
-  const std::vector<double> _AY_MAX_CURV_BP{100, 200, 400, 600};
-  const std::vector<double> _AY_MAX_CURV_V{1.6, 0.9, 0.5, 0.4};
+  const std::vector<double> _AY_MAX_CURV_BP{50, 100, 200, 300, 400};
+  const std::vector<double> _AY_MAX_CURV_V{2.2, 1.6, 1.1, 0.9, 0.8};
 
   SpeedLimitConfig speed_limit_config_;  // all configs
   double v_target_;                      // final v target
