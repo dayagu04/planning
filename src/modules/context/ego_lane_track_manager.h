@@ -164,13 +164,14 @@ class EgoLaneTrackManger {
       const std::shared_ptr<VirtualLane> base_lane,
       bool &virtual_lane_exist_virtual);
 
+  void ComputeIsSplitRegion(
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const std::vector<int>& order_ids);
+
  private:
   planning::framework::Session *session_ = nullptr;
   // int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
-  std::shared_ptr<VirtualLane> current_lane_ = nullptr;
-  std::shared_ptr<VirtualLane> left_lane_ = nullptr;
-  std::shared_ptr<VirtualLane> right_lane_ = nullptr;
   std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;
   // uint lane_num_ = 0;
   uint last_zero_relative_id_nums_ = 0;
@@ -195,6 +196,9 @@ class EgoLaneTrackManger {
   bool is_select_ego_lane_without_plan_ = false;
   bool is_select_ego_lane_with_plan_ = false;
   double current_segment_passed_distance_ = 0.0;
+  bool ego_in_split_region_ = false;
+  std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
 };
 
 }  // namespace planning

@@ -55,7 +55,11 @@ constexpr int32_t kLeastDefaultPointNums = 3;
 constexpr double kConsiderLaneStraightFrontEgo = 30.0;
 constexpr double kDefaultMappingConsiderLaneLength = 70.0;
 constexpr double kDefaultConsiderLaneMarksLength = 80.0;
-
+constexpr double kEgoPreviewTimeMinThd = 3.0;
+constexpr double kEgoPreviewTimeMaxThd = 5.0;
+constexpr double kExistSplitLateralDisThd = 1.5;
+constexpr double kCenterLineLateralDisThd = 0.8;
+constexpr double kNearPreviewDistanceThd = 20.0;
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(planning::framework::Session* session) {
@@ -96,7 +100,11 @@ void EgoLaneTrackManger::TrackEgoLane(
   is_in_ramp_select_split_situation_ = false;
   is_on_road_select_ramp_situation_ = false;
 
-  if (zero_relative_id_nums < 2) {
+  //判断自车是否处于分流场景
+  ComputeIsSplitRegion(
+      relative_id_lanes, order_ids_of_same_zero_relative_id);
+
+  if (zero_relative_id_nums < 2 || !ego_in_split_region_) {
     last_zero_relative_id_order_id_index_ = -1;
     last_track_ego_lane_ = nullptr;
   }
@@ -114,8 +122,9 @@ void EgoLaneTrackManger::TrackEgoLane(
         return;
       }
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2 &&
-            !is_in_lane_borrow_status) {
+        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2
+            &&!is_in_lane_borrow_status
+            && ego_in_split_region_) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -170,8 +179,9 @@ void EgoLaneTrackManger::TrackEgoLane(
         }
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
-        if (zero_relative_id_nums > 1 && lane_keep_status &&
-            !is_in_lane_borrow_status) {
+        if (zero_relative_id_nums > 1 && lane_keep_status
+            && !is_in_lane_borrow_status
+            && ego_in_split_region_) {
           PreprocessIntersectionSplit(relative_id_lanes,
                                       order_ids_of_same_zero_relative_id);
           LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
@@ -336,9 +346,6 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
 void EgoLaneTrackManger::Reset() {
   current_lane_virtual_id_ = 0;
   // order_id_mapped_lanes_.clear();
-  current_lane_ = nullptr;
-  left_lane_ = nullptr;
-  right_lane_ = nullptr;
   dis_to_ramp_ = NL_NMAX;
   distance_to_first_road_merge_ = NL_NMAX;
   distance_to_first_road_split_ = NL_NMAX;
@@ -2168,4 +2175,104 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
   }
   return;
 }
+
+void EgoLaneTrackManger::ComputeIsSplitRegion(
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const std::vector<int>& order_ids) {
+  std::shared_ptr<VirtualLane> relative_left_lane = nullptr;
+  std::shared_ptr<VirtualLane> relative_right_lane = nullptr;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  double ego_vel = ego_state->ego_v();
+  // if (ego_vel < kApprochingRampSpeedThd) {
+  //   return;
+  // }
+  Point2D ego_point = {ego_state->planning_init_point().x,
+                       ego_state->planning_init_point().y};
+  if (order_ids.size() < 2) {
+    ego_in_split_region_ = false;
+    return;
+  }else if (order_ids.size() > 2) {
+    ego_in_split_region_ = true;
+    return;
+  } else {
+    if (order_ids[0] < relative_id_lanes.size()) {
+      relative_left_lane = relative_id_lanes[order_ids[0]];
+    }
+    if (order_ids[1] < relative_id_lanes.size()) {
+      relative_right_lane = relative_id_lanes[order_ids[1]];
+    }
+
+    bool has_left_lane = false;
+    bool has_right_lane = false;
+    if (relative_left_lane != nullptr) {
+      if (relative_left_lane->get_lane_frenet_coord() != nullptr) {
+        has_left_lane = true;
+      }
+    }
+    if (relative_right_lane != nullptr) {
+      if (relative_right_lane->get_lane_frenet_coord() != nullptr) {
+        has_right_lane = true;
+      }
+    }
+
+    const auto& relative_left_lane_points = relative_left_lane->lane_points();
+    if (!has_left_lane || !has_right_lane ||
+        relative_left_lane_points.size() < 3) {
+      ego_in_split_region_ = false;
+      return;
+    }
+
+    const auto& right_lane_frenet_crd = 
+        relative_right_lane->get_lane_frenet_coord();
+    double ego_s_base_right = 0.0;
+    double ego_l_base_right = 0.0;
+    right_lane_frenet_crd->XYToSL(ego_point.x, ego_point.y, &ego_s_base_right,
+                                  &ego_l_base_right);
+    double near_average_l = 0.0;
+    double far_average_l = 0.0;
+    int32_t near_pt_count = 0;
+    int32_t far_pt_count = 0;
+    double near_pt_sum_l = 0.0;
+    double far_pt_sum_l = 0.0;
+    for (const auto point : relative_left_lane_points) {
+      if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
+        LOG_ERROR("update_lane_points: skip NaN point");
+        continue;
+      }
+      double pt_s = 0.0;
+      double pt_l = 0.0;
+      right_lane_frenet_crd->XYToSL(point.local_point.x, point.local_point.y,
+                                    &pt_s, &pt_l);
+      const double pt_distance_to_ego = pt_s - ego_s_base_right;
+      if (pt_l < 0.0 || pt_s > right_lane_frenet_crd->Length()) {
+        continue;
+      }
+      if (pt_distance_to_ego > -kNearPreviewDistanceThd &&
+          pt_distance_to_ego < 0.0) {
+        ++near_pt_count;
+        near_pt_sum_l += pt_l;
+      }
+      if (pt_distance_to_ego > kEgoPreviewTimeMinThd * ego_vel &&
+          pt_distance_to_ego < kEgoPreviewTimeMaxThd * ego_vel) {
+        ++far_pt_count;
+        far_pt_sum_l += pt_l;
+      }
+    }
+    near_pt_count = std::max(near_pt_count, 1);
+    far_pt_count = std::max(far_pt_count, 1);
+
+    near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
+    far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
+
+    if ((far_average_l - kExistSplitLateralDisThd > near_average_l) ||
+        near_average_l < kCenterLineLateralDisThd) {
+      ego_in_split_region_ = true;
+      return;
+    }
+  }
+
+  return;
+}
+
 }  // namespace planning
