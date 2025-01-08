@@ -36,6 +36,9 @@ void ApaSlotManager::Update(
 
   dist_id_map_.clear();
   slots_map_.clear();
+  ILOG_INFO << "parking_fusion_slot_lists_size = "
+            << static_cast<int>(local_view->parking_fusion_info
+                                    .parking_fusion_slot_lists_size);
 
   for (uint8_t i = 0;
        i < local_view->parking_fusion_info.parking_fusion_slot_lists_size;
@@ -89,6 +92,9 @@ void ApaSlotManager::Update(
     } else if (state_machine_ptr_->IsParkingStatus()) {
     }
   }
+
+  ego_info_under_slot_.confidence =
+      slots_map_[ego_info_under_slot_.id].confidence_;
 
   const SlotReleaseState last_geometry_release =
       ego_info_under_slot_.slot.release_info_

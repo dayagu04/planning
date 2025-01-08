@@ -314,15 +314,13 @@ const bool ParkingScenario::UpdateObstacleLocal() {
   std::vector<Eigen::Vector2d> obs_pt_vec;
   ego_slot_info.obs_pt_vec_slot.clear();
 
-  if (apa_param.GetParam().use_uss_pt_clound) {
-    // 获取超声波点云
-    if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
-                                          obs_vec)) {
-      for (const auto& obs : obs_vec) {
-        ego_slot_info.obs_pt_vec_slot.insert(
-            ego_slot_info.obs_pt_vec_slot.end(),
-            obs->GetPtClout2dLocal().begin(), obs->GetPtClout2dLocal().end());
-      }
+  // 获取超声波点云
+  if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                        obs_vec)) {
+    for (const auto& obs : obs_vec) {
+      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
+                                           obs->GetPtClout2dLocal().begin(),
+                                           obs->GetPtClout2dLocal().end());
     }
   }
 

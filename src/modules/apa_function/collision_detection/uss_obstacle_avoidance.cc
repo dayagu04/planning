@@ -474,7 +474,7 @@ void UssObstacleAvoidance::CalRemainDist() {
     for (size_t j = 0; j < car_local_vertex_vec_.size(); ++j) {
       if (car_motion_info_.car_motion_mode == LINE_MODE) {
         car_local_line = car_local_line_vec_[j];
-        if (pnc::geometry_lib::GetArcLineIntersection(
+        if (pnc::geometry_lib::GetArcLineSegIntersection(
                 intersection, uss_local_arc, car_local_line)) {
           dist = (intersection - car_local_line.pA).norm();
         }
@@ -592,16 +592,17 @@ void UssObstacleAvoidance::Update(
   CollisionDetector::CollisionResult result = col_det.UpdateByObsMap(
       predict_path_ptr->GetPredictPath(), param_.lat_inflation, 0.0);
 
-  const double dist =
-      col_det.CalClosestDistFromObsToCar(pnc::geometry_lib::PathPoint(
-          measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading()));
+  const double dist = col_det.CalClosestDistFromObsToCar(
+      pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
+                                   measure_data_ptr_->GetHeading()),
+      0.0);
   double vel_target = 1.168;
   if (!apa_param.GetParam().enable_corner_uss_process) {
     // limit vel
     if (dist + param_.lat_inflation < 0.268) {
       ILOG_INFO << "obs2car_dist is dangerous, reduce vel";
       vel_target =
-          std::max(0.368, std::fabs(measure_data_ptr_->GetVel()) - 0.28 * 0.1);
+          std::max(0.4, std::fabs(measure_data_ptr_->GetVel()) - 0.28 * 0.1);
     } else {
       ILOG_INFO << "obs2car_dist is safe, increase vel";
       vel_target = pnc::mathlib::Constrain(

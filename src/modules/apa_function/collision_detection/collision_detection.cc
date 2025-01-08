@@ -20,13 +20,27 @@ namespace apa_planner {
 const bool box = true;
 const double col_sample_ds = 0.1;
 void CollisionDetector::Init() {
+  const ApaParameters &param = apa_param.GetParam();
+  origin_car_local_rectangle_vertex_vec_.clear();
+  origin_car_local_rectangle_vertex_vec_.resize(4);
+  origin_car_local_rectangle_vertex_vec_[0]
+      << param.wheel_base + param.front_overhanging,
+      0.5 * param.max_car_width;
+  origin_car_local_rectangle_vertex_vec_[1]
+      << param.wheel_base + param.front_overhanging,
+      -0.5 * param.max_car_width;
+  origin_car_local_rectangle_vertex_vec_[2] << -param.rear_overhanging,
+      -0.5 * param.max_car_width;
+  origin_car_local_rectangle_vertex_vec_[3] << -param.rear_overhanging,
+      0.5 * param.max_car_width;
+
   car_line_local_vec_.clear();
-  car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  car_line_local_vec_.reserve(param.car_vertex_x_vec.size());
   car_local_vertex_vec_.clear();
-  car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  car_local_vertex_vec_.reserve(param.car_vertex_x_vec.size());
 
   double max_y_abs = 0.0;
-  for (const double &y : apa_param.GetParam().car_vertex_y_vec) {
+  for (const double &y : param.car_vertex_y_vec) {
     if (std::fabs(y) > max_y_abs) {
       max_y_abs = std::fabs(y);
     }
@@ -34,14 +48,11 @@ void CollisionDetector::Init() {
 
   std::vector<double> inflated_car_local_vertex_y_vec;
   inflated_car_local_vertex_y_vec.clear();
-  inflated_car_local_vertex_y_vec.resize(
-      apa_param.GetParam().car_vertex_y_vec.size());
+  inflated_car_local_vertex_y_vec.resize(param.car_vertex_y_vec.size());
 
-  origin_car_local_vertex_vec_.resize(
-      apa_param.GetParam().car_vertex_y_vec.size());
-  for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
-    inflated_car_local_vertex_y_vec[i] =
-        apa_param.GetParam().car_vertex_y_vec[i];
+  origin_car_local_vertex_vec_.resize(param.car_vertex_y_vec.size());
+  for (size_t i = 0; i < param.car_vertex_y_vec.size(); ++i) {
+    inflated_car_local_vertex_y_vec[i] = param.car_vertex_y_vec[i];
     const double side_sgn =
         inflated_car_local_vertex_y_vec[i] > 0.0 ? 1.0 : -1.0;
 
@@ -54,23 +65,21 @@ void CollisionDetector::Init() {
 
     inflated_car_local_vertex_y_vec[i] += side_sgn * param_.lat_inflation;
 
-    origin_car_local_vertex_vec_[i] << apa_param.GetParam().car_vertex_x_vec[i],
-        apa_param.GetParam().car_vertex_y_vec[i];
+    origin_car_local_vertex_vec_[i] << param.car_vertex_x_vec[i],
+        param.car_vertex_y_vec[i];
   }
 
   pnc::geometry_lib::LineSegment car_line;
   Eigen::Vector2d p1;
   Eigen::Vector2d p2;
 
-  for (size_t i = 0; i < apa_param.GetParam().car_vertex_x_vec.size(); ++i) {
-    p1 << apa_param.GetParam().car_vertex_x_vec[i],
-        inflated_car_local_vertex_y_vec[i];
-    if (i < apa_param.GetParam().car_vertex_x_vec.size() - 1) {
-      p2 << apa_param.GetParam().car_vertex_x_vec[i + 1],
+  for (size_t i = 0; i < param.car_vertex_x_vec.size(); ++i) {
+    p1 << param.car_vertex_x_vec[i], inflated_car_local_vertex_y_vec[i];
+    if (i < param.car_vertex_x_vec.size() - 1) {
+      p2 << param.car_vertex_x_vec[i + 1],
           inflated_car_local_vertex_y_vec[i + 1];
     } else {
-      p2 << apa_param.GetParam().car_vertex_x_vec[0],
-          inflated_car_local_vertex_y_vec[0];
+      p2 << param.car_vertex_x_vec[0], inflated_car_local_vertex_y_vec[0];
     }
     car_line.SetPoints(p1, p2);
     car_line_local_vec_.emplace_back(car_line);
@@ -216,7 +225,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
     return col_res;
   }
 
-  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer, 0.5);
 
   col_res.remain_car_dist = path_seg.Getlength();
 
@@ -225,10 +234,10 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
         edt_col_det_.CalPathRemainDistAndObsDist(point_set, col_sample_ds,
                                                  path_seg.seg_gear);
     col_res.remain_dist = remain_dist_obs_dist_pair.first;
-    col_res.obs2car_dist = remain_dist_obs_dist_pair.second;
+    col_res.obs2car_dist = remain_dist_obs_dist_pair.second + lat_buffer;
   } else {
-    col_res.remain_dist = edt_col_det_.CalPathSafeDist(point_set, col_sample_ds,
-                                                       path_seg.seg_gear);
+    col_res.remain_dist = edt_col_det_.CalPathRemainDist(
+        point_set, col_sample_ds, path_seg.seg_gear);
   }
 
   col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;
@@ -380,6 +389,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     param_.lat_inflation = lat_buffer;
     SetParam(param_);
   }
+  CalPathSegBound(path_seg);
   if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
     col_res = UpdateByObsMap(path_seg.line_seg, path_seg.GetStartHeading());
   } else {
@@ -389,6 +399,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
                                  col_res.remain_obstacle_dist - lon_buffer);
 
   col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;
+  col_res.traj_bound = path_seg_rectangle_bound_.GetRectanglePtVec();
   return col_res;
 }
 
@@ -415,13 +426,13 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     car_line_global_vec.emplace_back(car_line_global);
   }
 
-  std::vector<Eigen::Vector2d> traj_bound;
-  if (box) {
-    pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
-    pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
-    // CalTrajBound(traj_bound, start_pose, target_pose, true);
-    traj_bound = CalTrajBound(start_pose, target_pose);
-  }
+  // std::vector<Eigen::Vector2d> traj_bound;
+  // if (box) {
+  //   pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
+  //   pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
+  //   // CalTrajBound(traj_bound, start_pose, target_pose, true);
+  //   traj_bound = CalTrajBound(start_pose, target_pose);
+  // }
 
   // detect if there is intersection(point_P) between obstacle and car line
   // segment
@@ -443,18 +454,26 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
-      if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
-          box) {
+      // if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
+      //     box) {
+      //   continue;
+      // }
+      if (!path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
         continue;
       }
+
       for (size_t j = 0; j < car_line_global_vec.size(); ++j) {
         car_line_global = car_line_global_vec[j];
         obs_move_line.pA = obs_pt_global;
         obs_move_line.pB =
             obs_move_line.pA + min_obs_move_dist * unit_obs_move_line;
-        if (GetIntersectionFromTwoLineSeg(cross_point, car_line_global,
-                                          obs_move_line)) {
-          const auto dist_CP = (cross_point - obs_move_line.pA).norm();
+        // const bool has_intersection = GetIntersectionFromTwoLineSeg(
+        //     cross_point, car_line_global, obs_move_line);
+        const bool has_intersection =
+            pnc::geometry_lib::CalcTwoLineSegIntersection(
+                cross_point, car_line_global, obs_move_line);
+        if (has_intersection) {
+          const double dist_CP = (cross_point - obs_move_line.pA).norm();
           if (dist_CP < min_obs_move_dist) {
             col_pt_ego_global = cross_point;
             min_obs_move_dist = dist_CP;
@@ -491,7 +510,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     result.car_line_order = col_car_line_order;
     result.obs_type = col_obs_type;
   }
-  result.traj_bound = traj_bound;
+  // result.traj_bound = traj_bound;
   return result;
 }
 
@@ -627,13 +646,13 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     car_line_global_vec.emplace_back(car_line_global);
   }
 
-  std::vector<Eigen::Vector2d> traj_bound;
-  if (box) {
-    pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
-    pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
-    // CalTrajBound(traj_bound, start_pose, target_pose, false);
-    traj_bound = CalTrajBound(start_pose, target_pose, arc);
-  }
+  // std::vector<Eigen::Vector2d> traj_bound;
+  // if (box) {
+  //   pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
+  //   pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
+  //   // CalTrajBound(traj_bound, start_pose, target_pose, false);
+  //   traj_bound = CalTrajBound(start_pose, target_pose, arc);
+  // }
 
   // obstacle arc segment
   const auto v_OA = arc.pA - arc.circle_info.center;
@@ -657,15 +676,25 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
-      if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
-          box) {
+      // if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
+      //     box) {
+      //   continue;
+      // }
+
+      if (!path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
         continue;
       }
+
       for (size_t j = 0; j < car_line_global_vec.size(); ++j) {
         car_line_global = car_line_global_vec[j];
         obs_rot_circle.center = arc.circle_info.center;
         obs_rot_circle.radius = (obs_pt_global - obs_rot_circle.center).norm();
-        const double num = pnc::geometry_lib::CalcCrossPointsOfLineSegAndCircle(
+
+        // const size_t num =
+        // pnc::geometry_lib::CalcCrossPointsOfLineSegAndCircle(
+        //     car_line_global, obs_rot_circle, cross_points);
+
+        const size_t num = pnc::geometry_lib::CalcLineSegAndCircleIntersection(
             car_line_global, obs_rot_circle, cross_points);
 
         if (num == 0) {
@@ -673,30 +702,33 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
           continue;
         }
 
-        const auto v_OC = obs_pt_global - arc.circle_info.center;
+        const Eigen::Vector2d v_OC = obs_pt_global - arc.circle_info.center;
         Eigen::Vector2d D;
+        double obs_rot_angle = 0.0;
         if (num == 1) {
           D = cross_points.front();
+          const Eigen::Vector2d v_OD = D - arc.circle_info.center;
+          obs_rot_angle = pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD);
         } else if (num == 2) {
-          const auto v_OD1 = cross_points.front() - arc.circle_info.center;
-          const auto v_OD2 = cross_points.back() - arc.circle_info.center;
+          const Eigen::Vector2d v_OD1 =
+              cross_points.front() - arc.circle_info.center;
+          const Eigen::Vector2d v_OD2 =
+              cross_points.back() - arc.circle_info.center;
 
-          const auto obs_rot_angle1 =
+          const double obs_rot_angle1 =
               pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD1);
 
-          const auto obs_rot_angle2 =
+          const double obs_rot_angle2 =
               pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD2);
 
           if (std::fabs(obs_rot_angle1) < std::fabs(obs_rot_angle2)) {
             D = cross_points.front();
+            obs_rot_angle = obs_rot_angle1;
           } else {
             D = cross_points.back();
+            obs_rot_angle = obs_rot_angle2;
           }
         }
-        const auto v_OD = D - arc.circle_info.center;
-
-        const auto obs_rot_angle =
-            pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD);
 
         if (obs_rot_angle * car_rot_angle < 0.0 &&
             fabs(obs_rot_angle) < fabs(min_obs_rot_limit_angle)) {
@@ -738,7 +770,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     result.car_line_order = col_car_line_order;
     result.obs_type = col_obs_type;
   }
-  result.traj_bound = traj_bound;
+  // result.traj_bound = traj_bound;
   return result;
 }
 
@@ -1293,15 +1325,15 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
   Eigen::Vector2d car_vertex;
   std::vector<Eigen::Vector2d> car_vertex_vec;
   std::vector<pnc::geometry_lib::Arc> arc_vec;
-  arc_vec.reserve(car_line_local_vec_.size());
+  arc_vec.reserve(origin_car_local_rectangle_vertex_vec_.size());
   pnc::geometry_lib::Arc temp_arc = arc;
   car_vertex_vec.clear();
-  car_vertex_vec.reserve(2 * car_line_local_vec_.size());
-  for (size_t i = 0; i < car_line_local_vec_.size(); ++i) {
-    car_vertex = l2g_tf_start.GetPos(car_line_local_vec_[i].pA);
+  car_vertex_vec.reserve(2 * origin_car_local_rectangle_vertex_vec_.size());
+  for (size_t i = 0; i < origin_car_local_rectangle_vertex_vec_.size(); ++i) {
+    car_vertex = l2g_tf_start.GetPos(origin_car_local_rectangle_vertex_vec_[i]);
     car_vertex_vec.emplace_back(car_vertex);
     temp_arc.pA = car_vertex;
-    car_vertex = l2g_tf_end.GetPos(car_line_local_vec_[i].pA);
+    car_vertex = l2g_tf_end.GetPos(origin_car_local_rectangle_vertex_vec_[i]);
     car_vertex_vec.emplace_back(car_vertex);
     temp_arc.pB = car_vertex;
     temp_arc.circle_info.radius =
@@ -1328,7 +1360,7 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
   }
 
-  double bound_expand = 2.0;
+  double bound_expand = 3.2;
   min_x -= bound_expand;
   min_y -= bound_expand;
   max_x += bound_expand;
@@ -1340,7 +1372,7 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
   bool flag = true;
   uint8_t i = 0;
   const uint8_t count = 9;
-  const double dx_dy = 0.3;
+  const double dx_dy = 0.4;
 
   do {
     i++;
@@ -1358,8 +1390,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       max_x -= dx_dy;
+      std::cout << "find max x = " << max_x;
     } else {
       max_x += dx_dy;
+      std::cout << "finded max x = " << max_x;
     }
   } while (flag);
 
@@ -1381,8 +1415,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       max_y -= dx_dy;
+      std::cout << "find max y = " << max_y;
     } else {
       max_y += dx_dy;
+      std::cout << "finded max y = " << max_y;
     }
   } while (flag);
 
@@ -1404,8 +1440,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       min_x += dx_dy;
+      std::cout << "find min x = " << min_x;
     } else {
       min_x -= dx_dy;
+      std::cout << "finded min x = " << min_x;
     }
   } while (flag);
 
@@ -1427,15 +1465,18 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       min_y += dx_dy;
+      std::cout << "find min y = " << min_y;
     } else {
       min_y -= dx_dy;
+      std::cout << "finded min y = " << min_y;
     }
   } while (flag);
 
   // DEBUG_PRINT("max_x = " << max_x << "  min_x = " << min_x
   //                        << "  max_y = " << max_y << "  min_y = " << min_y);
 
-  bound_expand = apa_param.GetParam().col_obs_safe_dist_strict + 0.01;
+  // bound_expand = apa_param.GetParam().col_obs_safe_dist_strict + 0.01;
+  bound_expand = 0.5;
 
   min_x -= bound_expand;
   min_y -= bound_expand;
@@ -1648,8 +1689,62 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
   return ObsSlotType::OBS_INVALID;
 }
 
+const std::vector<Eigen::Vector2d> CollisionDetector::CalPathSegBound(
+    const pnc::geometry_lib::PathSegment &path_seg) {
+  std::vector<Eigen::Vector2d> bound;
+  bound.resize(4);
+  std::vector<pnc::geometry_lib::PathPoint> pose_vec;
+  pose_vec.reserve(4);
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    pose_vec.emplace_back(path_seg.GetStartPose());
+    pose_vec.emplace_back(path_seg.GetEndPose());
+  } else {
+    pnc::geometry_lib::PathPoint pose;
+    double length = 0.0;
+    while (length < path_seg.Getlength() - 3e-2) {
+      CalPtFromPathSeg(pose, path_seg, length);
+      pose_vec.emplace_back(pose);
+      length += 30 * kDeg2Rad * path_seg.arc_seg.circle_info.radius;
+    }
+    pose_vec.emplace_back(path_seg.GetEndPose());
+  }
+  std::vector<Eigen::Vector2d> car_vertex_vec;
+  Eigen::Vector2d car_vertex;
+  car_vertex_vec.clear();
+  car_vertex_vec.reserve(pose_vec.size() * 4 + 4);
+  for (const auto &pose : pose_vec) {
+    pnc::geometry_lib::LocalToGlobalTf l2g_tf(pose.pos, pose.heading);
+    for (size_t i = 0; i < origin_car_local_rectangle_vertex_vec_.size(); ++i) {
+      car_vertex = l2g_tf.GetPos(origin_car_local_rectangle_vertex_vec_[i]);
+      car_vertex_vec.emplace_back(car_vertex);
+    }
+  }
+
+  double x_min = 0.0, y_min = 0.0, x_max = 0.0, y_max = 0.0;
+  pnc::geometry_lib::GetPolygonBound(&x_min, &x_max, &y_min, &y_max,
+                                     car_vertex_vec);
+  x_min -= 0.5;
+  y_min -= 0.5;
+  x_max += 0.5;
+  y_max += 0.5;
+
+  bound[0] << x_min, y_max;
+  bound[1] << x_max, y_max;
+  bound[2] << x_max, y_min;
+  bound[3] << x_min, y_min;
+
+  path_seg_rectangle_bound_.Set(x_min, y_min, x_max, y_max);
+
+  return bound;
+}
+
 const double CollisionDetector::CalClosestDistFromObsToCar(
-    const pnc::geometry_lib::PathPoint &ego_pose) {
+    const pnc::geometry_lib::PathPoint &ego_pose, const double lat_buffer,
+    const bool safe_flag) {
+  if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
+    param_.lat_inflation = lat_buffer;
+    SetParam(param_);
+  }
   // car line segment
   std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
   car_line_global_vec.clear();
@@ -1667,10 +1762,36 @@ const double CollisionDetector::CalClosestDistFromObsToCar(
     car_polygon.emplace_back(car_line_global.pA);
   }
 
-  double min_dist = 166.6;
+  // 先假设车体是个较大的矩形  在矩形之外的统一设成一个值 视为安全
+  const Eigen::Vector2d ego_center =
+      ego_pose.pos + pnc::geometry_lib::GenHeadingVec(ego_pose.heading) *
+                         (apa_param.GetParam().car_length * 0.5 -
+                          apa_param.GetParam().rear_overhanging);
+  std::vector<Eigen::Vector2d> rectangle;
+  if (!pnc::geometry_lib::GetRectangle(ego_center, ego_pose.heading, 5.2, 2.4,
+                                       rectangle)) {
+    return 0.0;
+  }
+
+  double x_min = 0.0, y_min = 0.0, x_max = 0.0, y_max = 0.0;
+  if (!pnc::geometry_lib::GetPolygonBound(&x_min, &x_max, &y_min, &y_max,
+                                          rectangle)) {
+    return 0.0;
+  }
+  x_min -= 0.86;
+  y_min -= 0.86;
+  x_max += 0.86;
+  y_max += 0.86;
+
+  double min_dist = 6.8;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {
-      if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt_global)) {
+      if (obs_pt_global.x() < x_min || obs_pt_global.x() > x_max ||
+          obs_pt_global.y() < y_min || obs_pt_global.y() > y_max) {
+        continue;
+      }
+      if (!safe_flag &&
+          pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt_global)) {
         return 0.0;
       }
       for (const auto &car_line_global : car_line_global_vec) {

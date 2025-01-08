@@ -170,8 +170,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
+  GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 
@@ -219,7 +219,8 @@ class CollisionDetector {
                              double safe_dist);
 
   const double CalClosestDistFromObsToCar(
-      const pnc::geometry_lib::PathPoint &ego_pose);
+      const pnc::geometry_lib::PathPoint &ego_pose, const double lat_buffer,
+      const bool safe_flag = true);
 
   const bool CalTrajBound(std::vector<Eigen::Vector2d> &traj_bound,
                           const pnc::geometry_lib::PathPoint &start_pose,
@@ -236,6 +237,9 @@ class CollisionDetector {
       const pnc::geometry_lib::Arc &arc);
 
   const double GetCarMaxX(const pnc::geometry_lib::PathPoint &ego_pose);
+
+  const std::vector<Eigen::Vector2d> CalPathSegBound(
+      const pnc::geometry_lib::PathSegment &path_seg);
 
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
@@ -255,6 +259,9 @@ class CollisionDetector {
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_global_map_;
 
   std::vector<pnc::geometry_lib::LineSegment> obs_line_global_vec_;
+
+  pnc::geometry_lib::RectangleBound path_seg_rectangle_bound_;
+  std::vector<Eigen::Vector2d> origin_car_local_rectangle_vertex_vec_;
 
   Paramters param_;
 

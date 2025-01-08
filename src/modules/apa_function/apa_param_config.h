@@ -133,6 +133,8 @@ struct ApaParameters {
   double finish_lat_err_strict = 0.036;
   double finish_lon_err = 0.2;
   double finish_heading_err = 0.88;
+  double should_stop_lat_err = 0.10;
+  double should_stop_heading_err = 1.0;
   double finish_uss_slot_occupied_ratio = 0.668;
   double finish_heading_err_loose = 2.868;
   double finish_parallel_lat_err = 0.1;
