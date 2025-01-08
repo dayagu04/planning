@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from contruct_scenario import construct_scenario
 from lib.load_local_view_parking import *
 from bokeh.events import Tap
-from bokeh.models import Range1d
+from bokeh.models import Range1d, Arrow, NormalHead
 from bokeh.io import export_svgs
 from jupyter_pybind import parallel_planning_py
 from bokeh.models import SingleIntervalTicker
@@ -23,6 +23,67 @@ from bokeh.io import export_png
 
 kRad2Deg = 180.0 / pi
 kDeg2Rad = pi / 180.0
+
+lon_dist = 0.9
+word_size_pt = '22pt'
+
+def cal_common_circle(x0, y0, x1, y1, x2, y2):
+    # 计算向量 v1 = P1 - P0, v2 = P2 - P0
+    v1 = (x1 - x0, y1 - y0)
+    v2 = (x2 - x0, y2 - y0)
+
+    # 计算垂直向量 v1_perp = (-v1_y, v1_x), v2_perp = (-v2_y, v2_x)
+    v1_perp = (-v1[1], v1[0])
+    v2_perp = (-v2[1], v2[0])
+
+    # 计算中点 M1 = (P0 + P1) / 2, M2 = (P0 + P2) / 2
+    M1 = ((x0 + x1) / 2, (y0 + y1) / 2)
+    M2 = ((x0 + x2) / 2, (y0 + y2) / 2)
+
+    # 计算圆心 (a, b) 作为两条垂直平分线的交点
+    # 方程形式：M1 + t * v1_perp = M2 + s * v2_perp
+    # 解方程组得到 t 或 s
+    A = v1_perp[0]
+    B = -v2_perp[0]
+    C = v1_perp[1]
+    D = -v2_perp[1]
+    E = M2[0] - M1[0]
+    F = M2[1] - M1[1]
+
+    # 解线性方程组
+    denominator = A * D - B * C
+    if denominator == 0:
+        raise ValueError("三个点共线，无法确定唯一的圆")
+
+    t = (D * E - B * F) / denominator
+
+    # 计算圆心
+    a = M1[0] + t * v1_perp[0]
+    b = M1[1] + t * v1_perp[1]
+
+    # 计算半径
+    r = ((a - x0) ** 2 + (b - y0) ** 2) ** 0.5
+
+    return [a, b], r
+
+def find_shift_points(path_x_vec, path_y_vec, path_heading_vec):
+  x_vec_size = len(path_x_vec)
+  y_vec_size = len(path_y_vec)
+  heading_vec_size = len(path_heading_vec)
+  if x_vec_size != y_vec_size or x_vec_size != heading_vec_size or x_vec_size < 3:
+    return [],[]
+
+  x_res_vec = []
+  y_res_vec = []
+  heading_res_vec = []
+  for i in range(1, x_vec_size - 1):
+    v_1 = np.array([path_x_vec[i+1] - path_x_vec[i], path_y_vec[i+1] - path_y_vec[i]])
+    v_0 = np.array([path_x_vec[i] - path_x_vec[i-1], path_y_vec[i] - path_y_vec[i-1]])
+    if np.dot(v_1, v_0) < 1e-9:
+      x_res_vec.append(path_x_vec[i])
+      y_res_vec.append(path_y_vec[i])
+      heading_res_vec.append(path_heading_vec[i])
+  return x_res_vec, y_res_vec, heading_res_vec
 
 def load_car_box(path_x_vec, path_y_vec, path_theta_vec, car_xb, car_yb):
   car_box_x_vec = []
@@ -47,6 +108,16 @@ def load_ego_car_corner_path(path_x_vec, path_y_vec, path_heading_vec, car_local
     corner_path_y_vec.append(tmp_y)
   return corner_path_x_vec, corner_path_y_vec
 
+def load_ego_car_given_corner_path(path_x_vec, path_y_vec, path_heading_vec, car_local_x, car_local_y, idx_vec):
+  corner_path_x_vec = []
+  corner_path_y_vec = []
+  for idx in idx_vec:
+    tmp_x_vec, tmp_y_vec = load_ego_car_corner_path(path_x_vec, path_y_vec, path_heading_vec, car_local_x[idx], car_local_y[idx])
+    corner_path_x_vec.append(tmp_x_vec)
+    corner_path_y_vec.append(tmp_y_vec)
+  return corner_path_x_vec, corner_path_y_vec
+
+
 def load_ego_car_box(ego_x, ego_y, ego_heading, car_xb, car_yb):
   car_xn = []
   car_yn = []
@@ -60,6 +131,7 @@ def load_ego_car_box(ego_x, ego_y, ego_heading, car_xb, car_yb):
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
+car_idx_vec = [5]
 car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0)
 coord_tf = coord_transformer()
 
@@ -86,6 +158,9 @@ data_all_debug_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_tra_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
+data_tra_park_out_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_adv_park_out_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+
 data_slot = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_other_slot = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
@@ -106,6 +181,25 @@ data_debug_arc = ColumnDataSource(data = {'cx_vec':[],
 data_extra_region = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_obs_car_polygon = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
+data_adv_arrow = ColumnDataSource(data={
+    'x_start': [],
+    'y_start': [],
+    'x_end': [],
+    'y_end': []
+})
+
+data_tra_arrow = ColumnDataSource(data={
+    'x_start': [],
+    'y_start': [],
+    'x_end': [],
+    'y_end': []
+})
+
+tra_park_out_pos_heading = 100
+adv_park_out_pos_heading = 100
+tra_min_corner_dist = 100
+adv_min_corner_dist = 100
+
 # fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=700, height=600, match_aspect = True, aspect_scale=1)
 
 fig1 = bkp.figure(width=1200, height=800, match_aspect = True, aspect_scale=1)
@@ -118,16 +212,16 @@ fig1.outline_line_width = 1.0  # 可以调整边框线条的宽度
 fig1.x_range = Range1d(start = -1.1, end = 7.2)
 fig1.y_range = Range1d(start = -2.1, end = 2.5)
 
-fig1.xaxis.axis_label_text_font_size = '18pt'
+fig1.xaxis.axis_label_text_font_size = word_size_pt
 fig1.xaxis.axis_label_text_font = 'Times New Roman'
 
-fig1.yaxis.axis_label_text_font_size = '18pt'
+fig1.yaxis.axis_label_text_font_size = word_size_pt
 fig1.yaxis.axis_label_text_font = 'Times New Roman'
 
-fig1.xaxis.major_label_text_font_size = '18pt'  # 设置x轴字体大小
+fig1.xaxis.major_label_text_font_size = word_size_pt  # 设置x轴字体大小
 fig1.xaxis.major_label_text_font = 'Times New Roman'      # 设置字体类型
 
-fig1.yaxis.major_label_text_font_size = '18pt'
+fig1.yaxis.major_label_text_font_size = word_size_pt
 fig1.yaxis.major_label_text_font = 'Times New Roman'
 
 fig1.xaxis.ticker = SingleIntervalTicker(interval = 2, num_minor_ticks=0)
@@ -149,69 +243,73 @@ fig1.ygrid.grid_line_color = None
 aspect_ratio = (fig1.x_range.end - fig1.x_range.start) / (fig1.y_range.end - fig1.y_range.start)
 fig1.plot_height = int(fig1.plot_width / aspect_ratio)
 
-# # measure tool
-# source = ColumnDataSource(data=dict(x=[], y=[]))
-# fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
-# line_source = ColumnDataSource(data=dict(x=[], y=[]))
-# fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
-# text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
-# fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
-# # Define the JavaScript callback code
-# callback_code = """
-#     var x = cb_obj.x;
-#     var y = cb_obj.y;
+# measure tool
+source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.circle('x', 'y', size=10, source=source, color='red')
+line_source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid')
+text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='18pt')
+# Define the JavaScript callback code
+callback_code = """
+    var x = cb_obj.x;
+    var y = cb_obj.y;
 
-#     source.data['x'].push(x);
-#     source.data['y'].push(y);
+    source.data['x'].push(x);
+    source.data['y'].push(y);
 
-#     if (source.data['x'].length > 2) {
-#         source.data['x'].shift();
-#         source.data['y'].shift();
-#         source.data['x'].shift();
-#         source.data['y'].shift();
-#     }
-#     source.change.emit();
+    if (source.data['x'].length > 2) {
+        source.data['x'].shift();
+        source.data['y'].shift();
+        source.data['x'].shift();
+        source.data['y'].shift();
+    }
+    source.change.emit();
 
-#     if (source.data['x'].length >= 2) {
-#         var x1 = source.data['x'][source.data['x'].length - 2];
-#         var y1 = source.data['y'][source.data['y'].length - 2];
-#         var x2 = x;
-#         var y2 = y;
-#         var x3 = (x1 + x2) / 2;
-#         var y3 = (y1 + y2) / 2;
+    if (source.data['x'].length >= 2) {
+        var x1 = source.data['x'][source.data['x'].length - 2];
+        var y1 = source.data['y'][source.data['y'].length - 2];
+        var x2 = x;
+        var y2 = y;
+        var x3 = (x1 + x2) / 2;
+        var y3 = (y1 + y2) / 2;
 
-#         var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
-#         console.log("Distance between the last two points: " + distance);
+        console.log("Distance between the last two points: " + distance);
 
-#         distance = distance.toFixed(4);
-#         text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
-#         text_source.change.emit();
+        distance = distance.toFixed(4);
+        text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+        text_source.change.emit();
 
-#         line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
-#         line_source.change.emit();
-#     }
+        line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+        line_source.change.emit();
+    }
 
-#     if (source.data['x'].length == 1) {
-#         text_source.data['x'].shift();
-#         text_source.data['y'].shift();
-#         text_source.data['text'].shift();
-#     }
-#     text_source.change.emit();
-# """
-# # Create a CustomJS callback with the defined code
-# callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
-# # Attach the callback to the Tap event on the plot
-# fig1.js_on_event(Tap, callback)
+    if (source.data['x'].length == 1) {
+        text_source.data['x'].shift();
+        text_source.data['y'].shift();
+        text_source.data['text'].shift();
+    }
+    text_source.change.emit();
+"""
+# Create a CustomJS callback with the defined code
+callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+# Attach the callback to the Tap event on the plot
+fig1.js_on_event(Tap, callback)
 
-# fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = False)
-fig1.patches('x_vec', 'y_vec', source = data_tra_car_box, fill_color = None, fill_alpha = 0.0, line_color = "green", line_width = 0.3, visible = True)
-fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = None, fill_alpha = 0.0, line_color = "black", line_width = 0.3, visible = True)
+
+fig1.patch('x_vec', 'y_vec', source = data_tra_park_out_box, fill_color = 'green', fill_alpha = 0.3, line_color = "green", line_width = 1.0, visible = True)
+fig1.patch('x_vec', 'y_vec', source = data_adv_park_out_box, fill_color = 'blue', fill_alpha = 0.3, line_color = "blue", line_width = 1.0, visible = True)
+
+fig1.patches('x_vec', 'y_vec', source = data_tra_car_box, fill_color = None, fill_alpha = 0.0, line_color = "green", line_width = 1.0, visible = True)
+fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = None, fill_alpha = 0.0, line_color = "blue", line_width = 1.0, visible = True)
+
+fig1.multi_line('x_vec','y_vec',source =data_corner_path, line_width = 3.0, line_color = 'blue', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
+fig1.multi_line('x_vec','y_vec',source =data_tra_corner_search_out_path,  line_width = 3.5, line_color = 'green', line_dash = 'dashed',legend_label = 'Traditional method', visible = True)
 
 fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.5, line_color = 'green', line_dash = 'dashed',legend_label = 'Traditional method', visible = True)
-fig1.line('x_vec','y_vec',source =data_tra_corner_search_out_path,  line_width = 3.5, line_color = 'green', line_dash = 'dashed',legend_label = 'Traditional method', visible = True)
-fig1.line('x_vec','y_vec',source =data_corner_path, line_width = 3.0, line_color = 'black', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
-fig1.line('x_vec','y_vec',source =data_path, line_width = 3.0, line_color = 'black', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
+fig1.line('x_vec','y_vec',source =data_path, line_width = 3.0, line_color = 'blue', line_dash = 'solid',legend_label = 'Proposed method', visible = True)
 
 # target slot
 # fig1.line('x_vec','y_vec',source =data_slot,  line_width = 1.0, line_color = 'black', line_dash = 'solid',legend_label = 'slot', visible = True)
@@ -229,12 +327,12 @@ fig1.scatter("x_vec", "y_vec", source=data_obs_pt, size=3, color='red', visible 
 # fig1.patch('x_vec', 'y_vec', source = data_tra_tb_pt, fill_color='skyblue', fill_alpha=0.2, line_color=None)
 
 # car box at start pose
-fig1.circle('x', 'y', source = data_start_pos, size=8, color='lightskyblue', visible = True)
-fig1.patch( 'car_xn', 'car_yn', source = data_start_car, fill_color = "lightskyblue", fill_alpha = 0.2, line_color = "black", line_width = 0.5, visible = True)
+# fig1.circle('x', 'y', source = data_start_pos, size=8, color='lightskyblue', visible = True)
+# fig1.patch( 'car_xn', 'car_yn', source = data_start_car, fill_color = "lightskyblue", fill_alpha = 0.2, line_color = "black", line_width = 0.5, visible = True)
 
 # target pose
-fig1.circle('x', 'y', source = data_target_pos, size=8, color='black')
-fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = None, fill_alpha = 0.0, line_color = "black", line_width = 1.0)
+fig1.circle('x', 'y', source = data_target_pos, size=8, color='blue')
+fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = None, fill_alpha = 0.0, line_color = "black", line_width = 1.5)
 
 # fig1.scatter("x_vec", "y_vec", source=data_virtual_obs_pt, size=8, color='red', marker='star', visible = False)
 fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_debug_arc, line_alpha = 1, line_width = 2, line_color = "red", fill_alpha=0, visible = False)
@@ -245,11 +343,40 @@ fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_deb
 # fig1.line('x_vec','y_vec',source =data_parking_out_path,  line_width = 3.0, line_color = 'blue', line_dash = 'solid',legend_label = 'Inversed parking out step')
 # fig1.line('x_vec','y_vec',source =data_in_slot_path,  line_width = 3.0, line_color = 'black', line_dash = 'solid',legend_label = 'Inversed trials in slot')
 
+adv_arraw = Arrow(end=NormalHead(fill_color="black", size=10),
+               x_start='x_start', y_start='y_start',
+               x_end='x_end', y_end='y_end',
+               line_color="black", line_width = 0.5, source=data_adv_arrow)
+fig1.add_layout(adv_arraw)
+
+adv_arraw = Arrow(end=NormalHead(fill_color="black", size=10),
+               x_start='x_end', y_start='y_end',
+               x_end='x_start', y_end='y_start',
+              line_color="black", line_width = 0.5,
+               source=data_adv_arrow)
+fig1.add_layout(adv_arraw)
+
+tra_arraw = Arrow(end=NormalHead(fill_color="black", size=10),
+               x_start='x_start', y_start='y_start',
+               x_end='x_end', y_end='y_end',
+                line_color="black", line_width = 0.5, source=data_tra_arrow)
+fig1.add_layout(tra_arraw)
+
+tra_arraw = Arrow(end=NormalHead(fill_color="black", size=10),
+               x_start='x_end', y_start='y_end',
+               x_end='x_start', y_end='y_start',
+              line_color="black", line_width = 0.5,
+               source=data_tra_arrow)
+fig1.add_layout(tra_arraw)
+
+
 fig1.legend.visible = False
 fig1.legend.location = 'top_left'
-fig1.legend.label_text_font_size = '14pt'
+fig1.legend.label_text_font_size = word_size_pt
 fig1.legend.label_text_font = "Times New Roman"
 fig1.legend.click_policy = 'hide'
+fig1.legend.border_line_color = "white"
+fig1.legend.background_fill_color = None
 
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
@@ -269,7 +396,7 @@ class LocalViewSlider:
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot length",min=5.0, max=8.0, value=6.0, step=0.01)
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "width",min=2.0, max=3.0, value=2.2, step=0.01)
     # obs
-    self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=0.0, step=0.01)
+    self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=lon_dist, step=0.01)
     self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb offset ",min=-1.0, max=1.0, value=0.3, step=0.01)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=4.72, step=0.01)
 
@@ -279,7 +406,7 @@ class LocalViewSlider:
     self.rear_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs y",min=-2.0, max=4.0, value=0.2, step=0.01)
     self.rear_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
 
-    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.3, step=0.001)
+    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.03, step=0.001)
     ipywidgets.interact(slider_callback,
                                          is_front_occupied = self.is_front_occupied_slider,
                                          is_rear_occupied = self.is_rear_occupied_slider,
@@ -308,8 +435,6 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
                     front_car_y_offset, front_car_heading, rear_car_y_offset, rear_car_heading,
                     ds):
   kwargs = locals()
-
-  print("before construct_scenario")
 
   front_car_heading_rad = front_car_heading * kDeg2Rad
   rear_car_heading_rad = rear_car_heading * kDeg2Rad
@@ -417,7 +542,6 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
 
     # tradition method
     tra_search_out_path = parallel_planning_py.GetTraSearchOutPath()
-    print("tra_search_out_path = ", len(tra_search_out_path))
     tra_idx = next((i for i, value in enumerate(tra_search_out_path[1]) if value >= 1.5), len(tra_search_out_path[1]))
     tra_path_x_vec = tra_search_out_path[0][0:tra_idx]
     tra_path_y_vec = tra_search_out_path[1][0:tra_idx]
@@ -427,15 +551,59 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       'x_vec': tra_path_x_vec,
       'y_vec': tra_path_y_vec,
     })
-    tra_corner_x_vec, tra_corner_y_vec = load_ego_car_corner_path(tra_path_x_vec, tra_path_y_vec, tra_path_heading_vec, car_xb[5], car_yb[5])
+
+    tra_corner_x_vec, tra_corner_y_vec = load_ego_car_given_corner_path(tra_path_x_vec,  tra_path_y_vec, tra_path_heading_vec, car_xb, car_yb, car_idx_vec)
     data_tra_corner_search_out_path.data.update({
       'x_vec': tra_corner_x_vec,
       'y_vec': tra_corner_y_vec,
     })
-    tra_car_box_x_vec, tra_car_box_y_vec = load_car_box(tra_path_x_vec, tra_path_y_vec, tra_path_heading_vec, car_xb, car_yb)
+
+    tra_shift_x_vec, tra_shift_y_vec, tra_shift_heading_vec = find_shift_points(tra_path_x_vec, tra_path_y_vec, tra_path_heading_vec)
+    tra_car_box_x_vec, tra_car_box_y_vec = load_car_box(tra_shift_x_vec, tra_shift_y_vec, tra_shift_heading_vec, car_xb, car_yb)
     data_tra_car_box.data.update({
       'x_vec': tra_car_box_x_vec,
       'y_vec': tra_car_box_y_vec
+    })
+
+    park_out_pos_x = tra_shift_x_vec[-1]
+    park_out_pos_y = tra_shift_y_vec[-1]
+    tra_park_out_pos_heading = tra_shift_heading_vec[-1]
+    tra_park_out_x_vec, tra_park_out_y_vec = load_ego_car_box(park_out_pos_x, park_out_pos_y, tra_park_out_pos_heading, car_xb, car_yb)
+    data_tra_park_out_box.data.update({
+      'x_vec': tra_park_out_x_vec,
+      'y_vec': tra_park_out_y_vec
+    })
+
+    # 1.5 calc col dist in last circle step
+    min_dist_obs = np.array([0.0, 0.0])
+    tra_min_corner_dist = 100.0
+    tra_path_point_size = len(tra_path_x_vec)
+    center, radius = cal_common_circle(tra_path_x_vec[tra_path_point_size-3], tra_path_y_vec[tra_path_point_size-3],
+                                       tra_path_x_vec[tra_path_point_size-2], tra_path_y_vec[tra_path_point_size-2],
+                                       tra_path_x_vec[tra_path_point_size-1], tra_path_y_vec[tra_path_point_size-1])
+    center_to_corner = np.array([car_xb[0], radius + car_yb[0]])
+    radius = np.linalg.norm(center_to_corner)
+    center = np.array(center)
+
+    for i in range(len(obs_x_vec)):
+      obs_pt = np.array([obs_x_vec[i], obs_y_vec[i]])
+      if slot_length - 0.5 <= obs_pt[0] <= slot_length + 1.0 and 0.0 <= obs_pt[1] <= 1.5:
+        v_obs_to_center = center - obs_pt
+        dist = np.linalg.norm(v_obs_to_center)
+        if dist < tra_min_corner_dist:
+          min_dist_obs = obs_pt
+          tra_min_corner_dist = dist
+    tra_min_corner_dist -= radius
+    v_obs_to_corner = center - min_dist_obs
+    v_obs_to_corner = v_obs_to_corner / np.linalg.norm(v_obs_to_corner) * tra_min_corner_dist
+    corner = v_obs_to_corner + min_dist_obs
+    print("corner col det dist = ", tra_min_corner_dist)
+
+    data_tra_arrow.data.update({
+      'x_start': [corner[0]],
+      'y_start': [corner[1]],
+      'x_end': [min_dist_obs[0]],
+      'y_end': [min_dist_obs[1]]
     })
 
     path_x_vec = parallel_planning_py.GetPathEle(0)
@@ -446,8 +614,6 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
     path_y_vec.append(tra_path_y_vec[0])
     path_theta_vec.append(tra_path_heading_vec[0])
 
-    print("last pt x ", path_x_vec[-1])
-    print("last pt y ", path_y_vec[-1])
     target_pos_x = path_x_vec[-1]
     target_pos_y = path_y_vec[-1]
     target_pose_heading = path_theta_vec[-1]
@@ -462,28 +628,72 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       'car_yn': target_car_yn,
     })
 
-    # advanced reversed trials in slot
+    ## 2. advanced reversed trials in slot
     adv_idx = next((i for i, value in enumerate(path_y_vec) if value < 1.5), len(path_y_vec))
     adv_x_vec = path_x_vec[adv_idx : -1]
     adv_y_vec = path_y_vec[adv_idx : -1]
     adv_heading_vec = path_theta_vec[adv_idx : -1]
-
-
+    # 2.1 update adv path
     data_path.data.update({
       'x_vec': adv_x_vec,
       'y_vec': adv_y_vec,
       'theta_vec': adv_heading_vec,
     })
-    corner_x_vec, corner_y_vec = load_ego_car_corner_path(adv_x_vec, adv_y_vec, adv_heading_vec, car_xb[5], car_yb[5])
+    # 2.2 adv corner
+    adv_corner_x_vec, adv_corner_y_vec = load_ego_car_given_corner_path(adv_x_vec, adv_y_vec, adv_heading_vec, car_xb, car_yb, car_idx_vec)
     data_corner_path.data.update({
-      'x_vec': corner_x_vec,
-      'y_vec': corner_y_vec,
+      'x_vec': adv_corner_x_vec,
+      'y_vec': adv_corner_y_vec,
     })
-    car_box_x_vec, car_box_y_vec = load_car_box(adv_x_vec, adv_y_vec, adv_heading_vec, car_xb, car_yb)
+    # 2.3 adv all shift pose box
+    adv_shift_x_vec, adv_shift_y_vec, adv_shift_heading_vec = find_shift_points(adv_x_vec, adv_y_vec, adv_heading_vec)
+    car_box_x_vec, car_box_y_vec = load_car_box(adv_shift_x_vec, adv_shift_y_vec, adv_shift_heading_vec, car_xb, car_yb)
     data_car_box.data.update({
       'x_vec': car_box_x_vec,
       'y_vec': car_box_y_vec,
     })
+    # 2.4 adv parking out pose box
+    park_out_pos_x = adv_shift_x_vec[0]
+    park_out_pos_y = adv_shift_y_vec[0]
+    adv_park_out_pos_heading = adv_shift_heading_vec[0]
+    adv_park_out_x_vec, adv_park_out_y_vec = load_ego_car_box(park_out_pos_x, park_out_pos_y, adv_park_out_pos_heading, car_xb, car_yb)
+    data_adv_park_out_box.data.update({
+      'x_vec': adv_park_out_x_vec,
+      'y_vec': adv_park_out_y_vec
+    })
+
+    # 2.5 calc col dist in last circle step
+    min_dist_obs = np.array([0.0, 0.0])
+    adv_min_corner_dist = 100.0
+    center, radius = cal_common_circle(adv_x_vec[20], adv_y_vec[20], adv_x_vec[21], adv_y_vec[21], adv_x_vec[22], adv_y_vec[22])
+    center_to_corner = np.array([car_xb[0], radius + car_yb[0]])
+    radius = np.linalg.norm(center_to_corner)
+    center = np.array(center)
+
+    for i in range(len(obs_x_vec)):
+      obs_pt = np.array([obs_x_vec[i], obs_y_vec[i]])
+      if slot_length - 0.5 <= obs_pt[0] <= slot_length + 1.0 and 0.0 <= obs_pt[1] <= 1.5:
+        v_obs_to_center = center - obs_pt
+        dist = np.linalg.norm(v_obs_to_center)
+        if dist < adv_min_corner_dist:
+          min_dist_obs = obs_pt
+          adv_min_corner_dist = dist
+    adv_min_corner_dist -= radius
+
+
+    v_obs_to_corner = center - min_dist_obs
+    v_obs_to_corner = v_obs_to_corner / np.linalg.norm(v_obs_to_corner) * adv_min_corner_dist
+    corner = v_obs_to_corner + min_dist_obs
+    data_adv_arrow.data.update({
+      'x_start': [corner[0]],
+      'y_start': [corner[1]],
+      'x_end': [min_dist_obs[0]],
+      'y_end': [min_dist_obs[1]]
+    })
+    print("   tra  ---- vs ---- adv")
+    print("parking out heading = ", tra_park_out_pos_heading *kRad2Deg, "   vs   ", adv_park_out_pos_heading *kRad2Deg)
+    print("adv_min_corner_dist = ", tra_min_corner_dist, "   vs   ", adv_min_corner_dist)
+
 
     #path in different step
     preparing_step_end_idx = 0
@@ -566,8 +776,8 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
 
 
   res = parallel_planning_py.GetInverseArcVec()
-  print("arc info: cx, cy, radius, pBx, pBy")
-  print("arc info len: ", len(res))
+  # print("arc info: cx, cy, radius, pBx, pBy")
+  # print("arc info len: ", len(res))
   cx_vec = []
   cy_vec = []
   radius_vec = []
@@ -580,7 +790,7 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
   info_len = 7
   arc_size = int(len(res) / info_len)
   for i in range(arc_size):
-    print(i, ": [", res[info_len * i], res[info_len * i + 1], res[info_len * i + 2], res[info_len * i + 3], res[info_len * i + 4], "]")
+    # print(i, ": [", res[info_len * i], res[info_len * i + 1], res[info_len * i + 2], res[info_len * i + 3], res[info_len * i + 4], "]")
     cx_vec.append(res[info_len * i])
     cy_vec.append(res[info_len * i + 1])
     radius_vec.append(res[info_len * i + 2])
@@ -670,10 +880,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       obs_car_polygon_y_vec.append(list(tmp_y))
 
   rear_obs_car_matrix = json_data["rear_obs_car_matrix"]
-  print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
+  # print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
 
   if len(rear_obs_car_matrix) > 0:
-    print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
+    # print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
     points = np.column_stack((rear_obs_car_matrix[0], rear_obs_car_matrix[1]))
     hull = ConvexHull(points)
     polygon = Polygon(points[hull.vertices])
@@ -683,10 +893,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       obs_car_polygon_y_vec.append(list(tmp_y))
 
   front_obs_car_matrix = json_data["front_obs_car_matrix"]
-  print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
+  # print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
 
   if len(front_obs_car_matrix) > 0:
-    print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
+    # print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
     points = np.column_stack((front_obs_car_matrix[0], front_obs_car_matrix[1]))
     hull = ConvexHull(points)
     polygon = Polygon(points[hull.vertices])
@@ -705,17 +915,17 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
 bkp.show(row(fig1), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
 
-# os.environ['WEB_BROWSER'] = 'chrome'
-# fig1.output_backend = "svg"
-# name = 'inversed_0p0'
+os.environ['WEB_BROWSER'] = 'chrome'
+fig1.output_backend = "svg"
+name = 'reversed_trils_in_slot_' + f"{lon_dist}m"
 
-# svg_file_path = name +'.svg'
+svg_file_path = name +'.svg'
 # eps_file_path = name +'.eps'
-# export_svgs(fig1, filename=svg_file_path)
+export_svgs(fig1, filename=svg_file_path)
+cairosvg.svg2pdf(url=svg_file_path, write_to=name +'.pdf')
 
-# # 使用 CairoSVG 直接转换
+# 使用 CairoSVG 直接转换 eps
 # cairosvg.svg2eps(url=svg_file_path, write_to=eps_file_path)
-
 # print(f"SVG 文件已直接转换为 EPS：'{eps_file_path}'")
 
-# cairosvg.svg2pdf(url=svg_file_path, write_to=name +'.pdf')
+

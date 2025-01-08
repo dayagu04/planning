@@ -15,7 +15,12 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization, ControlOutput
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241226/20241226-11-44-04/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-26-11-44-05_no_camera.bag'
+# e0y1:  10034
+# e0y2:  04228
+# e0y8:  14520
+# e0y9:  18049
+# e0y10: 20267
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228//trigger/20250104/20250104-14-43-24/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-04-14-43-24_no_camera.bag'
 
 
 

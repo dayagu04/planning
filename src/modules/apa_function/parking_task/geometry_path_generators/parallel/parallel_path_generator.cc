@@ -36,7 +36,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kLonBufferTrippleStep = 0.2;
 // static const double kLatBufferTrippleStep = 0.05;
-static const double kColBufferInSlot = 0.25;
+static const double kColBufferInSlot = 0.2;
 static const double kColBufferOutSlot = 0.3;
 static const double kColLargeLatBufferOutSlot = 0.3;
 static const double kColSmallLatBufferOutSlot = 0.1;
@@ -49,7 +49,7 @@ static const size_t kMaxParallelShiftNums = 6;
 
 static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
-static const double kMaxHeadingFirstStepForwardLine = 30.0;
+static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
@@ -62,6 +62,10 @@ static const double k1dExtendLength = 0.36;
 static const size_t kInvalidInteger = 666;
 
 static const double kMinXInTBoundary = -1.0;
+
+static const double kMaxSearchArcLength = 1.5;
+static const double kMinSearchArcStep = 0.2;
+static const int kMaxSearchArcStepNum = 3;
 
 void ParallelPathGenerator::Reset() {
   output_.Reset();
@@ -869,7 +873,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   if (input_.ego_pose.pos.x() > input_.tlane.slot_length - 2.0) {
     GeometryPath ego_line_geo_path;
     std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
-    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
     if (BackwardNormalPlan(tmp_path_seg_vec, input_.ego_pose)) {
       AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
 
@@ -1035,7 +1039,7 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   if (!success) {
     TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, ref_radius,
                kColBufferOutSlot);
-    // ILOG_INFO <<"two arc path = " << path_vec.size());
+    ILOG_INFO << "two arc path = " << path_vec.size();
   }
 
   const pnc::geometry_lib::PathPoint target_pose(prepare_line.pA,
@@ -1048,12 +1052,25 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
     }
   }
 
+  // search based
+  if (SearchToTargetLine(tmp_path_vec, ego_pose, prepare_line, ref_radius,
+                         kColBufferOutSlot)) {
+    ILOG_INFO << "SearchToTargetLine SUCCESS!";
+    ILOG_INFO << "SearchToTargetLine size = " << tmp_path_vec.size();
+    for (const auto& path : tmp_path_vec) {
+      path_vec.emplace_back(path);
+    }
+  } else {
+    ILOG_INFO << "SearchToTargetLine failed!";
+  }
+
   ILOG_INFO << "path_vec size = " << path_vec.size();
   if (path_vec.size() == 0) {
     return false;
   }
 
-  for (size_t i = line_arc_path_size; i < path_vec.size(); i++) {
+  for (size_t i = 0; i < path_vec.size(); i++) {
+    // for (size_t i = line_arc_path_size; i < path_vec.size(); i++) {
     GeometryPath tmp_geo_path;
     if (AssempleGeometryPath(tmp_geo_path, path_vec[i])) {
       geo_path_vec.emplace_back(tmp_geo_path);
@@ -3338,6 +3355,166 @@ const bool ParallelPathGenerator::CalcLineDirAllValidPose(
   return is_success;
 }
 
+const bool ParallelPathGenerator::SearchToTargetLine(
+    std::vector<std::vector<geometry_lib::PathSegment>>& path_vec,
+    const pnc::geometry_lib::PathPoint& ego_pose,
+    const pnc::geometry_lib::LineSegment& prepare_line, const double radius,
+    const double lon_buffer) {
+  using namespace pnc::geometry_lib;
+  ILOG_INFO << "------------- SearchToTargetLine -----------------------";
+
+  bool success = false;
+
+  // std::vector<uint8_t> gear_vec = {SEG_GEAR_DRIVE, SEG_GEAR_REVERSE};
+  // std::vector<uint8_t> steer_vec = {SEG_STEER_LEFT, SEG_STEER_RIGHT,
+  //                                   SEG_STEER_STRAIGHT};
+
+  std::vector<uint8_t> gear_vec = {SEG_GEAR_DRIVE, SEG_GEAR_REVERSE};
+
+  std::vector<uint8_t> steer_vec;
+  if (std::fabs(ego_pose.heading) * kRad2Deg < 5.0) {
+    steer_vec = {SEG_STEER_STRAIGHT, SEG_STEER_STRAIGHT};
+  } else {
+    if (ego_pose.heading * kRad2Deg > 1e-5) {
+      steer_vec = {SEG_STEER_RIGHT, SEG_STEER_LEFT};
+    } else {
+      steer_vec = {SEG_STEER_LEFT, SEG_STEER_RIGHT};
+    }
+  }
+
+  if (steer_vec.size() == 0) {
+    ILOG_INFO << "steer_vec.size() == 0";
+    return false;
+  }
+
+  const Eigen::Vector2d ego_heading = GetUnitTangVecByHeading(ego_pose.heading);
+
+  for (size_t i = 0; i < gear_vec.size(); i++) {
+    const uint8_t gear = gear_vec[i];
+    const uint8_t steer = steer_vec[i];
+
+    if (steer == SEG_STEER_STRAIGHT) {
+      ILOG_INFO << "-------------------- LINE LOGIC ----------------------";
+      auto first_line = BuildLineSegByPose(ego_pose.pos, ego_pose.heading);
+
+      if (!CalcLineStepLimitPose(first_line, gear, kColLargeLatBufferOutSlot)) {
+        ILOG_INFO << "CalcLineStepLimitPose FAILED";
+        continue;
+      }
+
+      ILOG_INFO << "first_line length limit = " << first_line.length;
+
+      const double max_first_line_len = std::min(first_line.length, 1.5);
+      ILOG_INFO << "max_first_line_len = " << max_first_line_len;
+
+      const double gear_sgn = gear == SEG_GEAR_DRIVE ? 1.0 : -1.0;
+      pnc::geometry_lib::PathPoint ego_transition_pose = ego_pose;
+
+      const size_t step_num = 3;
+      const double step = max_first_line_len / static_cast<double>(step_num);
+
+      for (size_t i = 1; i < step_num + 1; i++) {
+        ego_transition_pose.pos =
+            ego_pose.pos + i * step * gear_sgn * ego_heading;
+
+        PrintPose("ego_transition_pose", ego_transition_pose);
+
+        std::vector<std::vector<PathSegment>> tmp_path_vec;
+        if (!TwoArcPath(tmp_path_vec, ego_transition_pose, prepare_line,
+                        SEG_GEAR_INVALID, radius, kColBufferOutSlot)) {
+          continue;
+        }
+        ILOG_INFO << "TwoArcPath tmp_path_vec size = " << tmp_path_vec.size();
+        success = true;
+        first_line.SetPoints(ego_pose.pos, ego_transition_pose.pos);
+        const PathSegment first_line_path_seg(gear, first_line);
+
+        for (auto& path : tmp_path_vec) {
+          std::vector<PathSegment> tmp_path = {first_line_path_seg};
+          tmp_path.insert(tmp_path.end(), path.begin(), path.end());
+          path_vec.emplace_back(tmp_path);
+        }
+      }
+
+    } else {
+      ILOG_INFO << " --------------- ARC LOGIC ----------------------";
+      PrintGear("gear = ", gear);
+      std::vector<PathSegment> aligned_path_seg_vec;
+      if (!AlignBodyPlan(aligned_path_seg_vec, ego_pose, prepare_line.heading,
+                         gear)) {
+        ILOG_INFO << "AlignBodyPlan failed!";
+        continue;
+      }
+
+      if (aligned_path_seg_vec.size() == 0) {
+        ILOG_INFO << "aligned_path_seg_vec size == 0!";
+        continue;
+      }
+
+      auto& aligned_seg = aligned_path_seg_vec.back();
+      if (TrimPathByCollisionDetection(aligned_seg, kColBufferOutSlot) ==
+          PATH_COL_INVALID) {
+        ILOG_INFO << "TrimPathByCollisionDetection failed!";
+        continue;
+      }
+
+      if (aligned_seg.Getlength() < 0.15) {
+        ILOG_INFO << "max avaliable path length < 0.15m";
+        continue;
+      }
+
+      const double max_search_lenth =
+          std::min(kMaxSearchArcLength, aligned_seg.Getlength());
+
+      const int max_step_num =
+          std::max(static_cast<int>(max_search_lenth / kMinSearchArcStep), 1);
+
+      const int step_num = std::min(kMaxSearchArcStepNum, max_step_num);
+      const double step = max_search_lenth / step_num;
+
+      const uint8_t ref_gear = geometry_lib::SEG_GEAR_INVALID;
+      const uint8_t ref_steer = geometry_lib::SEG_STEER_INVALID;
+      const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3;
+
+      for (size_t i = 1; i < step_num + 1; i++) {
+        Arc tmp_arc = aligned_seg.GetArcSeg();
+
+        if (!CompleteArcInfo(tmp_arc, i * step, tmp_arc.is_anti_clockwise)) {
+          continue;
+        }
+
+        const pnc::geometry_lib::PathPoint ego_transition_pose(
+            tmp_arc.pB, tmp_arc.headingB);
+
+        std::vector<std::vector<PathSegment>> tmp_path_vec;
+        if (!TwoArcPath(tmp_path_vec, ego_transition_pose, prepare_line,
+                        ref_gear, ref_radius, kColBufferOutSlot)) {
+          continue;
+        }
+
+        const PathSegment aligned_path_seg(CalArcSteer(tmp_arc),
+                                           CalArcGear(tmp_arc), tmp_arc);
+
+        for (const auto& path_seg : tmp_path_vec) {
+          if (path_seg.front().seg_steer == aligned_path_seg.seg_steer) {
+            continue;
+          }
+
+          success = true;
+          std::vector<PathSegment> path = {aligned_path_seg};
+          path.insert(path.end(), path_seg.begin(), path_seg.end());
+          path_vec.emplace_back(path);
+        }
+
+        // ILOG_INFO <<"two arc path = " << path_vec.size());
+      }
+    }
+  }
+  ILOG_INFO << "path_vec size = " << path_vec.size();
+
+  return success;
+}
+
 const bool ParallelPathGenerator::CalcLineDirAllValidPose(
     std::vector<pnc::geometry_lib::PathPoint>& target_tan_pose_vec,
     const pnc::geometry_lib::LineSegment& target_line) {
@@ -3668,7 +3845,8 @@ const bool ParallelPathGenerator::LineArcPlan(
       // ILOG_INFO <<"line pA =" << line.pA.transpose());
       // ILOG_INFO <<"line pB =" << line.pB.transpose());
       // ILOG_INFO << "line seg gear is error, line seg gear = "
-      //           << static_cast<int>(pnc::geometry_lib::CalLineSegGear(line))
+      //           <<
+      //           static_cast<int>(pnc::geometry_lib::CalLineSegGear(line))
       //           ;
       continue;
     }
@@ -3795,12 +3973,13 @@ const bool ParallelPathGenerator::AlignBodyPlan(
 
   // check if it is necessary to align body
   if (pnc::mathlib::IsDoubleEqual(arc.headingA, target_heading)) {
-    // ILOG_INFO <<"body already align");
+    ILOG_INFO << "body already align";
     return false;
   }
 
   if (!pnc::geometry_lib::CalOneArcWithTargetHeading(arc, current_gear,
                                                      target_heading)) {
+    ILOG_INFO << "CalOneArcWithTargetHeading failed!";
     return false;
   }
 
@@ -3808,6 +3987,7 @@ const bool ParallelPathGenerator::AlignBodyPlan(
   const auto steer = pnc::geometry_lib::CalArcSteer(arc);
   const auto gear = pnc::geometry_lib::CalArcGear(arc);
   if (gear != current_gear) {
+    ILOG_INFO << "gears are different!";
     return false;
   }
   pnc::geometry_lib::PathSegment aligned_arc_seg(steer, gear, arc);
@@ -3898,7 +4078,8 @@ const bool ParallelPathGenerator::CalSinglePathInAdjust(
   // ILOG_INFO <<"current_gear = "
   //             << static_cast<int>(current_gear)
   //             << ",  current_pos = " << current_pose.pos.transpose()
-  //             << ",  current_heading = " << current_pose.heading * kRad2Deg);
+  //             << ",  current_heading = " << current_pose.heading *
+  //             kRad2Deg);
 
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   tmp_path_seg_vec.clear();
