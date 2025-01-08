@@ -422,14 +422,6 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   JSON_DEBUG_VALUE("gap_front_agent_id", gap_front_agent_id & 0xFFFF)
   JSON_DEBUG_VALUE("gap_rear_agent_id", gap_rear_agent_id & 0xFFFF)
 
-  if (config_.enable_skip_neighbor_corridor_update) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: skip "
-        "neighbor corridor update\n");
-    int default_value = -1;
-    JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
-  }
-
   if (gap_front_agent_id == -1 && gap_rear_agent_id == -1) {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No gap "
