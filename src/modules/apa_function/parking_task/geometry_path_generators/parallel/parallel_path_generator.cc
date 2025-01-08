@@ -2262,6 +2262,8 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
       continue;
     }
 
+    ILOG_INFO << "Line limit = " << first_line.pB.transpose();
+
     double line_length = (first_line.pB - target_pose.pos).norm();
     if (line_length < 0.2) {
       ILOG_INFO << "line_length" << line_length
@@ -2279,7 +2281,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
 
     } else {
       line_length = std::min(line_length, 0.8);
-      step_size = mathlib::Clamp(step_size, 2, 4);
+      step_size = mathlib::Clamp(step_size, 2, 3);
       step_size = std::min(step_size, max_size);
     }
 
@@ -2287,18 +2289,11 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
     double length_diff = step;
     const double dir_sgn = (gear == SEG_GEAR_DRIVE ? 1.0 : -1.0);
 
-    while (length_diff <= line_length) {
-      const auto line_end_pos =
-          target_pose.pos + dir_sgn * length_diff * v_heading;
-
+    for (size_t i = 1; i <= step_size; i++) {
+      const Eigen::Vector2d line_end_pos =
+          target_pose.pos + dir_sgn * i * step * v_heading;
       line_step_vec.emplace_back(std::move(line_end_pos));
-      length_diff += step;
     }
-
-    if (std::fabs(line_step_vec.back().x() - first_line.pB.x()) < 0.36 * step) {
-      line_step_vec.pop_back();
-    }
-    line_step_vec.emplace_back(first_line.pB);
   }
 
   bool success = false;
@@ -2407,6 +2402,10 @@ const bool ParallelPathGenerator::CalcLineStepLimitPose(
                                            start_pose.heading));
 
   const auto& col_res = TrimPathByCollisionDetection(line_path, buffer);
+  if (col_res == PATH_COL_INVALID) {
+    ILOG_INFO << "line collided at start pos!";
+    return false;
+  }
 
   line.is_ignored = true;
   // check if ego can park out at limit pose
@@ -4208,16 +4207,17 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
+  ILOG_INFO << "remain_car_dist = " << remain_car_dist;
+  ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
+  ILOG_INFO << "buffer = " << buffer;
+
+  ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
+  ILOG_INFO << "col_pt_obs in slot = " << col_res.col_pt_obs_global.transpose();
+
   if (safe_remain_dist < 0.0) {
     ILOG_INFO << "the distance between obstacle and ego is smaller than "
                  "min_safe_distance, collided! ";
-    ILOG_INFO << "remain_car_dist = " << remain_car_dist;
-    ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
-    ILOG_INFO << "buffer = " << buffer;
 
-    ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
-    ILOG_INFO << "col_pt_obs in slot = "
-              << col_res.col_pt_obs_global.transpose();
     return PATH_COL_INVALID;
   }
 
