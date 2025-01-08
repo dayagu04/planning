@@ -161,8 +161,6 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_use_cone_change_request");
     enable_use_merge_change_request =
         read_json_key<bool>(json, "enable_use_merge_change_request");
-    enable_skip_neighbor_corridor_update = read_json_key<bool>(
-        json, "enable_skip_neighbor_corridor_update");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -179,7 +177,6 @@ struct EgoPlanningConfig : public Config {
   bool enable_use_emergency_avoidence_lane_change_request = false;
   bool enable_use_cone_change_request = false;
   bool enable_use_merge_change_request = false;
-  bool enable_skip_neighbor_corridor_update = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
