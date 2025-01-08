@@ -105,7 +105,8 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
       // }
       const double agent_speed = corridor_upper_point.velocity();
       const double ego_s = virtual_acc_curve->Evaluate(0, relative_t);
-      const double ego_s_to_front = ego_s + vehicle_param.front_edge_to_rear_axle;
+      const double ego_s_to_front =
+          ego_s + vehicle_param.front_edge_to_rear_axle;
       const double agent_s = corridor_upper_point.s();
       if (relative_t >= kUrgentWeightStartTime &&
           relative_t <= kUrgentWeightEndTime) {

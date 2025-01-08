@@ -1036,12 +1036,13 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
         boundary_id_st_boundaries_map,
     const std::unordered_map<int32_t, std::vector<int64_t>>&
         agent_id_st_boundaries_map,
-    const speed::StGraphInput& st_graph_input, const CIPVInfo& cipv_info,
+    const std::shared_ptr<speed::StGraphInput>& st_graph_input,
+    const CIPVInfo& cipv_info,
     std::unordered_map<int64_t, speed::STBoundary::DecisionType>*
         succ_decision_table) const {
   // make cipv yield decision when lane keep
   int64_t cipv_boundary_id = -1;
-  if (st_graph_input.is_lane_keeping()) {
+  if (st_graph_input->is_lane_keeping()) {
     const auto cipv_id = cipv_info.cipv_id();
     if (cipv_id != -1 && agent_id_st_boundaries_map.find(cipv_id) !=
                              agent_id_st_boundaries_map.end()) {
@@ -1055,7 +1056,7 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
 
   // Set rear target as overtake.
   const auto rear_st_id = speed::StGraphUtils::GetAgentStBoundaryId(
-      st_graph_input.rear_agent_of_target(), agent_id_st_boundaries_map);
+      st_graph_input->rear_agent_of_target(), agent_id_st_boundaries_map);
   const speed::STBoundary* rear_st_boundary = nullptr;
   if (boundary_id_st_boundaries_map.find(rear_st_id) !=
       boundary_id_st_boundaries_map.end()) {

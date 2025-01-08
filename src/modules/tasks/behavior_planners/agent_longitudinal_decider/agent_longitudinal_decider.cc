@@ -885,7 +885,7 @@ bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
   bool is_fast_agent = ptr_agent->speed() * kMpsToKph > kAgentLowerSpeedKph;
   if (ptr_obj_lane != nullptr) {
     is_neighbor = (std::abs(ptr_obj_lane->get_virtual_id() -
-                           ego_lane->get_virtual_id()) == 1) &&
+                            ego_lane->get_virtual_id()) == 1) &&
                   (nearest_l < std::fabs(half_ego_lane_width));
   }
   // const bool is_parallel =

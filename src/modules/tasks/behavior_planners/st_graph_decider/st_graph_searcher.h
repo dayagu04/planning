@@ -125,7 +125,8 @@ class StGraphSearcher : public Task {
           boundary_id_st_boundaries_map,
       const std::unordered_map<int32_t, std::vector<int64_t>>&
           agent_id_st_boundaries_map,
-      const speed::StGraphInput& st_graph_input, const CIPVInfo& cipv_info,
+      const std::shared_ptr<speed::StGraphInput>& st_graph_input,
+      const CIPVInfo& cipv_info,
       std::unordered_map<int64_t, speed::STBoundary::DecisionType>*
           succ_decision_table) const;
 

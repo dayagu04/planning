@@ -115,15 +115,15 @@ double StGraphUtils::CalculateLateralBufferForTimeRange(
 }
 
 void StGraphUtils::DetermineCautionYieldDecision(
-    const StGraphInput& st_graph_input, const std::string lane_change_status,
-    const std::string lane_change_request,
+    const std::shared_ptr<StGraphInput>& st_graph_input,
+    const std::string lane_change_status, const std::string lane_change_request,
     const std::unordered_map<int32_t, std::vector<int64_t>>&
         agent_id_st_boundaries_map,
     const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
         boundary_id_st_boundaries_map,
     std::vector<int32_t>& caution_yield_agent_ids) {
   caution_yield_agent_ids.clear();
-  if (st_graph_input.time_aligned_ego_state().vel() >
+  if (st_graph_input->time_aligned_ego_state().vel() >
       kCautionYieldSpeedThreshold / kMpsToKph) {
     return;
   }
@@ -133,14 +133,14 @@ void StGraphUtils::DetermineCautionYieldDecision(
   if (is_lane_change) {
     return;
   }
-  const auto& agents = st_graph_input.filtered_agents();
-  const auto planned_kd_path = st_graph_input.processed_path();
+  const auto& agents = st_graph_input->filtered_agents();
+  const auto planned_kd_path = st_graph_input->processed_path();
   if (!planned_kd_path) {
     return;
   }
   const double half_ego_width =
       VehicleConfigurationContext::Instance()->get_vehicle_param().width * 0.5;
-  const double ego_heading = st_graph_input.time_aligned_ego_state().theta();
+  const double ego_heading = st_graph_input->time_aligned_ego_state().theta();
   for (const agent::Agent* agent : agents) {
     if (!agent) {
       continue;
@@ -528,16 +528,16 @@ void StGraphUtils::UpdateStBoundaryForLaneChange(
 }
 
 void StGraphUtils::UpdateStBoundaryForOvertaking(
-    const StGraphInput& st_graph_input,
+    const std::shared_ptr<StGraphInput>& st_graph_input,
     const std::unordered_map<int32_t, std::vector<int64_t>>&
         agent_id_st_boundaries_map,
     const agent::Agent* rear_agent_of_target,
     std::unordered_map<int64_t, std::unique_ptr<STBoundary>>* const
         boundary_id_st_boundaries_map) {
-  if (st_graph_input.is_lane_keeping()) {
+  if (st_graph_input->is_lane_keeping()) {
     return;
   }
-  if (st_graph_input.max_acceleration_curve() == nullptr) {
+  if (st_graph_input->max_acceleration_curve() == nullptr) {
     return;
   }
   if (nullptr == boundary_id_st_boundaries_map) {
@@ -553,7 +553,7 @@ void StGraphUtils::UpdateStBoundaryForOvertaking(
   if (rear_st_boundary.max_t() - rear_st_boundary.min_t() < kTimeResolution) {
     return;
   }
-  const auto& max_acceleration_curve = *st_graph_input.max_acceleration_curve();
+  const auto& max_acceleration_curve = st_graph_input->max_acceleration_curve();
   double max_valid_time = rear_st_boundary.min_t();
   for (double time = rear_st_boundary.min_t(); time < rear_st_boundary.max_t();
        time += kTimeResolution) {
@@ -562,7 +562,7 @@ void StGraphUtils::UpdateStBoundaryForOvertaking(
     if (!rear_st_boundary.GetBoundarySRange(time, &s_lower, &s_upper)) {
       break;
     }
-    const double curve_s = max_acceleration_curve.Evaluate(0, time);
+    const double curve_s = max_acceleration_curve->Evaluate(0, time);
     if (curve_s <= s_upper) {
       break;
     }
@@ -1151,7 +1151,7 @@ bool IsNeighborAgentNearBoundary(
 bool StGraphUtils::CheckLonFarPositionSTBoundary(
     const agent::Agent& agent,
     const std::vector<std::pair<STPoint, STPoint>>& st_point_pairs,
-    const StGraphInput& st_graph_input, const bool is_parallel,
+    const std::shared_ptr<StGraphInput>& st_graph_input, const bool is_parallel,
     const std::shared_ptr<VirtualLane>& ego_lane,
     const std::shared_ptr<VirtualLane>& ptr_agent_lane,
     const std::shared_ptr<VirtualLaneManager>& virtual_lane_manager) {
@@ -1169,8 +1169,8 @@ bool StGraphUtils::CheckLonFarPositionSTBoundary(
     return false;
   }
 
-  const auto planned_kd_path = st_graph_input.processed_path();
-  const auto& init_point = st_graph_input.planning_init_point();
+  const auto planned_kd_path = st_graph_input->processed_path();
+  const auto& init_point = st_graph_input->planning_init_point();
   if (planned_kd_path == nullptr) {
     return false;
   }
@@ -1254,7 +1254,7 @@ bool StGraphUtils::IsLargeAgentByLength(const agent::Agent& agent) {
 bool StGraphUtils::CheckLateralFarCutinAgent(
     const agent::Agent& agent,
     const std::vector<std::pair<STPoint, STPoint>> st_point_pairs,
-    const StGraphInput& st_graph_input) {
+    const std::shared_ptr<StGraphInput>& st_graph_input) {
   constexpr double kSTProjectInitTime = 3.0;
   constexpr double kEgoPreTimeThd = 1.5;
 
@@ -1267,8 +1267,8 @@ bool StGraphUtils::CheckLateralFarCutinAgent(
     return false;
   }
 
-  const auto planned_kd_path = st_graph_input.processed_path();
-  const auto& init_point = st_graph_input.planning_init_point();
+  const auto planned_kd_path = st_graph_input->processed_path();
+  const auto& init_point = st_graph_input->planning_init_point();
   if (planned_kd_path == nullptr) {
     return false;
   }
@@ -1299,7 +1299,7 @@ bool StGraphUtils::CheckLateralFarCutinAgentIsLonSafe(
     const agent::Agent& agent,
     const std::vector<std::pair<STPoint, STPoint>> st_point_pairs,
     const trajectory::TrajectoryPoint& planning_init_point,
-    StGraphInput* st_graph_input) {
+    const std::shared_ptr<StGraphInput>& st_graph_input) {
   constexpr double dt = 0.1;
   constexpr int32_t plan_num = 51;
   constexpr double kLonSafeBuffer = 2.0;

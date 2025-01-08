@@ -18,7 +18,6 @@ namespace speed {
 
 class StGraphInput {
  public:
-
   StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                planning::framework::Session* session);
 
