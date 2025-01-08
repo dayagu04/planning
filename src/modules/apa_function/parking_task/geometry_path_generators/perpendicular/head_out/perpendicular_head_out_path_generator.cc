@@ -334,8 +334,8 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
     } else if (last_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       current_pose.Set(last_seg.GetArcSeg().pB, last_seg.GetArcSeg().headingB);
     }
-    current_gear = output_.gear_cmd_vec.back();
-    current_arc_steer = output_.steer_vec.back();
+    // current_gear = output_.gear_cmd_vec.back();
+    // current_arc_steer = output_.steer_vec.back();
     ILOG_INFO << "continue to plan after prepareplan";
   }
 
@@ -366,25 +366,6 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
     const double safe_dist_r = 0.8;
     const double safe_dist_d = 0.268;
 
-    // set current arc steer
-    if (current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
-      current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
-    } else if (current_arc_steer == pnc::geometry_lib::SEG_STEER_LEFT) {
-      current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
-    } else {
-      ILOG_INFO << "fault ref_arc_steer state!";
-      return false;
-    }
-
-    // set current gear
-    if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    } else if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-      current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    } else {
-      ILOG_INFO << "fault ref_gear state!";
-      return false;
-    }
     if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
       AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_d,
                      current_arc_steer, current_gear);
