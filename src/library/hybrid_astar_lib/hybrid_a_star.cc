@@ -23,6 +23,7 @@
 #include "src/modules/common/math/curve1d/quintic_polynomial_curve1d.h"
 #include "transform2d.h"
 #include "utils_math.h"
+#include "path_comparator.h"
 
 namespace planning {
 
@@ -48,7 +49,7 @@ namespace planning {
 
 // 控制可以执行的距离
 constexpr double rs_path_seg_advised_dist = 0.35;
-constexpr double max_search_time = 60.0;
+constexpr double max_search_time_ms = 10000.0;
 
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const VehicleParam& veh_param) {
@@ -865,9 +866,9 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   NodePath path;
   path.path_dist = std::fabs(rs_path_.total_length);
   path.point_size = 1;
-  // use end point to fill astar node
+  // use first path end point to fill astar node
   RSPoint rs_end_point;
-  rs_path_.BackPoint(&rs_end_point);
+  rs_path_.FirstPathEndPoint(&rs_end_point);
 
   path.points[0].x = rs_end_point.x;
   path.points[0].y = rs_end_point.y;
@@ -2021,6 +2022,15 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   new_node->SetDistToStart(path.path_dist + parent_node->GetDistToStart());
   new_node->SetRadius(radius);
 
+  if (new_node->GetGearSwitchNum() == 0) {
+    new_node->SetGearSwitchNode(nullptr);
+  } else if (new_node->GetGearSwitchNum() == 1 &&
+             parent_node->IsPathGearChange(gear)) {
+    new_node->SetGearSwitchNode(parent_node);
+  } else {
+    new_node->SetGearSwitchNode(parent_node->GearSwitchNode());
+  }
+
   // ILOG_INFO << "next node end";
   // next_node->DebugString();
 
@@ -2094,7 +2104,7 @@ void HybridAStar::GetSingleShotNodeHeuCost(const Node3d* father_node,
   optimal_path_cost = std::max(euler_dist_cost, optimal_path_cost);
 
   next_node->SetHeuCost(optimal_path_cost);
-  next_node->SetHeuCostDebug(cost);
+  // next_node->SetHeuCostDebug(cost);
 
   return;
 }
@@ -2245,8 +2255,7 @@ double HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   rs_node->SetGearSwitchNum(current_node->GetGearSwitchNum());
   // evaluate cost on the trajectory and add current cost
   double piecewise_cost = 0.0;
-  double path_dist = 0.0;
-  path_dist = rs_path->total_length;
+  double path_dist = rs_path->total_length;
   piecewise_cost += path_dist * config_.traj_forward_penalty;
 
   double gear_cost = 0.0;
@@ -2273,7 +2282,8 @@ double HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   }
 
   // gear cost
-  if (current_node->IsPathGearChange(rs_path_.paths[0].gear)) {
+  bool gear_switch = current_node->IsPathGearChange(rs_path_.paths[0].gear);
+  if (gear_switch) {
     gear_cost += config_.gear_switch_penalty;
     rs_node->AddGearSwitchNumber();
   }
@@ -2301,6 +2311,18 @@ double HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   }
 
   rs_node->SetDistToStart(path_dist + current_node->GetDistToStart());
+
+  if (current_node->GetGearSwitchNum() > 0) {
+    rs_node->SetGearSwitchNode(current_node->GearSwitchNode());
+  } else if (rs_node->GetGearSwitchNum() == 0) {
+    rs_node->SetGearSwitchNode(nullptr);
+  } else if (gear_switch) {
+    // 正常节点没有换档，rs起点换档
+    rs_node->SetGearSwitchNode(current_node);
+  } else {
+    // rs 起点没有换档
+    rs_node->SetGearSwitchNode(nullptr);
+  }
 
   return piecewise_cost;
 }
@@ -3090,7 +3112,6 @@ void HybridAStar::GearRerversePathAttempt(
 
         h_cost_rs_path_num++;
 
-        // next_node_in_pool->CopyNode(&new_node);
         *next_node_in_pool = new_node;
         next_node_in_pool->SetFCost();
         next_node_in_pool->SetVisitedType(AstarNodeVisitedType::IN_OPEN);
@@ -3819,6 +3840,8 @@ bool HybridAStar::AstarSearch(
       start, end, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
+  PathComparator path_comparator;
+
   // load open set, pq
   start_node_->SetMultiMapIter(
       open_pq_.insert(std::make_pair(0.0, start_node_)));
@@ -3848,7 +3871,7 @@ bool HybridAStar::AstarSearch(
   RSPath best_rs_path;
   Node3d best_rs_node;
   best_rs_node.ClearPath();
-  double best_rs_node_cost = 1000000.0;
+  best_rs_node.SetFCost(1000000.0);
 
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
@@ -3881,33 +3904,41 @@ bool HybridAStar::AstarSearch(
     // search ends.
     current_time = IflyTime::Now_ms();
 
-    // if bigger than 60 s，break
+    // if bigger than 10 s，break
     astar_search_time = current_time - astar_search_start_time;
-    if (astar_search_time > max_search_time * 1000.0) {
+    if (astar_search_time > max_search_time_ms) {
       ILOG_INFO << "time out " << astar_search_time;
       break;
     }
 
     if (AnalyticExpansionByRS(current_node, gear_request, &rs_node_to_goal)) {
-      ILOG_INFO << "RS success number=" << rs_path_success_num;
-
       rs_path_success_num++;
-      if (rs_node_to_goal.GetFCost() < best_rs_node_cost - 1.0) {
+
+      if (path_comparator.Compare(&request_, &best_rs_node, &rs_node_to_goal)) {
         best_rs_node = rs_node_to_goal;
         best_rs_path = rs_path_;
-        best_rs_node_cost = rs_node_to_goal.GetFCost();
-
-        current_node->DebugString();
-        rs_node_to_goal.DebugString();
-      }
-
-      if (rs_path_success_num > 5) {
-        break;
       }
 
       // in try searching, no need optimal path.
       if (request_.path_generate_method ==
           AstarPathGenerateType::TRY_SEARCHING) {
+        break;
+      }
+
+      // total gear switch number is 0 or 1, break;
+      if (rs_node_to_goal.GetGearSwitchNum() < 2) {
+        break;
+      }
+
+      /** If got some solutions, and search time bigger than 300.0, searching
+       *  can break. If not satisfy break condition, continue to do searching.
+       */
+      if (rs_path_success_num > 5 && astar_search_time > 300.0) {
+        break;
+      }
+
+      // If search time bigger than 1000 ms, break
+      if (rs_path_success_num > 0 && astar_search_time > 1000.0) {
         break;
       }
     }
@@ -4002,7 +4033,6 @@ bool HybridAStar::AstarSearch(
 
         h_cost_rs_path_num++;
 
-        // next_node_in_pool->CopyNode(&new_node);
         *next_node_in_pool = new_node;
         next_node_in_pool->SetFCost();
         next_node_in_pool->SetVisitedType(AstarNodeVisitedType::IN_OPEN);
@@ -4103,7 +4133,8 @@ bool HybridAStar::AstarSearch(
             << " ,rs path size is: " << explored_rs_path_num
             << " ,h cost rs num " << h_cost_rs_path_num
             << " ,node pool size:" << node_pool_.PoolSize()
-            << ",open_pq.size: " << open_pq_.size();
+            << ",open_pq.size: " << open_pq_.size()
+            << "RS success number=" << rs_path_success_num;
 
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
@@ -4978,6 +5009,7 @@ bool HybridAStar::SamplingByCubicPolyForParallelSlot(
 
   // sampling for path end
   Pose2D sampling_end;
+  PathComparator path_comparator;
 
   sampling_end.x = x_sample_bound.min - x_sampling_step;
   for (size_t j = 0; j < x_max_sampling_num; j++) {
@@ -5056,7 +5088,7 @@ bool HybridAStar::SamplingByCubicPolyForParallelSlot(
         continue;
       }
 
-      if (PolynomialPathBetter(path_cost, best_path_cost)) {
+      if (path_comparator.PolynomialPathBetter(path_cost, best_path_cost)) {
         best_path_cost = path_cost;
         best_cubic_path = cubic_path;
       }

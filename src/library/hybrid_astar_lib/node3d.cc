@@ -1,5 +1,6 @@
 #include "node3d.h"
 
+#include <cmath>
 #include <cstddef>
 #include <string>
 
@@ -11,6 +12,7 @@ namespace planning {
 using ad_common::math::Box2d;
 
 #define DEBUG_NODE3D (0)
+#define DEBUG_NODE_HCOST (0)
 
 Node3d::Node3d(const double x, const double y, const double phi) {
   path_.path_dist = 0;
@@ -26,6 +28,7 @@ Node3d::Node3d(const double x, const double y, const double phi) {
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
   gear_switch_num_ = 0;
+  gear_switch_node_ = nullptr;
 }
 
 Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
@@ -54,6 +57,7 @@ Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
   gear_switch_num_ = 0;
+  gear_switch_node_ = nullptr;
 }
 
 Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
@@ -77,6 +81,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
   gear_switch_num_ = 0;
+  gear_switch_node_ = nullptr;
 
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
@@ -117,6 +122,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
 
   collision_type_ = NodeCollisionType::NONE;
   gear_switch_num_ = 0;
+  gear_switch_node_ = nullptr;
 
   radius_ = 100000.0;
 #if DEBUG_NODE3D
@@ -185,6 +191,15 @@ void Node3d::DebugString() const {
             << path_.point_size << " ,safe dist " << dist_to_obs_
             << ", gear switch num: " << gear_switch_num_;
 
+  if (gear_switch_node_ != nullptr) {
+    ILOG_INFO << "gear switch node dist to start = "
+              << gear_switch_node_->GetDistToStart();
+
+    ILOG_INFO << "x = " << gear_switch_node_->GetPose().x
+              << ",y = " << gear_switch_node_->GetPose().y << ",theta = "
+              << gear_switch_node_->GetPose().theta * 180 / M_PI;
+  }
+
   // for (size_t i = 0; i < path_.point_size; i++) {
   //   ILOG_INFO << "x,y,theta: " << path_.points[i].x << " , "
   //             << path_.points[i].y << " , " << path_.points[i].theta * 57.3;
@@ -203,51 +218,17 @@ void Node3d::DebugPoseString() const {
 
 void Node3d::DebugCost() const {
   ILOG_INFO << "g: " << traj_cost_ << " ,safe dist " << dist_to_obs_
-            << " ,h: " << heuristic_cost_ << ", f:" << f_cost_ << " astar dist "
-            << h_cost_debug_.astar_dist << " rs_path_dist "
+            << " ,h: " << heuristic_cost_ << ", f:" << f_cost_ << " astar dist ";
+
+#if DEBUG_NODE_HCOST
+  ILOG_INFO << h_cost_debug_.astar_dist << " rs_path_dist "
             << h_cost_debug_.rs_path_dist << " rs_path_gear "
             << h_cost_debug_.rs_path_gear << " euler_dist "
             << h_cost_debug_.euler_dist << " ref_line_heading "
             << h_cost_debug_.ref_line_heading_cost << " rs_path_steer "
             << h_cost_debug_.rs_path_steer
             << " ,gear cost: " << h_cost_debug_.expected_gear;
-  return;
-}
-
-void Node3d::CopyNode(const Node3d* node) {
-  path_ = node->GetNodePath();
-
-  traj_cost_ = node->GetGCost();
-  heuristic_cost_ = node->GetHeuCost();
-  f_cost_ = node->GetFCost();
-
-  pre_node_ = node->GetPreNode();
-
-  steering_ = node->GetSteer();
-
-  path_type_ = node->GetPathType();
-
-  gear_type_ = node->GetGearType();
-
-  grid_index_ = node->GetIndex();
-
-  visited_type_ = node->GetVisitedType();
-
-  global_id_ = node->GetGlobalID();
-
-  next_node_ = node->GetNextNode();
-
-  dist_to_start_ = node->GetDistToStart();
-
-  is_start_node_ = node->IsStartNode();
-
-  h_cost_debug_ = node->GetHeuCostDebug();
-
-  collision_type_ = node->GetConstCollisionType();
-
-  dist_to_obs_ = node->GetDistToObs();
-
-  // nodeMapIt = node->nodeMapIt;
+#endif
   return;
 }
 
@@ -317,6 +298,8 @@ void Node3d::Clear() {
   path_type_ = AstarPathType::NONE;
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
+
+  gear_switch_node_ = nullptr;
 
   return;
 }
