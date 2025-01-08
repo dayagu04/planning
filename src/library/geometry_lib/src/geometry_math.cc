@@ -1,7 +1,5 @@
 #include "geometry_math.h"
 
-#include <Eigen/src/Core/Matrix.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -491,6 +489,10 @@ const size_t GetArcLineIntersection(
 
   double delta = b * b - 4.0 * a * c;
 
+  if (mathlib::IsDoubleEqual(a, 0.0)) {
+    return 0;
+  }
+
   if (delta < 0.0) {
     // line does not intersect with a circle
     return 0;
@@ -528,16 +530,20 @@ const size_t GetArcLineSegIntersection(
     std::pair<Eigen::Vector2d, Eigen::Vector2d> &intersections,
     const pnc::geometry_lib::Arc &arc,
     const pnc::geometry_lib::LineSegment &line_seg) {
-  const auto AB = line_seg.pB - line_seg.pA;
+  const Eigen::Vector2d AB = line_seg.pB - line_seg.pA;
   const Eigen::Vector2d OA(line_seg.pA.x() - arc.circle_info.center.x(),
                            line_seg.pA.y() - arc.circle_info.center.y());
   // |OA + lambda * AB|^2 = r^2 means that line segment AB intersects at circle
   // OA·OA + 2*OA·AB*lambda + AB·AB*lambda^2 = r^2
-  const auto a = AB.dot(AB);
-  const auto b = 2 * OA.dot(AB);
-  const auto c = OA.dot(OA) - pow(arc.circle_info.radius, 2);
+  const double a = AB.dot(AB);
+  const double b = 2 * OA.dot(AB);
+  const double c = OA.dot(OA) - pow(arc.circle_info.radius, 2);
 
-  const auto delta = b * b - 4.0 * a * c;
+  const double delta = b * b - 4.0 * a * c;
+
+  if (mathlib::IsDoubleEqual(a, 0.0)) {
+    return 0;
+  }
 
   if (delta < 0.0) {
     // line does not intersect with a circle
@@ -759,6 +765,10 @@ const size_t CalcLineSegAndCircleIntersection(
   const double a = d.dot(d);
   const double b = 2 * f.dot(d);
   const double c = f.dot(f) - circle.radius * circle.radius;
+
+  if (mathlib::IsDoubleEqual(a, 0.0)) {
+    return 0;
+  }
 
   // 判别式
   double discriminant = b * b - 4 * a * c;
