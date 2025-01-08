@@ -458,7 +458,7 @@ const bool ParallelParkInScenario::GenTlane() {
          (pnc::mathlib::IsInBound(
              obstacle_point_slot.y(),
              -side_sgn * kRearObsLineYMagIdentification,
-             (half_slot_width + kRearObsLineYMagIdentification) * side_sgn)));
+             (half_slot_width + 0.1) * side_sgn)));
 
     if (rear_obs_condition) {
       rear_que_x.emplace_back(obstacle_point_slot.x());
@@ -535,6 +535,9 @@ const bool ParallelParkInScenario::GenTlane() {
     rear_max_x = -kRearDetaXMagWhenFrontOccupiedRearVacant;
   } else {
   }
+
+  ILOG_INFO << "front_vacant = " << front_vacant;
+  ILOG_INFO << "rear_vacant = " << rear_vacant;
 
   ILOG_INFO << "para_tlane_front_min_x_before_clamp = " << front_min_x;
   JSON_DEBUG_VALUE("para_tlane_front_min_x_before_clamp", front_min_x)
