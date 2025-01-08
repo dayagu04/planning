@@ -308,28 +308,6 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
     ego_slot_info.obs_pt_vec_slot.emplace_back((obs_pt_local));
   }
   ILOG_INFO << "after obs filter";
-
-  // update stuck time
-  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
-      (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-           ApaStateMachine::ACTIVE_OUT_CAR_REAR ||
-       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-           ApaStateMachine::ACTIVE_OUT_CAR_FRONT)) {
-    frame_.stuck_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.stuck_time = 0.0;
-  }
-  ILOG_INFO << "frame_.stuck_time = " << frame_.stuck_time;
-
-  // update pause time
-  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    frame_.pause_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.pause_time = 0.0;
-  }
-  ILOG_INFO << "frame_.pause_time = " << frame_.pause_time;
-
   return true;
 }
 
@@ -898,6 +876,8 @@ const bool ParallelParkOutScenario::CheckReplan() {
     }
     return true;
   }
+
+  ILOG_INFO << "frame_.stuck_time = " << frame_.stuck_time;
 
   if (frame_.stuck_time > apa_param.GetParam().stuck_replan_time) {
     ILOG_INFO << "replan by stuck!";
