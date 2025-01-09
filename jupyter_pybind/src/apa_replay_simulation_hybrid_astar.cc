@@ -83,7 +83,7 @@ static PerfectControl *perfect_control_ptr;
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
 std::shared_ptr<apa_planner::NarrowSpaceScenario> hybrid_astar_park_;
 HybridAStarThreadSolver *thread_solver_;
-planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info_;
+planning::apa_planner::EgoInfoUnderSlot ego_slot_info_;
 
 static planning::LocalView local_view;
 std::vector<Eigen::Vector3d> global_astar_path_;
@@ -292,14 +292,10 @@ int GetPathFromHybridAstar() {
   static_ref_line_.emplace_back(
       Eigen::Vector2d(global_position.x, global_position.y));
 
+  // todo: rm it
   // get collision pose in path
-  const size_t collision_id = hybrid_astar_park_->GetPathCollisionID();
-  path_collision_info_[0] = static_cast<int>(collision_id);
-  if (hybrid_astar_park_->IsPathCollision()) {
-    path_collision_info_[1] = 1;
-  } else {
-    path_collision_info_[1] = 0;
-  }
+  path_collision_info_[0] = 0;
+  path_collision_info_[1] = 0;
 
   // 为了调试搜索过程，plot it
   search_sequence_path_.clear();
@@ -316,8 +312,8 @@ int GetPathFromHybridAstar() {
   }
 
   // 基坐标位置
-  coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
-  coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
+  coordinate_system_[0] = ego_slot_info_.origin_pose_global.pos[0];
+  coordinate_system_[1] = ego_slot_info_.origin_pose_global.pos[1];
 
   // plot all searched node
   const std::vector<DebugAstarSearchPoint> &all_search_node =
@@ -409,7 +405,7 @@ const void UpdateLocalView(
 
 static const int CopyVirtualWallForPlot(
     const ParkObstacleList &obs_list,
-    const planning::apa_planner::ParkingScenario::EgoSlotInfo &slot) {
+    const planning::apa_planner::EgoInfoUnderSlot &slot) {
   const ApaParameters &park_param = apa_param.GetParam();
 
   // publish to python
@@ -537,18 +533,15 @@ const bool PlanOnce(
           ParkingScenarioType::SCENARIO_NARROW_SPACE);
 
   if (scenario != nullptr) {
-    const apa_planner::ParkingScenario::Frame &frame = scenario->GetFrame();
-
-    const apa_planner::ParkingScenario::EgoSlotInfo &ego_slot_info =
-        frame.ego_slot_info;
-
-    ego_slot_info_ = ego_slot_info;
+    const apa_planner::EgoInfoUnderSlot &ego_info =
+        scenario->GetApaWorldPtr()->GetNewSlotManagerPtr()->ego_info_under_slot_;
+    ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();
 
     ParkObstacleList virtual_wall_obs;
     thread_solver_->GetVirtualWallPoints(&virtual_wall_obs.virtual_obs);
-    CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
+    CopyVirtualWallForPlot(virtual_wall_obs, ego_info);
 
   } else {
     ILOG_INFO << "hybrid_astar_interface_ is null";
@@ -595,32 +588,32 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   bool update_path = false;
 
   if (force_plan) {
-    planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info;
-    ego_slot_info = ego_slot_info_;
+    planning::apa_planner::EgoInfoUnderSlot ego_info;
+    ego_info = ego_slot_info_;
 
     hybrid_astar_obs_.Clear();
 
     // obs
     const ApaParameters &park_param = apa_param.GetParam();
     // translate perception
-    Pose2D slot_base_pose = Pose2D(ego_slot_info.slot_origin_pos.x(),
-                                   ego_slot_info.slot_origin_pos.y(),
-                                   ego_slot_info.slot_origin_heading);
+    Pose2D slot_base_pose = Pose2D(ego_info.origin_pose_global.pos.x(),
+                                   ego_info.origin_pose_global.pos.y(),
+                                   ego_info.origin_pose_global.heading);
 
     // start
     Pose2D start =
-        Pose2D(ego_slot_info.ego_pos_slot[0], ego_slot_info.ego_pos_slot[1],
-               ego_slot_info.ego_heading_slot);
+        Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
+               ego_info.cur_pose.heading);
 
-    Pose2D real_end = Pose2D(ego_slot_info.target_ego_pos_slot[0],
-                             ego_slot_info.target_ego_pos_slot[1],
-                             ego_slot_info.target_ego_heading_slot);
+    Pose2D real_end = Pose2D(ego_info.target_pose.pos[0],
+                             ego_info.target_pose.pos[1],
+                             ego_info.target_pose.heading);
     PointCloudObstacleTransform obstacle_generator;
 
     ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    if (ego_info.slot_type == SlotType::PARALLEL) {
       slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_info.slot_type == SlotType::SLANT) {
       slot_type = ParkSpaceType::SLANTING;
     } else {
       slot_type = ParkSpaceType::VERTICAL;
@@ -629,15 +622,15 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     VirtualWallDecider *wall_decider =
         hybrid_astar_park_->MutableVirtualWallDecider();
     wall_decider->Process(hybrid_astar_obs_.virtual_obs,
-                         ego_slot_info.slot_width, ego_slot_info.slot_length,
-                         start, real_end, slot_type,
-                         SlotRelativePosition::NONE);
+                          ego_info.slot.GetWidth(), ego_info.slot.GetLength(),
+                          start, real_end, slot_type,
+                          pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID);
 
     obstacle_generator.GenerateLocalObstacle(
-        hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, false);
+        hybrid_astar_obs_, &local_view, ego_info.slot.GetLength(),
+        ego_info.slot.GetWidth(), slot_base_pose, start, false);
 
-    CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
+    CopyVirtualWallForPlot(hybrid_astar_obs_, ego_info);
 
     // end
     Eigen::Vector3d end;
@@ -653,9 +646,9 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
       end_straight_dist = 0.5;
     }
 
-    end[0] = ego_slot_info.target_ego_pos_slot[0] + end_straight_dist;
-    end[1] = ego_slot_info.target_ego_pos_slot[1];
-    end[2] = ego_slot_info.target_ego_heading_slot;
+    end[0] = ego_info.target_pose.pos.x() + end_straight_dist;
+    end[1] = ego_info.target_pose.pos.y();
+    end[2] = ego_info.target_pose.heading;
 
     AstarRequest request;
     request.first_action_request.has_request = true;
@@ -685,13 +678,13 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     }
 
     request.rs_request = RSPathRequestType::none;
-    request.slot_width = ego_slot_info.slot_width;
-    request.slot_length = ego_slot_info.slot_length;
+    request.slot_width = ego_info.slot.GetWidth();
+    request.slot_length = ego_info.slot.GetLength();
     request.history_gear = history_gear_request_;
 
     thread_solver_->SetRequest(hybrid_astar_obs_, request);
 
-    ego_slot_info_ = ego_slot_info;
+    ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();
 

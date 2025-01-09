@@ -51,7 +51,7 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                                  const double slot_length,
                                  const Pose2D& ego_pose, const Pose2D& end,
                                  const ParkSpaceType slot_type,
-                                 const SlotRelativePosition slot_side) {
+                                 const pnc::geometry_lib::SlotSide slot_side) {
   start_ = ego_pose;
   end_ = end;
 
@@ -68,10 +68,10 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
 
     ILOG_INFO << "vertical slot virtual wall";
   } else {
-    if (slot_side == SlotRelativePosition::RIGHT) {
+    if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
                                    end);
-    } else if (slot_side == SlotRelativePosition::LEFT) {
+    } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       LeftSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
                                   end);
     }

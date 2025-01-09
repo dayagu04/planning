@@ -41,6 +41,7 @@ static const size_t slot_corner_pt_nums = 4;
 namespace planning {
 namespace apa_planner {
 
+// todo: will be retired
 class SlotInfoWindow {
  public:
   SlotInfoWindow() {
@@ -160,6 +161,7 @@ class SlotInfoWindow {
   bool force_set_occupied_ = true;
 };
 
+// todo: will be retired
 class LimiterPointWindow {
  public:
   LimiterPointWindow() {
@@ -237,12 +239,7 @@ class LimiterPointWindow {
   std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> limiter_points_vec_;
 };
 
-// todo:
-// 1. SlotManager需要和ParkingSlotManager统一起来.
-// 2. 内部的很多计算，也需要独立出去.
-// 3. slot manager 统计所有车位信息，包括历史信息，是否释放信息,等.
-// 而ApaSlot是通用数据结构, 和slot manager不同.
-// 4. 为了清晰起见，通用数据结构最好定义成一个单独的头文件.
+// todo: will be retired
 class SlotManager {
  public:
   struct Param {

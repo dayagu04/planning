@@ -121,6 +121,7 @@ class ApaWorld {
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
+  // will be retired
   std::shared_ptr<SlotManager> slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
