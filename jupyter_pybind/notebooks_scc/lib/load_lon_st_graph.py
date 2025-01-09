@@ -187,7 +187,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','cipv_id_st', 'cipv_relative_s','cipv_relative_s_ego_stop',"distance_to_go_condition",
-                          "cipv_vel_frenet","traffic_light_can_pass"]
+                          "cipv_vel_frenet","traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id"]
 
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
@@ -317,6 +317,20 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     t_cruise_target_vec.append(item.t)
   for item in (plan_debug_info.lon_target_s_ref.cruise_target.cruise_target_s_ref):
     s_cruise_target_vec.append(item.s)
+  
+  ## neighbor target
+  t_neighbor_target_vec = []
+  s_neighbor_target_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.neighbor_target.neighbor_target_s_ref):
+    t_neighbor_target_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.neighbor_target.neighbor_target_s_ref):
+    s_neighbor_target_vec.append(item.s)
+  print("neighbor_target_s_ref: ", s_neighbor_target_vec)
+
+  lon_plan_data['data_target_s_neighbor'].data.update({
+    't_neighbor_target': t_neighbor_target_vec,
+    's_neighbor_target': s_neighbor_target_vec,
+  })
 
   ## follow target
   t_follow_target_vec = []
@@ -1130,7 +1144,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                               'st_path_final_nodes_g_cost' : [],
                                                               'st_path_final_nodes_h_cost' : [],
                                                               })
-  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 't_cruise_target':[], 's_cruise_target':[], 't_follow_target':[], 's_follow_target':[]})
+  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 
+                                         't_cruise_target':[], 's_cruise_target':[], 
+                                         't_follow_target':[], 's_follow_target':[]})
+  data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -1174,6 +1191,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_st_search_history_cur_nodes' : data_st_search_history_cur_nodes, \
                    'data_st_search_path_final_nodes_cost' : data_st_search_path_final_nodes_cost, \
                    'data_target': data_target, \
+                   'data_target_s_neighbor': data_target_s_neighbor, \
                    'data_st_search_text' : data_st_search_text, \
   }
 
@@ -1297,10 +1315,11 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
   fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes')
   fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes')
-  fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3.0, line_color = 'blue', line_dash = 'solid', legend_label = 's_final_target')
-  fig3.circle('t_final_target', 's_final_target', source=data_target, size=5, color='brown', legend_label='s_final_target')
+  fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3, line_color = 'blue', alpha = 1, line_dash = 'solid', legend_label = 's_final_target')
+  fig3.circle('t_final_target', 's_final_target', source=data_target, size=6, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
+  fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
 
   # fig8 bar chart
   fig8 = bkp.figure(x_axis_label='time', y_axis_label='cost', width=600, height=400, title="Cost Over Time")

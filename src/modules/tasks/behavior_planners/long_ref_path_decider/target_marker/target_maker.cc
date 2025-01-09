@@ -1,8 +1,11 @@
 #include "target_maker.h"
 
+#include "behavior_planners/long_ref_path_decider/target_marker/target.h"
+#include "common/math/common_utils.h"
 #include "cruise_target.h"
 #include "debug_info_log.h"
 #include "follow_target.h"
+#include "neighbor_target.h"
 #include "overtake_target.h"
 #include "planning_context.h"
 
@@ -29,7 +32,7 @@ common::Status TargetMaker::Run() {
                                  follow_target);
 
   // 4. neighbor target @建伟
-  // NeighborTarget neighbor_target(config_, session_);
+  NeighborTarget neighbor_target(speed_planning_config_, session_);
 
   // 5. caution target @国朋
   // CautionTarget caution_target(config_, session_);
@@ -45,8 +48,8 @@ common::Status TargetMaker::Run() {
     TargetValue follow_target_value = follow_target.target_value(relative_t);
     TargetValue overtake_target_value =
         overtake_target.target_value(relative_t);
-    // TargetValue neighbor_target_value =
-    // neighbor_target.target_value(relative_t);
+    TargetValue neighbor_target_value =
+        neighbor_target.target_value(relative_t);
     //  TargetValue caution_target_value =
     //  caution_target.target_value(relative_t);
 
@@ -56,6 +59,7 @@ common::Status TargetMaker::Run() {
     TargetValue lower_target_value(0.0, false,
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
+
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
@@ -80,13 +84,6 @@ common::Status TargetMaker::Run() {
       lower_target_value = overtake_target_value;
     }
 
-    if (stop_speed_decision_info.is_valid()) {
-      upper_target_value.set_s_target_val(stop_speed_decision_info.s());
-      upper_target_value.set_v_target_val(stop_speed_decision_info.v());
-      lower_target_value.set_s_target_val(stop_speed_decision_info.s());
-      lower_target_value.set_v_target_val(stop_speed_decision_info.v());
-    }
-
     // TBD: 国朋合入caution
     // 2.update upper value by caution yield target
     // if (caution_target_value.has_target()) {
@@ -96,33 +93,39 @@ common::Status TargetMaker::Run() {
 
     // TBD: 建伟合入neighbor
     // 3.update lower and upper value by neighbor target
-    // if (neighbor_target_value.has_target()) {
-    //   // neighbor
-    //   if (neighbor_target_value.target_type() == TargetType::kNeighbor) {
-    //     if (cp_common::WithinBound(lower_target_value.s_target_val(),
-    //                                upper_target_value.s_target_val(),
-    //                                neighbor_target_value.s_target_val())) {
-    //       target_values_.push_back(std::move(neighbor_target_value));
-    //       continue;
-    //     }
-    //   }
-    //   if (neighbor_target_value.target_type() == TargetType::kNeighborYeild)
-    //   {
-    //     if (cp_common::WithinBound(lower_target_value.s_target_val(),
-    //                                upper_target_value.s_target_val(),
-    //                                neighbor_target_value.s_target_val())) {
-    //       upper_target_value = neighbor_target_value;
-    //     }
-    //   }
-    //   if (neighbor_target_value.target_type() ==
-    //       TargetType::kNeighborOvertake) {
-    //     if (cp_common::WithinBound(lower_target_value.s_target_val(),
-    //                                upper_target_value.s_target_val(),
-    //                                neighbor_target_value.s_target_val())) {
-    //       lower_target_value = neighbor_target_value;
-    //     }
-    //   }
-    // }
+    if (neighbor_target_value.has_target()) {
+      // neighbor
+      if (neighbor_target_value.target_type() == TargetType::kNeighbor) {
+        if (util::WithinBound(lower_target_value.s_target_val(),
+                              upper_target_value.s_target_val(),
+                              neighbor_target_value.s_target_val())) {
+          target_values_.emplace_back(std::move(neighbor_target_value));
+          continue;
+        }
+      }
+      if (neighbor_target_value.target_type() == TargetType::kNeighborYeild) {
+        if (util::WithinBound(lower_target_value.s_target_val(),
+                              upper_target_value.s_target_val(),
+                              neighbor_target_value.s_target_val())) {
+          upper_target_value = neighbor_target_value;
+        }
+      }
+      if (neighbor_target_value.target_type() ==
+          TargetType::kNeighborOvertake) {
+        if (util::WithinBound(lower_target_value.s_target_val(),
+                              upper_target_value.s_target_val(),
+                              neighbor_target_value.s_target_val())) {
+          lower_target_value = neighbor_target_value;
+        }
+      }
+    }
+
+    if (stop_speed_decision_info.is_valid()) {
+      upper_target_value.set_s_target_val(stop_speed_decision_info.s());
+      upper_target_value.set_v_target_val(stop_speed_decision_info.v());
+      lower_target_value.set_s_target_val(stop_speed_decision_info.s());
+      lower_target_value.set_v_target_val(stop_speed_decision_info.v());
+    }
 
     // hack: 先用默认值
     // auto final_lower_bound_value = lower_target_value;

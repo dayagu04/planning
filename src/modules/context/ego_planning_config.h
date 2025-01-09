@@ -3212,6 +3212,76 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
         lane_change_upper_speed_limit_kph);
     enable_speed_adjust = read_json_keys<bool>(
         json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
+
+    // neighbor target
+    {
+      neighbor_target_min_jerk = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_min_jerk"},
+          neighbor_target_min_jerk);
+      neighbor_target_max_jerk = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_max_jerk"},
+          neighbor_target_max_jerk);
+      neighbor_target_min_acc = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_min_acc"},
+          neighbor_target_min_acc);
+      neighbor_target_max_acc_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_max_acc_lower"},
+          neighbor_target_max_acc_lower);
+      neighbor_target_max_acc_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_max_acc_upper"},
+          neighbor_target_max_acc_upper);
+      neighbor_target_vel_lower_bound = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_vel_lower_bound"},
+          neighbor_target_vel_lower_bound);
+      neighbor_target_vel_upper_bound = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_vel_upper_bound"},
+          neighbor_target_vel_upper_bound);
+      neighbor_target_vel_buffer = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_vel_buffer"},
+          neighbor_target_vel_buffer);
+      neighbor_target_p_precision = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_p_precision"},
+          neighbor_target_p_precision);
+      neighbor_target_kEpsilon = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_kEpsilon"},
+          neighbor_target_kEpsilon);
+      neighbor_target_neighbor_yield_distance = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_neighbor_yield_distance"},
+          neighbor_target_neighbor_yield_distance);
+      neighbor_target_neighbor_overtake_distance = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning", "neighbor_target",
+              "neighbor_target_neighbor_overtake_distance"},
+          neighbor_target_neighbor_overtake_distance);
+      neighbor_target_neighbor_limit_velocity = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_neighbor_limit_velocity"},
+          neighbor_target_neighbor_limit_velocity);
+    }
   }
 
   double planning_time = 5.0;
@@ -3241,6 +3311,21 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double large_vehicle_min_follow_distance_gap = 4.5;
   double cone_min_follow_distance_gap = 4.5;
   double traffic_light_min_follow_distance_gap = 2.0;
+
+  // neighbor target
+  double neighbor_target_min_jerk = -1.5;
+  double neighbor_target_max_jerk = 2.0;
+  double neighbor_target_min_acc = -1.5;
+  double neighbor_target_max_acc_lower = 0.8;
+  double neighbor_target_max_acc_upper = 2.0;
+  double neighbor_target_vel_lower_bound = 5.0;
+  double neighbor_target_vel_upper_bound = 15.0;
+  double neighbor_target_vel_buffer = 5.0;
+  double neighbor_target_p_precision = 0.3;
+  double neighbor_target_kEpsilon = 1e-10;
+  double neighbor_target_neighbor_yield_distance = 10.0;
+  double neighbor_target_neighbor_overtake_distance = 10.0;
+  double neighbor_target_neighbor_limit_velocity = 5.0;
 
   // cruise target relevance
   double lane_change_upper_speed_limit_kph = 150.0;

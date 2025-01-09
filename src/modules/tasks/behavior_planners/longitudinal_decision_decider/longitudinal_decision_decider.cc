@@ -1,10 +1,17 @@
 #include "longitudinal_decision_decider.h"
 
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <type_traits>
+#include <unordered_map>
 
+#include "config/basic_type.h"
+#include "debug_info_log.h"
 #include "longitudinal_decision_decider_output.h"
 #include "src/modules/context/environmental_model.h"
 #include "src/modules/context/planning_context.h"
+#include "st_graph/st_boundary.h"
 #include "utils_math.h"
 
 namespace planning {
@@ -41,6 +48,8 @@ bool LongitudinalDecisionDecider::Execute() {
 
   // put agents that do not yield in lateral intrusion into the ST graph
   UpdateInvadeNeighborResults();
+
+  UpdateLaneChangeNeighborResults();
 
   MakeDebugMessage();
   const auto end_timestamp = IflyTime::Now_ms();
@@ -389,14 +398,80 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   }
 }
 
-bool LongitudinalDecisionDecider::ConstructNeighborLaneStGraph(
-    const agent::Agent *const invade_agent) {
+void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
+  const auto &environmental_model = session_->environmental_model();
   const auto &planning_context = session_->planning_context();
-  auto *mutable_st_graph = planning_context.st_graph();
-  if (nullptr == invade_agent) {
+  const auto &lane_change_decider_output =
+      planning_context.lane_change_decider_output();
+  const auto &dynamic_world = environmental_model.get_dynamic_world();
+  const auto &agent_manager = dynamic_world->agent_manager();
+  const auto st_graph = planning_context.st_graph();
+  const auto mutable_st_graph =
+      session_->mutable_planning_context()->st_graph();
+  const auto agent_id_st_boundaries_map =
+      st_graph->agent_id_st_boundaries_map();
+  const auto neighbor_agent_id_st_boundraies_map =
+      st_graph->neighbor_agent_id_st_boundaries_map();
+  const int32_t gap_front_agent_id =
+      lane_change_decider_output.lc_gap_info.front_agent_id;
+  const int32_t gap_rear_agent_id =
+      lane_change_decider_output.lc_gap_info.rear_agent_id;
+
+  const auto lane_change_status = lane_change_decider_output.curr_state;
+  JSON_DEBUG_VALUE("lane_change_status", static_cast<int>(lane_change_status))
+  JSON_DEBUG_VALUE("gap_front_agent_id", gap_front_agent_id & 0xFFFF)
+  JSON_DEBUG_VALUE("gap_rear_agent_id", gap_rear_agent_id & 0xFFFF)
+
+  if (gap_front_agent_id == -1 && gap_rear_agent_id == -1) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No gap "
+        "agents\n");
+    int default_value = -1;
+    JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
+    return;
+  }
+  const auto gap_front_agent = agent_manager->GetAgent(gap_front_agent_id);
+  const auto gap_rear_agent = agent_manager->GetAgent(gap_rear_agent_id);
+  std::unordered_map<int32_t, speed::STBoundary::DecisionType>
+      neighbor_agents_decision_table;
+  if (lane_change_status ==
+          StateMachineLaneChangeStatus::kLaneChangeExecution ||
+      lane_change_status == StateMachineLaneChangeStatus::kLaneChangeComplete) {
+    if (gap_front_agent_id != -1 &&
+      neighbor_agent_id_st_boundraies_map.count(gap_front_agent_id) == 0 /*&&
+      agent_id_st_boundaries_map.count(gap_front_agent_id) == 0*/) {
+      ConstructNeighborLaneStGraph(gap_front_agent);
+      neighbor_agents_decision_table[gap_front_agent_id] =
+          speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
+    }
+    if (gap_rear_agent_id != -1 &&
+      neighbor_agent_id_st_boundraies_map.count(gap_rear_agent_id) == 0 /*&&
+      agent_id_st_boundaries_map.count(gap_rear_agent_id) == 0*/) {
+      ConstructNeighborLaneStGraph(gap_rear_agent);
+      neighbor_agents_decision_table[gap_rear_agent_id] =
+          speed::STBoundary::DecisionType::NEIGHBOR_OVERTAKE;
+    }
+  }
+
+  if (!neighbor_agents_decision_table.empty()) {
+    mutable_st_graph->UpdateNeighborAgentResults(
+        neighbor_agents_decision_table);
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: Update "
+        "neighbor agents decision table\n");
+  }
+  JSON_DEBUG_VALUE("gap_lon_decision_update",
+                   !neighbor_agents_decision_table.empty())
+}
+
+bool LongitudinalDecisionDecider::ConstructNeighborLaneStGraph(
+    const agent::Agent *const neighbor_agent) {
+  const auto &mutable_planning_context = session_->mutable_planning_context();
+  auto *mutable_st_graph = mutable_planning_context->st_graph();
+  if (nullptr == neighbor_agent) {
     return false;
   }
-  return mutable_st_graph->InsertAgent(*invade_agent,
+  return mutable_st_graph->InsertAgent(*neighbor_agent,
                                        speed::StBoundaryType::NEIGHBOR);
 }
 

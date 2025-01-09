@@ -117,6 +117,9 @@ class Target {
   std::unique_ptr<Trajectory1d> MakeMaxSpeedLimitCurve();
 
  protected:
+  bool IsNeighborTargetValid() const;
+
+ protected:
   framework::Session* session_;
   const SpeedPlannerConfig& config_;
   std::vector<TargetValue> target_values_;

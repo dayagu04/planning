@@ -1,5 +1,6 @@
 #include "st_graph_helper.h"
 
+#include "st_graph/st_point.h"
 #include "st_graph_utils.h"
 
 namespace planning {
@@ -243,6 +244,10 @@ bool StGraphHelper::GetFirstNeighborUpperBound(
       first_neighbor_yield_index < 0) {
     return false;
   }
+  if (neighbor_corridor.at(first_neighbor_yield_index).first.agent_id() ==
+      kNoAgentId) {
+    return false;
+  }
   *upper_point = neighbor_corridor.at(first_neighbor_yield_index).first;
   return true;
 }
@@ -254,6 +259,10 @@ bool StGraphHelper::GetFirstNeighborLowerBound(
       st_graph_.first_neighbor_overtake_index();
   if (first_neighbor_overtake_index >= neighbor_corridor.size() ||
       first_neighbor_overtake_index < 0) {
+    return false;
+  }
+  if (neighbor_corridor.at(first_neighbor_overtake_index).second.agent_id() ==
+      kNoAgentId) {
     return false;
   }
   *lower_point = neighbor_corridor.at(first_neighbor_overtake_index).second;

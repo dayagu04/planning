@@ -21,7 +21,10 @@ class LongitudinalDecisionDecider : public Task {
 
   void UpdateInvadeNeighborResults();
 
-  bool ConstructNeighborLaneStGraph(const agent::Agent *const invade_agent);
+  // only consider lane change execution stage
+  void UpdateLaneChangeNeighborResults();
+
+  bool ConstructNeighborLaneStGraph(const agent::Agent *const neighbor_agent);
 
   void MakeDebugMessage();
 

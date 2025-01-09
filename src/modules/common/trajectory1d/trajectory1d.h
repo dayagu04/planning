@@ -41,8 +41,8 @@ struct StateLimit {
 };
 
 struct CoordinateParam {
-  double s_start = 0.0;
-  double v = 0.0;
+  double s_start = 0.0;  // s_start is target s(location) at current time
+  double v = 0.0;        // v is target v at current time
 };
 
 class Trajectory1d {
