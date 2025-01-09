@@ -734,8 +734,23 @@ void LateralObstacleDecider::UpdateLatDecision(
         // 平行车辆
         if (obstacle->d_s_rel() <= 0 && obstacle->d_s_rel() > -ego_length_) {
           ego_head_l_ = reference_path_ptr->get_frenet_ego_state().head_l();
-          bool lat_overlap = fabs(ego_head_l_ - obstacle->frenet_l()) <
-                             (ego_width_ + obstacle->width()) / 2;
+          const double ego_head_l_start = ego_head_l_ - ego_width_ / 2;
+          const double ego_head_l_end = ego_head_l_ + ego_width_ / 2;
+          double ego_l = reference_path_ptr->get_frenet_ego_state().l();
+          const double ego_l_start = ego_l - ego_width_ / 2;
+          const double ego_l_end = ego_l + ego_width_ / 2;
+          const double obstacle_l_start =
+              obstacle->frenet_polygon_sequence()[0].second.min_y();
+          const double obstacle_l_end =
+              obstacle->frenet_polygon_sequence()[0].second.max_y();
+          double start_l = std::max(ego_l_start, obstacle_l_start);
+          double end_l = std::min(ego_l_end, obstacle_l_end);
+          double start_head_l = std::max(ego_head_l_start, obstacle_l_start);
+          double end_head_l = std::min(ego_head_l_end, obstacle_l_end);
+          constexpr double kLatOverlapBuffer = 0.25;
+          bool lat_overlap = (start_l < end_l - kLatOverlapBuffer) &&
+                             (start_head_l < end_head_l - kLatOverlapBuffer);
+
           if (ego_head_l_ < obstacle->frenet_l()) {
             lat_obstacle_decision[obstacle->id()] =
                 LatObstacleDecisionType::RIGHT;
