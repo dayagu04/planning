@@ -456,7 +456,7 @@ void ObstacleManager::UpdateOccObstacle() {
         object_points.emplace_back(
             planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
       }
-      if (polygon_points_size >= 5) {
+      if (object_points.size() >= 5) {
         AddPointClouds(object_points);
         Obstacle obstacle(
             kOccupancyObjectIdOffset +
@@ -501,37 +501,40 @@ void ObstacleManager::UpdateGroundLineObstacle() {
       const size_t groundline_size = local_view.ground_line_perception.groundline_size;
       for (size_t i = 0; i < groundline_size; ++i) {
         const auto &groundline = local_view.ground_line_perception.groundline[i];
+        const size_t groundline_point_size = groundline.groundline_point_size;
         ground_line_id += 1;
         bool in_range = true;
         std::vector<planning_math::Vec2d> points;
-        points.reserve(groundline.groundline_point_size);
-        for (size_t j = 0; j < groundline.groundline_point_size; ++j) {
+        points.reserve(groundline_point_size);
+        for (size_t j = 0; j < groundline_point_size; ++j) {
           // filter
-          if (has_target_lane) {
-            if (ref_path_ptr != nullptr) {
-              const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
-              if (frenet_coord != nullptr) {
-                // 自车sl
-                Point2D ego_point;
-                if (!frenet_coord->XYToSL(
-                        Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
-                        ego_point) ||
-                    std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
-                  continue;
-                }
-                Point2D sl_point;
-                if (!frenet_coord->XYToSL(
-                        Point2D(groundline.shape[j].x, groundline.shape[j].y),
-                        sl_point) ||
-                    std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
-                    groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
-                    sl_point.x < ego_point.x + 7 ||
-                    ((sl_point.x < ego_point.x + 9) &&
-                     groundline.resource_type ==
-                         iflyauto::ResourceType::RESOURCE_TYPE_MAP)) {
-                  in_range = false;
-                  break;
-                }
+          if ((groundline.shape[j].x == 0) && (groundline.shape[j].y == 0)) {
+            continue;
+          }
+          if (ref_path_ptr != nullptr) {
+            const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+            if (frenet_coord != nullptr) {
+              // 自车sl
+              Point2D ego_point;
+              if (!frenet_coord->XYToSL(Point2D(ego_state->ego_carte().x,
+                                                ego_state->ego_carte().y),
+                                        ego_point) ||
+                  std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+                continue;
+              }
+              Point2D sl_point;
+              if (!frenet_coord->XYToSL(
+                      Point2D(groundline.shape[j].x, groundline.shape[j].y),
+                      sl_point) ||
+                  std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
+                  groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
+                  std::fabs(sl_point.y - ego_point.y) > 6 ||
+                  sl_point.x < ego_point.x + 6 ||
+                  ((sl_point.x < ego_point.x + 9) &&
+                   groundline.resource_type ==
+                       iflyauto::ResourceType::RESOURCE_TYPE_MAP)) {
+                in_range = false;
+                break;
               }
             }
           }
@@ -541,7 +544,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         if (!in_range) {
           continue;
         }
-        if (groundline.groundline_point_size >= 3) {
+        if (points.size() >= 3) {
           AddPointClouds(points);
           Obstacle obstacle(ground_line_id, std::move(points));
           add_groundline_obstacle(obstacle);
@@ -611,9 +614,11 @@ void ObstacleManager::UpdateMapStaticObstacle() {
       if (!in_range) {
         continue;
       }
-      AddPointClouds(column_box);
-      Obstacle obstacle(ehr_column_id, column_box);
-      add_map_static_obstacle(obstacle);
+      if (column_box.size() >= 3) {
+        AddPointClouds(column_box);
+        Obstacle obstacle(ehr_column_id, column_box);
+        add_map_static_obstacle(obstacle);
+      }
     }
   }
 }
