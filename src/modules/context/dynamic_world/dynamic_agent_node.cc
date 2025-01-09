@@ -81,7 +81,8 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
                                           ref_line_point.path_point.y()};
       ref_line_points.emplace_back(path_point);
     }
-    coord_ = std::make_shared<KDPath>(std::move(ref_line_points));
+    coord_ =
+        std::make_shared<planning_math::KDPath>(std::move(ref_line_points));
   } else {
     coord_ = ref_line.get_frenet_coord();
   }

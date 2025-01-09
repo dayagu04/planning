@@ -75,7 +75,8 @@ class OvertakeRequest : public LaneChangeRequest {
       double* rear_required_space);
 
   void selectTargetObstacleIds(
-      const std::shared_ptr<KDPath>& ref_line, const Point2D ego_cart_point,
+      const std::shared_ptr<planning_math::KDPath>& ref_line,
+      const Point2D ego_cart_point,
       const std::vector<TrackedObject> candidate_obs_info,
       const double search_range, const int max_target_num,
       const double ego_half_width, const double l_buffer,
@@ -121,7 +122,7 @@ class OvertakeRequest : public LaneChangeRequest {
   double getDrivingDistance(const double v, const double a, const double t,
                             double* v_out);
 
-  std::shared_ptr<KDPath> base_frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
   std::shared_ptr<ReferencePath> left_reference_path_ = nullptr;
   std::shared_ptr<ReferencePath> right_reference_path_ = nullptr;

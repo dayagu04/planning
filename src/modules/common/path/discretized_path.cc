@@ -6,6 +6,7 @@
 #include "math/linear_interpolation.h"
 
 namespace planning {
+using namespace planning_math;
 
 DiscretizedPath::DiscretizedPath(const std::vector<PathPoint>& path_points)
     : std::vector<PathPoint>(path_points) {}

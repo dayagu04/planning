@@ -4,7 +4,7 @@
 #include <cstddef>
 #include "math/box2d.h"
 #include "utils/kd_path.h"
-using namespace planning::planning_math;
+
 namespace planning {
 
 struct AgentSLInfo {

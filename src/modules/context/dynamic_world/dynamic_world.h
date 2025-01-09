@@ -76,8 +76,8 @@ class DynamicWorld {
  private:
   framework::Session* session_ = nullptr;
   agent::AgentManager& agent_manager_;
-  std::shared_ptr<KDPath> ego_lane_coord_;
-  std::shared_ptr<KDPath> neighbor_lane_coord_;
+  std::shared_ptr<planning_math::KDPath> ego_lane_coord_;
+  std::shared_ptr<planning_math::KDPath> neighbor_lane_coord_;
 
   // key: node_id, value: dynamic_agent_node ptr
   std::unordered_map<int64_t, std::unique_ptr<DynamicAgentNode>>

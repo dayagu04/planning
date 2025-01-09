@@ -87,7 +87,7 @@ class DynamicAgentNode {
  private:
   const agent::Agent* agent_;
   const VehicleParam vehicle_param_;
-  std::shared_ptr<KDPath> coord_;
+  std::shared_ptr<planning_math::KDPath> coord_;
   bool is_valid_ = false;
   int64_t node_id_ = kInvalidId;
   int32_t node_lane_id_ = kInvalidId;

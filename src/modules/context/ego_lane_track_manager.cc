@@ -34,6 +34,7 @@
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
 namespace planning {
+using namespace planning_math;
 
 namespace {
 constexpr double kLastPlanLengthThr = 2.0;

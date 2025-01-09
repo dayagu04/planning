@@ -1097,7 +1097,7 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
     }
 
     double s_end =
-        min(target_reference->get_frenet_coord()->Length(),
+        std::min(target_reference->get_frenet_coord()->Length(),
             target_reference->get_frenet_ego_state().s() + presee_dist);
     if (target_reference->get_frenet_coord()->SLToXY(
             Point2D(s_end, 0), presee_cart_point_in_target)) {

@@ -2509,7 +2509,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.dist_rblane = 10.;  // attention!!hack!
 
   // todo:clren 后面会使用ReferencePoints代替PathPoint
-  std::vector<PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
   if (flane_ != nullptr) {
     auto &ref_path = flane_->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {

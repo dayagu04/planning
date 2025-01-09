@@ -146,13 +146,14 @@ const double kInvalidDist = NL_NMAX;
 
 bool equal_zero(double a);
 
-void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
-                           double y, double &s, double &l, double &v_s,
-                           double &v_l, double &theta, bool get_theta,
-                           double *v = nullptr, double *yaw = nullptr);
+void calc_cartesian_frenet(
+    const std::vector<planning_math::PathPoint> &path_points, double x,
+    double y, double &s, double &l, double &v_s, double &v_l, double &theta,
+    bool get_theta, double *v = nullptr, double *yaw = nullptr);
 
-void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
-                           double l, double &x, double &y);
+void calc_frenet_cartesian(
+    const std::vector<planning_math::PathPoint> &path_points, double s,
+    double l, double &x, double &y);
 
 // void discrete(double start, double end, double gap,
 //               std::vector<double> &output) {

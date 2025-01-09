@@ -2309,7 +2309,7 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
   auto &hard_bounds_output =
       general_lateral_decider_output.hard_bounds_cart_point;
 
-  const std::shared_ptr<KDPath> frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   Point2D tmp_soft_lower_point;
   Point2D tmp_soft_upper_point;
@@ -2353,7 +2353,7 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
 
 void GeneralLateralDecider::GenerateEnuReferenceTraj(
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
-  const std::shared_ptr<KDPath> frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());

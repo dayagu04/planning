@@ -48,18 +48,17 @@ class AgentLongitudinalDecider : public Task {
 
   void DeciderCutOutAgent();
 
-  bool IsLargeAgentCutIn(const std::shared_ptr<VirtualLane> ego_lane,
-                         const std::shared_ptr<KDPath>& planned_path,
-                         const agent::Agent& agent, const double agent_max_s,
-                         const double cut_in_distance_range_m,
-                         const double ego_half_length, const double ego_s,
-                         const double ego_theta, const double ego_speed_mps);
+  bool IsLargeAgentCutIn(
+      const std::shared_ptr<VirtualLane> ego_lane,
+      const std::shared_ptr<planning_math::KDPath>& planned_path,
+      const agent::Agent& agent, const double agent_max_s,
+      const double cut_in_distance_range_m, const double ego_half_length,
+      const double ego_s, const double ego_theta, const double ego_speed_mps);
 
-  void IsSlowSpeedCutinSuppression(const std::shared_ptr<KDPath>& planned_path,
-                                   const PlanningInitPoint init_point,
-                                   const bool is_lane_change,
-                                   const agent::Agent& agent,
-                                   bool* is_slow_need_suppression);
+  void IsSlowSpeedCutinSuppression(
+      const std::shared_ptr<planning_math::KDPath>& planned_path,
+      const PlanningInitPoint init_point, const bool is_lane_change,
+      const agent::Agent& agent, bool* is_slow_need_suppression);
 
   void CalculateAgentLateralDistance(
       const double object_l_speed_mps, const double min_l, const double max_l,
@@ -83,17 +82,16 @@ class AgentLongitudinalDecider : public Task {
 
   void FilterReverseAgents();
 
-  bool IsConsiderBackObs(const std::shared_ptr<KDPath> planned_path,
-                         const PlanningInitPoint& init_point,
-                         const agent::Agent* agent, const double ego_front_s,
-                         const double front_corner_s, const double ego_center_s,
-                         const double front_edge_s_diff) const;
+  bool IsConsiderBackObs(
+      const std::shared_ptr<planning_math::KDPath> planned_path,
+      const PlanningInitPoint& init_point, const agent::Agent* agent,
+      const double ego_front_s, const double front_corner_s,
+      const double ego_center_s, const double front_edge_s_diff) const;
 
-  bool FilterRearNoCutInAgent(const std::shared_ptr<KDPath> planned_path,
-                              const PlanningInitPoint& init_point,
-                              const double ego_front_s,
-                              const double agent_front_s,
-                              const agent::Agent* agent) const;
+  bool FilterRearNoCutInAgent(
+      const std::shared_ptr<planning_math::KDPath> planned_path,
+      const PlanningInitPoint& init_point, const double ego_front_s,
+      const double agent_front_s, const agent::Agent* agent) const;
 
   double GetFilterUltraDistanceWithEgoVel(const double ego_vel) const;
 

@@ -6,6 +6,8 @@
 #include "utils/kd_path.h"
 
 namespace planning {
+using namespace planning_math;
+
 bool ConstructLinePolygons(const std::vector<planning_math::Vec2d> &line,
                            double y_width,
                            std::vector<planning_math::Polygon2d> &polygons) {

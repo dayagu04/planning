@@ -1317,7 +1317,7 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
 
-  const std::shared_ptr<KDPath> frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> frenet_coord =
       reference_path_ptr->get_frenet_coord();
   Point2D tmp_safe_lower_point;
   Point2D tmp_safe_upper_point;
@@ -1604,14 +1604,14 @@ ObstacleBorderInfo HppGeneralLateralDecider::GetNearestObstacleBorder(
 }
 
 void HppGeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
-    vector<pair<int, Polygon2d>> &left_groundline_polygons,
-    vector<pair<int, Polygon2d>> &right_groundline_polygons,
-    vector<pair<int, Polygon2d>> &left_parking_space_polygons,
-    vector<pair<int, Polygon2d>> &right_parking_space_polygons) {
+    std::vector<std::pair<int, Polygon2d>> &left_groundline_polygons,
+    std::vector<std::pair<int, Polygon2d>> &right_groundline_polygons,
+    std::vector<std::pair<int, Polygon2d>> &left_parking_space_polygons,
+    std::vector<std::pair<int, Polygon2d>> &right_parking_space_polygons) {
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
-  const std::shared_ptr<KDPath> &frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> &frenet_coord =
       reference_path_ptr->get_frenet_coord();
   // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
   // pillar），生成所有polygons Step 1.1 : 处理 lines

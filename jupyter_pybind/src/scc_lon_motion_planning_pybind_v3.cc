@@ -11,6 +11,8 @@
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/src/scc_longitudinal_motion_planning_problem_v3.h"
 
 namespace py = pybind11;
+using namespace planning;
+using namespace planning::planning_math;
 using namespace pnc::scc_longitudinal_planning_v3;
 
 static SccLongitudinalMotionPlanningProblemV3 *pBase = nullptr;

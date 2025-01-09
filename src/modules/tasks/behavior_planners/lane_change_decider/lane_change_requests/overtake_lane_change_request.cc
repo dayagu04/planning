@@ -21,6 +21,7 @@
 #include "virtual_lane_manager.h"
 
 namespace planning {
+using namespace planning_math;
 
 namespace {
 constexpr double kStaticVehicleThreshold = 1.0;

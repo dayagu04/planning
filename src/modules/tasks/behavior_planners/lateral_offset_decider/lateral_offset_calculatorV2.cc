@@ -510,12 +510,12 @@ double LateralOffsetCalculatorV2::SmoothLateralOffset(
                           avoid_obstacle.first_s_to_ego * lat_offset;
 
       if (last_avoid_info_.lat_offset * lat_offset >= 0 &&
-          fabs(last_avoid_info_.lat_offset) > fabs(lat_offset)) {
+          std::fabs(last_avoid_info_.lat_offset) > fabs(lat_offset)) {
         smooth_lat_offset = lat_offset;
-      } else if (min(smooth_lat_offset, lat_offset) <=
+      } else if (std::min(smooth_lat_offset, lat_offset) <=
                      last_avoid_info_.lat_offset &&
                  last_avoid_info_.lat_offset <=
-                     max(smooth_lat_offset, lat_offset)) {
+                     std::max(smooth_lat_offset, lat_offset)) {
         smooth_lat_offset = last_avoid_info_.lat_offset;
       }
 

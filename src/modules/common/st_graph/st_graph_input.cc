@@ -8,7 +8,8 @@
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
-namespace {
+namespace planning {
+using namespace planning_math;
 
 constexpr double kPathSampleInterval = 1.0;
 constexpr double kExtendTime = 0.3;
@@ -517,13 +518,13 @@ const std::shared_ptr<VirtualLane> StGraphInput::ego_lane() const {
 
 bool StGraphInput::is_lane_keeping() const { return is_lane_keeping_; }
 
-const string StGraphInput::lane_change_request() const {
+const std::string StGraphInput::lane_change_request() const {
   return session_->planning_context()
       .lateral_behavior_planner_output()
       .lc_request;
 }
 
-const string StGraphInput::lane_change_status() const {
+const std::string StGraphInput::lane_change_status() const {
   return session_->planning_context()
       .lateral_behavior_planner_output()
       .lc_status;

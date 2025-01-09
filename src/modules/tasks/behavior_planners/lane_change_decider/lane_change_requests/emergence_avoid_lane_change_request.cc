@@ -37,7 +37,7 @@ EmergenceAvoidRequest::EmergenceAvoidRequest(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-  base_frenet_coord_ = std::make_shared<KDPath>();
+  base_frenet_coord_ = std::make_shared<planning_math::KDPath>();
 }
 
 void EmergenceAvoidRequest::Update(int lc_status) {

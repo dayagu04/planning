@@ -71,7 +71,8 @@ void ReferencePath::update_refpath_points(
     coord_path_points.emplace_back(pt);
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
-  frenet_coord_ = std::make_shared<KDPath>(std::move(coord_path_points));
+  frenet_coord_ =
+      std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
 
   // Step 2) 1. update refined_ref_path_points_' frenet points by frenet_coord_
   refined_ref_path_points_.clear();

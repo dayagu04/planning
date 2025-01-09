@@ -638,7 +638,7 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
   const double ego_lateral_offset_in_target_lane =
       std::fabs(target_lane->get_ego_lateral_offset());
 
-  const std::shared_ptr<KDPath> base_frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> base_frenet_coord =
       reference_path_ptr->get_frenet_coord();
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();

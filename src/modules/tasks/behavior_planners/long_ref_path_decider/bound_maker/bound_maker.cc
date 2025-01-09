@@ -416,7 +416,7 @@ void BoundMaker::CalcAccLimits(const UpperBoundInfo& upper_bound_info,
                                  acc_target->first);
   }
   // a_min can't be higher than a_max
-  acc_target->first = min(acc_target->first, acc_target->second);
+  acc_target->first = std::min(acc_target->first, acc_target->second);
   // final check on limits
   acc_target->first = clip(acc_target->first, _A_MAX, _A_MIN);
   acc_target->second = clip(acc_target->second, _A_MAX, _A_MIN);

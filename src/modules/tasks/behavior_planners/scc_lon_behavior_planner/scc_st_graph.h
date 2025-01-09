@@ -73,7 +73,7 @@ class StGraphGenerator {
   bool CalcSpeedInfoWithLead(
       const planning::common::TrackedObjectInfo &lead_one,
       const planning::common::TrackedObjectInfo &lead_two,
-      const string &lc_request, const double v_ego,
+      const std::string &lc_request, const double v_ego,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
 
   bool CalcSpeedInfoWithTempLead(
@@ -85,7 +85,7 @@ class StGraphGenerator {
 
   void CalcSpeedInfoWithCutin(
       const planning::common::LatObsInfo &lateral_obstacles,
-      const string &lc_request, double v_cruise, double v_ego,
+      const std::string &lc_request, double v_cruise, double v_ego,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &cut_in_st_info);
 
   bool CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge,
@@ -118,7 +118,7 @@ class StGraphGenerator {
 
   void UpdateNearObstacles(
       const planning::common::LatObsInfo &lateral_obstacles,
-      const string &lc_request, double v_ego);
+      const std::string &lc_request, double v_ego);
 
   // compute desired distance
   double CalcDesiredDistance(
@@ -147,8 +147,8 @@ class StGraphGenerator {
 
   void CalcSpeedInfoWithGap(
       const planning::common::TrackedObjectInfo &lead_one,
-      const double v_cruise, const double v_ego, const string &lc_request,
-      const string &lc_status,
+      const double v_cruise, const double v_ego, const std::string &lc_request,
+      const std::string &lc_status,
       std::vector<planning::common::RealTimeLonObstacleSTInfo>
           &lane_change_st_info);
 
@@ -266,8 +266,8 @@ class StGraphGenerator {
 
   void MergeInfoReset();
 
-  void SetDefaultDebugValues(const std::vector<string> *names);
-  void SetDefaultDebugValues(std::vector<string> names);
+  void SetDefaultDebugValues(const std::vector<std::string> *names);
+  void SetDefaultDebugValues(std::vector<std::string> names);
 
   // HACK: cross障碍物判断
   bool FastCrossAgentChecker(const double lead_one_drel, const double v_ego,
@@ -293,7 +293,7 @@ class StGraphGenerator {
   scc::STboundaries st_boundaries_;
   common::StartStopInfo start_stop_info_;
   std::array<double, 3> lon_init_state_;
-  std::shared_ptr<KDPath> lat_path_coord_;
+  std::shared_ptr<planning_math::KDPath> lat_path_coord_;
   std::vector<NarrowLead> narrow_agent_;
   double curv_ = 1 / 10000.0;
   double road_radius_ = 10000.0;

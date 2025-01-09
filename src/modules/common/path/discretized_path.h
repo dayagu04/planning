@@ -8,24 +8,25 @@
 
 namespace planning {
 
-class DiscretizedPath : public std::vector<PathPoint> {
+class DiscretizedPath : public std::vector<planning_math::PathPoint> {
  public:
   DiscretizedPath() = default;
 
-  explicit DiscretizedPath(const std::vector<PathPoint>& path_points);
+  explicit DiscretizedPath(
+      const std::vector<planning_math::PathPoint>& path_points);
 
   double Length() const;
 
-  PathPoint Evaluate(const double path_s) const;
+  planning_math::PathPoint Evaluate(const double path_s) const;
 
-  PathPoint EvaluateReverse(const double path_s) const;
+  planning_math::PathPoint EvaluateReverse(const double path_s) const;
 
-  double QueryMatchedS(const PathPoint& path_point) const;
+  double QueryMatchedS(const planning_math::PathPoint& path_point) const;
 
  protected:
-  std::vector<PathPoint>::const_iterator QueryLowerBound(
+  std::vector<planning_math::PathPoint>::const_iterator QueryLowerBound(
       const double path_s) const;
-  std::vector<PathPoint>::const_iterator QueryUpperBound(
+  std::vector<planning_math::PathPoint>::const_iterator QueryUpperBound(
       const double path_s) const;
 };
 

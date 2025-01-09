@@ -349,7 +349,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
             clip(last_polygon.max_x(), frenet_coord->Length(), 0.0),
             &max_kappa);
 
-        double curvature = max(std::abs(min_kappa), std::abs(max_kappa));
+        double curvature = std::max(std::abs(min_kappa), std::abs(max_kappa));
         double cur_radius = curvature > 0.0
                                 ? 1.0 / curvature
                                 : std::numeric_limits<double>::infinity();
@@ -452,7 +452,8 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
 }
 
 void FrenetObstacle::generate_precise_frenet_polygon(
-    planning_math::Polygon2d &polygon, std::shared_ptr<KDPath> frenet_coord) {
+    planning_math::Polygon2d &polygon,
+    std::shared_ptr<planning_math::KDPath> frenet_coord) {
   planning_math::Polygon2d result_polygon;
   double max_curvature = 0.0;
   double min_l = std::numeric_limits<double>::max();
@@ -470,8 +471,8 @@ void FrenetObstacle::generate_precise_frenet_polygon(
     double curvature;
     frenet_coord->GetKappaByS(point.x(), &curvature);
     curvatures.push_back(curvature);
-    max_curvature = max(max_curvature, curvature);
-    min_l = min(min_l, std::abs(point.y()));
+    max_curvature = std::max(max_curvature, curvature);
+    min_l = std::min(min_l, std::abs(point.y()));
   }
   double cur_radius = max_curvature > 0.0
                           ? 1.0 / max_curvature
@@ -499,10 +500,11 @@ void FrenetObstacle::generate_precise_frenet_polygon(
     auto begin_point = origin_points[index_begin];
     auto end_point = origin_points[index_end];
     double s_diff = std::abs(end_point.x() - begin_point.x());
-    double ref_curvature = max(curvatures[index_begin], curvatures[index_end]);
-    double delta_s = max(0.5, kDeltaRadian / ref_curvature);
+    double ref_curvature =
+        std::max(curvatures[index_begin], curvatures[index_end]);
+    double delta_s = std::max(0.5, kDeltaRadian / ref_curvature);
     int inter_num =
-        min(kMaxInterpolateNums, max(2, int(ceil(s_diff / delta_s))));
+        std::min(kMaxInterpolateNums, std::max(2, int(ceil(s_diff / delta_s))));
     for (int j = 1; j <= inter_num; ++j) {
       Point2D cur_cart_p, cur_fren_p;
       if (j == inter_num) {

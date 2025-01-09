@@ -76,7 +76,8 @@ class FrenetObstacle {
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
 
   static void generate_precise_frenet_polygon(
-      planning_math::Polygon2d& polygon, std::shared_ptr<KDPath> frenet_coord);
+      planning_math::Polygon2d& polygon,
+      std::shared_ptr<planning_math::KDPath> frenet_coord);
 
  private:
   int id_;

@@ -21,7 +21,8 @@
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
-using namespace planning;
+namespace planning {
+using namespace planning::planning_math;
 constexpr double Eps = 1e-3;
 constexpr double LaneCheckBuffer = 0.55;
 constexpr double delta_t = 0.1;
@@ -847,4 +848,5 @@ void AgentNodeManager::RefineObjInitState(const int64_t &obj_id,
   // map_gs_care_obstacles_.erase(obj_id);
   // map_gs_care_obstacles_.insert(std::make_pair(obj_id, tmp_obstacle));
   return;
+}
 }

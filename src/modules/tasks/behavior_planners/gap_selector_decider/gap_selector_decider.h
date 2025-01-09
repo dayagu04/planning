@@ -47,7 +47,6 @@
 
 #define __FUNCTION_CONSUMPTION_COLLECT__
 namespace planning {
-using namespace planning_math;
 
 class GapSelectorDecider : public Task {
  public:
@@ -125,7 +124,8 @@ class GapSelectorDecider : public Task {
   void DecoupleQuinticPathSpline(
       const double remaining_lc_duration,
       const pnc::spline::QuinticPolynominalPath &quintic_path,
-      const std::shared_ptr<KDPath> coord, GapSelectorPathSpline &path_spline);
+      const std::shared_ptr<planning_math::KDPath> coord,
+      GapSelectorPathSpline &path_spline);
   void GenerateLinearRefTrajectory(const bool is_left,
                                    TrajectoryPoints &traj_points);
   void RetentivePathPlan();
@@ -147,7 +147,8 @@ class GapSelectorDecider : public Task {
       double &expected_s, double &expected_l, double &truancation_end_s,
       const double expected_lc_time);
   pnc::spline::QuinticPolynominalPath ConstructQuinticPath(
-      const double remaining_lc_duration, const shared_ptr<KDPath> coord);
+      const double remaining_lc_duration,
+      const std::shared_ptr<planning_math::KDPath> coord);
 
   bool CheckLCFinish();
 
@@ -231,11 +232,11 @@ class GapSelectorDecider : public Task {
   SecondOrderTimeOptimalTrajectory interact_speed_adjusted_time_optimal_;
 
   // virtual lane coord list
-  std::shared_ptr<KDPath> current_lane_coord_ptr_;
-  std::shared_ptr<KDPath> origin_lane_coord_ptr_;
-  std::shared_ptr<KDPath> target_lane_coord_ptr_;
+  std::shared_ptr<planning_math::KDPath> current_lane_coord_ptr_;
+  std::shared_ptr<planning_math::KDPath> origin_lane_coord_ptr_;
+  std::shared_ptr<planning_math::KDPath> target_lane_coord_ptr_;
 
-  std::shared_ptr<KDPath> base_frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   std::shared_ptr<AgentNodeManager> agent_node_mgr_;
 
   // ScenarioStateEnum last_target_state_{ROAD_NONE};

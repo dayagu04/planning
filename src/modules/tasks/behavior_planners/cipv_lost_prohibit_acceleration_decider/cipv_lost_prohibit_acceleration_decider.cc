@@ -132,7 +132,8 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
 }
 
 double CipvLostProhibitAccelerationDecider::CalculateRelativeDistance(
-    const std::shared_ptr<KDPath> &planned_path, const agent::Agent *cipv) {
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const agent::Agent *cipv) {
   double project_dist = std::numeric_limits<double>::max();
   if (cipv->agent_id() <= 0) {
     return project_dist;
@@ -233,7 +234,7 @@ void CipvLostProhibitAccelerationDecider::Update() {
 
 void CipvLostProhibitAccelerationDecider::UpdateCipvInfo(
     const std::shared_ptr<LateralObstacle> &lateral_obstacle,
-    const string &lc_status) {
+    const std::string &lc_status) {
   // check lead one
   bool is_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->leadone());
   // check lead two
