@@ -72,6 +72,7 @@ class CollisionDetector {
     bool is_side_mirror_expand = true;
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     double bound_expand = 0.5;
+    bool use_bounding_box = false;
     Paramters() = default;
     Paramters(const double lat_inf, bool set_side_mirror_expand = true) {
       lat_inflation = lat_inf;
@@ -82,6 +83,7 @@ class CollisionDetector {
       is_side_mirror_expand = true;
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
       bound_expand = 0.5;
+      use_bounding_box = false;
     }
   };
 

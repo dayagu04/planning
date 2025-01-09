@@ -458,7 +458,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       //     box) {
       //   continue;
       // }
-      if (!path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
+      if (param_.use_bounding_box &&
+          !path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
         continue;
       }
 
@@ -681,7 +682,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       //   continue;
       // }
 
-      if (!path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
+      if (param_.use_bounding_box &&
+          !path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
         continue;
       }
 
@@ -1734,6 +1736,7 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalPathSegBound(
   bound[3] << x_min, y_min;
 
   path_seg_rectangle_bound_.Set(x_min, y_min, x_max, y_max);
+  param_.use_bounding_box = true;
 
   return bound;
 }
