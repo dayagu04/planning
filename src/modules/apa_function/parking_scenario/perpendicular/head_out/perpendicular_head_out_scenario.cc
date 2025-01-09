@@ -84,6 +84,10 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  GenTlane();
+
+  GenObstacles();
+
   // check replan
   if (apa_world_ptr_->GetSimuParam().force_plan || CheckReplan()) {
     ILOG_INFO << "replan is required!";
@@ -94,10 +98,6 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     frame_.dynamic_plan_fail_flag = false;
 
     const double start_time = IflyTime::Now_ms();
-
-    GenTlane();
-
-    GenObstacles();
 
     frame_.total_plan_count++;
 
@@ -772,7 +772,18 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
 const bool PerpendicularHeadOutScenario::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   // set obstacles
-  double channel_width = frame_.ego_slot_info.channel_width;
+  // double channel_width = frame_.ego_slot_info.channel_width;
+  geometry_lib::PathPoint cur_pose;
+  cur_pose.pos = frame_.ego_slot_info.ego_pos_slot;
+  cur_pose.heading = frame_.ego_slot_info.ego_heading_slot;
+  cur_pose.heading_vec = frame_.ego_slot_info.ego_heading_slot_vec;
+  double channel_width =
+      apa_world_ptr_->GetCollisionDetectorPtr()->GetCarMaxX(cur_pose) + 3.168 -
+      std::max(frame_.ego_slot_info.pt_0.x(), frame_.ego_slot_info.pt_1.x());
+
+  channel_width =
+      std::max(channel_width, apa_param.GetParam().channel_width - 1.5);
+
   double channel_length = apa_param.GetParam().channel_length + 3.0;
 
   if (apa_param.GetParam().force_both_side_occupied) {
@@ -1018,6 +1029,35 @@ const bool PerpendicularHeadOutScenario::GenObstacles() {
 }
 
 const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
+  const bool conditions_1 =
+      frame_.ego_slot_info.ego_pos_slot.x() < 5.5 && frame_.is_replan_second;
+
+  const bool fix_shift_conditions = conditions_1 || frame_.is_replan_first;
+  ILOG_INFO << "ego_pos_slot x " << frame_.ego_slot_info.ego_pos_slot.x();
+
+  if (!fix_shift_conditions) {
+    ILOG_INFO << "current plan should shift gear";
+    // set current arc steer
+    if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
+    } else if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_LEFT) {
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
+    } else {
+      ILOG_INFO << "fault ref_arc_steer state!";
+      return false;
+    }
+
+    // set current gear
+    if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+    } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+    } else {
+      ILOG_INFO << "fault ref_gear state!";
+      return false;
+    }
+  }
+
   ILOG_INFO << "-------------- PathPlanOnce --------------";
   // construct input
   const auto& ego_slot_info = frame_.ego_slot_info;
@@ -1117,29 +1157,6 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   //     (frame_.is_replan_second && planner_output.gear_shift) ||
   //     (!frame_.is_replan_first && !frame_.is_replan_second &&
   //      frame_.replan_reason != DYNAMIC);
-
-  if (!frame_.is_replan_first) {
-    ILOG_INFO << "next plan should shift gear";
-    // set current arc steer
-    if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
-      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
-    } else if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_LEFT) {
-      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
-    } else {
-      ILOG_INFO << "fault ref_arc_steer state!";
-      return false;
-    }
-
-    // set current gear
-    if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    } else {
-      ILOG_INFO << "fault ref_gear state!";
-      return false;
-    }
-  }
 
   if (frame_.is_replan_first) {
     frame_.is_replan_first = false;
@@ -1368,8 +1385,7 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
     return true;
   }
 
-  if (!apa_world_ptr_->GetSimuParam().sim_to_target &&
-      CheckDynamicUpdate()) {
+  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
     ILOG_INFO << "replan by dynamic!";
     frame_.replan_reason = DYNAMIC;
     return true;
