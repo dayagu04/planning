@@ -413,9 +413,9 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   const auto neighbor_agent_id_st_boundraies_map =
       st_graph->neighbor_agent_id_st_boundaries_map();
   const int32_t gap_front_agent_id =
-      lane_change_decider_output.gap_info.front_agent_id;
+      lane_change_decider_output.lc_gap_info.front_agent_id;
   const int32_t gap_rear_agent_id =
-      lane_change_decider_output.gap_info.rear_agent_id;
+      lane_change_decider_output.lc_gap_info.rear_agent_id;
 
   const auto lane_change_status = lane_change_decider_output.curr_state;
   JSON_DEBUG_VALUE("lane_change_status", static_cast<int>(lane_change_status))
