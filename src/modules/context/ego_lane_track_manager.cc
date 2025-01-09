@@ -62,8 +62,10 @@ constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kNearPreviewDistanceThd = 20.0;
 }  // namespace
 
-EgoLaneTrackManger::EgoLaneTrackManger(planning::framework::Session* session) {
+EgoLaneTrackManger::EgoLaneTrackManger(
+    const EgoPlanningConfigBuilder* config_builder,planning::framework::Session* session) {
   session_ = session;
+  config_ = config_builder->cast<EgoPlanningConfig>();
   // order_ids_of_same_zero_relative_id_.clear();
 }
 
@@ -89,6 +91,7 @@ void EgoLaneTrackManger::TrackEgoLane(
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int zero_relative_id_nums = order_ids_of_same_zero_relative_id.size();
+  const bool enable_use_ground_mark = config_.enable_use_ground_mark_process_split;
 
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
@@ -182,8 +185,19 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (zero_relative_id_nums > 1 && lane_keep_status
             && !is_in_lane_borrow_status
             && ego_in_split_region_) {
-          PreprocessIntersectionSplit(relative_id_lanes,
-                                      order_ids_of_same_zero_relative_id);
+          if (enable_use_ground_mark) {
+            ProcessSplitWithGroundMark(relative_id_lanes,
+                                        order_ids_of_same_zero_relative_id);
+            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
+                      is_exist_split_on_intersection_);
+
+            if (is_exist_split_on_intersection_) {
+              return;
+            }
+          }
+
+          ProcessIntersectionSplit(relative_id_lanes,
+                          order_ids_of_same_zero_relative_id);
           LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
                     is_exist_split_on_intersection_);
 
@@ -399,8 +413,6 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
   double ego2lane_min = std::numeric_limits<double>::max();
   int origin_order_id = 0;
   double total_lane_cost = 0.0;
-  const double lane_line_segment_length = 3.0;
-  const double default_lane_line_length = 60.0;
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
   const double init_pos_lateral_offset_weight = 1.0;
   const double heading_angle_diff_weight = 2.5;
@@ -430,8 +442,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
         for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
-             s += lane_line_segment_length) {
-          if (s > default_lane_line_length + ego_s) {
+             s += kLaneLineSegmentLength) {
+          if (s > kDefaultMappingConsiderLaneLength + ego_s) {
             break;
           }
           double heading_angle = frenet_coord->GetPathCurveHeading(s);
@@ -1192,7 +1204,84 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
   return;
 }
 
-void EgoLaneTrackManger::PreprocessIntersectionSplit(
+void EgoLaneTrackManger::ProcessIntersectionSplit(
+    std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const std::vector<int>& order_ids) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const bool is_in_lane_borrow_status = session_->planning_context()
+                                            .lane_borrow_decider_output()
+                                            .is_in_lane_borrow_status;
+  int origin_order_id = 0;
+  int current_order_id = 0;
+  const double default_lane_mapping_cost = 10.0;
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
+                         plannig_init_point.lat_init_state.y()};
+
+  double clane_min_cost_total = std::numeric_limits<double>::max();
+  for (size_t i = 0; i < order_ids.size(); i++) {
+    if (relative_id_lanes.size() > order_ids[i]) {
+      std::shared_ptr<VirtualLane> relative_id_lane =
+          relative_id_lanes[order_ids[i]];
+      if (relative_id_lane == nullptr) {
+        continue;
+      }
+      if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
+        double average_kappa_cost = 0.0;
+        double total_kappa_cost = 0.0;
+        std::shared_ptr<KDPath> frenet_coord =
+            relative_id_lane->get_lane_frenet_coord();
+        double ego_s = 0.0;
+        double ego_l = 0.0;
+        Point2D ego_frenet_point;
+        if (!frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
+          continue;
+        } else {
+          ego_s = ego_frenet_point.x;
+          ego_l = ego_frenet_point.y;
+        }
+        if (ego_s > frenet_coord->Length()) {
+          continue;
+        }
+        planning_math::PathPoint ego_s_nearest_point =
+            frenet_coord->GetPathPointByS(ego_s);
+        int iter_count = 0;
+        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+             s += kLaneLineSegmentLength) {
+          if (s > kDefaultMappingConsiderLaneLength + ego_s) {
+            break;
+          }
+          double current_kappa;
+          frenet_coord->GetKappaByS(s, &current_kappa);
+          total_kappa_cost += std::fabs(current_kappa);
+          iter_count++;
+        }
+        iter_count = std::max(1, iter_count);
+        average_kappa_cost = total_kappa_cost / iter_count;
+
+        if (average_kappa_cost < clane_min_cost_total) {
+          clane_min_cost_total = average_kappa_cost;
+          origin_order_id = relative_id_lane->get_order_id();
+          relative_id_lane->set_relative_id(0);
+          last_zero_relative_id_order_id_index_ = i;
+          last_track_ego_lane_ = relative_id_lanes[order_ids[i]];
+          is_exist_split_on_intersection_ = true;
+        }
+      }
+    }
+  }
+
+  for (auto& lane : relative_id_lanes) {
+    int lane_order_id = lane->get_order_id();
+    int lane_relative_id = lane_order_id - origin_order_id;
+    lane->set_relative_id(lane_relative_id);
+  }
+
+  return;
+}
+
+void EgoLaneTrackManger::ProcessSplitWithGroundMark(
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids) {
   const auto& ego_state =
@@ -1206,7 +1295,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   bool find_last_frame_track_ego_lane = true;
   int zero_relative_id_order_id_index = last_zero_relative_id_order_id_index_;
   if (order_ids.size() < 2) {
-    LOG_DEBUG("PreprocessIntersectionSplit::order_ids.size() < 2");
+    LOG_DEBUG("ProcessSplitWithGroundMark::order_ids.size() < 2");
     is_exist_split_on_intersection_ = false;
     return;
   }

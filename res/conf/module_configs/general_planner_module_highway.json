@@ -12,6 +12,7 @@
   "replanning_with_navi": false,
   "use_ego_prediction_model_in_planning": true,
   "dump_mdebug": false,
+  "enable_use_ground_mark_process_split": false,
   "enable_use_emergency_avoidence_lane_change_request": true,
   "enable_use_cone_change_request": true,
   "enable_use_merge_change_request": true,

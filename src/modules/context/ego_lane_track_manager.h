@@ -17,7 +17,8 @@ namespace planning {
 
 class EgoLaneTrackManger {
  public:
-  explicit EgoLaneTrackManger(planning::framework::Session *session);
+  explicit EgoLaneTrackManger(
+      const EgoPlanningConfigBuilder* config_builder, planning::framework::Session *session);
   // EgoLaneTrackManger() = default;
   ~EgoLaneTrackManger(){};
 
@@ -54,7 +55,11 @@ class EgoLaneTrackManger {
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
           &virtual_id_mapped_lane);
 
-  void PreprocessIntersectionSplit(
+  void ProcessIntersectionSplit(
+      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<int>& order_ids);
+
+  void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
@@ -170,6 +175,7 @@ class EgoLaneTrackManger {
 
  private:
   planning::framework::Session *session_ = nullptr;
+  EgoPlanningConfig config_;
   // int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;

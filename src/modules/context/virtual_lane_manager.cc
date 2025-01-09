@@ -54,7 +54,7 @@ constexpr double kEpsilon = 1.0e-4;
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session* session)
-    : session_(session), ego_lane_track_manager_(session) {
+    : session_(session), ego_lane_track_manager_(config_builder, session) {
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
 }
