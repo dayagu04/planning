@@ -592,8 +592,37 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   double angle_offset = 0.0;
   bool behind_equal_l_point = true;
 
+  // 绕行方向
+  // int max_l_index = 0;
+  // for (size_t i = 1; i < traj_size; ++i) {
+  //   if (std::abs(hybrid_ara_result.l[i]) >
+  //       std::abs(hybrid_ara_result.l[max_l_index])) {
+  //     max_l_index = i;
+  //   }
+  // }
+
+  // 过滤无效返回中线
+  // if (max_l_index != 1) {
+  //   for (size_t i = 1; i < traj_size; ++i) {
+  //     if (behind_equal_l_point) {
+  //       if ((hybrid_ara_result.l[max_l_index] > 0 && ego_l > 0 &&
+  //            ego_l > hybrid_ara_result.l[i]) ||
+  //           (hybrid_ara_result.l[max_l_index] < 0 && ego_l < 0 &&
+  //            ego_l < hybrid_ara_result.l[i])) {
+  //         hybrid_ara_result.l[i] = ego_l;
+  //       }
+  //       if ((hybrid_ara_result.l[max_l_index] > 0 &&
+  //            ego_l + 0.05 < hybrid_ara_result.l[i]) ||
+  //           (hybrid_ara_result.l[max_l_index] < 0 &&
+  //            ego_l - 0.05 > hybrid_ara_result.l[i])) {
+  //         behind_equal_l_point = false;
+  //       }
+  //     }
+  //   }
+  // }
+
   double kFilterLBuffer = 0.0;
-  // 直道or弯道
+  // 直道or弯道，0表示关闭过滤细微扰动
   if (session_->planning_context()
           .lane_change_decider_output()
           .hpp_turn_signal == NO_CHANGE) {
@@ -601,33 +630,6 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   } else {
     kFilterLBuffer = 0.0;
   }
-
-  // 绕行方向
-  int max_l_index = 0;
-  for (size_t i = 1; i < traj_size; ++i) {
-    if (std::abs(hybrid_ara_result.l[i]) >
-        std::abs(hybrid_ara_result.l[max_l_index])) {
-      max_l_index = i;
-    }
-  }
-  // 过滤无效返回中线
-  for (size_t i = 1; i < traj_size; ++i) {
-    if (behind_equal_l_point) {
-      if ((hybrid_ara_result.l[max_l_index] > 0 && ego_l > 0 &&
-           ego_l > hybrid_ara_result.l[i]) ||
-          (hybrid_ara_result.l[max_l_index] < 0 && ego_l < 0 &&
-           ego_l < hybrid_ara_result.l[i])) {
-        hybrid_ara_result.l[i] = ego_l;
-      }
-      if ((hybrid_ara_result.l[max_l_index] > 0 &&
-           ego_l + 0.05 < hybrid_ara_result.l[i]) ||
-          (hybrid_ara_result.l[max_l_index] < 0 &&
-           ego_l - 0.05 > hybrid_ara_result.l[i])) {
-        behind_equal_l_point = false;
-      }
-    }
-  }
-
   // 过滤细微扰动
   bool find_first_ploe = false;
   bool monotonic = true;

@@ -35,9 +35,16 @@ double CenterCost::MakeCost(Node3D& vertex) const {
 
   // double max_l = std::abs(vertex.GetL());
 
-  double cost = max_l;  // use linear cost
-  // double cost = std::max(max_l, std::pow(2, max_l));  use square to make the
-  // cost more sensitive
+  // 当l较小时，降低l的作用
+  if (max_l < 1) {
+    max_l = 0.9 * max_l * max_l * max_l * max_l + 0.1 * max_l;
+  }
+
+  // use linear cost
+  double cost = max_l;
+
+  // use square to make the cost more sensitive
+  // double cost = std::max(max_l, std::pow(2, max_l));
 
   NormalizeCost(cost);
 

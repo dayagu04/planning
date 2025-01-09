@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
-#include <sstream>
 
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -27,7 +26,6 @@ constexpr double kSkipAppendSearchTimeLimit = 10;  // ms
 constexpr double kTotalSearchTimeLimit = 8;        // ms
 #endif
 // zkxie(TODO): 根据场景而定
-constexpr double kMinSearchRange = 20.0;
 constexpr double kLookAheadTime = 5.0;  // second
 // zkxie(TODO): 根据场景而定
 constexpr double kExtendARASearchRange = 20.0;
@@ -67,6 +65,9 @@ HybridARAStar::HybridARAStar(framework::Session* session) {
   collision_buffer_ = hybrid_ara_star_conf_.collision_buffer;
   rear_obs_s_ = hybrid_ara_star_conf_.rear_obs_s;
   front_obs_s_ = hybrid_ara_star_conf_.front_obs_s;
+  longitudinal_extend_ = hybrid_ara_star_conf_.longitudinal_extend;
+  lateral_extend_ = hybrid_ara_star_conf_.lateral_extend;
+  hpp_min_search_range_ = hybrid_ara_star_conf_.hpp_min_search_range;
 
   std::cout << "HybridARAStar::HybridARAStar() ===========" << std::endl;
   std::cout << "x_grid_resolution_: " << x_grid_resolution_ << std::endl;
@@ -278,28 +279,14 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
 
   // 最小是0.5，自车以当前速度0.2s走的距离，速度越大，这个值越大，魔数
   // 有障碍物时，步长小一点，没有障碍物时，步长大一点
-  double one_shot_distance_time = 0.1;
-  double static_obs_s_buffer = 15;
-  if (current_node->GetS() < obs_max_s_ + static_obs_s_buffer &&
-      current_node->GetS() > obs_min_s_ - static_obs_s_buffer) {
-    one_shot_distance_time = 0.02;
+  // HPP中速度变化较小，取消和速度的关系
+  double one_shot_distance_update = one_shot_distance_;
+  if (current_node->GetS() < obs_max_s_ + vehicle_param_.rear_edge_to_rear_axle &&
+      current_node->GetS() > obs_min_s_ - vehicle_param_.front_edge_to_rear_axle) {
+    one_shot_distance_update = 0.5;
   }
-
-  double one_shot_distance_update =
-      std::max(one_shot_distance_, init_v_ * one_shot_distance_time);
-
-  constexpr double kBendRadius = 20.0;
-  // 以1m为间隔，判断前方10m的距离内，是否车道线半径小于特定值
-  for (int i = 0; i < 10; i++) {
-    double s = ego_s_ + i * 1;
-    ReferencePathPoint temp_ref_path_point;
-    if (reference_path_ptr_->get_reference_point_by_lon(s,
-                                                        temp_ref_path_point)) {
-      if (std::abs(temp_ref_path_point.path_point.kappa()) > 1 / kBendRadius) {
-        one_shot_distance_update = 0.5;
-        break;
-      }
-    }
+  if (in_bend_) {
+    one_shot_distance_update = 0.5;
   }
 
   // one_shot_distance_的取值要注意，apollo中该值是xy_grid_resolution_的根号2倍，这样保证了一个格子里，最多只有一个节点
@@ -384,6 +371,15 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
     return nullptr;
   }
 
+  constexpr double kIgnoreLThreshold = 0.0;
+  if (no_left_ && next_l > kIgnoreLThreshold) {
+    std::cout << "Ignore left point" << std::endl;
+    return nullptr;
+  } else if (no_right_ && next_l < -kIgnoreLThreshold) {
+    std::cout << "Ignore right point" << std::endl;
+    return nullptr;
+  }
+
   auto next_node = std::make_shared<Node3D>(
       intermediate_x, intermediate_y, intermediate_phi, XYbounds_,
       x_grid_resolution_, y_grid_resolution_, phi_grid_resolution_);
@@ -405,7 +401,9 @@ void HybridARAStar::RegisterCost(ara_star::CostManager& cost_manager) const {
   auto agent_cost_ptr = std::make_shared<ara_star::AgentCost>(
       agent_cost_weight_, vehicle_param_.wheel_base, vehicle_param_.length,
       ego_half_width_, bounding_box_vec_, fix_lane_, agent_box_tree_,
-      reference_path_ptr_);
+      reference_path_ptr_, nudge_agents_,
+      vehicle_param_.front_edge_to_rear_axle,
+      vehicle_param_.rear_edge_to_rear_axle);
   cost_manager.AddCost(agent_cost_ptr);
 
   // 与道路边缘越近，cost越大
@@ -496,6 +494,11 @@ bool HybridARAStar::ImprovePath() {
     expand_current_node->set_heuristic_cost(current_node->GetHeuCost());
     expand_current_node->set_total_cost(
         current_node->GetCost(heuristic_factor_));
+    expand_current_node->set_min_dist(current_node->GetMinDist());
+    expand_current_node->set_dist_cost(current_node->GetDistCost());
+    expand_current_node->set_area_cost(current_node->GetAreaCost());
+    expand_current_node->set_directly_behind_cost(
+        current_node->GetDirectlyBehindCost());
 
     // put into close set
     close_set_.emplace(current_node->GetIndex(), current_node);
@@ -555,7 +558,7 @@ bool HybridARAStar::ImprovePath() {
       double new_traj_cost = current_node->GetTrajCost() + cost;
 
       auto time6 = (uint64_t)IflyTime::Now_us();
-      // std::cout << "traj cal time: " << (time6 - time5) << std::endl;
+      // std::cout << "ComputeCost time: " << (time6 - time5) << std::endl;
 
       if (next_node->GetTrajCost() > new_traj_cost) {
         // use new node connection
@@ -612,8 +615,13 @@ bool HybridARAStar::ImprovePath() {
       open_list->set_boundary_cost(node.second->GetBoundaryCost());
       open_list->set_center_cost(node.second->GetCenterCost());
       open_list->set_motion_cost(node.second->GetMotionCost());
-      open_list->set_heuristic_cost(node.second->GetHeuCost());
+      open_list->set_heuristic_cost(node.second->GetHeuCost() *
+                                    heuristic_factor_);
       open_list->set_total_cost(node.second->GetCost(heuristic_factor_));
+      open_list->set_min_dist(node.second->GetMinDist());
+      open_list->set_dist_cost(node.second->GetDistCost());
+      open_list->set_area_cost(node.second->GetAreaCost());
+      open_list->set_directly_behind_cost(node.second->GetDirectlyBehindCost());
     }
 
     // std::cout << expand_node->open_list().size() << std::endl;
@@ -671,8 +679,18 @@ planning_math::Box2d HybridARAStar::GetBoundingBox(const double x,
 }
 
 bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
-  // implement collision check here with small step size
+  // prepare for edt
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  Transform2d ego_base;
+  ego_base.SetBasePose(Pose2D(ego_state_manager->ego_pose().x,
+                              ego_state_manager->ego_pose().y,
+                              ego_state_manager->ego_pose().theta));
+  const AstarPathGear gear = AstarPathGear::DRIVE;
+  float dist = 100.0;
+  float min_dist = 100.0;
 
+  // implement collision check here with small step size
   size_t node_step_num = node->GetStepNum();
   const auto& traversed_x = node->GetXs();
   const auto& traversed_y = node->GetYs();
@@ -692,106 +710,36 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
     double cos_phi = std::cos(traversed_phi[i]);
     double sin_phi = std::sin(traversed_phi[i]);
     planning_math::Vec2d back_axis_position(traversed_x[i], traversed_y[i]);
-    double front_x = traversed_x[i] + vehicle_param_.wheel_base * cos_phi;
-    double front_y = traversed_y[i] + vehicle_param_.wheel_base * sin_phi;
-    planning_math::Vec2d front_axis_position(front_x, front_y);
+    double front_x = traversed_x[i] + vehicle_param_.front_edge_to_rear_axle * cos_phi;
+    double front_y = traversed_y[i] + vehicle_param_.front_edge_to_rear_axle * sin_phi;
+    planning_math::Vec2d ego_head_position(front_x, front_y);
     double center_x = (traversed_x[i] + front_x) / 2;
     double center_y = (traversed_y[i] + front_y) / 2;
     planning_math::Vec2d center_position(center_x, center_y);
 
-    planning_math::Box2d bounding_box =
-        GetBoundingBox(traversed_x[i], traversed_y[i], traversed_phi[i]);
-    bounding_box.LongAndLatExtend(hybrid_ara_star_conf_.longitudinal_extend * 2,
-                                  hybrid_ara_star_conf_.lateral_extend * 2);
-
-    // agent box check
-    if (agent_box_tree_ != nullptr) {
-      const auto* nearest_front_object =
-          agent_box_tree_->GetNearestObject(front_axis_position);
-      if (nearest_front_object != nullptr &&
-          nearest_front_object->obstacle_ptr() != nullptr) {
-        if ((nearest_front_object->obstacle_ptr()->source_type() ==
-                 SourceType::OCC ||
-             nearest_front_object->obstacle_ptr()->source_type() ==
-                 SourceType::GroundLine) &&
-            nearest_front_object->obstacle_ptr()
-                    ->perception_polygon()
-                    .num_points() >= 3) {
-          if (nearest_front_object->obstacle_ptr()
-                  ->perception_polygon()
-                  .HasOverlap(bounding_box)) {
-            return false;
-          }
-        } else {
-          const auto* nearest_box = nearest_front_object->box();
-          if (nearest_box != nullptr) {
-            if (nearest_box->HasOverlap(bounding_box)) {
-              return false;
-            }
-          }
-        }
-      }
-
-      const auto* nearest_center_object =
-          agent_box_tree_->GetNearestObject(center_position);
-      if (nearest_center_object != nearest_front_object &&
-          nearest_center_object != nullptr &&
-          nearest_center_object->obstacle_ptr() != nullptr) {
-        if ((nearest_center_object->obstacle_ptr()->source_type() ==
-                 SourceType::OCC ||
-             nearest_center_object->obstacle_ptr()->source_type() ==
-                 SourceType::GroundLine) &&
-            nearest_center_object->obstacle_ptr()
-                    ->perception_polygon()
-                    .num_points() >= 3) {
-          if (nearest_center_object->obstacle_ptr()
-                  ->perception_polygon()
-                  .HasOverlap(bounding_box)) {
-            return false;
-          }
-        } else {
-          const auto* nearest_box = nearest_center_object->box();
-          if (nearest_box != nullptr) {
-            if (nearest_box->HasOverlap(bounding_box)) {
-              return false;
-            }
-          }
-        }
-      }
-
-      const auto* nearest_back_object =
-          agent_box_tree_->GetNearestObject(back_axis_position);
-      if (nearest_back_object != nearest_front_object &&
-          nearest_back_object != nearest_center_object &&
-          nearest_back_object != nullptr &&
-          nearest_back_object->obstacle_ptr() != nullptr) {
-        if ((nearest_back_object->obstacle_ptr()->source_type() ==
-                 SourceType::OCC ||
-             nearest_back_object->obstacle_ptr()->source_type() ==
-                 SourceType::GroundLine) &&
-            nearest_back_object->obstacle_ptr()
-                    ->perception_polygon()
-                    .num_points() >= 3) {
-          if (nearest_back_object->obstacle_ptr()
-                  ->perception_polygon()
-                  .HasOverlap(bounding_box)) {
-            return false;
-          }
-        } else {
-          const auto* nearest_box = nearest_back_object->box();
-          if (nearest_box != nullptr) {
-            if (nearest_box->HasOverlap(bounding_box)) {
-              return false;
-            }
-          }
-        }
-      }
+    Pose2D local_point;
+    ego_base.GlobalPointToULFLocal(&local_point,
+                                   Pose2D(traversed_x[i], traversed_y[i], 0));
+    double relative_theta = std::fmod(
+        traversed_phi[i] - ego_state_manager->ego_pose().theta, 2 * M_PI);
+    if (relative_theta > M_PI) {
+      relative_theta -= 2 * M_PI;
+    } else if (relative_theta < -M_PI) {
+      relative_theta += 2 * M_PI;
+    }
+    Transform2d tf;
+    tf.SetBasePose(Pose2D(local_point.x, local_point.y, relative_theta));
+    if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
+      return false;
+    }
+    if (dist < min_dist) {
+      min_dist = dist;
     }
 
     // max l check
     double ego_front_s = 0.0;
     double ego_front_l = 0.0;
-    if (!fix_lane_->XYToSL(front_axis_position.x(), front_axis_position.y(),
+    if (!fix_lane_->XYToSL(ego_head_position.x(), ego_head_position.y(),
                            &ego_front_s, &ego_front_l)) {
       std::cout << "ValidityCheck: ego out of lane" << std::endl;
       return false;
@@ -816,6 +764,7 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
     //   }
     // }
   }
+  node->SetMinDist(min_dist);
   return true;
 }
 
@@ -823,6 +772,21 @@ bool HybridARAStar::SetStartAndEndPose(
     const PlanningInitPoint& planning_init_point,
     const std::shared_ptr<KDPath>& fix_lane,
     const vector<TrajectoryPoint>& plan_history_traj, const double target_v) {
+  // 弯道判断
+  constexpr double kBendRoadRadius = 30;
+  ReferencePathPoint temp_ref_path_point;
+  std::array<uint8_t, 5> s_range{0, 5, 10, 15, 20};
+  for (auto s : s_range) {
+    if (!in_bend_ && reference_path_ptr_->get_reference_point_by_lon(
+                        ego_s_ + s, temp_ref_path_point)) {
+      if (std::abs(temp_ref_path_point.path_point.kappa()) >
+          1 / kBendRoadRadius) {
+        in_bend_ = true;
+        break;
+      }
+    }
+  }
+
   // double ego_s = 0.0;
   // double ego_l = 0.0;
   // if (!fix_lane->XYToSL(planning_init_point.x, planning_init_point.y, &ego_s,
@@ -849,31 +813,8 @@ bool HybridARAStar::SetStartAndEndPose(
   }
   std::cout << "start s l: " << start_s << " " << start_l << std::endl;
 
-  // 搜索s范围20m
-  /*
-  double moving_s = kMinSearchRange;  // hpp和noa可能不一样
-  if (target_v > planning_init_point.v) {
-    // 加速时间，最大5s
-    double acc_t = std::min((target_v - planning_init_point.v) / 2.0,
-                            kLookAheadTime);  // assuse acc is 2m/s^2
-    // 对于5s的总时长，加速到目标速度后，还剩多少s
-    double rest_t = kLookAheadTime - acc_t;
-    // 更新搜索范围，最小20m，最大为自车在5s内走的距离
-    moving_s =
-        std::max(moving_s, (target_v + planning_init_point.v) / 2.0 * acc_t +
-                               target_v * rest_t);
-  }
-  // auto distance_to_destination = session_->environmental_model()
-  //                               .get_virtual_lane_manager()
-  //                               ->GetDistanceToDestination();
-  // moving_s = std::max(moving_s, distance_to_destination + 10);
-  double end_s =
-      ego_s + std::max(moving_s, planning_init_point.v * kLookAheadTime);
-  end_s = std::min(end_s, fix_lane->Length());
-*/
-
   // 终点s，与ref保持一致
-  constexpr double kMaxAcc = 2.0;
+  constexpr double kMaxAcc = 0.2;
   constexpr double kMinAcc = -5.5;
   double cruise_v = session_->planning_context().v_ref_cruise();
   double ego_v = std::max(
@@ -906,7 +847,14 @@ bool HybridARAStar::SetStartAndEndPose(
       session_->planning_context().v_ref_cruise() * span_t;
   s = std::min(s, max_ref_length);
   constexpr uint8_t kExtendS = 2;
-  double end_s = std::max(start_s + s + kExtendS, start_s + kMinSearchRange);
+  constexpr double kMinS = 13;
+  if (in_bend_) {
+    s = s + kExtendS;
+  } else {
+    s = std::max(s + kExtendS, hpp_min_search_range_);
+  }
+  s = std::max(kMinS, s);
+  double end_s = start_s + s;
 
   // 目标车道中心线上对应的终点，如果s超过了线长呢，在外层做了判断保护,直接搜索失败
   auto end_point = fix_lane->GetPathPointByS(end_s);
@@ -1014,116 +962,143 @@ void HybridARAStar::BuildAgentKDTree(
       agent_objects, kdtree_params);
 }
 
+void HybridARAStar::ChooseDirection() {
+  constexpr double kLThresehold = 2;
+  constexpr double kConsiderLBuffer = 0.5;
+  const double DistanceThreshold = ego_half_width_ * 2 + 0.4;
+  for (const auto& frenet_obstacle : nudge_agents_) {
+    if ((!no_right_ || !no_left_) &&
+        frenet_obstacle->source_type() != SourceType::OCC) {
+      double min_s =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
+      double max_s =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.max_x();
+      double min_l =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
+      double max_l =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
+      if (min_s > ego_s_ + ego_half_length_ * 2 && min_l < 0 && max_l > 0 &&
+          std::min(std::fabs(min_l), max_l) > kConsiderLBuffer) {
+        for (const auto& another_frenet_obstacle : nudge_agents_) {
+          double another_min_s =
+              another_frenet_obstacle->frenet_polygon_sequence()[0]
+                  .second.min_x();
+          double another_max_s =
+              another_frenet_obstacle->frenet_polygon_sequence()[0]
+                  .second.max_x();
+          double another_min_l =
+              another_frenet_obstacle->frenet_polygon_sequence()[0]
+                  .second.min_y();
+          double another_max_l =
+              another_frenet_obstacle->frenet_polygon_sequence()[0]
+                  .second.max_y();
+          if (another_frenet_obstacle->source_type() != SourceType::OCC &&
+              another_min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle &&
+              std::abs(another_frenet_obstacle->frenet_l() -
+                       frenet_obstacle->frenet_l()) > 1 &&
+              (min_s < another_max_s + 0.5 || max_s > another_min_s - 0.5)) {
+            if (!no_right_ &&
+                frenet_obstacle->frenet_l() >
+                    another_frenet_obstacle->frenet_l() &&
+                min_l - another_max_l < DistanceThreshold &&
+                another_min_l < -kLThresehold &&
+                frenet_obstacle->obstacle()->perception_polygon().DistanceTo(
+                    another_frenet_obstacle->obstacle()->perception_polygon()) <
+                    DistanceThreshold) {
+              no_right_ = true;
+            } else if (!no_left_ &&
+                       frenet_obstacle->frenet_l() <
+                           another_frenet_obstacle->frenet_l() &&
+                       another_min_l - max_l < DistanceThreshold &&
+                       another_max_l > kLThresehold &&
+                       frenet_obstacle->obstacle()
+                               ->perception_polygon()
+                               .DistanceTo(another_frenet_obstacle->obstacle()
+                                               ->perception_polygon()) <
+                           DistanceThreshold) {
+              no_left_ = true;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // 如果静止障碍物是需要nudge的，那将其加入到 bounding_box_vec_ ,
 // virtual_lineseg_tree_ , agent_box_tree_
 bool HybridARAStar::ProcessStaticAgents() {
   std::vector<planning_math::LineSegment2d> virtual_lineseg_vec;
-  auto obs_num = 0;
-  std::vector<const Obstacle*> nudge_agents;
-
+  uint32_t obs_num = 0;
   constexpr double kVruVelocity = 0.4;
+  constexpr double kLBuffer = 4;
+  constexpr double kCareLBuffer = 1.5;
   for (const auto& frenet_obstacle : reference_path_ptr_->get_obstacles()) {
-    double min_s = frenet_obstacle->frenet_obstacle_boundary().s_start;
-    double max_s = frenet_obstacle->frenet_obstacle_boundary().s_end;
-    if (frenet_obstacle->b_frenet_valid() && min_s < end_s_ &&
-        max_s > ego_s_ + rear_obs_s_ &&
-        (frenet_obstacle->is_static() ||
-         (frenet_obstacle->obstacle()->is_VRU() &&
-          std::fabs(frenet_obstacle->frenet_velocity_l()) < kVruVelocity))) {
-      // 过滤近处的OD，使用OCC和GROUDING
-      if (frenet_obstacle->source_type() == SourceType::OD &&
-          min_s > ego_s_ + -3 &&
-          min_s < ego_s_ + hybrid_ara_star_conf_.use_occ_s_dist) {
-        continue;
-      }
-      obs_max_s_ = std::max(obs_max_s_, frenet_obstacle->frenet_s());
-      obs_min_s_ = std::min(obs_min_s_, frenet_obstacle->frenet_s());
-      obs_num++;
-
-      nudge_agents.emplace_back(frenet_obstacle->obstacle());
-
-      ara_star::SLBox2d sl_box;
-      sl_box.box = frenet_obstacle->obstacle()->perception_bounding_box();
-      // 找到agent的最大和最小的 s l
-      sl_box.min_s = frenet_obstacle->frenet_obstacle_boundary().s_start;
-      sl_box.max_s = frenet_obstacle->frenet_obstacle_boundary().s_end;
-      sl_box.min_l = frenet_obstacle->frenet_obstacle_boundary().l_start;
-      sl_box.max_l = frenet_obstacle->frenet_obstacle_boundary().l_end;
-      sl_box.s = frenet_obstacle->frenet_s();
-      sl_box.id = frenet_obstacle->id();
-      bounding_box_vec_.emplace_back(sl_box);
-
-      /*
-      // generate virtual line segments for nudge obs
-      double virtual_s = area_s;
-      double virtual_l = area_l;
-      double virtual_x = 0.0;
-      double virtual_y = 0.0;
-      if (lat_obstacle_decision.at(obstacle->id()) ==
-          LatObstacleDecisionType::LEFT) {
-        // -50
-        virtual_l = l - kDistanceCrossLine;
-      }
-      if (lat_obstacle_decision.at(obstacle->id()) ==
-          LatObstacleDecisionType::RIGHT) {
-        // +50
-        virtual_l = l + kDistanceCrossLine;
-      }
-
-      if (!fix_lane_->SLToXY(virtual_s, virtual_l, &virtual_x, &virtual_y)) {
-        continue;
-      }
-      // 原始点和偏移50后的点组成一个线段，限制自车只能往一个方向通过
-      planning_math::LineSegment2d virtural_line_segment(
-          {obstacle->x_center(), obstacle->y_center()}, {virtual_x,
-          virtual_y});
-      virtual_lineseg_vec.emplace_back(virtural_line_segment);
-      */
-    }
-  }
-
-  if (hybrid_ara_star_conf_.enable_parking_space) {
-    for (const Obstacle* obstacle : session_->environmental_model()
-                                        .get_obstacle_manager()
-                                        ->get_parking_space()
-                                        .Items()) {
-      double area_s = 0.0;
-      double area_l = 0.0;
-      double s = 0.0;
-      double l = 0.0;
-      if (!fix_lane_->XYToSL(obstacle->x_center(), obstacle->y_center(),
-                             &area_s, &area_l)) {
-        std::cout << "Hybrid ARA: obstacle XYToSL failed" << std::endl;
-        continue;
-      }
-      if (area_s < end_s_ && area_s > ego_s_ + rear_obs_s_) {
-        obs_max_s_ = std::max(obs_max_s_, area_s);
-        obs_min_s_ = std::min(obs_max_s_, area_s);
+    if (frenet_obstacle->b_frenet_valid() &&
+        !frenet_obstacle->b_frenet_polygon_sequence_invalid()) {
+      double min_s =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
+      double max_s =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.max_x();
+      double min_l =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
+      double max_l =
+          frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
+      if (min_s < end_s_ + vehicle_param_.front_edge_to_rear_axle &&
+          max_s > ego_s_ + rear_obs_s_ &&
+          (std::abs(min_l) < kLBuffer || std::abs(max_l) < kLBuffer) &&
+          (frenet_obstacle->is_static() ||
+           (frenet_obstacle->obstacle()->is_VRU() &&
+            std::fabs(frenet_obstacle->frenet_velocity_l()) < kVruVelocity))) {
+        if (std::abs(min_l) < kCareLBuffer || std::abs(max_l) < kCareLBuffer) {
+          obs_max_s_ = std::max(obs_max_s_, max_s);
+          obs_min_s_ = std::min(obs_min_s_, min_s);
+        }
         obs_num++;
 
-        nudge_agents.emplace_back(obstacle);
+        nudge_agents_.emplace_back(frenet_obstacle);
 
+        // 注释掉bounding_box_vec_
+        /*
         ara_star::SLBox2d sl_box;
-        sl_box.box = obstacle->perception_bounding_box();
+        sl_box.box = frenet_obstacle->obstacle()->perception_bounding_box();
         // 找到agent的最大和最小的 s l
-        for (const auto& corner :
-             obstacle->perception_bounding_box().GetAllCorners()) {
-          if (!fix_lane_->XYToSL(corner.x(), corner.y(), &s, &l)) {
-            // std::cout << "box out of lane" << std::endl;
-            continue;
-          }
-          sl_box.min_s = std::min(sl_box.min_s, s);
-          sl_box.max_s = std::max(sl_box.max_s, s);
-          sl_box.min_l = std::min(sl_box.min_l, l);
-          sl_box.max_l = std::max(sl_box.max_l, l);
-        }
-        if (!fix_lane_->XYToSL(obstacle->x_center(), obstacle->y_center(), &s,
-                               &l)) {
-          continue;
-        }
-        sl_box.s = s;
-        sl_box.id = obstacle->id();
+        sl_box.min_s = frenet_obstacle->frenet_obstacle_boundary().s_start;
+        sl_box.max_s = frenet_obstacle->frenet_obstacle_boundary().s_end;
+        sl_box.min_l = frenet_obstacle->frenet_obstacle_boundary().l_start;
+        sl_box.max_l = frenet_obstacle->frenet_obstacle_boundary().l_end;
+        sl_box.s = frenet_obstacle->frenet_s();
+        sl_box.id = frenet_obstacle->id();
         bounding_box_vec_.emplace_back(sl_box);
+        */
+
+        // 注释掉virtual_lineseg_vec
+        /*
+        // generate virtual line segments for nudge obs
+        double virtual_s = area_s;
+        double virtual_l = area_l;
+        double virtual_x = 0.0;
+        double virtual_y = 0.0;
+        if (lat_obstacle_decision.at(obstacle->id()) ==
+            LatObstacleDecisionType::LEFT) {
+          // -50
+          virtual_l = l - kDistanceCrossLine;
+        }
+        if (lat_obstacle_decision.at(obstacle->id()) ==
+            LatObstacleDecisionType::RIGHT) {
+          // +50
+          virtual_l = l + kDistanceCrossLine;
+        }
+
+        if (!fix_lane_->SLToXY(virtual_s, virtual_l, &virtual_x, &virtual_y))
+        { continue;
+        }
+        // 原始点和偏移50后的点组成一个线段，限制自车只能往一个方向通过
+        planning_math::LineSegment2d virtural_line_segment(
+            {obstacle->x_center(), obstacle->y_center()}, {virtual_x,
+            virtual_y});
+        virtual_lineseg_vec.emplace_back(virtural_line_segment);
+        */
       }
     }
   }
@@ -1132,19 +1107,21 @@ bool HybridARAStar::ProcessStaticAgents() {
   planning_debug_data->mutable_hybrid_ara_info()
       ->mutable_ara_obstacles()
       ->Clear();
-  for (auto& obstacle_ptr : nudge_agents) {
+  for (auto& obstacle_ptr : nudge_agents_) {
     planning::common::HybridARAObstacle* obstacle =
         planning_debug_data->mutable_hybrid_ara_info()->add_ara_obstacles();
-    obstacle->set_id(obstacle_ptr->id());
-    obstacle->set_x_center(obstacle_ptr->x_center());
-    obstacle->set_y_center(obstacle_ptr->y_center());
-    obstacle->set_heading_angle(obstacle_ptr->heading_angle());
-    obstacle->set_x_relative_center(obstacle_ptr->x_relative_center());
-    obstacle->set_y_relative_center(obstacle_ptr->y_relative_center());
+    obstacle->set_id(obstacle_ptr->obstacle()->id());
+    obstacle->set_x_center(obstacle_ptr->obstacle()->x_center());
+    obstacle->set_y_center(obstacle_ptr->obstacle()->y_center());
+    obstacle->set_heading_angle(obstacle_ptr->obstacle()->heading_angle());
+    obstacle->set_x_relative_center(
+        obstacle_ptr->obstacle()->x_relative_center());
+    obstacle->set_y_relative_center(
+        obstacle_ptr->obstacle()->y_relative_center());
     obstacle->set_relative_heading_angle(
-        obstacle_ptr->relative_heading_angle());
-    obstacle->set_length(obstacle_ptr->length());
-    obstacle->set_width(obstacle_ptr->width());
+        obstacle_ptr->obstacle()->relative_heading_angle());
+    obstacle->set_length(obstacle_ptr->obstacle()->length());
+    obstacle->set_width(obstacle_ptr->obstacle()->width());
   }
 
   // only for static obs
@@ -1156,7 +1133,7 @@ bool HybridARAStar::ProcessStaticAgents() {
   // BuildVirturalKDTree(virtual_lineseg_vec);
 
   // 将nudge_agents中的agent放入agent_box_tree_
-  BuildAgentKDTree(nudge_agents);
+  // BuildAgentKDTree(nudge_agents_);
   return true;
 }
 
@@ -1166,8 +1143,14 @@ void HybridARAStar::Reset() {
   close_set_.clear();
   observed_set_.clear();
   bounding_box_vec_.clear();
+  nudge_agents_.clear();
   expand_num_ = 0;
   num_node_expand_ = 0;
+  no_left_ = false;
+  no_right_ = false;
+  in_bend_ = false;
+  obs_max_s_ = std::numeric_limits<double>::lowest();
+  obs_min_s_ = std::numeric_limits<double>::max();
   heuristic_factor_ = hybrid_ara_star_conf_.heuristic_factor;
   open_pq_ = decltype(open_pq_)();
   final_node_ = nullptr;
@@ -1275,6 +1258,12 @@ bool HybridARAStar::Init() {
   std::cout << "SetStartAndEndPose time: " << time2 - time1 << " ms"
             << std::endl;
 
+  // prepare for edt
+  edt_ = session_->environmental_model()
+             .get_obstacle_manager()
+             ->GetEulerDistanceTransform();
+  edt_->Init(lateral_extend_, longitudinal_extend_, lateral_extend_);
+
   return true;
 }
 bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
@@ -1301,8 +1290,17 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
   if (!ProcessStaticAgents()) {
     return false;
   }
+
   auto time4 = (uint64_t)IflyTime::Now_ms();
   std::cout << "ProcessStaticAgents time: " << time4 - time3 << " ms"
+            << std::endl;
+
+  if (!in_bend_) {
+    ChooseDirection();
+  }
+
+  auto time5 = (uint64_t)IflyTime::Now_ms();
+  std::cout << "ChooseDirection time: " << time5 - time4 << " ms"
             << std::endl;
 
   // load open set, pq

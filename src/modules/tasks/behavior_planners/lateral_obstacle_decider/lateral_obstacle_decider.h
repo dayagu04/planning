@@ -54,6 +54,7 @@ class LateralObstacleDecider : public Task {
   double ego_v_ = 0;
   double ego_v_s_ = 0;
   double ego_v_l_ = 0;
+  double ego_rear_edge_to_rear_axle_ = 0;
 };
 
 }  // namespace planning

@@ -102,6 +102,42 @@ OccupancyGridBound ObstacleManager::GenerateOGM(
     right_y -= 7.0;
   }
 
+  // 根据最短搜索范围，重新计算边界
+  if (session_->is_hpp_scene()) {
+    const auto &reference_path = session_->planning_context()
+                                     .lane_change_decider_output()
+                                     .coarse_planning_info.reference_path;
+    if (reference_path != nullptr) {
+      const auto &frenet_coord = reference_path->get_frenet_coord();
+      if (frenet_coord != nullptr) {
+        // 自车sl
+        const PlanningInitPoint &planning_init_point =
+            session_->environmental_model()
+                .get_ego_state_manager()
+                ->planning_init_point();
+        Point2D ego_point;
+        if (frenet_coord->XYToSL(
+                Point2D(planning_init_point.x, planning_init_point.y),
+                ego_point) &&
+            !std::isnan(ego_point.x) && !std::isnan(ego_point.y)) {
+          Point2D end_point;
+          if (frenet_coord->SLToXY(
+                  Point2D(ego_point.x + config_.hpp_min_search_range + 7, 0),
+                  end_point) &&
+              !std::isnan(end_point.x) && !std::isnan(end_point.y)) {
+            Pose2D local;
+            ego_base.GlobalPointToULFLocal(&local,
+                                           Pose2D(end_point.x, end_point.y, 0));
+            front_x = std::max(front_x, local.x);
+            back_x = std::min(back_x, local.x);
+            left_y = std::max(left_y, local.y);
+            right_y = std::min(right_y, local.y);
+          }
+        }
+      }
+    }
+  }
+
   OccupancyGridBound grid_bound(
     back_x,
     right_y,
@@ -152,48 +188,45 @@ void ObstacleManager::update() {
     // hpp中过滤近处的OD
     if (session_->is_hpp_scene()) {
       constexpr int kSLowerLimitForOD = -3;
-      constexpr int kSUpperLimitForOD = 7;
+      constexpr int kSUpperLimitForOD = 6;
 
-      const auto &reference_path =
-          session_->planning_context()
-              .lane_change_decider_output()
-              .coarse_planning_info.reference_path;
-
-      bool has_target_lane = session_->planning_context()
-              .lane_change_decider_output().has_target_lane;
-      if (has_target_lane) {
-        if (reference_path != nullptr) {
-          const auto &frenet_coord = reference_path->get_frenet_coord();
-          if (frenet_coord != nullptr) {
-            // 自车sl
-            Point2D ego_point;
-            if (!frenet_coord->XYToSL(
-                    Point2D(ego_state.ego_carte().x, ego_state.ego_carte().y),
-                    ego_point) ||
-                std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
-              continue;
+      const auto &reference_path = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+      if (reference_path != nullptr) {
+        const auto &frenet_coord = reference_path->get_frenet_coord();
+        if (frenet_coord != nullptr) {
+          // 自车sl
+          Point2D ego_point;
+          if (!frenet_coord->XYToSL(
+                  Point2D(ego_state.ego_carte().x, ego_state.ego_carte().y),
+                  ego_point) ||
+              std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+            continue;
+          }
+          bool in_range = true;
+          Box2d bounding_box(
+              {prediction_object.position_x, prediction_object.position_y},
+              prediction_object.yaw, prediction_object.length,
+              prediction_object.width);
+          std::vector<planning_math::Vec2d> polygon_points;
+          bounding_box.GetAllCorners(&polygon_points);
+          for (auto &point : polygon_points) {
+            Point2D frenet_point;
+            if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
+                                      frenet_point) ||
+                std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
+                ((frenet_point.x > ego_point.x + kSLowerLimitForOD) &&
+                 (frenet_point.x < ego_point.x + kSUpperLimitForOD))) {
+              in_range = false;
+              break;
             }
-            bool in_range = true;
-            Box2d bounding_box(
-                {prediction_object.position_x, prediction_object.position_y},
-                prediction_object.yaw, prediction_object.length,
-                prediction_object.width);
-            std::vector<planning_math::Vec2d> polygon_points;
-            bounding_box.GetAllCorners(&polygon_points);
-            for (auto &point : polygon_points) {
-              Point2D frenet_point;
-              if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
-                                        frenet_point) ||
-                  std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
-                  ((frenet_point.x > ego_point.x + kSLowerLimitForOD) &&
-                  (frenet_point.x < ego_point.x + kSUpperLimitForOD))) {
-                in_range = false;
-                break;
-              }
-            }
-            if (!in_range) {
-              continue;
-            }
+          }
+          if (!in_range) {
+            continue;
+          }
+          // only static obs added into EDT
+          if (prediction_object.is_static) {
             AddODPoint(prediction_object);
           }
         }
@@ -490,9 +523,6 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         }
       }
     } else {
-      bool has_target_lane = session_->planning_context()
-                                 .lane_change_decider_output()
-                                 .has_target_lane;
       const auto &ref_path_ptr = session_->planning_context()
                                 .lane_change_decider_output()
                                 .coarse_planning_info.reference_path;

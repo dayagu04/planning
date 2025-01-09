@@ -34,6 +34,10 @@ message HybridARANode {
   optional double motion_cost = 7;
   optional double heuristic_cost = 8;
   optional double total_cost = 9;
+  optional double min_dist = 10;
+  optional double dist_cost = 11;
+  optional double area_cost = 12;
+  optional double directly_behind_cost = 13;
 }
 
 message HybridARAExpandNode {

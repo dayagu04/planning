@@ -288,7 +288,7 @@ uint8_t LateralMotionPlanningProblem::Update(
 
   // temp debug
 //   if (planning_output_.solver_info().iter_info(planning_output_.solver_info().iter_info_size()-1).cost() > 10000) {
-//     return 9;
+//     return ilqr_solver::iLqr::NON_POSITIVE_EXPECT;
 //   }
   return solver_condition;
 }

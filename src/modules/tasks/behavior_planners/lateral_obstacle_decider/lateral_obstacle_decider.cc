@@ -34,6 +34,7 @@ LateralObstacleDecider::LateralObstacleDecider(
   ego_width_ = vehicle_param.width;
   name_ = "LateralObstacleDecider";
   hybrid_ara_star_ = std::make_unique<HybridARAStar>(session);
+  ego_rear_edge_to_rear_axle_ = vehicle_param.rear_edge_to_rear_axle;
 }
 
 bool LateralObstacleDecider::Execute() {
@@ -653,11 +654,15 @@ bool LateralObstacleDecider::CheckEnableSearch(
   const auto ego_s = reference_path_ptr->get_frenet_ego_state().s();
   if (config_.enable_hybrid_ara) {
     for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-      if (obstacle->b_frenet_valid() && obstacle->frenet_s() > ego_s &&
-          obstacle->frenet_s() - ego_s < config_.hybrid_ara_s_range) {
-        auto min_abs_l =
-            std::min(std::fabs(obstacle->frenet_obstacle_boundary().l_start),
-                     std::fabs(obstacle->frenet_obstacle_boundary().l_end));
+      if (obstacle->b_frenet_valid() &&
+          !obstacle->b_frenet_polygon_sequence_invalid() &&
+          obstacle->frenet_polygon_sequence()[0].second.max_x() >
+              ego_s - ego_rear_edge_to_rear_axle_ &&
+          obstacle->frenet_polygon_sequence()[0].second.min_x() - ego_s <
+              config_.hybrid_ara_s_range) {
+        auto min_abs_l = std::min(
+            std::fabs(obstacle->frenet_polygon_sequence()[0].second.min_y()),
+            std::fabs(obstacle->frenet_polygon_sequence()[0].second.max_y()));
         double l_threshold = 0.0;
         if (obstacle->type() ==
                 iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE ||
@@ -720,7 +725,7 @@ void LateralObstacleDecider::UpdateLatDecision(
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid()) {
+    if (obstacle->b_frenet_valid() && !obstacle->b_frenet_polygon_sequence_invalid()) {
       if (obstacle->obstacle()->is_static()) {
         double l_buffer = 0;
         if (obstacle->obstacle()->type() ==
@@ -749,7 +754,7 @@ void LateralObstacleDecider::UpdateLatDecision(
         bool lon_overlap = start_s < end_s;
 
         // 平行车辆
-        if (obstacle->d_s_rel() <= 0 && obstacle->d_s_rel() > -ego_length_) {
+        if (lon_overlap) {
           ego_head_l_ = reference_path_ptr->get_frenet_ego_state().head_l();
           const double ego_head_l_start = ego_head_l_ - ego_width_ / 2;
           const double ego_head_l_end = ego_head_l_ + ego_width_ / 2;

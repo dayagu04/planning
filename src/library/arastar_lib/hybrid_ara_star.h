@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "euler_distance_transform.h"
 #include "hybrid_ara_data.h"
 #include "ifly_time.h"
 #include "node3d.h"
@@ -55,6 +56,7 @@ class HybridARAStar {
   void UpdateOpenSetWithHeuristicFactor();
   void Reset();
   bool Init();
+  void ChooseDirection();
 
  private:
   framework::Session* session_;
@@ -106,6 +108,13 @@ class HybridARAStar {
   double ref_init_point_x_ = 0.0;
   double ref_init_point_y_ = 0.0;
   double compensation_s_ = 0.0;
+  double longitudinal_extend_ = 0.0;
+  double lateral_extend_ = 0.0;
+  double hpp_min_search_range_ = 0;
+  bool no_left_ = false;
+  bool no_right_ = false;
+  EulerDistanceTransform* edt_ = nullptr;
+  bool in_bend_ = false;
 
   // map bound
   std::vector<double> XYbounds_;
@@ -118,6 +127,7 @@ class HybridARAStar {
 
   // bounding box for cost
   std::vector<ara_star::SLBox2d> bounding_box_vec_;
+  std::vector<std::shared_ptr<planning::FrenetObstacle>> nudge_agents_;
   std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>
       agent_box_tree_;
   std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>

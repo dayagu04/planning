@@ -110,7 +110,7 @@ class ObstacleManager {
 
   void UpdateMapStaticObstacle();
 
-  const EulerDistanceTransform* GetEulerDistanceTransform() const {
+  EulerDistanceTransform* GetEulerDistanceTransform() {
     return &edt_;
   }
 

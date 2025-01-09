@@ -826,7 +826,7 @@ def load_lat_plan_figure(fig1, local_view_data):
   fig_hard_lbound = fig1.circle('hard_lower_bound_y0_vec','hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard lower bound')
 
   fig1.line('y_vec', 'x_vec', source = data_arastar, line_width = 5, line_color = 'purple', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hybrid ara path', visible=True)
-  f1 = fig1.circle('y_vec','x_vec', source = data_arastar, size = 6, line_width = 4, line_color = "darkorange", line_alpha = 0.7, fill_color = 'gold',fill_alpha = 0.7, legend_label = 'hybrid ara path')
+  f1 = fig1.circle('y_vec','x_vec', source = data_arastar, size = 6, line_width = 4, line_color = "blue", line_alpha = 0.7, fill_color = 'blue',fill_alpha = 0.7, legend_label = 'hybrid ara path')
   hover1 = HoverTool(renderers=[f1], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec')])
   fig1.add_tools(hover1)
 
