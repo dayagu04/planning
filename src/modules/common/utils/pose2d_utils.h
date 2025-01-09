@@ -5,11 +5,10 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
 #include "cartesian_coordinate_system.h"
 
 namespace planning {
-
-using namespace std;
 
 template <class T>
 typename std::underlying_type<T>::type enumToInteger(T t) {
@@ -20,67 +19,71 @@ typename std::underlying_type<T>::type enumToInteger(T t) {
 double get_dis(const Pose2D &p1, const Pose2D &p2);
 
 double get_dis(const Pose2D &p0, const Pose2D &p1, const Pose2D &p2);
-double get_dis(const vector<Pose2D> &pose_array);
-double get_dis(const vector<Pose2D> &pose_array, int start_ind, int end_ind);
-double get_dis(const vector<Pose2D> &pose_array1,
-               const vector<Pose2D> &pose_array2);
-double get_dis(const Pose2D &pose, const vector<Pose2D> &pose_array);
-double get_dis_from(const vector<Pose2D> &pose_array, int from);
-double get_dis_to(const vector<Pose2D> &pose_array1,
-                  const vector<Pose2D> &pose_array2, double to);
+double get_dis(const std::vector<Pose2D> &pose_array);
+double get_dis(const std::vector<Pose2D> &pose_array, int start_ind,
+               int end_ind);
+double get_dis(const std::vector<Pose2D> &pose_array1,
+               const std::vector<Pose2D> &pose_array2);
+double get_dis(const Pose2D &pose, const std::vector<Pose2D> &pose_array);
+double get_dis_from(const std::vector<Pose2D> &pose_array, int from);
+double get_dis_to(const std::vector<Pose2D> &pose_array1,
+                  const std::vector<Pose2D> &pose_array2, double to);
 
-int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array);
-int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array,
+int get_nearest_index(const Pose2D &pose,
+                      const std::vector<Pose2D> &pose_array);
+int get_nearest_index(const Pose2D &pose, const std::vector<Pose2D> &pose_array,
                       int from, int to);
-tuple<int, int> get_nearest_index2(const Pose2D &pose,
-                                   const vector<Pose2D> &pose_array);
+std::tuple<int, int> get_nearest_index2(const Pose2D &pose,
+                                        const std::vector<Pose2D> &pose_array);
 
 double get_sig_dis(const Pose2D &p1, const Pose2D &p2);
-double get_sig_dis(const Pose2D &pose, const vector<Pose2D> &pose_array);
-double get_sig_dis(const vector<Pose2D> &pose_array1,
-                   const vector<Pose2D> &pose_array2);
-double get_sig_dis_to(const vector<Pose2D> &pose_array1,
-                      const vector<Pose2D> &pose_array2, double to);
+double get_sig_dis(const Pose2D &pose, const std::vector<Pose2D> &pose_array);
+double get_sig_dis(const std::vector<Pose2D> &pose_array1,
+                   const std::vector<Pose2D> &pose_array2);
+double get_sig_dis_to(const std::vector<Pose2D> &pose_array1,
+                      const std::vector<Pose2D> &pose_array2, double to);
 
 Point2D convert_pose2point(const Pose2D &pose);
 
 // theta
 double format_theta(double theta);
 double get_theta(const Pose2D &p0, const Pose2D &p1);
-bool get_theta(vector<Pose2D> &pose_array);
-bool get_theta(const vector<Pose2D> &in_array, vector<Pose2D> &out_array);
+bool get_theta(std::vector<Pose2D> &pose_array);
+bool get_theta(const std::vector<Pose2D> &in_array,
+               std::vector<Pose2D> &out_array);
 double sub_theta(double t1, double t2);
 double go2target(double in, double step, double target);
 // double go2target(const double &in, const double &step, const double &target,
 // double &preview_dis);
 
 // planning
-int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose,
+int get_preview_index(const std::vector<Pose2D> &pose_array, const Pose2D &pose,
                       double preview_dis);
-int get_preview_index_4planning(const vector<Pose2D> &pose_array,
+int get_preview_index_4planning(const std::vector<Pose2D> &pose_array,
                                 const Pose2D &pose, double preview_dis);
 void shift_pose(Pose2D &pose, double w);
-void shift_pose_array(vector<Pose2D> &pose_array, double w);
+void shift_pose_array(std::vector<Pose2D> &pose_array, double w);
 void forward_pose(Pose2D &pose, double l);
-bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array,
-                    const Pose2D &car_pose, double car_vel);
+bool sim_pose_array(const std::vector<Pose2D> &in_array,
+                    std::vector<Pose2D> &out_array, const Pose2D &car_pose,
+                    double car_vel);
 
 // decision
-bool concat(double dis1, double dis2, const vector<Pose2D> &pose_array1,
-            const vector<Pose2D> &pose_array2, vector<Pose2D> &pose_array3,
-            const Pose2D &car_pose);
+bool concat(double dis1, double dis2, const std::vector<Pose2D> &pose_array1,
+            const std::vector<Pose2D> &pose_array2,
+            std::vector<Pose2D> &pose_array3, const Pose2D &car_pose);
 
 // controller
 /* interpolation when x is a scalor,
 TODO: interpolation for both vector and scalor.
 orignaly it is for both vector and scalor,
 but not that convinient for C++, function overloading is required*/
-double interp(double x, const vector<double> &xp, const vector<double> &fp);
-double interp(double x1, double x2, const vector<double> &xp1,
-              const vector<double> &xp2, const vector<double> &fp);
+double interp(double x, const std::vector<double> &xp, const std::vector<double> &fp);
+double interp(double x1, double x2, const std::vector<double> &xp1,
+              const std::vector<double> &xp2, const std::vector<double> &fp);
 
 template <class T>
-T interpolation(T x, const vector<T> &xp, const vector<T> &fp) {
+T interpolation(T x, const std::vector<T> &xp, const std::vector<T> &fp) {
   const size_t N = xp.size();
   size_t hi;
   for (hi = 0; hi < N && x > xp[hi]; hi++)
@@ -117,7 +120,7 @@ double fal(double error, double alpha, double delta);
 // delay)
 
 // time tools for log files
-string get_current_date();
+std::string get_current_date();
 
 }  // namespace planning
 

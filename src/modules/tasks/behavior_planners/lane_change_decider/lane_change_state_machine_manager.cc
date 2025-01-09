@@ -859,7 +859,7 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_valid_cnt = lc_valid_cnt_;
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
 
-  lane_change_decider_output.is_ego_on_leftmost_lane = 
+  lane_change_decider_output.is_ego_on_leftmost_lane =
       is_ego_on_leftmost_lane_;
   lane_change_decider_output.is_ego_on_rightmost_lane =
       is_ego_on_rightmost_lane_;
@@ -1271,7 +1271,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
   bool is_cur_path_project_to_ref_path = true;
   const auto cur_ref_path_finally_point =
       current_reference_path->get_points().back().path_point;
-  std::shared_ptr<KDPath> reference_path_frenet_coordinate =
+  std::shared_ptr<planning_math::KDPath> reference_path_frenet_coordinate =
       reference_path->get_frenet_coord();
   Point2D projection_point = {cur_ref_path_finally_point.x(),
                               cur_ref_path_finally_point.y()};
@@ -1360,7 +1360,7 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
     return true;
   }
   double overlap_lane_width = overlap_lane->width();
-  std::shared_ptr<KDPath> overlap_path_frenet_coordinate =
+  std::shared_ptr<planning_math::KDPath> overlap_path_frenet_coordinate =
       overlap_reference_path->get_frenet_coord();
 
   const auto &ego_vertices_points = session_->environmental_model()
@@ -1580,12 +1580,12 @@ void LaneChangeStateMachineManager::IsEgoOnSideLane() {
   if (!left_lane) {
     is_ego_on_leftmost_lane_ = true;
   } else {
-    is_ego_on_leftmost_lane_ = false;  
+    is_ego_on_leftmost_lane_ = false;
   }
   if (!right_lane) {
     is_ego_on_rightmost_lane_ = true;
   } else {
-    is_ego_on_rightmost_lane_ = false;  
+    is_ego_on_rightmost_lane_ = false;
   }
 }
 }  // namespace planning

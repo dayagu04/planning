@@ -11,8 +11,6 @@
 #include "utils/path_point.h"
 #include "vec2d.h"
 
-using namespace planning;
-using namespace planning::planning_math;
 namespace planning {
 namespace planning_math {
 enum KDPathStatus { NORMAL = 0, EXCEED = 1, FALL = 2, ERROR = 3 };

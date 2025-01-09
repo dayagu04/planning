@@ -1,6 +1,7 @@
 #include "refline.h"
 
 namespace planning {
+using namespace planning_math;
 
 bool equal_zero(double a) {
   if (a > -std::numeric_limits<double>::epsilon() &&

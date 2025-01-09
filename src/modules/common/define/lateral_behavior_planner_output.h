@@ -204,7 +204,7 @@ struct VirtualLaneContext {
 
 struct FixRefLineContext {
   int position = -100;
-  std::vector<PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
 };
 
 struct VirtualLaneManagerContext {
@@ -262,7 +262,7 @@ struct LateralBehaviorPlannerOutput {
   int scenario = 1;
   double flane_width = 3.8;
   double dist_rblane = 0.0;
-  std::vector<PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
   bool borrow_bicycle_lane = false;
   bool enable_intersection_planner = false;
   bool tleft_lane = false;

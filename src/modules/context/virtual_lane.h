@@ -103,11 +103,12 @@ class VirtualLane {
 
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
 
-  void set_lane_frenet_coord(std::shared_ptr<KDPath> frenet_coord) {
+  void set_lane_frenet_coord(
+      std::shared_ptr<planning_math::KDPath> frenet_coord) {
     lane_frenet_coord_ = frenet_coord;
   };
 
-  const std::shared_ptr<KDPath> get_lane_frenet_coord() {
+  const std::shared_ptr<planning_math::KDPath> get_lane_frenet_coord() {
     return lane_frenet_coord_;
   };
 
@@ -170,7 +171,7 @@ class VirtualLane {
   int relative_id_ = 0;
   float ego_lateral_offset_ = 0;
   double width_ = 2.8;
-  std::shared_ptr<KDPath> lane_frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> lane_frenet_coord_;
   LaneStatusEx lane_status_;
   std::vector<iflyauto::LaneTypeMsg> lane_types_;
   std::vector<iflyauto::LaneMarkMsg> lane_marks_;

@@ -17,6 +17,7 @@
 #include "virtual_lane.h"
 
 namespace planning {
+using namespace planning_math;
 
 namespace {
 

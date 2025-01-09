@@ -47,7 +47,7 @@ class LongitudinalMotionPlanner : public Task {
   AdaptiveCruiseControlConfig config_acc_;
   StartStopEnableConfig config_start_stop_;
 
-  string name_;
+  std::string name_;
   std::shared_ptr<pnc::longitudinal_planning::LongitudinalMotionPlanningProblem>
       planning_problem_ptr_;
   planning::common::LongitudinalPlanningInput planning_input_;

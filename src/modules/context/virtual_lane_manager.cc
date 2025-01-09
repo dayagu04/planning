@@ -1260,7 +1260,7 @@ void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
 std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
     const iflyauto::LaneBoundary& boundary) {
   std::shared_ptr<planning_math::KDPath> boundary_path;
-  std::vector<Vec2d> center_line_points;
+  std::vector<planning_math::Vec2d> center_line_points;
   center_line_points.clear();
 
   for (const auto& point : boundary.enu_points) {
@@ -1310,7 +1310,7 @@ std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
     if (relative_id_lane == nullptr) {
       continue;
     }
-    std::shared_ptr<KDPath> frenet_coord;
+    std::shared_ptr<planning_math::KDPath> frenet_coord;
     if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
       continue;
     }

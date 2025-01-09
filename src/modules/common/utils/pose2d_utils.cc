@@ -1,7 +1,8 @@
 #include "utils/pose2d_utils.h"
-#include "utils_math.h"
 
 #include <limits>
+
+#include "utils_math.h"
 
 namespace planning {
 
@@ -38,7 +39,7 @@ double get_dis(const Pose2D &p0, const Pose2D &p1, const Pose2D &p2) {
   return (A * p0.x + B * p0.y + C) / sqrt(A * A + B * B);
 }
 
-double get_dis(const vector<Pose2D> &pose_array) {
+double get_dis(const std::vector<Pose2D> &pose_array) {
   double sum_dis = 0.0f;
   for (size_t i = 1; i < pose_array.size(); i++) {
     sum_dis += get_dis(pose_array[i - 1], pose_array[i]);
@@ -46,23 +47,23 @@ double get_dis(const vector<Pose2D> &pose_array) {
   return sum_dis;
 }
 
-double get_dis_from(const vector<Pose2D> &pose_array, int from) {
+double get_dis_from(const std::vector<Pose2D> &pose_array, int from) {
   double sum_dis = 0.0f;
-  for (size_t i = (size_t)max(1, from); i < pose_array.size(); i++) {
+  for (size_t i = (size_t)std::max(1, from); i < pose_array.size(); i++) {
     sum_dis += get_dis(pose_array[i - 1], pose_array[i]);
   }
   return sum_dis;
 }
 
-double get_dis(const Pose2D &pose, const vector<Pose2D> &pose_array) {
+double get_dis(const Pose2D &pose, const std::vector<Pose2D> &pose_array) {
   int index = get_nearest_index(pose, pose_array);
   return get_dis(pose, pose_array[index]);
 }
 
-double get_dis(const vector<Pose2D> &pose_array1,
-               const vector<Pose2D> &pose_array2) {
+double get_dis(const std::vector<Pose2D> &pose_array1,
+               const std::vector<Pose2D> &pose_array2) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   double sum_dis = 0.0f;
   for (size_t i = 0; i < pose_array1.size(); i++) {
@@ -71,18 +72,20 @@ double get_dis(const vector<Pose2D> &pose_array1,
   return sum_dis / pose_array1.size();
 }
 
-double get_dis(const vector<Pose2D> &pose_array, int start_ind, int end_ind) {
+double get_dis(const std::vector<Pose2D> &pose_array, int start_ind,
+               int end_ind) {
   double sum_dis = 0.0f;
-  for (int i = max(start_ind + 1, 1);
-       i <= (min(end_ind, (int)pose_array.size() - 1)); i++) {
+  for (int i = std::max(start_ind + 1, 1);
+       i <= (std::min(end_ind, (int)pose_array.size() - 1)); i++) {
     sum_dis += get_dis(pose_array[i - 1], pose_array[i]);
   }
   return sum_dis;
 }
 
-int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array) {
+int get_nearest_index(const Pose2D &pose,
+                      const std::vector<Pose2D> &pose_array) {
   int index = -1;
-  double min_dis = (numeric_limits<double>::max)();
+  double min_dis = (std::numeric_limits<double>::max)();
   for (size_t i = 0; i < pose_array.size(); i++) {
     double dis = get_dis(pose, pose_array[i]);
     if (dis < min_dis) {
@@ -93,11 +96,12 @@ int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array) {
   return index;
 }
 
-int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array,
+int get_nearest_index(const Pose2D &pose, const std::vector<Pose2D> &pose_array,
                       int from, int to) {
   int index = -1;
-  double min_dis = (numeric_limits<double>::max)();
-  for (size_t i = max(0, from); i < min(pose_array.size(), (size_t)to); i++) {
+  double min_dis = (std::numeric_limits<double>::max)();
+  for (size_t i = std::max(0, from);
+       i < std::min(pose_array.size(), (size_t)to); i++) {
     double dis = get_dis(pose, pose_array[i]);
     if (dis < min_dis) {
       min_dis = dis;
@@ -107,8 +111,8 @@ int get_nearest_index(const Pose2D &pose, const vector<Pose2D> &pose_array,
   return index;
 }
 
-tuple<int, int> get_nearest_index2(const Pose2D &pose,
-                                   const vector<Pose2D> &pose_array) {
+std::tuple<int, int> get_nearest_index2(const Pose2D &pose,
+                                        const std::vector<Pose2D> &pose_array) {
   int index = get_nearest_index(pose, pose_array);
   double dist1, dist2;
   int index2;
@@ -128,13 +132,13 @@ tuple<int, int> get_nearest_index2(const Pose2D &pose,
   } else {
     index2 = pose_array.size() - 2;
   }
-  return make_tuple(index, index2);
+  return std::make_tuple(index, index2);
 }
 
-double get_dis_to(const vector<Pose2D> &pose_array1,
-                  const vector<Pose2D> &pose_array2, double to) {
+double get_dis_to(const std::vector<Pose2D> &pose_array1,
+                  const std::vector<Pose2D> &pose_array2, double to) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   double sum = 0.0f;
   double sum_dis = 0.0f;
@@ -147,7 +151,7 @@ double get_dis_to(const vector<Pose2D> &pose_array1,
     cnt++;
   }
   if (cnt == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   return sum / cnt;
 }
@@ -158,18 +162,18 @@ double get_sig_dis(const Pose2D &p1, const Pose2D &p2) {
   return dist;
 }
 
-double get_sig_dis(const Pose2D &pose, const vector<Pose2D> &pose_array) {
+double get_sig_dis(const Pose2D &pose, const std::vector<Pose2D> &pose_array) {
   if (pose_array.size() == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   const int index = get_nearest_index(pose, pose_array);
   return get_sig_dis(pose, pose_array[index]);
 }
 
-double get_sig_dis(const vector<Pose2D> &pose_array1,
-                   const vector<Pose2D> &pose_array2) {
+double get_sig_dis(const std::vector<Pose2D> &pose_array1,
+                   const std::vector<Pose2D> &pose_array2) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   double sum = 0;
   for (size_t i = 0; i < pose_array1.size(); i++) {
@@ -178,10 +182,10 @@ double get_sig_dis(const vector<Pose2D> &pose_array1,
   return sum / pose_array1.size();
 }
 
-double get_sig_dis_to(const vector<Pose2D> &pose_array1,
-                      const vector<Pose2D> &pose_array2, double to) {
+double get_sig_dis_to(const std::vector<Pose2D> &pose_array1,
+                      const std::vector<Pose2D> &pose_array2, double to) {
   if (pose_array1.size() == 0 || pose_array2.size() == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   double sum = 0.0f;
   double sum_dis = 0.0f;
@@ -194,7 +198,7 @@ double get_sig_dis_to(const vector<Pose2D> &pose_array1,
     cnt++;
   }
   if (cnt == 0) {
-    return (numeric_limits<double>::max)();
+    return (std::numeric_limits<double>::max)();
   }
   return sum / cnt;
 }
@@ -206,7 +210,7 @@ Point2D convert_pose2point(const Pose2D &pose) {
   return pt;
 }
 
-bool get_theta(vector<Pose2D> &pose_array) {
+bool get_theta(std::vector<Pose2D> &pose_array) {
   const size_t size = pose_array.size();
   if (size < 7) {
     pose_array.clear();
@@ -228,7 +232,8 @@ bool get_theta(vector<Pose2D> &pose_array) {
   return true;
 }
 
-bool get_theta(const vector<Pose2D> &in_array, vector<Pose2D> &out_array) {
+bool get_theta(const std::vector<Pose2D> &in_array,
+               std::vector<Pose2D> &out_array) {
   out_array.clear();
   const size_t size = in_array.size();
   if (size < 7) {
@@ -293,7 +298,7 @@ double go2target(double in, double step, double target) {
   }
 }
 
-int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose,
+int get_preview_index(const std::vector<Pose2D> &pose_array, const Pose2D &pose,
                       double preview_dis) {
   if (pose_array.size() == 0) return -1;
 
@@ -310,7 +315,7 @@ int get_preview_index(const vector<Pose2D> &pose_array, const Pose2D &pose,
   return pose_array.size() - 1;
 }
 
-int get_preview_index_4planning(const vector<Pose2D> &pose_array,
+int get_preview_index_4planning(const std::vector<Pose2D> &pose_array,
                                 const Pose2D &pose, double preview_dis) {
   if (pose_array.size() == 0) return -1;
   int start_index = get_nearest_index(pose, pose_array);
@@ -346,7 +351,7 @@ void shift_pose(Pose2D &pose, double w) {
   pose.y -= w * sin(pose.theta);
 }
 
-void shift_pose_array(vector<Pose2D> &pose_array, double w) {
+void shift_pose_array(std::vector<Pose2D> &pose_array, double w) {
   for (size_t i = 0; i < pose_array.size(); i++) {
     shift_pose(pose_array[i], w);
   }
@@ -357,15 +362,16 @@ void forward_pose(Pose2D &pose, double l) {
   pose.y += l * cos(pose.theta);
 }
 
-bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array,
-                    const Pose2D &car_pose, double car_vel) {
+bool sim_pose_array(const std::vector<Pose2D> &in_array,
+                    std::vector<Pose2D> &out_array, const Pose2D &car_pose,
+                    double car_vel) {
   out_array.clear();
   if (in_array.size() == 0) {
     return false;
   }
   const double theta =
       abs(in_array.back().theta - in_array.front().theta) / 80.0;
-  const double dtheta = max(theta, (double)(0.3 / 180 * M_PI));
+  const double dtheta = std::max(theta, (double)(0.3 / 180 * M_PI));
   const double dl = 0.3f;
 
   //    const int index = get_nearest_index(car_pose, in_array);
@@ -399,9 +405,9 @@ bool sim_pose_array(const vector<Pose2D> &in_array, vector<Pose2D> &out_array,
   return true;
 }
 
-bool concat(double dis1, double dis2, const vector<Pose2D> &pose_array1,
-            const vector<Pose2D> &pose_array2, vector<Pose2D> &pose_array3,
-            const Pose2D &car_pose) {
+bool concat(double dis1, double dis2, const std::vector<Pose2D> &pose_array1,
+            const std::vector<Pose2D> &pose_array2,
+            std::vector<Pose2D> &pose_array3, const Pose2D &car_pose) {
   const int start1 = get_nearest_index(car_pose, pose_array1);
   if (start1 == -1) return false;
 
@@ -433,7 +439,8 @@ bool concat(double dis1, double dis2, const vector<Pose2D> &pose_array1,
 }
 
 /* Look up table, given x in xp, find fp */
-double interp(double x, const vector<double> &xp, const vector<double> &fp) {
+double interp(double x, const std::vector<double> &xp,
+              const std::vector<double> &fp) {
   const size_t N = xp.size();
   size_t hi;
   for (hi = 0; hi < N && x > xp[hi]; hi++)
@@ -513,7 +520,7 @@ double fal(double error, double alpha, double delta) {
 }
 
 // time tools for log files
-string get_current_date() {
+std::string get_current_date() {
   //    int i = 0;
 
   time_t tt = time(0);

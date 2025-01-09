@@ -8,6 +8,7 @@ namespace planning {
 namespace speed {
 
 namespace {
+using namespace planning_math;
 
 constexpr double kDistanceThr = 0.01;
 constexpr double kMathEpsilon = 1e-10;
@@ -38,7 +39,8 @@ bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
 
 const agent::Agent* StGraphUtils::GetFrontAgentOfTargetLane(
     const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-    const std::string lane_change_status, const string& lane_change_request) {
+    const std::string lane_change_status,
+    const std::string& lane_change_request) {
   const auto* ptr_agent_manager = dynamic_world->agent_manager();
   if (nullptr == ptr_agent_manager) {
     return nullptr;
@@ -67,7 +69,8 @@ const agent::Agent* StGraphUtils::GetFrontAgentOfTargetLane(
 
 const agent::Agent* StGraphUtils::GetRearAgentOfTargetLane(
     const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-    const std::string lane_change_status, const string& lane_change_request) {
+    const std::string lane_change_status,
+    const std::string& lane_change_request) {
   const auto* ptr_agent_manager = dynamic_world->agent_manager();
   if (nullptr == ptr_agent_manager) {
     return nullptr;

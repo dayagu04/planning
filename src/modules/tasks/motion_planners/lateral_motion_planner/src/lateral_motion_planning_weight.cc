@@ -194,7 +194,7 @@ void LateralMotionPlanningWeight::CalculateInitInfo(
   const double b = planning_input.ref_x_vec(0) - planning_input.ref_x_vec(1);
   const double c = planning_input.ref_y_vec(0) * planning_input.ref_x_vec(1) -
                    planning_input.ref_x_vec(0) * planning_input.ref_y_vec(1);
-  const double d = Square(a) + Square(b);
+  const double d = pnc::mathlib::Square(a) + pnc::mathlib::Square(b);
   if (d > 1e-8) {
     init_dis_to_ref_ = -(a * planning_input.init_state().x() +
                          b * planning_input.init_state().y() + c) /
@@ -220,7 +220,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundByVelocity(
     planning::common::LateralPlanningInput &planning_input) {
   const double velocity = ego_vel_ * 3.6;
   std::vector<double> xp_vel{10.0, 50.0, 80.0, 100.0};
-  double jerk_bound = interp(velocity, xp_vel, config_.map_jerk_bound);
+  double jerk_bound = planning::interp(velocity, xp_vel, config_.map_jerk_bound);
   planning_input.set_acc_bound(config_.acc_bound);
   planning_input.set_jerk_bound(jerk_bound);
 }

@@ -23,6 +23,7 @@
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 namespace planning {
+using namespace planning_math;
 
 TrackletSequentialState *LifecycleDict::get(int uid) {
   auto iter = data_dict_.find(uid);
@@ -1194,7 +1195,7 @@ void TrackletMaintainer::calc_intersection_with_refline(
   }
   if (ego_x.size() > 0) {
     double half_car_width =
-        max(1.1, 0.5 * item.width * std::fabs(cos(item.theta)) +
+        std::max(1.1, 0.5 * item.width * std::fabs(cos(item.theta)) +
                      0.5 * item.length * sin(std::fabs(item.theta)));
     double half_lane_width = 0.;
     if (enable_intersection_planner) {
@@ -1212,8 +1213,8 @@ void TrackletMaintainer::calc_intersection_with_refline(
     double lmax = 0.0;
     double send = 0.0;
     double lend = 0.0;
-    int valid_range = min((int)ego_x.size() - 1, 25);
-    int end_range = min((int)ego_x.size() - 1, 25);
+    int valid_range = std::min((int)ego_x.size() - 1, 25);
+    int end_range = std::min((int)ego_x.size() - 1, 25);
 
     int max_idx = 0;
     int end_idx = 0;

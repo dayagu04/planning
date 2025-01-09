@@ -23,7 +23,7 @@
 #include "virtual_lane_manager.h"
 #define DEBUG_GAP_SELECTOR FALSE
 namespace planning {
-using namespace planning_math;
+
 struct LonInfo {
   double v = 0.;
   double a = 0.;

@@ -25,6 +25,7 @@
 
 namespace py = pybind11;
 using namespace planning;
+using namespace planning::planning_math;
 constexpr int PointNum = 25;
 constexpr double delta_t = 0.2;
 static GapSelectorDecider *pBase = nullptr;

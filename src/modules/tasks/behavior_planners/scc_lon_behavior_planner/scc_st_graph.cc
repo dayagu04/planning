@@ -44,6 +44,8 @@
 
 namespace {
 
+using namespace planning::planning_math;
+
 constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.1;
 constexpr double kStaticAgentBuffer = 0.2;
@@ -68,7 +70,7 @@ constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
 constexpr double kSafetyFollowTime = 2.0;
 
 bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
-                              const planning_math::Box2d &agent_box,
+                              const Box2d &agent_box,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
@@ -96,7 +98,7 @@ bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
 }
 
 bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
-                              const agent::Agent &agent,
+                              const planning::agent::Agent &agent,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
@@ -114,7 +116,7 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config,
                                    framework::Session *session)
     : session_(session),
       config_(config),
-      agent_node_manager_(make_shared<AgentNodeManager>()) {
+      agent_node_manager_(std::make_shared<AgentNodeManager>()) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
                                      200, 0.1);
   lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step,
@@ -345,7 +347,7 @@ void StGraphGenerator::Update(
 bool StGraphGenerator::CalcSpeedInfoWithLead(
     const planning::common::TrackedObjectInfo &lead_one,
     const planning::common::TrackedObjectInfo &lead_two,
-    const string &lc_request, const double v_ego,
+    const std::string &lc_request, const double v_ego,
     std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info) {
   double lead_one_a_processed = 0.0;
   double lead_one_desired_distance = 0.0;
@@ -1011,7 +1013,7 @@ void StGraphGenerator::UpdateSTGraphs(
 
 void StGraphGenerator::UpdateNearObstacles(
     const planning::common::LatObsInfo &lateral_obstacles,
-    const string &lc_request, double v_ego) {
+    const std::string &lc_request, double v_ego) {
   const double safety_distance = 2.0 + v_ego * 0.2;
   int cutin_status = 0;
 
@@ -1167,7 +1169,7 @@ void StGraphGenerator::UpdateNearObstacles(
       }
     } else {
       if (lc_request == "right_lane_change") {
-        vy_rel = min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
+        vy_rel = std::min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
       }
       if (lc_request == "left_lane_change_wait") {
         if (NEAR_CAR_LAT_MOVING) {
@@ -1239,7 +1241,7 @@ void StGraphGenerator::UpdateNearObstacles(
         ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
          (std::abs(near_cars_sorted[i]->y_min()) <= 2.5)) &&
         cutin_car &&
-        ((-3.5 - d_x_offset - min(near_cars_sorted[i]->v_rel(), 1.0) <
+        ((-3.5 - d_x_offset - std::min(near_cars_sorted[i]->v_rel(), 1.0) <
           near_cars_sorted[i]->location_tail()) &&
          (near_cars_sorted[i]->location_tail() < safety_distance + 2))) {
       v_limit_cutin[i] =
@@ -1701,7 +1703,8 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
 
 void StGraphGenerator::CalcSpeedInfoWithGap(
     const planning::common::TrackedObjectInfo &lead_one, const double v_cruise,
-    const double v_ego, const string &lc_request, const string &lc_status,
+    const double v_ego, const std::string &lc_request,
+    const std::string &lc_status,
     std::vector<planning::common::RealTimeLonObstacleSTInfo>
         &lane_change_st_info) {
   LOG_DEBUG("----entering CalcSpeedInfoWithGap--- \n");
@@ -2163,7 +2166,7 @@ bool StGraphGenerator::CalcAccLimits(
                                 acc_target.first);
   }
   // a_min can't be higher than a_max
-  acc_target.first = min(acc_target.first, acc_target.second);
+  acc_target.first = std::min(acc_target.first, acc_target.second);
   // final check on limits
   acc_target.first = clip(acc_target.first, _A_MAX, _A_MIN);
   acc_target.second = clip(acc_target.second, _A_MAX, _A_MIN);
@@ -3168,7 +3171,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     std::vector<planning::common::RealTimeLonObstacleSTInfo> &merge_st_info,
     const double v_ego) {
   LOG_DEBUG("----> CalculateMergeSpeedLimit <--- \n");
-  std::vector<string> debug_msg_names;
+  std::vector<std::string> debug_msg_names;
   debug_msg_names.emplace_back("merge_target_one_id");
   debug_msg_names.emplace_back("merge_target_two_id");
   debug_msg_names.emplace_back("v_target_merge");
@@ -3408,7 +3411,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         ProcessObstacleAcc(merge_target_one->accel());
     safe_distance_merge_target_one =
         CalcSafeDistance(merge_target_one->accel(), v_ego);
-    string lc_request = "Merging";
+    std::string lc_request = "Merging";
     merge_target_one_desired_distance =
         CalcDesiredDistance(v_adjacent_or_rear_agent_merge_with_ego_.second,
                             true, false, false, v_ego, lc_request);
@@ -3459,7 +3462,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         ProcessObstacleAcc(merge_target_two->accel());
     safe_distance_merge_target_two =
         CalcSafeDistance(merge_target_two->accel(), v_ego);
-    string lc_request = "Merging";
+    std::string lc_request = "Merging";
     merge_target_two_desired_distance =
         CalcDesiredDistance(v_front_agent_merge_with_ego_.second, true, false,
                             false, v_ego, lc_request);
@@ -4576,7 +4579,8 @@ void StGraphGenerator::DebugAgentsPredictionTraj(
   }
 }
 
-void StGraphGenerator::SetDefaultDebugValues(const std::vector<string> *names) {
+void StGraphGenerator::SetDefaultDebugValues(
+    const std::vector<std::string> *names) {
   for (const auto &name : *names) {
     if (name.size() >= 5 && name.substr(name.size() - 3) == "vec") {
       JSON_DEBUG_VECTOR(name, {}, 4)
@@ -4586,7 +4590,7 @@ void StGraphGenerator::SetDefaultDebugValues(const std::vector<string> *names) {
   }
 }
 
-void StGraphGenerator::SetDefaultDebugValues(std::vector<string> names) {
+void StGraphGenerator::SetDefaultDebugValues(std::vector<std::string> names) {
   for (const auto &name : names) {
     if (name.size() >= 5 && name.substr(name.size() - 3) == "vec") {
       JSON_DEBUG_VECTOR(name, {}, 4)

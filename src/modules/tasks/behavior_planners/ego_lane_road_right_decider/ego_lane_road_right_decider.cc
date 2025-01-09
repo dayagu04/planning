@@ -1019,7 +1019,7 @@ void EgoLaneRoadRightDecider::ComputeRoadRightFromLaneMark() {
   std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
 
   if (base_lane != nullptr) {
-    std::shared_ptr<KDPath> base_lane_frenet_crd =
+    std::shared_ptr<planning_math::KDPath> base_lane_frenet_crd =
         base_lane->get_lane_frenet_coord();
     int segment = -1;
     double ego_s = 0.0;

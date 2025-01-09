@@ -29,11 +29,13 @@ class StGraphUtils {
 
   static const agent::Agent* GetFrontAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status, const string& lane_change_request);
+      const std::string lane_change_status,
+      const std::string& lane_change_request);
 
   static const agent::Agent* GetRearAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status, const string& lane_change_request);
+      const std::string lane_change_status,
+      const std::string& lane_change_request);
 
   static double CalculateLateralBufferForNormalLaneKeeping(
       const trajectory::TrajectoryPoint& init_point,

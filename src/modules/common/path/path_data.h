@@ -34,7 +34,7 @@ class PathData {
 
   const PolygonalLine& RightBorder() const;
 
-  PathPoint GetPathPointWithPathS(const double s) const;
+  planning_math::PathPoint GetPathPointWithPathS(const double s) const;
 
   std::pair<double, double> getWidth(const double path_s) const;
 

@@ -7,6 +7,8 @@ namespace speed {
 
 namespace {
 
+using namespace planning_math;
+
 constexpr double kMaxPathLength = 400.0;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;

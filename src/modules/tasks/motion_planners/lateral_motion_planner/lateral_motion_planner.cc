@@ -697,7 +697,7 @@ void LateralMotionPlanner::Update() {
   }
 }
 
-std::shared_ptr<KDPath> LateralMotionPlanner::ConstructLateralKDPath(
+std::shared_ptr<planning_math::KDPath> LateralMotionPlanner::ConstructLateralKDPath(
     const std::vector<double> &x_vec, const std::vector<double> &y_vec) {
   std::vector<planning_math::PathPoint> lat_path_points;
   lat_path_points.reserve(x_vec.size());
@@ -720,6 +720,6 @@ std::shared_ptr<KDPath> LateralMotionPlanner::ConstructLateralKDPath(
   if (lat_path_points.size() <= 2) {
     return nullptr;
   }
-  return std::make_shared<KDPath>(std::move(lat_path_points));
+  return std::make_shared<planning_math::KDPath>(std::move(lat_path_points));
 }
 }  // namespace planning

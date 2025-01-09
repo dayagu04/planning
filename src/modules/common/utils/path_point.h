@@ -5,8 +5,7 @@
 #include <vector>
 
 #include "vec2d.h"
-using namespace planning;
-using namespace planning::planning_math;
+
 namespace planning {
 namespace planning_math {
 class PathPoint : public Vec2d {

@@ -33,7 +33,7 @@ MergeRequest::MergeRequest(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-  base_frenet_coord_ = std::make_shared<KDPath>();
+  base_frenet_coord_ = std::make_shared<planning_math::KDPath>();
 }
 
 void MergeRequest::Update(int lc_status) {
@@ -323,7 +323,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       }
     }
 
-    std::shared_ptr<KDPath> base_lane_frenet_crd =
+    std::shared_ptr<planning_math::KDPath> base_lane_frenet_crd =
         base_lane->get_lane_frenet_coord();
     int segment = -1;
     double ego_s = 0.0;

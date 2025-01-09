@@ -15,16 +15,19 @@ bool ConstructLinePolygons(const std::vector<planning_math::Vec2d> &line,
                            std::vector<planning_math::Polygon2d> &polygons);
 
 bool OnLeftSide(const std::vector<planning_math::Vec2d> &vec2ds);
-bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,
-                       const std::vector<planning_math::Vec2d> &pts,
-                       std::vector<planning_math::Vec2d> &frenet_pts);
+bool Vec2dsToFrenet2ds(
+    const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+    const std::vector<planning_math::Vec2d> &pts,
+    std::vector<planning_math::Vec2d> &frenet_pts);
 void MakeLinePolygons(
-    const int obstacle_id, const std::shared_ptr<KDPath> &frenet_coord,
+    const int obstacle_id,
+    const std::shared_ptr<planning_math::KDPath> &frenet_coord,
     const std::vector<planning_math::Vec2d> &points,
     std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
     std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons);
 void MakePolygon(
-    const int obstacle_id, const std::shared_ptr<KDPath> &frenet_coord,
+    const int obstacle_id,
+    const std::shared_ptr<planning_math::KDPath> &frenet_coord,
     const planning_math::Polygon2d &polygon,
     std::vector<std::pair<int, planning_math::Polygon2d>> &left_polygons,
     std::vector<std::pair<int, planning_math::Polygon2d>> &right_polygons);
