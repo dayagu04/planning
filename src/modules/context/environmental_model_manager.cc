@@ -800,9 +800,15 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.theta =
         std::atan2(prediction_object.fusion_obstacle.common_info.velocity.y,
                    prediction_object.fusion_obstacle.common_info.velocity.x);
-    cur_predicion_obj.acc = std::hypot(
+
+    // judge direction of obj acc
+    Eigen::Vector2f prediction_obj_heading_vec(cos(cur_predicion_obj.yaw),
+                                               sin(cur_predicion_obj.yaw));
+    Eigen::Vector2f prediction_obj_acc_vec(
         prediction_object.fusion_obstacle.common_info.acceleration.x,
         prediction_object.fusion_obstacle.common_info.acceleration.y);
+    cur_predicion_obj.acc =
+        prediction_obj_acc_vec.dot(prediction_obj_heading_vec);
     // cur_predicion_obj.bottom_polygon_points =
     // prediction_object.bottom_polygon_points();
     // cur_predicion_obj.top_polygon_points =
