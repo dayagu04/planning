@@ -25,6 +25,9 @@ LateralObstacleDecider::LateralObstacleDecider(
       search_result_(session_->mutable_planning_context()
                                ->mutable_lateral_obstacle_decider_output()
                                .search_result),
+      in_intersection_(session_->mutable_planning_context()
+              ->mutable_lateral_obstacle_decider_output()
+              .in_intersection),
       lateral_obstacle_history_info_(
           session_->mutable_planning_context()
               ->mutable_lateral_obstacle_decider_output()
@@ -141,7 +144,25 @@ bool LateralObstacleDecider::Execute() {
     double expand_vel =
         interp(ego_v_, config_.expand_ego_vel, config_.expand_obs_rel_vel);
 
-    // determine is_avd_car
+    auto intersection_state = session_->environmental_model()
+                                .get_virtual_lane_manager()
+                                ->GetIntersectionState();
+  double distance_to_stopline = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToStopline();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      intersection_state == common::IntersectionState::OFF_INTERSECTION ||
+      (intersection_state == common::IntersectionState::APPROACH_INTERSECTION &&
+       (distance_to_stopline > 500 || distance_to_stopline < 0));
+  if (current_intersection_state) {
+    intersection_count_ = 2;
+  } else {
+    intersection_count_ = std::max(intersection_count_ - 1, 0);
+  }
+  in_intersection_ = intersection_count_ > 0;
+
+  // determine is_avd_car
     std::vector<double> avd_car_id;
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
@@ -159,23 +180,36 @@ bool LateralObstacleDecider::Execute() {
       }
 
       // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
-      double expand_length = 0.0;
+      history.front_expand_len = 0.0;
+    history.rear_expand_len = 0.0;
       if (history.side_car &&
           frenet_obs->frenet_relative_velocity_s() < expand_vel) {
-        expand_length = 1.5;
+        history.front_expand_len = 1.5;
+    }
+    if (in_intersection_ && history.side_car &&
+        frenet_obs->frenet_relative_velocity_s() > -2) {
+      history.rear_expand_len = 1.5;
       }
-      if (frenet_obs->d_s_rel() > expand_length) {
+      if (frenet_obs->d_s_rel() > history.front_expand_len) {
         history.front_car = true;
         history.side_car = false;
         history.rear_car = false;
-      } else if (frenet_obs->d_s_rel() >= -ego_length_ &&
-                 frenet_obs->d_s_rel() <= expand_length) {
+      } else if (frenet_obs->d_s_rel() >=
+                   -(ego_length_ + history.rear_expand_len) &&
+                 frenet_obs->d_s_rel() <= history.front_expand_len) {
         history.side_car = true;
       } else {
         history.front_car = false;
         history.side_car = false;
         history.rear_car = true;
       }
+
+    if (CalculateIntersection(*frenet_obs, reference_path_ptr, lane_width)) {
+      history.is_avd_car = false;
+      history.ncar_count = 0;
+      history.ncar_count_in = false;
+      continue;
+    }
 
     if (frenet_obs->d_s_rel() <= 0) {
       history.is_avd_car = false;
@@ -188,17 +222,6 @@ bool LateralObstacleDecider::Execute() {
 
     history.is_avd_car = IsPotentialAvoidingCar(
         *frenet_obs, lane_width, rightest_lane, farthest_distance);
-      if (frenet_obs->d_s_rel() <= 0) {
-        history.is_avd_car = false;
-        if (frenet_obs->d_s_rel() <= -1 * (obs->length() + ego_length_)) {
-          history.ncar_count = 0;
-          history.ncar_count_in = false;
-        }
-        continue;
-      }
-
-      history.is_avd_car = IsPotentialAvoidingCar(
-          *frenet_obs, lane_width, rightest_lane, farthest_distance);
 
     history.last_recv_time = obs->timestamp();
 
@@ -219,14 +242,8 @@ bool LateralObstacleDecider::Execute() {
         continue;
       }
 
-      double expand_length = 0.0;
-      if (history.side_car &&
-          frenet_obs->frenet_relative_velocity_s() < expand_vel) {
-        expand_length = 1.5;
-      }
-
-      LateralObstacleDecision(*frenet_obs, lane_width, expand_length);
-    }
+    LateralObstacleDecision(*frenet_obs, lane_width);
+  }
 
     JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
   }
@@ -319,6 +336,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
     near_car_d_lane_thr = near_car_d_lane_thr * vel_factor_for_oversize_veh *
                           dis_factor_for_oversize_veh;
     lat_safety_buffer += oversize_veh_addition_buffer;
+  }
+
+  // 减去大车后视镜
+  if (obstacle.is_oversize_vehicle()) {
+    lat_safety_buffer -= 0.2;
   }
 
   // hysteresis
@@ -579,7 +601,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
 }
 
 void LateralObstacleDecider::LateralObstacleDecision(
-    FrenetObstacle &frenet_obstacle, double lane_width, double expand_length) {
+    FrenetObstacle &frenet_obstacle, double lane_width) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
@@ -607,7 +629,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
     } else if (d_min_cpath > 0) {
       output_[id] = LatObstacleDecisionType::RIGHT;
     }
-  } else if (d_s_rel > expand_length) {
+  } else if (d_s_rel > history.front_expand_len) {
     if (obstacle.is_traffic_facilities()) {
       avoid_front_buffer = config_.traffic_cone_thr;
     }
@@ -620,14 +642,15 @@ void LateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // 平行车辆
-  } else if (d_s_rel <= expand_length && d_s_rel > -ego_length_) {
+  } else if (d_s_rel <= history.front_expand_len &&
+             d_s_rel > -(ego_length_ + history.rear_expand_len)) {
     if (ego_head_l_ < l) {
       output_[id] = LatObstacleDecisionType::RIGHT;
     } else {
       output_[id] = LatObstacleDecisionType::LEFT;
     }
     // 防止感知误检，同时有横向和纵向overlap
-    if (lat_overlap) {
+    if (!in_intersection_ && lat_overlap) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // 后方车辆
@@ -640,6 +663,12 @@ void LateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
   }
+
+  // cut_in 或 横穿
+  if (history.intersection) {
+    output_[id] = LatObstacleDecisionType::IGNORE;
+  }
+
   // log
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::EnvironmentModelInfo *environment_model_debug_info =
@@ -652,6 +681,87 @@ void LateralObstacleDecider::LateralObstacleDecision(
       continue;
     }
   }
+}
+
+bool LateralObstacleDecider::CalculateIntersection(
+    FrenetObstacle &frenet_obstacle,
+    std::shared_ptr<ReferencePath> reference_path, double lane_width) {
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[frenet_obstacle.id()];
+  if (!frenet_obstacle.obstacle()->is_static() &&
+      !(frenet_obstacle.d_s_rel() <= 0 && in_intersection_) &&
+      frenet_obstacle.obstacle()->trajectory_valid()) {
+    double lat_safety_buffer = config_.lat_safety_buffer;
+    // addition buffer for VRU
+    if (frenet_obstacle.obstacle()->is_VRU()) {
+      lat_safety_buffer += 0.2;
+    }
+    // decre lat_safety_buffer in narrow lane
+    std::array<double, 3> x_lat_buffer{3.2, 3.5, 3.8};
+    std::array<double, 3> f_lat_buffer{0.3, 0.15, 0};
+    double decre_buffer_for_lane_width =
+        interp(lane_width, x_lat_buffer, f_lat_buffer);
+    lat_safety_buffer -= decre_buffer_for_lane_width;
+
+    // 减去大车后视镜
+    if (frenet_obstacle.obstacle()->is_oversize_vehicle()) {
+      lat_safety_buffer -= 0.2;
+    }
+
+    // 滞回
+    if (history.intersection) {
+      lat_safety_buffer += 0.1;
+    }
+    auto &frenet_coord = reference_path->get_frenet_coord();
+    const double kLThreshold =
+        ego_width_ + lat_safety_buffer - 0.5 * lane_width;
+    constexpr double kAdditionL = 0.15;
+    constexpr double kVelLThreshold = 0.15;
+    std::array<uint8_t, 6> timestamps{5, 4, 3, 2, 1, 0};
+    double min_l = std::numeric_limits<double>::max();
+    double max_l = std::numeric_limits<double>::lowest();
+    for (auto &i : timestamps) {
+      auto enu_polygon = frenet_obstacle.obstacle()->get_polygon_at_point(
+          frenet_obstacle.obstacle()->get_point_at_time(i));
+      for (auto &pt : enu_polygon.points()) {
+        Point2D frenet_point, carte_point;
+        carte_point.x = pt.x();
+        carte_point.y = pt.y();
+        if (frenet_coord->XYToSL(carte_point, frenet_point)) {
+          min_l = std::min(min_l, frenet_point.y);
+          max_l = std::max(max_l, frenet_point.y);
+        }
+      }
+    }
+
+    double extreme_l = (frenet_obstacle.frenet_l() > 0) ? min_l : max_l;
+    if ((frenet_obstacle.frenet_l() > 0 &&
+         extreme_l < kLThreshold - kAdditionL) ||
+        (frenet_obstacle.frenet_l() < 0 &&
+         extreme_l > -(kLThreshold - kAdditionL))) {
+      history.intersection = true;
+      history.intersection_count = 5;
+      return true;
+    } else if (std::abs(frenet_obstacle.frenet_velocity_l()) < kVelLThreshold &&
+               ((frenet_obstacle.frenet_l() > 0 && extreme_l < kLThreshold) ||
+                (frenet_obstacle.frenet_l() < 0 && extreme_l > -kLThreshold))) {
+      history.intersection_count += 1;
+      history.intersection_count = std::min(history.intersection_count, 5);
+    } else {
+      history.intersection_count -= 1;
+      history.intersection_count = std::max(history.intersection_count, 0);
+    }
+
+    if (history.intersection_count > 2) {
+      history.intersection = true;
+      return true;
+    } else {
+      history.intersection = false;
+      return false;
+    }
+  }
+  history.intersection = false;
+  return false;
 }
 
 bool LateralObstacleDecider::CheckEnableSearch(

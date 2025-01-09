@@ -144,6 +144,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
       perception_id_(prediction_object.id),
       timestamp_(prediction_object.timestamp_us / 1000000.0),
       is_static_(is_static),
+      trajectory_valid_(prediction_object.trajectory_valid),
       perception_bounding_box_(
           {prediction_object.position_x, prediction_object.position_y},
           prediction_object.yaw, prediction_object.length,

@@ -97,6 +97,7 @@ struct PredictionObject {
   float relative_theta;
   std::vector<Point3d> bottom_polygon_points;
   std::vector<Point3d> top_polygon_points;
+  bool trajectory_valid{false};
 
   std::vector<PredictionTrajectory> trajectory_array;
 };

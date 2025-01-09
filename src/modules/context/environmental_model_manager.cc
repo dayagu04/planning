@@ -926,7 +926,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
-    bool traj_valid = trajectory_point_size < 1 ? false : true;
+    cur_predicion_obj.trajectory_valid = trajectory_point_size < 1 ? false : true;
     for (int i = 0; i < TRAJ_POINT_NUM_USED + 1; i++) {
       const auto &point = prediction_traj.trajectory_point[i];
       PredictionTrajectoryPoint trajectory_point;
@@ -948,7 +948,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
       trajectory_point.relative_ego_yaw = point.relative_yaw;
       trajectory_point.relative_ego_speed =
           std::hypot(point.relative_velocity.x, point.relative_velocity.y);
-      if (traj_valid == false) {
+      if (cur_predicion_obj.trajectory_valid == false) {
         trajectory_point.relative_time = 0.2 * traj_index;
         trajectory_point.x = cur_predicion_obj.position_x;
         trajectory_point.y = cur_predicion_obj.position_y;
@@ -993,7 +993,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // cur_prediction_trajectory.b_minor_modal =
     // prediction_traj.b_minor_modal;
     cur_predicion_obj.trajectory_array.emplace_back(cur_prediction_trajectory);
-    prediction_info.emplace_back(cur_predicion_obj);
+    cur_predicion_obj.is_static = IsStatic(cur_predicion_obj);
+    prediction_info.emplace_back(std::move(cur_predicion_obj));
   }
 }
 
@@ -1286,9 +1287,9 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
 bool EnvironmentalModelManager::IsStatic(
     const PredictionObject &prediction_object) {
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
-  double prediction_trajectory_length = 10.0;
+  double prediction_trajectory_length = -10.0;
   double prediction_duration = 0.0;
-  if (prediction_object.trajectory_array.size() > 0) {
+  if (prediction_object.trajectory_valid) {
     const auto &trajectory_array = prediction_object.trajectory_array.at(0);
     if (trajectory_array.trajectory.size() > 0) {
       const auto &start_point = trajectory_array.trajectory.at(0);
@@ -1301,16 +1302,26 @@ bool EnvironmentalModelManager::IsStatic(
     }
   }
 
-  double max_speed_static_obstacle = 0.5;
-  const double kMaxStaticPredictionLength =
+  double max_speed_static_obstacle = 0.25;
+  double max_static_prediction_length =
       max_speed_static_obstacle * prediction_duration;
   std::array<double, 3> xp{10, 20, 30};
   std::array<double, 3> fp{0.25, 2, 3};
   double static_speed = interp(ego_state->ego_v(), xp, fp);
-  bool is_static = prediction_object.speed < static_speed ||
-                   prediction_object.trajectory_array.size() == 0 ||
-                   prediction_trajectory_length < kMaxStaticPredictionLength ||
-                   prediction_object.is_traffic_facilities;
+
+  // 滞回
+  const auto obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
+  const auto obstacle = obstacle_manager->find_obstacle(prediction_object.id);
+  if (obstacle != nullptr && obstacle->is_static()) {
+    static_speed = static_speed * 1.5;
+    max_static_prediction_length = max_static_prediction_length * 2;
+  }
+
+  bool is_static =
+      (prediction_object.speed < static_speed &&
+       (prediction_trajectory_length < max_static_prediction_length)) ||
+      prediction_object.is_traffic_facilities;
   return is_static;
 }
 

@@ -1211,7 +1211,7 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
           + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(type)+'\n' +'rel_v: '\
           + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2))+'\n'\
           +'abs_v: '+ str(round(obstacle_list[i].common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].common_info.velocity.y, 2))+'\n'\
-          + lat_decision + '\n' + is_static)
+          + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].common_info.velocity.x, obstacle_list[i].common_info.velocity.y), 2)))
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
     obs_info_all[source]['obstacles_y'].append(obs_y)

@@ -652,7 +652,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       planning_succ = plan_debug_msg.frame_info.planning_succ
       print("planning_succ: ", planning_succ)
       print("current planning_success: ", plan_debug_json_msg['current planning_success'])
-      intersection_state = plan_debug_msg.real_time_lon_behavior_planning_input.intersection_state
+      intersection_state = local_view_data['data_msg']['plan_debug_json_msg']['current_intersection_state']
       print("intersection_state: ", intersection_state)
     except:
       print("no intersection_state")

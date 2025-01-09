@@ -27,7 +27,7 @@ class LateralObstacleDecider : public Task {
                               double lane_width, bool rightest_lane,
                               double farthest_distance);
   void LateralObstacleDecision(FrenetObstacle &frenet_obstacle,
-                               double lane_width, double expand_length);
+                               double lane_width);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
@@ -37,6 +37,9 @@ class LateralObstacleDecider : public Task {
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  bool CalculateIntersection(FrenetObstacle &frenet_obstacle,
+                             std::shared_ptr<ReferencePath> reference_path,
+                             double lane_width);
 
  private:
   planning::framework::Session *session_;
@@ -56,6 +59,8 @@ class LateralObstacleDecider : public Task {
   double ego_v_s_ = 0;
   double ego_v_l_ = 0;
   double ego_rear_edge_to_rear_axle_ = 0;
+  bool &in_intersection_;
+  int intersection_count_ = 0;
 };
 
 }  // namespace planning
