@@ -614,7 +614,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     wall_decider->Process(hybrid_astar_obs_.virtual_obs,
                           ego_slot_info.slot.GetWidth(),
                           ego_slot_info.slot.GetLength(), start, real_end,
-                          slot_type, ego_slot_info.slot_side);
+                          slot_type, ego_slot_info.slot_side, ParkingVehDirection::NONE);
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_slot_info.slot.GetLength(),

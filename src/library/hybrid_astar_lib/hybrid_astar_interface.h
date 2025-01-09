@@ -84,7 +84,7 @@ class HybridAStarInterface {
 
   // for debug
   const std::vector<ad_common::math::Vec2d>& GetPriorQueueNode();
-
+  const std::vector<ad_common::math::Vec2d>& GetDelNodeQueueNode();
   // for debug,retired
   void GetNodeListMessage(planning::common::AstarNodeList* list);
 

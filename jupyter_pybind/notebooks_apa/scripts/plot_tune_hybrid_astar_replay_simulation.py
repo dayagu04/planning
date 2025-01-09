@@ -152,6 +152,7 @@ data_plot_ref_line = ColumnDataSource(data={'plan_path_x': [],
 data_search_sequence_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
 data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_all_delete_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 
@@ -179,6 +180,7 @@ fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend
 fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
 fig1.line('y_vec', 'x_vec', source = data_search_sequence_path, line_width = 2, line_color = 'blue', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_sequence',visible = False)
 fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
+fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
 ### sliders config
@@ -1068,6 +1070,25 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_coordinate_system.data.update({
     'x': [pose[0]],
     'y': [pose[1]],
+  })
+
+  # all delete node
+  data_all_delete_node.data.update({
+    'x_vec': [],
+    'y_vec': [],
+  })
+
+  nodes = replay_simulation_hybrid_astar.GetDelNodeSequencePath()
+  node_x = []
+  node_y = []
+
+  for i in range(len(nodes)):
+    node_x.append(nodes[i][0])
+    node_y.append(nodes[i][1])
+
+  data_all_delete_node.data.update({
+    'x_vec': node_x,
+    'y_vec': node_y
   })
 
   # all search node

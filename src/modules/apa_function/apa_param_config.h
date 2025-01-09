@@ -392,6 +392,12 @@ struct ApaParameters {
   // gen output params
   double max_velocity = 0.6;
 
+  // hybrid a star params
+  double tail_in_slot_virtual_wall_x_offset = 3.0;
+  double tail_in_slot_virtual_wall_y_offset = 0.5;
+  double head_in_slot_virtual_wall_x_offset = 4.0;
+  double head_in_slot_virtual_wall_y_offset = 1.8;
+
   std::vector<double> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
                                             2.02, 2.7, 1.8, 0.9,  0.0};
   std::vector<double> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,

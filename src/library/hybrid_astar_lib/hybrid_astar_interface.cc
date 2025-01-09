@@ -545,6 +545,11 @@ HybridAStarInterface::GetPriorQueueNode() {
   return hybrid_astar_->GetQueuePathForDebug();
 }
 
+const std::vector<ad_common::math::Vec2d>&
+HybridAStarInterface::GetDelNodeQueueNode() {
+  return hybrid_astar_->GetDelQueuePathForDebug();
+}
+
 void HybridAStarInterface::GetRSPathHeuristic(
     std::vector<std::vector<ad_common::math::Vec2d>>& path_list) {
   if (hybrid_astar_ == nullptr) {

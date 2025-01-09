@@ -102,6 +102,7 @@ EigenPath2d static_ref_line_;
 
 // bit 4 is flag
 EigenPointSet2d search_sequence_path_;
+EigenPointSet2d deletenode_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
 // all search node, not only include: open + close, and include deleted node.
@@ -311,6 +312,19 @@ int GetPathFromHybridAstar() {
         Eigen::Vector2d(global_position.x, global_position.y));
   }
 
+  deletenode_sequence_path_.clear();
+  const std::vector<ad_common::math::Vec2d> &delnode_path =
+      hybrid_astar_interface_->GetDelNodeQueueNode();
+
+  for (i = 0; i < delnode_path.size(); i++) {
+    local_position.x = delnode_path[i].x();
+    local_position.y = delnode_path[i].y();
+    tf.ULFLocalPoseToGlobal(&global_position, local_position);
+
+    deletenode_sequence_path_.emplace_back(
+        Eigen::Vector2d(global_position.x, global_position.y));
+  }
+
   // 基坐标位置
   coordinate_system_[0] = ego_slot_info_.origin_pose_global.pos[0];
   coordinate_system_[1] = ego_slot_info_.origin_pose_global.pos[1];
@@ -430,18 +444,20 @@ static const int CopyVirtualWallForPlot(
   return 0;
 }
 
-const bool PlanOnce(
-    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
-    py::bytes &localization_info_bytes,
-    py::bytes &vehicle_service_output_info_bytes,
-    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
-    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, int select_id,
-    bool force_plan, bool is_path_optimization, bool is_cilqr_optimization,
-    bool is_reset, bool is_complete_path, double sample_ds,
-    std::vector<double> target_managed_slot_x_vec,
-    std::vector<double> target_managed_slot_y_vec,
-    std::vector<double> target_managed_limiter_x_vec,
-    std::vector<double> target_managed_limiter_y_vec) {
+const bool PlanOnce(py::bytes &func_statemachine_bytes,
+                    py::bytes &parking_slot_info_bytes,
+                    py::bytes &localization_info_bytes,
+                    py::bytes &vehicle_service_output_info_bytes,
+                    py::bytes &uss_wave_info_bytes,
+                    py::bytes &uss_perception_info_bytes, py::bytes &fus_objs,
+                    py::bytes &fus_occ_obj_msg_bytes, int select_id,
+                    bool force_plan, bool is_path_optimization,
+                    bool is_cilqr_optimization, bool is_reset,
+                    bool is_complete_path, double sample_ds,
+                    std::vector<double> target_managed_slot_x_vec,
+                    std::vector<double> target_managed_slot_y_vec,
+                    std::vector<double> target_managed_limiter_x_vec,
+                    std::vector<double> target_managed_limiter_y_vec) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -619,12 +635,25 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
       slot_type = ParkSpaceType::VERTICAL;
     }
 
+    ParkingVehDirection parking_in_type;
+    const std::shared_ptr<apa_planner::ApaWorld> world =
+        hybrid_astar_park_->GetApaWorldPtr();
+
+    if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        world->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+      parking_in_type = ParkingVehDirection::TAIL_IN;
+    } else {
+      parking_in_type = ParkingVehDirection::HEAD_IN;
+    }
+
     VirtualWallDecider *wall_decider =
         hybrid_astar_park_->MutableVirtualWallDecider();
     wall_decider->Process(hybrid_astar_obs_.virtual_obs,
                           ego_info.slot.GetWidth(), ego_info.slot.GetLength(),
                           start, real_end, slot_type,
-                          pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID);
+                          pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID, parking_in_type);
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_info.slot.GetLength(),
@@ -634,12 +663,11 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     // end
     Eigen::Vector3d end;
-    const std::shared_ptr<apa_planner::ApaWorld> world =
-        hybrid_astar_park_->GetApaWorldPtr();
-
     double end_straight_dist = 0.0;
     if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
-        ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        world->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_dist =
           apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     } else {
@@ -671,7 +699,9 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.swap_start_goal = false;
 
     if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
-        ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+            ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+        world->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
       request.direction_request = ParkingVehDirection::HEAD_IN;
     } else {
       request.direction_request = ParkingVehDirection::TAIL_IN;
@@ -754,11 +784,9 @@ const std::vector<Eigen::Vector3d> &GetAstarPath() {
 }
 
 const bool SetFsm(py::bytes &func_statemachine_bytes) {
-  iflyauto::FuncStateMachine func_statemachine;
-  // auto func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine,
-  //     struct_msgs::FuncStateMachine>(
-  //         func_statemachine_bytes);
+  auto func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
 
   local_view.function_state_machine_info = func_statemachine;
 
@@ -821,6 +849,10 @@ const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
 
 const std::vector<Eigen::Vector2d> &GetSearchSequencePath() {
   return search_sequence_path_;
+}
+
+const std::vector<Eigen::Vector2d> &GetDelNodeSequencePath() {
+  return deletenode_sequence_path_;
 }
 
 const Eigen::Vector3d GetCoordinateSystem() { return coordinate_system_; }
@@ -910,6 +942,7 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("RefreshThreadResult", &RefreshThreadResult)
       .def("GetPlotRefLine", &GetPlotRefLine)
       .def("GetSearchSequencePath", &GetSearchSequencePath)
+      .def("GetDelNodeSequencePath", GetDelNodeSequencePath)
       .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetAllSearchNode", &GetAllSearchNode)
       .def("GetApaSpeedLimit", &GetApaSpeedLimit)

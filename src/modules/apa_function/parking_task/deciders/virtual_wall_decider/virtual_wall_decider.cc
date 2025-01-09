@@ -14,9 +14,6 @@
 
 namespace planning {
 
-#define SLOT_VIRTUAL_WALL_Y_OFFSET (0.5)
-#define SLOT_VIRTUAL_WALL_X_OFFSET (3.0)
-
 void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
@@ -51,7 +48,8 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                                  const double slot_length,
                                  const Pose2D& ego_pose, const Pose2D& end,
                                  const ParkSpaceType slot_type,
-                                 const pnc::geometry_lib::SlotSide slot_side) {
+                                 const pnc::geometry_lib::SlotSide slot_side,
+                                 const ParkingVehDirection parking_in_type) {
   start_ = ego_pose;
   end_ = end;
 
@@ -64,7 +62,22 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
 
   if (slot_type == ParkSpaceType::VERTICAL ||
       slot_type == ParkSpaceType::SLANTING) {
-    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end);
+    double virtual_wall_x_offset =
+        apa_param.GetParam().tail_in_slot_virtual_wall_x_offset;
+
+    double virtual_wall_y_offset =
+        apa_param.GetParam().tail_in_slot_virtual_wall_y_offset;
+
+    if (parking_in_type == ParkingVehDirection::HEAD_IN) {
+      virtual_wall_x_offset =
+          apa_param.GetParam().head_in_slot_virtual_wall_x_offset;
+
+      virtual_wall_y_offset =
+          apa_param.GetParam().head_in_slot_virtual_wall_y_offset;
+    }
+
+    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,
+                            virtual_wall_x_offset, virtual_wall_y_offset);
 
     ILOG_INFO << "vertical slot virtual wall";
   } else {
@@ -130,19 +143,21 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
 
 void VirtualWallDecider::CalcVerticalVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
+    const double virtual_wall_x_offset, const double virtual_wall_y_offset) {
   // slot virtual wall
   VirtualWallBoundary slot_boundary;
-  slot_boundary.y_lower = -slot_width / 2.0 - SLOT_VIRTUAL_WALL_Y_OFFSET;
-  slot_boundary.x_upper = slot_length - SLOT_VIRTUAL_WALL_X_OFFSET;
-  slot_boundary.y_upper = slot_width / 2.0 + SLOT_VIRTUAL_WALL_Y_OFFSET;
+
+  slot_boundary.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
+  slot_boundary.x_upper = slot_length - virtual_wall_x_offset;
+  slot_boundary.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
   double lower_bound_x = -1.0;
   slot_boundary.x_lower = lower_bound_x;
 
   // passage virtual wall
   // lower
   VirtualWallBoundary tmp_passage_boundary;
-  tmp_passage_boundary.x_lower = slot_length - SLOT_VIRTUAL_WALL_X_OFFSET;
+  tmp_passage_boundary.x_lower = slot_length - virtual_wall_x_offset;
   // passage up bound
   double passage_height = 8.0;
   double passage_up_bound_x = slot_length + passage_height;

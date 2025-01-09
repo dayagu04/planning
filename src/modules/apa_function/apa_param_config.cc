@@ -893,6 +893,18 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().speed_config.obs_dist_for_speed_limit,
                   double, "obs_dist_for_speed_limit");
 
+  // hybrid a star params
+  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_x_offset,
+                  double, "tail_in_slot_virtual_wall_x_offset");
+
+  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_y_offset,
+                  double, "tail_in_slot_virtual_wall_y_offset");
+
+  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_x_offset,
+                  double, "head_in_slot_virtual_wall_x_offset");
+
+  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_y_offset,
+                  double, "head_in_slot_virtual_wall_y_offset");
   return;
 }
 

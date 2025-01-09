@@ -535,7 +535,8 @@ void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
 
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss
-            << ", obs s = " << frame_.remain_dist_col_det;
+            << ", obs s = " << frame_.remain_dist_col_det
+            << ", current path length = " << frame_.current_path_length;
 
   return;
 }
@@ -563,6 +564,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   Pose2D end = real_end;
   double end_straight_len;
   ParkSpaceType slot_type;
+  ParkingVehDirection parking_in_type;
   ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
 
@@ -581,8 +583,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_len =
           apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+
+      parking_in_type = ParkingVehDirection::TAIL_IN;
     } else {
       end_straight_len = 0.5;
+      parking_in_type = ParkingVehDirection::HEAD_IN;
     }
     slot_type = ParkSpaceType::VERTICAL;
   }
@@ -602,7 +607,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   }
   virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot.slot_width_,
                                 ego_info.slot.slot_length_, start, real_end,
-                                slot_type, ego_info.slot_side);
+                                slot_type, ego_info.slot_side, parking_in_type);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
@@ -621,11 +626,15 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   cur_request.space_type = slot_type;
-  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
-      fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
     cur_request.direction_request = ParkingVehDirection::HEAD_IN;
-  } else if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
-             fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+  } else if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+                 ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+             apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+                 ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     cur_request.direction_request = ParkingVehDirection::TAIL_IN;
   }
 
@@ -760,7 +769,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       }
 
       // todo:
-      if (frame_.is_replan_first) {
+      if ((fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+           fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) &&
+          frame_.is_replan_first) {
         frame_.is_replan_first = false;
       }
 
@@ -808,7 +819,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       if (response.first_seg_path[0].gear == AstarPathGear::DRIVE) {
         frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
       }
-      current_gear_ = response.first_seg_path[0].gear;
+
+      if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+          fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+        current_gear_ = response.first_seg_path[0].gear;
+      }
 
       thread_.Clear();
       ILOG_INFO << "clear thread";
@@ -1120,7 +1135,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
           ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
-    ego_info_under_slot.target_pose.pos[0] += param.wheel_base;
+    ego_info_under_slot.target_pose.pos[0] += param.wheel_base + 0.1;
     ego_info_under_slot.target_pose.heading += M_PI;
     ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(-1, 0);
   }

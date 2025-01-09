@@ -59,7 +59,8 @@ class VirtualWallDecider : public ParkingTask {
   void Process(std::vector<Position2D>& points, const double slot_width,
                const double slot_length, const Pose2D& ego_pose,
                const Pose2D& end, const ParkSpaceType slot_type,
-               const pnc::geometry_lib::SlotSide slot_side);
+               const pnc::geometry_lib::SlotSide slot_side,
+               const ParkingVehDirection parking_in_type);
 
   void Reset(const Pose2D& ego_pose) {
     passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
@@ -70,7 +71,9 @@ class VirtualWallDecider : public ParkingTask {
   void CalcVerticalVirtualWall(std::vector<Position2D>& points,
                                const double slot_width,
                                const double slot_length, const Pose2D& ego_pose,
-                               const Pose2D& end);
+                               const Pose2D& end,
+                               const double virtual_wall_x_offset,
+                               const double virtual_wall_y_offset);
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
                                     const double slot_width,

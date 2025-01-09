@@ -31,6 +31,7 @@ namespace planning {
 #define PLOT_RS_EXNTEND_TO_END (0)
 #define PLOT_CHILD_NODE (0)
 #define PLOT_SEARCH_SEQUENCE (0)
+#define PLOT_DELETE_NODE (0)
 #define RS_H_COST_MAX_NUM (32)
 
 #define DEBUG_SEARCH_RESULT (0)
@@ -1099,7 +1100,8 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
     }
   } else if (request_.space_type == ParkSpaceType::VERTICAL &&
              request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    if (last_gear == AstarPathGear::REVERSE) {
+    if (request_.rs_request == RSPathRequestType::last_path_forbid_reverse &&
+        last_gear == AstarPathGear::REVERSE) {
       // ILOG_INFO << " rs path last seg len is reverse gear ";
       return false;
     } else if (first_gear == AstarPathGear::DRIVE) {
@@ -1112,7 +1114,7 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
       const auto first_path_size = reeds_shepp_to_end->paths[i].size - 1;
       const auto first_drive_path_end_pos =
           reeds_shepp_to_end->paths[i].points[first_path_size];
-      if (first_drive_path_end_pos.x < astar_end_node_->GetX() &&
+      if (first_drive_path_end_pos.x < astar_end_node_->GetX() - 0.01 &&
           std::fabs(first_drive_path_end_pos.y) <
               config_.headin_limit_y_shrink) {
         return false;
@@ -1975,6 +1977,10 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   bool heading_legal = false;
   heading_legal = node_shrink_decider_.IsLegalForHeading(new_node->GetPhi());
   if (!heading_legal) {
+#if PLOT_DELETE_NODE
+    delete_queue_path_debug_.emplace_back(
+        ad_common::math::Vec2d(new_node->GetX(), new_node->GetY()));
+#endif
     new_node->ClearPath();
     // ILOG_INFO << "heading is illegal";
     return NodeShrinkType::UNEXPECTED_HEADING;
@@ -1987,6 +1993,10 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
       config_.headin_limit_y_shrink);
 
   if (!position_legal) {
+#if PLOT_DELETE_NODE
+    delete_queue_path_debug_.emplace_back(
+        ad_common::math::Vec2d(new_node->GetX(), new_node->GetY()));
+#endif
     new_node->ClearPath();
     // ILOG_INFO << "pos is illegal";
     return NodeShrinkType::UNEXPECTED_POS;
@@ -3241,7 +3251,7 @@ void HybridAStar::GearDrivePathAttempt(
   }
 
   double heading = IflyUnifyTheta(start.GetPhi(), M_PI);
-  if (std::fabs(heading) < (M_PI_2 + 0.001)) {
+  if (std::fabs(heading) < (M_PI_2 - 0.001)) {
     ILOG_INFO << "start.GetPhi() =" << heading * 57.4;
     return;
   }
@@ -3254,6 +3264,7 @@ void HybridAStar::GearDrivePathAttempt(
   // debug
   child_node_debug_.clear();
   queue_path_debug_.clear();
+  delete_queue_path_debug_.clear();
   rs_path_h_cost_debug_.clear();
   rs_path_.Clear();
 
@@ -4402,6 +4413,11 @@ const std::vector<DebugAstarSearchPoint>& HybridAStar::GetChildNodeForDebug() {
 
 const std::vector<ad_common::math::Vec2d>& HybridAStar::GetQueuePathForDebug() {
   return queue_path_debug_;
+}
+
+const std::vector<ad_common::math::Vec2d>&
+HybridAStar::GetDelQueuePathForDebug() {
+  return delete_queue_path_debug_;
 }
 
 const std::vector<RSPath>& HybridAStar::GetRSPathHeuristic() {
