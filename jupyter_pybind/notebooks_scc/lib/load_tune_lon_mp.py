@@ -25,7 +25,7 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv', \
+  planning_json_value_list = ['acc_target_high', 'acc_target_low', 'cipv_acc', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \
@@ -317,7 +317,7 @@ def load_lon_global_figure(bag_loader):
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
       acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-      acc_leadone_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+      acc_leadone_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc'], 2))
    for ind in range(len(bag_loader.vs_msg['data'])):
       ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 

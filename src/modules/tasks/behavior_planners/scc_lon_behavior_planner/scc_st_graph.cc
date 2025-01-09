@@ -524,7 +524,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     acc_target_.first = std::min(acc_target_.first, acc_target.first);
     acc_target_.second = std::min(acc_target_.second, acc_target.second);
 
-    JSON_DEBUG_VALUE("acc_cipv", lead_one.a_lead_k());
+    JSON_DEBUG_VALUE("cipv_acc", lead_one.a_lead_k());
     JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
     JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
 
@@ -542,7 +542,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("lead_two_dis", 0);
     JSON_DEBUG_VALUE("lead_two_vel", 0);
     JSON_DEBUG_VALUE("v_target_lead_two", 0);
-    JSON_DEBUG_VALUE("acc_cipv", 0.0);
+    JSON_DEBUG_VALUE("cipv_acc", 0.0);
     JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
     JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
   }

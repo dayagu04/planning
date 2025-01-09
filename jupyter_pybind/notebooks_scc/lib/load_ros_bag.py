@@ -586,7 +586,7 @@ class LoadRosbag:
       json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                          "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
-                         'acc_target_high', 'acc_target_low', 'acc_cipv', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
+                         'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost', \
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \

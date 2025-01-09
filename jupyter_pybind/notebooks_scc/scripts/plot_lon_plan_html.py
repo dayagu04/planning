@@ -508,8 +508,8 @@ class ScalarGenerator(DataGeneratorBase):
                 elif val_type == 'lead_one_dis':
                     ys.append(round(v['lead_one_dis'], 2))
 
-                elif val_type == 'acc_cipv':
-                    ys.append(round(v['acc_cipv'], 2))
+                elif val_type == 'cipv_acc':
+                    ys.append(round(v['cipv_acc'], 2))
 
                 elif val_type == 'lead_two_dis':
                     ys.append(round(v['lead_two_dis'], 2))
@@ -1151,7 +1151,7 @@ def draw_rt_acc(plan_debug_msg, vs_msg, layer_manager):
     rt_ego_acc = ScalarGenerator(vs_msg, 'ego_acc', accu=True, name="rt_ego_acc")
     rt_acc_min = ScalarGenerator(plan_debug_msg, 'acc_min', accu=True, name="rt_acc_min")
     rt_acc_max = ScalarGenerator(plan_debug_msg, 'acc_max', accu=True, name="rt_acc_max")
-    rt_leadone_acc = ScalarGenerator(plan_debug_msg, 'acc_cipv', accu=True, name="rt_leadone_acc")
+    rt_leadone_acc = ScalarGenerator(plan_debug_msg, 'cipv_acc', accu=True, name="rt_leadone_acc")
 
     ego_acc_layer = CurveLayer(fig_rta, ego_acc_params)
     acc_min_layer = CurveLayer(fig_rta, acc_min_params)
