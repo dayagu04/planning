@@ -17,7 +17,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const bool is_nudge_left, bool in_intersection,
                                 HppGeneralLateralDeciderConfig &config);
 
-double CalDesireLonDistance(double ego_vel, double agent_vel);
+double CalDesireLonDistance(double ego_vel, double agent_vel, double base_dist);
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,

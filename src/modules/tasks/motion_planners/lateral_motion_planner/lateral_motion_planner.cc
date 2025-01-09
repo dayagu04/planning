@@ -93,27 +93,19 @@ bool LateralMotionPlanner::Execute() {
   // assemble input
   if (!AssembleInput()) {
     LOG_DEBUG("LateralMotionPlanner AssembleInput failed\n");
+    SaveDebugInfo();
     return false;
   }
   // update
   if (!Update()) {
     LOG_DEBUG("LateralMotionPlanner Solve failed\n");
+    SaveDebugInfo();
     return false;
   }
 
-  // record input and output
-  DebugInfoManager::GetInstance()
-      .GetDebugInfoPb()
-      ->mutable_lateral_motion_planning_input()
-      ->CopyFrom(planning_input_);
-  DebugInfoManager::GetInstance()
-      .GetDebugInfoPb()
-      ->mutable_lateral_motion_planning_output()
-      ->CopyFrom(planning_problem_ptr_->GetOutput());
-
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LateralMotionCostTime", end_time - start_time);
-
+  SaveDebugInfo();
   return true;
 }
 
@@ -341,8 +333,8 @@ bool LateralMotionPlanner::AssembleInput() {
   const double kv2 =
       config_.curv_factor *
       std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
-  planning_weight_ptr_->SetMaxAcc(max_wheel_angle * kv2);
-  planning_weight_ptr_->SetMaxJerk(max_wheel_angle_rate * kv2);
+  planning_weight_ptr_->SetMaxAcc(std::max(max_wheel_angle * kv2, 0.2));
+  planning_weight_ptr_->SetMaxJerk(std::max(max_wheel_angle_rate * kv2, 0.2));
   // split
   bool split_scene = false;
   // NOA split
@@ -539,9 +531,10 @@ bool LateralMotionPlanner::Update() {
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
 
-  if (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL) {
-    return false;
-  }
+  // if (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL) {
+  //   return false;
+  // }
+  bool is_solver_success = true;
   // update planning_output
   const auto &planning_output = planning_problem_ptr_->GetOutput();
 
@@ -586,8 +579,14 @@ bool LateralMotionPlanner::Update() {
     }
     s_vec[i + 1] = s;
     t_vec[i + 1] = t;
+    if (std::fabs(planning_output.theta_vec(i) - planning_input_.ref_theta_vec(i)) * 57.3 > 90) {
+      is_solver_success = false;
+    }
   }
 
+  if ((!is_solver_success) || (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL)) {
+    return false;
+  }
   // generate motion planning output into planning_context
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
@@ -757,5 +756,17 @@ LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
     return nullptr;
   }
   return std::make_shared<planning_math::KDPath>(std::move(lat_path_points));
+}
+
+void LateralMotionPlanner::SaveDebugInfo() {
+  // record input and output
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_lateral_motion_planning_input()
+      ->CopyFrom(planning_input_);
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_lateral_motion_planning_output()
+      ->CopyFrom(planning_problem_ptr_->GetOutput());
 }
 }  // namespace planning

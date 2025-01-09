@@ -425,6 +425,11 @@ class PlanningContext {
     status_info_.Clear();
   }
 
+  void ResetTaskOutput() {
+    // TODO(bsniu):注意Task成员变量的清空
+    lateral_offset_decider_output_.Reset();
+  }
+
   void reset() {
     planning_success_ = false;
     last_planning_success_ = false;

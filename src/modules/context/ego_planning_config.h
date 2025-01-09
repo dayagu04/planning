@@ -1434,6 +1434,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"}, map_qxy);
     read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qtheta"}, map_qtheta);
+    read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk1"},
         map_qjerk1);
     read_json_vec<double>(
@@ -1593,6 +1595,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   size_t motion_plan_concerned_end_index = 20;
   double valid_perception_range = 60.0;
   std::vector<double> map_qxy{80.0, 400.0, 500.0, 500.0};
+  std::vector<double> map_qtheta{1000.0, 5000.0, 5000.0, 20000.0};
   std::vector<double> map_qjerk1{120.0, 90.0, 60.0, 500.0};
   std::vector<double> map_qjerk2{40.0, 30.0, 30.0, 100.0};
   double end_ratio_for_qrefxy = 1.0;

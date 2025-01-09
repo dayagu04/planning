@@ -25,9 +25,10 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1300
+fig1.height = 1400
 # init pybind
 lateral_motion_planning_py.Init()
+global_var.set_value('g_is_display_enu', True)
 
 lat_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].lateral_motion_planning_input
 
@@ -330,19 +331,19 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
     lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound,
                                               ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
                                               safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
-                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 2.0), end_ratio1, end_ratio2, end_ratio3, max_iter)
+                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.0), end_ratio1, end_ratio2, end_ratio3, max_iter)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
     planning_output.ParseFromString(output_string_tmp)
 
     print("\n ------------------------------------------- \n")
-    delta_bound = 360.0 / steer_ratio / 57.3
-    omega_bound = 240.0 / steer_ratio / 57.3
     try:
-      delta_bound = min(delta_bound, acc_bound / (lat_motion_plan_input.curv_factor * ego_vel * ego_vel))
-      omega_bound = min(omega_bound, jerk_bound / (lat_motion_plan_input.curv_factor * ego_vel * ego_vel))
+      delta_bound = acc_bound / (lat_motion_plan_input.curv_factor * max(ego_vel, 1.0) * max(ego_vel, 1.0))
+      omega_bound = jerk_bound / (lat_motion_plan_input.curv_factor * max(ego_vel, 1.0) * max(ego_vel, 1.0))
     except:
+      delta_bound = 540.0 / steer_ratio / 57.3
+      omega_bound = 360.0 / steer_ratio / 57.3
       print("no ego_vel!")
     print("origin complete_follow : ", lat_motion_plan_input.complete_follow)
     print("origin motion_plan_concerned_end_index : ", lat_motion_plan_input.motion_plan_concerned_index)

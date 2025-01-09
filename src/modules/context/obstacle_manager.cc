@@ -489,14 +489,16 @@ void ObstacleManager::UpdateOccObstacle() {
         object_points.emplace_back(
             planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
       }
-      if (object_points.size() >= 5) {
+      if (object_points.size() >= 3) {
         AddPointClouds(object_points);
         Obstacle obstacle(
             kOccupancyObjectIdOffset +
                 occupancy_objects[i].additional_occupancy_info.track_id,
             std::move(object_points),
             occupancy_objects[i].common_occupancy_info.type);
-        add_occupancy_obstacle(obstacle);
+        if (obstacle.is_vaild()) {
+          add_occupancy_obstacle(obstacle);
+        }
       }
     }
   }
@@ -519,7 +521,9 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         if (ground_line_point.size() >= 3) {
           AddPointClouds(ground_line_point);
           Obstacle obstacle(ground_line_id, ground_line_point);
-          add_groundline_obstacle(obstacle);
+          if (obstacle.is_vaild()) {
+            add_groundline_obstacle(obstacle);
+          }
         }
       }
     } else {
@@ -577,7 +581,9 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         if (points.size() >= 3) {
           AddPointClouds(points);
           Obstacle obstacle(ground_line_id, std::move(points));
-          add_groundline_obstacle(obstacle);
+          if (obstacle.is_vaild()) {
+            add_groundline_obstacle(obstacle);
+          }
         }
       }
     }

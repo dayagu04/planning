@@ -245,6 +245,10 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   planning_input.set_q_ref_x(q_xy);
   planning_input.set_q_ref_y(q_xy);
 
+  std::vector<double> xp_v2{0.5, 2.5, 20.0, 30.0};
+  double q_theta = planning::interp(ego_vel_, xp_v2, config_.map_qtheta);
+  planning_input.set_q_ref_theta(q_theta);
+
   std::vector<double> xp_xy{0.1, 0.2, 0.4, 0.8};
   double q_jerk1 =
       planning::interp(std::fabs(init_dis_to_ref_), xp_xy, config_.map_qjerk1);

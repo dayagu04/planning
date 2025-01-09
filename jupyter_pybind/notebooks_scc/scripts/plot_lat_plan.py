@@ -130,18 +130,26 @@ ego_steer_deg = []
 ego_steer_dot_deg = []
 for t in np.arange(0.0, max_time, frame_dt):
   steer_time.append(t)
-  plan_debug_msg_idx = get_plan_debug_msg_idx(bag_loader, t)
-  lateral_motion_planning_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
-  if (len(lateral_motion_planning_output.delta_vec) > 0):
+  # plan_debug_msg
+  try:
+    plan_debug_msg_idx = get_plan_debug_msg_idx(bag_loader, t)
+    lateral_motion_planning_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
     plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * 13 * 57.3)
     plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * 13 * 57.3)
-  else:
+  except:
     plan_steer_deg.append(0.0)
     plan_steer_dot_deg.append(0.0)
-  vs_msg_idx = get_vs_msg_idx(bag_loader, t)
-  vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
-  ego_steer_deg.append(vs_msg.steering_wheel_angle * 57.3)
-  ego_steer_dot_deg.append(vs_msg.steering_wheel_angle_speed * 57.3)
+    pass
+  # vs_msg
+  try:
+    vs_msg_idx = get_vs_msg_idx(bag_loader, t)
+    vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
+    ego_steer_deg.append(vs_msg.steering_wheel_angle * 57.3)
+    ego_steer_dot_deg.append(vs_msg.steering_wheel_angle_speed * 57.3)
+  except:
+    ego_steer_deg.append(0.0)
+    ego_steer_dot_deg.append(0.0)
+    pass
 
 data_steer.data.update({
   'time': steer_time,

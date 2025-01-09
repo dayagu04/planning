@@ -154,7 +154,7 @@ bool PlanningScheduler::RunOnce(
   auto function_type = DetermineSceneType(state_machine);
   planning_result.scene_type = function_type;
   planning_result.timestamp = start_timestamp;
-
+  planning_output->successful_slot_info_list_size = 0;
   bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
   if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
     planning_success = ExcuteParkingFunction(function_type, planning_output);
@@ -636,8 +636,6 @@ void PlanningScheduler::ClearParkingInfo(
       ->mutable_planning_output()
       .successful_slot_info_list_size = 0;
 
-  planning_output->successful_slot_info_list_size = 0;
-
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
 }
 
@@ -921,6 +919,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
   if ((function_type != GENERAL_PLANNING_CONTEXT.GetStatemachine().scene_type ||
        (dbw_status != GENERAL_PLANNING_CONTEXT.GetStatemachine().dbw_status))) {
+    session_.mutable_planning_context()->ResetTaskOutput();
     SyncParameters(function_type);
   }
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
@@ -940,8 +939,8 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   } else {
     planning_success = scc_function_->Plan();
   }
-  session_.mutable_planning_context()->mutable_planning_success() =
-      planning_success;
+
+  JSON_DEBUG_VALUE("current planning_success", planning_success);
   if (!planning_success) {
     LOG_DEBUG("Planning failed !!!! \n");
     if (!UpdateFailedPlanningResult()) {
@@ -952,9 +951,11 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   } else {
     UpdateSuccessfulPlanningResult();
   }
+
   std::cout << "The RunOnce is successed !!!!:" << std::endl;
-  session_.mutable_planning_context()->mutable_last_planning_success() =
-      session_.planning_context().planning_success();
+  // 存在问题
+  session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
+  session_.mutable_planning_context()->mutable_planning_success() = true;
 
   const auto end_timestamp = IflyTime::Now_ms();
   const double time_consumption = end_timestamp - start_timestamp;
@@ -964,7 +965,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
   ClearParkingInfo(planning_output);
 
-  return planning_success;
+  return true;
 }
 
 }  // namespace planning

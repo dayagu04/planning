@@ -179,6 +179,11 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     if g_is_display_enu:
       ref_x, ref_y = lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec
       ref_xn, ref_yn = coord_tf.global_to_local(lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec)
+      try:
+        last_x_vec, last_y_vec = lat_motion_plan_input.last_x_vec, lat_motion_plan_input.last_y_vec
+      except:
+        print("last traj error!")
+        pass
 
       soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = lat_motion_plan_input.soft_upper_bound_x0_vec, \
         lat_motion_plan_input.soft_upper_bound_y0_vec
@@ -216,6 +221,11 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     else:
       ref_x, ref_y = coord_tf.global_to_local(lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec)
       ref_xn, ref_yn = lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec
+      try:
+        last_x_vec, last_y_vec = coord_tf.global_to_local(lat_motion_plan_input.last_x_vec, lat_motion_plan_input.last_y_vec)
+      except:
+        print("last traj error!")
+        pass
 
       soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x0_vec, \
         lat_motion_plan_input.soft_upper_bound_y0_vec)
@@ -315,6 +325,9 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       'ref_y': ref_y,
       'ref_xn': ref_xn,
       'ref_yn': ref_yn,
+      'last_x_vec': last_x_vec,
+      'last_y_vec': last_y_vec,
+
       'soft_upper_bound_x0_vec': soft_upper_bound_x0_vec,
       'soft_upper_bound_y0_vec': soft_upper_bound_y0_vec,
       'soft_lower_bound_x0_vec': soft_lower_bound_x0_vec,
@@ -378,7 +391,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     steer_dot_deg_lower_bound = []
 
     try:
-      speed = max(vs_msg.vehicle_speed, 2.0)
+      speed = max(vs_msg.vehicle_speed, 1.0)
       delta_bound = lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * speed * speed)
       omega_bound = lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * speed * speed)
     except:
@@ -682,6 +695,8 @@ def load_lat_plan_figure(fig1, local_view_data):
                                                         'ref_y':[],
                                                         'ref_xn':[],
                                                         'ref_yn':[],
+                                                        'last_x_vec': [],
+                                                        'last_y_vec': [],
                                                         'soft_upper_bound_x0_vec':[],
                                                         'soft_upper_bound_y0_vec':[],
                                                         'soft_lower_bound_x0_vec':[],
@@ -824,6 +839,7 @@ def load_lat_plan_figure(fig1, local_view_data):
   fig_soft_lbound = fig1.circle('soft_lower_bound_y0_vec','soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "darkorange", line_alpha = 0.7, fill_color = 'gold',fill_alpha = 1.0, legend_label = 'soft lower bound')
   fig_hard_ubound = fig1.circle('hard_upper_bound_y0_vec','hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard upper bound')
   fig_hard_lbound = fig1.circle('hard_lower_bound_y0_vec','hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard lower bound')
+  fig1.line('last_y_vec', 'last_x_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'brown', line_dash = 'solid', line_alpha = 0.35, legend_label = 'last path', visible=False)
 
   fig1.line('y_vec', 'x_vec', source = data_arastar, line_width = 5, line_color = 'purple', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hybrid ara path', visible=True)
   f1 = fig1.circle('y_vec','x_vec', source = data_arastar, size = 6, line_width = 4, line_color = "blue", line_alpha = 0.7, fill_color = 'blue',fill_alpha = 0.7, legend_label = 'hybrid ara path')

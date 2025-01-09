@@ -980,7 +980,11 @@ void PlanningPlayer::PlayOneFrame(
           functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
         }
       } else if (scene_type_ == "hpp") {
-        functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+        if (is_close_loop) {
+          functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+        } else {
+          functional_state = func_state_machine_ros_msg.current_state;
+        }
       }
     }
     func_state_machine_ros_msg.current_state = functional_state;

@@ -11,11 +11,11 @@ ParkingSwitchDecider::ParkingSwitchDecider(
     : Task(config_builder, session) {
   config_ = config_builder->cast<HppParkingSwitchConfig>();
   name_ = "ParkingSwitchDecider";
-  Clear();
+  parking_switch_info_.Clear();
 }
 
 bool ParkingSwitchDecider::Execute() {
-  Clear();
+  parking_switch_info_.Clear();
   // get distance_to_target_slot
   const EnvironmentalModel &env = session_->environmental_model();
   const auto &current_reference_path =
@@ -55,11 +55,7 @@ bool ParkingSwitchDecider::Execute() {
         break;
       }
     }
-  }
-  if ((distance_to_destination < config_.dist_to_parking_space_thr) &&
-      (!parking_switch_info_.is_memory_slot_allowed_to_park) &&
-      (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
-    if ((ego_v <= 1e-2) || (distance_to_destination <= 1e-1)) {
+    if ((ego_v <= 1e-2) || (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
       parking_switch_info_.is_memory_slot_occupied = true;
     }
   }
@@ -70,18 +66,15 @@ bool ParkingSwitchDecider::Execute() {
   auto &parking_switch_decider_output =
       session_->mutable_planning_context()
           ->mutable_parking_switch_decider_output();
+  if ((parking_switch_decider_output.parking_switch_info.is_memory_slot_occupied) &&
+      (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
+    parking_switch_info_.is_memory_slot_occupied = true;
+  }
+  if (parking_switch_info_.is_memory_slot_allowed_to_park) {
+    parking_switch_info_.is_memory_slot_occupied = false;
+  }
   parking_switch_decider_output.parking_switch_info =
       std::move(parking_switch_info_);
   return true;
 }
-
-void ParkingSwitchDecider::Clear() {
-  auto &parking_switch_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_parking_switch_decider_output();
-  parking_switch_decider_output.parking_switch_info.Clear();
-  parking_switch_info_.Clear();
-  return;
-}
-
 }  // namespace planning

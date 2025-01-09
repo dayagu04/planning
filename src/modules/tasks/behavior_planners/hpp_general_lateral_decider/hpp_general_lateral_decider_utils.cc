@@ -26,8 +26,8 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   return std::fmax(base_dis + 0.015 * ego_vel, 0.);
 }
 
-double CalDesireLonDistance(double ego_vel, double agent_vel) {
-  return 3.0 + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
+double CalDesireLonDistance(double ego_vel, double agent_vel, double base_dist) {
+  return base_dist + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
 
 double CalDesireStaticLateralDistance(const double base_distance,
@@ -53,7 +53,7 @@ double CalDesireStaticLateralDistance(const double base_distance,
   }
 
   double min_extra_lateral_buffer =
-      std::fmin(0.15 * ego_vel, max_extra_lateral_buffer);
+      std::fmin(0.1 * ego_vel, max_extra_lateral_buffer);
 
   double clip_ego_l = clip(fabs(ego_l), kMaxEgoLCoeff, 0.0);
   double lateral_extra_buffer =

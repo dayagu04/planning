@@ -17,9 +17,6 @@ class ParkingSwitchDecider : public Task {
   bool Execute() override;
 
  private:
-  void Clear();
-
- private:
   HppParkingSwitchConfig config_;
   HppParkingSwitchInfo parking_switch_info_;
 };

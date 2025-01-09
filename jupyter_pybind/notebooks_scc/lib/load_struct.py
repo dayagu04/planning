@@ -1142,11 +1142,13 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
     if frenet_vs == 255 and  frenet_vl == 255:
       obs_info_all[source]['obs_label'].append('v(' + str(obs_id) + ')=' \
           + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4))+','+ str(type)+'\n'\
-            + lat_decision + '\n' + is_static)
+          + str(round(obstacle_list[i].common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.velocity.y, 4))+'\n'\
+          + lat_decision + '\n' + is_static)
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obs_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type)+'\n'\
+          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(type)+'\n'\
           + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4))+'\n'\
+          + str(round(obstacle_list[i].common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.velocity.y, 4))+'\n'\
           + lat_decision + '\n' + is_static)
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):

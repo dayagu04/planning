@@ -114,12 +114,13 @@ bool ParkingSlotManager::Update(
 }
 
 bool ParkingSlotManager::CalculateDistanceToTargetSlot(
-    const std::shared_ptr<ReferencePath>& reference_path) {
-  distance_to_target_slot_ = -1;
-  const double distance_to_target_slot = session_->environmental_model()
-                                             .get_route_info()
-                                             ->get_route_info_output()
-                                             .distance_to_target_slot;
+    const std::shared_ptr<ReferencePath> &reference_path) {
+  distance_to_target_slot_ = -NL_NMAX;
+  const double distance_to_target_slot =
+      session_->environmental_model()
+              .get_route_info()
+              ->get_route_info_output()
+              .distance_to_target_slot;
   const double ego_s = reference_path->get_frenet_ego_state().s();
   const auto& frenet_coord = reference_path->get_frenet_coord();
   if ((target_slot_.empty()) || (frenet_coord == nullptr)) {
@@ -129,9 +130,9 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
   for (const auto& slot_point : target_slot_) {
     Point2D cart_pt(slot_point.x(), slot_point.y());
     Point2D frenet_pt{0.0, 0.0};
-    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      distance_to_target_slot_ =
-          std::max(std::fabs(frenet_pt.x - ego_s), distance_to_target_slot_);
+    if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      distance_to_target_slot_ = std::fabs(std::max(frenet_pt.x - ego_s,
+                                          distance_to_target_slot_));
     } else {
       distance_to_target_slot_ = distance_to_target_slot;
       break;
