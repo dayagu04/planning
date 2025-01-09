@@ -1733,6 +1733,9 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "narrow_space_width_stop_thrshld");
     narrow_space_distance_stop_thrshld =
         read_json_key<double>(json, "narrow_space_distance_stop_thrshld");
+    narrow_v_limit_attention = read_json_key<double>(json, "narrow_v_limit_attention");
+    narrow_v_limit_warn = read_json_key<double>(json, "narrow_v_limit_warn");
+    narrow_v_limit_danger = read_json_key<double>(json, "narrow_v_limit_danger");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1764,6 +1767,9 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double lon_max_ignore_relative_time = 2.0;
   double rads_stop_distance_to_destination = 0;
   double max_deceleration = -6.0;
+  double narrow_v_limit_attention = 2.5; // 9kph
+  double narrow_v_limit_warn = 1.67; // 6kph
+  double narrow_v_limit_danger = 0.83; // 3kph
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {

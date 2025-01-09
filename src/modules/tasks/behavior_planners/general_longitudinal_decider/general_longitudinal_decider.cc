@@ -3,9 +3,13 @@
 #include <assert.h>
 
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "adas_function/adaptive_cruise_control.h"
@@ -699,7 +703,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
 
   // get comfort brake traj
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  constexpr double kComfortBrakeJerk = -0.25;
+  constexpr double kComfortBrakeJerk = -1.0;
   constexpr double kEmergencyBrakeJerk = -3.0;
   constexpr double kDeltaJerkThld = 0.2;
   constexpr double kTimeToBrakeThld = 0.5;
@@ -2009,7 +2013,75 @@ double GeneralLongitudinalDecider::get_distance_to_destination() {
 }
 
 double GeneralLongitudinalDecider::get_narrow_area_velocity_limit() {
-  return std::numeric_limits<double>::max();
+  double suggest_velocity_limit = std::numeric_limits<double>::max();
+  constexpr double narrow_space_width_thrshld_safe = 1.5;
+  constexpr double narrow_space_width_thrshld_easy = 0.8;
+  constexpr double narrow_space_width_thrshld_hard = 0.1;
+  double kVelocityAttenLimit = config_.narrow_v_limit_attention;
+  double kVelocityWarnLimit = config_.narrow_v_limit_warn;
+  double kVelocityDangerLimit = config_.narrow_v_limit_danger;
+  double narrow_space_width_stop_thrshld =
+      config_.narrow_space_width_stop_thrshld;
+  double narrow_space_distance_stop_thrshld =
+      config_.narrow_space_distance_stop_thrshld;
+  // get lateral bound info
+  const auto &general_lateral_decider_output =
+      session_->planning_context().general_lateral_decider_output();
+  // <upper:left lower:right>
+  const auto &lateral_hard_bounds =
+      general_lateral_decider_output.hard_bounds_frenet_point;
+  const auto &lateral_soft_bounds =
+      general_lateral_decider_output.soft_bounds_frenet_point;
+  const auto &lateral_hard_bound_info =
+      general_lateral_decider_output.hard_bounds_info;
+  const auto &lateral_soft_bound_info =
+      general_lateral_decider_output.soft_bounds_info;
+  // calc passable area info
+  // std::vector<PassableAreaInfo> passable_area_info;
+  std::pair<BoundInfo, BoundInfo> min_width_bound_info; // <hard bound, soft bound>
+  double width_minimum = std::numeric_limits<double>::max();
+  for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+    const auto &hard_bounds = lateral_hard_bounds[i];
+    const auto &soft_bounds = lateral_soft_bounds[i];
+    const auto &hard_bounds_info = lateral_hard_bound_info[i];
+    const auto &soft_bounds_info = lateral_soft_bound_info[i];
+    double passable_area_width = hard_bounds.second - hard_bounds.first;
+    if (passable_area_width < width_minimum) {
+      width_minimum = passable_area_width;
+      min_width_bound_info.first.id = hard_bounds_info.first.id;
+      min_width_bound_info.first.type = hard_bounds_info.first.type;
+      min_width_bound_info.second.id = hard_bounds_info.second.id;
+      min_width_bound_info.second.type = hard_bounds_info.second.type;
+    }
+  }
+  // calc closest distance
+  double closest_distance = std::numeric_limits<double>::max();
+
+  if (width_minimum < narrow_space_width_thrshld_hard) {
+    LOG_DEBUG("Dangerous! The minimum path width is = : %f", width_minimum);
+    suggest_velocity_limit = kVelocityDangerLimit;
+  } else if (width_minimum < narrow_space_width_thrshld_easy) {
+    LOG_DEBUG("Warning! The minimum path width is = : %f", width_minimum);
+    suggest_velocity_limit = kVelocityWarnLimit;
+  } else if (width_minimum < narrow_space_width_thrshld_safe) {
+    LOG_DEBUG("Attention! The minimum path width is = : %f", width_minimum);
+    suggest_velocity_limit =
+        kVelocityWarnLimit +
+        (kVelocityAttenLimit - kVelocityWarnLimit) /
+            (narrow_space_width_thrshld_safe -
+             narrow_space_width_thrshld_easy) *
+            (width_minimum - narrow_space_width_thrshld_easy);
+  }
+  // The vehicle should stop
+  // if (width_minimum < narrow_space_width_stop_thrshld &&
+  //     closest_distance < narrow_space_distance_stop_thrshld) {
+  //   LOG_DEBUG(
+  //       "Dangerous! The vehilce can't get through the area whose minimum path "
+  //       "width is = : %f",
+  //       width_minimum);
+  //   suggest_velocity_limit = 0.0;
+  // }
+  return suggest_velocity_limit;
 }
 
 double GeneralLongitudinalDecider::get_s_bound_by_target_parking_space() {
