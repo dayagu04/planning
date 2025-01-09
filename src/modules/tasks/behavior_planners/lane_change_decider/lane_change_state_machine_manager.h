@@ -5,6 +5,7 @@
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "define/geometry.h"
 #include "session.h"
+#include "task_interface/vision_longitudinal_behavior_planner_output.h"
 #include "virtual_lane.h"
 namespace planning {
 struct StateTransitionInfo {
@@ -66,12 +67,15 @@ struct LaneChangeStageInfo {
   bool lc_should_back{false};
   bool lc_valid{false};
   std::string lc_back_reason{"none"};
+  GapInfo gap_info;
   void Reset() {
     should_premove = false;
     lc_invalid_reason = "none";
     lc_should_back = false;
     lc_valid = false;
     lc_back_reason = "none";
+    gap_info.front_id = -1;
+    gap_info.rear_id = -1;
   }
 };
 
@@ -106,7 +110,7 @@ class LaneChangeStateMachineManager {
                            const RequestSource& lane_change_type);
   bool CheckIfHoldToExecution(const RequestType& lane_change_direction,
                               const RequestSource& lane_change_type);
-  bool CheckIfCompleteToLaneKeeping() const;
+  bool CheckIfCompleteToLaneKeeping();
   bool CheckIfInPerfectLaneKeeping() const;
   bool CheckIfCancelToLaneKeeping() const;
   bool CheckIfCompleteToCancel();
