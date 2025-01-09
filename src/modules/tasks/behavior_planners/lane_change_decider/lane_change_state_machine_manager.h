@@ -67,15 +67,15 @@ struct LaneChangeStageInfo {
   bool lc_should_back{false};
   bool lc_valid{false};
   std::string lc_back_reason{"none"};
-  GapInfo gap_info;
+  LaneChangeGapInfo lc_gap_info;
   void Reset() {
     should_premove = false;
     lc_invalid_reason = "none";
     lc_should_back = false;
     lc_valid = false;
     lc_back_reason = "none";
-    gap_info.front_id = -1;
-    gap_info.rear_id = -1;
+    lc_gap_info.front_agent_id = -1;
+    lc_gap_info.rear_agent_id = -1;
   }
 };
 

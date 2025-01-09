@@ -52,7 +52,7 @@ struct LaneChangeDeciderOutput {
   double lateral_close_boundary_offset = 0.0;
   bool is_ego_on_leftmost_lane = false;
   bool is_ego_on_rightmost_lane = false;
-  LaneChangeGapInfo gap_info;
+  LaneChangeGapInfo lc_gap_info;
 };
 
 }  // namespace planning
