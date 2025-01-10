@@ -258,6 +258,7 @@ int HybridAStarInterface::UpdateOutput() {
     } else {
       lon_min_sampling_length = 0.4;
     }
+    target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
 
     for (size_t i = 0; i < config_.lat_hierarchy_safe_buffer.size(); i++) {
       lat_buffer = config_.lat_safe_buffer_for_inside[i];
