@@ -233,8 +233,7 @@ bool HybridAStar::PlanByRSPathSampling(
   double min_radius = 8.0;
   double radius_step = 5.0;
 
-  int sampline_numer = std::ceil(max_radius - min_radius) / radius_step;
-
+  int sampline_numer = std::ceil((max_radius - min_radius) / radius_step);
   HybridAStarResult path;
 
   double radius = max_radius;
@@ -282,7 +281,7 @@ bool HybridAStar::PlanByRSPathSampling(
 
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
-  ILOG_INFO << "hybrid astar total time (ms) = " << result->time_ms;
+  ILOG_INFO << "rs sampling total time (ms) = " << result->time_ms;
 
   return true;
 }
@@ -728,8 +727,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   // }
 
   double astar_end_time = IflyTime::Now_ms();
-  ILOG_INFO << "hybrid astar total time (ms): "
-            << astar_end_time - astar_start_time;
+  ILOG_INFO << "spiral path time (ms): " << astar_end_time - astar_start_time;
 
   return true;
 }
@@ -4398,7 +4396,7 @@ Polygon2D* HybridAStar::GetVehPolygon(const AstarPathGear& gear) {
 }
 
 const std::vector<DebugAstarSearchPoint>& HybridAStar::GetChildNodeForDebug() {
-  ILOG_INFO << "child node size" << child_node_debug_.size();
+  // ILOG_INFO << "child node size" << child_node_debug_.size();
   return child_node_debug_;
 }
 
