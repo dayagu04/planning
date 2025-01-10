@@ -68,7 +68,7 @@ const bool CubicKnotsToCoefficients(coefficient_cubic_t *coefficients,
   }
 
   if (!Fgreater(knots->sf, 0)) {
-    ILOG_ERROR << "final path length sf should be not less than 0!";
+    // ILOG_ERROR << "final path length sf should be not less than 0!";
     return false;
   }
 
@@ -335,12 +335,11 @@ const bool SampleCubicSpiralStatesByCoef(
   }
 
   if (!Fgreater(step_length, 0)) {
-    ILOG_ERROR << "step_length should not be less than zero!";
+    // ILOG_ERROR << "step_length should not be less than zero!";
     return false;
   }
 
   if (!GetCurvatureBounds(&curvature_lower_bound, &curvature_upper_bound)) {
-    ILOG_ERROR << "GetCurvatureBounds_config() failed!";
     return false;
   }
 
@@ -355,7 +354,7 @@ const bool SampleCubicSpiralStatesByCoef(
     s = i * coeffs->sf / total_point_number;
 
     if (!FThetaCubicByS(&theta, coeffs, s)) {
-      ILOG_ERROR << "Theta calculation of the spiral path failed!";
+      // ILOG_ERROR << "theta calculation of the spiral path failed!";
       return false;
     }
 
@@ -372,13 +371,13 @@ const bool SampleCubicSpiralStatesByCoef(
     local_state.theta = theta;
 
     if (!FKappaCubicS(&(local_state.kappa), coeffs, s)) {
-      ILOG_ERROR << "curvature calculation failed!";
+      // ILOG_ERROR << "curvature calculation failed!";
       return false;
     }
 
     if (Fless(local_state.kappa, curvature_lower_bound) ||
         Fgreater(local_state.kappa, curvature_upper_bound)) {
-      ILOG_ERROR << "the curvature of the solution is out of bounds!";
+      // ILOG_ERROR << "the curvature of the solution is out of bounds!";
       return false;
     }
 
@@ -401,18 +400,16 @@ const bool SampleCubicSpiralStatesBySol(
   coefficient_cubic_t coeffs;
 
   if (!CubicKnotsToCoefficients(&coeffs, &(solution->knots))) {
-    ILOG_ERROR << "CubicKnotsToCoefficients() failed!";
     return false;
   }
 
   if (!Fgreater(step_length, 0)) {
-    ILOG_ERROR << "step_length should not be less than zero!";
+    // ILOG_ERROR << "step_length should not be less than zero!";
     return false;
   }
 
   if (!SampleCubicSpiralStatesByCoef(states, &coeffs, &(solution->base_state),
                                      step_length)) {
-    ILOG_ERROR << "sample_cubic_spiral_by_step_length() failed!";
     return false;
   }
 
@@ -487,7 +484,7 @@ const bool CubicSpiralStrictSolve(solution_cubic_t *solution,
 
   /* limit the delta theta_g to [-pi, pi] */
   if (!CvtCompactStateGlobalToLocal(&local_goal, goal, start)) {
-    ILOG_ERROR << "input pointers should not be NULL!";
+    // ILOG_ERROR << "input pointers should not be NULL!";
     return false;
   }
 
@@ -538,7 +535,7 @@ const bool CubicSpiralStrictSolve(solution_cubic_t *solution,
   } /* for max_iterations loop */
   solution->base_state = *start;
   solution->knots = guess;
-  ILOG_INFO << " StrictSolve real_max_iterations " << i;
+  // ILOG_INFO << " StrictSolve real_max_iterations " << i;
 
   return true;
 }
@@ -573,7 +570,7 @@ const bool CubicSpiralEndkFreeSolve(solution_cubic_t *solution,
 
   /* limit the delta theta_g to [-pi, pi] */
   if (!CvtCompactStateGlobalToLocal(&local_goal, goal, start)) {
-    ILOG_ERROR << "transformation failed!";
+    // ILOG_ERROR << "transformation failed!";
     return false;
   }
 
@@ -635,7 +632,7 @@ const bool CubicSpiralEndkFreeSolve(solution_cubic_t *solution,
   solution->base_state = *start;
   solution->knots = guess;
 
-  ILOG_INFO << " EndkFreeSolve real_max_iterations " << i;
+  // ILOG_INFO << " EndkFreeSolve real_max_iterations " << i;
 
   return true;
 }
@@ -671,7 +668,7 @@ const bool CubicSpiralStartkFreeSolve(solution_cubic_t *solution,
 
   /* limit the delta theta_g to [-pi, pi] */
   if (!CvtCompactStateGlobalToLocal(&local_goal, goal, start)) {
-    ILOG_INFO << "transformation failed!";
+    // ILOG_INFO << "transformation failed!";
     return false;
   }
 
@@ -730,7 +727,7 @@ const bool CubicSpiralStartkFreeSolve(solution_cubic_t *solution,
   } /* for max_iterations loop */
   solution->base_state = *start;
   solution->knots = guess;
-  ILOG_INFO << " StartkFreeSolve real_max_iterations " << i;
+  // ILOG_INFO << " StartkFreeSolve real_max_iterations " << i;
 
   return true;
 }
@@ -766,7 +763,7 @@ const bool CubicSpiralBothkFreeSolve(solution_cubic_t *solution,
 
   /* limit the delta theta_g to [-pi, pi] */
   if (!CvtCompactStateGlobalToLocal(&local_goal, goal, start)) {
-    ILOG_INFO << "transformation failed!";
+    // ILOG_INFO << "transformation failed!";
     return false;
   }
 
@@ -831,7 +828,7 @@ const bool CubicSpiralBothkFreeSolve(solution_cubic_t *solution,
   solution->base_state = *start;
   solution->knots = guess;
 
-  ILOG_INFO << " BothkFreeSolve real_max_iterations " << i;
+  // ILOG_INFO << " BothkFreeSolve real_max_iterations " << i;
 
   return true;
 }

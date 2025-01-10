@@ -520,12 +520,12 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   double sampling_step = 0.1;
   size_t max_sampling_num = 30;
 
-  ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
-            << ", lon_min_sampling_length = " << lon_min_sampling_length
-            << ", start.x " << start.x << ", start.y " << start.y
-            << ", start.theta " << start.theta << ", end.x " << end.x
-            << ", end.y " << end.y << ", end.theta " << end.theta
-            << ", sampling_step " << sampling_step;
+  // ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
+  //           << ", lon_min_sampling_length = " << lon_min_sampling_length
+  //           << ", start.x " << start.x << ", start.y " << start.y
+  //           << ", start.theta " << start.theta << ", end.x " << end.x
+  //           << ", end.y " << end.y << ", end.theta " << end.theta
+  //           << ", sampling_step " << sampling_step;
 
   size_t plan_num = 0;
   HybridAStarResult path;
@@ -558,14 +558,14 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     std::vector<spiral_path_point_t> states;
     states.reserve(UOS_MAX_STEER_STATE_NUM);
 
-    DEBUG_PRINT("start is " << start_spiral.x << ", " << start_spiral.y << ", "
-                            << start_spiral.theta * 57.3);
-    DEBUG_PRINT("goal is " << goal_spiral.x << ", " << goal_spiral.y << ", "
-                           << goal_spiral.theta * 57.3);
+    // DEBUG_PRINT("start is " << start_spiral.x << ", " << start_spiral.y << ", "
+    //                         << start_spiral.theta * 57.3);
+    // DEBUG_PRINT("goal is " << goal_spiral.x << ", " << goal_spiral.y << ", "
+    //                        << goal_spiral.theta * 57.3);
 
     solution_cubic_t sol;
 
-    double spiral_start_time = IflyTime::Now_us();
+    // double spiral_start_time = IflyTime::Now_us();
     if (CubicSpiralStrictSolve(&sol, &start_spiral, &goal_spiral)) {
       sampling_end.x += sampling_step;
     } else {
@@ -585,11 +585,6 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
         ILOG_INFO << "cubic spiral sample failed !";
         continue;
       }
-
-      DEBUG_PRINT("states size is " << states.size());
-
-      std::cout << " Cubic Spiral Strict Solve ret " << static_cast<int>(ret)
-                << std::endl;
     }
 
     double s = 0.0;
@@ -600,9 +595,9 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
       s += spiral_step_length;
     }
 
-    double spiral_end_time = IflyTime::Now_us();
-    ILOG_INFO << "sample cubic spiral time (us): "
-              << (spiral_end_time - spiral_start_time);
+    // double spiral_end_time = IflyTime::Now_us();
+    // ILOG_INFO << "sample cubic spiral time (us): "
+    //           << (spiral_end_time - spiral_start_time);
 
     auto last_state = states.back();
     double end_point_error_x = last_state.x - goal_spiral.x;
@@ -662,16 +657,16 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
     path_points_size = std::min(path_points_size, collision_id);
     if (path_points_size <= 1) {
-      ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
-                << ", max_sampling_num=" << max_sampling_num;
+      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+      //           << ", max_sampling_num=" << max_sampling_num;
       continue;
     }
 
-    ILOG_INFO << plan_num << " point size = " << path.x.size()
-              << ", expected_dist_id = " << expected_dist_id
-              << ", path_points_size = " << path_points_size
-              << ", path len= " << path.accumulated_s.back()
-              << ", collision_id is " << collision_id;
+    // ILOG_INFO << plan_num << " point size = " << path.x.size()
+    //           << ", expected_dist_id = " << expected_dist_id
+    //           << ", path_points_size = " << path_points_size
+    //           << ", path len= " << path.accumulated_s.back()
+    //           << ", collision_id is " << collision_id;
 
     if (path_points_size >= expected_dist_id) {
       break;
@@ -684,9 +679,6 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   //   ILOG_INFO << "cubic plan fail";
   //   return false;
   // }
-
-  // path_points_size = path.x.size();
-  ILOG_INFO << "path_points_size is " << path_points_size;
 
   path_points_size = std::min(path_points_size, path.x.size());
 
@@ -729,11 +721,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     return false;
   }
 
-  for (int i = 0; i < result->x.size(); i++) {
-    ILOG_INFO << "[ " << i << " ] " << static_cast<int>(result->gear[i])
-              << ", ( " << result->x[i] << ", " << result->y[i] << ", "
-              << result->phi[i] << " )";
-  }
+  // for (int i = 0; i < result->x.size(); i++) {
+  //   ILOG_INFO << "[ " << i << " ] " << static_cast<int>(result->gear[i])
+  //             << ", ( " << result->x[i] << ", " << result->y[i] << ", "
+  //             << result->phi[i] << " )";
+  // }
 
   double astar_end_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar total time (ms): "
