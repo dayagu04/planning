@@ -8,7 +8,8 @@ namespace planning {
 /// @brief 自主式(Active)换道请求
 class OvertakeRequest : public LaneChangeRequest {
  public:
-  OvertakeRequest(planning::framework::Session* session,
+  OvertakeRequest(const EgoPlanningConfigBuilder* config_builder,
+                  planning::framework::Session* session,
                   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
                   std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~OvertakeRequest() = default;
@@ -122,6 +123,7 @@ class OvertakeRequest : public LaneChangeRequest {
   double getDrivingDistance(const double v, const double a, const double t,
                             double* v_out);
 
+  EgoPlanningConfig config_;
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
   std::shared_ptr<ReferencePath> left_reference_path_ = nullptr;

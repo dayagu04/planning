@@ -22,7 +22,7 @@ LaneChangeRequestManager::LaneChangeRequestManager(
       map_request_(session, config_builder, virtual_lane_mgr,
                    lane_change_lane_mgr),
       act_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
-      overtake_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
+      overtake_request_(config_builder, session, virtual_lane_mgr, lane_change_lane_mgr),
       emergence_avoid_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       cone_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       merge_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
@@ -60,7 +60,6 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const double trigger_overtake_min_ego_speed_threshold = 5.56;  // 20km/h
-  const double surpress_overtake_min_distance_to_split = 500.0;
   double minimum_ego_cruise_speed_for_active_lane_change =
       config_.minimum_ego_cruise_speed_for_active_lane_change;
   // const double kOvertakeTriggerCruiseSpeedMinThreshold = 16.67;  // 60km/h
@@ -70,10 +69,6 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
       config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
-  const double max_pass_merge_distance_to_surpress_overtake_lane_change =
-      virtual_lane_mgr_->dis_threshold_to_last_merge_point();
-  double sum_dis_to_last_merge_point =
-      route_info_output.sum_dis_to_last_merge_point;
   const double odd_route_distance_threshold = 500.0;
   const bool enable_use_emergency_avoidence_lc_request =
       config_.enable_use_emergency_avoidence_lane_change_request;
@@ -82,12 +77,6 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const bool enable_use_merge_lc_request =
       config_.enable_use_merge_change_request;
   const auto& function_info = session_->environmental_model().function_info();
-  const double dis_threshold_to_merged_point =
-      virtual_lane_mgr_->dis_threshold_to_merged_point();
-  const double dis_to_first_merge =
-      route_info_output.distance_to_first_road_merge;
-  const double distance_to_first_road_split =
-      route_info_output.distance_to_first_road_split;
   const int origin_relative_id_zero_nums =
       virtual_lane_mgr_->origin_relative_id_zero_nums();
 
@@ -127,12 +116,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
       if (route_info_output.is_on_ramp ||
           route_info_output.dis_to_ramp <=
-              minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
-          sum_dis_to_last_merge_point <
-              max_pass_merge_distance_to_surpress_overtake_lane_change ||
-          dis_to_first_merge < dis_threshold_to_merged_point ||
-          distance_to_first_road_split <
-              surpress_overtake_min_distance_to_split) {
+              minimum_distance_nearby_ramp_to_surpress_overtake_lane_change) {
         overtake_request_.Reset();
         LOG_DEBUG(
             "cann't generate overtake lane change on ramp or near ramp or near "

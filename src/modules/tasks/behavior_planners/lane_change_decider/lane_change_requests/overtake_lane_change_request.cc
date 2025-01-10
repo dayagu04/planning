@@ -96,11 +96,13 @@ constexpr double kDefaultLeadOneConsiderRange = 120.0;
 }  // namespace
 // class: OvertakeRequest
 OvertakeRequest::OvertakeRequest(
+    const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session* session,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
   base_frenet_coord_ = std::make_shared<KDPath>();
+  config_ = config_builder->cast<EgoPlanningConfig>();
 }
 
 void OvertakeRequest::Update(int lc_status) {
@@ -199,10 +201,28 @@ void OvertakeRequest::Update(int lc_status) {
 }
 
 void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
+  const double min_distance_nearby_split_to_surpress_specific_direction_overtake =
+      config_
+          .minimum_distance_nearby_split_to_surpress_specific_direction_overtake;
+  const double max_pass_merge_distance_to_surpress_overtake_lane_change =
+      virtual_lane_mgr_->dis_threshold_to_last_merge_point();
+  double sum_dis_to_last_merge_point =
+      route_info_output.sum_dis_to_last_merge_point;
+  const double dis_threshold_to_merged_point =
+      virtual_lane_mgr_->dis_threshold_to_merged_point();
+  const double dis_to_first_merge =
+      route_info_output.distance_to_first_road_merge;
+  const double distance_to_first_road_split =
+      route_info_output.distance_to_first_road_split;
+  const auto& first_merge_direction = route_info_output.first_merge_direction;
+  const auto& first_split_direction = route_info_output.first_split_direction;
+
   int base_lane_virtual_id{current_lane_virtual_id};
 
   if (lane_change_lane_mgr_->has_origin_lane()) {
@@ -400,12 +420,18 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
   if (trigger_left_overtake) {
     if (request_type_ != LEFT_CHANGE && compute_lc_valid_info(LEFT_CHANGE)) {
-      target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
-      GenerateRequest(LEFT_CHANGE);
-      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      LOG_DEBUG(
-          "[OvertakeRequest::update] Ask for overtake changing lane to left "
-          "\n");
+      if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
+           first_merge_direction != RAMP_ON_LEFT) &&
+          (distance_to_first_road_split >=
+               min_distance_nearby_split_to_surpress_specific_direction_overtake ||
+           first_split_direction != RAMP_ON_RIGHT)) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+        GenerateRequest(LEFT_CHANGE);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+        LOG_DEBUG(
+            "[OvertakeRequest::update] Ask for overtake changing lane to left "
+            "\n");
+      }
     }
     if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, origin_lane_virtual_id_) &&
         request_type_ != NO_CHANGE &&
@@ -426,12 +452,20 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
     if (request_type_ != RIGHT_CHANGE && compute_lc_valid_info(RIGHT_CHANGE)) {
-      target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
-      GenerateRequest(RIGHT_CHANGE);
-      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      LOG_DEBUG(
-          "[OvertakeRequest::update] Ask for overtake changing lane to right "
-          "\n");
+      if ((sum_dis_to_last_merge_point >=
+           max_pass_merge_distance_to_surpress_overtake_lane_change) &&
+          (dis_to_first_merge >= dis_threshold_to_merged_point ||
+           first_merge_direction != RAMP_ON_RIGHT) &&
+          (distance_to_first_road_split >=
+               min_distance_nearby_split_to_surpress_specific_direction_overtake ||
+           first_split_direction != RAMP_ON_LEFT)) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+        GenerateRequest(RIGHT_CHANGE);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+        LOG_DEBUG(
+            "[OvertakeRequest::update] Ask for overtake changing lane to right "
+            "\n");
+      }
     }
     if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, origin_lane_virtual_id_) &&
         request_type_ != NO_CHANGE &&
