@@ -17,7 +17,11 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 
 # bag path and frame dt
-# bag_path = '/docker_share/astar_0711_2/test_0.00000'
+# e0y1:  10034
+# e0y2:  04228
+# e0y8:  14520
+# e0y9:  18049
+# e0y10: 20267
 bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250103/20250103-19-19-12/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-03-19-19-13_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
