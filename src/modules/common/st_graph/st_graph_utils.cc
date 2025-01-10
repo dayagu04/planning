@@ -1,4 +1,5 @@
 #include "st_graph_utils.h"
+#include <cstdint>
 
 #include "common_c.h"
 #include "math/box2d.h"
@@ -45,10 +46,11 @@ const agent::Agent* StGraphUtils::GetFrontAgentOfTargetLane(
   if (nullptr == ptr_agent_manager) {
     return nullptr;
   }
-  if (lane_change_request == "" || lane_change_request == "") {
+  if (lane_change_status == "" || lane_change_request == "") {
     return nullptr;
   }
   int64_t target_front_agent_id = -1;
+  int32_t target_lane_front_agent_id = -1;
   if (lane_change_request == "none") {
     target_front_agent_id = dynamic_world->ego_front_node_id();
   } else {
@@ -64,7 +66,15 @@ const agent::Agent* StGraphUtils::GetFrontAgentOfTargetLane(
       target_front_agent_id = dynamic_world->ego_front_node_id();
     }
   }
-  return dynamic_world->agent_manager()->GetAgent(target_front_agent_id);
+
+  if (target_front_agent_id != -1) {
+    auto* target_lane_front_node =
+        dynamic_world->GetNode(target_front_agent_id);
+    if (target_lane_front_node != nullptr) {
+      target_lane_front_agent_id = target_lane_front_node->node_agent_id();
+    }
+  }
+  return dynamic_world->agent_manager()->GetAgent(target_lane_front_agent_id);
 }
 
 const agent::Agent* StGraphUtils::GetRearAgentOfTargetLane(
@@ -75,10 +85,11 @@ const agent::Agent* StGraphUtils::GetRearAgentOfTargetLane(
   if (nullptr == ptr_agent_manager) {
     return nullptr;
   }
-  if (lane_change_request == "" || lane_change_request == "") {
+  if (lane_change_status == "" || lane_change_request == "") {
     return nullptr;
   }
   int64_t target_rear_agent_id = -1;
+  int32_t target_lane_rear_agent_id = -1;
   if (lane_change_request == "none") {
     target_rear_agent_id = dynamic_world->ego_rear_node_id();
   } else {
@@ -94,7 +105,14 @@ const agent::Agent* StGraphUtils::GetRearAgentOfTargetLane(
       target_rear_agent_id = dynamic_world->ego_rear_node_id();
     }
   }
-  return dynamic_world->agent_manager()->GetAgent(target_rear_agent_id);
+
+  if (target_rear_agent_id != -1) {
+    auto* target_lane_front_node = dynamic_world->GetNode(target_rear_agent_id);
+    if (target_lane_front_node != nullptr) {
+      target_lane_rear_agent_id = target_lane_front_node->node_agent_id();
+    }
+  }
+  return dynamic_world->agent_manager()->GetAgent(target_lane_rear_agent_id);
 }
 
 double StGraphUtils::CalculateLateralBufferForNormalLaneKeeping(
