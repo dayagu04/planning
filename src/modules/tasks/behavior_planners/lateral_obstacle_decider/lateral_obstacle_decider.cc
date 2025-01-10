@@ -731,6 +731,23 @@ void LateralObstacleDecider::UpdateLatDecision(
         } else {
           l_buffer = config_.l_buffer_for_lat_decision;
         }
+
+        const double obstacle_l_start =
+            obstacle->frenet_polygon_sequence()[0].second.min_y();
+        const double obstacle_l_end =
+            obstacle->frenet_polygon_sequence()[0].second.max_y();
+        const double obstacle_s_start =
+            obstacle->frenet_polygon_sequence()[0].second.min_x();
+        const double obstacle_s_end =
+            obstacle->frenet_polygon_sequence()[0].second.max_x();
+        const double ego_s_start =
+            reference_path_ptr->get_frenet_ego_state().boundary().s_start;
+        const double ego_s_end =
+            reference_path_ptr->get_frenet_ego_state().boundary().s_end;
+        double start_s = std::max(ego_s_start, obstacle_s_start);
+        double end_s = std::min(ego_s_end, obstacle_s_end);
+        bool lon_overlap = start_s < end_s;
+
         // 平行车辆
         if (obstacle->d_s_rel() <= 0 && obstacle->d_s_rel() > -ego_length_) {
           ego_head_l_ = reference_path_ptr->get_frenet_ego_state().head_l();
@@ -739,10 +756,6 @@ void LateralObstacleDecider::UpdateLatDecision(
           double ego_l = reference_path_ptr->get_frenet_ego_state().l();
           const double ego_l_start = ego_l - ego_width_ / 2;
           const double ego_l_end = ego_l + ego_width_ / 2;
-          const double obstacle_l_start =
-              obstacle->frenet_polygon_sequence()[0].second.min_y();
-          const double obstacle_l_end =
-              obstacle->frenet_polygon_sequence()[0].second.max_y();
           double start_l = std::max(ego_l_start, obstacle_l_start);
           double end_l = std::min(ego_l_end, obstacle_l_end);
           double start_head_l = std::max(ego_head_l_start, obstacle_l_start);
@@ -764,18 +777,24 @@ void LateralObstacleDecider::UpdateLatDecision(
                 LatObstacleDecisionType::IGNORE;
           }
         } else {
-          if (std::fabs(obstacle->frenet_l()) < l_buffer) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::IGNORE;
-          } else if (obstacle->frenet_l() > 0) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::RIGHT;
+          if (obstacle->frenet_l() > 0) {
+            if (obstacle_l_start > -l_buffer) {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::RIGHT;
+            } else {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::IGNORE;
+            }
           } else {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
+            if (obstacle_l_end < l_buffer) {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::LEFT;
+            } else {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::IGNORE;
+            }
           }
         }
-
       } else {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
       }
