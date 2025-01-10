@@ -855,13 +855,13 @@ def load_lon_global_figure(bag_loader):
   ego_acc_vec = []
   acc_min_vec = []
   acc_max_vec = []
-  lead_one_acc = []
+  cipv_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
   # for ind in range(len(bag_loader.plan_debug_msg['json'])):
   #   acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
   #   acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-  #   lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+  #   cipv_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -871,8 +871,8 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_acc',color="blue")
   # acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
   #                             legend_label='acc_max', color="red")
-  # acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
-  #                             legend_label='lead_one_acc', color="green")
+  # acc_fig.line(t_plan_vec, cipv_acc, line_width=2,
+  #                             legend_label='cipv_acc', color="green")
   acc_fig.legend.click_policy = 'hide'
 
   # 各阶段耗时

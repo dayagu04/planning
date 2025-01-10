@@ -596,14 +596,14 @@ def load_lon_global_figure(bag_loader):
   ego_acc_vec = []
   acc_min_vec = []
   acc_max_vec = []
-  lead_one_acc = []
+  cipv_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
   t_new_localisation_vec = bag_loader.loc_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
     acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-    lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+    cipv_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc'], 2))
   # for ind in range(len(bag_loader.vs_msg['data'])):
   #   ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
   for ind in range(len(bag_loader.loc_msg['data'])):
@@ -617,8 +617,8 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_acc',color="blue")
   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                               legend_label='acc_max', color="red")
-  acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
-                              legend_label='lead_one_acc', color="green")
+  acc_fig.line(t_plan_vec, cipv_acc, line_width=2,
+                              legend_label='cipv_acc', color="green")
   acc_fig.legend.click_policy = 'hide'
 
   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
@@ -784,7 +784,7 @@ def load_lon_global_figure(bag_loader):
   fig_fsm_state.text(x=x_value, y=20, text=['MRC:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=18, text=['DRIVING_PASSIVE(行车抑制):3'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=16, text=['ACC_OVERRIDE:6'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=x_value, y=14, text=['ACC_STANDBY:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black') 
+  fig_fsm_state.text(x=x_value, y=14, text=['ACC_STANDBY:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=8, text=['SCC_STANDBY:7'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=10, text=['SCC_ACTIVE:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')

@@ -36,6 +36,7 @@ bool ClosestInPathVehicleDecider::Execute() {
   const auto cipv_decider_output =
       session_->planning_context().cipv_decider_output();
   JSON_DEBUG_VALUE("cipv_id_st", cipv_decider_output.cipv_id())
+  JSON_DEBUG_VALUE("cipv_acc", cipv_decider_output.acceleration())
   return true;
 }
 
@@ -50,6 +51,7 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
   int32_t id = kInvalidId;
   double releative_s = 0.0;
   double cipv_v_frenet = 0.0;
+  double cipv_acc = 0.0;
   double cipv_ttc = kDefaultTTC;
   int32_t dangerous_level = -1;
   bool is_virtual = false;
@@ -61,6 +63,7 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
     mutable_cipv_decider_output.set_cipv_id(id);
     mutable_cipv_decider_output.set_relative_s(releative_s);
     mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+    mutable_cipv_decider_output.set_acceleration(cipv_acc);
     mutable_cipv_decider_output.set_ttc(cipv_ttc);
     mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
     mutable_cipv_decider_output.set_is_virtual(is_virtual);
@@ -87,11 +90,12 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
       if (kInvalidId == id) {
         mutable_cipv_decider_output.Reset();
       } else {
-        MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_ttc,
+        MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_acc, &cipv_ttc,
                      &dangerous_level, &is_virtual);
         mutable_cipv_decider_output.set_cipv_id(id);
         mutable_cipv_decider_output.set_relative_s(releative_s);
         mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+        mutable_cipv_decider_output.set_acceleration(cipv_acc);
         mutable_cipv_decider_output.set_ttc(cipv_ttc);
         mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
         mutable_cipv_decider_output.set_is_virtual(is_virtual);
@@ -101,12 +105,10 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
   return true;
 }
 
-void ClosestInPathVehicleDecider::MakeCipvInfo(const int32_t cipv_id,
-                                               double *const relative_s,
-                                               double *const v_frenet,
-                                               double *const cipv_ttc,
-                                               int32_t *const dangerous_level,
-                                               bool *const is_virtual) {
+void ClosestInPathVehicleDecider::MakeCipvInfo(
+    const int32_t cipv_id, double *const relative_s, double *const v_frenet,
+    double *acc, double *const cipv_ttc, int32_t *const dangerous_level,
+    bool *const is_virtual) {
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   const auto &ego_vehi_param =
@@ -150,6 +152,7 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(const int32_t cipv_id,
   double heading_diff = agent->box().heading() - matched_point.theta();
 
   *v_frenet = agent->speed() * std::cos(heading_diff);
+  *acc = agent->accel();
   if (ego_v - *v_frenet > KSpeedDiffThr) {
     *cipv_ttc = *relative_s / (ego_v - *v_frenet);
   } else {
@@ -211,6 +214,7 @@ void ClosestInPathVehicleDecider::Reset() {
   mutable_cipv_decider_output.set_relative_s(
       std::numeric_limits<double>::max());
   mutable_cipv_decider_output.set_v_frenet(std::numeric_limits<double>::max());
+  mutable_cipv_decider_output.set_acceleration(0.0);
   mutable_cipv_decider_output.set_ttc(std::numeric_limits<double>::max());
   mutable_cipv_decider_output.set_dangerous_level(-1);
   mutable_cipv_decider_output.set_is_virtual(true);
