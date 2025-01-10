@@ -136,6 +136,9 @@ class Agent {
   const double prediction_cutin_score() const;
   void set_prediction_cutin_score(const double prediction_cutin_score);
 
+  const bool is_crossing() const;
+  void set_is_crossing(const bool is_crossing);
+
   const double timestamp_s() const;
   void set_timestamp_s(const double timestamp_s);
 
@@ -230,6 +233,8 @@ class Agent {
   // steady cut in flag(count for 3 frames)
   bool is_cutin_ = false;
   double prediction_cutin_score_ = 0.0;
+
+  bool is_crossing_ = false;
 
   double timestamp_s_ = 0.0;
   uint64_t timestamp_us_ = 0;
