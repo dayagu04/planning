@@ -1,9 +1,7 @@
-#include "lane_change_common_helper.h"
-
+#include "lane_change_utils.h"
 #include "refline.h"
 
 namespace planning {
-// 实际定义常量
 namespace {
 constexpr double kEgoReachBoundaryTime = 4.0;
 constexpr std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
@@ -13,7 +11,6 @@ constexpr std::array<double, 3> xp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
 }  // namespace
 
-// 函数实现
 double CalcGapObjSafeDistance(const double ego_v,
                               const double edge_distance_rel,
                               const double obj_v, const double obj_a,
