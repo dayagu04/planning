@@ -184,6 +184,9 @@ void Agent::set_prediction_cutin_score(const double prediction_cutin_score) {
   prediction_cutin_score_ = prediction_cutin_score;
 }
 
+const bool Agent::is_crossing() const { return is_crossing_; }
+void Agent::set_is_crossing(const bool is_crossing) { is_crossing_ = is_crossing; }
+
 const double Agent::timestamp_s() const { return timestamp_s_; }
 void Agent::set_timestamp_s(const double timestamp_s) {
   timestamp_s_ = timestamp_s;

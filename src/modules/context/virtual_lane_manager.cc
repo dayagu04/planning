@@ -997,8 +997,8 @@ bool VirtualLaneManager::UpdateIntersectionState() {
     Intersection_state_ = planning::common::IN_INTERSECTION;
     return true;
   }
-  if ((distance_to_stopline_ < 25.0 && distance_to_stopline_ > 3.0) ||
-      ((distance_to_crosswalk_ < 28.0 && distance_to_crosswalk_ > 5.0) &&
+  if ((distance_to_stopline_ < 35.0 && distance_to_stopline_ > 3.0) ||
+      ((distance_to_crosswalk_ < 38.0 && distance_to_crosswalk_ > 5.0) &&
        !IsPosXOnVirtualLaneType(ego_pos_x))) {
     Intersection_state_ = planning::common::APPROACH_INTERSECTION;
   } else if (-1.0 < distance_to_stopline_ && distance_to_stopline_ <= 3.0) {
