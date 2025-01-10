@@ -13,6 +13,7 @@
 #include "ad_common/math/linear_interpolation.h"
 
 #include "apa_param_config.h"
+#include "apa_slot_manager.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
@@ -117,7 +118,7 @@ void ResetHybridAstarPath() {
   return;
 }
 
-int GetPathFromHybridAstar(const ParkingScenario::EgoSlotInfo &ego_slot_info,
+int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
                            const double slot_target_adjust_dist,
                            const Eigen::Vector3d &ego_pose) {
   //
@@ -126,9 +127,9 @@ int GetPathFromHybridAstar(const ParkingScenario::EgoSlotInfo &ego_slot_info,
   bool success = false;
 
   Transform2d tf;
-  tf.SetBasePose(Pose2D(ego_slot_info.slot_origin_pos[0],
-                        ego_slot_info.slot_origin_pos[1],
-                        ego_slot_info.slot_origin_heading));
+  tf.SetBasePose(Pose2D(ego_slot_info.origin_pose_global.pos[0],
+                        ego_slot_info.origin_pose_global.pos[1],
+                        ego_slot_info.origin_pose_global.heading));
 
   size_t i;
   Eigen::Vector2d local_position;
@@ -261,7 +262,7 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   const EulerDistanceTransform *edt_ =
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::REVERSE);
+      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
@@ -283,14 +284,14 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
 }
 
 int GetParkingSpaceOccupiedRatio(const ApaParameters &parking_param,
-                                 ParkingScenario::EgoSlotInfo &slot_info) {
+                                 EgoInfoUnderSlot &slot_info) {
   if (std::fabs(slot_info.terminal_err.pos.y()) <
           parking_param.slot_occupied_ratio_max_lat_err &&
-      std::fabs(slot_info.ego_heading_slot) <
+      std::fabs(slot_info.terminal_err.heading) <
           parking_param.slot_occupied_ratio_max_heading_err / 57.3) {
     slot_info.slot_occupied_ratio = pnc::mathlib::Clamp(
-        1.0 - (slot_info.terminal_err.pos.x() / slot_info.slot_length), 0.0,
-        1.0);
+        1.0 - (slot_info.terminal_err.pos.x() / slot_info.slot.GetLength()),
+        0.0, 1.0);
   } else {
     slot_info.slot_occupied_ratio = 0.0;
   }
@@ -302,7 +303,7 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
                                  const Eigen::Vector2d &lower_middle_pt,
                                  const Eigen::Vector2d &ego_global_position,
                                  const Eigen::Vector3d &ego_global_pose,
-                                 ParkingScenario::EgoSlotInfo &slot_info,
+                                 EgoInfoUnderSlot &slot_info,
                                  ParkingScenario::Frame &frame) {
   Eigen::Vector2d ego_to_slot_center =
       0.5 * (upper_middle_pt + lower_middle_pt) - ego_global_position;
@@ -324,7 +325,7 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
 
   const double cross_ego_to_slot_heading =
       pnc::geometry_lib::GetCrossFromTwoVec2d(
-          heading_ego_vec, slot_info.slot_origin_heading_vec);
+          heading_ego_vec, slot_info.origin_pose_global.heading_vec);
 
   RotateDirection slot_origin_to_veh = RotateDirection::NONE;
 
@@ -354,7 +355,7 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
 }
 
 int UpdateParkSpaceKeyPoints(
-    const ApaParameters &parking_param, ParkingScenario::EgoSlotInfo &slot_info,
+    const ApaParameters &parking_param, EgoInfoUnderSlot &slot_info,
     const std::vector<Eigen::Vector2d> &global_park_space_points,
      double real_slot_length) {
   const double car_width_include_mirror =
@@ -363,31 +364,16 @@ int UpdateParkSpaceKeyPoints(
   const double virtual_slot_width =
       car_width_include_mirror + parking_param.slot_compare_to_car_width;
 
-  const double real_slot_width = slot_info.slot_width;
+  const double real_slot_width = slot_info.slot.GetWidth();
 
   // construct slot_t_lane, left is positive, right is negative
   const double slot_min_width = std::min(virtual_slot_width, real_slot_width);
 
-  Eigen::Vector2d slot_left_upper_point(slot_info.slot_length,
+  Eigen::Vector2d slot_left_upper_point(slot_info.slot.GetLength(),
                                         0.5 * slot_min_width);
 
-  Eigen::Vector2d slot_right_upper_point(slot_info.slot_length,
+  Eigen::Vector2d slot_right_upper_point(slot_info.slot.GetLength(),
                                          -0.5 * slot_min_width);
-
-  const auto initial_right_upper_point =
-      slot_info.g2l_tf.GetPos(global_park_space_points[0]);
-  const auto initial_left_upper_point =
-      slot_info.g2l_tf.GetPos(global_park_space_points[1]);
-
-  // initial slot point by fusion module
-  slot_info.pt_0 = initial_right_upper_point;
-  slot_info.pt_1 = initial_left_upper_point;
-  const auto vec_to_right =
-      initial_left_upper_point - initial_right_upper_point;
-
-  // vertical
-  slot_info.sin_angle = 1.0;
-  slot_info.origin_pt_0_heading = 0.0;
 
   return 0;
 }
@@ -405,7 +391,7 @@ int GenerateObstacleByJupyter(
     const std::vector<double> &obs_params, const Eigen::Vector2d &vec_01,
     const Eigen::Vector2d &vec_02, const Eigen::Vector2d &unit_vec_02,
     const Eigen::Vector2d &unit_vec_01,
-    ParkingScenario::EgoSlotInfo &slot_info) {
+    EgoInfoUnderSlot &slot_info) {
   obs_global_points_.clear();
 
   // base point is slot right upper point
@@ -553,7 +539,7 @@ std::vector<Eigen::Vector3d> Update(
     const bool swap_start_goal) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
-  auto &ego_slot_info = frame.ego_slot_info;
+  EgoInfoUnderSlot ego_slot_info;
 
   corrected_park_space_points_.clear();
   corrected_park_space_points_.resize(4);
@@ -596,21 +582,29 @@ std::vector<Eigen::Vector3d> Update(
   const auto vector_to_up =
       Eigen::Vector2d(vector_to_left.y(), -vector_to_left.x());
 
-  ego_slot_info.slot_corner = corrected_park_space_points_;
-  ego_slot_info.slot_origin_pos = left_middle_pt;
-  ego_slot_info.slot_origin_heading = std::atan2(vec_10.y(), vec_10.x());
-  ego_slot_info.slot_origin_heading_vec = vec_10;
-  ego_slot_info.slot_length = real_slot_length;
-  ego_slot_info.slot_width =
+  ego_slot_info.slot.origin_corner_coord_global_.pt_0 =
+      corrected_park_space_points_[0];
+  ego_slot_info.slot.origin_corner_coord_global_.pt_1 =
+      corrected_park_space_points_[1];
+  ego_slot_info.slot.origin_corner_coord_global_.pt_2 =
+      corrected_park_space_points_[2];
+  ego_slot_info.slot.origin_corner_coord_global_.pt_3 =
+      corrected_park_space_points_[3];
+
+  ego_slot_info.origin_pose_global.pos = left_middle_pt;
+  ego_slot_info.origin_pose_global.heading = std::atan2(vec_10.y(), vec_10.x());
+  ego_slot_info.origin_pose_global.heading_vec = vec_10;
+  ego_slot_info.slot.slot_length_ = real_slot_length;
+  ego_slot_info.slot.slot_width_ =
       (corrected_park_space_points_[0] - corrected_park_space_points_[2])
           .norm();
 
   // base coordinate
-  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                            ego_slot_info.slot_origin_heading);
+  ego_slot_info.g2l_tf.Init(ego_slot_info.origin_pose_global.pos,
+                            ego_slot_info.origin_pose_global.heading);
 
-  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                            ego_slot_info.slot_origin_heading);
+  ego_slot_info.l2g_tf.Init(ego_slot_info.origin_pose_global.pos,
+                            ego_slot_info.origin_pose_global.heading);
 
   // update ego pose
   ILOG_INFO << "ego x " << ego_global_pose.x();
@@ -618,30 +612,29 @@ std::vector<Eigen::Vector3d> Update(
   Eigen::Vector2d ego_global_position(ego_global_pose.x(), ego_global_pose.y());
   double heading_ego = ego_global_pose.z();
 
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(ego_global_position);
-  ego_slot_info.ego_heading_slot = ego_slot_info.g2l_tf.GetHeading(heading_ego);
+  ego_slot_info.cur_pose.pos = ego_slot_info.g2l_tf.GetPos(ego_global_position);
+  ego_slot_info.cur_pose.heading = ego_slot_info.g2l_tf.GetHeading(heading_ego);
 
-  ILOG_INFO << "ego_pos_slot = " << ego_slot_info.ego_pos_slot.x() << ","
-            << ego_slot_info.ego_pos_slot.y()
-            << ",heading = " << ego_slot_info.ego_heading_slot * 57.3;
+  ILOG_INFO << "ego_pos_slot = " << ego_slot_info.cur_pose.pos.x() << ","
+            << ego_slot_info.cur_pose.pos.y()
+            << ",heading = " << ego_slot_info.cur_pose.heading * 57.3;
 
-  ego_slot_info.ego_heading_slot_vec =
-      Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
-                      std::sin(ego_slot_info.ego_heading_slot));
+  ego_slot_info.cur_pose.heading_vec =
+      Eigen::Vector2d(std::cos(ego_slot_info.cur_pose.heading),
+                      std::sin(ego_slot_info.cur_pose.heading));
 
   // cal target pos
   const ApaParameters &parking_param = apa_param.GetParam();
 
-  ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
+  ego_slot_info.target_pose.pos = Eigen::Vector2d(
       parking_param.terminal_target_x, parking_param.terminal_target_y);
-
-  ego_slot_info.target_ego_heading_slot = parking_param.terminal_target_heading;
+  ego_slot_info.target_pose.heading = parking_param.terminal_target_heading;
 
   // get global
-  const auto &target_ego_pos_global =
-      ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
-  const auto &target_ego_heading_global =
-      ego_slot_info.l2g_tf.GetHeading(ego_slot_info.target_ego_heading_slot);
+  const auto target_ego_pos_global =
+      ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_pose.pos);
+  const auto target_ego_heading_global =
+      ego_slot_info.l2g_tf.GetHeading(ego_slot_info.target_pose.heading);
 
   global_target_pose_ =
       Eigen::Vector3d(target_ego_pos_global.x(), target_ego_pos_global.y(),
@@ -655,8 +648,8 @@ std::vector<Eigen::Vector3d> Update(
 
   // cal terminal error
   ego_slot_info.terminal_err.Set(
-      ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-      ego_slot_info.ego_heading_slot - ego_slot_info.target_ego_heading_slot);
+      ego_slot_info.cur_pose.pos - ego_slot_info.target_pose.pos,
+      ego_slot_info.cur_pose.heading - ego_slot_info.target_pose.heading);
 
   // cal slot occupied ratio
   GetParkingSpaceOccupiedRatio(parking_param, ego_slot_info);
@@ -690,15 +683,15 @@ std::vector<Eigen::Vector3d> Update(
 
   // start
   Eigen::Vector3d start;
-  start << ego_slot_info.ego_pos_slot[0], ego_slot_info.ego_pos_slot[1],
-      ego_slot_info.ego_heading_slot;
+  start << ego_slot_info.cur_pose.pos[0], ego_slot_info.cur_pose.pos[1],
+      ego_slot_info.cur_pose.heading;
 
   // end
   Eigen::Vector3d end;
-  end[0] = ego_slot_info.target_ego_pos_slot[0] +
+  end[0] = ego_slot_info.target_pose.pos[0] +
            parking_param.astar_config.parallel_slot_end_straight_dist;
-  end[1] = ego_slot_info.target_ego_pos_slot[1];
-  end[2] = ego_slot_info.target_ego_heading_slot;
+  end[1] = ego_slot_info.target_pose.pos[1];
+  end[2] = ego_slot_info.target_pose.heading;
 
   // obs
 
@@ -717,16 +710,16 @@ std::vector<Eigen::Vector3d> Update(
     request.goal_ = Pose2D(end[0], end[1], end[2]);
     request.goal_.theta = ad_common::math::NormalizeAngle(request.goal_.theta);
 
-    request.real_goal = Pose2D(ego_slot_info.target_ego_pos_slot[0],
-                               ego_slot_info.target_ego_pos_slot[1],
-                               ego_slot_info.target_ego_heading_slot);
+    request.real_goal = Pose2D(ego_slot_info.target_pose.pos[0],
+                               ego_slot_info.target_pose.pos[1],
+                               ego_slot_info.target_pose.heading);
     request.base_pose_ = Pose2D(0, 0, 0);
 
     request.space_type = ParkSpaceType::PARALLEL;
     request.direction_request = ParkingVehDirection::NONE;
     request.rs_request = RSPathRequestType::none;
-    request.slot_width = ego_slot_info.slot_width;
-    request.slot_length = ego_slot_info.slot_length;
+    request.slot_width = ego_slot_info.slot.GetWidth();
+    request.slot_length = ego_slot_info.slot.GetLength();
     request.history_gear = AstarPathGear::DRIVE;
     request.swap_start_goal = swap_start_goal;
 
@@ -746,9 +739,7 @@ std::vector<Eigen::Vector3d> Update(
     bool is_connected_to_goal;
 
     Pose2D start_pose = {start[0], start[1], start[2]};
-    Pose2D end_pose = {ego_slot_info.target_ego_pos_slot[0],
-                       ego_slot_info.target_ego_pos_slot[1],
-                       ego_slot_info.target_ego_heading_slot};
+    Pose2D end_pose = request.real_goal;
 
     RSPathInterface rs_interface;
     RSPath rs_path;
@@ -848,7 +839,6 @@ PYBIND11_MODULE(astar_parallel_py, m) {
       .def("GetSearchPathPoint", &GetSearchPathPoint)
       .def("GetRSHeuristicPath", &GetRSHeuristicPath)
       .def("GetObsLineList", &GetObsLineList)
-      .def("StopPybind", &StopPybind)
       .def("GetRSLibPath", &GetRSLibPath)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetAllSearchNode", &GetAllSearchNode)

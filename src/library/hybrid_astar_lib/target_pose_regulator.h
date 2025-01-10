@@ -48,6 +48,10 @@ class TargetPoseRegulator : public AstarDecider {
                                          const AstarRequest *request,
                                          const VehicleParam &veh_param);
 
+  void GenerateCandidatesForParallelSlot(EulerDistanceTransform *edt,
+                                         const AstarRequest *request,
+                                         const VehicleParam &veh_param);
+
   // 检查目标点直线入库路径，和障碍物距离
   // return true: 直线路径没有障碍物
   const float GetDistToObs(Pose2D *global_pose, EulerDistanceTransform *edt);

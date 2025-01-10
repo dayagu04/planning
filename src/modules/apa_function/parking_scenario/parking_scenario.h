@@ -69,6 +69,7 @@ class ParkingScenario {
     FORCE_PLAN,
   };
 
+  // will be retired
   struct EgoSlotInfo {
     common::SlotInfo target_managed_slot;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter;
@@ -257,6 +258,7 @@ class ParkingScenario {
     pnc::mathlib::spline headin_y_s_spline;
 
     PlannerStateMachine plan_stm;
+    // will be retired
     EgoSlotInfo ego_slot_info;
 
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;

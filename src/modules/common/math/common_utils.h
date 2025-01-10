@@ -106,9 +106,10 @@ planning_math::Vec2d MakeVec2d(const T& t) {
 SpeedPoint MakeSpeedPoint(const double s, const double t, const double v,
                           const double a, const double da);
 
-PathPoint MakePathPoint(const double x, const double y, const double z,
-                        const double theta, const double kappa,
-                        const double dkappa, const double ddkappa);
+planning_math::PathPoint MakePathPoint(const double x, const double y,
+                                       const double z, const double theta,
+                                       const double kappa, const double dkappa,
+                                       const double ddkappa);
 
 /**
  * uniformly slice a segment [start, end] to num + 1 pieces
@@ -183,9 +184,9 @@ bool SamePointXY(const U& u, const V& v) {
          (u.y - v.y) * (u.y - v.y) < kMathEpsilonSqr;
 }
 
-PathPoint GetWeightedAverageOfTwoPathPoints(const PathPoint& p1,
-                                            const PathPoint& p2,
-                                            const double w1, const double w2);
+planning_math::PathPoint GetWeightedAverageOfTwoPathPoints(
+    const planning_math::PathPoint& p1, const planning_math::PathPoint& p2,
+    const double w1, const double w2);
 
 // a wrapper template function for remove_if (notice that remove_if cannot
 // change the Container size)

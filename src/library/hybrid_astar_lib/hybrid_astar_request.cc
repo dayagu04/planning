@@ -28,4 +28,12 @@ void DebugAstarRequestString(const AstarRequest &request) {
 
   return;
 }
+
+void ClearFirstActionReqeust(AstarRequest *request) {
+  request->first_action_request.has_request = false;
+  request->first_action_request.dist_request = 0.0;
+  request->first_action_request.gear_request = AstarPathGear::NONE;
+  return;
+}
+
 }  // namespace planning

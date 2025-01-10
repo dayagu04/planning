@@ -3,12 +3,10 @@
 #include <memory>
 #include <vector>
 
-#include "./../convex_collision_detection/gjk2d_interface.h"
-#include "./../occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "Eigen/Core"
-#include "ad_common/math/line_segment2d.h"
 #include "hybrid_a_star.h"
-#include "log_glog.h"
 #include "node3d.h"
 #include "polygon_base.h"
 #include "pose2d.h"
@@ -76,16 +74,6 @@ class HybridAStarInterface {
     return &edt_;
   }
 
-  void SwapStartGoal() {
-    Pose2D tmp = initial_state_;
-    initial_state_ = goal_state_;
-    goal_state_ = tmp;
-
-    return;
-  }
-
-  void UpdateReqeustBySwapStartGoal();
-
  public:
   // for debug
   void GetRSPathHeuristic(
@@ -121,14 +109,18 @@ class HybridAStarInterface {
 
   int UpdateEDTByObs(const ParkObstacleList& obs_list);
 
-  int ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
-                                     const Pose2D& real_end);
+  void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
+                                      const Pose2D& real_end);
 
   void PathClear(HybridAStarResult* path);
 
   void UpdateSearchBoundary();
 
   void UpdateEDTBasePose(Pose2D& ogm_base_pose);
+
+  const Pose2D& GetStartPoint();
+
+  const Pose2D& GetGoalPoint();
 
  private:
   // read vehicle param from file
@@ -141,11 +133,9 @@ class HybridAStarInterface {
   // path = astar node path + rs path.
   HybridAStarResult coarse_traj_;
 
-  Pose2D initial_state_;
-  // astar searching goal.
-  // 对于垂直车位，goal_state位于中心线上.
+  Pose2D ego_state_;
+  // 对于垂直、平行车位，goal_state位于车位中心线上.
   // 位姿调节器依赖这个pose重新计算搜索目标点.
-  // 对于平行车位，goal_state位于车辆起点
   Pose2D goal_state_;
   // 目标调节器会计算一个合适的目标
   Pose2D target_regulator_goal_;

@@ -42,7 +42,7 @@ struct AstarRequest {
 
   CollisionDetectionMethod path_safe_detect_method;
 
-  // slot pose
+  // slot pose in global.
   Pose2D base_pose_;
   // local frame in slot
   Pose2D start_;
@@ -60,5 +60,7 @@ struct AstarRequest {
 };
 
 void DebugAstarRequestString(const AstarRequest &request);
+
+void ClearFirstActionReqeust(AstarRequest *request);
 
 }  // namespace planning

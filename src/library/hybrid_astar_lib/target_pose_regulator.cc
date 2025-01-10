@@ -7,7 +7,7 @@
 
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
-#include "modules/apa_function/apa_param_config.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -22,12 +22,6 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   Clear();
   center_line_target_ = center_line_target;
 
-  // todo: add parallel regulator
-  if (request->space_type == ParkSpaceType::PARALLEL) {
-    ILOG_INFO <<"parallel slot";
-    return;
-  }
-
   if (request->path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
       request->path_generate_method == AstarPathGenerateType::REEDS_SHEPP) {
@@ -35,12 +29,17 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
     return;
   }
 
+  // Parking out no need regulator.
   if (!IsParkingIn(request)) {
     ILOG_INFO << "not park in";
     return;
   }
 
-  GenerateCandidatesForVerticalSlot(edt, request, veh_param);
+  if (request->space_type == ParkSpaceType::VERTICAL) {
+    GenerateCandidatesForVerticalSlot(edt, request, veh_param);
+  } else {
+    GenerateCandidatesForParallelSlot(edt, request, veh_param);
+  }
 
   return;
 }
@@ -79,7 +78,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   y_lower = std::min(0.0, y_lower);
 
   double y_step = 0.03;
-  int sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
+  int y_sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
   double y_offset = 0.0;
   double left_y_offset = 0.0;
   double right_y_offset = 0.0;
@@ -105,7 +104,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     return;
   }
 
-  for (int i = 0; i < sampling_num; i++) {
+  for (int i = 0; i < y_sampling_num; i++) {
     // left
     if (i % 2 == 0) {
       left_y_offset += y_step;
@@ -216,6 +215,89 @@ void TargetPoseRegulator::DebugString() {
               << ",obs dist = " << candidate_info_[i].dist_to_obs;
   }
 
+  return;
+}
+
+void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
+    EulerDistanceTransform *edt, const AstarRequest *request,
+    const VehicleParam &veh_param) {
+  // 因为存在障碍物入侵情形，不管偏移范围设定多大，总会存在失败情况.
+  // 目前策略:不删除任何障碍物，只会将目标增加平移.
+  // 不要删除障碍物掩盖了上游问题.
+  Pose2D global_pose;
+  Transform2d tf;
+  AstarPathGear gear = AstarPathGear::NONE;
+
+  global_pose = center_line_target_;
+  tf.SetBasePose(global_pose);
+
+  double y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2;
+  y_upper = std::max(0.0, y_upper);
+  double y_lower = -request->slot_width / 2 + veh_param.width / 2 - 0.2;
+  y_lower = std::min(0.0, y_lower);
+
+  double y_step = 0.03;
+  int y_sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
+  double y_offset = 0.0;
+  double left_y_offset = 0.0;
+  double right_y_offset = 0.0;
+
+  x_check_upper_ = global_pose.x + 0.6;
+  x_check_lower_ = global_pose.x;
+  x_step_ = 0.2;
+  x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
+
+  float dist;
+
+  dist = GetDistToObs(&global_pose, edt);
+  PoseRegulateCandidate candidate;
+  candidate.lat_offset = 0.0;
+  candidate.dist_to_obs = dist;
+  candidate.pose = center_line_target_;
+  candidate_info_.emplace_back(candidate);
+
+  if (dist > 0.25) {
+#if DEBUG_DECIDER
+    DebugString();
+#endif
+    return;
+  }
+
+  for (int i = 0; i < y_sampling_num; i++) {
+    // left
+    if (i % 2 == 0) {
+      left_y_offset += y_step;
+      left_y_offset = std::min(left_y_offset, y_upper);
+      y_offset = left_y_offset;
+    } else {
+      right_y_offset -= y_step;
+      right_y_offset = std::max(right_y_offset, y_lower);
+      y_offset = right_y_offset;
+    }
+
+    global_pose = center_line_target_;
+    global_pose.y = y_offset;
+
+    dist = GetDistToObs(&global_pose, edt);
+    if (dist > 0.06) {
+      PoseRegulateCandidate candidate;
+      candidate.lat_offset = y_offset;
+      candidate.dist_to_obs = dist;
+      candidate.pose = center_line_target_;
+      candidate.pose.y = y_offset;
+      candidate_info_.emplace_back(candidate);
+    }
+
+    if (dist > 0.25) {
+      break;
+    }
+  }
+
+#if DEBUG_DECIDER
+  DebugString();
+#endif
+
+  // Todo: adjust x offset
   return;
 }
 

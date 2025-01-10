@@ -33,10 +33,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   HybridAStarThreadSolver* GetThread() { return &thread_; }
 
-  const size_t GetPathCollisionID() const { return path_collision_id_; }
-
-  const bool IsPathCollision() const { return is_path_collision_; }
-
   void ScenarioTry() override;
 
   VirtualWallDecider* MutableVirtualWallDecider() {
@@ -87,7 +83,7 @@ class NarrowSpaceScenario : public ParkingScenario {
       const std::vector<pnc::geometry_lib::PathPoint>& local_path,
       Transform2d* tf);
 
-  const int GenerateFallBackPath();
+  const void GenerateFallBackPath();
 
   const int LocalPathToGlobal(
       const std::vector<pnc::geometry_lib::PathPoint>& local_path,
@@ -141,15 +137,11 @@ class NarrowSpaceScenario : public ParkingScenario {
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 
-  bool is_ego_collision_;
-  bool is_path_collision_;
-  size_t path_collision_id_;
-
   AstarPathGear current_gear_;
+  // 库内揉库次数
   int in_slot_car_adjust_count_;
-  bool is_path_single_shot_to_goal_;
-
-  SlotRelativePosition slot_side_;
+  // path connected with goal
+  bool is_path_connected_to_goal_;
 
   // 一个车位泊车中，通道虚拟墙只能增长，不能缩减.
   // 如果根据车辆位置去缩减，导致2次规划之间路径差异太大.

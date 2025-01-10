@@ -1,10 +1,10 @@
 #pragma once
 
-#include "gjk2d_interface.h"
-#include "library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "parking_task.h"
-#include "polygon_base.h"
 #include "pose2d.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/library/geometry_lib/include/geometry_math.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
 
 namespace planning {
 
@@ -59,7 +59,7 @@ class VirtualWallDecider : public ParkingTask {
   void Process(std::vector<Position2D>& points, const double slot_width,
                const double slot_length, const Pose2D& ego_pose,
                const Pose2D& end, const ParkSpaceType slot_type,
-               const SlotRelativePosition slot_side);
+               const pnc::geometry_lib::SlotSide slot_side);
 
   void Reset(const Pose2D& ego_pose) {
     passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
