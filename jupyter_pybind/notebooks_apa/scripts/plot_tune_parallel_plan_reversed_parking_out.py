@@ -23,6 +23,77 @@ from bokeh.io import export_png
 
 kRad2Deg = 180.0 / pi
 kDeg2Rad = pi / 180.0
+name = "parking_out_normal_channel"
+name = "parking_out_narrow_channel"
+
+
+
+if name == "parking_out_narrow_channel":
+  channel_width = 3.14
+elif name == "parking_out_normal_channel":
+  channel_width = 4.34
+
+def find_turning_points(parking_out_x_vec, parking_out_y_vec):
+    # 将输入数组转换为 NumPy 数组
+    x = np.array(parking_out_x_vec)
+    y = np.array(parking_out_y_vec)
+
+    # 计算相邻点的方向向量
+    dx = np.diff(x)
+    dy = np.diff(y)
+
+    # 计算方向向量的角度（以弧度为单位）
+    angles = np.arctan2(dy, dx)
+
+    # 计算相邻角度的差值
+    angle_diff = np.diff(angles)
+
+    # 将角度差值归一化到 [-pi, pi] 范围内
+    angle_diff = (angle_diff + np.pi) % (2 * np.pi) - np.pi
+
+    # 转向改变的点是在角度差值绝对值较大的地方
+    turning_points = np.where(np.abs(angle_diff) > np.pi / 4)[0] + 1
+
+    return turning_points
+
+def cal_common_circle(x0, y0, x1, y1, x2, y2):
+    # 计算向量 v1 = P1 - P0, v2 = P2 - P0
+    v1 = (x1 - x0, y1 - y0)
+    v2 = (x2 - x0, y2 - y0)
+
+    # 计算垂直向量 v1_perp = (-v1_y, v1_x), v2_perp = (-v2_y, v2_x)
+    v1_perp = (-v1[1], v1[0])
+    v2_perp = (-v2[1], v2[0])
+
+    # 计算中点 M1 = (P0 + P1) / 2, M2 = (P0 + P2) / 2
+    M1 = ((x0 + x1) / 2, (y0 + y1) / 2)
+    M2 = ((x0 + x2) / 2, (y0 + y2) / 2)
+
+    # 计算圆心 (a, b) 作为两条垂直平分线的交点
+    # 方程形式：M1 + t * v1_perp = M2 + s * v2_perp
+    # 解方程组得到 t 或 s
+    A = v1_perp[0]
+    B = -v2_perp[0]
+    C = v1_perp[1]
+    D = -v2_perp[1]
+    E = M2[0] - M1[0]
+    F = M2[1] - M1[1]
+
+    # 解线性方程组
+    denominator = A * D - B * C
+    if denominator == 0:
+        raise ValueError("三个点共线，无法确定唯一的圆")
+
+    t = (D * E - B * F) / denominator
+
+    # 计算圆心
+    a = M1[0] + t * v1_perp[0]
+    b = M1[1] + t * v1_perp[1]
+
+    # 计算半径
+    r = ((a - x0) ** 2 + (b - y0) ** 2) ** 0.5
+
+    return [a, b], r
 
 def load_car_box(path_x_vec, path_y_vec, path_theta_vec, car_xb, car_yb):
   car_box_x_vec = []
@@ -108,6 +179,9 @@ data_debug_arc = ColumnDataSource(data = {'cx_vec':[],
 data_extra_region = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_obs_car_polygon = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
+data_arc_center = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_lines = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+
 # fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=700, height=600, match_aspect = True, aspect_scale=1)
 
 fig1 = bkp.figure(width=1200, height=800, match_aspect = True, aspect_scale=1)
@@ -119,8 +193,8 @@ fig1.x_range.flipped = False
 fig1.outline_line_color = "black"
 fig1.outline_line_width = 1.0  # 可以调整边框线条的宽度
 
-fig1.x_range = Range1d(start = -1.0, end = 16.7)
-fig1.y_range = Range1d(start = -2.2, end = 9.2)
+fig1.x_range = Range1d(start = -3.0, end = 16)
+fig1.y_range = Range1d(start = -3.2, end = 9.2)
 
 fig1.xaxis.axis_label_text_font_size = word_size
 fig1.xaxis.axis_label_text_font = 'Times New Roman'
@@ -147,7 +221,60 @@ fig1.ygrid.grid_line_color = None
 # fig1.yaxis.visible = False
 # fig1.xaxis.major_label_text_font_size = '0pt'  # 设置字体大小
 # fig1.yaxis.major_label_text_font_size = '0pt'
+# measure tool
+source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.circle('x', 'y', size=10, source=source, color='red')
+line_source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid')
+text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='18pt')
+# Define the JavaScript callback code
+callback_code = """
+    var x = cb_obj.x;
+    var y = cb_obj.y;
 
+    source.data['x'].push(x);
+    source.data['y'].push(y);
+
+    if (source.data['x'].length > 2) {
+        source.data['x'].shift();
+        source.data['y'].shift();
+        source.data['x'].shift();
+        source.data['y'].shift();
+    }
+    source.change.emit();
+
+    if (source.data['x'].length >= 2) {
+        var x1 = source.data['x'][source.data['x'].length - 2];
+        var y1 = source.data['y'][source.data['y'].length - 2];
+        var x2 = x;
+        var y2 = y;
+        var x3 = (x1 + x2) / 2;
+        var y3 = (y1 + y2) / 2;
+
+        var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+        console.log("Distance between the last two points: " + distance);
+
+        distance = distance.toFixed(4);
+        text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+        text_source.change.emit();
+
+        line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+        line_source.change.emit();
+    }
+
+    if (source.data['x'].length == 1) {
+        text_source.data['x'].shift();
+        text_source.data['y'].shift();
+        text_source.data['text'].shift();
+    }
+    text_source.change.emit();
+"""
+# Create a CustomJS callback with the defined code
+callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+# Attach the callback to the Tap event on the plot
+fig1.js_on_event(Tap, callback)
 
 # 尝试确保图表内容比例一致
 aspect_ratio = (fig1.x_range.end - fig1.x_range.start) / (fig1.y_range.end - fig1.y_range.start)
@@ -181,6 +308,29 @@ fig1.line('x_vec','y_vec',source = data_preparing_line, line_width = 1.5, line_c
 
 # fig1.scatter("x_vec", "y_vec", source=data_virtual_obs_pt, size=8, color='red', marker='star', visible = False)
 
+fig1.circle('x_vec', 'y_vec', source = data_arc_center, size=4, color='black')
+
+fig1.multi_line('x_vec', 'y_vec', source = data_lines, line_width = 0.5, line_dash = 'dotted', line_color='black')
+
+label = Label(x=-2.0 , y=5.4, text="step 1 circle", text_color="black", text_font_size=word_size,
+              x_offset=0, y_offset=0)
+fig1.add_layout(label)
+
+if name == "parking_out_normal_channel":
+  x2 = 7.8
+  y2 = -2.9
+else:
+  x2 = 3.5
+  y2 = -2.9
+  label = Label(x=9.5, y=-2.9, text="step 3 circle", text_color="black", text_font_size=word_size,
+              x_offset=0, y_offset=0)
+  fig1.add_layout(label)
+
+
+label = Label(x=x2, y=y2, text="step 2 circle", text_color="black", text_font_size=word_size,
+              x_offset=0, y_offset=0)
+fig1.add_layout(label)
+
 fig1.line('x_vec','y_vec',source =data_parking_out_path,  line_width = 3.0, line_color = 'blue', line_dash = 'solid',legend_label = 'Inversed parking out step')
 
 fig1.legend.visible = False
@@ -209,7 +359,7 @@ class LocalViewSlider:
     # obs
     self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=0.0, step=0.01)
     self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb offset ",min=-1.0, max=1.0, value=0.3, step=0.01)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=4.34, step=0.01) # 3.14
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=channel_width, step=0.01) # 3.24
 
     self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=0.2, step=0.01)
     self.front_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
@@ -383,6 +533,110 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       'y_vec': [fl_corner_y_vec, fr_corner_y_vec, rs_corner_y_vec, l_mirror_y_vec]
     })
 
+    reversed_park_out_x_vec = parking_out_x_vec[::-1]
+    reversed_park_out_y_vec = parking_out_y_vec[::-1]
+
+    center_1, radius1 = cal_common_circle(reversed_park_out_x_vec[0], reversed_park_out_y_vec[0],
+                                          reversed_park_out_x_vec[1], reversed_park_out_y_vec[1],
+                                          reversed_park_out_x_vec[2], reversed_park_out_y_vec[2])
+    center_1 = np.array(center_1)
+    curvature_change_idx = 0
+    print("radius1 = ", radius1)
+    for i in range(len(reversed_park_out_x_vec)):
+      dist = math.sqrt( (center_1[0] - reversed_park_out_x_vec[i])**2 + (center_1[1] - reversed_park_out_y_vec[i])**2)
+      print("i = ", i, ", dist = ", dist)
+      if dist > radius1 + 1e-8:
+        curvature_change_idx = i
+        break
+    curvature_change_idx -= 1
+
+    curvature_change_pt = np.array([
+      reversed_park_out_x_vec[curvature_change_idx],
+      reversed_park_out_y_vec[curvature_change_idx],
+    ])
+
+    v_c1_to_c2 = curvature_change_pt - np.array(center_1)
+    v_c1_to_c2 = v_c1_to_c2 / np.linalg.norm(v_c1_to_c2)
+    center_2 = center_1 + 2.0 * radius1 * v_c1_to_c2
+
+    center_2, radius2 = cal_common_circle(reversed_park_out_x_vec[curvature_change_idx], reversed_park_out_y_vec[curvature_change_idx],
+                                      reversed_park_out_x_vec[curvature_change_idx + 1], reversed_park_out_y_vec[curvature_change_idx + 1],
+                                      reversed_park_out_x_vec[curvature_change_idx + 2], reversed_park_out_y_vec[curvature_change_idx + 2])
+
+    cur_change2_idx = 0
+    if name == "parking_out_narrow_channel":
+      for i in range(curvature_change_idx, len(reversed_park_out_x_vec) - 3):
+        pt0 = np.array([ reversed_park_out_x_vec[i], reversed_park_out_y_vec[i]])
+        pt1 = np.array([ reversed_park_out_x_vec[i + 1], reversed_park_out_y_vec[i + 1]])
+        pt2 = np.array([ reversed_park_out_x_vec[i + 2], reversed_park_out_y_vec[i + 2]])
+        v_01 = pt1 - pt0
+        v_01 = v_01 / np.linalg.norm(v_01)
+        v_12 = pt2 - pt1
+        v_12 = v_12 / np.linalg.norm(v_12)
+        if np.dot(v_01, v_12) > cos(0.01 * kDeg2Rad):
+          cur_change2_idx = i
+          break
+
+      for i in range (cur_change2_idx, len(reversed_park_out_x_vec)):
+        pt0 = np.array([ reversed_park_out_x_vec[i], reversed_park_out_y_vec[i]])
+        pt1 = np.array([ reversed_park_out_x_vec[i + 1], reversed_park_out_y_vec[i + 1]])
+        pt2 = np.array([ reversed_park_out_x_vec[i + 2], reversed_park_out_y_vec[i + 2]])
+        v_01 = pt1 - pt0
+        v_01 = v_01 / np.linalg.norm(v_01)
+        v_12 = pt2 - pt1
+        v_12 = v_12 / np.linalg.norm(v_12)
+        if np.dot(v_01, v_12) < cos(0.01 * kDeg2Rad):
+          cur_change3_idx = i + 1
+          core_pt_3 = [reversed_park_out_x_vec[cur_change3_idx], reversed_park_out_y_vec[cur_change3_idx]]
+          center_3, radius3 = cal_common_circle(reversed_park_out_x_vec[cur_change3_idx], reversed_park_out_y_vec[cur_change3_idx],
+                            reversed_park_out_x_vec[cur_change3_idx + 1], reversed_park_out_y_vec[cur_change3_idx + 1],
+                            reversed_park_out_x_vec[cur_change3_idx + 2], reversed_park_out_y_vec[cur_change3_idx + 2])
+          break
+
+    else:
+        cur_change2_idx = len(reversed_park_out_x_vec) -1
+
+
+    arc_2_end_pos = [reversed_park_out_x_vec[cur_change2_idx], reversed_park_out_y_vec[cur_change2_idx]]
+
+    data_arc_center_x_vec = [center_1[0], center_2[0], 0.5 * (center_1[0] + center_2[0])]
+    data_arc_center_y_vec = [center_1[1], center_2[1], 0.5 * (center_1[1] + center_2[1])]
+
+    line_x_vec = [[center_1[0], parking_out_x_vec[-1]],
+              [center_1[0], center_2[0]],
+              [center_2[0], arc_2_end_pos[0]]
+              ]
+
+    line_y_vec = [[center_1[1], parking_out_y_vec[-1]],
+              [center_1[1], center_2[1]],
+              [center_2[1], arc_2_end_pos[1]]
+              ]
+
+    if name == "parking_out_narrow_channel":
+      data_arc_center_x_vec.append(core_pt_3[0])
+      data_arc_center_y_vec.append(core_pt_3[1])
+
+      data_arc_center_x_vec.append(center_3[0])
+      data_arc_center_y_vec.append(center_3[1])
+
+      line_x_vec.append([core_pt_3[0], center_3[0]])
+      line_y_vec.append([core_pt_3[1], center_3[1]])
+
+      line_x_vec.append([reversed_park_out_x_vec[-1], center_3[0]])
+      line_y_vec.append([reversed_park_out_y_vec[-1], center_3[1]])
+
+
+
+    data_arc_center.data.update({
+      'x_vec': data_arc_center_x_vec,
+      'y_vec': data_arc_center_y_vec
+    })
+
+    data_lines.data.update({
+      'x_vec':line_x_vec,
+      'y_vec':line_y_vec
+    })
+
     # ego start position
     data_start_pos.data.update({'x':[parking_out_x_vec[0]],'y':[parking_out_y_vec[0]]})
     car_xn, car_yn = load_ego_car_box(parking_out_x_vec[0], parking_out_y_vec[0], parking_out_theta_vec[0], car_xb, car_yb)
@@ -527,7 +781,6 @@ slider_class = LocalViewSlider(slider_callback)
 
 os.environ['WEB_BROWSER'] = 'chrome'
 fig1.output_backend = "svg"
-name = 'parking_out_normal_channel'
 
 svg_file_path = name +'.svg'
 eps_file_path = name +'.eps'

@@ -499,6 +499,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
   // select new center according to obs instead of channel width
   // ILOG_INFO <<"current channel y = " << input_.tlane.channel_y);
 
+  // Todo!!! do not rely on channel_y
   new_center.y() = input_.tlane.channel_y -
                    calc_params_.slot_side_sgn *
                        (kCornerSafeBufferWithChannel + kChannelYMoveDist +
@@ -670,7 +671,7 @@ const bool ParallelPathGenerator::CalSinglePathInNarrowChannel(
   current_arc.headingA =
       pnc::geometry_lib::NormalizeAngle(current_pose.heading);
 
-  const double min_radius = apa_param.GetParam().min_turn_radius;
+  const double min_radius = apa_param.GetParam().min_turn_radius + 0.5;
   current_arc.circle_info.radius = min_radius;
   current_arc.circle_info.center =
       CalEgoTurningCenter(current_pose, min_radius, current_arc_steer);
