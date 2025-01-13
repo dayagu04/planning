@@ -753,7 +753,7 @@ void TrackletMaintainer::calc(
     }
   }
 
-  JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
+  // JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
 
   // is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
   //                                   borrow_bicycle_lane, rightest_lane,

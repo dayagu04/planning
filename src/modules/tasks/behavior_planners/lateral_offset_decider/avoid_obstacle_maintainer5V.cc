@@ -277,6 +277,10 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
   // check avd_obstacles_ is deleted according to front_tracks' info
   // found it ,but is_avd_obstacle is false
   // keep_time_level: keep stability
+  auto &lateral_obstacle_history_info =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .lateral_obstacle_history_info;
   TrackedObject *lead_one = lateral_obstacle->leadone();
 
   if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
@@ -286,7 +290,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
     if (is_found && ((tr.fusion_source & OBSTACLE_SOURCE_CAMERA) &&
                      tr.d_rel > 0)) {  // TODO filter
       double diff_time = curr_time - avd_obstacles_[0].curr_time;
-      if (!tr.is_avd_car &&
+      bool is_avd_car = lateral_obstacle_history_info[tr.track_id].is_avd_car;
+      if (!is_avd_car &&
           (diff_time > keep_time_level_2 ||
            (diff_time > keep_time_level_1 &&
             avd_obstacles_[0].vs_lon_relative > 1.5) ||  //
@@ -302,7 +307,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
       if (is_found &&
           ((tr.fusion_source & OBSTACLE_SOURCE_CAMERA) && tr.d_rel > 0)) {
         double diff_time = curr_time - avd_obstacles_[1].curr_time;
-        if (!tr.is_avd_car &&
+        bool is_avd_car = lateral_obstacle_history_info[tr.track_id].is_avd_car;
+        if (!is_avd_car &&
             (curr_time - avd_obstacles_[1].curr_time > keep_time_level_2 ||
              (diff_time > keep_time_level_1 &&
               avd_obstacles_[1].vs_lon_relative > 1.5) ||  //
@@ -330,9 +336,14 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
   int enter2 = 0;
   double half_width = lane_width_ * 0.5;
   std::vector<AvoidObstacleInfo> avd_temp_cars;
+  auto &lateral_obstacle_history_info =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .lateral_obstacle_history_info;
   if (lateral_obstacle->front_tracks_copy().size() > 0) {
     for (auto &tr : lateral_obstacle->front_tracks_copy()) {
-      if (tr.is_avd_car == true && ncar_cnt < 3) {
+      bool is_avd_car = lateral_obstacle_history_info[tr.track_id].is_avd_car;
+      if (is_avd_car == true && ncar_cnt < 3) {
         ncar_cnt += 1;
         if (!(tr.type == iflyauto::OBJECT_TYPE_COUPE ||
               tr.type == iflyauto::OBJECT_TYPE_MINIBUS ||
