@@ -35,8 +35,12 @@ class LongitudinalDecisionDecider : public Task {
   SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve(
       const PlanningInitPoint &init_point) const;
 
+  bool IgnoreLaneChangeGapRearAgent(const agent::Agent *gap_rear_agent,
+                                    const std::shared_ptr<planning_math::KDPath>&
+                                        target_lane_frenet_coord) const;
+
  private:
-  EgoPlanningConfig config_;
+  LongitudinalDecisionDeciderConfig config_;
   // <counter, flag>
   std::pair<int32_t, int32_t> cruise_accelerate_count_{0, 0};
   int32_t plan_points_num_ = 26;
