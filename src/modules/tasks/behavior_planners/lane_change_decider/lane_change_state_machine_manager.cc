@@ -426,12 +426,12 @@ bool LaneChangeStateMachineManager::CheckIfHoldToExecution(
 bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
   const bool perfect_in_lane = CheckIfInPerfectLaneKeeping();
   if (target_lane_front_node_) {
-    lane_change_stage_info_.lc_gap_info.front_agent_id =
-        target_lane_front_node_->node_agent_id();
+    lane_change_stage_info_.lc_gap_info.front_node_id =
+        target_lane_front_node_->node_id();
   }
   if (target_lane_rear_node_) {
-    lane_change_stage_info_.lc_gap_info.rear_agent_id =
-        target_lane_rear_node_->node_agent_id();
+    lane_change_stage_info_.lc_gap_info.rear_node_id =
+        target_lane_rear_node_->node_id();
   }
   if (perfect_in_lane) {
     std::cout << "perfect_in_lane!!!" << std::endl;
@@ -583,14 +583,14 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
         target_lane_middle_node_->node_speed());
     lc_state_info.gap_insertable = false;
     lc_state_info.lc_invalid_reason = "front view invalid";
-    lc_state_info.lc_gap_info.front_agent_id =
-        target_lane_middle_node_->node_agent_id();
+    lc_state_info.lc_gap_info.front_node_id =
+        target_lane_middle_node_->node_id();
     return lc_state_info;
   }
 
   if (target_lane_front_node_) {
-    lc_state_info.lc_gap_info.front_agent_id =
-        target_lane_front_node_->node_agent_id();
+    lc_state_info.lc_gap_info.front_node_id =
+        target_lane_front_node_->node_id();
     CalculateFrontGapFeasible(&lc_state_info);
     if (!lc_state_info.gap_insertable) {
       return lc_state_info;
@@ -598,8 +598,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (target_lane_rear_node_) {
-    lc_state_info.lc_gap_info.rear_agent_id =
-        target_lane_rear_node_->node_agent_id();
+    lc_state_info.lc_gap_info.rear_node_id =
+        target_lane_rear_node_->node_id();
     CalculateSideGapFeasible(&lc_state_info);
     if (!lc_state_info.gap_insertable) {
       return lc_state_info;
@@ -649,8 +649,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
 
   if (target_lane_front_node_) {
-    lc_state_info.lc_gap_info.front_agent_id =
-        target_lane_front_node_->node_agent_id();
+    lc_state_info.lc_gap_info.front_node_id =
+        target_lane_front_node_->node_id();
     CalculateFrontAreaIfNeedBack(&lc_state_info);
     if (lc_state_info.lc_should_back) {
       return lc_state_info;
@@ -658,8 +658,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
 
   if (target_lane_rear_node_) {
-    lc_state_info.lc_gap_info.rear_agent_id =
-        target_lane_rear_node_->node_agent_id();
+    lc_state_info.lc_gap_info.rear_node_id =
+        target_lane_rear_node_->node_id();
     CalculateSideAreaIfNeedBack(&lc_state_info);
     if (lc_state_info.lc_should_back) {
       return lc_state_info;
@@ -873,10 +873,10 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.is_ego_on_rightmost_lane =
       is_ego_on_rightmost_lane_;
 
-  lane_change_decider_output.lc_gap_info.front_agent_id =
-      lane_change_stage_info_.lc_gap_info.front_agent_id;
-  lane_change_decider_output.lc_gap_info.rear_agent_id =
-      lane_change_stage_info_.lc_gap_info.rear_agent_id;
+  lane_change_decider_output.lc_gap_info.front_node_id =
+      lane_change_stage_info_.lc_gap_info.front_node_id;
+  lane_change_decider_output.lc_gap_info.rear_node_id =
+      lane_change_stage_info_.lc_gap_info.rear_node_id;
 
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp =

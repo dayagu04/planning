@@ -74,8 +74,8 @@ struct LaneChangeStageInfo {
     lc_should_back = false;
     lc_valid = false;
     lc_back_reason = "none";
-    lc_gap_info.front_agent_id = -1;
-    lc_gap_info.rear_agent_id = -1;
+    lc_gap_info.front_node_id = -1;
+    lc_gap_info.rear_node_id = -1;
   }
 };
 
