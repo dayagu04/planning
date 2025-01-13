@@ -15,17 +15,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   framework
   advanced_ctrl_lib
   osqp
+  c_interface
+  legacy_c_interface
 )
 
-if(PP_ENABLE OR PYBIND_TOOL_ENABLE)
-  target_link_libraries(${PROJECT_NAME} PUBLIC
-    c_interface
-    legacy_c_interface
-  )
-else()
-  target_link_libraries(${PROJECT_NAME} PUBLIC
-    algo_interface
-  )
-endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

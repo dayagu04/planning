@@ -23,7 +23,7 @@ class PerceptionRangeEstimator {
 
   // Feed map info to estimator
 
-  // virtual void Feed_IflytekEhrStaticMap(const MSDMapInfo &map_info) = 0;
+  // virtual void FeedMap(const MSDMapInfo &map_info) = 0;
 
   // Calculate occlusion distance by an obstacle
   // virtual double calculate(const TrackedObject &obstacle) const = 0;
