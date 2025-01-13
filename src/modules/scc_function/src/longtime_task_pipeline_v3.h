@@ -38,6 +38,7 @@
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 
 namespace planning {
 
@@ -60,6 +61,8 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
+  std::unique_ptr<LaneBorrowDecider> lane_borrow_decider_;
+
 
   std::unique_ptr<VirtualObstacleDecider> virtual_obstacle_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;

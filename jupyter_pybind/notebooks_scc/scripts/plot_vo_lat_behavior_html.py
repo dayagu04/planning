@@ -785,9 +785,9 @@ def plotOnce(bag_path, html_file):
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
-    # pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
+    pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
     # pan_sample_poly_info = Panel(child = row(column(fig_st_new, fig_sample_vt), column(fig_sample_at, fig_sample_jt)), title="SamplePolyInfo")
-    pans = Tabs(tabs=[pan_general_info, pan_speed_search_info])
+    pans = Tabs(tabs=[pan_lane_borrow_info,pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():
