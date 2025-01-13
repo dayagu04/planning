@@ -18,7 +18,7 @@
 #include "log_glog.h"
 #include "planning_context.h"
 #include "spline_projection.h"
-#include "task_interface/lane_change_common_helper.h"
+#include "task_interface/lane_change_utils.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 
