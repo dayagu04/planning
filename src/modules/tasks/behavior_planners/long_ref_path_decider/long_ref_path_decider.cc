@@ -130,15 +130,15 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // 8. use speed adjust s search ref
     if (lane_change_info.s_search_status &&
         speed_planning_config_.enable_speed_adjust) {
-      if (lane_change_info.st_search_vec.size() == plan_points_num_ + 1) {
+      if (lane_change_info.st_search_vec.size() == plan_points_num_) {
         for (size_t i = 0; i <= plan_points_num_; i++) {
           lon_behavior_output_.s_refs[i].first =
               lane_change_info.st_search_vec[i];
         }
-        std::cout << "use search path in lc wait!" << std::endl;
+        LOG_DEBUG("use search path in lc wait! \n");
       } else {
-        std::cout << "search path num is error:  "
-                  << lane_change_info.st_search_vec.size() << std::endl;
+        LOG_WARNING("search path num is error: [%zu]\n",
+                  lane_change_info.st_search_vec.size());
       }
     }
   }
