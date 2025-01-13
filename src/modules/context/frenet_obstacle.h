@@ -67,7 +67,7 @@ class FrenetObstacle {
     return frenet_polygon_sequence_;
   }
 
-  const std::vector<Vec2d>& corner_points() const { return corner_points_; }
+  const std::vector<planning_math::Vec2d>& corner_points() const { return corner_points_; }
 
   bool get_polygon_at_time(const double relative_time,
                            const std::shared_ptr<ReferencePath>& reference_path,
@@ -120,7 +120,7 @@ class FrenetObstacle {
   bool is_static_ = false;
   double width_;
   double length_;
-  std::vector<Vec2d> corner_points_;
+  std::vector<planning_math::Vec2d> corner_points_;
   SourceType source_type_;
 };
 

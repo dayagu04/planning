@@ -5,6 +5,7 @@
 #include "src/library/arastar_lib/hybrid_ara_data.h"
 #include "utils/kd_path.h"
 
+using namespace planning::planning_math;
 namespace planning {
 namespace ara_star {
 

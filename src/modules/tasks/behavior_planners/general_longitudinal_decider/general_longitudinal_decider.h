@@ -144,7 +144,7 @@ class GeneralLongitudinalDecider : public Task {
   // CollisionChecker lon_collision_checker_; // 主要给pnp使用，暂时不需要
 
   ObstacleDecisions obstacle_decisions_;
-  std::shared_ptr<CollisionChecker> lon_collision_checker_;
+  std::shared_ptr<planning_math::CollisionChecker> lon_collision_checker_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
 
   double max_curvature_ = 0.0;

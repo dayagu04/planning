@@ -8,6 +8,7 @@
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
 
+using namespace planning::planning_math;
 namespace planning {
 namespace hpp_general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,

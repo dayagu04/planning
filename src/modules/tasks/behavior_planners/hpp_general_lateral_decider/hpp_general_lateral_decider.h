@@ -19,6 +19,8 @@
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
+
+using namespace planning::planning_math;
 namespace planning {
 
 class HppGeneralLateralDecider : public Task {
@@ -53,8 +55,8 @@ class HppGeneralLateralDecider : public Task {
   void GenerateLaneSoftBoundary();
   void GenerateGroundLineAndParkingSpaceBoundary();
   void ConstructStaticObstacleTotalPolygons(
-      std::array<vector<pair<int, Polygon2d>>, 2> &groundline_polygons,
-      std::array<vector<pair<int, Polygon2d>>, 2> &parking_space_polygons);
+      std::array<vector<std::pair<int, Polygon2d>>, 2> &groundline_polygons,
+      std::array<vector<std::pair<int, Polygon2d>>, 2> &parking_space_polygons);
   void GetDesireRoadExtraBuffer(double *const left_road_extra_buffer,
                                 double *const right_road_extra_buffer);
   void GetLateralTTCToRoad(double *max_collision_t,

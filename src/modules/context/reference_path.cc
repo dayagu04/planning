@@ -151,9 +151,9 @@ void ReferencePath::update_refpath_points_in_hpp(
         continue;
       }
       // check direction
-      Vec2d last_direction = Vec2d::CreateUnitVec2d(last_pt.theta());
-      Vec2d cur_direction =
-          Vec2d::CreateUnitVec2d(raw_ref_path_points[i].path_point.theta());
+      planning_math::Vec2d last_direction = planning_math::Vec2d::CreateUnitVec2d(last_pt.theta());
+      planning_math::Vec2d cur_direction =
+          planning_math::Vec2d::CreateUnitVec2d(raw_ref_path_points[i].path_point.theta());
       if (cur_direction.InnerProd(last_direction) < 0) {
         if (ref_length > init_length) {
           end_index = i;
@@ -183,7 +183,7 @@ void ReferencePath::update_refpath_points_in_hpp(
     LOG_ERROR("update_refpath_points_in_hpp: coord points size < 2");
     return;
   }
-  frenet_coord_ = std::make_shared<KDPath>(std::move(coord_path_points));
+  frenet_coord_ = std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
 
   // Step 2) 1. update refined_ref_path_points_' frenet points by frenet_coord_
   refined_ref_path_points_.clear();

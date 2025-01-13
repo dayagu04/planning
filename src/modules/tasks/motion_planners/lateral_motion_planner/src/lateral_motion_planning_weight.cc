@@ -233,7 +233,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundByVelocity(
   const double velocity = ego_vel_ * 3.6;
   std::vector<double> xp_vel{10.0, 50.0, 80.0, 100.0};
   double jerk_bound =
-      std::min(interp(velocity, xp_vel, config_.map_jerk_bound), max_jerk_);
+      std::min(planning::interp(velocity, xp_vel, config_.map_jerk_bound), max_jerk_);
   planning_input.set_acc_bound(std::min(config_.acc_bound, max_acc_));
   planning_input.set_jerk_bound(jerk_bound);
 }
