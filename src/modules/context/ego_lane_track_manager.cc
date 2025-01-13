@@ -50,10 +50,10 @@ constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kLaneLineSegmentLength = 5.0;
 constexpr double kConsiderLaneLineLength = 50.0;
 constexpr double kDefaultRoadRadius = 750.0;
-constexpr int32_t kDefaultPointNums = 33;
+constexpr int32_t kDefaultPointNums = 35;
 constexpr int32_t kLeastDefaultPointNums = 3;
 constexpr double kConsiderLaneStraightFrontEgo = 30.0;
-constexpr double kDefaultMappingConsiderLaneLength = 70.0;
+constexpr double kDefaultMappingConsiderLaneLength = 75.0;
 constexpr double kDefaultConsiderLaneMarksLength = 80.0;
 constexpr double kEgoPreviewTimeMinThd = 3.0;
 constexpr double kEgoPreviewTimeMaxThd = 5.0;
@@ -441,7 +441,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
         planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
-        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+        for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
              s += kLaneLineSegmentLength) {
           if (s > kDefaultMappingConsiderLaneLength + ego_s) {
             break;
@@ -694,7 +694,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     virtual_lane_relative_id_switch_flag_ = true;
   }
   if (order_ids.size() > 1) {
-    for (int i = 0; i < order_ids.size(); i++) {
+    for (size_t i = 0; i < order_ids.size(); i++) {
       if (current_order_id == order_ids[i]) {
         last_zero_relative_id_order_id_index_ = i;
       } else {
@@ -944,7 +944,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   bool find_last_frame_track_ego_lane = true;
 
   if (last_zero_relative_id_nums_ > 1) {
-    LOG_DEBUG("last_zero_relative_id_nums_ > 1");
+    LOG_DEBUG("PreprocessRampSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
       if (order_ids.size() == 2 &&
           last_zero_relative_id_nums_ == order_ids.size() &&
@@ -1099,7 +1099,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
   }
 
   if (last_zero_relative_id_nums_ > 1) {
-    LOG_DEBUG("last_zero_relative_id_nums_ > 1");
+    LOG_DEBUG("PreprocessOrdinarySplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
       if (order_ids.size() == 2 &&
           last_zero_relative_id_nums_ == order_ids.size() &&
@@ -1218,6 +1218,54 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
+  int zero_relative_id_order_id_index = last_zero_relative_id_order_id_index_;
+  bool enable_using_last_frame_track_ego_lane = true;
+  bool find_last_frame_track_ego_lane = true;
+
+  if (last_zero_relative_id_nums_ > 1) {
+    LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
+    if (last_zero_relative_id_order_id_index_ != -1) {
+      if (order_ids.size() == 2 &&
+          last_zero_relative_id_nums_ == order_ids.size() &&
+          zero_relative_id_order_id_index < order_ids.size()) {
+        last_track_ego_lane_ =
+            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+        for (auto& lane : relative_id_lanes) {
+          int lane_order_id = lane->get_order_id();
+          int lane_relative_id =
+              lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
+          lane->set_relative_id(lane_relative_id);
+        }
+        is_exist_split_on_intersection_ = true;
+        return;
+      } else {
+        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                          relative_id_lanes, order_ids,
+                                          zero_relative_id_order_id_index);
+
+        if (enable_using_last_frame_track_ego_lane) {
+          if (zero_relative_id_order_id_index < order_ids.size() &&
+              relative_id_lanes.size() >
+                  order_ids[zero_relative_id_order_id_index]) {
+            last_track_ego_lane_ =
+                relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+            last_zero_relative_id_order_id_index_ =
+                zero_relative_id_order_id_index;
+            for (auto& lane : relative_id_lanes) {
+              int lane_order_id = lane->get_order_id();
+              int lane_relative_id =
+                  lane_order_id - order_ids[zero_relative_id_order_id_index];
+              lane->set_relative_id(lane_relative_id);
+            }
+            is_exist_split_on_intersection_ = true;
+            return;
+          } else {
+            return;
+          }
+        }
+      }
+    }
+  }
 
   double clane_min_cost_total = std::numeric_limits<double>::max();
   for (size_t i = 0; i < order_ids.size(); i++) {
@@ -1247,7 +1295,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
-        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+        for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
              s += kLaneLineSegmentLength) {
           if (s > kDefaultMappingConsiderLaneLength + ego_s) {
             break;
@@ -1671,7 +1719,7 @@ double EgoLaneTrackManger::ComputeTargetLaneSpecifiedRangeCurvature(
       frenet_coord->GetPathPointByS(ego_s + default_begin_length);
   int iter_count = 0;
   double total_curv = 0.0;
-  for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+  for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
        s += kLaneLineSegmentLength) {
     if (s > default_end_length + ego_s) {
       break;
@@ -1714,7 +1762,7 @@ double EgoLaneTrackManger::ComputeAverageHeadingDiff(
       planning_math::PathPoint ego_s_nearest_point =
           frenet_coord->GetPathPointByS(ego_s);
       int iter_count = 0;
-      for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+      for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
            s += kLaneLineSegmentLength) {
         if (s > kConsiderLaneLineLength + ego_s) {
           break;
