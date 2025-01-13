@@ -116,7 +116,7 @@ int HybridAStarInterface::UpdateEDT() {
   return 0;
 }
 
-int HybridAStarInterface::UpdateEDTByObs(const ParkObstacleList& obs_list) {
+void HybridAStarInterface::UpdateEDTByObs(const ParkObstacleList& obs_list) {
   Pose2D ogm_base_pose;
   UpdateEDTBasePose(ogm_base_pose);
 
@@ -126,7 +126,7 @@ int HybridAStarInterface::UpdateEDTByObs(const ParkObstacleList& obs_list) {
 
   edt_.Excute(ogm_, ogm_base_pose);
 
-  return 0;
+  return;
 }
 
 int HybridAStarInterface::UpdateOutput() {
@@ -258,7 +258,6 @@ int HybridAStarInterface::UpdateOutput() {
     } else {
       lon_min_sampling_length = 0.4;
     }
-    target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
 
     for (size_t i = 0; i < config_.lat_hierarchy_safe_buffer.size(); i++) {
       lat_buffer = config_.lat_safe_buffer_for_inside[i];
@@ -268,6 +267,8 @@ int HybridAStarInterface::UpdateOutput() {
                             static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
+      target_regulator_goal_ =
+          target_pose_regulator.GetCandidatePose(lat_buffer);
 
       if (request_.path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {

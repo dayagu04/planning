@@ -57,7 +57,6 @@ Eigen::Vector3d safe_circle_tang_pose_;
 Eigen::Vector2d pt_inside_pose_;
 // global park space
 std::vector<Eigen::Vector2d> corrected_park_space_points_;
-PerpendicularPathGenerator::Tlane slot_t_lane_;
 Eigen::Vector2d right_obs_start_;
 
 std::vector<Eigen::Vector2d> obs_global_points_;
@@ -69,10 +68,10 @@ std::vector<Eigen::Vector2d> search_sequence_path_;
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
 std::vector<std::vector<Eigen::Vector2d>> rs_h_path_;
-std::vector<Eigen::Vector3d> footprint_circle_model_;
-std::vector<Eigen::Vector3d> footprint_circle_model_gear_drive_;
-std::vector<Eigen::Vector3d> footprint_circle_model_gear_reverse_;
+std::vector<Eigen::Vector3d> footprint_circle_model_global_;
+std::vector<Eigen::Vector3d> footprint_circle_model_local_;
 Eigen::Vector3d astar_end_pose_;
+Eigen::Vector3d astar_current_path_end_;
 
 #define OBS_SAMPLING_DIST (0.1)
 
@@ -251,6 +250,36 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   astar_end_pose_[1] = global_pose.y;
   astar_end_pose_[2] = global_pose.theta;
 
+  // current gear path end
+  std::vector<AStarPathPoint> current_gear_path;
+  hybrid_astar_interface_->GetFirstSegmentPath(current_gear_path);
+  Pose2D local;
+  if (current_gear_path.size() == 0) {
+    astar_current_path_end_[0] = 0;
+    astar_current_path_end_[1] = 0;
+    astar_current_path_end_[2] = 0;
+  } else {
+    local.x = current_gear_path.back().x;
+    local.y = current_gear_path.back().y;
+    local.theta = current_gear_path.back().phi;
+
+    tf.ULFLocalPoseToGlobal(&global_pose, local);
+
+    astar_current_path_end_[0] = global_pose.x;
+    astar_current_path_end_[1] = global_pose.y;
+    astar_current_path_end_[2] = global_pose.theta;
+  }
+
+  // ego collision check
+  EulerDistanceTransform *edt = hybrid_astar_interface_->GetMutableEDT();
+  Transform2d ego_local_tf;
+  ego_local_tf.SetBasePose(Pose2D(ego_slot_info.cur_pose.pos[0],
+                                  ego_slot_info.cur_pose.pos[1],
+                                  ego_slot_info.cur_pose.heading));
+  bool ego_collision =
+      edt->IsCollisionForPoint(&ego_local_tf, AstarPathGear::DRIVE);
+  ILOG_INFO << "ego_collision = " << ego_collision;
+
   return 0;
 }
 
@@ -264,21 +293,26 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
       edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
-  footprint_circle_model_.clear();
+  footprint_circle_model_global_.clear();
+  footprint_circle_model_local_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
   planning::Position2D global_position2d;
   tf.ULFLocalPointToGlobal(&global_position2d, circle->pos);
 
-  footprint_circle_model_.push_back(Eigen::Vector3d(
+  footprint_circle_model_global_.push_back(Eigen::Vector3d(
       global_position2d.x, global_position2d.y, circle->radius));
+  footprint_circle_model_local_.push_back(Eigen::Vector3d(
+      circle->pos.x, circle->pos.y, circle->radius));
 
   for (int i = 0; i < circle_footprint.size; i++) {
     circle = &circle_footprint.circles[i];
     tf.ULFLocalPointToGlobal(&global_position2d, circle->pos);
 
-    footprint_circle_model_.push_back(Eigen::Vector3d(
+    footprint_circle_model_global_.push_back(Eigen::Vector3d(
         global_position2d.x, global_position2d.y, circle->radius));
+    footprint_circle_model_local_.push_back(Eigen::Vector3d(
+        circle->pos.x, circle->pos.y, circle->radius));
   }
 
   return;
@@ -344,15 +378,11 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
 
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-    slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
-
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
   } else if (cross_ego_to_slot_heading < 0.0 &&
              cross_ego_to_slot_center > 0.0) {
-    slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
   } else {
-    slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
     frame.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     // ILOG_INFO << "calculate slot side error ";
@@ -383,35 +413,6 @@ int UpdateParkSpaceKeyPoints(
 
   Eigen::Vector2d slot_right_upper_point(slot_info.slot.GetLength(),
                                          -0.5 * slot_min_width);
-
-  const auto &slot_side = slot_t_lane_.slot_side;
-  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-    // inside is right, outside is left
-    slot_t_lane_.corner_outside_slot = slot_left_upper_point;
-    slot_t_lane_.corner_inside_slot = slot_right_upper_point;
-
-    slot_t_lane_.pt_outside = slot_left_upper_point;
-    slot_t_lane_.pt_inside = slot_right_upper_point;
-  } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    // outside is right, inside is left
-    slot_t_lane_.corner_outside_slot = slot_right_upper_point;
-    slot_t_lane_.corner_inside_slot = slot_left_upper_point;
-
-    slot_t_lane_.pt_outside = slot_right_upper_point;
-    slot_t_lane_.pt_inside = slot_left_upper_point;
-  }
-
-  // extend tlane point by dx
-  slot_t_lane_.pt_inside.x() += inside_dx;
-
-  slot_t_lane_.pt_terminal_pos = Eigen::Vector2d(
-      slot_info.target_pose.pos.x(), slot_info.target_pose.pos.y());
-  slot_t_lane_.pt_terminal_heading = slot_info.target_pose.heading;
-
-  slot_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_terminal_pos;
-  slot_t_lane_.pt_lower_boundry_pos.x() =
-      slot_t_lane_.pt_lower_boundry_pos.x() - parking_param.rear_overhanging -
-      0.3 - 0.05;
 
   return 0;
 }
@@ -750,11 +751,6 @@ std::vector<Eigen::Vector3d> Update(
                             vec_01, vec_02, unit_vec_02, unit_vec_01,
                             ego_slot_info);
 
-  // copy pt_inside
-  slot_t_lane_.pt_inside.x() =
-      ego_slot_info.g2l_tf.GetPos(right_obs_start_).x();
-  pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane_.pt_inside);
-
   // start
   Eigen::Vector3d start;
   start << ego_slot_info.cur_pose.pos[0], ego_slot_info.cur_pose.pos[1],
@@ -800,13 +796,15 @@ std::vector<Eigen::Vector3d> Update(
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);
-
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
+    // hybrid_astar_interface_->UpdateEDTByObs(hybrid_astar_obs_);
+
     ILOG_INFO << "hybrid_astar_interface_ finish";
-    GetPathFromHybridAstar(ego_slot_info,
-                           parking_param.astar_config.vertical_slot_end_straight_dist,
-                           ego_global_pose);
+    GetPathFromHybridAstar(
+        ego_slot_info,
+        parking_param.astar_config.vertical_slot_end_straight_dist,
+        ego_global_pose);
 
     // just test rs library
 
@@ -898,11 +896,16 @@ const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
 
 const std::vector<Eigen::Vector3d> &GetRSLibPath() { return rs_path_alone_; }
 
-const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
-  return footprint_circle_model_;
+const std::vector<Eigen::Vector3d> &GetFootPrintModelGlobal() {
+  return footprint_circle_model_global_;
+}
+
+const std::vector<Eigen::Vector3d> &GetFootPrintModelLocal() {
+  return footprint_circle_model_local_;
 }
 
 const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
+const Eigen::Vector3d GetCurrentGearPathEnd() { return astar_current_path_end_; }
 
 PYBIND11_MODULE(hybrid_astar_py, m) {
   m.doc() = "m";
@@ -920,10 +923,12 @@ PYBIND11_MODULE(hybrid_astar_py, m) {
       .def("GetObsLineList", &GetObsLineList)
       .def("StopPybind", &StopPybind)
       .def("GetRSLibPath", &GetRSLibPath)
-      .def("GetFootPrintModel", &GetFootPrintModel)
+      .def("GetFootPrintModelGlobal", &GetFootPrintModelGlobal)
       .def("GetAllSearchNode", &GetAllSearchNode)
       .def("GetPolynomialPath", &GetPolynomialPath)
       .def("GetAstarEndPose", &GetAstarEndPose)
+      .def("GetCurrentGearPathEnd", &GetCurrentGearPathEnd)
+      .def("GetFootPrintModelLocal", &GetFootPrintModelLocal)
       .def("GetVirtualWallObstacles", &GetVirtualWallObstacles);
   ;
 }

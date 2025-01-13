@@ -8,7 +8,7 @@
 
 namespace planning {
 
-#define footprint_circle_num (10)
+#define FOOTPRINT_CIRCLE_NUM (12)
 
 struct FootPrintCircle {
   Position2D pos;
@@ -18,7 +18,7 @@ struct FootPrintCircle {
 
 struct FootPrintCircleList {
   int size;
-  FootPrintCircle circles[footprint_circle_num];
+  FootPrintCircle circles[FOOTPRINT_CIRCLE_NUM];
 
   // if this circle no collision, then no need to check other circle
   FootPrintCircle max_circle;
@@ -54,10 +54,12 @@ class FootPrintCircleModel {
   void LocalToGlobalByGear(FootPrintCircleList *global_circle, Transform2d *tf,
                            const AstarPathGear gear) const;
 
- private:
-  void DebugCircle(FootPrintCircle *circle);
+  FootPrintCircleList *GetMutableGlobalFPCircleByGear(const AstarPathGear gear);
 
-  void DebugCircles(FootPrintCircleList *circles);
+ private:
+  void DebugCircle(const FootPrintCircle *circle) const;
+
+  void DebugCircles(const FootPrintCircleList *circles) const;
 
  private:
   // vehicle coordinate system
@@ -66,6 +68,10 @@ class FootPrintCircleModel {
   // for different gear, use different safe buffer
   FootPrintCircleList drive_gear_circles_;
   FootPrintCircleList reverse_gear_circles_;
+
+  FootPrintCircleList global_circles_;
+  FootPrintCircleList global_drive_gear_circles_;
+  FootPrintCircleList global_reverse_gear_circles_;
 };
 
 }  // namespace planning

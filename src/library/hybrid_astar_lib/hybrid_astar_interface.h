@@ -74,6 +74,8 @@ class HybridAStarInterface {
     return &edt_;
   }
 
+  EulerDistanceTransform* GetMutableEDT() { return &edt_; }
+
  public:
   // for debug
   void GetRSPathHeuristic(
@@ -101,13 +103,13 @@ class HybridAStarInterface {
   void GetPolynomialPathForDebug(std::vector<double>& x, std::vector<double>& y,
                                  std::vector<double>& phi);
 
+  void UpdateEDTByObs(const ParkObstacleList& obs_list);
+
  private:
   // if ego pose is good, seleted real end is ok
   const bool IsSelectedRealTargetPose() const;
 
   int UpdateEDT();
-
-  int UpdateEDTByObs(const ParkObstacleList& obs_list);
 
   void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
                                       const Pose2D& real_end);
