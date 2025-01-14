@@ -137,10 +137,8 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
   OgmIndex index;
 
   FootPrintCircle *circle;
-
-  FootPrintCircleList *global_circles;
-  global_circles = &global_circles_;
-
+  FootPrintCircleList *global_circles =
+      footprint_model_.GetMutableGlobalFPCircleByGear(gear);
   footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
 
   float dist;
@@ -246,9 +244,8 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
 const bool EulerDistanceTransform::IsCollisionForPoint(
     Transform2d *tf, const AstarPathGear gear) {
   FootPrintCircle *circle;
-  FootPrintCircleList *global_circles;
-  global_circles = &global_circles_;
-
+  FootPrintCircleList *global_circles =
+      footprint_model_.GetMutableGlobalFPCircleByGear(gear);
   footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
 
   // check max circle
@@ -423,8 +420,6 @@ void EulerDistanceTransform::UpdateSafeBuffer(
 
   footprint_model_.UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer,
                                     mirror_buffer, big_circle_safe_buffer);
-
-  global_circles_ = footprint_model_.GetLocalFootPrintCircle();
 
   latetal_safe_buffer_ = car_body_lat_safe_buffer;
   lon_safe_buffer_ = lon_safe_buffer;

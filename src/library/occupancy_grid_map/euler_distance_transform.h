@@ -83,7 +83,6 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
  private:
   EDTData data_;
 
-  FootPrintCircleList global_circles_;
   FootPrintCircleModel footprint_model_;
   float latetal_safe_buffer_ = 0.1;
   float mirror_safe_buffer_ = 0.1;

@@ -341,7 +341,7 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
       history_path->accumulated_s[history_path_info_.end_point_id_] -
       history_path->accumulated_s[history_path_info_.start_point_id_];
 
-  ILOG_INFO << "drive distance decider hy history, gear = "
+  ILOG_INFO << "drive distance decider by history, gear = "
             << PathGearDebugString(second_path_gear)
             << ", dist = " << history_path_info_.dist_ << ", shot number = "
             << PathGearSwitchNumberString(

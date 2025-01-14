@@ -64,18 +64,9 @@ class HybridAStar {
                    HybridAStarResult* result, EulerDistanceTransform* edt,
                    ParkReferenceLine* ref_line);
 
-  // no astar search, just use rs path link start point and end point to adjust
-  // ego position.
-  bool PlanByRSPathLink(HybridAStarResult* result, const Pose2D& start,
-                        const Pose2D& end, const double lon_min_sampling_length,
-                        const MapBound& XYbounds,
-                        const ParkObstacleList& obstacles,
-                        const AstarRequest& request,
-                        const ObstacleClearZone* clear_zone,
-                        EulerDistanceTransform* edt,
-                        ParkReferenceLine* ref_line);
-
   // use rs path sampling to link start point and end point.
+  // 库内向前揉库使用.
+  // todo: 向前揉库，向后揉库统一起来.
   bool PlanByRSPathSampling(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
       const double lon_min_sampling_length, const MapBound& XYbounds,
@@ -157,10 +148,14 @@ class HybridAStar {
                              const PathGearRequest gear_request_info,
                              Node3d* rs_node_to_goal);
 
-  bool ExpansionByQunticPolynomial(Node3d* current_node,
-                                   std::vector<AStarPathPoint>& path,
-                                   Node3d* polynomial_node,
-                                   PolynomialPathErrorCode* fail_type);
+  bool SamplingByQunticPolynomial(Node3d* current_node,
+                                  std::vector<AStarPathPoint>& path,
+                                  Node3d* polynomial_node,
+                                  PolynomialPathErrorCode* fail_type);
+
+  // 向后揉库使用
+  bool SamplingByRSPath(const PathGearRequest gear_request,
+                        Node3d* current_node, Node3d* polynomial_node);
 
   // check collision and validity
   bool ValidityCheckByConvex(Node3d* node);
