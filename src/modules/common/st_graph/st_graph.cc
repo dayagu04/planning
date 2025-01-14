@@ -57,10 +57,10 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
   }
 
   // TODO: add cautin yield and cross agent decision first
-  // StGraphUtils::DetermineCautionYieldDecision(
-  //     st_graph_input_, st_graph_input.lane_change_status(),
-  //     st_graph_input.lane_change_request(), agent_id_st_boundaries_map_,
-  //     boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
+  StGraphUtils::DetermineCautionYieldDecision(
+       st_graph_input_, st_graph_input->lane_change_status(),
+       st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
+       boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
   // StGraphUtils::SetCrossingAgentCautionYieldDecision(
   //     st_graph_input_, agent_id_st_boundaries_map_,
   //     boundary_id_st_boundaries_map_);
