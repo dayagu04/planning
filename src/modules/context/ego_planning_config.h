@@ -2753,6 +2753,21 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   bool enable_only_s_t_hash = false;
 };
 
+struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ignore_agent_ttc_to_ego_thrd = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning",
+                                 "longitudinal_decision_decider",
+                                 "ignore_agent_ttc_to_ego_thrd"},
+        ignore_agent_ttc_to_ego_thrd);
+  }
+
+  double ignore_agent_ttc_to_ego_thrd = 3.0;
+};
+
 struct AgentHeadwayConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
