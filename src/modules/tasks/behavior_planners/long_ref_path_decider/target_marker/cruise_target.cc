@@ -117,11 +117,9 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::NONE:
     case SpeedLimitType::CURVATURE:
     case SpeedLimitType::MERGE:
-    case SpeedLimitType::LIDAR_RB:
     case SpeedLimitType::CONE_BUCKET:
     case SpeedLimitType::CIPV_LOST:
     case SpeedLimitType::ROUNDABOUT:
-    case SpeedLimitType::DDLD:
     case SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT:
     case SpeedLimitType::VRU_ROUND:
     case SpeedLimitType::MERGE_ALC:

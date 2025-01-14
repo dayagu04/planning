@@ -55,4 +55,29 @@ int64_t StSearchNode::ComputeId(double s, double t, double vel, double s_step,
   }
 }
 
+void StSearchNode::NodeSubCostAccumulate(const StSearchNode& father_node) {
+  node_sub_cost_.current_node_cost_yield_accumulated =
+      edge_sub_cost().fathernode_to_childnode_cost_yield +
+      father_node.node_sub_cost().current_node_cost_yield_accumulated;
+  node_sub_cost_.current_node_cost_overtake_accumulated =
+      edge_sub_cost().fathernode_to_childnode_edge_cost_overtake +
+      father_node.node_sub_cost().current_node_cost_overtake_accumulated;
+  node_sub_cost_.current_node_cost_vel_accumulated =
+      edge_sub_cost().fathernode_to_childnode_edge_cost_vel +
+      father_node.node_sub_cost().current_node_cost_vel_accumulated;
+  node_sub_cost_.current_node_cost_accel_accumulated =
+      edge_sub_cost().fathernode_to_childnode_edge_cost_accel +
+      father_node.node_sub_cost().current_node_cost_accel_accumulated;
+  node_sub_cost_.current_node_cost_accel_sign_changed_accumulated =
+      edge_sub_cost().fathernode_to_childnode_edge_cost_accel_sign_changed +
+      father_node.node_sub_cost()
+          .current_node_cost_accel_sign_changed_accumulated;
+  node_sub_cost_.current_node_cost_jerk_accumulated =
+      edge_sub_cost().fathernode_to_childnode_edge_cost_jerk +
+      father_node.node_sub_cost().current_node_cost_jerk_accumulated;
+  node_sub_cost_.current_node_cost_length_accumulated =
+      edge_sub_cost().fathernode_to_childnode_edge_cost_length +
+      father_node.node_sub_cost().current_node_cost_length_accumulated;
+}
+
 }  // namespace planning

@@ -223,7 +223,7 @@ class VirtualLaneManager {
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
-  std::shared_ptr<EgoLaneTrackManger> ego_lane_track_manager_;
+  EgoLaneTrackManger ego_lane_track_manager_;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::unordered_map<int, std::shared_ptr<VirtualLane>> virtual_id_mapped_lane_;

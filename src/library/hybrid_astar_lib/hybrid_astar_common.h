@@ -157,6 +157,14 @@ struct ParkFirstActionRequest {
   double dist_request;
 
   AstarPathSteer steer_request;
+
+  void Clear() {
+    has_request = 0.0;
+    gear_request = AstarPathGear::NONE;
+    dist_request = 0.0;
+
+    return;
+  }
 };
 
 struct MapBound {
@@ -280,20 +288,9 @@ struct DebugAstarSearchPoint {
   }
 };
 
-enum class SlotRelativePosition {
-  NONE,
-  RIGHT,
-  LEFT,
-  MAX_NUMBER
-};
+enum class SlotRelativePosition { NONE, RIGHT, LEFT, MAX_NUMBER };
 
-enum class VehRelativePosition {
-  NONE,
-  RIGHT,
-  LEFT,
-  MIDDLE,
-  MAX_NUMBER
-};
+enum class VehRelativePosition { NONE, RIGHT, LEFT, MIDDLE, MAX_NUMBER };
 
 struct Boundary2D {
   double min;

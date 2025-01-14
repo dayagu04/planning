@@ -8,14 +8,15 @@
 #include <vector>
 
 #include "apa_obstacle.h"
+#include "geometry_math.h"
 #include "local_view.h"
-#include "point_cloud_obstacle.h"
 #include "session.h"
 
 namespace planning {
 namespace apa_planner {
 // obstacle manager: 管理所有障碍物，包括超声波、限位器、视觉、虚拟
 // apa_obstacle: 是泊车障碍物的基本数据结构.
+
 class ApaObstacleManager final {
  public:
   ApaObstacleManager() {}
@@ -26,6 +27,7 @@ class ApaObstacleManager final {
   void Reset() {
     obs_id_generate_ = 0;
     obstacles_.clear();
+    uss_dis_vec_.clear();
   }
 
   const std::unordered_map<size_t, ApaObstacle> &GetObstacles() const {
@@ -41,12 +43,15 @@ class ApaObstacleManager final {
   const bool GetObstacle(const ApaObsAttributeType type,
                          std::vector<ApaObstacle *> &obs_vec);
 
+  const std::vector<double> &GetUssDisVec() { return uss_dis_vec_; }
+
   void TransformCoordFromGlobalToLocal(
-      const pnc::geometry_lib::PathPoint &origin_pose);
+      const pnc::geometry_lib::GlobalToLocalTf &g2l_tf);
 
  private:
   size_t obs_id_generate_{0};
   std::unordered_map<size_t, ApaObstacle> obstacles_;
+  std::vector<double> uss_dis_vec_;
 };
 
 typedef IndexedList<int, ApaObstacle> IndexedParkObstacles;

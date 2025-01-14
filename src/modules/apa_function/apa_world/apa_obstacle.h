@@ -12,8 +12,8 @@
 #include "config/message_type.h"
 #include "geometry_math.h"
 #include "pose2d.h"
-#include "src/library/collision_detection/aabb2d.h"
-#include "src/library/collision_detection/polygon_base.h"
+#include "src/library/convex_collision_detection/aabb2d.h"
+#include "src/library/convex_collision_detection/polygon_base.h"
 #include "utils/index_list.h"
 
 namespace planning {
@@ -135,6 +135,8 @@ class ApaObstacle final {
   const Polygon2D& GetPolygon2DLocal() const { return polygon_local_; }
 
   void Reset();
+
+  void GenerateLocalBoundingbox(cdl::AABB *box) const;
 
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};

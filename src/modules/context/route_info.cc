@@ -40,6 +40,7 @@ void RouteInfo::Update() {
       std::cout << "UpdateHdMap failed!!!" << std::endl;
     }
   }
+  UpdateVisionInfo();
 }
 
 void RouteInfo::UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sd_map) {
@@ -109,8 +110,6 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdmap::SDMap& sd_map,
       route_info_output_.ramp_direction = RAMP_NONE;
     }
   }
-  JSON_DEBUG_VALUE("ramp_direction",
-                   static_cast<int>(route_info_output_.ramp_direction));
 }
 
 SplitSegInfo RouteInfo::MakesureSplitDirection(
@@ -361,8 +360,6 @@ void RouteInfo::CaculateDistanceToLastMergePoint(
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
   }
-  JSON_DEBUG_VALUE("sum_dis_to_last_merge_point",
-                   route_info_output_.sum_dis_to_last_merge_point);
 }
 
 void RouteInfo::CaculateDistanceToLastSplitPoint(
@@ -391,8 +388,6 @@ void RouteInfo::CaculateDistanceToLastSplitPoint(
       }
     }
   }
-  JSON_DEBUG_VALUE("sum_dis_to_last_split_point",
-                   route_info_output_.sum_dis_to_last_split_point);
 
   // 计算在匝道上距离上一个split点的信息
   const SdMapSwtx::Segment* temp_last_split_seg =
@@ -431,8 +426,6 @@ void RouteInfo::CaculateDistanceToRoadEnd(const ad_common::sdmap::SDMap& sd_map,
   } else {
     route_info_output_.distance_to_route_end = NL_NMAX;
   }
-  JSON_DEBUG_VALUE("distance_to_route_end",
-                   route_info_output_.distance_to_route_end);
 }
 
 void RouteInfo::CaculateDistanceToTollStation(
@@ -529,8 +522,6 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   route_info_output_.current_segment_passed_distance = temp_nearest_s;
   LOG_DEBUG("current_segment_passed_distance:%f\n",
             route_info_output_.current_segment_passed_distance);
-  JSON_DEBUG_VALUE("current_segment_passed_distance",
-                   route_info_output_.current_segment_passed_distance);
   if (!current_segment) {
     return segment;
   }
@@ -561,8 +552,6 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
     return segment;
   }
-  JSON_DEBUG_VALUE("is_ego_on_expressway",
-                   route_info_output_.is_ego_on_expressway);
 
   route_info_output_.is_in_sdmaproad = true;
   segment = current_segment;
@@ -723,9 +712,6 @@ void RouteInfo::UpdateMLCInfoDecider(
       route_info_output_.is_on_highway) {
     route_info_output_.is_nearing_other_lane_merge_to_road_point = true;
   }
-  JSON_DEBUG_VALUE(
-      "is_nearing_other_lane_merge_to_road_point",
-      route_info_output_.is_nearing_other_lane_merge_to_road_point);
 
   //(3)、判断高速前方汇入点在前，还是匝道在前
   if (route_info_output_.is_nearing_ramp &&
@@ -744,12 +730,14 @@ void RouteInfo::UpdateMLCInfoDecider(
       route_info_output_.distance_to_first_road_split <
           (route_info_output_.dis_to_ramp - err_buffer)) {
     is_nearing_split = true;
-  } else if (route_info_output_.is_nearing_other_lane_merge_to_road_point &&
+  } else if (route_info_output_.is_road_merged_by_other_lane &&
              route_info_output_.distance_to_first_road_split <
                  route_info_output_.distance_to_first_road_merge) {
     is_nearing_split = true;
-  } else if (route_info_output_.distance_to_first_road_split <
-             nearing_split_dis_threshold) {
+  } else if (!route_info_output_.is_nearing_ramp &&
+      !route_info_output_.is_road_merged_by_other_lane &&
+      route_info_output_.distance_to_first_road_split <
+          nearing_split_dis_threshold) {
     is_nearing_split = true;
   }
   //(5)、判断是否需要生成split的变道任务
@@ -840,19 +828,6 @@ void RouteInfo::UpdateMLCInfoDecider(
   }
   route_info_output_.need_continue_lc_num_on_off_ramp_region =
       need_continue_lc_num_on_off_ramp_region;
-
-  JSON_DEBUG_VALUE("is_leaving_ramp", route_info_output_.is_leaving_ramp);
-  JSON_DEBUG_VALUE("is_nearing_ramp", route_info_output_.is_nearing_ramp);
-  JSON_DEBUG_VALUE("distance_to_ramp", route_info_output_.dis_to_ramp);
-  JSON_DEBUG_VALUE("distance_to_first_road_merge",
-                   route_info_output_.distance_to_first_road_merge);
-  JSON_DEBUG_VALUE("distance_to_first_road_split",
-                   route_info_output_.distance_to_first_road_split);
-  JSON_DEBUG_VALUE("is_ego_on_split_region", is_ego_on_split_region);
-  JSON_DEBUG_VALUE("last_split_seg_dir",
-                   int(route_info_output_.last_split_seg_dir));
-  JSON_DEBUG_VALUE("need_continue_lc_num_on_off_ramp_region",
-                   need_continue_lc_num_on_off_ramp_region);
 }
 
 // for HPP function
@@ -1016,4 +991,34 @@ void RouteInfo::UpdateMLCInfoDecider(
 //     }
 //   }
 // }
+void RouteInfo::UpdateVisionInfo() {
+  JSON_DEBUG_VALUE("is_leaving_ramp", route_info_output_.is_leaving_ramp);
+  JSON_DEBUG_VALUE("is_nearing_ramp", route_info_output_.is_nearing_ramp);
+  JSON_DEBUG_VALUE("distance_to_ramp", route_info_output_.dis_to_ramp);
+  JSON_DEBUG_VALUE("distance_to_first_road_merge",
+                   route_info_output_.distance_to_first_road_merge);
+  JSON_DEBUG_VALUE("distance_to_first_road_split",
+                   route_info_output_.distance_to_first_road_split);
+  JSON_DEBUG_VALUE("is_ego_on_split_region",
+                   route_info_output_.is_ego_on_split_region);
+  JSON_DEBUG_VALUE("last_split_seg_dir",
+                   int(route_info_output_.last_split_seg_dir));
+  JSON_DEBUG_VALUE("need_continue_lc_num_on_off_ramp_region",
+                   route_info_output_.need_continue_lc_num_on_off_ramp_region);
+  JSON_DEBUG_VALUE(
+      "is_nearing_other_lane_merge_to_road_point",
+      route_info_output_.is_nearing_other_lane_merge_to_road_point);
+  JSON_DEBUG_VALUE("is_ego_on_expressway",
+                   route_info_output_.is_ego_on_expressway);
+  JSON_DEBUG_VALUE("distance_to_route_end",
+                   route_info_output_.distance_to_route_end);
+  JSON_DEBUG_VALUE("sum_dis_to_last_split_point",
+                   route_info_output_.sum_dis_to_last_split_point);
+  JSON_DEBUG_VALUE("sum_dis_to_last_merge_point",
+                   route_info_output_.sum_dis_to_last_merge_point);
+  JSON_DEBUG_VALUE("ramp_direction",
+                   static_cast<int>(route_info_output_.ramp_direction));
+  JSON_DEBUG_VALUE("current_segment_passed_distance",
+                   route_info_output_.current_segment_passed_distance);
+}
 }  // namespace planning

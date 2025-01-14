@@ -37,6 +37,14 @@ struct AstarParkingConfig {
   double deadend_uss_stuck_replan_wait_time;
 };
 
+struct ParkingSpeedConfig {
+  bool enable_apa_speed_plan;
+  double default_cruise_speed;
+  double min_cruise_speed;
+  // If obs dist is smaller than this value, add speed limit.
+  double obs_dist_for_speed_limit;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -335,7 +343,6 @@ struct ApaParameters {
   bool enable_delete_fusion_obj_in_slot = true;
   double deadend_uss_stuck_replan_wait_time;
 
-
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
   bool perpendicular_lat_opt_enable = true;
@@ -346,6 +353,7 @@ struct ApaParameters {
   bool lock_parallel_slot = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
+  double slot_release_car_lat_buffer = 0.15;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;
@@ -390,6 +398,7 @@ struct ApaParameters {
                                             0.18, 0.95, 0.95, 0.95, 0.95};
 
   AstarParkingConfig astar_config;
+  ParkingSpeedConfig speed_config;
 };
 
 class ApaParametersSetting {

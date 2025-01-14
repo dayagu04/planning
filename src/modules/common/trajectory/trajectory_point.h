@@ -1,8 +1,8 @@
 #pragma once
 
 #include "math/integral.h"
-#include "math/linear_interpolation.h"
-#include "math/math_utils.h"
+#include "src/modules/common/math/linear_interpolation.h"
+#include "src/modules/common/math/math_utils.h"
 #include "utils/path_point.h"
 
 namespace planning {

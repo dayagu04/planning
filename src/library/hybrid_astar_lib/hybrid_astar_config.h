@@ -17,7 +17,6 @@ struct PlannerOpenSpaceConfig {
   bool enable_dp_cost_for_vertical_park = false;
   bool enable_ref_line_h_cost_for_vertical_park = false;
   bool enable_rs_path_h_cost_for_vertical_park = false;
-  bool enable_obs_dist_g_cost = false;
 
   // parallel parking
 
@@ -53,7 +52,7 @@ struct PlannerOpenSpaceConfig {
 
   double lon_front_safe_buffer = 0.5;
   double lon_back_safe_buffer = 0.1;
-  double lon_min_safe_buffer = 0.1;
+  double lon_min_safe_buffer;
 
   double rs_path_seg_advised_dist = 0.35;
 

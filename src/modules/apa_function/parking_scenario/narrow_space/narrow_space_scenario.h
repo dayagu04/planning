@@ -5,7 +5,7 @@
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
-#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
+#include "virtual_wall_decider.h"
 #include "narrow_space_decider.h"
 
 namespace planning {
@@ -39,6 +39,10 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void ScenarioTry() override;
 
+  VirtualWallDecider* MutableVirtualWallDecider() {
+    return &virtual_wall_decider_;
+  }
+
  private:
   virtual const bool CheckReplan() override;
 
@@ -48,13 +52,13 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckParallelSlotFinished();
 
-  virtual void PlanCore() override;
+  virtual void ExcutePathPlanningTask() override;
 
   virtual void Log() const override;
 
-  virtual void GenTlane() override;
+  virtual const bool GenTlane() override;
 
-  virtual void GenObstacles() override;
+  virtual const bool GenObstacles() override;
 
   virtual const uint8_t PathPlanOnce() override;
 
@@ -107,8 +111,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckUssStucked();
 
-  void ShrinkPathByFusionObj();
-
   void PathShrinkBySlotLimiter();
 
   void PathExpansionBySlotLimiter();
@@ -141,6 +143,10 @@ class NarrowSpaceScenario : public ParkingScenario {
   bool is_path_single_shot_to_goal_;
 
   SlotRelativePosition slot_side_;
+
+  // 一个车位泊车中，通道虚拟墙只能增长，不能缩减.
+  // 如果根据车辆位置去缩减，导致2次规划之间路径差异太大.
+  VirtualWallDecider virtual_wall_decider_;
 
   NarrowScenarioDecider narrow_space_decider_;
 };

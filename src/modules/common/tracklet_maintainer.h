@@ -69,8 +69,8 @@ class TrackletMaintainer {
             double lane_width, double lat_offset, bool borrow_bicycle_lane,
             bool enable_intersection_planner, double dist_rblane,
             bool tleft_lane, bool rightest_lane, double dist_intersect,
-            double intersect_length, bool left_faster, bool right_faster,
-            LeadCars &lead_cars, bool isRedLightStop, bool isFasterStaticAvd,
+            double intersect_length,
+            LeadCars &lead_cars, bool isRedLightStop,
             bool isOnHighway, const std::vector<double> &d_poly,
             const std::vector<double> &c_poly);
 
@@ -86,9 +86,7 @@ class TrackletMaintainer {
 
   void check_accident_car(TrackedObject &item, double v_ego, int scenario,
                           double dist_intersect, double intersect_length,
-                          bool left_faster, bool right_faster,
-                          bool isRedLightStop, bool isFasterStaticAvd,
-                          bool isOnHighway);
+                          bool isRedLightStop, bool isOnHighway);
 
   void check_prebrk_object(TrackedObject &item, double v_ego,
                            double lane_width);

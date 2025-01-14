@@ -16,11 +16,14 @@ void FuturePathDecider::Process(const HybridAStarResult *history_path,
                                 const ParkReferenceLine *ref_line,
                                 const double min_turn_radius,
                                 const bool swap_start_goal,
+                                const AstarPathGenerateType path_generate_type,
                                 ParkFirstActionRequest *future_path_request) {
   ILOG_INFO << "plan reason=" << static_cast<int>(plan_reason);
 
   min_turn_radius_ = min_turn_radius;
   swap_start_goal_ = swap_start_goal;
+  path_generate_type_ = path_generate_type;
+  astar_step_ = 0.4;
 
   CalcDriveDistByLineModel(ego_pose, edt, ref_line);
 
@@ -29,6 +32,10 @@ void FuturePathDecider::Process(const HybridAStarResult *history_path,
   CalcDriveDistByHistoryPath(history_path, plan_reason);
 
   UpdateFuturePathRequest(future_path_request);
+
+  if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
+    future_path_request->Clear();
+  }
 
   return;
 }
@@ -116,7 +123,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     s += ds;
   }
 
-  future_drive_dist_info_.gear_drive_dist_to_obs = s - ds;
+  future_drive_dist_info_.gear_drive_dist_to_obs = s - ds - astar_step_;
 
   // gear reverse drive dist
   s = 0.01;
@@ -138,7 +145,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
 
     s += ds;
   }
-  future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds;
+  future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds - astar_step_;
   future_drive_dist_info_.advised_drive_dist = 1.2;
 
   ILOG_INFO << "dist to ref line=" << future_drive_dist_info_.dist_to_ref_line
@@ -153,7 +160,6 @@ void FuturePathDecider::CalcDriveDistByLineModel(
 void FuturePathDecider::CalcDriveDistByCircleModel(
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line) {
-
   // update gear drive safe dist
   Pose2D global_pose;
   Transform2d tf;
@@ -177,7 +183,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
   }
 
   if (s < future_drive_dist_info_.gear_drive_dist_to_obs) {
-    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds;
+    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds - astar_step_;
   }
 
   ILOG_INFO << "dirve, left s=" << s;
@@ -198,7 +204,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
   }
 
   if (s < future_drive_dist_info_.gear_drive_dist_to_obs) {
-    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds;
+    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds - astar_step_;
   }
   ILOG_INFO << "dirve, right s=" << s;
 
@@ -218,7 +224,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     s += ds;
   }
   if (s < future_drive_dist_info_.gear_reverse_dist_to_obs) {
-    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds;
+    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds - astar_step_;
   }
   ILOG_INFO << "reverse, left s=" << s;
 
@@ -237,7 +243,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     s += ds;
   }
   if (s < future_drive_dist_info_.gear_reverse_dist_to_obs) {
-    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds;
+    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds - astar_step_;
   }
 
   ILOG_INFO << "reverse, right s=" << s;
@@ -338,9 +344,9 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
       history_path->accumulated_s[history_path_info_.end_point_id_] -
       history_path->accumulated_s[history_path_info_.start_point_id_];
 
-  ILOG_INFO << "drive distance decider, gear: "
-            << PathGearDebugString(second_path_gear) << " ,dist "
-            << history_path_info_.dist_ << " ,shot number: "
+  ILOG_INFO << "drive distance decider hy history, gear = "
+            << PathGearDebugString(second_path_gear) << ", dist = "
+            << history_path_info_.dist_ << ", shot number = "
             << PathGearSwitchNumberString(
                    history_path_info_.gear_switch_number_);
 
@@ -387,7 +393,7 @@ void FuturePathDecider::UpdateFuturePathRequest(
   }
 
   if (future_path_request->dist_request > 2.5) {
-    future_path_request->dist_request -=0.4;
+    future_path_request->dist_request -= 0.4;
   }
 
   return;
@@ -436,8 +442,8 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
   for (int i = 0; i < path_point_num; ++i) {
     acc_s += 0.1;
 
-    InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s,
-                           inv_radius, &next_pose);
+    InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s, inv_radius,
+                           &next_pose);
 
     path->push_back(next_pose);
   }

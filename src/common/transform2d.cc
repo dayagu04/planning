@@ -244,4 +244,18 @@ void Transform2d::SetBasePose(const Pose2D &base_pose, const double sin_theta,
   return;
 }
 
+void Transform2d::GlobalPointToULFLocal(const Position2D &global_pos,
+                                        Position2D *local_pos) const {
+  if (local_pos == nullptr) {
+    return;
+  }
+
+  double tmp_x = global_pos.x - base_pose_.x;
+  double tmp_y = global_pos.y - base_pose_.y;
+
+  local_pos->x = tmp_x * cos_theta_ + tmp_y * sin_theta_;
+  local_pos->y = tmp_y * cos_theta_ - tmp_x * sin_theta_;
+  return;
+}
+
 }  // namespace planning

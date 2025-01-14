@@ -40,6 +40,10 @@ class LateralPathOptimizer {
     return output_path_vec_;
   }
 
+  const std::vector<pnc::geometry_lib::PathPoint> &GetOriginOutputPathVec() {
+    return origin_output_path_vec_;
+  }
+
   const planning::common::LateralPathOptimizerOutput &GetOutputDebugInfo()
       const {
     return optimizer_planning_output_;
@@ -60,6 +64,7 @@ class LateralPathOptimizer {
 
   // local path
   std::vector<pnc::geometry_lib::PathPoint> output_path_vec_;
+  std::vector<pnc::geometry_lib::PathPoint> origin_output_path_vec_;
   Parameter param_;
 };
 }  // namespace apa_planner

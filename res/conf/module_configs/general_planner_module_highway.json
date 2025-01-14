@@ -202,7 +202,11 @@
     "relative_position_decrease_extra_buffer":[0, 0.18, 0.15, 0.13, 0.1, 0.0],
     "relative_v_bp":[-0.05, 0, 1, 2, 3, 4],
     "relative_v_decrease_extra_buffer":[0.0, 0.06, 0.12, 0.17, 0.2, 0.25],
-    "truck_decrease_extra_buffer":0.1
+    "truck_decrease_extra_buffer":0.1,
+    "care_exceed_distance_with_blocked_obstacle":2.5,
+    "extra_front_lon_buffer2blockobstacle":1.0,
+    "extra_rear_lon_buffer2blockobstacle":4.0,
+    "extra_hard_buffer2blockobstacle":0.0
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
@@ -467,8 +471,8 @@
     "enable_rss_model": false,
     "cruise_set_acc": 5.0,
     "cruise_set_dec": -1.0,
-    "fast_lead_distance_step": 1.0,
-    "slow_lead_distance_step": 2.0,
+    "fast_lead_distance_step": 2.0,
+    "slow_lead_distance_step": 3.0,
     "cut_in_desired_distance_step": 1.0,
     "soft_bound_corridor_t": 0.3,
     "acc_start_max_bound": 1.5,
@@ -624,8 +628,12 @@
         23.0, 20.0, 15.0, 10.0,
         7.0]
     }
+},
 
-  }
-
+"lane_borrow":{
+  "max_concern_obs_distance":  50.0,
+  "obs_static_vel_thold": 0.2,
+  "observe_frames": 15
+}
 }
 

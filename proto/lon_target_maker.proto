@@ -2,9 +2,10 @@ syntax = "proto2";
 
 package planning.common;
 
-message TargetPoint2D {
+message TargetPoint {
   optional double s = 1;
   optional double t = 2;
+  optional int32 target_type = 3;
 }
 
 message TargetMaker {
@@ -13,14 +14,24 @@ message TargetMaker {
   optional FollowTarget follow_target = 3;
 }
 
+message WeightMaker {
+  optional WeightMakerReplayInfo weight_maker_replay_info = 1;
+}
+
 message FinalTarget {
-  repeated TargetPoint2D final_target_s_ref = 1;
+  repeated TargetPoint final_target_s_ref = 1;
 }
 
 message CruiseTarget {
-  repeated TargetPoint2D cruise_target_s_ref = 1;
+  repeated TargetPoint cruise_target_s_ref = 1;
 }
 
 message FollowTarget {
-  repeated TargetPoint2D follow_target_s_ref = 1;
+  repeated TargetPoint follow_target_s_ref = 1;
+}
+
+message WeightMakerReplayInfo {
+  optional bool is_urgent = 1;
+  repeated TargetPoint target_point = 2;
+  optional double urgent_scale = 3;
 }

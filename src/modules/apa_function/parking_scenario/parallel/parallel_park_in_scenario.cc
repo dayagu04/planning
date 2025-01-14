@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "apa_data.h"
+
 #include "apa_param_config.h"
 #include "apa_utils.h"
 #include "apa_world.h"
@@ -66,15 +66,16 @@ void ParallelParkInScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-void ParallelParkInScenario::PlanCore() {
+void ParallelParkInScenario::ExcutePathPlanningTask() {
   // init simulation
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan &&
-      CheckPlanSkip()) {
+  if (!apa_world_ptr_->GetSimuParam().force_plan && CheckPlanSkip()) {
     return;
   }
+
+  UpdateStuckTime();
 
   if (CheckPaused()) {
     SetParkingStatus(PARKING_PAUSED);
@@ -114,7 +115,7 @@ void ParallelParkInScenario::PlanCore() {
   }
 
   // check replan
-  if (CheckReplan() || apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
+  if (CheckReplan() || apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "replan is required!";
 
     // generate t-lane
@@ -388,27 +389,10 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   // ILOG_INFO <<"ego_slot_info.obs_pt_vec_slot size = "
   //             << ego_slot_info.obs_pt_vec_slot.size());
 
-  // update stuck time
-  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
-    frame_.stuck_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.stuck_time = 0.0;
-  }
-
-  // update pause time
-  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    frame_.pause_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.pause_time = 0.0;
-  }
-
   return true;
 }
 
-void ParallelParkInScenario::GenTlane() {
+const bool ParallelParkInScenario::GenTlane() {
   // Todo: generate t-lane according to nearby obstacles
   const auto& ego_slot_info = frame_.ego_slot_info;
 
@@ -719,6 +703,8 @@ void ParallelParkInScenario::GenTlane() {
   JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
   JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
   JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
+
+  return true;
 }
 
 void ParallelParkInScenario::UpdateTlaneOnceInSlot() {
@@ -971,7 +957,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       point_set, CollisionDetector::CURB_OBS);
 }
 
-void ParallelParkInScenario::GenObstacles() {
+const bool ParallelParkInScenario::GenObstacles() {
   // set obstacles.
 
   //                         ^ y                      |
@@ -1101,6 +1087,7 @@ void ParallelParkInScenario::GenObstacles() {
       // ILOG_INFO << "obs_pos = " << obs_pos.transpose() ;
     }
   }
+  return true;
 }
 
 const bool ParallelParkInScenario::IsEgoInSlot() const {
@@ -1121,11 +1108,10 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   ParallelPathGenerator::Input path_planner_input;
   path_planner_input.tlane = t_lane_;
-  path_planner_input.sample_ds =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
+  path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = frame_.is_replan_first;
   path_planner_input.is_complete_path =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.is_complete_path;
+      apa_world_ptr_->GetSimuParam().is_complete_path;
 
   const auto& ego_slot_info = frame_.ego_slot_info;
   path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
@@ -1296,16 +1282,16 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   bool cilqr_optimization_enable = true;
   bool parallel_optimization_enable = true;
-  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
+  if (!apa_world_ptr_->GetSimuParam().is_simulation) {
     parallel_optimization_enable = apa_param.GetParam().parallel_lat_opt_enable;
     cilqr_optimization_enable =
         apa_param.GetParam().cilqr_path_optimization_enable;
 
   } else {
     parallel_optimization_enable =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.is_path_optimization;
+        apa_world_ptr_->GetSimuParam().is_path_optimization;
     cilqr_optimization_enable =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.is_cilqr_optimization;
+        apa_world_ptr_->GetSimuParam().is_cilqr_optimization;
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
@@ -1319,17 +1305,15 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     ILOG_INFO << "origin path size= " << planner_output.path_point_vec.size();
 
     LateralPathOptimizer::Parameter param;
-    param.sample_ds = apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
-    param.q_ref_xy = apa_world_ptr_->GetApaDataPtr()->simu_param.q_ref_xy;
-    param.q_ref_theta = apa_world_ptr_->GetApaDataPtr()->simu_param.q_ref_theta;
-    param.q_terminal_xy =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.q_terminal_xy;
-    param.q_terminal_theta =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.q_terminal_theta;
-    param.q_k = apa_world_ptr_->GetApaDataPtr()->simu_param.q_k;
-    param.q_u = apa_world_ptr_->GetApaDataPtr()->simu_param.q_u;
-    param.q_k_bound = apa_world_ptr_->GetApaDataPtr()->simu_param.q_k_bound;
-    param.q_u_bound = apa_world_ptr_->GetApaDataPtr()->simu_param.q_u_bound;
+    param.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
+    param.q_ref_xy = apa_world_ptr_->GetSimuParam().q_ref_xy;
+    param.q_ref_theta = apa_world_ptr_->GetSimuParam().q_ref_theta;
+    param.q_terminal_xy = apa_world_ptr_->GetSimuParam().q_terminal_xy;
+    param.q_terminal_theta = apa_world_ptr_->GetSimuParam().q_terminal_theta;
+    param.q_k = apa_world_ptr_->GetSimuParam().q_k;
+    param.q_u = apa_world_ptr_->GetSimuParam().q_u;
+    param.q_k_bound = apa_world_ptr_->GetSimuParam().q_k_bound;
+    param.q_u_bound = apa_world_ptr_->GetSimuParam().q_u_bound;
 
     apa_world_ptr_->GetLateralPathOptimizerPtr()->Init(
         cilqr_optimization_enable);
@@ -1413,7 +1397,7 @@ const bool ParallelParkInScenario::CheckSegCompleted() {
       } else {
         ILOG_INFO << "close to obstacle by uss!\n";
         // uss distance may not be accurate, so wait for a period of time
-        if (frame_.stuck_time >
+        if (frame_.stuck_uss_time >
             apa_param.GetParam().uss_stuck_replan_wait_time) {
           is_seg_complete = true;
         }
@@ -1426,7 +1410,7 @@ const bool ParallelParkInScenario::CheckSegCompleted() {
 
 const bool ParallelParkInScenario::CheckReplan() {
   if (frame_.is_replan_first == true ||
-      apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
+      apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "first plan";
     frame_.replan_reason = FIRST_PLAN;
     return true;
@@ -1441,7 +1425,7 @@ const bool ParallelParkInScenario::CheckReplan() {
     return true;
   }
 
-  if (frame_.stuck_time > apa_param.GetParam().stuck_replan_time) {
+  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
     ILOG_INFO << "replan by stuck!";
     frame_.replan_reason = STUCKED;
     return true;

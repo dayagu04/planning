@@ -338,4 +338,17 @@ HybridAStarThreadSolver::~HybridAStarThreadSolver() {
   Stop();
 }
 
+void HybridAStarThreadSolver::GetVirtualWallPoints(
+    std::vector<Position2D>* virtual_obs) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (solver_interface_ != nullptr && virtual_obs != nullptr) {
+    const ParkObstacleList& obs_list = solver_interface_->GetConstObstacles();
+
+    *virtual_obs = obs_list.virtual_obs;
+  }
+
+  return;
+}
+
 }  // namespace planning

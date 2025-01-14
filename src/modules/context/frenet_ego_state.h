@@ -18,6 +18,8 @@ class FrenetEgoState {
 
   double s() const { return s_; }
   double l() const { return l_; }
+  double head_s() const { return head_s_; }
+  double head_l() const { return head_l_; }
   double heading_angle() const { return heading_angle_; }
   double velocity() const { return velocity_; }
   double velocity_s() const { return velocity_ * std::cos(heading_angle_); }
@@ -35,6 +37,8 @@ class FrenetEgoState {
  private:
   double s_;
   double l_;
+  double head_s_;
+  double head_l_;
   double velocity_;
   double acc_;
   double jerk_;

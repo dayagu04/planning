@@ -59,7 +59,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const double kOvertakeTriggerEgoSpeedMinThreshold = 5.56;  // 20km/h
+  const double trigger_overtake_min_ego_speed_threshold = 5.56;  // 20km/h
+  const double surpress_overtake_min_distance_to_split = 500.0;
   double minimum_ego_cruise_speed_for_active_lane_change =
       config_.minimum_ego_cruise_speed_for_active_lane_change;
   // const double kOvertakeTriggerCruiseSpeedMinThreshold = 16.67;  // 60km/h
@@ -85,6 +86,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const double dis_to_first_merge =
       route_info_output.distance_to_first_road_merge;
+  const double distance_to_first_road_split = 
+      route_info_output.distance_to_first_road_split;
   const int origin_relative_id_zero_nums =
       virtual_lane_mgr_->origin_relative_id_zero_nums();
 
@@ -106,7 +109,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
-      map_request_.update(lc_status, map_request_.tfinish());
+      map_request_.Update(lc_status, map_request_.tfinish());
     }
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
         origin_relative_id_zero_nums == 1) {
@@ -127,7 +130,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
               minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
           sum_dis_to_last_merge_point <
               max_pass_merge_distance_to_surpress_overtake_lane_change ||
-          dis_to_first_merge < dis_threshold_to_merged_point) {
+          dis_to_first_merge < dis_threshold_to_merged_point ||
+          distance_to_first_road_split <
+              surpress_overtake_min_distance_to_split) {
         overtake_request_.Reset();
         LOG_DEBUG(
             "cann't generate overtake lane change on ramp or near ramp or near "
@@ -144,7 +149,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
       const auto& ego_state =
           session_->environmental_model().get_ego_state_manager();
-      if (ego_state->ego_v() < kOvertakeTriggerEgoSpeedMinThreshold ||
+      if (ego_state->ego_v() < trigger_overtake_min_ego_speed_threshold ||
           ego_state->ego_v_cruise() <
               minimum_ego_cruise_speed_for_active_lane_change) {
         LOG_DEBUG(

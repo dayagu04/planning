@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "Eigen/Core"
-
 #include "apa_world.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
@@ -19,6 +18,7 @@
 
 static const double kPiConst = 3.141592654;
 static const double kMinRadius = 6.0;
+static const double KappaMax = 1.0 / kMinRadius;
 static const double kCurvFactor = 0.3;
 static const double kMaxDelta = 400 / 57.3 / 15;
 static const double kRefVel = 0.6;
@@ -116,8 +116,7 @@ void LateralPathOptimizer::AssembleInput(
   double s_ilqr = 0.0;
 
   // set reference
-  const auto k_max = 1.0 / kMinRadius;
-  const auto k_min = -k_max;
+  const auto k_min = -KappaMax;
   const auto u_max = kCurvFactor * kMaxDelta / kRefVel;
   const auto u_min = -u_max;
   for (size_t i = 0; i < ilqr_horizon + 1; ++i) {
@@ -130,15 +129,15 @@ void LateralPathOptimizer::AssembleInput(
       planning_input_.mutable_init_state()->set_theta(theta_s_spline_(s_ilqr));
 
       planning_input_.mutable_init_state()->set_k(pnc::mathlib::Limit(
-          theta_s_spline_.deriv(1, s_ilqr + 0.5 * ds_ilqr), k_max));
+          theta_s_spline_.deriv(1, s_ilqr + 0.5 * ds_ilqr), KappaMax));
     }
     planning_input_.mutable_ref_theta_vec()->Set(i, theta_s_spline_(s_ilqr));
     planning_input_.mutable_ref_x_vec()->Set(i, x_s_spline_(s_ilqr));
     planning_input_.mutable_ref_y_vec()->Set(i, y_s_spline_(s_ilqr));
     planning_input_.mutable_ref_k_vec()->Set(
-        i, pnc::mathlib::Limit(theta_s_spline_.deriv(1, s_ilqr), k_max));
+        i, pnc::mathlib::Limit(theta_s_spline_.deriv(1, s_ilqr), KappaMax));
 
-    planning_input_.mutable_k_max_vec()->Set(i, k_max);
+    planning_input_.mutable_k_max_vec()->Set(i, KappaMax);
     planning_input_.mutable_k_min_vec()->Set(i, k_min);
     planning_input_.mutable_u_max_vec()->Set(i, u_max);
     planning_input_.mutable_u_min_vec()->Set(i, u_min);
@@ -219,18 +218,30 @@ void LateralPathOptimizer::PostProcessOutput() {
   std::vector<double> x_vec;
   std::vector<double> y_vec;
   std::vector<double> theta_vec;
+  std::vector<double> k_vec;
   std::vector<double> s_vec;
   x_vec.reserve(N);
   y_vec.reserve(N);
   theta_vec.reserve(N);
+  k_vec.reserve(N);
   s_vec.reserve(N);
 
   // double s_sum = 0.0;
+  pnc::geometry_lib::PathPoint pt;
+  origin_output_path_vec_.clear();
+  origin_output_path_vec_.reserve(planning_output.x_vec().size());
   for (size_t i = 0; i < N; i++) {
     x_vec.emplace_back(planning_output.x_vec(i));
     y_vec.emplace_back(planning_output.y_vec(i));
     theta_vec.emplace_back(planning_output.theta_vec(i));
+    k_vec.emplace_back(planning_output.k_vec(i));
     s_vec.emplace_back(planning_output.s_vec(i));
+    pt.pos << planning_output.x_vec(i), planning_output.y_vec(i);
+    pt.heading =
+        pnc::geometry_lib::NormalizeAngle(planning_output.theta_vec(i));
+    pt.kappa = pnc::mathlib::Limit(planning_output.k_vec(i), KappaMax);
+    pt.s = planning_output.s_vec(i);
+    origin_output_path_vec_.emplace_back(pt);
   }
 
   size_t resampled_point_num = std::ceil(s_vec.back() / param_.sample_ds);
@@ -244,9 +255,12 @@ void LateralPathOptimizer::PostProcessOutput() {
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
   pnc::mathlib::spline theta_s_spline;
+  pnc::mathlib::spline k_s_spline;
+
   x_s_spline.set_points(s_vec, x_vec);
   y_s_spline.set_points(s_vec, y_vec);
   theta_s_spline.set_points(s_vec, theta_vec);
+  k_s_spline.set_points(s_vec, k_vec);
 
   output_path_vec_.clear();
   output_path_vec_.reserve(adjust_sample_point_num);
@@ -258,6 +272,8 @@ void LateralPathOptimizer::PostProcessOutput() {
     point << x_s_spline(resampled_ds), y_s_spline(resampled_ds);
     heading = pnc::geometry_lib::NormalizeAngle(theta_s_spline(resampled_ds));
     tmp_output.Set(point, heading);
+    tmp_output.s = resampled_ds;
+    tmp_output.kappa = pnc::mathlib::Limit(k_s_spline(resampled_ds), KappaMax);
     output_path_vec_.emplace_back(tmp_output);
     resampled_ds += adjust_sample_ds;
   }

@@ -4,7 +4,6 @@
 #include <string>
 #include <utility>
 
-#include "apa_data.h"
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "collision_detection/collision_detection.h"
@@ -12,6 +11,7 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "log_glog.h"
+#include "math_lib.h"
 #include "transform_lib.h"
 
 namespace planning {
@@ -393,11 +393,6 @@ void UssObstacleAvoidance::GenUssArc() {
 }
 
 const bool UssObstacleAvoidance::Preprocess() {
-  if (apa_data_ptr_ == nullptr) {
-    ILOG_INFO << "uss apa_data_ptr_ is nullptr!";
-    return false;
-  }
-
   // 添加障碍物 世界坐标即可  暂时只添加超声波点云障碍物,
   // 后续应该放在一个地方统一计算所有真实的障碍物，考虑高度
   col_det.ClearObstacles();
@@ -410,6 +405,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
                         obs->GetPtClout2dGlobal().end());
     }
+    ILOG_INFO << "uss pt size = " << obs_pt_vec.size();
     col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
   }
 
@@ -421,6 +417,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
                         obs->GetPtClout2dGlobal().end());
     }
+    ILOG_INFO << "occ pt size = " << obs_pt_vec.size();
     col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
   }
 
@@ -432,6 +429,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
                         obs->GetPtClout2dGlobal().end());
     }
+    ILOG_INFO << "gl pt size = " << obs_pt_vec.size();
     col_det.AddObstacles(obs_pt_vec,
                          CollisionDetector::ObsType::GROUND_LINE_OBS);
   }
@@ -446,63 +444,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       (predict_path_ptr_->GetPathGear() == pnc::geometry_lib::SEG_GEAR_REVERSE);
 
   // set uss raw dist data
-  uss_raw_dist_vec_.clear();
-  uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
-
-  const double min_uss_dist = apa_param.GetParam().min_uss_origin_dist;
-
-  if (apa_param.GetParam().is_uss_dist_from_perception) {
-    const auto &uss_dis_info_buf =
-        apa_data_ptr_->uss_percept_info_ptr->dis_from_car_to_obj;
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // TODO(xjli32): NOTE
-    // uss info is stored in the fifth buf,
-    // uss_dis_info_buf size is 4 in c struct definition now, need to
-    // confirm interface with xuliu15;
-    // disable uss_dis_info temporarily;
-    // return false;
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // const auto &uss_dis_info = uss_dis_info_buf[4];
-    // if (uss_dis_info.obj_pt_cnt != 12) {
-    //   ILOG_INFO << "uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ";
-    //   return false;
-    // }
-    // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
-    // first four are front upa, the middle four are rear upa, the rest are apa.
-
-    //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
-    //  upa, fr apa
-    for (const auto &front_uss_idx :
-         apa_param.GetParam().uss_wdis_index_front) {
-      uss_raw_dist_vec_.emplace_back(
-          std::max(min_uss_dist, 0.001 * uss_dis_info_buf[front_uss_idx]));
-    }
-
-    // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4
-    // upa, rl apa
-    for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
-      uss_raw_dist_vec_.emplace_back(
-          std::max(min_uss_dist, 0.001 * uss_dis_info_buf[rear_uss_idx]));
-    }
-  } else {
-    // load uss dist from uss wave, m id f
-    const auto &upa_dis_info_buf =
-        apa_data_ptr_->uss_wave_info_ptr->upa_dis_info_buf;
-
-    const std::vector<int> front_wids_idx_vec = {0, 9, 6, 3, 1, 11};
-    const std::vector<int> rear_wids_idx_vec = {0, 1, 3, 6, 9, 11};
-
-    const std::vector<std::vector<int>> wids_idx_vec = {front_wids_idx_vec,
-                                                        rear_wids_idx_vec};
-    for (size_t i = 0; i < wids_idx_vec.size(); i++) {
-      for (size_t j = 0; j < wids_idx_vec[i].size(); j++) {
-        const auto idx = wids_idx_vec[i][j];
-        uss_raw_dist_vec_.emplace_back(std::max(
-            min_uss_dist, 1.0 * upa_dis_info_buf[i].wdis[idx].wdis_value[0]));
-      }
-    }
-  }
+  uss_raw_dist_vec_ = obstacle_manager_ptr_->GetUssDisVec();
 
   std::string dist_str;
   for (const double dist : uss_raw_dist_vec_) {
@@ -562,17 +504,15 @@ void UssObstacleAvoidance::CalRemainDist() {
 }
 
 void UssObstacleAvoidance::Update(
-    const std::shared_ptr<ApaData> apa_data_ptr,
     const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
     const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
     const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
-  if (apa_data_ptr == nullptr || measure_data_ptr == nullptr ||
-      predict_path_ptr == nullptr || obstacle_manager_ptr == nullptr) {
+  if (measure_data_ptr == nullptr || predict_path_ptr == nullptr ||
+      obstacle_manager_ptr == nullptr) {
     ILOG_ERROR << "UssObstacleAvoidance UPDATE input_ptr is err";
     return;
   }
   // update local_view
-  apa_data_ptr_ = apa_data_ptr;
   measure_data_ptr_ = measure_data_ptr;
   predict_path_ptr_ = predict_path_ptr;
   obstacle_manager_ptr_ = obstacle_manager_ptr;
@@ -656,10 +596,17 @@ void UssObstacleAvoidance::Update(
       col_det.CalClosestDistFromObsToCar(pnc::geometry_lib::PathPoint(
           measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading()));
   double vel_target = 1.168;
-  if (dist + param_.lat_inflation < 0.268 &&
-      !apa_param.GetParam().enable_corner_uss_process) {
+  if (!apa_param.GetParam().enable_corner_uss_process) {
     // limit vel
-    vel_target = std::max(0.368, measure_data_ptr_->GetVel() - 0.28 * 0.1);
+    if (dist + param_.lat_inflation < 0.268) {
+      ILOG_INFO << "obs2car_dist is dangerous, reduce vel";
+      vel_target =
+          std::max(0.368, std::fabs(measure_data_ptr_->GetVel()) - 0.28 * 0.1);
+    } else {
+      ILOG_INFO << "obs2car_dist is safe, increase vel";
+      vel_target = pnc::mathlib::Constrain(
+          std::fabs(measure_data_ptr_->GetVel()) + 0.68 * 0.1, 0.768, 1.168);
+    }
   }
   ILOG_INFO << "vel_target = " << vel_target;
   remain_dist_info_.vel_target = vel_target;

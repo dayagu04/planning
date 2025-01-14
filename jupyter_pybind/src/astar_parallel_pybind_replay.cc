@@ -14,46 +14,49 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-#include "apa_data.h"
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
+#include "apa_world/apa_world.h"
+#include "camera_preception_groundline_c.h"
+#include "config_context.h"
+#include "control_command_c.h"
+#include "debug_info_log.h"
 #include "func_state_machine_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
+#include "fusion_parking_slot_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
-#include "interface/src/c/camera_preception_groundline_c.h"
-#include "interface/src/c/fusion_objects_c.h"
-#include "interface/type_convert/struct_convert/camera_preception_groundline_c.h"
-#include "interface/type_convert/struct_convert/fusion_objects_c.h"
-#include "interface/src/c/fusion_occupancy_objects_c.h"
-#include "interface/type_convert/struct_convert/fusion_occupancy_objects_c.h"
-
+#include "log_glog.h"
+#include "narrow_space_scenario.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
+#include "polygon_base.h"
+#include "pose2d.h"
 #include "serialize_utils.h"
 #include "slot_manager.h"
 #include "src/common/debug_info_log.h"
-#include "log_glog.h"
-#include "pose2d.h"
-#include "transform2d.h"
-#include "src/library/collision_detection/gjk2d_interface.h"
-#include "polygon_base.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
-#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "struct_convert/camera_preception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_objects_c.h"
+#include "struct_convert/fusion_occupancy_objects_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
-// #include "struct_convert/localization_c.h"
-#include "interface/src/c/func_state_machine_c.h"
+#include "struct_convert/hmi_inner_c.h"
 #include "struct_convert/ifly_localization_c.h"
 #include "struct_convert/planning_plan_c.h"
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
 #include "struct_convert/vehicle_service_c.h"
+#include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
@@ -64,8 +67,9 @@
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
-#include "path_safe_checker.h"
-#include "narrow_space_scenario.h"
+#include "transform2d.h"
+#include "vehicle_service_c.h"
+#include "virtual_wall_decider.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -97,7 +101,6 @@ Pose2D base_pose_;
 EigenPath2d static_ref_line_;
 
 // bit 4 is flag
-Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 Eigen::Vector3d goal_pose_;
@@ -413,81 +416,6 @@ static const int CopyVirtualWallForPlot(
   return 0;
 }
 
-void GetTrajPoseBySDist(const double s) {
-  size_t left_idx = 0;
-  size_t right_idx = 0;
-
-  car_pose_by_s_[3] = -1.0;
-
-  if (global_astar_path_.size() < 1) {
-    return;
-  }
-
-  // ILOG_INFO << "s " << s << " path size "
-  //           << global_astar_path_.size();
-
-  // for (size_t i = 0; i < global_path_s_.size(); i++) {
-  //   ILOG_INFO << "i " << i << "s " << global_path_s_[i] << " "
-  //             << global_astar_path_[i].x() << " " <<
-  //             global_astar_path_[i].y();
-  // }
-
-  if (s <= global_path_s_[0]) {
-    left_idx = 0;
-    right_idx = 0;
-  } else if (global_path_s_.size() > 0 &&
-             s >= global_path_s_[global_path_s_.size() - 1]) {
-    left_idx = global_path_s_.size() - 1;
-    right_idx = left_idx;
-  } else {
-    for (size_t i = 0; i < global_path_s_.size(); i++) {
-      if (i == 0) {
-        if (s <= global_path_s_[1]) {
-          left_idx = 0;
-          right_idx = 1;
-          break;
-        }
-      }
-
-      if (s <= global_path_s_[i] && s >= global_path_s_[i - 1]) {
-        left_idx = i - 1;
-        right_idx = i;
-        break;
-      }
-    }
-  }
-
-  double left_s = global_path_s_[left_idx];
-  double right_s = global_path_s_[right_idx];
-
-  if (left_idx == right_idx) {
-    car_pose_by_s_[0] = global_astar_path_[left_idx][0];
-    car_pose_by_s_[1] = global_astar_path_[left_idx][1];
-    car_pose_by_s_[2] = global_astar_path_[left_idx][2];
-  } else {
-    car_pose_by_s_[0] =
-        ad_common::math::lerp(global_astar_path_[left_idx][0], left_s,
-                              global_astar_path_[right_idx][0], right_s, s);
-
-    car_pose_by_s_[1] =
-        ad_common::math::lerp(global_astar_path_[left_idx][1], left_s,
-                              global_astar_path_[right_idx][1], right_s, s);
-
-    car_pose_by_s_[2] =
-        ad_common::math::slerp(global_astar_path_[left_idx][2], left_s,
-                               global_astar_path_[right_idx][2], right_s, s);
-  }
-
-  car_pose_by_s_[3] = 1.0;
-
-  ILOG_INFO << "left s " << left_s << "right s " << right_s << " left phi "
-            << global_astar_path_[left_idx][2] << " right phi "
-            << global_astar_path_[right_idx][2] << " left_idx " << left_idx
-            << " right_idx" << right_idx;
-
-  return;
-}
-
 SlotRelativePosition GenerateSlotSide(
     const planning::apa_planner::ParkingScenario::EgoSlotInfo &ego_slot_info,
     iflyauto::IFLYLocalization &localization) {
@@ -542,7 +470,7 @@ const bool PlanOnce(
     std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
-    std::vector<double> target_managed_limiter_y_vec, int current_state) {
+    std::vector<double> target_managed_limiter_y_vec) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -560,12 +488,9 @@ const bool PlanOnce(
 
   apa_interface_ptr->SetSimuParam(sim_param);
 
-  // iflyauto::FuncStateMachine func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-  //         func_statemachine_bytes);
-
-  iflyauto::FuncStateMachine func_statemachine;
-  func_statemachine.current_state = static_cast<FunctionalState>(current_state);
+  iflyauto::FuncStateMachine func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -648,30 +573,7 @@ const bool PlanOnce(
     GetPathFromHybridAstar();
 
     ParkObstacleList virtual_wall_obs;
-    VirtualWallDecider wall_decider;
-
-    ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type == 1) {
-      slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type == 3) {
-      slot_type = ParkSpaceType::SLANTING;
-    } else {
-      slot_type = ParkSpaceType::VERTICAL;
-    }
-
-    SlotRelativePosition slot_side =
-        GenerateSlotSide(ego_slot_info, localization_info);
-
-    wall_decider.Process(
-        virtual_wall_obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
-        ego_slot_info.slot_length,
-        Pose2D(ego_slot_info.ego_pos_slot[0], ego_slot_info.ego_pos_slot[1],
-               ego_slot_info.ego_heading_slot),
-        Pose2D(ego_slot_info.target_ego_pos_slot[0],
-               ego_slot_info.target_ego_pos_slot[1],
-               ego_slot_info.target_ego_heading_slot),
-        slot_type, slot_side);
-
+    thread_solver_->GetVirtualWallPoints(&virtual_wall_obs.virtual_obs);
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
   } else {
@@ -832,14 +734,15 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     SlotRelativePosition slot_side =
         GenerateSlotSide(ego_slot_info, local_view.localization);
 
-    VirtualWallDecider wall_decider;
-    wall_decider.Process(hybrid_astar_obs_.virtual_obs, 40.0, 15.0,
+    VirtualWallDecider *wall_decider =
+        hybrid_astar_park_->MutableVirtualWallDecider();
+    wall_decider->Process(hybrid_astar_obs_.virtual_obs,
                          ego_slot_info.slot_width, ego_slot_info.slot_length,
                          start, real_end, slot_type, slot_side);
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start);
+        ego_slot_info.slot_width, slot_base_pose, start, false);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 
@@ -925,8 +828,6 @@ std::vector<double> GetDynamicState() {
 
   return res;
 }
-
-Eigen::Vector4d GetTrajPoseByDist() { return car_pose_by_s_; }
 
 void DynamicsSwitchBuf(double x, double y, double heading) {
   perfect_control_ptr->SetState(
@@ -1052,7 +953,6 @@ PYBIND11_MODULE(astar_parallel_replay_py, m) {
       .def("GetVirtualWall", &GetVirtualWall)
       .def("SetGroundLine", &SetGroundLine)
       .def("SetFusionObject", &SetFusionObject)
-      .def("GetTrajPoseByDist", &GetTrajPoseByDist)
       .def("GetAstarEndPose", &GetAstarEndPose)
       .def("GetAstarPathCollisionID", &GetAstarPathCollisionID)
       .def("GetAstarAllNodes", &GetAstarAllNodes)

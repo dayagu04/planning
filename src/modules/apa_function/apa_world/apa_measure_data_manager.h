@@ -1,6 +1,7 @@
 #pragma once
 #include "Eigen/Core"
 #include "local_view.h"
+#include "pose2d.h"
 
 namespace planning {
 namespace apa_planner {
@@ -14,6 +15,8 @@ class ApaMeasureDataManager final {
   void Reset() {
     vel_ = 0.0;
     pos_.setZero();
+    right_mirror_pos_.setZero();
+    left_mirror_pos_.setZero();
     heading_ = 0.0;
     heading_vec_.setZero();
     car_static_timer_by_pos_strict_ = 0.0;
@@ -24,6 +27,7 @@ class ApaMeasureDataManager final {
     steer_wheel_angle_ = 0.0;
     front_wheel_angle_ = 0.0;
     brake_flag_ = false;
+    fold_mirror_flag_ = false;
   }
 
   const double GetVel() const { return vel_; }
@@ -53,6 +57,9 @@ class ApaMeasureDataManager final {
   const double GetSteerWheelAngle() const { return steer_wheel_angle_; }
   const double GetFrontWheelAngle() const { return front_wheel_angle_; }
   const bool GetBrakeFlag() const { return brake_flag_; }
+  const bool GetFoldMirrorFlag() const { return fold_mirror_flag_; }
+
+  const Pose2D GetPose() { return Pose2D(pos_[0], pos_[1], heading_); }
 
  private:
   double vel_ = 0.0;
@@ -72,6 +79,8 @@ class ApaMeasureDataManager final {
   double front_wheel_angle_ = 0.0;
 
   bool brake_flag_ = false;
+
+  bool fold_mirror_flag_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

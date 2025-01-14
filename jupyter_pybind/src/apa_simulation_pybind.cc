@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include "apa_debug_data.pb.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "camera_preception_groundline_c.h"
@@ -173,13 +174,21 @@ const bool InterfaceUpdateParam(
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec,
-    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec) {
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec, std::vector<double> lat_path_optimizier_params) {
   SimulationParam param;
   param.is_simulation = true;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
   param.is_cilqr_optimization = is_cilqr_optimization;
+  param.q_ref_xy = lat_path_optimizier_params[0];
+  param.q_ref_theta = lat_path_optimizier_params[1];
+  param.q_terminal_xy = lat_path_optimizier_params[2];
+  param.q_terminal_theta = lat_path_optimizier_params[3];
+  param.q_k = lat_path_optimizier_params[4];
+  param.q_u = lat_path_optimizier_params[5];
+  param.q_k_bound = lat_path_optimizier_params[6];
+  param.q_u_bound = lat_path_optimizier_params[7];
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
   param.sim_to_target = sim_to_target;
@@ -310,6 +319,59 @@ void DynamicsSwitchBuf(double x, double y, double heading) {
       PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
 }
 
+std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
+  std::vector<Eigen::VectorXd> speed_limit_profile;
+  Eigen::VectorXd v(6);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_limit_profile.emplace_back(v);
+    return speed_limit_profile;
+  }
+
+  int size = 0;
+  if (speed_debug->has_speed_limit()) {
+    size = speed_debug->speed_limit().s_size();
+  }
+
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->speed_limit().s(i);
+
+    if (i < speed_debug->speed_limit().obs_dist_size()) {
+      v[1] = speed_debug->speed_limit().obs_dist(i);
+    }
+
+    if (i < speed_debug->speed_limit().v_upper_bound_size()) {
+      v[2] = speed_debug->speed_limit().v_upper_bound(i);
+    }
+
+    if (i < speed_debug->speed_limit().a_upper_bound_size()) {
+      v[3] = speed_debug->speed_limit().a_upper_bound(i);
+    }
+
+    if (i < speed_debug->speed_limit().a_lower_bound_size()) {
+      v[4] = speed_debug->speed_limit().a_lower_bound(i);
+    }
+
+    if (i < speed_debug->speed_limit().jerk_upper_bound_size()) {
+      v[5] = speed_debug->speed_limit().jerk_upper_bound(i);
+    }
+
+    speed_limit_profile.emplace_back(v);
+  }
+
+  if (speed_limit_profile.size() == 0) {
+    speed_limit_profile.emplace_back(v);
+  }
+
+  return speed_limit_profile;
+}
+
 PYBIND11_MODULE(apa_simulation_py, m) {
   m.doc() = "m";
 
@@ -321,5 +383,6 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
       .def("DynamicsUpdate", &DynamicsUpdate)
       .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
+      .def("GetApaSpeedLimit", &GetApaSpeedLimit)
       .def("GetDynamicState", &GetDynamicState);
 }

@@ -11,6 +11,10 @@ struct Position2D {
 
   Position2D() = default;
   Position2D(const double x_, const double y_) : x(x_), y(y_) {}
+
+  double DistanceTo(const Eigen::Vector2d &p) const {
+    return std::sqrt((x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]));
+  }
 };
 
 struct Position3D {
@@ -75,6 +79,10 @@ struct Pose2D {
   void DebugString() const {
     ILOG_INFO << "x = " << x << " ,y = " << y << " ,theta = " << theta;
     return;
+  }
+
+  double DistanceSquareTo(const Eigen::Vector2d &p) const {
+    return (x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]);
   }
 };
 

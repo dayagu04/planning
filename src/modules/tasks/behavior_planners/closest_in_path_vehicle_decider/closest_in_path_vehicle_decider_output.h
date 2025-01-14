@@ -8,7 +8,7 @@ class ClosestInPathVehicleDeciderOutput {
   ClosestInPathVehicleDeciderOutput() = default;
   ~ClosestInPathVehicleDeciderOutput() = default;
 
- void Reset();
+  void Reset();
 
   const int32_t cipv_id() const;
   void set_cipv_id(const int32_t cipv_id);
@@ -27,7 +27,7 @@ class ClosestInPathVehicleDeciderOutput {
   bool is_virtual() const;
   void set_is_virtual(const bool is_virtual);
 
-private:
+ private:
   // TODO:Enrich the cipv info, or create a cipv_class later.
   int32_t cipv_id_ = -1;
   double relative_s_ = 0.0;

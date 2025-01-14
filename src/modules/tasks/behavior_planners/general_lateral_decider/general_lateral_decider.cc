@@ -396,8 +396,8 @@ void GeneralLateralDecider::UnitTest() {
 
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
     const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   if (session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_is_exist_ramp_on_road() ||
@@ -518,7 +518,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     }
     const double kMinAcc = -5.5;
     // double cruise_v = session_->planning_context().v_ref_cruise();
-    double cruise_v = std::max(config_.min_v_cruise, session_->planning_context().v_ref_cruise());
+    double cruise_v = std::max(config_.min_v_cruise,
+                               session_->planning_context().v_ref_cruise());
     double ego_v = planning_init_point.v;
     if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
@@ -1049,7 +1050,9 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
-    if (!IsFilterForStaticObstacle(obstacle)) {
+    // filter lane borrow obstacle
+    if ((!IsFilterForStaticObstacle(obstacle)) &&
+        (!IsBlockObstacleInLaneBorrow(obstacle))) {
       continue;
     }
 
@@ -1076,9 +1079,14 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto &lat_obstacle_decision = session_->environmental_model()
-                                          .get_lateral_obstacle()
-                                          ->lat_obstacle_decision();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const bool is_in_lane_borrow_status =
+      lane_borrow_decider_output.is_in_lane_borrow_status;
+
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
 
@@ -1096,6 +1104,12 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(
         ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
   }
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    front_lon_buf_dis += config_.extra_front_lon_buffer2blockobstacle;
+    rear_lon_buf_dis += config_.extra_rear_lon_buffer2blockobstacle;
+  }
+
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
   const bool init_lon_no_overlap =
@@ -1106,6 +1120,19 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
 
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
+
+  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    if (borrow_direction == LEFT_BORROW) {
+      // 向左借道
+      is_nudge_left = false;
+    } else if (borrow_direction == RIGHT_BORROW) {
+      // 向右借道
+      is_nudge_left = true;
+    }
+  }
+
   const BoundType bound_type = BoundType::AGENT;
 
   bool is_cross_obj{false};
@@ -1159,6 +1186,10 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
         general_lateral_decider_utils::CalDesireStaticLateralDistance(
             config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
             ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound);
+
+    if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+      lat_buf_dis += config_.extra_hard_buffer2blockobstacle;
+    }
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -1289,7 +1320,9 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
-    if (!IsFilterForDynamicObstacle(obstacle)) {
+    // filter lane borrow obstacle
+    if ((!IsFilterForDynamicObstacle(obstacle)) &&
+        (!IsBlockObstacleInLaneBorrow(obstacle))) {
       continue;
     }
 
@@ -1314,13 +1347,17 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto &lat_obstacle_decision = session_->environmental_model()
-                                          .get_lateral_obstacle()
-                                          ->lat_obstacle_decision();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
   bool in_intersection = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->GetIntersectionState() ==
                          common::IntersectionState::IN_INTERSECTION;
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const bool is_in_lane_borrow_status =
+      lane_borrow_decider_output.is_in_lane_borrow_status;
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1333,10 +1370,16 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       ego_cur_s - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double front_lon_buf_dis =
+  double front_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
           ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
-  const double rear_lon_buf_dis = 1.0;
+  double rear_lon_buf_dis = 1.0;
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    front_lon_buf_dis += config_.extra_front_lon_buffer2blockobstacle;
+    rear_lon_buf_dis += config_.extra_rear_lon_buffer2blockobstacle;
+  }
+
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
   const bool init_lon_no_overlap =
@@ -1356,6 +1399,18 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
+
+  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    if (borrow_direction == LEFT_BORROW) {
+      // 向左借道
+      is_nudge_left = false;
+    } else if (borrow_direction == RIGHT_BORROW) {
+      // 向右借道
+      is_nudge_left = true;
+    }
+  }
 
   bool is_cross_obj{false};
   bool has_lat_decision{false};
@@ -1431,6 +1486,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
             is_nudge_left, in_intersection, config_);
+
+    if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+      lat_buf_dis += config_.extra_hard_buffer2blockobstacle;
+    }
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1655,9 +1714,9 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
 
 bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     const std::shared_ptr<FrenetObstacle> &obstacle) {
-  const auto &lat_obstacle_decision = session_->environmental_model()
-                                          .get_lateral_obstacle()
-                                          ->lat_obstacle_decision();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
   if (lat_obstacle_decision.find(obstacle->id()) !=
       lat_obstacle_decision.end()) {
     if (lat_obstacle_decision.at(obstacle->id()) ==
@@ -1857,11 +1916,9 @@ void GeneralLateralDecider::PostProcessBound(
     double lower = lower_bounds[lower_index].lower;
     double upper = upper_bounds[upper_index].upper;
     const int lower_priority =
-        general_lateral_decider_utils::GetBoundTypePriority(
-            lower_type);
+        general_lateral_decider_utils::GetBoundTypePriority(lower_type);
     const int upper_priority =
-        general_lateral_decider_utils::GetBoundTypePriority(
-            upper_type);
+        general_lateral_decider_utils::GetBoundTypePriority(upper_type);
     const double lower_weight = general_lateral_decider_utils::GetBoundWeight(
         lower_type, config_.map_bound_weight);
     const double upper_weight = general_lateral_decider_utils::GetBoundWeight(
@@ -1986,10 +2043,12 @@ void GeneralLateralDecider::PostProcessBound(
       } else {
         // double mid_bound = std::min(
         //     std::max(upper + (std::max(lower - upper, 0.0) *
-        //                       (lower_weight / (upper_weight + lower_weight))),
+        //                       (lower_weight / (upper_weight +
+        //                       lower_weight))),
         //              lower_bound), upper_bound);
-        double mid_bound = upper + (std::max(lower - upper, 0.0) *
-                              (lower_weight / (upper_weight + lower_weight)));
+        double mid_bound =
+            upper + (std::max(lower - upper, 0.0) *
+                     (lower_weight / (upper_weight + lower_weight)));
         if (use_upper_init_protect) {
           mid_bound = std::min(mid_bound, planning_init_point_l);
         }
@@ -2250,10 +2309,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
       path_points.emplace_back(ref_point.path_point);
     }
   }
-  // scenario, left_faster, right_is_faster
   lateral_output.scenario = lane_change_decider_output.scenario;
-  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
-  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
   // lc info
   int lc_request = lane_change_decider_output.lc_request;
 
@@ -2316,7 +2372,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop && lateral_output.accident_ahead &&
+      ((!isRedLightStop &&
         lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
@@ -2362,17 +2418,6 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
     lateral_output.intersect_length = 1000;
   }
 
-  // isFasterStaticAvd, attention!
-  bool right_direct_exist = true;
-  bool curr_direct_has_right = false;
-  bool curr_direct_has_straight = true;
-  bool is_right_turn = false;
-  bool left_direct_has_straight = true;
-  lateral_output.isFasterStaticAvd =
-      (left_direct_exist && lateral_output.left_faster) ||
-      (right_direct_exist && lateral_output.right_faster) ||
-      (curr_direct_has_right && !curr_direct_has_straight) ||
-      (is_right_turn && left_direct_has_straight && lateral_output.left_faster);
   // is on highway
   lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 
@@ -2464,21 +2509,49 @@ bool GeneralLateralDecider::IsRearObstacle(
          obstacle->frenet_obstacle_boundary().s_end;
 }
 
-bool GeneralLateralDecider::IsFilterForStaticObstacle(
+bool GeneralLateralDecider::IsBlockObstacleInLaneBorrow(
     const std::shared_ptr<FrenetObstacle> obstacle) {
-  const auto &otype = obstacle->type();
-  const auto ofusion_source = obstacle->obstacle()->fusion_source();
-  if ((ofusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto &obs_type = obstacle->type();
+  const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
+  if ((obs_fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
     return false;
   }
 
-  if (otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
+  const auto &blocked_obstacles = lane_borrow_decider_output.blocked_obs_id;
+  const bool is_in_lane_borrow_status =
+      lane_borrow_decider_output.is_in_lane_borrow_status;
+
+  const bool is_exceed_blocked_obstacle =
+      reference_path_ptr_->get_ego_frenet_boundary().s_start >
+      obstacle->frenet_obstacle_boundary().s_end +
+          config_.care_exceed_distance_with_blocked_obstacle;
+
+  if ((is_in_lane_borrow_status) && (!is_exceed_blocked_obstacle) &&
+      (std::find(blocked_obstacles.begin(), blocked_obstacles.end(),
+                 obstacle->id()) != blocked_obstacles.end())) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool GeneralLateralDecider::IsFilterForStaticObstacle(
+    const std::shared_ptr<FrenetObstacle> obstacle) {
+  const auto &obs_type = obstacle->type();
+  const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
+  if ((obs_fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
+    return false;
+  }
+
+  if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
                                                              // obstacle type
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_VAN or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
     // add logs;
     return false;
   }
@@ -2502,19 +2575,19 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
 
 bool GeneralLateralDecider::IsFilterForDynamicObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
-  const auto &otype = obstacle->type();
-  const auto ofusion_source = obstacle->obstacle()->fusion_source();
-  if ((ofusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
+  const auto &obs_type = obstacle->type();
+  const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
+  if ((obs_fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
     return false;
   }
 
-  if (otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
+  if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
                                                              // obstacle type
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_VAN or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
     // add logs;
     return false;
   }

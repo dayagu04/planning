@@ -18,6 +18,8 @@
 #include "parking_task/parking_task.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
+#include "speed/speed_data.h"
+#include "trajectory/trajectory.h"
 
 namespace planning {
 namespace apa_planner {
@@ -38,6 +40,11 @@ enum PathPlannerResult {
   PLAN_UPDATE,
   WAIT_PATH,
 };
+
+void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
+
+const std::string GetApaScenarioStatusString(
+    const ParkingScenarioStatus scenario_status);
 
 // 1.
 // 对于泊车而言，不同的行为对应不同的场景，包括垂直泊入场景、垂直泊出场景,等等.
@@ -175,7 +182,6 @@ class ParkingScenario {
       is_replan_first = true;
       is_replan_second = false;
       is_replan_dynamic = false;
-      is_dynamic_replan_first = true;
       dynamic_replan_count = 0;
       total_plan_count = 0;
       in_slot_plan_count = 0;
@@ -210,8 +216,6 @@ class ParkingScenario {
 
       is_left_empty = false;
       is_right_empty = false;
-
-      ego_car_info_slot.Reset();
     }
     bool is_left_empty = false;
     bool is_right_empty = false;
@@ -220,11 +224,10 @@ class ParkingScenario {
     bool is_replan_first = true;
     bool is_replan_second = false;
     bool is_replan_dynamic = false;
-    bool is_dynamic_replan_first = true;
     uint8_t dynamic_replan_count = 0;
     uint8_t replan_reason = NOT_REPLAN;
     uint8_t plan_fail_reason = NOT_FAILED;
-    int total_plan_count = 0;
+    uint8_t total_plan_count = 0;
     uint8_t in_slot_plan_count = 0;
     bool is_finished = false;
     bool is_fix_slot = false;
@@ -240,8 +243,11 @@ class ParkingScenario {
     double stuck_uss_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
+    // path remain dist
     double remain_dist = 5.01;
+    // path remain dist by uss safe check
     double remain_dist_uss = 5.01;
+    // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
     double car_already_move_dist = 0.0;
     pnc::mathlib::spline x_s_spline;
@@ -262,8 +268,6 @@ class ParkingScenario {
     bool dynamic_plan_fail_flag = false;
 
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
-
-    EgoCarInfoUnderSlot ego_car_info_slot;
   };
 
   enum ParkingStatus {
@@ -326,17 +330,29 @@ class ParkingScenario {
   // clear thread related
   virtual void ThreadClear();
 
+  const std::vector<pnc::geometry_lib::PathPoint> &GetCompletePlanPathPt() {
+    return complete_path_point_global_vec_;
+  }
+
+  const std::vector<pnc::geometry_lib::PathPoint> &GetCurrentGearPlanPathPt() {
+    return current_path_point_global_vec_;
+  }
+
  protected:
   virtual const bool CheckFinished() = 0;
   virtual const bool CheckReplan() = 0;
   virtual void Log() const = 0;
-  virtual void PlanCore() = 0;
-  virtual void GenTlane() = 0;
-  virtual void GenObstacles() = 0;
+  virtual void ExcutePathPlanningTask() = 0;
+
+  virtual void ExcuteSpeedPlanningTask();
+
+  virtual const bool GenTlane() = 0;
+  virtual const bool GenObstacles() = 0;
   virtual const bool UpdateEgoSlotInfo() = 0;
   virtual const uint8_t PathPlanOnce() = 0;
 
   virtual void InitSimulation();
+  virtual void UpdateStuckTime();
   virtual const bool CheckPaused() const;
   virtual const bool CheckPlanSkip() const;
   virtual void SetParkingStatus(uint8_t status);
@@ -369,6 +385,10 @@ class ParkingScenario {
   Frame frame_;
 
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
+
+  // todo: update speed data
+  trajectory::Trajectory trajectory_;
+  std::vector<pnc::geometry_lib::PathPoint> complete_path_point_global_vec_;
 };
 
 }  // namespace apa_planner

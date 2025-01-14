@@ -23,6 +23,8 @@ namespace planning_player {
 static constexpr auto TOPIC_PLANNING_PLAN = "/iflytek/planning/plan";
 static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
     "/iflytek/planning/debug_info";
+static constexpr auto TOPIC_PLANNING_DEBUG_INFO_ORIGIN =
+    "/iflytek/planning/debug_info_origin";
 static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
 static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
 static constexpr auto TOPIC_FUSION_OCCUPANCY_OBJECTS =
@@ -333,9 +335,8 @@ void PlanningPlayer::Clear() {
 
 void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
                                    std::string& outVersion) {
-  const std::string command =
-      "cd " + directory + " && git rev-parse --short=" + std::to_string(num) +
-      " HEAD";
+  const std::string command = "cd " + directory + " && git rev-parse --short=" +
+                              std::to_string(num) + " HEAD";
   FILE* pipe = popen(command.c_str(), "r");
   if (!pipe) {
     std::cerr << "Failed to run command: " << command << std::endl;
@@ -594,6 +595,9 @@ void PlanningPlayer::StoreRosBag() {
       } else if (it_msg.first == TOPIC_CONTROL_DEBUG_INFO) {
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(
             it_msg.second, TOPIC_CONTROL_DEBUG_INFO, bag);
+      } else if (it_msg.first == TOPIC_PLANNING_DEBUG_INFO) {
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(
+            it_msg.second, TOPIC_PLANNING_DEBUG_INFO_ORIGIN, bag);
       } else {
         // std::cerr << "unsupported channel:" << msg.channel_name <<
         // std::endl;
@@ -971,7 +975,7 @@ void PlanningPlayer::PlayOneFrame(
   planning_adapter_->Proc();
 }
 
-void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
+void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
   auto it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
 
   for (size_t i = 0; i < msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 2;
@@ -1066,6 +1070,13 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
     } else {
       early_stop_time_ = ros::Time(early_stop_time_tmp * 1.0e-6);
       break;
+    }
+
+    if (play_in_loop) {
+      if (i == msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 3) {
+        i = 0;
+        it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
+      }
     }
   }
 }
@@ -1720,7 +1731,7 @@ void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   }
 }
 
-void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
+void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
   uint64_t start_time = 0;
   uint64_t end_time = 0;
   if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
@@ -1735,6 +1746,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     return;
   }
 
+  const double init_start_time = start_time;
   while (start_time < end_time) {
     std::cout << "************************************** frame " << frame_num_
               << " **************************************" << std::endl;
@@ -2019,6 +2031,12 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     }
 
     planning_adapter_->Proc();
+
+    if (play_in_loop) {
+      if (start_time >= end_time) {
+        start_time = init_start_time;
+      }
+    }
   }
 }
 

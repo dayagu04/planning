@@ -39,9 +39,7 @@ bool VisionLateralMotionPlanner::Execute() {
   const auto &vision_lateral_behavior_planner_output =
       planning_context.vision_lateral_behavior_planner_output();
   const auto &status = lane_change_decider_output.curr_state;
-  const auto &accident_ahead = lane_change_decider_output.accident_ahead;
   const auto &should_premove = lane_change_decider_output.should_premove;
-  const auto &should_suspend = lane_change_decider_output.should_suspend;
   const auto &avd_car_past =
       vision_lateral_behavior_planner_output.avd_car_past;
   const auto &avd_sp_car_past =
@@ -85,7 +83,7 @@ bool VisionLateralMotionPlanner::Execute() {
   set_right_lane_boundary_poly();  // hack right_lane_boundary_poly
 
   b_success =
-      update(status, flag_avd, accident_ahead, should_premove, should_suspend,
+      update(status, flag_avd, should_premove,
              dist_rblane, avd_car_past, avd_sp_car_past);
 
   if (!b_success) {
@@ -103,8 +101,8 @@ bool VisionLateralMotionPlanner::Execute() {
 }
 
 bool VisionLateralMotionPlanner::update(
-    int status, bool flag_avd, bool accident_ahead, bool should_premove,
-    bool should_suspend, double dist_rblane,
+    int status, bool flag_avd, bool should_premove,
+    double dist_rblane,
     const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past) {
   std::reverse_copy(flane_->c_poly().begin(), flane_->c_poly().end(),
@@ -128,14 +126,13 @@ bool VisionLateralMotionPlanner::update(
     lat_motion_plan->add_basic_dpoly(value);
   }
   if (status == kLaneChangePropose || status == kLaneChangeCancel) {
-    update_premove_path(status, should_premove, should_suspend, accident_ahead,
-                        avd_car_past);
+    update_premove_path(status, should_premove, avd_car_past);
   } else {
     premoving_ = false;
   }
   lat_motion_plan->set_premove_dpoly_c0(d_poly_[3]);
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
-    update_avoidance_path(status, flag_avd, accident_ahead, should_premove,
+    update_avoidance_path(status, flag_avd, should_premove,
                           dist_rblane, avd_car_past, avd_sp_car_past);
   } else {
     lat_offset_ = 0;
@@ -331,7 +328,7 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
 }
 
 void VisionLateralMotionPlanner::update_premove_path(
-    int status, bool should_premove, bool should_suspend, bool accident_ahead,
+    int status, bool should_premove,
     const std::array<std::vector<double>, 2> &avd_car_past) {
   if (flane_->status() == BOTH_MISSING) {
     return;
@@ -364,7 +361,7 @@ void VisionLateralMotionPlanner::update_premove_path(
   double temp_ego = std::min(10.0 / std::max(v_ego, 0.1), 1.0);
   double temp_poly = std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
 
-  if ((status == is_LC_LWAIT_ && (should_premove || accident_ahead)) ||
+  if ((status == is_LC_LWAIT_ && (should_premove)) ||
       status == is_LC_LBACK_) {
     premoving_ = true;
 
@@ -380,13 +377,13 @@ void VisionLateralMotionPlanner::update_premove_path(
     } else {
       lat_offset_ = norminal_move * temp_poly;
 
-      if (should_suspend && lat_offset_ < -d_poly_[3]) {
+      if (lat_offset_ < -d_poly_[3]) {
         lat_offset_ = -d_poly_[3];
       }
 
       d_poly_[3] += lat_offset_;
     }
-  } else if ((status == is_LC_RWAIT_ && (should_premove || accident_ahead)) ||
+  } else if ((status == is_LC_RWAIT_ && (should_premove)) ||
              status == is_LC_RBACK_) {
     premoving_ = true;
 
@@ -403,7 +400,7 @@ void VisionLateralMotionPlanner::update_premove_path(
     } else {
       lat_offset_ = -norminal_move * temp_poly;
 
-      if (should_suspend && lat_offset_ > -d_poly_[3]) {
+      if (lat_offset_ > -d_poly_[3]) {
         lat_offset_ = -d_poly_[3];
       }
 
@@ -416,7 +413,7 @@ void VisionLateralMotionPlanner::update_premove_path(
 }
 
 bool VisionLateralMotionPlanner::update_avoidance_path(
-    int status, bool flag_avd, bool accident_ahead, bool should_premove,
+    int status, bool flag_avd, bool should_premove,
     double dist_rblane, const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past) {
   double lane_width = flane_->width();
@@ -1232,12 +1229,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     virtual_lane_manager_->get_right_lane() != nullptr &&
                     virtual_lane_manager_->get_right_lane()->get_lane_type() ==
                         iflyauto::LANETYPE_NON_MOTOR))) {
-                if (((!session_->environmental_model().is_on_highway()
+                if ((!session_->environmental_model().is_on_highway()
                       //    &&  // hack
                       //  map_info.dist_to_intsect() > 80 &&
                       //  map_info.dist_to_intsect() - avd_car_past[0][3] > 80
-                      ) ||
-                     accident_ahead) &&
+                      ) &&
                     ((avd_car_past[0][3] < 15 && v_ego < 5) ||
                      (v_ego < 10 && avd_car_past[0][2] + v_ego < -1) ||
                      avd_car_past[0][3] < 1)) {
@@ -2439,22 +2435,6 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   auto &state_name = lane_change_decider_output.state_name;
   int turn_light = lane_change_decider_output.turn_light;
   int map_turn_light = lane_change_decider_output.map_turn_light;  //
-  //   取值范围，对应的含义？
-  bool accident_ahead = lane_change_decider_output.accident_ahead;
-
-  bool accident_back = lane_change_decider_output.accident_back;
-
-  bool close_to_accident = lane_change_decider_output.close_to_accident;
-
-  bool lc_pause = lane_change_decider_output.lc_pause;
-  int lc_pause_id = lane_change_decider_output.lc_pause_id;  // id
-  //   //                          //
-  //   //
-  //   是指车辆id还是路线id，以及id命名顺序是从左到右还是从右到左？
-  double tr_pause_l = lane_change_decider_output.tr_pause_l;  //
-  //   为啥是double 类型？
-  //   //       表示的含义是？
-  double tr_pause_s = lane_change_decider_output.tr_pause_s;
 
   bool isRedLightStop = false;  // hack!
 
@@ -2465,14 +2445,6 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.track_id = -20000;  // hack!
   lateral_output.v_limit = 40.0 / 3.6;
   lateral_output.isRedLightStop = isRedLightStop;
-
-  lateral_output.disable_l = lane_change_decider_output.disable_l;
-  lateral_output.disable_r = lane_change_decider_output.disable_r;
-  lateral_output.enable_l = lane_change_decider_output.enable_l;  // disabled
-  //       ,enable的区别是啥？代表啥意思
-  lateral_output.enable_r = lane_change_decider_output.enable_r;
-  lateral_output.enable_id = lane_change_decider_output.enable_id;  //
-  //   enable车的id？ 车道线的id?
 
   lateral_output.lat_offset = lat_offset_;
 
@@ -2491,16 +2463,6 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.which_lane = "right_line";
   } else {
     lateral_output.which_lane = "current_line";
-  }
-
-  int lb_request = lane_change_decider_output.lb_request;
-
-  if (lb_request == NO_CHANGE) {
-    lateral_output.lb_request = "none";
-  } else if (lb_request == LEFT_CHANGE) {
-    lateral_output.lb_request = "left";
-  } else {
-    lateral_output.lb_request = "right";
   }
 
   lateral_output.lb_width = -10.;  //  attention!! hack!
@@ -2569,7 +2531,7 @@ bool VisionLateralMotionPlanner::update_planner_output() {
         virtual_lane_manager_->get_right_lane() != nullptr &&
         virtual_lane_manager_->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop && lateral_output.accident_ahead &&
+      ((!isRedLightStop &&
         lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
@@ -2642,27 +2604,10 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   lateral_output.force_pause = force_pause_;
   lateral_output.large_lat = large_lat_;
   lateral_output.premoving = premoving_;
-  lateral_output.accident_ahead = accident_ahead;
-  lateral_output.accident_back = accident_back;
-  lateral_output.lc_pause_id = lc_pause_id;
-  lateral_output.lc_pause = lc_pause;
-  lateral_output.tr_pause_l = tr_pause_l;
-  lateral_output.tr_pause_s = tr_pause_s;
   lateral_output.must_change_lane = lane_change_decider_output.must_change_lane;
-  lateral_output.close_to_accident = close_to_accident;
   lateral_output.angle_steers_limit = 0.0;  // attention!
-  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
 
-  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
-  lateral_output.premove = (lane_change_decider_output.premovel ||
-                            lane_change_decider_output.premover);
-  lateral_output.premove_dist = lane_change_decider_output.premove_dist;
-  lateral_output.isFasterStaticAvd =
-      (left_direct_exist && lateral_output.left_faster) ||
-      (right_direct_exist && lateral_output.right_faster) ||
-      (curr_direct_has_right && !curr_direct_has_straight) ||
-      (is_right_turn && left_direct_has_straight &&
-       lateral_output.left_faster);  // attention!
+  lateral_output.premove = false;
   lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 
   lateral_output.c_poly.assign(c_poly_.begin(), c_poly_.end());
@@ -2717,8 +2662,6 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.turn_light_source = "map_turn_light";
   } else if (lane_change_decider_output.lc_turn_light > 0) {
     lateral_output.turn_light_source = "lc_turn_light";
-  } else if (lane_change_decider_output.lb_turn_light > 0) {
-    lateral_output.turn_light_source = "lb_turn_light";
   } else {
     lateral_output.turn_light_source = "none";
   }
@@ -2737,13 +2680,8 @@ bool VisionLateralMotionPlanner::update_planner_output() {
 
   lateral_output.r_poly = r_poly_;
 
-  lateral_output.behavior_suspension =
-      lane_change_decider_output.behavior_suspend;  //
-                                                    //   lateral suspend
-  lateral_output.suspension_obs.assign(
-      lane_change_decider_output.suspend_obs.begin(),
-      lane_change_decider_output.suspend_obs.end());  //
-  //   lateral suspend
+  lateral_output.behavior_suspension = false;  //
+
   //   //       obstacles
   if (!update_lateral_info()) {  // 这里进入
     //   横向规划轨迹的输出部分
@@ -2803,7 +2741,6 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   auto lc_request = lateral_output.lc_request;
   auto lc_status = lateral_output.lc_status;
   // auto lb_status = lateral_output.lane_borrow;
-  auto lb_request = lateral_output.lb_request;
   auto lb_status = lateral_output.lb_status;
   // //   // LOG_DEBUG("zzd arbitrator lc_status %s
   // lc_request %s lb_status %s
@@ -2826,34 +2763,11 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
     lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
   } else {
     if (lc_request == "none") {
-      if (lb_request != "none") {
-        lane_status.status = planning::common::LaneStatus::Status::LANE_BORROW;
-        // TODO: BORROW_LANE_KEEP state to be set
-        // accordingly
-        if (lb_request == "left") {
-          lane_status.borrow_lane.direction = "left";
-        } else if (lb_request == "right") {
-          lane_status.borrow_lane.direction = "right";
-        }
-        if (lb_status == "left_lane_borrow" ||
-            lb_status == "right_lane_borrow") {
-          lane_status.borrow_lane.status =
-              planning::common::BorrowLaneStatus::Status::IN_BORROW_LANE;
-        } else if (lb_status == "left_lane_suspend" ||
-                   lb_status == "right_lane_suspend") {
-          lane_status.borrow_lane.status =
-              planning::common::BorrowLaneStatus::Status::BORROW_LANE_KEEP;
-        } else {
-          lane_status.borrow_lane.status =
-              planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
-        }
-      } else {
-        lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
-        lane_status.change_lane.status =
-            planning::common::ChangeLaneStatus::Status::CHANGE_LANE_FINISHED;
-        lane_status.borrow_lane.status =
-            planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
-      }
+      lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
+      lane_status.change_lane.status =
+          planning::common::ChangeLaneStatus::Status::CHANGE_LANE_FINISHED;
+      lane_status.borrow_lane.status =
+          planning::common::BorrowLaneStatus::Status::BORROW_LANE_FINISHED;
     } else {
       lane_status.status = planning::common::LaneStatus::Status::LANE_CHANGE;
 

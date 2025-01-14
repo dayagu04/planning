@@ -3,6 +3,7 @@ sys.path.append("..")
 from io import BytesIO
 # from lib.load_cyberbag import *
 from lib.load_local_view_parking import *
+from lib.load_lon_plan import *
 from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../build')
@@ -17,7 +18,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241203/20241203-21-06-17/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-03-21-06-17_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241220/20241220-10-36-40/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-20-10-36-40_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -41,6 +42,11 @@ start_time = time.time()
 fig1, local_view_data = load_local_view_figure_parking()
 end_time = time.time()
 print('load_local_view_figure_parking, ms===== ', (end_time - start_time) * 1000)
+
+# plot speed
+velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
+pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
+
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
@@ -111,7 +117,6 @@ data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 # record包中的定位信息
 data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 # 轨迹点pose，融合仿真使用
-data_moving_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_path_end_stop_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -165,7 +170,6 @@ fig1.multi_line('y_vec', 'x_vec', source=data_record_node_list, line_width=1.0, 
 fig1.multi_line('y_vec', 'x_vec', source=data_real_time_node_list, line_width=1.0, line_color='red', line_dash='solid', legend_label='real_time_node_list')
 fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'veh_body_envelope', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_current_gear_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'current_path_envelop', visible = False)
-fig1.patch('car_yn', 'car_xn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car')
 fig1.multi_line('y', 'x',source = all_rs_heuristic_path, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'rs_h_path')
 fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend_label = 'virtual_wall')
 fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
@@ -189,7 +193,6 @@ class LocalViewSlider:
     self.lon_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lon_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
-    self.car_move_mode_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="car_move_mode", min=0, max=1, value=0, step=1)
     self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
@@ -206,14 +209,13 @@ class LocalViewSlider:
                         lon_pos_dif = self.lon_pos_dif_slider,
                         lat_pos_dif = self.lat_pos_dif_slider,
                         heading_dif = self.heading_dif_slider,
-                        car_move_mode=self.car_move_mode_slider,
                         plot_child_node=self.plot_child_node
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,car_move_mode,plot_child_node):
+                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node):
 
   time0 = time.time()
 
@@ -470,6 +472,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
   current_state = soc_state_msg.current_state
 
+  print('apa_work_mode',soc_state_msg.parking_req.apa_work_mode)
+  print('apa_parking_direction',soc_state_msg.parking_req.apa_parking_direction)
+
   fus_parking_msg_buff = BytesIO()
   fus_parking_msg.serialize(fus_parking_msg_buff)
   fus_parking_msg_bytes = fus_parking_msg_buff.getvalue()
@@ -526,10 +531,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         sample_ds, target_managed_slot_x_vec,
         target_managed_slot_y_vec,
         target_managed_limiter_x_vec,
-        target_managed_limiter_y_vec, current_state)
+        target_managed_limiter_y_vec)
 
     print('end')
-  elif force_plan or car_move_mode==1:
+  elif force_plan:
       print('plan once by force')
 
       replay_simulation_hybrid_astar.SetLocalization(loc_msg_bytes)
@@ -1005,21 +1010,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     'y': obs_pt_y,
   })
 
-  # print('virtual_wall')
-
-  car_xn = []
-  car_yn = []
-  pose = replay_simulation_hybrid_astar.GetTrajPoseByDist()
-
-  if pose[3] > 0:
-    for i in range(len(car_polygon_x)):
-        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], pose[0], pose[1], pose[2])
-        car_xn.append(tmp_x)
-        car_yn.append(tmp_y)
-    data_moving_car.data.update({
-      'car_xn': car_xn,
-      'car_yn': car_yn,
-    })
+  print('virtual_wall')
 
   # get all rs path
   paths = replay_simulation_hybrid_astar.GetRSHeuristicPath()
@@ -1129,9 +1120,13 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if (is_reset):
     replay_simulation_hybrid_astar.StopPybind()
 
+  speed_data = replay_simulation_hybrid_astar.GetApaSpeedLimit()
+  update_lon_plan_online_data(speed_data,lon_plan_data)
+  update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
+
   push_notebook()
 
   print('pybind end')
 
-bkp.show(row(fig1), notebook_handle=True)
+bkp.show(row(fig1, pans), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

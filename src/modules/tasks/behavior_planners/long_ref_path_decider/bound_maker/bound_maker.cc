@@ -18,21 +18,22 @@ constexpr double kOvertakeBuffer = 2.0;
 constexpr double kSpeedBoundFactor = 1.1;
 constexpr double kPerSecondPlanLenth = 50.0;
 
-} // namespace
+}  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
                        framework::Session* session)
     : speed_planning_config_(speed_planning_config), session_(session) {
   dt_ = speed_planning_config_.dt;
   plan_time_ = speed_planning_config_.planning_time;
   plan_points_num_ = static_cast<int32_t>(plan_time_ / dt_) + 1;
-  const auto& ego_state =
-      *session_->mutable_environmental_model()->get_ego_state_manager();
-  const auto& planning_init_point = ego_state.planning_init_point();
-  init_lon_state_ = {0.0, planning_init_point.v, planning_init_point.a};
 }
 
 common::Status BoundMaker::Run() {
   LOG_DEBUG("=======LongRefPathDecider: BoundMaker======= \n");
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& init_point = ego_state_manager->planning_init_point();
+  init_lon_state_ = {0, init_point.v, init_point.a};
+
   // 1. acc bound
   MakeAccBound();
 
@@ -50,46 +51,54 @@ common::Status BoundMaker::Run() {
 
 void BoundMaker::MakeAccBound() {
   // @gpxu 待补充
-  const auto& speed_planning_bound = speed_planning_config_.speed_planning_bound;
-  double lower_speed_acc_upper_bound = speed_planning_bound.low_speed_acc_upper_bound;
-  double high_speed_acc_upper_bound = speed_planning_bound.high_speed_acc_upper_bound;
+  const auto& speed_planning_bound =
+      speed_planning_config_.speed_planning_bound;
+  double lower_speed_acc_upper_bound =
+      speed_planning_bound.low_speed_acc_upper_bound;
+  double high_speed_acc_upper_bound =
+      speed_planning_bound.high_speed_acc_upper_bound;
   const double low_speed_threshold_with_acc_upper_bound =
       speed_planning_bound.low_speed_threshold_with_acc_upper_bound;
   const double high_speed_threshold_with_acc_upper_bound =
       speed_planning_bound.high_speed_threshold_with_acc_upper_bound;
   // for lane change,we need larger acc bound
-  
+
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  bool is_in_lane_change_execution = lane_change_status == kLaneChangeExecution ||
-                           lane_change_status == kLaneChangeComplete;
+  bool is_in_lane_change_execution =
+      lane_change_status == kLaneChangeExecution ||
+      lane_change_status == kLaneChangeComplete;
 
   if (is_in_lane_change_execution) {
-    lower_speed_acc_upper_bound = speed_planning_bound.lane_change_low_speed_acc_upper_bound;
-    high_speed_acc_upper_bound = speed_planning_bound.lane_change_high_speed_acc_upper_bound;
+    lower_speed_acc_upper_bound =
+        speed_planning_bound.lane_change_low_speed_acc_upper_bound;
+    high_speed_acc_upper_bound =
+        speed_planning_bound.lane_change_high_speed_acc_upper_bound;
   }
   // TODO: adjust high_speed_acc_upper_bound by driving style
-  // MatchAccLimitWithTable(is_in_lane_change_execution, &lower_speed_acc_upper_bound,
+  // MatchAccLimitWithTable(is_in_lane_change_execution,
+  // &lower_speed_acc_upper_bound,
   //                        &high_speed_acc_upper_bound);
   acc_upper_bound_with_speed_ = planning_math::LerpWithLimit(
       lower_speed_acc_upper_bound, low_speed_threshold_with_acc_upper_bound,
-      high_speed_acc_upper_bound, high_speed_threshold_with_acc_upper_bound, init_lon_state_[1]);
+      high_speed_acc_upper_bound, high_speed_threshold_with_acc_upper_bound,
+      init_lon_state_[1]);
   const double config_acc_lower_bound = speed_planning_bound.acc_lower_bound;
-  acc_upper_bound_ =
-      std::vector<double>(plan_points_num_, std::fmax(init_lon_state_[2], acc_upper_bound_with_speed_));
-  acc_lower_bound_ =
-      std::vector<double>(plan_points_num_, std::fmin(init_lon_state_[2], config_acc_lower_bound));
+  acc_upper_bound_ = std::vector<double>(
+      plan_points_num_,
+      std::fmax(init_lon_state_[2], acc_upper_bound_with_speed_));
+  acc_lower_bound_ = std::vector<double>(
+      plan_points_num_, std::fmin(init_lon_state_[2], config_acc_lower_bound));
 }
 
 void BoundMaker::MakeSBound() {
-
   // @gpxu 待补充
   auto max_acceration_curve = GenerateMaxAccelerationCurve();
   auto max_deceleration_curve = GenerateMaxDecelerationCurve();
 
-  const auto &environmental_model = session_->environmental_model();
-  const auto &ego_lane =
+  const auto& environmental_model = session_->environmental_model();
+  const auto& ego_lane =
       environmental_model.get_virtual_lane_manager()->get_current_lane();
 
   if (ego_lane == nullptr) {
@@ -106,7 +115,8 @@ void BoundMaker::MakeSBound() {
   }
 
   const double path_length = ego_lane_coord->Length();
-  const double default_upper_bound = std::fmax(path_length, plan_time_ * kPerSecondPlanLenth);
+  const double default_upper_bound =
+      std::fmax(path_length, plan_time_ * kPerSecondPlanLenth);
   s_lower_bound_ = std::vector<double>(plan_points_num_, -0.1);
   s_upper_bound_ = std::vector<double>(plan_points_num_, default_upper_bound);
 
@@ -137,26 +147,32 @@ void BoundMaker::MakeSBound() {
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const double relative_t = i * dt_;
     // std::cout << "bound t: " << relative_t << std::endl;
-    const auto corridor_upper_point = ptr_st_graph_helper->GetPassCorridorUpperBound(relative_t);
-    const auto corridor_lower_point = ptr_st_graph_helper->GetPassCorridorLowerBound(relative_t);
+    const auto corridor_upper_point =
+        ptr_st_graph_helper->GetPassCorridorUpperBound(relative_t);
+    const auto corridor_lower_point =
+        ptr_st_graph_helper->GetPassCorridorLowerBound(relative_t);
     double& upper_bound = s_upper_bound_[i];
     double& lower_bound = s_lower_bound_[i];
     if (corridor_upper_point.valid() && corridor_upper_point.agent_id() != -1) {
-      const double upper_s_with_buffer = corridor_upper_point.s() - kFollowBuffer;
+      const double upper_s_with_buffer =
+          corridor_upper_point.s() - kFollowBuffer;
       upper_bound = upper_s_with_buffer;
       if (is_ego_low_speed) {
         continue;
       }
       // for base case
       if (relative_t > add_buffer_start_time &&
-          max_deceleration_curve.Evaluate(0, relative_t) < upper_bound - kBaseBuffer) {
+          max_deceleration_curve.Evaluate(0, relative_t) <
+              upper_bound - kBaseBuffer) {
         upper_bound -= kBaseBuffer;
       }
       // for ego speed buffer
-      bool is_safe_vel = virtual_acc_curve->Evaluate(1, relative_t) + kSafeVelBuffer >
-                         corridor_upper_point.velocity();
+      bool is_safe_vel =
+          virtual_acc_curve->Evaluate(1, relative_t) + kSafeVelBuffer >
+          corridor_upper_point.velocity();
       if (relative_t > add_speed_buffer_start_time &&
-          max_deceleration_curve.Evaluate(0, relative_t) < upper_bound - speed_buffer &&
+          max_deceleration_curve.Evaluate(0, relative_t) <
+              upper_bound - speed_buffer &&
           is_safe_vel) {
         upper_bound -= speed_buffer;
       }
@@ -185,16 +201,19 @@ void BoundMaker::MakeVBound() {
 
 void BoundMaker::MakeJerkBound() {
   // @gpxu 待补充
-  double jerk_upper_bound = speed_planning_config_.speed_planning_bound.jerk_upper_bound;
+  double jerk_upper_bound =
+      speed_planning_config_.speed_planning_bound.jerk_upper_bound;
   if (init_lon_state_[2] > 0.0) {
     jerk_upper_bound = speed_planning_config_.slow_jerk_upper_bound;
   }
-  double jerk_lower_bound = speed_planning_config_.speed_planning_bound.jerk_lower_bound;
+  double jerk_lower_bound =
+      speed_planning_config_.speed_planning_bound.jerk_lower_bound;
   jerk_upper_bound_ = std::vector<double>(plan_points_num_, jerk_upper_bound);
   jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
 }
 
-SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve() const {
+SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve()
+    const {
   LonState init_state;
   init_state.p = init_lon_state_[0];
   init_state.v = init_lon_state_[1];
@@ -207,13 +226,15 @@ SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve() cons
   constexpr double kSlowJerkLowerBound = -3.0;
   state_limit.v_end = init_lon_state_[1] + kSpeedBuffer;
   state_limit.a_max = acc_upper_bound_with_speed_ - kAccBuffer;
-  state_limit.a_min = speed_planning_config_.speed_planning_bound.acc_lower_bound;
+  state_limit.a_min =
+      speed_planning_config_.speed_planning_bound.acc_lower_bound;
   state_limit.j_max = kSlowJerkUpperBound;
   state_limit.j_min = kSlowJerkLowerBound;
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
 
-SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve() const {
+SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve()
+    const {
   LonState init_state;
   init_state.p = init_lon_state_[0];
   init_state.v = init_lon_state_[1];
@@ -226,25 +247,27 @@ SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve() cons
   // iso_acc_limit_speed_upper : 20.0
   // iso_acc_limit_speed_lower : 5.0
   //
-  const double acc_lower_bound =
-      planning_math::LerpWithLimit(IsoAccLimitLower, IsoAccLimitSpeedLower, IsoAccLimitUpper,
-                                     IsoAccLimitSpeedUpper, init_lon_state_[1]);
+  const double acc_lower_bound = planning_math::LerpWithLimit(
+      IsoAccLimitLower, IsoAccLimitSpeedLower, IsoAccLimitUpper,
+      IsoAccLimitSpeedUpper, init_lon_state_[1]);
 
-  const double jerk_lower_bound =
-      planning_math::LerpWithLimit(IsoJerkLimitLower, IsoJerkLimitSpeedLower, IsoJerkLimitUpper,
-                                     IsoJerkLimitSpeedUpper, init_lon_state_[1]);
+  const double jerk_lower_bound = planning_math::LerpWithLimit(
+      IsoJerkLimitLower, IsoJerkLimitSpeedLower, IsoJerkLimitUpper,
+      IsoJerkLimitSpeedUpper, init_lon_state_[1]);
 
   constexpr double kSlowAccLowerBound = -3.0;
   state_limit.a_max = acc_upper_bound_with_speed_;
   state_limit.a_min = acc_lower_bound;
-  state_limit.j_max = speed_planning_config_.speed_planning_bound.jerk_upper_bound;
+  state_limit.j_max =
+      speed_planning_config_.speed_planning_bound.jerk_upper_bound;
   state_limit.j_min = jerk_lower_bound;
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
 
 std::unique_ptr<Trajectory1d> BoundMaker::MakeVirtualZeroAccCurve() {
-  auto virtual_zero_acc_curve = std::make_unique<PiecewiseJerkAccelerationTrajectory1d>(
-      init_lon_state_[0], init_lon_state_[1]);
+  auto virtual_zero_acc_curve =
+      std::make_unique<PiecewiseJerkAccelerationTrajectory1d>(
+          init_lon_state_[0], init_lon_state_[1]);
   virtual_zero_acc_curve->AppendSegment(init_lon_state_[2], dt_);
 
   const double zero_acc_jerk_max = speed_planning_config_.zero_acc_jerk_max;
@@ -267,7 +290,7 @@ std::unique_ptr<Trajectory1d> BoundMaker::MakeVirtualZeroAccCurve() {
     }
 
     if (vel <= 0.0) {
-      a_next = 0.0; //??
+      a_next = 0.0;  //??
     }
     virtual_zero_acc_curve->AppendSegment(a_next, dt_);
   }

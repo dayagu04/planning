@@ -13,7 +13,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization, ControlOutput
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241129/20241129-11-26-28/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-29-11-26-28_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241212/20241212-15-49-58/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-12-15-49-58_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = CHERY_E0X
@@ -238,6 +238,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
 
+  lat_path_optimizier_params = [100.0, 100.0, 5000.0, 168000.0, 10.0, 10.0, 360.0, 360.0]
+
   res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg_bytes,
                                     fus_parking_msg_bytes,
                                     loc_msg_bytes,
@@ -253,7 +255,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
-                                    obs_x_vec, obs_y_vec)
+                                    obs_x_vec, obs_y_vec, lat_path_optimizier_params)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

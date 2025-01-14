@@ -15,6 +15,7 @@
 #include "reference_path_manager.h"
 #include "refline.h"
 #include "session.h"
+
 // #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -59,6 +60,7 @@ class VirtualLane {
   double width_by_s(double s);
   double width(double x);
   double width() { return width_; };
+
   // WB：用户设置巡航车速不应与地图限速耦合
   double velocity_limit() const { return v_cruise_; };
   const std::vector<double> &c_poly() const { return c_poly_; }
@@ -82,6 +84,7 @@ class VirtualLane {
   const std::vector<iflyauto::LaneTypeMsg> &get_lane_types() {
     return lane_types_;
   }
+
   void update_reference_path(
       std::shared_ptr<LaneReferencePath> reference_path) {
     // assert(reference_path != nullptr);

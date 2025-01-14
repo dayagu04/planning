@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "./../collision_detection/gjk2d_interface.h"
+#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "Eigen/Core"
 #include "ad_common/math/line_segment2d.h"
@@ -126,10 +126,6 @@ class HybridAStarInterface {
 
   void PathClear(HybridAStarResult* path);
 
-  // if in vertial parking, check goal safe, if not safe, move goal to a safe
-  // position.
-  void AdjustGoalBySafeCheck(Pose2D* adjust_goal, const Pose2D& request_goal);
-
   void UpdateSearchBoundary();
 
   void UpdateEDTBasePose(Pose2D& ogm_base_pose);
@@ -149,7 +145,9 @@ class HybridAStarInterface {
 
   Pose2D ego_pose_;
   Pose2D initial_state_;
-  // astar goal
+  // astar searching goal.
+  // 对于垂直车位，goal_state位于中心线上. 位姿调节器依赖这个pose重新计算搜索目标点.
+  // 对于平行车位，goal_state位于车辆起点
   Pose2D goal_state_;
 
   AstarSearchState search_state_;

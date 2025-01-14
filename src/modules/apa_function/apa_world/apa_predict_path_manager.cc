@@ -21,11 +21,15 @@ void ApaPredictPathManager::Update(
 
   if (planning_output == nullptr || local_view == nullptr ||
       measure_data_ptr == nullptr) {
+    ILOG_ERROR << "Update ApaPredictPathManager, local_view_ptr is nullptr";
     return;
   }
 
+  ILOG_INFO << "Update ApaPredictPathManager";
+
   if (planning_output->planning_status.apa_planning_status !=
       iflyauto::APA_IN_PROGRESS) {
+    ILOG_INFO << "apa not in progress, no predict_path";
     return;
   }
 

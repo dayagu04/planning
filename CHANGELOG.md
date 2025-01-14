@@ -1,3 +1,55 @@
+# planning2.7.5
+###  修改说明
+行车 Feature
+1. 添加V3-speed_limit_decider
+2. lane_borrow_deciderV1
+3. 更新纵向V3 planner A*画图，搜索cost全量展示；添加openset是否为空的文言展示
+4. 更新change log：增加跟车时距实时调节功能
+5. 非可变车道地面标识接入 完善LCC路口前分叉处理（左一、左二均为左转；右一、右二均右转）
+6. 添加自车距离road split一定距离内抑制超车变道
+7. 重构EgoLaneTrackManger::Update()函数
+8. 合并lon V3 中加入的proto，用于可视化
+9. 纵向添加锥桶变道的逻辑
+10. 横向障碍物决策重构
+11. 重构变道状态机中变道安全性检查逻辑；地图变道增加利用地面标识和汇流决策的判断；打开在高架上由主路滑入匝道时的亮灯功能
+
+行车 Bug
+1. 调整soft bound滤波器
+2. fix V3 bound maker
+3. 修复上一帧利用重合率确认当前车道 当前帧为分流场景 分叉选择跳变的问题
+4. 变道过程中更新车道virtual_id 主要是目标车道存在分流的情况
+5. 修复原ego_lane_track_manager_可能为nullptr导致崩溃
+6. DynamicWorld问题修复；增加可变车道、非可变车道、定位调用间隔绘图
+7. 优化fast cross车辆判断逻辑
+8. 调整Cutin判断阈值
+9. 修复lat_offset中first_s_to_ego和CalLaneWidth的bug，避免障碍物距离自车的距离更新错误，导致lat_offset计算错误，自车不避让。
+10. 修复原ego_lane_track_manager_可能为nullptr导致崩溃
+11. 修复cutin阈值错误初始化的问题，导致cutin误识别
+
+泊车 Feature
+1. 添加限速模块和停车决策模块
+2. 增加混合A星仿真目标点调节器
+3. 新增apa_slot_manager，垂直车尾泊入路径优化，车位释放优化。
+4. 新增垂直车位泊入仿真文件
+5. 放宽finish条件
+6. 混合A星搜索路径时，考虑uss point cloud
+7. 完善垂直车尾泊入代价计算
+8. 增加新车位管理，根据新车位管理完善垂直车位泊入，填充点的kappa和s
+
+泊车 Bug
+1. 修复编译告警
+2. 修复搜索阶段的垂直车尾入库
+3. 修复二次起步
+4. 修复5.5米宽断头路来回揉库问题
+5. 修复车位释放计算中，顶点赋值错误
+6. 修复断头路垂直车位泊入，rs最后一段路D档的问题
+7. 修复A星垂直车头入库和车尾入库互相影响的问题
+8. 修复A星折线路径和回环路径
+
+planning player
+1. pp增加循环播包跑仿真模式
+2. pp增加原包的planning debug info
+
 # planning2.7.4
 ###  修改说明
 Feature
@@ -23,6 +75,7 @@ Bug
 Feature
 1. 路权decider开发与完善
 2. 针对锥桶变道、紧急避障变道 变道请求及状态机层面优化变道请求生成的时机
+3. 增加跟随前车车距手动/自动调节功能，自动调节仅限大车
 
 Bug
 1. 优化cmake的link关系

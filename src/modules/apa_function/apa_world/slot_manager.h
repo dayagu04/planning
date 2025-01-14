@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "apa_data.h"
+
 #include "apa_measure_data_manager.h"
 #include "apa_obstacle_manager.h"
 #include "apa_param_config.h"
@@ -277,17 +277,6 @@ class SlotManager {
     }
   };
 
-  struct Measurement {
-    double v_ego = 0.0;
-    double heading = 0.0;
-    Eigen::Vector2d ego_heading_vec = Eigen::Vector2d::Zero();
-    Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
-    // move ego pose to right side by params
-    Eigen::Vector2d right_mirror_pos = Eigen::Vector2d::Zero();
-    // move ego pose to left side by params
-    Eigen::Vector2d left_mirror_pos = Eigen::Vector2d::Zero();
-  };
-
   struct EgoSlotInfo {
     uint8_t select_slot_id = 0;
     uint8_t slot_type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_INVALID;
@@ -384,13 +373,7 @@ class SlotManager {
   };
 
   struct Frame {
-    const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
-    const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
-    const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
-    const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
-    const iflyauto::FusionOccupancyObjectsInfo*
-        fusion_occupancy_objects_info_ptr;
 
     std::unordered_map<uint8_t, uint8_t> slot_release_voter;
 
@@ -414,7 +397,6 @@ class SlotManager {
 
     LimiterPointWindow limiter_point_window;
 
-    Measurement measurement;
     Param param;
     size_t fusion_order_error_cnt = 0;
 
@@ -466,33 +448,16 @@ class SlotManager {
     }
   };
 
-  bool Update(const std::shared_ptr<ApaData> apa_data_ptr,
+  bool Update(const LocalView* local_view,
               const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
               const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
               const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
-
-  void AddUssPerceptObstacles();
-
-  void AddGroundLineObstacles();
-
-  void AddFusionObjects();
-
-  const bool SetRealtime();
-
-  void SetParam(const Param& param) { frame_.param = param; }
 
   void SetFrame(const Frame& frame) { frame_ = frame; }
 
   void Reset();
 
-  const bool GetSelectedSlot(common::SlotInfo& slot_info,
-                             const int selected_id);
-
-  const bool GetSelectedSlot(common::SlotInfo& slot_info);
-
   const size_t GetFusedSlotSize() { return frame_.slot_info_window_map.size(); }
-
-  const std::vector<Eigen::Vector2d> GetSelectedSlotObsVec();
 
   const std::vector<Eigen::Vector2d>& GetRealTimeObsPtVec() {
     return frame_.obs_pt_vec;
@@ -507,9 +472,6 @@ class SlotManager {
   }
 
   const EgoSlotInfo& GetEgoSlotInfo() const { return frame_.ego_slot_info; }
-
-  const bool GetSelectedLimiter(
-      std::pair<Eigen::Vector2d, Eigen::Vector2d>& fused_limiter) const;
 
   const std::vector<int>& GetReleaseSlotIdVec() const {
     return frame_.release_slot_id_vec;
@@ -527,12 +489,10 @@ class SlotManager {
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
 
-  void AddObstacles();
-
   bool UpdateSlotsInParkingOut();
 
   // slot release by rule based
-  bool UpdateSlotsInSearching(const std::shared_ptr<ApaData> apa_data_ptr);
+  bool UpdateSlotsInSearching();
 
   bool UpdateSlotsInParking();
   bool UpdateEgoSlotInfo(const google::protobuf::uint32& select_slot_id,
@@ -572,8 +532,6 @@ class SlotManager {
   const bool ProcessSlantSlot(
       common::SlotInfo& slot_info,
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
-
-  void Log();
 
   void CopySlotReleaseInfo();
 };

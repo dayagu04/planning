@@ -73,7 +73,7 @@
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.1,
-  "finish_lat_err_strict": 0.1,
+  "finish_lat_err_strict": 0.15,
   "finish_lon_err": 0.25,
   "finish_heading_err": 1.8,
   "finish_uss_slot_occupied_ratio": 0.798,
@@ -86,8 +86,8 @@
   "finish_parallel_rear_stop_buffer": 0.45,
 
   "comment_6": "check fail params",
-  "stuck_failed_time": 9.0,
-  "pause_failed_time": 13.0,
+  "stuck_failed_time": 10.0,
+  "pause_failed_time": 33.0,
 
   "comment_7": "check static params",
   "car_static_pos_err_strict": 0.005,
@@ -115,7 +115,7 @@
   "corner_uss_scan_angle_deg_turn": 35.68,
   "corner_uss_dist_diff": 0.1068,
   "corner_uss_steer_angle": 146.8,
-  "enable_corner_uss_process": true,
+  "enable_corner_uss_process": false,
   "uss_corner_scan_angle_gain": 0.948,
   "uss_face_scan_angle_gain": 1.088,
   "uss_vertex_x_vec": [3.4655,  3.7711,  3.8742, 3.8742, 3.7711,  3.4655,
@@ -183,7 +183,7 @@
   "tmp_no_consider_obs_dy": true,
   "believe_in_fus_obs":false,
   "use_fus_occ_obj": true,
-  "use_uss_pt_clound": false,
+  "use_uss_pt_clound": true,
   "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.1068,
   "obs_safe_dx": 0.0668,
@@ -192,7 +192,7 @@
   "line_arc_obs_slot_occupied_ratio": 0.168,
   "line_arc_obs_channel_width": 4.88,
   "line_arc_obs_channel_length": 5.086,
-  "dynamic_col_det_enable": true,
+  "dynamic_col_det_enable": false,
   "parallel_obs2slot_max_dist": 16.66,
   "parallel_channel_y_mag": 7.9,
   "parallel_channel_x_mag": 20.0,
@@ -207,7 +207,7 @@
   "max_heading_err_2": 0.88,
   "max_y_err_3": 0.06,
   "max_heading_err_3": 2.68,
-  "pose_slot_occupied_ratio": 0.268,
+  "pose_slot_occupied_ratio": 0.068,
   "pose_slot_occupied_ratio_2": 0.568,
   "pose_slot_occupied_ratio_3": 0.768,
   "pose_min_remain_dis": 0.688,
@@ -310,6 +310,7 @@
   "slot_occupied_ratio_max_heading_err": 76.8,
   "max_slot_window_size": 3,
   "max_limiter_window_size": 3,
+  "slot_release_car_lat_buffer": 0.15,
 
   "comment_17": "gen output params",
   "max_velocity": 0.6,
@@ -326,5 +327,10 @@
   "astar_parallel_finish_lon_err" : 0.25,
   "astar_parallel_finish_center_lat_err" : 0.1,
   "astar_parallel_finish_head_lat_err" : 0.25,
-  "astar_parallel_finish_heading_err" : 2.5
+  "astar_parallel_finish_heading_err" : 2.5,
+
+  "enable_apa_speed_plan" : true,
+  "default_cruise_speed" : 1.0,
+  "min_cruise_speed" : 0.3,
+  "obs_dist_for_speed_limit" : 0.4
 }

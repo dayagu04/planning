@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-#include "apa_data.h"
+
 #include "apa_param_config.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
@@ -28,12 +28,12 @@
 #include "pose2d.h"
 #include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
-#include "src/library/collision_detection/aabb2d.h"
+#include "src/library/convex_collision_detection/aabb2d.h"
 #include "src/library/hybrid_astar_lib/hybrid_a_star.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
-#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
+#include "virtual_wall_decider.h"
 #include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "transform2d.h"
 #include "ad_common/math/math_utils.h"

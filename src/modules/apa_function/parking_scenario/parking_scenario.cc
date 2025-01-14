@@ -3,20 +3,54 @@
 #include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
+#include <algorithm>
 #include <memory>
+#include <string>
 
 #include "apa_param_config.h"
+#include "apa_slot.h"
 #include "apa_utils.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "log_glog.h"
-#include "parking_task/deciders/narrow_space_decider.h"
+#include "narrow_space_decider.h"
 #include "parking_task/parking_task.h"
+#include "parking_stop_decider.h"
+#include "park_speed_limit_decider.h"
+#include "pose2d.h"
 
 namespace planning {
 namespace apa_planner {
+
+void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status) {
+  ILOG_INFO << "scenario_status = "
+            << GetApaScenarioStatusString(scenario_status);
+}
+
+const std::string GetApaScenarioStatusString(
+    const ParkingScenarioStatus scenario_status) {
+  std::string status;
+  switch (scenario_status) {
+    case ParkingScenarioStatus::STATUS_TRY:
+      status = "STATUS_TRY";
+      break;
+    case ParkingScenarioStatus::STATUS_RUNNING:
+      status = "STATUS_RUNNING";
+      break;
+    case ParkingScenarioStatus::STATUS_DONE:
+      status = "STATUS_DONE";
+      break;
+    case ParkingScenarioStatus::STATUS_FAIL:
+      status = "STATUS_FAIL";
+      break;
+    default:
+      status = "STATUS_UNKNOWN";
+      break;
+  }
+  return status;
+}
 
 ParkingScenario::ParkingScenario() {}
 
@@ -33,7 +67,9 @@ void ParkingScenario::Reset() { return; }
 
 void ParkingScenario::ScenarioRunning() {
   // run plan core
-  PlanCore();
+  ExcutePathPlanningTask();
+
+  ExcuteSpeedPlanningTask();
 
   // generate planning output
   GenPlanningOutput();
@@ -47,12 +83,41 @@ void ParkingScenario::ScenarioRunning() {
 }
 
 void ParkingScenario::InitSimulation() {
-  if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
-      apa_world_ptr_->GetApaDataPtr()->simu_param.is_reset) {
+  if (apa_world_ptr_->GetSimuParam().is_simulation &&
+      apa_world_ptr_->GetSimuParam().is_reset) {
     Reset();
   }
 
   return;
+}
+
+void ParkingScenario::UpdateStuckTime() {
+  // update stuck by uss time  重规划清空
+  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag()) {
+    frame_.stuck_uss_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.stuck_uss_time = 0.0;
+  }
+
+  // 重规划不清空
+  if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
+       frame_.plan_stm.planning_status == PARKING_PLANNING) &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag()) {
+    frame_.stuck_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.stuck_time = 0.0;
+  }
+
+  // update pause time  这个时间其实没用  因为踩刹车导致的暂停根本进不来规划器
+  // 后面删除
+  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
+    frame_.pause_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.pause_time = 0.0;
+  }
 }
 
 const bool ParkingScenario::CheckPaused() const {
@@ -67,7 +132,7 @@ const bool ParkingScenario::CheckPaused() const {
 const bool ParkingScenario::CheckPlanSkip() const {
   if ((frame_.plan_stm.planning_status == PARKING_FINISHED ||
        frame_.plan_stm.planning_status == PARKING_FAILED) &&
-      !apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
+      !apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "plan has been finished or failed, should skip";
 
     // apa_world_ptr_->GetSlotManagerPtr()->Reset();
@@ -163,15 +228,6 @@ void ParkingScenario::GenPlanningPath() {
     trajectory->trajectory_points[i].v = 0.5;
   }
 
-  // set target velocity to control as a limit
-  const std::vector<double> ratio_tab = {0.0, 0.4, 0.8, 1.0};
-  const std::vector<double> vel_limit_tab = {apa_param.GetParam().max_velocity,
-                                             apa_param.GetParam().max_velocity,
-                                             0.45, 0.35};
-
-  const double vel_limit = pnc::mathlib::Interp1(
-      ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
-
   planning_output_.trajectory.target_reference.target_velocity =
       frame_.vel_target;
 
@@ -192,20 +248,24 @@ void ParkingScenario::GenPlanningPath() {
 
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
-      frame_.ego_slot_info.slot_occupied_ratio;
+      std::max(frame_.ego_slot_info.slot_occupied_ratio,
+               apa_world_ptr_->GetNewSlotManagerPtr()
+                   ->ego_info_under_slot_.slot_occupied_ratio);
 
   // send slot type to control
   planning_output_.trajectory.trajectory_points[2].distance =
-      static_cast<double>(apa_world_ptr_->GetApaDataPtr()->slot_type);
+      static_cast<double>(apa_world_ptr_->slot_type_);
 
   // send remain dist col det to uss
   // only set a flag let control can use it
-  const double flag = (apa_world_ptr_->GetApaDataPtr()->slot_type ==
-                           iflyauto::PARKING_SLOT_TYPE_VERTICAL ||
-                       apa_world_ptr_->GetApaDataPtr()->slot_type ==
-                           iflyauto::PARKING_SLOT_TYPE_SLANTING)
-                          ? 1.0
-                          : 0.0;
+  const double flag =
+      (apa_world_ptr_->GetNewSlotManagerPtr()
+               ->ego_info_under_slot_.slot.slot_type_ ==
+           SlotType::PERPENDICULAR ||
+       apa_world_ptr_->GetNewSlotManagerPtr()
+               ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT)
+          ? 1.0
+          : 0.0;
   planning_output_.trajectory.trajectory_points[3].distance = flag;
 
   planning_output_.trajectory.trajectory_points[4].distance =
@@ -242,9 +302,12 @@ const bool ParkingScenario::CheckStuckFailed() {
 const bool ParkingScenario::UpdateObstacleLocal() {
   auto& ego_slot_info = frame_.ego_slot_info;
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
-      pnc::geometry_lib::PathPoint(ego_slot_info.slot_origin_pos,
-                                   ego_slot_info.slot_origin_heading));
+      ego_slot_info.g2l_tf);
   const auto obstacle_manager_ptr = apa_world_ptr_->GetObstacleManagerPtr();
+
+  // 只是临时使用而已 其实不应该把障碍物转换到ego_slot_info
+  // 这个函数待整体适配完需要删除 应该直接从障碍物管理器中获取障碍物
+
   std::vector<ApaObstacle*> obs_vec;
   std::vector<Eigen::Vector2d> obs_pt_vec;
   ego_slot_info.obs_pt_vec_slot.clear();
@@ -329,8 +392,7 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
-  uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetApaDataPtr(),
-                                   apa_world_ptr_->GetMeasureDataManagerPtr(),
+  uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
                                    apa_world_ptr_->GetPredictPathManagerPtr(),
                                    apa_world_ptr_->GetObstacleManagerPtr());
 
@@ -414,6 +476,7 @@ const bool ParkingScenario::PostProcessPath() {
   for (size_t i = 0; i < x_vec_size; ++i) {
     point.pos << x_vec[i], y_vec[i];
     point.heading = heading_vec[i];
+    point.s = s_vec[i];
     current_path_point_global_vec_[i] = point;
   }
 
@@ -455,10 +518,65 @@ void ParkingScenario::ThreadClear() { return; }
 
 void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
-  std::shared_ptr<SlotManager> slot_manager =
-      apa_world_ptr_->GetSlotManagerPtr();
-  slot_manager->SlotReleaseByScenarioTry(
-      true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+  std::shared_ptr<ApaSlotManager> sslot_manager =
+      apa_world_ptr_->GetNewSlotManagerPtr();
+  sslot_manager->ego_info_under_slot_.slot.release_info_
+      .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+      SlotReleaseState::RELEASE;
+  sslot_manager->ego_info_under_slot_.slot.release_info_
+      .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+      SlotReleaseState::RELEASE;
+
+  return;
+}
+
+void ParkingScenario::ExcuteSpeedPlanningTask() {
+  if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
+    return;
+  }
+
+  SpeedDecisions speed_decisions;
+
+  double tracking_path_collision_dist = frame_.remain_dist_uss;
+  tracking_path_collision_dist =
+      std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
+
+  ILOG_INFO << "remain_dist_uss" << frame_.remain_dist_uss
+            << ", frame_.remain_dist_col_det" << frame_.remain_dist_col_det;
+
+  // update stop decision
+  ParkingStopDecider stop_decider = ParkingStopDecider();
+  stop_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(), apa_world_ptr_,
+                       tracking_path_collision_dist,
+                       current_path_point_global_vec_, &speed_decisions);
+
+  // update speed limit decision
+  ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
+  speed_limit_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(),
+                              current_path_point_global_vec_, &speed_decisions);
+
+  // get ego around speed limit decision
+  const SpeedLimitDecision* min_speed_decision =
+      speed_limit_decider.GetSpeedLimitDecisionBySRange(
+          &speed_decisions, stop_decider.GetEgoPathProjectS(),
+          stop_decider.GetEgoPathProjectS() + 0.6);
+
+  // todo: add uss obs dist
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  if (min_speed_decision != nullptr) {
+    double ref_v;
+    ref_v = speed_limit_decider.CalcRefSpeedBySpeedLimitDecision(
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
+        stop_decider.GetEgoPathProjectS(), min_speed_decision);
+
+    frame_.vel_target = std::min(
+        ref_v, uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+  } else {
+    frame_.vel_target =
+        std::min(apa_param.GetParam().speed_config.default_cruise_speed,
+                 uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+  }
 
   return;
 }

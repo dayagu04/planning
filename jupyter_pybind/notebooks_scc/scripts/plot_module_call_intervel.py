@@ -21,7 +21,7 @@ altitude0 = kRefAlt
 class LocalizationApaPlotter(object):
   def __init__(self):
   # bag path and frame dt
-    self.file_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240720/20240720-16-21-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-20-16-21-25_no_camera.bag'
+    self.file_path = '/data_cold/abu_zone/autoparse/chery_e0y_20260/trigger/20241214/20241214-11-21-40/data_collection_CHERY_E0Y_20260_EVENT_FILTER_2024-12-14-11-21-40_no_camera.bag'
     display(HTML('<style>.container { width:95% !important;  }</style>'))
     output_notebook()
 
@@ -37,14 +37,18 @@ class LocalizationApaPlotter(object):
     self.fusion_objects_time_vec = []
     self.control_call_interval_vec = []
     self.control_time_vec = []
-    self.ego_pose_call_interval_vec = []
-    self.ego_pose_time_vec = []
+    self.egomotion_call_interval_vec = []
+    self.egomotion_time_vec = []
     self.vehicle_service_call_interval_vec = []
     self.vehicle_service_time_vec = []
     self.ehr_position_call_interval_vec = []
     self.ehr_position_time_vec = []
     self.road_fusion_call_interval_vec = []
     self.road_fusion_time_vec = []
+    self.perception_lane_lines_call_interval_vec = []
+    self.perception_lane_lines_time_vec = []
+    self.perception_lane_topo_call_interval_vec = []
+    self.perception_lane_topo_time_vec = []
 
 
   def load_data(self):
@@ -114,14 +118,14 @@ class LocalizationApaPlotter(object):
       self.control_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
       last_control_time = msg.msg_header.stamp
 
-    last_ego_pose_time = None
-    for topic, msg, t in bag.read_messages('/iflytek/localization/ego_pose'):
-      if last_ego_pose_time is None:
-        self.ego_pose_call_interval_vec.append(0.0)
+    last_egomotion_time = None
+    for topic, msg, t in bag.read_messages('/iflytek/localization/egomotion'):
+      if last_egomotion_time is None:
+        self.egomotion_call_interval_vec.append(0.0)
       else:
-        self.ego_pose_call_interval_vec.append((msg.msg_header.stamp * 1000 - last_ego_pose_time) * 1e-6)
-      self.ego_pose_time_vec.append((msg.msg_header.stamp * 1000 - start_time) * 1e-6)
-      last_ego_pose_time = msg.msg_header.stamp * 1000
+        self.egomotion_call_interval_vec.append((msg.msg_header.stamp - last_egomotion_time) * 1e-6)
+      self.egomotion_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_egomotion_time = msg.msg_header.stamp
 
     last_vehicle_service_time = None
     for topic, msg, t in bag.read_messages('/iflytek/vehicle_service'):
@@ -156,6 +160,28 @@ class LocalizationApaPlotter(object):
       self.road_fusion_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
       last_road_fusion_time = msg.msg_header.stamp
 
+    last_perception_lane_lines_time = None
+    for topic, msg, t in bag.read_messages('/iflytek/camera_perception/lane_lines'):
+      if start_time is None:
+        start_time = msg.msg_header.stamp
+      if last_perception_lane_lines_time is None:
+        self.perception_lane_lines_call_interval_vec.append(0.0)
+      else:
+        self.perception_lane_lines_call_interval_vec.append((msg.msg_header.stamp - last_perception_lane_lines_time) * 1e-6)
+      self.perception_lane_lines_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_perception_lane_lines_time = msg.msg_header.stamp
+
+    last_perception_lane_topo_time = None
+    for topic, msg, t in bag.read_messages('/iflytek/camera_perception/lane_topo'):
+      if start_time is None:
+        start_time = msg.msg_header.stamp
+      if last_perception_lane_topo_time is None:
+        self.perception_lane_topo_call_interval_vec.append(0.0)
+      else:
+        self.perception_lane_topo_call_interval_vec.append((msg.msg_header.stamp - last_perception_lane_topo_time) * 1e-6)
+      self.perception_lane_topo_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_perception_lane_topo_time = msg.msg_header.stamp
+
 
   def plot_figure(self):
     self.load_data()
@@ -166,14 +192,16 @@ class LocalizationApaPlotter(object):
     fig1 = bkp.figure(x_axis_label='time', y_axis_label='interval', width=1500, height=500, y_range = [0, 2])
     fig1.line(self.planning_time_vec, self.planning_call_interval_vec, line_width=1, line_color='red', legend_label = 'planning')
     fig1.line(self.static_map_time_vec, self.static_map_call_interval_vec, line_width=1, line_color='blue', legend_label = 'static_map')
-    fig1.line(self.pbox_imu_time_vec, self.pbox_imu_call_interval_vec, line_width=1, line_color='green', legend_label = 'pbox_imu')
-    fig1.line(self.pbox_gnss_time_vec, self.pbox_gnss_call_interval_vec, line_width=1, line_color='black', legend_label = 'pbox_gnss')
+    # fig1.line(self.pbox_imu_time_vec, self.pbox_imu_call_interval_vec, line_width=1, line_color='green', legend_label = 'pbox_imu')
+    # fig1.line(self.pbox_gnss_time_vec, self.pbox_gnss_call_interval_vec, line_width=1, line_color='black', legend_label = 'pbox_gnss')
     fig1.line(self.fusion_objects_time_vec, self.fusion_objects_call_interval_vec, line_width=1, line_color='gold', legend_label = 'fusion_objects')
     fig1.line(self.control_time_vec, self.control_call_interval_vec, line_width=1, line_color='indigo', legend_label = 'control')
-    # fig1.line(self.ego_pose_time_vec, self.ego_pose_call_interval_vec, line_width=1, line_color='brown', legend_label = 'ego_pose')
+    fig1.line(self.egomotion_time_vec, self.egomotion_call_interval_vec, line_width=1, line_color='brown', legend_label = 'egomotion')
     fig1.line(self.vehicle_service_time_vec, self.vehicle_service_call_interval_vec, line_width=1, line_color='pink', legend_label = 'vehicle_service')
     fig1.line(self.ehr_position_time_vec, self.ehr_position_call_interval_vec, line_width=1, line_color='grey', legend_label = 'ehr_position')
     fig1.line(self.road_fusion_time_vec, self.road_fusion_call_interval_vec, line_width=1, line_color='navy', legend_label = 'road_fusion')
+    fig1.line(self.perception_lane_lines_time_vec, self.perception_lane_lines_call_interval_vec, line_width=1, line_color='green', legend_label = 'perception_lane_lines')
+    fig1.line(self.perception_lane_topo_time_vec, self.perception_lane_topo_call_interval_vec, line_width=1, line_color='black', legend_label = 'perception_lane_topo')
     fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
     fig1.legend.click_policy = 'hide'
     bkp.show(fig1, notebook_handle=True)

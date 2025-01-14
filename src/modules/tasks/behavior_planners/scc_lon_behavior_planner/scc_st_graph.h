@@ -132,7 +132,7 @@ class StGraphGenerator {
                                const bool is_accident_car = false,
                                const bool is_temp_lead = false,
                                const bool is_lead = false);
-                               
+
   // compute safe distance
   double CalcSafeDistance(const double obstacle_velocity, const double v_ego);
 
@@ -208,6 +208,11 @@ class StGraphGenerator {
       std::shared_ptr<VirtualLane> current_lane,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
 
+  void CalculateLaneBorrowLimitSpeed(
+      const planning::common::LatObsInfo &lateral_obstacles,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
+
   void CalculateMergeSpeedLimit(
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &merge_st_info,
@@ -265,7 +270,8 @@ class StGraphGenerator {
   void SetDefaultDebugValues(std::vector<string> names);
 
   // HACK: cross障碍物判断
-  bool FastCrossAgentChecker(const double lead_one_v_lat, double &end_time,
+  bool FastCrossAgentChecker(const double lead_one_drel, const double v_ego,
+                             const double lead_one_v_lat, double &end_time,
                              const double kwidth);
 
   void GenerateSrefByVrefJLT(std::vector<double> &s_refs);

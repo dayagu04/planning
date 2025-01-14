@@ -11,8 +11,8 @@
 
 #include "./../../modules/common/config/vehicle_param.h"
 #include "./../../modules/context/vehicle_config_context.h"
-#include "./../collision_detection/aabb2d.h"
-#include "./../collision_detection/gjk2d_interface.h"
+#include "./../convex_collision_detection/aabb2d.h"
+#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/euler_distance_transform.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "./../reeds_shepp/reeds_shepp_interface.h"
@@ -120,13 +120,14 @@ class HybridAStar {
 
   // search single gear path by gear reverse searching.
   // todo: gear drive searching.
-  void SingleShotPathAttempt(const MapBound& XYbounds,
-                             const ParkObstacleList& obstacles,
-                             const AstarRequest& request,
-                             const ObstacleClearZone* clear_zone,
-                             HybridAStarResult* result,
-                             EulerDistanceTransform* edt,
-                             ParkReferenceLine* ref_line);
+  void GearRerversePathAttempt(const MapBound& XYbounds,
+                               const ParkObstacleList& obstacles,
+                               const AstarRequest& request,
+                               const ObstacleClearZone* clear_zone,
+                               const Pose2D& start, const Pose2D& target,
+                               HybridAStarResult* result,
+                               EulerDistanceTransform* edt,
+                               ParkReferenceLine* ref_line);
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
@@ -305,6 +306,10 @@ class HybridAStar {
 
   void ReversePathBySwapStartGoal(HybridAStarResult* result);
 
+  const bool IsPolygonCollision(const Polygon2D* polygon);
+
+  const bool IsFootPrintCollision(const Transform2d& tf);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
@@ -312,10 +317,12 @@ class HybridAStar {
   double min_radius_;
   double inv_radius_;
 
-  // todo, width = vehicle width + mirror width + safe width
-  Polygon2D veh_polygon_gear_none_;
-  Polygon2D veh_polygon_gear_drive_;
-  Polygon2D veh_polygon_gear_reverse_;
+  // todo, width = vehicle width + mirror width + safe width, bounding box
+  Polygon2D veh_box_gear_none_;
+  Polygon2D veh_box_gear_drive_;
+  Polygon2D veh_box_gear_reverse_;
+  // convex hull for accurate car
+  PolygonFootPrint cvx_hull_foot_print_;
 
   size_t next_node_num_ = 0;
   // front wheel angle, [-pi, +pi]

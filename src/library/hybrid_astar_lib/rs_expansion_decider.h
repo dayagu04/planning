@@ -26,19 +26,20 @@ class RSExpansionDecider : public AstarDecider {
 
   const bool IsSameEndPointForRsWithAstar();
 
-  bool IsNeedRsExpansion(const Node3d *node);
+  bool IsNeedRsExpansion(const Node3d *node, const AstarRequest *request) const;
 
-  static void UpdateRSPathRequest(RSPathRequestType *rs_request,
-                                  const bool is_single_shot,
-                                  const AstarPathGear single_shot_gear,
-                                  const Pose2D &ego_pose,
-                                  const double slot_width);
+  /**
+   * [out] request: update next path rs info
+   */
+  static void UpdateRSPathRequest(const bool is_next_path_single_shot,
+                                  const AstarPathGear next_path_gear,
+                                  AstarRequest *request);
 
  private:
   // 对于车辆在ref line，需要注意
-  const bool NeedRsLinkByNodeHeading(const Node3d *node);
+  const bool NeedRsLinkByNodeHeading(const Node3d *node) const;
 
-  const bool NeedRsLinkByOffset(const Node3d *node);
+  const bool NeedRsLinkByOffset(const Node3d *node) const;
 
   bool same_point_for_rs_with_astar_;
 

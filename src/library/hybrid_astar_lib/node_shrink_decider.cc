@@ -103,4 +103,45 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
   return false;
 }
 
+const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
+                                             const Node3d *old_node) const {
+
+   if (new_node == nullptr || old_node == nullptr) {
+    return false;
+  }
+
+  const Node3d *parent = new_node->GetPreNode();
+  if (parent == nullptr) {
+    return false;
+  }
+
+  const size_t new_node_id = new_node->GetGlobalID();
+  for (size_t i = 0; i < 10000; i++) {
+    if (parent->GetGlobalID() == new_node_id) {
+      return true;
+    }
+
+    parent = parent->GetPreNode();
+    if (parent == nullptr) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+const bool NodeShrinkDecider::IsSameGridNodeContinuous(
+    const Node3d *new_node, const Node3d *old_node) const {
+  if (new_node->GetEulerDist(old_node) > 0.01) {
+    return false;
+  }
+
+  double theta_diff = std::fabs(new_node->GetPhi() - old_node->GetPhi());
+  if (theta_diff > 0.0087) {
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace planning

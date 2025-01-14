@@ -69,15 +69,19 @@ const bool RSExpansionDecider::IsSameEndPointForRsWithAstar() {
   return same_point_for_rs_with_astar_;
 }
 
-bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node) {
-  bool need_rs = false;
-  need_rs = NeedRsLinkByNodeHeading(node);
-  if (!need_rs) {
-    return false;
-  }
+bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
+                                           const AstarRequest *request) const {
+  if (request->space_type == ParkSpaceType::VERTICAL &&
+      request->direction_request == ParkingVehDirection::TAIL_IN) {
+    bool need_rs = false;
+    need_rs = NeedRsLinkByNodeHeading(node);
+    if (!need_rs) {
+      return false;
+    }
 
-  if (!NeedRsLinkByOffset(node)) {
-    return false;
+    if (!NeedRsLinkByOffset(node)) {
+      return false;
+    }
   }
 
   return true;
@@ -90,30 +94,30 @@ void RSExpansionDecider::Process(const Pose2D &start, const Pose2D &end) {
 }
 
 void RSExpansionDecider::UpdateRSPathRequest(
-    RSPathRequestType *rs_request, const bool is_single_shot,
-    const AstarPathGear single_shot_gear, const Pose2D &ego_pose,
-    const double slot_width) {
-  if (is_single_shot) {
-    if (single_shot_gear == AstarPathGear::REVERSE) {
-      *rs_request = RSPathRequestType::all_path_forbid_forward;
-    } else if (single_shot_gear == AstarPathGear::DRIVE) {
-      *rs_request = RSPathRequestType::all_path_forbid_reverse;
+    const bool is_next_path_single_shot, const AstarPathGear next_path_gear,
+    AstarRequest *request) {
+  if (is_next_path_single_shot) {
+    if (next_path_gear == AstarPathGear::REVERSE) {
+      request->rs_request = RSPathRequestType::all_path_forbid_forward;
+    } else if (next_path_gear == AstarPathGear::DRIVE) {
+      request->rs_request = RSPathRequestType::all_path_forbid_reverse;
     }
   } else {
     // check rs last path gear
-    *rs_request = RSPathRequestType::none;
-    double y_diff = std::fabs(ego_pose.y);
-    if (y_diff < slot_width / 2 + 1.5) {
-      *rs_request = RSPathRequestType::last_path_forbid_forward;
+    request->rs_request = RSPathRequestType::none;
+    if (request->space_type == ParkSpaceType::VERTICAL &&
+        request->direction_request == ParkingVehDirection::TAIL_IN) {
+      request->rs_request = RSPathRequestType::last_path_forbid_forward;
 
       ILOG_INFO << "last rs path forbid forward";
     }
-
-    return;
   }
+
+  return;
 }
 
-const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
+const bool RSExpansionDecider::NeedRsLinkByNodeHeading(
+    const Node3d *node) const {
   // use heuristic rule to do rs path expansion
   // use node heading and steering to check.
   // if heading > 150 degree, shrink some rs expansion.
@@ -145,7 +149,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
   return true;
 }
 
-const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) {
+const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) const {
   if (std::fabs(node->GetY()) > 10.0 || std::fabs(node->GetX()) > 15.0) {
     return false;
   }

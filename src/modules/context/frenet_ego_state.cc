@@ -20,9 +20,19 @@ void FrenetEgoState::update(
     l_ = frenet_point.y;
   } else {
     LOG_DEBUG("kd_path coordinate conversion failed");
-  };
+  }
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
+  double heading = ego_state.ego_pose_raw().theta;
+  double head_x = cart_point.x + front_edge_to_rear_axle * std::cos(heading);
+  double head_y = cart_point.y + front_edge_to_rear_axle * std::sin(heading);
+  if (frenet_coord->XYToSL(Point2D(head_x, head_y), frenet_point)) {
+    head_s_ = frenet_point.x;
+    head_l_ = frenet_point.y;
+  } else {
+    LOG_DEBUG("kd_path coordinate conversion failed");
+  }
   heading_angle_ = planning_math::NormalizeAngle(
       ego_state.heading_angle() - frenet_coord->GetPathCurveHeading(s_));
   velocity_ = ego_state.ego_v();

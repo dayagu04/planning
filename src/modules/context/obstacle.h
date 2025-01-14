@@ -43,6 +43,7 @@ class Obstacle {
   }
 
   int id() const { return id_; }
+  double timestamp() const { return timestamp_; }
   void set_x_center(const double x_center) {
     x_center_ = x_center;
   }  // for pybind debug
@@ -103,6 +104,7 @@ class Obstacle {
  private:
   int id_{};
   int perception_id_ = 0;
+  double timestamp_ = 0;  // 单位：s
   bool is_static_ = false;
   double x_center_;
   double y_center_;

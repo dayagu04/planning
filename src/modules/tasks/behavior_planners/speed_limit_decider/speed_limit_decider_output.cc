@@ -28,8 +28,6 @@ std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     ret.append("CRUISE");
   } else if (SpeedLimitType::CURVATURE == type) {
     ret.append("CURVATURE");
-  } else if (SpeedLimitType::LIDAR_RB == type) {
-    ret.append("LIDAR_RB");
   } else if (SpeedLimitType::MERGE == type) {
     ret.append("MERGE");
   } else if (SpeedLimitType::CONE_BUCKET == type) {
@@ -38,8 +36,6 @@ std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     ret.append("CIPV_LOST");
   } else if (SpeedLimitType::ROUNDABOUT == type) {
     ret.append("ROUNDABOUT");
-  } else if (SpeedLimitType::DDLD == type) {
-    ret.append("DDLD");
   } else if (SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT == type) {
     ret.append("NOT_OVERTAKE_FROM_RIGHT");
   } else if (SpeedLimitType::VRU_ROUND == type) {
@@ -50,25 +46,6 @@ std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     ret.append("type error");
   }
   return ret;
-}
-
-int32_t SpeedLimitDeciderOutput::ddld_speed_limit_type() const {
-  return ddld_speed_limit_type_;
-}
-
-void SpeedLimitDeciderOutput::set_ddld_speed_limit_type(
-    const int32_t ddld_speed_limit_type) {
-  ddld_speed_limit_type_ = ddld_speed_limit_type;
-}
-
-const std::string& SpeedLimitDeciderOutput::ddld_speed_limit_debug_string()
-    const {
-  return ddld_speed_limit_debug_string_;
-}
-
-void SpeedLimitDeciderOutput::set_ddld_speed_limit_debug_string(
-    const std::string& ddld_speed_limit_debug_string) {
-  ddld_speed_limit_debug_string_ = ddld_speed_limit_debug_string;
 }
 
 int32_t SpeedLimitDeciderOutput::merge_alc_speed_limit_type() const {
@@ -90,14 +67,6 @@ void SpeedLimitDeciderOutput::set_merge_alc_speed_limit_debug_string(
   merge_alc_speed_limit_debug_string_ = merge_alc_speed_limit_debug_string;
 }
 
-int32_t SpeedLimitDeciderOutput::lidar_rb_speed_limit_type() const {
-  return lidar_rb_speed_limit_type_;
-}
-void SpeedLimitDeciderOutput::set_lidar_rb_speed_limit_type(
-    const int32_t lidar_rb_speed_limit_type) {
-  lidar_rb_speed_limit_type_ = lidar_rb_speed_limit_type;
-}
-
 int32_t SpeedLimitDeciderOutput::roundabout_speed_limit_type() const {
   return roundabout_speed_limit_type_;
 }
@@ -105,14 +74,6 @@ int32_t SpeedLimitDeciderOutput::roundabout_speed_limit_type() const {
 void SpeedLimitDeciderOutput::set_roundabout_speed_limit_type(
     const int32_t roundabout_speed_limit_type) {
   roundabout_speed_limit_type_ = roundabout_speed_limit_type;
-}
-
-std::string SpeedLimitDeciderOutput::lidar_rb_debug_string() const {
-  return lidar_rb_speed_limit_debug_string_;
-}
-void SpeedLimitDeciderOutput::set_lidar_rb_debug_string(
-    const std::string& lidar_rb_speed_limit_debug_string) {
-  lidar_rb_speed_limit_debug_string_ = lidar_rb_speed_limit_debug_string;
 }
 
 std::string SpeedLimitDeciderOutput::roundabout_debug_string() const {
@@ -142,14 +103,6 @@ void SpeedLimitDeciderOutput::
         const std::string& not_overtake_from_right_speed_limit_debug_string) {
   not_overtake_from_right_speed_limit_debug_string_ =
       not_overtake_from_right_speed_limit_debug_string;
-}
-
-std::string SpeedLimitDeciderOutput::cone_bucket_debug_string() const {
-  return cone_bucket_speed_limit_debug_string_;
-}
-void SpeedLimitDeciderOutput::set_cone_bucket_debug_string(
-    const std::string& cone_bucket_speed_limit_debug_string) {
-  cone_bucket_speed_limit_debug_string_ = cone_bucket_speed_limit_debug_string;
 }
 
 std::string SpeedLimitDeciderOutput::cipv_lost_debug_string_() const {
