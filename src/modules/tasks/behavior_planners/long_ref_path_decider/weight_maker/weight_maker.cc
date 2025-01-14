@@ -9,15 +9,15 @@ namespace planning {
 
 namespace {
 constexpr double kUrgentWeightStartTime = 0.0;
-constexpr double kUrgentWeightEndTime = 1.5;
+constexpr double kUrgentWeightEndTime = 3.0;
 constexpr double kAddUrgentWeightEndTime = 2.0;
 constexpr double kUrgentSpeedThres = 4.0;
 constexpr double lower_urgent_distance = 0.5;
 constexpr double upper_urgent_distance = 1.5;
 constexpr double lower_urgent_speed = 20.0 / 3.6;
 constexpr double upper_urgent_speed = 80.0 / 3.6;
-constexpr double upper_urgent_scale = 7.0;
-constexpr double lower_urgent_scale = 5.0;
+constexpr double upper_urgent_scale = 14.0;
+constexpr double lower_urgent_scale = 10.0;
 }  // namespace
 
 WeightMaker::WeightMaker(const SpeedPlannerConfig& speed_planning_config,

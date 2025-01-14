@@ -33,8 +33,8 @@ constexpr double kMinFarTimeGap = 1.8;
 constexpr double min_far_distance_threshold = 15.0;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 5.0;
-constexpr double kFarDistFollowTimeGap = 1.8;
+constexpr double kSpeedBuffer = 3.0;
+constexpr double kFarDistFollowTimeGap = 1.5;
 constexpr double kNearDistFollowTimeGap = 1.2;
 constexpr double kFarDistanceThreshold = 20.0;
 constexpr double kNearDistanceThreshold = 10.0;
@@ -50,6 +50,7 @@ constexpr double kJerkMax = 0.5;
 constexpr double AccMinThreshold = -3.0;
 constexpr double kSafeTimeGap = 1.4;
 constexpr double kMinFollowDistance = 3.0;
+constexpr int32_t kContinuousNum = 3;
 }  // namespace
 
 FollowTarget::FollowTarget(const SpeedPlannerConfig config,
@@ -61,11 +62,11 @@ FollowTarget::FollowTarget(const SpeedPlannerConfig config,
   GenerateUpperBoundInfo();
 
   // far slow car case
-  bool is_far_slow_car = JudgeFarSlowCar();
-  if (is_far_slow_car) {
-    target_follow_curve_ = MakeTargetFollowCurve();
-    enable_target_follow_curve_ = target_follow_curve_ != nullptr;
-  }
+  // bool is_far_slow_car = JudgeFarSlowCar();
+  // if (is_far_slow_car) {
+  //   target_follow_curve_ = MakeTargetFollowCurve();
+  //   enable_target_follow_curve_ = target_follow_curve_ != nullptr;
+  // }
 
   MakeMinFollowDistance();
 
@@ -157,10 +158,33 @@ void FollowTarget::GenerateFollowTarget() {
   auto stable_follow_trajectory =
       GenerateStableFollowSlowCurve(matched_desired_headway);
   bool has_stable_follow_target = (stable_follow_trajectory != nullptr);
+
   // far slow target
+  // 1) multi-frame judgment
+  auto mutable_lon_ref_path_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lon_ref_path_decider_output();
+  auto enable_farslow_jlt_count_record =
+      session_->planning_context()
+          .lon_ref_path_decider_output()
+          .target_maker_info.follow_target_info.enable_far_slow_jlt_count;
+  const bool enable_far_slow_follow = JudgeFarSlowCar(matched_desired_headway);
+  int32_t enable_farslow_jlt_count =
+      enable_far_slow_follow ? enable_farslow_jlt_count_record + 1 : 0;
+  bool enable_far_slow_jlt = enable_farslow_jlt_count >= kContinuousNum;
+
+  // 2) run far slow jlt
   auto far_slow_follow_trajectory =
-      GenerateFarFollowSlowCurve(matched_desired_headway);
-  bool has_far_slow_follow_target = (far_slow_follow_trajectory != nullptr);
+      GenerateFarFollowSlowCurve(enable_far_slow_jlt);
+
+  // 3) jugde headway sref or far slow jlt ?
+  if (far_slow_follow_trajectory != nullptr) {
+    enable_far_slow_jlt = JudgeSrefValid(far_slow_follow_trajectory);
+  }
+
+  // 4) store enable_farslow_jlt_count in planning_context
+  mutable_lon_ref_path_decider_output->target_maker_info.follow_target_info
+      .enable_far_slow_jlt_count = enable_farslow_jlt_count;
 
   // JSON DEBUG
   JSON_DEBUG_VALUE("has_target_follow_curve", 0)
@@ -208,19 +232,19 @@ void FollowTarget::GenerateFollowTarget() {
       JSON_DEBUG_VALUE("has_stable_follow_target", 1.0)
     }
 
-    if (has_far_slow_follow_target) {
+    if (enable_far_slow_jlt) {
       s_value = std::fmin(far_slow_follow_trajectory->Evaluate(0, t), s_value);
       target_value.set_s_target_val(s_value);
       target_value.set_target_type(upper_bound_infos_[i].target_type);
       JSON_DEBUG_VALUE("has_farslow_follow_target", 1.0)
     }
 
-    if (MakeSValueWithTargetFollowCurve(i, true, &s_value)) {
-      target_value.set_has_target(true);
-      target_value.set_s_target_val(s_value);
-      target_value.set_target_type(TargetType::kFollow);
-      JSON_DEBUG_VALUE("has_target_follow_curve", 1.0)
-    }
+    // if (MakeSValueWithTargetFollowCurve(i, true, &s_value)) {
+    //   target_value.set_has_target(true);
+    //   target_value.set_s_target_val(s_value);
+    //   target_value.set_target_type(TargetType::kFollow);
+    //   JSON_DEBUG_VALUE("has_target_follow_curve", 1.0)
+    // }
   }
 }
 
@@ -254,7 +278,7 @@ double FollowTarget::MakeSlowerFollowSTarget(const double speed,
   return s_target;
 }
 
-std::unique_ptr<VariableCoordinateTimeOptimalTrajectory>
+std::shared_ptr<VariableCoordinateTimeOptimalTrajectory>
 FollowTarget::GenerateStableFollowSlowCurve(
     const double matched_desired_headway) const {
   // 1.check upper bound
@@ -340,72 +364,42 @@ FollowTarget::GenerateStableFollowSlowCurve(
       VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
           init_state, state_limit, relative_coordinate_param, p_precision);
 
-  return std::make_unique<VariableCoordinateTimeOptimalTrajectory>(
+  return std::make_shared<VariableCoordinateTimeOptimalTrajectory>(
       follow_stable_target_trajectory);
 }
 
-std::unique_ptr<VariableCoordinateTimeOptimalTrajectory>
-FollowTarget::GenerateFarFollowSlowCurve(
-    const double matched_desired_headway) const {
-  // Judge far slow case
-  const auto& preview_upper_bound_info = upper_bound_infos_[check_time_idx];
-  int32_t agent_id = preview_upper_bound_info.agent_id;
-  int64_t preview_st_boundary_id = preview_upper_bound_info.st_boundary_id;
-  if (upper_bound_infos_.size() <= check_time_idx ||
-      preview_upper_bound_info.target_type == TargetType::kNotSet) {
-    return nullptr;
+std::shared_ptr<VariableCoordinateTimeOptimalTrajectory>
+FollowTarget::GenerateFarFollowSlowCurve(const bool enable_far_slow_jlt) const {
+  if (enable_far_slow_jlt) {
+    const double far_preview_dist = kFarPreviewTime * init_lon_state_[1];
+    const double near_preview_dist = kNearPreviewTime * init_lon_state_[1];
+    const double far_distance =
+        std::fmax(kFarDistanceThreshold, far_preview_dist);
+    const double near_distance =
+        std::fmax(kNearDistanceThreshold, near_preview_dist);
+    const double init_dist = upper_bound_infos_[0].s;
+
+    const double far_slow_follow_time_gap = planning_math::LerpWithLimit(
+        kNearDistFollowTimeGap, near_distance, kFarDistFollowTimeGap,
+        far_distance, init_dist);
+
+    CoordinateParam relative_coordinate_param;
+    const auto& preview_upper_bound_info = upper_bound_infos_[check_time_idx];
+    int64_t preview_st_boundary_id = preview_upper_bound_info.st_boundary_id;
+    if (!GenerateFarSlowCarRelativeCoordinate(preview_st_boundary_id,
+                                              far_slow_follow_time_gap,
+                                              &relative_coordinate_param)) {
+      return nullptr;
+    }
+
+    // Make variable time optimal traj
+    auto follow_stable_target_trajectory =
+        MakeSafeFarSlowCurve(relative_coordinate_param);
+
+    return std::make_shared<VariableCoordinateTimeOptimalTrajectory>(
+        follow_stable_target_trajectory);
   }
-
-  // 1.check s_diff
-  const double add_time_gap = std::fmax(0.0, matched_desired_headway - 1.2);
-  const double far_time_gap = kMinFarTimeGap + add_time_gap;
-  const double ego_move_distance =
-      std::fmax(init_lon_state_[1] * far_time_gap + kDefaultFollowMinDist,
-                min_far_distance_threshold);
-  const double upper_bound_s_diff =
-      preview_upper_bound_info.s - check_time * preview_upper_bound_info.v;
-  if (upper_bound_s_diff < ego_move_distance) {
-    return nullptr;
-  }
-
-  // 2.check v_diff
-  const double preview_ego_v =
-      init_lon_state_[1] + init_lon_state_[2] * kPreviewTime;
-  if (preview_ego_v - preview_upper_bound_info.v < kSpeedBuffer) {
-    return nullptr;
-  }
-
-  // 3.check init_v
-  constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
-  if (init_lon_state_[1] < kEgoSpeedThreshold) {
-    return nullptr;
-  }
-
-  const double far_preview_dist = kFarPreviewTime * init_lon_state_[1];
-  const double near_preview_dist = kNearPreviewTime * init_lon_state_[1];
-  const double far_distance =
-      std::fmax(kFarDistanceThreshold, far_preview_dist);
-  const double near_distance =
-      std::fmax(kNearDistanceThreshold, near_preview_dist);
-  const double init_dist = upper_bound_infos_[0].s;
-
-  const double far_slow_follow_time_gap = planning_math::LerpWithLimit(
-      kNearDistFollowTimeGap, near_distance, kFarDistFollowTimeGap,
-      far_distance, init_dist);
-
-  CoordinateParam relative_coordinate_param;
-  if (!GenerateFarSlowCarRelativeCoordinate(preview_st_boundary_id,
-                                            far_slow_follow_time_gap,
-                                            &relative_coordinate_param)) {
-    return nullptr;
-  }
-
-  // Make variable time optimal traj
-  auto follow_stable_target_trajectory =
-      MakeSafeFarSlowCurve(relative_coordinate_param);
-
-  return std::make_unique<VariableCoordinateTimeOptimalTrajectory>(
-      follow_stable_target_trajectory);
+  return nullptr;
 }
 
 bool FollowTarget::GenerateRelativeCoordinate(
@@ -535,37 +529,69 @@ bool FollowTarget::IsSafeFarSlowCurve(
   return true;
 }
 
-bool FollowTarget::JudgeFarSlowCar() const {
-  const double min_far_distance = 10.0;
-  const double min_far_time_gap = 2.0;
-  constexpr double kCheckTimeIndex = 15;
-  const double check_time = static_cast<double>(kCheckTimeIndex) * dt_;
-  constexpr double kEgoVelThresholdMps = 85 / 3.6;
-
-  if (init_lon_state_[1] < kEgoVelThresholdMps) {
+bool FollowTarget::JudgeFarSlowCar(const double matched_desired_headway) const {
+  // Judge far slow case
+  const auto& preview_upper_bound_info = upper_bound_infos_[check_time_idx];
+  int32_t agent_id = preview_upper_bound_info.agent_id;
+  int64_t preview_st_boundary_id = preview_upper_bound_info.st_boundary_id;
+  if (upper_bound_infos_.size() <= check_time_idx ||
+      preview_upper_bound_info.target_type == TargetType::kNotSet) {
     return false;
   }
 
-  if (upper_bound_infos_.size() - 1 < kCheckTimeIndex) {
+  // 1.check s_diff
+  const double add_time_gap = std::fmax(0.0, matched_desired_headway - 1.2);
+  const double far_time_gap = kMinFarTimeGap + add_time_gap;
+  const double ego_move_distance =
+      std::fmax(init_lon_state_[1] * far_time_gap + kDefaultFollowMinDist,
+                min_far_distance_threshold);
+  const double upper_bound_s_diff =
+      preview_upper_bound_info.s - check_time * preview_upper_bound_info.v;
+  if (upper_bound_s_diff < ego_move_distance) {
     return false;
   }
 
-  const auto& upper_bound_info = upper_bound_infos_[kCheckTimeIndex];
-
-  if (upper_bound_info.target_type == TargetType::kNotSet) {
+  // 2.check v_diff
+  const double preview_ego_v =
+      init_lon_state_[1] + init_lon_state_[2] * kPreviewTime;
+  if (preview_ego_v - preview_upper_bound_info.v < kSpeedBuffer) {
     return false;
   }
 
-  if ((upper_bound_info.s - check_time * upper_bound_info.v) -
-          init_lon_state_[0] <
-      std::fmax(init_lon_state_[1] * min_far_time_gap + 3.0,
-                min_far_distance)) {
+  // 3.check init_v
+  constexpr double kEgoSpeedThreshold = 36.0 / 3.6;
+  if (init_lon_state_[1] < kEgoSpeedThreshold) {
     return false;
   }
+  return true;
+}
 
-  constexpr double kSpeedThreshold = 50 / 3.6;
-  if (init_lon_state_[1] - upper_bound_info.v < kSpeedThreshold) {
-    return false;
+bool FollowTarget::JudgeSrefValid(
+    std::shared_ptr<VariableCoordinateTimeOptimalTrajectory> jlt_curve) const {
+  const auto& agents_headway_map = session_->planning_context()
+                                       .agent_headway_decider_output()
+                                       .agents_headway_Info();
+  for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
+    const double t = i * dt_;
+    const double vel = virtual_zero_acc_curve_->Evaluate(1, t);
+    const auto& agent_id = upper_bound_infos_[i].agent_id;
+    double follow_time_gap = min_follow_distance_gap_cut_in;
+    auto iter = agents_headway_map.find(agent_id);
+    if (iter != agents_headway_map.end()) {
+      follow_time_gap = iter->second.current_headway;
+    }
+    double target_s_disatnce = std::max(
+        vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
+
+    double upper_bound_s =
+        std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
+    double target_s =
+        std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
+    const double s_target_value = std::min(upper_bound_s, target_s);
+    const double s_value_jlt = jlt_curve->Evaluate(0, t);
+    if (s_value_jlt > s_target_value) {
+      return false;
+    }
   }
   return true;
 }
