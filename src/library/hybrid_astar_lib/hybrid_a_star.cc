@@ -1468,9 +1468,6 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
 
       if (edt_->IsCollisionForPoint(&tf, point_gear)) {
         node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
-        if (segment->gear == AstarPathGear::DRIVE) {
-          ILOG_INFO << "edt collision";
-        }
         return false;
       }
 
