@@ -1,5 +1,6 @@
 #include "st_graph_searcher.h"
 
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -213,9 +214,11 @@ bool CheckCollisionAfterUpsampling(
 
 StGraphSearcher::StGraphSearcher(const EgoPlanningConfigBuilder* config_builder,
                                  framework::Session* session)
-    : Task(config_builder, session) {
+    : Task(config_builder, session),
+      config_(config_builder->cast<StGraphSearcherConfig>()),
+      search_style_context_(
+          {AStarSearchStyle::ORDINARY, AStarSearchStyle::RADICAL}) {
   name_ = "StGraphSearcher";
-  config_ = config_builder->cast<StGraphSearcherConfig>();
   if (yield_front_vehicle_safe_utils_ == nullptr) {
     yield_front_vehicle_safe_utils_ =
         std::make_unique<YieldFrontVehicleSafeFunction>(session, config_);
@@ -233,10 +236,17 @@ bool StGraphSearcher::Execute() {
   std::vector<StSearchNode> st_path;
 
   // search success
-  auto res = SearchStPath(&st_path);
+  bool search_success = false;
+  for (auto search_style : search_style_context_) {
+    search_success = SearchStPath(&st_path, search_style);
+    JSON_DEBUG_VALUE("search_style", static_cast<int32_t>(search_style))
+    if (search_success) {
+      break;
+    }
+  }
 
   // search fail
-  if (!res) {
+  if (!search_success) {
     SetSearchFailSafe();
     session_->mutable_planning_context()
         ->mutable_st_graph_searcher_output()
@@ -278,7 +288,8 @@ bool StGraphSearcher::Execute() {
 }
 
 bool StGraphSearcher::SearchStPath(
-    std::vector<StSearchNode>* const searched_path) {
+    std::vector<StSearchNode>* const searched_path,
+    AStarSearchStyle search_style) {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& planning_init_point_old =
@@ -292,25 +303,18 @@ bool StGraphSearcher::SearchStPath(
   const auto target_lane_rear_agent_st_boundaries =
       GetTargetLaneRearAgentStBoundaries();
 
-  // set config
-  const double planning_time_horizon = config_.planning_time_horizon;
-  const double max_accel_limit = config_.max_accel_limit;
-  const double min_accel_limit = config_.min_accel_limit;
-  const double max_jerk_limit = config_.max_jerk_limit;
-  const double min_jerk_limit = config_.min_jerk_limit;
-  const int64_t accel_sample_num = config_.accel_sample_num;
-  const double s_step = config_.s_step;
-  const double t_step = config_.t_step;
-  const double vel_step = config_.vel_step;
-  const double max_search_time = config_.max_search_time_s;
+  SetSearchConfigBySearchStyle(search_style);
 
   double planning_distance = planned_kd_path->Length();
-  UpdateHeuristicTargetSInLaneChange(session_, planning_time_horizon,
-                                     &planning_distance);
+  UpdateHeuristicTargetSInLaneChange(
+      session_, search_config_.planning_time_horizon, &planning_distance);
   StSearchInput st_search_input_info(
-      planning_init_point, planning_distance, planning_time_horizon, v_cruise,
-      max_accel_limit, min_accel_limit, max_jerk_limit, min_jerk_limit,
-      accel_sample_num, s_step, t_step, vel_step);
+      planning_init_point, planning_distance,
+      search_config_.planning_time_horizon, v_cruise,
+      search_config_.max_accel_limit, search_config_.min_accel_limit,
+      search_config_.max_jerk_limit, search_config_.min_jerk_limit,
+      search_config_.accel_sample_num, search_config_.s_step,
+      search_config_.t_step, search_config_.vel_step);
   std::unordered_map<int64_t, StSearchNode> nodes;
   MinHeap<int64_t, double> open_set;
   std::unordered_set<int64_t> close_set;
@@ -332,6 +336,8 @@ bool StGraphSearcher::SearchStPath(
   auto current_node = start_node;
   auto best_node = current_node;
   best_node.set_h_cost(std::numeric_limits<double>::max());
+  farthest_node_ = start_node;
+  farthest_node_.set_h_cost(std::numeric_limits<double>::max());
   std::vector<double> expanded_nodes_s_vec{};
   std::vector<double> expanded_nodes_t_vec{};
   std::vector<double> history_cur_nodes_s_vec{};
@@ -340,7 +346,7 @@ bool StGraphSearcher::SearchStPath(
   while (!open_set.IsEmpty()) {
     const double current_time = IflyTime::Now_ms();
     const double time_used = current_time - start_time;
-    const double max_search_time_ms = max_search_time * 1e3;
+    const double max_search_time_ms = search_config_.max_search_time * 1e3;
     // max search time < 0.1s
     if (time_used > max_search_time_ms) {
       LOG_DEBUG("time out, time used: %.4f", time_used);
@@ -358,6 +364,10 @@ bool StGraphSearcher::SearchStPath(
     if (current_node.t() > kBestNodeMinT - kEpsilon &&
         current_node.h_cost() < best_node.h_cost()) {
       best_node = current_node;
+    }
+
+    if (current_node.t() > farthest_node_.t()) {
+      farthest_node_ = current_node;
     }
 
     // pop current node and store in close set
@@ -462,6 +472,31 @@ bool StGraphSearcher::SearchStPath(
   //             << std::endl;
   // }
   return true;
+}
+
+void StGraphSearcher::SetSearchConfigBySearchStyle(
+    AStarSearchStyle search_style) {
+  search_config_.planning_time_horizon = config_.planning_time_horizon;
+  search_config_.max_search_time = config_.max_search_time_s;
+  if (search_style == AStarSearchStyle::ORDINARY) {
+    search_config_.max_accel_limit = config_.max_accel_limit;
+    search_config_.min_accel_limit = config_.min_accel_limit;
+    search_config_.max_jerk_limit = config_.max_jerk_limit;
+    search_config_.min_jerk_limit = config_.min_jerk_limit;
+    search_config_.accel_sample_num = config_.accel_sample_num;
+    search_config_.s_step = config_.s_step;
+    search_config_.t_step = config_.t_step;
+    search_config_.vel_step = config_.vel_step;
+  } else if (search_style == AStarSearchStyle::RADICAL) {
+    search_config_.max_accel_limit = config_.max_accel_limit_radical_style;
+    search_config_.min_accel_limit = config_.min_accel_limit_radical_style;
+    search_config_.max_jerk_limit = config_.max_jerk_limit_radical_style;
+    search_config_.min_jerk_limit = config_.min_jerk_limit_radical_style;
+    search_config_.accel_sample_num = config_.accel_sample_num_radical_style;
+    search_config_.s_step = config_.s_step_radical_style;
+    search_config_.t_step = config_.t_step_radical_style;
+    search_config_.vel_step = config_.vel_step_radical_style;
+  }
 }
 
 std::unordered_set<int64_t>
