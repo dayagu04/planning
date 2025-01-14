@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -22,6 +24,25 @@ class StGraphSearcher : public Task {
   using CIPVInfo = ClosestInPathVehicleDeciderOutput;
 
  public:
+  enum class AStarSearchStyle {
+    ORDINARY = 0,
+    RADICAL = 1,
+  };
+
+  struct AStarSearchConfig {
+    double planning_time_horizon = 0.1;
+    double max_accel_limit = 5.0;
+    double min_accel_limit = -6.0;
+    double max_jerk_limit = 10.0;
+    double min_jerk_limit = -10.0;
+    double accel_sample_num = 20.0;
+    double s_step = 0.5;
+    double t_step = 0.5;
+    double vel_step = 0.4;
+    double max_search_time = 0.1;
+  };
+
+ public:
   StGraphSearcher(const EgoPlanningConfigBuilder* config_builder,
                   framework::Session* session);
   virtual ~StGraphSearcher() = default;
@@ -29,7 +50,10 @@ class StGraphSearcher : public Task {
   bool Execute() override;
 
  private:
-  bool SearchStPath(std::vector<StSearchNode>* const searched_path);
+  bool SearchStPath(std::vector<StSearchNode>* const searched_path,
+                    AStarSearchStyle search_style);
+
+  void SetSearchConfigBySearchStyle(AStarSearchStyle search_style);
 
   StSearchNode GenerateStartNode(
       const trajectory::TrajectoryPoint planning_init_point,
@@ -112,6 +136,12 @@ class StGraphSearcher : public Task {
   planning::common::StGraphSearcher st_graph_searcher_pb_;
   std::shared_ptr<YieldFrontVehicleSafeFunction>
       yield_front_vehicle_safe_utils_;
+
+ private:
+  // search relevance
+  StSearchNode farthest_node_;
+  std::array<AStarSearchStyle, 2> search_style_context_;
+  AStarSearchConfig search_config_;
 };
 
 }  // namespace planning

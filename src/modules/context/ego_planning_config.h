@@ -2702,6 +2702,58 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_planning", "st_graph_searcher",
                                  "vel_step"},
         vel_step);
+        
+    // radical search style
+    {
+      max_accel_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "max_accel_limit_radical_style"},
+          max_accel_limit_radical_style);
+      min_accel_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "min_accel_limit_radical_style"},
+          min_accel_limit_radical_style);
+      max_jerk_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "max_jerk_limit_radical_style"},
+          max_jerk_limit_radical_style);
+      min_jerk_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "min_jerk_limit_radical_style"},
+          min_jerk_limit_radical_style);
+      accel_sample_num_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "accel_sample_num_radical_style"},
+          accel_sample_num_radical_style);
+      s_step_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "s_step_radical_style"},
+          s_step_radical_style);
+      t_step_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "t_step_radical_style"},
+          t_step_radical_style);
+      vel_step_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "vel_step_radical_style"},
+          vel_step_radical_style);
+    }
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -2714,6 +2766,16 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double s_step = 0.25;
   double t_step = 0.25;
   double vel_step = 0.4;
+
+  // radical search style info
+  double max_accel_limit_radical_style = 5.0;
+  double min_accel_limit_radical_style = -6.0;
+  double max_jerk_limit_radical_style = 10.0;
+  double min_jerk_limit_radical_style = -10.0;
+  double accel_sample_num_radical_style = 20;
+  double s_step_radical_style = 0.25;
+  double t_step_radical_style = 0.25;
+  double vel_step_radical_style = 0.4;
 
   double weight_yield = 2.0;
   double weight_overtake = 2.0;
