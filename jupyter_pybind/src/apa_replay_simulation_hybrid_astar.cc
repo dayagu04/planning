@@ -139,11 +139,11 @@ int StopPybind() {
   return 0;
 }
 
-void UpdateFootprintCircle() {
+void UpdateFootprintCircle(const AstarPathGear gear) {
   const EulerDistanceTransform *edt_ =
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
+      edt_->GetCircleFootPrint(gear);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
@@ -349,7 +349,11 @@ int GetPathFromHybridAstar() {
   AstarRequest request = thread_solver_->GetAstarRequest();
   history_gear_request_ = request.first_action_request.gear_request;
 
-  UpdateFootprintCircle();
+  AstarPathGear gear = AstarPathGear::NONE;
+  if (result.gear.size() > 0) {
+    gear = result.gear[0];
+  }
+  UpdateFootprintCircle(gear);
 
   ILOG_INFO << "receive finish";
 

@@ -317,7 +317,7 @@
   "comment_17": "gen output params",
   "max_velocity": 0.6,
 
-  "path_generator_type": 0,
+  "path_generator_type": 1,
   "vertical_slot_end_straight_dist": 1.5,
   "parallel_slot_end_straight_dist": 0.0,
   "enable_delete_occ_in_slot": false,
