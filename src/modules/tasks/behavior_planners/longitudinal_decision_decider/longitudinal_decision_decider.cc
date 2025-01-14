@@ -16,6 +16,10 @@
 
 namespace planning {
 
+namespace {
+double kEpsilon = 1e-6;
+}
+
 LongitudinalDecisionDecider::LongitudinalDecisionDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session),
@@ -495,16 +499,13 @@ bool LongitudinalDecisionDecider::IgnoreLaneChangeGapRearAgent(
     JSON_DEBUG_VALUE("rear_agent_ttc_to_ego", default_value)
     return true;
   }
-  const auto &environmental_model = session_->environmental_model();
-  const auto &ego_state_manager = environmental_model.get_ego_state_manager();
-  const auto planning_init_x =
-      ego_state_manager->planning_init_point().lat_init_state.x();
-  const auto planning_init_y =
-      ego_state_manager->planning_init_point().lat_init_state.y();
-  const auto planning_init_theta =
-      ego_state_manager->planning_init_point().lat_init_state.theta();
-  const auto planning_init_v =
-      ego_state_manager->planning_init_point().lon_init_state.v();
+  const auto &planning_init_point = session_->environmental_model()
+                                        .get_ego_state_manager()
+                                        ->planning_init_point();
+  const auto planning_init_x = planning_init_point.lat_init_state.x();
+  const auto planning_init_y = planning_init_point.lat_init_state.y();
+  const auto planning_init_theta = planning_init_point.lat_init_state.theta();
+  const auto planning_init_v = planning_init_point.lon_init_state.v();
   const auto &ego_vehi_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
@@ -547,8 +548,14 @@ bool LongitudinalDecisionDecider::IgnoreLaneChangeGapRearAgent(
       planning_init_s - rear_agent_center_s -
       ego_vehi_param.rear_edge_to_rear_axle - 0.5 * gap_rear_agent->length();
 
-  double rear_agent_ttc_to_ego = agent_reletive_s_target_lane_frenet /
-                                 (agent_vel_frenet - planning_init_vel_frenet);
+  double vel_difference_to_ego = agent_vel_frenet - planning_init_vel_frenet;
+  if (vel_difference_to_ego > -kEpsilon && vel_difference_to_ego < 0.0) {
+    vel_difference_to_ego = -kEpsilon;
+  } else if (vel_difference_to_ego < kEpsilon && vel_difference_to_ego > 0.0) {
+    vel_difference_to_ego = kEpsilon;
+  }
+  double rear_agent_ttc_to_ego =
+      agent_reletive_s_target_lane_frenet / vel_difference_to_ego;
   JSON_DEBUG_VALUE("rear_agent_ttc_to_ego", rear_agent_ttc_to_ego)
   if (rear_agent_ttc_to_ego < config_.ignore_agent_ttc_to_ego_thrd &&
       rear_agent_ttc_to_ego > 0.0) {
