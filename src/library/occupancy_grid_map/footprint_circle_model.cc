@@ -99,7 +99,7 @@ void FootPrintCircleModel::UpdateSafeBuffer(
 
   global_drive_gear_circles_ = drive_gear_circles_;
 
-  DebugCircles(&drive_gear_circles_);
+  // DebugCircles(&drive_gear_circles_);
 
   // gear reverse
   reverse_gear_circles_ = local_circles_;
