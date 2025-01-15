@@ -20,7 +20,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250107/20250107-21-24-10/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-07-21-24-10_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250114/20250114-14-03-11/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-14-14-03-12_no_camera.bag'
 
 
 
@@ -440,7 +440,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
       plan_traj_heading_vec = data_planning_debug["plan_traj_heading"]
       plan_traj_lat_buffer_vec = data_planning_debug["plan_traj_lat_buffer"]
 
-    # print("obstaclesX = ",date_planning_debug["obstaclesX"])
+    # print("obstaclesX = ",data_planning_debug["obstaclesX"])
 
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
       plan_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)

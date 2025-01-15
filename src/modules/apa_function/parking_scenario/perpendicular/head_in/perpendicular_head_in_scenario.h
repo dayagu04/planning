@@ -23,7 +23,7 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   virtual void Log() const override;
   const bool UpdateEgoSlotInfo() override;
   const uint8_t PathPlanOnce() override;
-  void RealTimeDynamicColDet(const EgoSlotInfo& ego_slot_info);
+  void RealTimeDynamicColDet(const EgoInfoUnderSlot& ego_slot_info);
 
   // virtual func
   virtual const double CalRemainDistFromPath() override;
@@ -40,8 +40,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   const uint8_t CheckParkingStatus();
 
  private:
-  planning::apa_planner::PerpendicularPathGenerator::Tlane slot_t_lane_;
-  planning::apa_planner::PerpendicularPathGenerator::Tlane obstacle_t_lane_;
   PerpendicularPathHeadingInPlanner perpendicular_path_planner_;
 
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;

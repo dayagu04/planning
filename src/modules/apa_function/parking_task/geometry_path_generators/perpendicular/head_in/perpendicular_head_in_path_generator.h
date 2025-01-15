@@ -113,6 +113,7 @@ class PerpendicularPathHeadingInPlanner : public PerpendicularPathGenerator {
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
   // simulation
   void PreprocessForSimu();
+  const bool UpdatePb();
   const bool PreparePlanPybind();
   const bool GenPathOutputByDubinsPybind();
   const bool MultiPlanPybind();
