@@ -40,7 +40,8 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   timestamp_us_ = prediction_object.timestamp_us;
   timestamp_s_ = prediction_object.timestamp_us / 1e6;
 
-  is_sod_ = prediction_object.is_traffic_facilities;
+  // is_sod_ = prediction_object.is_traffic_facilities; // 当前dynamic
+  // world中不会绑定锥桶至车道上,导致换道状态机检查出错
   is_vru_ = prediction_object.is_VRU;
 
   if (prediction_object.trajectory_array.empty()) {
