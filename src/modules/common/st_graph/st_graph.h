@@ -45,7 +45,7 @@ class STGraph {
           neighbor_agent_decision_table);
 
   /*******st_graph_helper functions*******/
-  const StGraphInput& st_graph_input() const;
+  const std::shared_ptr<StGraphInput>& st_graph_input() const;
 
   const std::pair<double, double> path_range() const;
 
@@ -120,7 +120,7 @@ class STGraph {
   void Reset();
 
  private:
-  StGraphInput st_graph_input_;
+  std::shared_ptr<StGraphInput> st_graph_input_;
 
   planning::common::StGraphData st_graph_data_pb_;
 

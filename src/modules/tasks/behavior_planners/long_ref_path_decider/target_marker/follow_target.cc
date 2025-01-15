@@ -277,7 +277,7 @@ FollowTarget::GenerateStableFollowSlowCurve(
   if (st_graph == nullptr) {
     return nullptr;
   }
-  const double check_front_time = 2.0;
+  const double check_front_time = 4.0;
   for (double t = 0.0; t < check_front_time; t += dt_) {
     const auto& current_upper_bound = st_graph->GetPassCorridorUpperBound(t);
     const auto& next_upper_bound = st_graph->GetPassCorridorUpperBound(t + dt_);

@@ -40,6 +40,10 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   timestamp_us_ = prediction_object.timestamp_us;
   timestamp_s_ = prediction_object.timestamp_us / 1e6;
 
+  // is_sod_ = prediction_object.is_traffic_facilities; // 当前dynamic
+  // world中不会绑定锥桶至车道上,导致换道状态机检查出错
+  is_vru_ = prediction_object.is_VRU;
+
   if (prediction_object.trajectory_array.empty()) {
     return;
   }
@@ -288,9 +292,9 @@ void Agent::RecalculateLowSpeedTrajectories() {
   std::vector<double> processed_acc;
   std::vector<double> processed_speed;
   std::vector<double> processed_lon_position;
-  processed_lon_position.reserve(51);
-  processed_speed.reserve(51);
-  processed_acc.reserve(51);
+  processed_lon_position.reserve(26);
+  processed_speed.reserve(26);
+  processed_acc.reserve(26);
 
   // calculate low speed agent lon prediction info
   for (double relative_time = 0.0; relative_time < kPredictionHorizon;
