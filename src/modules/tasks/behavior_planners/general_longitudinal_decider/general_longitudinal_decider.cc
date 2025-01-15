@@ -2016,7 +2016,7 @@ double GeneralLongitudinalDecider::get_narrow_area_velocity_limit() {
   double suggest_velocity_limit = std::numeric_limits<double>::max();
   constexpr double narrow_space_width_thrshld_safe = 1.5;
   constexpr double narrow_space_width_thrshld_easy = 0.8;
-  constexpr double narrow_space_width_thrshld_hard = 0.1;
+  constexpr double narrow_space_width_thrshld_hard = 0.4;
   double kVelocityAttenLimit = config_.narrow_v_limit_attention;
   double kVelocityWarnLimit = config_.narrow_v_limit_warn;
   double kVelocityDangerLimit = config_.narrow_v_limit_danger;
