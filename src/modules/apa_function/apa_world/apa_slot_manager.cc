@@ -467,5 +467,14 @@ const bool ApaSlotManager::IsTargetSlotReleaseByRule() const {
   return false;
 }
 
+const bool ApaSlotManager::IsTargetSlotReleaseByRule() const {
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[RULE_BASED_RELEASE] == SlotReleaseState::RELEASE) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

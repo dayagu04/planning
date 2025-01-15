@@ -449,7 +449,7 @@ class LoadCyberbag:
       print('fus_ground_line_msg time:',self.fus_ground_line_msg['t'][-1])
 
       if len(self.fus_ground_line_msg['t']) > 0:
-        self.fus_ground_line_msg['enable'] = False
+        self.fus_ground_line_msg['enable'] = True
       else:
         self.fus_ground_line_msg['enable'] = False
     except:
@@ -2564,6 +2564,8 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, d
       abs_t = bag_time + smallest_abs_t
       while bag_loader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= abs_t and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['abs_t'])-1):
           ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+
+      t_debug.append(bag_time)
       ctrl_debug_json = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
       controller_status.append(ctrl_debug_json['controller_status'])
       lon_enable.append(ctrl_debug_json['lon_enable'])

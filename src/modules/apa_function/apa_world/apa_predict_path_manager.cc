@@ -6,6 +6,8 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "log_glog.h"
+#include "planning_plan_c.h"
+#include "apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -27,8 +29,17 @@ void ApaPredictPathManager::Update(
 
   ILOG_INFO << "Update ApaPredictPathManager";
 
-  if (planning_output->planning_status.apa_planning_status !=
-      iflyauto::APA_IN_PROGRESS) {
+  if (IsValidApaState(local_view->function_state_machine_info.current_state) &&
+      planning_output->planning_status.apa_planning_status !=
+          iflyauto::APA_IN_PROGRESS) {
+    ILOG_INFO << "apa not in progress, no predict_path";
+    return;
+  }
+
+  if (IsHppParkingStage(
+          local_view->function_state_machine_info.current_state) &&
+      planning_output->planning_status.hpp_planning_status !=
+          iflyauto::HPP_RUNNING) {
     ILOG_INFO << "apa not in progress, no predict_path";
     return;
   }

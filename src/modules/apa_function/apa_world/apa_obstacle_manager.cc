@@ -169,7 +169,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
         gl_pt_clout_2d.emplace_back(std::move(gl_pt));
       }
 
-    GeneratePolygonByAABB(&polygon, box);
+      GeneratePolygonByAABB(&polygon, box);
 
     ApaObstacle apa_obs;
     apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
