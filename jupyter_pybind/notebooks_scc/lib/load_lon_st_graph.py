@@ -234,6 +234,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   t_search_vec = []
   s_search_vec = []
+  vel_search_vec = []
+  acc_search_vec = []
+  jerk_search_vec = []
   expanded_nodes_s_vec = []
   expanded_nodes_t_vec = []
   history_cur_nodes_s_vec = []
@@ -250,11 +253,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_path_final_nodes_total_cost_vec = []
   st_path_final_nodes_g_cost_vec = []
   st_path_final_nodes_h_cost_vec = []
-
   for item in (plan_debug_info.st_graph_searcher.st_search_path):
     t_search_vec.append(item.t)
   for item in (plan_debug_info.st_graph_searcher.st_search_path):
     s_search_vec.append(item.s)
+    vel_search_vec.append(item.vel)
+    acc_search_vec.append(item.acc)
+    jerk_search_vec.append(item.jerk)
   expanded_nodes_t_vec = plan_debug_json_info['expanded_nodes_t_vec']
   expanded_nodes_s_vec = plan_debug_json_info['expanded_nodes_s_vec']
   history_cur_nodes_t_vec = plan_debug_json_info['history_cur_nodes_t_vec']
@@ -276,6 +281,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_st_searcher'].data.update({
     't_search': t_search_vec,
     's_search': s_search_vec,
+    'vel_search': vel_search_vec,
+    'acc_search': acc_search_vec,
+    'jerk_search': jerk_search_vec,
   })
 
   lon_plan_data['data_st_search_nodes'].data.update({
@@ -1129,7 +1137,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_st_search_text = ColumnDataSource(data = {'StSearchAttr':[], 'StSearchVal': []})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
-  data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[]})
+  data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[], 'vel_search':[], 'acc_search':[], 'jerk_search':[]})
   data_st_search_nodes = ColumnDataSource(data = {'expanded_nodes_t':[], 'expanded_nodes_s':[]})
   data_st_search_history_cur_nodes = ColumnDataSource(data = {'history_cur_nodes_t':[], 'history_cur_nodes_s':[]})
   data_st_search_path_final_nodes_cost = ColumnDataSource(data = {
@@ -1313,7 +1321,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
 
-  fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
+  f3 = fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
   fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes')
   fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes')
   fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3, line_color = 'blue', alpha = 1, line_dash = 'solid', legend_label = 's_final_target')
@@ -1321,6 +1329,15 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
   fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
+
+  hover3 = HoverTool(tooltips=[('node_s', '@s_search'),
+                               ('node_vel', '@vel_search'),
+                               ('node_acc', '@acc_search'),
+                               ('node_jerk', '@jerk_search'),])
+                               
+  fig3.add_tools(hover3)
+  fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
+  fig3.legend.click_policy = 'hide'
 
   # fig8 bar chart
   fig8 = bkp.figure(x_axis_label='time', y_axis_label='cost', width=600, height=400, title="Cost Over Time")

@@ -338,6 +338,7 @@ bool StGraphSearcher::SearchStPath(
   best_node.set_h_cost(std::numeric_limits<double>::max());
   farthest_node_ = start_node;
   farthest_node_.set_h_cost(std::numeric_limits<double>::max());
+  // debug info
   std::vector<double> expanded_nodes_s_vec{};
   std::vector<double> expanded_nodes_t_vec{};
   std::vector<double> history_cur_nodes_s_vec{};
@@ -352,11 +353,9 @@ bool StGraphSearcher::SearchStPath(
       LOG_DEBUG("time out, time used: %.4f", time_used);
       break;
     }
-    // if (count > 100) {
-    //   break;
-    // }
 
     count++;
+
     current_node = nodes.at(open_set.Top().first);
     history_cur_nodes_s_vec.emplace_back(current_node.s());
     history_cur_nodes_t_vec.emplace_back(current_node.t());
@@ -1258,6 +1257,9 @@ void StGraphSearcher::AddStGraphSearcherDataToProto(
       auto* p = st_graph_searcher_pb_.add_st_search_path();
       p->set_s(search_node.s());
       p->set_t(search_node.t());
+      p->set_acc(search_node.accel());
+      p->set_jerk(search_node.jerk());
+      p->set_vel(search_node.vel());
     }
     mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
   } else {

@@ -5,6 +5,9 @@ package planning.common;
 message StPoint2D {
   optional double s = 1;
   optional double t = 2;
+  optional double vel = 3;
+  optional double acc = 4;
+  optional double jerk = 5;
 }
 
 message StGraphSearcher {
