@@ -149,6 +149,8 @@ class ApaSlotManager final {
     return release_slot_id_vec_;
   }
 
+  const bool IsTargetSlotReleaseByRule() const;
+
  public:
   EgoInfoUnderSlot ego_info_under_slot_;
 
