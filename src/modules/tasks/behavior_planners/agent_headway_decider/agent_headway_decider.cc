@@ -11,7 +11,7 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.5;
+constexpr double lane_change_decrease_time_gap = 0.3;
 constexpr double neighbor_valid_decrease_time_gap = 0.7;
 constexpr double first_appear_time_gap = 1.0;
 }  // namespace
@@ -51,8 +51,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
-  const bool is_in_lane_change = (lane_change_state == kLaneChangeExecution ||
-                                  lane_change_state == kLaneChangeComplete);
+  const bool is_in_lane_change_execution =
+      lane_change_state == kLaneChangeExecution;
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -154,7 +154,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       continue;
     }
 
-    if (is_in_lane_change) {
+    if (is_in_lane_change_execution) {
       const double lane_change_headway = std::fmin(
           (user_time_gap - lane_change_decrease_time_gap), current_headway);
       agents_headway_map_[st_agent_id].current_headway =
