@@ -229,6 +229,11 @@ void ParkingScenarioManager::ScenarioTry() {
     return;
   }
 
+  if (!apa_world_->GetNewSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
+    ILOG_INFO << "not release by rule";
+    return;
+  }
+
   const auto &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
