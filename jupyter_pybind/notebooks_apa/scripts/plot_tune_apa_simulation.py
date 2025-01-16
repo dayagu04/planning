@@ -20,7 +20,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250114/20250114-14-03-11/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-14-14-03-12_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250117/20250117-17-21-26/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-01-17-17-21-26_no_camera.bag'
 
 
 

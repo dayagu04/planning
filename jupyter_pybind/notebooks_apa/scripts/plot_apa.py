@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250102/20250102-19-24-00/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2025-01-02-19-24-00_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250107/20250107-21-24-10/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-07-21-24-10_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250117/20250117-17-21-26/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-01-17-17-21-26_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -112,7 +112,7 @@ def get_next_filename(folder):
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
+    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
     self.car_inflation = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.15, value=0.0, step=0.01)
     self.save_data = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "save_data",min=0, max=1, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
@@ -239,7 +239,8 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
 
     # bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241225/20241225-20-18-54/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-25-20-18-55_no_camera.bag'
     # http://localhost:2799/view/chery_e0y_20267/trigger/20241225/20241225-20-10-36/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-25-20-10-36_no_camera.bag.apa.html
-    html_path = "http://localhost:2799/view/" + bag_path[30:] + ".apa.html"
+    # http://10.103.227.10/html/20241218/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-18-16-10-31_no_camera.bag.apa.html
+    html_path = "http://10.103.227.10/html/" + bag_path[54:63] + bag_path[81:] + ".apa.html"
     print("html_path = ", html_path)
     data = {"bag_path": bag_path,
             "html_path": html_path,

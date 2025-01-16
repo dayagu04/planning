@@ -59,7 +59,8 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
       const double ds, const uint8_t gear);
 
-  const std::pair<double, double> CalPathRemainDistAndObsDist(
+  const std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>>
+  CalPathRemainDistAndObsDist(
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
       const double ds, const uint8_t gear);
 

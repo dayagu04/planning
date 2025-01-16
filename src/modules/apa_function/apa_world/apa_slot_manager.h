@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -125,6 +126,15 @@ struct EgoInfoUnderSlot {
   }
 };
 
+enum class SlotReleaseVoterType : uint8_t {
+  ACCUMULATE,
+  SUBTRACT,
+  CLEAR,
+  MAXIMUM,
+};
+
+const std::string GetSlotReleaseVoterTypeString(const SlotReleaseVoterType release_voter_type);
+
 class ApaSlotManager final {
  public:
   ApaSlotManager() {}
@@ -161,9 +171,9 @@ class ApaSlotManager final {
 
   const bool IsSlotCoarseRelease(const ApaSlot& slot);
 
-  const bool IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot);
+  const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot);
 
-  const bool IsParallelSlotAndPassageAreaOccupied(const ApaSlot& slot);
+  const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(const ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;

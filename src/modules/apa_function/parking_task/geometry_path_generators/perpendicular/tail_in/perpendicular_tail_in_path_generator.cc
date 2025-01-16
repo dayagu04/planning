@@ -32,12 +32,8 @@ void PerpendicularTailInPathGenerator::Reset() {
 
 void PerpendicularTailInPathGenerator::Preprocess() {
   // calc_params_.Reset();
-  calc_params_.complete_plan_again = false;
-  calc_params_.single_plan_again = false;
   calc_params_.multi_plan = false;
-  calc_params_.directly_use_ego_pose = false;
   calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
-  calc_params_.can_insert_line = true;
   calc_params_.is_searching_stage = ginput_.is_searching_stage;
   calc_params_.col_det_time = 0.0;
   calc_params_.dubins_plan_time = 0.0;
@@ -55,10 +51,11 @@ void PerpendicularTailInPathGenerator::Preprocess() {
     calc_params_.slot_side_sgn = -1.0;
   }
 
-  if (ginput_.force_mid_process_plan != 0) {
+  if (ginput_.force_mid_process_plan != 0 && ginput_.can_first_plan_again) {
     ginput_.is_replan_first = false;
     ginput_.is_replan_second = false;
     ginput_.is_replan_dynamic = false;
+    calc_params_.pre_plan_case = PrePlanCase::MID_POINT;
     if (ginput_.force_mid_process_plan == 2) {
       calc_params_.first_multi_plan = false;
     }
@@ -190,61 +187,87 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       // 当换挡次数大于1的时候尽量不从自车位置直接规划
       if (dubins_path.path_count < 1) {
         // 只允许0次换挡 即直接倒挡进库 或者1次换挡 D->R进库
-        if (rough_path.gear_change_count > 1) {
+        if (rough_path.gear_change_count > 2) {
           ego_pose_cost += 168.0;
+        } else if (rough_path.gear_change_count == 2) {
+          for (const auto& path_seg : rough_path.path_segment_vec) {
+            if (path_seg.seg_gear == geometry_lib::SEG_GEAR_DRIVE) {
+              ego_pose_cost += (std::fabs(path_seg.GetStartPos().y()) * 30.0 +
+                                std::fabs(path_seg.GetStartHeading()) * 15.0);
+              break;
+            }
+          }
         } else if (rough_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
           // 拿到前进挡的终点  D->R路径
-          for (const auto& path_seg : complete_path.path_segment_vec) {
+          for (const auto& path_seg : rough_path.path_segment_vec) {
             if (path_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
-              if (std::fabs(path_seg.GetStartHeading()) * kRad2Deg > 36.68 &&
-                  std::fabs(path_seg.GetStartPos().y()) < 1.468) {
-                ego_pose_cost += 86.0;
-              }
-              ego_pose_cost += std::fabs(path_seg.GetStartHeading()) * 68.8;
+              ego_pose_cost += (std::fabs(path_seg.GetStartPos().y()) * 36.8 +
+                                std::fabs(path_seg.GetStartHeading()) * 68.8);
               break;
             }
           }
         }
       }
 
-      // dubins 路径尽量不换挡
-      double dubins_path_gear_change_cost = 0.0;
-      if (dubins_path.gear_change_count > 0) {
-        dubins_path_gear_change_cost += 32.0;
+      double dubins_path_cost = 0.0;
+      // dubins路径如果换挡 施加惩罚
+      if (dubins_path.gear_change_count > 0 &&
+          dubins_path.gear_change_pose.size() > 0) {
+        dubins_path_cost += 20.0;
+
+        dubins_path_cost +=
+            std::fabs(dubins_path.gear_change_pose.back().heading) * 36.0;
+
+        if (!ginput_.can_first_plan_again) {
+          dubins_path_cost += 268.0;
+        }
       }
 
-      // dubins 不换挡且为前进挡时 尽量翘头走？
+      // dubins路径如果不换挡 那对其终点位置的航向误差施加惩罚
+      if (dubins_path.path_count > 0 && dubins_path.gear_change_count < 1) {
+        double weight = 0.0;
+        if (dubins_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
+          weight = 32.0;
+        } else {
+          weight = 16.0;
+        }
+        dubins_path_cost += std::fabs(dubins_path.end_pose.heading) * weight;
+      }
 
-      // rough路径 第一次倒挡的起点的航向误差尽可能小一点
-      // 即车子屁股可以斜对着车位
-      // rought路径第一次倒挡终点尽可能多的消除航向横向误差
+      // rough路径 对其当前挡位路径终点的航向和横向误差施加惩罚
       double fist_reverse_path_err_cost = 0.0;
       for (const auto& path_seg : rough_path.path_segment_vec) {
-        if (path_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
+        if (path_seg.seg_gear != rough_path.cur_gear) {
           fist_reverse_path_err_cost +=
-              std::fabs(path_seg.GetStartHeading()) * 16.0;
-          fist_reverse_path_err_cost +=
-              (std::fabs(path_seg.GetEndPos().y()) * 5.0 +
-               std::fabs(path_seg.GetEndHeading()) * 12.0);
+              (std::fabs(path_seg.GetStartPos().y()) * 5.0 +
+               std::fabs(path_seg.GetStartHeading()) * 12.0);
           break;
         }
       }
 
       // 障碍物距离代价
       double obs_dist_cost = 0.0;
-      const double max_dis = 0.50;
+      const double max_dis = 0.60;
       const double min_dis = 0.30;
-      if (dubins_path.dist_to_obs > max_dis) {
-        obs_dist_cost += 26.8 / max_dis;
-      } else if (dubins_path.dist_to_obs < min_dis) {
-        obs_dist_cost += 36.8 / dubins_path.dist_to_obs;
+      if (dubins_path.pt_closest2obs.first > max_dis) {
+        obs_dist_cost += 52.8 / max_dis;
+      } else if (dubins_path.pt_closest2obs.first < min_dis) {
+        obs_dist_cost += 56.8 / dubins_path.pt_closest2obs.first;
       } else {
-        obs_dist_cost += 26.8 / dubins_path.dist_to_obs;
+        obs_dist_cost += 52.8 / dubins_path.pt_closest2obs.first;
       }
 
-      obs_dist_cost += (rough_path.dist_to_obs > max_dis)
-                           ? (20.8 / max_dis)
-                           : 20.8 / rough_path.dist_to_obs;
+      double weight = 36.8;
+      if (CalOccupiedRatio(rough_path.pt_closest2obs.second) > 0.1) {
+        weight = 16.8;
+        if (rough_path.gear_change_count < 1) {
+          weight = 12.8;
+        }
+      }
+
+      obs_dist_cost += (rough_path.pt_closest2obs.first > max_dis)
+                           ? (weight / max_dis)
+                           : weight / rough_path.pt_closest2obs.first;
 
       // 当前挡位最小长度代价
       double cur_gear_path_length_cost = 0.0;
@@ -276,24 +299,44 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
 
       // 库内换挡的代价
       double gear_change_in_slot_cost = 0.0;
-      for (const auto& pose : rough_path.gear_change_pose) {
+      for (const geometry_lib::PathPoint& pose : rough_path.gear_change_pose) {
         const double ratio = CalOccupiedRatio(pose);
         if (ratio > 0.468) {
           gear_change_in_slot_cost += ratio * 56.8;
         }
       }
 
+      // 第一次换挡时距离车位过远代价
+      double far_to_slot_cost = 0.0;
+      if (complete_path.gear_change_pose.size() > 0) {
+        const geometry_lib::PathPoint& pose =
+            complete_path.gear_change_pose.front();
+        if (std::fabs(pose.pos.y()) > 3.68) {
+          far_to_slot_cost += (std::fabs(pose.pos.y()) - 3.67) * 68.8;
+        }
+        if (std::fabs(pose.pos.x()) > 7.8) {
+          far_to_slot_cost += (std::fabs(pose.pos.x()) - 7.69) * 30.8;
+        }
+      }
+
+      // 再次尝试first plan时与参考挡位不同的代价
+      double ref_gear_cost = 0.0;
+      if (!ginput_.can_first_plan_again &&
+          complete_path.cur_gear != input_.ref_gear) {
+        ref_gear_cost += 999.9;
+      }
+
       // cur_gear_path_length_cost = 0.0;
       // fist_reverse_path_err_cost = 0.0;
       // ego_pose_cost = 0.0;
-      // dubins_path_gear_change_cost = 0.0;
+      // dubins_path_cost = 0.0;
       // gear_change_in_slot_cost = 0.0;
       // last_line_length_cost = 0.0;
       // 整条路径的换挡、换向和长度代价
       cost += (complete_path.cost + one_step_cost + cur_gear_path_length_cost +
                obs_dist_cost + fist_reverse_path_err_cost + ego_pose_cost +
-               dubins_path_gear_change_cost + gear_change_in_slot_cost +
-               last_line_length_cost);
+               dubins_path_cost + gear_change_in_slot_cost +
+               last_line_length_cost + ref_gear_cost + far_to_slot_cost);
 
       if (cost_index_map.size() > debug_path_number - 1) {
         cost_index_map.erase(std::prev(cost_index_map.end()));
@@ -301,6 +344,13 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       cost_index_map[cost] = i;
 
       if (cost < min_cost) {
+        // 如果两个代价相似， 那么这时再优先选离障碍物的
+        if (cost < min_cost - 3.68 || rough_path.pt_closest2obs.first >
+                                          pair_geometry_path_vec[better_index]
+                                              .second.pt_closest2obs.first) {
+          better_index = static_cast<int>(i);
+          min_cost = cost;
+        }
         better_index = static_cast<int>(i);
         min_cost = cost;
         ILOG_INFO << "gear_change_count = "
@@ -310,18 +360,25 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
                   << "  steer_change_cost = " << complete_path.steer_change_cost
                   << "  length_cost = " << complete_path.length_cost
                   << "  obs_dist_cost = " << obs_dist_cost
-                  << "  dubins_path.dist_to_obs = " << dubins_path.dist_to_obs
-                  << "  rough_path.dist_to_obs = " << rough_path.dist_to_obs
+                  << "  dubins_path.dist_to_obs = "
+                  << dubins_path.pt_closest2obs.first << "  pt_closest2obs = "
+                  << dubins_path.pt_closest2obs.second.pos.transpose() << "  "
+                  << dubins_path.pt_closest2obs.second.heading * kRad2Deg
+                  << "  rough_path.dist_to_obs = "
+                  << rough_path.pt_closest2obs.first << "  pt_closest2obs = "
+                  << rough_path.pt_closest2obs.second.pos.transpose() << "  "
+                  << rough_path.pt_closest2obs.second.heading * kRad2Deg
                   << "  fist_reverse_path_err_cost = "
                   << fist_reverse_path_err_cost
-                  << "  dubins_path_gear_change_cost = "
-                  << dubins_path_gear_change_cost
+                  << "  dubins_path_cost = " << dubins_path_cost
                   << "  ego_pose_cost = " << ego_pose_cost
                   << "  cur_gear_path_length_cost = "
                   << cur_gear_path_length_cost
                   << "  gear_change_in_slot_cost = " << gear_change_in_slot_cost
                   << "  last_line_length_cost = " << last_line_length_cost
-                  << "  one_step_cost = " << one_step_cost;
+                  << "  one_step_cost = " << one_step_cost
+                  << "  far_to_slot_cost = " << far_to_slot_cost
+                  << "  ref_gear_cost = " << ref_gear_cost;
       }
     }
 
@@ -352,12 +409,19 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         output_.perferred_geometry_path_vec.emplace_back(complete_path);
         ILOG_INFO << "gear_change_count = "
                   << static_cast<int>(complete_path.gear_change_count)
-                  << "  cost = " << cost
+                  << "  cost = " << pair.first
                   << "  gear_change_cost = " << complete_path.gear_change_cost
                   << "  steer_change_cost = " << complete_path.steer_change_cost
                   << "  length_cost = " << complete_path.length_cost
-                  << "  dubins_path.dist_to_obs = " << dubins_path.dist_to_obs
-                  << "  rough_path.dist_to_obs = " << rough_path.dist_to_obs;
+                  << "  dubins_path.dist_to_obs = "
+                  << dubins_path.pt_closest2obs.first << "  pt_closest2obs = "
+                  << dubins_path.pt_closest2obs.second.pos.transpose() << "  "
+                  << dubins_path.pt_closest2obs.second.heading * kRad2Deg
+                  << "  rough_path.dist_to_obs = "
+                  << rough_path.pt_closest2obs.first << "  pt_closest2obs = "
+                  << rough_path.pt_closest2obs.second.pos.transpose() << "  "
+                  << rough_path.pt_closest2obs.second.heading * kRad2Deg;
+        // complete_path.PrintInfo();
       }
     }
 
@@ -726,29 +790,6 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
           if (RoughMultiAdjustPathPlan(tang_pose,
                                        geometry_lib::SEG_GEAR_REVERSE,
                                        rough_geometry_path)) {
-            for (size_t i = 0; i < rough_geometry_path.path_segment_vec.size();
-                 ++i) {
-              // 第一次倒挡的路径 不包含最后一条直线
-              if (rough_geometry_path.gear_cmd_vec[i] ==
-                  geometry_lib::SEG_GEAR_REVERSE) {
-                if (rough_geometry_path.path_segment_vec[i].seg_type ==
-                        geometry_lib::SEG_TYPE_LINE &&
-                    CalOccupiedRatio(
-                        rough_geometry_path.path_segment_vec[i].GetEndPose()) >
-                        0.8) {
-                  break;
-                } else {
-                  rough_geometry_path.dist_to_obs = std::min(
-                      rough_geometry_path.path_segment_vec[i].dist_to_obs,
-                      rough_geometry_path.dist_to_obs);
-                }
-                if (rough_geometry_path.gear_cmd_vec[i + 1] ==
-                    geometry_lib::SEG_GEAR_DRIVE) {
-                  break;
-                }
-              }
-            }
-
             pair_geometry_path_vec.emplace_back(
                 std::make_pair(dubins_geometry_path, rough_geometry_path));
 
@@ -774,6 +815,49 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
             calc_params_.tange_pose_vec.emplace_back(tang_pose);
           }
           continue;
+        }
+      }
+    }
+  }
+
+  for (auto& pair_geometry_path : pair_geometry_path_vec) {
+    auto& dubins_geometry_path = pair_geometry_path.first;
+    auto& rough_geometry_path = pair_geometry_path.second;
+    if (dubins_geometry_path.path_count > 0) {
+      for (size_t i = 0; i < rough_geometry_path.path_segment_vec.size(); ++i) {
+        // 第一次倒挡的路径 不包含最后一条直线
+        if (rough_geometry_path.gear_cmd_vec[i] ==
+            geometry_lib::SEG_GEAR_REVERSE) {
+          if (rough_geometry_path.path_segment_vec[i].seg_type ==
+                  geometry_lib::SEG_TYPE_LINE &&
+              CalOccupiedRatio(
+                  rough_geometry_path.path_segment_vec[i].GetEndPose()) > 0.8) {
+            break;
+          } else {
+            if (rough_geometry_path.pt_closest2obs.first >
+                rough_geometry_path.path_segment_vec[i].pt_closest2obs.first) {
+              rough_geometry_path.pt_closest2obs =
+                  rough_geometry_path.path_segment_vec[i].pt_closest2obs;
+            }
+          }
+          if (rough_geometry_path.gear_cmd_vec[i + 1] ==
+              geometry_lib::SEG_GEAR_DRIVE) {
+            break;
+          }
+        }
+      }
+    } else {
+      for (size_t i = 0; i < rough_geometry_path.path_segment_vec.size(); ++i) {
+        if (rough_geometry_path.path_segment_vec[i].seg_type ==
+                geometry_lib::SEG_TYPE_LINE &&
+            CalOccupiedRatio(
+                rough_geometry_path.path_segment_vec[i].GetEndPose()) > 0.8) {
+          break;
+        }
+        if (rough_geometry_path.pt_closest2obs.first >
+            rough_geometry_path.path_segment_vec[i].pt_closest2obs.first) {
+          rough_geometry_path.pt_closest2obs =
+              rough_geometry_path.path_segment_vec[i].pt_closest2obs;
         }
       }
     }
@@ -1214,8 +1298,10 @@ PerpendicularTailInPathGenerator::DubinsPathPlan(
         geometry_path.Reset();
         return DubinsPlanResult::PATH_COLLISION;
       }
-      geometry_path.dist_to_obs =
-          std::min(geometry_path.dist_to_obs, temp_path_seg.dist_to_obs);
+      if (geometry_path.pt_closest2obs.first >
+          temp_path_seg.pt_closest2obs.first) {
+        geometry_path.pt_closest2obs = temp_path_seg.pt_closest2obs;
+      }
     }
   }
 
@@ -1331,17 +1417,30 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
   path_seg.lat_buffer = lat_inflation;
   CollisionDetector::CollisionResult col_res;
 
-  if (use_edt_col) {
+  // 如果路径起点位置离障碍物较近，那么强制调用精确的几何碰撞检测
+  bool force_geometry_col = false;
+  col_res = collision_detector_ptr_->UpdateByEDT(
+      std::vector<geometry_lib::PathPoint>{path_seg.GetStartPose()},
+      geometry_lib::SEG_GEAR_INVALID, 0.1, lat_inflation, lon_safe_dist, true);
+  if (col_res.pt_closest2obs.first < 0.151) {
+    force_geometry_col = true;
+    // ILOG_INFO_IF(enable_log)
+    //     << "start pos is closed to obs, should use geometry col";
+  }
+
+  path_seg.pt_closest2obs = col_res.pt_closest2obs;
+
+  if (use_edt_col && !force_geometry_col) {
     if (need_cal_obs_dist || lat_inflation < 0.171) {
       col_res = collision_detector_ptr_->UpdateByEDT(path_seg, lat_inflation,
                                                      lon_safe_dist, true);
-      path_seg.dist_to_obs = col_res.obs2car_dist;
+      path_seg.pt_closest2obs = col_res.pt_closest2obs;
       // 因为EDT碰撞碰撞检测有误差 即有碰撞也可能显示无碰撞
       // 因此在横向buffer相对较小 虽无碰撞但障碍物距离自车很近的时候
       // 用几何做一次精确的碰撞检测 来绝对确保路径的安全性
       // 7厘米目前是edt碰撞检测的最大横向误差
       if (!col_res.collision_flag && lat_inflation < 0.171 &&
-          col_res.obs2car_dist < 0.071 + lat_inflation) {
+          col_res.pt_closest2obs.first < 0.071 + lat_inflation) {
         col_res = collision_detector_ptr_->UpdateByObsMap(
             path_seg, lat_inflation, lon_safe_dist);
       }
@@ -1358,30 +1457,6 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
     col_res = collision_detector_ptr_->UpdateByObsMap(path_seg, lat_inflation,
                                                       lon_safe_dist);
   }
-
-  // if (use_edt_col) {
-  //   if (!need_cal_obs_dist && false) {
-  //     col_res = collision_detector_ptr_->UpdateByEDT(path_seg, lat_inflation,
-  //                                                    lon_safe_dist, false);
-  //   } else {
-  //     col_res = collision_detector_ptr_->UpdateByEDT(path_seg, lat_inflation,
-  //                                                    lon_safe_dist, true);
-  //     path_seg.dist_to_obs = col_res.obs2car_dist;
-  //     // 因为EDT碰撞碰撞检测有误差 即有碰撞也可能显示无碰撞
-  //     // 因此在横向buffer相对较小 虽无碰撞但障碍物距离自车很近的时候
-  //     // 用几何做一次精确的碰撞检测 来绝对确保路径的安全性
-  //     // 7厘米目前是edt碰撞检测的最大横向误差
-  //     if (!col_res.collision_flag && lat_inflation < 0.171 &&
-  //         col_res.obs2car_dist < 0.071 + lat_inflation) {
-  //       col_res = collision_detector_ptr_->UpdateByObsMap(
-  //           path_seg, lat_inflation, lon_safe_dist);
-  //     }
-  //   }
-  // } else {
-  //   col_res = collision_detector_ptr_->UpdateByObsMap(path_seg,
-  //   lat_inflation,
-  //                                                     lon_safe_dist);
-  // }
 
   calc_params_.col_det_time += IflyTime::Now_ms() - time;
 
@@ -1873,41 +1948,47 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
         // the target line, should enter this logic
         if (geometry_path.collide_flag &&
             geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
-            (geometry_path.end_pose.pos.y() + calc_params_.target_line.pA.y()) *
-                    (geometry_path.start_pose.pos.y() +
-                     calc_params_.target_line.pA.y()) >
-                0.168 &&
-            std::fabs(geometry_path.start_pose.pos.y()) >
-                std::fabs(geometry_path.end_pose.pos.y()) &&
-            std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8 &&
             compensate_line_try_count < max_compensate_line_try_count) {
-          ILOG_INFO << "try use a reverse gear straight line to cast off "
-                       "inside stuck";
-          i = -1;
-          geometry_path_vec.clear();
-          success_geometry_path_vec.clear();
-          cur_pose_vec.clear();
-          compensate_line_try_count++;
-          single_cur_pose.pos =
-              pose.pos - compensate_line_length_step *
-                             compensate_line_try_count *
-                             geometry_lib::GenHeadingVec(pose.heading);
-          single_cur_pose.heading = pose.heading;
-          cur_pose_vec.emplace_back(single_cur_pose);
-          geometry_lib::PathSegment line_seg(
-              geometry_lib::SEG_GEAR_REVERSE,
-              geometry_lib::LineSegment(pose.pos, single_cur_pose.pos,
-                                        pose.heading));
-          if (TrimPathByObs(line_seg, lat_buffer, lon_buffer) !=
-              PathColDetRes::NORMAL) {
+          const bool case1 = (geometry_path.end_pose.pos.y() +
+                              calc_params_.target_line.pA.y()) *
+                                 (geometry_path.start_pose.pos.y() +
+                                  calc_params_.target_line.pA.y()) >
+                             0.068;
+          const bool case2 = std::fabs(geometry_path.start_pose.pos.y()) >
+                             std::fabs(geometry_path.end_pose.pos.y());
+          const bool case3 =
+              std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8;
+          ILOG_INFO << "case1 = " << case1 << "  case2 = " << case2
+                    << "  case3 = " << case3;
+          if (case1 && case2 && case3) {
+            ILOG_INFO << "try use a reverse gear straight line to cast off "
+                         "inside stuck";
+            i = -1;
+            geometry_path_vec.clear();
+            success_geometry_path_vec.clear();
+            cur_pose_vec.clear();
+            compensate_line_try_count++;
+            single_cur_pose.pos =
+                pose.pos - compensate_line_length_step *
+                               compensate_line_try_count *
+                               geometry_lib::GenHeadingVec(pose.heading);
+            single_cur_pose.heading = pose.heading;
+            cur_pose_vec.emplace_back(single_cur_pose);
+            geometry_lib::PathSegment line_seg(
+                geometry_lib::SEG_GEAR_REVERSE,
+                geometry_lib::LineSegment(pose.pos, single_cur_pose.pos,
+                                          pose.heading));
+            if (TrimPathByObs(line_seg, lat_buffer, lon_buffer) !=
+                PathColDetRes::NORMAL) {
+              break;
+            }
+            geometry_lib::GeometryPath temp_geometry_path(line_seg);
+            temp_geometry_path.PrintInfo();
+            geometry_path_vec.emplace_back(temp_geometry_path);
+            ILOG_INFO
+                << "set i is -1, and continuing a reverse gear straight line";
             break;
           }
-          geometry_lib::GeometryPath temp_geometry_path(line_seg);
-          temp_geometry_path.PrintInfo();
-          geometry_path_vec.emplace_back(temp_geometry_path);
-          ILOG_INFO
-              << "set i is -1, and continuing a reverse gear straight line";
-          break;
         }
       }
     }
@@ -1915,7 +1996,9 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     // If the car in slot is already close to obstacle , try driving straight
     // ahead for a distance
     if (i == 0 && success_geometry_path_vec.empty() &&
-        geometry_path_vec.empty() && CalOccupiedRatio(single_cur_pose) > 0.68 &&
+        geometry_path_vec.empty() &&
+        CalOccupiedRatio(single_cur_pose) > 0.168 &&
+        std::fabs(single_cur_pose.heading) * kRad2Deg < 3.68 &&
         single_ref_gear == geometry_lib::SEG_GEAR_DRIVE &&
         compensate_line_try_count < max_compensate_line_try_count) {
       ILOG_INFO << "try use a drive gear straight line to cast off "
@@ -2004,11 +2087,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       } else if (complete_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
         for (const auto& path_seg : complete_path.path_segment_vec) {
           if (path_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
-            if (std::fabs(path_seg.GetStartHeading()) * kRad2Deg > 36.68 &&
-                std::fabs(path_seg.GetStartPos().y()) < 1.468) {
-              cost += 86.0;
-            }
-            cost += std::fabs(path_seg.GetStartHeading()) * 68.8;
+            cost += (std::fabs(path_seg.GetStartPos().y()) * 36.8 +
+                     std::fabs(path_seg.GetStartHeading()) * 68.8);
             break;
           }
         }
@@ -2017,10 +2097,9 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
 
     if (calc_params_.first_multi_plan) {
       for (const auto& path_seg : complete_path.path_segment_vec) {
-        if (path_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
-          cost += std::fabs(path_seg.GetStartHeading()) * 16.0;
-          cost += (std::fabs(path_seg.GetEndPos().y()) * 5.0 +
-                   std::fabs(path_seg.GetEndHeading()) * 12.0);
+        if (path_seg.seg_gear != complete_path.cur_gear) {
+          cost += (std::fabs(path_seg.GetStartPos().y()) * 5.0 +
+                   std::fabs(path_seg.GetStartHeading()) * 12.0);
           break;
         }
       }
@@ -2042,6 +2121,11 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     } else if (last_seg.Getlength() < 0.86) {
       cost += 16.8 / last_seg.Getlength();
     }
+
+    // 规划终点离目标终点距离代价
+    cost += (last_seg.GetEndPos() - ginput_.ego_info_under_slot.target_pose.pos)
+                .norm() *
+            46.8;
 
     // 库内换挡的代价
     for (const auto& pose : complete_path.gear_change_pose) {
@@ -2170,11 +2254,29 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
     output_.current_gear = output_.gear_cmd_vec.front();
   }
 
-  if (CheckReachTargetPose() || output_.path_segment_vec.size() > 0) {
+  if (CheckReachTargetPose()) {
     return true;
   }
 
-  return CheckReachTargetPose();
+  if (input_.is_replan_dynamic) {
+    return false;
+  }
+
+  if (output_.path_segment_vec.size() > 0) {
+    const geometry_lib::PathPoint& init_pose =
+        output_.path_segment_vec.front().GetStartPose();
+    if (std::fabs(init_pose.pos.y()) > 0.268 ||
+        std::fabs(init_pose.heading) * kRad2Deg > 8.6) {
+      return true;
+    }
+
+    if (output_.path_segment_vec.front().seg_gear ==
+        geometry_lib::SEG_GEAR_DRIVE) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
@@ -2440,9 +2542,10 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
       }
 
       if (col_res2 == PathColDetRes::SHORTEN) {
-        ILOG_INFO_IF(enable_log) << "same gear, arc shorten, add arc to path";
+        ILOG_INFO_IF(enable_log)
+            << "same gear, arc shorten, add arc to path, quit";
+        continue;
       }
-
       path_seg_vec.emplace_back(arc_seg);
       geometry_path.SetPath(path_seg_vec);
 
@@ -2981,7 +3084,7 @@ const bool PerpendicularTailInPathGenerator::DubinsPathPlan(
   temp_output_vec.reserve(dubins_output_vec.size());
 
   for (const auto& output : dubins_output_vec) {
-    if (output.current_gear_cmd != ref_gear) {
+    if (output.current_gear_cmd != ref_gear || output.gear_cmd_vec.size() < 1) {
       continue;
     }
     uint8_t last_gear = geometry_lib::SEG_GEAR_INVALID;

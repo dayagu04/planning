@@ -415,7 +415,7 @@ struct PathSegment {
 
   double lat_buffer = 0.0;
 
-  double dist_to_obs = 26.8;
+  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs;
 
   LineSegment line_seg;
   Arc arc_seg;
@@ -953,7 +953,8 @@ struct GeometryPath {
   double cur_gear_length = 0.0;
   uint8_t path_count = 0;
   double cost = 0.0;
-  double dist_to_obs = 26.8;
+  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{26.8,
+                                                                 PathPoint()};
   double gear_change_cost = 0.0;
   double length_cost = 0.0;
   double steer_change_cost = 0.0;
@@ -966,6 +967,7 @@ struct GeometryPath {
   uint8_t last_steer = SEG_STEER_INVALID;
   std::vector<uint8_t> steer_cmd_vec;
   std::vector<uint8_t> gear_cmd_vec;
+  std::vector<uint8_t> gear_index_vec;
   std::vector<PathSegment> path_segment_vec;
   std::vector<PathPoint> path_pt_vec;
   bool collide_flag = false;
@@ -1013,7 +1015,7 @@ struct GeometryPath {
     steer_change_count = 0;
     total_length = 0.0;
     cur_gear_length = 0.0;
-    dist_to_obs = 26.8;
+    pt_closest2obs = std::make_pair(26.8, PathPoint());
     cost = 0.0;
     gear_change_cost = 0.0;
     length_cost = 0.0;
@@ -1028,6 +1030,7 @@ struct GeometryPath {
     last_steer = geometry_lib::SEG_STEER_INVALID;
     steer_cmd_vec.clear();
     gear_cmd_vec.clear();
+    gear_index_vec.clear();
     path_pt_vec.clear();
     collide_flag = false;
   }

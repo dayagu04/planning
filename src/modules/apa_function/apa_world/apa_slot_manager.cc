@@ -14,7 +14,7 @@
 namespace planning {
 namespace apa_planner {
 
-static const uint8_t kSlotReleaseVoteCount = 5;
+static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
 
 void ApaSlotManager::Update(
@@ -217,40 +217,53 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
 
   // 检查自车和通道内是否有障碍物
   bool is_obs_in_slot_passage_area = false;
+  SlotReleaseVoterType release_voter_type = SlotReleaseVoterType::CLEAR;
   if ((slot.slot_type_ == SlotType::PERPENDICULAR ||
        slot.slot_type_ == SlotType::SLANT)) {
-    is_obs_in_slot_passage_area =
-        IsPerpendicularSlotAndPassageAreaOccupied(slot);
+    release_voter_type = IsPerpendicularSlotAndPassageAreaOccupied(slot);
   } else if (slot.slot_type_ == SlotType::PARALLEL) {
-    is_obs_in_slot_passage_area = IsParallelSlotAndPassageAreaOccupied(slot);
+    release_voter_type = IsParallelSlotAndPassageAreaOccupied(slot);
   }
 
-  if (is_obs_in_slot_passage_area) {
-    if (slot_release_voter_.count(slot.id_) != 0) {
-      slot_release_voter_[slot.id_] = 0;
-    }
+  if (release_voter_type == SlotReleaseVoterType::CLEAR) {
+    slot_release_voter_[slot.id_] = 0;
     ILOG_INFO << "obs is in slot_passage_area, slot id = " << slot.id_;
-    return false;
-  } else {
+  } else if (release_voter_type == SlotReleaseVoterType::MAXIMUM) {
+    slot_release_voter_[slot.id_] = kSlotReleaseVoteCount * 4;
+  } else if (release_voter_type == SlotReleaseVoterType::ACCUMULATE) {
     if (slot_release_voter_.count(slot.id_) == 0) {
       slot_release_voter_[slot.id_] = 1;
     } else {
-      if (slot_release_voter_[slot.id_] < kSlotReleaseVoteCount + 5) {
+      if (slot_release_voter_[slot.id_] < kSlotReleaseVoteCount + 168) {
         slot_release_voter_[slot.id_]++;
       }
     }
-
-    if (slot_release_voter_[slot.id_] < kSlotReleaseVoteCount) {
-      ILOG_INFO << "voter count is not enough, slot id = " << slot.id_;
-      return false;
+  } else if (release_voter_type == SlotReleaseVoterType::SUBTRACT) {
+    if (slot_release_voter_.count(slot.id_) != 0 &&
+        slot_release_voter_[slot.id_] > 1) {
+      slot_release_voter_[slot.id_]--;
+    } else {
+      slot_release_voter_[slot.id_] = 0;
     }
+  } else {
+    slot_release_voter_[slot.id_] = 0;
   }
 
-  return true;
+  ILOG_INFO << "release_voter_type = "
+            << GetSlotReleaseVoterTypeString(release_voter_type)
+            << "  release_vote_number = "
+            << static_cast<int>(slot_release_voter_[slot.id_]);
+
+  if (slot_release_voter_.count(slot.id_) != 0 &&
+      slot_release_voter_[slot.id_] >= kSlotReleaseVoteCount) {
+    return true;
+  }
+
+  return false;
 }
 
-const bool ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(
-    const ApaSlot& slot) {
+const SlotReleaseVoterType
+ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   const auto& param = apa_param.GetParam();
   const Eigen::Vector2d pM01 = slot.processed_corner_coord_global_.pt_01_mid;
   const Eigen::Vector2d pM23 = slot.processed_corner_coord_global_.pt_23_mid;
@@ -271,38 +284,55 @@ const bool ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(
   }
 
   const std::vector<double> move_up_dist{0.68, 1.08, 1.48};
+  // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
+  // 单侧buffer 0.16米 碰撞直接清0 0.16-0.19 累减 0.20-0.26累加 0.26直接释放
+  std::vector<std::pair<double, SlotReleaseVoterType>> lat_buffer_pair_vec = {
+      {0.26, SlotReleaseVoterType::MAXIMUM},
+      {0.20, SlotReleaseVoterType::ACCUMULATE},
+      {0.16, SlotReleaseVoterType::SUBTRACT}};
 
   PathSafeChecker safe_check;
   double lat_buffer = param.slot_release_car_lat_buffer;
   const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
-  for (const double dist : move_slot_dist_vec) {
-    bool col = false;
-    for (const double up_dist : move_up_dist) {
-      const Eigen::Vector2d origin_target_pos =
-          pM01 - n * (param.wheel_base + param.front_overhanging - up_dist);
-      const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
-      const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
-      if (safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
-                                      lat_buffer, lon_buffer)) {
-        col = true;
-        break;
+  std::pair<double, SlotReleaseVoterType> lat_buffer_pair;
+
+  for (size_t i = 0; i < lat_buffer_pair_vec.size(); ++i) {
+    lat_buffer_pair = lat_buffer_pair_vec[i];
+    for (const double dist : move_slot_dist_vec) {
+      bool col = false;
+      for (const double up_dist : move_up_dist) {
+        const Eigen::Vector2d origin_target_pos =
+            pM01 - n * (param.wheel_base + param.front_overhanging - up_dist);
+        const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
+        const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
+        if (safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
+                                        lat_buffer_pair.first, lon_buffer)) {
+          col = true;
+          break;
+        }
       }
+      if (col) {
+        continue;
+      }
+      move_slot_dist = dist;
+      is_slot_occupied = false;
+      break;
     }
-    if (col) {
-      continue;
+    if (!is_slot_occupied) {
+      break;
     }
-    move_slot_dist = dist;
-    ILOG_INFO << "move_slot_dist = " << move_slot_dist;
-    is_slot_occupied = false;
-    break;
   }
 
   if (is_slot_occupied) {
     ILOG_INFO << "slot is occupied";
-    return true;
+    return SlotReleaseVoterType::CLEAR;
   }
+
+  ILOG_INFO << "move_slot_dist = " << move_slot_dist
+            << "  lat_buffer = " << lat_buffer_pair.first << "  voter _type = "
+            << GetSlotReleaseVoterTypeString(lat_buffer_pair.second);
 
   lat_buffer = 0.0368;
 
@@ -335,13 +365,13 @@ const bool ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(
   safe_check.SetObstacle(obstacle_manager_ptr_);
   if (safe_check.IsPolygonCollision(&polygon)) {
     ILOG_INFO << "passage is occupied";
-    return true;
+    return SlotReleaseVoterType::CLEAR;
   }
 
-  return false;
+  return lat_buffer_pair.second;
 }
 
-const bool ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
+const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const ApaSlot& slot) {
   const Eigen::Vector2d t = (slot.processed_corner_coord_global_.pt_0 -
                              slot.processed_corner_coord_global_.pt_2)
@@ -374,7 +404,34 @@ const bool ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       break;
     }
   }
-  return is_slot_occupied;
+
+  if (is_slot_occupied) {
+    return SlotReleaseVoterType::CLEAR;
+  }
+  return SlotReleaseVoterType::ACCUMULATE;
+}
+
+const std::string GetSlotReleaseVoterTypeString(
+    const SlotReleaseVoterType release_voter_type) {
+  std::string type;
+  switch (release_voter_type) {
+    case SlotReleaseVoterType::ACCUMULATE:
+      type = "ACCUMULATE";
+      break;
+    case SlotReleaseVoterType::SUBTRACT:
+      type = "SUBTRACT";
+      break;
+    case SlotReleaseVoterType::MAXIMUM:
+      type = "MAXIMUM";
+      break;
+    case SlotReleaseVoterType::CLEAR:
+      type = "CLEAR";
+      break;
+    default:
+      type = "CLEAR";
+      break;
+  }
+  return type;
 }
 
 const bool ApaSlotManager::IsTargetSlotReleaseByRule() const {

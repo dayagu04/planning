@@ -2218,7 +2218,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       heading = obj.common_info.heading_angle
       length_ = obj.common_info.shape.length
       width_ = obj.common_info.shape.width
-      print("length = ", length_, "  width = ", width_, "  center_x = ", center_x, "  center_y = ", center_y, "  heading = ", heading,)
+      # print("length = ", length_, "  width = ", width_, "  center_x = ", center_x, "  center_y = ", center_y, "  heading = ", heading,)
       box_x, box_y = rectangle_corners(center_x, center_y, length_, width_, heading, True)
       box_x_vec.append(box_x)
       box_y_vec.append(box_y)
