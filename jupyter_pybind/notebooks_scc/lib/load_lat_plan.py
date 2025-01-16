@@ -578,61 +578,60 @@ def load_select_obstacle_polygon(fig1):
   return data_select_obstacle_polygon
 
 
-def update_select_obstacle_polygon(obstacle_polygon_id, data_select_obstacle_polygon, local_view_data):
-  select_obstacle_polygon_ids = re.findall(r'\d+', obstacle_polygon_id)
-  obs_polygon_id = [int(select_obstacle_polygon_id) for select_obstacle_polygon_id in select_obstacle_polygon_ids]
-  print("obstacle_polygon_id: ", obs_polygon_id)
+def update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data):
   select_obstacle_polygon_x = []
   select_obstacle_polygon_y = []
   select_obstacle_polygon_id = []
+  obs_polygon_id = local_view_data['data_select_obs_id'].data['obstacle_polygon_id']
+  obs_id_num = len(obs_polygon_id)
+  if obs_id_num > 0:
+    # fusion object
+    fus_obs_ids = local_view_data['data_fus_obj'].data['obs_id']
+    fus_polygon_x = local_view_data['data_fus_obj'].data['polygon_x']
+    fus_polygon_y = local_view_data['data_fus_obj'].data['polygon_y']
+    index = 0
+    for obs_id in fus_obs_ids:
+      if obs_id in obs_polygon_id:
+        select_obstacle_polygon_x.append(fus_polygon_x[index])
+        select_obstacle_polygon_y.append(fus_polygon_y[index])
+        select_obstacle_polygon_id.append(obs_id)
+      index += 1
 
-  # fusion object
-  fus_obs_ids = local_view_data['data_fus_obj'].data['obs_id']
-  fus_polygon_x = local_view_data['data_fus_obj'].data['polygon_x']
-  fus_polygon_y = local_view_data['data_fus_obj'].data['polygon_y']
-  index = 0
-  for obs_id in fus_obs_ids:
-    if obs_id in obs_polygon_id:
-      select_obstacle_polygon_x.append(fus_polygon_x[index])
-      select_obstacle_polygon_y.append(fus_polygon_y[index])
-      select_obstacle_polygon_id.append(obs_id)
-    index += 1
+    # fusion occ object
+    fus_occ_obs_ids = local_view_data['data_fus_occ_obj'].data['obs_id']
+    fus_occ_polygon_x = local_view_data['data_fus_occ_obj'].data['polygon_x']
+    fus_occ_polygon_y = local_view_data['data_fus_occ_obj'].data['polygon_y']
+    index = 0
+    for obs_id in fus_occ_obs_ids:
+      if obs_id in obs_polygon_id:
+        select_obstacle_polygon_x.append(fus_occ_polygon_x[index])
+        select_obstacle_polygon_y.append(fus_occ_polygon_y[index])
+        select_obstacle_polygon_id.append(obs_id)
+      index += 1
 
-  # fusion occ object
-  fus_occ_obs_ids = local_view_data['data_fus_occ_obj'].data['obs_id']
-  fus_occ_polygon_x = local_view_data['data_fus_occ_obj'].data['polygon_x']
-  fus_occ_polygon_y = local_view_data['data_fus_occ_obj'].data['polygon_y']
-  index = 0
-  for obs_id in fus_occ_obs_ids:
-    if obs_id in obs_polygon_id:
-      select_obstacle_polygon_x.append(fus_occ_polygon_x[index])
-      select_obstacle_polygon_y.append(fus_occ_polygon_y[index])
-      select_obstacle_polygon_id.append(obs_id)
-    index += 1
+    # fusion ground line
+    fus_ground_line_ids = local_view_data['data_ground_line'].data['ground_line_id']
+    fus_ground_line_polygon_x = local_view_data['data_ground_line'].data['polygon_x']
+    fus_ground_line_polygon_y = local_view_data['data_ground_line'].data['polygon_y']
+    index = 0
+    for ground_line_id in fus_ground_line_ids:
+      if ground_line_id in obs_polygon_id:
+        select_obstacle_polygon_x.append(fus_ground_line_polygon_x[index])
+        select_obstacle_polygon_y.append(fus_ground_line_polygon_y[index])
+        select_obstacle_polygon_id.append(ground_line_id)
+      index += 1
 
-  # fusion ground line
-  fus_ground_line_ids = local_view_data['data_ground_line'].data['ground_line_id']
-  fus_ground_line_polygon_x = local_view_data['data_ground_line'].data['polygon_x']
-  fus_ground_line_polygon_y = local_view_data['data_ground_line'].data['polygon_y']
-  index = 0
-  for ground_line_id in fus_ground_line_ids:
-    if ground_line_id in obs_polygon_id:
-      select_obstacle_polygon_x.append(fus_ground_line_polygon_x[index])
-      select_obstacle_polygon_y.append(fus_ground_line_polygon_y[index])
-      select_obstacle_polygon_id.append(ground_line_id)
-    index += 1
-
-  # ehr column polygon
-  ehr_column_polygon_ids = local_view_data['data_polygon_obstacle'].data['polygon_id']
-  ehr_column_polygon_x = local_view_data['data_polygon_obstacle'].data['polygon_x']
-  ehr_column_polygon_y = local_view_data['data_polygon_obstacle'].data['polygon_y']
-  index = 0
-  for polygon_id in ehr_column_polygon_ids:
-    if polygon_id in obs_polygon_id:
-      select_obstacle_polygon_x.append(ehr_column_polygon_x[index])
-      select_obstacle_polygon_y.append(ehr_column_polygon_y[index])
-      select_obstacle_polygon_id.append(polygon_id)
-    index += 1
+    # ehr column polygon
+    ehr_column_polygon_ids = local_view_data['data_polygon_obstacle'].data['polygon_id']
+    ehr_column_polygon_x = local_view_data['data_polygon_obstacle'].data['polygon_x']
+    ehr_column_polygon_y = local_view_data['data_polygon_obstacle'].data['polygon_y']
+    index = 0
+    for polygon_id in ehr_column_polygon_ids:
+      if polygon_id in obs_polygon_id:
+        select_obstacle_polygon_x.append(ehr_column_polygon_x[index])
+        select_obstacle_polygon_y.append(ehr_column_polygon_y[index])
+        select_obstacle_polygon_id.append(polygon_id)
+      index += 1
 
   data_select_obstacle_polygon.data.update({'polygon_y': select_obstacle_polygon_y,
                                             'polygon_x': select_obstacle_polygon_x,

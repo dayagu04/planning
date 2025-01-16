@@ -15,7 +15,7 @@ void FrenetEgoState::update(
   Point2D frenet_point, cart_point;
   cart_point.x = ego_state.ego_carte().x;
   cart_point.y = ego_state.ego_carte().y;
-  if (frenet_coord->XYToSL(cart_point, frenet_point)) {
+  if (frenet_coord->XYToSL(cart_point.x, cart_point.y, &frenet_point.x, &frenet_point.y)) {
     s_ = frenet_point.x;
     l_ = frenet_point.y;
   } else {
@@ -31,6 +31,8 @@ void FrenetEgoState::update(
     head_s_ = frenet_point.x;
     head_l_ = frenet_point.y;
   } else {
+    head_s_ = s_ + front_edge_to_rear_axle;
+    head_l_ = l_;
     LOG_DEBUG("kd_path coordinate conversion failed");
   }
   heading_angle_ = planning_math::NormalizeAngle(

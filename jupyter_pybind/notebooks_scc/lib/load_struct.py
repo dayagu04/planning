@@ -110,7 +110,8 @@ def one_echo_text_local(old_x, old_y, radian, distance):
     new_x = old_x + distance * math.cos(radian)
     new_y = old_y + distance * math.sin(radian)
     return new_x, new_y
-def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
+
+def ehr_load_center_lane_lines(lanes, x, y, yaw, Max_line_size, g_is_display_enu = False):
   ehr_line_info_list = []
   for i in range(Max_line_size):
     ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
@@ -125,13 +126,14 @@ def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
       # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
       #   continue
       for point in lane.points_on_central_line:
-        ehr_x = point.x
-        ehr_y = point.y
-        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        if g_is_display_enu:
+          ehr_x, ehr_y = point.x, point.y
+        else:
+          ehr_x, ehr_y = global2local(point.x, point.y, x, y, yaw)
         # print("x:",ehr_x)
         # print("y:",ehr_y)
-        line_x.append(car_x)
-        line_y.append(car_y)
+        line_x.append(ehr_x)
+        line_y.append(ehr_y)
       ehr_lane_info['ehr_line_x_vec'] = line_x
       ehr_lane_info['ehr_line_y_vec'] = line_y
       ehr_lane_info['ehr_relative_id'] = lane.lane_id
@@ -215,7 +217,7 @@ def load_sd_map_segments(segments,x,y,yaw,Max_sdmap_segment_size):
   sdmap_road_line_info['outlinek_y_vec'] = outlink_y
   return sdmap_road_line_info
 
-def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size):
+def ehr_load_road_boundary_lines(road_boundaries, x, y, yaw, Road_boundary_max_line_size, g_is_display_enu = False):
   ehr_road_boundary_info_list = []
   for i in range(Road_boundary_max_line_size):
     ehr_road_boundary_info = {'ehr_road_boundary_x_vec':[], 'ehr_road_boundary_y_vec':[],'ehr_road_boundary_relative_id':[], 'ehr_type':[]}
@@ -231,13 +233,14 @@ def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_
       # #   continue
       for doundary_attribute in road_boundary.boundary_attributes:
         for  point in doundary_attribute.points:
-          ehr_x = point.x
-          ehr_y = point.y
-          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+          if g_is_display_enu:
+            ehr_x, ehr_y = point.x, point.y
+          else:
+            ehr_x, ehr_y= global2local(point.x, point.y, x, y, yaw)
           # print("x:",ehr_x)
           # print("y:",ehr_y)
-          line_x.append(car_x)
-          line_y.append(car_y)
+          line_x.append(ehr_x)
+          line_y.append(ehr_y)
       ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
       ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
       ehr_road_boundary_info['ehr_road_boundary_relative_id'] = road_boundary.boundary_id
@@ -252,7 +255,7 @@ def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_
       ehr_road_boundary_info_list.append(ehr_road_boundary_info)
   return ehr_road_boundary_info_list
 
-def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size):
+def ehr_load_lane_boundary_lines(lane_boundaries, x, y, yaw, Lane_boundary_max_line_size, g_is_display_enu = False):
   ehr_lane_boundary_info_list = []
 
   for i in range(Lane_boundary_max_line_size):
@@ -263,13 +266,14 @@ def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_
       line_y = []
       for boundary_attribute in lane_boundary.boundary_attributes:
         for  point in boundary_attribute.points:
-          ehr_x = point.x
-          ehr_y = point.y
-          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+          if g_is_display_enu:
+            ehr_x, ehr_y = point.x, point.y
+          else:
+            ehr_x, ehr_y = global2local(point.x, point.y, x, y, yaw)
           # print("x:",ehr_x)
           # print("y:",ehr_y)
-          line_x.append(car_x)
-          line_y.append(car_y)
+          line_x.append(ehr_x)
+          line_y.append(ehr_y)
       ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
       ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
       ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = lane_boundary.boundary_id
@@ -1435,6 +1439,7 @@ def load_obstacle_me(camera_msg,is_rdg):
 
   return obs_info_all
 
+
 def load_rdg_general_obstacle(camera_msg, loc_msg = None):
   obs_info_all = {
     'obstacles_x_rel': [],
@@ -1509,7 +1514,9 @@ def load_rdg_general_obstacle(camera_msg, loc_msg = None):
     # obs_info_all['is_cipv'].append(obstacle_list[i].target_selection_type)
     obs_info_all['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
         + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)) + ',' \
-        + str(round(obstacle_list[i].common_info.relative_velocity.y, 2)) + ',' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.y, 2)) + '\n' \
+        + str(round(obstacle_list[i].common_info.velocity.x, 2))+ ',' \
+        + str(round(obstacle_list[i].common_info.velocity.y, 4)) + ',' \
         + str(type))
     obs_info_all['obstacles_x'].append(obs_x)
     obs_info_all['obstacles_y'].append(obs_y)
@@ -1518,6 +1525,65 @@ def load_rdg_general_obstacle(camera_msg, loc_msg = None):
     num = num + 1
 
   return obs_info_all
+
+
+def load_rdg_occupancy_obstacle(rdg_occ_obj_msg, loc_msg = None):
+  obs_info_all = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'obstacles_x': [],
+    'obstacles_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'obs_label':[]
+  }
+  perception_objects_size = rdg_occ_obj_msg.camera_perception_objects_size
+  perception_objects = rdg_occ_obj_msg.camera_perception_objects
+  num = 0
+  for i in range(perception_objects_size):
+    num = num + 1
+    id = perception_objects[i].id
+    type = perception_objects[i].type
+    # visable_seg_num = perception_objects[i].type
+    # contour_points_size = perception_objects[i].contour_points_size
+    contour_points = perception_objects[i].contour_points
+
+    pos_x_rel, pos_y_rel = [], []
+    obs_x_rel, obs_y_rel = [], []
+    for index, points in enumerate(contour_points):
+      obs_x_rel.append(points.x)
+      obs_y_rel.append(points.y)
+      if index > 0:
+        continue
+      pos_x_rel.append(points.x)
+      pos_y_rel.append(points.y)
+
+    pos_x, pos_y = [], []
+    obs_x, obs_y = [], []
+    coord_tf = coord_transformer()
+    if loc_msg != None: # 长时轨迹
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obs_x, obs_y = coord_tf.local_to_global(obs_x_rel, obs_y_rel)
+      pos_x, pos_y = coord_tf.local_to_global(pos_x_rel, pos_y_rel)
+
+    obs_info_all['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all['pos_x_rel'].append(pos_x_rel)
+    obs_info_all['pos_y_rel'].append(pos_y_rel)
+    obs_info_all['obstacles_x'].append(obs_x)
+    obs_info_all['obstacles_y'].append(obs_y)
+    obs_info_all['pos_x'].append(pos_x)
+    obs_info_all['pos_y'].append(pos_y)
+    obs_info_all['obs_label'].append('t(' + str(id) + ')=' \
+        + str(type))
+
+  return obs_info_all
+
 
 def load_obstacle_radar(obstacle_list,type,num):
   obs_info_all = dict()
@@ -1642,7 +1708,7 @@ def gen_line(c0, c1, c2, c3, start, end):
 
   return points_x, points_y
 
-def load_prediction_objects(obstacle_list, localization_info, g_is_display_enu = False):
+def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info, g_is_display_enu = False):
   prediction_dict = {0: {'x': [], 'y': []},
                      1: {'x': [], 'y': []},
                      2: {'x': [], 'y': []},
@@ -1682,10 +1748,14 @@ def load_prediction_objects(obstacle_list, localization_info, g_is_display_enu =
   trajectory_info = {'x':[],'y':[], 'r':[]}
   p_x = []
   p_y = []
+  obs_id_num = len(prediction_obs_id)
   obs_num = len(obstacle_list)
   num = len(obstacle_list[0].trajectory.trajectory_point)
-  # print("num",num)
+  # print("num", num)
   for i in range(obs_num):
+    obs_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
+    if (obs_id_num > 0) and (obs_id not in prediction_obs_id):
+      continue
     if (obstacle_list[i].fusion_obstacle.additional_info.fusion_source & 1) == 0:
       continue
     if len(obstacle_list[i].trajectory.trajectory_point) == 0:

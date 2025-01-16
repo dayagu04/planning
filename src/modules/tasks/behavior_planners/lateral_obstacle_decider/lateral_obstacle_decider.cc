@@ -769,12 +769,22 @@ void LateralObstacleDecider::UpdateLatDecision(
           bool lat_overlap = (start_l < end_l - kLatOverlapBuffer) &&
                              (start_head_l < end_head_l - kLatOverlapBuffer);
 
-          if (ego_head_l_ < obstacle->frenet_l()) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::RIGHT;
+          if (ego_s_end > obstacle_s_end) {
+            if (ego_l < obstacle->frenet_l()) {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::RIGHT;
+            } else {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::LEFT;
+            }
           } else {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
+            if (ego_head_l_ < obstacle->frenet_l()) {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::RIGHT;
+            } else {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::LEFT;
+            }
           }
           // 防止感知误检，同时有横向和纵向overlap
           if (lat_overlap) {

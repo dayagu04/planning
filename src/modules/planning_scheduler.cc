@@ -597,7 +597,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
       }
     }
   }
-
+  if (route_info_output.distance_to_target_slot < 10.0) {
+    hpp_info->distance_to_parking_space =
+        std::min(std::fabs(points.back().path_point.s() - ego_s),
+                 route_info_output.distance_to_target_slot);
+  }
   // hpp状态切park_in状态
   if (session_.is_hpp_scene()) {
     const auto &parking_switch_info = session_.planning_context()
@@ -609,9 +613,13 @@ void PlanningScheduler::FillPlanningHmiInfo(
     } else if (parking_switch_info.is_memory_slot_occupied) {
       hpp_info->is_parking_space_occupied = true;
     } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
-      hpp_info->is_new_parking_space_found = true;
       hpp_info->hpp_state_switch =
           iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    }
+
+    // todo: is_new_parking_space_found is unused.
+    if (parking_switch_info.has_parking_slot_in_hpp_searching) {
+      hpp_info->is_new_parking_space_found = true;
     }
   }
 

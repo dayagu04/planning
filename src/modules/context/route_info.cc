@@ -999,7 +999,7 @@ bool RouteInfo::IsOnHPPLane() {
     nearest_lane_hpp_->GetProjection(cur_point, &accumulate_s, &lateral);
     const double hpp_lane_heading = nearest_lane_hpp_->GetHeading(accumulate_s);
     const double ego_heading = current_pose_.theta;
-    const double heading_diff_threshold = 30;
+    const double heading_diff_threshold = 60;
     const double angle_diff = planning_math::AngleDiff(hpp_lane_heading, ego_heading);
     if (std::abs(angle_diff) * 180 / M_PI < heading_diff_threshold) {
       return true;

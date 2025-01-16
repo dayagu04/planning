@@ -23,12 +23,14 @@ output_notebook()
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
+# global_var.set_value('is_vis_map', True)
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1, local_view_data)
-fig1.height = 1350
+fig1.height = 1500
 
+load_measure_distance_tool(fig1)
 fig_lat_offset = load_lateral_offset(bag_loader)
 data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 
@@ -178,17 +180,21 @@ fig11.legend.click_policy = 'hide'
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.1, max=max_time, value=0.1, step=frame_dt)
+    self.prediction_obstacle_id = ipywidgets.Text(description='predict_id:')
     self.obstacle_polygon_id = ipywidgets.Text(description='polygon_id:')
 
-    ipywidgets.interact(slider_callback, bag_time = self.time_slider, obstacle_polygon_id = self.obstacle_polygon_id)
+    ipywidgets.interact(slider_callback, bag_time = self.time_slider,
+                                         prediction_obstacle_id = self.prediction_obstacle_id,
+                                         obstacle_polygon_id = self.obstacle_polygon_id)
 
 
 ### sliders callback
-def slider_callback(bag_time, obstacle_polygon_id):
+def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   kwargs = locals()
+  update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
-  update_select_obstacle_polygon(obstacle_polygon_id, data_select_obstacle_polygon, local_view_data)
+  update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
     update_lat_behavior_data(lat_behavior_common)

@@ -29,6 +29,7 @@ fig_lat_offset = load_lateral_offset(bag_loader)
 
 # load lateral planning (behavior and motion)
 fig1, fig2, hybrid_ara_path_data = load_hybrid_ara_path_figure(fig1)
+load_measure_distance_tool(fig1)
 
 def get_plan_debug_msg_idx(bag_loader, bag_time):
   plan_debug_msg_idx = 0

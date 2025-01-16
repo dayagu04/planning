@@ -1276,7 +1276,7 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
     dist_to_parking_space_thr = read_json_key<double>(
         json, "dist_to_parking_space_thr", dist_to_parking_space_thr);
   }
-  double dist_to_parking_space_thr = 4.0;
+  double dist_to_parking_space_thr = 2.0;
 };
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
@@ -2506,6 +2506,9 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
     mirror_buffer = read_json_key<double>(
         json, "mirror_buffer",
         mirror_buffer);
+    supper_limit_for_OD = read_json_key<double>(
+        json, "supper_limit_for_OD",
+        supper_limit_for_OD);
   }
   double frenet_obstacle_range_s_min = -50.0;
   double frenet_obstacle_range_s_max = 180.0;
@@ -2516,6 +2519,7 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double car_body_lat_safe_buffer = 0.2;
   double lon_safe_buffer = 0.2;
   double mirror_buffer = 0.2;
+  double supper_limit_for_OD = 6.0;
 };
 
 struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {

@@ -335,6 +335,21 @@ bool LateralMotionPlanner::AssembleInput() {
       std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
   planning_weight_ptr_->SetMaxAcc(std::max(max_wheel_angle * kv2, 0.2));
   planning_weight_ptr_->SetMaxJerk(std::max(max_wheel_angle_rate * kv2, 0.2));
+
+  if (session_->is_hpp_scene()) {
+    // const bool &search_success = session_->mutable_planning_context()
+    //                                ->mutable_lateral_obstacle_decider_output()
+    //                                .search_success;
+    const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+    planning_weight_ptr_->SetIsSearchSuccess(search_success);
+    planning_weight_ptr_->SetLateralMotionWeight(
+        pnc::lateral_planning::LANE_KEEP, planning_input_);
+    planning_input_.set_complete_follow(complete_follow);
+    planning_input_.set_motion_plan_concerned_index(
+        config_.motion_plan_concerned_end_index);
+    return true;
+  }
+
   // split
   bool split_scene = false;
   // NOA split
@@ -409,11 +424,7 @@ bool LateralMotionPlanner::AssembleInput() {
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
 
-  // const bool &search_success = session_->mutable_planning_context()
-  //                                ->mutable_lateral_obstacle_decider_output()
-  //                                .search_success;
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
-  planning_weight_ptr_->SetIsSearchSuccess(search_success);
+  planning_weight_ptr_->SetIsSearchSuccess(false);
   // set weight
   if (lane_change_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(

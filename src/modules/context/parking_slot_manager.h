@@ -29,6 +29,8 @@ class ParkingSlotManager {
 
   const std::vector<ParkingSlotPoints> &GetPoints() const { return points_; };
 
+  const bool IsExistTargetSlot() const { return is_exist_target_slot_; }
+
   const size_t GetTargetSlotId() const { return target_slot_id_; }
 
   const double GetDistanceToTargetSlot() const {
@@ -39,6 +41,7 @@ class ParkingSlotManager {
   void Init();
 
   planning::framework::Session *session_ = nullptr;
+  bool is_exist_target_slot_;
   size_t target_slot_id_;
   double distance_to_target_slot_;
   ParkingSlotPoints target_slot_;

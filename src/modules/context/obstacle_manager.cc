@@ -1,8 +1,10 @@
 #include "obstacle_manager.h"
 
+#include <climits>
 #include <cstddef>
 #include <tuple>
 
+#include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "interface/src/c/common_c.h"
 #include "math/math_utils.h"
@@ -188,7 +190,7 @@ void ObstacleManager::update() {
     // hpp中过滤近处的OD
     if (session_->is_hpp_scene()) {
       constexpr int kSLowerLimitForOD = -3;
-      constexpr int kSUpperLimitForOD = 6;
+      const double kSUpperLimitForOD = config_.supper_limit_for_OD;
 
       const auto &reference_path = session_->planning_context()
                                        .lane_change_decider_output()
@@ -415,7 +417,6 @@ void ObstacleManager::UpdateParkingSpaceObstacle() {
   const double kMaxDistanceFrontX = 40;  // 后续根据实际需求更改
   const double kMaxDistanceBackX = 30;
   static constexpr int kParkingSlotIdOffset = 6000000;
-  int parking_slot_id = kParkingSlotIdOffset;
   const auto &local_view = session_->environmental_model().get_local_view();
   const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -434,7 +435,7 @@ void ObstacleManager::UpdateParkingSpaceObstacle() {
   for (uint8 i = 0; i < parking_slot_lists_size; i++) {
     std::vector<planning_math::Vec2d> slot_point;
     const auto &parking_slot = parking_slot_lists[i];
-
+    const size_t slot_id = parking_slot.id;
     // TBD: 这里没有判断size, c结构体没有设置size，默认4
     min_x = std::numeric_limits<double>::max();
     min_y = std::numeric_limits<double>::max();
@@ -463,8 +464,8 @@ void ObstacleManager::UpdateParkingSpaceObstacle() {
     if (((min_y > 0 && min_y < kMaxDistanceY) ||
          (max_y < 0 && max_y > -kMaxDistanceY) || (min_y <= 0 && max_y >= 0)) &&
         min_x < kMaxDistanceFrontX && max_x > -kMaxDistanceBackX) {
-      parking_slot_id += 1;
-      Obstacle obstacle(parking_slot_id, std::move(slot_point));
+      Obstacle obstacle(kParkingSlotIdOffset + slot_id,
+                    std::move(slot_point));
       add_parking_space(obstacle);
     }
   }
@@ -615,6 +616,7 @@ void ObstacleManager::UpdateMapStaticObstacle() {
         continue;
       }
       bool in_range = true;
+      double min_dist_to_ref = NL_NMAX;
       std::vector<planning::planning_math::Vec2d> column_box;
       column_box.reserve(polygon_object.shape_size());
       for (const auto& shape : polygon_object.shape()) {
@@ -636,11 +638,12 @@ void ObstacleManager::UpdateMapStaticObstacle() {
                       Point2D(shape.x(), shape.y()),
                       sl_point) ||
                   std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
-                  sl_point.x < ego_point.x + 9 ||
-                  sl_point.x > ego_point.x + 50 ||
-                  std::fabs(sl_point.y - ego_point.y) > 5) {
+                  sl_point.x < ego_point.x + 11 ||
+                  sl_point.x > ego_point.x + 50) {
                 in_range = false;
                 break;
+              } else {
+                min_dist_to_ref = std::min(std::fabs(sl_point.y), min_dist_to_ref);
               }
             }
           }
@@ -648,6 +651,8 @@ void ObstacleManager::UpdateMapStaticObstacle() {
         column_box.emplace_back(planning::planning_math::Vec2d(shape.x(), shape.y()));
       }
       if (!in_range) {
+        continue;
+      } else if (min_dist_to_ref > 5) {
         continue;
       }
       if (column_box.size() >= 3) {

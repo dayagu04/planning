@@ -24,16 +24,17 @@ output_notebook()
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
+# global_var.set_value('g_is_display_enu', True)
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1400
+fig1.height = 1500
 # init pybind
 lateral_motion_planning_py.Init()
-global_var.set_value('g_is_display_enu', True)
 
 lat_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].lateral_motion_planning_input
 
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
+load_measure_distance_tool(fig1)
 
 init_info_name = ["dbw status", "replan status", "lat err", "theta err", "lon err", "dist err", "init theta", "ego theta", "ref theta", "ref vel", "steer angle", "steer angle rate", "ego_lat_jerk"]
 init_info = ColumnDataSource(data = {'name':[], 'init info':[]})

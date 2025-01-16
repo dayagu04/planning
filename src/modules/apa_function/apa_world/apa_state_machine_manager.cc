@@ -28,14 +28,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
 
   ILOG_INFO << "fun_state_machine_info.current_state = "
             << static_cast<int>(fun_state_machine_info.current_state);
-  static iflyauto::FunctionalState last_current_state = iflyauto::FunctionalState_MANUAL;
-  iflyauto::FunctionalState current_state = fun_state_machine_info.current_state;
-  if (current_state == iflyauto::FunctionalState_HPP_PARKING_IN &&
-      last_current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
-    current_state = last_current_state;
-  }
-  last_current_state = fun_state_machine_info.current_state;
-  switch (current_state) {
+
+  switch (fun_state_machine_info.current_state) {
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
     case iflyauto::FunctionalState_HPP_CRUISE_ROUTING:
     case iflyauto::FunctionalState_HPP_CRUISE_SEARCHING:

@@ -79,20 +79,20 @@ bool ParkingSlotManager::Update(
   target_slot_.clear();
   points_.clear();
   limiters_.clear();
+  is_exist_target_slot_ = false;
   const size_t parking_slot_lists_size = parking_fusion_info.parking_fusion_slot_lists_size;
   const auto& parking_slot_lists = parking_fusion_info.parking_fusion_slot_lists;
   target_slot_id_ = parking_fusion_info.select_slot_id;
   for (uint8 i = 0; i < parking_slot_lists_size; i++) {
     ParkingSlotPoints slot_point;
     const auto& parking_slot = parking_slot_lists[i];
-    bool is_exist_target_slot = false;
     size_t slot_id = parking_slot.id;
     auto resource_type = parking_slot.resource_type;
     if ((slot_id == target_slot_id_) && (resource_type == 2)) {
-      is_exist_target_slot = true;
+      is_exist_target_slot_ = true;
     }
     for (const auto& corner_point : parking_slot.corner_points) {
-      if (is_exist_target_slot) {
+      if (is_exist_target_slot_) {
         target_slot_.emplace_back(
             planning_math::Vec2d(corner_point.x, corner_point.y));
       }
@@ -115,35 +115,38 @@ bool ParkingSlotManager::Update(
 
 bool ParkingSlotManager::CalculateDistanceToTargetSlot(
     const std::shared_ptr<ReferencePath> &reference_path) {
-  distance_to_target_slot_ = -NL_NMAX;
   const double distance_to_target_slot =
       session_->environmental_model()
               .get_route_info()
               ->get_route_info_output()
               .distance_to_target_slot;
-  const double ego_s = reference_path->get_frenet_ego_state().s();
-  const auto& frenet_coord = reference_path->get_frenet_coord();
-  if ((target_slot_.empty()) || (frenet_coord == nullptr)) {
-    distance_to_target_slot_ = distance_to_target_slot;
-    return false;
-  }
-  for (const auto& slot_point : target_slot_) {
-    Point2D cart_pt(slot_point.x(), slot_point.y());
-    Point2D frenet_pt{0.0, 0.0};
-    if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      distance_to_target_slot_ = std::fabs(std::max(frenet_pt.x - ego_s,
-                                          distance_to_target_slot_));
-    } else {
-      distance_to_target_slot_ = distance_to_target_slot;
-      break;
+  distance_to_target_slot_ = distance_to_target_slot;
+  if (reference_path != nullptr) {
+    const double ego_s = reference_path->get_frenet_ego_state().s();
+    const auto& frenet_coord = reference_path->get_frenet_coord();
+    const auto& points = reference_path->get_points();
+    if (distance_to_target_slot_ < 10.0) {
+      distance_to_target_slot_ =
+          std::min(std::fabs(points.back().path_point.s() - ego_s),
+                  distance_to_target_slot_);
     }
-  }
-
-  const auto& points = reference_path->get_points();
-  if (distance_to_target_slot_ < 10.0) {
-    distance_to_target_slot_ =
-        std::min(std::fabs(points.back().path_point.s() - ego_s),
-                 distance_to_target_slot_);
+    if ((target_slot_.empty()) ||
+        (frenet_coord == nullptr)) {
+      return false;
+    }
+    double slot_dist_to_ego = -NL_NMAX;
+    for (const auto& slot_point : target_slot_) {
+      Point2D cart_pt(slot_point.x(), slot_point.y());
+      Point2D frenet_pt{0.0, 0.0};
+      if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+        slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
+                                    slot_dist_to_ego);
+      } else {
+        slot_dist_to_ego = distance_to_target_slot_;
+        break;
+      }
+    }
+    distance_to_target_slot_ = std::min(std::fabs(slot_dist_to_ego), distance_to_target_slot_);
   }
   return true;
 }

@@ -46,7 +46,18 @@ bool ParkingSwitchDecider::Execute() {
   const double ego_v = env.get_ego_state_manager()->ego_v();
   if ((successful_slot_info_list_size > 0) &&
       (current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING)) {
-    parking_switch_info_.is_selected_slot_allowed_to_park = true;
+    // 多车位
+    for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
+      if ((target_slot_id == successful_slot_info_list[i].id) && (target_slot_id > 0)) {
+        parking_switch_info_.is_selected_slot_allowed_to_park = true;
+        break;
+      }
+    }
+    // 单车位
+    if (successful_slot_info_list_size < 2) {
+      parking_switch_info_.is_selected_slot_allowed_to_park = false;
+    }
+    parking_switch_info_.has_parking_slot_in_hpp_searching = true;
   } else if ((distance_to_target_slot < config_.dist_to_parking_space_thr) &&
              (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
     for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
@@ -55,7 +66,8 @@ bool ParkingSwitchDecider::Execute() {
         break;
       }
     }
-    if ((ego_v <= 1e-2) || (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
+    if ((ego_v <= 1e-2) ||
+        (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
       parking_switch_info_.is_memory_slot_occupied = true;
     }
   }
