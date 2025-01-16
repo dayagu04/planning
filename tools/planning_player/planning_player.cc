@@ -845,8 +845,13 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
-  if (input_time_list_sd_map_ != input_time_list.sd_map()) {
-    input_time_list_sd_map_ = input_time_list.sd_map();
+  // 适配老2.8之前的bag
+  double sd_map_timestamp = input_time_list.sd_map();
+  if (sd_map_timestamp < 1e-6) {
+    sd_map_timestamp = input_time_list.map();
+  }
+  if (input_time_list_sd_map_ != sd_map_timestamp) {
+    input_time_list_sd_map_ = sd_map_timestamp;
     for (auto it = msg_cache_[TOPIC_SD_MAP].begin();
          it != msg_cache_[TOPIC_SD_MAP].end(); it++) {
       auto sd_map_msg_i =
@@ -855,7 +860,7 @@ void PlanningPlayer::PlayOneFrame(
                              sd_map_msg_i->debug_info.end());
       auto sd_map = std::make_shared<SdMapSwtx::SdMap>();
       sd_map->ParseFromString(sd_map_str);
-      if (sd_map->header().timestamp() == input_time_list_map_) {
+      if (sd_map->header().timestamp() == input_time_list_sd_map_) {
         planning_adapter_->Feed_IflytekEhrSdmapInfo(*sd_map);
         break;
       }
