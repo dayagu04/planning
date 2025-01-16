@@ -89,7 +89,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+      (apa_world_ptr_->GetNewSlotManagerPtr()
+           ->ego_info_under_slot_.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
           : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
 
