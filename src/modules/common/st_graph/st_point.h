@@ -54,6 +54,9 @@ class STPoint : public planning_math::Vec2d {
   double extreme_l() const;
   void set_extreme_l(const double extreme_l);
 
+  void set_info(const double s, const double t, const double velocity,
+                const int32_t agent_id, const int64_t boundary_id);
+
  private:
   int32_t agent_id_ = kNoAgentId;
   int64_t boundary_id_ = kNoAgentId;

@@ -693,6 +693,15 @@
   "max_concern_obs_distance":  50.0,
   "obs_static_vel_thold": 0.2,
   "observe_frames": 15
+},
+"sample_poly_speed_adjust": {
+  "sample_v_nums": 15,
+  "sample_t_nums": 10,
+  "sample_v_upper": 35.0,
+  "sample_v_lower": 0.0,
+  "maximum_speed_adjustment":4.0,
+  "sample_t_upper":5.0,
+  "sample_t_lower":1.0
 }
 }
 

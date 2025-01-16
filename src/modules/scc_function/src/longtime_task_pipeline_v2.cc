@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
 #include "behavior_planners/speed_search_decider/speed_adjust_decider.h"
 
 namespace planning {
@@ -40,6 +41,8 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
   cipv_lost_prohibit_acceleration_decider_ =
       std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
                                                             session);
+  sample_poly_speed_adjust_decider_ =
+      std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
 }
 
 bool LongTimeTaskPipelineV2::Run() {
@@ -70,6 +73,10 @@ bool LongTimeTaskPipelineV2::Run() {
   ok = lateral_obstacle_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_obstacle_decider_->Name());
+  }
+  ok = sample_poly_speed_adjust_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(speed_adjust_decider_->Name());
     return false;
   }
 

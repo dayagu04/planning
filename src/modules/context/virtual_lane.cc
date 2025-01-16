@@ -7,6 +7,7 @@
 #include "environmental_model.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
+#include "planning_context.h"
 #include "virtual_lane.h"
 
 namespace {
@@ -19,6 +20,7 @@ namespace planning {
 VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
+  is_nearing_ramp_mlc_task_ = false;
   order_id_ = lane.order_id;
   // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id;
@@ -433,10 +435,16 @@ void VirtualLane::ProcessEgoOnRoadMLC(
     if (ramp_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
+        if (relative_id_ == 0) { //表示当前车道,输出给speed adjudst的标志位
+          is_nearing_ramp_mlc_task_ = true;
+        }
       }
     } else if (ramp_direction == RAMP_ON_LEFT) {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
+        if (relative_id_ == 0) { //表示当前车道,输出给speed adjudst的标志位
+          is_nearing_ramp_mlc_task_ = true;
+        }
       }
     }
   } else if (

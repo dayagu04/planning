@@ -893,6 +893,12 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   }
   JSON_DEBUG_VALUE("lat_close_bound_offset",
                    lane_change_decider_output.lateral_close_boundary_offset)
+  if (lc_req_mgr_->request_source() == MAP_REQUEST) {
+    const auto &virtual_lane_mgr =
+        session_->environmental_model().get_virtual_lane_manager();
+    lane_change_decider_output.is_nearing_ramp =
+        virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task();
+  }
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     LaneChangeStageInfo *const lc_state_info) {
@@ -904,7 +910,7 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
       target_lane_rear_node_->node_front_edge_to_ego_back_edge_distance();
 
   const double need_safety_dist = planning::CalcGapObjSafeDistance(
-      v_ego, distance_rel, node_v, node_a, is_large_car_in_side_, false);
+      v_ego, node_v, node_a, is_large_car_in_side_, false);
 
   if (distance_rel < need_safety_dist) {
     lc_invalid_track_.set_value(target_lane_rear_node_->node_agent_id(),
@@ -923,8 +929,8 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
   const double node_v = target_lane_front_node_->node_speed();
   const double node_a = target_lane_front_node_->node_accel();
 
-  const double target_lane_need_safety_dist = planning::CalcGapObjSafeDistance(
-      v_ego, distance_rel, node_v, node_a, false, true);
+  const double target_lane_need_safety_dist =
+      planning::CalcGapObjSafeDistance(v_ego, node_v, node_a, false, true);
 
   if (distance_rel < target_lane_need_safety_dist) {
     lc_invalid_track_.set_value(target_lane_front_node_->node_agent_id(),
@@ -941,8 +947,7 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     const double ego_front_node_a = ego_lane_front_node_->node_accel();
 
     const double ego_lane_need_safety_dist = planning::CalcGapObjSafeDistance(
-        v_ego, ego_lane_distance_rel, ego_front_node_v, ego_front_node_a, false,
-        true);
+        v_ego, ego_front_node_v, ego_front_node_a, false, true);
     if (ego_lane_distance_rel < ego_lane_need_safety_dist) {
       lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
                                   ego_lane_distance_rel, ego_front_node_v);
