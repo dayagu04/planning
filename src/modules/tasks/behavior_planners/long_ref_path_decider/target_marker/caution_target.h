@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ego_planning_config.h"
+#include "lon_target_maker.pb.h"
 #include "target.h"
 
 namespace planning {
@@ -23,8 +24,12 @@ class CautionTarget : public Target {
 
   void GenerateCautionTarget();
 
+  void AddCautionTargetDataToProto();
+
  private:
   std::vector<UpperBoundInfo> upper_bound_infos_;
+  planning::common::CautionTarget caution_target_pb_;
+
 };
 
 }  // namespace planning

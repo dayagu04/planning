@@ -39,6 +39,7 @@ OvertakeTarget::OvertakeTarget(const SpeedPlannerConfig& config,
   //   std::endl;
   // }
   // AddDebugToProto(TargetType::kOvertake, planning_debug_msg);
+  AddOvertakeTargetDataToProto();
 }
 
 void OvertakeTarget::MakeOvertakeBoundsWithStCorridor() {
@@ -133,6 +134,21 @@ void OvertakeTarget::MakeOvertakeTarget(const FollowTarget& follow_target) {
     target_values_[i].set_s_target_val(s_target_for_overtake);
     target_values_[i].set_target_type(TargetType::kOvertake);
   }
+}
+
+void OvertakeTarget::AddOvertakeTargetDataToProto() {
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_overtake_target_data =
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_overtake_target();
+  if (!target_values_.empty()) {
+    for (const auto& value : target_values_) {
+      auto* ptr = overtake_target_pb_.add_overtake_target_s_ref();
+      ptr->set_s(value.s_target_val());
+      ptr->set_t(value.relative_t());
+      ptr->set_target_type(static_cast<int32_t>(value.target_type()));
+    }
+  }
+  mutable_overtake_target_data->CopyFrom(overtake_target_pb_);
 }
 
 }  // namespace planning
