@@ -2107,6 +2107,14 @@ void HppGeneralLateralDecider::ExtractBoundary(
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
+
+    // temp hack
+    if (i == hard_bounds_.size() - 1) {
+      hard_bound.first = frenet_hard_bounds.back().first;
+      hard_bound.second = frenet_hard_bounds.back().second;
+      hard_bound_info.first = hard_bounds_info.back().first;
+      hard_bound_info.second = hard_bounds_info.back().second;
+    }
     frenet_hard_bounds.emplace_back(hard_bound);
     hard_bounds_info.emplace_back(hard_bound_info);
   }
@@ -2128,6 +2136,14 @@ void HppGeneralLateralDecider::ExtractBoundary(
       soft_bound.second = frenet_hard_bounds[i].second;
     } else if (soft_bound.second < frenet_hard_bounds[i].first) {
       soft_bound.second = frenet_hard_bounds[i].first;
+    }
+
+    // temp hack
+    if (i == soft_bounds_.size() - 1) {
+      soft_bound.first = frenet_soft_bounds.back().first;
+      soft_bound.second = frenet_soft_bounds.back().second;
+      soft_bound_info.first = soft_bounds_info.back().first;
+      soft_bound_info.second = soft_bounds_info.back().second;
     }
     frenet_soft_bounds.emplace_back(soft_bound);
     soft_bounds_info.emplace_back(soft_bound_info);

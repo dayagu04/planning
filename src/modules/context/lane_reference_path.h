@@ -55,6 +55,7 @@ class LaneReferencePath
   double CalculateEgoProjectionDistanceInReferencePath(
       const ReferencePathPoints &ref_path_points) const;
   bool get_ref_points(ReferencePathPoints &points);
+  bool get_ref_points_hpp(ReferencePathPoints &points);
 
   int lane_virtual_id_ = 0;
   std::vector<int> lane_obstacles_id_;

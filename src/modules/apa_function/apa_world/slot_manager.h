@@ -275,7 +275,7 @@ class SlotManager {
   };
 
   struct EgoSlotInfo {
-    uint8_t select_slot_id = 0;
+    uint32_t select_slot_id = 0;
     uint8_t slot_type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_INVALID;
     uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     iflyauto::ParkingFusionSlot select_fusion_slot;

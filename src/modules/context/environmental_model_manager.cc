@@ -212,14 +212,12 @@ bool EnvironmentalModelManager::Run() {
   printf("planner_type:%d\n", GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
   auto location_valid = (msf_valid || localization_valid) &&
                         fusion_localization_valid && planner_valid;
-  // auto location_valid = (msf_valid || localization_valid) &&
-  //                              planner_valid;   // [hack] use in pp
 
-  // if (session_->is_hpp_scene() && !location_valid) {
-  //   LOG_ERROR("hpp location invalid\n");
-  //   return false;
-  // }
-  location_valid = localization_valid;  // hack
+  if (session_->is_hpp_scene() && !location_valid) {
+    LOG_ERROR("hpp location invalid\n");
+    return false;
+  }
+  // location_valid = true; //hack
 
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);

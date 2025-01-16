@@ -263,13 +263,12 @@ bool EgoStateManager::update(
 
   update_transform();
 
-  UpdatePlanningInitState();
   // planning init state for realtime & longtime decided by location_valid
-  // if (session_->environmental_model().location_valid()) {
-  //   UpdatePlanningInitState();
-  // } else {
-  //   RealtimeUpdatePlanningInitState();
-  // }
+  if (session_->environmental_model().location_valid()) {
+    UpdatePlanningInitState();
+  } else {
+    RealtimeUpdatePlanningInitState();
+  }
   return true;
 }
 
