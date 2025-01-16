@@ -414,8 +414,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().curb_offset, double, "curb_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().mov_curb_out_dist, double,
-                  "mov_curb_out_dist");
+  JSON_READ_VALUE(apa_param.SetPram().curb_offset_when_ego_outside_slot, double,
+                  "curb_offset_when_ego_outside_slot");
 
   // construce obstacles params
   JSON_READ_VALUE(apa_param.SetPram().channel_width, double, "channel_width");

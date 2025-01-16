@@ -153,7 +153,7 @@
   "parallel_occupied_pt_inside_dx": 0.0,
   "parallel_occupied_pt_inside_dy": 0.0,
   "curb_offset": 0.45,
-  "mov_curb_out_dist": 0.0,
+  "curb_offset_when_ego_outside_slot": 0.0,
   "nearby_slot_corner_dist": 0.6,
   "force_both_side_occupied": false,
   "virtual_obs_y_pos": 0.68,

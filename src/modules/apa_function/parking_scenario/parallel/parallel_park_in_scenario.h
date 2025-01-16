@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "apa_world.h"
 #include "dubins_lib.h"
@@ -41,10 +42,8 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
-
-  void UpdateTlaneOnceInSlot();
-
   ParallelPathGenerator::Tlane t_lane_;
+  std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
 };
 

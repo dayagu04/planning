@@ -313,7 +313,7 @@ class ParkingScenario {
     return;
   }
 
-  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
+  std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
 
   // 点击开始泊车之后，更新speed and path
   virtual void ScenarioRunning();
