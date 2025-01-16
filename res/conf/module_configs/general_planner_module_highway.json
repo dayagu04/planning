@@ -693,7 +693,8 @@
 "lane_borrow":{
   "max_concern_obs_distance":  50.0,
   "obs_static_vel_thold": 0.2,
-  "observe_frames": 15
+  "observe_frames": 15,
+  "centric_obs_frames":10
 },
 "sample_poly_speed_adjust": {
   "sample_v_nums": 15,

@@ -171,6 +171,7 @@ void LaneBorrowDecider::ClearLaneBorrowStatus() {
   observe_frame_num_ = 0;
   left_borrow_ = false;
   right_borrow_ = false;
+  obs_direction_map_.clear();
 }
 
 bool LaneBorrowDecider::CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane() {
@@ -369,8 +370,24 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
         continue;
       }
     }
-    static_blocked_obstacles_.emplace_back(obstacle);
+    static_blocked_obstacles_.emplace_back(obstacle);  // really needed
+    static_blocked_obj_id_vec_.emplace_back(id);       // tmperal used
+    if (obs_direction_map_.empty() ||
+        obs_direction_map_.find(id) == obs_direction_map_.end()) {  // add
+      obs_direction_map_[id] = std::make_pair(BorrowDirection::NO_BORROW, 0);
+    }
   }
+  // delete disappear obs
+  for (auto it = obs_direction_map_.begin(); it != obs_direction_map_.end();) {
+    if (std::find(static_blocked_obj_id_vec_.begin(),
+                  static_blocked_obj_id_vec_.end(),
+                  it->first) == static_blocked_obj_id_vec_.end()) {
+      it = obs_direction_map_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
   return true;
 }
 bool LaneBorrowDecider::ObstacleDecision() {
@@ -391,8 +408,9 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
   const auto& front_obstacle_sl =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary();
+  const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
   BorrowDirection front_obs_bypass_direction =
-      GetBypassDirection(front_obstacle_sl);
+      GetBypassDirection(front_obstacle_sl, id);
   if (front_obs_bypass_direction == LEFT_BORROW && left_borrow_) {
     bypass_direction_ = LEFT_BORROW;
     right_borrow_ = false;
@@ -409,7 +427,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
     const auto& id = obstacle->obstacle()->id();
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     BorrowDirection obs_bypass_direction =
-        GetBypassDirection(frenet_obstacle_sl);
+        GetBypassDirection(frenet_obstacle_sl, id);
 
     if (obs_bypass_direction == bypass_direction_) {
       obs_left_l_ = std::max(obs_left_l_, frenet_obstacle_sl.l_end);
@@ -446,14 +464,24 @@ bool LaneBorrowDecider::ObstacleDecision() {
 }
 
 BorrowDirection LaneBorrowDecider::GetBypassDirection(
-    const FrenetObstacleBoundary& frenet_obstacle_sl) {
+    const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
   double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
   if (std::fabs(obs_center_l) <= kMaxCentricOffset) {
-    return NO_BORROW;
+    if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {
+      obs_direction_map_[obs_id].second += 1;
+      return obs_direction_map_[obs_id].first;
+    } else {
+      obs_direction_map_[obs_id].first = NO_BORROW;
+      return NO_BORROW;
+    }
   } else if (obs_center_l < -kMaxCentricOffset) {
+    obs_direction_map_[obs_id].first = LEFT_BORROW;
+    obs_direction_map_[obs_id].second = 0;
     return LEFT_BORROW;
   } else {
+    obs_direction_map_[obs_id].first = RIGHT_BORROW;
+    obs_direction_map_[obs_id].second = 0;
     return RIGHT_BORROW;
   }
 }
