@@ -407,11 +407,12 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       slot.processed_corner_coord_global_.pt_1 + target_x_loc * n -
       0.5 * slot_width * t;
 
-  const std::vector<double> move_slot_dist_vec{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  const std::vector<double> move_slot_dist_vec{0.0, 0.1, 0.2, 0.3,
+                                               0.4, 0.5, 0.6};
 
   PathSafeChecker safe_check;
-  const double lat_buffer = 0.1;
-  const double lon_buffer = 0.1;
+  const double lat_buffer = 0.05;
+  const double lon_buffer = 0.05;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
   for (const double dist : move_slot_dist_vec) {
