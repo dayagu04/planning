@@ -704,12 +704,12 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   // set T-Boundary obstacles
   const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
-                          0.5 * t_lane_.slot_side_sgn);
+                          0.3 * t_lane_.slot_side_sgn);
 
   const Eigen::Vector2d A(B.x() - 3.2, B.y());
   const Eigen::Vector2d E(
       t_lane_.obs_pt_inside.x(),
-      t_lane_.obs_pt_inside.y() - t_lane_.slot_side_sgn * 0.5);
+      t_lane_.obs_pt_inside.y() - t_lane_.slot_side_sgn * 0.8);
 
   const Eigen::Vector2d C(
       B.x(), (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset) *
@@ -1479,10 +1479,8 @@ void ParallelParkInScenario::Log() const {
   JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 2)
   JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 2)
 
-  JSON_DEBUG_VALUE("terminal_error_x",
-                   ego_info_under_slot.terminal_err.pos.x())
-  JSON_DEBUG_VALUE("terminal_error_y",
-                   ego_info_under_slot.terminal_err.pos.y())
+  JSON_DEBUG_VALUE("terminal_error_x", ego_info_under_slot.terminal_err.pos.x())
+  JSON_DEBUG_VALUE("terminal_error_y", ego_info_under_slot.terminal_err.pos.y())
   JSON_DEBUG_VALUE("terminal_error_heading",
                    ego_info_under_slot.terminal_err.heading)
 
