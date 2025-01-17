@@ -381,43 +381,31 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   if (n.dot(v_ego_heading) < 1e-9) {
     n *= -1.0;
   }
-
-  const double heading = std::atan2(n.y(), n.x());
   const Eigen::Vector2d t(-n.x(), n.y());
 
-  const pnc::geometry_lib::LineSegment line_01(
-      slot.processed_corner_coord_global_.pt_1,
-      slot.processed_corner_coord_global_.pt_0, heading);
+  const Eigen::Vector2d center = slot.origin_corner_coord_global_.pt_center;
 
-  const double dist_01_2 = pnc::geometry_lib::CalPoint2LineDist(
-      slot.processed_corner_coord_global_.pt_2, line_01);
+  const double slot_length = (slot.origin_corner_coord_global_.pt_0 -
+                              slot.origin_corner_coord_global_.pt_1)
+                                 .norm();
 
-  const double dist_01_3 = pnc::geometry_lib::CalPoint2LineDist(
-      slot.processed_corner_coord_global_.pt_3, line_01);
+  const double center_to_rac_dist = 0.5 * apa_param.GetParam().car_length -
+                                    apa_param.GetParam().rear_overhanging;
 
-  const double slot_width = std::min(dist_01_2, dist_01_3);
-  const double slot_length = line_01.length;
-  // stop in the center of slot
+  const Eigen::Vector2d target_ego_pos =
+      center - center_to_rac_dist * v_ego_heading;
 
-  const double target_x_loc =
-      0.5 * (slot_length - apa_param.GetParam().car_length) +
-      apa_param.GetParam().rear_overhanging;
-
-  const Eigen::Vector2d origin_target_pos =
-      slot.processed_corner_coord_global_.pt_1 + target_x_loc * n -
-      0.5 * slot_width * t;
-
-  const std::vector<double> move_slot_dist_vec{0.0, 0.1, 0.2, 0.3,
-                                               0.4, 0.5, 0.6};
+  const std::vector<double> move_slot_dist_vec{-0.6, 0.0, 0.6};
 
   PathSafeChecker safe_check;
   const double lat_buffer = 0.05;
-  const double lon_buffer = 0.05;
+  const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
   for (const double dist : move_slot_dist_vec) {
-    const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
-    const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
+    const Eigen::Vector2d target_pos = target_ego_pos + dist * t;
+    const Pose2D target_pose(target_pos.x(), target_pos.y(),
+                             measure_data_ptr_->GetHeading());
     if (!safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
                                      lat_buffer, lon_buffer)) {
       move_slot_dist = dist;
