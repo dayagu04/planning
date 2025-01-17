@@ -165,6 +165,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_use_cone_change_request");
     enable_use_merge_change_request =
         read_json_key<bool>(json, "enable_use_merge_change_request");
+    enable_use_ground_mark_process_split =
+        read_json_key<bool>(json, "enable_use_ground_mark_process_split");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -180,6 +182,7 @@ struct EgoPlanningConfig : public Config {
   double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =
       1500;
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
+  bool enable_use_ground_mark_process_split = false;
   bool enable_use_emergency_avoidence_lane_change_request = false;
   bool enable_use_cone_change_request = false;
   bool enable_use_merge_change_request = false;
@@ -228,6 +231,19 @@ struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
 };
 
 struct LateralObstacleConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    obstacle_detect_distance_upper = read_json_key<double>(
+        json, "obstacle_detect_distance_upper", obstacle_detect_distance_upper);
+    obstacle_detect_distance_lower = read_json_key<double>(
+        json, "obstacle_detect_distance_lower", obstacle_detect_distance_lower);
+  }
+  double obstacle_detect_distance_upper = 220;
+  double obstacle_detect_distance_lower = -50;
+};
+
+struct SplitProcessConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
