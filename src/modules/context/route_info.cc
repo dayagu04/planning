@@ -1,6 +1,7 @@
 #include "route_info.h"
 #include <memory>
 #include "config/basic_type.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 
 namespace planning {
@@ -1019,5 +1020,7 @@ void RouteInfo::UpdateVisionInfo() {
                    static_cast<int>(route_info_output_.ramp_direction));
   JSON_DEBUG_VALUE("current_segment_passed_distance",
                    route_info_output_.current_segment_passed_distance);
+  JSON_DEBUG_VALUE("first_split_direction", (int)route_info_output_.first_split_direction);
+  JSON_DEBUG_VALUE("first_merge_direction", (int)route_info_output_.first_merge_direction);
 }
 }  // namespace planning

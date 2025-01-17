@@ -93,6 +93,7 @@ class LaneChangeStateMachineManager {
   void ResetStateMachine();
 
  private:
+  void PreProcess();
   void RunStateMachine();
   bool CheckIfProposeLaneChange(RequestType* const lane_change_direction,
                                 RequestSource* const lane_change_type) const;
@@ -144,12 +145,13 @@ class LaneChangeStateMachineManager {
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request) const;
 
-  void PreProcess();
   bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
   void CalculateLatCloseValue();
   void IsEgoOnSideLane();
   bool IsLCFeasibleForTrafficCone(
       const planning_data::DynamicAgentNode* traffic_cone) const;
+  const std::vector<double> GetObjsDebugInfo(const double obj_v, const double obj_a, const double obj_t,
+      const double obj_s) const;
 
   bool IsLatOffsetValid() const;
 
@@ -184,5 +186,10 @@ class LaneChangeStateMachineManager {
   bool is_large_car_in_side_ = false;
   bool is_ego_on_leftmost_lane_ = false;
   bool is_ego_on_rightmost_lane_ = false;
+  std::vector<double> lc_front_objs_ego_lane_vec_{};
+  std::vector<double> lc_front_objs_tar_lane_vec_{};
+  std::vector<double> lc_rear_objs_vec_{};
+  std::vector<double> lc_egos_vec_{};
+  std::vector<double> lc_time_vec_{};
 };
 }  // namespace planning

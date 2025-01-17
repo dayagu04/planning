@@ -124,9 +124,10 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfExecutionToCancel(transition_info_.lane_change_direction,
                                      transition_info_.lane_change_type);
         // execution -> hold
-        bool is_execution_to_hold =
-            CheckIfExecutionToHold(transition_info_.lane_change_direction,
-                                   transition_info_.lane_change_type);
+        // bool is_execution_to_hold =
+        //     CheckIfExecutionToHold(transition_info_.lane_change_direction,
+        //                            transition_info_.lane_change_type);
+        bool is_execution_to_hold = false;//now no hold state,temp hack
         if (is_lane_change_complete) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeComplete;
@@ -574,6 +575,15 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
   lc_state_info.gap_insertable = true;
   lc_invalid_track_.reset();
+  
+  //store debug_info
+  const double v_ego =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+  lc_egos_vec_ = GetObjsDebugInfo(v_ego, 0, kEgoReachBoundaryTime, 0);
+  const int iter = kEgoReachBoundaryTime * 10;
+  for (int i = 0; i < iter; ++i) {
+    lc_time_vec_.emplace_back(i * 0.1);
+  }
 
   // 判断与各障碍物之间的gap是否安全
   if (target_lane_middle_node_) {
@@ -636,6 +646,20 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
   lc_state_info.gap_insertable = true;
   lc_invalid_track_.reset();
+  
+  //store debug_info
+  const auto &ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+    // 如果以当前的加速度为基准，预测剩余时间后是否会发生碰撞
+  const double t_remain_lc =
+      (kEgoReachBoundaryTime * 10 - execution_state_frame_nums_) * 0.1;
+  if (t_remain_lc > 0) {
+    const int iter_count = t_remain_lc * 10;
+    for (int i = 0; i < iter_count; ++i) {
+      lc_time_vec_.emplace_back(i * 0.1);
+      lc_egos_vec_.emplace_back(ego_v * i * 0.1);
+    }
+  }
 
   // 判断与各障碍物之间的gap是否安全
   if (target_lane_middle_node_) {
@@ -918,6 +942,8 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     lc_state_info->gap_insertable = false;
     lc_state_info->lc_invalid_reason = "side view invalid";
   }
+  lc_rear_objs_vec_ = GetObjsDebugInfo(node_v, node_a, kEgoReachBoundaryTime,
+                                       -distance_rel);
 }
 void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     LaneChangeStageInfo *const lc_state_info) {
@@ -930,7 +956,8 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
 
   const double target_lane_need_safety_dist =
       planning::CalcGapObjSafeDistance(v_ego, node_v, node_a, false, true);
-
+  lc_front_objs_tar_lane_vec_ = GetObjsDebugInfo(node_v, node_a, kEgoReachBoundaryTime,
+                                          distance_rel);
   if (distance_rel < target_lane_need_safety_dist) {
     lc_invalid_track_.set_value(target_lane_front_node_->node_agent_id(),
                                 distance_rel, node_v);
@@ -963,6 +990,8 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
         lc_state_info->lc_invalid_reason = "front view invalid";
       }
     }
+    lc_front_objs_ego_lane_vec_ = GetObjsDebugInfo(ego_front_node_v, ego_front_node_a, kEgoReachBoundaryTime,
+                                          ego_lane_distance_rel);
   }
 }
 void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
@@ -989,6 +1018,10 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
     const double buffer_dist = interp(v_ego, xp, buffer);
     const double need_rel_dis =
         obstacle_dist_remain - ego_dist_remain + buffer_dist;
+    
+    //store debug_info
+    lc_rear_objs_vec_ = GetObjsDebugInfo(v_node, a_node, t_remain_lc,
+                                         -distance_rel);
     if (need_rel_dis > distance_rel) {
       lc_state_info->lc_should_back = true;
       lc_state_info->lc_back_reason = "side view back";
@@ -1022,6 +1055,10 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     const double buffer_dist = interp(v_ego, xp, buffer);
     const double need_rel_dis =
         ego_dist_remain - obstacle_dist_remain + buffer_dist;
+    
+    //store debug_info
+    lc_front_objs_tar_lane_vec_ = GetObjsDebugInfo(v_node, a_node, t_remain_lc,
+                                         distance_rel);
     if (need_rel_dis > distance_rel) {
       lc_state_info->lc_should_back = true;
       lc_state_info->lc_back_reason = "front view back";
@@ -1110,6 +1147,12 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   lat_behavior_common->set_lc_valid_cnt(
       lane_change_decider_output.lc_valid_cnt);
   lat_behavior_common->set_lc_back_cnt(lane_change_decider_output.lc_back_cnt);
+  
+  JSON_DEBUG_VECTOR("front_obj_s_vec", lc_front_objs_ego_lane_vec_, 2);
+  JSON_DEBUG_VECTOR("front_obj_s_tar_lane_vec", lc_front_objs_tar_lane_vec_, 2);
+  JSON_DEBUG_VECTOR("rear_obj_s_vec", lc_rear_objs_vec_, 2);
+  JSON_DEBUG_VECTOR("ego_s_vec", lc_egos_vec_, 2);
+  JSON_DEBUG_VECTOR("t_vec", lc_time_vec_, 2);
 }
 
 void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
@@ -1472,6 +1515,12 @@ void LaneChangeStateMachineManager::PreProcess() {
   target_lane_middle_node_ = nullptr;
   target_lane_rear_node_ = nullptr;
   ego_lane_front_node_ = nullptr;
+  //init debug info
+  lc_front_objs_ego_lane_vec_.clear();
+  lc_front_objs_tar_lane_vec_.clear();
+  lc_rear_objs_vec_.clear();
+  lc_egos_vec_.clear();
+  lc_time_vec_.clear();
 
   RequestType direction = lc_req_mgr_->request();
   const auto &current_lc_state = transition_info_.lane_change_status;
@@ -1627,5 +1676,17 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
     }
   }
   return false;
+  }
+const std::vector<double> 
+LaneChangeStateMachineManager::GetObjsDebugInfo(const double obj_v, const double obj_a, const double obj_t,
+      const double obj_s) const {
+  // 暂时是预测4s后障碍物的运动轨迹
+  const int iter = obj_t * 10;
+  std::vector<double> obj_s_vec;
+  for (int i = 0; i < iter; i++) {
+    double s = obj_v * (i * 0.1) + 0.5 * obj_a * (i * 0.1) * (i * 0.1) + obj_s;
+      obj_s_vec.push_back(s);
+  }
+  return obj_s_vec;
 }
 }  // namespace planning
