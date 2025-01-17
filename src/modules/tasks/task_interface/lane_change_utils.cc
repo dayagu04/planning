@@ -1,4 +1,5 @@
 #include "lane_change_utils.h"
+
 #include "refline.h"
 
 namespace planning {
@@ -11,10 +12,9 @@ constexpr std::array<double, 3> xp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
 }  // namespace
 
-double CalcGapObjSafeDistance(const double ego_v,
-                              const double edge_distance_rel,
-                              const double obj_v, const double obj_a,
-                              bool is_large_car, bool is_front_car) {
+double CalcGapObjSafeDistance(const double ego_v, const double obj_v,
+                              const double obj_a, bool is_large_car,
+                              bool is_front_car) {
   double safety_dist = ego_v * ego_v * 0.02 + 2.0;
   const double distance_obj =
       obj_v * kEgoReachBoundaryTime +

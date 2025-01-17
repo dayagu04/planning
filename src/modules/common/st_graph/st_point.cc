@@ -76,5 +76,13 @@ double STPoint::extreme_l() const { return extreme_l_; }
 
 void STPoint::set_extreme_l(const double extreme_l) { extreme_l_ = extreme_l; }
 
+void STPoint::set_info(const double s, const double t, const double velocity,
+                       const int32_t agent_id, const int64_t boundary_id) {
+  y_ = s;
+  x_ = t;
+  velocity_ = velocity;
+  agent_id_ = agent_id;
+  boundary_id_ = boundary_id;
+}
 }  // namespace speed
 }  // namespace planning

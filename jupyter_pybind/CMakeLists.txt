@@ -188,6 +188,15 @@ target_link_libraries(jerk_limited_trajectory_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
+pybind11_add_module(sample_poly_speed_adjust_decider_py MODULE src/quartic_curve_sample_pybind.cc)
+target_link_libraries(sample_poly_speed_adjust_decider_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)
+
 pybind11_add_module(gap_selector_py MODULE src/gap_selector_pybind.cc)
 target_link_libraries(gap_selector_py PRIVATE
   autoplt

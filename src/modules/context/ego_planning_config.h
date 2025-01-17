@@ -373,6 +373,41 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double static_obs_buffer = 0.5;
 };
 
+struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    sample_v_nums = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_v_nums"});
+    sample_t_nums = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_nums"});
+    sample_v_upper = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_v_upper"});
+    sample_v_lower = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_v_lower"});
+    sample_t_upper = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_upper"});
+    sample_t_lower = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_lower"});
+    maximum_speed_adjustment = read_json_keys<int>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "maximum_speed_adjustment"});
+  }
+
+  int sample_v_nums = 15;
+  int sample_t_nums = 10;
+  double sample_v_upper = 35.0;
+  double sample_v_lower = 0.0;
+  double sample_t_upper = 5.0;
+  double sample_t_lower = 1.0;
+  double maximum_speed_adjustment = 15.0 / 3.6;
+};
+
 struct ActRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

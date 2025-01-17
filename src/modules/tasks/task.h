@@ -16,6 +16,7 @@ namespace planning {
 
 class Task {
  public:
+  explicit Task() = default;
   explicit Task(const EgoPlanningConfigBuilder *config_builder,
                 framework::Session *session);
 

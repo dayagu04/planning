@@ -160,6 +160,7 @@ class VirtualLane {
   void set_is_in_merge_area(bool is_in_merge_area) {
     is_in_merge_area_ = is_in_merge_area;
   }
+  bool is_nearing_ramp_mlc_task() const { return is_nearing_ramp_mlc_task_; }
   void ProcessEgoOnRoadMLC(const RouteInfoOutput &route_info_output);
   void ProcessEgoOnRampMLC(const RouteInfoOutput &route_info_output);
 
@@ -195,6 +196,7 @@ class VirtualLane {
   double v_cruise_ = 0.0;
   double current_lane_speed_limit_ = 0.0;
   bool is_in_merge_area_ = false;
+  bool is_nearing_ramp_mlc_task_ = false;
 };
 }  // namespace planning
 #endif

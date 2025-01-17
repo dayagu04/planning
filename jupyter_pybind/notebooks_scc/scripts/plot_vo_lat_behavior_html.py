@@ -96,6 +96,33 @@ lane_borrow_turn_circle_params = {
   'line_dash': 'dashed',
   'legend_label': 'lane_borrow_turn_circle'
 }
+sample_poly_s_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'sample_poly_s'
+}
+
+sample_poly_v_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'sample_poly_v'
+}
+
+sample_poly_a_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'sample_poly_a'
+}
+
+sample_poly_j_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'sample_poly_j'
+}
 def isINJupyter():
     try:
         __file__
@@ -387,7 +414,16 @@ def get_speed_search_st(plan_debug_msg):
     xys.append((one_t_vec, one_j_vec))
   speed_search_base_j = DataGeneratorBase(xys, ts)
 
-  return speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.sample_poly_speed_info.sample_t_vec)
+    one_s_vec = list(debug_info.st_search_decider_info.sample_poly_speed_info.sample_s_vec)
+    xys.append((one_t_vec, one_s_vec))
+  speed_sample_s = DataGeneratorBase(xys, ts)
+
+  return speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j, speed_sample_s
 
 def draw_v_a_j_fig():
     hover_v = HoverTool(tooltips = [('t', '@pts_xs'),
@@ -435,6 +471,32 @@ def draw_v_a_j_fig():
     fig_jt.toolbar.active_scroll = fig_jt.select_one(WheelZoomTool)
     fig_jt.legend.click_policy = "hide"
     return fig_vt, fig_at, fig_jt
+
+def get_sample_poly_info(plan_debug_msg):
+  ts = []
+  xys = []
+  xyv = []
+  xya = []
+  xyj = []
+  one_t_vec = []
+
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    sample_poly_speed_info = debug_info.st_search_decider_info.sample_poly_speed_info
+    ts.append(plan_debug_msg["t"][i])
+    one_s_vec = list(sample_poly_speed_info.sample_s_vec)
+    one_v_vec = list(sample_poly_speed_info.sample_v_vec)
+    one_a_vec = list(sample_poly_speed_info.sample_a_vec)
+    one_j_vec = list(sample_poly_speed_info.sample_j_vec)
+
+    xys.append((one_t_vec, one_s_vec))
+    xyv.append((one_t_vec, one_v_vec))
+    xya.append((one_t_vec, one_a_vec))
+    xyj.append((one_t_vec,one_j_vec))
+  sample_poly_s_vec = DataGeneratorBase(xys, ts)
+  sample_poly_v_vec = DataGeneratorBase(xyv, ts)
+  sample_poly_a_vec = DataGeneratorBase(xya, ts)
+  sample_poly_j_vec = DataGeneratorBase(xyj, ts)
+  return sample_poly_s_vec, sample_poly_v_vec, sample_poly_a_vec, sample_poly_j_vec
 
 def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
   loc_msg = dataLoader.loc_msg
@@ -570,14 +632,14 @@ def plotOnce(bag_path, html_file):
 
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
 
-    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
-    tab_lane_borrow_decider = load_lane_borrow_tab_info(dataLoader, layer_manager)
     plan_debug_msg = dataLoader.plan_debug_msg
-    speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
+    speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j, sample_base_s = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
     speed_search_layer = CurveLayer(fig_st, speed_search_s_params)
     layer_manager.AddLayer(speed_search_layer, 'speed_search_source', speed_search_base_s, 'speed_search_ref', 2)
 
+    sample_s_layer = CurveLayer(fig_st, sample_poly_s_params)
+    layer_manager.AddLayer(sample_s_layer, 'sample_s_source', sample_base_s, 'sample_base_ref', 2)
     fig_vt, fig_at, fig_jt = draw_v_a_j_fig()
 
     v_search_layer = CurveLayer(fig_vt, speed_search_v_params)
@@ -588,6 +650,18 @@ def plotOnce(bag_path, html_file):
 
     j_search_layer = CurveLayer(fig_jt, speed_search_j_params)
     layer_manager.AddLayer(j_search_layer, 'j_speed_search_source', speed_search_base_j, 'j_search_ref', 2)
+
+    # sample_poly_s_vec, sample_poly_v_vec, sample_poly_a_vec, sample_poly_j_vec = get_sample_poly_info(plan_debug_msg)
+    # fig_st_new = draw_lon_st(plan_debug_msg, layer_manager)
+    # sample_poly_layer = CurveLayer(fig_st_new, sample_poly_s_params)
+    # layer_manager.AddLayer(sample_poly_layer, 'sample_poly_source', sample_poly_s_vec, 'sample_poly_ref', 2)
+    # fig_sample_vt, fig_sample_at, fig_sample_jt = draw_v_a_j_fig()
+    # v_sample_layer = CurveLayer(fig_sample_vt, sample_poly_v_params)
+    # layer_manager.AddLayer(v_sample_layer, 'v_speed_search_source', sample_poly_v_vec, 'v_sample_ref', 2)
+    # a_sample_layer = CurveLayer(fig_sample_at, sample_poly_a_params)
+    # layer_manager.AddLayer(a_sample_layer, 'a_speed_search_source', sample_poly_a_vec, 'a_sample_ref', 2)
+    # j_sample_layer = CurveLayer(fig_sample_jt, sample_poly_j_params)
+    # layer_manager.AddLayer(j_sample_layer, 'j_speed_search_source', sample_poly_j_vec, 'j_sample_ref', 2)
 
     min_t = sys.maxsize
     max_t = 0
@@ -709,9 +783,9 @@ def plotOnce(bag_path, html_file):
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
-    pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
-
-    pans = Tabs(tabs=[ pan_lane_borrow_info,pan_general_info, pan_speed_search_info])
+    # pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
+    # pan_sample_poly_info = Panel(child = row(column(fig_st_new, fig_sample_vt), column(fig_sample_at, fig_sample_jt)), title="SamplePolyInfo")
+    pans = Tabs(tabs=[pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():

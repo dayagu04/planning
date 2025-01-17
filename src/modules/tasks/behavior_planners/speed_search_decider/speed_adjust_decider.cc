@@ -166,7 +166,7 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
         std::numeric_limits<double>::max();  // cailiu2:no use currently
   }
 
-  if (count_wait_state_ < 3) {
+  if (count_wait_state_ < 5) {
     std::cout << " pass lc wait state, count is: " << count_wait_state_
               << std::endl;
     last_request_ = lc_request;
