@@ -137,7 +137,7 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 //                                           const spiral_path_point_t *start,
 //                                           double step_length) {
 //   /* The max size for points is
-//   UOS_MAX_STEER_STATE_NUM x UOS_MAX_STEER_MOTION_NUM */
+//   MAX_SPIRAL_PATH_POINT_NUM x UOS_MAX_STEER_MOTION_NUM */
 //   int32_t max_point_num, total_point_number = 0;
 //   spiral_path_point_t local_state, global_state, key_state;
 //   double delta_x = 0, delta_y = 0, delta_x1 = 0, delta_y1 = 0, theta = 0;
@@ -159,7 +159,7 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 //   total_point_number = (int32_t)(ceil(coeffs->sf / step_length)) + 1;
 //   ILOG_INFO << "coeffs->sf " << coeffs->sf;
 //   ILOG_INFO << "total_point_number " << total_point_number;
-//   max_point_num = (UOS_MAX_STEER_STATE_NUM - 1) * UOS_MAX_STEER_MOTION_NUM +
+//   max_point_num = (MAX_SPIRAL_PATH_POINT_NUM - 1) * UOS_MAX_STEER_MOTION_NUM +
 //   1;
 
 //   if (total_point_number > max_point_num) {
@@ -174,7 +174,7 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 //   }
 
 //   motions->size = (int32_t)(ceil((double)total_point_number /
-//                                  (double)UOS_MAX_STEER_STATE_NUM));
+//                                  (double)MAX_SPIRAL_PATH_POINT_NUM));
 
 //   if (total_point_number <= 1) {
 //     ILOG_ERROR << "total_point_number should be greater than 1!";
@@ -223,10 +223,10 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 //       return false;
 //     }
 //     /* segment index */
-//     m = floor(i / (UOS_MAX_STEER_STATE_NUM - 1));
+//     m = floor(i / (MAX_SPIRAL_PATH_POINT_NUM - 1));
 //     ILOG_INFO << " i " << i;
 //     /* check whether this is a start of a new segment */
-//     n = i % (UOS_MAX_STEER_STATE_NUM - 1);
+//     n = i % (MAX_SPIRAL_PATH_POINT_NUM - 1);
 //     /* this is a key state coupled with a control defined by coeffcients */
 //     /* fill the UOSSteerMotionList */
 //     if (0 == n && m > 0 && i < (total_point_number - 1)) {

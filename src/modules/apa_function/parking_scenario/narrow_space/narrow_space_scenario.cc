@@ -649,6 +649,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.slot_width = ego_info.slot.GetWidth();
   cur_request.slot_length = ego_info.slot.GetLength();
   cur_request.history_gear = current_gear_;
+  frame_.current_gear = current_gear_ == AstarPathGear::DRIVE
+                            ? geometry_lib::SEG_GEAR_REVERSE
+                            : geometry_lib::SEG_GEAR_INVALID;
 
   switch (frame_.replan_reason) {
     case FIRST_PLAN:
@@ -677,9 +680,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   is_path_connected_to_goal_ = false;
 
   // generate request
-  bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
-      start, ego_info.slot.GetWidth(), ego_info.slot.GetLength());
-  if (need_drive_forward) {
+  bool need_adjust_plan = IsEgoNeedAdjustInSlot(start, ego_info.slot.GetWidth(),
+                                                ego_info.slot.GetLength());
+  if (need_adjust_plan) {
     if (apa_param.GetParam().astar_config.cubic_polynomial_pose_adjustment) {
       cur_request.path_generate_method =
           planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
@@ -687,7 +690,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       cur_request.path_generate_method =
           planning::AstarPathGenerateType::REEDS_SHEPP;
     }
-
     end.y = real_end.y;
     end.x = start.x + 30.0;
     cur_request.goal_ = end;
@@ -1140,21 +1142,42 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
     ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(-1, 0);
   }
 
-  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
-          param.slot_occupied_ratio_max_lat_err &&
-      std::fabs(ego_info_under_slot.cur_pose.heading) <
-          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    const std::vector<double> x_tab = {
-        ego_info_under_slot.target_pose.pos.x(),
-        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+  // 终点误差
+  ego_info_under_slot.terminal_err.Set(
+      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
+      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+                                   ego_info_under_slot.target_pose.heading));
 
-    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
-    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
-        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+  // 固定车位,计算占库比
+  if (std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
+          param.slot_occupied_ratio_max_lat_err &&
+      std::fabs(ego_info_under_slot.terminal_err.heading) <
+          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
+    // 车头泊入占比
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+      ego_info_under_slot.slot_occupied_ratio =
+          pnc::mathlib::Clamp(1.0 - (ego_info_under_slot.terminal_err.pos.x() /
+                                     ego_info_under_slot.slot.slot_length_),
+                              0.0, 1.0);
+    } else {
+      // 车尾泊入占比
+      const std::vector<double> x_tab = {
+          ego_info_under_slot.target_pose.pos.x(),
+          ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+
+      const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+      ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
+          x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+    }
+
   } else {
     ego_info_under_slot.slot_occupied_ratio = 0.0;
   }
-
+  ILOG_INFO << "slot_occupied_ratio = "
+            << ego_info_under_slot.slot_occupied_ratio;
   // trim or extend path according to limiter, only run once
   frame_.correct_path_for_limiter = false;
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
@@ -1178,12 +1201,8 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   if (ego_info_under_slot.slot_occupied_ratio > param.fix_slot_occupied_ratio &&
       !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
     ego_info_under_slot.fix_slot = true;
+    ILOG_INFO << "fix_slot";
   }
-
-  ego_info_under_slot.terminal_err.Set(
-      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
-      ego_info_under_slot.cur_pose.heading -
-          ego_info_under_slot.target_pose.heading);
 
   return true;
 }
@@ -1340,38 +1359,55 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   return true;
 }
 
-const bool NarrowSpaceScenario::IsEgoNeedDriveForwardInSlot(
-    const Pose2D& ego_pose, const double slot_width, const double slot_len) {
+const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
+                                                      const double slot_width,
+                                                      const double slot_len) {
+  double ego_lat_offset = std::fabs(ego_pose.y);
+  bool need_adjust_plan = false;
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
       ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    return false;
-  }
-
-  if (current_gear_ != AstarPathGear::REVERSE) {
-    return false;
-  }
-
-  double ego_lat_offset = std::fabs(ego_pose.y);
-  bool need_drive_forward = false;
-
-  // if ego is beyond slot, can use spiral/rs/polynomial to adjust ego. Not use
-  // astar because maybe switch gear too much or generate weird path.
-  if (ego_pose.x >= slot_len) {
-    if (ego_lat_offset < 1.0 && std::fabs(ego_pose.theta) < ifly_deg2rad(5.0)) {
-      need_drive_forward = true;
+    if (current_gear_ != AstarPathGear::DRIVE) {
+      return false;
     }
-  } else {
-    if (ego_lat_offset < 1.0 &&
-        std::fabs(ego_pose.theta) < ifly_deg2rad(15.0)) {
-      need_drive_forward = true;
+    EgoInfoUnderSlot& ego_info =
+        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+    if (ego_pose.x <= slot_len) {
+      if (ego_lat_offset < 1.0 &&
+          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(5.0)) {
+        need_adjust_plan = true;
+      }
+    } else {
+      if (ego_lat_offset < 1.0 &&
+          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(15.0)) {
+        need_adjust_plan = true;
+      }
+    }
+  } else if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+             ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+    if (current_gear_ != AstarPathGear::REVERSE) {
+      return false;
+    }
+    // if ego is beyond slot, can use spiral/rs/polynomial to adjust ego. Not
+    // use
+    // astar because maybe switch gear too much or generate weird path.
+    if (ego_pose.x >= slot_len) {
+      if (ego_lat_offset < 1.0 &&
+          std::fabs(ego_pose.theta) < ifly_deg2rad(5.0)) {
+        need_adjust_plan = true;
+      }
+    } else {
+      if (ego_lat_offset < 1.0 &&
+          std::fabs(ego_pose.theta) < ifly_deg2rad(15.0)) {
+        need_adjust_plan = true;
+      }
     }
   }
 
   ILOG_INFO << "lateral dist = " << ego_lat_offset
             << ",theta = " << ifly_rad2deg(ego_pose.theta)
-            << ",need_drive_forward = " << need_drive_forward;
+            << ",need_adjust_plan = " << need_adjust_plan;
 
-  return need_drive_forward;
+  return need_adjust_plan;
 }
 
 const double NarrowSpaceScenario::CalRemainDistFromPath() {

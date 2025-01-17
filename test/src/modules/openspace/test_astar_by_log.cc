@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
 
   Pose2D start = initial_state;
   Pose2D end = goal_state;
-  GeneShortestRSPath(&traj_set, &is_connected_to_goal, &start, &end, 5.0, true);
+  GeneShortestRSPath(&traj_set, &is_connected_to_goal, &start, &end, 5.0, true, true);
 
   coarse_traj.x.clear();
   coarse_traj.y.clear();
