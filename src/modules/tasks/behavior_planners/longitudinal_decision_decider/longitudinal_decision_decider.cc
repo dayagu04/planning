@@ -5,6 +5,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <set>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -364,6 +365,11 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
                                      ->planning_init_point()
                                      .lat_init_state.y();
   const auto &agent_manager = environmental_model.get_agent_manager();
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto &blocked_obs_id_vec = lane_borrow_output.blocked_obs_id;
+  const std::set<int32_t> lane_borrow_blocked_obs_id_set(
+      blocked_obs_id_vec.begin(), blocked_obs_id_vec.end());
   if (!ego_cur_lane) {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
@@ -446,9 +452,9 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   }
 
   // get closet invade neighbor gap's agents id
-  DetermineClosestInvadeNeighborGapInfo(ego_cur_lane, planning_init_x,
-                                        planning_init_y, lat_obstacle_decision,
-                                        agent_manager, st_graph_helper);
+  DetermineClosestInvadeNeighborGapInfo(
+      ego_cur_lane, planning_init_x, planning_init_y, lat_obstacle_decision,
+      lane_borrow_blocked_obs_id_set, agent_manager, st_graph_helper);
   const auto invade_neighbor_front_agent_id =
       closest_neighbor_invade_gap_agents_id_.second;
   const auto invade_neighbor_rear_agent_id =
@@ -456,11 +462,9 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
 
   std::unordered_map<int32_t, speed::STBoundary::DecisionType>
       neighbor_agents_decision_table;
-  const auto agent_id_st_boundaries_map =
-      // mutable_st_graph->agent_id_st_boundaries_map();
+  const auto &agent_id_st_boundaries_map =
       st_graph_helper->GetAgentIdSTBoundariesMap();
-  const auto neighbor_agent_id_st_boundraies_map =
-      // mutable_st_graph->neighbor_agent_id_st_boundaries_map();
+  const auto &neighbor_agent_id_st_boundraies_map =
       st_graph_helper->GetNeighborAgentIdSTBoundariesMap();
   if (invade_neighbor_front_agent_id != -1 &&
       agent_id_st_boundaries_map.find(invade_neighbor_front_agent_id) ==
@@ -524,6 +528,7 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const double planning_init_x, const double planning_init_y,
     const std::unordered_map<uint32_t, LatObstacleDecisionType>
         &lat_obstacle_decision,
+    const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
     const std::shared_ptr<agent::AgentManager> &agent_manager,
     const speed::StGraphHelper *st_graph_helper) {
   closest_neighbor_invade_gap_agents_id_ = std::pair<int32_t, int32_t>(-1, -1);
@@ -544,7 +549,7 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     return;
   }
 
-  const auto agent_id_st_boundaries_map =
+  const auto &agent_id_st_boundaries_map =
       st_graph_helper->GetAgentIdSTBoundariesMap();
   std::map<double, int32_t> invade_agents_s_id_map;
   invade_agents_s_id_map[planning_init_s] = 0;
@@ -553,6 +558,10 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
         agent_id_st_boundaries_map.find(id) !=
             agent_id_st_boundaries_map
                 .end()) {  // no invade or already in st graph(like cipv)
+      continue;
+    }
+    if (lane_borrow_blocked_obs_id_set.find(id) !=
+        lane_borrow_blocked_obs_id_set.end()) {  // ignore lane borrow agents
       continue;
     }
     double invade_agent_s = 0.0;
@@ -588,7 +597,7 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
           std::prev(iterator_ego)->second;
     }
   }
-};
+}
 
 void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   const auto &environmental_model = session_->environmental_model();
