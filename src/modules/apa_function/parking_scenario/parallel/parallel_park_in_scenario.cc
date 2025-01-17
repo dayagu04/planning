@@ -282,10 +282,6 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
             << ego_info_under_slot.origin_pose_global.heading * kRad2Deg;
   ego_info_under_slot.origin_pose_global.heading_vec = n;
 
-  const double target_x = 0.5 * (ego_info_under_slot.slot.slot_length_ -
-                                 apa_param.GetParam().car_length) +
-                          apa_param.GetParam().rear_overhanging;
-
   const double target_y_sgn =
       (ego_info_under_slot.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT
            ? 1.0
@@ -1418,9 +1414,6 @@ void ParallelParkInScenario::Log() const {
 
   const auto p0_g = l2g_tf.GetPos(t_lane_.obs_pt_outside);
   const auto p1_g = l2g_tf.GetPos(t_lane_.obs_pt_inside);
-  const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal_pos);
-  ILOG_INFO << "p0_g = " << p0_g.transpose();
-
   ILOG_INFO << "obs p out = " << p0_g.transpose();
   ILOG_INFO << "obs p in = " << p1_g.transpose();
 

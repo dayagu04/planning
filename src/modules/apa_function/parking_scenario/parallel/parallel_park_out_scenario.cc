@@ -217,8 +217,6 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
     ILOG_INFO << "slot_length_ = " << ego_info_under_slot.slot.slot_length_;
     ILOG_INFO << "slot_width = " << ego_info_under_slot.slot.slot_width_;
 
-    const double park_out_left_sgn = frame_.is_park_out_left ? 1.0 : -1.0;
-
     const Eigen::Vector2d n =
         (select_slot_global.pt_0 - select_slot_global.pt_1).normalized();
     const Eigen::Vector2d t(-n.y(), n.x());

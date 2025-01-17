@@ -1035,7 +1035,7 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
       }
     }
   }
-  const size_t line_arc_path_size = path_vec.size();
+  // const size_t line_arc_path_size = path_vec.size();
 
   if (!success) {
     TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, ref_radius,
@@ -2287,7 +2287,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
     }
 
     const double step = line_length / step_size;
-    double length_diff = step;
+    // double length_diff = step;
     const double dir_sgn = (gear == SEG_GEAR_DRIVE ? 1.0 : -1.0);
 
     for (size_t i = 1; i <= step_size; i++) {

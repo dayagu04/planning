@@ -124,8 +124,6 @@ const bool ParallelOutPathGenerator::Update() {
   calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
 
   for (const auto &prepare_pose : preparing_pose_vec) {
-    const auto preparing_line = pnc::geometry_lib::BuildLineSegByPose(
-        prepare_pose.pos, prepare_pose.heading);
 
     if (PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
       ReversePathSegVec(park_out_path_vec);
