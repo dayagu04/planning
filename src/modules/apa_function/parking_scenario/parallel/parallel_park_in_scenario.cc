@@ -180,8 +180,6 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ILOG_INFO << " select_slot_global pt 3 = "
             << select_slot_global.pt_3.transpose();
 
-  select_slot_global.CalExtraCoord();
-
   if (select_slot_global.pt_0 == select_slot_global.pt_1 ||
       select_slot_global.pt_0 == select_slot_global.pt_2 ||
       select_slot_global.pt_0 == select_slot_global.pt_3 ||
@@ -201,8 +199,8 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
     v_10 *= -1.0;
     select_slot_global.pt_0.swap(select_slot_global.pt_1);
     select_slot_global.pt_2.swap(select_slot_global.pt_3);
-    select_slot_global.CalExtraCoord();
   }
+  select_slot_global.CalExtraCoord();
   const double heading_10 = std::atan2(v_10.y(), v_10.x());
 
   const pnc::geometry_lib::LineSegment line_01(
@@ -289,8 +287,9 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
                           apa_param.GetParam().rear_overhanging;
 
   const double target_y_sgn =
-      (ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_LEFT ? 1.0
-                                                                     : -1.0);
+      (ego_info_under_slot.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT
+           ? 1.0
+           : -1.0);
   const double target_y = 0.5 * ego_info_under_slot.slot.GetWidth();
 
   ego_info_under_slot.origin_pose_global.pos =
@@ -353,33 +352,11 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
   ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
-
-  const pnc::geometry_lib::PathPoint ego_pose = ego_info_under_slot.cur_pose;
-
-  // size_t dist_fail_cnt = 0;
-  // size_t total_box_x_fail_cnt = 0;
-  // size_t total_box_y_fail_cnt = 0;
-  // size_t front_box_fail_cnt = 0;
-  // size_t rear_box_fail_cnt = 0;
-  // size_t in_ego_cnt = 0;
-
-  // ILOG_INFO<<"dist_fail_cnt = " << dist_fail_cnt);
-  // ILOG_INFO<<"total_box_x_fail_cnt = " << total_box_x_fail_cnt);
-  // ILOG_INFO<<"total_box_y_fail_cnt = " << total_box_y_fail_cnt);
-  // ILOG_INFO<<"front_box_fail_cnt = " << front_box_fail_cnt);
-  // ILOG_INFO<<"rear_box_fail_cnt = " << rear_box_fail_cnt);
-  // ILOG_INFO<<"in_ego_cnt = " << in_ego_cnt);
-  // ILOG_INFO<<"ego_slot_info.obs_pt_vec_slot size = "
-  //             << ego_slot_info.obs_pt_vec_slot.size());
-
   return true;
 }
 
 const bool ParallelParkInScenario::GenTlane() {
   // Todo: generate t-lane according to nearby obstacles
-
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
   // y
   // ^_______________    left side
@@ -392,6 +369,9 @@ const bool ParallelParkInScenario::GenTlane() {
   // |               |
   // |->x            |
   // |_______________|   right side
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
   const double slot_length = ego_info_under_slot.slot.GetLength();
   const double slot_width = ego_info_under_slot.slot.GetWidth();
@@ -406,8 +386,7 @@ const bool ParallelParkInScenario::GenTlane() {
   for (const auto& pair :
        apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
-      if ((frame_.ego_slot_info.l2g_tf.GetPos(obs_pt_local) - slot_center)
-              .norm() > 20.0) {
+      if ((obs_pt_local - slot_center).norm() > 20.0) {
         continue;
       }
 
@@ -1013,9 +992,10 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   const auto& ego_slot_info =
       apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+
+  path_planner_input.ego_pose = ego_slot_info.cur_pose;
   path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  path_planner_input.ego_pose.Set(ego_slot_info.cur_pose.pos,
-                                  ego_slot_info.cur_pose.heading);
+
   if (frame_.is_replan_first) {
     // temprarily give driving gear
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
@@ -1139,7 +1119,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       return PathPlannerResult::PLAN_FAILED;
     }
 
-    if (frame_.ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
       // set current arc steer
       frame_.current_arc_steer =
           pnc::geometry_lib::ReverseSteer(frame_.current_arc_steer);
@@ -1440,14 +1420,6 @@ void ParallelParkInScenario::Log() const {
   const auto p1_g = l2g_tf.GetPos(t_lane_.obs_pt_inside);
   const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal_pos);
   ILOG_INFO << "p0_g = " << p0_g.transpose();
-
-  JSON_DEBUG_VALUE("tlane_p0_x", p0_g.x())
-  JSON_DEBUG_VALUE("tlane_p0_y", p0_g.y())
-  JSON_DEBUG_VALUE("tlane_p1_x", p1_g.x())
-  JSON_DEBUG_VALUE("tlane_p1_y", p1_g.y())
-  JSON_DEBUG_VALUE("tlane_pt_x", pt_g.x())
-  JSON_DEBUG_VALUE("tlane_pt_y", pt_g.y())
-  JSON_DEBUG_VALUE("slot_side", t_lane_.slot_side)
 
   ILOG_INFO << "obs p out = " << p0_g.transpose();
   ILOG_INFO << "obs p in = " << p1_g.transpose();

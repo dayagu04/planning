@@ -141,7 +141,7 @@ struct ApaParameters {
   double finish_parallel_lon_err = 0.3;
   double finish_parallel_lon_overhaing_error = 0.2;
   double finish_parallel_heading_err = 2.3;
-  double finish_parallel_rear_stop_buffer = 0.55;
+  double finish_parallel_out_heading_mag = 0.55;
   double finish_parallel_lat_rac_err = 0.35;
 
   // check fail params

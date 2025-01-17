@@ -42,6 +42,7 @@ class ParallelParkOutScenario : public ParkingScenario {
 
  private:
   ParallelOutPathGenerator::Tlane tlane_;
+  std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelOutPathGenerator parallel_out_path_planner_;
 };
 }  // namespace apa_planner

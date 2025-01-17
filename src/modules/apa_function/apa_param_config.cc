@@ -219,8 +219,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_heading_err, double,
                   "finish_parallel_heading_err");
 
-  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_rear_stop_buffer, double,
-                  "finish_parallel_rear_stop_buffer");
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_out_heading_mag, double,
+                  "finish_parallel_out_heading_mag");
 
   // check fail params
   JSON_READ_VALUE(apa_param.SetPram().stuck_failed_time, double,

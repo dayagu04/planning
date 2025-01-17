@@ -159,8 +159,9 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
 
   ApaObstacle apa_obs;
   std::vector<Eigen::Vector2d> obs_vec;
+  obs_vec.resize(obs_x_vec.size());
   for (size_t i = 0; i < obs_x_vec.size(); i++) {
-    obs_vec.emplace_back(Eigen::Vector2d(obs_x_vec[i], obs_y_vec[i]));
+    obs_vec[i] << obs_x_vec[i], obs_y_vec[i];
   }
   apa_obs.SetPtClout2dGlobal(obs_vec);
   apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);

@@ -60,7 +60,7 @@ const bool ParallelOutPathGenerator::Update(
   RecorverChannelObstacles();
   pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
 
-  const auto time1 = std::chrono::high_resolution_clock::now();
+  // const auto time1 = std::chrono::high_resolution_clock::now();
   const auto duration_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::high_resolution_clock::now() - start_time)
