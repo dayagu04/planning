@@ -232,7 +232,7 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
          boundary_type ==
              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
     bool is_ego_in_perfect_pose =
-        CheckIfInPerfectLaneKeeping() && is_dashed_line;
+        IsLatOffsetValid() && is_dashed_line;
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
     if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
@@ -1573,5 +1573,18 @@ void LaneChangeStateMachineManager::IsEgoOnSideLane() {
   } else {
     is_ego_on_rightmost_lane_ = false;
   }
+}
+
+bool LaneChangeStateMachineManager::IsLatOffsetValid() const {
+  const auto &cur_path = session_->environmental_model()
+                              .get_reference_path_manager()
+                              ->get_reference_path_by_current_lane();
+  const double ego_l = cur_path->get_frenet_ego_state().l();
+  const double lat_offset_threshold = 0.5;
+  const double lat_offset = std::abs(ego_l);
+  if (lat_offset < lat_offset_threshold) {
+    return true;
+  }
+  return false;
 }
 }  // namespace planning

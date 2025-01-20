@@ -149,6 +149,9 @@ class LaneChangeStateMachineManager {
   void CalculateLatCloseValue();
   void IsEgoOnSideLane();
 
+  bool IsLatOffsetValid() const;
+
+
  private:
   ScenarioStateMachineConfig config_;
   framework::Session* session_;
