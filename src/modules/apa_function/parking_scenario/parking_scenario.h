@@ -217,7 +217,11 @@ class ParkingScenario {
 
       is_left_empty = false;
       is_right_empty = false;
+
+      can_first_plan_again = true;
     }
+    bool can_first_plan_again = true;
+
     bool is_left_empty = false;
     bool is_right_empty = false;
 

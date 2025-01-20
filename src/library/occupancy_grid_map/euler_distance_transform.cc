@@ -351,16 +351,19 @@ const double EulerDistanceTransform::CalPathRemainDist(
   return safe_dist;
 }
 
-const std::pair<double, double>
+const std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>>
 EulerDistanceTransform::CalPathRemainDistAndObsDist(
     const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
     const double ds, const uint8_t gear) {
+  std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>> res;
+  res.first = 0.0;
+  res.second = std::make_pair(0.0, pnc::geometry_lib::PathPoint());
   if (path_pt_vec.size() < 1) {
-    return std::pair<double, double>{0.0, 0.0};
+    return res;
   }
 
   if (IsCollisionForPoint(path_pt_vec[0], gear)) {
-    return std::pair<double, double>{0.0, 0.0};
+    return res;
   }
 
   double remain_dist = 0.0;
@@ -374,17 +377,23 @@ EulerDistanceTransform::CalPathRemainDistAndObsDist(
   }
 
   float obs_dist = 0.0;
-  float min_obs_dist = std::numeric_limits<float>::infinity();
+  float min_obs_dist = 26.8;
+  size_t index = 0;
   // 对于安全的点计算障碍物到自车的距离
-  for (size_t k = 0; k < i - 1; k++) {
+  for (size_t k = 0; k < i; k++) {
     DistanceCheckForPoint(&obs_dist, path_pt_vec[k],
                           pnc::geometry_lib::SEG_GEAR_INVALID);
     if (obs_dist < min_obs_dist) {
       min_obs_dist = obs_dist;
+      index = k;
     }
   }
 
-  return std::pair<double, double>{remain_dist, min_obs_dist};
+  res.first = remain_dist;
+  res.second.first = min_obs_dist;
+  res.second.second = path_pt_vec[index];
+
+  return res;
 }
 
 const bool EulerDistanceTransform::IsCollisionForPath(

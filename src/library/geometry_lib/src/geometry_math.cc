@@ -3150,7 +3150,10 @@ void GeometryPath::PrintInfo(const bool enable_log) const {
                            << "  cur_gear = " << GetGearString(cur_gear)
                            << "  cur_steer = " << GetSteerString(cur_steer)
                            << "  col_flag = " << collide_flag
-                           << "  dist_to_obs = " << dist_to_obs;
+                           << "  dist_to_obs = " << pt_closest2obs.first
+                           << "  pt_closest2obs = "
+                           << pt_closest2obs.second.pos.transpose() << "  "
+                           << pt_closest2obs.second.heading * kRad2Deg;
 
   for (size_t i = 0; i < path_segment_vec.size(); i++) {
     ILOG_INFO_IF(enable_log) << "Segment [" << i << "]";
@@ -3192,7 +3195,16 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
         gear_change_count++;
         gear_change_pose.emplace_back(path_segment_vec[i].GetEndPose());
+        gear_index_vec.emplace_back(i + 1);
         continue;
+      }
+
+      bool change_gear_path = false;
+      for (int j = 0; j < gear_index_vec.size(); ++j) {
+        if (i == gear_index_vec[j]) {
+          change_gear_path = true;
+          break;
+        }
       }
 
       // 直线到转弯
@@ -3208,7 +3220,19 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
           (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
            steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
         steer_change_count += static_cast<uint8_t>(std::round(
-            4.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+
+        // 如果第一段圆弧路径较短，施加额外惩罚
+        std::vector<double> radius_tab{5.5, 5.9, 6.3, 6.7, 7.1, 7.5};
+        std::vector<double> length_tab{2.68, 2.28, 1.88, 1.48, 1.08, 0.68};
+        const double min_length =
+            mathlib::Interp1(radius_tab, length_tab,
+                             path_segment_vec[i].arc_seg.circle_info.radius);
+
+        if ((i == 0 || change_gear_path) &&
+            path_segment_vec[i].Getlength() < min_length) {
+          steer_change_count += 5;
+        }
       }
 
       // 转弯到直线  后续看是否可以不考虑 因为直线更容易跟踪

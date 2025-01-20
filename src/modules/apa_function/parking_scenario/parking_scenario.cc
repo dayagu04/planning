@@ -394,7 +394,8 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
 
   uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
                                    apa_world_ptr_->GetPredictPathManagerPtr(),
-                                   apa_world_ptr_->GetObstacleManagerPtr());
+                                   apa_world_ptr_->GetObstacleManagerPtr(),
+                                   apa_param.GetParam().lat_inflation);
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
@@ -541,8 +542,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   tracking_path_collision_dist =
       std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
 
-  ILOG_INFO << "remain_dist_uss" << frame_.remain_dist_uss
-            << ", frame_.remain_dist_col_det" << frame_.remain_dist_col_det;
+  ILOG_INFO << "remain_dist_uss = " << frame_.remain_dist_uss
+            << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
 
   // update stop decision
   ParkingStopDecider stop_decider = ParkingStopDecider();

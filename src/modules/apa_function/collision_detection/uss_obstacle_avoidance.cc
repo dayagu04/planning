@@ -506,7 +506,8 @@ void UssObstacleAvoidance::CalRemainDist() {
 void UssObstacleAvoidance::Update(
     const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
     const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
-    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
+    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
+    const double lat_buffer) {
   if (measure_data_ptr == nullptr || predict_path_ptr == nullptr ||
       obstacle_manager_ptr == nullptr) {
     ILOG_ERROR << "UssObstacleAvoidance UPDATE input_ptr is err";
@@ -590,7 +591,7 @@ void UssObstacleAvoidance::Update(
   }
 
   CollisionDetector::CollisionResult result = col_det.UpdateByObsMap(
-      predict_path_ptr->GetPredictPath(), param_.lat_inflation, 0.0);
+      predict_path_ptr->GetPredictPath(), lat_buffer, 0.0);
 
   const double dist = col_det.CalClosestDistFromObsToCar(
       pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
@@ -599,7 +600,7 @@ void UssObstacleAvoidance::Update(
   double vel_target = 1.168;
   if (!apa_param.GetParam().enable_corner_uss_process) {
     // limit vel
-    if (dist + param_.lat_inflation < 0.268) {
+    if (dist + lat_buffer < 0.268) {
       ILOG_INFO << "obs2car_dist is dangerous, reduce vel";
       vel_target =
           std::max(0.4, std::fabs(measure_data_ptr_->GetVel()) - 0.28 * 0.1);
@@ -626,7 +627,7 @@ void UssObstacleAvoidance::Update(
     car_predict_heading_vec.emplace_back(pt.heading);
   }
 
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", param_.lat_inflation)
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", lat_buffer)
   JSON_DEBUG_VECTOR("car_predict_x_vec", car_predict_x_vec, 3)
   JSON_DEBUG_VECTOR("car_predict_y_vec", car_predict_y_vec, 3)
   JSON_DEBUG_VECTOR("car_predict_heading_vec", car_predict_heading_vec, 3)

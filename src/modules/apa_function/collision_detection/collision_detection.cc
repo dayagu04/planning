@@ -222,22 +222,40 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
   if (!pnc::geometry_lib::SamplePointSetInPathSeg(point_set, path_seg,
                                                   col_sample_ds)) {
     ILOG_INFO << "UpdateByEDT sample pt fail";
+    col_res.remain_car_dist = 0.0;
+    col_res.remain_dist = 0.0;
+    return col_res;
+  }
+
+  return UpdateByEDT(point_set, path_seg.seg_gear, col_sample_ds, lat_buffer,
+                     lon_buffer, need_cal_obs_dist);
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+    const uint8_t gear, const double sample_ds, const double lat_buffer,
+    const double lon_buffer, const bool need_cal_obs_dist) {
+  CollisionResult col_res;
+  if (path_pt_vec.size() < 1) {
+    col_res.remain_car_dist = 0.0;
+    col_res.remain_dist = 0.0;
     return col_res;
   }
 
   edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer, 0.5);
 
-  col_res.remain_car_dist = path_seg.Getlength();
+  col_res.remain_car_dist = path_pt_vec.back().s;
 
   if (need_cal_obs_dist) {
-    std::pair<double, double> remain_dist_obs_dist_pair =
-        edt_col_det_.CalPathRemainDistAndObsDist(point_set, col_sample_ds,
-                                                 path_seg.seg_gear);
+    std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>>
+        remain_dist_obs_dist_pair = edt_col_det_.CalPathRemainDistAndObsDist(
+            path_pt_vec, sample_ds, gear);
     col_res.remain_dist = remain_dist_obs_dist_pair.first;
-    col_res.obs2car_dist = remain_dist_obs_dist_pair.second + lat_buffer;
+    col_res.pt_closest2obs = remain_dist_obs_dist_pair.second;
+    col_res.pt_closest2obs.first += lat_buffer;
   } else {
-    col_res.remain_dist = edt_col_det_.CalPathRemainDist(
-        point_set, col_sample_ds, path_seg.seg_gear);
+    col_res.remain_dist =
+        edt_col_det_.CalPathRemainDist(path_pt_vec, sample_ds, gear);
   }
 
   col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;

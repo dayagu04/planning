@@ -25,6 +25,7 @@ struct GeometryPathInput {
   bool is_replan_second = false;
   bool is_replan_dynamic = false;
   int force_mid_process_plan = 0;
+  bool can_first_plan_again = true;
   double sample_ds = 0.02;
   uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
   uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;

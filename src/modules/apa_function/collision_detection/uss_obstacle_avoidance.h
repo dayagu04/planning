@@ -89,7 +89,8 @@ class UssObstacleAvoidance {
 
   void Update(const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
               const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
-              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
+              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
+              const double lat_buffer);
 
   void SetParam(const Paramters& param) {
     param_ = param;
