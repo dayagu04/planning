@@ -50,6 +50,7 @@ class LongitudinalDecisionDecider : public Task {
   void DetermineClosestInvadeNeighborGapInfo(
       const std::shared_ptr<VirtualLane> &ego_cur_lane,
       const double planning_init_x, const double planning_init_y,
+      const double planned_path_length,
       const std::unordered_map<uint32_t, LatObstacleDecisionType>
           &lat_obstacle_decision,
       const std::set<int32_t> &lane_borrow_blocked_obs_id_set,

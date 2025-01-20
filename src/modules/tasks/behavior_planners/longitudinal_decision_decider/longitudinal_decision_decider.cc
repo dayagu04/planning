@@ -1,5 +1,6 @@
 #include "longitudinal_decision_decider.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -10,6 +11,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "agent/agent_decision.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "log.h"
@@ -358,12 +360,14 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   const auto &virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
   const auto &ego_cur_lane = virtual_lane_manager->get_current_lane();
-  const double planning_init_x = environmental_model.get_ego_state_manager()
-                                     ->planning_init_point()
-                                     .lat_init_state.x();
-  const double planning_init_y = environmental_model.get_ego_state_manager()
-                                     ->planning_init_point()
-                                     .lat_init_state.y();
+  const auto &ego_state_manager = environmental_model.get_ego_state_manager();
+  const double planning_init_x =
+      ego_state_manager->planning_init_point().lat_init_state.x();
+  const double planning_init_y =
+      ego_state_manager->planning_init_point().lat_init_state.y();
+  const double planned_path_length = session_->planning_context()
+                                         .motion_planner_output()
+                                         .lateral_path_coord->Length();
   const auto &agent_manager = environmental_model.get_agent_manager();
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
@@ -453,8 +457,9 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
 
   // get closet invade neighbor gap's agents id
   DetermineClosestInvadeNeighborGapInfo(
-      ego_cur_lane, planning_init_x, planning_init_y, lat_obstacle_decision,
-      lane_borrow_blocked_obs_id_set, agent_manager, st_graph_helper);
+      ego_cur_lane, planning_init_x, planning_init_y, planned_path_length,
+      lat_obstacle_decision, lane_borrow_blocked_obs_id_set, agent_manager,
+      st_graph_helper);
   const auto invade_neighbor_front_agent_id =
       closest_neighbor_invade_gap_agents_id_.second;
   const auto invade_neighbor_rear_agent_id =
@@ -526,6 +531,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
 void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const std::shared_ptr<VirtualLane> &ego_cur_lane,
     const double planning_init_x, const double planning_init_y,
+    const double planned_path_length,
     const std::unordered_map<uint32_t, LatObstacleDecisionType>
         &lat_obstacle_decision,
     const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
@@ -569,6 +575,17 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const auto invade_agent = agent_manager->GetAgent(id);
     if (!ego_cur_lane_frenet_coord->XYToSL(invade_agent->x(), invade_agent->y(),
                                            &invade_agent_s, &invade_agent_l)) {
+      continue;
+    }
+    if (std::fabs(invade_agent_l) >
+            0.5 * invade_agent->width() +
+                0.55 * ego_cur_lane->width_by_s(invade_agent_s) ||
+        invade_agent_s - planning_init_s >
+            planned_path_length) {  // far from ego
+      continue;
+    }
+    if (invade_agent->agent_decision().agent_decision_type() ==
+        agent::AgentDecisionType::IGNORE) {
       continue;
     }
     invade_agents_s_id_map[invade_agent_s] = id;
