@@ -146,7 +146,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
   if (apa_param.GetParam().use_ground_line) {
     const uint8 ground_lines_size =
         std::min(local_view->ground_line_perception.groundline_size,
-                 static_cast<uint8>(GROUND_LINES_NUM));
+                 static_cast<uint8>(FUSION_GROUNDLINE_MAX_NUM));
     for (uint8 i = 0; i < ground_lines_size; ++i) {
       const iflyauto::FusionGroundLine& gl =
           local_view->ground_line_perception.groundline[i];
@@ -156,7 +156,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       }
 
       const uint8 points_3d_size = std::min(
-          gl.groundline_point_size, static_cast<uint8>(GROUND_LINE_POINTS_NUM));
+          gl.groundline_point_size, static_cast<uint8>(FUSION_GROUNDLINE_MAX_NUM));
       if (points_3d_size < 1) {
         continue;
       }
