@@ -31,4 +31,5 @@ message LaneBorrowDeciderInfo {
   optional double ego_l = 12;
   optional double dis_to_traffic_lights = 13;
   optional BorrowTurnCircle borrow_turn_circle = 14;
+  optional double front_obs_center = 15;
 };

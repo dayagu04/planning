@@ -578,7 +578,8 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
     lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
     vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
             'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
-              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle']
+              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle',
+              'front_obs_center']
     names  = []
     datas = []
     for name in vars:

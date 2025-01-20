@@ -391,6 +391,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
   return true;
 }
 bool LaneBorrowDecider::ObstacleDecision() {
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
   static_blocked_obj_id_vec_.clear();
   bypass_direction_ = NO_BORROW;
   if (static_blocked_obstacles_.empty()) {
@@ -411,6 +414,10 @@ bool LaneBorrowDecider::ObstacleDecision() {
   const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
   BorrowDirection front_obs_bypass_direction =
       GetBypassDirection(front_obstacle_sl, id);
+      double front_obs_center_l =
+      0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
+  lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
+
   if (front_obs_bypass_direction == LEFT_BORROW && left_borrow_) {
     bypass_direction_ = LEFT_BORROW;
     right_borrow_ = false;
