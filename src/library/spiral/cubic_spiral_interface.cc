@@ -37,6 +37,7 @@ const bool CubicSpiralInterface::CubicSpiralStatesSolve(
   {
     if (!SampleCubicSpiralStatesBySol(states, &sol, step_length)) {
       ILOG_ERROR << " cubic spiral sampling failed !";
+      return false;
     }
   }
 
@@ -46,16 +47,18 @@ const bool CubicSpiralInterface::CubicSpiralStatesSolve(
 const bool CubicSpiralInterface::GenerateCubicSpiralPathByStrictSolve(
     solution_cubic_t *solution, std::vector<spiral_path_point_t> &states,
     const spiral_path_point_t *start, const spiral_path_point_t *goal,
-    const double step_length, const bool is_drive) {
+    const double step_length) {
   bool ret = false;
   solution_cubic_t sol;
   if (start == NULL || goal == NULL) {
     ILOG_ERROR << "input pointers should not be NULL!";
+    return false;
   }
 
   ret = CubicSpiralStrictSolve(&sol, start, goal);
   if (!CubicSpiralStrictSolve(&sol, start, goal)) {
     ILOG_ERROR << "cubic spiral solve failed !";
+    return false;
   }
 
   bool solution_usable = (bool)(sol.solve_status);
@@ -64,14 +67,9 @@ const bool CubicSpiralInterface::GenerateCubicSpiralPathByStrictSolve(
     ret = SampleCubicSpiralStatesBySol(states, &sol, step_length);
     if (!SampleCubicSpiralStatesBySol(states, &sol, step_length)) {
       ILOG_ERROR << "cubic spiral sampling failed !";
+      return false;
     }
   }
-
-  // if (!is_drive) {
-  //   for (auto &state : states) {
-  //     state.theta = state.theta - M_PI;
-  //   }
-  // }
 
   return true;
 }

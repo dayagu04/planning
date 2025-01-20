@@ -1321,7 +1321,7 @@ PerpendicularTailInPathGenerator::RSPathPlan(
   Pose2D end(target_pose.pos.x(), target_pose.pos.y(), target_pose.heading);
   RSPathRequestType request_type = RSPathRequestType::none;
   rs.GeneShortestRSPath(&path, &is_connected_to_goal, &start, &end, turn_radius,
-                        true, request_type, 100.0);
+                        true, true, request_type, 100.0);
   if (!is_connected_to_goal || path.size < 1) {
     return DubinsPlanResult::NO_PATH;
   }

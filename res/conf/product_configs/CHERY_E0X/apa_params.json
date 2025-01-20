@@ -339,6 +339,6 @@
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 3.0,
   "tail_in_slot_virtual_wall_y_offset" : 0.5,
-  "head_in_slot_virtual_wall_x_offset" : 4.0,
-  "head_in_slot_virtual_wall_y_offset" : 1.8
+  "head_in_slot_virtual_wall_x_offset" : 0.1,
+  "head_in_slot_virtual_wall_y_offset" : 2.0
 }

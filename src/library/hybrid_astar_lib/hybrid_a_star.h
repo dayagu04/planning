@@ -280,6 +280,7 @@ class HybridAStar {
   const bool IsPointBeyondBound(const double x, const double y) const;
 
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
+                        const bool need_anchor_point,
                         const RSPathRequestType rs_request,
                         const double rs_radius);
 
@@ -302,8 +303,9 @@ class HybridAStar {
                                const Pose2D& start, const double start_kappa,
                                const Pose2D& end);
 
-//   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-//                           const Pose2D& start, const Pose2D& end);
+  const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+                                const Pose2D& start, const Pose2D& end,
+                                const AstarPathGear ref_gear);
 
   const bool BackwardPassByPolynomialPath(
       HybridAStarResult* result, Node3d* poly_node,

@@ -463,12 +463,38 @@ const bool ParkingScenario::PostProcessPath() {
     s_vec.emplace_back(s);
   }
 
-  const size_t x_vec_size = x_vec.size();
+  size_t x_vec_size = x_vec.size();
   if (x_vec_size < 2) {
     frame_.spline_success = false;
     ILOG_INFO << "error: x_vec_size = " << x_vec.size();
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
     return false;
+  }
+
+  // hack: insert line of 0.1m compensating control error to reduce gear change
+  // num
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT
+      //     &&
+      // frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE
+      ) {
+    const Eigen::Vector2d start_point(x_vec[x_vec_size - 2],
+                                      y_vec[x_vec_size - 2]);
+
+    const Eigen::Vector2d end_point(x_vec[x_vec_size - 1],
+                                    y_vec[x_vec_size - 1]);
+
+    const Eigen::Vector2d heading_norm = (end_point - start_point).normalized();
+    pnc::geometry_lib::PathPoint extend_point;
+    const double extend_length = 0.2;
+    extend_point.pos = end_point + extend_length * heading_norm;
+    extend_point.heading = heading_vec.back();
+    s += extend_length;
+    x_vec.emplace_back(extend_point.pos.x());
+    y_vec.emplace_back(extend_point.pos.y());
+    heading_vec.emplace_back(extend_point.heading);
+    s_vec.emplace_back(s);
+    x_vec_size = x_vec.size();
   }
 
   current_path_point_global_vec_.clear();

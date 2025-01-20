@@ -14,6 +14,7 @@
 #include "log_glog.h"
 #include "math_utils.h"
 #include "node3d.h"
+#include "path_comparator.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
@@ -23,7 +24,6 @@
 #include "src/modules/common/math/curve1d/quintic_polynomial_curve1d.h"
 #include "transform2d.h"
 #include "utils_math.h"
-#include "path_comparator.h"
 
 namespace planning {
 
@@ -66,6 +66,7 @@ int HybridAStar::UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf) {
 
 bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
                                    const bool need_rs_dense_point,
+                                   const bool need_anchor_point,
                                    const RSPathRequestType rs_request,
                                    const double rs_radius) {
 #if LOG_TIME_PROFILE
@@ -76,9 +77,9 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
   const Pose2D& end_pose = rs_expansion_decider_.GetRSEndPose();
 
   bool is_connected_to_goal;
-  rs_path_interface_.GeneShortestRSPath(&rs_path_, &is_connected_to_goal,
-                                        &start_pose, &end_pose, rs_radius,
-                                        need_rs_dense_point, rs_request);
+  rs_path_interface_.GeneShortestRSPath(
+      &rs_path_, &is_connected_to_goal, &start_pose, &end_pose, rs_radius,
+      need_rs_dense_point, need_anchor_point, rs_request);
 
 #if LOG_TIME_PROFILE
   double rs_end_time = IflyTime::Now_ms();
@@ -398,7 +399,10 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
   clear_zone_ = clear_zone;
 
-  const AstarPathGear spiral_gear = AstarPathGear::DRIVE;
+  const AstarPathGear spiral_gear =
+      request_.direction_request == ParkingVehDirection::TAIL_IN
+          ? AstarPathGear::DRIVE
+          : AstarPathGear::REVERSE;
 
   // sampling for path end
   // sampling start point: move start point forward dist
@@ -408,7 +412,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   sampling_end.theta = 0.0;
   sampling_end.x = start.x + lon_min_sampling_length;
 
-  double sampling_step = 0.1;
+  const double sampling_step = 0.1;
   size_t max_sampling_num = 30;
 
   // ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
@@ -424,80 +428,33 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   size_t path_points_size = 1000;
   size_t expected_dist_id = 0;
 
-  spiral_path_point_t start_spiral;
-  start_spiral.x = start.x;
-  start_spiral.y = start.y;
-  start_spiral.theta = start.theta;
-  start_spiral.kappa = 0.0;
-  start_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
-  spiral_path_point_t goal_spiral;
-  goal_spiral.x = 1.1;
-  goal_spiral.y = 0.0;
-  goal_spiral.theta = 0.0;
-  goal_spiral.kappa = 0.0;
-  goal_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
-  bool constrain_start_k = true;
-  bool constrain_goal_k = true;
-  const double spiral_step_length = 0.1;
   std::vector<AStarPathPoint> cubic_spiral_path;
-  cubic_spiral_path.reserve(UOS_MAX_STEER_STATE_NUM);
+  cubic_spiral_path.reserve(MAX_SPIRAL_PATH_POINT_NUM);
+  Pose2D real_end;
+  real_end.x = sampling_end.x;
 
   for (size_t k = 0; k < max_sampling_num; k++) {
     cubic_spiral_path.clear();
     plan_num = k;
-    goal_spiral.x = sampling_end.x;
-    std::vector<spiral_path_point_t> states;
-    states.reserve(UOS_MAX_STEER_STATE_NUM);
 
-    // DEBUG_PRINT("start is " << start_spiral.x << ", " << start_spiral.y << ", "
-    //                         << start_spiral.theta * 57.3);
-    // DEBUG_PRINT("goal is " << goal_spiral.x << ", " << goal_spiral.y << ", "
-    //                        << goal_spiral.theta * 57.3);
-
-    solution_cubic_t sol;
-
-    // double spiral_start_time = IflyTime::Now_us();
-    if (CubicSpiralStrictSolve(&sol, &start_spiral, &goal_spiral)) {
-      sampling_end.x += sampling_step;
-    } else {
-      sampling_end.x += sampling_step;
-      ILOG_INFO << "cubic spiral solve failed !";
+    if (!GetCubicSpiralPath(cubic_spiral_path, start, real_end, spiral_gear)) {
+      real_end.x += 0.1;
       continue;
     }
+    std::vector<spiral_path_point_t> states;
+    states.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
-    bool solution_usable = (bool)(sol.solve_status);
-
-    // std::vector<spiral_path_point_t> states;
-    // states.reserve(UOS_MAX_STEER_STATE_NUM);
-    if (solution_usable) /* usable */
-    {
-      auto ret = SampleCubicSpiralStatesBySol(states, &sol, spiral_step_length);
-      if (!ret) {
-        ILOG_INFO << "cubic spiral sample failed !";
-        continue;
-      }
-    }
-
-    double s = 0.0;
-
-    for (auto& state : states) {
-      cubic_spiral_path.emplace_back(state.x, state.y, state.theta, spiral_gear,
-                                     s, AstarPathType::SPIRAL, state.kappa);
-      s += spiral_step_length;
-    }
-
-    // double spiral_end_time = IflyTime::Now_us();
-    // ILOG_INFO << "sample cubic spiral time (us): "
-    //           << (spiral_end_time - spiral_start_time);
-
-    auto last_state = states.back();
-    double end_point_error_x = last_state.x - goal_spiral.x;
-    double end_point_error_y = last_state.y - goal_spiral.y;
-    double end_point_error_theta = last_state.theta - goal_spiral.theta;
+    auto last_state = cubic_spiral_path.back();
+    // ILOG_INFO << "last_state.x " << last_state.x << ", real_end.x "
+    //           << real_end.x << ", last_state.y " << last_state.y
+    //           << ", real_end.y " << real_end.y << ", last_state.theta "
+    //           << last_state.phi << ", real_end.theta " << real_end.theta;
+    double end_point_error_x = last_state.x - real_end.x;
+    double end_point_error_y = last_state.y - real_end.y;
+    double end_point_error_theta = last_state.phi - real_end.theta;
 
     if (std::fabs(end_point_error_x) >= 1e-2 ||
-        std::fabs(end_point_error_y) >= 1e-2 ||
-        std::fabs(end_point_error_theta) >= 1e-3) {
+        std::fabs(end_point_error_y) >= 1e-2) {
       ILOG_INFO << "spiral path end point insufficient accuracy";
       continue;
     }
@@ -538,7 +495,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
       last_y = path.y[i];
     }
 
-    path_points_size = std::min(path_points_size, expected_dist_id);
+    // path_points_size = std::min(path_points_size, expected_dist_id);
 
     // collision check
     size_t collision_id = GetPathCollisionIDByEDT(&path);
@@ -548,16 +505,17 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
     path_points_size = std::min(path_points_size, collision_id);
     if (path_points_size <= 1) {
-      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " <<
+      // k
       //           << ", max_sampling_num=" << max_sampling_num;
       continue;
     }
 
-    // ILOG_INFO << plan_num << " point size = " << path.x.size()
-    //           << ", expected_dist_id = " << expected_dist_id
-    //           << ", path_points_size = " << path_points_size
-    //           << ", path len= " << path.accumulated_s.back()
-    //           << ", collision_id is " << collision_id;
+    ILOG_INFO << plan_num << " point size = " << path.x.size()
+              << ", expected_dist_id = " << expected_dist_id
+              << ", path_points_size = " << path_points_size
+              << ", path len= " << path.accumulated_s.back()
+              << ", collision_id is " << collision_id;
 
     if (path_points_size >= expected_dist_id) {
       break;
@@ -636,7 +594,12 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   const double rs_radius = vehicle_param_.min_turn_radius + 0.2;
 
   RSPathRequestType rs_request = RSPathRequestType::gear_switch_less_than_twice;
-  if (!CalcRSPathToGoal(current_node, false, rs_request, rs_radius)) {
+  bool need_anchor_point = false;
+  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    need_anchor_point = true;
+  }
+  if (!CalcRSPathToGoal(current_node, false, need_anchor_point, rs_request,
+                        rs_radius)) {
     ILOG_INFO << " generate rs fail";
 
     return false;
@@ -984,7 +947,7 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
   }
 
   AstarPathGear first_gear = reeds_shepp_to_end->paths[0].gear;
-  AstarPathGear last_gear =
+  const AstarPathGear last_gear =
       reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
   if (request_.space_type == ParkSpaceType::VERTICAL &&
@@ -1007,18 +970,18 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
         first_gear = reeds_shepp_to_end->paths[i].gear;
         i++;
       }
-      i--;
-      const auto first_path_size = reeds_shepp_to_end->paths[i].size - 1;
-      const auto first_drive_path_end_pos =
-          reeds_shepp_to_end->paths[i].points[first_path_size];
-      if (first_drive_path_end_pos.x < astar_end_node_->GetX() - 0.01 &&
+      const RSPoint first_drive_path_end_pos =
+          rs_path_interface_.GetAnchorPoint().points[i];
+      // ILOG_INFO << "first drive end pos = " << first_drive_path_end_pos.x
+      //           << ", " << first_drive_path_end_pos.y;
+
+      if (first_drive_path_end_pos.x < astar_end_node_->GetX() - 0.15 &&
           std::fabs(first_drive_path_end_pos.y) <
               config_.headin_limit_y_shrink) {
         return false;
       }
     }
   }
-
   return true;
 }
 
@@ -1470,7 +1433,6 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
         node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
         return false;
       }
-
     }
   }
 
@@ -1899,7 +1861,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   // headin shrink limit pose
   bool position_legal = false;
   position_legal = node_shrink_decider_.IsLegalForPos(
-      new_node->GetX(), new_node->GetY(), astar_end_node_->GetX(),
+      new_node->GetX(), new_node->GetY(), astar_end_node_->GetX() - 0.1,
       config_.headin_limit_y_shrink);
 
   if (!position_legal) {
@@ -2029,7 +1991,7 @@ void HybridAStar::CalculateNodeGCost(Node3d* current_node, Node3d* next_node) {
 double HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
                                                   NodeHeuristicCost* cost) {
   RSPathRequestType rs_request = RSPathRequestType::none;
-  if (!CalcRSPathToGoal(next_node, false, rs_request,
+  if (!CalcRSPathToGoal(next_node, false, false, rs_request,
                         vehicle_param_.min_turn_radius)) {
     ILOG_INFO << "ShortestRSP failed";
     return 100.0;
@@ -2501,7 +2463,7 @@ const bool HybridAStar::BackwardPassByPolynomialPath(
   ILOG_INFO << "get result backward pass by polynomial";
   poly_node->DebugPoseString();
 
-  DebugPolynomialPath(poly_path);
+  // DebugPolynomialPath(poly_path);
 
   // backward pass
   int i = 0;
@@ -3364,7 +3326,7 @@ void HybridAStar::GearDrivePathAttempt(
     }
 
     if (SamplingByQunticPolynomial(current_node, poly_path, &polynomial_node,
-                                    &poly_path_fail_type)) {
+                                   &poly_path_fail_type)) {
       ILOG_INFO << "polynomial success";
 
       current_node->DebugPoseString();
@@ -4544,9 +4506,9 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
 
   for (size_t k = 0; k < max_sampling_num; k++) {
     sampling_end.x += sampling_step;
-    rs_path_interface_.GeneShortestRSPath(&rs_path_, &is_connected_to_goal,
-                                          &start, &sampling_end,
-                                          sampling_radius, true, rs_request);
+    rs_path_interface_.GeneShortestRSPath(
+        &rs_path_, &is_connected_to_goal, &start, &sampling_end,
+        sampling_radius, true, true, rs_request);
 
 #if 0
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
@@ -4803,67 +4765,83 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
  *the endpoints. It is not needed for the time being.
  *
  **/
-// const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-//                                            const Pose2D& start,
-//                                            const Pose2D& end) {
-//   ILOG_INFO << "---- generate cubic spiral path ----";
-//   CubicSpiralInterface cubic_spiral_interface;
-//   spiral_path_point_t start_spiral;
-//   start_spiral.x = start.x;
-//   start_spiral.y = start.y;
-//   start_spiral.theta = start.theta + M_PI;
-//   start_spiral.kappa = 0.0;
-//   start_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
-//   ILOG_INFO << "start_spiral ( " << start_spiral.x << ", " << start_spiral.y
-//             << ", " << start_spiral.theta << " ) ";
-//   spiral_path_point_t goal_spiral;
-//   goal_spiral.x = 1.1;
-//   goal_spiral.y = 0.0;
-//   goal_spiral.theta = -M_PI;
-//   goal_spiral.kappa = 0.0;
-//   goal_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
-//   bool constrain_start_k = true;
-//   bool constrain_goal_k = true;
-//   const double spiral_step_length = 0.1;
-//   std::vector<AStarPathPoint> cubic_spiral_path;
-//   cubic_spiral_path.reserve(UOS_MAX_STEER_STATE_NUM);
+const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+                                           const Pose2D& start,
+                                           const Pose2D& end,
+                                           const AstarPathGear ref_gear) {
+  ILOG_INFO << "---- generate cubic spiral path ----";
 
-//   std::vector<spiral_path_point_t> states;
-//   states.reserve(UOS_MAX_STEER_STATE_NUM);
+  CubicSpiralInterface cubic_spiral_interface;
+  spiral_path_point_t start_spiral;
+  start_spiral.x = start.x;
+  start_spiral.y = start.y;
+  start_spiral.theta = start.theta;
+  start_spiral.kappa = 0.0;
+  start_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
 
-//   solution_cubic_t solution;
-//   const bool is_drive = false;
+  spiral_path_point_t goal_spiral;
+  goal_spiral.x = end.x;
+  goal_spiral.y = end.y;
+  goal_spiral.theta = end.theta;
+  goal_spiral.kappa = 0.0;
+  goal_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
 
-//   bool success = cubic_spiral_interface.GenerateCubicSpiralPathByStrictSolve(
-//       &solution, states, &start_spiral, &goal_spiral, spiral_step_length,
-//       is_drive);
+  // *
+  // Reverse gear requires changing the heading of the path point
+  if (ref_gear == AstarPathGear::REVERSE) {
+    start_spiral.theta = start.theta + M_PI;
+    // goal_spiral.theta = -M_PI;
+    start_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
+    goal_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
+  }
 
-//   if (!success) {
-//     ILOG_INFO << "generate cubic spiral path failed ";
-//     return false;
-//   }
+  // ILOG_INFO << "start_spiral ( " << start_spiral.x << ", " << start_spiral.y
+  //           << ", " << start_spiral.theta << " ) ";
+  // ILOG_INFO << "goal_spiral ( " << goal_spiral.x << ", " << goal_spiral.y
+  //           << ", " << goal_spiral.theta << " ) ";
+  bool constrain_start_k = true;
+  bool constrain_goal_k = true;
+  const double spiral_step_length = 0.1;
+  std::vector<AStarPathPoint> cubic_spiral_path;
+  cubic_spiral_path.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
-//   AStarPathPoint point;
-//   double accumulated_s = 0.0;
+  std::vector<spiral_path_point_t> states;
+  states.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
-//   for (auto& state : states) {
-//     point.x = state.x;
-//     point.y = state.y;
-//     point.phi = state.theta - M_PI;
-//     point.gear = AstarPathGear::REVERSE;
-//     point.type = AstarPathType::SPIRAL;
-//     point.kappa = state.kappa;
-//     point.accumulated_s = accumulated_s;
-//     path.emplace_back(point);
-//     accumulated_s += spiral_step_length;
+  solution_cubic_t solution;
 
-//     ILOG_INFO << "spiral s: " << point.accumulated_s << ", ( " << point.x
-//               << ", " << point.y << ", " << point.phi << " ) ";
-//   }
-//   ILOG_INFO << "expansion cubic spiral path size " << path.size();
+  bool success = cubic_spiral_interface.GenerateCubicSpiralPathByStrictSolve(
+      &solution, states, &start_spiral, &goal_spiral, spiral_step_length);
 
-//   return true;
-// }
+  if (!success) {
+    ILOG_INFO << "generate cubic spiral path failed ";
+    return false;
+  }
+
+  AStarPathPoint point;
+  double accumulated_s = 0.0;
+  path.clear();
+
+  for (auto& state : states) {
+    point.x = state.x;
+    point.y = state.y;
+    point.phi =
+        (ref_gear == AstarPathGear::DRIVE) ? state.theta : state.theta - M_PI;
+    point.gear = ref_gear;
+    point.type = AstarPathType::SPIRAL;
+    point.kappa = state.kappa;
+    point.accumulated_s = accumulated_s;
+    path.emplace_back(point);
+    accumulated_s += spiral_step_length;
+
+    ILOG_INFO << "spiral s: " << point.accumulated_s << ", ( " << point.x
+              << ", " << point.y << ", " << point.phi << ", "
+              << static_cast<int>(point.gear) << " ) ";
+  }
+  ILOG_INFO << "expansion cubic spiral path size " << path.size();
+
+  return true;
+}
 
 void HybridAStar::DebugPolynomialPath(
     const std::vector<AStarPathPoint>& poly_path) {
@@ -5265,7 +5243,7 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
     end_pose.x -= 0.1;
     rs_path_interface_.GeneShortestRSPath(
         &rs_path_, &is_connected_to_goal, &current_node->GetPose(), &end_pose,
-        vehicle_param_.min_turn_radius, false, RSPathRequestType::none);
+        vehicle_param_.min_turn_radius, false, false, RSPathRequestType::none);
 
     // check length
     if (rs_path_.total_length < 0.01 || !is_connected_to_goal) {
