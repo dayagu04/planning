@@ -331,6 +331,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
 
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   static_blocked_obstacles_.clear();
+  const auto& lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
   for (const auto& obstacle : obstacles) {
     int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
@@ -350,14 +353,21 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
             ego_frenet_boundary_.s_start) {  // lon concern area
       continue;
     }
-
     const auto& vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
-    if (frenet_obstacle_sl.l_start >
-            (-right_width + vehicle_param.width + config_.static_obs_buffer) ||
-        frenet_obstacle_sl.l_end <
-            (left_width - vehicle_param.width - config_.static_obs_buffer)) {
-      continue;
+    //  no lon overlap
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end ||
+        frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
+      if (lat_obstacle_decision.at(id) != LatObstacleDecisionType::IGNORE) {
+        continue;
+      }
+    } else {  // lon overlap origin rule
+      if (frenet_obstacle_sl.l_start > (-right_width + vehicle_param.width +
+                                        config_.static_obs_buffer) ||
+          frenet_obstacle_sl.l_end <
+              (left_width - vehicle_param.width - config_.static_obs_buffer)) {
+        continue;
+      }
     }
     // TODO: concern more scene
     if (frenet_obstacle_sl.l_end < left_width &&
@@ -414,7 +424,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
   const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
   BorrowDirection front_obs_bypass_direction =
       GetBypassDirection(front_obstacle_sl, id);
-      double front_obs_center_l =
+  double front_obs_center_l =
       0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
   lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
 
