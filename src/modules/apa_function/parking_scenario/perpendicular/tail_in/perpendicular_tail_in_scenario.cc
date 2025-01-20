@@ -349,7 +349,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
             ego_info_under_slot.origin_pose_global.heading_vec);
 
     // 这个初始参考挡位对迭代式路径规划已经没有什么意义
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
       ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
     } else if (cross_ego_to_slot_heading < 0.0 &&
@@ -1656,6 +1656,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   const geometry_lib::PathPoint tar_pose_now = geometry_path_now.end_pose;
 
   if (geometry_path_now.gear_change_count > 0) {
+    ILOG_INFO << "now path gear change count bigger than 0";
     return false;
   }
 
@@ -1669,6 +1670,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   // 如果之前的规划终点相对现在的规划终点更靠近实际终点
   if (std::fabs((tar_pose_bef.pos - tar_pose_real.pos).y()) <
       std::fabs((tar_pose_now.pos - tar_pose_real.pos).y())) {
+    ILOG_INFO << "bef path is more close to actual target pose than now path";
     return false;
   }
 
@@ -1676,6 +1678,8 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   if (std::fabs((tar_pose_bef.pos - tar_pose_now.pos).y()) < 0.05 &&
       std::fabs((tar_pose_now.pos - tar_pose_real.pos).y()) <
           apa_param.GetParam().finish_lat_err * 0.6) {
+    ILOG_INFO
+        << "bef path is close to now path, and bef path meet finish condition";
     return false;
   }
 

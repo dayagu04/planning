@@ -293,7 +293,6 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
       {0.16, SlotReleaseVoterType::SUBTRACT}};
 
   PathSafeChecker safe_check;
-  double lat_buffer = param.slot_release_car_lat_buffer;
   const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
@@ -335,7 +334,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
             << "  lat_buffer = " << lat_buffer_pair.first << "  voter _type = "
             << GetSlotReleaseVoterTypeString(lat_buffer_pair.second);
 
-  lat_buffer = 0.0368;
+  const double lat_buffer = 0.0368;
 
   Eigen::Vector2d pt_0 = pM01 - t * (param.max_car_width * 0.5 + lat_buffer);
   Eigen::Vector2d pt_1 = pM01 + t * (param.max_car_width * 0.5 + lat_buffer);
@@ -343,7 +342,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   pt_0 = pt_0 + move_slot_dist * t;
   pt_1 = pt_1 + move_slot_dist * t;
 
-  const double channel_width = 3.0;
+  const double channel_width = param.slot_release_channel_width;
   Polygon2D polygon;
   polygon.vertexes[0].x = pt_0.x();
   polygon.vertexes[0].y = pt_0.y();

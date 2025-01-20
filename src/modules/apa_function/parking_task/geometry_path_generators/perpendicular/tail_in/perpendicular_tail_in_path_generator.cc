@@ -88,7 +88,7 @@ const bool PerpendicularTailInPathGenerator::Update() {
 
   if ((ginput_.is_replan_first || ginput_.is_replan_second) &&
       calc_params_.pre_plan_case != PrePlanCase::EGO_POSE &&
-      !ginput_.is_replan_dynamic) {
+      calc_params_.should_prepare_second && !ginput_.is_replan_dynamic) {
     calc_params_.first_multi_plan = true;
     PreparePathSecondPlan();
   }
@@ -192,8 +192,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         } else if (rough_path.gear_change_count == 2) {
           for (const auto& path_seg : rough_path.path_segment_vec) {
             if (path_seg.seg_gear == geometry_lib::SEG_GEAR_DRIVE) {
-              ego_pose_cost += (std::fabs(path_seg.GetStartPos().y()) * 30.0 +
-                                std::fabs(path_seg.GetStartHeading()) * 15.0);
+              ego_pose_cost += (std::fabs(path_seg.GetStartPos().y()) * 36.8 +
+                                std::fabs(path_seg.GetStartHeading()) * 68.8);
               break;
             }
           }
@@ -322,7 +322,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       // 再次尝试first plan时与参考挡位不同的代价
       double ref_gear_cost = 0.0;
       if (!ginput_.can_first_plan_again &&
-          complete_path.cur_gear != input_.ref_gear) {
+          complete_path.cur_gear != ginput_.ref_gear) {
         ref_gear_cost += 999.9;
       }
 
@@ -443,6 +443,13 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       ILOG_INFO << "use mid point to multi_adjust plan";
       optimal_dubins_geometry_path.PrintInfo();
       optimal_rough_geometry_path.PrintInfo();
+      if (optimal_dubins_geometry_path.gear_change_count < 1 &&
+          optimal_dubins_geometry_path.cur_gear ==
+              geometry_lib::SEG_GEAR_REVERSE) {
+        calc_params_.should_prepare_second = false;
+      } else {
+        calc_params_.should_prepare_second = true;
+      }
       calc_params_.pre_plan_case = PrePlanCase::MID_POINT;
     }
 
@@ -1017,10 +1024,6 @@ const bool PerpendicularTailInPathGenerator::IsGeometryPathSafe(
 }
 
 const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
-  if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
-    return false;
-  }
-
   const uint8_t ref_gear =
       geometry_lib::ReverseGear(calc_params_.first_path_gear);
 
@@ -1810,7 +1813,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       lon_buffer = apa_param.GetParam().col_obs_safe_dist_strict;
     }
 
-    if (input_.is_replan_dynamic) {
+    if (ginput_.is_replan_dynamic) {
       lat_buffer += 0.0268;
       lon_buffer += 0.0268;
     }
@@ -2207,16 +2210,16 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
           if (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) {
             temp_path_d.cost += 100.0;
           } else if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
-            const auto& pose =
-                temp_path_r.path_segment_vec.front().GetEndPose();
-            if (CalOccupiedRatio(pose) < 0.16 ||
-                std::fabs(pose.pos.y()) > 0.968 ||
-                std::fabs(pose.heading) * kRad2Deg > 45.68) {
-              ILOG_INFO << "ego pose plan, should add some cost to "
-                           "use safe circle "
-                           "more possible";
-              temp_path_r.cost += 100.0;
-            }
+            // const auto& pose =
+            //     temp_path_r.path_segment_vec.front().GetEndPose();
+            // if (CalOccupiedRatio(pose) < 0.16 ||
+            //     std::fabs(pose.pos.y()) > 0.968 ||
+            //     std::fabs(pose.heading) * kRad2Deg > 45.68) {
+            //   ILOG_INFO << "ego pose plan, should add some cost to "
+            //                "use safe circle "
+            //                "more possible";
+            //   temp_path_r.cost += 100.0;
+            // }
           }
         } else {
           if (geometry_path_r.cur_gear != ref_gear) {
@@ -2258,7 +2261,7 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
     return true;
   }
 
-  if (input_.is_replan_dynamic) {
+  if (ginput_.is_replan_dynamic) {
     return false;
   }
 

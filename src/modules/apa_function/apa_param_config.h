@@ -353,7 +353,7 @@ struct ApaParameters {
   bool lock_parallel_slot = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
-  double slot_release_car_lat_buffer = 0.15;
+  double slot_release_channel_width = 4.86;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;
