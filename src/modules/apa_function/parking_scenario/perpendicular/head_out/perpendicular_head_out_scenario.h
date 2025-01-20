@@ -16,6 +16,14 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); }
 
+  enum class SlotObsType : uint8_t {
+    INSIDE_OBS,
+    OUTSIDE_OBS,
+    IN_OBS,
+    OTHER_OBS,
+    DISCARD_OBS,
+  };
+
  private:
   // virtual func
   virtual const uint8_t PathPlanOnce() override;
@@ -30,6 +38,9 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   virtual const bool CheckSegCompleted() override;
   virtual const bool CheckUssStucked() override;
   virtual const bool CheckColDetStucked() override;
+
+  const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
+  const bool CurrentPathTrimmed();
   // virtual const bool CheckDynamicUpdate() override;
  private:
   PerpendicularPathOutPlanner::Tlane slot_t_lane_;

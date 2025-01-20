@@ -222,6 +222,7 @@ class ParkingScenario {
     }
     bool can_first_plan_again = true;
 
+    bool path_trim_flag = false;
     bool is_left_empty = false;
     bool is_right_empty = false;
 
