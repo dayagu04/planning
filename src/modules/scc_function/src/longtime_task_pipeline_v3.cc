@@ -1,5 +1,7 @@
 #include "longtime_task_pipeline_v3.h"
+#include <memory>
 
+#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 #include "log.h"
 #include "speed/st_graph_input.h"
 
@@ -16,6 +18,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<SpeedAdjustDecider>(config_builder, session);
   lateral_obstacle_decider_ =
       std::make_unique<LateralObstacleDecider>(config_builder, session);
+  lane_borrow_decider_ =
+      std::make_unique<LaneBorrowDecider>(config_builder,session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -95,6 +99,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = lateral_obstacle_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_obstacle_decider_->Name());
+    return false;
+  }
+
+  ok = lane_borrow_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(lane_borrow_decider_->Name());
     return false;
   }
 

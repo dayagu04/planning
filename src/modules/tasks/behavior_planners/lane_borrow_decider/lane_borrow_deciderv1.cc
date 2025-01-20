@@ -171,6 +171,7 @@ void LaneBorrowDecider::ClearLaneBorrowStatus() {
   observe_frame_num_ = 0;
   left_borrow_ = false;
   right_borrow_ = false;
+  obs_direction_map_.clear();
 }
 
 bool LaneBorrowDecider::CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane() {
@@ -330,6 +331,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
 
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   static_blocked_obstacles_.clear();
+  const auto& lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
   for (const auto& obstacle : obstacles) {
     int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
@@ -349,14 +353,23 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
             ego_frenet_boundary_.s_start) {  // lon concern area
       continue;
     }
-
     const auto& vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
-    if (frenet_obstacle_sl.l_start >
-            (-right_width + vehicle_param.width + config_.static_obs_buffer) ||
-        frenet_obstacle_sl.l_end <
-            (left_width - vehicle_param.width - config_.static_obs_buffer)) {
-      continue;
+    //  no lon overlap
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end ||
+        frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
+          const auto lat_obs_iter = lat_obstacle_decision.find(id);
+          if(lat_obs_iter != lat_obstacle_decision.end()&&
+              lat_obs_iter->second != LatObstacleDecisionType::IGNORE){
+            continue;
+      }
+    } else {  // lon overlap origin rule
+      if (frenet_obstacle_sl.l_start > (-right_width + vehicle_param.width +
+                                        config_.static_obs_buffer) ||
+          frenet_obstacle_sl.l_end <
+              (left_width - vehicle_param.width - config_.static_obs_buffer)) {
+        continue;
+      }
     }
     // TODO: concern more scene
     if (frenet_obstacle_sl.l_end < left_width &&
@@ -369,11 +382,30 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
         continue;
       }
     }
-    static_blocked_obstacles_.emplace_back(obstacle);
+    static_blocked_obstacles_.emplace_back(obstacle);  // really needed
+    static_blocked_obj_id_vec_.emplace_back(id);       // tmperal used
+    if (obs_direction_map_.empty() ||
+        obs_direction_map_.find(id) == obs_direction_map_.end()) {  // add
+      obs_direction_map_[id] = std::make_pair(BorrowDirection::NO_BORROW, 0);
+    }
   }
+  // delete disappear obs
+  for (auto it = obs_direction_map_.begin(); it != obs_direction_map_.end();) {
+    if (std::find(static_blocked_obj_id_vec_.begin(),
+                  static_blocked_obj_id_vec_.end(),
+                  it->first) == static_blocked_obj_id_vec_.end()) {
+      it = obs_direction_map_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
   return true;
 }
 bool LaneBorrowDecider::ObstacleDecision() {
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
   static_blocked_obj_id_vec_.clear();
   bypass_direction_ = NO_BORROW;
   if (static_blocked_obstacles_.empty()) {
@@ -391,8 +423,13 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
   const auto& front_obstacle_sl =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary();
+  const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
   BorrowDirection front_obs_bypass_direction =
-      GetBypassDirection(front_obstacle_sl);
+      GetBypassDirection(front_obstacle_sl, id);
+  const double front_obs_center_l =
+      0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
+  lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
+
   if (front_obs_bypass_direction == LEFT_BORROW && left_borrow_) {
     bypass_direction_ = LEFT_BORROW;
     right_borrow_ = false;
@@ -409,7 +446,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
     const auto& id = obstacle->obstacle()->id();
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     BorrowDirection obs_bypass_direction =
-        GetBypassDirection(frenet_obstacle_sl);
+        GetBypassDirection(frenet_obstacle_sl, id);
 
     if (obs_bypass_direction == bypass_direction_) {
       obs_left_l_ = std::max(obs_left_l_, frenet_obstacle_sl.l_end);
@@ -446,14 +483,24 @@ bool LaneBorrowDecider::ObstacleDecision() {
 }
 
 BorrowDirection LaneBorrowDecider::GetBypassDirection(
-    const FrenetObstacleBoundary& frenet_obstacle_sl) {
-  double obs_center_l =
+    const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
+  const double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
   if (std::fabs(obs_center_l) <= kMaxCentricOffset) {
-    return NO_BORROW;
+    if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {
+      obs_direction_map_[obs_id].second += 1;
+      return obs_direction_map_[obs_id].first;
+    } else {
+      obs_direction_map_[obs_id].first = NO_BORROW;
+      return NO_BORROW;
+    }
   } else if (obs_center_l < -kMaxCentricOffset) {
+    obs_direction_map_[obs_id].first = LEFT_BORROW;
+    obs_direction_map_[obs_id].second = 0;
     return LEFT_BORROW;
   } else {
+    obs_direction_map_[obs_id].first = RIGHT_BORROW;
+    obs_direction_map_[obs_id].second = 0;
     return RIGHT_BORROW;
   }
 }
@@ -884,18 +931,18 @@ bool LaneBorrowDecider::IsSafeForTurn() {
   }
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double wheel_base = vehicle_param.wheel_base;
-  double front_angle =
+  const double wheel_base = vehicle_param.wheel_base;
+  const double front_angle =
       vehicle_param.max_front_wheel_angle;  // relative to ego_speed_?
-  double max_current_radius = wheel_base / std::tan(front_angle);
+  const double max_current_radius = wheel_base / std::tan(front_angle);
   // turn center
-  Pose2D rear_center_pose =
+  const Pose2D rear_center_pose =
       session_->environmental_model().get_ego_state_manager()->ego_pose();
-  Point2D rear_center_cart =
+  const Point2D rear_center_cart =
       session_->environmental_model().get_ego_state_manager()->ego_carte();
-  double heading_angle =
+  const double heading_angle =
       session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
-  Point2D turning_center =
+  const Point2D turning_center =
       CalTurningCenter(rear_center_cart, heading_angle, max_current_radius);
   // sl static area overlap circle
   // sl to SLToXY
@@ -909,18 +956,18 @@ bool LaneBorrowDecider::IsSafeForTurn() {
                                &back_right_corner.y);
   current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
                                &back_left_corner.y);
-  double corner_angle = std::tan((vehicle_param.max_width * 0.5) /
+  const double corner_angle = std::tan((vehicle_param.max_width * 0.5) /
                                  vehicle_param.front_edge_to_rear_axle);
-  double corner_length = std::hypot(vehicle_param.max_width * 0.5,
+  const double corner_length = std::hypot(vehicle_param.max_width * 0.5,
                                     vehicle_param.front_edge_to_rear_axle);
-  double corner_radius_square =
+  const double corner_radius_square =
       corner_length * corner_length + max_current_radius * max_current_radius -
       2 * corner_length * max_current_radius * std::cos(corner_angle + M_PI_2);
-  double corner_radius = std::sqrt(corner_radius_square);
+  const double corner_radius = std::sqrt(corner_radius_square);
 
-  double distance_to_left = std::hypot(turning_center.x - back_left_corner.x,
+  const double distance_to_left = std::hypot(turning_center.x - back_left_corner.x,
                                        turning_center.y - back_left_corner.y);
-  double distance_to_right = std::hypot(turning_center.x - back_right_corner.x,
+  const double distance_to_right = std::hypot(turning_center.x - back_right_corner.x,
                                         turning_center.y - back_right_corner.y);
   // log
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
