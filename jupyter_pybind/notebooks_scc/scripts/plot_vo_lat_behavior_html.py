@@ -631,7 +631,8 @@ def plotOnce(bag_path, html_file):
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
 
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
-
+    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
+    tab_lane_borrow_decider = load_lane_borrow_tab_info(dataLoader, layer_manager)
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j, sample_base_s = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
