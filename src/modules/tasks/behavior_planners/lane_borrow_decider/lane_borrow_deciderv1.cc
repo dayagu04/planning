@@ -424,7 +424,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
   const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
   BorrowDirection front_obs_bypass_direction =
       GetBypassDirection(front_obstacle_sl, id);
-  double front_obs_center_l =
+  const double front_obs_center_l =
       0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
   lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
 
@@ -482,7 +482,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
 BorrowDirection LaneBorrowDecider::GetBypassDirection(
     const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
-  double obs_center_l =
+  const double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
   if (std::fabs(obs_center_l) <= kMaxCentricOffset) {
     if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {
@@ -929,18 +929,18 @@ bool LaneBorrowDecider::IsSafeForTurn() {
   }
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double wheel_base = vehicle_param.wheel_base;
-  double front_angle =
+  const double wheel_base = vehicle_param.wheel_base;
+  const double front_angle =
       vehicle_param.max_front_wheel_angle;  // relative to ego_speed_?
-  double max_current_radius = wheel_base / std::tan(front_angle);
+  const double max_current_radius = wheel_base / std::tan(front_angle);
   // turn center
-  Pose2D rear_center_pose =
+  const Pose2D rear_center_pose =
       session_->environmental_model().get_ego_state_manager()->ego_pose();
-  Point2D rear_center_cart =
+  const Point2D rear_center_cart =
       session_->environmental_model().get_ego_state_manager()->ego_carte();
-  double heading_angle =
+  const double heading_angle =
       session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
-  Point2D turning_center =
+  const Point2D turning_center =
       CalTurningCenter(rear_center_cart, heading_angle, max_current_radius);
   // sl static area overlap circle
   // sl to SLToXY
@@ -954,18 +954,18 @@ bool LaneBorrowDecider::IsSafeForTurn() {
                                &back_right_corner.y);
   current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
                                &back_left_corner.y);
-  double corner_angle = std::tan((vehicle_param.max_width * 0.5) /
+  const double corner_angle = std::tan((vehicle_param.max_width * 0.5) /
                                  vehicle_param.front_edge_to_rear_axle);
-  double corner_length = std::hypot(vehicle_param.max_width * 0.5,
+  const double corner_length = std::hypot(vehicle_param.max_width * 0.5,
                                     vehicle_param.front_edge_to_rear_axle);
-  double corner_radius_square =
+  const double corner_radius_square =
       corner_length * corner_length + max_current_radius * max_current_radius -
       2 * corner_length * max_current_radius * std::cos(corner_angle + M_PI_2);
-  double corner_radius = std::sqrt(corner_radius_square);
+  const double corner_radius = std::sqrt(corner_radius_square);
 
-  double distance_to_left = std::hypot(turning_center.x - back_left_corner.x,
+  const double distance_to_left = std::hypot(turning_center.x - back_left_corner.x,
                                        turning_center.y - back_left_corner.y);
-  double distance_to_right = std::hypot(turning_center.x - back_right_corner.x,
+  const double distance_to_right = std::hypot(turning_center.x - back_right_corner.x,
                                         turning_center.y - back_right_corner.y);
   // log
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
