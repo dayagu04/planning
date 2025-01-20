@@ -62,8 +62,6 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
   std::unique_ptr<LaneBorrowDecider> lane_borrow_decider_;
-
-
   std::unique_ptr<VirtualObstacleDecider> virtual_obstacle_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<ExpandStBoundariesDecider> expand_st_boundaries_decider_;

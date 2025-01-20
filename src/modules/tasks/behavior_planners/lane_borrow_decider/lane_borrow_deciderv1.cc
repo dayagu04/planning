@@ -358,7 +358,8 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     //  no lon overlap
     if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end ||
         frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
-      if (lat_obstacle_decision.at(id) != LatObstacleDecisionType::IGNORE) {
+      if (lat_obstacle_decision.find(obstacle->id()) !=lat_obstacle_decision.end()&&
+      lat_obstacle_decision.at(id) != LatObstacleDecisionType::IGNORE) {
         continue;
       }
     } else {  // lon overlap origin rule
