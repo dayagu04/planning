@@ -365,7 +365,8 @@ const void UpdateLocalView(
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes,
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
-    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, bool force_plan,
+    py::bytes &ground_line_info_bytes, py::bytes &fus_objs,
+    py::bytes &fus_occ_obj_msg_bytes, bool force_plan,
     std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
@@ -395,9 +396,9 @@ const void UpdateLocalView(
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  // auto ground_line_ =
-  //     BytesToStruct<GroundLinePerception::GroundLinePerceptionInfo>(
-  //         ground_line);
+  iflyauto::GroundLinePerceptionInfo ground_line_ =
+      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+                    struct_msgs::GroundLinePerceptionInfo>(ground_line_info_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -414,7 +415,7 @@ const void UpdateLocalView(
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
-  // local_view.ground_line_perception = ground_line_;
+  local_view.ground_line_perception = ground_line_;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
@@ -505,7 +506,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  auto ground_line =
+  iflyauto::GroundLinePerceptionInfo ground_line_info =
       BytesToStruct<iflyauto::GroundLinePerceptionInfo,
                     struct_msgs::GroundLinePerceptionInfo>(ground_line_bytes);
 
@@ -524,7 +525,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
-  local_view.ground_line_perception = ground_line;
+  local_view.ground_line_perception = ground_line_info;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
@@ -622,13 +623,12 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                                    ego_info.origin_pose_global.heading);
 
     // start
-    Pose2D start =
-        Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
-               ego_info.cur_pose.heading);
+    Pose2D start = Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
+                          ego_info.cur_pose.heading);
 
-    Pose2D real_end = Pose2D(ego_info.target_pose.pos[0],
-                             ego_info.target_pose.pos[1],
-                             ego_info.target_pose.heading);
+    Pose2D real_end =
+        Pose2D(ego_info.target_pose.pos[0], ego_info.target_pose.pos[1],
+               ego_info.target_pose.heading);
     PointCloudObstacleTransform obstacle_generator;
 
     ParkSpaceType slot_type;
@@ -655,10 +655,10 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     VirtualWallDecider *wall_decider =
         hybrid_astar_park_->MutableVirtualWallDecider();
-    wall_decider->Process(hybrid_astar_obs_.virtual_obs,
-                          ego_info.slot.GetWidth(), ego_info.slot.GetLength(),
-                          start, real_end, slot_type,
-                          pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID, parking_in_type);
+    wall_decider->Process(
+        hybrid_astar_obs_.virtual_obs, ego_info.slot.GetWidth(),
+        ego_info.slot.GetLength(), start, real_end, slot_type,
+        pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID, parking_in_type);
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_info.slot.GetLength(),

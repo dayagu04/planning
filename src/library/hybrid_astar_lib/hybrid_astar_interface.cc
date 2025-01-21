@@ -137,6 +137,7 @@ int HybridAStarInterface::UpdateOutput() {
     return 0;
   }
 
+  PathClear(&coarse_traj_);
   search_state_ = AstarSearchState::SEARCHING;
 
   UpdateSearchBoundary();
@@ -192,6 +193,30 @@ int HybridAStarInterface::UpdateOutput() {
       target_regulator_goal_ =
           target_pose_regulator.GetCandidatePose(lat_buffer);
 
+      // judge target regulator goal if collide
+      float dist_goal_collide = 100.0;
+      Transform2d tf;
+      if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+        tf.SetBasePose(
+            Pose2D(request_.slot_length + 2.0, 0.0, request_.goal_.theta));
+        edt_.DistanceCheckForPoint(&dist_goal_collide, &tf,
+                                   AstarPathGear::DRIVE);
+        if (dist_goal_collide < lat_buffer) {
+          ILOG_INFO << "dist_goal_collide = " << dist_goal_collide;
+          ILOG_INFO << "target_regulator_goal_ will collide";
+          continue;
+        }
+      } else {
+        tf.SetBasePose(
+            Pose2D(request_.slot_length - 2.0, 0.0, request_.goal_.theta));
+        edt_.DistanceCheckForPoint(&dist_goal_collide, &tf,
+                                   AstarPathGear::DRIVE);
+        if (dist_goal_collide < lat_buffer) {
+          ILOG_INFO << "dist_goal_collide = " << dist_goal_collide;
+          ILOG_INFO << "target_regulator_goal_ will collide";
+          continue;
+        }
+      }
       // search single shot path.
       if (lat_buffer > 0.2 - 1e-4) {
         if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
@@ -323,7 +348,7 @@ int HybridAStarInterface::UpdateOutput() {
   ILOG_INFO << "hybrid astar finish, plan once time = "
             << response_end_time - response_start_time;
 
-  // hybrid_astar_->DebugPathString(&coarse_traj_);
+  hybrid_astar_->DebugPathString(&coarse_traj_);
 
   return 0;
 }

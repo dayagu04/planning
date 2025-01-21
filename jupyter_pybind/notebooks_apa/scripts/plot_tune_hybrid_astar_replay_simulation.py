@@ -23,7 +23,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y9:  18049
 # e0y10: 20267
 bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250120/20250120-15-29-20/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-01-20-15-29-20_no_camera.bag'
-# bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -502,10 +502,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   uss_perception_msg.serialize(uss_perception_msg_buff)
   uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
 
-  if data_valid['fus_ground_line_msg_idx'] == True:
-    ground_line_perception_msg_buff = BytesIO()
-    ground_line_msg.serialize(ground_line_perception_msg_buff)
-    ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
+
+  ground_line_perception_msg_buff = BytesIO()
+  ground_line_msg.serialize(ground_line_perception_msg_buff)
+  ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
 
   fus_obj_msg_buff = BytesIO()
   fus_obj_msg.serialize(fus_obj_msg_buff)

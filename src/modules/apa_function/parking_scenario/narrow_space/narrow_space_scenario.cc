@@ -1378,7 +1378,7 @@ const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
       }
     } else {
       if (ego_lat_offset < 1.0 &&
-          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(15.0)) {
+          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(18.0)) {
         need_adjust_plan = true;
       }
     }
