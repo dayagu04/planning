@@ -35,6 +35,9 @@ struct AstarParkingConfig {
   bool enable_delete_occ_in_slot;
   bool enable_delete_occ_in_ego;
   double deadend_uss_stuck_replan_wait_time;
+  // 车辆到中线的距离小于阈值, 可以使用spiral/dubins库外揉库.
+  // 注意：要限制库外揉库API的使用，该API只会让车辆来到中心线附近，不能保证车辆能正确进库.
+  double adjust_ego_y_thresh_outside_slot;
 };
 
 struct ParkingSpeedConfig {
@@ -339,11 +342,6 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
-  bool use_a_cubic_polynomial_for_adjustment = true;
-  // move target point in slot to another point for easy tracking
-  double vertical_slot_target_adjust_dist = 1.0;
-  bool enable_delete_fusion_obj_in_slot = true;
-  double deadend_uss_stuck_replan_wait_time;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;

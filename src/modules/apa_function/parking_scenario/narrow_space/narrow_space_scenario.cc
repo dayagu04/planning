@@ -1387,11 +1387,13 @@ const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
     if (current_gear_ != AstarPathGear::REVERSE) {
       return false;
     }
-    // if ego is beyond slot, can use spiral/rs/polynomial to adjust ego. Not
-    // use
-    // astar because maybe switch gear too much or generate weird path.
+    // If ego is beyond slot and ego neayby center line, use spiral,rs,or
+    // polynomial curve to adjust ego pose.
+    // For astar searching, ego maybe switch gear too much or generate weird
+    // path, we will improve it in the future for better parking performance.
     if (ego_pose.x >= slot_len) {
-      if (ego_lat_offset < 1.0 &&
+      if (ego_lat_offset < apa_param.GetParam()
+                               .astar_config.adjust_ego_y_thresh_outside_slot &&
           std::fabs(ego_pose.theta) < ifly_deg2rad(5.0)) {
         need_adjust_plan = true;
       }

@@ -277,9 +277,6 @@
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,
   "is_parallel_advanced_method": true,
-  "vertical_slot_target_adjust_dist": 1.5,
-  "use_a_cubic_polynomial_for_adjustment" :true,
-
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
@@ -330,6 +327,7 @@
   "astar_parallel_finish_center_lat_err" : 0.1,
   "astar_parallel_finish_head_lat_err" : 0.25,
   "astar_parallel_finish_heading_err" : 2.5,
+  "adjust_ego_y_thresh_outside_slot": 0.2,
 
   "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 0.5,

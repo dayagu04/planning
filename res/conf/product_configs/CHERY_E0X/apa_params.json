@@ -277,8 +277,6 @@
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,
   "is_parallel_advanced_method": true,
-  "vertical_slot_target_adjust_dist": 1.5,
-  "use_a_cubic_polynomial_for_adjustment" :true,
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
@@ -317,7 +315,7 @@
   "comment_17": "gen output params",
   "max_velocity": 0.6,
 
-  "path_generator_type": 1,
+  "path_generator_type": 0,
   "vertical_slot_end_straight_dist": 1.5,
   "parallel_slot_end_straight_dist": 0.0,
   "enable_delete_occ_in_slot": false,
@@ -330,6 +328,7 @@
   "astar_parallel_finish_center_lat_err" : 0.1,
   "astar_parallel_finish_head_lat_err" : 0.25,
   "astar_parallel_finish_heading_err" : 2.5,
+  "adjust_ego_y_thresh_outside_slot": 0.2,
 
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,
