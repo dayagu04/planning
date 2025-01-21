@@ -139,11 +139,11 @@ int StopPybind() {
   return 0;
 }
 
-void UpdateFootprintCircle() {
+void UpdateFootprintCircle(const AstarPathGear gear) {
   const EulerDistanceTransform *edt_ =
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
+      edt_->GetCircleFootPrint(gear);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
@@ -349,7 +349,11 @@ int GetPathFromHybridAstar() {
   AstarRequest request = thread_solver_->GetAstarRequest();
   history_gear_request_ = request.first_action_request.gear_request;
 
-  UpdateFootprintCircle();
+  AstarPathGear gear = AstarPathGear::NONE;
+  if (result.gear.size() > 0) {
+    gear = result.gear[0];
+  }
+  UpdateFootprintCircle(gear);
 
   ILOG_INFO << "receive finish";
 
@@ -449,7 +453,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     py::bytes &localization_info_bytes,
                     py::bytes &vehicle_service_output_info_bytes,
                     py::bytes &uss_wave_info_bytes,
-                    py::bytes &uss_perception_info_bytes, py::bytes &fus_objs,
+                    py::bytes &uss_perception_info_bytes,
+                    py::bytes &ground_line_bytes, py::bytes &fus_objs,
                     py::bytes &fus_occ_obj_msg_bytes, int select_id,
                     bool force_plan, bool is_path_optimization,
                     bool is_cilqr_optimization, bool is_reset,
@@ -500,9 +505,9 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  // auto ground_line_ =
-  //     BytesToStruct<GroundLinePerception::GroundLinePerceptionInfo>(
-  //         ground_line);
+  auto ground_line =
+      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+                    struct_msgs::GroundLinePerceptionInfo>(ground_line_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -519,7 +524,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
-  // local_view.ground_line_perception = ground_line_;
+  local_view.ground_line_perception = ground_line;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 

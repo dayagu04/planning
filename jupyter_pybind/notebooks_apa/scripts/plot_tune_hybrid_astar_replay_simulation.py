@@ -529,7 +529,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         vs_msg_bytes,
         wave_msg_bytes,
         uss_perception_msg_bytes,
-        # ground_line_msg,
+        ground_line_perception_msg_bytes,
         fus_obj_msg_bytes,
         fus_occ_obj_msg_bytes,
         select_id, force_plan, is_path_optimization,
