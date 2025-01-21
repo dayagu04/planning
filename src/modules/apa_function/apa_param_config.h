@@ -324,8 +324,8 @@ struct ApaParameters {
   double target_pos_err = 0.068;
   double target_heading_err = 0.88;
   double target_radius_err = 0.036;
-  double perpendicular_park_out_max_target_heading = 95;
-  double perpendicular_park_out_min_target_heading = 85;
+  double perpendicular_park_out_max_target_heading = 100;
+  double perpendicular_park_out_min_target_heading = 70;
   double path_extend_distance = 0.3;
   bool actual_mono_plan_enable = false;
   bool mono_plan_enable = false;

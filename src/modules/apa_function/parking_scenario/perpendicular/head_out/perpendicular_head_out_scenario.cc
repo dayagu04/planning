@@ -963,7 +963,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
       100.0 * kDeg2Rad;  // TODU::
 
   const bool heading_condition_2 =
-      std::fabs(ego_info_under_slot.cur_pose.heading) >= 80.0 * kDeg2Rad;
+      std::fabs(ego_info_under_slot.cur_pose.heading) >= 70.0 * kDeg2Rad;
 
   const bool lat_condition = heading_condition_1 && heading_condition_2;
 
