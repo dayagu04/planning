@@ -64,11 +64,16 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  const double safe_uss_remain_dist =
+  double safe_uss_remain_dist =
       (apa_world_ptr_->GetNewSlotManagerPtr()
            ->ego_info_under_slot_.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
           : 0.3;
+
+  // cancel for obs expand in perpendicular slot
+  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    safe_uss_remain_dist += 0.068;
+  }
 
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
