@@ -141,7 +141,7 @@ struct ApaParameters {
   double finish_parallel_lon_err = 0.3;
   double finish_parallel_lon_overhaing_error = 0.2;
   double finish_parallel_heading_err = 2.3;
-  double finish_parallel_rear_stop_buffer = 0.55;
+  double finish_parallel_out_heading_mag = 0.55;
   double finish_parallel_lat_rac_err = 0.35;
 
   // check fail params
@@ -225,7 +225,7 @@ struct ApaParameters {
   double parallel_occupied_pt_inside_dx = 0.0;
   double parallel_occupied_pt_inside_dy = 0.3;
   double curb_offset = 3.0;
-  double mov_curb_out_dist = 0.3;
+  double curb_offset_when_ego_outside_slot = 0.3;
 
   // construce obstacles params
   double channel_width = 12.28;

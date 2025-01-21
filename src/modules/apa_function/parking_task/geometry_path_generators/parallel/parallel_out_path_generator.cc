@@ -60,7 +60,7 @@ const bool ParallelOutPathGenerator::Update(
   RecorverChannelObstacles();
   pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
 
-  const auto time1 = std::chrono::high_resolution_clock::now();
+  // const auto time1 = std::chrono::high_resolution_clock::now();
   const auto duration_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::high_resolution_clock::now() - start_time)
@@ -124,8 +124,6 @@ const bool ParallelOutPathGenerator::Update() {
   calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
 
   for (const auto &prepare_pose : preparing_pose_vec) {
-    const auto preparing_line = pnc::geometry_lib::BuildLineSegByPose(
-        prepare_pose.pos, prepare_pose.heading);
 
     if (PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
       ReversePathSegVec(park_out_path_vec);

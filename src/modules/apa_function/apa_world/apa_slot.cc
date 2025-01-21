@@ -74,7 +74,7 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
     slot_length_ = (processed_corner_coord_global_.pt_1 -
                     processed_corner_coord_global_.pt_0)
                        .norm();
-    geometry_lib::LineSegment line_01(processed_corner_coord_global_.pt_1,
+    const geometry_lib::LineSegment line_01(processed_corner_coord_global_.pt_1,
                                       processed_corner_coord_global_.pt_0);
     slot_width_ = std::min(geometry_lib::CalPoint2LineDist(
                                processed_corner_coord_global_.pt_2, line_01),

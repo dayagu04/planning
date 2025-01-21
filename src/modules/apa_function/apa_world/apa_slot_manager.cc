@@ -8,6 +8,7 @@
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/path_safe_checker.h"
+#include "geometry_math.h"
 #include "ifly_time.h"
 #include "log_glog.h"
 
@@ -373,33 +374,42 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
 
 const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const ApaSlot& slot) {
-  const Eigen::Vector2d t = (slot.processed_corner_coord_global_.pt_0 -
-                             slot.processed_corner_coord_global_.pt_2)
-                                .normalized();
-  const Eigen::Vector2d n(-t.y(), t.x());
-  const double heading = std::atan2(n.y(), n.x());
-  const Eigen::Vector2d pM02 = 0.5 * (slot.processed_corner_coord_global_.pt_0 +
-                                      slot.processed_corner_coord_global_.pt_2);
-  const Eigen::Vector2d pM13 = 0.5 * (slot.processed_corner_coord_global_.pt_1 +
-                                      slot.processed_corner_coord_global_.pt_3);
+  const auto& v_ego_heading = measure_data_ptr_->GetHeadingVec();
+  Eigen::Vector2d n = (slot.processed_corner_coord_global_.pt_0 -
+                       slot.processed_corner_coord_global_.pt_1)
+                          .normalized();
+  if (n.dot(v_ego_heading) < 1e-9) {
+    n *= -1.0;
+  }
+  const Eigen::Vector2d t(-n.x(), n.y());
 
-  const Eigen::Vector2d origin_target_pos =
-      pM02 + n * (apa_param.GetParam().rear_overhanging + 0.168);
+  const Eigen::Vector2d center = slot.origin_corner_coord_global_.pt_center;
 
-  const std::vector<double> move_slot_dist_vec{0.0, 0.1, 0.2, 0.3};
+  const double slot_length = (slot.origin_corner_coord_global_.pt_0 -
+                              slot.origin_corner_coord_global_.pt_1)
+                                 .norm();
+
+  const double center_to_rac_dist = 0.5 * apa_param.GetParam().car_length -
+                                    apa_param.GetParam().rear_overhanging;
+
+  const Eigen::Vector2d target_ego_pos =
+      center - center_to_rac_dist * v_ego_heading;
+
+  const std::vector<double> move_slot_dist_vec{-0.6, 0.0, 0.6};
 
   PathSafeChecker safe_check;
-  const double lat_buffer = 0.1;
-  const double lon_buffer = 0.05;
+  const double lat_buffer = 0.05;
+  const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
   for (const double dist : move_slot_dist_vec) {
-    const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
-    const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
+    const Eigen::Vector2d target_pos = target_ego_pos + dist * t;
+    const Pose2D target_pose(target_pos.x(), target_pos.y(),
+                             measure_data_ptr_->GetHeading());
     if (!safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
                                      lat_buffer, lon_buffer)) {
       move_slot_dist = dist;
-      ILOG_INFO << "move_slot_dist = " << move_slot_dist;
+      ILOG_INFO << "release slot with move_slot_dist = " << move_slot_dist;
       is_slot_occupied = false;
       break;
     }

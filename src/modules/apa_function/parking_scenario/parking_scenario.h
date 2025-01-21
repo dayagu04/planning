@@ -105,7 +105,6 @@ class ParkingScenario {
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
     bool fix_limiter = false;
-    bool is_park_out_left = true;
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
@@ -152,7 +151,6 @@ class ParkingScenario {
       slot_occupied_ratio = 0.0;
 
       fix_limiter = false;
-      is_park_out_left = true;
 
       obs_pt_vec_slot.clear();
 
@@ -219,11 +217,13 @@ class ParkingScenario {
       is_right_empty = false;
 
       can_first_plan_again = true;
+      is_park_out_left = true;
     }
     bool can_first_plan_again = true;
 
     bool is_left_empty = false;
     bool is_right_empty = false;
+    bool is_park_out_left = true;
 
     bool replan_flag = false;
     bool is_replan_first = true;
@@ -313,7 +313,7 @@ class ParkingScenario {
     return;
   }
 
-  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
+  std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
 
   // 点击开始泊车之后，更新speed and path
   virtual void ScenarioRunning();

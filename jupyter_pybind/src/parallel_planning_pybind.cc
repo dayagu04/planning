@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #include "apa_plan_interface.h"
@@ -22,7 +23,6 @@
 #include "slot_manager.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
-namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathGenerator *pBase = nullptr;
@@ -156,8 +156,20 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   ILOG_INFO << "obs_y_vec.size() = " << obs_y_vec.size();
 
   std::shared_ptr<ApaWorld> apa_world_ptr = std::make_shared<ApaWorld>();
-  SimulationParam simu_param;
 
+  ApaObstacle apa_obs;
+  std::vector<Eigen::Vector2d> obs_vec;
+  obs_vec.resize(obs_x_vec.size());
+  for (size_t i = 0; i < obs_x_vec.size(); i++) {
+    obs_vec[i] << obs_x_vec[i], obs_y_vec[i];
+  }
+  apa_obs.SetPtClout2dGlobal(obs_vec);
+  apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
+  apa_obs.SetId(0);
+  apa_world_ptr->GetObstacleManagerPtr()->SetObstacles()[0] = apa_obs;
+
+  ILOG_INFO << "1";
+  SimulationParam simu_param;
   simu_param.sample_ds = path_ds;
   simu_param.is_complete_path = true;
   apa_world_ptr->SetSimuParam(simu_param);
@@ -165,39 +177,31 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_world_ptr->GetMeasureDataManagerPtr()->SetPose(
       Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
-  planning::common::SlotInfo select_slot_filter;
-  const std::vector<double> slot_x_vec = {slot_length, 0.0, slot_length, 0.0};
-  const std::vector<double> slot_y_vec = {0.5 * slot_width, 0.5 * slot_width,
-                                          -0.5 * slot_width, -0.5 * slot_width};
-  for (size_t i = 0; i < slot_x_vec.size(); i++) {
-    auto corner_pt =
-        select_slot_filter.mutable_corner_points()->add_corner_point();
-    corner_pt->set_x(slot_x_vec[i]);
-    corner_pt->set_y(slot_y_vec[i]);
-  }
-  SlotManager::Frame slm_frame;
-  slm_frame.ego_slot_info.ego_pos_slot << ego_x, ego_y;
-  slm_frame.ego_slot_info.ego_heading_slot = ego_heading;
-  slm_frame.ego_slot_info.select_slot_filter = select_slot_filter;
-  slm_frame.ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
-  slm_frame.ego_slot_info.slot_origin_pos << 0.0, 0.5 * slot_width;
-  slm_frame.ego_slot_info.slot_origin_heading = 0.0;
-  slm_frame.ego_slot_info.ego_heading_slot_vec << 1.0, 0.0;
+  EgoInfoUnderSlot &ego_info_under_slot =
+      apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_;
+  ego_info_under_slot.id = 1;
 
-  for (size_t i = 0; i < obs_x_vec.size(); i++) {
-    const Eigen::Vector2d obs_pt(obs_x_vec[i], obs_y_vec[i]);
-    slm_frame.obs_pt_vec.emplace_back(obs_pt);
-    slm_frame.ego_slot_info.obs_pt_vec_slot.emplace_back(obs_pt);
-  }
+  const double half_slot_width = 0.5 * slot_width;
 
-  apa_world_ptr->GetSlotManagerPtr()->SetFrame(slm_frame);
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_0 << slot_length,
+      half_slot_width;
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_1 << 0.0,
+      half_slot_width;
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_2 << slot_length,
+      -half_slot_width;
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_3 << 0.0,
+      -half_slot_width;
+  ego_info_under_slot.slot.origin_corner_coord_global_.CalExtraCoord();
+
+  ILOG_INFO << "2";
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
+  ILOG_INFO << "3";
   parallel_park_planner.UpdateEgoSlotInfo();
-  parallel_park_planner.GetMutableFrame()->ego_slot_info.obs_pt_vec_slot =
-      slm_frame.obs_pt_vec;
-
+  ILOG_INFO << "4";
   parallel_park_planner.GenTlane();
+  ILOG_INFO << "5";
   parallel_park_planner.GenTBoundaryObstacles();
+  ILOG_INFO << "6";
 
   ParallelPathGenerator::Input path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
@@ -205,15 +209,17 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   path_planner_input.is_replan_first = true;
   path_planner_input.is_complete_path = true;
 
-  const auto &ego_slot_info = parallel_park_planner.GetFrame().ego_slot_info;
+  const auto &ego_slot_info = ego_info_under_slot;
   path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
-                                  ego_slot_info.ego_heading_slot);
+  path_planner_input.ego_pose.Set(ego_slot_info.cur_pose.pos,
+                                  ego_slot_info.cur_pose.heading);
 
   pBase->SetInput(path_planner_input);
+  ILOG_INFO << "7";
   const double path_plan_start_time = IflyTime::Now_ms();
   const bool path_plan_success =
       pBase->Update(apa_world_ptr->GetCollisionDetectorPtr());
+  ILOG_INFO << "8";
   auto path_planner_output = pBase->GetOutput();
 
   path_planner_output.path_seg_index.first = 0;
