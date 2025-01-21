@@ -12,21 +12,16 @@ namespace apa_planner {
 
 void PerpendicularHeadOutScenario::Reset() {
   frame_.Reset();
-  slot_t_lane_.Reset();
-  obstacle_t_lane_.Reset();
   perpendicular_path_planner_.Reset();
   current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
+  path_trim_flag_ = false;
+  end_position_correction_flag_ = false;
 
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
 
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
-
-  pt_center_replan_.setZero();
-  pt_center_heading_replan_ = 0.0;
-  pt_center_replan_jump_dist_ = 0.0;
-  pt_center_replan_jump_heading_ = 0.0;
 
   ParkingScenario::Reset();
 }
@@ -161,13 +156,17 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  const double& cur_pos_x = apa_world_ptr_->GetNewSlotManagerPtr()
-                                ->ego_info_under_slot_.cur_pose.pos.x();
-  if (!frame_.path_trim_flag &&
-      apa_world_ptr_->GetNewSlotManagerPtr()
-              ->ego_info_under_slot_.slot_occupied_ratio < 0.15) {
+  // check if the current path is safe
+  if (CheckSecurityCurrentpath()) {
     if (CurrentPathTrimmed()) {
-      frame_.path_trim_flag = true;
+      path_trim_flag_ = true;
+    }
+  }
+
+  // check if the key positions need to be corrected
+  if (CheckRationalityEndpointPosition()) {
+    if (CurrentPathTrimmed()) {
+      end_position_correction_flag_ = true;
     }
   }
 
@@ -243,21 +242,18 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     ego_info_under_slot.slot_occupied_ratio = 0.0;
   }
 
-  // calc slot side and init gear and init steer at first
+  // calc init gear and init steer at first
   if (frame_.is_replan_first) {
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
         ApaParkOutDirection::RIGHT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
-      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
     } else if (apa_world_ptr_->GetStateMachineManagerPtr()
                    ->GetParkOutDirection() == ApaParkOutDirection::LEFT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
-      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
     } else if (apa_world_ptr_->GetStateMachineManagerPtr()
                    ->GetParkOutDirection() == ApaParkOutDirection::FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
-      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     }
 
     ILOG_INFO << "Now default to turn right at first";
@@ -1291,73 +1287,94 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   }
 }
 
+const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
+  return !path_trim_flag_ &&
+         apa_world_ptr_->GetNewSlotManagerPtr()
+                 ->ego_info_under_slot_.slot_occupied_ratio < 0.15;
+}
+
+const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
+  const pnc::geometry_lib::PathPoint& current_path_last_point =
+      current_path_point_global_vec_.back();
+  Eigen::Vector2d current_path_last_local_point =
+      apa_world_ptr_->GetNewSlotManagerPtr()
+          ->ego_info_under_slot_.g2l_tf.GetPos(current_path_last_point.pos);
+
+  const bool conditions_endpoint_correction =
+      !end_position_correction_flag_ &&
+      current_path_last_local_point.x() < 7.0 &&
+      frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE;
+  return conditions_endpoint_correction;
+}
+
 const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
-  const double current_car_s = frame_.current_path_length - frame_.remain_dist;
-  ILOG_INFO << "current_car_s " << current_car_s;
-  pnc::geometry_lib::GlobalToLocalTf& g2l_tf =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
+  if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    const double current_car_s =
+        frame_.current_path_length - frame_.remain_dist;
+    // ILOG_INFO << "current_car_s " << current_car_s;
+    pnc::geometry_lib::GlobalToLocalTf& g2l_tf =
+        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
 
-  pnc::geometry_lib::LocalToGlobalTf& l2g_tf =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+    pnc::geometry_lib::LocalToGlobalTf& l2g_tf =
+        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
 
-  std::vector<pnc::geometry_lib::PathPoint> path_point_local_vec;
-  pnc::geometry_lib::PathPoint path_point_local;
-  path_point_local_vec.clear();
-  path_point_local_vec.reserve(200);
-  for (const auto& point : current_path_point_global_vec_) {
-    // *
-    // move the starting point forward by 100 centimeters to ensure that the
-    // collision detection path is outside the slot
-    if (point.s >= current_car_s + 1.0) {
-      path_point_local = point;
-      path_point_local.GlobalToLocal(g2l_tf);
-      path_point_local_vec.emplace_back(path_point_local);
+    std::vector<pnc::geometry_lib::PathPoint> path_point_local_vec;
+    pnc::geometry_lib::PathPoint path_point_local;
+    path_point_local_vec.clear();
+    path_point_local_vec.reserve(200);
+    for (const auto& point : current_path_point_global_vec_) {
+      // *
+      // move the starting point forward by 100 centimeters to ensure that the
+      // collision detection path is outside the slot
+      if (point.s >= current_car_s + 1.5) {
+        path_point_local = point;
+        path_point_local.GlobalToLocal(g2l_tf);
+        path_point_local_vec.emplace_back(path_point_local);
+      }
     }
-  }
 
-  CollisionDetector::CollisionResult col_res;
-  col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
-      path_point_local_vec, 0.35, 0.3);
+    CollisionDetector::CollisionResult col_res;
+    col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
+        path_point_local_vec, 0.35, 0.3);
 
-  if (col_res.remain_dist == frame_.current_path_length) {
-    ILOG_INFO << "at this time, there is no collision in the path";
+    if (col_res.remain_dist == frame_.current_path_length) {
+      ILOG_INFO << "at this time, there is no collision in the path";
+      return true;
+    }
+
+    const double lon_buffer = 0.4;
+    const double safe_remain_dist = col_res.remain_dist - lon_buffer;
+
+    // ILOG_INFO << "safe_remain_dist : " << safe_remain_dist;
+
+    auto new_end = std::remove_if(
+        current_path_point_global_vec_.begin(),
+        current_path_point_global_vec_.end(),
+        [this, safe_remain_dist](const pnc::geometry_lib::PathPoint& point) {
+          return point.s > safe_remain_dist;
+        });
+
+    current_path_point_global_vec_.erase(new_end,
+                                         current_path_point_global_vec_.end());
+
+    PostProcessPath();
+    ILOG_INFO << "the current path has been trimmed";
+
+    return true;
+  } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    size_t size = current_path_point_global_vec_.size();
+    if (size > 0) {
+      size_t half_size = size / 2;
+      current_path_point_global_vec_.resize(half_size);
+    } else {
+      return false;
+    }
+
+    PostProcessPath();
+    ILOG_INFO << "the current path has been trimmed";
+
     return true;
   }
-
-  const double lon_buffer = 0.4;
-  const double safe_remain_dist = col_res.remain_dist - lon_buffer;
-
-  ILOG_INFO << "safe_remain_dist : " << safe_remain_dist;
-
-  // if (safe_remain_dist - current_car_s < 1e-3) {
-  //   return false;
-  // }
-
-  // std::vector<pnc::geometry_lib::PathPoint> path_point_global_vec;
-  // path_point_global_vec.clear();
-  // path_point_global_vec.reserve(200);
-  // for (auto& point : current_path_point_global_vec_) {
-  //   if (point.s <= safe_remain_dist) {
-  //     path_point_global_vec.emplace_back(point);
-  //   }
-  // }
-
-  // current_path_point_global_vec_.clear();
-  // current_path_point_global_vec_ = path_point_global_vec;
-
-  auto new_end = std::remove_if(
-      current_path_point_global_vec_.begin(),
-      current_path_point_global_vec_.end(),
-      [this, safe_remain_dist](const pnc::geometry_lib::PathPoint& point) {
-        return point.s > safe_remain_dist;
-      });
-
-  current_path_point_global_vec_.erase(new_end,
-                                       current_path_point_global_vec_.end());
-
-  PostProcessPath();
-  ILOG_INFO << "the current path has been trimmed";
-
   return true;
 }
 
