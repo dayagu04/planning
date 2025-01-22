@@ -155,6 +155,7 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
     ILOG_INFO << "out of bound";
 #endif
 
+    *min_dist = 0.0;
     return true;
   }
 

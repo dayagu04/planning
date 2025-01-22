@@ -14,6 +14,48 @@ namespace planning {
 
 #define DEBUG_DECIDER (0)
 
+bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
+  if (candidate_info_.size() > 0 && candidate_info_[0].dist_to_obs > 0.25) {
+    return true;
+  }
+
+  return false;
+}
+
+void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
+                                                const VehicleParam &veh_param,
+                                                EulerDistanceTransform *edt) {
+  if (request->space_type == ParkSpaceType::VERTICAL) {
+    if (request->direction_request == ParkingVehDirection::TAIL_IN) {
+      x_check_upper_ = center_line_target_.x + 1.5;
+    } else {
+      // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
+      // todo: 使用新的方式，加速这里的计算. 采样的计算方式并不快.
+      x_check_upper_ = center_line_target_.x + veh_param.wheel_base;
+    }
+  } else {
+    x_check_upper_ = center_line_target_.x + 0.6;
+  }
+
+  x_check_lower_ = center_line_target_.x;
+  x_step_ = 0.2;
+  x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
+
+  Pose2D pose = center_line_target_;
+  float dist = GetDistToObs(&pose, edt);
+  PoseRegulateCandidate candidate;
+  candidate.lat_offset = 0.0;
+  candidate.dist_to_obs = dist;
+  candidate.pose = center_line_target_;
+  candidate_info_.emplace_back(candidate);
+
+#if DEBUG_DECIDER
+    DebugString();
+#endif
+
+  return;
+}
+
 void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
                                   const AstarRequest *request,
                                   const Pose2D &ego_pose,
@@ -21,6 +63,8 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
                                   const VehicleParam &veh_param) {
   Clear();
   center_line_target_ = center_line_target;
+  edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
+  UpdateDefaultPoseInfo(request, veh_param, edt);
 
   if (request->path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
@@ -32,6 +76,10 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   // Parking out no need regulator.
   if (!IsParkingIn(request)) {
     ILOG_INFO << "not park in";
+    return;
+  }
+
+  if (IsDefaultPoseSafeEnough()) {
     return;
   }
 
@@ -66,11 +114,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   // 目前策略:不删除任何障碍物，只会将目标增加平移.
   // 不要删除障碍物掩盖了上游问题.
   Pose2D global_pose;
-  Transform2d tf;
-  AstarPathGear gear = AstarPathGear::NONE;
-
   global_pose = center_line_target_;
-  tf.SetBasePose(global_pose);
 
   double y_upper = request->slot_width / 2 - veh_param.width / 2;
   y_upper = std::max(0.0, y_upper);
@@ -83,37 +127,30 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   double left_y_offset = 0.0;
   double right_y_offset = 0.0;
 
-  x_check_upper_ = global_pose.x + 1.5;
-  x_check_lower_ = global_pose.x;
-  x_step_ = 0.2;
-  x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
-
   float dist;
-
-  dist = GetDistToObs(&global_pose, edt);
   PoseRegulateCandidate candidate;
-  candidate.lat_offset = 0.0;
-  candidate.dist_to_obs = dist;
-  candidate.pose = center_line_target_;
-  candidate_info_.emplace_back(candidate);
-
-  if (dist > 0.25) {
-#if DEBUG_DECIDER
-    DebugString();
-#endif
-    return;
-  }
+  bool check_left = true;
 
   for (int i = 0; i < y_sampling_num; i++) {
     // left
-    if (i % 2 == 0) {
-      left_y_offset += y_step;
-      left_y_offset = std::min(left_y_offset, y_upper);
-      y_offset = left_y_offset;
+    if (check_left) {
+      check_left = false;
+      if (left_y_offset < y_upper) {
+        left_y_offset += y_step;
+        left_y_offset = std::min(left_y_offset, y_upper);
+        y_offset = left_y_offset;
+      } else {
+        continue;
+      }
     } else {
-      right_y_offset -= y_step;
-      right_y_offset = std::max(right_y_offset, y_lower);
-      y_offset = right_y_offset;
+      check_left = true;
+      if (right_y_offset > y_lower) {
+        right_y_offset -= y_step;
+        right_y_offset = std::max(right_y_offset, y_lower);
+        y_offset = right_y_offset;
+      } else {
+        continue;
+      }
     }
 
     global_pose = center_line_target_;
@@ -127,12 +164,16 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
       candidate.pose = center_line_target_;
       candidate.pose.y = y_offset;
       candidate_info_.emplace_back(candidate);
-    }
+      }
+
+#if DEBUG_DECIDER
+    ILOG_INFO << "offset = " << y_offset << ", dist = " << dist;
+#endif
 
     if (dist > 0.25) {
       break;
     }
-  }
+    }
 
 #if DEBUG_DECIDER
   DebugString();
@@ -211,8 +252,11 @@ void TargetPoseRegulator::DebugString() {
   ILOG_INFO << "candidate size = " << candidate_info_.size();
 
   for (size_t i = 0; i < candidate_info_.size(); i++) {
-    ILOG_INFO << "i = " << i << ",lat offset = " << candidate_info_[i].lat_offset
+    ILOG_INFO << "i = " << i
+              << ",lat offset = " << candidate_info_[i].lat_offset
               << ",obs dist = " << candidate_info_[i].dist_to_obs;
+
+    candidate_info_[i].pose.DebugString();
   }
 
   return;
@@ -225,11 +269,8 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   // 目前策略:不删除任何障碍物，只会将目标增加平移.
   // 不要删除障碍物掩盖了上游问题.
   Pose2D global_pose;
-  Transform2d tf;
   AstarPathGear gear = AstarPathGear::NONE;
-
   global_pose = center_line_target_;
-  tf.SetBasePose(global_pose);
 
   double y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2;
   y_upper = std::max(0.0, y_upper);
@@ -242,26 +283,8 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   double left_y_offset = 0.0;
   double right_y_offset = 0.0;
 
-  x_check_upper_ = global_pose.x + 0.6;
-  x_check_lower_ = global_pose.x;
-  x_step_ = 0.2;
-  x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
-
   float dist;
-
-  dist = GetDistToObs(&global_pose, edt);
   PoseRegulateCandidate candidate;
-  candidate.lat_offset = 0.0;
-  candidate.dist_to_obs = dist;
-  candidate.pose = center_line_target_;
-  candidate_info_.emplace_back(candidate);
-
-  if (dist > 0.25) {
-#if DEBUG_DECIDER
-    DebugString();
-#endif
-    return;
-  }
 
   for (int i = 0; i < y_sampling_num; i++) {
     // left

@@ -75,6 +75,9 @@ void PlannerOpenSpaceConfig::InitConfig() {
   // headin node shrink condition
   headin_limit_y_shrink = 1.2;
 
+  max_search_time_ms = 5000;
+  max_search_time_ms_for_no_gear_switch = 100;
+
   return;
 }
 

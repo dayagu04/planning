@@ -302,9 +302,10 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
 
     if (pair.second.GetPtClout2dLocal().size() > 0) {
       GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
+    } else {
+      obs.envelop_polygon = pair.second.GetPolygon2DLocal();
     }
 
-    obs.envelop_polygon = pair.second.GetPolygon2DLocal();
     obs.obs_type = pair.second.GetObsAttributeType();
     obs_list.point_cloud_list.emplace_back(obs);
   }

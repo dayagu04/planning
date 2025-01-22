@@ -17,6 +17,7 @@ namespace planning {
 
 struct PoseRegulateCandidate {
   Pose2D pose;
+  // 位姿对应的车辆真实外壳到障碍物的距离.
   double dist_to_obs;
   double lat_offset;
 };
@@ -57,6 +58,12 @@ class TargetPoseRegulator : public AstarDecider {
   const float GetDistToObs(Pose2D *global_pose, EulerDistanceTransform *edt);
 
   void DebugString();
+
+  void UpdateDefaultPoseInfo(const AstarRequest *request,
+                             const VehicleParam &veh_param,
+                             EulerDistanceTransform *edt);
+
+  bool IsDefaultPoseSafeEnough();
 
  private:
   Pose2D center_line_target_;

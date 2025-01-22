@@ -83,6 +83,12 @@ struct PlannerOpenSpaceConfig {
   double scenario_try_lat_buffer;
   double scenario_try_lon_buffer;
 
+  // A星最大搜索时间: 暂时设定为5秒，超过这个时间不要继续搜索
+  double max_search_time_ms;
+
+  // 无换档路径最大搜索时间: 默认100ms
+  double max_search_time_ms_for_no_gear_switch;
+
   // todo: 为了增加成功率，4米内的不换档路径可以使用精细碰撞检测.
 
   void InitConfig();
