@@ -555,7 +555,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info =
-        scenario->GetApaWorldPtr()->GetNewSlotManagerPtr()->ego_info_under_slot_;
+        scenario->GetApaWorldPtr()->GetSlotManagerPtr()->ego_info_under_slot_;
     ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();

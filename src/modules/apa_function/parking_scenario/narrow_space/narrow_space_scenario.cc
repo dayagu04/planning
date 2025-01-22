@@ -146,7 +146,7 @@ const bool NarrowSpaceScenario::CheckReplan() {
 
 const bool NarrowSpaceScenario::CheckFinished() {
   bool ret = false;
-  if (apa_world_ptr_->GetNewSlotManagerPtr()
+  if (apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
     ret = CheckParallelSlotFinished();
   } else {
@@ -158,7 +158,7 @@ const bool NarrowSpaceScenario::CheckFinished() {
 
 const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const ApaParameters& config = apa_param.GetParam();
 
   const bool lon_condition =
@@ -351,7 +351,7 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag);
 
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
   std::vector<double> slot_corner_X;
@@ -445,7 +445,7 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
   JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
-  JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
+  JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)
 
   JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.id);
   JSON_DEBUG_VALUE("slot_length", ego_info_under_slot.slot.slot_length_);
@@ -544,7 +544,7 @@ void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
 PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     const bool is_scenario_try) {
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
 
@@ -568,12 +568,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
 
-  if (apa_world_ptr_->GetNewSlotManagerPtr()
+  if (apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
     end_straight_len =
         apa_param.GetParam().astar_config.parallel_slot_end_straight_dist;
     slot_type = ParkSpaceType::PARALLEL;
-  } else if (apa_world_ptr_->GetNewSlotManagerPtr()
+  } else if (apa_world_ptr_->GetSlotManagerPtr()
                  ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT) {
     end_straight_len =
         apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
@@ -940,7 +940,7 @@ const int NarrowSpaceScenario::HybridAstarDebugInfoClear() {
 
 const void NarrowSpaceScenario::GenerateFallBackPath() {
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   if (frame_.replan_reason == 5) {
     return;
@@ -1007,7 +1007,7 @@ const bool NarrowSpaceScenario::UpdateThreadPath() {
 
 const bool NarrowSpaceScenario::UpdateEgoSlotInfo() {
   bool ret = false;
-  if (apa_world_ptr_->GetNewSlotManagerPtr()
+  if (apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
     ret = UpdateParallelSlotInfo();
   } else {
@@ -1026,7 +1026,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
   // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ego_info_under_slot.origin_pose_global.heading_vec =
       ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
@@ -1223,7 +1223,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   }
 
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   // path is not pass limiter, return
   double limiter_x = ego_info.target_pose.pos[0];
@@ -1282,7 +1282,7 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
 
   // path is near limiter, return.
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
   Eigen::Vector2d point_local;
   point_local = ego_info.g2l_tf.GetPos(path_end_global);
@@ -1348,7 +1348,7 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
 
   // check plan number in slot
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   if (is_replan && current_gear_ == AstarPathGear::REVERSE &&
       ego_info.slot_occupied_ratio > 0.2) {
     if (in_slot_car_adjust_count_ >= 3) {
@@ -1370,7 +1370,7 @@ const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
       return false;
     }
     EgoInfoUnderSlot& ego_info =
-        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
     if (ego_pose.x <= slot_len) {
       if (ego_lat_offset < 1.0 &&
           std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(5.0)) {
@@ -1539,7 +1539,7 @@ void NarrowSpaceScenario::DebugPathString(
 const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const ApaParameters& param = apa_param.GetParam();
 
   // note: slot points' order is corrected in slot management
@@ -1670,7 +1670,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
 const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
   const ApaParameters& config = apa_param.GetParam();
   EgoInfoUnderSlot& ego_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const bool rear_axis_lon_condition =
       ego_info.terminal_err.pos.x() <
@@ -1716,7 +1716,7 @@ void NarrowSpaceScenario::ScenarioTry() {
   }
 
   auto& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   if (ego_info_under_slot.slot.slot_type_ != SlotType::PERPENDICULAR) {
     return;

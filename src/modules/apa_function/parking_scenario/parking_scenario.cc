@@ -135,8 +135,6 @@ const bool ParkingScenario::CheckPlanSkip() const {
       !apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "plan has been finished or failed, should skip";
 
-    // apa_world_ptr_->GetSlotManagerPtr()->Reset();
-
     return true;
   } else {
     return false;
@@ -248,25 +246,26 @@ void ParkingScenario::GenPlanningPath() {
 
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
-      std::max(frame_.ego_slot_info.slot_occupied_ratio,
-               apa_world_ptr_->GetNewSlotManagerPtr()
-                   ->ego_info_under_slot_.slot_occupied_ratio);
+      apa_world_ptr_->GetSlotManagerPtr()
+          ->ego_info_under_slot_.slot_occupied_ratio;
 
   // send slot type to control
   planning_output_.trajectory.trajectory_points[2].distance =
-      static_cast<double>(apa_world_ptr_->slot_type_);
+      static_cast<double>(
+          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot_type);
 
   // send remain dist col det to uss
   // only set a flag let control can use it
-  const double flag =
-      (apa_world_ptr_->GetNewSlotManagerPtr()
-               ->ego_info_under_slot_.slot.slot_type_ ==
-           SlotType::PERPENDICULAR ||
-       apa_world_ptr_->GetNewSlotManagerPtr()
-               ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT)
-          ? 1.0
-          : 0.0;
-  planning_output_.trajectory.trajectory_points[3].distance = flag;
+  // retire it, only rely on real time braking
+  // const double flag =
+  //     (apa_world_ptr_->GetSlotManagerPtr()
+  //              ->ego_info_under_slot_.slot.slot_type_ ==
+  //          SlotType::PERPENDICULAR ||
+  //      apa_world_ptr_->GetSlotManagerPtr()
+  //              ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT)
+  //         ? 1.0
+  //         : 0.0;
+  planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
   planning_output_.trajectory.trajectory_points[4].distance =
       frame_.remain_dist_col_det;
@@ -274,18 +273,6 @@ void ParkingScenario::GenPlanningPath() {
   // set plan gear cmd
   auto gear_command = &(planning_output_.gear_command);
   gear_command->available = true;
-
-  // reset obs remain dist when gear shift
-  if ((frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-       gear_command->gear_command_value ==
-           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE) ||
-      (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-       gear_command->gear_command_value ==
-           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE)) {
-    frame_.remain_dist_uss = 2.68;
-    frame_.remain_dist_col_det = 2.68;
-  }
-
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
   } else {
@@ -299,52 +286,6 @@ void ParkingScenario::GenPlanningPath() {
 
 const bool ParkingScenario::CheckStuckFailed() {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
-}
-
-const bool ParkingScenario::UpdateObstacleLocal() {
-  auto& ego_slot_info = frame_.ego_slot_info;
-  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
-      ego_slot_info.g2l_tf);
-  const auto obstacle_manager_ptr = apa_world_ptr_->GetObstacleManagerPtr();
-
-  // 只是临时使用而已 其实不应该把障碍物转换到ego_slot_info
-  // 这个函数待整体适配完需要删除 应该直接从障碍物管理器中获取障碍物
-
-  std::vector<ApaObstacle*> obs_vec;
-  std::vector<Eigen::Vector2d> obs_pt_vec;
-  ego_slot_info.obs_pt_vec_slot.clear();
-
-  // 获取超声波点云
-  if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
-                                        obs_vec)) {
-    for (const auto& obs : obs_vec) {
-      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
-                                           obs->GetPtClout2dLocal().begin(),
-                                           obs->GetPtClout2dLocal().end());
-    }
-  }
-
-  // 获取OCC点云
-  if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::FUSION_POINT_CLOUD,
-                                        obs_vec)) {
-    for (const auto& obs : obs_vec) {
-      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
-                                           obs->GetPtClout2dLocal().begin(),
-                                           obs->GetPtClout2dLocal().end());
-    }
-  }
-
-  // 获取接地线点云
-  if (obstacle_manager_ptr->GetObstacle(
-          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
-    for (const auto& obs : obs_vec) {
-      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
-                                           obs->GetPtClout2dLocal().begin(),
-                                           obs->GetPtClout2dLocal().end());
-    }
-  }
-
-  return true;
 }
 
 void ParkingScenario::UpdateRemainDist(const double uss_safe_dist) {
@@ -474,10 +415,10 @@ const bool ParkingScenario::PostProcessPath() {
   // hack: insert line of 0.1m compensating control error to reduce gear change
   // num
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_IN_CAR_FRONT
+      ApaStateMachine::ACTIVE_IN_CAR_FRONT
       //     &&
       // frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE
-      ) {
+  ) {
     const Eigen::Vector2d start_point(x_vec[x_vec_size - 2],
                                       y_vec[x_vec_size - 2]);
 
@@ -546,7 +487,7 @@ void ParkingScenario::ThreadClear() { return; }
 void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
   std::shared_ptr<ApaSlotManager> sslot_manager =
-      apa_world_ptr_->GetNewSlotManagerPtr();
+      apa_world_ptr_->GetSlotManagerPtr();
   sslot_manager->ego_info_under_slot_.slot.release_info_
       .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;

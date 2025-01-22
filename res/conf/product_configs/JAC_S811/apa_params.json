@@ -310,7 +310,7 @@
   "slot_occupied_ratio_max_heading_err": 76.8,
   "max_slot_window_size": 3,
   "max_limiter_window_size": 3,
-  "slot_release_car_lat_buffer": 0.15,
+  "slot_release_channel_width": 4.86,
 
   "comment_17": "gen output params",
   "max_velocity": 0.6,

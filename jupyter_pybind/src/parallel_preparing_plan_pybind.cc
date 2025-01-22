@@ -194,7 +194,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
     slm_frame.ego_slot_info.obs_pt_vec_slot.emplace_back(obs_pt);
   }
 
-  apa_world_ptr->GetSlotManagerPtr()->SetFrame(slm_frame);
+  apa_world_ptr->GetRetiredSlotManagerPtr()->SetFrame(slm_frame);
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
   parallel_park_planner.UpdateEgoSlotInfo();
   parallel_park_planner.GetMutableFrame()->ego_slot_info.obs_pt_vec_slot =

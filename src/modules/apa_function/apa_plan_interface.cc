@@ -95,10 +95,10 @@ void ApaPlanInterface::AddReleasedSlotInfo(
     iflyauto::PlanningOutput &planning_output) {
   planning_output.successful_slot_info_list_size = 0;
 
-  apa_world_ptr_->GetNewSlotManagerPtr()->GenerateReleaseSlotIdVec();
+  apa_world_ptr_->GetSlotManagerPtr()->GenerateReleaseSlotIdVec();
 
   const std::vector<size_t> &release_slot_id_vec =
-      apa_world_ptr_->GetNewSlotManagerPtr()->GetReleaseSlotIdVec();
+      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
 
   std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {

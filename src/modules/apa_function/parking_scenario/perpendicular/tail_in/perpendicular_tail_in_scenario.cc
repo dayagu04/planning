@@ -41,7 +41,7 @@ void PerpendicularTailInScenario::ScenarioTry() {
     return;
   }
   Reset();
-  SlotReleaseInfo& release_info = apa_world_ptr_->GetNewSlotManagerPtr()
+  SlotReleaseInfo& release_info = apa_world_ptr_->GetSlotManagerPtr()
                                       ->ego_info_under_slot_.slot.release_info_;
   if (!UpdateEgoSlotInfo()) {
     release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
@@ -144,7 +144,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
       frame_.plan_fail_reason = PATH_PLAN_FAILED;
       frame_.dynamic_replan_fail_count++;
       EgoInfoUnderSlot& ego_info_under_slot =
-          apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
       ego_info_under_slot.move_slot_dist =
           ego_info_under_slot.last_move_slot_dist;
 
@@ -290,7 +290,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ego_info_under_slot.origin_pose_global.heading_vec =
       ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
@@ -349,7 +349,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
             ego_info_under_slot.origin_pose_global.heading_vec);
 
     // 这个初始参考挡位对迭代式路径规划已经没有什么意义
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
       ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
     } else if (cross_ego_to_slot_heading < 0.0 &&
@@ -466,7 +466,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
       (param.max_car_width - param.car_width) * 0.5 - 0.0168;
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const double mir_x = ego_info_under_slot.target_pose.pos.x() +
                        param.lon_dist_mirror_to_rear_axle - 0.368;
@@ -788,7 +788,7 @@ const bool PerpendicularTailInScenario::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
 
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const TLane& obs_tlane = ego_info_under_slot.obs_tlane;
 
   geometry_lib::LineSegment tlane_line;
@@ -895,7 +895,7 @@ const bool PerpendicularTailInScenario::GenObstacles() {
 
 const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   GeometryPathInput input;
   input.ego_info_under_slot = ego_info_under_slot;
   input.is_complete_path = apa_world_ptr_->GetSimuParam().is_complete_path;
@@ -1129,7 +1129,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
 const bool PerpendicularTailInScenario::CheckFinished() {
   const auto& terminal_err_pose =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.terminal_err;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.terminal_err;
 
   const bool lon_condition =
       terminal_err_pose.pos.x() < apa_param.GetParam().finish_lon_err;
@@ -1138,7 +1138,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const double y2 = (terminal_err_pose.pos +
                      (apa_param.GetParam().wheel_base +
                       apa_param.GetParam().front_overhanging) *
-                         apa_world_ptr_->GetNewSlotManagerPtr()
+                         apa_world_ptr_->GetSlotManagerPtr()
                              ->ego_info_under_slot_.cur_pose.heading_vec)
                         .y();
   JSON_DEBUG_VALUE("terminal_error_y_front", y2)
@@ -1176,7 +1176,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
   // stucked by directly behind uss
   const bool enter_slot_condition =
-      apa_world_ptr_->GetNewSlotManagerPtr()
+      apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
@@ -1227,13 +1227,13 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
   heading_vec.reserve(traj_size);
 
   const Eigen::Vector2d limiter_mid =
-      (apa_world_ptr_->GetNewSlotManagerPtr()
+      (apa_world_ptr_->GetSlotManagerPtr()
            ->ego_info_under_slot_.l2g_tf.GetPos(
-               apa_world_ptr_->GetNewSlotManagerPtr()
+               apa_world_ptr_->GetSlotManagerPtr()
                    ->ego_info_under_slot_.virtual_limiter.first) +
-       apa_world_ptr_->GetNewSlotManagerPtr()
+       apa_world_ptr_->GetSlotManagerPtr()
            ->ego_info_under_slot_.l2g_tf.GetPos(
-               apa_world_ptr_->GetNewSlotManagerPtr()
+               apa_world_ptr_->GetSlotManagerPtr()
                    ->ego_info_under_slot_.virtual_limiter.second)) *
       0.5;
 
@@ -1306,7 +1306,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
       CollisionDetector::CollisionResult col_res;
       pnc::geometry_lib::PathSegment path_seg_local = path_seg_global;
       const GlobalToLocalTf& g2l_tf =
-          apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
+          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
       if (path_seg_global.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
         path_seg_local.line_seg.pA = g2l_tf.GetPos(path_seg_global.line_seg.pA);
         path_seg_local.line_seg.pB = g2l_tf.GetPos(path_seg_global.line_seg.pB);
@@ -1404,7 +1404,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
 const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const ApaParameters& param = apa_param.GetParam();
   const double lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
                                 ? param.safe_uss_remain_dist_out_slot
@@ -1468,7 +1468,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
 const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   const auto& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const double ego_stop_dist = 1.0;
 
@@ -1492,7 +1492,7 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
 
   pnc::geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
 
   const pnc::geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
 
@@ -1641,7 +1641,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingRemainDist(
 const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   // 拿到之前的路径 并转换到如今的车位坐标系下
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(ego_info_under_slot.g2l_tf);
 
@@ -1656,6 +1656,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   const geometry_lib::PathPoint tar_pose_now = geometry_path_now.end_pose;
 
   if (geometry_path_now.gear_change_count > 0) {
+    ILOG_INFO << "now path gear change count bigger than 0";
     return false;
   }
 
@@ -1669,6 +1670,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   // 如果之前的规划终点相对现在的规划终点更靠近实际终点
   if (std::fabs((tar_pose_bef.pos - tar_pose_real.pos).y()) <
       std::fabs((tar_pose_now.pos - tar_pose_real.pos).y())) {
+    ILOG_INFO << "bef path is more close to actual target pose than now path";
     return false;
   }
 
@@ -1676,6 +1678,8 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   if (std::fabs((tar_pose_bef.pos - tar_pose_now.pos).y()) < 0.05 &&
       std::fabs((tar_pose_now.pos - tar_pose_real.pos).y()) <
           apa_param.GetParam().finish_lat_err * 0.6) {
+    ILOG_INFO
+        << "bef path is close to now path, and bef path meet finish condition";
     return false;
   }
 
@@ -1895,7 +1899,7 @@ const bool PerpendicularTailInScenario::CheckSegCompleted() {
 const PerpendicularTailInScenario::SlotObsType
 PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   // 2米2的车位重规划考虑的障碍物单侧最多入侵车位15厘米
   double dy1 = 0.15 / 1.1 * (ego_info_under_slot.slot.slot_width_ * 0.5);
 
@@ -2028,9 +2032,9 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
   const bool dynamic_update_flag =
       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      (apa_world_ptr_->GetNewSlotManagerPtr()
+      (apa_world_ptr_->GetSlotManagerPtr()
                ->ego_info_under_slot_.confidence == 1 &&
-       mathlib::IsInBound(apa_world_ptr_->GetNewSlotManagerPtr()
+       mathlib::IsInBound(apa_world_ptr_->GetSlotManagerPtr()
                               ->ego_info_under_slot_.slot_occupied_ratio,
                           apa_param.GetParam().pose_slot_occupied_ratio,
                           apa_param.GetParam().pose_slot_occupied_ratio_3));
@@ -2055,7 +2059,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
 
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
