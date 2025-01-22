@@ -61,7 +61,7 @@ void UpdateSlot(std::vector<Eigen::Vector2d> pt_vec) {
   slot.id = 1;
   slot.allow_parking = iflyauto::ALLOW_PARKING;
 
-  g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.id = slot.id;
+  g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.id = slot.id;
 
   Eigen::Vector2d pt_01_vec = (pt_vec[1] - pt_vec[0]).normalized();
   Eigen::Vector2d pt_23mid_01mid_vec =
@@ -71,12 +71,12 @@ void UpdateSlot(std::vector<Eigen::Vector2d> pt_vec) {
       kRad2Deg);
   if (angle > 80.0 && angle < 100.0) {
     slot.type = iflyauto::PARKING_SLOT_TYPE_VERTICAL;
-    g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.slot_type =
+    g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
         SlotType::PERPENDICULAR;
     ILOG_INFO << "PERPENDICULAR SLOT";
   } else {
     slot.type = iflyauto::PARKING_SLOT_TYPE_SLANTING;
-    g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.slot_type =
+    g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
         SlotType::SLANT;
     ILOG_INFO << "SLANT SLOT";
   }
@@ -158,7 +158,7 @@ std::vector<Eigen::Vector2d> GetObsVec() {
           g_apa_world_ptr->GetCollisionDetectorPtr()->GetObstaclesMap();
 
   const auto& l2g_tf =
-      g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
 
   for (const auto& obs_pair : obstacles_map) {
     for (const auto& obstacle : obs_pair.second) {

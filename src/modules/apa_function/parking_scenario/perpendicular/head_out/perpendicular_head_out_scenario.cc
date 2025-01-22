@@ -183,7 +183,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
 
   // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ego_info_under_slot.origin_pose_global.heading_vec =
       ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
@@ -296,7 +296,7 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
       (param.max_car_width - param.car_width) * 0.5 - 0.0168;
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const double mir_x = ego_info_under_slot.target_pose.pos.x() +
                        param.lon_dist_mirror_to_rear_axle - 0.368;
@@ -569,7 +569,7 @@ const bool PerpendicularHeadOutScenario::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
 
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const TLane& obs_tlane = ego_info_under_slot.obs_tlane;
 
   geometry_lib::LineSegment tlane_line;
@@ -677,7 +677,7 @@ const bool PerpendicularHeadOutScenario::GenObstacles() {
 const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   ILOG_INFO << "-------------- PathPlanOnce --------------";
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const bool conditions_1 =
       ego_info_under_slot.cur_pose.pos.x() < 5.5 && frame_.is_replan_second;
 
@@ -956,7 +956,7 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
 const bool PerpendicularHeadOutScenario::CheckFinished() {
   bool parking_finish = false;
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const bool heading_condition_1 =
       std::fabs(ego_info_under_slot.cur_pose.heading) <=
@@ -1004,7 +1004,7 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
 
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
@@ -1173,7 +1173,7 @@ void PerpendicularHeadOutScenario::Log() const {
 const PerpendicularHeadOutScenario::SlotObsType
 PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   // 2米2的车位重规划考虑的障碍物单侧最多入侵车位15厘米
   double dy1 = 0.15 / 1.1 * (ego_info_under_slot.slot.slot_width_ * 0.5);
 
@@ -1289,7 +1289,7 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 
 const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
   return !path_trim_flag_ &&
-         apa_world_ptr_->GetNewSlotManagerPtr()
+         apa_world_ptr_->GetSlotManagerPtr()
                  ->ego_info_under_slot_.slot_occupied_ratio < 0.15;
 }
 
@@ -1297,7 +1297,7 @@ const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
   const pnc::geometry_lib::PathPoint& current_path_last_point =
       current_path_point_global_vec_.back();
   Eigen::Vector2d current_path_last_local_point =
-      apa_world_ptr_->GetNewSlotManagerPtr()
+      apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.g2l_tf.GetPos(current_path_last_point.pos);
 
   const bool conditions_endpoint_correction =
@@ -1313,10 +1313,10 @@ const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
         frame_.current_path_length - frame_.remain_dist;
     // ILOG_INFO << "current_car_s " << current_car_s;
     pnc::geometry_lib::GlobalToLocalTf& g2l_tf =
-        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
 
     pnc::geometry_lib::LocalToGlobalTf& l2g_tf =
-        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
 
     std::vector<pnc::geometry_lib::PathPoint> path_point_local_vec;
     pnc::geometry_lib::PathPoint path_point_local;

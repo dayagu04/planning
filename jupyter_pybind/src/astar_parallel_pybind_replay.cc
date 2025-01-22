@@ -518,7 +518,7 @@ const bool PlanOnce(
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info = scenario->GetApaWorldPtr()
-                                                        ->GetNewSlotManagerPtr()
+                                                        ->GetSlotManagerPtr()
                                                         ->ego_info_under_slot_;
     ego_slot_info_ = ego_info;
 

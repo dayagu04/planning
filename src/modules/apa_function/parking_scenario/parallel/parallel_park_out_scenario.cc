@@ -65,7 +65,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   }
 
   double safe_uss_remain_dist =
-      (apa_world_ptr_->GetNewSlotManagerPtr()
+      (apa_world_ptr_->GetSlotManagerPtr()
            ->ego_info_under_slot_.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
           : 0.3;
@@ -149,7 +149,7 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   using namespace pnc::geometry_lib;
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   auto& select_slot_global =
       ego_info_under_slot.slot.origin_corner_coord_global_;
@@ -308,11 +308,11 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 
 const bool ParallelParkOutScenario::CheckFinished() {
   const double slot_occupied_ratio =
-      apa_world_ptr_->GetNewSlotManagerPtr()
+      apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot_occupied_ratio;
 
   const double heading_mag_deg =
-      std::fabs(apa_world_ptr_->GetNewSlotManagerPtr()
+      std::fabs(apa_world_ptr_->GetSlotManagerPtr()
                     ->ego_info_under_slot_.cur_pose.heading *
                 kRad2Deg);
 
@@ -344,7 +344,7 @@ const bool ParallelParkOutScenario::GenTlane() {
   // |_______________|   right side
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const double slot_length = ego_info_under_slot.slot.GetLength();
   const double slot_width = ego_info_under_slot.slot.GetWidth();
@@ -798,7 +798,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
       apa_world_ptr_->GetSimuParam().is_complete_path;
 
   const auto& ego_slot_info =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   path_planner_input.ego_pose = ego_slot_info.cur_pose;
   path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
@@ -963,7 +963,7 @@ const bool ParallelParkOutScenario::CheckSegCompleted() {
 
 void ParallelParkOutScenario::Log() const {
   const auto& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const auto& l2g_tf = ego_info_under_slot.l2g_tf;
 
@@ -1034,8 +1034,8 @@ void ParallelParkOutScenario::Log() const {
                    ego_info_under_slot.slot_occupied_ratio)
 
   std::vector<double> target_ego_pos_slot = {
-      frame_.ego_slot_info.target_ego_pos_slot.x(),
-      frame_.ego_slot_info.target_ego_pos_slot.y()};
+      ego_info_under_slot.target_pose.pos.x(),
+      ego_info_under_slot.target_pose.pos.y()};
 
   JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
   JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2)
