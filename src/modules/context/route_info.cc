@@ -217,6 +217,10 @@ void RouteInfo::CaculateMergeInfo(const ad_common::sdmap::SDMap& sd_map,
               MakesureMergeDirection(*merge_seg, sd_map);
           route_info_output_.distance_to_first_road_merge =
               merge_info_temp.second;
+          route_info_output_.merge_seg_forward_lane_nums =
+              merge_seg->forward_lane_num();
+          route_info_output_.merge_last_seg_forward_lane_nums =
+              merge_seg_last_seg->forward_lane_num();
           is_find_first_merge_onfo = true;
           traverse_num++;
         } else if (is_find_first_merge_onfo) {
