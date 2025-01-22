@@ -1,5 +1,7 @@
 #include "perpendicular_head_out_scenario.h"
 
+#include <math.h>
+
 #include <queue>
 
 #include "debug_info_log.h"
@@ -1300,10 +1302,15 @@ const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
       apa_world_ptr_->GetSlotManagerPtr()
           ->ego_info_under_slot_.g2l_tf.GetPos(current_path_last_point.pos);
 
+  double local_heading= apa_world_ptr_->GetSlotManagerPtr()
+                              ->ego_info_under_slot_.g2l_tf.GetHeading(
+                                  current_path_last_point.heading);
+
   const bool conditions_endpoint_correction =
       !end_position_correction_flag_ &&
       current_path_last_local_point.x() < 7.0 &&
-      frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE;
+      frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+      fabs(local_heading* kRad2Deg) > 80;
   return conditions_endpoint_correction;
 }
 
