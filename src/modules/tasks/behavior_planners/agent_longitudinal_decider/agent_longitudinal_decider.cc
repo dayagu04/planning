@@ -73,6 +73,7 @@ constexpr double kIntersectionFactor = 0.3;
 constexpr double kconsideredLonDistanceInCurve = 80.0;
 constexpr double kDistanceCurvature = 30.0;
 constexpr double kTimeCurvature = 2.0;
+constexpr double kLateralSafeBuffer = 0.3;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath>& planned_path,
                               const planning_math::Box2d& agent_box,
@@ -682,6 +683,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double vehicle_length = vehicle_param.length;
+  const double vehicle_width = vehicle_param.width;
   const double rear_axle_to_rear_edge =
       vehicle_length - vehicle_param.front_edge_to_rear_axle;
   const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
@@ -712,6 +714,8 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     }
 
     double front_corner_s = -std::numeric_limits<double>::max();
+    double corner_max_l = -std::numeric_limits<double>::max();
+    double corner_min_l = std::numeric_limits<double>::max();
     std::vector<planning_math::Vec2d> corners;
     agent->box().GetAllCorners(&corners);
     for (const auto& corner : corners) {
@@ -724,10 +728,26 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       if (corner_s > front_corner_s) {
         front_corner_s = corner_s;
       }
+      corner_min_l = std::fmin(corner_min_l, corner_l);
+      corner_max_l = std::fmax(corner_max_l, corner_l);
     }
-    if (std::fabs(front_corner_s) < -1.0e6) {
+
+    double min_lat_l_from_ego = 0.0;
+    double corner_l_from_ego = 0.0;
+    if (agent_l > kEpsilon) {
+      corner_l_from_ego = corner_min_l - ego_l;
+      min_lat_l_from_ego =
+          ((agent_l - ego_l) * corner_l_from_ego) > 0 ? corner_l_from_ego : 0.0;
+    } else {
+      corner_l_from_ego = corner_max_l - ego_l;
+      min_lat_l_from_ego =
+          ((agent_l - ego_l) * corner_l_from_ego) > 0 ? corner_l_from_ego : 0.0;
+    }
+
+    if (std::fabs(front_corner_s) < kEpsilon) {
       continue;
     }
+
     const double front_edge_s_diff = front_corner_s - ego_front_edge_s;
     // filter front agent
     if (front_edge_s_diff > kEpsilon) {
@@ -737,7 +757,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     // filter consider rear agent
     if (IsConsiderBackObs(ego_lane_coord, planning_init_point, agent,
                           ego_front_edge_s, front_corner_s, ego_center_s,
-                          front_edge_s_diff)) {
+                          front_edge_s_diff, min_lat_l_from_ego)) {
       continue;
     }
 
@@ -783,11 +803,13 @@ bool AgentLongitudinalDecider::IsConsiderBackObs(
     const std::shared_ptr<KDPath> planned_path,
     const PlanningInitPoint& init_point, const agent::Agent* agent,
     const double ego_front_s, const double front_corner_s,
-    const double ego_center_s, const double front_edge_s_diff) const {
+    const double ego_center_s, const double front_edge_s_diff,
+    const double min_lat_l_from_ego) const {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double k_agent_ignore_only_position_diff_thd =
       -(vehicle_param.length / 2.0 + 8.0);
+  const double ego_width = vehicle_param.width;
 
   auto& mutable_agent_manager =
       session_->mutable_environmental_model()->mutable_agent_manager();
@@ -803,8 +825,9 @@ bool AgentLongitudinalDecider::IsConsiderBackObs(
   }
 
   // 1.agent is not cut-in and rear of ego
-  const bool filter_rear_no_cut_in_agent = FilterRearNoCutInAgent(
-      planned_path, init_point, ego_front_s, front_corner_s, agent);
+  const bool filter_rear_no_cut_in_agent =
+      FilterRearNoCutInAgent(planned_path, init_point, ego_front_s, ego_width,
+                             front_corner_s, agent, min_lat_l_from_ego);
   if (filter_rear_no_cut_in_agent) {
     return false;
   }
@@ -826,7 +849,8 @@ bool AgentLongitudinalDecider::IsConsiderBackObs(
 bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
     const std::shared_ptr<KDPath> planned_path,
     const PlanningInitPoint& init_point, const double ego_front_s,
-    const double agent_front_s, const agent::Agent* ptr_agent) const {
+    const double ego_width, const double agent_front_s,
+    const agent::Agent* ptr_agent, const double min_lat_l_from_ego) const {
   constexpr double kAgentLowerSpeedKph = 40.0;
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -859,8 +883,10 @@ bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
   }
   bool is_in_ego_lane =
       ptr_obj_lane->get_virtual_id() == ego_lane->get_virtual_id();
+  const double nearest_distance_from_ego =
+      std::fabs(min_lat_l_from_ego) - 0.5 * ego_width;
   if (is_in_ego_lane) {
-    if (nearest_l > std::fabs(half_ego_lane_width)) {
+    if (nearest_distance_from_ego > kLateralSafeBuffer) {
       need_judge = true;
     }
   }

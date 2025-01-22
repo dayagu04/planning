@@ -86,12 +86,14 @@ class AgentLongitudinalDecider : public Task {
       const std::shared_ptr<planning_math::KDPath> planned_path,
       const PlanningInitPoint& init_point, const agent::Agent* agent,
       const double ego_front_s, const double front_corner_s,
-      const double ego_center_s, const double front_edge_s_diff) const;
+      const double ego_center_s, const double front_edge_s_diff,
+      const double min_lat_l_from_ego) const;
 
   bool FilterRearNoCutInAgent(
       const std::shared_ptr<planning_math::KDPath> planned_path,
       const PlanningInitPoint& init_point, const double ego_front_s,
-      const double agent_front_s, const agent::Agent* agent) const;
+      const double ego_width, const double agent_front_s,
+      const agent::Agent* agent, const double min_lat_l_from_ego) const;
 
   double GetFilterUltraDistanceWithEgoVel(const double ego_vel) const;
 
