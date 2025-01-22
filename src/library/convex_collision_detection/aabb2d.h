@@ -63,14 +63,16 @@ class CDL_EXPORT AABB {
     // x bound
     if (p[0] < min_[0]) {
       min_[0] = p[0];
-    } else if (p[0] > max_[0]) {
+    }
+    if (p[0] > max_[0]) {
       max_[0] = p[0];
     }
 
     // y bound
     if (p[1] < min_[1]) {
       min_[1] = p[1];
-    } else if (p[1] > max_[1]) {
+    }
+    if (p[1] > max_[1]) {
       max_[1] = p[1];
     }
 

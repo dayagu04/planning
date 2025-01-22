@@ -50,7 +50,6 @@ namespace planning {
 
 // 控制可以执行的距离
 constexpr double rs_path_seg_advised_dist = 0.35;
-constexpr double max_search_time_ms = 10000.0;
 
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const VehicleParam& veh_param) {
@@ -2813,8 +2812,6 @@ void HybridAStar::GearRerversePathAttempt(
   double astar_search_start_time = IflyTime::Now_ms();
   double astar_search_time;
   heuristic_time_ = 0.0;
-  // 100 ms
-  constexpr double astar_max_search_time = 100.0;
 
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
@@ -2866,7 +2863,7 @@ void HybridAStar::GearRerversePathAttempt(
 
     // if bigger than 100 ms，break
     astar_search_time = current_time - astar_search_start_time;
-    if (astar_search_time > astar_max_search_time) {
+    if (astar_search_time > config_.max_search_time_ms_for_no_gear_switch) {
       ILOG_INFO << "time out " << astar_search_time;
       break;
     }
@@ -3267,8 +3264,6 @@ void HybridAStar::GearDrivePathAttempt(
   double astar_search_start_time = IflyTime::Now_ms();
   double astar_search_time;
   heuristic_time_ = 0.0;
-  // 100 ms
-  constexpr double astar_max_search_time = 100.0;
 
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
@@ -3320,7 +3315,7 @@ void HybridAStar::GearDrivePathAttempt(
 
     // if bigger than 100 ms，break
     astar_search_time = current_time - astar_search_start_time;
-    if (astar_search_time > astar_max_search_time) {
+    if (astar_search_time > config_.max_search_time_ms_for_no_gear_switch) {
       ILOG_INFO << "time out " << astar_search_time;
       break;
     }
@@ -3779,7 +3774,7 @@ bool HybridAStar::AstarSearch(
 
     // if bigger than 10 s，break
     astar_search_time = current_time - astar_search_start_time;
-    if (astar_search_time > max_search_time_ms) {
+    if (astar_search_time > config_.max_search_time_ms) {
       ILOG_INFO << "time out " << astar_search_time;
       break;
     }

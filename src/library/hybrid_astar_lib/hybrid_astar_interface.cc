@@ -222,7 +222,7 @@ int HybridAStarInterface::UpdateOutput() {
       ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
 
       // check time
-      if (coarse_traj_.time_ms > 1000.0) {
+      if (coarse_traj_.time_ms > config_.max_search_time_ms) {
         break;
       }
 
@@ -302,7 +302,7 @@ int HybridAStarInterface::UpdateOutput() {
                 << coarse_traj_.x.size();
 
       // check time
-      if (coarse_traj_.time_ms > 1000.0) {
+      if (coarse_traj_.time_ms > config_.max_search_time_ms) {
         break;
       }
 
