@@ -484,35 +484,6 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
         speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
   }
 
-  // binwang33: 待横向障碍物决策开发，横向侵入但是无法nudge
-  // const auto& lateral_invade_agents_info =
-  // lateral_decision_data->LateralInvadeAgentInfo();
-
-  // for (const auto &invade_agent_info : lateral_invade_agents_info) {
-  //   const auto invade_agent_id = invade_agent_info.agent_id;
-  //   if (agent_id_st_boundaries_map.count(invade_agent_id) > 0) {
-  //     continue;
-  //   }
-  //   bool is_not_in_neighbor_agent_id =
-  //       neighbor_agent_id_st_boundraies_map.count(invade_agent_id) == 0;
-  //   LOG_DEBUG("is_not_in_neighbor_agent_id =  [%d] \n",
-  //             is_not_in_neighbor_agent_id);
-  //   if (is_not_in_neighbor_agent_id) {
-  //     const agent::Agent *invade_agent =
-  //         agent_manger->GetAgent(invade_agent_id);
-  //     const bool is_succeeded_construct_neighbor_lane_st_graph =
-  //         ConstructNeighborLaneStGraph(invade_agent);
-  //     LOG_DEBUG("tis_succeeded_construct_neighbor_lane_st_graph =  [%d] \n",
-  //               is_succeeded_construct_neighbor_lane_st_graph);
-  //     if (!is_succeeded_construct_neighbor_lane_st_graph) {
-  //       continue;
-  //     }
-  //   }
-
-  //   neighbor_agents_decision_table[invade_agent_id] =
-  //       speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
-  //   LOG_DEBUG("invade agent id =  [%d] \n", invade_agent_id);
-  // }
   const auto mutable_st_graph =
       session_->mutable_planning_context()->st_graph();
   if (!neighbor_agents_decision_table.empty()) {
@@ -526,7 +497,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
 }
 
 // NOTE: ignored agents in lateral decision mean agents invade into ego cur lane
-// and do not overlap with planned path probablly, need consider the gap between
+// and do not overlap with planned path probably, need consider the gap between
 // them
 void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const std::shared_ptr<VirtualLane> &ego_cur_lane,
