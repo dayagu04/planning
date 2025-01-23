@@ -3,12 +3,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <utility>
 #include <vector>
 
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
-#include "src/modules/apa_function/apa_param_config.h"
 #include "pose2d.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 
@@ -130,6 +131,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   float dist;
   PoseRegulateCandidate candidate;
   bool check_left = true;
+  center_line_target_obs_dist_ = GetDistToObs(&global_pose, edt);
 
   for (int i = 0; i < y_sampling_num; i++) {
     // left
@@ -226,10 +228,10 @@ const bool TargetPoseRegulator::IsCandidatePoseSafe(
   return false;
 }
 
-const Pose2D TargetPoseRegulator::GetCandidatePose(
+const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePose(
     const double lat_buffer) const {
   if (candidate_info_.size() <= 0) {
-    return center_line_target_;
+    return std::make_pair(center_line_target_, center_line_target_obs_dist_);
   }
 
   double dist;
@@ -241,11 +243,11 @@ const Pose2D TargetPoseRegulator::GetCandidatePose(
     if (dist > 0.0) {
       ILOG_INFO << "lat offset = " << obj.lat_offset
                 << ",obs dist = " << obj.dist_to_obs;
-      return obj.pose;
+      return std::make_pair(obj.pose, obj.dist_to_obs);
     }
   }
 
-  return center_line_target_;
+  return std::make_pair(center_line_target_, center_line_target_obs_dist_);
 }
 
 void TargetPoseRegulator::DebugString() {
@@ -271,6 +273,7 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   Pose2D global_pose;
   AstarPathGear gear = AstarPathGear::NONE;
   global_pose = center_line_target_;
+  center_line_target_obs_dist_ = GetDistToObs(&global_pose, edt);
 
   double y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2;
   y_upper = std::max(0.0, y_upper);
