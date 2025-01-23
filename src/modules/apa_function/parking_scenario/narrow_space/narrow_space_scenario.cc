@@ -1263,11 +1263,14 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
 
 void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
+      current_gear_ != AstarPathGear::DRIVE) {
     return;
   }
 
-  if (current_gear_ != AstarPathGear::REVERSE) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR &&
+      current_gear_ != AstarPathGear::REVERSE) {
     return;
   }
 

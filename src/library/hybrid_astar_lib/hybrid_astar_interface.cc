@@ -290,11 +290,6 @@ int HybridAStarInterface::UpdateOutput() {
       target_regulator_result =
           target_pose_regulator.GetCandidatePose(lat_buffer);
 
-      if (target_regulator_result.second < lat_buffer) {
-        ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-        ILOG_INFO << "target_regulator_goal_ will collide";
-        continue;
-      }
       target_regulator_goal_ = target_regulator_result.first;
 
       if (request_.path_generate_method ==
