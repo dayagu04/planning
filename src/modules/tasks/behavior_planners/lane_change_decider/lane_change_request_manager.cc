@@ -6,6 +6,7 @@
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
 #include "ego_planning_config.h"
 #include "lane_change_requests/emergence_avoid_lane_change_request.h"
 #include "lane_change_requests/overtake_lane_change_request.h"
@@ -54,6 +55,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   // TBD： 后续考虑json形式进行数据存储
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto&  reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
   auto mrc_condition = session_->mutable_planning_context()->mrc_condition();
   const bool location_valid = session_->environmental_model().location_valid();
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
@@ -70,6 +73,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
       config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
   const double odd_route_distance_threshold = 500.0;
+  const double distance_nearby_merge_point_to_surpress_merge_request = 50.0;
   const bool enable_use_emergency_avoidence_lc_request =
       config_.enable_use_emergency_avoidence_lane_change_request;
   const bool enable_use_cone_change_request =
@@ -79,6 +83,27 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const auto& function_info = session_->environmental_model().function_info();
   const int origin_relative_id_zero_nums =
       virtual_lane_mgr_->origin_relative_id_zero_nums();
+  const auto& boundary_merge_point_valid = session_->planning_context()
+                                    .ego_lane_road_right_decider_output()
+                                    .boundary_merge_point_valid;
+  const auto& boundary_merge_point = session_->planning_context()
+                                          .ego_lane_road_right_decider_output()
+                                          .boundary_merge_point;
+  const auto& cur_lane = virtual_lane_mgr_->get_current_lane();
+  double ego_distance_to_boundary_merge = 0.0;
+  if (cur_lane != nullptr) {
+    const auto& curr_reference_path = reference_path_mgr->get_reference_path_by_lane(
+        cur_lane->get_virtual_id(), false);
+    if (curr_reference_path != nullptr && boundary_merge_point_valid) {
+      const auto& refline = curr_reference_path->get_frenet_coord();
+      Point2D boundary_merge_frenet_point;
+      if (!refline->XYToSL(boundary_merge_point, boundary_merge_frenet_point)) {
+        LOG_DEBUG("LaneChangeRequestManager::fail to get ego position on current lane");
+      }
+      ego_distance_to_boundary_merge = 
+          boundary_merge_frenet_point.x - curr_reference_path->get_frenet_ego_state().s();
+    }
+  }
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -101,7 +126,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       map_request_.Update(lc_status, map_request_.tfinish());
     }
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
-        origin_relative_id_zero_nums == 1) {
+        origin_relative_id_zero_nums == 1 &&
+        ego_distance_to_boundary_merge >
+        distance_nearby_merge_point_to_surpress_merge_request) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
           merge_change_request_.is_merge_lane_change_situation();
