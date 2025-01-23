@@ -82,13 +82,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
 
-        iflyauto::LaneBoundaryType boundary_type =
-            MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
         const bool is_dashed_line =
-            (boundary_type ==
-                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-             boundary_type ==
-                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+            IsDashLineCurBoundary(transition_info_.lane_change_direction);
 
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
@@ -225,13 +220,7 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
   *lane_change_type = lc_req_mgr_->request_source();
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    iflyauto::LaneBoundaryType boundary_type =
-        MakesureCurrentBoundaryType(*lane_change_direction);
-    const bool is_dashed_line =
-        (boundary_type ==
-             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-         boundary_type ==
-             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+    const bool is_dashed_line = IsDashLineCurBoundary(*lane_change_direction);
     bool is_ego_in_perfect_pose =
         IsLatOffsetValid() && is_dashed_line;
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
@@ -1688,5 +1677,28 @@ LaneChangeStateMachineManager::GetObjsDebugInfo(const double obj_v, const double
       obj_s_vec.push_back(s);
   }
   return obj_s_vec;
+}
+bool LaneChangeStateMachineManager::IsDashLineCurBoundary(
+    const RequestType lc_direction) const {
+  const auto &cur_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  if ((cur_lane->is_nearing_ramp_mlc_task() &&
+       route_info_output.dis_to_ramp < 100) ||
+      (cur_lane->is_nearing_split_mlc_task() &&
+       route_info_output.distance_to_first_road_split < 100)) {
+    // 当接近匝道或split区域距离小于100m时，实线也可以变道
+    return true;
+  }
+  iflyauto::LaneBoundaryType boundary_type =
+      MakesureCurrentBoundaryType(lc_direction);
+  const bool is_dashed_line =
+      (boundary_type ==
+           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+       boundary_type ==
+           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+  return is_dashed_line;
 }
 }  // namespace planning

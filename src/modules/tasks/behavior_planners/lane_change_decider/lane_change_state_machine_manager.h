@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
+#include "config/basic_type.h"
 #include "define/geometry.h"
 #include "session.h"
 #include "task_interface/vision_longitudinal_behavior_planner_output.h"
@@ -154,6 +155,7 @@ class LaneChangeStateMachineManager {
       const double obj_s) const;
 
   bool IsLatOffsetValid() const;
+  bool IsDashLineCurBoundary(const RequestType lc_direction) const;
 
 
  private:
