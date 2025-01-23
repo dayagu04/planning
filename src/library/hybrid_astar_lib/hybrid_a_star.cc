@@ -3109,19 +3109,19 @@ void HybridAStar::GearDrivePathAttempt(
     return;
   }
 
-  if (start.GetX() < 5.0) {
+  double heading = IflyUnifyTheta(start.GetPhi(), M_PI);
+  if (std::fabs(heading) < (M_PI_2 - 0.001)) {
+    ILOG_INFO << "start.GetPhi() =" << heading * 57.4;
+    return;
+  }
+
+  if (start.GetX() < 8.0) {
     ILOG_INFO << "start.GetX() =" << start.GetX();
     return;
   }
 
   if (start.GetY() < -3.0 || start.GetY() > 3.0) {
     ILOG_INFO << "start.GetY() =" << start.GetY();
-    return;
-  }
-
-  double heading = IflyUnifyTheta(start.GetPhi(), M_PI);
-  if (std::fabs(heading) < (M_PI_2 - 0.001)) {
-    ILOG_INFO << "start.GetPhi() =" << heading * 57.4;
     return;
   }
 
@@ -4720,11 +4720,13 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
 
     point.x = end.x + ref_s;
     point.y = y;
-    point.phi = theta;
-
-    point.gear = request_.direction_request == ParkingVehDirection::TAIL_IN
-                     ? AstarPathGear::REVERSE
-                     : AstarPathGear::DRIVE;
+    if (request_.direction_request == ParkingVehDirection::TAIL_IN) {
+      point.phi = theta;
+      point.gear = AstarPathGear::REVERSE;
+    } else {
+      point.phi = IflyUnifyTheta(theta + M_PI, M_PI);
+      point.gear = AstarPathGear::DRIVE;
+    }
 
     point.type = AstarPathType::QUNTIC_POLYNOMIAL;
     point.kappa = kappa;

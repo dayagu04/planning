@@ -38,7 +38,7 @@ class TargetPoseRegulator : public AstarDecider {
 
   void Clear();
 
-  const Pose2D GetCandidatePose(const double lat_buffer) const;
+ const std::pair<Pose2D, double> GetCandidatePose(const double lat_buffer) const;
 
   const bool IsCandidatePoseSafe(const double lat_buffer) const;
 
@@ -67,7 +67,7 @@ class TargetPoseRegulator : public AstarDecider {
 
  private:
   Pose2D center_line_target_;
-
+  double center_line_target_obs_dist_;
   std::vector<PoseRegulateCandidate> candidate_info_;
 
   double x_check_upper_;

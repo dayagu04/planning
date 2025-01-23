@@ -137,6 +137,7 @@ int HybridAStarInterface::UpdateOutput() {
     return 0;
   }
 
+  PathClear(&coarse_traj_);
   search_state_ = AstarSearchState::SEARCHING;
 
   UpdateSearchBoundary();
@@ -189,9 +190,17 @@ int HybridAStarInterface::UpdateOutput() {
                             static_cast<float>(lat_buffer));
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
 
-      target_regulator_goal_ =
+      // judge target regulator goal if collide
+      std::pair<Pose2D, double> target_regulator_result;
+      target_regulator_result =
           target_pose_regulator.GetCandidatePose(lat_buffer);
 
+      if (target_regulator_result.second < lat_buffer) {
+        ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+        ILOG_INFO << "target_regulator_goal_ will collide";
+        continue;
+      }
+      target_regulator_goal_ = target_regulator_result.first;
       // search single shot path.
       if (lat_buffer > 0.2 - 1e-4) {
         if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
@@ -243,10 +252,19 @@ int HybridAStarInterface::UpdateOutput() {
 
     // todo: 需要限制搜索时间
     ILOG_INFO << "scenario try planning";
-    target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
+    std::pair<Pose2D, double> target_regulator_result;
+    target_regulator_result =
+        target_pose_regulator.GetCandidatePose(lat_buffer);
+
+    if (target_regulator_result.second < lat_buffer) {
+      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+      ILOG_INFO << "target_regulator_goal_ will collide";
+    }
+    target_regulator_goal_ = target_regulator_result.first;
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                obs_, request_, &clear_zone_, &coarse_traj_,
                                &edt_, &ref_line_);
+
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
     double dist_to_slot_up_edge =
@@ -267,8 +285,17 @@ int HybridAStarInterface::UpdateOutput() {
                             static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
-      target_regulator_goal_ =
+
+      std::pair<Pose2D, double> target_regulator_result;
+      target_regulator_result =
           target_pose_regulator.GetCandidatePose(lat_buffer);
+
+      if (target_regulator_result.second < lat_buffer) {
+        ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+        ILOG_INFO << "target_regulator_goal_ will collide";
+        continue;
+      }
+      target_regulator_goal_ = target_regulator_result.first;
 
       if (request_.path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
@@ -400,7 +427,16 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
   }
 
-  target_regulator_goal_ = target_pose_regulator.GetCandidatePose(lat_buffer);
+  std::pair<Pose2D, double> target_regulator_result;
+  target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);
+
+  if (target_regulator_result.second < lat_buffer) {
+    ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+    ILOG_INFO << "target_regulator_goal_ will collide";
+    return;
+  }
+  target_regulator_goal_ = target_regulator_result.first;
+
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                obs_list, request, &clear_zone_, &coarse_traj_,
