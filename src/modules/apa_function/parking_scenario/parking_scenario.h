@@ -369,9 +369,15 @@ class ParkingScenario {
   virtual void GenPlanningHmiOutput();
   virtual void GenPlanningPath();
   virtual const bool CheckStuckFailed();
-  virtual void UpdateRemainDist(const double uss_safe_dist);
+  virtual void UpdateRemainDist(
+      const double uss_safe_dist,
+      const double lat_buffer = apa_param.GetParam().lat_inflation,
+      const double extra_buffer_when_reversing = 0.068);
   virtual const double CalRemainDistFromPath();
-  virtual const double CalRemainDistFromUss(const double safe_dist);
+  virtual const double CalRemainDistFromUss(
+      const double safe_dist,
+      const double lat_buffer = apa_param.GetParam().lat_inflation,
+      const double extra_buffer_when_reversing = 0.068);
   virtual const bool PostProcessPath();
 
   void CreateTasks();

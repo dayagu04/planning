@@ -95,7 +95,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
           : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
 
   // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  UpdateRemainDist(safe_uss_remain_dist, 0.09, 0.0);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
