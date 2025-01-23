@@ -415,10 +415,8 @@ const bool ParkingScenario::PostProcessPath() {
   // hack: insert line of 0.1m compensating control error to reduce gear change
   // num
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachine::ACTIVE_IN_CAR_FRONT
-      //     &&
-      // frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE
-  ) {
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
+      frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE) {
     const Eigen::Vector2d start_point(x_vec[x_vec_size - 2],
                                       y_vec[x_vec_size - 2]);
 
