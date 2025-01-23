@@ -400,7 +400,7 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
   //   }
   // }
 
-  const double safe_dist_r = 0.8;
+  const double safe_dist_r = 0.4;
   const double safe_dist_d = 0.268;
 
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
