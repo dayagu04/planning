@@ -17,6 +17,10 @@
 
 namespace planning {
 namespace apa_planner {
+
+const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
+    const pnc::geometry_lib::PathPoint &current_pose);
+
 class CollisionDetector {
  public:
   enum ObsType {

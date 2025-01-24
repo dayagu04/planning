@@ -227,9 +227,9 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       if (dubins_path.path_count > 0 && dubins_path.gear_change_count < 1) {
         double weight = 0.0;
         if (dubins_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
-          weight = 32.0;
+          weight = 60.0;
         } else {
-          weight = 16.0;
+          weight = 26.0;
         }
         dubins_path_cost += std::fabs(dubins_path.end_pose.heading) * weight;
       }
@@ -240,34 +240,34 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         if (path_seg.seg_gear != rough_path.cur_gear) {
           fist_reverse_path_err_cost +=
               (std::fabs(path_seg.GetStartPos().y()) * 5.0 +
-               std::fabs(path_seg.GetStartHeading()) * 12.0);
+               std::fabs(path_seg.GetStartHeading()) * 16.0) +
+              path_seg.GetStartPos().x() * 4.8;
           break;
         }
       }
 
       // 障碍物距离代价
+      const double obs_dist_out_slot =
+          std::min(dubins_path.obs_dist.first, rough_path.obs_dist.first);
+
+      const double obs_dist_in_slot = rough_path.obs_dist.second;
+
+      const double max_dis = 0.70;
+      const double min_dis = 0.468;
       double obs_dist_cost = 0.0;
-      const double max_dis = 0.60;
-      const double min_dis = 0.30;
-      if (dubins_path.pt_closest2obs.first > max_dis) {
-        obs_dist_cost += 52.8 / max_dis;
-      } else if (dubins_path.pt_closest2obs.first < min_dis) {
-        obs_dist_cost += 56.8 / dubins_path.pt_closest2obs.first;
+      if (obs_dist_out_slot > max_dis) {
+        obs_dist_cost += 66.8 / max_dis;
+      } else if (obs_dist_out_slot < min_dis) {
+        obs_dist_cost += 80.8 / obs_dist_out_slot;
       } else {
-        obs_dist_cost += 52.8 / dubins_path.pt_closest2obs.first;
+        obs_dist_cost += 66.8 / obs_dist_out_slot;
       }
 
-      double weight = 36.8;
-      if (CalOccupiedRatio(rough_path.pt_closest2obs.second) > 0.1) {
-        weight = 16.8;
-        if (rough_path.gear_change_count < 1) {
-          weight = 12.8;
-        }
+      if (rough_path.gear_change_count < 1) {
+        obs_dist_cost += 24.8 / obs_dist_in_slot;
+      } else {
+        obs_dist_cost += 36.8 / obs_dist_in_slot;
       }
-
-      obs_dist_cost += (rough_path.pt_closest2obs.first > max_dis)
-                           ? (weight / max_dis)
-                           : weight / rough_path.pt_closest2obs.first;
 
       // 当前挡位最小长度代价
       double cur_gear_path_length_cost = 0.0;
@@ -306,16 +306,16 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 第一次换挡时距离车位过远代价
+      // 第一次和第二次换挡时距离车位过远代价
       double far_to_slot_cost = 0.0;
-      if (complete_path.gear_change_pose.size() > 0) {
-        const geometry_lib::PathPoint& pose =
-            complete_path.gear_change_pose.front();
+      for (size_t i = 0; i < complete_path.gear_change_pose.size() && i < 2;
+           ++i) {
+        const geometry_lib::PathPoint& pose = complete_path.gear_change_pose[i];
         if (std::fabs(pose.pos.y()) > 3.68) {
           far_to_slot_cost += (std::fabs(pose.pos.y()) - 3.67) * 68.8;
         }
-        if (std::fabs(pose.pos.x()) > 7.8) {
-          far_to_slot_cost += (std::fabs(pose.pos.x()) - 7.69) * 30.8;
+        if (std::fabs(pose.pos.x()) > 7.56) {
+          far_to_slot_cost += (std::fabs(pose.pos.x()) - 7.55) * 30.8;
         }
       }
 
@@ -344,41 +344,36 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       cost_index_map[cost] = i;
 
       if (cost < min_cost) {
-        // 如果两个代价相似， 那么这时再优先选离障碍物的
-        if (cost < min_cost - 3.68 || rough_path.pt_closest2obs.first >
-                                          pair_geometry_path_vec[better_index]
-                                              .second.pt_closest2obs.first) {
-          better_index = static_cast<int>(i);
-          min_cost = cost;
-        }
         better_index = static_cast<int>(i);
         min_cost = cost;
-        ILOG_INFO << "gear_change_count = "
-                  << static_cast<int>(complete_path.gear_change_count)
-                  << "  cost = " << cost
-                  << "  gear_change_cost = " << complete_path.gear_change_cost
-                  << "  steer_change_cost = " << complete_path.steer_change_cost
-                  << "  length_cost = " << complete_path.length_cost
-                  << "  obs_dist_cost = " << obs_dist_cost
-                  << "  dubins_path.dist_to_obs = "
-                  << dubins_path.pt_closest2obs.first << "  pt_closest2obs = "
-                  << dubins_path.pt_closest2obs.second.pos.transpose() << "  "
-                  << dubins_path.pt_closest2obs.second.heading * kRad2Deg
-                  << "  rough_path.dist_to_obs = "
-                  << rough_path.pt_closest2obs.first << "  pt_closest2obs = "
-                  << rough_path.pt_closest2obs.second.pos.transpose() << "  "
-                  << rough_path.pt_closest2obs.second.heading * kRad2Deg
-                  << "  fist_reverse_path_err_cost = "
-                  << fist_reverse_path_err_cost
-                  << "  dubins_path_cost = " << dubins_path_cost
-                  << "  ego_pose_cost = " << ego_pose_cost
-                  << "  cur_gear_path_length_cost = "
-                  << cur_gear_path_length_cost
-                  << "  gear_change_in_slot_cost = " << gear_change_in_slot_cost
-                  << "  last_line_length_cost = " << last_line_length_cost
-                  << "  one_step_cost = " << one_step_cost
-                  << "  far_to_slot_cost = " << far_to_slot_cost
-                  << "  ref_gear_cost = " << ref_gear_cost;
+        ILOG_INFO
+            << "gear_change_count = "
+            << static_cast<int>(complete_path.gear_change_count)
+            << "  cost = " << cost
+            << "  gear_change_cost = " << complete_path.gear_change_cost
+            << "  steer_change_cost = " << complete_path.steer_change_cost
+            << "  length_cost = " << complete_path.length_cost
+            << "  obs_dist_cost = " << obs_dist_cost
+            << "  obs_dist_out_slot = " << obs_dist_out_slot
+            << "  obs_dist_in_slot = "
+            << obs_dist_in_slot
+            // << "  dubins_path.dist_to_obs = "
+            // << dubins_path.pt_closest2obs.first << "  pt_closest2obs = "
+            // << dubins_path.pt_closest2obs.second.pos.transpose() << "  "
+            // << dubins_path.pt_closest2obs.second.heading * kRad2Deg
+            // << "  rough_path.dist_to_obs = "
+            // << rough_path.pt_closest2obs.first << "  pt_closest2obs = "
+            // << rough_path.pt_closest2obs.second.pos.transpose() << "  "
+            // << rough_path.pt_closest2obs.second.heading * kRad2Deg
+            << "  fist_reverse_path_err_cost = " << fist_reverse_path_err_cost
+            << "  dubins_path_cost = " << dubins_path_cost
+            << "  ego_pose_cost = " << ego_pose_cost
+            << "  cur_gear_path_length_cost = " << cur_gear_path_length_cost
+            << "  gear_change_in_slot_cost = " << gear_change_in_slot_cost
+            << "  last_line_length_cost = " << last_line_length_cost
+            << "  one_step_cost = " << one_step_cost
+            << "  far_to_slot_cost = " << far_to_slot_cost
+            << "  ref_gear_cost = " << ref_gear_cost;
       }
     }
 
@@ -413,14 +408,20 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
                   << "  gear_change_cost = " << complete_path.gear_change_cost
                   << "  steer_change_cost = " << complete_path.steer_change_cost
                   << "  length_cost = " << complete_path.length_cost
-                  << "  dubins_path.dist_to_obs = "
-                  << dubins_path.pt_closest2obs.first << "  pt_closest2obs = "
-                  << dubins_path.pt_closest2obs.second.pos.transpose() << "  "
-                  << dubins_path.pt_closest2obs.second.heading * kRad2Deg
-                  << "  rough_path.dist_to_obs = "
-                  << rough_path.pt_closest2obs.first << "  pt_closest2obs = "
-                  << rough_path.pt_closest2obs.second.pos.transpose() << "  "
-                  << rough_path.pt_closest2obs.second.heading * kRad2Deg;
+                  << "  dubins_path dist_to_obs out slot = "
+                  << dubins_path.obs_dist.first
+                  << "  rough_path dist_to_obs out slot = "
+                  << rough_path.obs_dist.first
+                  << "  rough_path dist_to_obs in slot = "
+                  << rough_path.obs_dist.second;
+        // << "  dubins_path.dist_to_obs = "
+        // << dubins_path.pt_closest2obs.first << "  pt_closest2obs = "
+        // << dubins_path.pt_closest2obs.second.pos.transpose() << "  "
+        // << dubins_path.pt_closest2obs.second.heading * kRad2Deg
+        // << "  rough_path.dist_to_obs = "
+        // << rough_path.pt_closest2obs.first << "  pt_closest2obs = "
+        // << rough_path.pt_closest2obs.second.pos.transpose() << "  "
+        // << rough_path.pt_closest2obs.second.heading * kRad2Deg;
         // complete_path.PrintInfo();
       }
     }
@@ -707,6 +708,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   const size_t max_path_count = 30;
   const uint8_t max_dubins_gear_change_count = 1;
 
+  calc_params_.pre_plan_case = PrePlanCase::EGO_POSE;
   // 先尝试用自车位置规划一下 看是否能规划成功
   if (RoughMultiAdjustPathPlan(ginput_.ego_info_under_slot.cur_pose,
                                geometry_lib::SEG_GEAR_REVERSE,
@@ -735,6 +737,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   uint8_t fewer_gear_change_count = 0;
   calc_params_.tange_pose_vec.clear();
   calc_params_.tange_pose_vec.reserve(number);
+  calc_params_.pre_plan_case = PrePlanCase::MID_POINT;
   for (size_t i = 0;
        i < tang_pose_vec.size() && find_all_result && !exceed_time_flag; ++i) {
     bool continue_use_same_1arc = true;
@@ -759,6 +762,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         PathColDetRes col_res = TrimPathByObs(
             arc_seg, calc_params_.strict_car_lat_inflation,
             calc_params_.strict_col_lon_safe_dist, false, false, true);
+
         if (col_res == PathColDetRes::NORMAL) {
           reverse_1arc_safe = true;
         } else {
@@ -827,12 +831,16 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
     }
   }
 
+  const double slot_ds = 0.1;
+  const double ratio_err = 0.01;
+  const double slot_x = ginput_.ego_info_under_slot.slot.slot_length_ + 0.68;
   for (auto& pair_geometry_path : pair_geometry_path_vec) {
     auto& dubins_geometry_path = pair_geometry_path.first;
     auto& rough_geometry_path = pair_geometry_path.second;
+    std::vector<geometry_lib::PathSegment> seg_vec;
     if (dubins_geometry_path.path_count > 0) {
+      // mid point
       for (size_t i = 0; i < rough_geometry_path.path_segment_vec.size(); ++i) {
-        // 第一次倒挡的路径 不包含最后一条直线
         if (rough_geometry_path.gear_cmd_vec[i] ==
             geometry_lib::SEG_GEAR_REVERSE) {
           if (rough_geometry_path.path_segment_vec[i].seg_type ==
@@ -841,19 +849,16 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
                   rough_geometry_path.path_segment_vec[i].GetEndPose()) > 0.8) {
             break;
           } else {
-            if (rough_geometry_path.pt_closest2obs.first >
-                rough_geometry_path.path_segment_vec[i].pt_closest2obs.first) {
-              rough_geometry_path.pt_closest2obs =
-                  rough_geometry_path.path_segment_vec[i].pt_closest2obs;
-            }
+            seg_vec.emplace_back(rough_geometry_path.path_segment_vec[i]);
           }
-          if (rough_geometry_path.gear_cmd_vec[i + 1] ==
-              geometry_lib::SEG_GEAR_DRIVE) {
-            break;
-          }
+        }
+        if (rough_geometry_path.gear_cmd_vec[i + 1] ==
+            geometry_lib::SEG_GEAR_DRIVE) {
+          break;
         }
       }
     } else {
+      // ego pose
       for (size_t i = 0; i < rough_geometry_path.path_segment_vec.size(); ++i) {
         if (rough_geometry_path.path_segment_vec[i].seg_type ==
                 geometry_lib::SEG_TYPE_LINE &&
@@ -861,13 +866,74 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
                 rough_geometry_path.path_segment_vec[i].GetEndPose()) > 0.8) {
           break;
         }
-        if (rough_geometry_path.pt_closest2obs.first >
-            rough_geometry_path.path_segment_vec[i].pt_closest2obs.first) {
-          rough_geometry_path.pt_closest2obs =
-              rough_geometry_path.path_segment_vec[i].pt_closest2obs;
+        seg_vec.emplace_back(rough_geometry_path.path_segment_vec[i]);
+      }
+    }
+    // seg_vec存储着包含障碍物离轨迹的距离 但是需要考虑库内和库外
+    double min_obs_dist_out_slot = 26.8;
+    double min_obs_dist_in_slot = 26.8;
+    for (const auto& seg : seg_vec) {
+      const double start_min_x = CalCarRectangleBound(seg.GetStartPose()).min_x;
+      const double end_min_x = CalCarRectangleBound(seg.GetEndPose()).min_x;
+      const double start_slot_occupied_ratio =
+          CalOccupiedRatio(seg.GetStartPose());
+      const double end_slot_occupied_ratio = CalOccupiedRatio(seg.GetEndPose());
+      if (start_min_x > slot_x && end_min_x > slot_x) {
+        // the seg is all out
+        min_obs_dist_out_slot =
+            std::min(min_obs_dist_out_slot, seg.pt_closest2obs.first);
+      } else if (start_min_x < slot_x && end_min_x < slot_x) {
+        // the seg is all in
+        min_obs_dist_in_slot =
+            std::min(min_obs_dist_in_slot, seg.pt_closest2obs.first);
+      } else {
+        geometry_lib::PathSegment seg_out_slot;
+        geometry_lib::PathSegment seg_in_slot;
+        std::vector<geometry_lib::PathPoint> pt_vec;
+        double s = 0.0;
+        geometry_lib::SamplePointSetInPathSeg(pt_vec, seg, slot_ds);
+        if (start_min_x > slot_x) {
+          // from out to in
+          for (const geometry_lib::PathPoint& pt : pt_vec) {
+            if (CalCarRectangleBound(pt).min_x < slot_x) {
+              break;
+            }
+            s += slot_ds;
+          }
+          geometry_lib::SeparatePathSegByS(seg, seg_out_slot, seg_in_slot, s);
+        } else {
+          // from in to out
+          for (const geometry_lib::PathPoint& pt : pt_vec) {
+            if (CalCarRectangleBound(pt).min_x > slot_x) {
+              break;
+            }
+            s += slot_ds;
+          }
+          geometry_lib::SeparatePathSegByS(seg, seg_in_slot, seg_out_slot, s);
+        }
+
+        const double ratio = CalOccupiedRatio(seg.pt_closest2obs.second);
+        if (CalCarRectangleBound(seg.pt_closest2obs.second).min_x > slot_x) {
+          min_obs_dist_out_slot =
+              std::min(min_obs_dist_out_slot, seg.pt_closest2obs.first);
+          // 额外计算一下库内
+          TrimPathByObs(seg_in_slot, 0.1, 0.1, false, true, true);
+          min_obs_dist_in_slot =
+              std::min(min_obs_dist_in_slot, seg_in_slot.pt_closest2obs.first);
+
+        } else {
+          min_obs_dist_in_slot =
+              std::min(min_obs_dist_in_slot, seg.pt_closest2obs.first);
+          // 额外计算一下库外
+          TrimPathByObs(seg_out_slot, 0.1, 0.1, false, true, true);
+          min_obs_dist_out_slot = std::min(min_obs_dist_out_slot,
+                                           seg_out_slot.pt_closest2obs.first);
         }
       }
     }
+
+    rough_geometry_path.obs_dist.first = min_obs_dist_out_slot;
+    rough_geometry_path.obs_dist.second = min_obs_dist_in_slot;
   }
 
   ILOG_INFO << "there arc " << pair_geometry_path_vec.size()
@@ -1083,8 +1149,13 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
       output_.gear_cmd_vec.emplace_back(path_seg.seg_gear);
       output_.steer_vec.emplace_back(path_seg.seg_steer);
     }
+    geometry_lib::Arc arc;
+    arc.pA = target_pose.pos;
+    arc.headingA = target_pose.heading;
     // 如果当前挡位是前进挡 延长一条直线便于控制跟踪
-    if (ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
+    if (ref_gear == geometry_lib::SEG_GEAR_DRIVE && ginput_.is_replan_second &&
+        geometry_lib::CalOneArcWithLineAndGear(
+            arc, calc_params_.target_line, geometry_lib::SEG_GEAR_REVERSE)) {
       geometry_lib::PathSegment line_seg;
       geometry_lib::CalLineFromPt(ref_gear,
                                   apa_param.GetParam().insert_line_after_arc,
@@ -1304,6 +1375,7 @@ PerpendicularTailInPathGenerator::DubinsPathPlan(
       if (geometry_path.pt_closest2obs.first >
           temp_path_seg.pt_closest2obs.first) {
         geometry_path.pt_closest2obs = temp_path_seg.pt_closest2obs;
+        geometry_path.obs_dist.first = geometry_path.pt_closest2obs.first;
       }
     }
   }
@@ -1642,16 +1714,24 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
         // if 1r path col, also start pose and end pose is on the same side of
         // the target line, should enter this logic
         if (geometry_path.collide_flag &&
-            (geometry_path.end_pose.pos.y() + calc_params_.target_line.pA.y()) *
-                    (geometry_path.start_pose.pos.y() +
-                     calc_params_.target_line.pA.y()) >
-                0.168 &&
-            std::fabs(geometry_path.start_pose.pos.y()) >
-                std::fabs(geometry_path.end_pose.pos.y()) &&
-            std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8) {
-          reverse_1arc_safe = false;
-          ILOG_INFO_IF(enable_log) << "reverse_1arc is not safe";
-          break;
+            geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE) {
+          const bool case1 = (geometry_path.end_pose.pos.y() +
+                              calc_params_.target_line.pA.y()) *
+                                 (geometry_path.start_pose.pos.y() +
+                                  calc_params_.target_line.pA.y()) >
+                             0.068;
+          const bool case2 = std::fabs(geometry_path.start_pose.pos.y()) >
+                             std::fabs(geometry_path.end_pose.pos.y());
+          const bool case3 =
+              std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8;
+          ILOG_INFO_IF(enable_log)
+              << "case1 = " << case1 << "  case2 = " << case2
+              << "  case3 = " << case3;
+          if (case1 && case2 && case3) {
+            reverse_1arc_safe = false;
+            ILOG_INFO_IF(enable_log) << "reverse_1arc is not safe";
+            break;
+          }
         }
       }
     }
@@ -2102,7 +2182,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       for (const auto& path_seg : complete_path.path_segment_vec) {
         if (path_seg.seg_gear != complete_path.cur_gear) {
           cost += (std::fabs(path_seg.GetStartPos().y()) * 5.0 +
-                   std::fabs(path_seg.GetStartHeading()) * 12.0);
+                   std::fabs(path_seg.GetStartHeading()) * 16.0) +
+                  path_seg.GetStartPos().x() * 4.8;
           break;
         }
       }
@@ -2760,11 +2841,21 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
               << "opposite gear, arc1 normal, then check arc2 col\n";
           PathColDetRes col_res2 =
               TrimPathByObs(arc2_seg, lat_buffer, lon_buffer, enable_log);
-          if (col_res2 == PathColDetRes::NORMAL ||
-              col_res2 == PathColDetRes::SHORTEN) {
-            ILOG_INFO_IF(enable_log)
-                << "arc2 col is normal or shorten, add arc1 to path";
+          if (col_res2 == PathColDetRes::NORMAL) {
+            ILOG_INFO_IF(enable_log) << "arc2 col is normal, add arc1 to path";
             geometry_path.SetPath(arc1_seg);
+            break;
+          }
+          if (col_res2 == PathColDetRes::SHORTEN) {
+            ILOG_INFO_IF(enable_log) << "arc2 col is shorten, extend line "
+                                        "after arc1, add arc1 and line to path";
+            geometry_lib::LineSegment line(arc1_seg.GetEndPos(),
+                                           arc1_seg.GetEndHeading(), 0.86,
+                                           arc1_gear);
+            geometry_lib::PathSegment line_seg(arc1_gear, line);
+            TrimPathByObs(line_seg, 0.168, 0.486, enable_log, true, true);
+            geometry_path.SetPath(arc1_seg);
+            geometry_path.AddPath(line_seg);
             break;
           }
 
@@ -3380,23 +3471,18 @@ const bool PerpendicularTailInPathGenerator::ConstructReverseVaildPathSeg(
 
 const double PerpendicularTailInPathGenerator::CalOccupiedRatio(
     const pnc::geometry_lib::PathPoint& current_pose) {
-  pnc::geometry_lib::PathPoint terminal_err;
-  terminal_err.Set(current_pose.pos - calc_params_.target_line.pA,
-                   std::fabs(pnc::geometry_lib::NormalizeAngle(
-                       current_pose.heading -
-                       ginput_.ego_info_under_slot.target_pose.heading)));
-  double slot_occupied_ratio;
-  if (std::fabs(terminal_err.pos.y()) <
+  if (std::fabs(current_pose.pos.y()) <
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
-      std::fabs(terminal_err.heading) <
+      std::fabs(current_pose.heading) <
           apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    slot_occupied_ratio = pnc::mathlib::Clamp(
-        1.0 - (terminal_err.pos.x() / apa_param.GetParam().normal_slot_length),
-        0.0, 1.0);
-  } else {
-    slot_occupied_ratio = 0.0;
+    const std::vector<double> x_tab = {
+        ginput_.ego_info_under_slot.target_pose.pos.x(),
+        ginput_.ego_info_under_slot.slot.slot_length_ +
+            apa_param.GetParam().rear_overhanging};
+    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    return mathlib::Interp1(x_tab, occupied_ratio_tab, current_pose.pos.x());
   }
-  return slot_occupied_ratio;
+  return 0.0;
 }
 
 const bool PerpendicularTailInPathGenerator::IsRightCircle(

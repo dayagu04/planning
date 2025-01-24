@@ -91,11 +91,18 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.Reset();
       }
     } else if (state_machine_ptr_->IsParkingStatus()) {
+      // If the selected slot id does not exist during the parking process,
+      // simply reset and exit the parking
+      if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) ==
+          0) {
+        ILOG_INFO << "the selected slot disappear when parking";
+        ego_info_under_slot_.Reset();
+      }
     }
   }
 
-  ego_info_under_slot_.confidence =
-      slots_map_[ego_info_under_slot_.id].confidence_;
+  ILOG_INFO << "select slot id = " << ego_info_under_slot_.id
+            << "  type = " << GetSlotTypeString(ego_info_under_slot_.slot_type);
 
   const SlotReleaseState last_geometry_release =
       ego_info_under_slot_.slot.release_info_
@@ -107,7 +114,10 @@ void ApaSlotManager::Update(
 
   if (slots_map_.count(ego_info_under_slot_.id) != 0 &&
       !ego_info_under_slot_.fix_slot) {
+    ILOG_INFO << "Update selected slot";
     ego_info_under_slot_.slot = slots_map_[ego_info_under_slot_.id];
+    ego_info_under_slot_.confidence =
+        slots_map_[ego_info_under_slot_.id].confidence_;
   }
 
   // keep last release state here, and would change later when searching
@@ -115,9 +125,6 @@ void ApaSlotManager::Update(
       .release_state[GEOMETRY_PLANNING_RELEASE] = last_geometry_release;
   ego_info_under_slot_.slot.release_info_
       .release_state[ASTAR_PLANNING_RELEASE] = last_astar_release;
-
-  ILOG_INFO << "select slot id = " << ego_info_under_slot_.id
-            << "  type = " << GetSlotTypeString(ego_info_under_slot_.slot_type);
 }
 
 void ApaSlotManager::GenerateReleaseSlotIdVec() {

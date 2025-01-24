@@ -214,6 +214,8 @@ std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
 
 void ParkingScenarioManager::ScenarioRunning() {
   if (current_scenario_ == nullptr) {
+    Reset();
+    planning_output_.planning_status.apa_planning_status = iflyauto::APA_FAILED;
     return;
   }
   current_scenario_->ScenarioRunning();

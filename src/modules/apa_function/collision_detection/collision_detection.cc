@@ -1834,5 +1834,28 @@ const double CollisionDetector::CalClosestDistFromObsToCar(
   return min_dist;
 }
 
+const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
+    const pnc::geometry_lib::PathPoint &current_pose) {
+  pnc::geometry_lib::RectangleBound bound;
+  const Eigen::Vector2d t =
+      pnc::geometry_lib::GenHeadingVec(current_pose.heading);
+  const Eigen::Vector2d n(-t.y(), t.x());
+  std::vector<Eigen::Vector2d> polygon;
+  polygon.reserve(4);
+  const ApaParameters &param = apa_param.GetParam();
+  polygon.emplace_back(current_pose.pos +
+                       (param.wheel_base + param.front_overhanging) * t +
+                       0.5 * param.max_car_width * n);
+  polygon.emplace_back(current_pose.pos +
+                       (param.wheel_base + param.front_overhanging) * t -
+                       0.5 * param.max_car_width * n);
+  polygon.emplace_back(current_pose.pos - param.rear_overhanging * t -
+                       0.5 * param.max_car_width * n);
+  polygon.emplace_back(current_pose.pos - param.rear_overhanging * t +
+                       0.5 * param.max_car_width * n);
+  bound.CalcBoundByPtVec(polygon);
+  return bound;
+}
+
 }  // namespace apa_planner
 }  // namespace planning
