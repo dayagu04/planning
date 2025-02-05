@@ -1137,7 +1137,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
           ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
-    ego_info_under_slot.target_pose.pos[0] += param.wheel_base + 0.1;
+    ego_info_under_slot.target_pose.pos[0] += param.wheel_base;
     ego_info_under_slot.target_pose.heading += M_PI;
     ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(-1, 0);
   }
@@ -1214,7 +1214,15 @@ const bool NarrowSpaceScenario::CheckStuckFailed() {
 }
 
 void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
-  if (current_gear_ != AstarPathGear::REVERSE) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
+      current_gear_ != AstarPathGear::DRIVE) {
+    return;
+  }
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR &&
+      current_gear_ != AstarPathGear::REVERSE) {
     return;
   }
 
@@ -1231,7 +1239,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   Eigen::Vector2d point_local;
   point_local = ego_info.g2l_tf.GetPos(path_end_global);
 
-  ILOG_INFO << "targer point x = " << limiter_x
+  ILOG_INFO << "target point x = " << limiter_x
             << ", path end x = " << point_local[0]
             << ", path end y=" << point_local[1];
 
@@ -1251,7 +1259,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   for (size_t i = 0; i < path_size; i++) {
     Eigen::Vector2d& point_global = current_path_point_global_vec_.back().pos;
     point_local = ego_info.g2l_tf.GetPos(point_global);
-    if (point_local[0] >= limiter_x) {
+    if (point_local[0] >= limiter_x + 0.1) {
       break;
     }
 
