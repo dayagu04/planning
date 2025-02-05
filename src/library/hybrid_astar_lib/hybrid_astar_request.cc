@@ -36,4 +36,15 @@ void ClearFirstActionReqeust(AstarRequest *request) {
   return;
 }
 
+const bool IsEgoPoseAdjustPlanning(const AstarPathGenerateType type) {
+  if (type == AstarPathGenerateType::REEDS_SHEPP_SAMPLING ||
+      type == AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
+      type == AstarPathGenerateType::SPIRAL_SAMPLING ||
+      type == AstarPathGenerateType::QUNTIC_POLYNOMIAL_SAMPLING) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace planning

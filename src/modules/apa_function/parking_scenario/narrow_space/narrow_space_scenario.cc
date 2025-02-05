@@ -688,7 +688,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
           planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
     } else {
       cur_request.path_generate_method =
-          planning::AstarPathGenerateType::REEDS_SHEPP;
+          planning::AstarPathGenerateType::REEDS_SHEPP_SAMPLING;
     }
     end.y = real_end.y;
     end.x = start.x + 30.0;

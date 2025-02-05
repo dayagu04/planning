@@ -46,7 +46,8 @@ class HybridAStar {
 
   void Init();
 
-  void UpdateCarBoxBySafeBuffer(const double lat_buffer,
+  void UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
+                                const double lat_buffer_inside,
                                 const double lon_buffer);
 
   int UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf);
@@ -141,6 +142,9 @@ class HybridAStar {
       const ParkObstacleList& obstacles, const AstarRequest& request,
       EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
       ParkReferenceLine* ref_line);
+
+  // debug
+  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
@@ -321,6 +325,8 @@ class HybridAStar {
 
   const bool IsFootPrintCollision(const Transform2d& tf);
 
+  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
@@ -396,6 +402,12 @@ class HybridAStar {
   GJK2DInterface gjk_interface_;
 
   HybridAStarResult fallback_path_;
+
+  // 用于区分库内库外
+  cdl::AABB slot_box_;
+
+  // 根据车辆位置，使用不同buffer
+  HierarchyBufferCircleFootPrint hierachy_circle_model_;
 
   // just for debug, display all result in hmi/plot
   std::vector<DebugAstarSearchPoint> child_node_debug_;

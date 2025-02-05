@@ -81,6 +81,9 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   const double GetLatetalSafeBuffer() const { return latetal_safe_buffer_; }
 
+  const bool IsCollisionForPoint(Transform2d *tf, const AstarPathGear gear,
+                                 FootPrintCircleModel *footprint_model);
+
  private:
   EDTData data_;
 

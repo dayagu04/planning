@@ -47,6 +47,8 @@ class CDL_EXPORT AABB {
 
   bool contain(const planning::Position2D &p) const;
 
+  bool contain(const planning::Pose2D &p) const;
+
   void combine(const AABB &a, const AABB &b) {
     GetVectorMin(&min_, a.min_, b.min_);
     GetVectorMax(&max_, a.max_, b.max_);

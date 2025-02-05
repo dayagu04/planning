@@ -1,3 +1,4 @@
+#include <bits/stdint-intn.h>
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -108,7 +109,10 @@ Eigen::Vector3d coordinate_system_;
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
 AstarPathGear history_gear_request_;
-std::vector<Eigen::Vector3d> footprint_circle_model_;
+// local coordinate system
+std::vector<Eigen::Vector3d> footprint_circle_model_normal_gear_;
+std::vector<Eigen::Vector3d> footprint_circle_model_drive_gear_;
+std::vector<Eigen::Vector3d> footprint_circle_model_reverse_gear_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -139,23 +143,37 @@ int StopPybind() {
   return 0;
 }
 
-void UpdateFootprintCircle(const AstarPathGear gear) {
-  const EulerDistanceTransform *edt_ =
-      hybrid_astar_interface_->GetEulerDistanceTransform();
+void UpdateFootprintCircle(const AstarPathGear gear,
+                           std::vector<Eigen::Vector3d> &footprint_circle) {
+  footprint_circle.clear();
+
+  FootPrintCircleModel *model =
+      hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(gear);
-  footprint_circle_model_.clear();
+      model->GetLocalFootPrintCircleByGear(gear);
+
   const FootPrintCircle *circle = &circle_footprint.max_circle;
-
-  footprint_circle_model_.push_back(
+  footprint_circle.push_back(
       Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
-
   for (int i = 0; i < circle_footprint.size; i++) {
     circle = &circle_footprint.circles[i];
 
-    footprint_circle_model_.push_back(
+    footprint_circle.push_back(
         Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
   }
+
+  return;
+}
+
+void UpdateFootprintCircleList() {
+  UpdateFootprintCircle(AstarPathGear::NORMAL,
+                        footprint_circle_model_normal_gear_);
+
+  UpdateFootprintCircle(AstarPathGear::DRIVE,
+                        footprint_circle_model_drive_gear_);
+
+  UpdateFootprintCircle(AstarPathGear::REVERSE,
+                        footprint_circle_model_reverse_gear_);
 
   return;
 }
@@ -349,11 +367,7 @@ int GetPathFromHybridAstar() {
   AstarRequest request = thread_solver_->GetAstarRequest();
   history_gear_request_ = request.first_action_request.gear_request;
 
-  AstarPathGear gear = AstarPathGear::NONE;
-  if (result.gear.size() > 0) {
-    gear = result.gear[0];
-  }
-  UpdateFootprintCircle(gear);
+  UpdateFootprintCircleList();
 
   ILOG_INFO << "receive finish";
 
@@ -919,8 +933,19 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
   return speed_limit_profile;
 }
 
-const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
-  return footprint_circle_model_;
+const std::vector<Eigen::Vector3d> &GetFootPrintModel(const int32_t gear) {
+  switch (gear) {
+    case 0:
+      return footprint_circle_model_normal_gear_;
+    case 4:
+      return footprint_circle_model_drive_gear_;
+    case 2:
+      return footprint_circle_model_reverse_gear_;
+    default:
+      break;
+  }
+
+  return footprint_circle_model_normal_gear_;
 }
 
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {

@@ -98,7 +98,8 @@ bool PathComparator::CheckVerticalSlotTailIn(const AstarRequest *request,
   }
 
   // check heading
-  if (heading_error_challenger < heading_error_best) {
+  if (heading_error_challenger < heading_error_best &&
+      node_challenger->GetGCost() < best_node->GetGCost() + 4.0) {
     return true;
   }
 

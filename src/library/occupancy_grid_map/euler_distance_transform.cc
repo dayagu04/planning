@@ -243,11 +243,12 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
 }
 
 const bool EulerDistanceTransform::IsCollisionForPoint(
-    Transform2d *tf, const AstarPathGear gear) {
+    Transform2d *tf, const AstarPathGear gear,
+    FootPrintCircleModel *footprint_model) {
   FootPrintCircle *circle;
   FootPrintCircleList *global_circles =
-      footprint_model_.GetMutableGlobalFPCircleByGear(gear);
-  footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
+      footprint_model->GetMutableGlobalFPCircleByGear(gear);
+  footprint_model->LocalToGlobalByGear(global_circles, tf, gear);
 
   // check max circle
   circle = &global_circles->max_circle;
@@ -306,6 +307,11 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
   }
 
   return false;
+}
+
+const bool EulerDistanceTransform::IsCollisionForPoint(
+    Transform2d *tf, const AstarPathGear gear) {
+  return IsCollisionForPoint(tf, gear, &footprint_model_);
 }
 
 const bool EulerDistanceTransform::IsCollisionForPoint(

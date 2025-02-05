@@ -38,9 +38,11 @@ class TargetPoseRegulator : public AstarDecider {
 
   void Clear();
 
- const std::pair<Pose2D, double> GetCandidatePose(const double lat_buffer) const;
+  const std::pair<Pose2D, double> GetCandidatePose(
+      const double lat_buffer) const;
 
-  const bool IsCandidatePoseSafe(const double lat_buffer) const;
+  const std::pair<Pose2D, double> GetCandidatePose(
+      const double big_buffer, const double small_buffer) const;
 
  private:
   const bool IsParkingIn(const AstarRequest *request);
@@ -55,7 +57,8 @@ class TargetPoseRegulator : public AstarDecider {
 
   // 检查目标点直线入库路径，和障碍物距离
   // return true: 直线路径没有障碍物
-  const float GetDistToObs(Pose2D *global_pose, EulerDistanceTransform *edt);
+  const float GetDistToObs(const Pose2D *global_pose,
+                           EulerDistanceTransform *edt);
 
   void DebugString();
 
@@ -65,9 +68,10 @@ class TargetPoseRegulator : public AstarDecider {
 
   bool IsDefaultPoseSafeEnough();
 
+  const bool IsCandidatePoseSafe(const double lat_buffer) const;
+
  private:
   Pose2D center_line_target_;
-  double center_line_target_obs_dist_;
   std::vector<PoseRegulateCandidate> candidate_info_;
 
   double x_check_upper_;
