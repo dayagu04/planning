@@ -170,7 +170,8 @@ void FollowTarget::GenerateFollowTarget() {
           .target_maker_info.follow_target_info.enable_far_slow_jlt_count;
   const bool enable_far_slow_follow = JudgeFarSlowCar(matched_desired_headway);
   int32_t enable_farslow_jlt_count =
-      enable_far_slow_follow ? enable_farslow_jlt_count_record + 1 : 0;
+      enable_far_slow_follow ? std::min(enable_farslow_jlt_count_record + 1, 3)
+                             : 0;
   bool enable_far_slow_jlt = enable_farslow_jlt_count >= kContinuousNum;
 
   // 2) run far slow jlt
