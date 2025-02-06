@@ -4,6 +4,7 @@
 
 #include "../tasks/behavior_planners/agent_headway_decider/agent_headway_decider_output.h"
 #include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
+#include "../tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
 #include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
@@ -136,6 +137,13 @@ class PlanningContext {
   }
   SpeedLimitDeciderOutput *mutable_speed_limit_decider_output() {
     return &speed_limit_decider_output_;
+  }
+
+  const LonRefPathDeciderOutput &lon_ref_path_decider_output() const {
+    return lon_ref_path_decider_output_;
+  }
+  LonRefPathDeciderOutput *mutable_lon_ref_path_decider_output() {
+    return &lon_ref_path_decider_output_;
   }
 
   const VisionLateralBehaviorPlannerOutput &
@@ -495,6 +503,10 @@ class PlanningContext {
   AgentHeadwayDeciderOutput agent_headway_decider_output_;
 
   StartStopDeciderOutPut start_stop_decider_output_;
+
+  // LonRefPathDeciderOutput
+  LonRefPathDeciderOutput lon_ref_path_decider_output_;
+
 };
 
 }  // namespace planning

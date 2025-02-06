@@ -11,7 +11,7 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.5;
+constexpr double lane_change_decrease_time_gap = 0.3;
 constexpr double neighbor_valid_decrease_time_gap = 0.7;
 constexpr double first_appear_time_gap = 1.0;
 }  // namespace
@@ -51,8 +51,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
-  const bool is_in_lane_change = (lane_change_state == kLaneChangeExecution ||
-                                  lane_change_state == kLaneChangeComplete);
+  const bool is_in_lane_change_execution =
+      lane_change_state == kLaneChangeExecution;
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -117,10 +117,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
 
     const double v_ego = ego_state_manager->ego_v();
-    const double v_relative = v_ego - agent->speed();
-    if (v_relative > 0.5) {
-      headway_step = 0.05;
-    }
+    // const double v_relative = v_ego - agent->speed();
+    // if (v_relative > 0.5) {
+    //   headway_step = 0.05;
+    // }
 
     // first appear
     if (iter == agents_headway_map_.end()) {
@@ -133,28 +133,28 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
     double current_headway = agents_headway_map_[st_agent_id].current_headway;
 
-    if (agent_is_cutin) {
-      const double delta_headway = planning_math::LerpWithLimit(
-          config_.cut_in_headway_upper_bound,
-          config_.cut_in_velocity_lower_bound,
-          config_.cut_in_headway_lower_bound,
-          config_.cut_in_velocity_upper_bound, ego_state_manager->ego_v());
-      const double matched_cut_in_headway =
-          std::fmin((cutin_headway - delta_headway), current_headway);
-      agents_headway_map_[st_agent_id].current_headway =
-          std::fmin(matched_cut_in_headway + headway_step, gear_headway);
-      continue;
-    }
+    // if (agent_is_cutin) {
+    //   const double delta_headway = planning_math::LerpWithLimit(
+    //       config_.cut_in_headway_upper_bound,
+    //       config_.cut_in_velocity_lower_bound,
+    //       config_.cut_in_headway_lower_bound,
+    //       config_.cut_in_velocity_upper_bound, ego_state_manager->ego_v());
+    //   const double matched_cut_in_headway =
+    //       std::fmin((cutin_headway - delta_headway), current_headway);
+    //   agents_headway_map_[st_agent_id].current_headway =
+    //       std::fmin(matched_cut_in_headway + headway_step, gear_headway);
+    //   continue;
+    // }
 
-    if (is_neighbor_target_valid) {
-      const double neighbor_target_headway = std::fmin(
-          (user_time_gap - neighbor_valid_decrease_time_gap), current_headway);
-      agents_headway_map_[st_agent_id].current_headway =
-          std::fmin(neighbor_target_headway + headway_step, gear_headway);
-      continue;
-    }
+    // if (is_neighbor_target_valid) {
+    //   const double neighbor_target_headway = std::fmin(
+    //       (user_time_gap - neighbor_valid_decrease_time_gap), current_headway);
+    //   agents_headway_map_[st_agent_id].current_headway =
+    //       std::fmin(neighbor_target_headway + headway_step, gear_headway);
+    //   continue;
+    // }
 
-    if (is_in_lane_change) {
+    if (is_in_lane_change_execution) {
       const double lane_change_headway = std::fmin(
           (user_time_gap - lane_change_decrease_time_gap), current_headway);
       agents_headway_map_[st_agent_id].current_headway =
