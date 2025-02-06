@@ -63,4 +63,6 @@ void DebugAstarRequestString(const AstarRequest &request);
 
 void ClearFirstActionReqeust(AstarRequest *request);
 
+const bool IsEgoPoseAdjustPlanning(const AstarPathGenerateType type);
+
 }  // namespace planning

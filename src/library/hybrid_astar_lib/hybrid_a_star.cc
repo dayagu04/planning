@@ -9,6 +9,8 @@
 
 #include "aabb2d.h"
 #include "ad_common/math/math_utils.h"
+#include "collision_detect_types.h"
+#include "footprint_circle_model.h"
 #include "h_cost.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
@@ -47,9 +49,6 @@ namespace planning {
 #define DEBUG_ONE_SHOT_PATH (0)
 #define DEBUG_ONE_SHOT_PATH_MAX_NODE (10000)
 #define ENABLE_OBS_DIST_G_COST (0)
-
-// 控制可以执行的距离
-constexpr double rs_path_seg_advised_dist = 0.35;
 
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const VehicleParam& veh_param) {
@@ -889,7 +888,7 @@ bool HybridAStar::IsAllPathSegmentLongEnough(const RSPath* reeds_shepp_to_end,
 
     left_pointer_id = right_pointer_id;
 
-    if (same_gear_path_min_dist < rs_path_seg_advised_dist) {
+    if (same_gear_path_min_dist < config_.rs_path_seg_advised_dist) {
       ILOG_INFO << " rs path seg len " << same_gear_path_min_dist;
       return false;
     }
@@ -929,7 +928,7 @@ bool HybridAStar::IsRsPathFirstSegmentLongEnough(
     }
   }
 
-  if (same_gear_path_min_dist < rs_path_seg_advised_dist) {
+  if (same_gear_path_min_dist < config_.rs_path_seg_advised_dist) {
     // ILOG_INFO << " rs path first seg len is small " <<
     // same_gear_path_min_dist;
     return false;
@@ -1215,7 +1214,8 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
     }
 #else
 
-    if (edt_->IsCollisionForPoint(&tf, point_gear)) {
+    if (edt_->IsCollisionForPoint(&tf, point_gear,
+                                  GetCircleFootPrintModel(global_pose))) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       // node->SetCollisionID(i);
 
@@ -1428,7 +1428,8 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
         point_gear = AstarPathGear::NONE;
       }
 
-      if (edt_->IsCollisionForPoint(&tf, point_gear)) {
+      if (edt_->IsCollisionForPoint(&tf, point_gear,
+                                    GetCircleFootPrintModel(global_pose))) {
         node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
         return false;
       }
@@ -1495,7 +1496,8 @@ const bool HybridAStar::IsPolynomialPathSafeByEDT(
       point_gear = AstarPathGear::NONE;
     }
 
-    if (edt_->IsCollisionForPoint(&tf, point_gear)) {
+    if (edt_->IsCollisionForPoint(&tf, point_gear,
+                                  GetCircleFootPrintModel(global_pose))) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       return false;
     }
@@ -1630,7 +1632,8 @@ size_t HybridAStar::GetPathCollisionIDByEDT(HybridAStarResult* result) {
       continue;
     }
 
-    if (edt_->IsCollisionForPoint(&tf, result->gear[i])) {
+    if (edt_->IsCollisionForPoint(&tf, result->gear[i],
+                                  GetCircleFootPrintModel(global_pose))) {
       return i;
     }
   }
@@ -4002,7 +4005,7 @@ bool HybridAStar::AstarSearch(
             << " ,h cost rs num " << h_cost_rs_path_num
             << " ,node pool size:" << node_pool_.PoolSize()
             << ",open_pq.size: " << open_pq_.size()
-            << "RS success number=" << rs_path_success_num;
+            << ",RS success number=" << rs_path_success_num;
 
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
@@ -4058,9 +4061,10 @@ void HybridAStar::Init() {
 
   car_half_width_ = vehicle_param_.width / 2 + config_.heuristic_safe_dist;
 
-  if (config_.lat_hierarchy_safe_buffer.size() > 0) {
-    UpdateCarBoxBySafeBuffer(config_.lat_hierarchy_safe_buffer[0],
-                             config_.lon_hierarchy_safe_buffer[0]);
+  if (config_.safe_buffer.lat_safe_buffer_outside.size() > 0) {
+    UpdateCarBoxBySafeBuffer(config_.safe_buffer.lat_safe_buffer_outside[0],
+                             config_.safe_buffer.lat_safe_buffer_inside[0],
+                             config_.safe_buffer.lon_safe_buffer[0]);
   }
 
   if (dp_heuristic_generator_ == nullptr) {
@@ -4420,41 +4424,51 @@ int HybridAStar::GetStraightLinePoint(Pose2D* goal_state,
   return 1;
 }
 
-void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer,
+void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
+                                           const double lat_buffer_inside,
                                            const double lon_buffer) {
   // gear d
   double safe_half_width =
-      (vehicle_param_.width + config_.width_mirror * 2 + lat_buffer * 2) * 0.5;
+      (vehicle_param_.max_width + lat_buffer_outside * 2) * 0.5;
 
   GetRightUpCoordinatePolygonByParam(
       &veh_box_gear_drive_,
-      config_.rear_overhanging + config_.lon_min_safe_buffer,
-      vehicle_param_.wheel_base + config_.front_overhanging + lon_buffer,
+      vehicle_param_.rear_edge_to_rear_axle +
+          config_.safe_buffer.lon_min_safe_buffer,
+      vehicle_param_.wheel_base + vehicle_param_.front_overhanging + lon_buffer,
       safe_half_width);
 
   // gear r
   GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_reverse_, config_.rear_overhanging + lon_buffer,
-      vehicle_param_.wheel_base + config_.front_overhanging +
-          config_.lon_min_safe_buffer,
+      &veh_box_gear_reverse_,
+      vehicle_param_.rear_edge_to_rear_axle + lon_buffer,
+      vehicle_param_.wheel_base + vehicle_param_.front_overhanging +
+          config_.safe_buffer.lon_min_safe_buffer,
       safe_half_width);
 
   // gear none
   GetRightUpCoordinatePolygonByParam(
       &veh_box_gear_none_,
-      config_.rear_overhanging + config_.lon_min_safe_buffer,
-      vehicle_param_.wheel_base + config_.front_overhanging +
-          config_.lon_min_safe_buffer,
+      vehicle_param_.rear_edge_to_rear_axle +
+          config_.safe_buffer.lon_min_safe_buffer,
+      vehicle_param_.wheel_base + vehicle_param_.front_overhanging +
+          config_.safe_buffer.lon_min_safe_buffer,
       safe_half_width);
 
-  GenerateVehCompactPolygon(lat_buffer, config_.lon_min_safe_buffer,
+  GenerateVehCompactPolygon(lat_buffer_inside,
+                            config_.safe_buffer.lon_min_safe_buffer,
                             &cvx_hull_foot_print_);
 
   // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_right, "right mirror");
 
-  ILOG_INFO << "lat buffer = " << lat_buffer;
+  hierachy_circle_model_
+      .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(lat_buffer_outside, lon_buffer, lat_buffer_outside);
+  hierachy_circle_model_
+      .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(lat_buffer_inside, lon_buffer, lat_buffer_inside);
 
   return;
 }
@@ -5082,7 +5096,8 @@ size_t HybridAStar::GetPathCollisionIDByEDT(
       continue;
     }
 
-    if (edt_->IsCollisionForPoint(&tf, poly_path[i].gear)) {
+    if (edt_->IsCollisionForPoint(&tf, poly_path[i].gear,
+                                  GetCircleFootPrintModel(global_pose))) {
       return i;
     }
   }
@@ -5096,6 +5111,19 @@ void HybridAStar::UpdateConfig(const AstarRequest& request) {
   } else {
     config_.node_step = config_.perpendicular_slot_node_step;
   }
+
+  if (request.direction_request == ParkingVehDirection::HEAD_IN) {
+    slot_box_ =
+        cdl::AABB(cdl::Vector2r(0.0, -request.slot_width / 2),
+                  cdl::Vector2r(request.slot_length + vehicle_param_.length,
+                                request.slot_width / 2));
+  } else {
+    slot_box_ = cdl::AABB(
+        cdl::Vector2r(0.0, -request.slot_width / 2),
+        cdl::Vector2r(request.slot_length + 3.0, request.slot_width / 2));
+  }
+
+  slot_box_.DebugString();
 
   return;
 }
@@ -5311,6 +5339,21 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
   *end_in_pool = *rs_node_to_goal;
 
   return true;
+}
+
+FootPrintCircleModel* HybridAStar::GetCircleFootPrintModel(const Pose2D& pose) {
+  if (slot_box_.contain(pose)) {
+    return &hierachy_circle_model_
+                .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
+  }
+
+  return &hierachy_circle_model_
+              .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+}
+
+FootPrintCircleModel* HybridAStar::GetSlotOutsideCircleFootPrint() {
+  return &hierachy_circle_model_
+              .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
 }
 
 }  // namespace planning

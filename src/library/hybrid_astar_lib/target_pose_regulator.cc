@@ -9,7 +9,6 @@
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
-#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 
@@ -42,8 +41,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   x_step_ = 0.2;
   x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
 
-  Pose2D pose = center_line_target_;
-  float dist = GetDistToObs(&pose, edt);
+  float dist = GetDistToObs(&center_line_target_, edt);
   PoseRegulateCandidate candidate;
   candidate.lat_offset = 0.0;
   candidate.dist_to_obs = dist;
@@ -52,6 +50,9 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
 
 #if DEBUG_DECIDER
     DebugString();
+
+    dist = GetDistToObs(&request->start_, edt);
+    ILOG_INFO << "start point obs dist = " << dist;
 #endif
 
   return;
@@ -69,7 +70,8 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
 
   if (request->path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
-      request->path_generate_method == AstarPathGenerateType::REEDS_SHEPP) {
+      request->path_generate_method ==
+          AstarPathGenerateType::REEDS_SHEPP_SAMPLING) {
     ILOG_INFO << "slot polynomial";
     return;
   }
@@ -131,7 +133,6 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   float dist;
   PoseRegulateCandidate candidate;
   bool check_left = true;
-  center_line_target_obs_dist_ = GetDistToObs(&global_pose, edt);
 
   for (int i = 0; i < y_sampling_num; i++) {
     // left
@@ -166,7 +167,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
       candidate.pose = center_line_target_;
       candidate.pose.y = y_offset;
       candidate_info_.emplace_back(candidate);
-      }
+    }
 
 #if DEBUG_DECIDER
     ILOG_INFO << "offset = " << y_offset << ", dist = " << dist;
@@ -175,7 +176,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     if (dist > 0.25) {
       break;
     }
-    }
+  }
 
 #if DEBUG_DECIDER
   DebugString();
@@ -190,16 +191,17 @@ void TargetPoseRegulator::Clear() {
   return;
 }
 
-const float TargetPoseRegulator::GetDistToObs(Pose2D *global_pose,
+const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
                                               EulerDistanceTransform *edt) {
   Transform2d tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
   float min_dist = 10.0;
+  Pose2D pose = *global_pose;
 
   for (int j = 0; j < x_sample_num_; j++) {
-    global_pose->x = x_check_lower_ + x_step_ * j;
-    tf.SetBasePose(*global_pose);
+    pose.x = x_check_lower_ + x_step_ * j;
+    tf.SetBasePose(pose);
 
     edt->DistanceCheckForPoint(&dist, &tf, gear);
 
@@ -229,25 +231,54 @@ const bool TargetPoseRegulator::IsCandidatePoseSafe(
 }
 
 const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePose(
-    const double lat_buffer) const {
+    const double big_buffer, const double small_buffer) const {
   if (candidate_info_.size() <= 0) {
-    return std::make_pair(center_line_target_, center_line_target_obs_dist_);
+    return std::make_pair(center_line_target_, 0.0);
   }
 
   double dist;
-  double min_dist;
   double extra_buffer = 0.05;
+  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
 
   for (auto &obj : candidate_info_) {
+    // If pose is big buffer, return
+    dist = obj.dist_to_obs - big_buffer - extra_buffer;
+    if (dist > 0.0) {
+      ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
+                << ",obs dist = " << obj.dist_to_obs;
+      return std::make_pair(obj.pose, obj.dist_to_obs);
+    }
+
+    // get relative safe pose.
+    if (obj.dist_to_obs > best_candidate->dist_to_obs) {
+      best_candidate = &obj;
+    }
+  }
+
+  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+}
+
+const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePose(
+    const double lat_buffer) const {
+  if (candidate_info_.size() <= 0) {
+    return std::make_pair(center_line_target_, 0.0);
+  }
+
+  double dist;
+  double extra_buffer = 0.02;
+  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
+
+  for (auto &obj : candidate_info_) {
+    // If pose is big buffer, return
     dist = obj.dist_to_obs - lat_buffer - extra_buffer;
     if (dist > 0.0) {
-      ILOG_INFO << "lat offset = " << obj.lat_offset
+      ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
                 << ",obs dist = " << obj.dist_to_obs;
       return std::make_pair(obj.pose, obj.dist_to_obs);
     }
   }
 
-  return std::make_pair(center_line_target_, center_line_target_obs_dist_);
+  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
 }
 
 void TargetPoseRegulator::DebugString() {
@@ -273,7 +304,6 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   Pose2D global_pose;
   AstarPathGear gear = AstarPathGear::NONE;
   global_pose = center_line_target_;
-  center_line_target_obs_dist_ = GetDistToObs(&global_pose, edt);
 
   double y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2;
   y_upper = std::max(0.0, y_upper);

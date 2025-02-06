@@ -28,6 +28,8 @@ struct VehicleParam {
   double max_jerk = 8.0;
   double min_jerk = -5.0;
   double max_front_wheel_angle = 0.56;
+  double front_overhanging = 1.0;
+  double mirror_width = 0.15;
   std::string car_type = "";
 
   void InitParameters(std::string config_path) {
@@ -55,6 +57,9 @@ struct VehicleParam {
     JSON_READ_VALUE(max_front_wheel_angle, double, "max_front_wheel_angle");
     JSON_READ_VALUE(rear_axle_to_center, double, "rear_axle_to_center");
     JSON_READ_VALUE(car_type, std::string, "car_type");
+    JSON_READ_VALUE(front_overhanging, double, "front_overhanging");
+
+    mirror_width = (max_width - width) * 0.5;
   }
 };
 

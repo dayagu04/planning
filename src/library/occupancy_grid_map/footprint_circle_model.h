@@ -74,4 +74,14 @@ class FootPrintCircleModel {
   FootPrintCircleList global_reverse_gear_circles_;
 };
 
+enum HierarchySafeBuffer : int8_t {
+  INSIDE_SLOT_BUFFER = 0,
+  OUTSIDE_SLOT_BUFFER = 1,
+  MAX_NUMBER = 2,
+};
+
+struct HierarchyBufferCircleFootPrint {
+  FootPrintCircleModel footprint_model[HierarchySafeBuffer::MAX_NUMBER];
+};
+
 }  // namespace planning

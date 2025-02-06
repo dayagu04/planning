@@ -64,11 +64,11 @@ class HybridAStarInterface {
   const Pose2D GetAstarTargetPose() const { return target_regulator_goal_; }
 
   // multi-thread, input
-  int UpdateInput(const ParkObstacleList& obs_list,
+  void UpdateInput(const ParkObstacleList& obs_list,
                   const AstarRequest& request);
 
   // multi-thread, output
-  int UpdateOutput();
+  void UpdateOutput();
 
   const EulerDistanceTransform* GetEulerDistanceTransform() const {
     return &edt_;
@@ -104,6 +104,8 @@ class HybridAStarInterface {
                                  std::vector<double>& phi);
 
   void UpdateEDTByObs(const ParkObstacleList& obs_list);
+
+  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
  private:
   // if ego pose is good, seleted real end is ok
