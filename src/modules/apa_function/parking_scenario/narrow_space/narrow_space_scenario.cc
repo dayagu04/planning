@@ -526,12 +526,15 @@ const std::string NarrowSpaceScenario::GetPlanReason(const uint8_t type) {
   return "none";
 }
 
-void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
+void NarrowSpaceScenario::UpdateRemainDist(
+    const double uss_safe_dist, const double lat_buffer,
+    const double extra_buffer_when_reversing) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
 
   // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist);
+  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist, lat_buffer,
+                                                extra_buffer_when_reversing);
 
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss

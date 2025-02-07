@@ -95,7 +95,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
           : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
 
   // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  UpdateRemainDist(safe_uss_remain_dist, 0.09, 0.0);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -602,12 +602,6 @@ const bool ParallelParkInScenario::GenTlane() {
                                  target_y_with_curb)
                       : std::min(ego_info_under_slot.target_pose.pos.y(),
                                  target_y_with_curb));
-  // hack for obs
-  if (ego_info_under_slot.slot_occupied_ratio < 0.01) {
-    ego_info_under_slot.target_pose.pos.y() +=
-        apa_param.GetParam().curb_offset_when_ego_outside_slot *
-        t_lane_.slot_side_sgn;
-  }
 
   const double target_x_in_slot_center =
       0.5 * (ego_info_under_slot.slot.slot_length_ -

@@ -252,7 +252,7 @@ const bool ParallelPathGenerator::Update() {
   } else {
     ILOG_INFO << "ego is in slot";
 
-    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
     // ego is in slot, search from ego pose to target pose, or just
     // correct heading
     if (MultiPlan()) {
@@ -1685,7 +1685,7 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 const bool ParallelPathGenerator::CalMinSafeCircle() {
   const auto time0 = IflyTime::Now_ms();
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.09, false));
 
   std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
   const bool success_tra =
@@ -2281,7 +2281,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
       step_size = std::min(step_size, max_size);
 
     } else {
-      line_length = std::min(line_length, 0.8);
+      line_length = std::min(line_length, 1.0);
       step_size = mathlib::Clamp(step_size, 2, 3);
       step_size = std::min(step_size, max_size);
     }
@@ -3473,7 +3473,6 @@ const bool ParallelPathGenerator::SearchToTargetLine(
       const double step = max_search_lenth / step_num;
 
       const uint8_t ref_gear = geometry_lib::SEG_GEAR_INVALID;
-      const uint8_t ref_steer = geometry_lib::SEG_STEER_INVALID;
       const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3;
 
       for (size_t i = 1; i < step_num + 1; i++) {

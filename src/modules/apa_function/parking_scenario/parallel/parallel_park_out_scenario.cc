@@ -70,13 +70,8 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
           : 0.3;
 
-  // cancel for obs expand in perpendicular slot
-  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    safe_uss_remain_dist += 0.068;
-  }
-
   // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  UpdateRemainDist(safe_uss_remain_dist, 0.09, 0.0);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {

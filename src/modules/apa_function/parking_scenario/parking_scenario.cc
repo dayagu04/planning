@@ -288,12 +288,15 @@ const bool ParkingScenario::CheckStuckFailed() {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
 }
 
-void ParkingScenario::UpdateRemainDist(const double uss_safe_dist) {
+void ParkingScenario::UpdateRemainDist(
+    const double uss_safe_dist, const double lat_buffer,
+    const double extra_buffer_when_reversing) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
 
   // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist);
+  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist, lat_buffer,
+                                                extra_buffer_when_reversing);
 
   return;
 }
@@ -327,7 +330,9 @@ const double ParkingScenario::CalRemainDistFromPath() {
   return remain_dist;
 }
 
-const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
+const double ParkingScenario::CalRemainDistFromUss(
+    const double safe_dist, const double lat_buffer,
+    const double extra_buffer_when_reversing) {
   double remain_dist = 5.01;
 
   const auto& uss_obstacle_avoider_ptr =
@@ -336,7 +341,7 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
   uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
                                    apa_world_ptr_->GetPredictPathManagerPtr(),
                                    apa_world_ptr_->GetObstacleManagerPtr(),
-                                   apa_param.GetParam().lat_inflation);
+                                   lat_buffer);
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
@@ -346,8 +351,8 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
       safe_dist;
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    remain_dist -= 0.068;
-    obs_pt_remain_dist -= 0.068;
+    remain_dist -= extra_buffer_when_reversing;
+    obs_pt_remain_dist -= extra_buffer_when_reversing;
   }
 
   ILOG_INFO << "origin_uss remain dist = "
