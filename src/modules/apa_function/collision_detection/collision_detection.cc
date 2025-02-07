@@ -381,12 +381,14 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       car_polygon[h++] = l2g_tf.GetPos(car_line_local.pA);
     }
     for (const auto &obs_vec : obs_pt_global_map_) {
-      if (std::any_of(obs_vec.second.begin(), obs_vec.second.end(),
-                      [&](const Eigen::Vector2d &obs_point) {
-                        return pnc::geometry_lib::IsPointInPolygon(car_polygon,
-                                                                   obs_point);
-                      })) {
+      auto it = std::find_if(obs_vec.second.begin(), obs_vec.second.end(),
+                             [&](const Eigen::Vector2d &obs_point) {
+                               return pnc::geometry_lib::IsPointInPolygon(
+                                   car_polygon, obs_point);
+                             });
+      if (it != obs_vec.second.end()) {
         collision_detected = true;
+        col_res.col_pt_obs_global = *it;
         break;
       }
     }
