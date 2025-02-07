@@ -30,7 +30,7 @@ class LateralObstacleDecider : public Task {
                                double lane_width, double expand_length);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
-      bool search_success);
+      SearchResult search_result);
   bool ARAStar();
   void UpdateLatDecision(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
@@ -45,6 +45,7 @@ class LateralObstacleDecider : public Task {
       &lateral_obstacle_history_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
+  SearchResult &search_result_;
   // ego info
   double ego_rear_axis_to_front_edge_;
   double ego_length_;

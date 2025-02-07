@@ -9,7 +9,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241218/20241218-14-48-53/data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-12-18-14-48-54_no_camera.bag.60-78.split.1734615075.close-loop.hpp.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241225/20241225-22-06-51/data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-12-25-22-06-52_no_camera.bag.215-250.split.1738898757.open-loop.hpp.plan"
 
 frame_dt = 0.1 # sec
 # global_var.set_value('g_is_display_enu', True)
@@ -24,7 +24,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1400
+fig1.height = 1500
 fig_lat_offset = load_lateral_offset(bag_loader)
 
 # load lateral planning (behavior and motion)

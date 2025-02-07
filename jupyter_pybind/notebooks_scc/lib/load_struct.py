@@ -918,6 +918,63 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
       line_info_list.append(lane_info)
   return line_info_list
 
+def load_rdg_parking_lane_line(rdg_parking_lane_line_msg, loc_msg):
+  ground_mark_info = {
+    'ground_mark_x_rel': [],
+    'ground_mark_y_rel': [],
+    'ground_mark_x': [],
+    'ground_mark_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'ground_mark_label':[]
+  }
+  LaneDrivableDirection = ['未知', '直行', '直行加右转', '右转', '直行加左转', '左转', '调头加左转', '调头加右转',
+                           '直行加左转加右转', '直行加左调头', '直行加右调头', '直行加左转加左掉头', '左调头', '右调头',
+                           '禁止调头', '左转加右转', '左侧汇流', '右侧汇流', '人行横道']
+  try:
+    lane_ground_markings_size = rdg_parking_lane_line_msg.lane_ground_markings_size
+    for j in range(lane_ground_markings_size):
+      lane_ground_marking = rdg_parking_lane_line_msg.lane_ground_markings[j]
+      turn_type = lane_ground_marking.turn_type
+      ground_marking_points_set = lane_ground_marking.ground_marking_points_set
+      pos_x_rel = 0.0
+      pos_y_rel = 0.0
+      ground_mark_x_rel, ground_mark_y_rel = [], []
+      for index, points in enumerate(ground_marking_points_set):
+        ground_mark_x_rel.append(points.x)
+        ground_mark_y_rel.append(points.y)
+        pos_x_rel += points.x
+        pos_y_rel += points.y
+
+      pos_x_rel /= 4.0
+      pos_y_rel /= 4.0
+
+      pos_x, pos_y= [], []
+      ground_mark_x, ground_mark_y = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        ground_mark_x, ground_mark_y = coord_tf.local_to_global(ground_mark_x_rel, ground_mark_y_rel)
+        pos_x, pos_y = coord_tf.local_to_global([pos_x_rel], [pos_y_rel])
+
+      ground_mark_info['ground_mark_x_rel'].append(ground_mark_x_rel)
+      ground_mark_info['ground_mark_y_rel'].append(ground_mark_y_rel)
+      ground_mark_info['pos_x_rel'].append(pos_x_rel)
+      ground_mark_info['pos_y_rel'].append(pos_y_rel)
+      ground_mark_info['ground_mark_x'].append(ground_mark_x)
+      ground_mark_info['ground_mark_y'].append(ground_mark_y)
+      ground_mark_info['pos_x'].append([pos_x])
+      ground_mark_info['pos_y'].append([pos_y])
+      ground_mark_info['ground_mark_label'].append([LaneDrivableDirection[turn_type]])
+  except:
+    print("rdg_parking_lane_line_msg error")
+  return ground_mark_info
+
 def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   stop_line_info_list = []
   stop_line_msg = rdg_lane_lines_msg.stop_line
@@ -1150,9 +1207,9 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
           + lat_decision + '\n' + is_static)
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obs_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(type)+'\n'\
-          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4))+'\n'\
-          + str(round(obstacle_list[i].common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.velocity.y, 4))+'\n'\
+          + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(type)+'\n' +'rel_v: '\
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2))+'\n'\
+          +'abs_v: '+ str(round(obstacle_list[i].common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].common_info.velocity.y, 2))+'\n'\
           + lat_decision + '\n' + is_static)
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
@@ -1709,25 +1766,25 @@ def gen_line(c0, c1, c2, c3, start, end):
   return points_x, points_y
 
 def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info, g_is_display_enu = False):
-  prediction_dict = {0: {'x': [], 'y': []},
-                     1: {'x': [], 'y': []},
-                     2: {'x': [], 'y': []},
-                     3: {'x': [], 'y': []},
-                     4: {'x': [], 'y': []}}
-  obs_info = {'obstacles_x': [],
-              'obstacles_y': [],
-              'pos_x': [],
-              'pos_y': [],
-              'loc_x': [],
-              'loc_y': [],
-              'obstacles_vel': [],
-              'obstacles_acc': [],
-              'obstacles_tid': [],
-              'is_cipv': [],
-              'obs_label':[]
-              }
-  localization_x = 0
-  localization_y = 0
+  prediction_dict = {0: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     1: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     2: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     3: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     4: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []}}
+  # obs_info = {'obstacles_x': [],
+  #             'obstacles_y': [],
+  #             'pos_x': [],
+  #             'pos_y': [],
+  #             'loc_x': [],
+  #             'loc_y': [],
+  #             'obstacles_vel': [],
+  #             'obstacles_acc': [],
+  #             'obstacles_tid': [],
+  #             'is_cipv': [],
+  #             'obs_label':[]
+  #             }
+  # localization_x = 0
+  # localization_y = 0
   # if localization_info.pose.type == 1:
   #   localization_x = localization_info.pose.enu_position.x
   #   localization_y = localization_info.pose.enu_position.y
@@ -1740,17 +1797,19 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
   # elif localization_info.pose.type == 0:
   #   localization_x = localization_info.pose.local_position.x
   #   localization_y = localization_info.pose.local_position.y
-  localization_x = localization_info.position.position_boot.x
-  localization_y = localization_info.position.position_boot.y
+  # localization_x = localization_info.position.position_boot.x
+  # localization_y = localization_info.position.position_boot.y
   # linear_velocity_from_wheel = localization_info.pose.linear_velocity_from_wheel
-  localization_theta = localization_info.orientation.euler_boot.yaw
+  # localization_theta = localization_info.orientation.euler_boot.yaw
 
-  trajectory_info = {'x':[],'y':[], 'r':[]}
+  trajectory_info = {'x':[],'y':[], 'obs_x': [], 'obs_y': [], 'r':[]}
   p_x = []
   p_y = []
+  p_obs_x = []
+  p_obs_y = []
   obs_id_num = len(prediction_obs_id)
   obs_num = len(obstacle_list)
-  num = len(obstacle_list[0].trajectory.trajectory_point)
+  # num = len(obstacle_list[0].trajectory.trajectory_point)
   # print("num", num)
   for i in range(obs_num):
     obs_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
@@ -1764,53 +1823,89 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
     elif obstacle_list[i].fusion_obstacle.common_info.shape.width == 0 or obstacle_list[i].fusion_obstacle.common_info.shape.length == 0:
       continue
     else:
-      long_pos = obstacle_list[i].trajectory.trajectory_point[0].relative_position.x
-      lat_pos = obstacle_list[i].trajectory.trajectory_point[0].relative_position.y
-      theta = obstacle_list[i].fusion_obstacle.common_info.relative_heading_angle
-      half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width /2
-      length = obstacle_list[i].fusion_obstacle.common_info.shape.length
-      track_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
+      # long_pos = obstacle_list[i].trajectory.trajectory_point[0].center_position.x
+      # lat_pos = obstacle_list[i].trajectory.trajectory_point[0].center_position.y
+      # theta = obstacle_list[i].fusion_obstacle.common_info.heading_angle
+      half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width / 2
+      half_length = obstacle_list[i].fusion_obstacle.common_info.shape.length / 2
+      # track_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
 
       # print(f"long_pos = {long_pos}\tlat_pos = {lat_pos}\ttheta = {theta}\thalf_width = {half_width}\tlength = {length}\n")
 
-      obs_x = [long_pos+half_width*math.sin(theta), \
-                long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
-                long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
-                long_pos-half_width*math.sin(theta), \
-                long_pos+half_width*math.sin(theta)]
+      # obs_x = [long_pos+half_width*math.sin(theta), \
+      #           long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
+      #           long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
+      #           long_pos-half_width*math.sin(theta), \
+      #           long_pos+half_width*math.sin(theta)]
 
-      obs_y = [lat_pos-half_width*math.cos(theta), \
-                lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
-                lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
-                lat_pos+half_width*math.cos(theta),
-                lat_pos-half_width*math.cos(theta)]
-      num = num + 1
-      obs_info['obstacles_x'].append(obs_x)
-      obs_info['obstacles_y'].append(obs_y)
-      obs_info['pos_x'].append(lat_pos)
-      obs_info['pos_y'].append(long_pos)
-      obs_info['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
-      obs_info['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
-      obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
-      obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
+      # obs_y = [lat_pos-half_width*math.cos(theta), \
+      #           lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
+      #           lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
+      #           lat_pos+half_width*math.cos(theta),
+      #           lat_pos-half_width*math.cos(theta)]
+      # num = num + 1
+      # obs_info['obstacles_x'].append(obs_x)
+      # obs_info['obstacles_y'].append(obs_y)
+      # obs_info['pos_x'].append(lat_pos)
+      # obs_info['pos_y'].append(long_pos)
+      # obs_info['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
+      # obs_info['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
+      # obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
+      # obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
 
       for j in range(len(obstacle_list[i].trajectory.trajectory_point)):
         # local_x = obstacle_list[i].trajectory.trajectory_point[j].relative_position.x
         # local_y = obstacle_list[i].trajectory.trajectory_point[j].relative_position.y
         global_x = obstacle_list[i].trajectory.trajectory_point[j].position.x
         global_y = obstacle_list[i].trajectory.trajectory_point[j].position.y
+        global_yaw = obstacle_list[i].trajectory.trajectory_point[j].yaw
+        cos_heading = math.cos(global_yaw)
+        sin_heading = math.sin(global_yaw)
+        dx1 = cos_heading * half_length
+        dy1 = sin_heading * half_length
+        dx2 = sin_heading * half_width
+        dy2 = -cos_heading * half_width
+        obs_x = [global_x + dx1 + dx2,
+                 global_x + dx1 - dx2,
+                 global_x - dx1 - dx2,
+                 global_x - dx1 + dx2,
+                 global_x + dx1 + dx2]
+        obs_y = [global_y + dy1 + dy2,
+                 global_y + dy1 - dy2,
+                 global_y - dy1 - dy2,
+                 global_y - dy1 + dy2,
+                 global_y + dy1 + dy2]
         # print(global_x, global_y)
         if g_is_display_enu:
           p_x.append(global_x)
           p_y.append(global_y)
+          p_obs_x.append(obs_x)
+          p_obs_y.append(obs_y)
         else:
-          local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
-          p_x.append(local_x)
-          p_y.append(local_y)
+          coord_tf = coord_transformer()
+          if localization_info != None:
+            cur_pos_xn = localization_info.position.position_boot.x
+            cur_pos_yn = localization_info.position.position_boot.y
+            cur_yaw = localization_info.orientation.euler_boot.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            local_x, local_y = coord_tf.global_to_local(global_x, global_y)
+            p_x.append(local_x)
+            p_y.append(local_y)
+            obs_x_rel, obs_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+            p_obs_x.append(obs_x_rel)
+            p_obs_y.append(obs_y_rel)
+          else:
+            p_x.append(global_x)
+            p_y.append(global_y)
+            p_obs_x.append(obs_x)
+            p_obs_y.append(obs_y)
+            print("load_prediction_objects: localization_info error!")
 
       # trajectory_info[track_id] = [p_x, p_y]
   trajectory_info['x']=p_x
   trajectory_info['y']=p_y
+  trajectory_info['obs_x']=p_obs_x
+  trajectory_info['obs_y']=p_obs_y
 
   for i in range(len(trajectory_info['x'])):
     index_object = (int)(i / 40)
@@ -1819,6 +1914,13 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
       break
     prediction_dict[index]['x'].append(trajectory_info['x'][i])
     prediction_dict[index]['y'].append(trajectory_info['y'][i])
+    if obs_id_num > 0:
+      prediction_dict[index]['obs_x'].append(trajectory_info['obs_x'][i])
+      prediction_dict[index]['obs_y'].append(trajectory_info['obs_y'][i])
+    else:
+      prediction_dict[index]['obs_x'].append([])
+      prediction_dict[index]['obs_y'].append([])
+
   return prediction_dict
 
 def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = False):

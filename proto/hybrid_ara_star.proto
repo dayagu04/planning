@@ -1,17 +1,15 @@
-/*******************************************************************************
- * planning调试信息
- * topic：/iflytek/planning/debug_info
- * 频率：10Hz
- *******************************************************************************/
-
 syntax = "proto2";
 
 package planning.common;
+
+import "basic_types.proto";
 
 message HybridARAPath {
   repeated double x = 1;
   repeated double y = 2;
   repeated double phi = 3;
+  repeated double s = 4;
+  repeated double l = 5;
 }
 
 message HybridARAPathCostInfo {
@@ -38,6 +36,7 @@ message HybridARANode {
   optional double dist_cost = 11;
   optional double area_cost = 12;
   optional double directly_behind_cost = 13;
+  optional double pass_interval_cost = 14;
 }
 
 message HybridARAExpandNode {
@@ -59,6 +58,7 @@ message HybridARAObstacle {
   optional double relative_heading_angle = 7;
   optional double length = 8;
   optional double width = 9;
+  repeated Point2d polygon_points = 10;
 }
 
 message HybridARAInfo {

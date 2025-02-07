@@ -697,6 +697,8 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"hybrid_ara_star", "step_size"});
     one_shot_distance = read_json_keys<double>(
         json, std::vector<std::string>{"hybrid_ara_star", "one_shot_distance"});
+    small_shot_distance = read_json_keys<double>(
+        json, std::vector<std::string>{"hybrid_ara_star", "small_shot_distance"});
     use_percentage_of_steering = read_json_keys<double>(
         json, std::vector<std::string>{"hybrid_ara_star",
                                        "use_percentage_of_steering"});
@@ -748,6 +750,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
   double next_node_num = 7;
   double step_size = 4;
   double one_shot_distance = 2;
+  double small_shot_distance = 2;
   double use_percentage_of_steering = 1.0;
   double heuristic_factor = 15;
   double agent_cost_weight = 0.2;
@@ -2497,6 +2500,27 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
         enable_bbox_mode);  // obstacle boundary construction
     max_speed_static_obstacle =
         read_json_key<double>(json, "max_speed_static_obstacle");
+    supper_limit_for_OD_straight = read_json_key<double>(
+        json, "supper_limit_for_OD_straight",
+        supper_limit_for_OD_straight);
+    supper_limit_for_OD_bend = read_json_key<double>(
+        json, "supper_limit_for_OD_bend",
+        supper_limit_for_OD_bend);
+  }
+  double frenet_obstacle_range_s_min = -50.0;
+  double frenet_obstacle_range_s_max = 180.0;
+  double frenet_obstacle_range_l_min = -50.0;
+  double frenet_obstacle_range_l_max = 50.0;
+  bool enable_bbox_mode = true;
+  double max_speed_static_obstacle = 0.5;
+  double supper_limit_for_OD_straight = 6.0;
+  double supper_limit_for_OD_bend = 6.0;
+};
+
+struct EgoPlanningEdtManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
     car_body_lat_safe_buffer = read_json_key<double>(
         json, "car_body_lat_safe_buffer",
          car_body_lat_safe_buffer);
@@ -2506,20 +2530,10 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
     mirror_buffer = read_json_key<double>(
         json, "mirror_buffer",
         mirror_buffer);
-    supper_limit_for_OD = read_json_key<double>(
-        json, "supper_limit_for_OD",
-        supper_limit_for_OD);
   }
-  double frenet_obstacle_range_s_min = -50.0;
-  double frenet_obstacle_range_s_max = 180.0;
-  double frenet_obstacle_range_l_min = -50.0;
-  double frenet_obstacle_range_l_max = 50.0;
-  bool enable_bbox_mode = true;
-  double max_speed_static_obstacle = 0.5;
   double car_body_lat_safe_buffer = 0.2;
   double lon_safe_buffer = 0.2;
   double mirror_buffer = 0.2;
-  double supper_limit_for_OD = 6.0;
 };
 
 struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
@@ -2560,6 +2574,12 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                           replan_longitudinal_distance_threshold_speed);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_value",
                           replan_longitudinal_distance_threshold_value);
+    read_json_vec<double>(json, "hpp_replan_threshold_speed",
+                          hpp_replan_threshold_speed);
+    read_json_vec<double>(json, "hpp_replan_lat_err_threshold_value",
+                          hpp_replan_lat_err_threshold_value);
+    read_json_vec<double>(json, "hpp_replan_lon_err_threshold_value",
+                          hpp_replan_lon_err_threshold_value);
   }
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
@@ -2572,6 +2592,15 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   std::vector<double> replan_longitudinal_distance_threshold_speed{11.111,
                                                                    27.778};
   std::vector<double> replan_longitudinal_distance_threshold_value{1.0, 1.1};
+  std::vector<double> hpp_replan_threshold_speed{1.0,
+                                                 4.167,
+                                                 11.111};
+  std::vector<double> hpp_replan_lat_err_threshold_value{0.2,
+                                                         0.4,
+                                                         0.6};
+  std::vector<double> hpp_replan_lon_err_threshold_value{0.1,
+                                                         0.5,
+                                                         1.0};
   double hpp_max_replan_lat_err = 0.45;
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;

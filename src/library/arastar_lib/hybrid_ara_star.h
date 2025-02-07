@@ -9,6 +9,7 @@
 #include "euler_distance_transform.h"
 #include "hybrid_ara_data.h"
 #include "ifly_time.h"
+#include "modules/tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "node3d.h"
 #include "src/framework/session.h"
 #include "src/library/arastar_lib/cost/agent_cost.h"
@@ -30,7 +31,8 @@ class HybridARAStar {
 
   virtual ~HybridARAStar() = default;
 
-  bool Plan(ara_star::HybridARAStarResult& result);
+  bool Plan(ara_star::HybridARAStarResult& result,
+            const SearchResult search_result);
 
  private:
   bool ProcessStaticAgents();
@@ -41,7 +43,7 @@ class HybridARAStar {
                           const std::shared_ptr<KDPath>& target_lane,
                           const vector<TrajectoryPoint>& plan_history_traj,
                           const double target_v);
-  bool ValidityCheck(const std::shared_ptr<Node3D> node) const;
+  bool ValidityCheck(const std::shared_ptr<Node3D> node);
   planning::planning_math::Box2d GetBoundingBox(const double x, const double y,
                                                 const double phi) const;
   double CalculateBaseHeuCost(const std::shared_ptr<Node3D> current_node) const;
@@ -55,8 +57,24 @@ class HybridARAStar {
   void UpdateHeuristicFactor();
   void UpdateOpenSetWithHeuristicFactor();
   void Reset();
-  bool Init();
+  bool Init(const SearchResult search_result);
   void ChooseDirection();
+  void LogAgent();
+  void MergeCloseAgent();
+  bool IsClose(
+      const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
+      const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle);
+  std::shared_ptr<planning::FrenetObstacle> MergeAgents(
+      int id, const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
+      const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle);
+  void FindClosestUncoveredInterval();
+  void LogNodeDebugInfo(const std::shared_ptr<Node3D>& current_node,
+                        common::HybridARAExpand* hybrid_ara_expand);
+  bool DetectBend();
+  bool LeftOrRightTurn();
+  void CalculateSearchBounds(
+      const std::vector<TrajectoryPoint>& plan_history_traj);
+  double ReferencePathLength();
 
  private:
   framework::Session* session_;
@@ -67,6 +85,7 @@ class HybridARAStar {
   double max_front_wheel_angle_ = 0.0;
   double step_size_ = 0.0;
   double one_shot_distance_ = 0.0;
+  double small_shot_distance_ = 0.0;
   double x_grid_resolution_ = 0.0;
   double y_grid_resolution_ = 0.0;
   double phi_grid_resolution_ = 0.0;
@@ -115,17 +134,17 @@ class HybridARAStar {
   bool no_right_ = false;
   EulerDistanceTransform* edt_ = nullptr;
   bool in_bend_ = false;
+  bool left_turn_ = false;
+  bool right_turn_ = false;
+  std::vector<std::shared_ptr<Obstacle>> obstacle_pool_;
+  std::pair<double, double> pass_interval_;
+  Transform2d ego_base_;
 
-  // map bound
   std::vector<double> XYbounds_;
   std::shared_ptr<KDPath> fix_lane_ = nullptr;
-
   std::shared_ptr<Node3D> start_node_;
   std::shared_ptr<Node3D> end_node_;
-  std::shared_ptr<Node3D>
-      final_node_;  // reach destination not need fully match end node
-
-  // bounding box for cost
+  std::shared_ptr<Node3D> final_node_;
   std::vector<ara_star::SLBox2d> bounding_box_vec_;
   std::vector<std::shared_ptr<planning::FrenetObstacle>> nudge_agents_;
   std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>

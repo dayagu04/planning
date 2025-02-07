@@ -7,6 +7,7 @@
 #include <limits>
 
 #include "debug_info_log.h"
+#include "edt_manager.h"
 #include "environmental_model.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
@@ -32,6 +33,8 @@ constexpr double kExtendARASearchRange = 20.0;
 constexpr double kDefaultLaneWidth = 3.5;
 // zkxie(TODO): 1 or 2
 constexpr double kMinHeuristicFactor = 2.0;
+constexpr int kCollisionStepSize = 3;
+constexpr double kBendRoadRadius = 30;
 }  // namespace
 
 HybridARAStar::HybridARAStar(framework::Session* session) {
@@ -47,6 +50,7 @@ HybridARAStar::HybridARAStar(framework::Session* session) {
       hybrid_ara_star_conf_.use_percentage_of_steering;  // need to be rad
   step_size_ = hybrid_ara_star_conf_.step_size;
   one_shot_distance_ = hybrid_ara_star_conf_.one_shot_distance;
+  small_shot_distance_ = hybrid_ara_star_conf_.small_shot_distance;
   x_grid_resolution_ = hybrid_ara_star_conf_.x_grid_resolution;
   y_grid_resolution_ = hybrid_ara_star_conf_.y_grid_resolution;
   phi_grid_resolution_ = hybrid_ara_star_conf_.phi_grid_resolution;
@@ -281,12 +285,14 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
   // 有障碍物时，步长小一点，没有障碍物时，步长大一点
   // HPP中速度变化较小，取消和速度的关系
   double one_shot_distance_update = one_shot_distance_;
-  if (current_node->GetS() < obs_max_s_ + vehicle_param_.rear_edge_to_rear_axle &&
-      current_node->GetS() > obs_min_s_ - vehicle_param_.front_edge_to_rear_axle) {
-    one_shot_distance_update = 0.5;
+  if (current_node->GetS() <
+          obs_max_s_ + vehicle_param_.rear_edge_to_rear_axle &&
+      current_node->GetS() >
+          obs_min_s_ - vehicle_param_.front_edge_to_rear_axle) {
+    one_shot_distance_update = small_shot_distance_;
   }
   if (in_bend_) {
-    one_shot_distance_update = 0.5;
+    one_shot_distance_update = small_shot_distance_;
   }
 
   // one_shot_distance_的取值要注意，apollo中该值是xy_grid_resolution_的根号2倍，这样保证了一个格子里，最多只有一个节点
@@ -357,11 +363,8 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
   }
 
   // check if the vehicle runs outside ego lane
-  auto reference_path_ptr = session_->planning_context()
-                                .lane_change_decider_output()
-                                .coarse_planning_info.reference_path;
   ReferencePathPoint refpath_pt{};
-  if (!reference_path_ptr->get_reference_point_by_lon(next_s, refpath_pt)) {
+  if (!reference_path_ptr_->get_reference_point_by_lon(next_s, refpath_pt)) {
     std::cout << "Hybrid ara*: Get reference point by lon failed!" << std::endl;
   }
   if (next_l > refpath_pt.distance_to_left_lane_border - ego_half_width_ +
@@ -387,6 +390,7 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
   next_node->SetSteer(steering);
   next_node->SetS(next_s);
   next_node->SetL(next_l);
+  next_node->SetDeltaS(next_s - ego_s_);
 
   return next_node;
 }
@@ -403,7 +407,8 @@ void HybridARAStar::RegisterCost(ara_star::CostManager& cost_manager) const {
       ego_half_width_, bounding_box_vec_, fix_lane_, agent_box_tree_,
       reference_path_ptr_, nudge_agents_,
       vehicle_param_.front_edge_to_rear_axle,
-      vehicle_param_.rear_edge_to_rear_axle);
+      vehicle_param_.rear_edge_to_rear_axle, pass_interval_, left_turn_,
+      right_turn_);
   cost_manager.AddCost(agent_cost_ptr);
 
   // 与道路边缘越近，cost越大
@@ -415,15 +420,11 @@ void HybridARAStar::RegisterCost(ara_star::CostManager& cost_manager) const {
 }
 
 bool HybridARAStar::ImprovePath() {
-  // fvalue = gvalue + hvalue;
-  // gvalue is traj_cost in node3d
-
-  auto start_time = (uint64_t)IflyTime::Now_us();
+  // auto start_time = (uint64_t)IflyTime::Now_us();
 
   bool has_found_new_path = false;
   bool search_find_result = true;
   std::unordered_map<std::string, std::shared_ptr<Node3D>> incons_set;
-  incons_set.clear();
 
   // register cost manager
   ara_star::CostManager cost_manager;
@@ -434,7 +435,7 @@ bool HybridARAStar::ImprovePath() {
       motion_cost_weight_, max_front_wheel_angle_, 0.0);
   cost_manager.AddCost(motion_cost_ptr);
 
-  auto end_time = (uint64_t)IflyTime::Now_us();
+  // auto end_time = (uint64_t)IflyTime::Now_us();
   // std::cout << "ImprovePath: prepare time " << (end_time - start_time)
   //           << std::endl;
 
@@ -455,9 +456,8 @@ bool HybridARAStar::ImprovePath() {
       break;
     }
 
-    auto time1 = (uint64_t)IflyTime::Now_us();
+    // auto time1 = (uint64_t)IflyTime::Now_us();
 
-    // zkxie(TODO): 是否需要加 heuristic_factor_
     // double goal_fvalue = final_node_->GetCost();
     double goal_fvalue = final_node_->GetCost(heuristic_factor_);
     double best_fvalue = open_pq_.top().second;
@@ -481,25 +481,6 @@ bool HybridARAStar::ImprovePath() {
     std::shared_ptr<Node3D> current_node = open_set_[current_id];
     open_set_.erase(current_id);
 
-    // put data into debug info
-    auto expand_node = hybrid_ara_expand->add_hybrid_ara_expand();
-    auto expand_current_node = expand_node->mutable_current_node();
-    expand_current_node->set_x(current_node->GetX());
-    expand_current_node->set_y(current_node->GetY());
-    expand_current_node->set_phi(current_node->GetPhi());
-    expand_current_node->set_agent_cost(current_node->GetAgentCost());
-    expand_current_node->set_boundary_cost(current_node->GetBoundaryCost());
-    expand_current_node->set_center_cost(current_node->GetCenterCost());
-    expand_current_node->set_motion_cost(current_node->GetMotionCost());
-    expand_current_node->set_heuristic_cost(current_node->GetHeuCost());
-    expand_current_node->set_total_cost(
-        current_node->GetCost(heuristic_factor_));
-    expand_current_node->set_min_dist(current_node->GetMinDist());
-    expand_current_node->set_dist_cost(current_node->GetDistCost());
-    expand_current_node->set_area_cost(current_node->GetAreaCost());
-    expand_current_node->set_directly_behind_cost(
-        current_node->GetDirectlyBehindCost());
-
     // put into close set
     close_set_.emplace(current_node->GetIndex(), current_node);
 
@@ -508,18 +489,17 @@ bool HybridARAStar::ImprovePath() {
       continue;
     }
 
-    auto time2 = (uint64_t)IflyTime::Now_us();
+    // auto time2 = (uint64_t)IflyTime::Now_us();
     // std::cout << "pq pop time: " << (time2 - time1) << std::endl;
 
     expand_num_++;
-    // std::cout << "========= expand node ==========" << std::endl;
     for (size_t i = 0; i < next_node_num_; ++i) {
-      auto time3 = (uint64_t)IflyTime::Now_us();
+      // auto time3 = (uint64_t)IflyTime::Now_us();
 
       std::shared_ptr<Node3D> next_node = NextNodeGenerator(current_node, i);
       num_node_expand_++;
 
-      auto time4 = (uint64_t)IflyTime::Now_us();
+      // auto time4 = (uint64_t)IflyTime::Now_us();
       // std::cout << "next node generate time: " << (time4 - time3) <<
       // std::endl;
 
@@ -532,13 +512,8 @@ bool HybridARAStar::ImprovePath() {
         continue;
       }
 
-      auto time5 = (uint64_t)IflyTime::Now_us();
+      // auto time5 = (uint64_t)IflyTime::Now_us();
       // std::cout << "ValidityCheck time: " << (time5 - time4) << std::endl;
-
-      // std::cout << "next node index: "<< next_node->GetIndex() << std::endl;
-      // std::cout << "next node x,y,phi: "<< next_node->GetX() << " " <<
-      // next_node->GetY() << " "
-      // << next_node->GetPhi() << std::endl;
 
       // check if the node is already in the observed set
       // observed_set_ 不清空
@@ -557,7 +532,7 @@ bool HybridARAStar::ImprovePath() {
       double cost = cost_manager.ComputeCost(*next_node);
       double new_traj_cost = current_node->GetTrajCost() + cost;
 
-      auto time6 = (uint64_t)IflyTime::Now_us();
+      // auto time6 = (uint64_t)IflyTime::Now_us();
       // std::cout << "ComputeCost time: " << (time6 - time5) << std::endl;
 
       if (next_node->GetTrajCost() > new_traj_cost) {
@@ -593,7 +568,7 @@ bool HybridARAStar::ImprovePath() {
           incons_set.emplace(next_node->GetIndex(), next_node);
         }
       }
-      auto time7 = (uint64_t)IflyTime::Now_us();
+      // auto time7 = (uint64_t)IflyTime::Now_us();
       // std::cout << "incons cost time: " << (time7 - time6) << std::endl;
 
     }  // end node explore loop
@@ -605,27 +580,8 @@ bool HybridARAStar::ImprovePath() {
       break;
     }
 
-    // put data into debug info
-    for (auto& node : open_set_) {
-      auto open_list = expand_node->add_open_list();
-      open_list->set_x(node.second->GetX());
-      open_list->set_y(node.second->GetY());
-      open_list->set_phi(node.second->GetPhi());
-      open_list->set_agent_cost(node.second->GetAgentCost());
-      open_list->set_boundary_cost(node.second->GetBoundaryCost());
-      open_list->set_center_cost(node.second->GetCenterCost());
-      open_list->set_motion_cost(node.second->GetMotionCost());
-      open_list->set_heuristic_cost(node.second->GetHeuCost() *
-                                    heuristic_factor_);
-      open_list->set_total_cost(node.second->GetCost(heuristic_factor_));
-      open_list->set_min_dist(node.second->GetMinDist());
-      open_list->set_dist_cost(node.second->GetDistCost());
-      open_list->set_area_cost(node.second->GetAreaCost());
-      open_list->set_directly_behind_cost(node.second->GetDirectlyBehindCost());
-    }
+    LogNodeDebugInfo(current_node, hybrid_ara_expand);
 
-    // std::cout << expand_node->open_list().size() << std::endl;
-    // std::cout << expand_node->open_list().begin()->x() << std::endl;
   }  // end while loop
 
   if (!search_find_result) {
@@ -633,26 +589,70 @@ bool HybridARAStar::ImprovePath() {
     return false;
   }
 
-  auto time8 = (uint64_t)IflyTime::Now_us();
-  // merge incons_set_ into open_set_
-  for (auto& node : incons_set) {
-    open_set_.emplace(node.first, node.second);
-  }
-  auto time9 = (uint64_t)IflyTime::Now_us();
-  // std::cout << "merge incons_set_ into open_set_ time: " << (time9 - time8)
-  //           << std::endl;
+  if (!incons_set.empty()) {
+    // auto time8 = (uint64_t)IflyTime::Now_us();
+    // merge incons_set_ into open_set_
+    for (auto& node : incons_set) {
+      open_set_.emplace(node.first, node.second);
+    }
+    // auto time9 = (uint64_t)IflyTime::Now_us();
+    // std::cout << "merge incons_set_ into open_set_ time: " << (time9 - time8)
+    //           << std::endl;
 
-  auto time10 = (uint64_t)IflyTime::Now_us();
-  // rebuild open_pq_
-  open_pq_ = decltype(open_pq_)();
-  for (auto& node : open_set_) {
-    // 这里的epsilon无所谓，因为后面会更新epsilon然后更新open list
-    open_pq_.emplace(node.first, node.second->GetCost());
+    // rebuild open_pq_
+    open_pq_ = decltype(open_pq_)();
+    for (auto& node : open_set_) {
+      // 这里的epsilon无所谓，因为后面会更新epsilon然后更新open list
+      open_pq_.emplace(node.first, node.second->GetCost());
+    }
+    // auto time10 = (uint64_t)IflyTime::Now_us();
+    // std::cout << "rebuild open_pq_ time: " << (time10 - time9) << std::endl;
   }
-  auto time11 = (uint64_t)IflyTime::Now_us();
-  // std::cout << "rebuild open_pq_ time: " << (time11 - time10) << std::endl;
 
   return true;
+}
+
+void HybridARAStar::LogNodeDebugInfo(
+    const std::shared_ptr<Node3D>& current_node,
+    common::HybridARAExpand* hybrid_ara_expand) {
+  // put data into debug info
+  auto expand_node = hybrid_ara_expand->add_hybrid_ara_expand();
+  auto expand_current_node = expand_node->mutable_current_node();
+  expand_current_node->set_x(current_node->GetX());
+  expand_current_node->set_y(current_node->GetY());
+  expand_current_node->set_phi(current_node->GetPhi());
+  expand_current_node->set_agent_cost(current_node->GetAgentCost());
+  expand_current_node->set_boundary_cost(current_node->GetBoundaryCost());
+  expand_current_node->set_center_cost(current_node->GetCenterCost());
+  expand_current_node->set_motion_cost(current_node->GetMotionCost());
+  expand_current_node->set_heuristic_cost(current_node->GetHeuCost());
+  expand_current_node->set_total_cost(current_node->GetCost(heuristic_factor_));
+  expand_current_node->set_min_dist(current_node->GetMinDist());
+  expand_current_node->set_dist_cost(current_node->GetDistCost());
+  expand_current_node->set_area_cost(current_node->GetAreaCost());
+  expand_current_node->set_directly_behind_cost(
+      current_node->GetDirectlyBehindCost());
+  expand_current_node->set_pass_interval_cost(
+      current_node->GetPassIntervalCost());
+
+  for (auto& node : open_set_) {
+    auto open_list = expand_node->add_open_list();
+    open_list->set_x(node.second->GetX());
+    open_list->set_y(node.second->GetY());
+    open_list->set_phi(node.second->GetPhi());
+    open_list->set_agent_cost(node.second->GetAgentCost());
+    open_list->set_boundary_cost(node.second->GetBoundaryCost());
+    open_list->set_center_cost(node.second->GetCenterCost());
+    open_list->set_motion_cost(node.second->GetMotionCost());
+    open_list->set_heuristic_cost(node.second->GetHeuCost() *
+                                  heuristic_factor_);
+    open_list->set_total_cost(node.second->GetCost(heuristic_factor_));
+    open_list->set_min_dist(node.second->GetMinDist());
+    open_list->set_dist_cost(node.second->GetDistCost());
+    open_list->set_area_cost(node.second->GetAreaCost());
+    open_list->set_directly_behind_cost(node.second->GetDirectlyBehindCost());
+    open_list->set_pass_interval_cost(node.second->GetPassIntervalCost());
+  }
 }
 
 // 与终点s的差值，最小为0
@@ -678,14 +678,8 @@ planning_math::Box2d HybridARAStar::GetBoundingBox(const double x,
   return ego_box;
 }
 
-bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
+bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) {
   // prepare for edt
-  const auto& ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  Transform2d ego_base;
-  ego_base.SetBasePose(Pose2D(ego_state_manager->ego_pose().x,
-                              ego_state_manager->ego_pose().y,
-                              ego_state_manager->ego_pose().theta));
   const AstarPathGear gear = AstarPathGear::DRIVE;
   float dist = 100.0;
   float min_dist = 100.0;
@@ -697,36 +691,30 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
   const auto& traversed_phi = node->GetPhis();
 
   // The first {x, y, phi} is collision free unless they are start and end
-  int check_start_index = 0;
-  if (node_step_num == 1) {
-    check_start_index = 0;
-  } else {
-    check_start_index = 1;
-  }
+  const int check_start_index = (node_step_num == 1) ? 0 : 1;
+
   // since step size is 0.2m for motion integration, we check every 1.0m for
   // collision is enough
   // 为了加快速度，省略了一些中间的点，这样理论上会有碰撞的风险，但是概率很小
-  for (int i = node_step_num - 1; i >= check_start_index; i = i - 3) {
-    double cos_phi = std::cos(traversed_phi[i]);
-    double sin_phi = std::sin(traversed_phi[i]);
+  for (int i = node_step_num - 1; i >= check_start_index;
+       i -= kCollisionStepSize) {
+    const double cos_phi = std::cos(traversed_phi[i]);
+    const double sin_phi = std::sin(traversed_phi[i]);
+    const double front_x =
+        traversed_x[i] + vehicle_param_.front_edge_to_rear_axle * cos_phi;
+    const double front_y =
+        traversed_y[i] + vehicle_param_.front_edge_to_rear_axle * sin_phi;
+
     planning_math::Vec2d back_axis_position(traversed_x[i], traversed_y[i]);
-    double front_x = traversed_x[i] + vehicle_param_.front_edge_to_rear_axle * cos_phi;
-    double front_y = traversed_y[i] + vehicle_param_.front_edge_to_rear_axle * sin_phi;
     planning_math::Vec2d ego_head_position(front_x, front_y);
-    double center_x = (traversed_x[i] + front_x) / 2;
-    double center_y = (traversed_y[i] + front_y) / 2;
-    planning_math::Vec2d center_position(center_x, center_y);
+    planning_math::Vec2d center_position((traversed_x[i] + front_x) / 2,
+                                         (traversed_y[i] + front_y) / 2);
 
     Pose2D local_point;
-    ego_base.GlobalPointToULFLocal(&local_point,
-                                   Pose2D(traversed_x[i], traversed_y[i], 0));
-    double relative_theta = std::fmod(
-        traversed_phi[i] - ego_state_manager->ego_pose().theta, 2 * M_PI);
-    if (relative_theta > M_PI) {
-      relative_theta -= 2 * M_PI;
-    } else if (relative_theta < -M_PI) {
-      relative_theta += 2 * M_PI;
-    }
+    ego_base_.GlobalPointToULFLocal(&local_point,
+                                    Pose2D(traversed_x[i], traversed_y[i], 0));
+    double relative_theta = planning_math::NormalizeAngle(
+        traversed_phi[i] - ego_base_.GetConstBasePose().GetPhi());
     Transform2d tf;
     tf.SetBasePose(Pose2D(local_point.x, local_point.y, relative_theta));
     if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
@@ -768,57 +756,48 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
   return true;
 }
 
-bool HybridARAStar::SetStartAndEndPose(
-    const PlanningInitPoint& planning_init_point,
-    const std::shared_ptr<KDPath>& fix_lane,
-    const vector<TrajectoryPoint>& plan_history_traj, const double target_v) {
-  // 弯道判断
-  constexpr double kBendRoadRadius = 30;
+bool HybridARAStar::LeftOrRightTurn() {
   ReferencePathPoint temp_ref_path_point;
-  std::array<uint8_t, 5> s_range{0, 5, 10, 15, 20};
+  std::array<int8_t, 3> s_range{11, 4, -1};
   for (auto s : s_range) {
-    if (!in_bend_ && reference_path_ptr_->get_reference_point_by_lon(
-                        ego_s_ + s, temp_ref_path_point)) {
+    if (reference_path_ptr_->get_reference_point_by_lon(ego_s_ + s,
+                                                        temp_ref_path_point)) {
       if (std::abs(temp_ref_path_point.path_point.kappa()) >
           1 / kBendRoadRadius) {
-        in_bend_ = true;
-        break;
+        if (temp_ref_path_point.path_point.kappa() > 0) {
+          left_turn_ = true;
+          return true;
+        } else {
+          right_turn_ = true;
+          return true;
+        }
       }
     }
   }
+  return false;
+}
 
-  // double ego_s = 0.0;
-  // double ego_l = 0.0;
-  // if (!fix_lane->XYToSL(planning_init_point.x, planning_init_point.y, &ego_s,
-  //                       &ego_l)) {
-  //   std::cout << "Hybrid ara*: planning_init_point frenet failed!!!"
-  //             << std::endl;
-  //   return false;
-  // }
-  // auto start_point = fix_lane.GetCenterLinePathPointByS(ego_s);
-  // start_pose_.x = start_point.x();
-  // start_pose_.y = start_point.y();
-  // start_pose_.theta = start_point.theta();
-
-  // Try always use ego state as start point
-  start_pose_.x = planning_init_point.x;
-  start_pose_.y = planning_init_point.y;
-  start_pose_.theta = planning_init_point.heading_angle;
-
-  double start_s = 0.0;
-  double start_l = 0.0;
-  if (!fix_lane_->XYToSL(start_pose_.x, start_pose_.y, &start_s, &start_l)) {
-    std::cout << "start node out of lane" << std::endl;
-    return false;
+bool HybridARAStar::DetectBend() {
+  ReferencePathPoint temp_ref_path_point;
+  std::array<int8_t, 5> s_range{-1, 5, 10, 15, 20};
+  for (auto s : s_range) {
+    if (reference_path_ptr_->get_reference_point_by_lon(ego_s_ + s,
+                                                        temp_ref_path_point)) {
+      if (std::abs(temp_ref_path_point.path_point.kappa()) >
+          1 / kBendRoadRadius) {
+        return true;
+      }
+    }
   }
-  std::cout << "start s l: " << start_s << " " << start_l << std::endl;
+  return false;
+}
 
-  // 终点s，与ref保持一致
+double HybridARAStar::ReferencePathLength() {
   constexpr double kMaxAcc = 0.2;
   constexpr double kMinAcc = -5.5;
   double cruise_v = session_->planning_context().v_ref_cruise();
   double ego_v = std::max(
-      planning_init_point.v,
+      init_v_,
       std::min(hpp_general_lateral_decider_config_.min_v_cruise, cruise_v));
   // if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
   //   limit_ref_vel_on_ramp_valid = true;
@@ -846,6 +825,65 @@ bool HybridARAStar::SetStartAndEndPose(
   const double max_ref_length =
       session_->planning_context().v_ref_cruise() * span_t;
   s = std::min(s, max_ref_length);
+  return s;
+}
+
+void HybridARAStar::CalculateSearchBounds(
+    const std::vector<TrajectoryPoint>& plan_history_traj) {
+  // TODO: this may wrong in u turn and could be very large for left right turn
+  // this XYbounds is only used for get the node index
+  // bound check is now used ego lane.
+  XYbounds_.clear();
+  // 找到上一帧轨迹和A*搜索起止点的最大，最小x和y。将这个x和y都往外扩了50m
+  double min_x = std::min(start_pose_.x, end_pose_.x);
+  double max_x = std::max(start_pose_.x, end_pose_.x);
+  for (auto traj_poit : plan_history_traj) {
+    min_x = std::min(traj_poit.x, min_x);
+    max_x = std::max(traj_poit.x, max_x);
+  }
+  XYbounds_.push_back(min_x - kExtendARASearchRange);
+  XYbounds_.push_back(max_x + kExtendARASearchRange);
+  double min_y = std::min(start_pose_.y, end_pose_.y);
+  double max_y = std::max(start_pose_.y, end_pose_.y);
+  for (const auto& traj_poit : plan_history_traj) {
+    min_y = std::min(traj_poit.y, min_y);
+    max_y = std::max(traj_poit.y, max_y);
+  }
+  XYbounds_.push_back(min_y - kExtendARASearchRange);
+  XYbounds_.push_back(max_y + kExtendARASearchRange);
+}
+
+bool HybridARAStar::SetStartAndEndPose(
+    const PlanningInitPoint& planning_init_point,
+    const std::shared_ptr<KDPath>& fix_lane,
+    const vector<TrajectoryPoint>& plan_history_traj, const double target_v) {
+  // double ego_s = 0.0;
+  // double ego_l = 0.0;
+  // if (!fix_lane->XYToSL(planning_init_point.x, planning_init_point.y, &ego_s,
+  //                       &ego_l)) {
+  //   std::cout << "Hybrid ara*: planning_init_point frenet failed!!!"
+  //             << std::endl;
+  //   return false;
+  // }
+  // auto start_point = fix_lane.GetCenterLinePathPointByS(ego_s);
+  // start_pose_.x = start_point.x();
+  // start_pose_.y = start_point.y();
+  // start_pose_.theta = start_point.theta();
+
+  // 规划起点 或 规划起点投影点
+  start_pose_.x = planning_init_point.x;
+  start_pose_.y = planning_init_point.y;
+  start_pose_.theta = planning_init_point.heading_angle;
+
+  double start_s = 0.0;
+  double start_l = 0.0;
+  if (!fix_lane_->XYToSL(start_pose_.x, start_pose_.y, &start_s, &start_l)) {
+    std::cout << "start node out of lane" << std::endl;
+    return false;
+  }
+
+  // 终点
+  double s = ReferencePathLength();
   constexpr uint8_t kExtendS = 2;
   constexpr double kMinS = 13;
   if (in_bend_) {
@@ -853,9 +891,11 @@ bool HybridARAStar::SetStartAndEndPose(
   } else {
     s = std::max(s + kExtendS, hpp_min_search_range_);
   }
-  s = std::max(kMinS, s);
+  if (!left_turn_ && !right_turn_) {
+    s = std::max(kMinS, s);
+  }
   double end_s = start_s + s;
-
+  end_s = std::min(end_s, fix_lane->path_points().back().s() - 1);
   // 目标车道中心线上对应的终点，如果s超过了线长呢，在外层做了判断保护,直接搜索失败
   auto end_point = fix_lane->GetPathPointByS(end_s);
 
@@ -868,31 +908,8 @@ bool HybridARAStar::SetStartAndEndPose(
   }
   std::cout << "  end s l: " << end_s_ << " " << end_l_ << std::endl;
 
-  // TODO: this may wrong in u turn and could be very large for left right turn
-  // this XYbounds is only used for get the node index
-  // bound check is now used ego lane.
-  XYbounds_.clear();
-  // 找到上一帧轨迹和A*搜索起止点的最大，最小x和y。将这个x和y都往外扩了50m
-  double min_x = std::min(start_pose_.x, end_pose_.x);
-  double max_x = std::max(start_pose_.x, end_pose_.x);
-  for (auto traj_poit : plan_history_traj) {
-    min_x = std::min(traj_poit.x, min_x);
-    max_x = std::max(traj_poit.x, max_x);
-  }
-  XYbounds_.push_back(
-      min_x -
-      kExtendARASearchRange);  // kExtendARASearchRange：hpp可以先设成30m
-  XYbounds_.push_back(max_x + kExtendARASearchRange);
-  double min_y = std::min(start_pose_.y, end_pose_.y);
-  double max_y = std::max(start_pose_.y, end_pose_.y);
-  for (const auto& traj_poit : plan_history_traj) {
-    min_y = std::min(traj_poit.y, min_y);
-    max_y = std::max(traj_poit.y, max_y);
-  }
-  XYbounds_.push_back(
-      min_y -
-      kExtendARASearchRange);  // kExtendARASearchRange：hpp可以先设成30m
-  XYbounds_.push_back(max_y + kExtendARASearchRange);
+  // 扩展搜索范围
+  CalculateSearchBounds(plan_history_traj);
 
   // load nodes
   start_node_.reset(new Node3D(start_pose_.x, start_pose_.y, start_pose_.theta,
@@ -901,12 +918,6 @@ bool HybridARAStar::SetStartAndEndPose(
   end_node_.reset(new Node3D(end_pose_.x, end_pose_.y, end_pose_.theta,
                              XYbounds_, x_grid_resolution_, y_grid_resolution_,
                              phi_grid_resolution_));
-
-  // 目前start_node_就是自车位置，并不是自车位置在参考线的投影
-  // if (!ValidityCheck(start_node_)) {
-  //   std::cout << "Error!!! start_node in collision with obstacles" <<
-  //   std::endl; return false;
-  // }
 
   start_node_->SetS(start_s);
   start_node_->SetL(start_l);
@@ -938,65 +949,60 @@ void HybridARAStar::BuildVirturalKDTree(
       agent_objects, kdtree_params);
 }
 
-void HybridARAStar::BuildAgentKDTree(
-    const std::vector<const Obstacle*>& nudge_agents) {
-  std::vector<planning_math::GeometryObject> agent_objects;
-  agent_objects.reserve(nudge_agents.size());
-  int i = 0;
-  for (const auto& agent : nudge_agents) {
-    if (agent == nullptr) {
-      continue;
-    }
-    const bool is_traffic_facilities = agent->is_traffic_facilities();
-    agent_objects.emplace_back(agent->perception_bounding_box(), i, agent->id(),
-                               agent);
-    i++;
-  }
+// void HybridARAStar::BuildAgentKDTree(
+//     const std::vector<const Obstacle*>& nudge_agents) {
+//   std::vector<planning_math::GeometryObject> agent_objects;
+//   agent_objects.reserve(nudge_agents.size());
+//   int i = 0;
+//   for (const auto& agent : nudge_agents) {
+//     if (agent == nullptr) {
+//       continue;
+//     }
+//     const bool is_traffic_facilities = agent->is_traffic_facilities();
+//     agent_objects.emplace_back(agent->perception_bounding_box(), i,
+//     agent->id(),
+//                                agent);
+//     i++;
+//   }
 
-  planning_math::AABoxKDTreeParams kdtree_params;
-  kdtree_params.max_depth = 8;
-  kdtree_params.max_leaf_dimension = 25;
-  kdtree_params.max_leaf_size = 4;
-  agent_box_tree_ = std::make_shared<
-      planning_math::AABoxKDTree2d<planning_math::GeometryObject>>(
-      agent_objects, kdtree_params);
-}
+//   planning_math::AABoxKDTreeParams kdtree_params;
+//   kdtree_params.max_depth = 8;
+//   kdtree_params.max_leaf_dimension = 25;
+//   kdtree_params.max_leaf_size = 4;
+//   agent_box_tree_ = std::make_shared<
+//       planning_math::AABoxKDTree2d<planning_math::GeometryObject>>(
+//       agent_objects, kdtree_params);
+// }
 
 void HybridARAStar::ChooseDirection() {
   constexpr double kLThresehold = 2;
-  constexpr double kConsiderLBuffer = 0.5;
-  const double DistanceThreshold = ego_half_width_ * 2 + 0.4;
+  const double DistanceThreshold = (ego_half_width_ + 0.2) * 2;
   for (const auto& frenet_obstacle : nudge_agents_) {
     if ((!no_right_ || !no_left_) &&
         frenet_obstacle->source_type() != SourceType::OCC) {
-      double min_s =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
-      double max_s =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.max_x();
-      double min_l =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
-      double max_l =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
-      if (min_s > ego_s_ + ego_half_length_ * 2 && min_l < 0 && max_l > 0 &&
-          std::min(std::fabs(min_l), max_l) > kConsiderLBuffer) {
+      const auto& polygon_sequence =
+          frenet_obstacle->frenet_polygon_sequence()[0].second;
+      double min_s = polygon_sequence.min_x();
+      double max_s = polygon_sequence.max_x();
+      double min_l = polygon_sequence.min_y();
+      double max_l = polygon_sequence.max_y();
+      if (min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle &&
+          min_l < 0 && max_l > 0) {
         for (const auto& another_frenet_obstacle : nudge_agents_) {
-          double another_min_s =
-              another_frenet_obstacle->frenet_polygon_sequence()[0]
-                  .second.min_x();
-          double another_max_s =
-              another_frenet_obstacle->frenet_polygon_sequence()[0]
-                  .second.max_x();
-          double another_min_l =
-              another_frenet_obstacle->frenet_polygon_sequence()[0]
-                  .second.min_y();
-          double another_max_l =
-              another_frenet_obstacle->frenet_polygon_sequence()[0]
-                  .second.max_y();
+          const auto& another_polygon_sequence =
+              another_frenet_obstacle->frenet_polygon_sequence()[0].second;
+          double another_min_s = another_polygon_sequence.min_x();
+          double another_max_s = another_polygon_sequence.max_x();
+          double another_min_l = another_polygon_sequence.min_y();
+          double another_max_l = another_polygon_sequence.max_y();
+          double start_s = std::max(min_s, another_min_s - 0.5);
+          double end_s = std::min(max_s, another_max_s + 0.5);
+          bool lon_overlap = start_s < end_s;
           if (another_frenet_obstacle->source_type() != SourceType::OCC &&
               another_min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle &&
               std::abs(another_frenet_obstacle->frenet_l() -
                        frenet_obstacle->frenet_l()) > 1 &&
-              (min_s < another_max_s + 0.5 || max_s > another_min_s - 0.5)) {
+              lon_overlap) {
             if (!no_right_ &&
                 frenet_obstacle->frenet_l() >
                     another_frenet_obstacle->frenet_l() &&
@@ -1028,34 +1034,28 @@ void HybridARAStar::ChooseDirection() {
 // 如果静止障碍物是需要nudge的，那将其加入到 bounding_box_vec_ ,
 // virtual_lineseg_tree_ , agent_box_tree_
 bool HybridARAStar::ProcessStaticAgents() {
-  std::vector<planning_math::LineSegment2d> virtual_lineseg_vec;
+  // std::vector<planning_math::LineSegment2d> virtual_lineseg_vec;
   uint32_t obs_num = 0;
-  constexpr double kVruVelocity = 0.4;
-  constexpr double kLBuffer = 4;
+  constexpr double kLBuffer = 4.5;
   constexpr double kCareLBuffer = 1.5;
   for (const auto& frenet_obstacle : reference_path_ptr_->get_obstacles()) {
     if (frenet_obstacle->b_frenet_valid() &&
         !frenet_obstacle->b_frenet_polygon_sequence_invalid()) {
-      double min_s =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
-      double max_s =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.max_x();
-      double min_l =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
-      double max_l =
-          frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
+      const auto& polygon =
+          frenet_obstacle->frenet_polygon_sequence()[0].second;
+      double min_s = polygon.min_x();
+      double max_s = polygon.max_x();
+      double min_l = polygon.min_y();
+      double max_l = polygon.max_y();
       if (min_s < end_s_ + vehicle_param_.front_edge_to_rear_axle &&
           max_s > ego_s_ + rear_obs_s_ &&
           (std::abs(min_l) < kLBuffer || std::abs(max_l) < kLBuffer) &&
-          (frenet_obstacle->is_static() ||
-           (frenet_obstacle->obstacle()->is_VRU() &&
-            std::fabs(frenet_obstacle->frenet_velocity_l()) < kVruVelocity))) {
+          EdtManager::FilterObstacleForAra(*frenet_obstacle)) {
         if (std::abs(min_l) < kCareLBuffer || std::abs(max_l) < kCareLBuffer) {
           obs_max_s_ = std::max(obs_max_s_, max_s);
           obs_min_s_ = std::min(obs_min_s_, min_s);
         }
         obs_num++;
-
         nudge_agents_.emplace_back(frenet_obstacle);
 
         // 注释掉bounding_box_vec_
@@ -1103,6 +1103,21 @@ bool HybridARAStar::ProcessStaticAgents() {
     }
   }
 
+  // only for static obs
+  if (0 == obs_num) {
+    return false;
+  }
+
+  // 将virtual_lineseg_vec中线段变成agent并放入virtual_lineseg_tree_
+  // BuildVirturalKDTree(virtual_lineseg_vec);
+
+  // 将nudge_agents中的agent放入agent_box_tree_
+  // BuildAgentKDTree(nudge_agents_);
+
+  return true;
+}
+
+void HybridARAStar::LogAgent() {
   auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning_debug_data->mutable_hybrid_ara_info()
       ->mutable_ara_obstacles()
@@ -1122,37 +1137,206 @@ bool HybridARAStar::ProcessStaticAgents() {
         obstacle_ptr->obstacle()->relative_heading_angle());
     obstacle->set_length(obstacle_ptr->obstacle()->length());
     obstacle->set_width(obstacle_ptr->obstacle()->width());
+    for (const auto& polygon :
+         obstacle_ptr->obstacle()->perception_polygon().points()) {
+      planning::common::Point2d* obstacle_polygon =
+          obstacle->add_polygon_points();
+      obstacle_polygon->set_x(polygon.x());
+      obstacle_polygon->set_y(polygon.y());
+    }
+  }
+}
+
+void HybridARAStar::MergeCloseAgent() {
+  bool merged = true;
+  int id = 5900000;
+  while (merged) {
+    merged = false;
+    std::unordered_set<size_t> erased_indices;
+    std::vector<std::shared_ptr<planning::FrenetObstacle>> new_nudge_agents;
+    for (size_t i = 0; i < nudge_agents_.size(); ++i) {
+      if (!nudge_agents_[i]->b_frenet_valid() ||
+          nudge_agents_[i]->b_frenet_polygon_sequence_invalid()) {
+        continue;
+      }
+      if (erased_indices.count(i)) {
+        continue;
+      }
+      auto current = nudge_agents_[i];
+      for (size_t j = i + 1; j < nudge_agents_.size(); ++j) {
+        if (!nudge_agents_[j]->b_frenet_valid() ||
+            nudge_agents_[j]->b_frenet_polygon_sequence_invalid() ||
+            !current->b_frenet_valid() ||
+            current->b_frenet_polygon_sequence_invalid()) {
+          continue;
+        }
+        if (erased_indices.count(j)) {
+          continue;
+        }
+        if (IsClose(current, nudge_agents_[j])) {
+          id++;
+          current = MergeAgents(id, current, nudge_agents_[j]);
+          erased_indices.insert(j);
+          merged = true;
+        }
+      }
+      new_nudge_agents.push_back(current);
+    }
+    nudge_agents_ = std::move(new_nudge_agents);
+  }
+}
+
+bool HybridARAStar::IsClose(
+    const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
+    const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle) {
+  const double DistanceThreshold = ego_half_width_ * 2 + 0.15 * 2;
+  constexpr double kMinDistance = 1.0;
+  const auto& sequence = frenet_obstacle->frenet_polygon_sequence()[0].second;
+  const auto& another_sequence =
+      another_frenet_obstacle->frenet_polygon_sequence()[0].second;
+  double min_s = sequence.min_x();
+  double max_s = sequence.max_x();
+  double min_l = sequence.min_y();
+  double max_l = sequence.max_y();
+  double another_min_s = another_sequence.min_x();
+  double another_max_s = another_sequence.max_x();
+  double another_min_l = another_sequence.min_y();
+  double another_max_l = another_sequence.max_y();
+  double start_s = std::max(min_s, another_min_s - 0.5);
+  double end_s = std::min(max_s, another_max_s + 0.5);
+  bool lon_overlap = start_s < end_s;
+
+  if (min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle &&
+      another_min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle &&
+      lon_overlap &&
+      ((frenet_obstacle->frenet_l() > another_frenet_obstacle->frenet_l() &&
+        min_l - another_max_l > kMinDistance &&
+        min_l - another_max_l < DistanceThreshold) ||
+       (frenet_obstacle->frenet_l() < another_frenet_obstacle->frenet_l() &&
+        another_min_l - max_l > kMinDistance &&
+        another_min_l - max_l < DistanceThreshold)) &&
+      frenet_obstacle->obstacle()->perception_polygon().DistanceTo(
+          another_frenet_obstacle->obstacle()->perception_polygon()) <
+          DistanceThreshold) {
+    return true;
+  }
+  return false;
+}
+
+std::shared_ptr<planning::FrenetObstacle> HybridARAStar::MergeAgents(
+    int id, const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
+    const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle) {
+  auto mergePoints =
+      [](const std::shared_ptr<planning::FrenetObstacle>& obstacle,
+         std::vector<planning_math::Vec2d>& points) {
+        if (obstacle->source_type() == SourceType::OD) {
+          const auto& corners =
+              obstacle->obstacle()->perception_bounding_box().GetAllCorners();
+          points.insert(points.end(), corners.begin(), corners.end());
+        } else {
+          const auto& perception_points =
+              obstacle->obstacle()->perception_points();
+          points.insert(points.end(), perception_points.begin(),
+                        perception_points.end());
+        }
+      };
+
+  std::vector<planning_math::Vec2d> merged_points;
+  mergePoints(frenet_obstacle, merged_points);
+  mergePoints(another_frenet_obstacle, merged_points);
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  auto obstacle = std::make_shared<Obstacle>(id, merged_points);
+  obstacle_pool_.push_back(obstacle);
+  return std::make_shared<planning::FrenetObstacle>(
+      obstacle.get(), *reference_path_ptr_, ego_state_manager, true);
+}
+
+void HybridARAStar::FindClosestUncoveredInterval() {
+  const double kMinLength = ego_half_width_ * 2 + 0.15 * 2;
+  const double kMaxLength = ego_half_width_ * 2 + 0.5 * 2;
+  constexpr double kConsiderS = 16.0;
+  std::vector<std::pair<double, double>> intervals;
+  intervals.reserve(nudge_agents_.size());
+  for (const auto& frenet_obstacle : nudge_agents_) {
+    double min_s = frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
+    if (min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle + 0.3 &&
+        min_s < ego_s_ + kConsiderS) {
+      intervals.emplace_back(
+          frenet_obstacle->frenet_polygon_sequence()[0].second.min_y(),
+          frenet_obstacle->frenet_polygon_sequence()[0].second.max_y());
+    }
   }
 
-  // only for static obs
-  if (0 == obs_num) {
-    return false;
+  std::sort(intervals.begin(), intervals.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; });
+
+  // 合并区间并查找未覆盖的目标区间
+  bool find_pass_interval = false;
+  double min_distance = std::numeric_limits<double>::max();
+  double last_end = intervals[0].second;
+
+  for (size_t i = 1; i < intervals.size(); ++i) {
+    if (intervals[i].first <= last_end) {
+      // 合并重叠区间
+      last_end = std::max(last_end, intervals[i].second);
+    } else {
+      double gap_start = last_end;
+      double gap_end = intervals[i].first;
+      double gap_length = gap_end - gap_start;
+      if (gap_length > kMinLength) {
+        double distance_to_zero =
+            std::min(std::abs(gap_start), std::abs(gap_end));
+        if (distance_to_zero < min_distance) {
+          min_distance = distance_to_zero;
+          pass_interval_ = {gap_start, gap_end};
+          find_pass_interval = true;
+        }
+      }
+      last_end = intervals[i].second;
+    }
   }
 
-  // 将virtual_lineseg_vec中线段变成agent并放入virtual_lineseg_tree_
-  // BuildVirturalKDTree(virtual_lineseg_vec);
-
-  // 将nudge_agents中的agent放入agent_box_tree_
-  // BuildAgentKDTree(nudge_agents_);
-  return true;
+  if (find_pass_interval) {
+    double gap_start = pass_interval_.first;
+    double gap_end = pass_interval_.second;
+    double gap_length = gap_end - gap_start;
+    if (gap_length > kMaxLength) {
+      if (gap_start < -1 * kMaxLength / 2 && gap_end > kMaxLength / 2) {
+        pass_interval_ = {0, 0};
+        return;
+      }
+      if (std::abs(gap_start) < std::abs(gap_end)) {
+        gap_end = gap_start + kMaxLength;
+      } else {
+        gap_start = gap_end - kMaxLength;
+      }
+      pass_interval_ = {gap_start, gap_end};
+    }
+  }
 }
 
 void HybridARAStar::Reset() {
   // initialization
+  open_pq_ = decltype(open_pq_)();
   open_set_.clear();
   close_set_.clear();
   observed_set_.clear();
   bounding_box_vec_.clear();
   nudge_agents_.clear();
+  obstacle_pool_.clear();
+  pass_interval_ = {0.0, 0.0};
   expand_num_ = 0;
   num_node_expand_ = 0;
   no_left_ = false;
   no_right_ = false;
   in_bend_ = false;
+  left_turn_ = false;
+  right_turn_ = false;
   obs_max_s_ = std::numeric_limits<double>::lowest();
   obs_min_s_ = std::numeric_limits<double>::max();
   heuristic_factor_ = hybrid_ara_star_conf_.heuristic_factor;
-  open_pq_ = decltype(open_pq_)();
   final_node_ = nullptr;
   auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning_debug_data->mutable_hybrid_ara_info()
@@ -1160,7 +1344,19 @@ void HybridARAStar::Reset() {
       ->Clear();
 }
 
-bool HybridARAStar::Init() {
+bool HybridARAStar::Init(const SearchResult search_result) {
+  // 根据上一次搜索结果调整膨胀参数
+  if (search_result == SearchResult::NO_SEARCH) {
+    longitudinal_extend_ = hybrid_ara_star_conf_.longitudinal_extend;
+    lateral_extend_ = hybrid_ara_star_conf_.lateral_extend;
+  } else if (search_result == SearchResult::SUCCESS) {
+    longitudinal_extend_ = hybrid_ara_star_conf_.longitudinal_extend - 0.05;
+    lateral_extend_ = hybrid_ara_star_conf_.lateral_extend - 0.05;
+  } else if (search_result == SearchResult::FAILED) {
+    longitudinal_extend_ = hybrid_ara_star_conf_.longitudinal_extend + 0.05;
+    lateral_extend_ = hybrid_ara_star_conf_.lateral_extend + 0.05;
+  }
+
   const auto& coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
@@ -1172,9 +1368,7 @@ bool HybridARAStar::Init() {
     return false;
   }
 
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
+  const auto& reference_path_ptr = coarse_planning_info.reference_path;
   if (reference_path_ptr) {
     reference_path_ptr_ = reference_path_ptr;
     fix_lane_ = reference_path_ptr->get_frenet_coord();
@@ -1207,16 +1401,10 @@ bool HybridARAStar::Init() {
   init_v_ = planning_init_point.v;
   const auto& last_traj_points =
       session_->planning_context().last_planning_result().traj_points;
-  // if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
-  //   farthest_distance = last_traj_points.back().s -
-  //   last_traj_points.front().s;
-  // }
 
   // 最小是1，速度越大，这个值越大，则允许的前轮转角越小，魔数
   std::array<double, 6> xp{0.0, 3, 10.0, 20.0, 30.0, 40.0};
-  // std::array<double, 5> fp{max_front_wheel_angle_, 0.12, 0.09, 0.06, 0.03};
   std::array<double, 6> fp{max_front_wheel_angle_, 0.8, 0.3, 0.27, 0.24, 0.21};
-
   max_front_wheel_angle_ = interp(init_v_, xp, fp);
   // double steering_factor = std::max(1.0, init_v_ / 10.0);
   // max_front_wheel_angle_ = max_front_wheel_angle_ / steering_factor;
@@ -1239,14 +1427,13 @@ bool HybridARAStar::Init() {
   }
   */
 
-  // init conditions for log
-  std::cout << "one shot distance: " << one_shot_distance_ << std::endl;
-  std::cout << "max front wheel angle: " << max_front_wheel_angle_ << std::endl;
-  std::cout << "fix_lane length: " << fix_lane_->Length() << std::endl;
-  std::cout << "is_in_lane_change_execution_" << is_in_lane_change_execution_
-            << std::endl;
-  std::cout << "RB soft safe buffer:" << soft_safe_distance_ << std::endl;
-  std::cout << "target lane width: " << lane_width_ << std::endl;
+  // 弯道判断
+  in_bend_ = DetectBend();
+
+  // 范围更小的弯道判断，for calcu cost
+  if (LeftOrRightTurn()) {
+    heuristic_factor_ *= 3;
+  };
 
   // 设置搜索的起止点，以及搜索的x，y的范围
   auto time1 = (uint64_t)IflyTime::Now_ms();
@@ -1260,37 +1447,39 @@ bool HybridARAStar::Init() {
 
   // prepare for edt
   edt_ = session_->environmental_model()
-             .get_obstacle_manager()
+             .get_edt_manager()
              ->GetEulerDistanceTransform();
   edt_->Init(lateral_extend_, longitudinal_extend_, lateral_extend_);
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  ego_base_.SetBasePose(Pose2D(ego_state_manager->ego_pose().x,
+                               ego_state_manager->ego_pose().y,
+                               ego_state_manager->ego_pose().theta));
 
   return true;
 }
-bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
+bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
+                         const SearchResult search_result) {
   // HARA* begins
   std::cout << std::endl;
   std::cout << "==== start hybrid ara star search ==== " << std::endl;
 
-  auto start_time = (uint64_t)IflyTime::Now_ms();
-  Reset();
-  auto end_start = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ARA star Reset time: " << end_start - start_time << " ms"
-            << std::endl;
-
   auto time1 = (uint64_t)IflyTime::Now_ms();
-  if (!Init()) {
+  Reset();
+  auto time2 = (uint64_t)IflyTime::Now_ms();
+  std::cout << "ARA star Reset time: " << time2 - time1 << " ms" << std::endl;
+
+  if (!Init(search_result)) {
     return false;
   }
-  auto time2 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ARA star Init time: " << time2 - time1 << " ms" << std::endl;
+  auto time3 = (uint64_t)IflyTime::Now_ms();
+  std::cout << "ARA star Init time: " << time3 - time2 << " ms" << std::endl;
 
   // 如果静止障碍物是需要nudge的，那将其加入到 bounding_box_vec_ ,
   // virtual_lineseg_tree_ , agent_box_tree_
-  auto time3 = (uint64_t)IflyTime::Now_ms();
   if (!ProcessStaticAgents()) {
     return false;
   }
-
   auto time4 = (uint64_t)IflyTime::Now_ms();
   std::cout << "ProcessStaticAgents time: " << time4 - time3 << " ms"
             << std::endl;
@@ -1298,9 +1487,20 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
   if (!in_bend_) {
     ChooseDirection();
   }
-
   auto time5 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ChooseDirection time: " << time5 - time4 << " ms"
+  std::cout << "ChooseDirection time: " << time5 - time4 << " ms" << std::endl;
+
+  if (!no_right_ && !no_left_) {
+    // MergeCloseAgent();
+  }
+  auto time6 = (uint64_t)IflyTime::Now_ms();
+  std::cout << "MergeCloseAgent time: " << time6 - time5 << " ms" << std::endl;
+
+  LogAgent();
+
+  FindClosestUncoveredInterval();
+  auto time7 = (uint64_t)IflyTime::Now_ms();
+  std::cout << "FindClosestUncoveredInterval time: " << time7 - time6 << " ms"
             << std::endl;
 
   // load open set, pq
@@ -1308,9 +1508,7 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
   open_pq_.emplace(start_node_->GetIndex(),
                    start_node_->GetCost(heuristic_factor_));
   observed_set_.emplace(start_node_->GetIndex(), start_node_);
-
   start_search_time_ = (uint64_t)IflyTime::Now_ms();
-
   std::vector<double> expand_num_vec;
   std::cout << "======== ImprovePath start =========" << std::endl;
   if (!ImprovePath()) {
@@ -1354,7 +1552,6 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
       auto time2 = (uint64_t)IflyTime::Now_ms();
       std::cout << "UpdateHeuristicFactor time: " << time2 - time1 << " ms"
                 << std::endl;
-
       std::cout << "heuristic_factor_ after reduce: " << heuristic_factor_
                 << std::endl;
       UpdateOpenSetWithHeuristicFactor();
@@ -1383,6 +1580,10 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
   std::cout << "Final heuristic_factor_: " << heuristic_factor_ << std::endl;
   std::cout << "kMinHeuristicFactor: " << kMinHeuristicFactor << std::endl;
 
+  JSON_DEBUG_VECTOR("expand_num_vec", expand_num_vec, 0);
+  JSON_DEBUG_VALUE("pass_interval_first", pass_interval_.first);
+  JSON_DEBUG_VALUE("pass_interval_second", pass_interval_.second);
+
   auto result_start_t = (uint64_t)IflyTime::Now_ms();
   if (!GetResult(result)) {
     std::cout << "GetResult failed" << std::endl;
@@ -1402,7 +1603,6 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result) {
   auto end_time = (uint64_t)IflyTime::Now_ms();
   diff = end_time - start_search_time_;
 
-  JSON_DEBUG_VECTOR("expand_num_vec", expand_num_vec, 0);
   std::cout << "total search time: " << diff << " ms" << std::endl;
   return true;
 }

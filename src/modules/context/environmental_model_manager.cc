@@ -156,6 +156,11 @@ void EnvironmentalModelManager::InitContext() {
   route_info_ptr_ =
       std::make_shared<planning::RouteInfo>(config_builder, session_);
   session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
+
+  edt_manager_ptr_ =
+      std::make_shared<planning::EdtManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_edt_manager(
+      edt_manager_ptr_);
 }
 
 void EnvironmentalModelManager::SetConfig(
@@ -179,6 +184,8 @@ void EnvironmentalModelManager::SetConfig(
   agent_manager_ptr_->SetConfig(config_builder);
 
   // route_info_ptr_->SetConfig(config_builder);
+
+  edt_manager_ptr_->SetConfig(config_builder);
 }
 
 bool EnvironmentalModelManager::Run() {
@@ -200,6 +207,11 @@ bool EnvironmentalModelManager::Run() {
   bool localization_valid =
       local_view.localization.status.status_info.mode !=
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
+  if (session_->is_hpp_scene()) {
+    localization_valid =
+      local_view.localization.status.status_info.mode ==
+      iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
+  }
   bool fusion_localization_valid =
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
@@ -232,7 +244,7 @@ bool EnvironmentalModelManager::Run() {
   bool hpp_mode =
       (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
       (fsm_state <=
-       iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu):set hpp mode range
+       iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
@@ -353,7 +365,7 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
 
-  if (not session_->is_hpp_scene()) {
+  if (!session_->is_hpp_scene()) {
     time_start = IflyTime::Now_ms();
     lateral_obstacle_ptr_->update();
     time_end = IflyTime::Now_ms();
@@ -384,6 +396,12 @@ bool EnvironmentalModelManager::Run() {
   // dynamic_world_->DebugEgoNearByAgentNodesTrajectory();
   LOG_DEBUG("dynamic world update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
+
+  time_start = IflyTime::Now_ms();
+  edt_manager_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("edt_manager cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
 
   auto end_time = IflyTime::Now_ms();
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
@@ -1126,7 +1144,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   // The agent is slow when it's speed < 10km/h (person's speed)
   object_is_slow = prediction_object.speed < 2.78 ? true : false;
   // For no prediction schemes, use heading angle when obstacles are slow
-  if (object_is_slow) {
+  if (object_is_slow && (!session_->is_hpp_scene() || !prediction_object.is_VRU)) {
     prediction_object.relative_theta =
         fusion_object.common_info.heading_angle - ego_state->heading_angle();
     prediction_object.theta = fusion_object.common_info.heading_angle;
@@ -1206,7 +1224,7 @@ bool EnvironmentalModelManager::IsStatic(
   const double kMaxStaticPredictionLength =
       max_speed_static_obstacle * prediction_duration;
   std::array<double, 3> xp{10, 20, 30};
-  std::array<double, 3> fp{1, 2, 3};
+  std::array<double, 3> fp{0.25, 2, 3};
   double static_speed = interp(ego_state->ego_v(), xp, fp);
   bool is_static = prediction_object.speed < static_speed ||
                    prediction_object.trajectory_array.size() == 0 ||
@@ -1243,7 +1261,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
         return "fusion_lanes_info";
       default:
         return "unknown type";
-    };
+    }
   };
 
   static const std::vector<double> kCheckTimeDiff = {20, 20, 20, 20, 20, 20,

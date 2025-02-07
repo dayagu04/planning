@@ -12,6 +12,8 @@
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "planning_context.h"
+#include "edt_manager.h"
+#include "task_interface/lateral_obstacle_decider_output.h"
 
 namespace planning {
 
@@ -20,6 +22,9 @@ LateralObstacleDecider::LateralObstacleDecider(
     : Task(config_builder, session),
       session_(session),
       config_(config_builder->cast<LateralObstacleDeciderConfig>()),
+      search_result_(session_->mutable_planning_context()
+                               ->mutable_lateral_obstacle_decider_output()
+                               .search_result),
       lateral_obstacle_history_info_(
           session_->mutable_planning_context()
               ->mutable_lateral_obstacle_decider_output()
@@ -43,30 +48,47 @@ bool LateralObstacleDecider::Execute() {
     return false;
   }
 
+  // get info of ego
+  // const auto& reference_path_ptr = session_->planning_context().
+  //                     lane_change_decider_output().coarse_planning_info.reference_path;
+  const auto target_reference_virtual_id = session_->planning_context()
+                                               .lane_change_decider_output()
+                                               .fix_lane_virtual_id;
+  auto reference_path_ptr =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(target_reference_virtual_id, false);
+  ego_head_s_ = reference_path_ptr->get_frenet_ego_state().head_s();
+  ego_head_l_ = reference_path_ptr->get_frenet_ego_state().head_l();
+  ego_v_ = reference_path_ptr->get_frenet_ego_state().velocity();
+  ego_v_s_ = reference_path_ptr->get_frenet_ego_state().velocity_s();
+  ego_v_l_ = reference_path_ptr->get_frenet_ego_state().velocity_l();
+
   if (session_->is_hpp_scene()) {
     const auto &reference_path_ptr = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info.reference_path;
-
-    auto &search_success = session_->mutable_planning_context()
-                               ->mutable_lateral_obstacle_decider_output()
-                               .search_success;
-
-    bool enable_search = CheckEnableSearch(reference_path_ptr, search_success);
-
-    auto time1 = IflyTime::Now_ms();
     DebugInfoManager::GetInstance()
         .GetDebugInfoPb()
         ->mutable_hybrid_ara_info()
         ->Clear();
-    search_success = false;
+
+    bool enable_search = CheckEnableSearch(reference_path_ptr, search_result_);
+
+    auto time1 = IflyTime::Now_ms();
     if (enable_search) {
-      search_success = ARAStar();
+      if (ARAStar()) {
+        search_result_ = SearchResult::SUCCESS;
+      } else {
+        search_result_ = SearchResult::FAILED;
+      };
+    } else {
+      search_result_ = SearchResult::NO_SEARCH;
     }
     auto time2 = IflyTime::Now_ms();
     JSON_DEBUG_VALUE("ARAStarTime", time2 - time1);
 
-    if (!search_success) {
+    if (search_result_ != SearchResult::SUCCESS) {
       UpdateLatDecision(reference_path_ptr);
     } else {
       UpdateLatDecisionWithARAStar(reference_path_ptr);
@@ -75,22 +97,6 @@ bool LateralObstacleDecider::Execute() {
     Log(reference_path_ptr);
 
   } else {
-    // get info of ego
-    // const auto& reference_path_ptr = session_->planning_context().
-    //                     lane_change_decider_output().coarse_planning_info.reference_path;
-    const auto target_reference_virtual_id = session_->planning_context()
-                                                 .lane_change_decider_output()
-                                                 .fix_lane_virtual_id;
-    auto reference_path_ptr =
-        session_->environmental_model()
-            .get_reference_path_manager()
-            ->get_reference_path_by_lane(target_reference_virtual_id, false);
-    ego_head_s_ = reference_path_ptr->get_frenet_ego_state().head_s();
-    ego_head_l_ = reference_path_ptr->get_frenet_ego_state().head_l();
-    ego_v_ = reference_path_ptr->get_frenet_ego_state().velocity();
-    ego_v_s_ = reference_path_ptr->get_frenet_ego_state().velocity_s();
-    ego_v_l_ = reference_path_ptr->get_frenet_ego_state().velocity_l();
-
     // lane_width
     const auto &coarse_planning_info = session_->planning_context()
                                            .lane_change_decider_output()
@@ -650,7 +656,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
 
 bool LateralObstacleDecider::CheckEnableSearch(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
-    bool search_success) {
+    const SearchResult search_result) {
   const auto ego_s = reference_path_ptr->get_frenet_ego_state().s();
   if (config_.enable_hybrid_ara) {
     for (auto &obstacle : reference_path_ptr->get_obstacles()) {
@@ -671,7 +677,7 @@ bool LateralObstacleDecider::CheckEnableSearch(
         } else {
           l_threshold = config_.static_buffer_for_search;
         }
-        if (search_success) {
+        if (search_result == SearchResult::SUCCESS) {
           l_threshold += 0.3;
         }
         if (min_abs_l < l_threshold) {
@@ -688,7 +694,7 @@ bool LateralObstacleDecider::ARAStar() {
                                 ->mutable_lateral_obstacle_decider_output()
                                 .hybrid_ara_result;
   hybrid_ara_result.Clear();
-  bool find_path = hybrid_ara_star_->Plan(hybrid_ara_result);
+  bool find_path = hybrid_ara_star_->Plan(hybrid_ara_result, search_result_);
 
   // log
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
@@ -705,6 +711,12 @@ bool LateralObstacleDecider::ARAStar() {
   }
   for (const auto phi : hybrid_ara_result.phi) {
     hybrid_ara_path->add_phi(phi);
+  }
+  for (const auto s : hybrid_ara_result.s) {
+    hybrid_ara_path->add_s(s);
+  }
+  for (const auto l : hybrid_ara_result.l) {
+    hybrid_ara_path->add_l(l);
   }
 
   return (find_path && hybrid_ara_result.Valid());
@@ -724,9 +736,20 @@ void LateralObstacleDecider::UpdateLatDecision(
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
+  constexpr double kNearFrontThreshold = 7;
+  constexpr double kHeadLBuffer = 0.5;
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid() && !obstacle->b_frenet_polygon_sequence_invalid()) {
-      if (obstacle->obstacle()->is_static()) {
+    if (obstacle->b_frenet_valid() &&
+        !obstacle->b_frenet_polygon_sequence_invalid()) {
+      const double obstacle_l_start =
+          obstacle->frenet_polygon_sequence()[0].second.min_y();
+      const double obstacle_l_end =
+          obstacle->frenet_polygon_sequence()[0].second.max_y();
+      const double obstacle_s_start =
+          obstacle->frenet_polygon_sequence()[0].second.min_x();
+      const double obstacle_s_end =
+          obstacle->frenet_polygon_sequence()[0].second.max_x();
+      if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_buffer = 0;
         if (obstacle->obstacle()->type() ==
                 iflyauto::ObjectType::OBJECT_TYPE_COLUMN ||
@@ -737,14 +760,8 @@ void LateralObstacleDecider::UpdateLatDecision(
           l_buffer = config_.l_buffer_for_lat_decision;
         }
 
-        const double obstacle_l_start =
-            obstacle->frenet_polygon_sequence()[0].second.min_y();
-        const double obstacle_l_end =
-            obstacle->frenet_polygon_sequence()[0].second.max_y();
-        const double obstacle_s_start =
-            obstacle->frenet_polygon_sequence()[0].second.min_x();
-        const double obstacle_s_end =
-            obstacle->frenet_polygon_sequence()[0].second.max_x();
+        const double ego_head_l_start = ego_head_l_ - ego_width_ / 2;
+        const double ego_head_l_end = ego_head_l_ + ego_width_ / 2;
         const double ego_s_start =
             reference_path_ptr->get_frenet_ego_state().boundary().s_start;
         const double ego_s_end =
@@ -756,8 +773,6 @@ void LateralObstacleDecider::UpdateLatDecision(
         // 平行车辆
         if (lon_overlap) {
           ego_head_l_ = reference_path_ptr->get_frenet_ego_state().head_l();
-          const double ego_head_l_start = ego_head_l_ - ego_width_ / 2;
-          const double ego_head_l_end = ego_head_l_ + ego_width_ / 2;
           double ego_l = reference_path_ptr->get_frenet_ego_state().l();
           const double ego_l_start = ego_l - ego_width_ / 2;
           const double ego_l_end = ego_l + ego_width_ / 2;
@@ -809,6 +824,16 @@ void LateralObstacleDecider::UpdateLatDecision(
                   LatObstacleDecisionType::IGNORE;
             }
           }
+          if (obstacle_s_start > ego_head_s_ &&
+              obstacle_s_start < ego_head_s_ + kNearFrontThreshold) {
+            if (ego_head_l_start > obstacle_l_end - kHeadLBuffer) {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::LEFT;
+            } else if (ego_head_l_end < obstacle_l_start + kHeadLBuffer) {
+              lat_obstacle_decision[obstacle->id()] =
+                  LatObstacleDecisionType::RIGHT;
+            }
+          }
         }
       } else {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
@@ -841,8 +866,9 @@ void LateralObstacleDecider::UpdateLatDecisionWithARAStar(
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid()) {
-      if (obstacle->obstacle()->is_static()) {
+    if (obstacle->b_frenet_valid() &&
+        !obstacle->b_frenet_polygon_sequence_invalid()) {
+      if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_ara = 0;
         if (obstacle->frenet_s() < s_vec.front()) {
           l_ara = l_vec.front();

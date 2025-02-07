@@ -19,8 +19,9 @@ class AgentCost : public BaseCost {
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const std::vector<std::shared_ptr<planning::FrenetObstacle>>&
           nudge_agents,
-      const double front_edge_to_rear_axle,
-      const double rear_edge_to_rear_axle);
+      const double front_edge_to_rear_axle, const double rear_edge_to_rear_axle,
+      const std::pair<double, double> pass_interval, const bool left_turn,
+      const bool right_turn);
   ~AgentCost() = default;
 
   double MakeCost(Node3D& vertex) const;
@@ -30,11 +31,17 @@ class AgentCost : public BaseCost {
   bool GetAreaCost(
       const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
       const double ego_front_s, const double ego_front_l,
-      const double ego_back_s, const double ego_back_l,
-      double& area_cost, bool in_bend) const;
+      const double ego_back_s, const double ego_back_l, double& area_cost,
+      const bool left_turn, const bool right_turn) const;
   void GetDirectlyBehindCost(
       const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
-      const double ego_front_s, const double ego_front_l, double& cost, bool in_bend) const;
+      const double ego_front_s, const double ego_front_l,
+      const double ego_back_l, double& cost, const bool left_turn,
+      const bool right_turn) const;
+  void GetPassIntervalCost(const double delta_s, const double ego_front_l,
+                           const double ego_back_l, double& cost,
+                           const bool left_turn, const bool right_turn,
+                           const std::pair<double, double> pass_interval) const;
 
  private:
   // agent list;
@@ -43,6 +50,9 @@ class AgentCost : public BaseCost {
   const std::shared_ptr<AABoxKDTree2d<GeometryObject>> agent_box_tree_;
   const std::shared_ptr<ReferencePath> reference_path_ptr_;
   const std::vector<std::shared_ptr<planning::FrenetObstacle>> nudge_agents_;
+  const std::pair<double, double> pass_interval_;
+  const bool left_turn_;
+  const bool right_turn_;
 
   double ego_wheel_base_ = 0.0;
   double ego_length_ = 0.0;

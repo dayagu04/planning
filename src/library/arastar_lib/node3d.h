@@ -43,6 +43,9 @@ class Node3D {
   double GetDirectlyBehindCost() const {
     return directly_behind_cost_;
   }
+  double GetPassIntervalCost() const {
+    return pass_interval_cost_;
+  }
   double GetBoundaryCost() const {
     return boundary_cost_;
   }
@@ -75,6 +78,9 @@ class Node3D {
   }
   double GetL() const {
     return l_;
+  }
+  double GetDeltaS() const {
+    return delta_s_;
   }
   bool operator==(const Node3D& right) const;
   const std::string& GetIndex() const {
@@ -119,6 +125,9 @@ class Node3D {
   void SetDirectlyBehindCost(double cost) {
     directly_behind_cost_ = cost;
   }
+  void SetPassIntervalCost(double cost) {
+    pass_interval_cost_ = cost;
+  }
   void SetBoundaryCost(double cost) {
     boundary_cost_ = cost;
   }
@@ -136,6 +145,9 @@ class Node3D {
   }
   void SetL(double l){
     l_ = l;
+  }
+  void SetDeltaS(double s){
+    delta_s_ = s;
   }
   void SetReachDest(bool reach_dest) {
     reach_dest_ = reach_dest;
@@ -159,6 +171,7 @@ class Node3D {
   double phi_ = 0.0;
   double s_ = 0.0;
   double l_ = 0.0;
+  double delta_s_ = 0.0;
   size_t step_num_ = 1;
   std::vector<double> traversed_x_;
   std::vector<double> traversed_y_;
@@ -180,6 +193,7 @@ class Node3D {
   double dist_cost_ = 0.0;
   double area_cost_ = 0.0;
   double directly_behind_cost_ = 0.0;
+  double pass_interval_cost_ = 0.0;
 };
 
 }  // namespace planning

@@ -329,6 +329,12 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   double max_replan_lon_err = max_replan_lon_err_;
   double max_replan_dist_err = max_replan_dist_err_;
   if (session_->is_hpp_scene()) {
+    hpp_max_replan_lat_err_ =
+        interp(ego_v_, config_.hpp_replan_threshold_speed,
+              config_.hpp_replan_lat_err_threshold_value);
+    hpp_max_replan_lon_err_ =
+        interp(ego_v_, config_.hpp_replan_threshold_speed,
+              config_.hpp_replan_lon_err_threshold_value);
     max_replan_lat_err = hpp_max_replan_lat_err_;
     max_replan_theta_err = hpp_max_replan_theta_err_ / 57.3;
     max_replan_lon_err = hpp_max_replan_lon_err_;

@@ -1,5 +1,7 @@
 #include "agent_cost.h"
 
+#include <array>
+#include <cstdint>
 #include <iostream>
 
 #include "reference_path.h"
@@ -11,11 +13,12 @@ using Vec2d = planning::planning_math::Vec2d;
 namespace {
 constexpr double kAreaRange = 10.0;  // TODO: may related to speed
 constexpr double kRecRange = 6.0;
-constexpr double kHardBuffer = 0.3;
-constexpr double kSoftBufferMore = 0.9;
+constexpr double kHardBuffer = 0.0;
+constexpr double kSoftBufferMore = 0.6;
 constexpr double kSoftBufferLess = 0.6;
 constexpr double kAreaCost = 15.0;
 constexpr double kDirectlyBehindCost = 20.0;
+constexpr double kPassIntervalCost = 12.5;
 constexpr double kBendRoadRadius = 30;
 constexpr double kBendFrontRange = 7;
 constexpr double kBendBackRange = 1;
@@ -28,7 +31,9 @@ AgentCost::AgentCost(
     const std::shared_ptr<AABoxKDTree2d<GeometryObject>>& agent_box_tree,
     const std::shared_ptr<ReferencePath>& reference_path_ptr,
     const std::vector<std::shared_ptr<planning::FrenetObstacle>>& nudge_agents,
-    const double front_edge_to_rear_axle, const double rear_edge_to_rear_axle)
+    const double front_edge_to_rear_axle, const double rear_edge_to_rear_axle,
+    const std::pair<double, double> pass_interval, const bool left_turn,
+    const bool right_turn)
     : BaseCost(BaseCost::CostType::AGENT, weight),
       obstacles_(obstacles),
       ego_lane_(ego_lane),
@@ -39,7 +44,10 @@ AgentCost::AgentCost(
       reference_path_ptr_(reference_path_ptr),
       nudge_agents_(nudge_agents),
       front_edge_to_rear_axle_(front_edge_to_rear_axle),
-      rear_edge_to_rear_axle_(rear_edge_to_rear_axle){};
+      rear_edge_to_rear_axle_(rear_edge_to_rear_axle),
+      pass_interval_(pass_interval),
+      left_turn_(left_turn),
+      right_turn_(right_turn){};
 
 double AgentCost::MakeCost(Node3D& vertex) const {
   // distance cost，离障碍物越近，cost越大
@@ -81,29 +89,6 @@ double AgentCost::MakeCost(Node3D& vertex) const {
   double ego_back_s = vertex.GetS();
   double ego_back_l = vertex.GetL();
 
-  // 弯道判断
-  bool in_bend = false;
-  ReferencePathPoint temp_ref_path_point;
-  if (!in_bend && reference_path_ptr_->get_reference_point_by_lon(
-                      ego_front_s, temp_ref_path_point)) {
-    if (std::abs(temp_ref_path_point.path_point.kappa()) > 1 / kBendRoadRadius) {
-      in_bend = true;
-    }
-  }
-  if (!in_bend && reference_path_ptr_->get_reference_point_by_lon(
-                      ego_front_s + kBendFrontRange, temp_ref_path_point)) {
-    if (std::abs(temp_ref_path_point.path_point.kappa()) > 1 / kBendRoadRadius) {
-      in_bend = true;
-    }
-  }
-  if (!in_bend &&
-      reference_path_ptr_->get_reference_point_by_lon(
-          ego_front_s - ego_length_ - kBendBackRange, temp_ref_path_point)) {
-    if (std::abs(temp_ref_path_point.path_point.kappa()) > 1 / kBendRoadRadius) {
-      in_bend = true;
-    }
-  }
-
   double area_cost = 0.0;
   double directly_behind_cost = 0.0;
 
@@ -111,42 +96,98 @@ double AgentCost::MakeCost(Node3D& vertex) const {
 
   for (const auto& frenet_obstacle : nudge_agents_) {
     double cost = 0.0;
-    has_set_area_cost = GetAreaCost(frenet_obstacle, ego_front_s, ego_front_l,
-                                    ego_back_s, ego_back_l, cost, in_bend);
+    has_set_area_cost =
+        GetAreaCost(frenet_obstacle, ego_front_s, ego_front_l, ego_back_s,
+                    ego_back_l, cost, left_turn_, right_turn_);
     area_cost = area_cost + cost;
 
     cost = 0.0;
-    GetDirectlyBehindCost(frenet_obstacle, ego_front_s, ego_front_l, cost, in_bend);
+    GetDirectlyBehindCost(frenet_obstacle, ego_front_s, ego_front_l, ego_back_l,
+                          cost, left_turn_, right_turn_);
     directly_behind_cost = directly_behind_cost + cost;
   }
 
-  vertex.SetAgentCost((dist_cost + area_cost + directly_behind_cost) *
-                      GetCostWeight());
+  double pass_interval_cost = 0.0;
+  GetPassIntervalCost(vertex.GetDeltaS(), ego_front_l, ego_back_l,
+                      pass_interval_cost, left_turn_, right_turn_,
+                      pass_interval_);
+
+  vertex.SetAgentCost(
+      (dist_cost + area_cost + directly_behind_cost + pass_interval_cost) *
+      GetCostWeight());
   vertex.SetDistCost(dist_cost * GetCostWeight());
   vertex.SetAreaCost(area_cost * GetCostWeight());
   vertex.SetDirectlyBehindCost(directly_behind_cost * GetCostWeight());
-  return dist_cost + area_cost + directly_behind_cost;
+  vertex.SetPassIntervalCost(pass_interval_cost * GetCostWeight());
+  return dist_cost + area_cost + directly_behind_cost + pass_interval_cost;
 }
 
-void AgentCost::NormalizeCost(double& cost) const { cost = cost * 10.0; }
+void AgentCost::NormalizeCost(double& cost) const { cost = cost * 15.0; }
+
+void AgentCost::GetPassIntervalCost(
+    const double delta_s, const double ego_front_l, const double ego_back_l,
+    double& cost, const bool left_turn, const bool right_turn,
+    const std::pair<double, double> pass_interval) const {
+  bool in_bend = left_turn || right_turn;
+  if (!in_bend || (pass_interval.first == 0 && pass_interval.second == 0)) {
+    cost = 0.0;
+    return;
+  }
+
+  // 根据delta_s来调整权重，暂时关闭
+  std::array<double, 2> xp{4, 20};
+  std::array<double, 2> fp{1, 1};
+  double times_for_s = interp(delta_s, xp, fp);
+
+  double center_l = (pass_interval.first + pass_interval.second) / 2;
+  double l_half_width = (pass_interval.second - pass_interval.first) / 2.0;
+  double l_buffer = ego_half_width_ + l_half_width + 0.2;
+  double ego_center_l = (ego_back_l + ego_front_l) / 2;
+  double l_distance = std::abs(ego_front_l - center_l);
+  if (l_distance < l_buffer) {
+    cost = -1 * kPassIntervalCost * times_for_s *
+           std::max(0.0, (l_buffer - std::pow(l_distance, 2) / l_buffer));
+  }
+}
 
 void AgentCost::GetDirectlyBehindCost(
     const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
-    const double ego_front_s, const double ego_front_l, double& cost, bool in_bend) const {
+    const double ego_front_s, const double ego_front_l, const double ego_back_l,
+    double& cost, const bool left_turn, const bool right_turn) const {
   double min_l = frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
   double max_l = frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
   double center_l = (min_l + max_l) / 2;
   double l_half_width = (max_l - min_l) / 2.0;
   double min_s = frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
 
-  double directly_behind_range = 10;
-  if (in_bend) {
-    directly_behind_range = 0.3;
+  constexpr double kStraightLaneRange = 10;
+  constexpr double kInsideBendRange = 10;
+  constexpr double kOutsideBendRange = 0.3;
+  double directly_behind_range = kStraightLaneRange;
+  if (left_turn) {
+    if (center_l > 0) {
+      directly_behind_range = kInsideBendRange;
+    } else {
+      directly_behind_range = kOutsideBendRange;
+    }
+  } else if (right_turn) {
+    if (center_l > 0) {
+      directly_behind_range = kOutsideBendRange;
+    } else {
+      directly_behind_range = kInsideBendRange;
+    }
   }
 
+  double ego_l = ego_front_l;
   double l_buffer = ego_half_width_ + l_half_width;
+  if (left_turn || right_turn) {
+    // ego_l = (ego_front_l + 3 * ego_back_l) / 4;
+    ego_l = (ego_front_l + ego_back_l) / 2;
+    l_buffer = ego_half_width_ + l_half_width + 0.2;
+  }
+
   if (ego_front_s < min_s && ego_front_s > min_s - directly_behind_range) {
-    double l_distance = std::abs(ego_front_l - center_l);
+    double l_distance = std::abs(ego_l - center_l);
     if (l_distance < l_buffer) {
       cost = kDirectlyBehindCost *
              std::max(0.0, (l_buffer - std::pow(l_distance, 2) / l_buffer));
@@ -157,7 +198,8 @@ void AgentCost::GetDirectlyBehindCost(
 bool AgentCost::GetAreaCost(
     const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
     const double ego_front_s, const double ego_front_l, const double ego_back_s,
-    const double ego_back_l, double& area_cost, bool in_bend) const {
+    const double ego_back_l, double& area_cost, const bool left_turn,
+    const bool right_turn) const {
   bool has_set_area_cost = false;
 
   double min_l = frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
@@ -172,10 +214,15 @@ bool AgentCost::GetAreaCost(
   constexpr double kRecRangeLBuffer = 0;
   double ellipse_major_axis = 0.0;
   double ellipse_minor_axis = 0.0;
+  bool in_bend = left_turn || right_turn;
   if (in_bend) {
+    // 直接返回
+    area_cost = 0.0;
+    return true;
+    // 弯道代价
     if (ego_front_s < center_s) {
-      ellipse_major_axis = 0.5;
-      ellipse_minor_axis = l_half_width + ego_half_width_ + 0.5;
+      ellipse_major_axis = 0.01;
+      ellipse_minor_axis = 0.01;
     }
     if (ego_back_s > center_s) {
       ellipse_major_axis = 0.01;

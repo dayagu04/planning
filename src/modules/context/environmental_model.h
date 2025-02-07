@@ -61,6 +61,7 @@ class TrafficLightDecisionManager;
 class LateralObstacle;
 class LaneTracksManager;
 class AgentNodeManager;
+class EdtManager;
 class EnvironmentalModel {
  public:
   EnvironmentalModel();
@@ -231,6 +232,16 @@ class EnvironmentalModel {
     return route_info_;
   }
 
+  const std::shared_ptr<EdtManager> &get_edt_manager() const {
+    return edt_manager_;
+  }
+  std::shared_ptr<EdtManager> &mutable_edt_manager() {
+    return edt_manager_;
+  }
+  void set_edt_manager(std::shared_ptr<EdtManager> edt_manager) {
+    edt_manager_ = edt_manager;
+  }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -319,6 +330,7 @@ class EnvironmentalModel {
   std::shared_ptr<GroundLineManager> ground_line_manager_ = nullptr;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
   std::shared_ptr<RouteInfo> route_info_ = nullptr;
+  std::shared_ptr<EdtManager> edt_manager_ = nullptr;
   bool location_valid_{true};
   // planning::VehicleParam vehicle_param_;
   std::string config_file_dir_;

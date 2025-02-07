@@ -1,4 +1,5 @@
 #include "route_info.h"
+#include <cstddef>
 #include <memory>
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -958,39 +959,45 @@ void RouteInfo::CalculateDistanceToTargetSlot() {
 
 void RouteInfo::CalculateDistanceToNextSpeedBump() {
   // ehr speed bump
-  const auto& road_marks =
-      local_view_.static_map_info.road_map().lane_groups(0).road_marks();
-  double distance_to_speed_bump_tmp = 0;
-  for (auto& road_mark : road_marks) {
-    if (road_mark.type() == IFLYParkingMap::RoadMark::SPEED_BUMP &&
-        road_mark.shape_size() == 4) {
-      ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
-      double speed_bump_nearest_s = 0.0;
-      double speed_bump_nearest_l = 0.0;
+  const auto& lane_groups = local_view_.static_map_info.road_map().lane_groups();
+  for (auto& lane_group : lane_groups) {
+    const auto& road_marks = lane_group.road_marks();
+    double distance_to_speed_bump_tmp = 0;
+    for (auto& road_mark : road_marks) {
+      if (road_mark.type() == IFLYParkingMap::RoadMark::SPEED_BUMP &&
+          road_mark.shape_size() == 4) {
+        ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
+        double speed_bump_nearest_s = 0.0;
+        double speed_bump_nearest_l = 0.0;
 
-      ad_common::math::Vec2d speed_bump_center_point(
-          (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
-          (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
-      const int speed_bump_res = hd_map_.GetNearestLane(
-          speed_bump_center_point, &speed_bump_nearest_lane,
-          &speed_bump_nearest_s, &speed_bump_nearest_l);
-      if (speed_bump_res != 0) {
-        std::cout << "not get speed_bump projection point on line!!!"
-                  << std::endl;
-        continue;
-      } else {
-        std::cout << "get s for speed_bump projection point on line:"
-                  << speed_bump_nearest_s << std::endl;
+        ad_common::math::Vec2d speed_bump_center_point(
+            (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
+            (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
+        const int speed_bump_res = hd_map_.GetNearestLane(
+            speed_bump_center_point, &speed_bump_nearest_lane,
+            &speed_bump_nearest_s, &speed_bump_nearest_l);
+        if (speed_bump_res != 0) {
+          std::cout << "not get speed_bump projection point on line!!!"
+                    << std::endl;
+          continue;
+        } else {
+          std::cout << "get s for speed_bump projection point on line:"
+                    << speed_bump_nearest_s << std::endl;
+        }
+        distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_hpp_;
+        if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
+          route_info_output_.distance_to_next_speed_bump =
+              distance_to_speed_bump_tmp;
+          break;
+        }
       }
-      distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_hpp_;
-      if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
-        route_info_output_.distance_to_next_speed_bump =
-            distance_to_speed_bump_tmp;
-        break;
-      }
+    }
+    if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
+      break;
     }
   }
 }
+
 bool RouteInfo::IsOnHPPLane() {
   ad_common::math::Vec2d cur_point{current_pose_.x, current_pose_.y};
   if (nearest_lane_hpp_->IsOnLane(cur_point)) {

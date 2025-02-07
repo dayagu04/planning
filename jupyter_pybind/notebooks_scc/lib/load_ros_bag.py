@@ -142,6 +142,10 @@ class LoadRosbag:
 
     # perception 3d occupancy objects msg
     self.rdg_occ_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception parking lane line msg
+    self.rdg_parking_lane_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
+
     # time offset
     t0 = 0
 
@@ -667,13 +671,13 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec']
-
+      # hpp 
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
                          "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
                          "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second"]
       json_vector_list += ["lon_collision_object_position_x_vec",
-                           "lon_collision_object_position_y_vec"]
+                           "lon_collision_object_position_y_vec",'expand_num_vec']
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         planning_debug_output = PlanningDebugInfo()
@@ -1101,6 +1105,26 @@ class LoadRosbag:
     except Exception as e:
       self.rdg_occ_objects_msg['enable'] = False
       print('missing /iflytek/camera_perception/occupancy_objects topic !!!')
+
+    # load perception parking lane line msg
+    try:
+      rdg_parking_lane_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_lane_line"):
+        rdg_parking_lane_line_msg_dict[msg.isp_timestamp / 1e6] = msg
+      rdg_parking_lane_line_msg_dict = {key: val for key, val in sorted(rdg_parking_lane_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_parking_lane_line_msg_dict.items():
+        self.rdg_parking_lane_line_msg['t'].append(t)
+        self.rdg_parking_lane_line_msg['data'].append(msg)
+        self.rdg_parking_lane_line_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_parking_lane_line_msg['t'] = [tmp - t0  for tmp in self.rdg_parking_lane_line_msg['t']]
+      print('rdg_parking_lane_line_msg time:',self.rdg_parking_lane_line_msg['t'][-1])
+      if len(self.rdg_parking_lane_line_msg['t']) > 0:
+        self.rdg_parking_lane_line_msg['enable'] = True
+      else:
+        self.rdg_parking_lane_line_msg['enable'] = False
+    except Exception as e:
+      self.rdg_parking_lane_line_msg['enable'] = False
+      print('missing /iflytek/camera_perception/parking_lane_line topic !!!')
 
     global_var.set_value_by_scene(scene_type)
     end_time = time.time()

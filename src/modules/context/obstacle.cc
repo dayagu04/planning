@@ -449,7 +449,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
 }
 
 Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
-                   iflyauto::ObjectType type)
+                   const iflyauto::FusionOccupancyObject &occupancy_objects)
     : id_(id),
       perception_id_(id),
       is_static_(true),
@@ -459,7 +459,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   fusion_source_ = 1;
 
   if (id_ > 7000000) {  // occupancy object
-    type_ = type;
+    type_ = occupancy_objects.common_occupancy_info.type;
     if (type_ < iflyauto::OBJECT_TYPE_OCC_EMPTY) {
       type_ = iflyauto::OBJECT_TYPE_OCC_EMPTY;
     }
@@ -470,15 +470,16 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   if (perception_polygon_.is_convex() &&
       perception_polygon_.points().size() >= 3) {
     perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
+    if (perception_polygon_.area() < 0.01) {
+      valid_ = false;
+    }
   } else {
+    valid_ = false;
     planning_math::LineSegment2d axis(
         planning_math::Vec2d(perception_points_.front().x(),
                              perception_points_.front().y()),
         planning_math::Vec2d(perception_points_.back().x(),
                              perception_points_.back().y()));
-    if (axis.length() <= 1e-3) {
-      valid_ = false;
-    }
     perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
     perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
   }
@@ -486,8 +487,17 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   y_center_ = perception_bounding_box_.center_y();
   width_ = perception_bounding_box_.width();
   length_ = perception_bounding_box_.length();
-  yaw_ = perception_bounding_box_.heading();
-  velocity_angle_ = perception_bounding_box_.heading();
+  yaw_ = planning_math::NormalizeAngle(
+      occupancy_objects.common_occupancy_info.heading_angle);
+  velocity_ = std::hypot(occupancy_objects.common_occupancy_info.velocity.x,
+                         occupancy_objects.common_occupancy_info.velocity.y);
+  velocity_angle_ =
+      std::atan2(occupancy_objects.common_occupancy_info.velocity.y,
+                 occupancy_objects.common_occupancy_info.velocity.x);
+  acc_ = 0;
+  is_VRU_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) || (type_ == iflyauto::OBJECT_TYPE_OCC_CYCLIST);
+  is_car_ = (type_ == iflyauto::OBJECT_TYPE_OCC_CAR);
+
   std::vector<planning_math::Vec2d> ego_polygon_points;
   for (const auto &point : perception_polygon_.points()) {
     ego_polygon_points.emplace_back(

@@ -15,6 +15,7 @@
 #include "route_info.h"
 #include "session.h"
 #include "vehicle_status.pb.h"
+#include "edt_manager.h"
 
 namespace planning {
 namespace planner {
@@ -112,6 +113,7 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world_ =
       nullptr;
   std::shared_ptr<planning::RouteInfo> route_info_ptr_ = nullptr;
+  std::shared_ptr<planning::EdtManager> edt_manager_ptr_ = nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;
   int current_turn_signal_ = 0;

@@ -551,10 +551,10 @@ void HppGeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points
   //   max_ara_l = std::max(std::fabs(l), max_ara_l);
   // }
 
-  auto &search_success = session_->mutable_planning_context()
+  auto &search_result = session_->mutable_planning_context()
                               ->mutable_lateral_obstacle_decider_output()
-                              .search_success;
-  if (config_.enable_ara_ref && search_success &&
+                              .search_result;
+  if (config_.enable_ara_ref && search_result == SearchResult::SUCCESS &&
       hybrid_ara_result.s.back() > traj_points.back().s) {
     if (HandleAraPath(traj_points)) {
       general_lateral_decider_output.enable_ara_ref = true;
