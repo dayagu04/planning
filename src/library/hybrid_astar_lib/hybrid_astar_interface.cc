@@ -282,17 +282,14 @@ void HybridAStarInterface::UpdateOutput() {
       lon_min_sampling_length = 0.4;
     }
 
-    std::pair<Pose2D, double> target_regulator_result;
-    target_regulator_result = target_pose_regulator.GetCandidatePose(
-        config_.safe_buffer.lat_safe_buffer_inside[0],
-        config_.safe_buffer.lat_safe_buffer_inside[1]);
-    advised_lat_buffer_inside =
-        config_.safe_buffer.lat_safe_buffer_inside[1];
-    if (target_regulator_result.second >
-        config_.safe_buffer.lat_safe_buffer_inside[0]) {
+    // 库内揉库时，根据车辆当前位置安全性选择buffer，而不是根据目标位置选择buffer
+    double ego_obs_dist = target_pose_regulator.GetEgoObsDist();
+    if (ego_obs_dist > config_.safe_buffer.lat_safe_buffer_inside[0]) {
       advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
+    } else {
+      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[1];
     }
-    target_regulator_goal_ = target_regulator_result.first;
+    target_regulator_goal_ = request_.goal_;
 
     for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size(); i++) {
       lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
