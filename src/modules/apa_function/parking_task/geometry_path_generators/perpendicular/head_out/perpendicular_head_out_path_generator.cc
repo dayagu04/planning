@@ -470,7 +470,7 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
   ILOG_INFO << "current_pose heanding " << current_pose.heading;
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-      current_pose.pos.x() < 6.2 && std::fabs(current_pose.heading) >= 0.7) {
+      current_pose.pos.x() < 7.0 && std::fabs(current_pose.heading) >= 0.7) {
     const double expected_pos_x = 8.0;
     const double tmp_x =
         expected_pos_x -

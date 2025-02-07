@@ -381,7 +381,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     const ParkObstacleList& obstacles, const AstarRequest& request,
     EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
     ParkReferenceLine* ref_line) {
-  double astar_start_time = IflyTime::Now_ms();
+  // double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, by cubic spiral";
 
   // init
@@ -574,8 +574,8 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   //             << result->phi[i] << " )";
   // }
 
-  double astar_end_time = IflyTime::Now_ms();
-  ILOG_INFO << "spiral path time (ms): " << astar_end_time - astar_start_time;
+  // double astar_end_time = IflyTime::Now_ms();
+  // ILOG_INFO << "spiral path time (ms): " << astar_end_time - astar_start_time;
 
   return true;
 }
@@ -4780,7 +4780,7 @@ const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
                                            const Pose2D& start,
                                            const Pose2D& end,
                                            const AstarPathGear ref_gear) {
-  ILOG_INFO << "---- generate cubic spiral path ----";
+  // ILOG_INFO << "---- generate cubic spiral path ----";
 
   CubicSpiralInterface cubic_spiral_interface;
   spiral_path_point_t start_spiral;
@@ -4845,11 +4845,11 @@ const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
     path.emplace_back(point);
     accumulated_s += spiral_step_length;
 
-    ILOG_INFO << "spiral s: " << point.accumulated_s << ", ( " << point.x
-              << ", " << point.y << ", " << point.phi << ", "
-              << static_cast<int>(point.gear) << " ) ";
+    // ILOG_INFO << "spiral s: " << point.accumulated_s << ", ( " << point.x
+    //           << ", " << point.y << ", " << point.phi << ", "
+    //           << static_cast<int>(point.gear) << " ) ";
   }
-  ILOG_INFO << "expansion cubic spiral path size " << path.size();
+  // ILOG_INFO << "expansion cubic spiral path size " << path.size();
 
   return true;
 }
