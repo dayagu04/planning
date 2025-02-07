@@ -82,6 +82,7 @@ struct EgoInfoUnderSlot {
   // 根据障碍物移动车位 对于垂直车位 向左为正
   double move_slot_dist = 0.0;
   double last_move_slot_dist = 0.0;
+  double replan_move_slot_dist = 0.0;
 
   Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
 
@@ -114,6 +115,7 @@ struct EgoInfoUnderSlot {
 
     move_slot_dist = 0.0;
     last_move_slot_dist = 0.0;
+    replan_move_slot_dist = 0.0;
 
     pt_inside.setZero();
 

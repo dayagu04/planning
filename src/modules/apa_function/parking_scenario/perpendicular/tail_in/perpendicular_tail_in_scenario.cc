@@ -652,6 +652,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
       ego_info_under_slot.move_slot_dist =
           std::max(ego_info_under_slot.move_slot_dist, -max_move_slot_dist);
     }
+    ego_info_under_slot.replan_move_slot_dist =
+        ego_info_under_slot.move_slot_dist;
   }
 
   ILOG_INFO << "move_slot_dist = " << ego_info_under_slot.move_slot_dist
@@ -1408,14 +1410,31 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                                 ? param.safe_uss_remain_dist_out_slot
                                 : param.safe_uss_remain_dist_in_slot;
 
+  ILOG_INFO << "replan_move_slot_dist = "
+            << ego_info_under_slot.replan_move_slot_dist;
+  JSON_DEBUG_VALUE("replan_move_slot_dist",
+                   ego_info_under_slot.replan_move_slot_dist)
+  // 根据车位上次重规划移动距离更新终点位置
+  geometry_lib::PathPoint tar_pose(
+      Eigen::Vector2d(ego_info_under_slot.virtual_limiter.first.x(),
+                      param.terminal_target_y),
+      param.terminal_target_heading);
+
+  tar_pose.pos += ego_info_under_slot.replan_move_slot_dist *
+                  ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
+                      .normalized();
+
+  geometry_lib::PathPoint terminal_err(
+      ego_info_under_slot.cur_pose.pos - tar_pose.pos,
+      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+                                   tar_pose.heading));
+
   double lat_buffer = apa_param.GetParam().lat_inflation;
 
   const bool case_1 = frame_.is_last_path;
   const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.428;
-  const bool case_3 =
-      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 2.68;
-  const bool case_4 =
-      std::fabs(ego_info_under_slot.terminal_err.pos.y()) > 0.078;
+  const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 2.68;
+  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.078;
 
   lat_buffer = (case_1 && case_2 && case_3 && case_4) ? 0.14 : lat_buffer;
 
