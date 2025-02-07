@@ -126,9 +126,9 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   bool enable_left = llane && left_reference_path_;
   bool enable_right = rlane && right_reference_path_;
   const bool is_left_lane_change_safe =
-      (enable_left && compute_lc_valid_info(LEFT_CHANGE));
+      (enable_left && ComputeLcValid(LEFT_CHANGE));
   const bool is_right_lane_change_safe =
-      (enable_right && compute_lc_valid_info(RIGHT_CHANGE));
+      (enable_right && ComputeLcValid(RIGHT_CHANGE));
   const bool emergency_avoidance_valid =
       (is_left_lane_change_safe || is_right_lane_change_safe);
   bool lane_change_to_left = true;
