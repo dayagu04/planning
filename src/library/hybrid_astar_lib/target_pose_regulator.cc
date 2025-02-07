@@ -48,6 +48,13 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   candidate.pose = center_line_target_;
   candidate_info_.emplace_back(candidate);
 
+  // update ego dist
+  Transform2d tf;
+  tf.SetBasePose(request->start_);
+  AstarPathGear gear = AstarPathGear::NONE;
+  edt->DistanceCheckForPoint(&dist, &tf, gear);
+  ego_dist_to_obs_ = static_cast<double>(dist);
+
 #if DEBUG_DECIDER
     DebugString();
 

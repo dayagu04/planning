@@ -44,6 +44,8 @@ class TargetPoseRegulator : public AstarDecider {
   const std::pair<Pose2D, double> GetCandidatePose(
       const double big_buffer, const double small_buffer) const;
 
+  const double GetEgoObsDist() const { return ego_dist_to_obs_; }
+
  private:
   const bool IsParkingIn(const AstarRequest *request);
 
@@ -78,6 +80,8 @@ class TargetPoseRegulator : public AstarDecider {
   double x_check_lower_;
   double x_step_;
   int x_sample_num_;
+
+  double ego_dist_to_obs_;
 };
 
 }  // namespace planning

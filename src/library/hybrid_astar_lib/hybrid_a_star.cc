@@ -349,11 +349,11 @@ bool HybridAStar::SamplingByCubicPolyForVerticalSlot(
     result->base_pose = request.base_pose_;
 
     ILOG_INFO << "path valid, point size= " << result->x.size();
-  } else {
+  } else if (valid_dist > 0.5) {
     // if path is too short by collision check or gear check, use a fallback
     // path with no collision check.
     fallback_path_.Clear();
-    for (size_t i = 0; i < expected_dist_id; i++) {
+    for (size_t i = 0; i < path_points_size; i++) {
       fallback_path_.x.emplace_back(path.x[i]);
       fallback_path_.y.emplace_back(path.y[i]);
       fallback_path_.phi.emplace_back(path.phi[i]);
@@ -369,7 +369,7 @@ bool HybridAStar::SamplingByCubicPolyForVerticalSlot(
   // DebugRSPath(&rs_path_);
 
   double astar_end_time = IflyTime::Now_ms();
-  ILOG_INFO << "hybrid astar total time (ms): "
+  ILOG_INFO << "cubic polynomial curve sampling time (ms): "
             << astar_end_time - astar_start_time;
 
   return true;
@@ -509,11 +509,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
       continue;
     }
 
-    ILOG_INFO << plan_num << " point size = " << path.x.size()
-              << ", expected_dist_id = " << expected_dist_id
-              << ", path_points_size = " << path_points_size
-              << ", path len= " << path.accumulated_s.back()
-              << ", collision_id is " << collision_id;
+    // ILOG_INFO << plan_num << " point size = " << path.x.size()
+    //           << ", expected_dist_id = " << expected_dist_id
+    //           << ", path_points_size = " << path_points_size
+    //           << ", path len= " << path.accumulated_s.back()
+    //           << ", collision_id is " << collision_id;
 
     if (path_points_size >= expected_dist_id) {
       break;
@@ -550,11 +550,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     result->base_pose = request.base_pose_;
 
     ILOG_INFO << "path valid, point size= " << result->x.size();
-  } else {
+  } else if (valid_dist > 0.5) {
     // if path is too short by collision check or gear check, use a fallback
     // path with no collision check.
     fallback_path_.Clear();
-    for (size_t i = 0; i < expected_dist_id; i++) {
+    for (size_t i = 0; i < path_points_size; i++) {
       fallback_path_.x.emplace_back(path.x[i]);
       fallback_path_.y.emplace_back(path.y[i]);
       fallback_path_.phi.emplace_back(path.phi[i]);
@@ -4500,7 +4500,11 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
   sampling_end.x = start.x + lon_min_sampling_length;
 
   double sampling_step = 0.2;
-  size_t max_sampling_num = std::ceil((end.x - sampling_end.x) / sampling_step);
+  double sampling_range = end.x - sampling_end.x;
+  size_t max_sampling_num = 0;
+  if (sampling_range > 0.0) {
+    max_sampling_num = std::ceil(sampling_range / sampling_step);
+  }
   double sampling_radius = radius;
 
   result->Clear();
@@ -4511,7 +4515,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
 
   size_t best_path_valid_point_size = 0;
   size_t path_valid_point_size = 1000;
-  size_t expected_dist_point_size = 0;
+  size_t expected_dist_id = 0;
 
   for (size_t k = 0; k < max_sampling_num; k++) {
     sampling_end.x += sampling_step;
@@ -4580,7 +4584,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
     double x_diff;
     double y_diff;
 
-    expected_dist_point_size = 0;
+    expected_dist_id = 0;
     for (size_t i = 0; i < path_valid_point_size; ++i) {
       x_diff = path.x[i] - last_x;
       y_diff = path.y[i] - last_y;
@@ -4588,7 +4592,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
       path.accumulated_s.emplace_back(accumulated_s);
 
       if (accumulated_s <= lon_min_sampling_length) {
-        expected_dist_point_size = i;
+        expected_dist_id = i;
       }
 
       last_x = path.x[i];
@@ -4596,7 +4600,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
     }
 
     path_valid_point_size =
-        std::min(path_valid_point_size, expected_dist_point_size);
+        std::min(path_valid_point_size, expected_dist_id);
 
     // collision check
     size_t collision_id = GetPathCollisionIDByEDT(&path);
@@ -4622,12 +4626,13 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
               << ", path_valid_point_size=" << path_valid_point_size;
 #endif
 
+    // find longer path
     if (best_path_valid_point_size < path_valid_point_size) {
       best_path_valid_point_size = path_valid_point_size;
       best_path = path;
     }
 
-    if (path_valid_point_size >= expected_dist_point_size) {
+    if (path_valid_point_size >= expected_dist_id) {
       break;
     }
   }
@@ -4656,7 +4661,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
     result->base_pose = request_.base_pose_;
 
     ILOG_INFO << "path valid, point size= " << result->x.size();
-  } else {
+  } else if (valid_dist > 0.5) {
     // if path is too short by collision check or gear check, use a fallback
     // path with no collision check.
     fallback_path_.Clear();
