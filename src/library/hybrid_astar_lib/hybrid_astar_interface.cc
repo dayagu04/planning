@@ -197,6 +197,7 @@ void HybridAStarInterface::UpdateOutput() {
     if (target_regulator_result.second < advised_lat_buffer_inside) {
       ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
       ILOG_INFO << "target_regulator_goal_ will collide";
+      search_state_ = AstarSearchState::FAILURE;
       return;
     }
 
@@ -433,6 +434,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   if (target_regulator_result.second < lat_buffer) {
     ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
     ILOG_INFO << "target_regulator_goal_ will collide";
+    search_state_ = AstarSearchState::FAILURE;
     return;
   }
   target_regulator_goal_ = target_regulator_result.first;
