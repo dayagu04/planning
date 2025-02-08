@@ -727,13 +727,15 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         std::make_pair(dubins_geometry_path, rough_geometry_path));
   }
   for (const auto& pair : pair_geometry_path_vec) {
-    if (apa_param.GetParam().actual_mono_plan_enable &&
+    if (!calc_params_.is_searching_stage &&
+        apa_param.GetParam().actual_mono_plan_enable &&
         pair.second.gear_change_count < 1) {
       ILOG_INFO << "ego pose rough plan gear change count is 0, no need to "
                    "dubins plan";
       find_all_result = false;
     }
   }
+  const size_t min_path_count_searching = 4;
   uint8_t fewer_gear_change_count = 0;
   calc_params_.tange_pose_vec.clear();
   calc_params_.tange_pose_vec.reserve(number);
@@ -815,12 +817,19 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
               fewer_gear_change_count++;
             }
 
-            if (calc_params_.is_searching_stage ||
-                (pair_geometry_path_vec.size() > max_path_count &&
-                 fewer_gear_change_count > 3) ||
-                (fewer_gear_change_count > 10 &&
-                 apa_param.GetParam().actual_mono_plan_enable)) {
-              find_all_result = false;
+            if (calc_params_.is_searching_stage) {
+              // searching stage
+              if (pair_geometry_path_vec.size() >= min_path_count_searching) {
+                find_all_result = false;
+              }
+            } else {
+              // parking stage
+              if ((pair_geometry_path_vec.size() > max_path_count &&
+                   fewer_gear_change_count > 3) ||
+                  (fewer_gear_change_count > 10 &&
+                   apa_param.GetParam().actual_mono_plan_enable)) {
+                find_all_result = false;
+              }
             }
 
             calc_params_.tange_pose_vec.emplace_back(tang_pose);
@@ -829,6 +838,10 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         }
       }
     }
+  }
+
+  if (calc_params_.is_searching_stage) {
+    return pair_geometry_path_vec.size() >= min_path_count_searching;
   }
 
   const double slot_ds = 0.1;

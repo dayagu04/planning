@@ -91,13 +91,13 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  // update ego slot info
+  UpdateEgoSlotInfo();
+
   // update remain dist
   // UpdateRemainDist(safe_uss_remain_dist);
   frame_.remain_dist = CalRemainDistFromPath();
   frame_.remain_dist_uss = CalRealTimeBrakeDist();
-
-  // update ego slot info
-  UpdateEgoSlotInfo();
 
   // check finish
   if (CheckFinished()) {
@@ -1954,11 +1954,14 @@ const PerpendicularTailInScenario::SlotObsType
 PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-  // 2米2的车位重规划考虑的障碍物单侧最多入侵车位15厘米
-  double dy1 = 0.15 / 1.1 * (ego_info_under_slot.slot.slot_width_ * 0.5);
+  // 2米2的车位重规划考虑的障碍物单侧最多入侵车位20厘米 给障碍物跳动留下些许余量
+  const std::vector<double> slot_width_tab{2.2, 2.4, 2.6, 2.8, 3.0, 3.2};
+  const std::vector<double> invasion_dist_tab{0.20, 0.25, 0.30, 0.35, 0.40};
+  const double dy1 = mathlib::Interp1(slot_width_tab, invasion_dist_tab,
+                                      ego_info_under_slot.slot.slot_width_);
 
   // 内外侧障碍物往远离车位的一遍考虑1.68米就可以
-  double dy2 = 1.68;
+  const double dy2 = 1.68;
 
   // 最多高于车位3.468米的障碍物可以当做内外侧障碍物
   double dx1 = 3.468;

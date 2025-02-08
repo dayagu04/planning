@@ -338,7 +338,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   }
 
   ILOG_INFO << "move_slot_dist = " << move_slot_dist
-            << "  lat_buffer = " << lat_buffer_pair.first << "  voter _type = "
+            << "  lat_buffer = " << lat_buffer_pair.first << "  voter type = "
             << GetSlotReleaseVoterTypeString(lat_buffer_pair.second);
 
   const double lat_buffer = 0.0368;
