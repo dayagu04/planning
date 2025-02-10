@@ -50,6 +50,8 @@ struct RouteInfoOutput {
   int cur_seg_forward_lane_num = 0;
   int need_continue_lc_num_on_off_ramp_region = 0;
   int lane_num_except_emergency = 0;
+  int merge_seg_forward_lane_nums = 0;
+  int merge_last_seg_forward_lane_nums = 0;
   bool is_update_segment_success = false;
   bool is_on_ramp = false;
   bool is_in_sdmaproad = false;
@@ -139,6 +141,8 @@ struct RouteInfoOutput {
     is_ego_on_split_region = false;
     need_continue_lc_num_on_off_ramp_region = 0;
     lane_num_except_emergency = 0;
+    merge_seg_forward_lane_nums = 0;
+    merge_last_seg_forward_lane_nums = 0;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

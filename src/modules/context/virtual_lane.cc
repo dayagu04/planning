@@ -21,6 +21,7 @@ VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   is_nearing_ramp_mlc_task_ = false;
+  is_nearing_split_mlc_task_ = false;
   order_id_ = lane.order_id;
   // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id;
@@ -415,6 +416,10 @@ void VirtualLane::ProcessEgoOnRoadMLC(
   } else if (lc_nums_for_split !=
              0) {  // 处理在接近split的区域生成1个选择split的任务
     current_tasks_.emplace_back(lc_nums_for_split);
+    if (relative_id_ == 0) {
+      //表示当前车道,输出给下游模块表示是在接近split的变道场景
+      is_nearing_split_mlc_task_ = true;
+    }
   } else if (
       is_nearing_other_lane_merge_to_road_point) {  // 主路前方接近汇入区域的变道
     if (first_merge_direction == RAMP_ON_LEFT) {
@@ -479,6 +484,10 @@ void VirtualLane::ProcessEgoOnRampMLC(
   const RampDirection second_merge_direction =
       route_info_output.second_merge_direction;
   const bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
+  const int merge_seg_forward_lane_nums =
+      route_info_output.merge_seg_forward_lane_nums;
+  const int merge_last_seg_forward_lane_nums =
+      route_info_output.merge_last_seg_forward_lane_nums;
   // 在匝道汇入匝道时，距离merge的距离在100m范围内时，
   // 再生成地图变道任务，避免前面有1分2场景的不合理变道
   const double dis_to_first_merge_threshold = 100;
@@ -494,20 +503,44 @@ void VirtualLane::ProcessEgoOnRampMLC(
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
       }
+      if (relative_id_ == 0) {
+        //表示当前车道,输出给下游模块表示是在接近split的变道场景
+        is_nearing_split_mlc_task_ = true;
+      }
     } else if (first_split_direction == RAMP_ON_LEFT) {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
       }
+      if (relative_id_ == 0) {
+        //表示当前车道,输出给下游模块表示是在接近split的变道场景
+        is_nearing_split_mlc_task_ = true;
+      }
     }
   } else if (is_ramp_merge_to_road_on_expressway &&
              is_leaving_ramp) {  // 处理匝道汇入主路的场景
+    //在匝道汇入主路一般有两种：
+    // 1、从右边汇入主路，一般是右边车道数较少，汇入主路车道数较多的场景，
+    // 2、从左边汇入主路，目前出现的case中，左边汇入时，车道都是continue，没有左侧车道被汇入截断，因此在处理左侧汇入场景时，初步加一个车道数判断
     if (first_merge_direction == RAMP_ON_RIGHT) {
+      // 右边汇入
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
       }
     } else if (first_merge_direction == RAMP_ON_LEFT) {
-      for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-        current_tasks_.emplace_back(1);
+      // 左边汇入
+      if (merge_seg_forward_lane_nums > 1 &&
+          merge_last_seg_forward_lane_nums == 1) {
+        // 只有一条车道汇入时，正常往主路变道
+        for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+          current_tasks_.emplace_back(1);
+        }
+      } else if (merge_seg_forward_lane_nums >= 2 &&
+                 merge_last_seg_forward_lane_nums >= 2) {
+        // 有2条及以上车道往主路汇，且主路的车道数也大于等于2条时，说明当前车道大概率是continue的，那么自车不呆在最左侧车道即可。
+        // 如果两条都不是continue，那么靠汇流变道了，或者后期加上前方收窄的信息后优化
+        if (order_id_ == 0) {
+          current_tasks_.emplace_back(1);
+        }
       }
     }
   } else if (is_ramp_merge_to_ramp_on_expressway &&  // 匝道汇入匝道的scean

@@ -545,13 +545,19 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       all_lane_boundary_types_are_dashed || dash_length > lc_response_dist) {
     return true;
   }
-  if (route_info_output.dis_to_ramp < 100) {
+  const auto &cur_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
+  if (route_info_output.dis_to_ramp < 100 ||
+      (cur_lane->is_nearing_split_mlc_task() &&
+      route_info_output.distance_to_first_road_split < 100)) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
       if (left_boundary_type ==
           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
+          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID) {
         return true;
       }
     } else if (lc_request == RIGHT_CHANGE) {
@@ -559,7 +565,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
           MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_id);
       if (right_boundary_type ==
           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
+          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID) {
         return true;
       }
     }

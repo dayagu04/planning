@@ -1,5 +1,7 @@
 #include "route_info.h"
 #include <memory>
+#include "config/basic_type.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 
 namespace planning {
@@ -216,6 +218,10 @@ void RouteInfo::CaculateMergeInfo(const ad_common::sdmap::SDMap& sd_map,
               MakesureMergeDirection(*merge_seg, sd_map);
           route_info_output_.distance_to_first_road_merge =
               merge_info_temp.second;
+          route_info_output_.merge_seg_forward_lane_nums =
+              merge_seg->forward_lane_num();
+          route_info_output_.merge_last_seg_forward_lane_nums =
+              merge_seg_last_seg->forward_lane_num();
           is_find_first_merge_onfo = true;
           traverse_num++;
         } else if (is_find_first_merge_onfo) {
@@ -722,22 +728,16 @@ void RouteInfo::UpdateMLCInfoDecider(
     route_info_output_.is_nearing_ramp = false;
   }
 
-  //(4)、判断是否接近split区域
+  //(4)、判断在主路上是否接近split区域
+  //常规split场景是前方自车需向左行驶，有其他车道从右边向左边汇入自车道。这种场景，仅需要自车不呆在最右侧车道即可
+  //特殊split场景：自车前方需向右行驶，且当前仅有一个车道(匝道上)，且在split之前有一个右边的汇入。
+  // 此时如果在汇入之前触发split的逻辑，那么可能会错误地变道至merge region
   bool is_nearing_split = false;
   double err_buffer = 10;
   double nearing_split_dis_threshold = 2000;
-  if (route_info_output_.is_nearing_ramp &&
+  if (!route_info_output_.is_on_ramp && !route_info_output_.is_nearing_ramp &&
       route_info_output_.distance_to_first_road_split <
-          (route_info_output_.dis_to_ramp - err_buffer)) {
-    is_nearing_split = true;
-  } else if (route_info_output_.is_road_merged_by_other_lane &&
-             route_info_output_.distance_to_first_road_split <
-                 route_info_output_.distance_to_first_road_merge) {
-    is_nearing_split = true;
-  } else if (!route_info_output_.is_nearing_ramp &&
-             !route_info_output_.is_road_merged_by_other_lane &&
-             route_info_output_.distance_to_first_road_split <
-                 nearing_split_dis_threshold) {
+          nearing_split_dis_threshold) {
     is_nearing_split = true;
   }
   //(5)、判断是否需要生成split的变道任务
@@ -1020,5 +1020,7 @@ void RouteInfo::UpdateVisionInfo() {
                    static_cast<int>(route_info_output_.ramp_direction));
   JSON_DEBUG_VALUE("current_segment_passed_distance",
                    route_info_output_.current_segment_passed_distance);
+  JSON_DEBUG_VALUE("first_split_direction", (int)route_info_output_.first_split_direction);
+  JSON_DEBUG_VALUE("first_merge_direction", (int)route_info_output_.first_merge_direction);
 }
 }  // namespace planning

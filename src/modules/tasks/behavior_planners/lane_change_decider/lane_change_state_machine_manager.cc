@@ -45,6 +45,7 @@ void LaneChangeStateMachineManager::Update() {
   GenerateStateMachineOutput();
   UpdateCoarsePlanningInfo();
   UpdateStateMachineDebugInfo();
+  UpdateHMIInfo();
 }
 
 void LaneChangeStateMachineManager::RunStateMachine() {
@@ -82,13 +83,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
 
-        iflyauto::LaneBoundaryType boundary_type =
-            MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
         const bool is_dashed_line =
-            (boundary_type ==
-                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-             boundary_type ==
-                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+            IsDashLineCurBoundary(transition_info_.lane_change_direction);
 
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
@@ -124,9 +120,10 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfExecutionToCancel(transition_info_.lane_change_direction,
                                      transition_info_.lane_change_type);
         // execution -> hold
-        bool is_execution_to_hold =
-            CheckIfExecutionToHold(transition_info_.lane_change_direction,
-                                   transition_info_.lane_change_type);
+        // bool is_execution_to_hold =
+        //     CheckIfExecutionToHold(transition_info_.lane_change_direction,
+        //                            transition_info_.lane_change_type);
+        bool is_execution_to_hold = false;//now no hold state,temp hack
         if (is_lane_change_complete) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeComplete;
@@ -224,15 +221,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
   *lane_change_type = lc_req_mgr_->request_source();
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    iflyauto::LaneBoundaryType boundary_type =
-        MakesureCurrentBoundaryType(*lane_change_direction);
-    const bool is_dashed_line =
-        (boundary_type ==
-             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-         boundary_type ==
-             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+    const bool is_dashed_line = IsDashLineCurBoundary(*lane_change_direction);
     bool is_ego_in_perfect_pose =
-        CheckIfInPerfectLaneKeeping() && is_dashed_line;
+        IsLatOffsetValid() && is_dashed_line;
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
     if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
@@ -574,6 +565,15 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
   lc_state_info.gap_insertable = true;
   lc_invalid_track_.reset();
+  
+  //store debug_info
+  const double v_ego =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+  lc_egos_vec_ = GetObjsDebugInfo(v_ego, 0, kEgoReachBoundaryTime, 0);
+  const int iter = kEgoReachBoundaryTime * 10;
+  for (int i = 0; i < iter; ++i) {
+    lc_time_vec_.emplace_back(i * 0.1);
+  }
 
   // 判断与各障碍物之间的gap是否安全
   if (target_lane_middle_node_) {
@@ -636,6 +636,20 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
   lc_state_info.gap_insertable = true;
   lc_invalid_track_.reset();
+  
+  //store debug_info
+  const auto &ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+    // 如果以当前的加速度为基准，预测剩余时间后是否会发生碰撞
+  const double t_remain_lc =
+      (kEgoReachBoundaryTime * 10 - execution_state_frame_nums_) * 0.1;
+  if (t_remain_lc > 0) {
+    const int iter_count = t_remain_lc * 10;
+    for (int i = 0; i < iter_count; ++i) {
+      lc_time_vec_.emplace_back(i * 0.1);
+      lc_egos_vec_.emplace_back(ego_v * i * 0.1);
+    }
+  }
 
   // 判断与各障碍物之间的gap是否安全
   if (target_lane_middle_node_) {
@@ -918,12 +932,13 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     lc_state_info->gap_insertable = false;
     lc_state_info->lc_invalid_reason = "side view invalid";
   }
+  lc_rear_objs_vec_ = GetObjsDebugInfo(node_v, node_a, kEgoReachBoundaryTime,
+                                       -distance_rel);
 }
 void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     LaneChangeStageInfo *const lc_state_info) {
   const double v_ego =
       session_->environmental_model().get_ego_state_manager()->ego_v();
-  double safety_dist = v_ego * v_ego * 0.02 + 2.0;
   const double distance_rel =
       target_lane_front_node_->node_back_edge_to_ego_front_edge_distance();
   const double node_v = target_lane_front_node_->node_speed();
@@ -931,7 +946,8 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
 
   const double target_lane_need_safety_dist =
       planning::CalcGapObjSafeDistance(v_ego, node_v, node_a, false, true);
-
+  lc_front_objs_tar_lane_vec_ = GetObjsDebugInfo(node_v, node_a, kEgoReachBoundaryTime,
+                                          distance_rel);
   if (distance_rel < target_lane_need_safety_dist) {
     lc_invalid_track_.set_value(target_lane_front_node_->node_agent_id(),
                                 distance_rel, node_v);
@@ -946,14 +962,26 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     const double ego_front_node_v = ego_lane_front_node_->node_speed();
     const double ego_front_node_a = ego_lane_front_node_->node_accel();
 
-    const double ego_lane_need_safety_dist = planning::CalcGapObjSafeDistance(
-        v_ego, ego_front_node_v, ego_front_node_a, false, true);
-    if (ego_lane_distance_rel < ego_lane_need_safety_dist) {
-      lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
-                                  ego_lane_distance_rel, ego_front_node_v);
-      lc_state_info->gap_insertable = false;
-      lc_state_info->lc_invalid_reason = "front view invalid";
+    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+      if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
+        lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
+                                    ego_lane_distance_rel, ego_front_node_v);
+        lc_state_info->gap_insertable = false;
+        lc_state_info->lc_invalid_reason = "front view invalid";
+      }
+    } else {
+      const double ego_lane_need_safety_dist = planning::CalcGapObjSafeDistance(
+          v_ego, ego_front_node_v, ego_front_node_a, false,
+          true);
+      if (ego_lane_distance_rel < ego_lane_need_safety_dist) {
+        lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
+                                    ego_lane_distance_rel, ego_front_node_v);
+        lc_state_info->gap_insertable = false;
+        lc_state_info->lc_invalid_reason = "front view invalid";
+      }
     }
+    lc_front_objs_ego_lane_vec_ = GetObjsDebugInfo(ego_front_node_v, ego_front_node_a, kEgoReachBoundaryTime,
+                                          ego_lane_distance_rel);
   }
 }
 void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
@@ -980,6 +1008,10 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
     const double buffer_dist = interp(v_ego, xp, buffer);
     const double need_rel_dis =
         obstacle_dist_remain - ego_dist_remain + buffer_dist;
+    
+    //store debug_info
+    lc_rear_objs_vec_ = GetObjsDebugInfo(v_node, a_node, t_remain_lc,
+                                         -distance_rel);
     if (need_rel_dis > distance_rel) {
       lc_state_info->lc_should_back = true;
       lc_state_info->lc_back_reason = "side view back";
@@ -1013,6 +1045,10 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     const double buffer_dist = interp(v_ego, xp, buffer);
     const double need_rel_dis =
         ego_dist_remain - obstacle_dist_remain + buffer_dist;
+    
+    //store debug_info
+    lc_front_objs_tar_lane_vec_ = GetObjsDebugInfo(v_node, a_node, t_remain_lc,
+                                         distance_rel);
     if (need_rel_dis > distance_rel) {
       lc_state_info->lc_should_back = true;
       lc_state_info->lc_back_reason = "front view back";
@@ -1101,6 +1137,12 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   lat_behavior_common->set_lc_valid_cnt(
       lane_change_decider_output.lc_valid_cnt);
   lat_behavior_common->set_lc_back_cnt(lane_change_decider_output.lc_back_cnt);
+  
+  JSON_DEBUG_VECTOR("front_obj_s_vec", lc_front_objs_ego_lane_vec_, 2);
+  JSON_DEBUG_VECTOR("front_obj_s_tar_lane_vec", lc_front_objs_tar_lane_vec_, 2);
+  JSON_DEBUG_VECTOR("rear_obj_s_vec", lc_rear_objs_vec_, 2);
+  JSON_DEBUG_VECTOR("ego_s_vec", lc_egos_vec_, 2);
+  JSON_DEBUG_VECTOR("t_vec", lc_time_vec_, 2);
 }
 
 void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
@@ -1463,6 +1505,12 @@ void LaneChangeStateMachineManager::PreProcess() {
   target_lane_middle_node_ = nullptr;
   target_lane_rear_node_ = nullptr;
   ego_lane_front_node_ = nullptr;
+  //init debug info
+  lc_front_objs_ego_lane_vec_.clear();
+  lc_front_objs_tar_lane_vec_.clear();
+  lc_rear_objs_vec_.clear();
+  lc_egos_vec_.clear();
+  lc_time_vec_.clear();
 
   RequestType direction = lc_req_mgr_->request();
   const auto &current_lc_state = transition_info_.lane_change_status;
@@ -1574,4 +1622,306 @@ void LaneChangeStateMachineManager::IsEgoOnSideLane() {
     is_ego_on_rightmost_lane_ = false;
   }
 }
+
+bool LaneChangeStateMachineManager::IsLatOffsetValid() const {
+  const auto &cur_path = session_->environmental_model()
+                              .get_reference_path_manager()
+                              ->get_reference_path_by_current_lane();
+  const double ego_l = cur_path->get_frenet_ego_state().l();
+  const double lat_offset_threshold = 0.5;
+  const double lat_offset = std::abs(ego_l);
+  if (lat_offset < lat_offset_threshold) {
+    return true;
+  }
+  return false;
+}
+bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
+  const planning_data::DynamicAgentNode *traffic_cone) const {
+  const auto &current_lane = session_->environmental_model()
+                                  .get_reference_path_manager()
+                                  ->get_reference_path_by_current_lane();
+  const auto &current_lane_coord = current_lane->get_frenet_coord();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_need_dis = ego_state->ego_v() * kEgoReachBoundaryTime;
+  Point2D frenet_point;
+  Point2D traffic_cone_pt{traffic_cone->node_x(), traffic_cone->node_y()};
+  if (!current_lane_coord->XYToSL(traffic_cone_pt, frenet_point)) {
+    return false;
+  }
+
+  if (frenet_point.x - current_lane->get_frenet_ego_state().s() >
+      ego_need_dis) {
+    // 在变道所需的纵向距离之外，可以不用考虑，可以直接变道
+    return true;
+  } else {
+    //TODO(fengwang31):暂时把traffic_cone的横向距离限制距离中心线在1m以外则认为安全
+    //后续根据自车的轨迹点是否与锥桶有overlap来判断是否安全
+    if (transition_info_.lane_change_direction == RIGHT_CHANGE &&
+        frenet_point.y > 1.0) {
+      return true;
+    } else if (transition_info_.lane_change_direction == LEFT_CHANGE &&
+                frenet_point.y < -1.0) {
+      return true;
+    }
+  }
+  return false;
+  }
+const std::vector<double> 
+LaneChangeStateMachineManager::GetObjsDebugInfo(const double obj_v, const double obj_a, const double obj_t,
+      const double obj_s) const {
+  // 暂时是预测4s后障碍物的运动轨迹
+  const int iter = obj_t * 10;
+  std::vector<double> obj_s_vec;
+  for (int i = 0; i < iter; i++) {
+    double s = obj_v * (i * 0.1) + 0.5 * obj_a * (i * 0.1) * (i * 0.1) + obj_s;
+      obj_s_vec.push_back(s);
+  }
+  return obj_s_vec;
+}
+bool LaneChangeStateMachineManager::IsDashLineCurBoundary(
+    const RequestType lc_direction) const {
+  const auto &cur_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  if ((cur_lane->is_nearing_ramp_mlc_task() &&
+       route_info_output.dis_to_ramp < 100) ||
+      (cur_lane->is_nearing_split_mlc_task() &&
+       route_info_output.distance_to_first_road_split < 100)) {
+    // 当接近匝道或split区域距离小于100m时，实线也可以变道
+    return true;
+  }
+  iflyauto::LaneBoundaryType boundary_type =
+      MakesureCurrentBoundaryType(lc_direction);
+  const bool is_dashed_line =
+      (boundary_type ==
+           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+       boundary_type ==
+           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+  return is_dashed_line;
+}
+
+void LaneChangeStateMachineManager::UpdateHMIInfo() {
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  auto &ad_info = session_->mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->ad_info;
+  const auto &ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
+  ad_info.lane_change_direction =
+      (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
+  // update LaneChangeStatus
+  const auto curr_state = lane_change_decider_output.curr_state;
+  const auto lasr_frame_state = session_->planning_context()
+                                    .lane_change_decider_output()
+                                    .coarse_planning_info.source_state;
+  if (curr_state == kLaneKeeping) {
+    if (lasr_frame_state == kLaneChangeComplete) {
+      ad_info.lane_change_status =
+          iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+    } else {
+      ad_info.lane_change_status =
+          iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+      // for turn signal road to ramp
+      const auto dir_turn_signal_road_to_ramp =
+          lane_change_decider_output.dir_turn_signal_road_to_ramp;
+      if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
+        ad_info.lane_change_status =
+            iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
+        ad_info.lane_change_direction =
+            iflyauto::LaneChangeDirection::LC_DIR_LEFT;
+      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
+        ad_info.lane_change_direction =
+            iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+      }
+    }
+  } else if (curr_state == kLaneChangePropose) {
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_WAITING;
+  } else if (curr_state == kLaneChangeExecution) {
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+  } else if (curr_state == kLaneChangeComplete) {
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+  } else if (curr_state == kLaneChangeCancel) {
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
+  }
+
+  // update StatusUpdateReason
+  const auto int_request_cancel_reason =
+      lane_change_decider_output.int_request_cancel_reason;
+  const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
+  const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
+  if (int_request_cancel_reason == SOLID_LC &&
+      lane_change_decider_output.lc_request_source == INT_REQUEST) {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+    // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
+    // 在此更新变道状态和变道方向的值！！！！！！！
+    //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
+    ad_info.lane_change_direction =
+        (iflyauto::LaneChangeDirection)
+            lane_change_decider_output.ilc_virtual_req;
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+  } else if (int_request_cancel_reason == MANUAL_CANCEL) {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
+  } else if (lc_invalid_reason == "side view invalid" ||
+             lc_invalid_reason == "front view invalid" ||
+             lc_back_reason == "side view back" ||
+             lc_back_reason == "front view back" ||
+             lc_back_reason == "but back cnt below threshold") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
+    iflyauto::ObstacleInfo obstacle;
+    obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
+    ad_info.obstacle_info[0] = obstacle;
+  } else {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
+  }
+
+  // update LaneChangeReason
+  const auto lc_request_source = lane_change_decider_output.lc_request_source;
+  if (lc_request_source == NO_REQUEST) {
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_NONE;
+  } else if (lc_request_source == INT_REQUEST) {
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MANUAL;
+  } else if (lc_request_source == OVERTAKE_REQUEST) {
+    ad_info.lane_change_reason =
+        iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
+  } else if (lc_request_source == MAP_REQUEST) {
+    if (route_info_output.dis_to_ramp <
+        route_info_output.distance_to_first_road_merge) {
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    } else {
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    }
+  } else if (lc_request_source == MERGE_REQUEST) {
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+  }
+  // update route info
+  if (!route_info_output.is_on_ramp) {
+    ad_info.distance_to_ramp = route_info_output.dis_to_ramp;
+  } else {
+    ad_info.distance_to_ramp = NL_NMAX;
+  }
+  ad_info.distance_to_split = route_info_output.distance_to_first_road_split;
+  if (route_info_output.is_ramp_merge_to_road_on_expressway) {
+    ad_info.distance_to_merge = route_info_output.distance_to_first_road_merge;
+  } else {
+    ad_info.distance_to_merge = NL_NMAX;
+  }
+  ad_info.distance_to_toll_station = route_info_output.distance_to_toll_station;
+  ad_info.noa_exit_warning_level_distance =
+      route_info_output.distance_to_route_end;
+  // ad_info.distance_to_tunnel = ;  //
+  // ad_info.is_within_hdmap = ;     //
+  const int ramp_direction = route_info_output.ramp_direction;
+  ad_info.ramp_direction = (iflyauto::RampDirection)ramp_direction;
+
+  const auto &fix_reference_path =
+      lane_change_decider_output.coarse_planning_info.reference_path;
+  if (fix_reference_path != nullptr) {
+    ad_info.dis_to_reference_line =
+        std::abs(fix_reference_path->get_frenet_ego_state().l() * 100);
+    ad_info.angle_to_roaddirection =
+        fix_reference_path->get_frenet_ego_state().heading_angle();
+  }
+
+  ad_info.is_in_sdmaproad = route_info_output.is_in_sdmaproad;
+  if (route_info_output.is_ego_on_expressway_hmi) {
+    ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+    // update RampPassSts
+    // 高速主路上距离匝道距离小于200m，且不在一分二车道的场景
+    if (route_info_output.dis_to_ramp < 200 &&
+        lane_change_decider_output.dir_turn_signal_road_to_ramp == RAMP_NONE &&
+        !route_info_output.is_on_ramp) {
+      if (ramp_direction == iflyauto::RAMP_LEFT &&
+          !lane_change_decider_output.is_ego_on_leftmost_lane) {
+        ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else if (ramp_direction == iflyauto::RAMP_RIGHT &&
+                 !lane_change_decider_output.is_ego_on_rightmost_lane) {
+        ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else {
+        ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
+      }
+    } else {
+      ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
+    }
+  } else if (route_info_output.is_ego_on_city_expressway_hmi) {
+    ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+    // update RampPassSts
+    // 城区主路上距离匝道距离小于50m，且不在一分二车道的场景
+    if (route_info_output.dis_to_ramp < 50 &&
+        lane_change_decider_output.dir_turn_signal_road_to_ramp == RAMP_NONE &&
+        !route_info_output.is_on_ramp) {
+      if (ramp_direction == iflyauto::RAMP_LEFT &&
+          !lane_change_decider_output.is_ego_on_leftmost_lane) {
+        ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else if (ramp_direction == iflyauto::RAMP_RIGHT &&
+                 !lane_change_decider_output.is_ego_on_rightmost_lane) {
+        ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else {
+        ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
+      }
+    } else {
+      ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
+    }
+  } else {
+    ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+    ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
+  }
+  JSON_DEBUG_VALUE("ramp_pass_sts", (int)ad_info.ramp_pass_sts)
+
+  if (curr_state == kLaneChangePropose || curr_state == kLaneChangeExecution ||
+      curr_state == kLaneChangeComplete || curr_state == kLaneChangeCancel) {
+    int target_reference_virtual_id;
+    if (curr_state == kLaneChangeCancel) {
+      target_reference_virtual_id =
+          lane_change_decider_output.fix_lane_virtual_id;
+    } else {
+      target_reference_virtual_id =
+          lane_change_decider_output.target_lane_virtual_id;
+    }
+    auto target_reference =
+        session_->environmental_model()
+            .get_reference_path_manager()
+            ->get_reference_path_by_lane(target_reference_virtual_id, false);
+    if (target_reference != nullptr) {
+      Point2D cart_point;
+      if (target_reference->get_frenet_coord()->SLToXY(
+              Point2D(target_reference->get_frenet_ego_state().s(), 0),
+              cart_point)) {
+        const auto &ego_pose =
+            session_->environmental_model().get_ego_state_manager()->ego_pose();
+        const double theta_ori = ego_pose.theta;
+        double landing_point_theta_global = 0;
+        ReferencePathPoint reference_path_point{};
+        if (target_reference->get_reference_point_by_lon(
+                target_reference->get_frenet_ego_state().s(),
+                reference_path_point)) {
+          landing_point_theta_global = reference_path_point.path_point.theta();
+        }
+        Eigen::Vector2d pos_n_ori(ego_pose.x, ego_pose.y);
+        pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori,
+                                                              theta_ori);
+        Eigen::Vector2d p_n(cart_point.x, cart_point.y);
+        Eigen::Vector2d landing_point_body = global_to_local_tf.GetPos(p_n);
+        const double landing_point_theta_local =
+            global_to_local_tf.GetHeading(landing_point_theta_global);
+        ad_info.landing_point.relative_pos.x = landing_point_body.x();
+        ad_info.landing_point.relative_pos.y = landing_point_body.y();
+        ad_info.landing_point.relative_pos.z = 0;
+        ad_info.landing_point.heading = landing_point_theta_local;
+      }
+    }
+  }
+}
+
 }  // namespace planning
