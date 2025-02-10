@@ -30,13 +30,12 @@ void ApaSlotManager::Update(
   }
 
   ILOG_INFO << "Update ApaSlotManager";
-
-  state_machine_ptr_ = state_machine_ptr;
   measure_data_ptr_ = measure_data_ptr;
+  state_machine_ptr_ = state_machine_ptr;
   obstacle_manager_ptr_ = obstacle_manager_ptr;
 
-  dist_id_map_.clear();
   slots_map_.clear();
+  dist_id_map_.clear();
   ILOG_INFO << "parking_fusion_slot_lists_size = "
             << static_cast<int>(local_view->parking_fusion_info
                                     .parking_fusion_slot_lists_size);
@@ -387,7 +386,9 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   if (n.dot(v_ego_heading) < 1e-9) {
     n *= -1.0;
   }
-  const Eigen::Vector2d t(-n.x(), n.y());
+  const double slot_heading = std::atan2(n.y(), n.x());
+
+  const Eigen::Vector2d t(-n.y(), n.x());
 
   const Eigen::Vector2d center = slot.origin_corner_coord_global_.pt_center;
 
@@ -401,7 +402,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   const Eigen::Vector2d target_ego_pos =
       center - center_to_rac_dist * v_ego_heading;
 
-  const std::vector<double> move_slot_dist_vec{-0.6, 0.0, 0.6};
+  const std::vector<double> move_slot_dist_vec{-0.5, 0.0, 0.5};
 
   PathSafeChecker safe_check;
   const double lat_buffer = 0.05;
@@ -410,16 +411,23 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   bool is_slot_occupied = true;
   for (const double dist : move_slot_dist_vec) {
     const Eigen::Vector2d target_pos = target_ego_pos + dist * t;
-    const Pose2D target_pose(target_pos.x(), target_pos.y(),
-                             measure_data_ptr_->GetHeading());
-    if (!safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
-                                     lat_buffer, lon_buffer)) {
+    const Pose2D target_pose(target_pos.x(), target_pos.y(), slot_heading);
+
+    const bool is_collided = safe_check.CalcEgoCollision(
+        obstacle_manager_ptr_, target_pose, lat_buffer, lon_buffer);
+
+    ILOG_INFO << "lateral moving dist = " << dist
+              << ". target_pos= " << target_pose.GetX() << ", "
+              << target_pose.GetY() << ", is_collided = " << is_collided;
+
+    if (!is_collided) {
       move_slot_dist = dist;
       ILOG_INFO << "release slot with move_slot_dist = " << move_slot_dist;
       is_slot_occupied = false;
       break;
     }
   }
+  ILOG_INFO << "final parallel slot is occupied = " << is_slot_occupied;
 
   if (is_slot_occupied) {
     return SlotReleaseVoterType::CLEAR;
