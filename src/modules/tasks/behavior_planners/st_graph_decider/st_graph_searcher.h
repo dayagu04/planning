@@ -62,9 +62,9 @@ class StGraphSearcher : public Task {
   bool IsReachGoal(const StSearchInput& input_info,
                    const StSearchNode& node) const;
 
-  std::vector<StSearchNode> GenerateSuccessorNodes(
+  void GenerateSuccessorNodes(
       const StSearchInput& input_info, const StSearchNode& current_node,
-      const std::unordered_set<int64_t>& target_lane_agent_boundaries) const;
+      const std::unordered_set<int64_t>& target_lane_agent_boundaries);
 
   std::unordered_set<int64_t> GetTargetLaneRearAgentStBoundaries() const;
 
@@ -141,6 +141,7 @@ class StGraphSearcher : public Task {
  private:
   // search relevance
   StSearchNode farthest_node_;
+  std::vector<StSearchNode> successor_nodes_;
   std::array<AStarSearchStyle, 2> search_style_context_;
   AStarSearchConfig search_config_;
 };
