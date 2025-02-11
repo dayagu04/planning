@@ -369,7 +369,7 @@ class ParkingScenario {
   virtual void SetParkingStatus(uint8_t status);
   virtual void GenPlanningOutput();
   virtual void GenPlanningHmiOutput();
-  virtual void GenPlanningPath(const bool is_hpp);
+  virtual void GenPlanningPath();
   virtual const bool CheckStuckFailed();
   virtual void UpdateRemainDist(
       const double uss_safe_dist,

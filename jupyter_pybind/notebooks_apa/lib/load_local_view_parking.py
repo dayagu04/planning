@@ -2252,14 +2252,17 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    #print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size)
-    for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size):
-      ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines[i]
-      points_3d = ground_line.points_3d
-      for j in range(ground_line.points_3d_size):
-        point_3d = points_3d[j]
-        pos_x.append(point_3d.x - cur_pos_xn0)
-        pos_y.append(point_3d.y - cur_pos_yn0)
+    print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size)
+    for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size):
+      ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline[i]
+
+      if(ground_line.resource_type != 2):
+        continue
+
+      for j in range(ground_line.groundline_point_size):
+        point_2d = ground_line.shape[j]
+        pos_x.append(point_2d.x)
+        pos_y.append(point_2d.y)
     # for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:
     #   points_3d = ground_line.points_3d
     #   for point_3d in points_3d:

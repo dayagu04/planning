@@ -187,6 +187,7 @@
   "believe_in_fus_obs":false,
   "use_fus_occ_obj": true,
   "use_uss_pt_clound": false,
+  "use_ground_line": true,
   "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.1068,
   "obs_safe_dx": 0.0668,

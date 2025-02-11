@@ -22,16 +22,13 @@ void SetStoppingPlanningOutput(iflyauto::PlanningOutput& planning_output,
                                const pnc::geometry_lib::PathPoint& ego_pose);
 
 void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
-                               const pnc::geometry_lib::PathPoint& ego_pose,
-                               const bool is_hpp);
+                               const pnc::geometry_lib::PathPoint& ego_pose);
 
 void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
-                             const pnc::geometry_lib::PathPoint& ego_pose,
-                             const bool is_hpp);
+                             const pnc::geometry_lib::PathPoint& ego_pose);
 
 void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
-                           const pnc::geometry_lib::PathPoint& ego_pose,
-                           const bool is_hpp);
+                           const pnc::geometry_lib::PathPoint& ego_pose);
 
 // if in apa function: can switch to apa;
 // if in hpp searching or parking, can switch to apa;
