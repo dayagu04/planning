@@ -198,7 +198,9 @@ void LateralObstacle::update_tracks(
   side_tracks_l_.clear();
   side_tracks_r_.clear();
   all_tracks_ = tracked_objects;
+  tracks_map_.clear();
   for (auto &tr : tracked_objects) {
+    tracks_map_[tr.track_id] = tr;
     if (tr.d_rel >= 0.0) {
       auto it = front_tracks_.begin();
       while (it != front_tracks_.end() && it->d_rel < tr.d_rel) {

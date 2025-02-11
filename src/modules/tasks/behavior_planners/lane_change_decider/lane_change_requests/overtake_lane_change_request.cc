@@ -112,11 +112,7 @@ void OvertakeRequest::Update(int lc_status) {
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
-  const auto tracks = lateral_obstacle_->all_tracks();
-  tracks_map_.clear();
-  for (auto track : tracks) {
-    tracks_map_[track.track_id] = track;
-  }
+  tracks_map_ = lateral_obstacle_->tracks_map();
 
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
