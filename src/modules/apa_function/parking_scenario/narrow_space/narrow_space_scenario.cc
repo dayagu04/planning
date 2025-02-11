@@ -171,7 +171,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
           .y();
 
   const bool ego_center_lat_condition =
-      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err;
+      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict;
 
   const bool ego_head_lat_condition =
       std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict &&
@@ -1183,7 +1183,9 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
             << ego_info_under_slot.slot_occupied_ratio;
   // trim or extend path according to limiter, only run once
   frame_.correct_path_for_limiter = false;
-  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+  if (((apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::ACTIVE_IN_CAR_REAR &&
+        frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE)) &&
       !ego_info_under_slot.fix_slot) {
     const geometry_lib::LineSegment limiter_line(
         ego_info_under_slot.virtual_limiter.first,
