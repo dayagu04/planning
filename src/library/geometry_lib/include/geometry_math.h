@@ -72,23 +72,39 @@ const double NormalizeAnglePI(const double angle);
 const double AngleSubtraction(const double angle1, const double angle2);
 
 struct RectangleBound {
-  // simple AABB
-  double min_x = 0.0;
-  double min_y = 0.0;
-  double max_x = 0.0;
-  double max_y = 0.0;
+  // simple AABB, edge perpendicular and parallel to the coordinate axis
+  double min_x = std::numeric_limits<double>::infinity();
+  double min_y = std::numeric_limits<double>::infinity();
+  double max_x = -std::numeric_limits<double>::infinity();
+  double max_y = -std::numeric_limits<double>::infinity();
+
+  double length = 0.0;
+  double width = 0.0;
 
   RectangleBound() {}
   ~RectangleBound() {}
   RectangleBound(const double _min_x, const double _min_y, const double _max_x,
-                 const double _max_y)
-      : min_x(_min_x), min_y(_min_x), max_x(_min_x), max_y(_min_x) {}
+                 const double _max_y) {
+    Set(min_x, _min_y, _max_x, _max_y);
+  }
+
   void Set(const double _min_x, const double _min_y, const double _max_x,
            const double _max_y) {
-    min_x = _min_x;
-    min_y = _min_y;
-    max_x = _max_x;
-    max_y = _max_y;
+    min_x = std::min(_min_x, _max_x);
+    min_y = std::min(_min_y, _max_y);
+    max_x = std::max(_min_x, _max_x);
+    max_y = std::max(_min_y, _max_y);
+    length = max_x - min_x;
+    width = max_y - min_y;
+  }
+
+  void Reset() {
+    min_x = std::numeric_limits<double>::infinity();
+    min_y = std::numeric_limits<double>::infinity();
+    max_x = -std::numeric_limits<double>::infinity();
+    max_y = -std::numeric_limits<double>::infinity();
+    length = 0.0;
+    width = 0.0;
   }
 
   const bool IsPtInRectangleBound(const Eigen::Vector2d pt) {
@@ -106,6 +122,17 @@ struct RectangleBound {
     box[2] << max_x, min_y;
     box[3] << min_x, min_y;
     return box;
+  }
+
+  void CalcBoundByPtVec(const std::vector<Eigen::Vector2d> &polygon) {
+    for (const Eigen::Vector2d &pt : polygon) {
+      min_x = std::min(min_x, pt.x());
+      max_x = std::max(max_x, pt.x());
+      min_y = std::min(min_y, pt.y());
+      max_y = std::max(max_y, pt.y());
+    }
+    length = max_x - min_x;
+    width = max_y - min_y;
   }
 };
 
@@ -281,6 +308,19 @@ struct LineSegment {
     heading_vec << std::cos(heading), std::sin(heading);
   }
 
+  LineSegment(const Eigen::Vector2d &p1, const double heading_in,
+              const double _length, const uint8_t gear) {
+    length = _length;
+    pA = p1;
+    heading = heading_in;
+    heading_vec << std::cos(heading), std::sin(heading);
+    if (gear == SEG_GEAR_DRIVE) {
+      pB = pA + length * heading_vec;
+    } else {
+      pB = pA - length * heading_vec;
+    }
+  }
+
   void SetPoints(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2) {
     pA = p1;
     pB = p2;
@@ -322,6 +362,8 @@ struct LineSegment {
     heading = l2g_tf.GetHeading(heading);
     heading_vec << std::cos(heading), std::sin(heading);
   }
+
+  const bool IsPtOnLineSeg(const PathPoint &pt) const;
 };
 
 struct Circle {
@@ -403,6 +445,8 @@ struct Arc {
     headingA = l2g_tf.GetHeading(headingA);
     headingB = l2g_tf.GetHeading(headingB);
   }
+
+  const bool IsPtOnArcSeg(const PathPoint &pt) const;
 };
 
 struct PathSegment {
@@ -415,7 +459,8 @@ struct PathSegment {
 
   double lat_buffer = 0.0;
 
-  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs;
+  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{26.8,
+                                                                 PathPoint()};
 
   LineSegment line_seg;
   Arc arc_seg;
@@ -579,6 +624,8 @@ struct PathSegment {
   }
 
   void PrintInfo(const bool enable_log = true) const;
+
+  const bool IsPtOnPathSeg(const PathPoint &pt) const;
 };
 
 const bool IsSTrunPath(const PathSegment &path_seg1,
@@ -955,6 +1002,8 @@ struct GeometryPath {
   double cost = 0.0;
   std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{26.8,
                                                                  PathPoint()};
+  // first is outslot, second is in slot
+  std::pair<double, double> obs_dist{26.8, 26.8};
   double gear_change_cost = 0.0;
   double length_cost = 0.0;
   double steer_change_cost = 0.0;
@@ -1007,6 +1056,9 @@ struct GeometryPath {
     SetPath(__path_segment_vec);
   }
 
+  const std::pair<uint8_t, uint8_t> GetPtGearAndSteer(
+      const PathPoint &pt) const;
+
   const bool IsHasSTurnPath() const;
 
   void Reset() {
@@ -1016,6 +1068,7 @@ struct GeometryPath {
     total_length = 0.0;
     cur_gear_length = 0.0;
     pt_closest2obs = std::make_pair(26.8, PathPoint());
+    obs_dist = std::make_pair(26.8, 26.8);
     cost = 0.0;
     gear_change_cost = 0.0;
     length_cost = 0.0;
@@ -1080,6 +1133,10 @@ const bool GetRectangle(const Eigen::Vector2d pos, const double heading,
 const bool GetPolygonBound(double *x_min, double *x_max, double *y_min,
                            double *y_max,
                            const std::vector<Eigen::Vector2d> &polygon);
+
+const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
+                              PathSegment &seg2, const double s,
+                              const bool from_start = true);
 
 }  // namespace geometry_lib
 }  // namespace pnc

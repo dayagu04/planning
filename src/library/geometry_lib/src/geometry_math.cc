@@ -1898,7 +1898,7 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
     line.length = (line.pB - line.pA).norm();
   }
 
-  const auto dist = CalPoint2LineDist(pose.pos, line);
+  const double dist = CalPoint2LineDist(pose.pos, line);
   // ILOG_INFO << "pos = " << pose.pos.transpose()
   //           << "  heading = " << pose.heading << "  dist = " << dist
   //           << "   line.heading = " << line.heading ;
@@ -3167,7 +3167,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
     path_segment_vec = _path_segment_vec;
     path_count = path_segment_vec.size();
     cur_gear = path_segment_vec.front().seg_gear;
-    cur_steer = path_segment_vec.front().seg_steer;
+    // cur_steer = path_segment_vec.front().seg_steer;
     last_gear = path_segment_vec.back().seg_gear;
     last_steer = path_segment_vec.back().seg_steer;
     start_pose = path_segment_vec.front().GetStartPose();
@@ -3180,6 +3180,9 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       total_length += path_seg.Getlength();
       if (path_seg.collision_flag) {
         collide_flag = true;
+      }
+      if (cur_steer == SEG_STEER_INVALID && path_seg.Getlength() > 0.168) {
+        cur_steer = path_seg.seg_steer;
       }
     }
 
@@ -3285,6 +3288,40 @@ const bool GeometryPath::IsHasSTurnPath() const {
     }
   }
   return false;
+}
+
+const std::pair<uint8_t, uint8_t> GeometryPath::GetPtGearAndSteer(
+    const PathPoint &pt) const {
+  std::pair<uint8_t, uint8_t> gear_steer =
+      std::make_pair(SEG_GEAR_INVALID, SEG_STEER_INVALID);
+  for (const PathSegment &seg : path_segment_vec) {
+    if (seg.IsPtOnPathSeg(pt)) {
+      gear_steer.first = seg.seg_gear;
+      gear_steer.second = seg.seg_steer;
+      break;
+    }
+  }
+  return gear_steer;
+}
+
+const bool Arc::IsPtOnArcSeg(const PathPoint &pt) const {
+  // todo:
+  return false;
+}
+
+const bool LineSegment::IsPtOnLineSeg(const PathPoint &pt) const {
+  // todo:
+  return false;
+}
+
+const bool PathSegment::IsPtOnPathSeg(const PathPoint &pt) const {
+  if (seg_type == SEG_TYPE_LINE) {
+    return line_seg.IsPtOnLineSeg(pt);
+  } else if (seg_type == SEG_TYPE_ARC) {
+    return arc_seg.IsPtOnArcSeg(pt);
+  } else {
+    return false;
+  }
 }
 
 void PathSegment::PrintInfo(const bool enable_log) const {
@@ -3396,6 +3433,69 @@ const bool GetPolygonBound(double *x_min, double *x_max, double *y_min,
     *x_max = std::max(*x_max, pt.x());
     *y_min = std::min(*y_min, pt.y());
     *y_max = std::max(*y_max, pt.y());
+  }
+  return true;
+}
+
+const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
+                              PathSegment &seg2, const double s,
+                              const bool from_start) {
+  if (s < 1e-3) {
+    return false;
+  }
+  seg1 = total_seg;
+  seg2 = total_seg;
+  const double total_length = total_seg.Getlength();
+  LineSegment &line1 = seg1.line_seg;
+  LineSegment &line2 = seg2.line_seg;
+  Arc &arc1 = seg1.arc_seg;
+  Arc &arc2 = seg2.arc_seg;
+  if (total_seg.seg_type == SEG_TYPE_LINE) {
+    LineSegment &line1 = seg1.line_seg;
+    LineSegment &line2 = seg2.line_seg;
+    const Eigen::Vector2d t_vec = (line1.pB - line1.pA).normalized();
+    if (from_start) {
+      line1.length = s;
+      line1.pB = line1.pA + s * t_vec;
+      line2.length = total_length - s;
+      line2.pA = line1.pB;
+    } else {
+      line2.length = s;
+      line2.pA = line2.pB - s * t_vec;
+      line1.length = total_length - s;
+      line1.pB = line2.pA;
+    }
+  } else {
+    Arc &arc1 = seg1.arc_seg;
+    Arc &arc2 = seg2.arc_seg;
+    bool is_anti_clockwise = false;
+    CalcArcDirection(is_anti_clockwise, seg1.seg_gear, seg1.seg_steer);
+    double rot_angle = NormalizeAngle(s / arc1.circle_info.radius);
+    if (!is_anti_clockwise) {
+      rot_angle *= -1.0;
+    }
+    if (from_start) {
+      const Eigen::Matrix2d rot_m = GetRotm2dFromTheta(rot_angle);
+      const Eigen::Vector2d OA = arc1.pA - arc1.circle_info.center;
+      arc1.length = s;
+      arc1.pB = rot_m * OA + arc1.circle_info.center;
+      arc1.headingB = NormalizeAngle(arc1.headingA + rot_angle);
+
+      arc2.length = total_length - s;
+      arc2.pA = arc1.pB;
+      arc2.headingA = arc1.headingB;
+    } else {
+      rot_angle *= -1.0;
+      const Eigen::Matrix2d rot_m = GetRotm2dFromTheta(rot_angle);
+      const Eigen::Vector2d OB = arc2.pB - arc2.circle_info.center;
+      arc2.length = s;
+      arc2.pA = rot_m * OB + arc2.circle_info.center;
+      arc2.headingA = NormalizeAngle(arc2.headingB + rot_angle);
+
+      arc1.length = total_length - s;
+      arc1.pB = arc2.pA;
+      arc1.headingB = arc2.headingA;
+    }
   }
   return true;
 }

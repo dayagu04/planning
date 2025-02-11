@@ -262,7 +262,7 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading", "is_path_lateral_optimized",
-                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "geometry_path_release", "pre_plan_case",
+                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_move_slot_dist", "replan_count", "geometry_path_release", "pre_plan_case",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
@@ -1393,6 +1393,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_planning_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     local_view_data['data_planning_line'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     local_view_data['data_planning_pose'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_all_managed_limiter'].data.update({'limiter_point_y': [], 'limiter_point_x': [],})
     local_view_data['data_all_managed_slot_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
     slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
     select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
@@ -1410,13 +1411,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
       corner_point = maganed_slot_vec.corner_points.corner_point
-      if maganed_slot_vec.id == select_slot_id:
-          target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
-          target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
-          local_view_data['data_target_managed_slot'].data.update({
-            'corner_point_x': target_managed_slot_x_vec,
-            'corner_point_y': target_managed_slot_y_vec,
-            })
+      # if maganed_slot_vec.id == select_slot_id:
+      #     target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+      #     target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+      #     local_view_data['data_target_managed_slot'].data.update({
+      #       'corner_point_x': target_managed_slot_x_vec,
+      #       'corner_point_y': target_managed_slot_y_vec,
+      #       })
           #break
       slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
       slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
@@ -1442,15 +1443,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
           'occupied_slot_y': occupied_y_vec,
           'occupied_slot_x': occupied_x_vec,
           })
-    limiter_x_vec = []
-    limiter_y_vec = []
-    for limiter in slot_management_info.limiter_points:
-      limiter_x_vec.append(limiter.x)
-      limiter_y_vec.append(limiter.y)
-    local_view_data['data_all_managed_limiter'].data.update({
-      'limiter_point_y': limiter_y_vec,
-      'limiter_point_x': limiter_x_vec,
-    })
 
     obstacle_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesX']
     obstacle_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesY']
@@ -1505,35 +1497,36 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     limiter_corner_X = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['limiter_corner_X']
     limiter_corner_Y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['limiter_corner_Y']
 
-    if (len(slot_corner_X) > 3):
-      local_view_data['data_target_managed_slot'].data.update({
-        'corner_point_x': [slot_corner_X[0], slot_corner_X[2], slot_corner_X[3], slot_corner_X[1]],
-        'corner_point_y': [slot_corner_Y[0], slot_corner_Y[2], slot_corner_Y[3], slot_corner_Y[1]],
-      })
+    if bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state != 14 and bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state != 18:
+      if (len(slot_corner_X) > 3):
+        local_view_data['data_target_managed_slot'].data.update({
+          'corner_point_x': [slot_corner_X[0], slot_corner_X[2], slot_corner_X[3], slot_corner_X[1]],
+          'corner_point_y': [slot_corner_Y[0], slot_corner_Y[2], slot_corner_Y[3], slot_corner_Y[1]],
+        })
 
-    if (len(slot_corner_X) > 12):
-      local_view_data['data_target_line'].data.update({
-        'corner_point_x': [slot_corner_X[4],slot_corner_X[5]],
-        'corner_point_y': [slot_corner_Y[4],slot_corner_Y[5]],
-      })
+      if (len(slot_corner_X) > 12):
+        local_view_data['data_target_line'].data.update({
+          'corner_point_x': [slot_corner_X[4],slot_corner_X[5]],
+          'corner_point_y': [slot_corner_Y[4],slot_corner_Y[5]],
+        })
 
-      local_view_data['data_planning_slot'].data.update({
-        'corner_point_x': [slot_corner_X[6], slot_corner_X[8], slot_corner_X[9], slot_corner_X[7]],
-        'corner_point_y': [slot_corner_Y[6], slot_corner_Y[8], slot_corner_Y[9], slot_corner_Y[7]],
-      })
-      local_view_data['data_planning_line'].data.update({
-        'corner_point_x': [slot_corner_X[10],slot_corner_X[11]],
-        'corner_point_y': [slot_corner_Y[10],slot_corner_Y[11]],
-      })
-      local_view_data['data_planning_pose'].data.update({
-        'corner_point_x': [slot_corner_X[12]],
-        'corner_point_y': [slot_corner_Y[12]],
-      })
+        local_view_data['data_planning_slot'].data.update({
+          'corner_point_x': [slot_corner_X[6], slot_corner_X[8], slot_corner_X[9], slot_corner_X[7]],
+          'corner_point_y': [slot_corner_Y[6], slot_corner_Y[8], slot_corner_Y[9], slot_corner_Y[7]],
+        })
+        local_view_data['data_planning_line'].data.update({
+          'corner_point_x': [slot_corner_X[10],slot_corner_X[11]],
+          'corner_point_y': [slot_corner_Y[10],slot_corner_Y[11]],
+        })
+        local_view_data['data_planning_pose'].data.update({
+          'corner_point_x': [slot_corner_X[12]],
+          'corner_point_y': [slot_corner_Y[12]],
+        })
 
-    local_view_data['data_all_managed_limiter'].data.update({
-      'limiter_point_x': limiter_corner_X,
-      'limiter_point_y': limiter_corner_Y,
-    })
+      local_view_data['data_all_managed_limiter'].data.update({
+        'limiter_point_x': limiter_corner_X,
+        'limiter_point_y': limiter_corner_Y,
+      })
 
     uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
     #print("uss_available = ", uss_available)
@@ -1790,6 +1783,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
       names.append("move_slot_dist")
       datas.append(str(plan_json['move_slot_dist']))
+
+      names.append("replan_move_slot_dist")
+      datas.append(str(plan_json['replan_move_slot_dist']))
 
       names.append("replan_count")
       datas.append(str(plan_json['replan_count']))
@@ -3487,6 +3483,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           limiter_x_vec = []
           limiter_y_vec = []
           flag, plan_msg = findt(dataLoader.plan_debug_msg, plan_debug_timestamps[slot_i])
+          flag, soc_msg = findt(dataLoader.soc_state_msg, soc_timestamps[slot_i])
           if not flag:
             print('find plan_msg error')
             all_slot_id_generate.xys.append(([], [], []))
@@ -3568,17 +3565,19 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               plan_pose_x_list = [slot_corner_X[12]]
               plan_pose_y_list = [slot_corner_Y[12]]
 
+          if soc_msg.current_state == 14 or soc_msg.current_state == 18:
+            temp_corner_y_list, temp_corner_x_list, target_slot_line_y_list, target_slot_line_x_list, plan_slot_corner_y_list, plan_slot_corner_x_list, plan_slot_line_y_list, plan_slot_line_x_list, limiter_y_vec, limiter_x_vec = [], [], [], [], [], [], [], [], [], []
           origin_pose_generate.xys.append(([plan_json['slot_origin_pos_y']], [plan_json['slot_origin_pos_x']]))
           target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
           target_slot_line_generate.xys.append((target_slot_line_y_list, target_slot_line_x_list))
           planning_slot_generate.xys.append((plan_slot_corner_y_list, plan_slot_corner_x_list))
           planning_line_generate.xys.append((plan_slot_line_y_list, plan_slot_line_x_list))
           plan_pose_generate.xys.append((plan_pose_y_list, plan_pose_x_list))
+          all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
 
           all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
           all_slot_id_generate.xys.append((all_slot_id_y_list,all_slot_id_x_list,all_slot_id_list))
           all_managed_occupied_slot_generate.xys.append((occupied_y_vec, occupied_x_vec))
-          all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
           tlane_generate.xys.append((obstacle_y, obstacle_x))
           col_det_path_generate.xys.append((col_det_path_y, col_det_path_x))
           car_predict_traj_path1_generate.xys.append((car_predict_traj_y, car_predict_traj_x))
@@ -4225,6 +4224,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("move_slot_dist")
             datas.append(str(plan_json['move_slot_dist']))
+
+            names.append("replan_move_slot_dist")
+            datas.append(str(plan_json['replan_move_slot_dist']))
 
             names.append("replan_count")
             datas.append(str(plan_json['replan_count']))
