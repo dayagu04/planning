@@ -66,7 +66,7 @@ constexpr double kAverageThetaDiffCostWeight = 0.5;
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
-    const EgoPlanningConfigBuilder* config_builder,planning::framework::Session* session) {
+    const EgoPlanningConfigBuilder* config_builder, planning::framework::Session* session) {
   session_ = session;
   SetConfig(config_builder);
   // order_ids_of_same_zero_relative_id_.clear();

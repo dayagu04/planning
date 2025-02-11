@@ -638,7 +638,7 @@ class LoadRosbag:
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                          "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
                          "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region', 'is_split_region', 'merge_lane_virtual_id', \
-                          'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
+                         'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
                          'sdmap_min_curv_radius',"is_static_avoid_scene", \
                          "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
                          'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
@@ -662,12 +662,18 @@ class LoadRosbag:
                          "ego_left_rear_agent_traj_x_vec","ego_left_rear_agent_traj_y_vec","ego_left_rear_agent_traj_theta_vec",
                          "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",
                          "expanded_nodes_t_vec", "expanded_nodes_s_vec", "history_cur_nodes_t_vec", "history_cur_nodes_s_vec",
-                         "st_path_final_nodes_total_cost_vec","st_path_final_nodes_g_cost_vec","st_path_final_nodes_h_cost_vec", "expand_num_vec",
+                         "st_path_final_nodes_total_cost_vec","st_path_final_nodes_g_cost_vec","st_path_final_nodes_h_cost_vec",
                          "st_path_final_nodes_cost_yield_vec","st_path_final_nodes_cost_overtake_vec","st_path_final_nodes_cost_vel_vec",
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec']
 
+      json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
+                         "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
+                         "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
+                         "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second"]
+      json_vector_list += ["lon_collision_object_position_x_vec",
+                           "lon_collision_object_position_y_vec"]
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         planning_debug_output = PlanningDebugInfo()

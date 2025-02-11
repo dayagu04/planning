@@ -1044,8 +1044,11 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
-    ReadItem<double>(json, hard_buffer2static_agent, "general_lateral_decider",
-                     "hard_buffer2static_agent");
+    hard_buffer2static_agent = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "hard_buffer2static_agent"},
+        hard_buffer2static_agent);
 
     soft_buffer2lane = read_json_keys<double>(
         json,
@@ -1116,22 +1119,11 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
                              std::vector<std::string>{"general_lateral_decider",
                                                       "ramp_limit_v_valid"},
                              ramp_limit_v_valid);
-    min_v_cruise = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "min_v_cruise"},
-        min_v_cruise);
-    lc_second_dist_thr = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "lc_second_dist_thr"},
-        lc_second_dist_thr);
-
-    read_json_vec<double>(json,
-                          std::vector<std::string>{"general_lateral_decider",
-                                                   "dynamic_ref_buffer"},
-                          dynamic_ref_buffer);
-    ReadItem<bool>(json, not_use_gap_flag, "general_lateral_decider",
-                   "not_use_gap_flag");
+    min_v_cruise =
+        read_json_keys<double>(json,
+                             std::vector<std::string>{"general_lateral_decider",
+                                                      "min_v_cruise"},
+                             min_v_cruise);
 
     read_json_vec<double>(
         json,
@@ -1152,18 +1144,32 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
                                                    "extra_lateral_buffer"},
                           extra_lateral_buffer);
 
-    ReadItem<double>(json, nudge_extra_buffer_in_intersection,
-                     "general_lateral_decider",
-                     "nudge_extra_buffer_in_intersection");
+    nudge_extra_buffer_in_intersection = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "nudge_extra_buffer_in_intersection"},
+        nudge_extra_buffer_in_intersection);
 
-    ReadItem<double>(json, map_bound_weight[BoundType::AGENT],
-                     "general_lateral_decider", "bound_static_agent_weight");
-    ReadItem<double>(json, map_bound_weight[BoundType::DYNAMIC_AGENT],
-                     "general_lateral_decider", "bound_dynamic_agent_weight");
-    ReadItem<double>(json, map_bound_weight[BoundType::ADJACENT_AGENT],
-                     "general_lateral_decider", "bound_adjacent_agent_weight");
-    ReadItem<double>(json, map_bound_weight[BoundType::ROAD_BORDER],
-                     "general_lateral_decider", "bound_road_border_weight");
+    map_bound_weight[BoundType::AGENT] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_static_agent_weight"},
+        0.1);
+    map_bound_weight[BoundType::DYNAMIC_AGENT] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_dynamic_agent_weight"},
+        0.1);
+    map_bound_weight[BoundType::ADJACENT_AGENT] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_adjacent_agent_weight"},
+        0.1);
+    map_bound_weight[BoundType::ROAD_BORDER] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_road_border_weight"},
+        0.1);
 
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",

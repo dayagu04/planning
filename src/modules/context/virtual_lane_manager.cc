@@ -53,9 +53,8 @@ constexpr double kEpsilon = 1.0e-4;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
-    planning::framework::Session* session): session_(session) {
+    planning::framework::Session* session): session_(session), ego_lane_track_manager_(config_builder, session){
   SetConfig(config_builder);
-  ego_lane_track_manager_ = std::make_shared<EgoLaneTrackManger>(config_builder, session);
 }
 
 void VirtualLaneManager::SetConfig(
