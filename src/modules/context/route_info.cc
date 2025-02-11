@@ -42,7 +42,6 @@ void RouteInfo::Update() {
       std::cout << "UpdateHdMap failed!!!" << std::endl;
     }
   }
-  UpdateVisionInfo();
 }
 
 void RouteInfo::UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sd_map) {
@@ -991,7 +990,7 @@ void RouteInfo::UpdateMLCInfoDecider(
 //     }
 //   }
 // }
-void RouteInfo::UpdateVisionInfo() {
+void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("is_leaving_ramp", route_info_output_.is_leaving_ramp);
   JSON_DEBUG_VALUE("is_nearing_ramp", route_info_output_.is_nearing_ramp);
   JSON_DEBUG_VALUE("distance_to_ramp", route_info_output_.dis_to_ramp);
