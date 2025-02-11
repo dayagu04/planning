@@ -1,11 +1,88 @@
 #include "speed_limit_decider.h"
+#include <vector>
+
+#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
 #include "planning_context.h"
+
+namespace planning {
+
 namespace {
 constexpr double kHighVel = 100 / 3.6;
+constexpr double kLaneBorrowLimitedSpeed = 5.56;
+constexpr double kSpeedlimitScale = 0.6;
+
+bool CalculateAgentSLBoundary(
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const planning_math::Box2d &agent_box, double *const ptr_min_s,
+    double *const ptr_max_s, double *const ptr_min_l, double *const ptr_max_l) {
+  if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
+      nullptr == ptr_max_l) {
+    return false;
+  }
+  const auto &all_corners = agent_box.GetAllCorners();
+  for (const auto &corner : all_corners) {
+    Point2D agent_sl{0.0, 0.0};
+    Point2D corner_sl{corner.x(), corner.y()};
+    if (!planned_path->XYToSL(corner_sl, agent_sl)) {
+      continue;
+    }
+    *ptr_min_s = std::fmin(*ptr_min_s, agent_sl.x);
+    *ptr_max_s = std::fmax(*ptr_max_s, agent_sl.x);
+    *ptr_min_l = std::fmin(*ptr_min_l, agent_sl.y);
+    *ptr_max_l = std::fmax(*ptr_max_l, agent_sl.y);
+  }
+  if (*ptr_min_s > 200.0 || *ptr_max_s < -200.0 || *ptr_min_l > 50.0 ||
+      *ptr_max_l < -50.0) {
+    return false;
+  }
+  return true;
 }
-namespace planning {
+
+bool CalculateAgentSLBoundary(
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const planning::agent::Agent &agent, double *const ptr_min_s,
+    double *const ptr_max_s, double *const ptr_min_l, double *const ptr_max_l) {
+  const auto &agent_box = agent.box();
+  bool is_success = CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s,
+                                             ptr_max_s, ptr_min_l, ptr_max_l);
+  return is_success;
+}
+
+bool LateralCollisionCheck(
+    const double &start_s, const double &end_s, const double &agent_min_l,
+    const double ego_length, const double ego_width,
+    const std::shared_ptr<planning_math::KDPath> lat_path_coord) {
+  const double sampling_interval_s = 1.0;
+  for (double s = start_s; s <= end_s; s += sampling_interval_s) {
+    double box_x = 0.0;
+    double box_y = 0.0;
+    lat_path_coord->SLToXY(s, 0.0, &box_x, &box_y);
+    double theta = lat_path_coord->GetPathCurveHeading(s);
+    planning_math::Box2d ego_box({box_x, box_y}, theta, ego_length, ego_width);
+    const auto &all_corners = ego_box.GetAllCorners();
+    double min_l = std::numeric_limits<double>::max();
+    double max_l = -min_l;
+
+    for (const auto &corner : all_corners) {
+      double ego_s = 0.0;
+      double ego_l = 0.0;
+      lat_path_coord->XYToSL(corner.x(), corner.y(), &ego_s, &ego_l);
+      min_l = std::fmin(min_l, ego_l);
+      max_l = std::fmax(max_l, ego_l);
+    }
+
+    // check collision
+    if ((agent_min_l < 0 && min_l < agent_min_l) ||
+        (agent_min_l >= 0 && max_l > agent_min_l)) {
+      return true;
+    }
+  }
+  return false;
+}
+}  // namespace
+
 SpeedLimitDecider::SpeedLimitDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
@@ -31,6 +108,8 @@ bool SpeedLimitDecider::Execute() {
   CalculatePerceptVisibSpeedLimit();
   // 6. speed limit from POI
   CalculatePOISpeedLimit();
+  // 7. speed limit from lane borrow agent
+  CalculateLaneBorrowSpeedLimit();
 
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
@@ -223,5 +302,112 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
 void SpeedLimitDecider::CalculatePerceptVisibSpeedLimit() {}
 
 void SpeedLimitDecider::CalculatePOISpeedLimit() {}
+
+void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
+  // get lane borrow agent
+  bool is_exist_lane_borrow_agent = false;
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  const auto borrow_direction = lane_borrow_output.borrow_direction;
+
+  // get lane borrow agent
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+
+  std::vector<SpeedLimitAgent> speed_limit_agents;
+  std::vector<const agent::Agent *> lane_borrow_agents;
+  for (const int lane_borrow_agent_id : blocked_obs_id) {
+    const auto lane_borrow_agent =
+        agent_manager->GetAgent(lane_borrow_agent_id);
+    if (lane_borrow_agent != nullptr) {
+      lane_borrow_agents.emplace_back(lane_borrow_agent);
+    }
+  }
+
+  // get lateral path
+  const auto &planned_kd_path =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (planned_kd_path == nullptr) {
+    return;
+  }
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+
+  for (auto agent : lane_borrow_agents) {
+    double min_s_by_lat_path = std::numeric_limits<double>::max();
+    double max_s_by_lat_path = std::numeric_limits<double>::lowest();
+    double min_l_by_lat_path = std::numeric_limits<double>::max();
+    double max_l_by_lat_path = std::numeric_limits<double>::lowest();
+    bool is_success = CalculateAgentSLBoundary(
+        planned_kd_path, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        &min_l_by_lat_path, &max_l_by_lat_path);
+    if (!is_success) {
+      continue;
+    }
+    double min_lat_l_by_lat_path = 0.0;
+    if (borrow_direction == LEFT_BORROW) {
+      min_lat_l_by_lat_path = max_l_by_lat_path;
+      // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    } else if (borrow_direction == RIGHT_BORROW) {
+      min_lat_l_by_lat_path = min_l_by_lat_path;
+      // (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
+    } else {
+      continue;
+    }
+
+    // lateral collision check
+    double ego_length = vehicle_param.length;
+    double ego_width = vehicle_param.width;
+    double agent_half_width = 0.5 * agent->width();
+    double start_s = min_s_by_lat_path;
+    double end_s = start_s + ego_length + 0.5 * agent->length();
+    bool is_collision =
+        LateralCollisionCheck(start_s, end_s, min_lat_l_by_lat_path, ego_length,
+                              ego_width, planned_kd_path);
+
+    // calc limit speed
+    std::array<double, 2> xp{agent_half_width, 1.8};
+    std::array<double, 2> fp{kSpeedlimitScale * v_ego, v_ego};
+    double v_limit = interp(fabs(min_lat_l_by_lat_path), xp, fp);
+    v_limit = std::max(v_limit, kLaneBorrowLimitedSpeed);
+
+    SpeedLimitAgent speed_limit_agent;
+    speed_limit_agent.id = agent->agent_id();
+    speed_limit_agent.min_s = min_s_by_lat_path;
+    speed_limit_agent.v_limit = v_limit;
+    speed_limit_agent.is_collison = is_collision;
+    speed_limit_agents.emplace_back(speed_limit_agent);
+
+    // sort
+    auto comp = [](const SpeedLimitAgent &a, const SpeedLimitAgent &b) {
+      return a.min_s < b.min_s;
+    };
+    std::sort(speed_limit_agents.begin(), speed_limit_agents.end(), comp);
+  }
+
+  if (speed_limit_agents.empty()) {
+    JSON_DEBUG_VALUE("lane_borrow_agent_id", -1.0)
+    JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", 100.0)
+    return;
+  }
+  // only use nearest lane borrow agent
+  auto it = speed_limit_agents.begin();
+  if (it != speed_limit_agents.end()) {
+    if (it->v_limit < v_target_) {
+      v_target_ = it->v_limit;
+      v_target_type_ = SpeedLimitType::Lane_Borrow;
+      JSON_DEBUG_VALUE("lane_borrow_agent_id", it->id)
+      JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", v_target_)
+    }
+  }
+}
 
 }  // namespace planning
