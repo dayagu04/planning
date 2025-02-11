@@ -23,6 +23,8 @@ class RouteInfo {
 
   void UpdateMLCInfoDecider(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+  
+  void UpdateVisionInfo() const;
   const RouteInfoOutput& get_route_info_output() { return route_info_output_; }
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool get_sdmap_valid() const { return sdmap_valid_; }
@@ -54,8 +56,6 @@ class RouteInfo {
   double sum_distance_driving_ = -1;
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
-
-  void UpdateVisionInfo();
 
   // for NOA function
   void UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sdmap);

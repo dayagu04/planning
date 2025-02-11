@@ -613,6 +613,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       }
     }
   }
+  //更新route的可视化信息
+  route_info->UpdateVisionInfo();
 
   // 9.计算自车到停止线的距离
   UpdateEgoDistanceToStopline();
