@@ -188,7 +188,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','cipv_relative_s_ego_stop',"distance_to_go_condition",
                           "cipv_vel_frenet","traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
-                          "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id']
+                          "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent']
 
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 

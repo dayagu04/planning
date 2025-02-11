@@ -560,7 +560,8 @@ void LateralMotionPlanner::Update() {
       session_->mutable_planning_context()->mutable_motion_planner_output();
 
   // append the planning traj anti-direction for decoupling lat & lon replan
-  const static double appended_length = 2.5;
+  const static double appended_length = config_.path_backward_appended_length;
+  motion_planner_output.path_backward_appended_length = appended_length;
   Eigen::Vector2d unit_vector(x_vec[1] - x_vec[2], y_vec[1] - y_vec[2]);
   unit_vector.normalize();
 
@@ -697,8 +698,9 @@ void LateralMotionPlanner::Update() {
   }
 }
 
-std::shared_ptr<planning_math::KDPath> LateralMotionPlanner::ConstructLateralKDPath(
-    const std::vector<double> &x_vec, const std::vector<double> &y_vec) {
+std::shared_ptr<planning_math::KDPath>
+LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
+                                             const std::vector<double> &y_vec) {
   std::vector<planning_math::PathPoint> lat_path_points;
   lat_path_points.reserve(x_vec.size());
   for (int i = 1; i <= 26; ++i) {

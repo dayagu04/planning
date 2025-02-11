@@ -80,7 +80,7 @@ void ReadItem(const Json &json, T &value, StringType &&key1) {
  */
 template <typename T, typename StringType, typename... RestKeys>
 void ReadItem(const Json &json, T &value, StringType &&key1,
-              RestKeys &&... rest_keys) {
+              RestKeys &&...rest_keys) {
   auto key = std::string(std::forward<StringType>(key1));
   if (json.find(key) != json.end()) {
     ReadItem(json[key], value, std::forward<RestKeys>(rest_keys)...);
@@ -101,7 +101,7 @@ void ReadVector(const Json &json, std::vector<T> &vec, StringType &&key1) {
 
 template <typename T, typename StringType, typename... RestKeys>
 void ReadVector(const Json &json, std::vector<T> &vec, StringType &&key1,
-                RestKeys &&... rest_keys) {
+                RestKeys &&...rest_keys) {
   auto key = std::string(std::forward<StringType>(key1));
   if (json.find(key) != json.end()) {
     ReadVector<T>(json[key], vec, std::forward<RestKeys>(rest_keys)...);
@@ -1151,6 +1151,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, big_theta_thr, "lat_motion_ilqr", "big_theta_thr");
     ReadItem<double>(json, q_jerk_for_big_theta, "lat_motion_ilqr",
                      "q_jerk_for_big_theta");
+    ReadItem<double>(json, path_backward_appended_length, "lat_motion_ilqr",
+                     "path_backward_appended_length");
   }
 
   bool warm_start_enable = true;
@@ -1272,6 +1274,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double lc_end_ratio_for_qreftheta = 1.0;
   double big_theta_thr = 1.0;
   double q_jerk_for_big_theta = 2.0;
+  double path_backward_appended_length = 2.5;
 };
 
 struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {
@@ -2562,9 +2565,23 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
                                  "longitudinal_decision_decider",
                                  "ignore_agent_ttc_to_ego_thrd"},
         ignore_agent_ttc_to_ego_thrd);
+    ignore_ego_ttc_to_agent_thrd = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning",
+                                 "longitudinal_decision_decider",
+                                 "ignore_ego_ttc_to_agent_thrd"},
+        ignore_ego_ttc_to_agent_thrd);
+    lat_distance_close_enough_to_planned_path_thrd = read_json_keys<double>(
+        json,
+        std::vector<std::string>{
+            "speed_planning", "longitudinal_decision_decider",
+            "lat_distance_close_enough_to_planned_path_thrd"},
+        lat_distance_close_enough_to_planned_path_thrd);
   }
 
   double ignore_agent_ttc_to_ego_thrd = 3.0;
+  double ignore_ego_ttc_to_agent_thrd = 3.0;
+  double lat_distance_close_enough_to_planned_path_thrd = 0.5;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {
