@@ -670,7 +670,7 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_yield_vec","st_path_final_nodes_cost_overtake_vec","st_path_final_nodes_cost_vel_vec",
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",
-                         'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec']
+                         'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec']
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
@@ -678,6 +678,7 @@ class LoadRosbag:
                          "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
+
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         planning_debug_output = PlanningDebugInfo()
