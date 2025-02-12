@@ -45,6 +45,7 @@ LateralObstacleDecider::LateralObstacleDecider(
   VehicleParam vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
+  ego_rear_axle_to_center_ = vehicle_param.rear_axle_to_center;
   ego_length_ = vehicle_param.length;
   ego_width_ = vehicle_param.width;
   name_ = "LateralObstacleDecider";
@@ -167,7 +168,7 @@ bool LateralObstacleDecider::Execute() {
 
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
-          !frenet_obs->b_frenet_valid() ||
+          !frenet_obs->b_frenet_valid() || frenet_obs->b_frenet_polygon_sequence_invalid() ||
           last_fix_lane_id != current_fix_lane_id) {
         history.is_avd_car = false;
         history.ncar_count = 0;
@@ -236,14 +237,11 @@ bool LateralObstacleDecider::Execute() {
           frenet_obs->b_frenet_polygon_sequence_invalid()) {
         continue;
       }
-      LateralObstacleDecision(*frenet_obs, lane_width);
-
+      LateralObstacleDecision(*frenet_obs, lane_width, reference_path_ptr);
       if (history.last_is_avd_car && !history.is_avd_car) {
         HoldLatOffset(*frenet_obs);
       }
-
       history.last_is_avd_car = history.is_avd_car;
-
       if (history.is_avd_car) {
         avd_car_id.emplace_back(obs->id());
       }
@@ -676,7 +674,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
 }
 
 void LateralObstacleDecider::LateralObstacleDecision(
-    FrenetObstacle &frenet_obstacle, double lane_width) {
+    FrenetObstacle &frenet_obstacle, double lane_width,
+    const std::shared_ptr<ReferencePath> reference_path_ptr) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
@@ -736,17 +735,55 @@ void LateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::LEFT;
     }
     // 防止感知误检，同时有横向和纵向overlap
-    if (!in_intersection_ && lat_overlap) {
-      output_[id] = LatObstacleDecisionType::IGNORE;
+    if (lat_overlap) {
+      if (!in_intersection_) {
+        output_[id] = LatObstacleDecisionType::IGNORE;
+      } else {
+        const auto &ego_state_manager =
+            session_->environmental_model().get_ego_state_manager();
+        planning_math::Box2d ego_box(
+            {ego_state_manager->ego_pose().x +
+                 ego_rear_axle_to_center_ *
+                     std::cos(ego_state_manager->ego_pose().theta),
+             ego_state_manager->ego_pose().y +
+                 ego_rear_axle_to_center_ *
+                     std::sin(ego_state_manager->ego_pose().theta)},
+            ego_state_manager->ego_pose().theta, ego_length_, ego_width_);
+        if (frenet_obstacle.obstacle()->perception_bounding_box().HasOverlap(
+                ego_box)) {
+          output_[id] = LatObstacleDecisionType::IGNORE;
+        }
+      }
     }
     // 后方车辆
   } else {
-    if (d_max_cpath < 0 && !lat_overlap && d_max_cpath < -ref_dis) {
-      output_[id] = LatObstacleDecisionType::LEFT;
-    } else if (d_min_cpath > 0 && !lat_overlap && d_min_cpath > ref_dis) {
-      output_[id] = LatObstacleDecisionType::RIGHT;
+    if (!in_intersection_ || d_s_rel < -25) {
+      if (d_max_cpath < 0 && !lat_overlap && d_max_cpath < -ref_dis) {
+        output_[id] = LatObstacleDecisionType::LEFT;
+      } else if (d_min_cpath > 0 && !lat_overlap && d_min_cpath > ref_dis) {
+        output_[id] = LatObstacleDecisionType::RIGHT;
+      } else {
+        output_[id] = LatObstacleDecisionType::IGNORE;
+      }
     } else {
-      output_[id] = LatObstacleDecisionType::IGNORE;
+      double ego_l = reference_path_ptr->get_frenet_ego_state().l();
+      const double ego_l_start = ego_l - ego_width_ / 2;
+      const double ego_l_end = ego_l + ego_width_ / 2;
+      const double obstacle_l_start =
+          frenet_obstacle.frenet_polygon_sequence()[0].second.min_y();
+      const double obstacle_l_end =
+          frenet_obstacle.frenet_polygon_sequence()[0].second.max_y();
+      double start_l = std::max(ego_l_start, obstacle_l_start);
+      double end_l = std::min(ego_l_end, obstacle_l_end);
+      constexpr double kLatOverlapBuffer = 0.5;
+      bool lat_overlap_for_rear_obs = (start_l < end_l - kLatOverlapBuffer);
+      if (lat_overlap_for_rear_obs) {
+        output_[id] = LatObstacleDecisionType::IGNORE;
+      } else if (ego_l < l) {
+        output_[id] = LatObstacleDecisionType::RIGHT;
+      } else {
+        output_[id] = LatObstacleDecisionType::LEFT;
+      }
     }
   }
 
