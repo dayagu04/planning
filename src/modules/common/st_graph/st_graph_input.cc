@@ -113,7 +113,7 @@ void StGraphInput::Update() {
   MakeBuffer(lane_change_status, config_);
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
-  ego_lane_ = virtual_lane_manager_->get_current_lane();
+  const auto& ego_lane = virtual_lane_manager_->get_current_lane();
   vehicle_param_ = VehicleConfigurationContext::Instance()->get_vehicle_param();
   mutable_agent_manager_ = session_->environmental_model().get_agent_manager();
   const auto& agents = dynamic_world->agent_manager()->GetAllCurrentAgents();
@@ -128,7 +128,7 @@ void StGraphInput::Update() {
   time_range_.first = 0.0;
   time_range_.second = kPlanningHorizon + kTimeBuffer;
 
-  GenerateParallelMap(virtual_lane_manager_, ego_lane_, &is_parallel_lane_map_);
+  GenerateParallelMap(virtual_lane_manager_, ego_lane, &is_parallel_lane_map_);
 
   FilterAgentsByDecisionType(agents);
 
@@ -354,7 +354,8 @@ void StGraphInput::ForwardLinearlyExtendPlannedPath(
 void StGraphInput::BackwardExtendPoints(
     const std::shared_ptr<planning_math::KDPath>& planned_path,
     std::vector<planning_math::PathPoint>* const ptr_path_points) {
-  if (nullptr == ptr_path_points || nullptr == ego_lane_) {
+  const auto& ego_lane = virtual_lane_manager_->get_current_lane();
+  if (nullptr == ptr_path_points || nullptr == ego_lane) {
     return;
   }
 
@@ -363,7 +364,7 @@ void StGraphInput::BackwardExtendPoints(
   // get project_s of ego_pose on ego_lane
   double ego_project_s = 0.0;
   double ego_project_l = 0.0;
-  const auto& ego_frenet_coord = ego_lane_->get_lane_frenet_coord();
+  const auto& ego_frenet_coord = ego_lane->get_lane_frenet_coord();
   if (!ego_frenet_coord->XYToSL(planning_init_point_.x(),
                                 planning_init_point_.y(), &ego_project_s,
                                 &ego_project_l)) {
@@ -503,7 +504,7 @@ StGraphInput::ptr_virtual_lane_manager() const {
 }
 
 const std::shared_ptr<VirtualLane> StGraphInput::ego_lane() const {
-  return ego_lane_;
+  return virtual_lane_manager_->get_current_lane();
 }
 
 bool StGraphInput::is_lane_keeping() const { return is_lane_keeping_; }
