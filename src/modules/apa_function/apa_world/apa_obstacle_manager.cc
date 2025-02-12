@@ -66,6 +66,12 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
         std::min(local_view->fusion_occupancy_objects_info.fusion_object_size,
                  static_cast<uint8>(FUSION_OCCUPANCY_OBJECT_MAX_NUM));
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
+      // [hack]: need to retire in published version.
+      if (local_view->fusion_occupancy_objects_info.fusion_object[i]
+              .common_occupancy_info.type == iflyauto::OBJECT_TYPE_OCC_COLUMN) {
+        continue;
+      }
+
       const iflyauto::FusionOccupancyAdditional& fusion_occupancy_object =
           local_view->fusion_occupancy_objects_info.fusion_object[i]
               .additional_occupancy_info;

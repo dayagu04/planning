@@ -410,9 +410,10 @@ const void UpdateLocalView(
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_ =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(ground_line_info_bytes);
+    iflyauto::FusionGroundLineInfo ground_line_ =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
+          ground_line_info_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -520,9 +521,10 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_info =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(ground_line_bytes);
+  iflyauto::FusionGroundLineInfo ground_line_info =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
+          ground_line_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
