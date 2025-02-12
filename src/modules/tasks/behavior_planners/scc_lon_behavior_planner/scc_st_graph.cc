@@ -67,12 +67,11 @@ constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
 constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
-constexpr double kSafetyFollowTime = 2.0;
+constexpr double kSafetyFollowTime = 3.0;
 
 bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
-                              const Box2d &agent_box,
-                              double *const ptr_min_s, double *const ptr_max_s,
-                              double *const ptr_min_l,
+                              const Box2d &agent_box, double *const ptr_min_s,
+                              double *const ptr_max_s, double *const ptr_min_l,
                               double *const ptr_max_l) {
   if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
       nullptr == ptr_max_l) {
@@ -370,7 +369,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(lead_one.track_id());
     if (agent != nullptr) {
-      is_reverse_obs_in_large_curv = agent->is_reverse();
+      is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
       is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
@@ -574,7 +573,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(temp_lead_one.track_id());
     if (agent != nullptr) {
-      is_reverse_obs_in_large_curv = agent->is_reverse();
+      is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
       is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
@@ -1039,7 +1038,7 @@ void StGraphGenerator::UpdateNearObstacles(
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
-        is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
@@ -1060,7 +1059,7 @@ void StGraphGenerator::UpdateNearObstacles(
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
-        is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
@@ -1553,7 +1552,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
-        is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
         is_reverse_cutin_agent = agent->is_reverse_cutin();
         is_static_cutin_agent = agent->is_static();
@@ -4704,7 +4703,7 @@ void StGraphGenerator::IsReverseAgentInLargeCurvature(
       }
       // 2. filter revese agent
       if (object_s_speed_mps < -3.0) {
-        mutable_agent->set_is_reverse(true);
+        mutable_agent->set_is_reverse_in_large_curv(true);
       }
     }
   }
