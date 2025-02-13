@@ -757,7 +757,9 @@ void LateralObstacleDecider::LateralObstacleDecision(
     }
     // 后方车辆
   } else {
-    if (!in_intersection_ || d_s_rel < -25) {
+    bool lon_too_far = d_s_rel < -25;
+    bool lat_too_far = std::abs(frenet_obstacle.l_relative_to_ego()) > 4;
+    if (!in_intersection_ || lon_too_far || lat_too_far) {
       if (d_max_cpath < 0 && !lat_overlap && d_max_cpath < -ref_dis) {
         output_[id] = LatObstacleDecisionType::LEFT;
       } else if (d_min_cpath > 0 && !lat_overlap && d_min_cpath > ref_dis) {

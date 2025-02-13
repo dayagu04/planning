@@ -25,6 +25,8 @@ FrenetObstacle::FrenetObstacle(
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
     compute_frenet_polygon_sequence(reference_path);
+  } else {
+    b_frenet_polygon_sequence_invalid_ = true;
   }
 }
 
