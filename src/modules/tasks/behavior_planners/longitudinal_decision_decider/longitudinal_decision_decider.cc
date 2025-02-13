@@ -14,6 +14,7 @@
 #include "agent/agent_decision.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
 #include "log.h"
 #include "longitudinal_decision_decider_output.h"
 #include "src/modules/context/environmental_model.h"
@@ -544,11 +545,13 @@ std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
     double planning_init_s = session_->planning_context()
                                  .motion_planner_output()
                                  .path_backward_appended_length;
-    double front_agent_center_s = 0.0;
-    double front_agent_center_l = 0.0;
+    Point2D invade_gap_front_agent_xy(invade_gap_front_agent->x(),
+                                      invade_gap_front_agent->y());
+    Point2D invade_gap_front_agent_sl;
     const bool access_to_front_agent_center_sl = planned_path->XYToSL(
-        invade_gap_front_agent->x(), invade_gap_front_agent->y(),
-        &front_agent_center_s, &front_agent_center_l);
+        invade_gap_front_agent_xy, invade_gap_front_agent_sl);
+    const double front_agent_center_s = invade_gap_front_agent_sl.x;
+    const double front_agent_center_l = invade_gap_front_agent_sl.y;
     if (!access_to_front_agent_center_sl) {
       ignore_gap_rear_agent = true;
       JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
@@ -625,8 +628,8 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
         agent_id_st_boundaries_map.find(id) !=
             agent_id_st_boundaries_map
                 .end()) {  // no invade or already in st graph(like cipv)
-      LOG_DEBUG(
-          "agent (ID: %d) is not ignored or already in st graph, skip\n", id);
+      LOG_DEBUG("agent (ID: %d) is not ignored or already in st graph, skip\n",
+                id);
       continue;
     }
     if (lane_borrow_blocked_obs_id_set.find(id) !=
@@ -634,15 +637,22 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
       LOG_DEBUG("agent (ID: %d) is lane borrow target, skip\n", id);
       continue;
     }
-    double invade_agent_s = 0.0;
-    double invade_agent_l = 0.0;
+    const auto agent = agent_manager->GetAgent(id);
+    if (agent && agent->is_static()) {
+      LOG_DEBUG("agent (ID: %d) is static, skip\n", id);
+      continue;
+    }
+
     const auto invade_agent = agent_manager->GetAgent(id);
-    if (!planned_path->XYToSL(invade_agent->x(), invade_agent->y(),
-                              &invade_agent_s,
-                              &invade_agent_l)) {  // far from ego in lon s
+    Point2D invade_agent_sl;
+    Point2D invade_agent_xy(invade_agent->x(), invade_agent->y());
+    if (!planned_path->XYToSL(invade_agent_xy,
+                              invade_agent_sl)) {  // far from ego in lon s
       LOG_DEBUG("agent (ID: %d) is far from ego in lon s, skip\n", id);
       continue;
     }
+    const double invade_agent_s = invade_agent_sl.x;
+    const double invade_agent_l = invade_agent_sl.y;
     const static double lat_distance_thrd =
         config_.lat_distance_close_enough_to_planned_path_thrd;
     if (std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
@@ -794,16 +804,17 @@ bool LongitudinalDecisionDecider::IgnoreLaneChangeGapRearAgent(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   // agent info in target lane
-  double rear_agent_center_s = 0.0;
-  double rear_agent_center_l = 0.0;
   const auto &rear_agent_center = gap_rear_agent->box().center();
-  if (!target_lane_frenet_coord->XYToSL(
-          rear_agent_center.x(), rear_agent_center.y(), &rear_agent_center_s,
-          &rear_agent_center_l)) {
+  Point2D rear_agent_center_xy(rear_agent_center.x(), rear_agent_center.y());
+  Point2D rear_agent_center_sl;
+  if (!target_lane_frenet_coord->XYToSL(rear_agent_center_xy,
+                                        rear_agent_center_sl)) {
     int default_value = -1;
     JSON_DEBUG_VALUE("rear_agent_ttc_to_ego", default_value)
     return true;
   }
+  const double rear_agent_center_s = rear_agent_center_sl.x;
+  const double rear_agent_center_l = rear_agent_center_sl.y;
   const auto agent_center_matched_point =
       target_lane_frenet_coord->GetPathPointByS(rear_agent_center_s);
   const double agent_target_lane_heading_diff =
@@ -812,14 +823,15 @@ bool LongitudinalDecisionDecider::IgnoreLaneChangeGapRearAgent(
       gap_rear_agent->speed() * std::cos(agent_target_lane_heading_diff);
 
   // planning init info in target lane
-  double planning_init_s = 0.0;
-  double planning_init_l = 0.0;
-  if (!target_lane_frenet_coord->XYToSL(planning_init_x, planning_init_y,
-                                        &planning_init_s, &planning_init_l)) {
+  Point2D planning_init_xy(planning_init_x, planning_init_y);
+  Point2D planning_init_sl;
+  if (!target_lane_frenet_coord->XYToSL(planning_init_xy, planning_init_sl)) {
     int default_value = -1;
     JSON_DEBUG_VALUE("rear_agent_ttc_to_ego", default_value)
     return true;
   }
+  double planning_init_s = planning_init_sl.x;
+  double planning_init_l = planning_init_sl.y;
   const auto planning_init_matched_point =
       target_lane_frenet_coord->GetPathPointByS(planning_init_s);
   const double planning_init_target_lane_heading_diff =
