@@ -721,6 +721,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
                   "parallel_search_out_heading");
 
+  JSON_READ_VALUE(apa_param.SetPram().x_max_internal_obstacles, double,
+                  "x_max_internal_obstacles");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_x_value_park_out_position, double,
+                  "min_x_value_park_out_position");
+
   JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");
 

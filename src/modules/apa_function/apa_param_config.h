@@ -339,6 +339,8 @@ struct ApaParameters {
   double min_gear_path_length = 0.25;
   double parallel_multi_plan_radius_eps = 0.03;
   double parallel_search_out_heading = 0.0;
+  double x_max_internal_obstacles = 6.68;
+  double min_x_value_park_out_position = 2.3;
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;

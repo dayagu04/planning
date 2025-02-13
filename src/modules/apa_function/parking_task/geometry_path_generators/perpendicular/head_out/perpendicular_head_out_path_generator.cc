@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 
+#include "apa_param_config.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 
@@ -329,6 +330,12 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
     }
   }
 
+  ILOG_INFO << " arc heanding b "
+            << path_seg_vec.back().GetArcSeg().headingB * kRad2Deg;
+  // if (fabs(path_seg_vec.back().GetEndHeading()) < 15 * kDeg2Rad) {
+  //   return false;
+  // }
+
   return prepare_success;
 }
 
@@ -471,7 +478,9 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   ILOG_INFO << "current_pose heanding " << current_pose.heading;
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
       current_pose.pos.x() < 7.0 && std::fabs(current_pose.heading) >= 0.7) {
-    const double expected_pos_x = 8.0;
+    const double expected_pos_x =
+        ginput_.ego_info_under_slot.pt_inside.x() +
+        apa_param.GetParam().min_x_value_park_out_position;
     const double tmp_x =
         expected_pos_x -
         current_turn_radius * (1 - fabs(sin(current_pose.heading)));
