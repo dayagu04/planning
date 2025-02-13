@@ -226,12 +226,6 @@ void FrenetObstacle::compute_frenet_obstacle(
 
   d_min_cpath_ = min_l;
   d_max_cpath_ = max_l;
-  d_s_rel_ = 0;
-  if (frenet_s_ > ego_head_s && min_s > ego_head_s) {
-    d_s_rel_ = min_s - ego_head_s;  // obstacle in front of ego
-  } else if (frenet_s_ < ego_head_s && max_s < ego_head_s) {
-    d_s_rel_ = max_s - ego_head_s;  // obstacle behind ego
-  }
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
     const ReferencePath &reference_path) {
@@ -265,6 +259,14 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
   frenet_obstacle_boundary_.s_end = obs_end_s;
   frenet_obstacle_boundary_.l_start = obs_start_l;
   frenet_obstacle_boundary_.l_end = obs_end_l;
+
+  double ego_head_s = reference_path.get_frenet_ego_state().head_s();
+  d_s_rel_ = 0;
+  if (frenet_s_ > ego_head_s && obs_start_s > ego_head_s) {
+    d_s_rel_ = obs_start_s - ego_head_s;  // obstacle in front of ego
+  } else if (frenet_s_ < ego_head_s && obs_end_s < ego_head_s) {
+    d_s_rel_ = obs_end_s - ego_head_s;  // obstacle behind ego
+  }
 }
 
 void FrenetObstacle::compute_frenet_polygon_sequence(
