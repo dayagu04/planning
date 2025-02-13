@@ -85,7 +85,7 @@ struct RectangleBound {
   ~RectangleBound() {}
   RectangleBound(const double _min_x, const double _min_y, const double _max_x,
                  const double _max_y) {
-    Set(min_x, _min_y, _max_x, _max_y);
+    Set(_min_x, _min_y, _max_x, _max_y);
   }
 
   void Set(const double _min_x, const double _min_y, const double _max_x,
