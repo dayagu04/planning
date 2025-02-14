@@ -232,7 +232,7 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
                       cut_in_distance_range_m, cut_in_lateral_threshold_m,
                       mutable_agent_manager);
   }
-  // DeciderCutOutAgent();
+  DeciderCutOutAgent(mutable_agent_manager);
 }
 
 void AgentLongitudinalDecider::DeciderCutInAgent(
@@ -583,6 +583,190 @@ void AgentLongitudinalDecider::CalculateAgentLateralDistance(
       (1 - dist_ratio) * (*ptr_small_lateral_distance_with_ego_l);
 };
 
+void AgentLongitudinalDecider::DeciderCutOutAgent(
+    agent::AgentManager* const mutable_agent_manager) {
+  if (nullptr == mutable_agent_manager) {
+    return;
+  }
+
+  const auto& cipv_decider_output =
+      session_->planning_context().cipv_decider_output();
+  const int32_t cipv_id = cipv_decider_output.cipv_id();
+
+  auto* ptr_agent = mutable_agent_manager->mutable_agent(cipv_id);
+  if (nullptr == ptr_agent || ptr_agent->trajectories().empty() ||
+      ptr_agent->trajectories().front().empty()) {
+    return;
+  }
+
+  const bool is_cut_out = CheckCutOutAgent(*ptr_agent);
+  cut_out_agent_count_[cipv_id] =
+      is_cut_out ? ++cut_out_agent_count_[cipv_id] : 0;
+
+  constexpr int32_t kSteadyCutOutCheckCount = 3;
+  constexpr int32_t kSteadyCutOutKeepCount = 4;
+  if (cut_out_agent_count_[cipv_id] >= kSteadyCutOutCheckCount) {
+    steady_cut_out_agent_count_[cipv_id] = kSteadyCutOutKeepCount;
+  } else {
+    steady_cut_out_agent_count_[cipv_id] =
+        std::fmax(0, steady_cut_out_agent_count_[cipv_id] - 1);
+  }
+
+  if (steady_cut_out_agent_count_[cipv_id] > 0) {
+    // ptr_agent->set_need_backward_extend(true);
+    ptr_agent->set_is_cutout(true);
+  }
+}
+
+bool AgentLongitudinalDecider::CheckCutOutAgent(const agent::Agent& agent) {
+  const auto& trajectory = agent.trajectories().front();
+  const auto& end_point = trajectory.back();
+  const double agent_end_time = end_point.absolute_time();
+
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto& lane_change_status = lane_change_decider_output.curr_state;
+  const bool is_in_lane_change = (lane_change_status == kLaneChangeExecution ||
+                                  lane_change_status == kLaneChangeComplete);
+
+  const auto& current_lane = virtual_lane_manager_->get_current_lane();
+  const auto current_lane_coord = current_lane->get_lane_frenet_coord();
+
+  // 0.check the cipv agent
+  // 1.should not reverse agent
+  if (IsReverseAgent(&agent, current_lane)) {
+    return false;
+  }
+
+  // 2.agent's speed < 30kph
+  constexpr double kSpeedThresholdKph = 30.0;
+  const bool speed_meet = agent.speed() * kMpsToKph < kSpeedThresholdKph;
+  if (!speed_meet) {
+    return false;
+  }
+
+  double agent_s_in_lane = 0.0;
+  double agent_l_in_lane = 0.0;
+  if (!current_lane_coord->XYToSL(agent.x(), agent.y(), &agent_s_in_lane,
+                                  &agent_l_in_lane)) {
+    return false;
+  }
+
+  // 3.agent's heading diff with lane is at [3,90]
+  const auto matched_point_in_lane =
+      current_lane_coord->GetPathPointByS(agent_s_in_lane);
+  const double heading_diff = std::fabs(planning_math::NormalizeAngle(
+      agent.theta() - matched_point_in_lane.theta()));
+  constexpr double kLowerHeadingDiff = 3.0 / 57.3;
+  constexpr double kUpperHeadingDiff = 90.0 / 57.3;
+  const bool heading_diff_meet =
+      heading_diff > kLowerHeadingDiff && heading_diff < kUpperHeadingDiff;
+  if (!heading_diff_meet) {
+    return false;
+  }
+
+  // 4.agent's trajectory end point l - agent's l > 3m, relative point s -
+  // agent's s < 15.0m
+  constexpr double kRelativeTime = 3.5;
+  const auto relative_point = kRelativeTime < agent_end_time
+                                  ? trajectory.Evaluate(kRelativeTime)
+                                  : end_point;
+  double end_point_s_in_lane = 0.0;
+  double end_point_l_in_lane = 0.0;
+  double relative_point_s_in_lane = 0.0;
+  double relative_point_l_in_lane = 0.0;
+  if (!current_lane_coord->XYToSL(end_point.x(), end_point.y(),
+                                  &end_point_s_in_lane, &end_point_l_in_lane) ||
+      !current_lane_coord->XYToSL(relative_point.x(), relative_point.y(),
+                                  &relative_point_s_in_lane,
+                                  &relative_point_l_in_lane)) {
+    return false;
+  }
+  constexpr double kLateralDiff = 3.0;
+  constexpr double kLongitudinalDiff = 20.0;
+  const bool lateral_diff_meet =
+      std::fabs(agent_l_in_lane - end_point_l_in_lane) > kLateralDiff;
+  const bool longitudinal_diff_meet =
+      std::fabs(relative_point_s_in_lane - agent_s_in_lane) < kLongitudinalDiff;
+  if (!lateral_diff_meet || !longitudinal_diff_meet) {
+    return false;
+  }
+
+  // cut-out intention
+  // 5. agent has cut-out intention
+  const bool have_cut_out_intention = HaveCutOutIntention(
+      agent, current_lane_coord, matched_point_in_lane, end_point_l_in_lane);
+  if (!have_cut_out_intention) {
+    return false;
+  }
+
+  // 6.agent is in lateral range of planned path,range is half of vehicle width
+  // + 0.35
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vehicle_width = vehicle_param.width;
+  const double left_border_position = vehicle_width * 0.5;
+  const double right_border_position = -left_border_position;
+  constexpr double kExpandBuffer = 0.35;
+
+  auto tmp_box = agent.box();
+  tmp_box.LateralExtend(kExpandBuffer * 2);
+  double min_s = std::numeric_limits<double>::max();
+  double max_s = std::numeric_limits<double>::lowest();
+  double min_l = std::numeric_limits<double>::max();
+  double max_l = std::numeric_limits<double>::lowest();
+  CalculateAgentSLBoundary(current_lane_coord, tmp_box, &min_s, &max_s, &min_l,
+                           &max_l);
+  bool in_lateral_range =
+      !(min_l > left_border_position || max_l < right_border_position);
+  return in_lateral_range;
+}
+
+bool AgentLongitudinalDecider::HaveCutOutIntention(
+    const agent::Agent& agent,
+    const std::shared_ptr<planning_math::KDPath>& current_lane_coord,
+    const planning_math::PathPoint& agent_matched_point_in_lane,
+    const double agent_trajetory_end_point_l_in_lane) {
+  const auto& agent_center_point = agent.box().center();
+  const double rear_theta = planning_math::NormalizeAngle(agent.theta() + M_PI);
+  const auto rear_point =
+      agent_center_point + planning_math::Vec2d::CreateUnitVec2d(rear_theta) *
+                               agent.length() * kHalf;
+  const auto front_point =
+      agent_center_point +
+      planning_math::Vec2d::CreateUnitVec2d(agent.theta()) * agent.length() *
+          kHalf;
+  double rear_point_s_in_lane = 0.0;
+  double rear_point_l_in_lane = 0.0;
+  if (!current_lane_coord->XYToSL(rear_point.x(), rear_point.y(),
+                                  &rear_point_s_in_lane,
+                                  &rear_point_l_in_lane)) {
+    return false;
+  }
+  double front_point_s_in_lane = 0.0;
+  double front_point_l_in_lane = 0.0;
+  if (!current_lane_coord->XYToSL(front_point.x(), front_point.y(),
+                                  &front_point_s_in_lane,
+                                  &front_point_l_in_lane)) {
+    return false;
+  }
+  const double signed_heading_diff = planning_math::NormalizeAngle(
+      agent.theta() - agent_matched_point_in_lane.theta());
+  bool has_cut_out_intention = false;
+  if (signed_heading_diff > kEpsilon) {
+    has_cut_out_intention =
+        std::fabs(front_point_l_in_lane) > std::fabs(rear_point_l_in_lane) &&
+        (agent_trajetory_end_point_l_in_lane > front_point_l_in_lane) &&
+        (front_point_l_in_lane > kEpsilon);
+  } else if (signed_heading_diff < -kEpsilon) {
+    has_cut_out_intention =
+        std::fabs(front_point_l_in_lane) > std::fabs(rear_point_l_in_lane) &&
+        (agent_trajetory_end_point_l_in_lane < front_point_l_in_lane) &&
+        (front_point_l_in_lane < -kEpsilon);
+  }
+  return has_cut_out_intention;
+}
+
 void AgentLongitudinalDecider::UpdateCutInAgentTable() {
   for (auto iter = cut_in_agent_count_.begin();
        iter != cut_in_agent_count_.end();) {
@@ -606,6 +790,24 @@ void AgentLongitudinalDecider::UpdateCutInAgentTable() {
        iter != rule_based_cut_in_agent_count_.end();) {
     if (current_agent_ids_.count(iter->first) == 0) {
       iter = rule_based_cut_in_agent_count_.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+
+  for (auto iter = cut_out_agent_count_.begin();
+       iter != cut_out_agent_count_.end();) {
+    if (current_agent_ids_.count(iter->first) == 0) {
+      iter = cut_out_agent_count_.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+
+  for (auto iter = steady_cut_out_agent_count_.begin();
+       iter != steady_cut_out_agent_count_.end();) {
+    if (current_agent_ids_.count(iter->first) == 0) {
+      iter = steady_cut_out_agent_count_.erase(iter);
     } else {
       ++iter;
     }
