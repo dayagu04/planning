@@ -21,6 +21,8 @@ constexpr double kVehicleInverseCrossingSpeedThd = 30 / 3.6;
 constexpr int32_t kVirtualVRUObstacleBaseId = 10000;
 constexpr double kVirtualVRUObstacleLength = 5.0;
 constexpr double kVirtualVRUObstacleWidth = 2.0;
+constexpr double kVRUDangerWidthToReference = 1.5;
+constexpr double kEgoPassVRUSafeLength = 3.0;
 const int32_t kNumNots = 25;
 const double kStepTime = 0.1;
 }  // namespace
@@ -98,6 +100,8 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
   const auto ego_half_width = veh_param.width * 0.5;
 
   const auto& environmental_model = session_->environmental_model();
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
   const auto& ego_lane =
       environmental_model.get_virtual_lane_manager()->get_current_lane();
 
@@ -114,7 +118,6 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
     return false;
   }
 
-  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto& init_point = ego_state_mgr->planning_init_point();
 
   // 1.judge vru prediction
@@ -140,7 +143,25 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
   if (!ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
     return false;
   }
-  if (vru_current_s < ego_s + veh_param.length * 0.5) {
+  if (vru_current_s < ego_s + veh_param.front_edge_to_rear_axle) {
+    return false;
+  }
+
+  const auto& corners = agent->box().GetAllCorners();
+  double agent_min_s = std::numeric_limits<double>::max();
+  double agent_max_s = std::numeric_limits<double>::min();
+  for (const auto& corner : corners) {
+    double project_l = 0.0;
+    double projrct_s = 0.0;
+    if (!ego_lane_coord->XYToSL(corner.x(), corner.y(), &projrct_s,
+                                    &project_l)) {
+      continue;
+    }
+    agent_min_s = std::fmin(agent_min_s, projrct_s);
+    agent_max_s = std::fmax(agent_max_s, projrct_s);
+  }
+
+  if (agent_min_s < ego_s + veh_param.front_edge_to_rear_axle && agent->is_reverse()) {
     return false;
   }
 
@@ -181,6 +202,32 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
   if (std::fabs(vru_pred_last_point_l) < ego_half_width ||
       (vru_pred_last_point_l * vru_current_l < 0.0)) {
     is_vru_prediction_satisfied_for_virtual = true;
+  }
+
+  double vru_danger_zone_pred_point_rel_time =
+      std::numeric_limits<double>::max();
+  double vru_danger_zone_pred_point_s = std::numeric_limits<double>::max();
+  const auto& first_point = agent->trajectories().front().at(0);
+  const double trajectory_start_time = first_point.absolute_time();
+  for (int32_t i = 0; i <= kNumNots; ++i) {
+    double releative_t = i * kStepTime;
+    double absolute_t = trajectory_start_time + releative_t;
+    auto pred_point = agent->trajectories().front().Evaluate(absolute_t);
+    double pred_point_s, pred_point_l;
+    if (!ego_lane_coord->XYToSL(pred_point.x(), pred_point.y(), &pred_point_s,
+                                &pred_point_l)) {
+      continue;
+    }
+    if (std::fabs(pred_point_l) < kVRUDangerWidthToReference) {
+      vru_danger_zone_pred_point_rel_time = releative_t;
+      vru_danger_zone_pred_point_s = pred_point_s;
+      break;
+    }
+  }
+
+  if (v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_current_s + kEgoPassVRUSafeLength &&
+      v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength) {
+    return false;
   }
 
   bool is_vru_crossing = false;
