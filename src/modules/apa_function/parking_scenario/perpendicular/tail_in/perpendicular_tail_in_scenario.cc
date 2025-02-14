@@ -11,6 +11,7 @@
 #include "apa_slot.h"
 #include "apa_slot_manager.h"
 #include "apa_state_machine_manager.h"
+#include "collision_detection/collision_detection.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
@@ -1130,35 +1131,35 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 }
 
 const bool PerpendicularTailInScenario::CheckFinished() {
-  const auto& terminal_err_pose =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.terminal_err;
+  const ApaParameters& param = apa_param.GetParam();
 
-  const bool lon_condition =
-      terminal_err_pose.pos.x() < apa_param.GetParam().finish_lon_err;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+
+  const geometry_lib::PathPoint& terminal_err_pose =
+      ego_info_under_slot.terminal_err;
+
+  const bool lon_condition = terminal_err_pose.pos.x() < param.finish_lon_err;
 
   const double y1 = terminal_err_pose.pos.y();
-  const double y2 = (terminal_err_pose.pos +
-                     (apa_param.GetParam().wheel_base +
-                      apa_param.GetParam().front_overhanging) *
-                         apa_world_ptr_->GetSlotManagerPtr()
-                             ->ego_info_under_slot_.cur_pose.heading_vec)
-                        .y();
+  const double y2 =
+      (terminal_err_pose.pos + (param.wheel_base + param.front_overhanging) *
+                                   ego_info_under_slot.cur_pose.heading_vec)
+          .y();
+
   JSON_DEBUG_VALUE("terminal_error_y_front", y2)
 
-  const bool lat_condition_1 =
-      std::fabs(y1) <= apa_param.GetParam().finish_lat_err;
+  const bool lat_condition_1 = std::fabs(y1) <= param.finish_lat_err;
 
-  const bool lat_condition_2 =
-      std::fabs(y1) <= apa_param.GetParam().finish_lat_err_strict &&
-      std::fabs(y2) <= apa_param.GetParam().finish_lat_err_strict;
+  const bool lat_condition_2 = std::fabs(y1) <= param.finish_lat_err_strict &&
+                               std::fabs(y2) <= param.finish_lat_err_strict;
 
-  const bool heading_condition_1 =
-      std::fabs(terminal_err_pose.heading) <=
-      apa_param.GetParam().finish_heading_err * kDeg2Rad;
+  const bool heading_condition_1 = std::fabs(terminal_err_pose.heading) <=
+                                   param.finish_heading_err * kDeg2Rad;
 
   const bool heading_condition_2 =
       std::fabs(terminal_err_pose.heading) <=
-      (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
+      (param.finish_heading_err + 1.988) * kDeg2Rad;
 
   const bool lat_condition = (lat_condition_1 && heading_condition_1) &&
                              (lat_condition_2 && heading_condition_2);
@@ -1167,7 +1168,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist < param.max_replan_remain_dist;
 
   bool parking_finish =
       lon_condition && lat_condition && static_condition && remain_s_condition;
@@ -1177,22 +1178,25 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   }
 
   // stucked by directly behind uss
-  const bool enter_slot_condition =
-      apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot_occupied_ratio >
-      apa_param.GetParam().finish_uss_slot_occupied_ratio;
+  const bool enter_slot_condition = ego_info_under_slot.slot_occupied_ratio >
+                                    param.finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_uss < param.max_replan_remain_dist;
+
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
                    remain_uss_condition;
 
-  if (parking_finish) {
+  // Consider whether there are really obstacles at target pos. If so, finish
+  // it is indeed impossible to reach the target pos, if not, try replan again
+  if (parking_finish &&
+      apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInPolygan(
+          GetCarMaxPolygan(ego_info_under_slot.target_pose))) {
     return true;
   }
 
   // stucked by dynamic col det
   const bool remain_dist_col_det_condition =
-      frame_.remain_dist_col_det < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_col_det < param.max_replan_remain_dist;
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
                    remain_dist_col_det_condition &&

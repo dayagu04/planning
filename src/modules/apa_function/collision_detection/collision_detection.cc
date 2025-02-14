@@ -1834,9 +1834,8 @@ const double CollisionDetector::CalClosestDistFromObsToCar(
   return min_dist;
 }
 
-const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
+const std::vector<Eigen::Vector2d> GetCarMaxPolygan(
     const pnc::geometry_lib::PathPoint &current_pose) {
-  pnc::geometry_lib::RectangleBound bound;
   const Eigen::Vector2d t =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
   const Eigen::Vector2d n(-t.y(), t.x());
@@ -1853,8 +1852,26 @@ const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
                        0.5 * param.max_car_width * n);
   polygon.emplace_back(current_pose.pos - param.rear_overhanging * t +
                        0.5 * param.max_car_width * n);
-  bound.CalcBoundByPtVec(polygon);
+  return polygon;
+}
+
+const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
+    const pnc::geometry_lib::PathPoint &current_pose) {
+  pnc::geometry_lib::RectangleBound bound;
+  bound.CalcBoundByPtVec(GetCarMaxPolygan(current_pose));
   return bound;
+}
+
+const bool CollisionDetector::IsObstacleInPolygan(
+    const std::vector<Eigen::Vector2d> &vertex_vec) {
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {
+      if (pnc::geometry_lib::IsPointInPolygon(vertex_vec, obs_pt_global)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 }  // namespace apa_planner
