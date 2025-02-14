@@ -149,7 +149,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_uss_wave_info_msg_updated_.store(true);
   }
 
-  void Feed_IflytekUssUssPerceptionInfo(
+  void Feed_IflytekFusionUssPerceptionInfo(
       const iflyauto::UssPerceptInfo& uss_percept_info_msg) override {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     uss_percept_info_msg_ = uss_percept_info_msg;

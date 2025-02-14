@@ -822,7 +822,7 @@ void PlanningPlayer::PlayOneFrame(
   if (uss_percept_ros_msg) {
     iflyauto::UssPerceptInfo uss_percept_msg{};
     convert(uss_percept_msg, *uss_percept_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->Feed_IflytekUssUssPerceptionInfo(uss_percept_msg);
+    planning_adapter_->Feed_IflytekFusionUssPerceptionInfo(uss_percept_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/uss/uss_perception_info" << std::endl;
@@ -1927,7 +1927,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::UssPerceptInfo uss_percept_msg{};
       convert(uss_percept_msg, *uss_percept_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->Feed_IflytekUssUssPerceptionInfo(uss_percept_msg);
+      planning_adapter_->Feed_IflytekFusionUssPerceptionInfo(uss_percept_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/uss/uss_perception_info" << std::endl;
