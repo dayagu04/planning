@@ -319,6 +319,7 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
       path_seg_vec.emplace_back(tmp_path_seg);
     } else if (path_col_det_res == PathColDetRes::SHORTEN) {
       path_seg_vec.emplace_back(tmp_path_seg);
+      ILOG_INFO << " Path Col Det Res::SHORTEN ";
     } else if (path_col_det_res == PathColDetRes::INVALID) {
       prepare_success = false;
       ILOG_INFO << " Path Col Det Res::INVALID ";
@@ -332,9 +333,6 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
 
   ILOG_INFO << " arc heanding b "
             << path_seg_vec.back().GetArcSeg().headingB * kRad2Deg;
-  // if (fabs(path_seg_vec.back().GetEndHeading()) < 15 * kDeg2Rad) {
-  //   return false;
-  // }
 
   return prepare_success;
 }
@@ -346,6 +344,11 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
       ginput_.ego_info_under_slot.cur_pose;
   uint8_t current_gear = ginput_.ref_gear;
   uint8_t current_arc_steer = ginput_.ref_arc_steer;
+  if (current_pose.pos.x() < 3.0) {
+    ILOG_INFO
+        << "check : the current location does not require adjust planning";
+    return true;
+  }
 
   if (output_.path_segment_vec.size() > 0 && output_.gear_cmd_vec.size() > 0) {
     const auto& last_seg = output_.path_segment_vec.back();
@@ -616,12 +619,18 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
   double steer_change_radius = apa_param.GetParam().max_radius_in_slot;
   std::vector<double> offset_y_vec;
   offset_y_vec.clear();
-  const double y_min = -0.12;
-  const double y_max = 0.12;
-  double offset_y = y_min;
-  for (size_t i = 0; i < std::ceil((y_max - y_min) / 0.01); i++) {
+  double offset_y = 0.0;
+  const size_t max_offset_num = 20;
+
+  for (size_t i = 0; i < max_offset_num; i++) {
     offset_y_vec.emplace_back(offset_y);
-    offset_y += 0.01;
+    if (ginput_.ref_arc_steer ==
+        pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT) {
+      offset_y -= 0.01;
+    } else if (ginput_.ref_arc_steer ==
+               pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT) {
+      offset_y += 0.01;
+    }
   }
 
   bool flag = false;
@@ -1035,20 +1044,13 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
   }
 
   if (remain_car_dist > safe_remain_dist + 1e-3) {
-    if (col_res.col_pt_obs_global.transpose().x() < 6 &&
+    if (col_res.col_pt_ego_local.transpose().x() < 2.5 &&
         path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      // ILOG_INFO << "**** collision_point = "
-      //             << col_res.col_pt_ego_local.transpose()
-      //             << "  obs_pt_global = "
-      //             << col_res.col_pt_ego_global.transpose();
       return PathColDetRes::INSIDE_STUCK;
     }
 
-    // ILOG_INFO << "collision_point = "
-    //             << col_res.col_pt_ego_local.transpose()
-    //             << "  obs_pt_global = " <<
-    //             col_res.col_pt_ego_global.transpose()
-    //             << "  car_line_order = " << col_res.car_line_order);
+    // ILOG_INFO << "col_pt_ego_local = " << col_res.col_pt_ego_local.transpose()
+    //           << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose();
 
     if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       auto& line = path_seg.line_seg;

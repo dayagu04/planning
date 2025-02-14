@@ -2,6 +2,7 @@
 
 #include <math.h>
 
+#include <cstddef>
 #include <queue>
 
 #include "apa_state_machine_manager.h"
@@ -1311,15 +1312,16 @@ const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf.GetPos(
           current_path_last_point.pos);
 
-  double local_heading = apa_world_ptr_->GetSlotManagerPtr()
-                             ->ego_info_under_slot_.g2l_tf.GetHeading(
-                                 current_path_last_point.heading);
+  frame_.current_path_last_point_heading =
+      apa_world_ptr_->GetSlotManagerPtr()
+          ->ego_info_under_slot_.g2l_tf.GetHeading(
+              current_path_last_point.heading);
 
   const bool conditions_endpoint_correction =
       !end_position_correction_flag_ &&
       current_path_last_local_point.x() < 7.0 &&
       frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-      fabs(local_heading * kRad2Deg) > 70;
+      fabs(frame_.current_path_last_point_heading * kRad2Deg) > 60;
   return conditions_endpoint_correction;
 }
 
@@ -1381,10 +1383,20 @@ const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
 
     return true;
   } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    const double heading_condition =
+        frame_.current_path_last_point_heading * kRad2Deg;
+    ILOG_INFO << "current_path_last_point_heading : " << heading_condition;
     size_t size = current_path_point_global_vec_.size();
     if (size > 0) {
-      size_t half_size = size / 2;
-      current_path_point_global_vec_.resize(half_size);
+      if (fabs(heading_condition) > 70) {
+        size_t half_size = static_cast<size_t>(size / 2);
+        current_path_point_global_vec_.resize(half_size);
+      } else if (fabs(heading_condition) > 60 &&
+                 fabs(heading_condition) <= 70) {
+        size_t half_size = static_cast<size_t>(size * 2 / 3);
+        current_path_point_global_vec_.resize(half_size);
+      }
+
     } else {
       return false;
     }
