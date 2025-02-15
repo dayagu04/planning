@@ -479,16 +479,16 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   const Eigen::Vector2d line_tangent_vec =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
   ILOG_INFO << "current_pose heanding " << current_pose.heading;
-  if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-      current_pose.pos.x() < 7.0 && std::fabs(current_pose.heading) >= 0.7) {
-    const double expected_pos_x =
-        ginput_.ego_info_under_slot.pt_inside.x() +
-        apa_param.GetParam().min_x_value_park_out_position;
-    const double tmp_x =
-        expected_pos_x -
-        current_turn_radius * (1 - fabs(sin(current_pose.heading)));
-    const double move_lon =
-        tmp_x - current_pose.pos.x();  // Two meters higher than the slot
+
+  const double expected_pos_x =
+      ginput_.ego_info_under_slot.pt_inside.x() +
+      apa_param.GetParam().min_x_value_park_out_position;
+  const double tmp_x =
+      expected_pos_x -
+      current_turn_radius * (1 - fabs(sin(current_pose.heading)));
+  const double move_lon =
+      tmp_x - current_pose.pos.x();  // Two meters higher than the slot
+  if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE && move_lon > 1e-3) {
     const double need_move_length = move_lon / cos(current_pose.heading);
     pnc::geometry_lib::PathPoint tmp_pose;
     Eigen::Vector2d tmp_pos =
@@ -1049,8 +1049,10 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
       return PathColDetRes::INSIDE_STUCK;
     }
 
-    // ILOG_INFO << "col_pt_ego_local = " << col_res.col_pt_ego_local.transpose()
-    //           << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose();
+    // ILOG_INFO << "col_pt_ego_local = " <<
+    // col_res.col_pt_ego_local.transpose()
+    //           << "  obs_pt_global = " <<
+    //           col_res.col_pt_obs_global.transpose();
 
     if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       auto& line = path_seg.line_seg;

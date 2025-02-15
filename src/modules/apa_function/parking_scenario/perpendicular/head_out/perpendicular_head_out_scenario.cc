@@ -1318,7 +1318,6 @@ const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
               current_path_last_point.heading);
 
   const bool conditions_endpoint_correction =
-      !end_position_correction_flag_ &&
       current_path_last_local_point.x() < 7.0 &&
       frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
       fabs(frame_.current_path_last_point_heading * kRad2Deg) > 60;
