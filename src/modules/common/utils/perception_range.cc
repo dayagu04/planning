@@ -58,7 +58,7 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
     frenet_coord_ = frenet;
   };
 
-  // void FeedMap(const MSDMapInfo &map_info) override {
+  // void Feed_IflytekEhrStaticMap(const MSDMapInfo &map_info) override {
   //   refline_points_.clear();
   //   left_bound_points_.clear();
   //   right_bound_points_.clear();

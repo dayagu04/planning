@@ -28,7 +28,7 @@ static uint64_t get_latency(double now, uint64_t input_time) {
   return (now - input_time) / US_PER_MS;
 }
 
-void PlanningAdapter::Init() {
+bool PlanningAdapter::Init() {
   std::cout << "The planning component init!!!" << std::endl;
   std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
@@ -67,6 +67,7 @@ void PlanningAdapter::Init() {
   local_view_ptr_ = std::make_shared<LocalView>();
   planning_scheduler_ = std::make_unique<PlanningScheduler>(
       local_view_ptr_.get(), &engine_config);
+  return true;
 }
 
 void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
@@ -85,7 +86,7 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
   }
 }
 
-void PlanningAdapter::Proc() {
+bool PlanningAdapter::Proc() {
   LOG_DEBUG("PlanningScheduler::RunOnce \n");
   double start_time = IflyTime::Now_us();
 
@@ -355,15 +356,8 @@ void PlanningAdapter::Proc() {
   UpdateApaResetFlag();
 
   // 2.planning run
-    auto planning_output_container =
-      std::make_shared<iflyauto::StructContainer>();
-  auto &planning_output = *iflyauto::struct_cast<iflyauto::PlanningOutput>(
-      planning_output_container);
-  auto planning_hmi_info_container =
-      std::make_shared<iflyauto::StructContainer>();
-  auto &planning_hmi_info =
-      *iflyauto::struct_cast<iflyauto::PlanningHMIOutputInfoStr>(
-          planning_hmi_info_container);
+  iflyauto::PlanningOutput planning_output;
+  iflyauto::PlanningHMIOutputInfoStr planning_hmi_info;
   auto planning_debuginfo_container =
       std::make_shared<iflyauto::StructContainer>();
 
@@ -392,7 +386,7 @@ void PlanningAdapter::Proc() {
 
     auto payload = planning_debuginfo_container->mutable_payload();
     planning_debug_data->SerializeToString(payload);
-    planning_debug_writer_(planning_debuginfo_container);
+    planning_debug_writer_(*planning_debuginfo_container);
   }
 
   if (planning_writer_) {
@@ -412,7 +406,7 @@ void PlanningAdapter::Proc() {
     msg_meta.start_time = start_time;
     iflyauto::strcpy_array(msg_meta.version, __version_str__);
     UpdateInputListInfo(msg_meta);
-    planning_writer_(planning_output_container);
+    planning_writer_(planning_output);
   }
 
   if (planning_hmi_info_writer_) {
@@ -422,7 +416,7 @@ void PlanningAdapter::Proc() {
     hmi_msg_header.seq = frame_num_;
     hmi_msg_meta.start_time = start_time;
     iflyauto::strcpy_array(hmi_msg_meta.version, __version_str__);
-    planning_hmi_info_writer_(planning_hmi_info_container);
+    planning_hmi_info_writer_(planning_hmi_info);
   }
 
   // Trigger: write fault info where error occured
@@ -433,6 +427,7 @@ void PlanningAdapter::Proc() {
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
+  return true;
 }
 
 void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
