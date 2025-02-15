@@ -5,6 +5,7 @@
 #include <cstdio>
 
 #include "apa_slot.h"
+#include "collision_detection/path_safe_checker.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "geometry_math.h"
@@ -17,7 +18,6 @@
 #include "math_utils.h"
 #include "narrow_space_decider.h"
 #include "parking_scenario.h"
-#include "collision_detection/path_safe_checker.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
@@ -52,18 +52,17 @@ void NarrowSpaceScenario::Reset() {
                    params.min_turn_radius,
                    (params.max_car_width - params.car_width) * 0.5);
       thread_.Start();
-    } else {
-      thread_.Clear();
     }
   }
 
   current_gear_ = AstarPathGear::PARKING;
   in_slot_car_adjust_count_ = 0;
-  is_path_single_shot_to_goal_ = false;
+  is_path_connected_to_goal_ = false;
 
   ParkingScenario::Reset();
 
   narrow_space_decider_.Clear();
+  virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
 
   return;
 }
@@ -77,7 +76,7 @@ void NarrowSpaceScenario::Init() {
 
   current_gear_ = AstarPathGear::PARKING;
   in_slot_car_adjust_count_ = 0;
-  is_path_single_shot_to_goal_ = false;
+  is_path_connected_to_goal_ = false;
 
   thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
                params.steer_ratio, params.wheel_base, params.min_turn_radius,
@@ -158,16 +157,17 @@ const bool NarrowSpaceScenario::CheckFinished() {
 }
 
 const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
-  const auto& ego_slot_info = frame_.ego_slot_info;
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+  const ApaParameters& config = apa_param.GetParam();
 
   const bool lon_condition =
-      ego_slot_info.terminal_err.pos.x() < apa_param.GetParam().finish_lon_err;
+      ego_info.terminal_err.pos.x() < config.finish_lon_err;
 
-  const double lat_offset = ego_slot_info.ego_pos_slot.y();
+  const double lat_offset = ego_info.cur_pose.pos.y();
   const double ego_head_lat_offset =
-      (ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
-                                     apa_param.GetParam().front_overhanging) *
-                                        ego_slot_info.ego_heading_slot_vec)
+      (ego_info.cur_pose.pos + (config.wheel_base + config.front_overhanging) *
+                                   ego_info.cur_pose.heading_vec)
           .y();
 
   const bool ego_center_lat_condition =
@@ -179,11 +179,11 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
           apa_param.GetParam().finish_lat_err_strict;
 
   const bool heading_condition_1 =
-      std::fabs(ego_slot_info.terminal_err.heading) <=
+      std::fabs(ego_info.terminal_err.heading) <=
       apa_param.GetParam().finish_heading_err * kDeg2Rad;
 
   const bool heading_condition_2 =
-      std::fabs(ego_slot_info.terminal_err.heading) <=
+      std::fabs(ego_info.terminal_err.heading) <=
       (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
 
   const bool lat_condition =
@@ -207,7 +207,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
   const bool enter_slot_condition =
-      frame_.ego_slot_info.slot_occupied_ratio >
+      ego_info.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
       frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
@@ -221,9 +221,27 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   }
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   (ego_slot_info.terminal_err.pos.x() < 0.568);
+                   (ego_info.terminal_err.pos.x() < 0.568);
 
-  return parking_finish;
+  if (parking_finish) {
+    return true;
+  }
+
+  // 车辆不压线，车头基本摆正，就认定完成泊车
+  if (static_condition && remain_s_condition && lon_condition &&
+      heading_condition_2) {
+    Pose2D ego;
+    ego.x = ego_info.cur_pose.pos[0];
+    ego.y = ego_info.cur_pose.pos[1];
+    ego.theta = ego_info.cur_pose.heading;
+    if (!IsVehicleOverlapWithSlotLine(ego_info.slot.slot_length_,
+                                      ego_info.slot.slot_width_, ego)) {
+      ILOG_INFO << "vehicle is inside slot line, finish";
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void NarrowSpaceScenario::ExcutePathPlanningTask() {
@@ -259,8 +277,8 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  // todo: do not shrink in every frame
   PathShrinkBySlotLimiter();
-
   PathExpansionBySlotLimiter();
 
   // check finish
@@ -289,7 +307,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
 
   ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
-            << ",is_replan = " << is_replan;
+            << " ,is_replan = " << is_replan;
 
   // check replan
   if (apa_world_ptr_->GetSimuParam().force_plan || is_replan ||
@@ -315,10 +333,9 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
         SetParkingStatus(PARKING_FAILED);
         break;
       default:
-        SetParkingStatus(PARKING_PLANNING);
+        SetParkingStatus(PARKING_RUNNING);
         break;
     }
-
   } else {
     SetParkingStatus(PARKING_RUNNING);
     HybridAstarDebugInfoClear();
@@ -331,84 +348,93 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 }
 
 void NarrowSpaceScenario::Log() const {
-  const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
-  const auto& l2g_tf = ego_slot_info.l2g_tf;
+  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag);
 
-  JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
-  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+  const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
   std::vector<double> slot_corner_X;
-  const size_t corner_size = ego_slot_info.slot_corner.size();
   slot_corner_X.clear();
-  slot_corner_X.reserve(4 * corner_size);
+  slot_corner_X.reserve(16);
   std::vector<double> slot_corner_Y;
   slot_corner_Y.clear();
-  slot_corner_Y.reserve(4 * corner_size);
-  std::vector<Eigen::Vector2d> pt_vec;
-  pt_vec.clear();
-  pt_vec.reserve(corner_size);
-  for (const auto& corner : ego_slot_info.slot_corner) {
-    slot_corner_X.emplace_back(corner.x());
-    slot_corner_Y.emplace_back(corner.y());
-    pt_vec.emplace_back(corner);
+  slot_corner_Y.reserve(16);
+
+  const auto& origin_corner_coord_global =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  std::vector<Eigen::Vector2d> pt_vec{
+      origin_corner_coord_global.pt_0, origin_corner_coord_global.pt_1,
+      origin_corner_coord_global.pt_2, origin_corner_coord_global.pt_3};
+
+  for (const Eigen::Vector2d& pt : pt_vec) {
+    slot_corner_X.emplace_back(pt.x());
+    slot_corner_Y.emplace_back(pt.y());
   }
 
-  if (corner_size == 4) {
-    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
-    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
-    const Eigen::Vector2d vec_01 = (pt_vec[1] - pt_vec[0]).normalized();
-    const Eigen::Vector2d vec_23 = (pt_vec[3] - pt_vec[2]).normalized();
-    pt_vec[0] = pt_vec[0] + ego_slot_info.move_slot_dist * vec_01;
-    pt_vec[1] = pt_vec[1] + ego_slot_info.move_slot_dist * vec_01;
-    pt_vec[2] = pt_vec[2] + ego_slot_info.move_slot_dist * vec_23;
-    pt_vec[3] = pt_vec[3] + ego_slot_info.move_slot_dist * vec_23;
-    for (const Eigen::Vector2d& pt : pt_vec) {
-      slot_corner_X.emplace_back(pt.x());
-      slot_corner_Y.emplace_back(pt.y());
-    }
-    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
-    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+
+  pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_01_vec.normalized();
+  pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_01_vec.normalized();
+  pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_23_vec.normalized();
+  pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_23_vec.normalized();
+
+  for (const Eigen::Vector2d& pt : pt_vec) {
+    slot_corner_X.emplace_back(pt.x());
+    slot_corner_Y.emplace_back(pt.y());
   }
 
-  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 6)
-  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 6)
+  slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+
+  slot_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).x());
+  slot_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).y());
+
+  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 3);
+  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 3);
 
   std::vector<double> limiter_corner_X;
   limiter_corner_X.clear();
-  limiter_corner_X.reserve(frame_.ego_slot_info.limiter_corner.size());
+  limiter_corner_X.reserve(3);
   std::vector<double> limiter_corner_Y;
   limiter_corner_Y.clear();
-  limiter_corner_Y.reserve(frame_.ego_slot_info.limiter_corner.size());
-  for (const auto& corner : frame_.ego_slot_info.limiter_corner) {
-    const auto tmp_corner = l2g_tf.GetPos(corner);
-    limiter_corner_X.emplace_back(tmp_corner.x());
-    limiter_corner_Y.emplace_back(tmp_corner.y());
-  }
-  JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2)
-  JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
+  limiter_corner_Y.reserve(3);
+
+  limiter_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).x());
+  limiter_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).x());
+  limiter_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).y());
+  limiter_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).y());
+
+  JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2);
+  JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2);
 
   JSON_DEBUG_VALUE("terminal_error_x",
-                   frame_.ego_slot_info.terminal_err.pos.x())
+                   ego_info_under_slot.terminal_err.pos.x());
   JSON_DEBUG_VALUE("terminal_error_y",
-                   frame_.ego_slot_info.terminal_err.pos.y())
+                   ego_info_under_slot.terminal_err.pos.y());
   JSON_DEBUG_VALUE("terminal_error_heading",
-                   frame_.ego_slot_info.terminal_err.heading)
+                   ego_info_under_slot.terminal_err.heading)
 
-  ILOG_INFO << "lon error = " << frame_.ego_slot_info.terminal_err.pos.x()
-            << ",lat error=" << frame_.ego_slot_info.terminal_err.pos.y()
-            << ",heading error="
-            << ifly_rad2deg(ego_slot_info.terminal_err.heading);
-
-  JSON_DEBUG_VALUE("is_replan", frame_.is_replan)
-  JSON_DEBUG_VALUE("is_finished", frame_.is_finished)
+  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
   JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
-  JSON_DEBUG_VALUE("gear_change_count", frame_.gear_change_count)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
@@ -421,35 +447,35 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
   JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
 
-  JSON_DEBUG_VALUE("selected_slot_id", frame_.ego_slot_info.selected_slot_id)
-  JSON_DEBUG_VALUE("slot_length", frame_.ego_slot_info.slot_length)
-  JSON_DEBUG_VALUE("slot_width", frame_.ego_slot_info.slot_width)
+  JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.id);
+  JSON_DEBUG_VALUE("slot_length", ego_info_under_slot.slot.slot_length_);
+  JSON_DEBUG_VALUE("slot_width", ego_info_under_slot.slot.slot_width_);
 
   JSON_DEBUG_VALUE("slot_origin_pos_x",
-                   frame_.ego_slot_info.slot_origin_pos.x())
+                   ego_info_under_slot.origin_pose_global.pos.x());
 
   JSON_DEBUG_VALUE("slot_origin_pos_y",
-                   frame_.ego_slot_info.slot_origin_pos.y())
+                   ego_info_under_slot.origin_pose_global.pos.y());
 
   JSON_DEBUG_VALUE("slot_origin_heading",
-                   frame_.ego_slot_info.slot_origin_heading)
+                   ego_info_under_slot.origin_pose_global.heading);
 
   JSON_DEBUG_VALUE("slot_occupied_ratio",
-                   frame_.ego_slot_info.slot_occupied_ratio)
+                   ego_info_under_slot.slot_occupied_ratio);
 
   std::vector<double> target_ego_pos_slot = {
-      frame_.ego_slot_info.target_ego_pos_slot.x(),
-      frame_.ego_slot_info.target_ego_pos_slot.y()};
+      ego_info_under_slot.target_pose.pos.x(),
+      ego_info_under_slot.target_pose.pos.y()};
 
-  JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
-  JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2)
+  JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result);
+  JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2);
 
   const auto uss_info =
       apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
-  JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
-  JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
-  JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
-  JSON_DEBUG_VALUE("uss_car_index", uss_info.car_index)
+  JSON_DEBUG_VALUE("uss_available", uss_info.is_available);
+  JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist);
+  JSON_DEBUG_VALUE("uss_index", uss_info.uss_index);
+  JSON_DEBUG_VALUE("uss_car_index", uss_info.car_index);
 
   // lateral optimization
   const auto plan_debug_info =
@@ -457,13 +483,18 @@ void NarrowSpaceScenario::Log() const {
 
   if (plan_debug_info.has_terminal_pos_error()) {
     JSON_DEBUG_VALUE("optimization_terminal_pose_error",
-                     plan_debug_info.terminal_pos_error())
+                     plan_debug_info.terminal_pos_error());
     JSON_DEBUG_VALUE("optimization_terminal_heading_error",
-                     plan_debug_info.terminal_heading_error())
+                     plan_debug_info.terminal_heading_error());
   } else {
-    JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
-    JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
+    JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0);
+    JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0);
   }
+
+  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3);
+  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3);
+  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3);
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3);
 
   return;
 }
@@ -504,33 +535,39 @@ void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
 
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss
-            << ", obs s = " << frame_.remain_dist_col_det;
+            << ", obs s = " << frame_.remain_dist_col_det
+            << ", current path length = " << frame_.current_path_length;
 
   return;
 }
 
 PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     const bool is_scenario_try) {
-  const auto& ego_slot_info = frame_.ego_slot_info;
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
 
   // start
   Pose2D start;
-  start.x = ego_slot_info.ego_pos_slot[0];
-  start.y = ego_slot_info.ego_pos_slot[1];
-  start.theta = ego_slot_info.ego_heading_slot;
+  start.x = ego_info.cur_pose.pos[0];
+  start.y = ego_info.cur_pose.pos[1];
+  start.theta = ego_info.cur_pose.heading;
 
   // real target pose in slot
   Pose2D real_end;
-  real_end.x = ego_slot_info.target_ego_pos_slot[0];
-  real_end.y = ego_slot_info.target_ego_pos_slot[1];
-  real_end.theta = ego_slot_info.target_ego_heading_slot;
+  real_end.x = ego_info.target_pose.pos[0];
+  real_end.y = ego_info.target_pose.pos[1];
+  real_end.theta = ego_info.target_pose.heading;
 
   // astar end, maybe different with real end.
   Pose2D end = real_end;
   double end_straight_len;
   ParkSpaceType slot_type;
+  ParkingVehDirection parking_in_type;
+  ApaStateMachine fsm =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+
   if (apa_world_ptr_->GetNewSlotManagerPtr()
           ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
     end_straight_len =
@@ -542,23 +579,24 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     slot_type = ParkSpaceType::SLANTING;
   } else {
-    if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
-        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_len =
           apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+
+      parking_in_type = ParkingVehDirection::TAIL_IN;
     } else {
       end_straight_len = 0.5;
+      parking_in_type = ParkingVehDirection::HEAD_IN;
     }
     slot_type = ParkSpaceType::VERTICAL;
   }
   end.x = real_end.x + end_straight_len;
 
   double astar_start_time = IflyTime::Now_ms();
-  Pose2D slot_base_pose = Pose2D(ego_slot_info.slot_origin_pos.x(),
-                                 ego_slot_info.slot_origin_pos.y(),
-                                 ego_slot_info.slot_origin_heading);
+  Pose2D slot_base_pose = Pose2D(ego_info.origin_pose_global.pos.x(),
+                                 ego_info.origin_pose_global.pos.y(),
+                                 ego_info.origin_pose_global.heading);
 
   ParkObstacleList obs;
 
@@ -567,12 +605,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
     virtual_wall_decider_.Init(start);
   }
-  virtual_wall_decider_.Process(obs.virtual_obs, ego_slot_info.slot_width,
-                        ego_slot_info.slot_length, start, real_end, slot_type,
-                        slot_side_);
+  virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot.slot_width_,
+                                ego_info.slot.slot_length_, start, real_end,
+                                slot_type, ego_info.slot_side, parking_in_type);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
-      ego_slot_info.g2l_tf);
+      ego_info.g2l_tf);
 
   PointCloudObstacleTransform obstacle_generator;
   obstacle_generator.GenerateLocalObstacle(
@@ -589,23 +627,27 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   cur_request.space_type = slot_type;
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
     cur_request.direction_request = ParkingVehDirection::HEAD_IN;
   } else if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-             ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+                 ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+             apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+                 ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     cur_request.direction_request = ParkingVehDirection::TAIL_IN;
   }
 
   cur_request.rs_request = RSPathRequestType::none;
   cur_request.timestamp_ms = astar_start_time;
-  cur_request.slot_id = ego_slot_info.selected_slot_id;
+  cur_request.slot_id = ego_info.id;
 
   cur_request.start_ = start;
   cur_request.base_pose_ = slot_base_pose;
   cur_request.real_goal = real_end;
 
-  cur_request.slot_width = ego_slot_info.slot_width;
-  cur_request.slot_length = ego_slot_info.slot_length;
+  cur_request.slot_width = ego_info.slot.GetWidth();
+  cur_request.slot_length = ego_info.slot.GetLength();
   cur_request.history_gear = current_gear_;
 
   switch (frame_.replan_reason) {
@@ -632,11 +674,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       break;
   }
 
-  is_path_single_shot_to_goal_ = false;
+  is_path_connected_to_goal_ = false;
 
   // generate request
   bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
-      start, ego_slot_info.slot_width, ego_slot_info.slot_length);
+      start, ego_info.slot.GetWidth(), ego_info.slot.GetLength());
   if (need_drive_forward) {
     if (apa_param.GetParam().astar_config.cubic_polynomial_pose_adjustment) {
       cur_request.path_generate_method =
@@ -652,7 +694,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   } else {
     // gear need be different with history in next replanning
-    if (frame_.replan_reason != 1) {
+    if (frame_.replan_reason != FIRST_PLAN) {
       switch (current_gear_) {
         case AstarPathGear::REVERSE:
           cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
@@ -683,6 +725,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         cur_request.path_generate_method ==
             planning::AstarPathGenerateType::TRY_SEARCHING) {
       cur_request.swap_start_goal = true;
+      ClearFirstActionReqeust(&cur_request);
     }
   }
 
@@ -726,7 +769,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       }
 
       // todo:
-      if (frame_.is_replan_first) {
+      if ((fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+           fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) &&
+          frame_.is_replan_first) {
         frame_.is_replan_first = false;
       }
 
@@ -734,9 +779,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
       // check path is single shot to goal.
       if (response.result.gear_change_num > 0) {
-        is_path_single_shot_to_goal_ = false;
+        is_path_connected_to_goal_ = false;
       } else {
-        is_path_single_shot_to_goal_ = true;
+        is_path_connected_to_goal_ = true;
       }
 
       double path_dist = 0.0;
@@ -774,7 +819,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       if (response.first_seg_path[0].gear == AstarPathGear::DRIVE) {
         frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
       }
-      current_gear_ = response.first_seg_path[0].gear;
+
+      if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+          fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+        current_gear_ = response.first_seg_path[0].gear;
+      }
 
       thread_.Clear();
       ILOG_INFO << "clear thread";
@@ -795,7 +844,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
     frame_.total_plan_count++;
     if (current_gear_ == AstarPathGear::REVERSE &&
-        frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
+        ego_info.slot_occupied_ratio > 0.2) {
       in_slot_car_adjust_count_++;
     }
 
@@ -887,25 +936,24 @@ const int NarrowSpaceScenario::HybridAstarDebugInfoClear() {
   return 0;
 }
 
-const int NarrowSpaceScenario::GenerateFallBackPath() {
-  const auto& ego_slot_info = frame_.ego_slot_info;
+const void NarrowSpaceScenario::GenerateFallBackPath() {
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
   if (frame_.replan_reason == 5) {
-    return 0;
+    return;
   }
 
-  current_path_point_global_vec_.clear();
-
+  const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
+      apa_world_ptr_->GetMeasureDataManagerPtr();
   pnc::geometry_lib::PathPoint global_point;
-  global_point.Set(
-      ego_slot_info.l2g_tf.GetPos(ego_slot_info.ego_pos_slot),
-      ego_slot_info.l2g_tf.GetHeading(ego_slot_info.ego_heading_slot));
-  global_point.kappa = 0.0;
+  global_point.Set(measures_ptr->GetPos(), measures_ptr->GetHeading());
 
   // todo, use one point
+  current_path_point_global_vec_.clear();
   current_path_point_global_vec_.emplace_back(global_point);
 
-  return 0;
+  return;
 }
 
 const int NarrowSpaceScenario::PathOptimizationByCILRQ(
@@ -938,11 +986,6 @@ const int NarrowSpaceScenario::LocalPathToGlobal(
     current_path_point_global_vec_.emplace_back(global_point);
   }
 
-  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3)
-  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3)
-  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
-
   return 0;
 }
 
@@ -961,7 +1004,7 @@ const bool NarrowSpaceScenario::UpdateThreadPath() {
 }
 
 const bool NarrowSpaceScenario::UpdateEgoSlotInfo() {
-  bool ret = true;
+  bool ret = false;
   if (apa_world_ptr_->GetNewSlotManagerPtr()
           ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
     ret = UpdateParallelSlotInfo();
@@ -973,196 +1016,62 @@ const bool NarrowSpaceScenario::UpdateEgoSlotInfo() {
 }
 
 const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
-  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
-  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
+  const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
+      apa_world_ptr_->GetMeasureDataManagerPtr();
 
-  frame_.correct_path_for_limiter = false;
+  const ApaParameters& param = apa_param.GetParam();
   frame_.replan_flag = false;
 
-  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+  // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
-  ego_slot_info.target_managed_slot =
-      slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
+  ego_info_under_slot.origin_pose_global.heading_vec =
+      ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
+          .normalized();
 
-  const auto& slot_points =
-      ego_slot_info.target_managed_slot.corner_points().corner_point();
-  std::vector<Eigen::Vector2d> pt;
-  pt.resize(4);
-  for (size_t i = 0; i < 4; ++i) {
-    if (apa_world_ptr_->GetSimuParam().is_simulation &&
-        apa_world_ptr_->GetSimuParam().target_managed_slot_x_vec.size() == 4 &&
-        apa_world_ptr_->GetSimuParam().use_slot_in_bag) {
-      pt[i] << apa_world_ptr_->GetSimuParam().target_managed_slot_x_vec[i],
-          apa_world_ptr_->GetSimuParam().target_managed_slot_y_vec[i];
-    } else {
-      pt[i] << slot_points[i].x(), slot_points[i].y();
-    }
-  }
-  const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
-  const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
-  const double real_slot_length = (pM01 - pM23).norm();
-  const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
-  // n is vec that slot opening orientation
-  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
-  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
-  pt[2] = pt[0] - real_slot_length * n;
-  pt[3] = pt[1] - real_slot_length * n;
+  ego_info_under_slot.origin_pose_global.heading =
+      std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
+                 ego_info_under_slot.origin_pose_global.heading_vec.x());
 
-  ego_slot_info.slot_corner = pt;
-  ego_slot_info.slot_center = (pt[0] + pt[1] + pt[2] + pt[3]) * 0.25;
+  ego_info_under_slot.origin_pose_global.pos =
+      ego_info_under_slot.slot.processed_corner_coord_global_.pt_01_mid -
+      ego_info_under_slot.slot.slot_length_ *
+          ego_info_under_slot.origin_pose_global.heading_vec;
 
-  const double use_slot_length = real_slot_length;
+  ego_info_under_slot.g2l_tf = geometry_lib::GlobalToLocalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
 
-  ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
-  ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
-  ego_slot_info.slot_origin_heading_vec = n;
-  ego_slot_info.slot_length = use_slot_length;
-  ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
+  ego_info_under_slot.l2g_tf = geometry_lib::LocalToGlobalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
 
-  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                            ego_slot_info.slot_origin_heading);
+  ego_info_under_slot.origin_pose_local.pos = ego_info_under_slot.g2l_tf.GetPos(
+      ego_info_under_slot.origin_pose_global.pos);
 
-  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                            ego_slot_info.slot_origin_heading);
+  ego_info_under_slot.origin_pose_local.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(
+          ego_info_under_slot.origin_pose_global.heading);
 
-  if (ego_slot_info.target_managed_slot.slot_type() ==
-      Common::PARKING_SLOT_TYPE_SLANTING) {
-    const Eigen::Vector2d origin_pt_0 =
-        Eigen::Vector2d(slot_manager_ptr->GetEgoSlotInfo()
-                            .select_fusion_slot.corner_points[0]
-                            .x,
-                        slot_manager_ptr->GetEgoSlotInfo()
-                            .select_fusion_slot.corner_points[0]
-                            .y);
+  ego_info_under_slot.origin_pose_local.heading_vec =
+      geometry_lib::GenHeadingVec(
+          ego_info_under_slot.origin_pose_local.heading);
 
-    const Eigen::Vector2d origin_pt_1 =
-        Eigen::Vector2d(slot_manager_ptr->GetEgoSlotInfo()
-                            .select_fusion_slot.corner_points[1]
-                            .x,
-                        slot_manager_ptr->GetEgoSlotInfo()
-                            .select_fusion_slot.corner_points[1]
-                            .y);
+  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
 
-    ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(origin_pt_0);
-    ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
+  ego_info_under_slot.cur_pose.pos =
+      ego_info_under_slot.g2l_tf.GetPos(measures_ptr->GetPos());
+  ego_info_under_slot.cur_pose.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
+  ego_info_under_slot.cur_pose.heading_vec =
+      geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
 
-    if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
-      std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
-    }
-
-    const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-
-    double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                       Eigen::Vector2d(real_slot_length, 0.0), pt_01_vec)) *
-                   kRad2Deg;
-
-    if (angle > 90.0) {
-      angle = 180.0 - angle;
-    }
-
-    angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
-    ego_slot_info.sin_angle = std::sin(angle * kDeg2Rad);
-    ego_slot_info.origin_pt_0_heading = 90.0 - angle;
-  } else {
-    ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(pt[0]);
-    ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(pt[1]);
-    if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
-      std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
-    }
-    ego_slot_info.sin_angle = 1.0;
-    ego_slot_info.origin_pt_0_heading = 0.0;
-  }
-
-  ego_slot_info.ego_pos_slot =
-      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
-
-  ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
-
-  ego_slot_info.ego_heading_slot_vec
-      << std::cos(ego_slot_info.ego_heading_slot),
-      std::sin(ego_slot_info.ego_heading_slot);
-
-  ego_slot_info.fus_obj_valid_flag =
-      slot_manager_ptr->GetEgoSlotInfo().fus_obj_valid_flag;
-
-  ego_slot_info.limiter = slot_manager_ptr->GetEgoSlotInfo().limiter;
-
-  if (apa_world_ptr_->GetSimuParam().is_simulation &&
-      apa_world_ptr_->GetSimuParam().target_managed_limiter_x_vec.size() == 2 &&
-      apa_world_ptr_->GetSimuParam().use_slot_in_bag) {
-    ego_slot_info.limiter.first
-        << apa_world_ptr_->GetSimuParam().target_managed_limiter_x_vec[0],
-        apa_world_ptr_->GetSimuParam().target_managed_limiter_y_vec[0];
-    ego_slot_info.limiter.first =
-        ego_slot_info.g2l_tf.GetPos(ego_slot_info.limiter.first);
-    ego_slot_info.limiter.second
-        << apa_world_ptr_->GetSimuParam().target_managed_limiter_x_vec[1],
-        apa_world_ptr_->GetSimuParam().target_managed_limiter_y_vec[1];
-    ego_slot_info.limiter.second =
-        ego_slot_info.g2l_tf.GetPos(ego_slot_info.limiter.second);
-  }
-
-  ego_slot_info.limiter_corner.clear();
-  ego_slot_info.limiter_corner.reserve(2);
-  ego_slot_info.limiter_corner.emplace_back(ego_slot_info.limiter.first);
-  ego_slot_info.limiter_corner.emplace_back(ego_slot_info.limiter.second);
-
-  // cal target pos
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    ego_slot_info.target_ego_pos_slot << (ego_slot_info.limiter.first.x() +
-                                          ego_slot_info.limiter.second.x()) /
-                                             2.0,
-        apa_param.GetParam().terminal_target_y;
-
-    ego_slot_info.target_ego_pos_slot[0] += apa_param.GetParam().wheel_base;
-
-    ego_slot_info.target_ego_heading_slot =
-        apa_param.GetParam().terminal_target_heading + M_PI;
-  } else {
-    ego_slot_info.target_ego_pos_slot << (ego_slot_info.limiter.first.x() +
-                                          ego_slot_info.limiter.second.x()) /
-                                             2.0,
-        apa_param.GetParam().terminal_target_y;
-    ego_slot_info.target_ego_heading_slot =
-        apa_param.GetParam().terminal_target_heading;
-  }
-
-  ILOG_INFO << "limiter x=" << ego_slot_info.target_ego_pos_slot[0]
-            << ",y=" << ego_slot_info.target_ego_pos_slot[1];
-
-  // cal terminal error
-  ego_slot_info.terminal_err.Set(
-      ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-      ego_slot_info.ego_heading_slot - ego_slot_info.target_ego_heading_slot);
-
-  // cal slot occupied ratio
-  if (std::fabs(ego_slot_info.terminal_err.pos.y()) <
-          apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
-      std::fabs(ego_slot_info.ego_heading_slot) <
-          apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    const std::vector<double> x_bound = {
-        ego_slot_info.target_ego_pos_slot.x(),
-        ego_slot_info.slot_length + apa_param.GetParam().rear_overhanging};
-
-    const std::vector<double> occupied_ratio_bound = {1.0, 0.0};
-    ego_slot_info.slot_occupied_ratio = pnc::mathlib::Interp1(
-        x_bound, occupied_ratio_bound, ego_slot_info.ego_pos_slot.x());
-  } else {
-    ego_slot_info.slot_occupied_ratio = 0.0;
-  }
-
-  // calc slot side and init gear and init steer at first
   if (frame_.is_replan_first) {
-    frame_.car_already_move_dist = 0.0;
-
-    const auto pM01 =
-        0.5 * (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1]);
-    const auto pM23 =
-        0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
-    Eigen::Vector2d ego_to_slot_center_vec =
-        0.5 * (pM01 + pM23) - measures_ptr->GetPos();
+    const Eigen::Vector2d ego_to_slot_center_vec =
+        ego_info_under_slot.slot.origin_corner_coord_global_.pt_center -
+        measures_ptr->GetPos();
 
     const double cross_ego_to_slot_center =
         pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
@@ -1171,30 +1080,110 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
     const double cross_ego_to_slot_heading =
         pnc::geometry_lib::GetCrossFromTwoVec2d(
             measures_ptr->GetHeadingVec(),
-            ego_slot_info.slot_origin_heading_vec);
+            ego_info_under_slot.origin_pose_global.heading_vec);
 
-    // judge slot side via slot center and heading
+    // 这个初始参考挡位对迭代式路径规划已经没有什么意义
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
+      ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
     } else if (cross_ego_to_slot_heading < 0.0 &&
                cross_ego_to_slot_center > 0.0) {
-      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
+      ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_LEFT;
     } else {
-      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
-      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+      ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_INVALID;
+    }
+  }
+
+  // 计算停车位置
+  double virtual_tar_x = 0.0;
+  if (ego_info_under_slot.slot.limiter_.valid) {
+    // 根据原始限位器点计算停车终点
+    Eigen::Vector2d pt1 = ego_info_under_slot.g2l_tf.GetPos(
+        ego_info_under_slot.slot.limiter_.start_pt);
+    Eigen::Vector2d pt2 = ego_info_under_slot.g2l_tf.GetPos(
+        ego_info_under_slot.slot.limiter_.end_pt);
+
+    virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
+  } else {
+    // 根据后面两个角点计算停车终点
+    virtual_tar_x =
+        ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+        param.terminal_target_x;
+  }
+
+  // 如果限位器很靠后 可以结合一下前面两个车位角点信息
+  virtual_tar_x = std::max(
+      virtual_tar_x,
+      ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid.x() -
+          param.limiter_length - param.wheel_base - param.front_overhanging);
+
+  ego_info_under_slot.virtual_limiter.first.x() = virtual_tar_x;
+  ego_info_under_slot.virtual_limiter.second.x() = virtual_tar_x;
+  ego_info_under_slot.virtual_limiter.first.y() =
+      0.5 * ego_info_under_slot.slot.slot_width_;
+  ego_info_under_slot.virtual_limiter.second.y() =
+      -0.5 * ego_info_under_slot.slot.slot_width_;
+
+  // 后续横向终点位置会随着障碍物而进行改变
+  ego_info_under_slot.target_pose.pos
+      << ego_info_under_slot.virtual_limiter.first.x(),
+      param.terminal_target_y;
+  ego_info_under_slot.target_pose.heading = param.terminal_target_heading;
+  ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(1, 0);
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+    ego_info_under_slot.target_pose.pos[0] += param.wheel_base + 0.1;
+    ego_info_under_slot.target_pose.heading += M_PI;
+    ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(-1, 0);
+  }
+
+  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+          param.slot_occupied_ratio_max_lat_err &&
+      std::fabs(ego_info_under_slot.cur_pose.heading) <
+          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
+    const std::vector<double> x_tab = {
+        ego_info_under_slot.target_pose.pos.x(),
+        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+
+    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
+        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+  } else {
+    ego_info_under_slot.slot_occupied_ratio = 0.0;
+  }
+
+  // trim or extend path according to limiter, only run once
+  frame_.correct_path_for_limiter = false;
+  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+      !ego_info_under_slot.fix_slot) {
+    const geometry_lib::LineSegment limiter_line(
+        ego_info_under_slot.virtual_limiter.first,
+        ego_info_under_slot.virtual_limiter.second);
+
+    const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
+        ego_info_under_slot.cur_pose.pos, limiter_line);
+
+    ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter;
+
+    if (dist_ego_limiter < param.car_to_limiter_dis) {
+      ILOG_INFO << "should correct path according limiter";
+      ego_info_under_slot.fix_slot = true;
     }
   }
 
   // fix slot
-  if (ego_slot_info.slot_occupied_ratio >
-          apa_param.GetParam().fix_slot_occupied_ratio &&
-      !frame_.is_fix_slot && measures_ptr->GetStaticFlag()) {
-    frame_.is_fix_slot = true;
-    ego_slot_info.fix_limiter = true;
+  if (ego_info_under_slot.slot_occupied_ratio > param.fix_slot_occupied_ratio &&
+      !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
+    ego_info_under_slot.fix_slot = true;
   }
 
-  ego_slot_info.slot_type = 2;
+  ego_info_under_slot.terminal_err.Set(
+      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
+      ego_info_under_slot.cur_pose.heading -
+          ego_info_under_slot.target_pose.heading);
 
   return true;
 }
@@ -1214,25 +1203,26 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
     return;
   }
 
-  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
-  double limiter_x = ego_slot_info.target_ego_pos_slot[0];
-
+  // path is not pass limiter, return
+  double limiter_x = ego_info.target_pose.pos[0];
   Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
   Eigen::Vector2d point_local;
-  point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
+  point_local = ego_info.g2l_tf.GetPos(path_end_global);
 
-  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
-            << ", y=" << point_local[1];
+  ILOG_INFO << "targer point x = " << limiter_x
+            << ", path end x = " << point_local[0]
+            << ", path end y=" << point_local[1];
 
   if (point_local[0] >= limiter_x) {
     return;
   }
 
-  double x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
-                            ego_slot_info.ego_pos_slot[0]);
-  double y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
-                            ego_slot_info.ego_pos_slot[1]);
+  // car pose has big distance with limiter, return
+  double x_diff = std::fabs(ego_info.terminal_err.pos.x());
+  double y_diff = std::fabs(ego_info.terminal_err.pos.y());
   if (x_diff > 2.0 || y_diff > 2.0) {
     return;
   }
@@ -1241,9 +1231,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   size_t path_size = current_path_point_global_vec_.size();
   for (size_t i = 0; i < path_size; i++) {
     Eigen::Vector2d& point_global = current_path_point_global_vec_.back().pos;
-
-    point_local = ego_slot_info.g2l_tf.GetPos(point_global);
-
+    point_local = ego_info.g2l_tf.GetPos(point_global);
     if (point_local[0] >= limiter_x) {
       break;
     }
@@ -1268,55 +1256,44 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
     return;
   }
 
-  if (!is_path_single_shot_to_goal_) {
+  // If path is not linked with goal, do not expand.
+  if (!is_path_connected_to_goal_) {
     return;
   }
 
-  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
-
-  double limiter_x = ego_slot_info.target_ego_pos_slot[0];
-
+  // path is near limiter, return.
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
   Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
   Eigen::Vector2d point_local;
-  point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
-
+  point_local = ego_info.g2l_tf.GetPos(path_end_global);
+  double limiter_x = ego_info.target_pose.pos.x();
   if (point_local[0] <= (limiter_x + 0.1)) {
     return;
   }
 
-  double ego_x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
-                                ego_slot_info.ego_pos_slot[0]);
-  double ego_y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
-                                ego_slot_info.ego_pos_slot[1]);
+  // car pose has big distance with limiter, return
+  double ego_x_diff = std::fabs(ego_info.terminal_err.pos.x());
+  double ego_y_diff = std::fabs(ego_info.terminal_err.pos.y());
   if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
     return;
   }
 
-  double x_diff =
-      std::fabs(point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
-  double y_diff =
-      std::fabs(point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
-  double length = std::sqrt(x_diff * x_diff + y_diff * y_diff);
-  length = std::min(length, 5.0);
-
+  // path end pose has big distance with limiter, return
+  double x_diff = std::fabs(point_local[0] - ego_info.target_pose.pos.x());
+  double y_diff = std::fabs(point_local[1] - ego_info.target_pose.pos.y());
   if (x_diff > 1.0 || y_diff > 0.5) {
     return;
   }
 
-  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
-            << ", y=" << point_local[1];
-
-  double phi = current_path_point_global_vec_.back().heading;
-
+  double dist_to_goal = x_diff;
   size_t path_point_size = current_path_point_global_vec_.size();
 
   Eigen::Vector2d the_last_but_one =
       current_path_point_global_vec_[path_point_size - 2].pos;
-
   Eigen::Vector2d unit_line_vec =
       Eigen::Vector2d(path_end_global[0] - the_last_but_one[0],
                       path_end_global[1] - the_last_but_one[1]);
-
   if (unit_line_vec.norm() < 0.01) {
     return;
   }
@@ -1327,7 +1304,8 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
 
   Eigen::Vector2d point;
   pnc::geometry_lib::PathPoint global_point;
-  while (s < length) {
+  double phi = current_path_point_global_vec_.back().heading;
+  while (s < dist_to_goal) {
     point = path_end_global + s * unit_line_vec;
 
     global_point.Set(point, phi);
@@ -1350,8 +1328,10 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   }
 
   // check plan number in slot
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
   if (is_replan && current_gear_ == AstarPathGear::REVERSE &&
-      frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
+      ego_info.slot_occupied_ratio > 0.2) {
     if (in_slot_car_adjust_count_ >= 3) {
       return false;
     }
@@ -1520,144 +1500,148 @@ void NarrowSpaceScenario::DebugPathString(
 
 const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
-  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
-
-  const auto& select_slot_filter =
-      slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
-  if (!select_slot_filter.has_corner_points()) {
-    return false;
-  }
-
-  if (select_slot_filter.corner_points().corner_point_size() != 4) {
-    return false;
-  }
-
-  auto& ego_slot_info = frame_.ego_slot_info;
-  // notice: get slot from GetEgoSlotInfo.select_slot_filter in slot management
-  ego_slot_info.target_managed_slot.CopyFrom(select_slot_filter);
-
-  const auto& slot_points =
-      ego_slot_info.target_managed_slot.corner_points().corner_point();
-
-  // 顶点顺序,来自感知
-  std::vector<Eigen::Vector2d> pt;
-  pt.resize(slot_points.size());
-  Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
-
-  for (int i = 0; i < slot_points.size(); i++) {
-    pt[i] << slot_points[i].x(), slot_points[i].y();
-    slot_center += pt[i];
-  }
-  ego_slot_info.slot_corner = pt;
-  slot_center *= 0.25;
-
-  Eigen::Vector2d n = Eigen::Vector2d::Zero();
-  Eigen::Vector2d t = Eigen::Vector2d::Zero();
-
-  ego_slot_info.slot_length = (pt[0] - pt[1]).norm();
-  pnc::geometry_lib::LineSegment line_01(pt[0], pt[1]);
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+  const ApaParameters& param = apa_param.GetParam();
 
   // note: slot points' order is corrected in slot management
-  Pose2D vec02;
-  vec02.x = pt[2].x() - pt[0].x();
-  vec02.y = pt[2].y() - pt[0].y();
+  if (frame_.is_replan_first) {
+    Pose2D vec02;
+    vec02.x = ego_info.slot.processed_corner_coord_global_.pt_2.x() -
+              ego_info.slot.processed_corner_coord_global_.pt_0.x();
+    vec02.y = ego_info.slot.processed_corner_coord_global_.pt_2.y() -
+              ego_info.slot.processed_corner_coord_global_.pt_0.y();
 
-  Pose2D ego_vector;
-  ego_vector.x = std::cos(measures_ptr->GetHeading());
-  ego_vector.y = std::sin(measures_ptr->GetHeading());
+    Pose2D ego_vector;
+    ego_vector.x = std::cos(measures_ptr->GetHeading());
+    ego_vector.y = std::sin(measures_ptr->GetHeading());
 
-  slot_side_ = SlotRelativePosition::NONE;
-  double cross = CrossProduct(ego_vector, vec02);
-  if (cross > 0) {
-    slot_side_ = SlotRelativePosition::LEFT;
-  } else if (cross < 0) {
-    slot_side_ = SlotRelativePosition::RIGHT;
-  } else {
-    ILOG_ERROR << "ego is vertical";
-    return false;
+    double cross = CrossProduct(ego_vector, vec02);
+    if (cross > 0) {
+      ego_info.slot_side = geometry_lib::SLOT_SIDE_LEFT;
+    } else if (cross < 0) {
+      ego_info.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
+    } else {
+      ILOG_ERROR << "ego is vertical";
+      ego_info.slot_side = geometry_lib::SLOT_SIDE_INVALID;
+    }
   }
 
-  if (slot_side_ == SlotRelativePosition::RIGHT) {
-    ego_slot_info.slot_width =
-        std::min(pnc::geometry_lib::CalPoint2LineDist(pt[2], line_01),
-                 pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01));
+  if (ego_info.slot_side == geometry_lib::SLOT_SIDE_RIGHT) {
+    ego_info.origin_pose_global.heading_vec =
+        (ego_info.slot.processed_corner_coord_global_.pt_0 -
+         ego_info.slot.processed_corner_coord_global_.pt_1)
+            .normalized();
 
-    n = (pt[0] - pt[1]).normalized();
-    t << -n.y(), n.x();
-    ego_slot_info.slot_origin_pos = pt[0] - ego_slot_info.slot_length * n -
-                                    0.5 * ego_slot_info.slot_width * t;
+    ego_info.origin_pose_global.heading =
+        std::atan2(ego_info.origin_pose_global.heading_vec.y(),
+                   ego_info.origin_pose_global.heading_vec.x());
+
+    ego_info.origin_pose_global.pos =
+        (ego_info.slot.processed_corner_coord_global_.pt_1 +
+         ego_info.slot.processed_corner_coord_global_.pt_3) /
+        2;
+
   } else {
-    ego_slot_info.slot_width =
-        pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01);
+    ego_info.origin_pose_global.heading_vec =
+        (ego_info.slot.processed_corner_coord_global_.pt_1 -
+         ego_info.slot.processed_corner_coord_global_.pt_0)
+            .normalized();
 
-    n = (pt[1] - pt[0]).normalized();
-    t << -n.y(), n.x();
-    ego_slot_info.slot_origin_pos = pt[1] - ego_slot_info.slot_length * n +
-                                    0.5 * ego_slot_info.slot_width * t;
+    ego_info.origin_pose_global.heading =
+        std::atan2(ego_info.origin_pose_global.heading_vec.y(),
+                   ego_info.origin_pose_global.heading_vec.x());
+
+    ego_info.origin_pose_global.pos =
+        (ego_info.slot.processed_corner_coord_global_.pt_0 +
+         ego_info.slot.processed_corner_coord_global_.pt_2) /
+        2;
   }
 
-  ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
-  ego_slot_info.slot_origin_heading_vec = n;
+  ego_info.g2l_tf = geometry_lib::GlobalToLocalTf(
+      ego_info.origin_pose_global.pos, ego_info.origin_pose_global.heading);
 
-  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                            ego_slot_info.slot_origin_heading);
-  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                            ego_slot_info.slot_origin_heading);
+  ego_info.l2g_tf = geometry_lib::LocalToGlobalTf(
+      ego_info.origin_pose_global.pos, ego_info.origin_pose_global.heading);
 
-  ego_slot_info.ego_pos_slot =
-      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
-  ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
-  ego_slot_info.ego_heading_slot_vec
-      << std::cos(ego_slot_info.ego_heading_slot),
-      std::sin(ego_slot_info.ego_heading_slot);
+  ego_info.origin_pose_local.pos =
+      ego_info.g2l_tf.GetPos(ego_info.origin_pose_global.pos);
 
-  // calc terminal pos, try best to stop in the middle of slot
-  const double goal_x =
-      0.5 * (ego_slot_info.slot_length - apa_param.GetParam().car_length) +
-      apa_param.GetParam().rear_overhanging;
-  const double goal_y = 0.0;
-  ego_slot_info.target_ego_pos_slot << goal_x, goal_y;
-  ego_slot_info.target_ego_heading_slot = 0.0;
+  ego_info.origin_pose_local.heading =
+      ego_info.g2l_tf.GetHeading(ego_info.origin_pose_global.heading);
+
+  ego_info.origin_pose_local.heading_vec =
+      geometry_lib::GenHeadingVec(ego_info.origin_pose_local.heading);
+
+  ego_info.slot.TransformCoordFromGlobalToLocal(ego_info.g2l_tf);
+
+  ego_info.cur_pose.pos = ego_info.g2l_tf.GetPos(measures_ptr->GetPos());
+  ego_info.cur_pose.heading =
+      ego_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
+  ego_info.cur_pose.heading_vec =
+      geometry_lib::GenHeadingVec(ego_info.cur_pose.heading);
+
+  // 计算停车位置
+  double virtual_tar_x = 0.0;
+  if (ego_info.slot.limiter_.valid) {
+    // 根据原始限位器点计算停车终点
+    Eigen::Vector2d pt1 =
+        ego_info.g2l_tf.GetPos(ego_info.slot.limiter_.start_pt);
+    Eigen::Vector2d pt2 = ego_info.g2l_tf.GetPos(ego_info.slot.limiter_.end_pt);
+
+    virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
+  } else {
+    const double terminal_x =
+        0.5 * (ego_info.slot.GetLength() - param.car_length) +
+        param.rear_overhanging;
+    virtual_tar_x = terminal_x;
+  }
+
+  ego_info.virtual_limiter.first.x() = virtual_tar_x;
+  ego_info.virtual_limiter.second.x() = virtual_tar_x;
+  ego_info.virtual_limiter.first.y() = 0.5 * ego_info.slot.slot_width_;
+  ego_info.virtual_limiter.second.y() = -0.5 * ego_info.slot.slot_width_;
+
+  // 后续横向终点位置会随着障碍物而进行改变
+  ego_info.target_pose.pos << ego_info.virtual_limiter.first.x(),
+      param.terminal_target_y;
+  ego_info.target_pose.heading = param.terminal_target_heading;
+  ego_info.target_pose.heading_vec = Eigen::Vector2d(1, 0);
 
   // calc terminal error once
-  ego_slot_info.terminal_err.Set(
-      ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-      pnc::geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
-                                        ego_slot_info.target_ego_heading_slot));
+  ego_info.terminal_err.Set(
+      ego_info.cur_pose.pos - ego_info.target_pose.pos,
+      ego_info.cur_pose.heading - ego_info.target_pose.heading);
 
   // calc slot occupied ratio
   double slot_occupied_ratio = 0.0;
-  if (pnc::mathlib::IsInBound(ego_slot_info.terminal_err.pos.x(), -3.0, 4.0)) {
+  if (pnc::mathlib::IsInBound(ego_info.terminal_err.pos.x(), -3.0, 4.0)) {
     const double y_err_ratio =
-        ego_slot_info.terminal_err.pos.y() / (0.5 * ego_slot_info.slot_width);
+        ego_info.terminal_err.pos.y() / (0.5 * ego_info.slot.GetWidth());
 
-    if (slot_side_ == SlotRelativePosition::RIGHT) {
+    if (ego_info.slot_side == geometry_lib::SLOT_SIDE_RIGHT) {
       slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
     } else {
       slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
     }
   }
-  ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
-
-  ego_slot_info.slot_type = 1;
 
   return true;
 }
 
 const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
   const ApaParameters& config = apa_param.GetParam();
-  const auto& ego_slot_info = frame_.ego_slot_info;
+  EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
 
   const bool rear_axis_lon_condition =
-      ego_slot_info.terminal_err.pos.x() <
+      ego_info.terminal_err.pos.x() <
       config.astar_config.parallel_finish_lon_err;
 
-  const double rear_axis_lat_offset = ego_slot_info.ego_pos_slot.y();
+  const double rear_axis_lat_offset = ego_info.cur_pose.pos.y();
   const double veh_head_lat_offset =
-      (ego_slot_info.ego_pos_slot +
-       (config.wheel_base + config.front_overhanging) *
-           ego_slot_info.ego_heading_slot_vec)
+      (ego_info.cur_pose.pos + (config.wheel_base + config.front_overhanging) *
+                                   ego_info.cur_pose.heading_vec)
           .y();
 
   const bool ego_center_lat_condition =
@@ -1669,7 +1653,7 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
       config.astar_config.parallel_finish_head_lat_err;
 
   const bool heading_condition =
-      std::fabs(ego_slot_info.terminal_err.heading) <=
+      std::fabs(ego_info.terminal_err.heading) <=
       config.astar_config.parallel_finish_heading_err * kDeg2Rad;
 
   const bool lat_condition =
@@ -1759,6 +1743,49 @@ void NarrowSpaceScenario::ScenarioTry() {
 void NarrowSpaceScenario::ThreadClear() {
   thread_.Clear();
   return;
+}
+
+const bool NarrowSpaceScenario::IsVehicleOverlapWithSlotLine(
+    const double slot_length, const double slot_width,
+    const Pose2D& ego_start) {
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
+  Polygon2D local_polygon;
+  Polygon2D ego_global_polygon;
+
+  double lat_buffer = 0.03;
+  GenerateUpLeftFrameBox(&local_polygon, -config.rear_overhanging,
+                         -config.car_width / 2 - lat_buffer,
+                         config.car_length - config.rear_overhanging,
+                         config.car_width / 2 + lat_buffer);
+  ULFLocalPolygonToGlobal(&ego_global_polygon, &local_polygon, ego_start);
+
+  // slot polygon
+  Polygon2D slot_left_line;
+  GenerateLineSegmentPolygon(&slot_left_line,
+                             Position2D(slot_length, slot_width / 2),
+                             Position2D(0, slot_width / 2));
+
+  Polygon2D slot_right_line;
+  GenerateLineSegmentPolygon(&slot_right_line,
+                             Position2D(slot_length, -slot_width / 2),
+                             Position2D(0, -slot_width / 2));
+
+  bool is_collision;
+  GJK2DInterface gjk;
+  gjk.PolygonCollisionByCircleCheck(&is_collision, &ego_global_polygon,
+                                    &slot_left_line, 0.1);
+  if (is_collision) {
+    ILOG_INFO << "collision";
+    return true;
+  }
+
+  gjk.PolygonCollisionByCircleCheck(&is_collision, &ego_global_polygon,
+                                    &slot_right_line, 0.1);
+  if (is_collision) {
+    ILOG_INFO << "collision";
+    return true;
+  }
+  return false;
 }
 
 }  // namespace apa_planner

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "gjk2d_interface.h"
-#include "library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "parking_task.h"
-#include "polygon_base.h"
 #include "pose2d.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/library/geometry_lib/include/geometry_math.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
 
 namespace planning {
 
@@ -35,6 +35,18 @@ struct VirtualWallBoundary {
     x_upper = std::max(x_upper, a.x_upper);
     y_upper = std::max(y_upper, a.y_upper);
   }
+
+  bool Contain(const Position2D& p) const {
+    if (x_lower > p.x || y_lower > p.y) {
+      return false;
+    }
+
+    if (x_upper < p.x || y_upper < p.y) {
+      return false;
+    }
+
+    return true;
+  }
 };
 
 // generate virtual wall by ego pose and slot, used by astar, need refact.
@@ -42,21 +54,26 @@ class VirtualWallDecider : public ParkingTask {
  public:
   VirtualWallDecider() = default;
 
-  void Init(const Pose2D& ego_pose) {
-    channel_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
-    return;
-  }
+  void Init(const Pose2D& ego_pose);
 
   void Process(std::vector<Position2D>& points, const double slot_width,
                const double slot_length, const Pose2D& ego_pose,
                const Pose2D& end, const ParkSpaceType slot_type,
-               const SlotRelativePosition slot_side);
+               const pnc::geometry_lib::SlotSide slot_side,
+               const ParkingVehDirection parking_in_type);
+
+  void Reset(const Pose2D& ego_pose) {
+    passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
+    return;
+  }
 
  private:
   void CalcVerticalVirtualWall(std::vector<Position2D>& points,
                                const double slot_width,
                                const double slot_length, const Pose2D& ego_pose,
-                               const Pose2D& end);
+                               const Pose2D& end,
+                               const double virtual_wall_x_offset,
+                               const double virtual_wall_y_offset);
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
                                     const double slot_width,
@@ -75,20 +92,29 @@ class VirtualWallDecider : public ParkingTask {
 
   void SampleInLineSegment(const Eigen::Vector2d& start,
                            const Eigen::Vector2d& end,
+                           const bool delete_blind_zone_point,
                            std::vector<Position2D>* points);
 
-  void GenerateCarRelativePosition(const Pose2D& ego_pose);
+  void GetVehicleBound();
 
  private:
   std::string name_;
   Pose2D start_;
   Pose2D end_;
 
-  VehRelativePosition relative_position_;
   Polygon2D ego_polygon_in_slot_;
   GJK2DInterface gjk_interface_;
 
-  VirtualWallBoundary channel_bound_;
+  // 感知存在盲区，规划认为盲区外存在障碍物. 车辆坐标系.
+  Polygon2D blind_local_box_;
+  // 车位坐标系
+  Polygon2D blind_global_box_;
+
+  // 感知范围6x6meter，所以passage范围尽量设置小一些，否则path经常穿墙、穿车而过.
+  VirtualWallBoundary passage_bound_;
+
+  // vehicle boundary
+  VirtualWallBoundary veh_boundary_;
 };
 
 }  // namespace planning

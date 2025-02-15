@@ -24,17 +24,19 @@
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
+#include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/behavior_planners/truck_longitudinal_avoid_decider/truck_longitudinal_avoid_decider.h"
 #include "tasks/behavior_planners/virtual_obstacle_decider/virtual_obstacle_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
-#include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
+#include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 
 namespace planning {
@@ -52,6 +54,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
+  std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
@@ -73,6 +76,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<AgentHeadwayDecider> agent_headway_decider_;
   std::unique_ptr<LongitudinalDecisionDecider> longitudinal_decision_decider_;
   std::unique_ptr<SpeedLimitDecider> speed_limit_decider_;
+  std::unique_ptr<StartStopDecider> start_stop_decider_;
   std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成
@@ -80,7 +84,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
 
   // Motion Planners
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
-  std::unique_ptr<SccLongitudinalMotionPlanner>
+  std::unique_ptr<SccLongitudinalMotionPlannerV3>
       scc_longitudinal_motion_planner_;
 
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;

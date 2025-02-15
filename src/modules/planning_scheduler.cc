@@ -646,10 +646,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   } else if (lc_request_source == INT_REQUEST) {
     planning_hmi_info->ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_MANUAL;
-  } else if (lc_request_source == ACT_REQUEST ||
-             lc_request_source == OVERTAKE_REQUEST ||
-             lc_request_source == CONE_REQUEST ||
-             lc_request_source == EMERGENCE_AVOID_REQUEST) {
+  } else if (lc_request_source == OVERTAKE_REQUEST) {
     planning_hmi_info->ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
@@ -713,9 +710,29 @@ void PlanningScheduler::FillPlanningHmiInfo(
   if (route_info_output.is_ego_on_expressway_hmi) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+    //update RampPassSts
+    if (planning_hmi_info->ad_info.distance_to_ramp < 200) {
+      if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_LEFT &&
+          !lane_change_decider_output.is_ego_on_leftmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_RIGHT &&
+          !lane_change_decider_output.is_ego_on_rightmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      }
+    }
   } else if (route_info_output.is_ego_on_city_expressway_hmi) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+    //update RampPassSts
+    if (planning_hmi_info->ad_info.distance_to_ramp < 50) {
+      if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_LEFT &&
+          !lane_change_decider_output.is_ego_on_leftmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_RIGHT &&
+          !lane_change_decider_output.is_ego_on_rightmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      }
+    }
   } else {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
@@ -748,7 +765,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
         if (target_reference->get_reference_point_by_lon(
                 target_reference->get_frenet_ego_state().s(),
                 reference_path_point)) {
-          landing_point_theta_global = reference_path_point.path_point.theta;
+          landing_point_theta_global = reference_path_point.path_point.theta();
         }
         Eigen::Vector2d pos_n_ori(ego_pose.x, ego_pose.y);
         pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori,
@@ -795,14 +812,14 @@ void PlanningScheduler::FillPlanningHmiInfo(
     auto points = current_reference_path->get_points();
     double ego_s = frenet_ego_state.s();
     for (auto &point : points) {
-      double distance = point.path_point.s - ego_s;
+      double distance = point.path_point.s() - ego_s;
       if (distance > kEgoIsOnTurnDistance1 &&
           distance < kEgoIsOnTurnDistance2 &&
-          point.path_point.kappa > 0.08) {  // ego is on the curve
+          point.path_point.kappa() > 0.08) {  // ego is on the curve
         break;
       }
       if (distance > kEgoIsOnTurnDistance2 && distance <= kCheckTurnDistance) {
-        if (point.path_point.kappa >
+        if (point.path_point.kappa() >
             0.1) {  // 关注实际曲率的连续性，考虑多点还是单点
           // hpp_info->set_is_approaching_intersection(true);
           hpp_info->is_approaching_turn = true;
@@ -832,6 +849,8 @@ void PlanningScheduler::ClearParkingInfo(
   session_.mutable_planning_context()
       ->mutable_planning_output()
       .successful_slot_info_list_size = 0;
+
+  planning_output->successful_slot_info_list_size = 0;
 
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
 }
@@ -1078,7 +1097,7 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
     }
 
     double s_end =
-        min(target_reference->get_frenet_coord()->Length(),
+        std::min(target_reference->get_frenet_coord()->Length(),
             target_reference->get_frenet_ego_state().s() + presee_dist);
     if (target_reference->get_frenet_coord()->SLToXY(
             Point2D(s_end, 0), presee_cart_point_in_target)) {

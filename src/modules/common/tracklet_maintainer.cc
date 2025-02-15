@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "common.pb.h"
-#include "path_point.h"
 #include "refline.h"
+#include "src/modules/common/utils/path_point.h"
 #include "utils/path_point.h"
 #define _USE_MATH_DEFINES
 #include <algorithm>
@@ -17,12 +17,13 @@
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
-#include "path_point.h"
 #include "planning_context.h"
+#include "src/modules/common/utils/path_point.h"
 #include "tracklet_maintainer.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 namespace planning {
+using namespace planning_math;
 
 TrackletSequentialState *LifecycleDict::get(int uid) {
   auto iter = data_dict_.find(uid);
@@ -128,13 +129,13 @@ void TrackletMaintainer::apply_update(
         double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
         double ego_lx = -ego_fy;
         double ego_ly = ego_fx;
-        double dx = ref_point.path_point.x - ego_state_->ego_pose_raw().x;
-        double dy = ref_point.path_point.y - ego_state_->ego_pose_raw().y;
+        double dx = ref_point.path_point.x() - ego_state_->ego_pose_raw().x;
+        double dy = ref_point.path_point.y() - ego_state_->ego_pose_raw().y;
 
-        ref_point.path_point.x = dx * ego_fx + dy * ego_fy;
-        ref_point.path_point.y = dx * ego_lx + dy * ego_ly;
-        planning_math::PathPoint path_point{ref_point.path_point.x,
-                                            ref_point.path_point.y};
+        ref_point.path_point.set_x(dx * ego_fx + dy * ego_fy);
+        ref_point.path_point.set_y(dx * ego_lx + dy * ego_ly);
+        planning_math::PathPoint path_point{ref_point.path_point.x(),
+                                            ref_point.path_point.y()};
         coord_points.emplace_back(path_point);
       }
       frenet_coord_ = std::make_shared<KDPath>(std::move(coord_points));
@@ -151,8 +152,8 @@ void TrackletMaintainer::apply_update(
        lateral_output.lat_offset, lateral_output.borrow_bicycle_lane,
        lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
        lateral_output.tleft_lane, lateral_output.rightest_lane,
-       lateral_output.dist_intersect, lateral_output.intersect_length,
-       leadcars, isRedLightStop, lateral_output.isOnHighway, lateral_output.d_poly,
+       lateral_output.dist_intersect, lateral_output.intersect_length, leadcars,
+       isRedLightStop, lateral_output.isOnHighway, lateral_output.d_poly,
        lateral_output.c_poly);
 
   set_default_value(objects);
@@ -691,9 +692,8 @@ void TrackletMaintainer::calc(
       session_->environmental_model().highway_config_builder();
   PotentialAvoidDeciderConfig config =
       config_builder->cast<PotentialAvoidDeciderConfig>();
-  double expand_vel =
-      interp(ego_state_->ego_v(), config.expand_ego_vel,
-             config.expand_obs_rel_vel);
+  double expand_vel = interp(ego_state_->ego_v(), config.expand_ego_vel,
+                             config.expand_obs_rel_vel);
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
@@ -707,7 +707,7 @@ void TrackletMaintainer::calc(
 
     // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
     double expend_length = 0.0;
-    if (tr->side_car && tr->rear_car && tr->v_rel < expand_vel) {
+    if (tr->side_car && tr->v_rel < expand_vel) {
       expend_length = 1.5;
     }
     if (tr->d_rel > expend_length) {
@@ -753,7 +753,7 @@ void TrackletMaintainer::calc(
     }
   }
 
-  JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
+  // JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
 
   // is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
   //                                   borrow_bicycle_lane, rightest_lane,
@@ -1195,7 +1195,7 @@ void TrackletMaintainer::calc_intersection_with_refline(
   }
   if (ego_x.size() > 0) {
     double half_car_width =
-        max(1.1, 0.5 * item.width * std::fabs(cos(item.theta)) +
+        std::max(1.1, 0.5 * item.width * std::fabs(cos(item.theta)) +
                      0.5 * item.length * sin(std::fabs(item.theta)));
     double half_lane_width = 0.;
     if (enable_intersection_planner) {
@@ -1213,8 +1213,8 @@ void TrackletMaintainer::calc_intersection_with_refline(
     double lmax = 0.0;
     double send = 0.0;
     double lend = 0.0;
-    int valid_range = min((int)ego_x.size() - 1, 25);
-    int end_range = min((int)ego_x.size() - 1, 25);
+    int valid_range = std::min((int)ego_x.size() - 1, 25);
+    int end_range = std::min((int)ego_x.size() - 1, 25);
 
     int max_idx = 0;
     int end_idx = 0;
@@ -1454,10 +1454,11 @@ double TrackletMaintainer::calc_ignorance_threshold(
   return sgn * ignorance_threshold;
 }
 
-void TrackletMaintainer::check_accident_car(
-    TrackedObject &item, double v_ego, int scenario, double dist_intersect,
-    double intersect_length,
-    bool isRedLightStop, bool isOnHighway) {
+void TrackletMaintainer::check_accident_car(TrackedObject &item, double v_ego,
+                                            int scenario, double dist_intersect,
+                                            double intersect_length,
+                                            bool isRedLightStop,
+                                            bool isOnHighway) {
   LOG_DEBUG("----check_accident_car-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp{0, 10, 15, 20, 30};

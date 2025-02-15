@@ -15,7 +15,6 @@
 #include "speed/st_point.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
-using namespace planning;
 
 namespace planning {
 enum MonotonicStatus { NONMONOTIONIC = 0, INCREASE, DECREASE };
@@ -89,8 +88,8 @@ class AgentNodeManager {
   };
 
   void set_input_info(
-      std::shared_ptr<KDPath> origin_coord,
-      std::shared_ptr<KDPath> target_coord, const int request,
+      std::shared_ptr<planning_math::KDPath> origin_coord,
+      std::shared_ptr<planning_math::KDPath> target_coord, const int request,
       const std::vector<int> &ids_obstacle_in_origin_lane,
       const std::vector<int> &ids_obstacle_in_target_lane,
       const std::unordered_map<int, Obstacle> &gs_care_obstacles);

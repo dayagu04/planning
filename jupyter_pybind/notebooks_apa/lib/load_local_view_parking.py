@@ -49,7 +49,7 @@ mobileye_lane_lines_timestamps = []
 mobileye_objects_timestamps = []
 fus_release_solts_id = []
 
-car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
+car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh()
 coord_tf = coord_transformer()
 max_slot_num = 20
 corner_points_size = 4
@@ -70,6 +70,27 @@ NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
 ego_init_x = 0.0
 ego_init_y = 0.0
+
+def rectangle_corners(cx, cy, length, width, heading, is_rad=False):
+  # 将航向转换为弧度
+  if not is_rad:
+    radians = math.radians(heading)
+  else:
+    radians = heading
+
+  unit_t = np.array([np.cos(radians), np.sin(radians)])
+  unit_n = np.array([-unit_t[1], unit_t[0]]) # 逆时针旋转
+
+  half_length = length / 2
+  half_width = width / 2
+
+  top_left = np.array([cx, cy]) + half_length * unit_t + half_width * unit_n
+  top_right = np.array([cx, cy]) + half_length * unit_t - half_width * unit_n
+  bottom_right = np.array([cx, cy]) - half_length * unit_t - half_width * unit_n
+  bottom_left = np.array([cx, cy]) - half_length * unit_t + half_width * unit_n
+
+  return [top_left[0], top_right[0], bottom_right[0], bottom_left[0], top_left[0]], [top_left[1], top_right[1], bottom_right[1], bottom_left[1], top_left[1]]
+
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
@@ -241,7 +262,7 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading", "is_path_lateral_optimized",
-                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan", "geometry_path_release",
+                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "geometry_path_release", "pre_plan_case",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
@@ -825,6 +846,7 @@ class LoadCyberbag:
 def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag=False):
 
   car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)
+  car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type, car_inflation)
   abs_t = bag_time + smallest_abs_t
 
   ### step 1: timestamp alignment
@@ -1193,10 +1215,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     fus_release_solts_id = []
     id_text_x_vec = []
     id_text_y_vec = []
+    selected_slot_confidence = 0
     for j in range(parking_fusion_slot_lists_size):
       slot = parking_fusion_slot_lists[j]
       single_slot_x_vec = []
       single_slot_y_vec = []
+      if slot.id == select_slot_id:
+        selected_slot_confidence = slot.confidence
       # attention: fusion slots are based on odom system, visual slots are based on vehicle system
       # 1. update slots corner points
       for k in range(corner_points_size):
@@ -1683,7 +1708,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     # load planning data
     if bag_loader.plan_msg['enable'] == True:
       plan_data = bag_loader.plan_debug_msg['data'][plan_msg_idx]
-      plan_json = bag_loader.plan_debug_msg['json'][plan_msg_idx]
+      plan_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
       # load func_state
       if bag_loader.soc_state_msg['enable'] == True:
@@ -1701,6 +1726,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
       names.append("fusion_release_slots_id")
       datas.append(str(fus_release_solts_id))
+
+      names.append("selected_slot_confidence")
+      datas.append(str(selected_slot_confidence))
 
       names.append("plan_gear_cmd")
       gear_command = bag_loader.plan_msg['data'][plan_msg_idx].gear_command.gear_command_value
@@ -1808,11 +1836,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       names.append("sample_ds")
       datas.append(str(plan_json['sample_ds']))
 
-      names.append("mono_plan")
-      datas.append(str(plan_json['mono_plan']))
-
-      names.append("multi_plan")
-      datas.append(str(plan_json['multi_plan']))
+      names.append("pre_plan_case")
+      pre_plan_case = plan_json['pre_plan_case']
+      pre_plan_case_dict = {0: 'FAILED', 1: 'EGO_POSE', 2: 'MID_POINT'}
+      pre_plan_case1 = pre_plan_case_dict.get(pre_plan_case, 'UNKNOWN')
+      datas.append(str(pre_plan_case) + ": " + str(pre_plan_case1))
 
       names.append("slot_replan_jump_dist")
       datas.append(str(slot_replan_jump_dist))
@@ -2140,6 +2168,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
+    box_x_vec, box_y_vec = [], []
 
     for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]
@@ -2149,15 +2178,33 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         y = polygon_points[j].y
         pos_x.append(x)
         pos_y.append(y)
+      center_x = obj.common_occupancy_info.center_position.x
+      center_y = obj.common_occupancy_info.center_position.y
+      heading = obj.common_occupancy_info.heading_angle
+      length_ = obj.common_occupancy_info.shape.length
+      width_ = obj.common_occupancy_info.shape.width
+      box_x, box_y = rectangle_corners(center_x, center_y, length_, width_, heading)
+
+      box_x_vec.append(box_x)
+      box_y_vec.append(box_y)
 
     local_view_data['data_fusion_obj'].data.update({
       'y': pos_y,
       'x': pos_x,
     })
+
+    # print("box_y_vec = ", box_y_vec)
+    # print("box_x_vec = ", box_x_vec)
+
+    local_view_data['data_fusion_obj_box'].data.update({
+      'y': box_y_vec,
+      'x': box_x_vec,
+    })
   elif bag_loader.fus_objects_msg['enable'] == True and not load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
+    box_x_vec, box_y_vec = [], []
 
-    for i in range(bag_loader.fus_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size):
+    for i in range(bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
       polygon_points =  obj.additional_info.polygon_points
       for j in range(obj.additional_info.polygon_points_size):
@@ -2165,12 +2212,29 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         y = polygon_points[j].y
         pos_x.append(x)
         pos_y.append(y)
+      box_x, box_y = [], []
+      center_x = obj.common_info.center_position.x
+      center_y = obj.common_info.center_position.y
+      heading = obj.common_info.heading_angle
+      length_ = obj.common_info.shape.length
+      width_ = obj.common_info.shape.width
+      # print("length = ", length_, "  width = ", width_, "  center_x = ", center_x, "  center_y = ", center_y, "  heading = ", heading,)
+      box_x, box_y = rectangle_corners(center_x, center_y, length_, width_, heading, True)
+      box_x_vec.append(box_x)
+      box_y_vec.append(box_y)
 
-      local_view_data['data_fusion_obj'].data.update({
-        'y': pos_y,
-        'x': pos_x,
-      })
+    local_view_data['data_fusion_obj'].data.update({
+      'y': pos_y,
+      'x': pos_x,
+    })
 
+    print("box_y_vec = ", box_y_vec)
+    print("box_x_vec = ", box_x_vec)
+
+    local_view_data['data_fusion_obj_box'].data.update({
+      'y': box_y_vec,
+      'x': box_x_vec,
+    })
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
@@ -2238,6 +2302,7 @@ def load_local_view_figure_parking():
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
   data_fusion_obj = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_fusion_obj_box = ColumnDataSource(data = {'y':[], 'x':[]})
 
   data_ground_line_obj = ColumnDataSource(data = {'yn':[], 'xn':[]})
 
@@ -2319,6 +2384,7 @@ def load_local_view_figure_parking():
                      'data_dluss_post':data_dluss_post,\
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
                      'data_fusion_obj':data_fusion_obj,\
+                     'data_fusion_obj_box':data_fusion_obj_box,\
                      'data_ground_line_obj' :data_ground_line_obj,\
                      }
   ### figures config
@@ -2381,6 +2447,7 @@ def load_local_view_figure_parking():
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
+  fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 3, line_color = 'yellow', line_dash = 'solid',legend_label = 'fusion_objects', visible = False)
 
   # car prediction traj
   fig1.circle('y', 'x', source = data_car_prediction_traj, size=4, color='orange', legend_label = 'car_prediction_traj', visible = False)
@@ -4083,13 +4150,18 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               if not flag:
                 print('find fusion_msg error')
               else:
-                names.append("fusion_release_slots_id")
                 parking_fusion_slot_lists = fusion_msg.parking_fusion_slot_lists
                 release_id = []
+                selected_slot_confidence = 0
                 for slot in parking_fusion_slot_lists:
                   if slot.allow_parking == 1:
                     release_id.append(slot.id)
+                  if slot.id == fusion_msg.select_slot_id:
+                    selected_slot_confidence = slot.confidence
+                names.append("fusion_release_slots_id")
                 datas.append(str(release_id))
+                names.append("selected_slot_confidence")
+                datas.append(str(selected_slot_confidence))
             else:
               print('find fusion_msg error')
 
@@ -4196,11 +4268,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             names.append("sample_ds")
             datas.append(str(plan_json['sample_ds']))
 
-            names.append("mono_plan")
-            datas.append(str(plan_json['mono_plan']))
-
-            names.append("multi_plan")
-            datas.append(str(plan_json['multi_plan']))
+            names.append("pre_plan_case")
+            pre_plan_case = plan_json['pre_plan_case']
+            pre_plan_case_dict = {0: 'FAILED', 1: 'EGO_POSE', 2: 'MID_POINT'}
+            pre_plan_case1 = pre_plan_case_dict.get(pre_plan_case, 'UNKNOWN')
+            datas.append(str(pre_plan_case) + ": " + str(pre_plan_case1))
 
             names.append("current_path_length")
             datas.append(str(plan_json['current_path_length']))

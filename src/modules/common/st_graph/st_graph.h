@@ -44,14 +44,8 @@ class STGraph {
       const std::unordered_map<int32_t, STBoundary::DecisionType>&
           neighbor_agent_decision_table);
 
-  /*******fallback st-graph functions*******/
-
-  void SetStSearchFailSafeDecisionTable(
-      std::unordered_map<int64_t, STBoundary::DecisionType>*
-          succ_decision_table) const;
-
   /*******st_graph_helper functions*******/
-  const StGraphInput& st_graph_input() const;
+  const std::shared_ptr<StGraphInput>& st_graph_input() const;
 
   const std::pair<double, double> path_range() const;
 
@@ -126,7 +120,7 @@ class STGraph {
   void Reset();
 
  private:
-  StGraphInput st_graph_input_;
+  std::shared_ptr<StGraphInput> st_graph_input_;
 
   planning::common::StGraphData st_graph_data_pb_;
 

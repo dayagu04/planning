@@ -38,11 +38,11 @@ class LateralMotionPlanner : public Task {
  private:
   void AssembleInput();
   void Update();
-  std::shared_ptr<KDPath> ConstructLateralKDPath(
+  std::shared_ptr<planning_math::KDPath> ConstructLateralKDPath(
       const std::vector<double>& x_vec, const std::vector<double>& y_vec);
 
   LateralMotionPlannerConfig config_;
-  string name_;
+  std::string name_;
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem>
       planning_problem_ptr_;
   planning::common::LateralPlanningInput planning_input_;

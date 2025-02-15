@@ -216,8 +216,8 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   cur_ego_s = cur_reference_path->get_frenet_ego_state().s();
   ReferencePathPoint cur_ref_path_point{};
   cur_reference_path->get_reference_point_by_lon(cur_ego_s, cur_ref_path_point);
-  Point2D cur_ref_point = {cur_ref_path_point.path_point.x,
-                           cur_ref_path_point.path_point.y};
+  Point2D cur_ref_point = {cur_ref_path_point.path_point.x(),
+                           cur_ref_path_point.path_point.y()};
   Point2D frenet_ref_point;
   if (ref_lane_coord->XYToSL(cur_ref_point, frenet_ref_point)) {
     abs_lat_diff = std::abs(frenet_ref_point.y);
@@ -253,11 +253,11 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   double start_abs_lat_diff = 0.0;
   Point2D frenet_point_start;
   Point2D cur_ref_path_start_point_temp = {
-      cur_reference_path->get_points().begin()->path_point.x,
-      cur_reference_path->get_points().begin()->path_point.y};
+      cur_reference_path->get_points().begin()->path_point.x(),
+      cur_reference_path->get_points().begin()->path_point.y()};
   Point2D ref_path_start_point_temp = {
-      reference_path->get_points().begin()->path_point.x,
-      reference_path->get_points().begin()->path_point.y};
+      reference_path->get_points().begin()->path_point.x(),
+      reference_path->get_points().begin()->path_point.y()};
   if (ref_lane_coord->XYToSL(cur_ref_path_start_point_temp,
                              frenet_point_start)) {
     start_abs_lat_diff = std::abs(frenet_point_start.y);
@@ -273,23 +273,23 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   double target_s = cur_ego_s + ego_front_length - default_lane_buffer;
   if (cur_reference_path->get_reference_point_by_lon(target_s,
                                                      cur_ref_path_point_temp)) {
-    cur_ref_path_end_point_temp = {cur_ref_path_point_temp.path_point.x,
-                                   cur_ref_path_point_temp.path_point.y};
+    cur_ref_path_end_point_temp = {cur_ref_path_point_temp.path_point.x(),
+                                   cur_ref_path_point_temp.path_point.y()};
   } else {
-    cur_ref_path_end_point_temp = {cur_ref_path_end_point.path_point.x,
-                                   cur_ref_path_end_point.path_point.y};
+    cur_ref_path_end_point_temp = {cur_ref_path_end_point.path_point.x(),
+                                   cur_ref_path_end_point.path_point.y()};
   }
   Point2D ref_path_end_point_temp;
   ReferencePathPoint ref_path_point_temp{};
   target_s = std::min(target_s, reference_path->get_frenet_coord()->Length());
   if (reference_path->get_reference_point_by_lon(target_s,
                                                  ref_path_point_temp)) {
-    ref_path_end_point_temp = {ref_path_point_temp.path_point.x,
-                               ref_path_point_temp.path_point.y};
+    ref_path_end_point_temp = {ref_path_point_temp.path_point.x(),
+                               ref_path_point_temp.path_point.y()};
   } else {
     ref_path_end_point_temp = {
-        reference_path->get_points().back().path_point.x,
-        reference_path->get_points().back().path_point.y};
+        reference_path->get_points().back().path_point.x(),
+        reference_path->get_points().back().path_point.y()};
   }
 
   Point2D frenet_point;
@@ -325,8 +325,8 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
             cur_ego_s + i * 5, cur_ref_path_point_temp)) {
       continue;
     }
-    Point2D cur_point_temp = {cur_ref_path_point_temp.path_point.x,
-                              cur_ref_path_point_temp.path_point.y};
+    Point2D cur_point_temp = {cur_ref_path_point_temp.path_point.x(),
+                              cur_ref_path_point_temp.path_point.y()};
     if (ref_lane_coord->XYToSL(cur_point_temp, frenet_point_temp)) {
       double cur_point_to_other_lane_lat_diff = frenet_point_temp.y;
       if (std::abs(cur_point_to_other_lane_lat_diff) <
@@ -394,8 +394,8 @@ void EgoLaneRoadRightDecider::CalculateMergePoint(
       continue;
     }
     Point2D frenet_point;
-    Point2D projection_point = {cur_ref_path_point_temp.path_point.x,
-                                cur_ref_path_point_temp.path_point.y};
+    Point2D projection_point = {cur_ref_path_point_temp.path_point.x(),
+                                cur_ref_path_point_temp.path_point.y()};
     if (!overlap_path_coordinate->XYToSL(projection_point, frenet_point)) {
       continue;
     }
@@ -418,8 +418,8 @@ void EgoLaneRoadRightDecider::CalculateMergePoint(
       ReferencePathPoint cur_ref_path_point_temp{};
       if (cur_path->get_reference_point_by_lon(
               cur_ego_s + need_judgement_length, cur_ref_path_point_temp)) {
-        merge_point.x = cur_ref_path_point_temp.path_point.x;
-        merge_point.y = cur_ref_path_point_temp.path_point.y;
+        merge_point.x = cur_ref_path_point_temp.path_point.x();
+        merge_point.y = cur_ref_path_point_temp.path_point.y();
       }
       *calculate_nums = i;
     }
@@ -460,51 +460,49 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
     return;
   }
 
-  //针对向左侧汇流 利用曲率判断路权
-  if (left_lane != nullptr &&
-      merge_lane_virtual_id_ == left_lane->get_virtual_id()) {
-    const double cur_ego_s = cur_path->get_frenet_ego_state().s();
-    const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
-    const double step_length = 1.0;
-    std::vector<planning_math::PathPoint> cur_path_points;
-    std::vector<planning_math::PathPoint> overlap_path_points;
-    for (int i = 0; i <= calculate_nums; i++) {
-      ReferencePathPoint cur_ref_path_point_temp{};
-      if (!cur_path->get_reference_point_by_lon(cur_ego_s + i * step_length,
-                                                cur_ref_path_point_temp)) {
-        continue;
-      }
-      ReferencePathPoint over_ref_path_point_temp{};
-      if (!overlap_path->get_reference_point_by_lon(
-              overlap_ego_s + i * step_length, over_ref_path_point_temp)) {
-        continue;
-      }
-      auto overlap_pt =
-          planning_math::PathPoint(over_ref_path_point_temp.path_point.x,
-                                   over_ref_path_point_temp.path_point.y);
-      auto cur_pt =
-          planning_math::PathPoint(cur_ref_path_point_temp.path_point.x,
-                                   cur_ref_path_point_temp.path_point.y);
-      overlap_path_points.emplace_back(overlap_pt);
-      cur_path_points.emplace_back(cur_pt);
+  //针对汇流 利用曲率判断路权
+  const double cur_ego_s = cur_path->get_frenet_ego_state().s();
+  const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
+  const double step_length = 1.0;
+  std::vector<planning_math::PathPoint> cur_path_points;
+  std::vector<planning_math::PathPoint> overlap_path_points;
+  for (int i = 0; i <= calculate_nums; i++) {
+    ReferencePathPoint cur_ref_path_point_temp{};
+    if (!cur_path->get_reference_point_by_lon(cur_ego_s + i * step_length,
+                                              cur_ref_path_point_temp)) {
+      continue;
     }
-    if (cur_path_points.size() < 3 || overlap_path_points.size() < 3) {
-      return;
+    ReferencePathPoint over_ref_path_point_temp{};
+    if (!overlap_path->get_reference_point_by_lon(
+            overlap_ego_s + i * step_length, over_ref_path_point_temp)) {
+      continue;
     }
-
-    std::shared_ptr<planning_math::KDPath> cur_kd_path =
-        std::make_shared<planning_math::KDPath>(std::move(cur_path_points));
-    std::shared_ptr<planning_math::KDPath> over_kd_path =
-        std::make_shared<planning_math::KDPath>(std::move(overlap_path_points));
-    const double cur_average_kappa = CalculateAverageKappa(cur_kd_path);
-    const double overlap_average_kappa = CalculateAverageKappa(over_kd_path);
-
-    if (cur_average_kappa > overlap_average_kappa) {
-      cur_lane_is_continue_ = false;
-    } else {
-      cur_lane_is_continue_ = true;
-    }
+    auto overlap_pt =
+        planning_math::PathPoint(over_ref_path_point_temp.path_point.x(),
+                                  over_ref_path_point_temp.path_point.y());
+    auto cur_pt =
+        planning_math::PathPoint(cur_ref_path_point_temp.path_point.x(),
+                                  cur_ref_path_point_temp.path_point.y());
+    overlap_path_points.emplace_back(overlap_pt);
+    cur_path_points.emplace_back(cur_pt);
   }
+  if (cur_path_points.size() < 3 || overlap_path_points.size() < 3) {
+    return;
+  }
+
+  std::shared_ptr<planning_math::KDPath> cur_kd_path =
+      std::make_shared<planning_math::KDPath>(std::move(cur_path_points));
+  std::shared_ptr<planning_math::KDPath> over_kd_path =
+      std::make_shared<planning_math::KDPath>(std::move(overlap_path_points));
+  const double cur_average_kappa = CalculateAverageKappa(cur_kd_path);
+  const double overlap_average_kappa = CalculateAverageKappa(over_kd_path);
+
+  if (cur_average_kappa > overlap_average_kappa) {
+    cur_lane_is_continue_ = false;
+  } else {
+    cur_lane_is_continue_ = true;
+  }
+  
   return;
 }
 
@@ -1019,7 +1017,7 @@ void EgoLaneRoadRightDecider::ComputeRoadRightFromLaneMark() {
   std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
 
   if (base_lane != nullptr) {
-    std::shared_ptr<KDPath> base_lane_frenet_crd =
+    std::shared_ptr<planning_math::KDPath> base_lane_frenet_crd =
         base_lane->get_lane_frenet_coord();
     int segment = -1;
     double ego_s = 0.0;

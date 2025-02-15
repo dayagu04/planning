@@ -1,13 +1,13 @@
 
 #include "point_cloud_obstacle.h"
 
-#include "aabb2d.h"
-#include "src/modules/apa_function/apa_param_config.h"
 #include "./../convex_collision_detection/gjk2d_interface.h"
+#include "aabb2d.h"
 #include "log_glog.h"
 #include "modules/apa_function/apa_world/apa_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 
@@ -291,12 +291,6 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
-    if (!apa_param.GetParam().use_uss_pt_clound &&
-        pair.second.GetObsAttributeType() ==
-            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     obs.points.clear();
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 

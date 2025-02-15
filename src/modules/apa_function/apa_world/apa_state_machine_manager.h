@@ -48,6 +48,10 @@ class ApaStateMachineManager final {
     return out_direction_;
   }
 
+  void SetParkOutDirection(const ApaParkOutDirection& park_out_direction) {
+    out_direction_ = park_out_direction;
+  }
+
   const bool IsParkingStatus() const;
 
   const bool IsSeachingStatus() const;

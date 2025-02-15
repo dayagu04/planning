@@ -62,7 +62,7 @@ def load_car_circle_coord():
 
   return circle_x, circle_y, circle_r
 
-def load_car_circle_coord_by_veh(vehicle_type = JAC_S811):
+def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X,  car_lat_inflation = 0.0):
 
   if vehicle_type == JAC_S811:
     circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
@@ -73,9 +73,9 @@ def load_car_circle_coord_by_veh(vehicle_type = JAC_S811):
     circle_y = [0.0, 0.5, -0.5, -0.912, -0.5, 0.5, 0.912, 0.0, 0.0, 0.0, 0.0]
     circle_r = [2.4075, 0.46, 0.46, 0.18, 0.46, 0.46, 0.18, 0.9595, 0.9595, 0.9595, 0.9595]
   elif vehicle_type == CHERY_E0X:
-    circle_x = [1.45, 3.4650, 3.4650, 2.12, -0.5650, -0.5650, 2.12, 2.9375, 1.8, 0.9, -0.0375]
-    circle_y = [0.0, 0.5275, -0.5275, -0.9345, -0.5275, 0.5275, 0.9345, 0.0, 0.0, 0.0, 0.0]
-    circle_r = [2.58, 0.46, 0.46, 0.18, 0.46, 0.46, 0.18, 0.9875, 0.9875, 0.9875, 0.9875]
+    circle_x = [1.45, 3.5150, 3.5150, 2.12, -0.5650, -0.5650, 2.12, 2.9375, 1.8, 0.9, -0.0375]
+    circle_y = [0.0, 0.6375, -0.6375, -0.9345, -0.5275, 0.5275, 0.9345, 0.0, 0.0, 0.0, 0.0]
+    circle_r = [2.58, 0.35, 0.35, 0.18, 0.46, 0.46, 0.18, 0.9875, 0.9875, 0.9875, 0.9875]
 
 
   return circle_x, circle_y, circle_r

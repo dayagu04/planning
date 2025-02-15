@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <memory>
 
-
 #include "geometry_math.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"
@@ -42,10 +41,13 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
+  const bool PostProcessPathAccordingRemainDist(const double remain_dist);
+  const bool CheckShouldStopWhenSlotJumpsMuch();
   const bool CheckDynamicPlanPathOptimal();
   const bool LateralPathOptimize(
       std::vector<geometry_lib::PathPoint>& optimal_path_vec);
   const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
+  const double CalRealTimeBrakeDist();
 
   virtual const bool PostProcessPathAccordingLimiter() override;
   virtual const bool CheckSegCompleted() override;

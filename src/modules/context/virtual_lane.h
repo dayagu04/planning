@@ -103,11 +103,12 @@ class VirtualLane {
 
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
 
-  void set_lane_frenet_coord(std::shared_ptr<KDPath> frenet_coord) {
+  void set_lane_frenet_coord(
+      std::shared_ptr<planning_math::KDPath> frenet_coord) {
     lane_frenet_coord_ = frenet_coord;
   };
 
-  const std::shared_ptr<KDPath> get_lane_frenet_coord() {
+  const std::shared_ptr<planning_math::KDPath> get_lane_frenet_coord() {
     return lane_frenet_coord_;
   };
 
@@ -159,6 +160,7 @@ class VirtualLane {
   void set_is_in_merge_area(bool is_in_merge_area) {
     is_in_merge_area_ = is_in_merge_area;
   }
+  bool is_nearing_ramp_mlc_task() const { return is_nearing_ramp_mlc_task_; }
   void ProcessEgoOnRoadMLC(const RouteInfoOutput &route_info_output);
   void ProcessEgoOnRampMLC(const RouteInfoOutput &route_info_output);
 
@@ -170,7 +172,7 @@ class VirtualLane {
   int relative_id_ = 0;
   float ego_lateral_offset_ = 0;
   double width_ = 2.8;
-  std::shared_ptr<KDPath> lane_frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> lane_frenet_coord_;
   LaneStatusEx lane_status_;
   std::vector<iflyauto::LaneTypeMsg> lane_types_;
   std::vector<iflyauto::LaneMarkMsg> lane_marks_;
@@ -194,6 +196,7 @@ class VirtualLane {
   double v_cruise_ = 0.0;
   double current_lane_speed_limit_ = 0.0;
   bool is_in_merge_area_ = false;
+  bool is_nearing_ramp_mlc_task_ = false;
 };
 }  // namespace planning
 #endif

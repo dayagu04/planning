@@ -615,22 +615,24 @@ int GetBoundingBoxByPolygon(cdl::AABB *box, const Polygon2D *polygon) {
   return 0;
 }
 
-int PolygonDebugString(const Polygon2D *polygon) {
+void PolygonDebugString(const Polygon2D *polygon,const std::string &name) {
   if (nullptr == polygon) {
-    return 0;
+    return;
   }
 
-  int i;
+  ILOG_INFO << "polygon name = " << name;
+
+
   ILOG_INFO << "poly_type= " << static_cast<int>(polygon->shape)
             << " poly_vertex_num= " << polygon->vertex_num
             << " polygon_radius= " << polygon->radius;
 
-  for (i = 0; i < polygon->vertex_num; i++) {
+  for (int i = 0; i < polygon->vertex_num; i++) {
     ILOG_INFO << "x, y " << polygon->vertexes[i].x << " ,"
               << polygon->vertexes[i].y;
   }
 
-  return 1;
+  return;
 }
 
 int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
@@ -697,7 +699,7 @@ void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
 
 void GetCompactPolygonByParam(const double lat_buffer, const double lon_buffer,
                               Polygon2D *polygon) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
+  const apa_planner::ApaParameters &config = apa_param.GetParam();
   if (config.car_vertex_x_vec.size() != 20 ||
       config.car_vertex_y_vec.size() != 20) {
     polygon->vertex_num = 0;

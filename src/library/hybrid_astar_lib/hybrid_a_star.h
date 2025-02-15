@@ -64,18 +64,9 @@ class HybridAStar {
                    HybridAStarResult* result, EulerDistanceTransform* edt,
                    ParkReferenceLine* ref_line);
 
-  // no astar search, just use rs path link start point and end point to adjust
-  // ego position.
-  bool PlanByRSPathLink(HybridAStarResult* result, const Pose2D& start,
-                        const Pose2D& end, const double lon_min_sampling_length,
-                        const MapBound& XYbounds,
-                        const ParkObstacleList& obstacles,
-                        const AstarRequest& request,
-                        const ObstacleClearZone* clear_zone,
-                        EulerDistanceTransform* edt,
-                        ParkReferenceLine* ref_line);
-
   // use rs path sampling to link start point and end point.
+  // 库内向前揉库使用.
+  // todo: 向前揉库，向后揉库统一起来.
   bool PlanByRSPathSampling(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
       const double lon_min_sampling_length, const MapBound& XYbounds,
@@ -85,6 +76,14 @@ class HybridAStar {
 
   // use cubic path sampling to link start point and end point.
   bool SamplingByCubicPolyForVerticalSlot(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      const double lon_min_sampling_length, const MapBound& XYbounds,
+      const ParkObstacleList& obstacles, const AstarRequest& request,
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
+
+  // use cubic spiral path sampling to link start point and end point.
+  bool SamplingByCubicSpiralForVerticalSlot(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
       const double lon_min_sampling_length, const MapBound& XYbounds,
       const ParkObstacleList& obstacles, const AstarRequest& request,
@@ -102,7 +101,7 @@ class HybridAStar {
 
   // for debug
   const std::vector<ad_common::math::Vec2d>& GetQueuePathForDebug();
-
+  const std::vector<ad_common::math::Vec2d>& GetDelQueuePathForDebug();
   // for debug
   const std::vector<RSPath>& GetRSPathHeuristic();
 
@@ -120,14 +119,17 @@ class HybridAStar {
 
   // search single gear path by gear reverse searching.
   // todo: gear drive searching.
-  void GearRerversePathAttempt(const MapBound& XYbounds,
-                               const ParkObstacleList& obstacles,
-                               const AstarRequest& request,
-                               const ObstacleClearZone* clear_zone,
-                               const Pose2D& start, const Pose2D& target,
-                               HybridAStarResult* result,
-                               EulerDistanceTransform* edt,
-                               ParkReferenceLine* ref_line);
+  void GearRerversePathAttempt(
+      const MapBound& XYbounds, const ParkObstacleList& obstacles,
+      const AstarRequest& request, const ObstacleClearZone* clear_zone,
+      const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
+      EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
+
+  void GearDrivePathAttempt(
+      const MapBound& XYbounds, const ParkObstacleList& obstacles,
+      const AstarRequest& request, const ObstacleClearZone* clear_zone,
+      const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
+      EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
@@ -146,10 +148,14 @@ class HybridAStar {
                              const PathGearRequest gear_request_info,
                              Node3d* rs_node_to_goal);
 
-  bool ExpansionByQunticPolynomial(Node3d* current_node,
-                                   std::vector<AStarPathPoint>& path,
-                                   Node3d* polynomial_node,
-                                   PolynomialPathErrorCode* fail_type);
+  bool SamplingByQunticPolynomial(Node3d* current_node,
+                                  std::vector<AStarPathPoint>& path,
+                                  Node3d* polynomial_node,
+                                  PolynomialPathErrorCode* fail_type);
+
+  // 向后揉库使用
+  bool SamplingByRSPath(const PathGearRequest gear_request,
+                        Node3d* current_node, Node3d* polynomial_node);
 
   // check collision and validity
   bool ValidityCheckByConvex(Node3d* node);
@@ -296,6 +302,9 @@ class HybridAStar {
                                const Pose2D& start, const double start_kappa,
                                const Pose2D& end);
 
+//   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+//                           const Pose2D& start, const Pose2D& end);
+
   const bool BackwardPassByPolynomialPath(
       HybridAStarResult* result, Node3d* poly_node,
       const std::vector<AStarPathPoint>& poly_path);
@@ -389,6 +398,7 @@ class HybridAStar {
   // just for debug, display all result in hmi/plot
   std::vector<DebugAstarSearchPoint> child_node_debug_;
   std::vector<ad_common::math::Vec2d> queue_path_debug_;
+  std::vector<ad_common::math::Vec2d> delete_queue_path_debug_;
   std::vector<RSPath> rs_path_h_cost_debug_;
 
   // for debug

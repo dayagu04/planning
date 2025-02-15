@@ -6,12 +6,14 @@ message TargetPoint {
   optional double s = 1;
   optional double t = 2;
   optional int32 target_type = 3;
+  optional double s_weight = 4;
 }
 
 message TargetMaker {
   optional FinalTarget final_target = 1;
   optional CruiseTarget cruise_target = 2;
   optional FollowTarget follow_target = 3;
+  optional NeighborTarget neighbor_target = 4;
 }
 
 message WeightMaker {
@@ -28,6 +30,10 @@ message CruiseTarget {
 
 message FollowTarget {
   repeated TargetPoint follow_target_s_ref = 1;
+}
+
+message NeighborTarget {
+  repeated TargetPoint neighbor_target_s_ref = 1;
 }
 
 message WeightMakerReplayInfo {

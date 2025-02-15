@@ -59,7 +59,8 @@ class CollisionDetector {
     double remain_dist = 25.0;
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
-    double obs2car_dist = 25.0;
+    std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{
+        26.8, pnc::geometry_lib::PathPoint()};
     Eigen::Vector2d col_pt_ego_global;
     Eigen::Vector2d col_pt_ego_local;
     Eigen::Vector2d col_pt_obs_global;
@@ -72,6 +73,7 @@ class CollisionDetector {
     bool is_side_mirror_expand = true;
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     double bound_expand = 0.5;
+    bool use_bounding_box = false;
     Paramters() = default;
     Paramters(const double lat_inf, bool set_side_mirror_expand = true) {
       lat_inflation = lat_inf;
@@ -82,6 +84,7 @@ class CollisionDetector {
       is_side_mirror_expand = true;
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
       bound_expand = 0.5;
+      use_bounding_box = false;
     }
   };
 
@@ -101,6 +104,11 @@ class CollisionDetector {
 
   const CollisionResult UpdateByEDT(
       const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+      const double lon_buffer, const bool need_cal_obs_dist = false);
+
+  const CollisionResult UpdateByEDT(
+      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+      const uint8_t gear, const double sample_ds, const double lat_buffer,
       const double lon_buffer, const bool need_cal_obs_dist = false);
 
   const CollisionResult UpdateByEDT(
@@ -170,8 +178,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
+  GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 
@@ -219,7 +227,8 @@ class CollisionDetector {
                              double safe_dist);
 
   const double CalClosestDistFromObsToCar(
-      const pnc::geometry_lib::PathPoint &ego_pose);
+      const pnc::geometry_lib::PathPoint &ego_pose, const double lat_buffer,
+      const bool safe_flag = true);
 
   const bool CalTrajBound(std::vector<Eigen::Vector2d> &traj_bound,
                           const pnc::geometry_lib::PathPoint &start_pose,
@@ -236,6 +245,9 @@ class CollisionDetector {
       const pnc::geometry_lib::Arc &arc);
 
   const double GetCarMaxX(const pnc::geometry_lib::PathPoint &ego_pose);
+
+  const std::vector<Eigen::Vector2d> CalPathSegBound(
+      const pnc::geometry_lib::PathSegment &path_seg);
 
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
@@ -255,6 +267,9 @@ class CollisionDetector {
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_global_map_;
 
   std::vector<pnc::geometry_lib::LineSegment> obs_line_global_vec_;
+
+  pnc::geometry_lib::RectangleBound path_seg_rectangle_bound_;
+  std::vector<Eigen::Vector2d> origin_car_local_rectangle_vertex_vec_;
 
   Paramters param_;
 

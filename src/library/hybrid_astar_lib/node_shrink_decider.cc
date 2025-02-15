@@ -1,6 +1,7 @@
 #include "node_shrink_decider.h"
 
 #include "astar_decider.h"
+#include "hybrid_astar_common.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "utils_math.h"
@@ -39,6 +40,15 @@ bool NodeShrinkDecider::IsLegalForHeading(const double heading) {
     return false;
   }
 
+  return true;
+}
+
+bool NodeShrinkDecider::IsLegalForPos(const double x, const double y,
+                                      const double x_limit,
+                                      const double y_limit) {
+  if (std::fabs(y) < y_limit && x < x_limit) {
+    return false;
+  }
   return true;
 }
 
@@ -105,8 +115,7 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
 const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
                                              const Node3d *old_node) const {
-
-   if (new_node == nullptr || old_node == nullptr) {
+  if (new_node == nullptr || old_node == nullptr) {
     return false;
   }
 

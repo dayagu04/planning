@@ -193,6 +193,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().finish_heading_err, double,
                   "finish_heading_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().should_stop_lat_err, double,
+                  "should_stop_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().should_stop_heading_err, double,
+                  "should_stop_heading_err");
+
   JSON_READ_VALUE(apa_param.SetPram().finish_uss_slot_occupied_ratio, double,
                   "finish_uss_slot_occupied_ratio");
   JSON_READ_VALUE(apa_param.SetPram().finish_heading_err_loose, double,
@@ -878,8 +884,8 @@ void SyncParkingParameters(const bool is_simulation) {
   ILOG_INFO << "vertical_slot_end_straight_dist "
             << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
 
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan,
-                  bool, "enable_apa_speed_plan");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
+                  "enable_apa_speed_plan");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.default_cruise_speed, double,
                   "default_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.min_cruise_speed, double,
@@ -887,6 +893,18 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().speed_config.obs_dist_for_speed_limit,
                   double, "obs_dist_for_speed_limit");
 
+  // hybrid a star params
+  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_x_offset,
+                  double, "tail_in_slot_virtual_wall_x_offset");
+
+  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_y_offset,
+                  double, "tail_in_slot_virtual_wall_y_offset");
+
+  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_x_offset,
+                  double, "head_in_slot_virtual_wall_x_offset");
+
+  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_y_offset,
+                  double, "head_in_slot_virtual_wall_y_offset");
   return;
 }
 

@@ -106,7 +106,7 @@ class UssObstacle {
       Eigen::Vector2d &intersection, const Arc &arc1,
       const Arc &arc2) const;  // note that assume just one interection
 
-  const bool GetArcLineIntersection(
+  const bool GetArcLineSegIntersection(
       Eigen::Vector2d &intersection, const Arc &arc1,
       const Arc &line2) const;  // use pA and pB of arc to fake line
 

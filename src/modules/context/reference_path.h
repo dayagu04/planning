@@ -16,7 +16,7 @@ namespace planning {
 enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
 
 struct ReferencePathPoint {
-  PathPoint path_point;
+  planning_math::PathPoint path_point;
   double distance_to_left_road_border;
   double distance_to_right_road_border;
   double distance_to_left_lane_border;
@@ -46,7 +46,7 @@ class ReferencePath {
     return refined_ref_path_points_;
   }
 
-  const std::shared_ptr<KDPath> &get_frenet_coord() const {
+  const std::shared_ptr<planning_math::KDPath> &get_frenet_coord() const {
     return frenet_coord_;
   }
 
@@ -142,7 +142,7 @@ class ReferencePath {
   // std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
 
   // kd_path
-  std::shared_ptr<KDPath> frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> frenet_coord_;
 
   // ego_state
   FrenetEgoState frenet_ego_state_;

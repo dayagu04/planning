@@ -76,13 +76,15 @@
   "finish_lat_err_strict": 0.086,
   "finish_lon_err": 0.2,
   "finish_heading_err": 1.68,
+  "should_stop_lat_err": 0.168,
+  "should_stop_heading_err": 2.368,
   "finish_uss_slot_occupied_ratio": 0.798,
   "finish_heading_err_loose": 2.868,
   "finish_parallel_lat_err": 0.1,
   "finish_parallel_lat_rac_err": 0.50,
-  "finish_parallel_lon_err": 0.3,
+  "finish_parallel_lon_err": 0.25,
   "finish_parallel_lon_overhaing_error": 0.22,
-  "finish_parallel_heading_err": 1.98,
+  "finish_parallel_heading_err": 1.68,
   "finish_parallel_rear_stop_buffer": 0.45,
 
   "comment_6": "check fail params",
@@ -105,7 +107,7 @@
   "lat_inflation": 0.086,
   "detection_distance": 2.5,
   "safe_uss_remain_dist_in_slot": 0.3286,
-  "safe_uss_remain_dist_in_parallel_slot": 0.25,
+  "safe_uss_remain_dist_in_parallel_slot": 0.3,
   "safe_uss_remain_dist_out_slot": 0.4286,
   "uss_stuck_replan_wait_time": 2.5,
   "uss_scan_angle_deg": 60.0,
@@ -233,7 +235,7 @@
   "max_one_step_arc_radius": 8.5,
   "radius_eps": 0.01,
   "min_line_length": 0.3,
-  "min_path_length": 0.35,
+  "min_path_length": 0.30,
   "insert_line_after_arc": 0.2268,
   "min_one_step_path_length": 0.6,
   "min_one_step_path_length_in_slot": 1.2,
@@ -333,5 +335,11 @@
   "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 0.5,
   "min_cruise_speed" : 0.3,
-  "obs_dist_for_speed_limit" : 0.4
+  "obs_dist_for_speed_limit" : 0.4,
+
+  "comment_18": "hybrid a star params",
+  "tail_in_slot_virtual_wall_x_offset" : 3.0,
+  "tail_in_slot_virtual_wall_y_offset" : 0.5,
+  "head_in_slot_virtual_wall_x_offset" : 4.0,
+  "head_in_slot_virtual_wall_y_offset" : 1.8
 }

@@ -153,6 +153,10 @@ struct EgoPlanningConfig : public Config {
         read_json_key<double>(
             json,
             "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change");
+    minimum_distance_nearby_split_to_surpress_specific_direction_overtake =
+        read_json_key<double>(json,
+                              "minimum_distance_nearby_split_to_surpress_"
+                              "specific_direction_overtake");
     minimum_ego_cruise_speed_for_active_lane_change = read_json_key<double>(
         json, "minimum_ego_cruise_speed_for_active_lane_change");
     enable_use_emergency_avoidence_lane_change_request = read_json_key<bool>(
@@ -161,6 +165,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_use_cone_change_request");
     enable_use_merge_change_request =
         read_json_key<bool>(json, "enable_use_merge_change_request");
+    enable_use_ground_mark_process_split =
+        read_json_key<bool>(json, "enable_use_ground_mark_process_split");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -173,7 +179,10 @@ struct EgoPlanningConfig : public Config {
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
       true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
+  double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =
+      1500;
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
+  bool enable_use_ground_mark_process_split = false;
   bool enable_use_emergency_avoidence_lane_change_request = false;
   bool enable_use_cone_change_request = false;
   bool enable_use_merge_change_request = false;
@@ -222,6 +231,19 @@ struct EgoPlanningCandidateConfig : public EgoPlanningConfig {
 };
 
 struct LateralObstacleConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    obstacle_detect_distance_upper = read_json_key<double>(
+        json, "obstacle_detect_distance_upper", obstacle_detect_distance_upper);
+    obstacle_detect_distance_lower = read_json_key<double>(
+        json, "obstacle_detect_distance_lower", obstacle_detect_distance_lower);
+  }
+  double obstacle_detect_distance_upper = 220;
+  double obstacle_detect_distance_lower = -50;
+};
+
+struct SplitProcessConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
@@ -352,22 +374,54 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
 
     max_concern_obs_distance = read_json_keys<double>(
-    json, std::vector<std::string>{"lane_borrow",
-                                    "max_concern_obs_distance"});
+        json,
+        std::vector<std::string>{"lane_borrow", "max_concern_obs_distance"});
     obs_static_vel_thold = read_json_keys<double>(
-    json, std::vector<std::string>{"lane_borrow",
-                                    "obs_static_vel_thold"});
+        json, std::vector<std::string>{"lane_borrow", "obs_static_vel_thold"});
     observe_frames = read_json_keys<int>(
-    json, std::vector<std::string>{"lane_borrow",
-                                    "observe_frames"});
-    static_obs_buffer =read_json_key<double>
-    (json, "static_obs_buffer", static_obs_buffer);
-
+        json, std::vector<std::string>{"lane_borrow", "observe_frames"});
+    static_obs_buffer =
+        read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
   }
-  double max_concern_obs_distance =  40.0;
-  double obs_static_vel_thold =  0.1;
-  int observe_frames =  30;
+  double max_concern_obs_distance = 40.0;
+  double obs_static_vel_thold = 0.1;
+  int observe_frames = 30;
   double static_obs_buffer = 0.5;
+};
+
+struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    sample_v_nums = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_v_nums"});
+    sample_t_nums = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_nums"});
+    sample_v_upper = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_v_upper"});
+    sample_v_lower = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_v_lower"});
+    sample_t_upper = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_upper"});
+    sample_t_lower = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_lower"});
+    maximum_speed_adjustment = read_json_keys<int>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "maximum_speed_adjustment"});
+  }
+
+  int sample_v_nums = 15;
+  int sample_t_nums = 10;
+  double sample_v_upper = 35.0;
+  double sample_v_lower = 0.0;
+  double sample_t_upper = 5.0;
+  double sample_t_lower = 1.0;
+  double maximum_speed_adjustment = 15.0 / 3.6;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -744,6 +798,15 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "extra_collision_lateral_buffer"},
         extra_collision_lateral_buffer);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "extra_buffer_for_lane_width_bp"},
+        extra_buffer_for_lane_width_bp);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "extra_lane_width_buffer"},
+                          extra_lane_width_buffer);
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
                                                    "lateral_road_boader_v_bp"},
@@ -825,6 +888,13 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "extra_rear_lon_buffer2blockobstacle"},
         extra_rear_lon_buffer2blockobstacle);
+
+    extra_lane_type_decrease_buffer = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "extra_lane_type_decrease_buffer"},
+        extra_lane_type_decrease_buffer);
+
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -871,6 +941,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> lateral_road_boader_collision_ttc_bp{0, 1.5, 3, 4.5, 5};
   std::vector<double> extra_collision_lateral_buffer{0.1, 0.0, 0.0, 0.0, 0.0};
 
+  std::vector<double> extra_buffer_for_lane_width_bp{2.8, 3.1, 3.4, 3.7, 4.2};
+  std::vector<double> extra_lane_width_buffer{0.2, 0.15, 0.1, 0.05, 0.0};
+
   std::vector<double> lateral_road_boader_v_bp{10, 40, 60, 100, 130};
   std::vector<double> extra_lateral_buffer{0.0, 0.0, 0.0, 0.0, 0.0};
 
@@ -883,6 +956,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> _relative_v_bp = {0, 1, 2, 3, 4, 5};
   std::vector<double> _relative_v_decrease_extra_buffer = {0,   0.02, 0.05,
                                                            0.1, 0.15, 0.23};
+  double extra_lane_type_decrease_buffer = 0.05;
   double truck_decrease_extra_buffer = 0.05;
   double care_exceed_distance_with_blocked_obstacle = 2.0;
   double extra_hard_buffer2blockobstacle = 2.0;
@@ -2116,6 +2190,54 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double jerk_lower_in_large_curv = -2.0;
 };
 
+struct SpeedLimitConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    preview_x = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider", "preview_x"});
+    t_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider", "t_curv"});
+    dis_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider", "dis_curv"});
+    pre_accelerate_distance_for_merge = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "pre_accelerate_distance_for_merge"});
+    straight_ramp_v_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "straight_ramp_v_limit"});
+    v_limit_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider", "v_limit_ramp"});
+    v_limit_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "v_limit_near_ramp_zone"});
+    dis_near_ramp_zone = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_limit_decider", "dis_near_ramp_zone"});
+    brake_dis_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "brake_dis_near_ramp_zone"});
+    acc_to_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider", "acc_to_ramp"});
+    v_intersection_min_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "v_intersection_min_limit"});
+  }
+  int lon_num_step = 25;
+  double delta_time = 0.2;
+  double preview_x = 80.0;
+  double t_curv = 2.0;
+  double dis_curv = 30.0;
+  double pre_accelerate_distance_for_merge = 80.0;
+  double straight_ramp_v_limit = 22.22;
+  double v_limit_ramp = 16.67;
+  double v_limit_near_ramp_zone = 25.0;
+  double dis_near_ramp_zone = 1200.0;
+  double brake_dis_near_ramp_zone = 700.0;
+  double acc_to_ramp = -0.7;
+  double v_intersection_min_limit = 11.11;
+};
+
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -2138,6 +2260,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
     q_acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
+    q_acc_bound_v3 = read_json_keys<double>(
+        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound_v3"});
     q_jerk_bound = read_json_keys<double>(
         json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
     q_stop_s = read_json_keys<double>(
@@ -2228,6 +2352,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_sv_bound = 1000.0;
   double q_vel_bound = 400.0;
   double q_acc_bound = 400.0;
+  double q_acc_bound_v3 = 3200.0;
   double q_jerk_bound = 100.0;
   double q_stop_s = 2000.0;
 
@@ -2628,6 +2753,58 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_planning", "st_graph_searcher",
                                  "vel_step"},
         vel_step);
+        
+    // radical search style
+    {
+      max_accel_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "max_accel_limit_radical_style"},
+          max_accel_limit_radical_style);
+      min_accel_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "min_accel_limit_radical_style"},
+          min_accel_limit_radical_style);
+      max_jerk_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "max_jerk_limit_radical_style"},
+          max_jerk_limit_radical_style);
+      min_jerk_limit_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "min_jerk_limit_radical_style"},
+          min_jerk_limit_radical_style);
+      accel_sample_num_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "accel_sample_num_radical_style"},
+          accel_sample_num_radical_style);
+      s_step_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "s_step_radical_style"},
+          s_step_radical_style);
+      t_step_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "t_step_radical_style"},
+          t_step_radical_style);
+      vel_step_radical_style = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                   "radical_search_style",
+                                   "vel_step_radical_style"},
+          vel_step_radical_style);
+    }
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -2640,6 +2817,16 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double s_step = 0.25;
   double t_step = 0.25;
   double vel_step = 0.4;
+
+  // radical search style info
+  double max_accel_limit_radical_style = 5.0;
+  double min_accel_limit_radical_style = -6.0;
+  double max_jerk_limit_radical_style = 10.0;
+  double min_jerk_limit_radical_style = -10.0;
+  double accel_sample_num_radical_style = 20;
+  double s_step_radical_style = 0.25;
+  double t_step_radical_style = 0.25;
+  double vel_step_radical_style = 0.4;
 
   double weight_yield = 2.0;
   double weight_overtake = 2.0;
@@ -2679,6 +2866,21 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   bool enable_only_s_t_hash = false;
 };
 
+struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ignore_agent_ttc_to_ego_thrd = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning",
+                                 "longitudinal_decision_decider",
+                                 "ignore_agent_ttc_to_ego_thrd"},
+        ignore_agent_ttc_to_ego_thrd);
+  }
+
+  double ignore_agent_ttc_to_ego_thrd = 3.0;
+};
+
 struct AgentHeadwayConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -2688,7 +2890,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double dt = 0.2;
   double cutin_headway_threshold = 1.0;
   double smallest_headway_threshold = 1.2;
-  double headway_step = 0.025;
+  double headway_step = 0.1;
   std::vector<std::pair<int32_t, double>> normal_headway_table = {
       {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
   std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
@@ -2717,6 +2919,73 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double traffic_light_min_follow_distance_gap = 2.0;
 };
 
+struct StartStopDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ego_vel_begin_stop_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "ego_vel_begin_stop_threshold"},
+        ego_vel_begin_stop_threshold);
+    ego_vel_start_mode_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "ego_vel_start_mode_threshold"},
+        ego_vel_start_mode_threshold);
+    cipv_vel_begin_start_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "cipv_vel_begin_start_threshold"},
+        cipv_vel_begin_start_threshold);
+    cipv_relative_s_begin_start_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "cipv_relative_s_begin_start_threshold"},
+        cipv_relative_s_begin_start_threshold);
+    distance_stop_buffer_between_ego_and_cipv_threshold =
+        read_json_keys<double>(
+            json,
+            std::vector<std::string>{
+                "speed_planning", "start_stop_decider",
+                "distance_stop_buffer_between_ego_and_cipv_threshold"},
+            distance_stop_buffer_between_ego_and_cipv_threshold);
+    distance_start_between_ego_and_cipv_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{
+            "speed_planning", "start_stop_decider",
+            "distance_start_between_ego_and_cipv_threshold"},
+        distance_start_between_ego_and_cipv_threshold);
+    distance_to_stop_line_ego_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "distance_to_stop_line_ego_threshold"},
+        distance_to_stop_line_ego_threshold);
+    desired_stopped_distance_between_ego_and_cipv_threshold =
+        read_json_keys<double>(
+            json,
+            std::vector<std::string>{
+                "speed_planning", "start_stop_decider",
+                "desired_stopped_distance_between_ego_and_cipv_threshold"},
+            desired_stopped_distance_between_ego_and_cipv_threshold);
+    distance_to_go_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "distance_to_go_threshold"},
+        distance_to_go_threshold);
+  }
+
+  double ego_vel_begin_stop_threshold = 0.5;
+  double ego_vel_start_mode_threshold = 5.5;
+  double cipv_vel_begin_start_threshold = 0.5;
+  double cipv_relative_s_begin_start_threshold = 3.5;
+  double distance_stop_buffer_between_ego_and_cipv_threshold = 2.0;
+  double distance_start_between_ego_and_cipv_threshold = 0.3;
+  double distance_to_stop_line_ego_threshold = 5.5;
+  double desired_stopped_distance_between_ego_and_cipv_threshold = 3.0;
+  double distance_to_go_threshold = 5.5;
+};
+
 struct SpeedPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -2727,6 +2996,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "acc_positive_upper",
                                  },
@@ -2735,6 +3005,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "comfort_kinematic_param",
               "acc_positive_speed_lower",
           },
@@ -2744,6 +3015,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "acc_positive_lower",
                                  },
@@ -2753,6 +3025,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "comfort_kinematic_param",
               "acc_positive_speed_upper",
           },
@@ -2762,6 +3035,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "acc_negative_lower",
                                  },
@@ -2771,6 +3045,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "comfort_kinematic_param",
               "acc_negative_speed_lower",
           },
@@ -2780,6 +3055,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "acc_negative_upper",
                                  },
@@ -2789,6 +3065,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "comfort_kinematic_param",
               "acc_negative_speed_upper",
           },
@@ -2798,6 +3075,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "jerk_positive_upper",
                                  },
@@ -2808,6 +3086,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
               json,
               std::vector<std::string>{
                   "speed_planning",
+                  "cruise_target",
                   "comfort_kinematic_param",
                   "jerk_positive_speed_lower",
               },
@@ -2817,6 +3096,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "jerk_positive_lower",
                                  },
@@ -2827,6 +3107,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
               json,
               std::vector<std::string>{
                   "speed_planning",
+                  "cruise_target",
                   "comfort_kinematic_param",
                   "jerk_positive_speed_upper",
               },
@@ -2836,6 +3117,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "jerk_negative_lower",
                                  },
@@ -2846,6 +3128,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
               json,
               std::vector<std::string>{
                   "speed_planning",
+                  "cruise_target",
                   "comfort_kinematic_param",
                   "jerk_negative_speed_lower",
               },
@@ -2855,6 +3138,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "comfort_kinematic_param",
                                      "jerk_negative_upper",
                                  },
@@ -2865,6 +3149,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
               json,
               std::vector<std::string>{
                   "speed_planning",
+                  "cruise_target",
                   "comfort_kinematic_param",
                   "jerk_negative_speed_upper",
               },
@@ -2877,6 +3162,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "acc_positive_upper",
                                  },
@@ -2885,6 +3171,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "acc_positive_speed_lower",
           },
@@ -2894,6 +3181,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "acc_positive_lower",
                                  },
@@ -2903,6 +3191,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "acc_positive_speed_upper",
           },
@@ -2912,6 +3201,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "acc_negative_lower",
                                  },
@@ -2921,6 +3211,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "acc_negative_speed_lower",
           },
@@ -2930,6 +3221,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "acc_negative_upper",
                                  },
@@ -2939,6 +3231,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "acc_negative_speed_upper",
           },
@@ -2948,6 +3241,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "jerk_positive_upper",
                                  },
@@ -2957,6 +3251,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "jerk_positive_speed_lower",
           },
@@ -2966,6 +3261,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "jerk_positive_lower",
                                  },
@@ -2975,6 +3271,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "jerk_positive_speed_upper",
           },
@@ -2984,6 +3281,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "jerk_negative_lower",
                                  },
@@ -2993,6 +3291,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "jerk_negative_speed_lower",
           },
@@ -3002,6 +3301,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           read_json_keys<double>(json,
                                  std::vector<std::string>{
                                      "speed_planning",
+                                     "cruise_target",
                                      "kappa_kinematic_param",
                                      "jerk_negative_upper",
                                  },
@@ -3011,6 +3311,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
           json,
           std::vector<std::string>{
               "speed_planning",
+              "cruise_target",
               "kappa_kinematic_param",
               "jerk_negative_speed_upper",
           },
@@ -3021,34 +3322,101 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     {
       read_json_vec(json,
                     std::vector<std::string>{"normal_kappa_speed_limit_table",
-                                             "kappa_table"},
+                                             "cruise_target", "kappa_table"},
                     normal_kappa_speed_limit_table.kappa_table);
       read_json_vec(json,
                     std::vector<std::string>{"normal_kappa_speed_limit_table",
-                                             "speed_table"},
+                                             "cruise_target", "speed_table"},
                     normal_kappa_speed_limit_table.speed_table);
-      read_json_vec(json,
-                    std::vector<std::string>{
-                        "lane_change_kappa_speed_limit_table", "kappa_table"},
-                    lane_change_kappa_speed_limit_table.kappa_table);
-      read_json_vec(json,
-                    std::vector<std::string>{
-                        "lane_change_kappa_speed_limit_table", "speed_table"},
-                    lane_change_kappa_speed_limit_table.speed_table);
+      read_json_vec(
+          json,
+          std::vector<std::string>{"lane_change_kappa_speed_limit_table",
+                                   "cruise_target", "kappa_table"},
+          lane_change_kappa_speed_limit_table.kappa_table);
+      read_json_vec(
+          json,
+          std::vector<std::string>{"lane_change_kappa_speed_limit_table",
+                                   "cruise_target", "speed_table"},
+          lane_change_kappa_speed_limit_table.speed_table);
     }
     lane_change_upper_speed_limit_kph = read_json_keys<double>(
         json,
         std::vector<std::string>{"speed_planning",
                                  "lane_change_upper_speed_limit_kph"},
         lane_change_upper_speed_limit_kph);
-    enable_always_cruise = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"speed_planning", "debug_switch",
-                                 "enable_always_cruise"},
-        enable_always_cruise);
+    enable_speed_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
+
+    // neighbor target
+    {
+      neighbor_target_min_jerk = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_min_jerk"},
+          neighbor_target_min_jerk);
+      neighbor_target_max_jerk = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_max_jerk"},
+          neighbor_target_max_jerk);
+      neighbor_target_min_acc = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_min_acc"},
+          neighbor_target_min_acc);
+      neighbor_target_max_acc_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_max_acc_lower"},
+          neighbor_target_max_acc_lower);
+      neighbor_target_max_acc_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_max_acc_upper"},
+          neighbor_target_max_acc_upper);
+      neighbor_target_vel_lower_bound = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_vel_lower_bound"},
+          neighbor_target_vel_lower_bound);
+      neighbor_target_vel_upper_bound = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_vel_upper_bound"},
+          neighbor_target_vel_upper_bound);
+      neighbor_target_vel_buffer = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_vel_buffer"},
+          neighbor_target_vel_buffer);
+      neighbor_target_p_precision = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_p_precision"},
+          neighbor_target_p_precision);
+      neighbor_target_kEpsilon = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_kEpsilon"},
+          neighbor_target_kEpsilon);
+      neighbor_target_neighbor_yield_distance = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_neighbor_yield_distance"},
+          neighbor_target_neighbor_yield_distance);
+      neighbor_target_neighbor_overtake_distance = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning", "neighbor_target",
+              "neighbor_target_neighbor_overtake_distance"},
+          neighbor_target_neighbor_overtake_distance);
+      neighbor_target_neighbor_limit_velocity = read_json_keys<double>(
+          json,
+          std::vector<std::string>{"speed_planning", "neighbor_target",
+                                   "neighbor_target_neighbor_limit_velocity"},
+          neighbor_target_neighbor_limit_velocity);
+    }
   }
-  // debug switch - cruise target maker
-  bool enable_always_cruise = false;
 
   double planning_time = 5.0;
   double dt = 0.2;
@@ -3067,6 +3435,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double stop_acc_lower_bound = -0.3;
   double stop_jerk_upper_bound = 0.8;
   double stop_jerk_lower_bound = -0.8;
+  bool enable_speed_adjust = true;
 
   // follow target
   double lower_speed_min_follow_distance_gap = 3.0;
@@ -3076,6 +3445,21 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double large_vehicle_min_follow_distance_gap = 4.5;
   double cone_min_follow_distance_gap = 4.5;
   double traffic_light_min_follow_distance_gap = 2.0;
+
+  // neighbor target
+  double neighbor_target_min_jerk = -1.5;
+  double neighbor_target_max_jerk = 2.0;
+  double neighbor_target_min_acc = -1.5;
+  double neighbor_target_max_acc_lower = 0.8;
+  double neighbor_target_max_acc_upper = 2.0;
+  double neighbor_target_vel_lower_bound = 5.0;
+  double neighbor_target_vel_upper_bound = 15.0;
+  double neighbor_target_vel_buffer = 5.0;
+  double neighbor_target_p_precision = 0.3;
+  double neighbor_target_kEpsilon = 1e-10;
+  double neighbor_target_neighbor_yield_distance = 10.0;
+  double neighbor_target_neighbor_overtake_distance = 10.0;
+  double neighbor_target_neighbor_limit_velocity = 5.0;
 
   // cruise target relevance
   double lane_change_upper_speed_limit_kph = 150.0;
@@ -3099,8 +3483,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   };
 
   struct SpeedPlanningBound {
-    double low_speed_acc_upper_bound = 1.8;
-    double high_speed_acc_upper_bound = 1.2;
+    double low_speed_acc_upper_bound = 1.2;
+    double high_speed_acc_upper_bound = 0.8;
     double lane_change_low_speed_acc_upper_bound = 2.4;
     double lane_change_high_speed_acc_upper_bound = 1.6;
     double low_speed_threshold_with_acc_upper_bound = 5.5;
@@ -3126,5 +3510,27 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   KappaSpeedLimitTable normal_kappa_speed_limit_table;
   KappaSpeedLimitTable lane_change_kappa_speed_limit_table;
+
+  // weight maker
+  struct WeightConfig {
+    double s_weight = 1.0;
+    double v_weight = 0.0;
+    double a_weight = 10.0;
+    double jerk_weight = 100.0;
+    double cruise_v_weight = 20.0;
+    double follow_s_weight = 1.0;
+    double overtake_s_weight = 1.0;
+    double neighbor_s_weight = 1.0;
+    double end_s_weight = 40.0;
+    double max_s_weight_time = 3.0;
+    double front_lower_weight = 0.5;
+    double back_upper_weight = 1.5;
+    double max_s_weight = 2.0;
+    double s_speed_upper_weight_v = 8.33;
+    double s_speed_lower_weight_v = 2.78;
+    double s_speed_upper_weight = 2.0;
+    double s_speed_lower_weight = 1.0;
+  };
+  WeightConfig weight_maker_config;
 };
 }  // namespace planning

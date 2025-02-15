@@ -71,6 +71,44 @@ const double NormalizeAngle(const double angle);
 const double NormalizeAnglePI(const double angle);
 const double AngleSubtraction(const double angle1, const double angle2);
 
+struct RectangleBound {
+  // simple AABB
+  double min_x = 0.0;
+  double min_y = 0.0;
+  double max_x = 0.0;
+  double max_y = 0.0;
+
+  RectangleBound() {}
+  ~RectangleBound() {}
+  RectangleBound(const double _min_x, const double _min_y, const double _max_x,
+                 const double _max_y)
+      : min_x(_min_x), min_y(_min_x), max_x(_min_x), max_y(_min_x) {}
+  void Set(const double _min_x, const double _min_y, const double _max_x,
+           const double _max_y) {
+    min_x = _min_x;
+    min_y = _min_y;
+    max_x = _max_x;
+    max_y = _max_y;
+  }
+
+  const bool IsPtInRectangleBound(const Eigen::Vector2d pt) {
+    if (pt.x() < min_x || pt.y() < min_y || pt.x() > max_x || pt.y() > max_y) {
+      return false;
+    }
+    return true;
+  }
+
+  const std::vector<Eigen::Vector2d> GetRectanglePtVec() {
+    std::vector<Eigen::Vector2d> box;
+    box.resize(4);
+    box[0] << min_x, max_y;
+    box[1] << max_x, max_y;
+    box[2] << max_x, min_y;
+    box[3] << min_x, min_y;
+    return box;
+  }
+};
+
 struct TangentOutput {
   std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_a;
   std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_b;
@@ -199,7 +237,7 @@ struct PathPoint {
   double lat_buffer = 0.0;
   bool col_flag = false;
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
-  double dist_to_obs;
+  double dist_to_obs = 26.8;
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
@@ -214,7 +252,7 @@ struct PathPoint {
     s = 0.0;
     lat_buffer = 0.0;
     col_flag = false;
-    dist_to_obs = 100.0;
+    dist_to_obs = 26.8;
   }
 
   void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
@@ -376,6 +414,8 @@ struct PathSegment {
   bool collision_flag = false;
 
   double lat_buffer = 0.0;
+
+  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs;
 
   LineSegment line_seg;
   Arc arc_seg;
@@ -579,6 +619,10 @@ const Eigen::Matrix2d GetRotm2dFromTwoVec(const Eigen::Vector2d &a,
 const LineSegment GetEgoHeadingLine(const Eigen::Vector2d &ego_pos,
                                     const double ego_heading);
 
+const bool CalcTwoLineSegIntersection(Eigen::Vector2d &intersection,
+                                      LineSegment &line_seg1,
+                                      LineSegment &line_seg2);
+
 const bool GetIntersectionFromTwoLineSeg(Eigen::Vector2d &intersection,
                                          LineSegment &line_seg1,
                                          LineSegment &line_seg2);
@@ -589,8 +633,13 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
 const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
                                const Eigen::Vector2d &pC);
 
-const bool GetArcLineIntersection(
+const bool GetArcLineSegIntersection(
     Eigen::Vector2d &intersection, const pnc::geometry_lib::Arc &arc,
+    const pnc::geometry_lib::LineSegment &line_seg);
+
+const size_t GetArcLineSegIntersection(
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> &intersections,
+    const pnc::geometry_lib::Arc &arc,
     const pnc::geometry_lib::LineSegment &line_seg);
 
 const size_t GetArcLineIntersection(
@@ -619,6 +668,10 @@ const size_t CalcCrossPointsOfLineAndCircle(
 
 const size_t CalcCrossPointsOfLineSegAndCircle(
     const LineSegment &line_seg, const Circle &circle,
+    std::vector<Eigen::Vector2d> &cross_points);
+
+const size_t CalcLineSegAndCircleIntersection(
+    const LineSegment &line, const Circle &circle,
     std::vector<Eigen::Vector2d> &cross_points);
 
 const size_t CalcTangentPtOfCircleAndLinePassingThroughAGivenPt(
@@ -865,6 +918,10 @@ void PrintPose(const std::string &str,
 void PrintPose(const Eigen::Vector2d &pos, const double heading);
 void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
                const double heading);
+
+void PrintGear(const std::string &str, const uint8_t gear);
+void PrintSteer(const std::string &str, const uint8_t steer);
+
 void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg);
 void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
@@ -896,17 +953,21 @@ struct GeometryPath {
   double cur_gear_length = 0.0;
   uint8_t path_count = 0;
   double cost = 0.0;
+  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{26.8,
+                                                                 PathPoint()};
   double gear_change_cost = 0.0;
   double length_cost = 0.0;
   double steer_change_cost = 0.0;
   PathPoint start_pose;
   PathPoint end_pose;
+  std::vector<PathPoint> gear_change_pose;
   uint8_t cur_gear = SEG_GEAR_INVALID;
   uint8_t cur_steer = SEG_STEER_INVALID;
   uint8_t last_gear = SEG_GEAR_INVALID;
   uint8_t last_steer = SEG_STEER_INVALID;
   std::vector<uint8_t> steer_cmd_vec;
   std::vector<uint8_t> gear_cmd_vec;
+  std::vector<uint8_t> gear_index_vec;
   std::vector<PathSegment> path_segment_vec;
   std::vector<PathPoint> path_pt_vec;
   bool collide_flag = false;
@@ -954,6 +1015,7 @@ struct GeometryPath {
     steer_change_count = 0;
     total_length = 0.0;
     cur_gear_length = 0.0;
+    pt_closest2obs = std::make_pair(26.8, PathPoint());
     cost = 0.0;
     gear_change_cost = 0.0;
     length_cost = 0.0;
@@ -961,12 +1023,14 @@ struct GeometryPath {
     path_count = 0;
     start_pose.Reset();
     end_pose.Reset();
+    gear_change_pose.clear();
     cur_gear = geometry_lib::SEG_GEAR_INVALID;
     cur_steer = geometry_lib::SEG_STEER_INVALID;
     last_gear = geometry_lib::SEG_GEAR_INVALID;
     last_steer = geometry_lib::SEG_STEER_INVALID;
     steer_cmd_vec.clear();
     gear_cmd_vec.clear();
+    gear_index_vec.clear();
     path_pt_vec.clear();
     collide_flag = false;
   }
@@ -1008,6 +1072,14 @@ const std::string GetGearString(const uint8_t gear);
 const std::string GetSteerString(const uint8_t steer);
 
 const std::string GetSlotSideString(const uint8_t slot_side);
+
+const bool GetRectangle(const Eigen::Vector2d pos, const double heading,
+                        const double length, const double width,
+                        std::vector<Eigen::Vector2d> &rectangle);
+
+const bool GetPolygonBound(double *x_min, double *x_max, double *y_min,
+                           double *y_max,
+                           const std::vector<Eigen::Vector2d> &polygon);
 
 }  // namespace geometry_lib
 }  // namespace pnc

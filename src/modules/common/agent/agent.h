@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 
 #include "agent_decision.h"
 #include "math/box2d.h"
@@ -135,6 +136,9 @@ class Agent {
   const double prediction_cutin_score() const;
   void set_prediction_cutin_score(const double prediction_cutin_score);
 
+  const bool is_crossing() const;
+  void set_is_crossing(const bool is_crossing);
+
   const double timestamp_s() const;
   void set_timestamp_s(const double timestamp_s);
 
@@ -156,6 +160,9 @@ class Agent {
 
   const bool is_reverse() const;
   void set_is_reverse(const bool is_reverse);
+
+  const bool is_reverse_in_large_curv() const;
+  void set_is_reverse_in_large_curv(const bool is_reverse_in_large_curv);
 
   const bool is_far_in_large_curv() const;
   void set_is_far_in_large_curv(const bool is_far_in_large_curv);
@@ -182,6 +189,12 @@ class Agent {
   const bool is_tfl_virtual_obs() const;
   void set_is_tfl_virtual_obs(bool is_tfl_virtual_obs);
 
+  const double d_path() const;
+  void set_d_path(double d_path);
+
+  const double d_rel() const;
+  void set_d_rel(double d_rel);
+
   ~Agent() = default;
 
  private:
@@ -203,6 +216,9 @@ class Agent {
   double accel_ = 0.0;
   planning_math::Box2d box_;
 
+  double d_path_ = std::numeric_limits<double>::max();
+  double d_rel_ = std::numeric_limits<double>::max();
+
   std::vector<trajectory::Trajectory> trajectories_;
   // std::vector<trajectory::Trajectory> trajectories_used_by_st_graph_;
 
@@ -220,6 +236,8 @@ class Agent {
   // steady cut in flag(count for 3 frames)
   bool is_cutin_ = false;
   double prediction_cutin_score_ = 0.0;
+
+  bool is_crossing_ = false;
 
   double timestamp_s_ = 0.0;
   uint64_t timestamp_us_ = 0;
@@ -242,6 +260,7 @@ class Agent {
   bool is_sod_ = false;
   bool need_backward_extend_ = false;
   bool is_far_in_large_curv_ = false;
+  bool is_reverse_in_large_curv_ = false;
   bool is_reverse_cutin_ = false;
 
   bool is_cut_out_for_lane_change_ = false;

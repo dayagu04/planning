@@ -56,8 +56,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   plan_debug_json_msg = find_nearest(bag_loader.plan_debug_msg, bag_time, True)
   prediction_msg = find_nearest(bag_loader.prediction_msg, bag_time)
   ctrl_msg = find_nearest(bag_loader.ctrl_msg, bag_time)
-  ctrl_debug_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time)
-  ctrl_debug_json_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time,True)
+  # ctrl_debug_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time)
+  # ctrl_debug_json_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time,True)
+  ctrl_debug_msg, ctrl_debug_json_msg = [], []
   ehr_static_map_msg = find_nearest(bag_loader.ehr_static_map_msg, bag_time)
   ehr_sd_map_msg = find_nearest(bag_loader.ehr_sd_map_msg, bag_time)
   ehr_parking_map_msg = find_nearest(bag_loader.ehr_parking_map_msg, bag_time)
@@ -338,7 +339,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       7:local_view_data['lane_mark_data_7'],
       8:local_view_data['lane_mark_data_8'],
       9:local_view_data['lane_mark_data_9'],
-    }    
+    }
 
     for i in range(20):
       try:
@@ -567,6 +568,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       pass
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
     try:
       intersection_state = plan_debug_msg.real_time_lon_behavior_planning_input.intersection_state
       print("intersection_state: ", intersection_state)
@@ -665,6 +669,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       replan_status = plan_debug_json_msg["replan_status"]
       init_pos_point_x = []
       init_pos_point_y = []
+      init_pos_line_x = []
+      init_pos_line_y = []
       ego_pos_compensation_x_ = []
       ego_pos_compensation_y_ = []
       init_pos_point_theta = []
@@ -677,6 +683,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
         temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
         init_pos_point_theta.append(temp_theta)
+
+      for i in range(len(bag_loader.plan_debug_msg['data'])):
+        init_pos_xn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.x
+        init_pos_yn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.y
+
+        if g_is_display_enu:
+          local_init_x = init_pos_xn_i
+          local_init_y = init_pos_yn_i
+        else:
+         local_init_x, local_init_y = global2local(init_pos_xn_i, init_pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+        init_pos_line_x.append(local_init_x)
+        init_pos_line_y.append(local_init_y)
+
+      local_view_data['data_init_line'].data.update({
+        'init_pos_line_x': init_pos_line_x,
+        'init_pos_line_y': init_pos_line_y,
+       })
 
       local_view_data['data_init_pos_point'].data.update({
         'init_pos_point_y': init_pos_point_y,
@@ -967,8 +991,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'prediction_y' : prediction_dict[i]['y'],
           'prediction_x' : prediction_dict[i]['x'],
         })
-    except:
-      print("prediction error")
+    except Exception as error:
+      print("prediction error: ", error)
       pass
 
   # load control
@@ -1155,6 +1179,7 @@ def load_local_view_figure():
                                                  'replan_status':[],
                                                  'ego_pos_compensation_x': [],
                                                  'ego_pos_compensation_y': []})
+  data_init_line = ColumnDataSource(data = {'init_pos_line_x':[], 'init_pos_line_y':[]})
   data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
   macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
@@ -1416,6 +1441,7 @@ def load_local_view_figure():
                      'origin_data_ego':origin_data_ego, \
                      'data_ego_pos_point': data_ego_pos_point, \
                      'data_init_pos_point': data_init_pos_point, \
+                     'data_init_line': data_init_line, \
                      'data_merge_point': data_merge_point, \
                      'macroeconomic_decider_data_merge_point': macroeconomic_decider_data_merge_point, \
                      'boundary_line_merge_point': boundary_line_merge_point, \
@@ -1698,6 +1724,9 @@ def load_local_view_figure():
   fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
 
+  fig1.line('init_pos_line_y', 'init_pos_line_x', source = data_init_line, line_width = 3, line_color = 'purple', line_dash = 'solid', legend_label = 'init_point_line')
+
+
   if is_vis_map:
     for i in range (len(ehr_data_lanes)):
       keyy = 'ehr_line_{}_y'.format(i)
@@ -1764,23 +1793,23 @@ def load_local_view_figure():
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_4, radius = 0.03, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
 
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fm_obj, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fm_obj',visible = False)
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fl_obj, fill_color = "red", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fl_obj',visible = False)
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fr_obj, fill_color = "blue", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fr_obj',visible = False)
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_rl_obj, fill_color = "yellow", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rl_obj',visible = False)
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_rr_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rr_obj',visible = False)
+  # fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fm_obj, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fm_obj',visible = False)
+  # fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fl_obj, fill_color = "red", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fl_obj',visible = False)
+  # fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fr_obj, fill_color = "blue", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fr_obj',visible = False)
+  # fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_rl_obj, fill_color = "yellow", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rl_obj',visible = False)
+  # fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_rr_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_rr_obj',visible = False)
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_obj, text_color="orange", text_align="center", text_font_size="10pt", legend_label = 'rdg_info',visible = False)
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="maroon", text_align="center", text_font_size="10pt", legend_label = 'me_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fm_obj, text_color="palegreen", text_align="center", text_font_size="10pt", legend_label = 'radar_fm_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fl_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'radar_fl_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fr_obj, text_color="blue", text_align="center", text_font_size="10pt", legend_label = 'radar_fr_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rl_obj, text_color="yellow", text_align="center", text_font_size="10pt", legend_label = 'radar_rl_info',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rr_obj, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'radar_rr_info',visible = False)
-  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
+  # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fm_obj, text_color="palegreen", text_align="center", text_font_size="10pt", legend_label = 'radar_fm_info',visible = False)
+  # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fl_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'radar_fl_info',visible = False)
+  # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_fr_obj, text_color="blue", text_align="center", text_font_size="10pt", legend_label = 'radar_fr_info',visible = False)
+  # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rl_obj, text_color="yellow", text_align="center", text_font_size="10pt", legend_label = 'radar_rl_info',visible = False)
+  # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_radar_rr_obj, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'radar_rr_info',visible = False)
+  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction', visible = False)
+  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction', visible = False)
+  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction', visible = False)
+  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction', visible = False)
+  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction', visible = False)
   # fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
   # fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec' ,source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id')
   # fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')

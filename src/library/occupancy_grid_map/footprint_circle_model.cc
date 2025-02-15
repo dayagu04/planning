@@ -2,8 +2,8 @@
 
 #include "log_glog.h"
 #include "pose2d.h"
-#include "transform2d.h"
 #include "src/modules/apa_function/apa_param_config.h"
+#include "transform2d.h"
 
 namespace planning {
 
@@ -16,15 +16,12 @@ void FootPrintCircleModel::Init(const float lat_safe_buffer,
   return;
 }
 
-void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
-                                            const float lon_safe_buffer,
-                                            const float mirror_buffer) {
+void FootPrintCircleModel::UpdateSafeBuffer(
+    const float lat_safe_buffer, const float lon_safe_buffer,
+    const float mirror_buffer, const double big_circle_safe_buffer) {
   const std::vector<double> &circle_x = apa_param.GetParam().footprint_circle_x;
   const std::vector<double> &circle_y = apa_param.GetParam().footprint_circle_y;
   const std::vector<double> &circle_r = apa_param.GetParam().footprint_circle_r;
-
-  // big circle, buffer is 0.35
-  double big_circle_safe_buffer = 0.35;
 
   // min_lon_buffer:
   // 1. gear is reverse, car head buffer;
@@ -41,7 +38,7 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
   // small circle
   // todo: add safe buffer for mirrors
   for (size_t i = 1; i < circle_x.size(); i++) {
-    if (local_circles_.size >= footprint_circle_num) {
+    if (local_circles_.size >= FOOTPRINT_CIRCLE_NUM) {
       continue;
     }
 
@@ -53,12 +50,20 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + mirror_buffer;
       local_circles_.circles[local_circles_.size].safe_buffer = mirror_buffer;
-    } else if (i == 1 || i == 2 || i == 7) {
+    } else if (i == 1 || i == 5) {
+      local_circles_.circles[local_circles_.size].radius = (float)circle_r[i];
+      local_circles_.circles[local_circles_.size].pos.y += lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
+    } else if (i == 7) {
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + lat_safe_buffer;
       local_circles_.circles[local_circles_.size].pos.x -= lat_safe_buffer;
       local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
-    } else if (i == 4 || i == 5 || i == 10) {
+    } else if (i == 4 || i == 2) {
+      local_circles_.circles[local_circles_.size].radius = (float)circle_r[i];
+      local_circles_.circles[local_circles_.size].pos.y -= lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
+    } else if (i == 10) {
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + lat_safe_buffer;
       local_circles_.circles[local_circles_.size].pos.x += lat_safe_buffer;
@@ -75,13 +80,7 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
   // gear drive
   // front buffer: lon_safe_buffer
   drive_gear_circles_ = local_circles_;
-  drive_gear_circles_.circles[0].pos.x =
-      local_circles_.circles[0].pos.x + lon_safe_buffer;
-  drive_gear_circles_.circles[1].pos.x =
-      local_circles_.circles[1].pos.x + lon_safe_buffer;
-  drive_gear_circles_.circles[6].pos.x =
-      local_circles_.circles[6].pos.x + lon_safe_buffer;
-
+  drive_gear_circles_.size = 12;
   drive_gear_circles_.circles[3].pos.x =
       local_circles_.circles[3].pos.x - min_lon_buffer;
   drive_gear_circles_.circles[4].pos.x =
@@ -89,10 +88,22 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
   drive_gear_circles_.circles[9].pos.x =
       local_circles_.circles[9].pos.x - min_lon_buffer;
 
+  drive_gear_circles_.circles[10] = local_circles_.circles[0];
+  drive_gear_circles_.circles[10].pos.y -= lat_safe_buffer;
+  drive_gear_circles_.circles[10].pos.x += lon_safe_buffer;
+
+  drive_gear_circles_.circles[11] = local_circles_.circles[1];
+  drive_gear_circles_.circles[11].pos.y += lat_safe_buffer;
+  drive_gear_circles_.circles[11].pos.x += lon_safe_buffer;
+  drive_gear_circles_.circles[6].pos.x += lon_safe_buffer;
+
+  global_drive_gear_circles_ = drive_gear_circles_;
+
   // DebugCircles(&drive_gear_circles_);
 
   // gear reverse
   reverse_gear_circles_ = local_circles_;
+  reverse_gear_circles_.size = 12;
   reverse_gear_circles_.circles[0].pos.x =
       local_circles_.circles[0].pos.x + min_lon_buffer;
   reverse_gear_circles_.circles[1].pos.x =
@@ -100,12 +111,16 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
   reverse_gear_circles_.circles[6].pos.x =
       local_circles_.circles[6].pos.x + min_lon_buffer;
 
-  reverse_gear_circles_.circles[3].pos.x =
-      local_circles_.circles[3].pos.x - lon_safe_buffer;
-  reverse_gear_circles_.circles[4].pos.x =
-      local_circles_.circles[4].pos.x - lon_safe_buffer;
-  reverse_gear_circles_.circles[9].pos.x =
-      local_circles_.circles[9].pos.x - lon_safe_buffer;
+  reverse_gear_circles_.circles[10] = local_circles_.circles[4];
+  reverse_gear_circles_.circles[10].pos.y -= lat_safe_buffer;
+  reverse_gear_circles_.circles[10].pos.x -= lon_safe_buffer;
+
+  reverse_gear_circles_.circles[11] = local_circles_.circles[3];
+  reverse_gear_circles_.circles[11].pos.y += lat_safe_buffer;
+  reverse_gear_circles_.circles[11].pos.x -= lon_safe_buffer;
+  reverse_gear_circles_.circles[9].pos.x -= lon_safe_buffer;
+
+  global_reverse_gear_circles_ = reverse_gear_circles_;
 
   // DebugCircles(&reverse_gear_circles_);
 
@@ -124,6 +139,8 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
       local_circles_.circles[4].pos.x - min_lon_buffer;
   local_circles_.circles[9].pos.x =
       local_circles_.circles[9].pos.x - min_lon_buffer;
+
+  global_circles_ = local_circles_;
 
   // DebugCircles(&local_circles_);
   // ILOG_INFO << "footprint init success";
@@ -188,15 +205,12 @@ void FootPrintCircleModel::LocalToGlobalByGear(
   // max circle
   tf->ULFLocalPointToGlobal(&(global_circle->max_circle.pos),
                             local->max_circle.pos);
-
-  // DebugCircle(&local_circles.max_circle);
+  // DebugCircles(local);
 
   // fill circle
   for (int i = 0; i < local->size; i++) {
     tf->ULFLocalPointToGlobal(&(global_circle->circles[i].pos),
                               local->circles[i].pos);
-
-    // DebugCircle(&local_circles.circles[i]);
   }
 
   global_circle->size = local->size;
@@ -250,17 +264,28 @@ const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircle() {
   return local_circles_;
 }
 
-void FootPrintCircleModel::DebugCircle(FootPrintCircle *circle) {
+void FootPrintCircleModel::DebugCircle(const FootPrintCircle *circle) const {
   ILOG_INFO << "x " << circle->pos.x << " y " << circle->pos.y << " r "
-            << circle->radius;
+            << circle->radius << ",safe buffer = " << circle->safe_buffer;
 }
 
-void FootPrintCircleModel::DebugCircles(FootPrintCircleList *circles) {
+void FootPrintCircleModel::DebugCircles(
+    const FootPrintCircleList *circles) const {
   DebugCircle(&circles->max_circle);
 
   for (int i = 0; i < circles->size; i++) {
     DebugCircle(&circles->circles[i]);
   }
+}
+
+FootPrintCircleList *FootPrintCircleModel::GetMutableGlobalFPCircleByGear(
+    const AstarPathGear gear) {
+  if (gear == AstarPathGear::DRIVE) {
+    return &global_drive_gear_circles_;
+  } else if (gear == AstarPathGear::REVERSE) {
+    return &global_reverse_gear_circles_;
+  }
+  return &global_circles_;
 }
 
 }  // namespace planning

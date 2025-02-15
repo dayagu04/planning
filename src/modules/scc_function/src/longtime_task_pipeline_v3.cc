@@ -14,6 +14,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LaneChangeDecider>(config_builder, session);
   speed_adjust_decider_ =
       std::make_unique<SpeedAdjustDecider>(config_builder, session);
+  lateral_obstacle_decider_ =
+      std::make_unique<LateralObstacleDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -57,9 +59,10 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LongRefPathDecider>(config_builder, session);
   scc_lon_behavior_planner_ =
       std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
+  start_stop_decider_ =
+      std::make_unique<StartStopDecider>(config_builder, session);
   scc_longitudinal_motion_planner_ =
-      std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
-
+      std::make_unique<SccLongitudinalMotionPlannerV3>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
 }
@@ -86,6 +89,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = speed_adjust_decider_->Execute();
   if (!ok) {
     AddErrorInfo(speed_adjust_decider_->Name());
+    return false;
+  }
+
+  ok = lateral_obstacle_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(lateral_obstacle_decider_->Name());
     return false;
   }
 
@@ -220,6 +229,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = speed_limit_decider_->Execute();
   if (!ok) {
     AddErrorInfo(speed_limit_decider_->Name());
+    return false;
+  }
+
+  ok = start_stop_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(start_stop_decider_->Name());
     return false;
   }
 

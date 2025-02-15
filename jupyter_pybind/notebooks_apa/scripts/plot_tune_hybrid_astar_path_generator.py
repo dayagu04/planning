@@ -104,7 +104,7 @@ fig1.line('x_vec', 'y_vec', source = data_search_path, line_width = 2, line_colo
 fig1.circle('x_vec', 'y_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('x_vec', 'y_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
-fig1.circle(x='car_circle_xn', y='car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
+fig1.circle(x='car_circle_xn', y='car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = True)
 
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -182,7 +182,7 @@ class LocalViewSlider:
 
     self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.6, step=0.05)
     self.left_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_virtual_wall_x",min=-30.0, max=20.0, value=-12.6, step=0.05)
-    self.right_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_virtual_wall_x",min=0.0, max=20.0, value=15, step=0.05)
+    self.right_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_virtual_wall_x",min=0.0, max=20.0, value=15, step=0.01)
     self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.6, step=0.05)
     self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.6, step=0.5)
     self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.6, step=0.05)
@@ -222,13 +222,15 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
   # vehicle_type = 'CHERY_T26'
   vehicle_type = 'CHERY_E0X'
-  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, 0.0)
+  lat_buffer = 0.0
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, lat_buffer)
 
   car_xn = []
   car_yn = []
 
   for i in range(len(car_xb)):
-      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y, ego_heading/57.3)
+      tmp_x, tmp_y = local2global(
+          car_xb[i], car_yb[i], ego_x, ego_y, ego_heading * math.pi/180.0)
       car_xn.append(tmp_x)
       car_yn.append(tmp_y)
       print('y', car_yb[i])
@@ -709,9 +711,8 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
   #   'car_yn': car_yn,
   # })
 
-
   # vehicle_type = 'CHERY_T26'
-  footprint_model = hybrid_astar_py.GetFootPrintModel()
+  footprint_model_global = hybrid_astar_py.GetFootPrintModelGlobal()
 
   car_circle_xn = []
   car_circle_yn = []
@@ -725,12 +726,26 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
       y = ego_pose[1]
       heading = ego_pose[2]
 
-      tmp_x, tmp_y = local2global(
+      if i == 1 or i==5:
+        tmp_x, tmp_y = local2global(
+          car_circle_x[i], car_circle_y[i]+lat_buffer, x, y, heading)
+      elif i==2 or i==4:
+        tmp_x, tmp_y = local2global(
+            car_circle_x[i], car_circle_y[i]-lat_buffer, x, y, heading)
+      else:
+        tmp_x, tmp_y = local2global(
           car_circle_x[i], car_circle_y[i], x, y, heading)
-
       car_circle_xn.append(tmp_x)
       car_circle_yn.append(tmp_y)
-      car_circle_rn.append(car_circle_r[i])
+
+      if i == 0:
+        car_circle_rn.append(car_circle_r[i]+lat_buffer)
+      elif i == 3 or i == 6:
+        car_circle_rn.append(car_circle_r[i]+lat_buffer)
+      elif i ==1 or i==2 or i==4 or i==5:
+        car_circle_rn.append(car_circle_r[i])
+      else:
+        car_circle_rn.append(car_circle_r[i]+lat_buffer)
 
     data_veh_circle.data.update({
         'car_circle_xn': car_circle_xn,
@@ -738,20 +753,30 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
         'car_circle_rn': car_circle_rn
     })
 
-  # expansion
-  for i in range(len(footprint_model)):
+  for i in range(len(footprint_model_global)):
     x = ego_pose[0]
     y = ego_pose[1]
     heading = ego_pose[2]
 
-    car_circle_xn.append(footprint_model[i][0])
-    car_circle_yn.append(footprint_model[i][1])
-    car_circle_rn.append(footprint_model[i][2])
+    car_circle_xn.append(footprint_model_global[i][0])
+    car_circle_yn.append(footprint_model_global[i][1])
+    car_circle_rn.append(footprint_model_global[i][2])
+
+  # astar current gear path target
+  pose = hybrid_astar_py.GetCurrentGearPathEnd()
+  footprint_model_local = hybrid_astar_py.GetFootPrintModelLocal()
+  for i in range(len(footprint_model_local)):
+    tmp_x, tmp_y = local2global(
+        footprint_model_local[i][0], footprint_model_local[i][1], pose[0], pose[1], pose[2])
+
+    car_circle_xn.append(tmp_x)
+    car_circle_yn.append(tmp_y)
+    car_circle_rn.append(footprint_model_local[i][2])
 
   data_veh_circle.data.update({
     'car_circle_xn': car_circle_xn,
     'car_circle_yn': car_circle_yn,
-    'car_circle_rn': car_circle_rn
+    'car_circle_rn': car_circle_rn,
   })
 
   push_notebook()

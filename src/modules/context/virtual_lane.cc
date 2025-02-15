@@ -1,13 +1,13 @@
 #include "virtual_lane.h"
-#include "config/basic_type.h"
-#include "environmental_model.h"
 
 #include <algorithm>
 #include <cassert>
 
+#include "config/basic_type.h"
 #include "environmental_model.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
+#include "planning_context.h"
 #include "virtual_lane.h"
 
 namespace {
@@ -20,6 +20,7 @@ namespace planning {
 VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
+  is_nearing_ramp_mlc_task_ = false;
   order_id_ = lane.order_id;
   // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id;
@@ -216,7 +217,7 @@ double VirtualLane::width_by_s(double s) {
     auto &reference_path_points = reference_path_->get_points();
     if (!reference_path_points.empty()) {
       auto comp = [](const ReferencePathPoint &p, const double s) {
-        return p.path_point.s < s;
+        return p.path_point.s() < s;
       };
       auto p_first_point = std::lower_bound(
           reference_path_points.begin(), reference_path_points.end(), s, comp);
@@ -225,9 +226,10 @@ double VirtualLane::width_by_s(double s) {
       } else if (p_first_point == reference_path_points.end()) {
         width = reference_path_points.back().lane_width;
       } else {
-        width = planning_math::lerp(
-            (p_first_point - 1)->lane_width, (p_first_point - 1)->path_point.s,
-            p_first_point->lane_width, p_first_point->path_point.s, s);
+        width = planning_math::lerp((p_first_point - 1)->lane_width,
+                                    (p_first_point - 1)->path_point.s(),
+                                    p_first_point->lane_width,
+                                    p_first_point->path_point.s(), s);
       }
     }
   }
@@ -348,7 +350,7 @@ void VirtualLane::update_speed_limit(double ego_vel,
     double acc_brake_min = 100.0;
     for (size_t i = 1; i < referece_path_points.size(); ++i) {
       if (!find_last &&
-          referece_path_points[i].path_point.s > 0.0) {  // hack: frenet_point
+          referece_path_points[i].path_point.s() > 0.0) {  // hack: frenet_point
         find_last = true;
         last_speed = referece_path_points[i - 1].max_velocity;
         current_lane_speed_limit_ = last_speed;
@@ -356,13 +358,14 @@ void VirtualLane::update_speed_limit(double ego_vel,
       }
 
       if (find_last && referece_path_points[i].max_velocity != last_speed) {
-        double acc_brake = (std::pow(referece_path_points[i].max_velocity, 2) -
-                            std::pow(ego_vel, 2)) /
-                           std::max(1.0, referece_path_points[i].path_point.s);
+        double acc_brake =
+            (std::pow(referece_path_points[i].max_velocity, 2) -
+             std::pow(ego_vel, 2)) /
+            std::max(1.0, referece_path_points[i].path_point.s());
         if (acc_brake < acc_brake_min) {
           acc_brake_min = acc_brake;
           find_change = true;
-          speed_change_point_.x = referece_path_points[i].path_point.s;
+          speed_change_point_.x = referece_path_points[i].path_point.s();
           speed_change_point_.y = 0;
           speed_change_point_.speed = referece_path_points[i].max_velocity;
         }
@@ -370,7 +373,7 @@ void VirtualLane::update_speed_limit(double ego_vel,
     }
 
     if (!find_change) {
-      speed_change_point_.x = referece_path_points.back().path_point.s;
+      speed_change_point_.x = referece_path_points.back().path_point.s();
       speed_change_point_.y = 0;
       speed_change_point_.speed = referece_path_points.back().max_velocity;
     }
@@ -405,15 +408,15 @@ void VirtualLane::ProcessEgoOnRoadMLC(
   bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
   int need_continue_lc_num_on_off_ramp_region =
       route_info_output.need_continue_lc_num_on_off_ramp_region;
-  //生成各个场景的变道任务
+  // 生成各个场景的变道任务
   if (need_continue_lc_num_on_off_ramp_region !=
-      0) {  //处理在下匝道的split区域继续生成1个下匝道的任务
+      0) {  // 处理在下匝道的split区域继续生成1个下匝道的任务
     current_tasks_.emplace_back(need_continue_lc_num_on_off_ramp_region);
   } else if (lc_nums_for_split !=
-             0) {  //处理在接近split的区域生成1个选择split的任务
+             0) {  // 处理在接近split的区域生成1个选择split的任务
     current_tasks_.emplace_back(lc_nums_for_split);
   } else if (
-      is_nearing_other_lane_merge_to_road_point) {  //主路前方接近汇入区域的变道
+      is_nearing_other_lane_merge_to_road_point) {  // 主路前方接近汇入区域的变道
     if (first_merge_direction == RAMP_ON_LEFT) {
       if (order_id_ + 1 == lane_num) {
         current_tasks_.emplace_back(-1);
@@ -428,14 +431,20 @@ void VirtualLane::ProcessEgoOnRoadMLC(
       }
     }
   } else if (is_nearing_ramp && !is_on_ramp &&
-             !is_ego_on_split_region) {  //在主路上，前方接近ramp的变道
+             !is_ego_on_split_region) {  // 在主路上，前方接近ramp的变道
     if (ramp_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
+        if (relative_id_ == 0) { //表示当前车道,输出给speed adjudst的标志位
+          is_nearing_ramp_mlc_task_ = true;
+        }
       }
     } else if (ramp_direction == RAMP_ON_LEFT) {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
+        if (relative_id_ == 0) { //表示当前车道,输出给speed adjudst的标志位
+          is_nearing_ramp_mlc_task_ = true;
+        }
       }
     }
   } else if (
@@ -470,17 +479,17 @@ void VirtualLane::ProcessEgoOnRampMLC(
   const RampDirection second_merge_direction =
       route_info_output.second_merge_direction;
   const bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
-  //在匝道汇入匝道时，距离merge的距离在100m范围内时，
-  //再生成地图变道任务，避免前面有1分2场景的不合理变道
+  // 在匝道汇入匝道时，距离merge的距离在100m范围内时，
+  // 再生成地图变道任务，避免前面有1分2场景的不合理变道
   const double dis_to_first_merge_threshold = 100;
   int need_continue_lc_num_on_off_ramp_region =
       route_info_output.need_continue_lc_num_on_off_ramp_region;
-  //生成各个场景的变道任务
+  // 生成各个场景的变道任务
   if (need_continue_lc_num_on_off_ramp_region !=
-      0) {  //处理在下匝道的split区域继续生成1个下匝道的任务
+      0) {  // 处理在下匝道的split区域继续生成1个下匝道的任务
     current_tasks_.emplace_back(need_continue_lc_num_on_off_ramp_region);
   } else if (dis_to_first_merge > dis_to_first_split &&
-             !is_ego_on_split_region) {  //首先处理匝道上的分叉口
+             !is_ego_on_split_region) {  // 首先处理匝道上的分叉口
     if (first_split_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
@@ -501,7 +510,7 @@ void VirtualLane::ProcessEgoOnRampMLC(
         current_tasks_.emplace_back(1);
       }
     }
-  } else if (is_ramp_merge_to_ramp_on_expressway &&  //匝道汇入匝道的scean
+  } else if (is_ramp_merge_to_ramp_on_expressway &&  // 匝道汇入匝道的scean
              !is_ego_on_split_region &&
              dis_to_first_merge < dis_to_first_merge_threshold) {
     RampDirection next_lc_dir = RAMP_NONE;
@@ -514,13 +523,13 @@ void VirtualLane::ProcessEgoOnRampMLC(
           current_tasks_.emplace_back(-1);
         }
       }
-      //fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
-      // } else if (first_merge_direction == RAMP_ON_LEFT &&
-      //            next_lc_dir == RAMP_ON_LEFT) {
-      //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-      //     current_tasks_.emplace_back(1);
-      //   }
-      // }
+      // fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
+      //  } else if (first_merge_direction == RAMP_ON_LEFT &&
+      //             next_lc_dir == RAMP_ON_LEFT) {
+      //    for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+      //      current_tasks_.emplace_back(1);
+      //    }
+      //  }
     } else if (dis_to_second_merge >= dis_to_first_split) {
       // 下下一个是split的场景
       next_lc_dir = first_split_direction;
@@ -530,13 +539,13 @@ void VirtualLane::ProcessEgoOnRampMLC(
           current_tasks_.emplace_back(-1);
         }
       }
-      //fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
-      // else if (first_merge_direction == RAMP_ON_LEFT &&
-      //            next_lc_dir == RAMP_ON_RIGHT) {
-      //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-      //     current_tasks_.emplace_back(1);
-      //   }
-      // }
+      // fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
+      //  else if (first_merge_direction == RAMP_ON_LEFT &&
+      //             next_lc_dir == RAMP_ON_RIGHT) {
+      //    for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+      //      current_tasks_.emplace_back(1);
+      //    }
+      //  }
     }
   }
 }

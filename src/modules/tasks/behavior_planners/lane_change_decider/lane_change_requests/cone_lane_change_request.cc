@@ -46,7 +46,7 @@ ConeRequest::ConeRequest(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-  base_frenet_coord_ = std::make_shared<KDPath>();
+  base_frenet_coord_ = std::make_shared<planning_math::KDPath>();
 }
 
 void ConeRequest::Update(int lc_status) {
@@ -417,7 +417,7 @@ bool ConeRequest::GetOriginLaneWidthByCone(
       const ReferencePathPoint& ref_path_point =
           origin_refline->get_points()[i];
       origin_lane_s_width_.emplace_back(std::make_pair(
-          ref_path_point.path_point.s, ref_path_point.lane_width));
+          ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
     origin_lane_width = QueryLaneWidth(cone_s, origin_lane_s_width_);
   }
@@ -564,7 +564,7 @@ void ConeRequest::ConeDir() {
               const ReferencePathPoint& ref_path_point =
                   target_refline->get_points()[i];
               right_lane_s_width_.emplace_back(std::make_pair(
-                  ref_path_point.path_point.s, ref_path_point.lane_width));
+                  ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
           if (CheckTargetLaneAvailable(false, rlane)) {
@@ -590,7 +590,7 @@ void ConeRequest::ConeDir() {
               const ReferencePathPoint& ref_path_point =
                   target_refline->get_points()[i];
               left_lane_s_width_.emplace_back(std::make_pair(
-                  ref_path_point.path_point.s, ref_path_point.lane_width));
+                  ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
           if (CheckTargetLaneAvailable(true, llane)) {
@@ -723,7 +723,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(seach_lane->get_virtual_id(), false);
 
-  std::shared_ptr<KDPath> target_lane_frenet_coord =
+  std::shared_ptr<planning_math::KDPath> target_lane_frenet_coord =
       target_refline->get_frenet_coord();
 
   std::vector<ConePoint> serach_cone_points = cone_points_;

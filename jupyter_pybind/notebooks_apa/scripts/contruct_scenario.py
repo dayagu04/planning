@@ -15,18 +15,17 @@ from lib.load_rotate import *
 
 
 def construct_scenario(
-      slot_width = 2.2,
-      slot_length = 6.0,
-      curb_offset = 0.4,
-      dx = 0.4,
-      channel_width = 5.5,
-      front_car_y_offset = 0.4,
-      front_car_heading = 5.0 / 57.3,
-
-      rear_car_y_offset = 0.0,
-      rear_car_heading = -2.0 / 57.3,
-      is_front_occupied = True,
-      is_rear_occupied = True):
+    slot_width = 2.2,
+    slot_length = 6.0,
+    curb_offset = 0.4,
+    dx = 0.4,
+    channel_width = 5.5,
+    front_car_y_offset = 0.4,
+    front_car_heading = 5.0 / 57.3,
+    rear_car_y_offset = 0.0,
+    rear_car_heading = -2.0 / 57.3,
+    is_front_occupied = True,
+    is_rear_occupied = True):
 
   # channel car
   x_offset_vec = [1.2, 3.6, 6.0, 8.9,12.3]

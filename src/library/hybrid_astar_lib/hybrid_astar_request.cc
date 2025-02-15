@@ -17,7 +17,8 @@ void DebugAstarRequestString(const AstarRequest &request) {
 
   ILOG_INFO << " rs request: " << GetRSRequestType(request.rs_request)
             << ",plan reason = " << PlanReasonDebugString(request.plan_reason)
-            << ",swap goal = " << request.swap_start_goal;
+            << ",swap goal = " << request.swap_start_goal << ",dir "
+            << static_cast<int>(request.direction_request);
 
   // ILOG_INFO << "start pose";
   // request.start_.DebugString();
@@ -27,4 +28,12 @@ void DebugAstarRequestString(const AstarRequest &request) {
 
   return;
 }
+
+void ClearFirstActionReqeust(AstarRequest *request) {
+  request->first_action_request.has_request = false;
+  request->first_action_request.dist_request = 0.0;
+  request->first_action_request.gear_request = AstarPathGear::NONE;
+  return;
+}
+
 }  // namespace planning

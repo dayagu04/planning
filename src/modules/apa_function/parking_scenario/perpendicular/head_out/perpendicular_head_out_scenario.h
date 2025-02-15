@@ -1,8 +1,8 @@
 #ifndef __PERPENDICULAR_PARK_OUT_PLANNER_H__
 #define __PERPENDICULAR_PARK_OUT_PLANNER_H__
 
-#include "perpendicular_park_scenario.h"
 #include "perpendicular_head_out_path_generator.h"
+#include "perpendicular_park_scenario.h"
 
 namespace planning {
 namespace apa_planner {

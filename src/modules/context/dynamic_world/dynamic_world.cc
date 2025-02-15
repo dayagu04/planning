@@ -219,12 +219,12 @@ void DynamicWorld::BuildConnectionForEgoLane(
     }
     ego_center_line_points.reserve(ego_ref_line->get_points().size());
     for (const auto& ref_line_point : ego_ref_line->get_points()) {
-      planning_math::PathPoint path_point{ref_line_point.path_point.x,
-                                          ref_line_point.path_point.y};
+      planning_math::PathPoint path_point{ref_line_point.path_point.x(),
+                                          ref_line_point.path_point.y()};
       ego_center_line_points.emplace_back(path_point);
     }
-    ego_lane_coord_ =
-        std::make_shared<KDPath>(std::move(ego_center_line_points));
+    ego_lane_coord_ = std::make_shared<planning_math::KDPath>(
+        std::move(ego_center_line_points));
     return;
   } else {
     ego_lane_coord_ = ego_ref_line->get_frenet_coord();
@@ -313,12 +313,12 @@ void DynamicWorld::BuildConnectionForNeighborLane(
     }
     center_line_points.reserve(neighbor_ref_line->get_points().size());
     for (const auto& ref_line_point : neighbor_ref_line->get_points()) {
-      planning_math::PathPoint path_point{ref_line_point.path_point.x,
-                                          ref_line_point.path_point.y};
+      planning_math::PathPoint path_point{ref_line_point.path_point.x(),
+                                          ref_line_point.path_point.y()};
       center_line_points.emplace_back(path_point);
     }
     neighbor_lane_coord_ =
-        std::make_shared<KDPath>(std::move(center_line_points));
+        std::make_shared<planning_math::KDPath>(std::move(center_line_points));
     return;
   } else {
     neighbor_lane_coord_ = neighbor_ref_line->get_frenet_coord();

@@ -87,7 +87,7 @@ void ApaObstacle::TransformPolygonFromGlobalToLocal(
   return;
 }
 
-void ApaObstacle::GenerateLocalBoundingbox(cdl::AABB *box) const {
+void ApaObstacle::GenerateLocalBoundingbox(cdl::AABB* box) const {
   *box = cdl::AABB();
 
   for (const auto& pt : pt_clout_2d_local_) {

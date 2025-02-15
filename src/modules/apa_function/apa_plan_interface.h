@@ -6,14 +6,13 @@
 #include <unordered_map>
 #include <vector>
 
-
-#include "parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "local_view.h"
+#include "parking_scenario/parking_scenario.h"
+#include "parking_scenario/parking_scenario_manager.h"
 #include "plan_data.h"
 #include "planning_hmi_c.h"
 #include "session.h"
-#include "parking_scenario/parking_scenario_manager.h"
 
 namespace planning {
 namespace apa_planner {

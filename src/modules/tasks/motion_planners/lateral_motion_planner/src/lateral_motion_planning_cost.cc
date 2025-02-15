@@ -196,11 +196,12 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   const double d1 = Square(a1) + Square(b1);
   if (d1 > kEps) {
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
-    const double distance_to_soft_upper_bound = std::abs(numerator1) / std::sqrt(d1);
+    const double distance_to_soft_upper_bound =
+        std::abs(numerator1) / std::sqrt(d1);
 
     if (numerator1 < 0. && distance_to_soft_upper_bound > kEps) {
       cost = 0.5 * cost_config_ptr_->at(W_SOFT_CORRIDOR) *
-            Square(distance_to_soft_upper_bound);
+             Square(distance_to_soft_upper_bound);
     }
   }
 
@@ -216,7 +217,8 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   const double d2 = Square(a2) + Square(b2);
   if (d2 > kEps) {
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
-    const double distance_to_soft_lower_bound = std::abs(numerator2) / std::sqrt(d2);
+    const double distance_to_soft_lower_bound =
+        std::abs(numerator2) / std::sqrt(d2);
 
     if (numerator2 > 0. && distance_to_soft_lower_bound > kEps) {
       cost += 0.5 * cost_config_ptr_->at(W_SOFT_CORRIDOR) *
@@ -244,12 +246,13 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
 
   if (d1 > kEps) {
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
-    const double distance_to_soft_upper_bound = std::abs(numerator1) / std::sqrt(d1);
+    const double distance_to_soft_upper_bound =
+        std::abs(numerator1) / std::sqrt(d1);
     if (numerator1 < 0. && distance_to_soft_upper_bound > kEps) {
       lx(X) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * a1 *
-              (a1 * x[X] + b1 * x[Y] + c1) / d1;
+               (a1 * x[X] + b1 * x[Y] + c1) / d1;
       lx(Y) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * b1 *
-              (a1 * x[X] + b1 * x[Y] + c1) / d1;
+               (a1 * x[X] + b1 * x[Y] + c1) / d1;
       lxx(X, X) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * Square(a1) / d1;
       lxx(Y, Y) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * Square(b1) / d1;
     }
@@ -267,12 +270,13 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
   const double d2 = Square(a2) + Square(b2);
   if (d2 > kEps) {
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
-    const double distance_to_soft_lower_bound = std::abs(numerator2) / std::sqrt(d2);
+    const double distance_to_soft_lower_bound =
+        std::abs(numerator2) / std::sqrt(d2);
     if (numerator2 > 0. && distance_to_soft_lower_bound > kEps) {
       lx(X) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * a2 *
-              (a2 * x[X] + b2 * x[Y] + c2) / d2;
+               (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lx(Y) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * b2 *
-              (a2 * x[X] + b2 * x[Y] + c2) / d2;
+               (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lxx(X, X) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * Square(a2) / d2;
       lxx(Y, Y) += cost_config_ptr_->at(W_SOFT_CORRIDOR) * Square(b2) / d2;
     }
@@ -294,10 +298,11 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   const double d1 = Square(a1) + Square(b1);
   if (d1 > kEps) {
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
-    const double distance_to_hard_upper_bound = std::abs(numerator1) / std::sqrt(d1);
+    const double distance_to_hard_upper_bound =
+        std::abs(numerator1) / std::sqrt(d1);
     if (numerator1 < 0. && distance_to_hard_upper_bound > kEps) {
       cost = 0.5 * cost_config_ptr_->at(W_HARD_CORRIDOR) *
-            Square(a1 * x[X] + b1 * x[Y] + c1) / d1;
+             Square(a1 * x[X] + b1 * x[Y] + c1) / d1;
     }
   }
 
@@ -313,7 +318,8 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   const double d2 = Square(a2) + Square(b2);
   if (d2 > kEps) {
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
-    const double distance_to_hard_lower_bound = std::abs(numerator2) / std::sqrt(d2);
+    const double distance_to_hard_lower_bound =
+        std::abs(numerator2) / std::sqrt(d2);
     if (numerator2 > 0. && distance_to_hard_lower_bound > kEps) {
       cost += 0.5 * cost_config_ptr_->at(W_HARD_CORRIDOR) *
               Square(a2 * x[X] + b2 * x[Y] + c2) / d2;
@@ -339,12 +345,13 @@ void PathHardCorridorCostTerm::GetGradientHessian(
   const double d1 = Square(a1) + Square(b1);
   if (d1 > kEps) {
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
-    const double distance_to_hard_upper_bound = std::abs(numerator1) / std::sqrt(d1);
+    const double distance_to_hard_upper_bound =
+        std::abs(numerator1) / std::sqrt(d1);
     if (numerator1 < 0. && numerator1 > kEps) {
       lx(X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * a1 *
-              (a1 * x[X] + b1 * x[Y] + c1) / d1;
+               (a1 * x[X] + b1 * x[Y] + c1) / d1;
       lx(Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * b1 *
-              (a1 * x[X] + b1 * x[Y] + c1) / d1;
+               (a1 * x[X] + b1 * x[Y] + c1) / d1;
       lxx(X, X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(a1) / d1;
       lxx(Y, Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(b1) / d1;
     }
@@ -362,12 +369,13 @@ void PathHardCorridorCostTerm::GetGradientHessian(
   const double d2 = Square(a2) + Square(b2);
   if (d2 > kEps) {
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
-    const double distance_to_hard_lower_bound = std::abs(numerator2) / std::sqrt(d2);
+    const double distance_to_hard_lower_bound =
+        std::abs(numerator2) / std::sqrt(d2);
     if (numerator2 > 0. && distance_to_hard_lower_bound > kEps) {
       lx(X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * a2 *
-              (a2 * x[X] + b2 * x[Y] + c2) / d2;
+               (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lx(Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * b2 *
-              (a2 * x[X] + b2 * x[Y] + c2) / d2;
+               (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lxx(X, X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(a2) / d2;
       lxx(Y, Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(b2) / d2;
     }

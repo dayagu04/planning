@@ -17,8 +17,12 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 
 # bag path and frame dt
-# bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241220/20241220-10-36-40/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-20-10-36-40_no_camera.bag'
+# e0y1:  10034
+# e0y2:  04228
+# e0y8:  14520
+# e0y9:  18049
+# e0y10: 20267
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250110/20250110-18-29-57/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-10-18-29-58_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -148,6 +152,7 @@ data_plot_ref_line = ColumnDataSource(data={'plan_path_x': [],
 data_search_sequence_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
 data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_all_delete_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 
@@ -175,6 +180,7 @@ fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend
 fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
 fig1.line('y_vec', 'x_vec', source = data_search_sequence_path, line_width = 2, line_color = 'blue', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_sequence',visible = False)
 fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
+fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
 ### sliders config
@@ -854,65 +860,43 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   car_circle_xn = []
   car_circle_yn = []
   car_circle_rn = []
+
+  car_circle_x = []
+  car_circle_y = []
+  car_circle_r = []
+
+  footprint_model = replay_simulation_hybrid_astar.GetFootPrintModel()
+  for i in range(len(footprint_model)):
+    car_circle_x.append(footprint_model[i][0])
+    car_circle_y.append(footprint_model[i][1])
+    car_circle_r.append(footprint_model[i][2])
+
   for i in range(len(car_circle_x)):
     tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], pose[0], pose[1], pose[2])
     car_circle_xn.append(tmp_x)
     car_circle_yn.append(tmp_y)
+    car_circle_rn.append(car_circle_r[i])
 
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-
-
+  # ego pose circle list
   for i in range(len(car_circle_x)):
 
     x = loc_msg.position.position_boot.x
     y = loc_msg.position.position_boot.y
     heading = loc_msg.orientation.euler_boot.yaw
-
-    if i == 1 or i==2:
-      tmp_x, tmp_y = local2global(
-        car_circle_x[i]+0.2, car_circle_y[i], x, y, heading)
-    elif i==4 or i==5:
-     tmp_x, tmp_y = local2global(
-        car_circle_x[i]-0.2, car_circle_y[i], x, y, heading)
-    else:
-      tmp_x, tmp_y = local2global(
+    tmp_x, tmp_y = local2global(
         car_circle_x[i], car_circle_y[i], x, y, heading)
     car_circle_xn.append(tmp_x)
     car_circle_yn.append(tmp_y)
+    car_circle_rn.append(car_circle_r[i])
 
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-
+  # astar current gear path target
   for i in range(len(car_circle_x)):
-    if i == 1 or i==2:
-      tmp_x, tmp_y = local2global(
-        car_circle_x[i]+0.2, car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
-    elif i==4 or i==5:
-     tmp_x, tmp_y = local2global(
-        car_circle_x[i]-0.2, car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
-    else:
-      tmp_x, tmp_y = local2global(
+    tmp_x, tmp_y = local2global(
         car_circle_x[i], car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
 
     car_circle_xn.append(tmp_x)
     car_circle_yn.append(tmp_y)
-
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif  i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-
+    car_circle_rn.append(car_circle_r[i])
 
   data_veh_circle.data.update({
     'car_circle_xn': car_circle_xn,
@@ -1086,6 +1070,25 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_coordinate_system.data.update({
     'x': [pose[0]],
     'y': [pose[1]],
+  })
+
+  # all delete node
+  data_all_delete_node.data.update({
+    'x_vec': [],
+    'y_vec': [],
+  })
+
+  nodes = replay_simulation_hybrid_astar.GetDelNodeSequencePath()
+  node_x = []
+  node_y = []
+
+  for i in range(len(nodes)):
+    node_x.append(nodes[i][0])
+    node_y.append(nodes[i][1])
+
+  data_all_delete_node.data.update({
+    'x_vec': node_x,
+    'y_vec': node_y
   })
 
   # all search node

@@ -69,6 +69,7 @@ class ParkingScenario {
     FORCE_PLAN,
   };
 
+  // will be retired
   struct EgoSlotInfo {
     common::SlotInfo target_managed_slot;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter;
@@ -80,7 +81,7 @@ class ParkingScenario {
     double move_slot_dist = 0.0;
     std::vector<Eigen::Vector2d> limiter_corner;
 
-    Eigen::Vector2d slot_center;
+    Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
 
     size_t selected_slot_id = 0;
     size_t slot_type = 0;
@@ -104,6 +105,7 @@ class ParkingScenario {
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
     bool fix_limiter = false;
+    bool is_park_out_left = true;
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
@@ -150,6 +152,7 @@ class ParkingScenario {
       slot_occupied_ratio = 0.0;
 
       fix_limiter = false;
+      is_park_out_left = true;
 
       obs_pt_vec_slot.clear();
 
@@ -176,16 +179,17 @@ class ParkingScenario {
 
   struct Frame {
     void Reset() {
-      gear_change_count = 0;
-      is_replan = false;
-      // parking stage: go to prepare point; go to slot point;
+      replan_flag = false;
       is_replan_first = true;
       is_replan_second = false;
       is_replan_dynamic = false;
+      is_replan_by_uss = false;
+      is_last_path = false;
       dynamic_replan_count = 0;
+      dynamic_replan_fail_count = 0;
+      ego_stop_when_slot_jumps_much = false;
       total_plan_count = 0;
       in_slot_plan_count = 0;
-      is_finished = false;
       is_fix_slot = false;
       stuck_time = 0.0;
       stuck_uss_time = 0.0;
@@ -200,7 +204,6 @@ class ParkingScenario {
       current_path_length = 0.0;
       headin_current_path_length = 0.0;
       path_extended_dist = 1.0;
-      is_replan_by_uss = false;
       ego_slot_info.Reset();
       plan_stm.Reset();
       pathplan_result = 0;
@@ -208,33 +211,36 @@ class ParkingScenario {
       current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       replan_reason = NOT_REPLAN;
       plan_fail_reason = NOT_FAILED;
-      need_update_slot = true;
       correct_path_for_limiter = false;
-      replan_flag = false;
       dynamic_plan_fail_flag = false;
       gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
       is_left_empty = false;
       is_right_empty = false;
+
+      can_first_plan_again = true;
     }
+    bool can_first_plan_again = true;
+
     bool is_left_empty = false;
     bool is_right_empty = false;
 
-    bool is_replan = false;
+    bool replan_flag = false;
     bool is_replan_first = true;
     bool is_replan_second = false;
     bool is_replan_dynamic = false;
+    bool is_replan_by_uss = false;
+    bool is_last_path = false;
     uint8_t dynamic_replan_count = 0;
+    uint8_t dynamic_replan_fail_count = 0;
+    bool ego_stop_when_slot_jumps_much = false;
     uint8_t replan_reason = NOT_REPLAN;
     uint8_t plan_fail_reason = NOT_FAILED;
     uint8_t total_plan_count = 0;
     uint8_t in_slot_plan_count = 0;
-    bool is_finished = false;
     bool is_fix_slot = false;
     bool spline_success = false;
-    bool is_replan_by_uss = false;
     uint8_t pathplan_result = 0;
-    size_t gear_change_count = 0;
     double current_path_length = 0.0;
     double headin_current_path_length = 0.0;
     double path_extended_dist = 1.0;
@@ -256,15 +262,13 @@ class ParkingScenario {
     pnc::mathlib::spline headin_y_s_spline;
 
     PlannerStateMachine plan_stm;
+    // will be retired
     EgoSlotInfo ego_slot_info;
 
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
 
-    bool need_update_slot = true;
-
     bool correct_path_for_limiter = false;
-    bool replan_flag = false;
     bool dynamic_plan_fail_flag = false;
 
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
@@ -322,6 +326,7 @@ class ParkingScenario {
   }
 
   const Frame &GetFrame() const { return frame_; }
+  Frame *GetMutableFrame() { return &frame_; }
 
   const iflyauto::PlanningOutput &GetOutput() const { return planning_output_; }
 
@@ -336,6 +341,10 @@ class ParkingScenario {
 
   const std::vector<pnc::geometry_lib::PathPoint> &GetCurrentGearPlanPathPt() {
     return current_path_point_global_vec_;
+  }
+
+  std::vector<pnc::geometry_lib::GeometryPath> &GetPerferredGeometryPathVec() {
+    return perferred_geometry_path_vec_;
   }
 
  protected:
@@ -389,6 +398,9 @@ class ParkingScenario {
   // todo: update speed data
   trajectory::Trajectory trajectory_;
   std::vector<pnc::geometry_lib::PathPoint> complete_path_point_global_vec_;
+
+  // only debug for choosing the best path
+  std::vector<pnc::geometry_lib::GeometryPath> perferred_geometry_path_vec_;
 };
 
 }  // namespace apa_planner

@@ -7,6 +7,8 @@ LongtimeNoaTaskPipeline::LongtimeNoaTaskPipeline(
     : BaseTaskPipeline(config_builder, session) {
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
+  lateral_obstacle_decider_ =
+    std::make_unique<LateralObstacleDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -27,6 +29,12 @@ bool LongtimeNoaTaskPipeline::Run() {
   bool ok = lane_change_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lane_change_decider_->Name());
+    return false;
+  }
+
+  ok = lateral_obstacle_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(lateral_obstacle_decider_->Name());
     return false;
   }
 

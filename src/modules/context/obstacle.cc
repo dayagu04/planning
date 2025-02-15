@@ -137,15 +137,14 @@ namespace planning {
 
 Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
                    const bool is_static, double start_timestamp)
-  : id_ (id),
-    perception_id_ (prediction_object.id),
-    timestamp_ (prediction_object.timestamp_us / 1000000.0),
-    is_static_ (is_static),
-    perception_bounding_box_ (
-      {prediction_object.position_x, prediction_object.position_y},
-        prediction_object.yaw, prediction_object.length,
-        prediction_object.width) {
-
+    : id_(id),
+      perception_id_(prediction_object.id),
+      timestamp_(prediction_object.timestamp_us / 1000000.0),
+      is_static_(is_static),
+      perception_bounding_box_(
+          {prediction_object.position_x, prediction_object.position_y},
+          prediction_object.yaw, prediction_object.length,
+          prediction_object.width) {
   x_center_ = prediction_object.position_x;
   y_center_ = prediction_object.position_y;
   x_relative_center_ = prediction_object.relative_position_x;
@@ -228,11 +227,11 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     tp.v = traj_point.speed;
     tp.a = 0;
     tp.prediction_prob = traj_point.prob;
-    tp.path_point.x = traj_point.x;
-    tp.path_point.y = traj_point.y;
+    tp.path_point.set_x(traj_point.x);
+    tp.path_point.set_y(traj_point.y);
     tp.sigma_x = traj_point.std_dev_x;
     tp.sigma_y = traj_point.std_dev_y;
-    tp.path_point.theta = planning_math::NormalizeAngle(traj_point.yaw);
+    tp.path_point.set_theta(planning_math::NormalizeAngle(traj_point.yaw));
     tp.velocity_direction = planning_math::NormalizeAngle(traj_point.theta);
     tp.relative_ego_x = traj_point.relative_ego_x;
     tp.relative_ego_y = traj_point.relative_ego_y;
@@ -242,15 +241,15 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     tp.relative_ego_std_dev_y = traj_point.relative_ego_std_dev_y;
     tp.relative_ego_std_dev_yaw = traj_point.relative_ego_std_dev_yaw;
     tp.relative_ego_std_dev_speed = traj_point.relative_ego_std_dev_speed;
-    tp.path_point.s = cumulative_s;
+    tp.path_point.set_s(cumulative_s);
     tp.relative_time = traj_point.relative_time;
     // todo: get relative time from prediction msg !!!
     // relative_time += 0.2; // prediction time step
 
     if (i >= 1) {
       cumulative_s += planning_math::fast_hypot(
-          trajectory_[i - 1].path_point.x - tp.path_point.x,
-          trajectory_[i - 1].path_point.y - tp.path_point.y);
+          trajectory_[i - 1].path_point.x() - tp.path_point.x(),
+          trajectory_[i - 1].path_point.y() - tp.path_point.y());
     }
     trajectory_.emplace_back(tp);
   }
@@ -267,7 +266,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
 Obstacle::Obstacle(const Obstacle *obstacle) {
   id_ = obstacle->id();
   perception_id_ = obstacle->perception_id_;
-  timestamp_ = obstacle->timestamp_;
+  timestamp_ = obstacle->timestamp();
   is_static_ = obstacle->is_static();
   x_center_ = obstacle->x_center();
   y_center_ = obstacle->y_center();
@@ -436,16 +435,16 @@ PncTrajectoryPoint Obstacle::get_point_at_time(
   const auto &points = trajectory_;
   if (points.size() < 2) {
     PncTrajectoryPoint point;
-    point.path_point.x = x_center_;
-    point.path_point.y = y_center_;
-    point.path_point.z = 0.;  // 障碍物位置需要z信息
-    point.path_point.theta = yaw_;
+    point.path_point.set_x(x_center_);
+    point.path_point.set_y(y_center_);
+    point.path_point.set_z(0.0);  // 障碍物位置需要z信息
+    point.path_point.set_theta(yaw_);
     point.prediction_prob = 1.0;
     point.velocity_direction = 0.0;
-    point.path_point.s = 0.0;
-    point.path_point.kappa = 0.0;
-    point.path_point.dkappa = 0.0;
-    point.path_point.ddkappa = 0.0;
+    point.path_point.set_s(0.0);
+    point.path_point.set_kappa(0.0);
+    point.path_point.set_dkappa(0.0);
+    point.path_point.set_ddkappa(0.0);
     point.v = 0.0;
     point.a = 0.0;
     point.s = 0.0;
@@ -477,29 +476,29 @@ PncTrajectoryPoint Obstacle::get_point_at_time(
 
 planning_math::Box2d Obstacle::get_bounding_box(
     const PncTrajectoryPoint &point) const {
-  return planning_math::Box2d({point.path_point.x, point.path_point.y},
-                              point.path_point.theta, length_, width_);
+  return planning_math::Box2d({point.path_point.x(), point.path_point.y()},
+                              point.path_point.theta(), length_, width_);
 }
 
 planning_math::Polygon2d Obstacle::get_polygon_at_point(
     const PncTrajectoryPoint &point) const {
   std::vector<planning_math::Vec2d> polygon_points;
-  double rel_theta = point.path_point.theta - yaw_;
+  double rel_theta = point.path_point.theta() - yaw_;
   for (const auto &ego_point : obstacle_ego_polygon_.points()) {
     polygon_points.emplace_back(planning_math::Vec2d(
         ego_point.x() * cos(rel_theta) - ego_point.y() * sin(rel_theta) +
-            point.path_point.x,
+            point.path_point.x(),
         ego_point.y() * cos(rel_theta) + ego_point.x() * sin(rel_theta) +
-            point.path_point.y));
+            point.path_point.y()));
   }
 
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
-    LOG_DEBUG("polygon_debug : get position %f %f failed\n", point.path_point.x,
-              point.path_point.y);
+    LOG_DEBUG("polygon_debug : get position %f %f failed\n",
+              point.path_point.x(), point.path_point.y());
     for (auto p : polygon_points) {
       LOG_DEBUG("polygon_debug invald point x %f y %f",
-                p.x() - point.path_point.x, p.y() - point.path_point.y);
+                p.x() - point.path_point.x(), p.y() - point.path_point.y());
     }
     if (!planning_math::Polygon2d::ComputeConvexHull(
             get_bounding_box(point).GetAllCorners(), &polygon)) {

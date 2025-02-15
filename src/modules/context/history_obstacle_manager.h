@@ -61,7 +61,7 @@ class HistoryObstacleManager {
 
   HistoryObstacleConfig config_;
   planning::framework::Session *session_ = nullptr;
-  std::shared_ptr<KDPath> frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> frenet_coord_;
   std::vector<Obstacle> old_obstacles_;  // hack: maintain static_obstacle
   std::vector<Obstacle> new_obstacles_;
   std::vector<HistoryObstacle> history_obstacles_;

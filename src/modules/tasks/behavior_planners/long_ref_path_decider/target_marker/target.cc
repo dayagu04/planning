@@ -3,6 +3,9 @@
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "math/acc_curve_maker/acc_curve_maker.h"
+#include "planning_context.h"
+#include "speed/st_point.h"
+#include "st_graph/st_point.h"
 #include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
 
@@ -135,6 +138,34 @@ TargetValue Target::target_value(const double t) const {
   }
   size_t index = static_cast<size_t>(std::round(t / dt_));
   return target_values_[index];
+}
+
+bool Target::IsNeighborTargetValid() const {
+  auto st_graph_helper = session_->planning_context().st_graph_helper();
+  if (st_graph_helper == nullptr) {
+    return false;
+  }
+  speed::STPoint first_neighbor_upper_bound = speed::STPoint::HighestSTPoint();
+  bool is_yield_valid =
+      st_graph_helper->GetFirstNeighborUpperBound(&first_neighbor_upper_bound);
+  speed::STPoint first_neighbor_lower_bound = speed::STPoint::LowestSTPoint();
+  bool is_overtake_valid =
+      st_graph_helper->GetFirstNeighborLowerBound(&first_neighbor_lower_bound);
+
+  if (!(is_yield_valid || is_overtake_valid)) {
+    return false;
+  }
+
+  double yield_s =
+      first_neighbor_upper_bound.s() -
+      first_neighbor_upper_bound.velocity() * first_neighbor_upper_bound.t();
+  double overtake_s =
+      first_neighbor_lower_bound.s() +
+      first_neighbor_lower_bound.velocity() * first_neighbor_lower_bound.t();
+  if (yield_s < overtake_s) {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace planning

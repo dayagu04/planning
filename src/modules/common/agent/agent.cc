@@ -12,7 +12,7 @@ namespace agent {
 namespace {
 
 constexpr double kLowSpeedAgentSpeedThrMps = 5.0;
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kDecayJerkMps3 = -0.2;
 constexpr double kPredictionHorizon = 5.0;
@@ -39,6 +39,10 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   fusion_source_ = prediction_object.fusion_source;
   timestamp_us_ = prediction_object.timestamp_us;
   timestamp_s_ = prediction_object.timestamp_us / 1e6;
+
+  // is_sod_ = prediction_object.is_traffic_facilities; // 当前dynamic
+  // world中不会绑定锥桶至车道上,导致换道状态机检查出错
+  is_vru_ = prediction_object.is_VRU;
 
   if (prediction_object.trajectory_array.empty()) {
     return;
@@ -152,12 +156,9 @@ const AgentType Agent::type() const { return type_; }
 void Agent::set_type(const AgentType type) { type_ = type; }
 
 bool Agent::is_vehicle_type() const {
-  return type_ == AgentType::BUS ||
-         type_ == AgentType::COUPE ||
-         type_ == AgentType::MINIBUS ||
-         type_ == AgentType::VAN ||
-         type_ == AgentType::TRAILER ||
-         type_ == AgentType::TRUCK;
+  return type_ == AgentType::BUS || type_ == AgentType::COUPE ||
+         type_ == AgentType::MINIBUS || type_ == AgentType::VAN ||
+         type_ == AgentType::TRAILER || type_ == AgentType::TRUCK;
 }
 
 bool Agent::is_static() const { return is_static_; }
@@ -186,6 +187,9 @@ const double Agent::prediction_cutin_score() const {
 void Agent::set_prediction_cutin_score(const double prediction_cutin_score) {
   prediction_cutin_score_ = prediction_cutin_score;
 }
+
+const bool Agent::is_crossing() const { return is_crossing_; }
+void Agent::set_is_crossing(const bool is_crossing) { is_crossing_ = is_crossing; }
 
 const double Agent::timestamp_s() const { return timestamp_s_; }
 void Agent::set_timestamp_s(const double timestamp_s) {
@@ -230,6 +234,14 @@ void Agent::set_is_far_in_large_curv(const bool is_far_in_large_curv) {
   is_far_in_large_curv_ = is_far_in_large_curv;
 }
 
+const bool Agent::is_reverse_in_large_curv() const {
+  return is_reverse_in_large_curv_;
+}
+
+void Agent::set_is_reverse_in_large_curv(const bool is_reverse_in_large_curv) {
+  is_reverse_in_large_curv_ = is_reverse_in_large_curv;
+}
+
 const bool Agent::is_reverse_cutin() const { return is_reverse_cutin_; }
 
 void Agent::set_is_reverse_cutin(const bool is_reverse) {
@@ -251,7 +263,7 @@ void Agent::set_is_vru(const bool is_vru) { is_vru_ = is_vru; }
 
 const bool Agent::is_sod() const { return is_sod_; }
 
-void Agent::set_is_sod(const bool is_sod) { is_sod_ = is_sod; } // cone
+void Agent::set_is_sod(const bool is_sod) { is_sod_ = is_sod; }  // cone
 
 const bool Agent::need_backward_extend() const { return need_backward_extend_; }
 
@@ -274,15 +286,23 @@ void Agent::set_is_tfl_virtual_obs(bool is_tfl_virtual_obs) {
   is_tfl_virtual_obs_ = is_tfl_virtual_obs;
 }
 
+const double Agent::d_rel() const { return d_rel_; }
+
+void Agent::set_d_rel(double d_rel) { d_rel_ = d_rel; };
+
+const double Agent::d_path() const { return d_path_; }
+
+void Agent::set_d_path(double d_path) { d_path_ = d_path; };
+
 void Agent::RecalculateLowSpeedTrajectories() {
   const double init_accel = accel_;
   const double init_speed = std::fmax(speed_, 0.0);
   std::vector<double> processed_acc;
   std::vector<double> processed_speed;
   std::vector<double> processed_lon_position;
-  processed_lon_position.reserve(51);
-  processed_speed.reserve(51);
-  processed_acc.reserve(51);
+  processed_lon_position.reserve(26);
+  processed_speed.reserve(26);
+  processed_acc.reserve(26);
 
   // calculate low speed agent lon prediction info
   for (double relative_time = 0.0; relative_time < kPredictionHorizon;

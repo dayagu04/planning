@@ -136,7 +136,7 @@ collision_detection_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=1, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
     self.traj_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "traj_bound",min=0.2, max=2, value=0.5, step=0.1)
     # obstacle info
     self.obstacle_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obstacle_x",min=-15, max=15, value=-0.7, step=0.01)
@@ -150,7 +150,7 @@ class LocalViewSlider:
     self.ego_y_start_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y_start",min=-10, max=10, value=0.0, step=0.01)
     self.ego_heading_start_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading_start",min=-180, max=180, value=90.0, step=1)
     self.turn_radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "turn_radius",min=0.0, max=10, value=5.5, step=0.01)
-    self.traj_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "traj_length",min=0, max=10, value=9.0, step=0.05)
+    self.traj_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "traj_length",min=0, max=15, value=9.0, step=0.05)
     self.straight_left_right_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "straight_left_right",min=0, max=2, value=2, step=1)
     self.forward_back_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "forward_back",min=0, max=1, value=0, step=1)
 
@@ -223,7 +223,7 @@ def slider_callback(vehicle_type, traj_bound, obstacle_x, obstacle_y, obstacle_h
   elif vehicle_type == 2:
     vehicle_type = 'CHERY_E0X'
 
-  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, lat_inflation)
 
   kwargs = locals()
 
@@ -253,6 +253,7 @@ def slider_callback(vehicle_type, traj_bound, obstacle_x, obstacle_y, obstacle_h
   else:
     # turn
     ego_turn_circle[2] = turn_radius
+    ego_turn_circle[3] = traj_length / turn_radius
     # determine whether the car rotates anticlockwise or clockwise
     if (forward_back == 0 and straight_left_right == 1) or (forward_back == 1 and straight_left_right == 2):
       # forward left or back right notes that car rotates anticlockwise
@@ -271,8 +272,6 @@ def slider_callback(vehicle_type, traj_bound, obstacle_x, obstacle_y, obstacle_h
     ego_pos_start[2] = ego_start_heading
     ego_turn_circle[0] = ego_turn_center_coord[0]
     ego_turn_circle[1] = ego_turn_center_coord[1]
-
-    ego_turn_circle[3] = traj_length / turn_radius
 
     ego_pos_coord_end = collision_detection_py.GetEgoPosCoord(ego_pos_start, ego_turn_circle)
     ego_pos_end[0] = ego_pos_coord_end[0]
@@ -374,9 +373,9 @@ def slider_callback(vehicle_type, traj_bound, obstacle_x, obstacle_y, obstacle_h
 
   # collision detect
   if straight_left_right == 0:
-    collision_detection_py.UpdateRefTrajLine(ego_pos_start, ego_pos_end, is_line_obs)
+    collision_detection_py.UpdateRefTrajLine(ego_pos_start, ego_pos_end, is_line_obs, lat_inflation)
   else:
-    collision_detection_py.UpdateRefTrajArc(ego_pos_start, ego_pos_end, ego_turn_circle, ego_turn_circle[4], is_line_obs)
+    collision_detection_py.UpdateRefTrajArc(ego_pos_start, ego_pos_end, ego_turn_circle, ego_turn_circle[4], is_line_obs, lat_inflation)
 
   # get collision detect result
   collision_flag = collision_detection_py.GetCollisionFlag()

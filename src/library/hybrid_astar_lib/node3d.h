@@ -80,6 +80,7 @@ enum class NodeShrinkType {
   UNEXPECTED_STEERING_WHEEL = 7,
   UNEXPECTED_DRIVE_DIST = 8,
   FAIL_TO_ALLOCATE_NODE = 9,
+  UNEXPECTED_POS = 10,
   MAX_NUMBER,
 };
 
@@ -124,6 +125,7 @@ class Node3d {
 
   const double GetPhi() const { return path_.GetEndPoint().theta; }
 
+  // Get end pose
   const Pose2D& GetPose() const;
 
   bool operator==(const Node3d& right) const;
@@ -158,13 +160,16 @@ class Node3d {
 
   void SetFCost() { f_cost_ = traj_cost_ + heuristic_cost_; }
 
+  void SetFCost(const double v) { f_cost_ = v; }
+
   void SetHeuCost(double cost) { heuristic_cost_ = cost; }
 
   const double GetNodePathDistance() const { return path_.path_dist; }
 
-  void SetHeuCostDebug(const NodeHeuristicCost& cost) { h_cost_debug_ = cost; }
+  // void SetHeuCostDebug(const NodeHeuristicCost& cost) { h_cost_debug_ = cost;
+  // }
 
-  const NodeHeuristicCost& GetHeuCostDebug() const { return h_cost_debug_; }
+  // const NodeHeuristicCost& GetHeuCostDebug() const { return h_cost_debug_; }
 
   void SetGearType(const AstarPathGear type) { gear_type_ = type; }
 
@@ -183,8 +188,6 @@ class Node3d {
   void SetPathType(const AstarPathType type) { path_type_ = type; }
 
   bool IsPathGearChange(const AstarPathGear type);
-
-  void CopyNode(const Node3d* node);
 
   const bool IsForward() const { return gear_type_ == AstarPathGear::DRIVE; }
 
@@ -267,6 +270,13 @@ class Node3d {
 
   double DistToPose(const Pose2D& pose);
 
+  Node3d* GearSwitchNode() const { return gear_switch_node_; }
+
+  void SetGearSwitchNode(Node3d* node) {
+    gear_switch_node_ = node;
+    return;
+  }
+
  private:
   // path point size
   NodePath path_;
@@ -316,12 +326,17 @@ class Node3d {
   bool is_start_node_;
 
   // for debug
-  NodeHeuristicCost h_cost_debug_;
+  // NodeHeuristicCost h_cost_debug_;
 
   NodeCollisionType collision_type_;
   size_t collision_id_;
 
   std::multimap<double, Node3d*>::iterator multimap_iter_;
+
+  // 第一次换档点.
+  // 如果换档点在搜索节点，需要记录. 这里如果搜索节点和rs曲线连接处换档，也记录.
+  // 如果换档点在rs曲线上，不需要记录.
+  Node3d* gear_switch_node_ = nullptr;
 };
 
 }  // namespace planning

@@ -16,9 +16,9 @@
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
-#include "parking_task/parking_task.h"
-#include "parking_stop_decider.h"
 #include "park_speed_limit_decider.h"
+#include "parking_stop_decider.h"
+#include "parking_task/parking_task.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -291,6 +291,8 @@ void ParkingScenario::GenPlanningPath() {
   } else {
     gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
   }
+  ILOG_INFO << "gear command in planning output = "
+            << static_cast<int>(gear_command->gear_command_value);
 
   return;
 }
@@ -312,15 +314,13 @@ const bool ParkingScenario::UpdateObstacleLocal() {
   std::vector<Eigen::Vector2d> obs_pt_vec;
   ego_slot_info.obs_pt_vec_slot.clear();
 
-  if (apa_param.GetParam().use_uss_pt_clound) {
-    // 获取超声波点云
-    if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
-                                          obs_vec)) {
-      for (const auto& obs : obs_vec) {
-        ego_slot_info.obs_pt_vec_slot.insert(
-            ego_slot_info.obs_pt_vec_slot.end(),
-            obs->GetPtClout2dLocal().begin(), obs->GetPtClout2dLocal().end());
-      }
+  // 获取超声波点云
+  if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                        obs_vec)) {
+    for (const auto& obs : obs_vec) {
+      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
+                                           obs->GetPtClout2dLocal().begin(),
+                                           obs->GetPtClout2dLocal().end());
     }
   }
 
@@ -394,7 +394,8 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
 
   uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
                                    apa_world_ptr_->GetPredictPathManagerPtr(),
-                                   apa_world_ptr_->GetObstacleManagerPtr());
+                                   apa_world_ptr_->GetObstacleManagerPtr(),
+                                   apa_param.GetParam().lat_inflation);
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
@@ -541,8 +542,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   tracking_path_collision_dist =
       std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
 
-  ILOG_INFO << "remain_dist_uss" << frame_.remain_dist_uss
-            << ", frame_.remain_dist_col_det" << frame_.remain_dist_col_det;
+  ILOG_INFO << "remain_dist_uss = " << frame_.remain_dist_uss
+            << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
 
   // update stop decision
   ParkingStopDecider stop_decider = ParkingStopDecider();

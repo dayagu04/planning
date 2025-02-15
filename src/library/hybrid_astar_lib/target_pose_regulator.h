@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include "astar_decider.h"
 #include "euler_distance_transform.h"
@@ -14,6 +15,12 @@
 
 namespace planning {
 
+struct PoseRegulateCandidate {
+  Pose2D pose;
+  double dist_to_obs;
+  double lat_offset;
+};
+
 // 目标pose调节器.
 // Todo: all target pose decisions should be moved to here.
 // 1. Move goal to outside a few meters in vertical/parallel slot scene.
@@ -23,24 +30,43 @@ class TargetPoseRegulator : public AstarDecider {
   TargetPoseRegulator() = default;
 
   void Process(EulerDistanceTransform *edt, const AstarRequest *request,
-               const Pose2D &ego_pose, const Pose2D &center_line_target);
+               const Pose2D &ego_pose, const Pose2D &center_line_target,
+               const VehicleParam &veh_param);
 
   void Process(const Pose2D &start, const Pose2D &end);
 
   void Clear();
 
-  const Pose2D &GetTargetPose() const { return advised_safe_target_pose_; }
+  const Pose2D GetCandidatePose(const double lat_buffer) const;
+
+  const bool IsCandidatePoseSafe(const double lat_buffer) const;
 
  private:
   const bool IsParkingIn(const AstarRequest *request);
 
-  void UpdatePoseBySafeChecker(EulerDistanceTransform *edt,
-                               const AstarRequest *request);
+  void GenerateCandidatesForVerticalSlot(EulerDistanceTransform *edt,
+                                         const AstarRequest *request,
+                                         const VehicleParam &veh_param);
+
+  void GenerateCandidatesForParallelSlot(EulerDistanceTransform *edt,
+                                         const AstarRequest *request,
+                                         const VehicleParam &veh_param);
+
+  // 检查目标点直线入库路径，和障碍物距离
+  // return true: 直线路径没有障碍物
+  const float GetDistToObs(Pose2D *global_pose, EulerDistanceTransform *edt);
+
+  void DebugString();
 
  private:
-  bool is_default_pose_safe_;
-  bool is_adjust_pose_;
-  Pose2D advised_safe_target_pose_;
+  Pose2D center_line_target_;
+
+  std::vector<PoseRegulateCandidate> candidate_info_;
+
+  double x_check_upper_;
+  double x_check_lower_;
+  double x_step_;
+  int x_sample_num_;
 };
 
 }  // namespace planning

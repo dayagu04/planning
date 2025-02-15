@@ -17,6 +17,8 @@ class TargetMaker {
 
   void Reset();
 
+  void RefineStarget();
+
   void AddFinalTargetDataToProto();
 
   double s_target(const double t) const;
@@ -26,7 +28,7 @@ class TargetMaker {
   const TargetValue& target_value(const double t) const;
 
  private:
-  framework::Session *session_;
+  framework::Session* session_;
   const SpeedPlannerConfig& speed_planning_config_;
   double dt_ = 0.0;
   double plan_time_ = 0.0;

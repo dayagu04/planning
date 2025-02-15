@@ -167,7 +167,7 @@ const bool InterfaceUpdateParam(
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
     py::bytes &ground_line_info_bytes, py::bytes &fus_obj_info_bytes,
     py::bytes &fus_occ_obj_info_bytes, py::bytes &control_output_bytes,
-    int select_id, bool force_plan, bool is_path_optimization,
+    int plan_type, int select_id, bool force_plan, bool is_path_optimization,
     bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
     bool sim_to_target, bool use_slot_in_bag, bool use_obs_in_bag,
     double sample_ds, std::vector<double> target_managed_slot_x_vec,
@@ -177,6 +177,7 @@ const bool InterfaceUpdateParam(
     std::vector<double> obs_x_vec, std::vector<double> obs_y_vec, std::vector<double> lat_path_optimizier_params) {
   SimulationParam param;
   param.is_simulation = true;
+  param.plan_type = plan_type;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;

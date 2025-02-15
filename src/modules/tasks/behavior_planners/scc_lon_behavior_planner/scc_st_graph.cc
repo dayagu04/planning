@@ -44,6 +44,8 @@
 
 namespace {
 
+using namespace planning::planning_math;
+
 constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.1;
 constexpr double kStaticAgentBuffer = 0.2;
@@ -65,12 +67,11 @@ constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
 constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
-constexpr double kSafetyFollowTime = 2.0;
+constexpr double kSafetyFollowTime = 3.0;
 
 bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
-                              const planning_math::Box2d &agent_box,
-                              double *const ptr_min_s, double *const ptr_max_s,
-                              double *const ptr_min_l,
+                              const Box2d &agent_box, double *const ptr_min_s,
+                              double *const ptr_max_s, double *const ptr_min_l,
                               double *const ptr_max_l) {
   if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
       nullptr == ptr_max_l) {
@@ -96,7 +97,7 @@ bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
 }
 
 bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
-                              const agent::Agent &agent,
+                              const planning::agent::Agent &agent,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
@@ -114,7 +115,7 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config,
                                    framework::Session *session)
     : session_(session),
       config_(config),
-      agent_node_manager_(make_shared<AgentNodeManager>()) {
+      agent_node_manager_(std::make_shared<AgentNodeManager>()) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
                                      200, 0.1);
   lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step,
@@ -345,7 +346,7 @@ void StGraphGenerator::Update(
 bool StGraphGenerator::CalcSpeedInfoWithLead(
     const planning::common::TrackedObjectInfo &lead_one,
     const planning::common::TrackedObjectInfo &lead_two,
-    const string &lc_request, const double v_ego,
+    const std::string &lc_request, const double v_ego,
     std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info) {
   double lead_one_a_processed = 0.0;
   double lead_one_desired_distance = 0.0;
@@ -368,7 +369,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(lead_one.track_id());
     if (agent != nullptr) {
-      is_reverse_obs_in_large_curv = agent->is_reverse();
+      is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
       is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
@@ -522,7 +523,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     acc_target_.first = std::min(acc_target_.first, acc_target.first);
     acc_target_.second = std::min(acc_target_.second, acc_target.second);
 
-    JSON_DEBUG_VALUE("acc_cipv", lead_one.a_lead_k());
+    JSON_DEBUG_VALUE("cipv_acc", lead_one.a_lead_k());
     JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
     JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
 
@@ -540,7 +541,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("lead_two_dis", 0);
     JSON_DEBUG_VALUE("lead_two_vel", 0);
     JSON_DEBUG_VALUE("v_target_lead_two", 0);
-    JSON_DEBUG_VALUE("acc_cipv", 0.0);
+    JSON_DEBUG_VALUE("cipv_acc", 0.0);
     JSON_DEBUG_VALUE("acc_target_high", acc_target_.second);
     JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
   }
@@ -572,7 +573,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(temp_lead_one.track_id());
     if (agent != nullptr) {
-      is_reverse_obs_in_large_curv = agent->is_reverse();
+      is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
       is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
@@ -610,8 +611,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
 
   // temp leadone
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
-      is_tlead_too_close &&
-      !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+      is_tlead_too_close && !is_reverse_obs_in_large_curv &&
+      !is_far_obs_in_large_curv &&
       (is_left_right_front_agent || is_in_cone_emergency_lc) &&
       temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
@@ -1011,7 +1012,7 @@ void StGraphGenerator::UpdateSTGraphs(
 
 void StGraphGenerator::UpdateNearObstacles(
     const planning::common::LatObsInfo &lateral_obstacles,
-    const string &lc_request, double v_ego) {
+    const std::string &lc_request, double v_ego) {
   const double safety_distance = 2.0 + v_ego * 0.2;
   int cutin_status = 0;
 
@@ -1037,7 +1038,7 @@ void StGraphGenerator::UpdateNearObstacles(
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
-        is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
@@ -1058,7 +1059,7 @@ void StGraphGenerator::UpdateNearObstacles(
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
-        is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
@@ -1167,7 +1168,7 @@ void StGraphGenerator::UpdateNearObstacles(
       }
     } else {
       if (lc_request == "right_lane_change") {
-        vy_rel = min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
+        vy_rel = std::min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
       }
       if (lc_request == "left_lane_change_wait") {
         if (NEAR_CAR_LAT_MOVING) {
@@ -1239,7 +1240,7 @@ void StGraphGenerator::UpdateNearObstacles(
         ((0.8 <= std::abs(near_cars_sorted[i]->y_min())) &&
          (std::abs(near_cars_sorted[i]->y_min()) <= 2.5)) &&
         cutin_car &&
-        ((-3.5 - d_x_offset - min(near_cars_sorted[i]->v_rel(), 1.0) <
+        ((-3.5 - d_x_offset - std::min(near_cars_sorted[i]->v_rel(), 1.0) <
           near_cars_sorted[i]->location_tail()) &&
          (near_cars_sorted[i]->location_tail() < safety_distance + 2))) {
       v_limit_cutin[i] =
@@ -1551,7 +1552,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
-        is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
         is_reverse_cutin_agent = agent->is_reverse_cutin();
         is_static_cutin_agent = agent->is_static();
@@ -1701,7 +1702,8 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
 
 void StGraphGenerator::CalcSpeedInfoWithGap(
     const planning::common::TrackedObjectInfo &lead_one, const double v_cruise,
-    const double v_ego, const string &lc_request, const string &lc_status,
+    const double v_ego, const std::string &lc_request,
+    const std::string &lc_status,
     std::vector<planning::common::RealTimeLonObstacleSTInfo>
         &lane_change_st_info) {
   LOG_DEBUG("----entering CalcSpeedInfoWithGap--- \n");
@@ -2163,7 +2165,7 @@ bool StGraphGenerator::CalcAccLimits(
                                 acc_target.first);
   }
   // a_min can't be higher than a_max
-  acc_target.first = min(acc_target.first, acc_target.second);
+  acc_target.first = std::min(acc_target.first, acc_target.second);
   // final check on limits
   acc_target.first = clip(acc_target.first, _A_MAX, _A_MIN);
   acc_target.second = clip(acc_target.second, _A_MAX, _A_MIN);
@@ -2966,9 +2968,9 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
   if (agent_manager == nullptr) {
     return;
   }
-  const auto* lead_one_agent = agent_manager->GetAgent(lead_one_id);
-  const auto* lead_two_agent = agent_manager->GetAgent(lead_two_id);
-  std::vector<const agent::Agent*> lead_agent;
+  const auto *lead_one_agent = agent_manager->GetAgent(lead_one_id);
+  const auto *lead_two_agent = agent_manager->GetAgent(lead_two_id);
+  std::vector<const agent::Agent *> lead_agent;
   if (lead_one_agent != nullptr) {
     lead_agent.emplace_back(lead_one_agent);
   }
@@ -2996,7 +2998,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
     if (borrow_direction == LEFT_BORROW) {
       min_lat_l_by_lat_path = max_l_by_lat_path;
       // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
-    } else if(borrow_direction == RIGHT_BORROW) {
+    } else if (borrow_direction == RIGHT_BORROW) {
       min_lat_l_by_lat_path = min_l_by_lat_path;
       // (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
     } else {
@@ -3168,7 +3170,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     std::vector<planning::common::RealTimeLonObstacleSTInfo> &merge_st_info,
     const double v_ego) {
   LOG_DEBUG("----> CalculateMergeSpeedLimit <--- \n");
-  std::vector<string> debug_msg_names;
+  std::vector<std::string> debug_msg_names;
   debug_msg_names.emplace_back("merge_target_one_id");
   debug_msg_names.emplace_back("merge_target_two_id");
   debug_msg_names.emplace_back("v_target_merge");
@@ -3408,7 +3410,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         ProcessObstacleAcc(merge_target_one->accel());
     safe_distance_merge_target_one =
         CalcSafeDistance(merge_target_one->accel(), v_ego);
-    string lc_request = "Merging";
+    std::string lc_request = "Merging";
     merge_target_one_desired_distance =
         CalcDesiredDistance(v_adjacent_or_rear_agent_merge_with_ego_.second,
                             true, false, false, v_ego, lc_request);
@@ -3459,7 +3461,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         ProcessObstacleAcc(merge_target_two->accel());
     safe_distance_merge_target_two =
         CalcSafeDistance(merge_target_two->accel(), v_ego);
-    string lc_request = "Merging";
+    std::string lc_request = "Merging";
     merge_target_two_desired_distance =
         CalcDesiredDistance(v_front_agent_merge_with_ego_.second, true, false,
                             false, v_ego, lc_request);
@@ -4576,7 +4578,8 @@ void StGraphGenerator::DebugAgentsPredictionTraj(
   }
 }
 
-void StGraphGenerator::SetDefaultDebugValues(const std::vector<string> *names) {
+void StGraphGenerator::SetDefaultDebugValues(
+    const std::vector<std::string> *names) {
   for (const auto &name : *names) {
     if (name.size() >= 5 && name.substr(name.size() - 3) == "vec") {
       JSON_DEBUG_VECTOR(name, {}, 4)
@@ -4586,7 +4589,7 @@ void StGraphGenerator::SetDefaultDebugValues(const std::vector<string> *names) {
   }
 }
 
-void StGraphGenerator::SetDefaultDebugValues(std::vector<string> names) {
+void StGraphGenerator::SetDefaultDebugValues(std::vector<std::string> names) {
   for (const auto &name : names) {
     if (name.size() >= 5 && name.substr(name.size() - 3) == "vec") {
       JSON_DEBUG_VECTOR(name, {}, 4)
@@ -4700,7 +4703,7 @@ void StGraphGenerator::IsReverseAgentInLargeCurvature(
       }
       // 2. filter revese agent
       if (object_s_speed_mps < -3.0) {
-        mutable_agent->set_is_reverse(true);
+        mutable_agent->set_is_reverse_in_large_curv(true);
       }
     }
   }

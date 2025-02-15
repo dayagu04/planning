@@ -39,7 +39,8 @@ struct LaneChangeDeciderOutput {
   int lc_back_cnt;
   std::string lc_back_invalid_reason;
 
-  bool turn_signal = false;  // session_->mutable_planning_context()->mutable_planning_result().turn_signal
+  bool turn_signal =
+      false;  // session_->mutable_planning_context()->mutable_planning_result().turn_signal
 
   bool s_search_status = false;
   std::vector<double> st_search_vec;
@@ -49,6 +50,10 @@ struct LaneChangeDeciderOutput {
   IntCancelReasonType int_request_cancel_reason = NO_CANCEL;
   RequestType ilc_virtual_req = NO_CHANGE;
   double lateral_close_boundary_offset = 0.0;
+  bool is_ego_on_leftmost_lane = false;
+  bool is_ego_on_rightmost_lane = false;
+  LaneChangeGapInfo lc_gap_info;
+  bool is_nearing_ramp = false;
 };
 
 }  // namespace planning

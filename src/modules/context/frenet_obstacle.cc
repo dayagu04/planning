@@ -18,7 +18,7 @@ FrenetObstacle::FrenetObstacle(
     : id_(obstacle_ptr->id()),
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid) {
-  compute_frenet_obstacle(reference_path, ego_state_info);
+  compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
     compute_frenet_polygon_sequence(reference_path);
@@ -26,11 +26,12 @@ FrenetObstacle::FrenetObstacle(
 }
 
 void FrenetObstacle::compute_frenet_obstacle(
-    const ReferencePath &reference_path,
-    const std::shared_ptr<EgoStateManager> ego_state_info) {
+    const ReferencePath &reference_path) {
   FrenetEgoState frenet_ego_state = reference_path.get_frenet_ego_state();
   double ego_s = frenet_ego_state.s();
   double ego_l = frenet_ego_state.l();
+  double ego_head_s = frenet_ego_state.head_s();
+  double ego_head_l = frenet_ego_state.head_l();
 
   const auto &frenet_coord = reference_path.get_frenet_coord();
   // center frenet
@@ -129,9 +130,11 @@ void FrenetObstacle::compute_frenet_obstacle(
   min_l = s_with_min_l_.x;
   max_l = s_with_max_l_.x;
   if (frenet_s_ > frenet_ego_state.s()) {
-    rel_s_ = (min_s > frenet_ego_state.s()) ? (min_s - frenet_ego_state.s()) : 0;
+    rel_s_ =
+        (min_s > frenet_ego_state.s()) ? (min_s - frenet_ego_state.s()) : 0;
   } else {
-    rel_s_ = (max_s < frenet_ego_state.s()) ? (max_s - frenet_ego_state.s()) : 0;
+    rel_s_ =
+        (max_s < frenet_ego_state.s()) ? (max_s - frenet_ego_state.s()) : 0;
   }
 
   std::vector<double> corners_l_relative_ego = {
@@ -149,24 +152,14 @@ void FrenetObstacle::compute_frenet_obstacle(
         min_corners_l_relative_ego < 0 ? min_corners_l_relative_ego : 0;
   }
 
-  frenet_relative_velocity_s_ = frenet_velocity_s_ - frenet_ego_state.velocity_s();
-  frenet_relative_velocity_l_ = frenet_velocity_l_ - frenet_ego_state.velocity_l();
-  frenet_velocity_lateral_ = (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
+  frenet_relative_velocity_s_ =
+      frenet_velocity_s_ - frenet_ego_state.velocity_s();
+  frenet_relative_velocity_l_ =
+      frenet_velocity_l_ - frenet_ego_state.velocity_l();
+  frenet_velocity_lateral_ =
+      (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
 
-  const double front_edge_to_rear_axle = VehicleConfigurationContext::Instance()
-                                        ->get_vehicle_param().front_edge_to_rear_axle;
-  double ego_x = ego_state_info->ego_carte().x;
-  double ego_y = ego_state_info->ego_carte().y;
-  double ego_heading = frenet_ego_state.planning_init_point().heading_angle;
-  double ego_head_x = ego_x + front_edge_to_rear_axle * std::cos(ego_heading);
-  double ego_head_y = ego_y + front_edge_to_rear_axle * std::sin(ego_heading);
-  double ego_head_s = 0;
-  double ego_head_l = 0;
-  if (frenet_coord->XYToSL(Point2D(ego_head_x, ego_head_y), frenet_point)) {
-    ego_head_s = frenet_point.x;
-    ego_head_l = frenet_point.y;
-  }
-
+  // calculate d_rel, d_min_cpath, d_max_cpath
   double half_length = obs_length * 0.5;
   double half_width = obs_width * 0.5;
   // 对车辆障碍物half_width限定在1-2m以内
@@ -183,29 +176,33 @@ void FrenetObstacle::compute_frenet_obstacle(
   }
 
   // recalculate min_s, max_s, min_l, max_l
-  if(std::fabs(half_width - obs_width * 0.5) > 1e-6) {
+  if (std::fabs(half_width - obs_width * 0.5) > 1e-6) {
     std::array<int, 2> sgn_list{1, -1};
     std::array<std::vector<double>, 2> obstacle_box;
-    enum box_corner {box_s, box_l};
+    enum box_corner { box_s, box_l };
 
     for (int sgn_length : sgn_list) {
       for (int sgn_width : sgn_list) {
-        double _s =
-                frenet_s_ + sgn_length * std::cos(obs_relative_heading) * half_length -
-                            sgn_width * std::sin(obs_relative_heading) * half_width;
+        double _s = frenet_s_ +
+                    sgn_length * std::cos(obs_relative_heading) * half_length -
+                    sgn_width * std::sin(obs_relative_heading) * half_width;
         if ((frenet_s_ - ego_head_s) * (_s - ego_head_s) <= 0) {
           half_width = obs_width * 0.5;
           break;
         }
       }
     }
-    if(std::fabs(half_width - obs_width * 0.5) > 1e-6) {
+    if (std::fabs(half_width - obs_width * 0.5) > 1e-6) {
       for (int sgn_length : sgn_list) {
         for (int sgn_width : sgn_list) {
-          double _s = frenet_s_ + sgn_length * std::cos(obs_relative_heading) * half_length -
-                                sgn_width * std::sin(obs_relative_heading) * half_width;
-          double _l = frenet_l_ + sgn_length * std::sin(obs_relative_heading) * half_length +
-                                sgn_width * std::cos(obs_relative_heading) * half_width;
+          double _s =
+              frenet_s_ +
+              sgn_length * std::cos(obs_relative_heading) * half_length -
+              sgn_width * std::sin(obs_relative_heading) * half_width;
+          double _l =
+              frenet_l_ +
+              sgn_length * std::sin(obs_relative_heading) * half_length +
+              sgn_width * std::cos(obs_relative_heading) * half_width;
           obstacle_box[box_s].push_back(_s);
           obstacle_box[box_l].push_back(_l);
           // update min_s, max_s, min_l, max_l
@@ -222,9 +219,9 @@ void FrenetObstacle::compute_frenet_obstacle(
   d_max_cpath_ = max_l;
   d_s_rel_ = 0;
   if (frenet_s_ > ego_head_s && min_s > ego_head_s) {
-    d_s_rel_ = min_s - ego_head_s; // obstacle in front of ego
+    d_s_rel_ = min_s - ego_head_s;  // obstacle in front of ego
   } else if (frenet_s_ < ego_head_s && max_s < ego_head_s) {
-    d_s_rel_ = max_s - ego_head_s; // obstacle behind ego
+    d_s_rel_ = max_s - ego_head_s;  // obstacle behind ego
   }
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
@@ -278,8 +275,8 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
   // static obstacle
   if (obstacle_ptr_->is_static() ||
       (!obstacle_ptr_->trajectory().empty() &&
-       std::fabs(obstacle_ptr_->trajectory().back().path_point.s -
-                 obstacle_ptr_->trajectory().front().path_point.s) < 1.e-2)) {
+       std::fabs(obstacle_ptr_->trajectory().back().path_point.s() -
+                 obstacle_ptr_->trajectory().front().path_point.s()) < 1.e-2)) {
     PolygonWithT polygon0, polygon1;
     polygon0.first = time_range.first;
     polygon1.first = time_range.second;
@@ -331,7 +328,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
       double t = i * time_gap + time_range.first;
       auto traj_point = obstacle_ptr_->get_point_at_time(t);
       if (i != 0 && i != time_step - 1 &&
-          traj_point.path_point.s - last_s_distance <
+          traj_point.path_point.s() - last_s_distance <
               min_obstacle_check_length) {
         continue;
       }
@@ -352,24 +349,24 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
             clip(last_polygon.max_x(), frenet_coord->Length(), 0.0),
             &max_kappa);
 
-        double curvature = max(std::abs(min_kappa), std::abs(max_kappa));
+        double curvature = std::max(std::abs(min_kappa), std::abs(max_kappa));
         double cur_radius = curvature > 0.0
                                 ? 1.0 / curvature
                                 : std::numeric_limits<double>::infinity();
         double euler_distance =
-            std::abs(traj_point.path_point.s - last_s_distance);
+            std::abs(traj_point.path_point.s() - last_s_distance);
         double last_frenet_l = std::max(std::abs(last_polygon.min_y()),
                                         std::abs(last_polygon.max_y()));
         if (cur_radius > std::max(kDefaultCurvatureRadius,
                                   2 * (last_frenet_l + euler_distance +
                                        obstacle_size)) &&
-            std::abs(traj_point.path_point.s - last_s_distance) <
+            std::abs(traj_point.path_point.s() - last_s_distance) <
                 kMaxHeuristicDis) {
           double theta = std::asin((euler_distance + obstacle_size) /
                                    (cur_radius - last_frenet_l));
           double search_buffer1 = theta * cur_radius;
           double search_buffer =
-              std::max(std::abs(traj_point.path_point.s - last_s_distance),
+              std::max(std::abs(traj_point.path_point.s() - last_s_distance),
                        search_buffer1);
           has_heuristics = true;
           heuristic_s_begin =
@@ -442,7 +439,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
         invalid_time_section = {8.0, 0.0};
       }
       frenet_polygon_sequence_.push_back(p_point);
-      last_s_distance = traj_point.path_point.s;
+      last_s_distance = traj_point.path_point.s();
     }
     frenet_polygon_sequence_.set_invalid_time_sections(invalid_time_sections);
     if (frenet_polygon_sequence_.size() >= 2) {
@@ -455,7 +452,8 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
 }
 
 void FrenetObstacle::generate_precise_frenet_polygon(
-    planning_math::Polygon2d &polygon, std::shared_ptr<KDPath> frenet_coord) {
+    planning_math::Polygon2d &polygon,
+    std::shared_ptr<planning_math::KDPath> frenet_coord) {
   planning_math::Polygon2d result_polygon;
   double max_curvature = 0.0;
   double min_l = std::numeric_limits<double>::max();
@@ -473,8 +471,8 @@ void FrenetObstacle::generate_precise_frenet_polygon(
     double curvature;
     frenet_coord->GetKappaByS(point.x(), &curvature);
     curvatures.push_back(curvature);
-    max_curvature = max(max_curvature, curvature);
-    min_l = min(min_l, std::abs(point.y()));
+    max_curvature = std::max(max_curvature, curvature);
+    min_l = std::min(min_l, std::abs(point.y()));
   }
   double cur_radius = max_curvature > 0.0
                           ? 1.0 / max_curvature
@@ -502,10 +500,11 @@ void FrenetObstacle::generate_precise_frenet_polygon(
     auto begin_point = origin_points[index_begin];
     auto end_point = origin_points[index_end];
     double s_diff = std::abs(end_point.x() - begin_point.x());
-    double ref_curvature = max(curvatures[index_begin], curvatures[index_end]);
-    double delta_s = max(0.5, kDeltaRadian / ref_curvature);
+    double ref_curvature =
+        std::max(curvatures[index_begin], curvatures[index_end]);
+    double delta_s = std::max(0.5, kDeltaRadian / ref_curvature);
     int inter_num =
-        min(kMaxInterpolateNums, max(2, int(ceil(s_diff / delta_s))));
+        std::min(kMaxInterpolateNums, std::max(2, int(ceil(s_diff / delta_s))));
     for (int j = 1; j <= inter_num; ++j) {
       Point2D cur_cart_p, cur_fren_p;
       if (j == inter_num) {

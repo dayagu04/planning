@@ -1,8 +1,13 @@
 #include "target_maker.h"
 
+#include "behavior_planners/long_ref_path_decider/target_marker/target.h"
+#include "common/math/common_utils.h"
 #include "cruise_target.h"
 #include "debug_info_log.h"
 #include "follow_target.h"
+#include "neighbor_target.h"
+#include "overtake_target.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -23,24 +28,30 @@ common::Status TargetMaker::Run() {
   FollowTarget follow_target(speed_planning_config_, session_);
 
   // 3. overtake target @国朋
-  // OvertakeTarget overtake_target(config_, session_);
+  OvertakeTarget overtake_target(speed_planning_config_, session_,
+                                 follow_target);
 
   // 4. neighbor target @建伟
-  // NeighborTarget neighbor_target(config_, session_);
+  NeighborTarget neighbor_target(speed_planning_config_, session_);
 
   // 5. caution target @国朋
   // CautionTarget caution_target(config_, session_);
 
   // 6. decider final target values
+  const auto& start_stop_decider_output =
+      session_->planning_context().start_stop_decider_output();
+  const auto& stop_speed_decision_info =
+      start_stop_decider_output.stop_speed_decision_info();
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
     TargetValue follow_target_value = follow_target.target_value(relative_t);
-    // TargetValue overtake_target_value =
-    // overtake_target.target_value(relative_t); TargetValue
-    // neighbor_target_value = neighbor_target.target_value(relative_t);
-    // TargetValue caution_target_value =
-    // caution_target.target_value(relative_t);
+    TargetValue overtake_target_value =
+        overtake_target.target_value(relative_t);
+    TargetValue neighbor_target_value =
+        neighbor_target.target_value(relative_t);
+    //  TargetValue caution_target_value =
+    //  caution_target.target_value(relative_t);
 
     TargetValue upper_target_value(0.0, false,
                                    std::numeric_limits<double>::max(), 0.0,
@@ -48,66 +59,73 @@ common::Status TargetMaker::Run() {
     TargetValue lower_target_value(0.0, false,
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
+
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
             upper_target_value.s_target_val()) {
-      // TBD: 国朋合入overtake
-      // if (overtake_target_value.has_target()) {
-      //   if (overtake_target_value.s_target_val() >
-      //       follow_target_value.s_target_val()) {
-      //     // final_target_value = overtake_target_value;
-      //     target_values_.push_back(std::move(overtake_target_value));
-      //     continue;
-      //   } else {
-      //     upper_target_value = follow_target_value;
-      //     lower_target_value = overtake_target_value;
-      //   }
-      // } else {
-      upper_target_value = follow_target_value;
-      // }
-      // } else if (overtake_target_value.has_target() &&
-      //            overtake_target_value.s_target_val() >
-      //                lower_target_value.s_target_val()) {
-      //   lower_target_value = overtake_target_value;
-      // }
-
-      // TBD: 国朋合入caution
-      // 2.update upper value by caution yield target
-      // if (caution_target_value.has_target()) {
-      //   upper_target_value =
-      //       Target::TargetMin(caution_target_value, upper_target_value);
+      // overtake
+      if (overtake_target_value.has_target()) {
+        if (overtake_target_value.s_target_val() >
+            follow_target_value.s_target_val()) {
+          // final_target_value = overtake_target_value;
+          target_values_.push_back(std::move(overtake_target_value));
+          continue;
+        } else {
+          upper_target_value = follow_target_value;
+          lower_target_value = overtake_target_value;
+        }
+      } else {
+        upper_target_value = follow_target_value;
+      }
+    } else if (overtake_target_value.has_target() &&
+               overtake_target_value.s_target_val() >
+                   lower_target_value.s_target_val()) {
+      lower_target_value = overtake_target_value;
     }
+
+    // TBD: 国朋合入caution
+    // 2.update upper value by caution yield target
+    // if (caution_target_value.has_target()) {
+    //   upper_target_value =
+    //       Target::TargetMin(caution_target_value, upper_target_value);
+    //}
 
     // TBD: 建伟合入neighbor
     // 3.update lower and upper value by neighbor target
-    // if (neighbor_target_value.has_target()) {
-    //   // neighbor
-    //   if (neighbor_target_value.target_type() == TargetType::kNeighbor) {
-    //     if (cp_common::WithinBound(lower_target_value.s_target_val(),
-    //                                upper_target_value.s_target_val(),
-    //                                neighbor_target_value.s_target_val())) {
-    //       target_values_.push_back(std::move(neighbor_target_value));
-    //       continue;
-    //     }
-    //   }
-    //   if (neighbor_target_value.target_type() == TargetType::kNeighborYeild)
-    //   {
-    //     if (cp_common::WithinBound(lower_target_value.s_target_val(),
-    //                                upper_target_value.s_target_val(),
-    //                                neighbor_target_value.s_target_val())) {
-    //       upper_target_value = neighbor_target_value;
-    //     }
-    //   }
-    //   if (neighbor_target_value.target_type() ==
-    //       TargetType::kNeighborOvertake) {
-    //     if (cp_common::WithinBound(lower_target_value.s_target_val(),
-    //                                upper_target_value.s_target_val(),
-    //                                neighbor_target_value.s_target_val())) {
-    //       lower_target_value = neighbor_target_value;
-    //     }
-    //   }
-    // }
+    if (neighbor_target_value.has_target()) {
+      // neighbor
+      if (neighbor_target_value.target_type() == TargetType::kNeighbor) {
+        if (util::WithinBound(lower_target_value.s_target_val(),
+                              upper_target_value.s_target_val(),
+                              neighbor_target_value.s_target_val())) {
+          target_values_.emplace_back(std::move(neighbor_target_value));
+          continue;
+        }
+      }
+      if (neighbor_target_value.target_type() == TargetType::kNeighborYeild) {
+        if (util::WithinBound(lower_target_value.s_target_val(),
+                              upper_target_value.s_target_val(),
+                              neighbor_target_value.s_target_val())) {
+          upper_target_value = neighbor_target_value;
+        }
+      }
+      if (neighbor_target_value.target_type() ==
+          TargetType::kNeighborOvertake) {
+        if (util::WithinBound(lower_target_value.s_target_val(),
+                              upper_target_value.s_target_val(),
+                              neighbor_target_value.s_target_val())) {
+          lower_target_value = neighbor_target_value;
+        }
+      }
+    }
+
+    if (stop_speed_decision_info.is_valid()) {
+      upper_target_value.set_s_target_val(stop_speed_decision_info.s());
+      upper_target_value.set_v_target_val(stop_speed_decision_info.v());
+      lower_target_value.set_s_target_val(stop_speed_decision_info.s());
+      lower_target_value.set_v_target_val(stop_speed_decision_info.v());
+    }
 
     // hack: 先用默认值
     // auto final_lower_bound_value = lower_target_value;
@@ -118,6 +136,7 @@ common::Status TargetMaker::Run() {
         Target::TargetMin(final_lower_bound_value, upper_target_value);
     target_values_.push_back(std::move(final_target_value));
   }
+  RefineStarget();
   AddFinalTargetDataToProto();
   return common::Status::OK();
 }
@@ -141,6 +160,15 @@ const TargetValue& TargetMaker::target_value(const double t) const {
 void TargetMaker::Reset() {
   target_values_.clear();
   final_target_pb_.Clear();
+}
+
+void TargetMaker::RefineStarget() {
+  const int target_size = static_cast<int>(target_values_.size());
+  for (int i = target_size - 2; i >= 0; i--) {
+    const auto s_target_tmp = std::fmin(target_values_[i].s_target_val(),
+                                        target_values_[i + 1].s_target_val());
+    target_values_[i].set_s_target_val(s_target_tmp);
+  }
 }
 
 void TargetMaker::AddFinalTargetDataToProto() {

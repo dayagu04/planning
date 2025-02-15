@@ -9,15 +9,12 @@
 
 namespace planning {
 
-void FuturePathDecider::Process(const HybridAStarResult *history_path,
-                                const PlanningReason plan_reason,
-                                const Pose2D &ego_pose,
-                                EulerDistanceTransform *edt,
-                                const ParkReferenceLine *ref_line,
-                                const double min_turn_radius,
-                                const bool swap_start_goal,
-                                const AstarPathGenerateType path_generate_type,
-                                ParkFirstActionRequest *future_path_request) {
+void FuturePathDecider::Process(
+    const HybridAStarResult *history_path, const PlanningReason plan_reason,
+    const Pose2D &ego_pose, EulerDistanceTransform *edt,
+    const ParkReferenceLine *ref_line, const double min_turn_radius,
+    const bool swap_start_goal, const AstarPathGenerateType path_generate_type,
+    ParkFirstActionRequest *future_path_request) {
   ILOG_INFO << "plan reason=" << static_cast<int>(plan_reason);
 
   min_turn_radius_ = min_turn_radius;
@@ -344,9 +341,9 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
       history_path->accumulated_s[history_path_info_.end_point_id_] -
       history_path->accumulated_s[history_path_info_.start_point_id_];
 
-  ILOG_INFO << "drive distance decider hy history, gear = "
-            << PathGearDebugString(second_path_gear) << ", dist = "
-            << history_path_info_.dist_ << ", shot number = "
+  ILOG_INFO << "drive distance decider by history, gear = "
+            << PathGearDebugString(second_path_gear)
+            << ", dist = " << history_path_info_.dist_ << ", shot number = "
             << PathGearSwitchNumberString(
                    history_path_info_.gear_switch_number_);
 

@@ -10,7 +10,7 @@ namespace planning {
 namespace speed {
 
 namespace {
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 };
 
 STBoundary::STBoundary(

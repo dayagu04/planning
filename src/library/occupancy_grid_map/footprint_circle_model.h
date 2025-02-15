@@ -1,13 +1,14 @@
 #pragma once
 
 #include <cstdint>
+
 #include "./../hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
 
 namespace planning {
 
-#define footprint_circle_num (10)
+#define FOOTPRINT_CIRCLE_NUM (12)
 
 struct FootPrintCircle {
   Position2D pos;
@@ -17,7 +18,7 @@ struct FootPrintCircle {
 
 struct FootPrintCircleList {
   int size;
-  FootPrintCircle circles[footprint_circle_num];
+  FootPrintCircle circles[FOOTPRINT_CIRCLE_NUM];
 
   // if this circle no collision, then no need to check other circle
   FootPrintCircle max_circle;
@@ -32,7 +33,8 @@ class FootPrintCircleModel {
             const float mirror_buffer);
 
   void UpdateSafeBuffer(const float lat_safe_buffer,
-                        const float lon_safe_buffer, const float mirror_buffer);
+                        const float lon_safe_buffer, const float mirror_buffer,
+                        const double big_circle_safe_buffer = 0.35);
 
   void LocalToGlobalFast(FootPrintCircleList *global_circle,
                          const Pose2D &veh_pose);
@@ -52,10 +54,12 @@ class FootPrintCircleModel {
   void LocalToGlobalByGear(FootPrintCircleList *global_circle, Transform2d *tf,
                            const AstarPathGear gear) const;
 
- private:
-  void DebugCircle(FootPrintCircle *circle);
+  FootPrintCircleList *GetMutableGlobalFPCircleByGear(const AstarPathGear gear);
 
-  void DebugCircles(FootPrintCircleList *circles);
+ private:
+  void DebugCircle(const FootPrintCircle *circle) const;
+
+  void DebugCircles(const FootPrintCircleList *circles) const;
 
  private:
   // vehicle coordinate system
@@ -64,6 +68,10 @@ class FootPrintCircleModel {
   // for different gear, use different safe buffer
   FootPrintCircleList drive_gear_circles_;
   FootPrintCircleList reverse_gear_circles_;
+
+  FootPrintCircleList global_circles_;
+  FootPrintCircleList global_drive_gear_circles_;
+  FootPrintCircleList global_reverse_gear_circles_;
 };
 
 }  // namespace planning

@@ -1,13 +1,16 @@
 #include "st_graph_input.h"
+
 #include <memory>
 
+#include "config/basic_type.h"
 #include "environmental_model.h"
 #include "planning_context.h"
 #include "st_graph_utils.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
-namespace {
+namespace planning {
+using namespace planning_math;
 
 constexpr double kPathSampleInterval = 1.0;
 constexpr double kExtendTime = 0.3;
@@ -79,7 +82,7 @@ void GenerateParallelMap(
     (*ptr_is_parallel_lane_map)[lane_id] = is_parallel;
   }
 }
-}  // namespace
+}  // namespace planning
 
 namespace planning {
 namespace speed {
@@ -98,15 +101,16 @@ void StGraphInput::Update() {
       session_->planning_context().lateral_behavior_planner_output();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  const auto lane_change_status = lateral_behavior_planner_output.lc_status;
-  const auto lane_change_request = lateral_behavior_planner_output.lc_request;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto& lane_change_status = lane_change_decider_output.curr_state;
   const auto& planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
-  GetAgentOfTargetLane(dynamic_world, lane_change_status, lane_change_request);
+  is_lane_keeping_ = lane_change_status == kLaneKeeping;
+  GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);
   const auto& init_point = ego_state_manager->planning_init_point();
   PlanningInitPointToTrajectoryPoint(init_point);
-  MakeBuffer(lane_change_status, lane_change_request, config_);
-
+  MakeBuffer(lane_change_status, config_);
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
   ego_lane_ = virtual_lane_manager_->get_current_lane();
@@ -128,8 +132,7 @@ void StGraphInput::Update() {
 
   FilterAgentsByDecisionType(agents);
 
-  ExtendProcessedPath(lane_change_status, lane_change_request,
-                      ego_center_line_coord, planned_kd_path);
+  ExtendProcessedPath(is_lane_keeping_, ego_center_line_coord, planned_kd_path);
 
   // update for the forward extend path
   if (nullptr != processed_path_ && !processed_path_->path_points().empty()) {
@@ -151,20 +154,20 @@ void StGraphInput::Update() {
 
 void StGraphInput::GetAgentOfTargetLane(
     const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-    const std::string lane_change_status,
-    const std::string lane_change_request) {
-  const bool is_lane_keeping = lane_change_request == "none" ||
-                               lane_change_status == "none" ||
-                               lane_change_status == "left_lane_change_wait" ||
-                               lane_change_status == "right_lane_change_wait";
+    const bool is_lane_keeping) {
   if (is_lane_keeping) {
+    front_agent_of_target_ = nullptr;
+    rear_agent_of_target_ = nullptr;
     return;
   }
 
-  front_agent_of_target_ = StGraphUtils::GetFrontAgentOfTargetLane(
-      dynamic_world, lane_change_status, lane_change_request);
-  rear_agent_of_target_ = StGraphUtils::GetRearAgentOfTargetLane(
-      dynamic_world, lane_change_status, lane_change_request);
+  const auto target_lane_front_rear_agents =
+      MakeTargetLaneFrontRearAgents(session_);
+
+  front_agent_of_target_ = dynamic_world->agent_manager()->GetAgent(
+      target_lane_front_rear_agents.first);
+  rear_agent_of_target_ = dynamic_world->agent_manager()->GetAgent(
+      target_lane_front_rear_agents.second);
 }
 
 void StGraphInput::FilterAgentsByDecisionType(
@@ -190,19 +193,13 @@ void StGraphInput::FilterAgentsByDecisionType(
 }
 
 void StGraphInput::ExtendProcessedPath(
-    const std::string lane_change_status,
-    const std::string lane_change_request,
+    const bool is_lane_keeping,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path) {
   std::vector<planning_math::PathPoint> path_points;
   path_points.reserve(planned_path->path_points().size());
-  ForwardExtendPlannedPath(lane_change_status, lane_change_request,
-                           lane_fusion_ego_center_lane, planned_path,
-                           &path_points);
-  const bool is_lane_keeping = lane_change_request == "none" ||
-                               lane_change_status == "none" ||
-                               lane_change_status == "left_lane_change_wait" ||
-                               lane_change_status == "right_lane_change_wait";
+  ForwardExtendPlannedPath(is_lane_keeping, lane_fusion_ego_center_lane,
+                           planned_path, &path_points);
   if (!is_lane_keeping) {
     BackwardExtendPoints(planned_path, &path_points);
   }
@@ -215,16 +212,10 @@ void StGraphInput::ExtendProcessedPath(
 }
 
 void StGraphInput::ForwardExtendPlannedPath(
-    const std::string lane_change_status,
-    const std::string lane_change_request,
+    const bool is_lane_keeping,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path,
     std::vector<planning_math::PathPoint>* const ptr_path_points) {
-  const bool is_in_lane_keeping =
-      lane_change_request == "none" || lane_change_status == "none" ||
-      lane_change_status == "left_lane_change_wait" ||
-      lane_change_status == "right_lane_change_wait";
-
   // cal desire path length
   constexpr double kMinLength = 30.0;
   const double init_v = std::fmax(0.0, planning_init_point_.vel());
@@ -236,7 +227,7 @@ void StGraphInput::ForwardExtendPlannedPath(
       0.5 * ego_max_acc * plan_time_length * plan_time_length;
   desired_path_length = std::fmax(kMinLength, desired_path_length);
 
-  if (is_in_lane_keeping) {
+  if (is_lane_keeping) {
     ForwardExtendPlannedPathWithEgoLane(lane_fusion_ego_center_lane,
                                         planned_path, desired_path_length,
                                         ptr_path_points);
@@ -517,13 +508,13 @@ const std::shared_ptr<VirtualLane> StGraphInput::ego_lane() const {
 
 bool StGraphInput::is_lane_keeping() const { return is_lane_keeping_; }
 
-const string StGraphInput::lane_change_request() const {
+const std::string StGraphInput::lane_change_request() const {
   return session_->planning_context()
       .lateral_behavior_planner_output()
       .lc_request;
 }
 
-const string StGraphInput::lane_change_status() const {
+const std::string StGraphInput::lane_change_status() const {
   return session_->planning_context()
       .lateral_behavior_planner_output()
       .lc_status;
@@ -559,13 +550,8 @@ const planning_math::Box2d& StGraphInput::planning_init_point_box() const {
   return planning_init_point_box_;
 }
 
-void StGraphInput::MakeBuffer(const std::string lane_change_status,
-                              const std::string lane_change_request,
+void StGraphInput::MakeBuffer(const bool is_lane_keeping,
                               const STGraphConfig& config) {
-  is_lane_keeping_ = lane_change_request == "none" ||
-                     lane_change_status == "none" ||
-                     lane_change_status == "left_lane_change_wait" ||
-                     lane_change_status == "right_lane_change_wait";
   const double lane_keeping_lower_lateral_buffer_m =
       config.lane_keeping_lower_lateral_buffer_m;
   const double lane_keeping_upper_lateral_buffer_m =
@@ -816,8 +802,57 @@ StGraphInput::GenerateMaxAccelerationCurve(
                                                             state_limit);
 }
 
+std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents(
+    framework::Session* session) {
+  const auto& dynamic_world =
+      session->environmental_model().get_dynamic_world();
+  // get lane change status
+  const auto& lane_change_decider_output =
+      session->planning_context().lane_change_decider_output();
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+
+  // get front and rear agents
+  int64_t target_lane_front_node_id = -1;
+  int64_t target_lane_rear_node_id = -1;
+  int32_t target_lane_front_agent_id;
+  int32_t target_lane_rear_agent_id;
+
+  if (lane_change_state == kLaneChangeExecution) {
+    if (lc_request_direction == LEFT_CHANGE) {
+      target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
+      target_lane_rear_node_id = dynamic_world->ego_left_rear_node_id();
+    } else if (lc_request_direction == RIGHT_CHANGE) {
+      target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
+      target_lane_rear_node_id = dynamic_world->ego_right_rear_node_id();
+    }
+  } else if (lane_change_state == kLaneChangeComplete) {
+    target_lane_front_node_id = dynamic_world->ego_front_node_id();
+    target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
+  }
+
+  if (target_lane_front_node_id != -1) {
+    auto* target_lane_front_node =
+        dynamic_world->GetNode(target_lane_front_node_id);
+    if (target_lane_front_node != nullptr) {
+      target_lane_front_agent_id = target_lane_front_node->node_agent_id();
+    }
+  }
+
+  if (target_lane_rear_node_id != -1) {
+    auto* target_lane_rear_node =
+        dynamic_world->GetNode(target_lane_rear_node_id);
+    if (target_lane_rear_node != nullptr) {
+      target_lane_rear_agent_id = target_lane_rear_node->node_agent_id();
+    }
+  }
+  return std::make_pair(target_lane_front_agent_id, target_lane_rear_agent_id);
+}
+
 void StGraphInput::Reset() {
   is_parallel_lane_map_.clear();
+  front_agent_of_target_ = nullptr;
+  rear_agent_of_target_ = nullptr;
 }
 
 }  // namespace speed

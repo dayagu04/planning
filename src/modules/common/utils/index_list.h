@@ -122,24 +122,24 @@ class IndexedList {
 
 template <typename I, typename T>
 class ThreadSafeIndexedList : public IndexedList<I, T> {
-public:
- T *Add(const I id, const T &object) {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return IndexedList<I, T>::Add(id, object);
- }
+ public:
+  T *Add(const I id, const T &object) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return IndexedList<I, T>::Add(id, object);
+  }
 
- T *Find(const I id) {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return IndexedList<I, T>::Find(id);
- }
+  T *Find(const I id) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return IndexedList<I, T>::Find(id);
+  }
 
- std::vector<const T *> Items() {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return IndexedList<I, T>::Items();
- }
+  std::vector<const T *> Items() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return IndexedList<I, T>::Items();
+  }
 
-private:
- std::mutex mutex_;
+ private:
+  std::mutex mutex_;
 };
 
 }  // namespace planning

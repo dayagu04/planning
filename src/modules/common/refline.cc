@@ -1,6 +1,7 @@
 #include "refline.h"
 
 namespace planning {
+using namespace planning_math;
 
 bool equal_zero(double a) {
   if (a > -std::numeric_limits<double>::epsilon() &&
@@ -39,11 +40,11 @@ void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
   int index_min = 0;
 
   double min_dist =
-      std::pow(path_points[0].x - x, 2) + std::pow(path_points[0].y - y, 2);
+      std::pow(path_points[0].x() - x, 2) + std::pow(path_points[0].y() - y, 2);
 
   for (size_t i = 1; i < path_points.size(); i++) {
-    double temp_dist =
-        std::pow(path_points[i].x - x, 2) + std::pow(path_points[i].y - y, 2);
+    double temp_dist = std::pow(path_points[i].x() - x, 2) +
+                       std::pow(path_points[i].y() - y, 2);
 
     if (temp_dist < min_dist) {
       min_dist = temp_dist;
@@ -54,52 +55,52 @@ void calc_cartesian_frenet(const std::vector<PathPoint> &path_points, double x,
   double x0, y0, x1, y1, matched_x, matched_y, t;
 
   if (index_min == 0) {
-    x0 = path_points[index_min].x;
-    y0 = path_points[index_min].y;
-    x1 = path_points[index_min + 1].x;
-    y1 = path_points[index_min + 1].y;
-    matched_x = path_points[index_min].x;
-    matched_y = path_points[index_min].y;
-    s = path_points[index_min].s;
+    x0 = path_points[index_min].x();
+    y0 = path_points[index_min].y();
+    x1 = path_points[index_min + 1].x();
+    y1 = path_points[index_min + 1].y();
+    matched_x = path_points[index_min].x();
+    matched_y = path_points[index_min].y();
+    s = path_points[index_min].s();
     if (get_theta || v != nullptr) {
-      theta = path_points[index_min].theta;
+      theta = path_points[index_min].theta();
     }
   } else {
-    x0 = path_points[index_min - 1].x;
-    y0 = path_points[index_min - 1].y;
-    x1 = path_points[index_min].x;
-    y1 = path_points[index_min].y;
+    x0 = path_points[index_min - 1].x();
+    y0 = path_points[index_min - 1].y();
+    x1 = path_points[index_min].x();
+    y1 = path_points[index_min].y();
 
     calc_projection(x, y, x0, y0, x1, y1, matched_x, matched_y, t);
-    s = path_points[index_min - 1].s +
-        (path_points[index_min].s - path_points[index_min - 1].s) * t;
+    s = path_points[index_min - 1].s() +
+        (path_points[index_min].s() - path_points[index_min - 1].s()) * t;
 
     if (get_theta || v != nullptr) {
-      if (path_points[index_min - 1].theta > M_PI / 2 &&
-          path_points[index_min].theta < -M_PI / 2) {
-        theta = path_points[index_min - 1].theta +
-                (path_points[index_min].theta + 2 * M_PI -
-                 path_points[index_min - 1].theta) *
+      if (path_points[index_min - 1].theta() > M_PI / 2 &&
+          path_points[index_min].theta() < -M_PI / 2) {
+        theta = path_points[index_min - 1].theta() +
+                (path_points[index_min].theta() + 2 * M_PI -
+                 path_points[index_min - 1].theta()) *
                     t;
 
         if (theta > 2 * M_PI) {
           theta -= 2 * M_PI;
         }
-      } else if (path_points[index_min - 1].theta < -M_PI / 2 &&
-                 path_points[index_min].theta > M_PI / 2) {
-        theta = path_points[index_min - 1].theta +
-                (path_points[index_min].theta - 2 * M_PI -
-                 path_points[index_min - 1].theta) *
+      } else if (path_points[index_min - 1].theta() < -M_PI / 2 &&
+                 path_points[index_min].theta() > M_PI / 2) {
+        theta = path_points[index_min - 1].theta() +
+                (path_points[index_min].theta() - 2 * M_PI -
+                 path_points[index_min - 1].theta()) *
                     t;
 
         if (theta < -2 * M_PI) {
           theta += 2 * M_PI;
         }
       } else {
-        theta =
-            path_points[index_min - 1].theta +
-            (path_points[index_min].theta - path_points[index_min - 1].theta) *
-                t;
+        theta = path_points[index_min - 1].theta() +
+                (path_points[index_min].theta() -
+                 path_points[index_min - 1].theta()) *
+                    t;
       }
     }
   }
@@ -123,14 +124,14 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
   size_t i_upp = path_points.size() - 1;
 
   while (i_upp > i_low + 1) {
-    if (path_points[(i_low + i_upp) / 2].s > s) {
+    if (path_points[(i_low + i_upp) / 2].s() > s) {
       i_upp = (i_low + i_upp) / 2;
     } else {
       i_low = (i_low + i_upp) / 2;
     }
   }
 
-  if (s >= path_points[i_upp].s) {
+  if (s >= path_points[i_upp].s()) {
     index = i_upp;
   } else {
     index = i_low;
@@ -139,43 +140,44 @@ void calc_frenet_cartesian(const std::vector<PathPoint> &path_points, double s,
   double x_r, y_r, theta_r;
 
   if (index < path_points.size() - 1) {
-    double s0 = path_points[index].s;
-    double s1 = path_points[index + 1].s;
+    double s0 = path_points[index].s();
+    double s1 = path_points[index + 1].s();
     double t = equal_zero(s1 - s0) ? 0 : ((s - s0) / (s1 - s0));
 
-    if (path_points[index].theta > M_PI / 2 &&
-        path_points[index + 1].theta < -M_PI / 2) {
+    if (path_points[index].theta() > M_PI / 2 &&
+        path_points[index + 1].theta() < -M_PI / 2) {
       theta_r =
-          path_points[index].theta +
-          (path_points[index + 1].theta + 2 * M_PI - path_points[index].theta) *
-              t;
+          path_points[index].theta() + (path_points[index + 1].theta() +
+                                        2 * M_PI - path_points[index].theta()) *
+                                           t;
 
       if (theta_r > 2 * M_PI) {
         theta_r -= 2 * M_PI;
       }
-    } else if (path_points[index].theta < -M_PI / 2 &&
-               path_points[index + 1].theta > M_PI / 2) {
+    } else if (path_points[index].theta() < -M_PI / 2 &&
+               path_points[index + 1].theta() > M_PI / 2) {
       theta_r =
-          path_points[index].theta +
-          (path_points[index + 1].theta - 2 * M_PI - path_points[index].theta) *
-              t;
+          path_points[index].theta() + (path_points[index + 1].theta() -
+                                        2 * M_PI - path_points[index].theta()) *
+                                           t;
 
       if (theta_r < -2 * M_PI) {
         theta_r += 2 * M_PI;
       }
     } else {
-      theta_r = path_points[index].theta +
-                (path_points[index + 1].theta - path_points[index].theta) * t;
+      theta_r =
+          path_points[index].theta() +
+          (path_points[index + 1].theta() - path_points[index].theta()) * t;
     }
 
-    x_r = path_points[index].x +
-          (path_points[index + 1].x - path_points[index].x) * t;
-    y_r = path_points[index].y +
-          (path_points[index + 1].y - path_points[index].y) * t;
+    x_r = path_points[index].x() +
+          (path_points[index + 1].x() - path_points[index].x()) * t;
+    y_r = path_points[index].y() +
+          (path_points[index + 1].y() - path_points[index].y()) * t;
   } else {
-    theta_r = path_points[index].theta;
-    x_r = path_points[index].x;
-    y_r = path_points[index].y;
+    theta_r = path_points[index].theta();
+    x_r = path_points[index].x();
+    y_r = path_points[index].y();
   }
 
   x = x_r - l * std::sin(theta_r);

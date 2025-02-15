@@ -54,8 +54,7 @@ constexpr double kEpsilon = 1.0e-4;
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session* session)
-    : session_(session),
-      ego_lane_track_manager_(session) {
+    : session_(session), ego_lane_track_manager_(config_builder, session) {
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
 }
@@ -528,8 +527,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_start = IflyTime::Now_ms();
   if (location_valid) {
     ego_lane_track_manager_.TrackEgoLane(relative_id_lanes_,
-                                          order_ids_of_same_zero_relative_id_,
-                                          virtual_id_mapped_lane_);
+                                         order_ids_of_same_zero_relative_id_,
+                                         virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_.is_select_ego_lane_without_plan();
     LOG_DEBUG("select_ego_lane_without_plan: %d \n",
@@ -547,6 +546,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   ego_lane_track_manager_.SetLastZeroRelativeIdNums(
       origin_relative_id_zero_nums_);
+  JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
+                    origin_relative_id_zero_nums_);
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
@@ -996,8 +997,8 @@ bool VirtualLaneManager::UpdateIntersectionState() {
     Intersection_state_ = planning::common::IN_INTERSECTION;
     return true;
   }
-  if ((distance_to_stopline_ < 25.0 && distance_to_stopline_ > 3.0) ||
-      ((distance_to_crosswalk_ < 28.0 && distance_to_crosswalk_ > 5.0) &&
+  if ((distance_to_stopline_ < 35.0 && distance_to_stopline_ > 3.0) ||
+      ((distance_to_crosswalk_ < 38.0 && distance_to_crosswalk_ > 5.0) &&
        !IsPosXOnVirtualLaneType(ego_pos_x))) {
     Intersection_state_ = planning::common::APPROACH_INTERSECTION;
   } else if (-1.0 < distance_to_stopline_ && distance_to_stopline_ <= 3.0) {
@@ -1261,7 +1262,7 @@ void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
 std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
     const iflyauto::LaneBoundary& boundary) {
   std::shared_ptr<planning_math::KDPath> boundary_path;
-  std::vector<Vec2d> center_line_points;
+  std::vector<planning_math::Vec2d> center_line_points;
   center_line_points.clear();
 
   for (const auto& point : boundary.enu_points) {
@@ -1311,7 +1312,7 @@ std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
     if (relative_id_lane == nullptr) {
       continue;
     }
-    std::shared_ptr<KDPath> frenet_coord;
+    std::shared_ptr<planning_math::KDPath> frenet_coord;
     if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
       continue;
     }

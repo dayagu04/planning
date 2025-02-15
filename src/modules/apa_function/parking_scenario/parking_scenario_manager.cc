@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -16,6 +15,7 @@
 #include "narrow_space_decider.h"
 #include "narrow_space_scenario.h"
 #include "parallel_park_in_scenario.h"
+#include "parallel_park_out_scenario.h"
 #include "parking_scenario.h"
 #include "perpendicular_head_in_scenario.h"
 #include "perpendicular_head_out_scenario.h"
@@ -90,6 +90,9 @@ bool ParkingScenarioManager::Init(
   scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_IN] =
       std::make_shared<ParallelParkInScenario>(apa_world);
 
+  scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_OUT] =
+      std::make_shared<ParallelParkOutScenario>(apa_world);
+
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT] =
       std::make_shared<PerpendicularHeadOutScenario>(apa_world);
 
@@ -109,6 +112,7 @@ bool ParkingScenarioManager::Init(
 }
 
 void ParkingScenarioManager::Excute() {
+  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute --------------------";
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
@@ -149,18 +153,15 @@ void ParkingScenarioManager::Excute() {
   } else if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
-      scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
-
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::SEARCH_BASED) {
-        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
-      }
+      scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
     }
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
+    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
+      scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
     }
   }
 
@@ -225,6 +226,11 @@ void ParkingScenarioManager::ScenarioRunning() {
 
 void ParkingScenarioManager::ScenarioTry() {
   if (current_scenario_ == nullptr) {
+    return;
+  }
+
+  if (!apa_world_->GetNewSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
+    ILOG_INFO << "not release by rule";
     return;
   }
 

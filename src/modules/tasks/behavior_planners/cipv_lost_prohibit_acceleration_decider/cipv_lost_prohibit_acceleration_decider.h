@@ -26,14 +26,15 @@ class CipvLostProhibitAccelerationDecider : public Task {
 
   void Update();
 
-  double CalculateRelativeDistance(const std::shared_ptr<KDPath>& planned_path,
-                                   const agent::Agent* cipv);
+  double CalculateRelativeDistance(
+      const std::shared_ptr<planning_math::KDPath>& planned_path,
+      const agent::Agent* cipv);
 
   const agent::Agent* QuerryCipv(
       std::shared_ptr<agent::AgentManager> agent_manager);
 
   void UpdateCipvInfo(const std::shared_ptr<LateralObstacle>& lateral_obstacle,
-                      const string& lc_status);
+                      const std::string& lc_status);
 
   bool IsLeadVehicle(const TrackedObject* lead);
 

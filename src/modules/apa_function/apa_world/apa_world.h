@@ -1,12 +1,12 @@
 #ifndef __APA_WORLD_H__
 #define __APA_WORLD_H__
 
+#include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-
 
 #include "apa_measure_data_manager.h"
 #include "apa_obstacle_manager.h"
@@ -29,7 +29,9 @@ namespace planning {
 namespace apa_planner {
 
 struct SimulationParam {
+  int force_mid_process_plan = 0;
   bool is_simulation = false;
+  int plan_type = 0;
   bool is_complete_path = false;
   bool force_plan = false;
   bool sim_to_target = false;
@@ -119,6 +121,7 @@ class ApaWorld {
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
+  // will be retired
   std::shared_ptr<SlotManager> slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;

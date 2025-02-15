@@ -1,6 +1,5 @@
 #include "apa_trajectory_stitcher.h"
 
-
 namespace planning {
 
 void ApaTrajectoryStitcher::Process(
@@ -22,4 +21,4 @@ void ApaTrajectoryStitcher::Process(
 
   return;
 }
-}
+}  // namespace planning

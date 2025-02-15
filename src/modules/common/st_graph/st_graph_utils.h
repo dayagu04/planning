@@ -29,11 +29,13 @@ class StGraphUtils {
 
   static const agent::Agent* GetFrontAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status, const string& lane_change_request);
+      const std::string lane_change_status,
+      const std::string& lane_change_request);
 
   static const agent::Agent* GetRearAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status, const string& lane_change_request);
+      const std::string lane_change_status,
+      const std::string& lane_change_request);
 
   static double CalculateLateralBufferForNormalLaneKeeping(
       const trajectory::TrajectoryPoint& init_point,
@@ -45,7 +47,8 @@ class StGraphUtils {
       const double lower_t, const double upper_t, const double t);
 
   static void DetermineCautionYieldDecision(
-      const StGraphInput& st_graph_input, const std::string lane_change_status,
+      const std::shared_ptr<StGraphInput>& st_graph_input,
+      const std::string lane_change_status,
       const std::string lane_change_request,
       const std::unordered_map<int32_t, std::vector<int64_t>>&
           agent_id_st_boundaries_map,
@@ -55,7 +58,7 @@ class StGraphUtils {
 
   // TODO: 待Cross决策加入后添加
   static void SetCrossingAgentCautionYieldDecision(
-      const StGraphInput& st_graph_input,
+      const std::shared_ptr<StGraphInput>& st_graph_input,
       const std::unordered_map<int32_t, std::vector<int64_t>>&
           agent_id_st_boundaries_map,
       const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
@@ -78,7 +81,7 @@ class StGraphUtils {
           boundary_id_st_boundaries_map);
 
   static void UpdateStBoundaryForOvertaking(
-      const StGraphInput& st_graph_input,
+      const std::shared_ptr<StGraphInput>& st_graph_input,
       const std::unordered_map<int32_t, std::vector<int64_t>>&
           agent_id_st_boundaries_map,
       const agent::Agent* rear_agent_of_target,
@@ -161,8 +164,8 @@ class StGraphUtils {
   static bool CheckLonFarPositionSTBoundary(
       const agent::Agent& agent,
       const std::vector<std::pair<STPoint, STPoint>>& st_point_pairs,
-      const StGraphInput& st_graph_input, const bool is_parallel,
-      const std::shared_ptr<VirtualLane>& ego_lane,
+      const std::shared_ptr<StGraphInput>& st_graph_input,
+      const bool is_parallel, const std::shared_ptr<VirtualLane>& ego_lane,
       const std::shared_ptr<VirtualLane>& ptr_agent_lane,
       const std::shared_ptr<VirtualLaneManager>& virtual_lane_manager);
 
@@ -171,13 +174,13 @@ class StGraphUtils {
   static bool CheckLateralFarCutinAgent(
       const agent::Agent& agent,
       const std::vector<std::pair<STPoint, STPoint>> st_point_pairs,
-      const StGraphInput& st_graph_input);
+      const std::shared_ptr<StGraphInput>& st_graph_input);
 
   static bool CheckLateralFarCutinAgentIsLonSafe(
       const agent::Agent& agent,
       const std::vector<std::pair<STPoint, STPoint>> st_point_pairs,
       const trajectory::TrajectoryPoint& planning_init_point,
-      StGraphInput* st_graph_input);
+      const std::shared_ptr<StGraphInput>& st_graph_input);
 
   static SecondOrderTimeOptimalTrajectory
   GenerateMaxDecelerationCurveByAgentVel(

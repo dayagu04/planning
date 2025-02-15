@@ -108,7 +108,7 @@ void AgentManager::Update(const double start_timestamp_s) {
         prediction_object.motion_pattern_current ==
             iflyauto::OBJECT_MOTION_TYPE_STATIC;
     double prediction_relative_time = prediction_object.delay_time - init_time;
-    unordered_map<int32_t, Agent> agent_table;
+    std::unordered_map<int32_t, Agent> agent_table;
     if (prediction_object.trajectory_array.size() == 0) {
       auto agent =
           Agent(prediction_object, is_static, prediction_relative_time);
@@ -135,7 +135,8 @@ void AgentManager::Update(const double start_timestamp_s) {
 //   constexpr double kTooOldThreshold = 2.0;
 //   for (auto iter = historical_agents_.begin();
 //        iter != historical_agents_.end();) {
-//     bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s() >
+//     bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s()
+//     >
 //                       kTooOldThreshold;
 //     bool is_del = is_too_old;
 //     if (is_del) {

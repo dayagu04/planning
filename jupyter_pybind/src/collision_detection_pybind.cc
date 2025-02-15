@@ -25,7 +25,7 @@ typedef Eigen::Matrix<double, 5, 1> Vector5d;
 static CollisionDetector* pBaseColDetAir = nullptr;
 static CollisionDetector::CollisionResult collision_result;
 static std::vector<Eigen::Vector3d> pt_vec;
-static planning::apa_planner::ApaPlanInterface* pApaPlanInterface= nullptr;
+static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
 static bool is_obs_in_car = false;
 static bool is_line_intersect_arc = false;
 static pnc::geometry_lib::LineSegment gl_line_seg;
@@ -41,7 +41,7 @@ int Init() {
   // InitGlog(FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
 
-  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init(true);
   pBaseColDetAir = new CollisionDetector();
@@ -86,15 +86,19 @@ void SetParam(const double lat_inflation, const double bound_expand) {
 }
 
 void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
-                       const Eigen::Vector3d ego_pos_end,
-                       const int is_line_obs) {
+                       const Eigen::Vector3d ego_pos_end, const int is_line_obs,
+                       const double lat_inflation) {
   pt_vec.clear();
   pnc::geometry_lib::LineSegment line_seg(
       Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
       Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]), ego_pos_start[2]);
+
+  const uint8_t line_gear = geometry_lib::CalLineSegGear(line_seg);
+  geometry_lib::PathSegment line_seg_(line_gear, line_seg);
+
   if (is_line_obs == 0) {
     collision_result =
-        pBaseColDetAir->UpdateByObsMap(line_seg, ego_pos_start[2]);
+        pBaseColDetAir->UpdateByObsMap(line_seg_, lat_inflation, 0.3);
   } else {
     collision_result =
         pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
@@ -119,7 +123,8 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
 void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
                       const Eigen::Vector3d ego_pos_end,
                       const Eigen::Vector5d ego_turn_circle,
-                      bool is_anti_clockwise, const int is_line_obs) {
+                      bool is_anti_clockwise, const int is_line_obs,
+                      const double lat_inflation) {
   pt_vec.clear();
   pnc::geometry_lib::Arc arc;
   arc.pA = Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]);
@@ -131,8 +136,15 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
   arc.headingA = ego_pos_start[2];
   arc.headingB = ego_pos_end[2];
   arc.length = length;
+
+  const uint8_t arc_gear = geometry_lib::CalArcGear(arc);
+  const uint8_t arc_steer = geometry_lib::CalArcSteer(arc);
+
+  geometry_lib::PathSegment arc1_seg(arc_steer, arc_gear, arc);
+
   if (!is_line_obs) {
-    collision_result = pBaseColDetAir->UpdateByObsMap(arc, ego_pos_start[2]);
+    collision_result =
+        pBaseColDetAir->UpdateByObsMap(arc1_seg, lat_inflation, 0.3);
   } else {
     collision_result = pBaseColDetAir->UpdateByLineObs(arc, ego_pos_start[2]);
   }
@@ -152,7 +164,7 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
 
   std::pair<Eigen::Vector2d, Eigen::Vector2d> intersections;
 
-  if (pnc::geometry_lib::GetArcLineIntersection(intersections, arc,
+  if (pnc::geometry_lib::GetArcLineSegIntersection(intersections, arc,
                                                 gl_line_seg) > 0) {
     is_line_intersect_arc = true;
   } else {
@@ -195,11 +207,17 @@ const Eigen::Vector2d GetTrunCenterCoord(
                                             sin(ego_pos_start[2]));
   // ego_pos_start: x, y, heading
   // ego_turn_circle: x, y, radius, rotation_angle, rotation_direction
-  const double sign = (ego_turn_circle[4] == true ? 1.0 : -1.0);
-  const double rot_angle = sign * pnc::mathlib::Deg2Rad(90);
-  length = std::fabs(rot_angle * ego_turn_circle[2]);
+  const double sign = (ego_turn_circle[4] > 0.5 ? 1.0 : -1.0);
+  // const double rot_angle = sign * pnc::mathlib::Deg2Rad(90);
+  const double rot_angle = sign * ego_turn_circle[3];
+  length = std::fabs(ego_turn_circle[3] * ego_turn_circle[2]);
   const auto rot_m = pnc::geometry_lib::GetRotm2dFromTheta(rot_angle);
-  const Eigen::Vector2d normal_unit_vector = rot_m * tangent_unit_vector;
+  Eigen::Vector2d normal_unit_vector;
+  if (ego_turn_circle[4] > 0.5) {
+    normal_unit_vector << -tangent_unit_vector.y(), tangent_unit_vector.x();
+  } else {
+    normal_unit_vector << tangent_unit_vector.y(), -tangent_unit_vector.x();
+  }
   const Eigen::Vector2d AO = ego_turn_circle[2] * normal_unit_vector;
   return Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]) + AO;
 }
@@ -212,7 +230,7 @@ const Eigen::Vector2d GetEgoPosCoord(const Eigen::Vector3d ego_pos_start,
       Eigen::Vector2d(ego_pos_start[0] - ego_turn_circle[0],
                       ego_pos_start[1] - ego_turn_circle[1]);
 
-  const double sign = (ego_turn_circle[4] == true ? 1.0 : -1.0);
+  const double sign = (ego_turn_circle[4] > 0.5 ? 1.0 : -1.0);
   const double rot_angle = sign * ego_turn_circle[3];
   const auto rot_m = pnc::geometry_lib::GetRotm2dFromTheta(rot_angle);
   Eigen::Vector2d OB = rot_m * OA;

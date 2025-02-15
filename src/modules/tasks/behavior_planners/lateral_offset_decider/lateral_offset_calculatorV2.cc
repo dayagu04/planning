@@ -86,9 +86,8 @@ bool LateralOffsetCalculatorV2::Process(
   has_enough_speed_hysteresis_.SetIsValidByValue(ego_v * 3.6);
   enable_bound_ = !has_enough_speed_hysteresis_.IsValid();
 
-  b_success =
-      update(status, flag_avd, should_premove,
-             dist_rblane, avd_obstacle, avd_sp_obstacle);
+  b_success = update(status, flag_avd, should_premove, dist_rblane,
+                     avd_obstacle, avd_sp_obstacle);
 
   if (!b_success) {
     // TBD : add logs
@@ -99,14 +98,13 @@ bool LateralOffsetCalculatorV2::Process(
 }
 
 bool LateralOffsetCalculatorV2::update(
-    int status, bool flag_avd, bool should_premove,
-    double dist_rblane,
+    int status, bool flag_avd, bool should_premove, double dist_rblane,
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
   last_avoid_info_ = avoid_info_;
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
-    UpdateAvoidPath(status, flag_avd, should_premove,
-                    dist_rblane, avd_obstacle, avd_sp_obstacle);
+    UpdateAvoidPath(status, flag_avd, should_premove, dist_rblane, avd_obstacle,
+                    avd_sp_obstacle);
   } else {
     Reset();
     auto &enough_space_hysteresis_map =
@@ -121,8 +119,8 @@ bool LateralOffsetCalculatorV2::update(
 }
 
 bool LateralOffsetCalculatorV2::UpdateAvoidPath(
-    int status, bool flag_avd, bool should_premove,
-    double dist_rblane, const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
+    int status, bool flag_avd, bool should_premove, double dist_rblane,
+    const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
   Reset();
   CalLaneWidth();
@@ -512,12 +510,12 @@ double LateralOffsetCalculatorV2::SmoothLateralOffset(
                           avoid_obstacle.first_s_to_ego * lat_offset;
 
       if (last_avoid_info_.lat_offset * lat_offset >= 0 &&
-          fabs(last_avoid_info_.lat_offset) > fabs(lat_offset)) {
+          std::fabs(last_avoid_info_.lat_offset) > fabs(lat_offset)) {
         smooth_lat_offset = lat_offset;
-      } else if (min(smooth_lat_offset, lat_offset) <=
+      } else if (std::min(smooth_lat_offset, lat_offset) <=
                      last_avoid_info_.lat_offset &&
                  last_avoid_info_.lat_offset <=
-                     max(smooth_lat_offset, lat_offset)) {
+                     std::max(smooth_lat_offset, lat_offset)) {
         smooth_lat_offset = last_avoid_info_.lat_offset;
       }
 
@@ -1240,7 +1238,7 @@ void LateralOffsetCalculatorV2::CalLaneWidth() {
   if (1) {
     double width = 0.0;
     double preview_s = 20 + ego_frenet_state_.s();
-    double start_s = 5+ ego_frenet_state_.s();
+    double start_s = 5 + ego_frenet_state_.s();
     double interval_s = 5;
     int point_num = (int)((preview_s - start_s) / interval_s) + 1;
     for (double s = start_s; s <= preview_s; s += interval_s) {

@@ -5,9 +5,9 @@
 #include <cstddef>
 
 #include "apa_param_config.h"
+#include "debug_info_log.h"
 #include "log_glog.h"
 #include "speed/apa_speed_decision.h"
-#include "debug_info_log.h"
 
 namespace planning {
 
@@ -106,14 +106,13 @@ StopDecision* ParkSpeedLimitDecider::GetCloseStopDecision(
 void ParkSpeedLimitDecider::PublishDebugInfo() {
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
-  common::SVGraphSpeedConstraint *speed_limit_debug =
+  common::SVGraphSpeedConstraint* speed_limit_debug =
       speed_debug->mutable_speed_limit();
 
   const std::vector<std::pair<double, double>>& points =
       speed_limit_profile_.SpeedLimitPoints();
 
   for (size_t i = 0; i < points.size(); i++) {
-
     speed_limit_debug->add_s(points[i].first);
     speed_limit_debug->add_v_upper_bound(points[i].second);
 
@@ -184,7 +183,7 @@ const double ParkSpeedLimitDecider::CalcRefSpeedBySpeedLimitDecision(
     return decision->advised_speed;
   }
 
-  double delta_s  = decision->path_s - ego_s;
+  double delta_s = decision->path_s - ego_s;
 
   // obstacle is over, no need speed limit
   if (delta_s < 0) {

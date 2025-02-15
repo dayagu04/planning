@@ -503,7 +503,7 @@ void HppGeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     double static_obstacle_safe_center_distance =
         config_.static_obj_safe_buffer + vehicle_param.width / 2;
     double static_obstacle_buffer_extra =
-        std::fabs(ref_path_points_[i].path_point.kappa) /
+        std::fabs(ref_path_points_[i].path_point.kappa()) /
         config_.max_ref_curvature * 0.2;
     double static_obstacle_safe_buffer_extra = 0.2;
 
@@ -1317,7 +1317,7 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
 
-  const std::shared_ptr<KDPath> frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> frenet_coord =
       reference_path_ptr->get_frenet_coord();
   Point2D tmp_safe_lower_point;
   Point2D tmp_safe_upper_point;
@@ -1433,7 +1433,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
       session_->environmental_model().get_virtual_lane_manager();
 
   // path points
-  std::vector<planning::PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
   if (flane != nullptr) {
     auto &ref_path = flane->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
@@ -1500,8 +1500,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop &&
-        lead_one != nullptr && lead_one->type == 20001))) {
+      ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
     lateral_output.borrow_bicycle_lane = false;
@@ -1605,14 +1604,14 @@ ObstacleBorderInfo HppGeneralLateralDecider::GetNearestObstacleBorder(
 }
 
 void HppGeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
-    vector<pair<int, Polygon2d>> &left_groundline_polygons,
-    vector<pair<int, Polygon2d>> &right_groundline_polygons,
-    vector<pair<int, Polygon2d>> &left_parking_space_polygons,
-    vector<pair<int, Polygon2d>> &right_parking_space_polygons) {
+    std::vector<std::pair<int, Polygon2d>> &left_groundline_polygons,
+    std::vector<std::pair<int, Polygon2d>> &right_groundline_polygons,
+    std::vector<std::pair<int, Polygon2d>> &left_parking_space_polygons,
+    std::vector<std::pair<int, Polygon2d>> &right_parking_space_polygons) {
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
-  const std::shared_ptr<KDPath> &frenet_coord =
+  const std::shared_ptr<planning_math::KDPath> &frenet_coord =
       reference_path_ptr->get_frenet_coord();
   // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
   // pillar），生成所有polygons Step 1.1 : 处理 lines

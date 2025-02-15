@@ -44,12 +44,15 @@ void Init() {
       std::make_shared<PerpendicularTailInScenario>(g_apa_world_ptr);
 }
 
-void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable, int is_complete_path) {
+void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
+                      int is_complete_path, int force_mid_process_plan, double sample_ds) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
   g_simu_param.is_cilqr_optimization = is_cilqr_enable;
   g_simu_param.is_complete_path = is_complete_path;
+  g_simu_param.force_mid_process_plan = force_mid_process_plan;
+  g_simu_param.sample_ds = sample_ds;
 }
 
 void UpdateLocalization(Eigen::Vector3d pose) {
@@ -170,8 +173,35 @@ void Update() {
   g_scenario_ptr->ScenarioRunning();
 }
 
+std::vector<std::vector<Eigen::Vector4d>> GetPerferredPlanPath() {
+  std::vector<std::vector<Eigen::Vector4d>> path_vec_vec;
+  if (g_scenario_ptr->GetPlannerStates().planning_status ==
+      ParkingScenario::ParkingStatus::PARKING_FAILED) {
+    return path_vec_vec;
+  }
+  path_vec_vec.reserve(g_scenario_ptr->GetPerferredGeometryPathVec().size() +
+                       6);
+  const auto& l2g_tf =
+      g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+  for (auto& geometry_path : g_scenario_ptr->GetPerferredGeometryPathVec()) {
+    geometry_path.Sample(g_simu_param.sample_ds);
+    std::vector<Eigen::Vector4d> path_vec;
+    for (const auto& pt : geometry_path.path_pt_vec) {
+      path_vec.emplace_back(
+          Eigen::Vector4d(l2g_tf.GetPos(pt.pos).x(), l2g_tf.GetPos(pt.pos).y(),
+                          l2g_tf.GetHeading(pt.heading), pt.lat_buffer));
+    }
+    path_vec_vec.emplace_back(path_vec);
+  }
+  return path_vec_vec;
+}
+
 std::vector<Eigen::Vector4d> GetCompletePlanPath() {
   std::vector<Eigen::Vector4d> path_vec;
+  if (g_scenario_ptr->GetPlannerStates().planning_status ==
+      ParkingScenario::ParkingStatus::PARKING_FAILED) {
+    return path_vec;
+  }
   path_vec.reserve(g_scenario_ptr->GetCompletePlanPathPt().size() + 6);
   for (const auto& pt : g_scenario_ptr->GetCompletePlanPathPt()) {
     path_vec.emplace_back(
@@ -182,6 +212,10 @@ std::vector<Eigen::Vector4d> GetCompletePlanPath() {
 
 std::vector<Eigen::Vector4d> GetCurrentGearPlanPath() {
   std::vector<Eigen::Vector4d> path_vec;
+  if (g_scenario_ptr->GetPlannerStates().planning_status ==
+      ParkingScenario::ParkingStatus::PARKING_FAILED) {
+    return path_vec;
+  }
   path_vec.reserve(g_scenario_ptr->GetCurrentGearPlanPathPt().size() + 6);
   for (const auto& pt : g_scenario_ptr->GetCurrentGearPlanPathPt()) {
     path_vec.emplace_back(
@@ -192,6 +226,10 @@ std::vector<Eigen::Vector4d> GetCurrentGearPlanPath() {
 
 std::vector<Eigen::Vector2d> GetObsVec() {
   std::vector<Eigen::Vector2d> obs_vec;
+  if (g_scenario_ptr->GetPlannerStates().planning_status ==
+      ParkingScenario::ParkingStatus::PARKING_FAILED) {
+    return obs_vec;
+  }
   const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
       obstacles_map =
           g_apa_world_ptr->GetCollisionDetectorPtr()->GetObstaclesMap();
@@ -200,6 +238,9 @@ std::vector<Eigen::Vector2d> GetObsVec() {
       g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
 
   for (const auto& obs_pair : obstacles_map) {
+    if (obs_pair.first != CollisionDetector::TLANE_OBS) {
+      continue;
+    }
     for (const auto& obstacle : obs_pair.second) {
       obs_vec.emplace_back(l2g_tf.GetPos(obstacle));
     }
@@ -221,6 +262,7 @@ PYBIND11_MODULE(perpendicular_slant_tail_in_with_json_py, m) {
       .def("UpdateUssPerceptionObs", &UpdateUssPerceptionObs)
       .def("GetCurrentGearPlanPath", &GetCurrentGearPlanPath)
       .def("GetCompletePlanPath", &GetCompletePlanPath)
-      .def("GetObsVec", &GetObsVec);
+      .def("GetObsVec", &GetObsVec)
+      .def("GetPerferredPlanPath", &GetPerferredPlanPath);
   ;
 }

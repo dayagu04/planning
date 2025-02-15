@@ -73,6 +73,9 @@ class GeneralLateralDecider : public Task {
       ObstacleDecision &obstacle_decision);
   double CalculateExtraDecreaseBuffer(
       const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
+  double CalculateExtraLaneTypeDecreaseBuffer(bool is_nudge_left);
+  void CalculateExtraLaneWidthDecreaseBuffer();
+
   bool CheckObstacleNudgeDecision(
       const std::shared_ptr<FrenetObstacle> &obstacle);
 
@@ -87,6 +90,9 @@ class GeneralLateralDecider : public Task {
   bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
                             double &limit_overlap_min_y,
                             double &limit_overlap_max_y);
+  double CalLaneWidth();
+  iflyauto::LaneBoundaryType CalLaneBoundaryType(const LineDirection direction,
+                                                 const double s) const;
   void PostProcessReferenceTrajBySoftBound(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds);
   void ExtractBoundary(
@@ -179,6 +185,7 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
   double cruise_vel_ = 0.0;
+  double extra_lane_width_decrease_buffer_ = 0.0;
   bool is_lane_change_scene_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;

@@ -70,10 +70,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     bool should_prepare_second = false;
     bool should_prepare_third = false;
     bool first_multi_plan = true;
-    bool complete_plan_again = false;
-    bool single_plan_again = false;
     bool multi_plan = false;
-    bool can_insert_line = true;
 
     double col_det_time = 0.0;
 
@@ -92,12 +89,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     Eigen::Vector2d pt_inside;
 
     pnc::geometry_lib::PathPoint safe_circle_tang_pt;
-    bool cal_tang_pt_success = false;
-    bool directly_use_ego_pose = false;
     uint8_t first_path_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-
-    bool use_mono_tang = false;
-    bool use_multi_tang = false;
 
     pnc::geometry_lib::LineSegment prepare_line;  // pA is tag point
     Eigen::Vector2d pre_line_tangent_vec = Eigen::Vector2d::Zero();
@@ -123,13 +115,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
-      complete_plan_again = false;
-      single_plan_again = false;
       multi_plan = false;
-      can_insert_line = true;
 
-      use_mono_tang = false;
-      use_multi_tang = false;
       first_path_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
 
       pt_inside.setZero();
@@ -140,8 +127,6 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       multi_safe_circle.Reset();
 
       safe_circle_tang_pt.Reset();
-      cal_tang_pt_success = false;
-      directly_use_ego_pose = false;
 
       pre_line_tangent_vec.setZero();
       pre_line_normal_vec.setZero();
@@ -182,7 +167,9 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,
                                     const double lon_safe_dist,
-                                    const bool enable_log = true);
+                                    const bool enable_log = true,
+                                    const bool need_cal_obs_dist = false,
+                                    const bool use_edt_col = true);
 
   const bool CalTurnAroundPose();
 
@@ -225,7 +212,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   const bool RoughMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
                                       const uint8_t ref_gear,
                                       geometry_lib::GeometryPath &ahead_path,
-                                      const bool enable_log = false);
+                                      const bool enable_log = false,
+                                      const bool ego_pose_flag = false);
 
   const bool OneStepMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
                                         const uint8_t ref_gear,

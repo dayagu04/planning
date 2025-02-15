@@ -37,9 +37,8 @@ enum class AstarPathGenerateType {
   NONE,
   REEDS_SHEPP,
   ASTAR_SEARCHING,
-  GEAR_REVERSE_DYNAMIC_PROGRAMMING,
-  GEAR_DRIVE_DYNAMIC_PROGRAMMING,
-  DUBINS_SAMPLING,
+  GEAR_REVERSE_SEARCHING,
+  GEAR_DRIVE_SEARCHING,
   SPIRAL_SAMPLING,
   CUBIC_POLYNOMIAL_SAMPLING,
   QUNTIC_POLYNOMIAL_SAMPLING,
@@ -297,21 +296,6 @@ struct Boundary2D {
   double max;
 };
 
-struct PolynomialPathCost {
-  double offset_to_center;
-  double accumulated_s;
-  double tail_heading;
-
-  size_t point_size;
-
-  void Clear() {
-    offset_to_center = 100.0;
-    tail_heading = 100.0;
-    point_size = 0;
-    return;
-  }
-};
-
 std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
@@ -319,8 +303,5 @@ std::string GetPathSteerDebugString(const AstarPathSteer type);
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
 
 std::string PlanReasonDebugString(const PlanningReason reason);
-
-const bool PolynomialPathBetter(const PolynomialPathCost& path,
-                                const PolynomialPathCost& base);
 
 }  // namespace planning

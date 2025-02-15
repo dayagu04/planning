@@ -18,10 +18,10 @@ namespace speed {
 
 class StGraphInput {
  public:
-  StGraphInput() = default;
-
   StGraphInput(const EgoPlanningConfigBuilder* config_builder,
                planning::framework::Session* session);
+
+  StGraphInput() = default;
 
   ~StGraphInput() = default;
 
@@ -29,12 +29,9 @@ class StGraphInput {
 
   void GetAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status,
-      const std::string lane_change_request);
+      const bool is_lane_keeping);
 
-  void MakeBuffer(const std::string lane_change_status,
-                  const std::string lane_change_request,
-                  const STGraphConfig& config);
+  void MakeBuffer(const bool is_lane_keeping, const STGraphConfig& config);
 
   void MakePlanningInitPointBox();
 
@@ -42,14 +39,12 @@ class StGraphInput {
       const std::vector<const agent::Agent*>& origin_agents);
 
   void ExtendProcessedPath(
-      const std::string lane_change_status,
-      const std::string lane_change_request,
+      const bool is_lane_keeping,
       const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
       const std::shared_ptr<planning_math::KDPath>& planned_path);
 
   void ForwardExtendPlannedPath(
-      const std::string lane_change_status,
-      const std::string lane_change_request,
+      const bool is_lane_keeping,
       const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       std::vector<planning_math::PathPoint>* const ptr_path_points);
@@ -73,6 +68,9 @@ class StGraphInput {
       const std::shared_ptr<planning_math::KDPath>& planned_path);
 
   void PlanningInitPointToTrajectoryPoint(const PlanningInitPoint& init_point);
+
+  std::pair<int32_t, int32_t> MakeTargetLaneFrontRearAgents(
+      framework::Session* session);
 
   const double lat_buffer() const;
 

@@ -41,6 +41,9 @@ class RSExpansionDecider : public AstarDecider {
 
   const bool NeedRsLinkByOffset(const Node3d *node) const;
 
+  const bool NeedRsLinkByRequestDist(
+    const Node3d *node, const AstarRequest *request) const;
+
   bool same_point_for_rs_with_astar_;
 
   double rs_end_max_depth_;

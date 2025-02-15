@@ -56,7 +56,7 @@ class RouteInfo {
   double distance_to_next_speed_bump_ = NL_NMAX;
 
   void UpdateVisionInfo();
-  
+
   // for NOA function
   void UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sdmap);
   bool UpdateSdMap(const LocalView& local_view);

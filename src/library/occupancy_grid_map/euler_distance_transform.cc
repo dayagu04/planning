@@ -137,10 +137,8 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
   OgmIndex index;
 
   FootPrintCircle *circle;
-
-  FootPrintCircleList *global_circles;
-  global_circles = &global_circles_;
-
+  FootPrintCircleList *global_circles =
+      footprint_model_.GetMutableGlobalFPCircleByGear(gear);
   footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
 
   float dist;
@@ -161,13 +159,13 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
   }
 
   dist = data_.dist[index.x][index.y] - circle->radius;
-  if (dist > 0.0f) {
+  if (dist > 1.0f) {
 #if DEBUG_EDT
     ILOG_INFO << "dist " << dist << " r " << circle->radius << " ,safe "
               << circle->safe_buffer;
 #endif
 
-    *min_dist = dist + circle->safe_buffer;
+    *min_dist = dist;
 
     return false;
   }
@@ -200,13 +198,13 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
                 << circle->radius;
 #endif
 
-      *min_dist = dist + circle->safe_buffer;
+      *min_dist = dist;
 
       return true;
     }
 
-    if ((dist + circle->safe_buffer) < close_dist) {
-      close_dist = dist + circle->safe_buffer;
+    if (dist < close_dist) {
+      close_dist = dist;
 
 #if DEBUG_EDT
       ILOG_INFO << "dist " << dist << " r " << circle->radius << " ,safe "
@@ -223,9 +221,18 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
 const bool EulerDistanceTransform::DistanceCheckForPoint(
     float *min_dist, const pnc::geometry_lib::PathPoint &pose,
     const uint8_t gear) {
-  const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
-                                      ? AstarPathGear::DRIVE
-                                      : AstarPathGear::REVERSE;
+  AstarPathGear path_gear;
+  switch (gear) {
+    case pnc::geometry_lib::SEG_GEAR_DRIVE:
+      path_gear = AstarPathGear::DRIVE;
+      break;
+    case pnc::geometry_lib::SEG_GEAR_REVERSE:
+      path_gear = AstarPathGear::REVERSE;
+      break;
+    default:
+      path_gear = AstarPathGear::NONE;
+      break;
+  }
 
   const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
 
@@ -237,9 +244,8 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
 const bool EulerDistanceTransform::IsCollisionForPoint(
     Transform2d *tf, const AstarPathGear gear) {
   FootPrintCircle *circle;
-  FootPrintCircleList *global_circles;
-  global_circles = &global_circles_;
-
+  FootPrintCircleList *global_circles =
+      footprint_model_.GetMutableGlobalFPCircleByGear(gear);
   footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
 
   // check max circle
@@ -322,7 +328,7 @@ void EulerDistanceTransform::Init(const float car_body_lat_safe_buffer,
   return;
 }
 
-const double EulerDistanceTransform::CalPathSafeDist(
+const double EulerDistanceTransform::CalPathRemainDist(
     const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
     const double ds, const uint8_t gear) {
   if (path_pt_vec.size() < 1) {
@@ -345,36 +351,49 @@ const double EulerDistanceTransform::CalPathSafeDist(
   return safe_dist;
 }
 
-const std::pair<double, double>
+const std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>>
 EulerDistanceTransform::CalPathRemainDistAndObsDist(
     const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
     const double ds, const uint8_t gear) {
-  double remain_dist = 0.0;
-  float obs_dist = 0.0;
-
+  std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>> res;
+  res.first = 0.0;
+  res.second = std::make_pair(0.0, pnc::geometry_lib::PathPoint());
   if (path_pt_vec.size() < 1) {
-    return std::pair<double, double>{remain_dist, obs_dist};
+    return res;
   }
 
-  if (DistanceCheckForPoint(&obs_dist, path_pt_vec[0], gear)) {
-    return std::pair<double, double>{remain_dist, obs_dist};
+  if (IsCollisionForPoint(path_pt_vec[0], gear)) {
+    return res;
   }
 
-  float min_obs_dist = std::numeric_limits<float>::infinity();
-  for (size_t i = 1; i < path_pt_vec.size(); ++i) {
-    const bool col_flag =
-        DistanceCheckForPoint(&obs_dist, path_pt_vec[i], gear);
-    if (obs_dist < min_obs_dist) {
-      min_obs_dist = obs_dist;
-    }
-    if (col_flag) {
+  double remain_dist = 0.0;
+  size_t i = 1;
+  for (i = 1; i < path_pt_vec.size(); ++i) {
+    if (IsCollisionForPoint(path_pt_vec[i], gear)) {
       break;
     } else {
       remain_dist += ds;
     }
   }
 
-  return std::pair<double, double>{remain_dist, min_obs_dist};
+  float obs_dist = 0.0;
+  float min_obs_dist = 26.8;
+  size_t index = 0;
+  // 对于安全的点计算障碍物到自车的距离
+  for (size_t k = 0; k < i; k++) {
+    DistanceCheckForPoint(&obs_dist, path_pt_vec[k],
+                          pnc::geometry_lib::SEG_GEAR_INVALID);
+    if (obs_dist < min_obs_dist) {
+      min_obs_dist = obs_dist;
+      index = k;
+    }
+  }
+
+  res.first = remain_dist;
+  res.second.first = min_obs_dist;
+  res.second.second = path_pt_vec[index];
+
+  return res;
 }
 
 const bool EulerDistanceTransform::IsCollisionForPath(
@@ -400,21 +419,21 @@ const bool EulerDistanceTransform::IsCollisionForPath(
 
 void EulerDistanceTransform::UpdateSafeBuffer(
     const float car_body_lat_safe_buffer, const float lon_safe_buffer,
-    const float mirror_buffer) {
+    const float mirror_buffer, const double big_circle_safe_buffer) {
   if (std::fabs(latetal_safe_buffer_ - car_body_lat_safe_buffer) < 0.001 &&
       std::fabs(lon_safe_buffer_ - lon_safe_buffer) < 0.001 &&
-      std::fabs(mirror_safe_buffer_ - mirror_buffer) < 0.001) {
+      std::fabs(mirror_safe_buffer_ - mirror_buffer) < 0.001 &&
+      std::fabs(big_circle_safe_buffer_ - big_circle_safe_buffer) < 0.001) {
     return;
   }
 
   footprint_model_.UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer,
-                                    mirror_buffer);
-
-  global_circles_ = footprint_model_.GetLocalFootPrintCircle();
+                                    mirror_buffer, big_circle_safe_buffer);
 
   latetal_safe_buffer_ = car_body_lat_safe_buffer;
   lon_safe_buffer_ = lon_safe_buffer;
   mirror_safe_buffer_ = mirror_buffer;
+  big_circle_safe_buffer_ = big_circle_safe_buffer;
 
   return;
 }

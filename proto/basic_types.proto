@@ -289,9 +289,6 @@ message PathPoint {
   optional double dkappa = 7;   // derivative of kappa w.r.t s.
   optional double ddkappa = 8;  // derivative of derivative of kappa w.r.t s.
   optional string lane_id = 9;  // The lane ID where the path point is on
-  // derivative of x and y w.r.t parametric parameter t in CosThetareferenceline
-  optional double x_derivative = 10;
-  optional double y_derivative = 11;
 }
 
 message ReferencePathPoint {
@@ -317,6 +314,7 @@ message StartStopInfo {
   optional bool enable_stop = 3 [default = false];
   optional StateType state = 4 [default = CRUISE];
   optional double stop_distance_of_leadone = 5 [default = 0.0];
+  optional double cipv_relative_s_when_ego_stopped = 6 [default = 0.0];
 }
 
 message DrivingFunctionInfo {

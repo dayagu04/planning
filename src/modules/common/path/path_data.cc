@@ -1,6 +1,7 @@
 #include "path/path_data.h"
 
 namespace planning {
+using namespace planning_math;
 
 PolygonalLine::PolygonalLine(std::vector<SLPoint> sl_points)
     : std::vector<SLPoint>(std::move(sl_points)) {

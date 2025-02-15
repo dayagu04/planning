@@ -34,8 +34,10 @@ void PlannerOpenSpaceConfig::InitConfig() {
   traj_steer_penalty = 0.0;
   // traj_steer_change_penalty = 4.0;
   traj_steer_change_penalty = 0.0;
+  // todo: 临时将安全buffer减小，因为现在规划失败率太高.
+  // 后续感知精度提升/控制精度提升，再将安全buffer增大.
   lat_hierarchy_safe_buffer.emplace_back(0.2);
-  lat_hierarchy_safe_buffer.emplace_back(0.1);
+  lat_hierarchy_safe_buffer.emplace_back(0.08);
   lon_hierarchy_safe_buffer.push_back(0.4);
   lon_hierarchy_safe_buffer.push_back(0.2);
   lon_front_safe_buffer = 0.4;
@@ -64,6 +66,14 @@ void PlannerOpenSpaceConfig::InitConfig() {
   single_shot_path_end_straight_dist = 0.7;
   perpendicular_slot_node_step = 0.4;
   parallel_slot_node_step = 0.3;
+
+  lat_safe_buffer_for_inside.emplace_back(0.15);
+  lat_safe_buffer_for_inside.emplace_back(0.06);
+
+  scenario_try_lat_buffer = 0.15;
+  scenario_try_lon_buffer = 0.4;
+  // headin node shrink condition
+  headin_limit_y_shrink = 1.2;
 
   return;
 }

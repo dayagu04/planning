@@ -459,14 +459,14 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
 
 void EgoStateManager::LateralInitStateReset(const PncTrajectoryPoint &point) {
   auto &lat_init_state = planning_init_point_.lat_init_state;
-  lat_init_state.set_x(point.path_point.x);
-  lat_init_state.set_y(point.path_point.y);
-  lat_init_state.set_theta(point.path_point.theta);
+  lat_init_state.set_x(point.path_point.x());
+  lat_init_state.set_y(point.path_point.y());
+  lat_init_state.set_theta(point.path_point.theta());
   // TODO: need estimated delta and omega for large curv condition
   if (!enable_delta_stitch_in_replan_) {
     lat_init_state.set_delta(point.delta);
   }
-  lat_init_state.set_curv(point.path_point.kappa);
+  lat_init_state.set_curv(point.path_point.kappa());
   lat_init_state.set_d_curv(0.0);
 }
 

@@ -1,5 +1,7 @@
 #include "trajectory/trajectory_stitcher.h"
+
 #include <algorithm>
+
 #include "math/math_utils.h"
 #include "vehicle_model/vehicle_model.h"
 
@@ -8,12 +10,12 @@ namespace planning {
 PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
     const VehicleState& vehicle_state) {
   PncTrajectoryPoint point;
-  point.path_point.s = 0.0;
-  point.path_point.x = vehicle_state.x;
-  point.path_point.y = vehicle_state.y;
-  point.path_point.z = vehicle_state.z;
-  point.path_point.theta = vehicle_state.heading;
-  point.path_point.kappa = vehicle_state.kappa;
+  point.path_point.set_s(0.0);
+  point.path_point.set_x(vehicle_state.x);
+  point.path_point.set_y(vehicle_state.y);
+  point.path_point.set_z(vehicle_state.z);
+  point.path_point.set_theta(vehicle_state.heading);
+  point.path_point.set_kappa(vehicle_state.kappa);
   point.delta = vehicle_state.delta;
   point.v = vehicle_state.linear_velocity;
   point.a = vehicle_state.linear_acceleration;

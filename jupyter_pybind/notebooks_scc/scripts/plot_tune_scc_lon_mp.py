@@ -8,11 +8,11 @@ sys.path.append('../../../')
 
 sys.path.append('../../python_proto')
 from python_proto import longitudinal_motion_planner_pb2
-from jupyter_pybind import scc_lon_motion_planning_py
+from jupyter_pybind import scc_lon_motion_planning_v3_py
 
 # bag path and frame dt
 #bag_path = "/mnt/s811_1_0907/motion_14.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-56-24/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-56-24_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241206/20241206-15-34-05/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-12-06-15-34-05_no_camera.bag.1733746230.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -28,7 +28,7 @@ velocity_fig, acc_fig = load_lon_global_figure(bag_loader)
 pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig)
 
 # init pybind
-scc_lon_motion_planning_py.Init()
+scc_lon_motion_planning_v3_py.Init()
 
 lon_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].longitudinal_motion_planning_input
 
@@ -72,11 +72,11 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bo
   lon_motion_plan_input = local_view_data['data_msg']['plan_debug_msg'].longitudinal_motion_planning_input
 
   input_string = lon_motion_plan_input.SerializeToString()
-  scc_lon_motion_planning_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound,
+  scc_lon_motion_planning_v3_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound,
                                             q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_sv_bound, q_stop_s)
 
   planning_output = longitudinal_motion_planner_pb2.LongitudinalPlanningOutput()
-  output_string_tmp = scc_lon_motion_planning_py.GetOutputBytes()
+  output_string_tmp = scc_lon_motion_planning_v3_py.GetOutputBytes()
   planning_output.ParseFromString(output_string_tmp)
 
   # print(planning_output)
@@ -89,6 +89,20 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bo
     'jerk_vec_t' : planning_output.jerk_vec,
   })
 
+  # print("lon_motion_plan_output:=", lon_motion_plan_output)
+  motion_solver_info = planning_output.solver_info
+  iter_count = motion_solver_info.iter_count
+  cost_size = motion_solver_info.cost_size
+  cost_vec = motion_solver_info.cost_vec
+  lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
+  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", "LonSVBoundCost", \
+               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "LonStopPointCost", "NonNegativeVelCost"]
+  print(cost_list)
+  for i, sub_list in enumerate(lists):
+    if i == 0:
+      print(f"Cost init: {sub_list}")
+    else:
+      print(f"Cost {i}: {sub_list}")
 
   push_notebook()
 

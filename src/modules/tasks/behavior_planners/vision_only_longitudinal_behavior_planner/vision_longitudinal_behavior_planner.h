@@ -30,26 +30,26 @@ class VisionLongitudinalBehaviorPlanner : public Task {
 
   bool limit_accel_velocity_for_cutin(
       const std::vector<TrackedObject> &front_tracks,
-      const std::vector<TrackedObject> &side_tracks, const string &lc_status,
+      const std::vector<TrackedObject> &side_tracks, const std::string &lc_status,
       const double v_ego);
   bool calc_speed_with_leads(const TrackedObject *lead_one,
                              const TrackedObject *lead_two,
-                             const string &lc_request, const double v_ego);
+                             const std::string &lc_request, const double v_ego);
   bool calc_speed_with_temp_leads(const TrackedObject *temp_lead_one,
                                   const TrackedObject *temp_lead_two,
                                   const double v_ego,
                                   const bool close_to_accident,
-                                  const string &lc_request,
-                                  const string &lc_status);
+                                  const std::string &lc_request,
+                                  const std::string &lc_status);
   bool calc_speed_for_ramp(double v_ego);
   bool calc_speed_with_potential_cutin_car(
-      const std::vector<TrackedObject> &front_tracks, const string &lc_request,
+      const std::vector<TrackedObject> &front_tracks, const std::string &lc_request,
       const double v_cruise, const double v_ego);
 
   bool calc_speed_for_lane_change(const TrackedObject *lead_one,
                                   const double v_cruise, const double v_ego,
-                                  const string &lc_request,
-                                  const string &lc_status);
+                                  const std::string &lc_request,
+                                  const std::string &lc_status);
 
   double interp(const double x, const std::vector<double> &xp,
                 const std::vector<double> &fp);

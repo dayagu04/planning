@@ -12,7 +12,7 @@ planning_math::IntervalMethodSolution<double> STBoundary::interval_methods_;
 
 STBoundary::STBoundary(
     const std::vector<std::pair<STPoint, STPoint>>& point_pairs) {
-  assert(IsValid(point_pairs));
+  // assert(IsValid(point_pairs));
 
   std::vector<std::pair<STPoint, STPoint>> reduced_pairs(point_pairs);
   // RemoveRedundantPoints(&reduced_pairs);
@@ -20,15 +20,15 @@ STBoundary::STBoundary(
   for (const auto& item : reduced_pairs) {
     // use same t for both points
     const double t = item.first.t();
-    lower_points_.emplace_back(item.first.s(), t);
-    upper_points_.emplace_back(item.second.s(), t);
+    lower_points_.emplace_back(item.first);
+    upper_points_.emplace_back(item.second);
   }
 
   for (const auto& point : lower_points_) {
-    points_.emplace_back(point.t(), point.s());
+    points_.emplace_back(point);
   }
   for (auto rit = upper_points_.rbegin(); rit != upper_points_.rend(); ++rit) {
-    points_.emplace_back(rit->t(), rit->s());
+    points_.emplace_back(*rit);
   }
 
   BuildFromPoints();

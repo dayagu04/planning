@@ -5,6 +5,7 @@
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "define/geometry.h"
 #include "session.h"
+#include "task_interface/vision_longitudinal_behavior_planner_output.h"
 #include "virtual_lane.h"
 namespace planning {
 struct StateTransitionInfo {
@@ -66,12 +67,15 @@ struct LaneChangeStageInfo {
   bool lc_should_back{false};
   bool lc_valid{false};
   std::string lc_back_reason{"none"};
+  LaneChangeGapInfo lc_gap_info;
   void Reset() {
     should_premove = false;
     lc_invalid_reason = "none";
     lc_should_back = false;
     lc_valid = false;
     lc_back_reason = "none";
+    lc_gap_info.front_node_id = -1;
+    lc_gap_info.rear_node_id = -1;
   }
 };
 
@@ -106,7 +110,7 @@ class LaneChangeStateMachineManager {
                            const RequestSource& lane_change_type);
   bool CheckIfHoldToExecution(const RequestType& lane_change_direction,
                               const RequestSource& lane_change_type);
-  bool CheckIfCompleteToLaneKeeping() const;
+  bool CheckIfCompleteToLaneKeeping();
   bool CheckIfInPerfectLaneKeeping() const;
   bool CheckIfCancelToLaneKeeping() const;
   bool CheckIfCompleteToCancel();
@@ -143,7 +147,7 @@ class LaneChangeStateMachineManager {
   void PreProcess();
   bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
   void CalculateLatCloseValue();
-
+  void IsEgoOnSideLane();
 
  private:
   ScenarioStateMachineConfig config_;
@@ -173,5 +177,7 @@ class LaneChangeStateMachineManager {
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
   const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
   bool is_large_car_in_side_ = false;
+  bool is_ego_on_leftmost_lane_ = false;
+  bool is_ego_on_rightmost_lane_ = false;
 };
 }  // namespace planning

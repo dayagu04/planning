@@ -6,7 +6,7 @@
 #include <limits>
 #include <vector>
 
-#include "define/geometry.h"
+#include "log.h"
 #include "utils/path_point.h"
 
 namespace planning {

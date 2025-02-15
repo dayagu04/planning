@@ -133,6 +133,8 @@ struct ApaParameters {
   double finish_lat_err_strict = 0.036;
   double finish_lon_err = 0.2;
   double finish_heading_err = 0.88;
+  double should_stop_lat_err = 0.10;
+  double should_stop_heading_err = 1.0;
   double finish_uss_slot_occupied_ratio = 0.668;
   double finish_heading_err_loose = 2.868;
   double finish_parallel_lat_err = 0.1;
@@ -389,6 +391,12 @@ struct ApaParameters {
 
   // gen output params
   double max_velocity = 0.6;
+
+  // hybrid a star params
+  double tail_in_slot_virtual_wall_x_offset = 3.0;
+  double tail_in_slot_virtual_wall_y_offset = 0.5;
+  double head_in_slot_virtual_wall_x_offset = 4.0;
+  double head_in_slot_virtual_wall_y_offset = 1.8;
 
   std::vector<double> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
                                             2.02, 2.7, 1.8, 0.9,  0.0};

@@ -10,10 +10,10 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "geometry_path_generator.h"
 #include "collision_detection/collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
+#include "geometry_path_generator.h"
 
 namespace planning {
 namespace apa_planner {
@@ -125,9 +125,14 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   };
 
   struct DebugInfo {
-    std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
     std::vector<GeometryPath> debug_all_path_vec;
+    std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
     std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
+    void Reset() {
+      debug_arc_vec.clear();
+      debug_all_path_vec.clear();
+      tra_search_out_res.clear();
+    }
   };
 
  public:
@@ -165,7 +170,12 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     return obs_vec;
   }
 
- private:
+  const bool PlanToPreparingLine(
+      std::vector<pnc::geometry_lib::PathSegment> &ego_to_prepare_seg_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &prepare_line);
+
+ protected:
   virtual void Preprocess() override;
 
   const bool AssempleGeometryPath(
@@ -212,7 +222,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const bool PlanFromTargetToLine(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &start_pose);
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const bool is_park_out = false);
 
   const bool PlanFromTargetToLineInNarrowChannel(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -244,10 +255,6 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool SelectBestPathOutsideSlot(
       const std::vector<GeometryPath> &path_vec, size_t &best_path_idx);
 
-  const bool PlanToPreparingLine(
-      std::vector<pnc::geometry_lib::PathSegment> &ego_to_prepare_seg_vec,
-      const pnc::geometry_lib::PathPoint &ego_pose,
-      const pnc::geometry_lib::LineSegment &prepare_line);
   const std::vector<double> GetMinDistOfEgoToObs();
 
   const bool GenAlignedPreparingLine(
@@ -255,7 +262,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const pnc::geometry_lib::PathPoint &ego_pose);
 
   const bool GenParallelPreparingLineVec(
-      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec,
+      const bool is_ref_slot_line = false);
 
   const bool GenTiltedPreparingLine(
       std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
@@ -368,6 +376,12 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
       const pnc::geometry_lib::LineSegment &target_line);
 
+  const bool SearchToTargetLine(
+      std::vector<std::vector<geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &prepare_line, const double radius,
+      const double lon_buffer);
+
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
@@ -472,6 +486,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool CheckSamePos(const Eigen::Vector2d &pos0,
                           const Eigen::Vector2d &pos1) const;
 
+ protected:
   PlannerParams calc_params_;
   DebugInfo debug_info_;
 };

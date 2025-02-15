@@ -40,8 +40,8 @@ bool ObjectSelector::in_alc_range() {
   // 350)) {
   //   return false;
   // }
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   bool is_on_ramp = route_info_output.is_on_ramp;
   if (is_on_ramp) return false;
 
@@ -201,8 +201,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
       session_->environmental_model().get_virtual_lane_manager();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
   auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();

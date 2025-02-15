@@ -22,7 +22,7 @@ const bool PerpendicularPathOutPlanner::Update() {
   // reset output
   output_.Reset();
 
-  if (input_.is_replan_first) {
+  if (input_.ego_pose.pos.x() < 3.0) {
     if (PreparePlan()) {
       ILOG_INFO << "parking out prepare plan success";
     } else {
@@ -122,21 +122,25 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   const double slant_angle_rad = (input_.origin_pt_0_heading) * kDeg2Rad;
   const double cos_slant_angle = cos(input_.origin_pt_0_heading * kDeg2Rad);
-  double x_min = 0.7;
-  double x_max = 3.7;
+  double x_min = 2.8;
+  double x_max = 4.8;
+  const double max_plan_num = 20;
 
   if (input_.origin_pt_0_heading != 0) {
     x_min = 4.0 / cos_slant_angle;
     x_max = 5.0 / cos_slant_angle;
   }
 
-  double x_offset = x_min;
-  const double sampling_step = 0.15;
-  const size_t x_offset_vec_num = std::ceil((x_max - x_min) / sampling_step);
-  for (size_t i = 0; i < x_offset_vec_num; i++) {
-    x_offset_vec.emplace_back(x_offset);
-    x_offset += sampling_step;
+  double x_offset = 0.0;
+  if (std::abs(current_pose.pos.x()) < x_min) {
+    x_offset = x_min - current_pose.pos.x();
   }
+  const double sampling_step = 0.15;
+  // const size_t x_offset_vec_num = std::ceil((x_max - x_min) / sampling_step);
+  // for (size_t i = 0; i < x_offset_vec_num; i++) {
+  //   x_offset_vec.emplace_back(x_offset);
+  //   x_offset += sampling_step;
+  // }
 
   bool flag = false;
   bool prepare_success = false;
@@ -148,14 +152,15 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
       flag = true;
     }
   } else {
-    for (size_t j = 0; j < x_offset_vec.size() && !flag; ++j) {
-      const double& x_offset = x_offset_vec[j];
+    for (size_t j = 0; j < max_plan_num && !flag; ++j) {
+      ILOG_INFO << "x_offset = " << x_offset
+                << ", (slot) ego x  = " << current_pose.pos.x();
       path_seg_vec.clear();
       if (PreparePlanOnce(path_seg_vec, x_offset, calc_params_.turn_radius,
                           current_gear, current_arc_steer, current_pose)) {
         prepare_success = true;
-        ILOG_INFO << "x_offset = " << x_offset;
       }
+      x_offset += sampling_step;
       flag = prepare_success;
     }
   }
@@ -288,12 +293,14 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
 
   // param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.08));
-
   bool prepare_success = true;
   // collision detect
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
+    if (&tmp_path_seg == &tmp_path_seg_vec.back()) {
+      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
+    }
     const PathColDetRes path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg, 0.08);
+        TrimPathByCollisionDetection(tmp_path_seg, 0.20);
     // path_seg_vec.emplace_back(tmp_path_seg);
     if (path_col_det_res == PathColDetRes::NORMAL) {
       path_seg_vec.emplace_back(tmp_path_seg);
@@ -327,8 +334,8 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
     } else if (last_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
       current_pose.Set(last_seg.GetArcSeg().pB, last_seg.GetArcSeg().headingB);
     }
-    current_gear = output_.gear_cmd_vec.back();
-    current_arc_steer = output_.steer_vec.back();
+    // current_gear = output_.gear_cmd_vec.back();
+    // current_arc_steer = output_.steer_vec.back();
     ILOG_INFO << "continue to plan after prepareplan";
   }
 
@@ -359,25 +366,6 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
     const double safe_dist_r = 0.8;
     const double safe_dist_d = 0.268;
 
-    // set current arc steer
-    if (current_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
-      current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
-    } else if (current_arc_steer == pnc::geometry_lib::SEG_STEER_LEFT) {
-      current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
-    } else {
-      ILOG_INFO << "fault ref_arc_steer state!";
-      return false;
-    }
-
-    // set current gear
-    if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    } else if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-      current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    } else {
-      ILOG_INFO << "fault ref_gear state!";
-      return false;
-    }
     if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
       AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_d,
                      current_arc_steer, current_gear);
@@ -457,9 +445,9 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   const Eigen::Vector2d line_tangent_vec =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-      current_pose.pos.x() < 5.2) {
+      current_pose.pos.x() < 6.2) {
     const double move_lon =
-        6.5 - current_pose.pos.x();  // Two meters higher than the slot
+        7.0 - current_pose.pos.x();  // Two meters higher than the slot
     const double need_move_length = move_lon / cos(current_pose.heading);
     pnc::geometry_lib::PathPoint tmp_pose;
     Eigen::Vector2d tmp_pos =
@@ -658,7 +646,7 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
   //                       ? offset_y
   //                       : -offset_y;
   s_end_point.y() = offset_y;
-  ILOG_INFO << "offset_y is " << offset_y;
+
   pnc::geometry_lib::Arc arc_s_2;
   arc_s_2.circle_info.radius = real_steer_change_radius;
   arc_s_2.pB = s_end_point;
@@ -806,7 +794,11 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
   }
 
   // collision detect
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.08));
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
+    if (&tmp_path_seg == &tmp_path_seg_vec.back()) {
+      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
+    }
     const PathColDetRes path_col_det_res =
         TrimPathByCollisionDetection(tmp_path_seg, 0.08);
     // path_seg_vec.emplace_back(tmp_path_seg);

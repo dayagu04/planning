@@ -104,7 +104,7 @@ class ConeRequest : public LaneChangeRequest {
       const double s0,
       const std::vector<std::pair<double, double>>& lane_s_width);
 
-  std::shared_ptr<KDPath> base_frenet_coord_;
+  std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
   std::shared_ptr<ReferencePath> left_reference_path_ = nullptr;
   std::shared_ptr<ReferencePath> right_reference_path_ = nullptr;

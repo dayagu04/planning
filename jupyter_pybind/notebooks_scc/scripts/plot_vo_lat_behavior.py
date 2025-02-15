@@ -212,7 +212,7 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_split_region', 'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line',
              'is_left_merge_direction', 'is_right_merge_direction',
              'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
-             'virtual_lane_relative_id_switch_flag',
+             'virtual_lane_relative_id_switch_flag','origin_relative_id_zero_nums',
              'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split',
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
              'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'forward_lane_num',

@@ -7,22 +7,22 @@
 #include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
 #include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
+#include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
-#include "../tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "../tasks/task_interface/lane_borrow_decider_output.h"
 #include "../tasks/task_interface/lane_change_decider_output.h"
 #include "../tasks/task_interface/lateral_motion_planner_output.h"
+#include "../tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
-#include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -133,6 +133,9 @@ class PlanningContext {
 
   const SpeedLimitDeciderOutput &speed_limit_decider_output() const {
     return speed_limit_decider_output_;
+  }
+  SpeedLimitDeciderOutput *mutable_speed_limit_decider_output() {
+    return &speed_limit_decider_output_;
   }
 
   const VisionLateralBehaviorPlannerOutput &
@@ -309,6 +312,14 @@ class PlanningContext {
     return cipv_decider_output_;
   }
 
+  const StartStopDeciderOutPut &start_stop_decider_output() const {
+    return start_stop_decider_output_;
+  }
+
+  StartStopDeciderOutPut &mutable_start_stop_decider_output() {
+    return start_stop_decider_output_;
+  }
+
   const LongitudinalDecisionDeciderOutput &
   longitudinal_decision_decider_output() const {
     return longitudinal_decision_decider_output_;
@@ -482,6 +493,8 @@ class PlanningContext {
 
   // AgentHeadwayDecider
   AgentHeadwayDeciderOutput agent_headway_decider_output_;
+
+  StartStopDeciderOutPut start_stop_decider_output_;
 };
 
 }  // namespace planning

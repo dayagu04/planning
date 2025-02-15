@@ -3,14 +3,14 @@
 #include <memory>
 #include <vector>
 
+#include "define/geometry.h"
 #include "math/aaboxkdtree2d.h"
 #include "math/geometry_object.h"
 #include "math/line_segment2d.h"
+#include "utils/frenet_coordinate_system.h"
 #include "utils/path_point.h"
 #include "vec2d.h"
 
-using namespace planning;
-using namespace planning::planning_math;
 namespace planning {
 namespace planning_math {
 enum KDPathStatus { NORMAL = 0, EXCEED = 1, FALL = 2, ERROR = 3 };

@@ -1,11 +1,14 @@
 #include "st_graph_helper.h"
 
+#include "st_graph/st_point.h"
 #include "st_graph_utils.h"
 
 namespace planning {
 namespace speed {
 
 namespace {
+
+using namespace planning_math;
 
 constexpr double kMaxPathLength = 400.0;
 constexpr double kMathEpsilon = 1e-10;
@@ -186,18 +189,18 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
     std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
         boundary_id_st_boundaries_map) {
   const auto& st_graph_input = st_graph_.st_graph_input();
-  const auto* path_border_querier = st_graph_input.path_border_querier();
+  const auto* path_border_querier = st_graph_input->path_border_querier();
   const int32_t reserve_num = st_graph_.reserve_num();
-  const auto planned_kd_path = st_graph_input.processed_path();
+  const auto planned_kd_path = st_graph_input->processed_path();
   const auto& planning_init_point_box =
-      st_graph_input.planning_init_point_box();
+      st_graph_input->planning_init_point_box();
   if (nullptr == planned_kd_path || nullptr == path_border_querier ||
       reserve_num <= 0) {
     return;
   }
   const auto& time_range = st_graph_.time_range();
   const auto& path_range = st_graph_.path_range();
-  const double lat_buffer = st_graph_input.lat_buffer();
+  const double lat_buffer = st_graph_input->lat_buffer();
   auto obs_box = agent.box();
   obs_box.LateralExtend(lat_buffer * 2.0);
   // max_s min_s max_l min_l
@@ -241,6 +244,10 @@ bool StGraphHelper::GetFirstNeighborUpperBound(
       first_neighbor_yield_index < 0) {
     return false;
   }
+  if (neighbor_corridor.at(first_neighbor_yield_index).first.agent_id() ==
+      kNoAgentId) {
+    return false;
+  }
   *upper_point = neighbor_corridor.at(first_neighbor_yield_index).first;
   return true;
 }
@@ -252,6 +259,10 @@ bool StGraphHelper::GetFirstNeighborLowerBound(
       st_graph_.first_neighbor_overtake_index();
   if (first_neighbor_overtake_index >= neighbor_corridor.size() ||
       first_neighbor_overtake_index < 0) {
+    return false;
+  }
+  if (neighbor_corridor.at(first_neighbor_overtake_index).second.agent_id() ==
+      kNoAgentId) {
     return false;
   }
   *lower_point = neighbor_corridor.at(first_neighbor_overtake_index).second;

@@ -16,6 +16,7 @@
 #include "ad_common/math/linear_interpolation.h"
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
+#include "apa_slot_manager.h"
 #include "apa_world/apa_world.h"
 #include "camera_preception_groundline_c.h"
 #include "config_context.h"
@@ -25,6 +26,7 @@
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
 #include "ifly_localization_c.h"
@@ -69,7 +71,7 @@
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "transform2d.h"
 #include "vehicle_service_c.h"
-#include "virtual_wall_decider.h"
+#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider/virtual_wall_decider.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -83,7 +85,7 @@ static PerfectControl *perfect_control_ptr;
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
 std::shared_ptr<apa_planner::NarrowSpaceScenario> hybrid_astar_park_;
 HybridAStarThreadSolver *thread_solver_;
-planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info_;
+EgoInfoUnderSlot ego_slot_info_;
 
 static planning::LocalView local_view;
 std::vector<Eigen::Vector3d> global_astar_path_;
@@ -271,14 +273,10 @@ int GetPathFromHybridAstar() {
   static_ref_line_.emplace_back(
       Eigen::Vector2d(global_position.x, global_position.y));
 
+  // todo: rm it
   // get collision pose in path
-  const size_t collision_id = hybrid_astar_park_->GetPathCollisionID();
-  path_collision_info_[0] = static_cast<int>(collision_id);
-  if (hybrid_astar_park_->IsPathCollision()) {
-    path_collision_info_[1] = 1;
-  } else {
-    path_collision_info_[1] = 0;
-  }
+  path_collision_info_[0] = 0;
+  path_collision_info_[1] = 0;
 
   // 为了调试搜索过程，plot it
   search_sequence_path_.clear();
@@ -295,12 +293,12 @@ int GetPathFromHybridAstar() {
   }
 
   // 基坐标位置
-  coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
-  coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
+  coordinate_system_[0] = ego_slot_info_.origin_pose_global.pos[0];
+  coordinate_system_[1] = ego_slot_info_.origin_pose_global.pos[1];
 
   // goal
-  local_position.x = ego_slot_info_.target_ego_pos_slot.x();
-  local_position.y = ego_slot_info_.target_ego_pos_slot.y();
+  local_position.x = ego_slot_info_.target_pose.pos.x();
+  local_position.y = ego_slot_info_.target_pose.pos.y();
 
   tf.ULFLocalPoseToGlobal(&global_position, local_position);
   goal_pose_[0] = global_position.x;
@@ -391,7 +389,7 @@ const void UpdateLocalView(
 
 static const int CopyVirtualWallForPlot(
     const ParkObstacleList &obs_list,
-    const planning::apa_planner::ParkingScenario::EgoSlotInfo &slot) {
+    const EgoInfoUnderSlot &slot) {
   const ApaParameters &park_param = apa_param.GetParam();
 
   // publish to python
@@ -414,49 +412,6 @@ static const int CopyVirtualWallForPlot(
   }
 
   return 0;
-}
-
-SlotRelativePosition GenerateSlotSide(
-    const planning::apa_planner::ParkingScenario::EgoSlotInfo &ego_slot_info,
-    iflyauto::IFLYLocalization &localization) {
-  const auto &slot_points =
-      ego_slot_info.target_managed_slot.corner_points().corner_point();
-
-  if (slot_points.size() != 4) {
-    ILOG_ERROR << "slot point error";
-    return SlotRelativePosition::NONE;
-  }
-
-  // 顶点顺序,来自感知
-  std::vector<Eigen::Vector2d> pt;
-  pt.resize(slot_points.size());
-
-  for (int i = 0; i < slot_points.size(); i++) {
-    pt[i] << slot_points[i].x(), slot_points[i].y();
-  }
-
-  Eigen::Vector2d n = Eigen::Vector2d::Zero();
-  Eigen::Vector2d t = Eigen::Vector2d::Zero();
-
-  // note: slot points' order is corrected in slot management
-  Pose2D vec02;
-  vec02.x =  pt[2].x()-pt[0].x();
-  vec02.y =  pt[2].y()-pt[0].y();
-
-  Pose2D ego_vector;
-  double ego_heading = localization.orientation.euler_boot.yaw;
-  ego_vector.x  = std::cos(ego_heading);
-  ego_vector.y  = std::sin(ego_heading);
-
-  SlotRelativePosition slot_side = SlotRelativePosition::NONE;
-  double cross = CrossProduct(ego_vector, vec02);
-  if (cross > 0) {
-    slot_side = SlotRelativePosition::LEFT;
-  } else if (cross < 0) {
-    slot_side = SlotRelativePosition::RIGHT;
-  }
-
-  return slot_side;
 }
 
 const bool PlanOnce(
@@ -557,24 +512,21 @@ const bool PlanOnce(
   double plan_time = IflyTime::Now_us();
   ILOG_INFO << "plan time ms " << (plan_time - copy_data_time) / 1000.0;
 
-  const std::shared_ptr<apa_planner::ParkingScenario> astar_planner =
+  const std::shared_ptr<apa_planner::ParkingScenario> scenario =
       apa_interface_ptr->GetPlannerByType(
           ParkingScenarioType::SCENARIO_NARROW_SPACE);
 
-  if (astar_planner != nullptr) {
-    const apa_planner::ParkingScenario::Frame &frame =
-        astar_planner->GetFrame();
-
-    const apa_planner::ParkingScenario::EgoSlotInfo &ego_slot_info =
-        frame.ego_slot_info;
-
-    ego_slot_info_ = ego_slot_info;
+  if (scenario != nullptr) {
+    const apa_planner::EgoInfoUnderSlot &ego_info = scenario->GetApaWorldPtr()
+                                                        ->GetNewSlotManagerPtr()
+                                                        ->ego_info_under_slot_;
+    ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();
 
     ParkObstacleList virtual_wall_obs;
     thread_solver_->GetVirtualWallPoints(&virtual_wall_obs.virtual_obs);
-    CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
+    CopyVirtualWallForPlot(virtual_wall_obs, ego_info);
 
   } else {
     ILOG_INFO << "hybrid_astar_interface_ is null";
@@ -626,123 +578,47 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   bool update_path = false;
 
   if (force_plan) {
-    planning::apa_planner::ParkingScenario::Frame frame;
-    planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info =
-        frame.ego_slot_info;
-
-    if (1) {
-      ego_slot_info = ego_slot_info_;
-    } else {
-      ego_slot_info.slot_origin_pos[0] = end_pose[0];
-      ego_slot_info.slot_origin_pos[1] = end_pose[1];
-      ego_slot_info.slot_origin_heading = end_pose[2];
-
-      ego_slot_info.slot_origin_heading_vec =
-          Eigen::Vector2d(std::cos(end_pose[2]), std::sin(end_pose[2]));
-
-      ego_slot_info.slot_length = 6;
-
-      ego_slot_info.slot_width = 2.3;
-
-      // base coordinate
-      ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                                ego_slot_info.slot_origin_heading);
-
-      ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                                ego_slot_info.slot_origin_heading);
-
-      // update ego pose
-      Eigen::Vector2d ego_global_position(
-          local_view.localization.position.position_boot.x,
-          local_view.localization.position.position_boot.y);
-      double heading_ego = local_view.localization.orientation.euler_boot.yaw;
-
-      Pose2D ego_global_pose = {ego_global_position.x(),
-                                ego_global_position.y(), heading_ego};
-
-      ego_slot_info.ego_pos_slot =
-          ego_slot_info.g2l_tf.GetPos(ego_global_position);
-      ego_slot_info.ego_heading_slot =
-          ego_slot_info.g2l_tf.GetHeading(heading_ego);
-
-      // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x()
-      //           << ego_slot_info.ego_pos_slot.y() << "  ego_heading_slot = "
-      //           << ego_slot_info.ego_heading_slot * 57.3;
-
-      ego_slot_info.ego_heading_slot_vec =
-          Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
-                          std::sin(ego_slot_info.ego_heading_slot));
-
-      // cal target pos
-      const planning::apa_planner::ApaParameters &parking_param =
-          apa_param.GetParam();
-
-      ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
-          parking_param.terminal_target_x, parking_param.terminal_target_y);
-
-      ego_slot_info.target_ego_heading_slot =
-          parking_param.terminal_target_heading;
-
-      // get global
-      const auto &target_ego_pos_global =
-          ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
-      const auto &target_ego_heading_global = ego_slot_info.l2g_tf.GetHeading(
-          ego_slot_info.target_ego_heading_slot);
-
-      // ILOG_INFO << "target_ego_pos_slot = " <<
-      // ego_slot_info.target_ego_pos_slot[0]
-      //           << ", " << ego_slot_info.target_ego_pos_slot[1]
-      //           << "  target_ego_heading_slot = "
-      //           << ego_slot_info.target_ego_heading_slot * 57.3;
-
-      // cal terminal error
-      ego_slot_info.terminal_err.Set(
-          ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-          ego_slot_info.ego_heading_slot -
-              ego_slot_info.target_ego_heading_slot);
-    }
+    EgoInfoUnderSlot ego_slot_info;
+    ego_slot_info = ego_slot_info_;
 
     hybrid_astar_obs_.Clear();
 
     // obs
     const ApaParameters &park_param = apa_param.GetParam();
     // translate perception
-    Pose2D slot_base_pose = Pose2D(ego_slot_info.slot_origin_pos.x(),
-                                   ego_slot_info.slot_origin_pos.y(),
-                                   ego_slot_info.slot_origin_heading);
+    Pose2D slot_base_pose = Pose2D(ego_slot_info.origin_pose_global.pos.x(),
+                                   ego_slot_info.origin_pose_global.pos.y(),
+                                   ego_slot_info.origin_pose_global.heading);
 
     // start
     Pose2D start =
-        Pose2D(ego_slot_info.ego_pos_slot[0], ego_slot_info.ego_pos_slot[1],
-               ego_slot_info.ego_heading_slot);
+        Pose2D(ego_slot_info.cur_pose.pos[0], ego_slot_info.cur_pose.pos[1],
+               ego_slot_info.cur_pose.heading);
 
-    Pose2D real_end = Pose2D(ego_slot_info.target_ego_pos_slot[0],
-                             ego_slot_info.target_ego_pos_slot[1],
-                             ego_slot_info.target_ego_heading_slot);
+    Pose2D real_end = Pose2D(ego_slot_info.target_pose.pos[0],
+                             ego_slot_info.target_pose.pos[1],
+                             ego_slot_info.target_pose.heading);
     PointCloudObstacleTransform obstacle_generator;
 
     ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type ==
-        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    if (ego_slot_info.slot_type == SlotType::PARALLEL) {
       slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type ==
-               Common::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_slot_info.slot_type == SlotType::SLANT) {
       slot_type = ParkSpaceType::SLANTING;
     } else {
       slot_type = ParkSpaceType::VERTICAL;
     }
-    SlotRelativePosition slot_side =
-        GenerateSlotSide(ego_slot_info, local_view.localization);
 
     VirtualWallDecider *wall_decider =
         hybrid_astar_park_->MutableVirtualWallDecider();
     wall_decider->Process(hybrid_astar_obs_.virtual_obs,
-                         ego_slot_info.slot_width, ego_slot_info.slot_length,
-                         start, real_end, slot_type, slot_side);
+                          ego_slot_info.slot.GetWidth(),
+                          ego_slot_info.slot.GetLength(), start, real_end,
+                          slot_type, ego_slot_info.slot_side, ParkingVehDirection::NONE);
 
     obstacle_generator.GenerateLocalObstacle(
-        hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, false);
+        hybrid_astar_obs_, &local_view, ego_slot_info.slot.GetLength(),
+        ego_slot_info.slot.GetWidth(), slot_base_pose, start, false);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 
@@ -754,10 +630,10 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     // end
     Eigen::Vector3d end;
-    end[0] = ego_slot_info.target_ego_pos_slot[0] +
+    end[0] = ego_slot_info.target_pose.pos[0] +
              park_param.astar_config.parallel_slot_end_straight_dist;
-    end[1] = ego_slot_info.target_ego_pos_slot[1];
-    end[2] = ego_slot_info.target_ego_heading_slot;
+    end[1] = ego_slot_info.target_pose.pos[1];
+    end[2] = ego_slot_info.target_pose.heading;
 
     AstarRequest request;
     request.first_action_request.has_request = true;
@@ -781,8 +657,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.space_type = ParkSpaceType::PARALLEL;
     request.direction_request = ParkingVehDirection::TAIL_IN;
     request.rs_request = RSPathRequestType::none;
-    request.slot_width = ego_slot_info.slot_width;
-    request.slot_length = ego_slot_info.slot_length;
+    request.slot_width = ego_slot_info.slot.GetWidth();
+    request.slot_length = ego_slot_info.slot.GetLength();
     request.history_gear = history_gear_request_;
 
     thread_solver_->SetRequest(hybrid_astar_obs_, request);

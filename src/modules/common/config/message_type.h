@@ -4,7 +4,7 @@
 #include <string>
 
 #include "common.pb.h"
-#include "path_point.h"
+#include "utils/path_point.h"
 
 #define VEHICLE_LENGTH 4.98
 
@@ -43,7 +43,7 @@ struct ObstacleType {
 
 struct PncTrajectoryPoint {
   // path point
-  PathPoint path_point;
+  planning_math::PathPoint path_point;
 
   // linear velocity
   double v;  // in [m/s]

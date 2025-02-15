@@ -10,6 +10,7 @@ namespace planning {
 namespace apa_planner {
 void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   id_ = fusion_slot.id;
+  confidence_ = fusion_slot.confidence;
 
   release_info_.release_state[FUSION_RELEASE] =
       (fusion_slot.allow_parking == iflyauto::ALLOW_PARKING)

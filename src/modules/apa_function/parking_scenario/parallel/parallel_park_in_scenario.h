@@ -4,10 +4,10 @@
 #include <cstdint>
 #include <memory>
 
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "dubins_lib.h"
 #include "parallel_path_generator.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -31,20 +31,18 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const uint8_t PathPlanOnce() override;
   const ParallelPathGenerator::Tlane& GetTlane() { return t_lane_; }
 
+  const bool CheckSegCompleted();
+  virtual const bool CheckReplan() override;
+  virtual const bool CheckFinished() override;
+
  private:
   // virtual func
 
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
-  virtual const bool CheckReplan() override;
-  virtual const bool CheckFinished() override;
 
   void UpdateTlaneOnceInSlot();
-
-  const bool IsEgoInSlot() const;
-  const bool IsEgoInSlot(const pnc::geometry_lib::PathPoint& pose) const;
-  const bool CheckSegCompleted();
 
   ParallelPathGenerator::Tlane t_lane_;
   ParallelPathGenerator parallel_path_planner_;

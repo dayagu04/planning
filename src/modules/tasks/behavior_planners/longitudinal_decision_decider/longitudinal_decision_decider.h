@@ -1,8 +1,8 @@
 #pragma once
 
+#include "src/modules/common/agent/agent.h"
 #include "tasks/task.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
-#include "src/modules/common/agent/agent.h"
 
 namespace planning {
 
@@ -21,7 +21,10 @@ class LongitudinalDecisionDecider : public Task {
 
   void UpdateInvadeNeighborResults();
 
-  bool ConstructNeighborLaneStGraph(const agent::Agent *const invade_agent);
+  // only consider lane change execution stage
+  void UpdateLaneChangeNeighborResults();
+
+  bool ConstructNeighborLaneStGraph(const agent::Agent *const neighbor_agent);
 
   void MakeDebugMessage();
 
@@ -32,8 +35,12 @@ class LongitudinalDecisionDecider : public Task {
   SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve(
       const PlanningInitPoint &init_point) const;
 
+  bool IgnoreLaneChangeGapRearAgent(const agent::Agent *gap_rear_agent,
+                                    const std::shared_ptr<planning_math::KDPath>&
+                                        target_lane_frenet_coord) const;
+
  private:
-  EgoPlanningConfig config_;
+  LongitudinalDecisionDeciderConfig config_;
   // <counter, flag>
   std::pair<int32_t, int32_t> cruise_accelerate_count_{0, 0};
   int32_t plan_points_num_ = 26;

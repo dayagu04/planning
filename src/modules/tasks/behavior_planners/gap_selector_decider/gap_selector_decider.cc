@@ -204,7 +204,7 @@ void GapSelectorDecider::Preprocessor() {
       const ReferencePathPoint &ref_path_point =
           target_refline->get_points()[i];
       target_lane_s_width_.emplace_back(std::make_pair(
-          ref_path_point.path_point.s, ref_path_point.lane_width));
+          ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
   } else {
     ids_obstacle_in_target_lane_.emplace_back(-1);  // no obstacle in targe lane
@@ -236,7 +236,7 @@ void GapSelectorDecider::Preprocessor() {
       const ReferencePathPoint &ref_path_point =
           origin_refline->get_points()[i];
       origin_lane_s_width_.emplace_back(std::make_pair(
-          ref_path_point.path_point.s, ref_path_point.lane_width));
+          ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
   } else {
     ids_obstacle_in_origin_lane_.emplace_back(-1);  // no obstacle in targe lane
@@ -1359,7 +1359,7 @@ void GapSelectorDecider::ResponsivePathPlan() {
 
   double remaining_lc_duration =
       lc_time_list_[0] - gap_selector_state_machine_info_.lc_pass_time;
-  shared_ptr<KDPath> coord = target_lane_coord_ptr_;
+  std::shared_ptr<KDPath> coord = target_lane_coord_ptr_;
   if (remaining_lc_duration < 1.0) {
     const double lat_mvd_coeff = lc_time_list_[0] / kDefaultLatMovedDistance;
     remaining_lc_duration = std::fabs(ego_l_cur_lane_) * lat_mvd_coeff;
@@ -2039,7 +2039,7 @@ pnc::spline::QuinticPolynominalPath GapSelectorDecider::ConstructQuinticPath(
 }
 
 pnc::spline::QuinticPolynominalPath GapSelectorDecider::ConstructQuinticPath(
-    const double remaining_lc_duration, const shared_ptr<KDPath> coord) {
+    const double remaining_lc_duration, const std::shared_ptr<KDPath> coord) {
   double ego_v = cruise_vel_;
   const auto &lat_state = planning_init_point_.lat_init_state;
 

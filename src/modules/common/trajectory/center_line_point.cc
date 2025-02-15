@@ -1,4 +1,5 @@
 #include "trajectory/center_line_point.h"
+#include "math/linear_interpolation.h"
 
 namespace planning {
 namespace trajectory {
