@@ -1,6 +1,6 @@
 
 #pragma once
-
+#include <functional>
 #include "component_intf.h"
 #include "camera_perception_tsr_c.h"
 #include "control_command_c.h"
@@ -23,6 +23,8 @@
 #include "uss_wave_info_c.h"
 #include "vehicle_service_c.h"
 
+
+
 namespace iflyauto {
 namespace interface {
 class PlanningInterface : public ComponentInterface {
@@ -42,7 +44,9 @@ class PlanningInterface : public ComponentInterface {
   virtual void Feed_IflytekVehicleService(
       const iflyauto::VehicleServiceOutputInfo &data) = 0;
   virtual void Feed_IflytekUssUsswaveInfo(
-      const iflyauto::UssWaveInfo &data) = 0;
+      const iflyauto::UssWaveInfo& uss_wave_info_msg) = 0;
+  virtual void Feed_IflytekFusionUssPerceptionInfo(
+      const iflyauto::UssPerceptInfo& uss_percept_info_msg) = 0;
   virtual void Feed_IflytekFsmSocState(
       const iflyauto::FuncStateMachine &data) = 0;
   virtual void Feed_IflytekFusionRoadFusion(
@@ -55,8 +59,7 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::FusionDecelerInfo &data) = 0;
   virtual void Feed_IflytekPredictionPredictionResult(
       const iflyauto::PredictionResult &data) = 0;
-  virtual void Feed_IflytekUssUssPerceptionInfo(
-      const iflyauto::UssPerceptInfo &data) = 0;
+
   virtual void Feed_IflytekCameraPerceptionTrafficSignRecognition(
       const iflyauto::CameraPerceptionTsrInfo &data) = 0;
   virtual void Feed_IflytekFusionObjects(

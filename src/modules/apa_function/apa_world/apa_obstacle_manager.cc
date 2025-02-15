@@ -165,7 +165,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       Polygon2D polygon;
       cdl::AABB box = cdl::AABB();
       for (uint8 j = 0; j < points_3d_size; ++j) {
-        const Eigen::Vector2d gl_pt(gl.shape[j].x, gl.shape[j].y);
+        const Eigen::Vector2d gl_pt(gl.groundline_point[j].x, gl.groundline_point[j].y);
         box.MergePoint(cdl::Vector2r(gl_pt.x(), gl_pt.y()));
         gl_pt_clout_2d.emplace_back(std::move(gl_pt));
       }
