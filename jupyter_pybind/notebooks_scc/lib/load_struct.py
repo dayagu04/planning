@@ -2344,9 +2344,12 @@ def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
       mpc_dy.append(control_result_points[i].y)
     if len(mpc_dx) > 0:
       f1 = interp1d(mpc_dx, mpc_dy, kind='cubic')
-      for i in range(len(mpc_dx) - 1):
-        mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
-      mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
+      try:
+        for i in range(len(mpc_dx) - 1):
+          mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
+        mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
+      except:
+        mpc_dtheta = len(mpc_dx) * [0]
     if g_is_display_enu:
       if loc_msg == None:
         mpc_dx = len(mpc_dx) * [0]
