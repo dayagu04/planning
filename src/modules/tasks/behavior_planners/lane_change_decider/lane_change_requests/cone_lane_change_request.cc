@@ -332,9 +332,9 @@ void ConeRequest::setLaneChangeRequestByCone() {
   bool enable_left = llane && left_reference_path_;
   bool enable_right = rlane && right_reference_path_;
   const bool is_left_lane_change_safe =
-      enable_left && compute_lc_valid_info(LEFT_CHANGE);
+      enable_left && ComputeLcValid(LEFT_CHANGE);
   const bool is_right_lane_change_safe =
-      enable_right && compute_lc_valid_info(RIGHT_CHANGE);
+      enable_right && ComputeLcValid(RIGHT_CHANGE);
 
   if (cone_lane_change_direction_ == LEFT_CHANGE) {
     if (request_type_ != LEFT_CHANGE && is_left_lane_change_safe) {

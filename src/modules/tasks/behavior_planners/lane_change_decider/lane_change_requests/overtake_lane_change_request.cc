@@ -419,7 +419,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
   if (trigger_left_overtake) {
-    if (request_type_ != LEFT_CHANGE && compute_lc_valid_info(LEFT_CHANGE)) {
+    if (request_type_ != LEFT_CHANGE && ComputeLcValid(LEFT_CHANGE)) {
       if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
            first_merge_direction != RAMP_ON_LEFT) &&
           (distance_to_first_road_split >=
@@ -451,7 +451,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
                 overtake_vehicle_id_, overtake_vehicle_speed_);
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
-    if (request_type_ != RIGHT_CHANGE && compute_lc_valid_info(RIGHT_CHANGE)) {
+    if (request_type_ != RIGHT_CHANGE && ComputeLcValid(RIGHT_CHANGE)) {
       if ((sum_dis_to_last_merge_point >=
            max_pass_merge_distance_to_surpress_overtake_lane_change) &&
           (dis_to_first_merge >= dis_threshold_to_merged_point ||

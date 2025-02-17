@@ -36,7 +36,7 @@ class LaneChangeRequest {
   RequestType turn_signal() const { return turn_signal_; }
   double tstart() const { return tstart_; }
   double tfinish() const { return tfinish_; }
-  bool compute_lc_valid_info(RequestType direction);
+  bool ComputeLcValid(RequestType direction);
   bool IsDashEnoughForRepeatSegments(const RequestType lc_request,
                                      const int origin_lane_id) const;
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
