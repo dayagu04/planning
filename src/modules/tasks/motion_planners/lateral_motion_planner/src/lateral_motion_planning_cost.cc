@@ -118,13 +118,20 @@ double LatAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(EGO_VEL));
 
-  if (x[DELTA] > cost_config_ptr_->at(DELTA_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-           Square(x[DELTA] - cost_config_ptr_->at(DELTA_BOUND));
-  } else if (x[DELTA] < -cost_config_ptr_->at(DELTA_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-           Square(-x[DELTA] - cost_config_ptr_->at(DELTA_BOUND));
+  if (x[DELTA] > cost_config_ptr_->at(DELTA_HARD_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_ACC_HARD_BOUND) * k2v4 *
+           Square(x[DELTA] - cost_config_ptr_->at(DELTA_HARD_BOUND));
+  } else if (x[DELTA] < -cost_config_ptr_->at(DELTA_HARD_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_ACC_HARD_BOUND) * k2v4 *
+           Square(-x[DELTA] - cost_config_ptr_->at(DELTA_HARD_BOUND));
+  } else if (x[DELTA] > cost_config_ptr_->at(DELTA_SOFT_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_ACC_SOFT_BOUND) * k2v4 *
+           Square(x[DELTA] - cost_config_ptr_->at(DELTA_SOFT_BOUND));
+  } else if (x[DELTA] < -cost_config_ptr_->at(DELTA_SOFT_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_ACC_SOFT_BOUND) * k2v4 *
+           Square(-x[DELTA] - cost_config_ptr_->at(DELTA_SOFT_BOUND));
   }
+
   return cost;
 }
 
@@ -135,33 +142,41 @@ void LatAccBoundCostTerm::GetGradientHessian(
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(EGO_VEL));
 
-  if (x[DELTA] > cost_config_ptr_->at(DELTA_BOUND)) {
-    lx(DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-                 (x[DELTA] - cost_config_ptr_->at(DELTA_BOUND));
-    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4;
-  } else if (x[DELTA] < -cost_config_ptr_->at(DELTA_BOUND)) {
-    lx(DELTA) += -cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-                 (-x[DELTA] - cost_config_ptr_->at(DELTA_BOUND));
-    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4;
+  if (x[DELTA] > cost_config_ptr_->at(DELTA_HARD_BOUND)) {
+    lx(DELTA) += cost_config_ptr_->at(W_ACC_HARD_BOUND) * k2v4 *
+                 (x[DELTA] - cost_config_ptr_->at(DELTA_HARD_BOUND));
+    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_HARD_BOUND) * k2v4;
+  } else if (x[DELTA] < -cost_config_ptr_->at(DELTA_HARD_BOUND)) {
+    lx(DELTA) += -cost_config_ptr_->at(W_ACC_HARD_BOUND) * k2v4 *
+                 (-x[DELTA] - cost_config_ptr_->at(DELTA_HARD_BOUND));
+    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_HARD_BOUND) * k2v4;
+  } else if (x[DELTA] > cost_config_ptr_->at(DELTA_SOFT_BOUND)) {
+    lx(DELTA) += cost_config_ptr_->at(W_ACC_SOFT_BOUND) * k2v4 *
+                 (x[DELTA] - cost_config_ptr_->at(DELTA_SOFT_BOUND));
+    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_SOFT_BOUND) * k2v4;
+  } else if (x[DELTA] < -cost_config_ptr_->at(DELTA_SOFT_BOUND)) {
+    lx(DELTA) += -cost_config_ptr_->at(W_ACC_SOFT_BOUND) * k2v4 *
+                 (-x[DELTA] - cost_config_ptr_->at(DELTA_SOFT_BOUND));
+    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_SOFT_BOUND) * k2v4;
   }
 }
 
-double LatJerkBoundCostTerm::GetCost(const ilqr_solver::State &x,
+double LatJerkSoftBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                      const ilqr_solver::Control &u) {
   double cost = 0.;
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(EGO_VEL));
-  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-           Square(u[OMEGA] - cost_config_ptr_->at(OMEGA_BOUND));
-  } else if (u[OMEGA] < -cost_config_ptr_->at(OMEGA_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-           Square(-u[OMEGA] - cost_config_ptr_->at(OMEGA_BOUND));
+  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_SOFT_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_JERK_SOFT_BOUND) * k2v4 *
+           Square(u[OMEGA] - cost_config_ptr_->at(OMEGA_SOFT_BOUND));
+  } else if (u[OMEGA] < -cost_config_ptr_->at(OMEGA_SOFT_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_JERK_SOFT_BOUND) * k2v4 *
+           Square(-u[OMEGA] - cost_config_ptr_->at(OMEGA_SOFT_BOUND));
   }
   return cost;
 }
 
-void LatJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
+void LatJerkSoftBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
                                               const ilqr_solver::Control &u,
                                               ilqr_solver::LxMT & /*lx*/,
                                               ilqr_solver::LuMT &lu,
@@ -170,16 +185,52 @@ void LatJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
                                               ilqr_solver::LuuMT &luu) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
                       SSquare(cost_config_ptr_->at(EGO_VEL));
-  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_BOUND)) {
-    lu(OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-                 (u[OMEGA] - cost_config_ptr_->at(OMEGA_BOUND));
-    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4;
-  } else if (u[OMEGA] < -cost_config_ptr_->at(OMEGA_BOUND)) {
-    lu(OMEGA) += -cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-                 (-u[OMEGA] - cost_config_ptr_->at(OMEGA_BOUND));
-    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4;
+  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_SOFT_BOUND)) {
+    lu(OMEGA) += cost_config_ptr_->at(W_JERK_SOFT_BOUND) * k2v4 *
+                 (u[OMEGA] - cost_config_ptr_->at(OMEGA_SOFT_BOUND));
+    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_SOFT_BOUND) * k2v4;
+  } else if (u[OMEGA] < -cost_config_ptr_->at(OMEGA_SOFT_BOUND)) {
+    lu(OMEGA) += -cost_config_ptr_->at(W_JERK_SOFT_BOUND) * k2v4 *
+                 (-u[OMEGA] - cost_config_ptr_->at(OMEGA_SOFT_BOUND));
+    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_SOFT_BOUND) * k2v4;
   }
 }
+
+double LatJerkHardBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                     const ilqr_solver::Control &u) {
+  double cost = 0.;
+  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
+                      SSquare(cost_config_ptr_->at(EGO_VEL));
+  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_HARD_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_JERK_HARD_BOUND) * k2v4 *
+           Square(u[OMEGA] - cost_config_ptr_->at(OMEGA_HARD_BOUND));
+  } else if (u[OMEGA] < -cost_config_ptr_->at(OMEGA_HARD_BOUND)) {
+    cost = 0.5 * cost_config_ptr_->at(W_JERK_HARD_BOUND) * k2v4 *
+           Square(-u[OMEGA] - cost_config_ptr_->at(OMEGA_HARD_BOUND));
+  }
+  return cost;
+}
+
+void LatJerkHardBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
+                                              const ilqr_solver::Control &u,
+                                              ilqr_solver::LxMT & /*lx*/,
+                                              ilqr_solver::LuMT &lu,
+                                              ilqr_solver::LxxMT & /*lxx*/,
+                                              ilqr_solver::LxuMT & /*lxu*/,
+                                              ilqr_solver::LuuMT &luu) {
+  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
+                      SSquare(cost_config_ptr_->at(EGO_VEL));
+  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_HARD_BOUND)) {
+    lu(OMEGA) += cost_config_ptr_->at(W_JERK_HARD_BOUND) * k2v4 *
+                 (u[OMEGA] - cost_config_ptr_->at(OMEGA_HARD_BOUND));
+    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_HARD_BOUND) * k2v4;
+  } else if (u[OMEGA] < -cost_config_ptr_->at(OMEGA_HARD_BOUND)) {
+    lu(OMEGA) += -cost_config_ptr_->at(W_JERK_HARD_BOUND) * k2v4 *
+                 (-u[OMEGA] - cost_config_ptr_->at(OMEGA_HARD_BOUND));
+    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_HARD_BOUND) * k2v4;
+  }
+}
+
 
 double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
                                          const ilqr_solver::Control & /*u*/) {

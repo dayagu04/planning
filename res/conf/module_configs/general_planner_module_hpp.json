@@ -426,7 +426,8 @@
     "lc_end_ratio_for_second_qrefxy": 1.0,
     "lc_end_ratio_for_qreftheta": 2.0,
     "big_theta_thr": 10.0,
-    "q_jerk_for_big_theta": 5.0
+    "q_jerk_for_big_theta": [20.0, 5.0],
+    "path_backward_appended_length": 2.5
   },
   "long_motion_ilqr": {
     "q_ref_pos": 0.5,

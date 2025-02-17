@@ -343,20 +343,35 @@ bool LateralMotionPlanner::AssembleInput() {
   const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
+  planning_weight_ptr_->SetInitL(planning_init_point.frenet_state.r);
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double steer_ratio = vehicle_param.steer_ratio;
+  double max_steer_angle = vehicle_param.max_steer_angle * 57.3;  // deg
+  double max_steer_angle_rate = vehicle_param.max_steer_angle_rate * 57.3;  // deg
+  std::vector<double> xp_vel{4.167, 8.333, 25.0, 30.0};
+  std::vector<double> fp_max_steer_angle{max_steer_angle, 360.0, 240.0, 120.0};
+  std::vector<double> fp_max_steer_angle_rate{max_steer_angle_rate, 200.0, 120.0, 60.0};
+  double steer_angle =
+      planning::interp(std::fabs(ego_v), xp_vel, fp_max_steer_angle);
+  double steer_angle_rate =
+      planning::interp(std::fabs(ego_v), xp_vel, fp_max_steer_angle_rate);
   double max_wheel_angle =
-      360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc/noa
+      steer_angle / steer_ratio / 57.3;
   double max_wheel_angle_rate =
-      240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc/noa
-  if (session_->is_hpp_scene()) {
-    max_wheel_angle = 540.0 / 13.0 / 57.3;  // 360 deg steering angle for hpp
-    max_wheel_angle_rate =
-        360.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for hpp
-  }
+      steer_angle_rate / steer_ratio / 57.3;
   const double kv2 =
       config_.curv_factor *
       std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
-  planning_weight_ptr_->SetMaxAcc(std::max(max_wheel_angle * kv2, 0.2));
-  planning_weight_ptr_->SetMaxJerk(std::max(max_wheel_angle_rate * kv2, 0.2));
+  planning_weight_ptr_->SetMaxAcc(std::max(max_wheel_angle * kv2, 0.186));
+  planning_weight_ptr_->SetMaxJerk(std::min(std::max(max_wheel_angle_rate * kv2, 0.159), 1.0));
+  const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
+  const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
+  planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
+  const auto &soft_bounds_info = general_lateral_decider_output.soft_bounds_info;
+  const auto &hard_bounds_info = general_lateral_decider_output.hard_bounds_info;
+  planning_weight_ptr_->CalculateLatAvoidBoundPriority(
+      soft_bounds_frenet_point, hard_bounds_frenet_point, soft_bounds_info, hard_bounds_info);
 
   if (session_->is_hpp_scene()) {
     // const bool &search_success = session_->mutable_planning_context()
@@ -370,10 +385,10 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_input_.set_motion_plan_concerned_index(
         config_.motion_plan_concerned_end_index);
     return true;
+  } else {
+    planning_weight_ptr_->SetIsSearchSuccess(false);
   }
 
-  // split
-  bool split_scene = false;
   // NOA split
   const bool is_exist_ramp_on_road = session_->environmental_model()
                                          .get_virtual_lane_manager()
@@ -382,7 +397,12 @@ bool LateralMotionPlanner::AssembleInput() {
                                           .get_virtual_lane_manager()
                                           ->get_is_exist_split_on_ramp();
   // LCC split
-  if (is_exist_ramp_on_road || is_exist_split_on_ramp) {
+  const bool is_exist_intersection_split = session_->environmental_model()
+                                               .get_virtual_lane_manager()
+                                               ->get_is_exist_intersection_split();
+  // split
+  bool split_scene = false;
+  if (is_exist_ramp_on_road || is_exist_split_on_ramp || is_exist_intersection_split) {
     split_scene = true;
     // complete_follow = true;
     enter_split_time_ = 1.0;
@@ -417,7 +437,7 @@ bool LateralMotionPlanner::AssembleInput() {
       intersection_state ==
       planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
-  if ((is_approach_intersection || is_in_intersection || is_off_intersection) &&
+  if ((is_approach_intersection || is_in_intersection) &&
       is_ref_consistent) {
     planning_weight_ptr_->SetIsInIntersection(true);
   } else {
@@ -474,73 +494,10 @@ bool LateralMotionPlanner::AssembleInput() {
 
   // set motion_plan_concerned_end_index
   const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
-  double motion_plan_concerned_end_index =
-      config_.motion_plan_concerned_end_index;
-  double valid_perception_range = config_.valid_perception_range;
-  if (ramp_scene) {
-    valid_perception_range = config_.valid_perception_range_on_ramp;
-  }
-  for (size_t i = 15; i < motion_plan_concerned_end_index; ++i) {
-    Point2D cart_ref_xy(planning_input_.ref_x_vec(i),
-                        planning_input_.ref_y_vec(i));
-    Point2D frenet_ref_xy;
-    if (reference_path_ptr->get_frenet_coord() != nullptr &&
-        reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref_xy,
-                                                       frenet_ref_xy)) {
-      if (frenet_ref_xy.x > (ego_s + valid_perception_range)) {
-        motion_plan_concerned_end_index = i;
-        break;
-      }
-    }
-  }
-
-  // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
-  if ((lane_change_scene) && (!lane_change_back)) {
-    if (ego_v <= config_.lane_change_high_vel || config_.use_new_lc_param) {
-      complete_follow = false;
-      motion_plan_concerned_end_index = 20;
-    }
-    // complete_follow = false;
-    // motion_plan_concerned_end_index = 17;
-    // for (size_t i = 1; i < 17; ++i) {
-    //   Point2D cart_refi(planning_input_.ref_x_vec(i),
-    //                     planning_input_.ref_y_vec(i));
-    //   Point2D frenet_refi;
-    //   if (reference_path_ptr->get_frenet_coord() != nullptr &&
-    //       reference_path_ptr->get_frenet_coord()->XYToSL(cart_refi,
-    //                                                      frenet_refi)) {
-    //     if (std::fabs(frenet_refi.y - lateral_offset) < 0.05) {
-    //       motion_plan_concerned_end_index = i - 1;
-    //       break;
-    //     }
-    //   }
-    // }
-    // if (motion_plan_concerned_end_index < 1 || std::fabs(frenet_init.y -
-    // frenet_ref0.y) > 1e-6) {
-    const double init_dis_to_ref = planning_weight_ptr_->GetInitDisToRef();
-    if (std::fabs(init_dis_to_ref) > 0.01) {
-      complete_follow = false;
-      if (ego_v <= config_.lane_change_high_vel) {
-        motion_plan_concerned_end_index = 20;
-      } else {
-        motion_plan_concerned_end_index = 17;
-      }
-      planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
-    }
-  } else if (split_scene) {
-    motion_plan_concerned_end_index = 17;
-    if (!is_divide_lane_into_two_) {
-      planning_weight_ptr_->MakeSplitDynamicWeight(planning_input_);
-    } else {
-      complete_follow = true;
-    }
-  }
-
-  // set complete hold flag, concerned index
-  planning_input_.set_complete_follow(complete_follow);
-  planning_input_.set_motion_plan_concerned_index(
-      motion_plan_concerned_end_index);
-
+  planning_weight_ptr_->SetMotionPlanConcernedEndIndex(
+      complete_follow, is_divide_lane_into_two_, ego_s,
+      planning_input_,
+      reference_path_ptr->get_frenet_coord());
   // [hack](bsniu):
   if (session_->environmental_model().function_info().function_mode() ==
       common::DrivingFunctionInfo_DrivingFunctionMode::
@@ -566,8 +523,8 @@ bool LateralMotionPlanner::Update() {
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
       end_ratio_for_qrefxy, end_ratio_for_qreftheta,
-      config_.end_ratio_for_qjerk, config_.motion_plan_concerned_start_index,
-      concerned_start_q_jerk, ego_vel, planning_input_);
+      config_.end_ratio_for_qjerk,
+      concerned_start_q_jerk, ego_vel, planning_weight_ptr_, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
@@ -791,7 +748,7 @@ LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
     }
     planning_math::PathPoint path_point{x_vec[i], y_vec[i]};
     lat_path_points.emplace_back(path_point);
-    if (not lat_path_points.empty()) {
+    if (!lat_path_points.empty()) {
       auto &last_pt = lat_path_points.back();
       if (planning_math::Vec2d(last_pt.x() - path_point.x(),
                                last_pt.y() - path_point.y())

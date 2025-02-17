@@ -117,7 +117,8 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds);
+  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds,
+                                      general_lateral_decider_output);
   GenerateLateralDeciderOutput(frenet_soft_bounds, frenet_hard_bounds,
                                general_lateral_decider_output);
 
@@ -405,7 +406,13 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
           ->get_is_exist_ramp_on_road() ||
       session_->environmental_model()
           .get_virtual_lane_manager()
-          ->get_is_exist_split_on_ramp()) {
+          ->get_is_exist_split_on_ramp() ||
+      (session_->environmental_model()
+              .get_virtual_lane_manager()
+              ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+       session_->environmental_model()
+              .get_virtual_lane_manager()
+              ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
     return false;
   }
   if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
@@ -473,13 +480,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
   const auto &frenet_coord =
-      coarse_planning_info.reference_path->get_frenet_coord();
-  Eigen::Vector2d cart_init_point(
-      ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
-      ego_cart_state_manager_->planning_init_point().lat_init_state.y());
-  Point2D frenet_init_pt{0.0, 3.0};
-  Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
-  frenet_coord->XYToSL(cart_init_pt, frenet_init_pt);
+      reference_path_ptr_->get_frenet_coord();
+  const auto &planning_init_point =
+      ego_frenet_state_.planning_init_point();
 
   bool limit_ref_vel_on_ramp_valid = false;
   bool is_LC_CHANGE =
@@ -497,13 +500,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   double dynamic_ref_buffer =
       interp(v_ego, xp_v_ego, config_.dynamic_ref_buffer);
   double init_dist_to_ref =
-      std::fabs(frenet_init_pt.y - lateral_offset) - dynamic_ref_buffer;
+      std::fabs(planning_init_point.frenet_state.r - lateral_offset) - dynamic_ref_buffer;
   double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
   if (dist_to_second_stage < -1e-6) {
     dynamic_ref_buffer =
         std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
   }
-  if (frenet_init_pt.y < -1e-6) {
+  if (planning_init_point.frenet_state.r < -1e-6) {
     dynamic_ref_buffer = -dynamic_ref_buffer;
   }
 
@@ -514,16 +517,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
     // generate traj_points based on kMaxAcc or kMinAcc
-    const auto &planning_init_point =
-        ego_cart_state_manager_->planning_init_point();
     double kMaxAcc = 0.8;
-    if (is_LC_CHANGE || is_LC_BACK) {
-      kMaxAcc = 1e-6;
-    }
     const double kMinAcc = -5.5;
     // double cruise_v = session_->planning_context().v_ref_cruise();
     double cruise_v = std::max(config_.min_v_cruise,
                                session_->planning_context().v_ref_cruise());
+    if (cruise_v < 8.333) {
+      kMaxAcc = 0.3;
+    }
+    if (is_LC_CHANGE || is_LC_BACK) {
+      kMaxAcc = 1e-6;
+    }
     double ego_v = planning_init_point.v;
     if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
@@ -547,21 +551,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
-    const double max_ref_length =
-        session_->planning_context().v_ref_cruise() * span_t;
-    double avg_cruise_v = std::min(s, max_ref_length) / span_t;
-    double delta_s = avg_cruise_v * config_.delta_t;
-    // Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
-    //                                 planning_init_point.lat_init_state.y());
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
-    pnc::spline::Projection projection_spline;
-    projection_spline.CalProjectionPoint(
-        cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
-        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
-        cart_init_point);
-
-    double s_ref = projection_spline.GetOutput().s_proj;
-    s_ref = frenet_init_pt.x;
+    double s_ref = planning_init_point.frenet_state.s;
+    const double max_ref_length = std::max(
+        std::min(cart_ref_info.s_vec.back(),frenet_coord->Length()) - s_ref - 0.01,
+        0.0);
+    double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
+    double delta_s = avg_cruise_v * config_.delta_t;
     traj_points.clear();
     TrajectoryPoint point;
     constexpr double kEps = 1e-4;
@@ -615,9 +611,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
 void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
                                              double dynamic_ref_buffer) {
   const auto &frenet_coord =
-      session_->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info.reference_path->get_frenet_coord();
+      reference_path_ptr_->get_frenet_coord();
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
@@ -662,9 +656,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
   const auto &frenet_coord =
-      session_->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info.reference_path->get_frenet_coord();
+      reference_path_ptr_->get_frenet_coord();
   auto &last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
                                .raw_traj_points;
@@ -2582,12 +2574,19 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 }
 
 void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+  bool bound_avoid = false;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
+    if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
+        ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
+      bound_avoid = true;
+    }
     ref_traj_points_[i].l =
         std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
                  frenet_soft_bounds[i].second);
   }
+  general_lateral_decider_output.bound_avoid = bound_avoid;
 }
 
 void GeneralLateralDecider::GenerateLateralDeciderOutput(

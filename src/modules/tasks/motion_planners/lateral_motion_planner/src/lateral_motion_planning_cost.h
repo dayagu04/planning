@@ -17,8 +17,10 @@ enum iLqrCostconfigId {
   CONTINUITY_X,
   CONTINUITY_Y,
   CONTINUITY_THETA,
-  DELTA_BOUND,
-  OMEGA_BOUND,
+  DELTA_SOFT_BOUND,
+  DELTA_HARD_BOUND,
+  OMEGA_SOFT_BOUND,
+  OMEGA_HARD_BOUND,
   SOFT_UPPER_BOUND_X0,
   SOFT_UPPER_BOUND_Y0,
   SOFT_UPPER_BOUND_X1,
@@ -43,8 +45,10 @@ enum iLqrCostconfigId {
   W_CONTINUITY_THETA,
   W_ACC,
   W_JERK,
-  W_ACC_BOUND,
-  W_JERK_BOUND,
+  W_ACC_SOFT_BOUND,
+  W_ACC_HARD_BOUND,
+  W_JERK_SOFT_BOUND,
+  W_JERK_HARD_BOUND,
   W_SOFT_CORRIDOR,
   W_HARD_CORRIDOR,
   W_SNAP,
@@ -57,7 +61,8 @@ enum iLqrCostId {
   LAT_ACC_COST,
   LAT_JERK_COST,
   LAT_ACC_BOUND_COST,
-  LAT_JERK_BOUND_COST,
+  LAT_JERK_SOFT_BOUND_COST,
+  LAT_JERK_HARD_BOUND_COST,
   PATH_SOFT_CORRIDOR_COST,
   PATH_HARD_CORRIDOR_COST,
   LAT_SNAP_COST,
@@ -137,9 +142,9 @@ class LatAccBoundCostTerm : public ilqr_solver::BaseCostTerm {
   uint8_t GetCostId() override { return LAT_ACC_BOUND_COST; }
 };
 
-class LatJerkBoundCostTerm : public ilqr_solver::BaseCostTerm {
+class LatJerkSoftBoundCostTerm : public ilqr_solver::BaseCostTerm {
  public:
-  LatJerkBoundCostTerm() = default;
+  LatJerkSoftBoundCostTerm() = default;
   double GetCost(const ilqr_solver::State & /*x*/,
                  const ilqr_solver::Control &u) override;
   void GetGradientHessian(const ilqr_solver::State & /*x*/,
@@ -149,7 +154,22 @@ class LatJerkBoundCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LxuMT & /*lxu*/,
                           ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LAT_JERK_BOUND_COST; }
+  uint8_t GetCostId() override { return LAT_JERK_SOFT_BOUND_COST; }
+};
+
+class LatJerkHardBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  LatJerkHardBoundCostTerm() = default;
+  double GetCost(const ilqr_solver::State & /*x*/,
+                 const ilqr_solver::Control &u) override;
+  void GetGradientHessian(const ilqr_solver::State & /*x*/,
+                          const ilqr_solver::Control &u,
+                          ilqr_solver::LxMT & /*lx*/, ilqr_solver::LuMT &lu,
+                          ilqr_solver::LxxMT & /*lxx*/,
+                          ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT &luu) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return LAT_JERK_HARD_BOUND_COST; }
 };
 
 class PathSoftCorridorCostTerm : public ilqr_solver::BaseCostTerm {

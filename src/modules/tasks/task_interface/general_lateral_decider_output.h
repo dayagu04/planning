@@ -29,6 +29,7 @@ struct GeneralLateralDeciderOutput {
   double v_cruise;
   bool ramp_scene = false;
   bool enable_ara_ref = false;
+  bool bound_avoid = false;
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;

@@ -1344,6 +1344,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
+    ReadItem<double>(json, jerk_bound, "lat_motion_ilqr", "jerk_bound");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"},
         map_jerk_bound, map_jerk_bound);
@@ -1361,8 +1362,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "q_continuity_search");
     ReadItem<double>(json, q_acc, "lat_motion_ilqr", "q_acc");
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
-    ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
-    ReadItem<double>(json, q_jerk_bound, "lat_motion_ilqr", "q_jerk_bound");
+    ReadItem<double>(json, q_acc_soft_bound, "lat_motion_ilqr", "q_acc_soft_bound");
+    ReadItem<double>(json, q_acc_hard_bound, "lat_motion_ilqr", "q_acc_hard_bound");
+    ReadItem<double>(json, q_jerk_soft_bound, "lat_motion_ilqr", "q_jerk_soft_bound");
+    ReadItem<double>(json, q_jerk_hard_bound, "lat_motion_ilqr", "q_jerk_hard_bound");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qsoft_bound"},
         map_qsoft_bound, map_qsoft_bound);
@@ -1542,8 +1545,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, valid_perception_range_on_ramp, "lat_motion_ilqr",
                      "valid_perception_range_on_ramp");
     ReadItem<double>(json, big_theta_thr, "lat_motion_ilqr", "big_theta_thr");
-    ReadItem<double>(json, q_jerk_for_big_theta, "lat_motion_ilqr",
-                     "q_jerk_for_big_theta");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_for_big_theta"},
+        q_jerk_for_big_theta);
     ReadItem<double>(json, path_backward_appended_length, "lat_motion_ilqr",
                      "path_backward_appended_length");
   }
@@ -1555,15 +1559,18 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double min_v_cruise = 2.0;
 
   double acc_bound = 1.5;
-  std::vector<double> map_jerk_bound{1.2, 1.0, 0.8, 0.25};
+  double jerk_bound = 1.0;
+  std::vector<double> map_jerk_bound{0.6, 0.5, 0.4, 0.25};
   double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
-  double q_acc_bound = 200.0;
-  double q_jerk_bound = 5000.0;
+  double q_acc_soft_bound = 200.0;
+  double q_acc_hard_bound = 20000.0;
+  double q_jerk_soft_bound = 5000.0;
+  double q_jerk_hard_bound = 500000.0;
 
-  std::vector<double> map_qsoft_bound{1000.0, 3000.0, 4000.0, 5000.0};
-  std::vector<double> map_qhard_bound{3000.0, 5000.0, 6000.0, 7000.0};
+  std::vector<double> map_qsoft_bound{500, 1500.0, 3000.0, 4000.0, 5000.0};
+  std::vector<double> map_qhard_bound{1000, 3000.0, 5000.0, 6000.0, 7000.0};
   double emergence_avoid_factor = 2.0;
   double intersection_avoid_factor = 2.0;
 
@@ -1657,10 +1664,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
   double valid_perception_range = 60.0;
-  std::vector<double> map_qxy{80.0, 400.0, 500.0, 500.0};
-  std::vector<double> map_qtheta{1000.0, 5000.0, 5000.0, 20000.0};
-  std::vector<double> map_qjerk1{120.0, 90.0, 60.0, 500.0};
-  std::vector<double> map_qjerk2{40.0, 30.0, 30.0, 100.0};
+  std::vector<double> map_qxy{80.0, 400.0, 500.0};
+  std::vector<double> map_qtheta{3000.0, 5000.0, 8000.0, 15000.0, 30000.0};
+  std::vector<double> map_qjerk1{45.0, 10.0, 100.0, 300.0, 600.0};
+  std::vector<double> map_qjerk2{10.0, 5.0, 50.0, 150.0, 400.0};
   double end_ratio_for_qrefxy = 1.0;
   double end_ratio_for_qreftheta = 1.0;
   double end_ratio_for_qjerk = 1.0;
@@ -1668,7 +1675,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double lc_end_ratio_for_second_qrefxy = 1.0;
   double lc_end_ratio_for_qreftheta = 1.0;
   double big_theta_thr = 1.0;
-  double q_jerk_for_big_theta = 2.0;
+  std::vector<double> q_jerk_for_big_theta{20.0, 5.0};
   double path_backward_appended_length = 2.5;
 };
 

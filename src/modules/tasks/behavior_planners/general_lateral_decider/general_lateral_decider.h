@@ -98,7 +98,8 @@ class GeneralLateralDecider : public Task {
   iflyauto::LaneBoundaryType CalLaneBoundaryType(const LineDirection direction,
                                                  const double s) const;
   void PostProcessReferenceTrajBySoftBound(
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds);
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
