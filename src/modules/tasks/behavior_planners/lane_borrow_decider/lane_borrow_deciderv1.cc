@@ -455,8 +455,16 @@ bool LaneBorrowDecider::ObstacleDecision() {
       obs_end_s_ = std::max(obs_end_s_, frenet_obstacle_sl.s_end);
       static_blocked_obj_id_vec_.emplace_back(obstacle->obstacle()->id());
     } else {
+      // too dense obstacles
+      const double dist = frenet_obstacle_sl.s_start - obs_end_s_;
+      if(dist < 8.0){
+        lane_borrow_decider_output_.lane_borrow_failed_reason =
+        CENTER_OBSTACLE;
+        return false;
+      }
       break;
     }
+
   }
 
   if (obs_left_l_ <= obs_right_l_) {
