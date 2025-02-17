@@ -443,8 +443,8 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, obs_static_vel_thold, "lane_borrow",
                      "obs_static_vel_thold");
     ReadItem<int>(json, observe_frames, "lane_borrow", "observe_frames");
-    static_obs_buffer =
-        read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
+    large_static_obs_buffer =
+        read_json_key<double>(json, "large_static_obs_buffer", large_static_obs_buffer);
     centric_obs_frames = read_json_keys<int>(
         json, std::vector<std::string>{"lane_borrow", "centric_obs_frames"});
     dense_obstacle_dist = read_json_keys<double>(
@@ -455,7 +455,7 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double max_concern_obs_distance = 40.0;
   double obs_static_vel_thold = 0.1;
   int observe_frames = 30;
-  double static_obs_buffer = 0.5;
+  double large_static_obs_buffer = 0.5;
   int centric_obs_frames = 10;
   double dense_obstacle_dist = 8.0;
   double extend_obs_distance = 10.0;
@@ -626,10 +626,12 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "oversize_veh_addition_buffer", oversize_veh_addition_buffer);
     traffic_cone_thr =
         read_json_key<double>(json, "traffic_cone_thr", traffic_cone_thr);
-    static_obs_buffer =
-        read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
     avoid_persistence_front_buffer =
         read_json_key<double>(json, "avoid_persistence_front_buffer", avoid_persistence_front_buffer);
+    large_static_obs_buffer =
+        read_json_key<double>(json, "large_static_obs_buffer", large_static_obs_buffer);
+    small_static_obs_buffer =
+        read_json_key<double>(json, "small_static_obs_buffer", small_static_obs_buffer);
     near_car_hysteresis =
         read_json_key<double>(json, "near_car_hysteresis", near_car_hysteresis);
     in_range_v = read_json_key<double>(json, "in_range_v", in_range_v);
@@ -676,8 +678,9 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double lat_safety_buffer = 0.7;
   double oversize_veh_addition_buffer = 0.15;
   double traffic_cone_thr = 0.15;
-  double static_obs_buffer = 3.4;
   double avoid_persistence_front_buffer = 0.15;
+  double large_static_obs_buffer = 0.5;
+  double small_static_obs_buffer = 0.5;
   double near_car_hysteresis = 1.3;
   double in_range_v = 1.0;
   double in_range_v_hysteresis = 1.5;

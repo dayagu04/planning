@@ -38,7 +38,8 @@ struct LateralObstacleDeciderOutput {
       lateral_obstacle_history_info;
   SearchResult search_result = SearchResult::NO_SEARCH;
   bool in_intersection = false;
-
+  bool left_borrow = true;
+  bool right_borrow = true;
 
   void Clear() {
     hybrid_ara_result.Clear();

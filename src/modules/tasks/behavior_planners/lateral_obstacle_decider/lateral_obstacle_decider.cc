@@ -25,6 +25,12 @@ LateralObstacleDecider::LateralObstacleDecider(
       search_result_(session_->mutable_planning_context()
                                ->mutable_lateral_obstacle_decider_output()
                                .search_result),
+      left_borrow_(session_->mutable_planning_context()
+              ->mutable_lateral_obstacle_decider_output()
+              .left_borrow),
+      right_borrow_(session_->mutable_planning_context()
+              ->mutable_lateral_obstacle_decider_output()
+              .right_borrow),
       in_intersection_(session_->mutable_planning_context()
               ->mutable_lateral_obstacle_decider_output()
               .in_intersection),
@@ -51,6 +57,8 @@ bool LateralObstacleDecider::Execute() {
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+
+  UpdateLaneBorrowDirection();
 
   // get info of ego
   // const auto& reference_path_ptr = session_->planning_context().
@@ -222,7 +230,8 @@ bool LateralObstacleDecider::Execute() {
     }
 
     history.is_avd_car = IsPotentialAvoidingCar(
-        *frenet_obs, lane_width, rightest_lane, farthest_distance);
+        *frenet_obs, lane_width, rightest_lane, farthest_distance,
+        left_borrow_, right_borrow_);
 
     history.last_recv_time = obs->timestamp();
 
@@ -248,13 +257,15 @@ bool LateralObstacleDecider::Execute() {
   }
 
     JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
+  JSON_DEBUG_VALUE("can_left_borrow", left_borrow_);
+  JSON_DEBUG_VALUE("can_right_borrow", right_borrow_);
   }
   return true;
 }
 
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
     FrenetObstacle &frenet_obstacle, double lane_width, bool rightest_lane,
-    double farthest_distance) {
+    double farthest_distance, bool can_left_borrow, bool can_right_borrow) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
@@ -263,7 +274,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double lat_safety_buffer = config_.lat_safety_buffer;
   double oversize_veh_addition_buffer = config_.oversize_veh_addition_buffer;
   double traffic_cone_thr = config_.traffic_cone_thr;
-  double static_obs_buffer = config_.static_obs_buffer;
+  double static_obs_buffer = config_.small_static_obs_buffer;
   double near_car_hysteresis = config_.near_car_hysteresis;
   double in_range_v = config_.in_range_v;
   double in_range_v_hysteresis = config_.in_range_v_hysteresis;
@@ -306,6 +317,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double d_s_rel = frenet_obstacle.d_s_rel();
   double d_min_cpath = frenet_obstacle.d_min_cpath();
   double d_max_cpath = frenet_obstacle.d_max_cpath();
+
+  // static obs lat_safety_buffer
+  if ((l > 0 && can_right_borrow) || (l < 0 && can_left_borrow)) {
+    static_obs_buffer = config_.large_static_obs_buffer;
+  }
 
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
@@ -818,6 +834,61 @@ bool LateralObstacleDecider::CalculateIntersection(
   }
   history.intersection = false;
   return false;
+}
+
+void LateralObstacleDecider::UpdateLaneBorrowDirection() {
+  left_borrow_ = true;
+  right_borrow_ = true;
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto current_lane_ptr = virtual_lane_manager->get_current_lane();
+  const auto left_lane_ptr = virtual_lane_manager->get_left_lane();
+  const auto right_lane_ptr = virtual_lane_manager->get_right_lane();
+  double lane_line_length = 0.0;
+  const auto& left_lane_boundarys = current_lane_ptr->get_left_lane_boundary();
+  const auto& right_lane_boundarys =
+      current_lane_ptr->get_right_lane_boundary();
+  iflyauto::LaneBoundaryType left_lane_boundary_type;
+  iflyauto::LaneBoundaryType right_lane_boundary_type;
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+    lane_line_length += left_lane_boundarys.type_segments[i].length;
+    if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
+      left_lane_boundary_type = left_lane_boundarys.type_segments[i].type;
+      break;
+    }
+  }
+  lane_line_length = 0.0;
+  for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+    lane_line_length += right_lane_boundarys.type_segments[i].length;
+    if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
+      right_lane_boundary_type = right_lane_boundarys.type_segments[i].type;
+      break;
+    }
+  }
+
+  if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+      left_lane_boundary_type !=
+          iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
+      left_lane_boundary_type !=
+          iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
+    left_borrow_ = false;
+  }
+  if (left_lane_ptr == nullptr) {
+    left_borrow_ = false;
+  }
+
+  // todo: if left lane is reverse, then left_boorow is false
+  if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+      right_lane_boundary_type !=
+          iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
+    right_borrow_ = false;
+  }
+  if (right_lane_ptr == nullptr) {
+    right_borrow_ = false;
+  }
 }
 
 bool LateralObstacleDecider::CheckEnableSearch(
