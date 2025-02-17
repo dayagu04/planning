@@ -2357,7 +2357,7 @@ struct STGraphConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
-  bool enable_backward_extend_st_boundary = false;
+  bool enable_backward_extend_st_boundary = true;
   double backward_extend_length_for_lane_change = 50.0;
   double backward_extend_sample_resolution = 3.0;
   double lane_keeping_lower_lateral_buffer_m = 0.2;

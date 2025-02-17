@@ -177,6 +177,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'cipv_id_st', 'road_curvature_radius', \
                               'new_cutin_id', 'new_cutin_id_count', \
+                              "new_cutout_id", "new_cutout_id_count", \
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
                               "agents_headway_id", "agents_headway_value", \
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \

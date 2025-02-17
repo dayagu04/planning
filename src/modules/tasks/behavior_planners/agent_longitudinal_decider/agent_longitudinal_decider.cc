@@ -613,7 +613,7 @@ void AgentLongitudinalDecider::DeciderCutOutAgent(
   }
 
   if (steady_cut_out_agent_count_[cipv_id] > 0) {
-    // ptr_agent->set_need_backward_extend(true);
+    ptr_agent->set_need_backward_extend(true);
     ptr_agent->set_is_cutout(true);
   }
 }
@@ -634,9 +634,9 @@ bool AgentLongitudinalDecider::CheckCutOutAgent(const agent::Agent& agent) {
 
   // 0.check the cipv agent
   // 1.should not reverse agent
-  if (IsReverseAgent(&agent, current_lane)) {
-    return false;
-  }
+  // if (IsReverseAgent(&agent, current_lane)) {
+  //   return false;
+  // }
 
   // 2.agent's speed < 30kph
   constexpr double kSpeedThresholdKph = 30.0;
@@ -825,6 +825,17 @@ void AgentLongitudinalDecider::UpdateCutInAgentTable() {
   }
   JSON_DEBUG_VECTOR("new_cutin_id", cutin_id, 0)
   JSON_DEBUG_VECTOR("new_cutin_id_count", cutin_count, 0)
+
+  std::vector<double> cutout_id;
+  std::vector<double> cutout_count;
+  for (const auto cut_out_agent : steady_cut_out_agent_count_) {
+    if (cut_out_agent.second > 0) {
+      cutout_id.emplace_back(cut_out_agent.first);
+      cutout_count.emplace_back(cut_out_agent.second);
+    }
+  }
+  JSON_DEBUG_VECTOR("new_cutout_id", cutout_id, 0)
+  JSON_DEBUG_VECTOR("new_cutout_id_count", cutout_count, 0)
 };
 
 void AgentLongitudinalDecider::FilterRearAgents() {
