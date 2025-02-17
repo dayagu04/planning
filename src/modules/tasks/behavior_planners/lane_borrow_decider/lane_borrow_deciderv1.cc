@@ -457,7 +457,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
     } else {
       // too dense obstacles
       const double dist = frenet_obstacle_sl.s_start - obs_end_s_;
-      if(dist < 8.0){
+      if(dist < config_.dense_obstacle_dist){
         lane_borrow_decider_output_.lane_borrow_failed_reason =
         CENTER_OBSTACLE;
         return false;
