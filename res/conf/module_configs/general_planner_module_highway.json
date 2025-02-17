@@ -415,7 +415,8 @@
     "lc_end_ratio_for_second_qrefxy": 1.0,
     "lc_end_ratio_for_qreftheta": 2.0,
     "big_theta_thr": 0.2,
-    "q_jerk_for_big_theta": 5.0
+    "q_jerk_for_big_theta": 5.0,
+    "path_backward_appended_length": 2.5
   },
   "long_motion_ilqr": {
     "q_ref_pos_startmode": 35.0,
@@ -569,7 +570,9 @@
   },
   "speed_planning": {
     "longitudinal_decision_decider" : {
-      "ignore_agent_ttc_to_ego_thrd": 2.5
+      "ignore_agent_ttc_to_ego_thrd": 2.5,
+      "ignore_ego_ttc_to_agent_thrd" : 2.5,
+      "lat_distance_close_enough_to_planned_path_thrd": 0.38
     },
 
     "st_graph_searcher" : {

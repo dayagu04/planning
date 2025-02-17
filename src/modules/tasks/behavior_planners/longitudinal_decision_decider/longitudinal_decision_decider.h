@@ -47,6 +47,11 @@ class LongitudinalDecisionDecider : public Task {
                                     const std::shared_ptr<planning_math::KDPath>
                                         &target_lane_frenet_coord) const;
 
+  std::pair<bool, bool> IgnoreInvadeNeighborAgents(
+      const agent::Agent *invade_gap_rear_agent,
+      const agent::Agent *invade_gap_front_agent,
+      const std::shared_ptr<planning_math::KDPath> &planned_path) const;
+
   void DetermineClosestInvadeNeighborGapInfo(
       const std::shared_ptr<VirtualLane> &ego_cur_lane,
       const double planning_init_x, const double planning_init_y,
@@ -55,7 +60,8 @@ class LongitudinalDecisionDecider : public Task {
           &lat_obstacle_decision,
       const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
       const std::shared_ptr<agent::AgentManager> &agent_manager,
-      const speed::StGraphHelper *st_graph_helper);
+      const speed::StGraphHelper *st_graph_helper,
+      const std::shared_ptr<planning_math::KDPath> &planned_path);
 
  private:
   LongitudinalDecisionDeciderConfig config_;
