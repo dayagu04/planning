@@ -90,7 +90,8 @@ class LaneBorrowDecider : public Task {
   int lane_change_state_{0};
   double current_left_lane_width_{1.75};
   double current_right_lane_width_{1.75};
-  std::vector<int> static_blocked_obj_id_vec_;
+  std::vector<int> static_blocked_obj_id_vec_;//after decision
+  std::vector<int> last_static_blocked_obj_id_vec_;
   std::vector<std::shared_ptr<FrenetObstacle>> static_blocked_obstacles_;
   std::shared_ptr<ReferencePath> current_reference_path_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> current_lane_ptr_ = nullptr;

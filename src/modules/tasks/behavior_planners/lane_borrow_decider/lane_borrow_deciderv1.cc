@@ -142,6 +142,7 @@ void LaneBorrowDecider::Update() {
       break;
     }
   }
+  last_static_blocked_obj_id_vec_ = static_blocked_obj_id_vec_;
   if (lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow) {
     lane_borrow_decider_output_.is_in_lane_borrow_status = true;
     lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
@@ -363,11 +364,10 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
               lat_obs_iter->second != LatObstacleDecisionType::IGNORE){
             continue;
       }
-    } else {  // lon overlap origin rule
-      if (frenet_obstacle_sl.l_start > (-right_width + vehicle_param.width +
-                                        config_.static_obs_buffer) ||
-          frenet_obstacle_sl.l_end <
-              (left_width - vehicle_param.width - config_.static_obs_buffer)) {
+    } else {  // lon overlap
+      auto it = std::find(last_static_blocked_obj_id_vec_.begin(),
+                          last_static_blocked_obj_id_vec_.end(), id);
+      if (it == last_static_blocked_obj_id_vec_.end()) {
         continue;
       }
     }
