@@ -1862,7 +1862,7 @@ const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
   return bound;
 }
 
-const bool CollisionDetector::IsObstacleInPolygan(
+const bool CollisionDetector::IsObstacleInPolygon(
     const std::vector<Eigen::Vector2d> &vertex_vec) {
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {

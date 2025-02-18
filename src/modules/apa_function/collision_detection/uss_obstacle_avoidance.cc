@@ -712,5 +712,11 @@ void UssObstacleAvoidance::UpdateByPybind() {
     remain_dist_info_.is_available = false;
   }
 }
+
+const bool UssObstacleAvoidance::IsObstacleInPolygon(
+    const std::vector<Eigen::Vector2d> &vertex_vec) {
+  return col_det.IsObstacleInPolygon(vertex_vec);
+}
+
 }  // namespace apa_planner
 }  // namespace planning

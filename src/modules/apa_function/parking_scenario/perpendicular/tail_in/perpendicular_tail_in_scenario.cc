@@ -1183,14 +1183,29 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_uss_condition =
       frame_.remain_dist_uss < param.max_replan_remain_dist;
 
+  geometry_lib::PathPoint uss_pose = ego_info_under_slot.target_pose;
+  uss_pose.LocalToGlobal(ego_info_under_slot.l2g_tf);
+  bool end_pos_has_obs_condition =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr()->IsObstacleInPolygon(
+          GetCarMaxPolygan(uss_pose));
+
+  if (!end_pos_has_obs_condition) {
+    uss_pose.Set(
+        ego_info_under_slot.target_pose.pos - 0.368 * Eigen::Vector2d(1.0, 0.0),
+        ego_info_under_slot.target_pose.heading);
+    uss_pose.LocalToGlobal(ego_info_under_slot.l2g_tf);
+
+    end_pos_has_obs_condition =
+        apa_world_ptr_->GetUssObstacleAvoidancePtr()->IsObstacleInPolygon(
+            GetCarMaxPolygan(uss_pose));
+  }
+
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_uss_condition;
+                   remain_uss_condition && end_pos_has_obs_condition;
 
   // Consider whether there are really obstacles at target pos. If so, finish
   // it is indeed impossible to reach the target pos, if not, try replan again
-  if (parking_finish &&
-      apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInPolygan(
-          GetCarMaxPolygan(ego_info_under_slot.target_pose))) {
+  if (parking_finish) {
     return true;
   }
 
@@ -1445,6 +1460,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   ILOG_INFO << "lat_buffer = " << lat_buffer << "  case_1 = " << case_1
             << "  case_2 = " << case_2 << "  case_3 = " << case_3
             << "  case_4 = " << case_4;
+
+  if (ego_info_under_slot.cur_pose.pos.x() > 7.0) {
+    lat_buffer = 0.14;
+  }
 
   double remain_dist = 5.01;
 

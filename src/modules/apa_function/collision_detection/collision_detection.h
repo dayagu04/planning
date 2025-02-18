@@ -262,7 +262,7 @@ class CollisionDetector {
       const bool is_left_side, const bool is_replan,
       const bool is_vertical_slot = true);
 
-  const bool IsObstacleInPolygan(
+  const bool IsObstacleInPolygon(
       const std::vector<Eigen::Vector2d> &vertex_vec);
 
  private:
