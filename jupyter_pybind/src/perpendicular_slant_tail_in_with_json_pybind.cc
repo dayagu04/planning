@@ -136,8 +136,8 @@ void UpdateGroundLineObs(std::vector<std::vector<Eigen::Vector2d>> obs_vec) {
     auto& obs = gl_obs.groundline[i];
     obs.groundline_point_size = obs_vec[i].size();
     for (size_t j = 0; j < obs_vec[i].size(); ++j) {
-      obs.shape[j].x = obs_vec[i][j].x();
-      obs.shape[j].y = obs_vec[i][j].y();
+      obs.groundline_point[j].x = obs_vec[i][j].x();
+      obs.groundline_point[j].y = obs_vec[i][j].y();
     }
   }
 }
