@@ -125,6 +125,9 @@ class UssObstacleAvoidance {
 
   void UpdateByPybind();
 
+  const bool IsObstacleInPolygon(
+      const std::vector<Eigen::Vector2d>& vertex_vec);
+
  private:
   const bool Preprocess();
 

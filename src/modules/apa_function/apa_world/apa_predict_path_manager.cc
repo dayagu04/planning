@@ -121,17 +121,20 @@ void ApaPredictPathManager::Update(
         predict_pt_vec_.emplace_back(car_predict_pt);
       }
 
-      // 延长避免压速
-      const size_t pt_size = predict_pt_vec_.size();
-      Eigen::Vector2d extended_point;
-      if (pt_size > 1 &&
+      // 延长避免压速  多延长几个点
+      if (predict_pt_vec_.size() > 1) {
+        Eigen::Vector2d extended_point;
+        size_t pt_size;
+        for (size_t i = 0; i < 10; ++i) {
+          pt_size = predict_pt_vec_.size();
           pnc::geometry_lib::CalExtendedPointByTwoPoints(
               predict_pt_vec_[pt_size - 2].pos,
-              predict_pt_vec_[pt_size - 1].pos, extended_point, 0.86)) {
-        car_predict_pt.pos = extended_point;
-        car_predict_pt.heading = predict_pt_vec_.back().heading;
-        car_predict_pt.s = predict_pt_vec_.back().s + 0.86;
-        predict_pt_vec_.emplace_back(car_predict_pt);
+              predict_pt_vec_[pt_size - 1].pos, extended_point, 0.1);
+          car_predict_pt.pos = extended_point;
+          car_predict_pt.heading = predict_pt_vec_.back().heading;
+          car_predict_pt.s = predict_pt_vec_.back().s + 0.1;
+          predict_pt_vec_.emplace_back(car_predict_pt);
+        }
       }
     }
   }
