@@ -238,4 +238,11 @@ void GapAvaliableCost::GetCost(const double future_gap_length,
 void StopPenaltyCost::GetCost(const double end_v) {
   cost_ = end_v > kPenaltyVel ? 0.0 : kMaxPenalty;
 }
+
+void AccLimitCost::GetCost(const double acc_extrema) {
+  cost_ = acc_extrema > kAccPenaltyLimit
+              ? weight_ * std::exp(kAccPenaltyScaleFactor *
+                                   (acc_extrema - kAccPenaltyLimit))
+              : 0.0;
+}
 }  // namespace planning

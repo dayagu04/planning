@@ -45,4 +45,6 @@ constexpr double kMatchGapVelPenaltyThreshold = 1.5;
 constexpr double kAgentNoValidVel = 100.0;
 constexpr double kAgentNoValidDis = 100.0;
 constexpr double kZeroEpsilon = 1e-6;
+constexpr double kAccPenaltyLimit = 1.3;
+constexpr double kAccPenaltyScaleFactor = 3.0;
 }  // namespace planning

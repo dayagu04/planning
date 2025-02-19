@@ -1,5 +1,6 @@
 #include "sample_poly_curve.h"
 
+#include <cmath>
 #include <cstdint>
 
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
@@ -12,7 +13,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_match_gap_vel, const double weight_match_gap_s,
     const double weight_follow_vel, const double weight_stop_line,
     const double weight_leading_veh_safe_s, const double weight_speed_variable,
-    const double weight_gap_avaliable) {
+    const double weight_gap_avaliable, const double weight_acc_limit) {
   poly_ = poly;
   arrived_t_ = arrived_t;
   arrived_v_ = poly_.CalculateFirstDerivative(poly_.T());
@@ -38,6 +39,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   leading_veh_safe_cost_.SetWeight(weight_leading_veh_safe_s);
   speed_variable_cost_.SetWeight(weight_speed_variable);
   gap_avaliable_cost_.SetWeight(weight_gap_avaliable);
+  acc_limit_cost_.SetWeight(weight_acc_limit);
 };
 
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
@@ -137,10 +139,14 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
+  const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
+                                       std::fabs(poly_.acc_extrema().second));
+  acc_limit_cost_.GetCost(acc_extrema);
+  
   cost_sum_ = mid_point_match_gap_cost_.cost() +
               end_point_match_gap_cost_.cost() + follow_vel_cost_.cost() +
               stop_line_cost_.cost() + leading_veh_safe_cost_.cost() +
               speed_variable_cost_.cost() + gap_avaliable_cost_.cost() +
-              stop_penalty_cost_.cost();
+              stop_penalty_cost_.cost() + acc_limit_cost_.cost();
 }
 }  // namespace planning
