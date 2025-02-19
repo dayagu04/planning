@@ -33,7 +33,7 @@ ApaPlanInterface::ApaPlanInterface() {}
 
 void ApaPlanInterface::Init(const bool is_simulation) {
   // sync parameters
-  SyncParkingParameters();
+  SyncParkingParameters(is_simulation);
 
   // init apa world
   apa_world_ptr_ = std::make_shared<ApaWorld>();
