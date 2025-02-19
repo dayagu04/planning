@@ -1083,6 +1083,9 @@ bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
   if (nullptr == ego_lane) {
     return true;
   }
+  if (ptr_agent->trajectories().empty()) {
+    return true;
+  }
 
   // 1.agent is not in ego lane or nearest_l > half_ego_lane_width ---> consider
   double nearest_s = 0.0;

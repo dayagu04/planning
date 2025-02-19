@@ -184,6 +184,9 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
   for (size_t trajectory_index = 0;
        trajectory_index < agent->trajectories().size(); ++trajectory_index) {
     const auto& trajectory = agent->trajectories().at(trajectory_index);
+    if (trajectory.empty()) {
+      continue;
+    }
     const auto& last_point = trajectory.back();
     if (!GetClosestCenterLinePoint(last_point.x(), last_point.y(),
                                    center_line_points,
