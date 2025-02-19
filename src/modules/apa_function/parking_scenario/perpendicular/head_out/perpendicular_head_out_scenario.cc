@@ -1302,26 +1302,31 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
   return !path_trim_flag_ &&
          apa_world_ptr_->GetSlotManagerPtr()
-                 ->ego_info_under_slot_.slot_occupied_ratio < 0.15;
+                 ->ego_info_under_slot_.slot_occupied_ratio < 0.15 &&
+         fabs(frame_.current_path_last_point_heading * kRad2Deg) > 80;
 }
 
 const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
-  const pnc::geometry_lib::PathPoint& current_path_last_point =
-      current_path_point_global_vec_.back();
-  Eigen::Vector2d current_path_last_local_point =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf.GetPos(
-          current_path_last_point.pos);
+  if (current_path_point_global_vec_.size() > 0) {
+    const pnc::geometry_lib::PathPoint& current_path_last_point =
+        current_path_point_global_vec_.back();
+    Eigen::Vector2d current_path_last_local_point =
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf.GetPos(
+            current_path_last_point.pos);
 
-  frame_.current_path_last_point_heading =
-      apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.g2l_tf.GetHeading(
-              current_path_last_point.heading);
+    frame_.current_path_last_point_heading =
+        apa_world_ptr_->GetSlotManagerPtr()
+            ->ego_info_under_slot_.g2l_tf.GetHeading(
+                current_path_last_point.heading);
 
-  const bool conditions_endpoint_correction =
-      current_path_last_local_point.x() < 7.0 &&
-      frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-      fabs(frame_.current_path_last_point_heading * kRad2Deg) > 60;
-  return conditions_endpoint_correction;
+    const bool conditions_endpoint_correction =
+        current_path_last_local_point.x() < 7.0 &&
+        frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+        fabs(frame_.current_path_last_point_heading * kRad2Deg) > 60;
+    return conditions_endpoint_correction;
+  } else {
+    return false;
+  }
 }
 
 const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
