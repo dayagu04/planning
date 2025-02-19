@@ -333,8 +333,10 @@ const bool InterfaceUpdateParam(
           iflyauto::APA_IN_PROGRESS ||
       apa_interface_ptr->GetPlaningOutput()
               .planning_status.hpp_planning_status == iflyauto::HPP_RUNNING) {
-    apa_interface_ptr->UpdateDebugInfo();
+    return false;
   }
+
+  apa_interface_ptr->UpdateDebugInfo();
 
   return result;
 }

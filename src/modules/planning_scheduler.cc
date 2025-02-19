@@ -155,6 +155,20 @@ bool PlanningScheduler::RunOnce(
   planning_result.scene_type = function_type;
   planning_result.timestamp = start_timestamp;
   planning_output->successful_slot_info_list_size = 0;
+
+  // reset
+  if (function_type == common::PARKING_APA || function_type == common::HPP) {
+    const auto &state_machine = local_view_->function_state_machine_info;
+    if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
+        state_machine.current_state !=
+            iflyauto::FunctionalState_PARK_GUIDANCE) {
+      apa_function_->Reset();
+      ILOG_INFO << "reset parking";
+
+      ResetGLogFile();
+    }
+  }
+
   bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
   if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
     planning_success = ExcuteParkingFunction(function_type, planning_output);
@@ -896,21 +910,9 @@ const bool PlanningScheduler::ExcuteParkingFunction(
     const common::SceneType function_type,
     iflyauto::PlanningOutput *const planning_output) {
   // 泊车规划部分
-  const auto &state_machine = local_view_->function_state_machine_info;
-  if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
-      state_machine.current_state != iflyauto::FunctionalState_PARK_GUIDANCE) {
-    apa_function_->Reset();
-    ILOG_INFO << "reset parking";
-
-    ResetGLogFile();
-  }
-
   bool planning_success = apa_function_->Plan();
 
-  // todo: hpp 巡库阶段，不要填充轨迹, 不要覆盖行车轨迹.
-  // if (function_type == common::SceneType::PARKING_APA) {
   *planning_output = session_.planning_context().planning_output();
-  // }
 
   return planning_success;
 }

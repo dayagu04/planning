@@ -29,18 +29,18 @@
 namespace planning {
 namespace apa_planner {
 
-ApaPlanInterface::ApaPlanInterface() {
+ApaPlanInterface::ApaPlanInterface() {}
+
+void ApaPlanInterface::Init(const bool is_simulation) {
+  // sync parameters
+  SyncParkingParameters();
+
   // init apa world
   apa_world_ptr_ = std::make_shared<ApaWorld>();
 
   scenario_manager_.Init(apa_world_ptr_);
 
   return;
-}
-
-void ApaPlanInterface::Init(const bool is_simulation) {
-  // sync parameters
-  SyncParkingParameters(is_simulation);
 }
 
 void ApaPlanInterface::Reset() {
