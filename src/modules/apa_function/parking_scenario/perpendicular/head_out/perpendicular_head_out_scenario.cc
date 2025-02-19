@@ -2,8 +2,10 @@
 
 #include <math.h>
 
+#include <cstddef>
 #include <queue>
 
+#include "apa_state_machine_manager.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
@@ -399,6 +401,14 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
                                  left_pq_for_y.top().y());
   const Eigen::Vector2d right_obs(right_pq_for_x.top().x(),
                                   right_pq_for_y.top().y());
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
+      ApaParkOutDirection::LEFT_FRONT) {
+    ego_info_under_slot.pt_inside = left_obs;
+  } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                 ->GetParkOutDirection() == ApaParkOutDirection::RIGHT_FRONT) {
+    ego_info_under_slot.pt_inside = right_obs;
+  }
 
   const double car_width_fold_mirror = apa_param.GetParam().car_width + 0.06;
   const double car_width_no_fold_mirror = apa_param.GetParam().max_car_width;
@@ -1180,16 +1190,16 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   double dy1 = 0.15 / 1.1 * (ego_info_under_slot.slot.slot_width_ * 0.5);
 
   // 内外侧障碍物往远离车位的一遍考虑1.68米就可以
-  double dy2 = 1.68;
+  double dy2 = apa_param.GetParam().x_max_internal_obstacles;
 
   // 最多高于车位3.468米的障碍物可以当做内外侧障碍物
   double dx1 = 3.468;
-  // 但是如果自车位置本身较低 那么内外侧障碍物考虑的x值也应该降低
-  dx1 = std::min(dx1, ego_info_under_slot.cur_pose.pos.x() -
-                          apa_param.GetParam().car_width * 0.5 -
-                          ego_info_under_slot.slot.slot_length_);
-  // 也需要有个最低考虑位置
-  dx1 = std::max(dx1, 0.368);
+  // // 但是如果自车位置本身较低 那么内外侧障碍物考虑的x值也应该降低
+  // dx1 = std::min(dx1, ego_info_under_slot.cur_pose.pos.x() -
+  //                         apa_param.GetParam().car_width * 0.5 -
+  //                         ego_info_under_slot.slot.slot_length_);
+  // // 也需要有个最低考虑位置
+  // dx1 = std::max(dx1, 0.368);
 
   // 对于5米长的车位 从车位线往内延长3.86米当做内外侧障碍物即可
   // 这个时候可以参考当做根据障碍物移动车位的标准， 再深就无需横向移动
@@ -1292,26 +1302,31 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
   return !path_trim_flag_ &&
          apa_world_ptr_->GetSlotManagerPtr()
-                 ->ego_info_under_slot_.slot_occupied_ratio < 0.15;
+                 ->ego_info_under_slot_.slot_occupied_ratio < 0.15 &&
+         fabs(frame_.current_path_last_point_heading * kRad2Deg) > 80;
 }
 
 const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
-  const pnc::geometry_lib::PathPoint& current_path_last_point =
-      current_path_point_global_vec_.back();
-  Eigen::Vector2d current_path_last_local_point =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf.GetPos(
-          current_path_last_point.pos);
+  if (current_path_point_global_vec_.size() > 0) {
+    const pnc::geometry_lib::PathPoint& current_path_last_point =
+        current_path_point_global_vec_.back();
+    Eigen::Vector2d current_path_last_local_point =
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf.GetPos(
+            current_path_last_point.pos);
 
-  double local_heading = apa_world_ptr_->GetSlotManagerPtr()
-                             ->ego_info_under_slot_.g2l_tf.GetHeading(
-                                 current_path_last_point.heading);
+    frame_.current_path_last_point_heading =
+        apa_world_ptr_->GetSlotManagerPtr()
+            ->ego_info_under_slot_.g2l_tf.GetHeading(
+                current_path_last_point.heading);
 
-  const bool conditions_endpoint_correction =
-      !end_position_correction_flag_ &&
-      current_path_last_local_point.x() < 7.0 &&
-      frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-      fabs(local_heading * kRad2Deg) > 80;
-  return conditions_endpoint_correction;
+    const bool conditions_endpoint_correction =
+        current_path_last_local_point.x() < 7.0 &&
+        frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+        fabs(frame_.current_path_last_point_heading * kRad2Deg) > 60;
+    return conditions_endpoint_correction;
+  } else {
+    return false;
+  }
 }
 
 const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
@@ -1372,10 +1387,20 @@ const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
 
     return true;
   } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    const double heading_condition =
+        frame_.current_path_last_point_heading * kRad2Deg;
+    ILOG_INFO << "current_path_last_point_heading : " << heading_condition;
     size_t size = current_path_point_global_vec_.size();
     if (size > 0) {
-      size_t half_size = size / 2;
-      current_path_point_global_vec_.resize(half_size);
+      if (fabs(heading_condition) > 70) {
+        size_t half_size = static_cast<size_t>(size / 2);
+        current_path_point_global_vec_.resize(half_size);
+      } else if (fabs(heading_condition) > 60 &&
+                 fabs(heading_condition) <= 70) {
+        size_t half_size = static_cast<size_t>(size * 2 / 3);
+        current_path_point_global_vec_.resize(half_size);
+      }
+
     } else {
       return false;
     }

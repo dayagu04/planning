@@ -198,6 +198,7 @@ class ParkingScenario {
       remain_dist_col_det = 5.01;
       vel_target = 1.168;
       car_already_move_dist = 0.0;
+      current_path_last_point_heading = 0.0;
       spline_success = false;
       current_path_length = 0.0;
       headin_current_path_length = 0.0;
@@ -256,6 +257,7 @@ class ParkingScenario {
     // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
     double car_already_move_dist = 0.0;
+    double current_path_last_point_heading = 0.0;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
     pnc::mathlib::spline headin_x_s_spline;
