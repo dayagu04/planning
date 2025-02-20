@@ -184,8 +184,8 @@ void Node3d::DebugString() const {
   ILOG_INFO << "index " << grid_index_.x << ", " << grid_index_.y << " "
             << grid_index_.phi << " point size " << path_.point_size
             << " steering_ " << steering_ * 57.3 << " gear "
-            << PathGearDebugString(gear_type_) << " g ,h, f " << traj_cost_
-            << ", " << heuristic_cost_ << "," << f_cost_ << ", "
+            << PathGearDebugString(gear_type_) << " (g, h, f) = (" << traj_cost_
+            << ", " << heuristic_cost_ << ", " << f_cost_ << "), collision_type "
             << static_cast<int>(collision_type_) << ", dist to start "
             << dist_to_start_ << ", id " << global_id_ << " , size "
             << path_.point_size << " ,safe dist " << dist_to_obs_

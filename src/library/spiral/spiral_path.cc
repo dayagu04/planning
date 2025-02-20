@@ -216,7 +216,6 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 //       return false;
 //     }
 
-//     local_state.dir = VEHICLE_MOVE_DIR_FORWARD;
 //     /* convert the local state to a global state */
 //     if (!CvtCompactStateLocalToGlobal(&global_state, &local_state, start)) {
 //       ILOG_ERROR << "transformation failed!";
@@ -381,7 +380,6 @@ const bool SampleCubicSpiralStatesByCoef(
       return false;
     }
 
-    local_state.dir = VEHICLE_MOVE_DIR_FORWARD;
     /* convert the local state to a global state */
     CvtCompactStateLocalToGlobal(&global_state, &local_state, start);
     states.emplace_back(global_state);

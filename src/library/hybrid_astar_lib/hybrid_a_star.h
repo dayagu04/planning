@@ -327,6 +327,11 @@ class HybridAStar {
 
   FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose);
 
+  const bool IsExpectedGearForRsPath(const RSPath &path);
+
+  // copy path from rs path
+  void PathTransformByRSPath(const RSPath& rs_path, HybridAStarResult* result);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;

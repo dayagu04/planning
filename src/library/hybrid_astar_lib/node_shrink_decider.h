@@ -44,10 +44,14 @@ class NodeShrinkDecider : public AstarDecider {
                                       const Node3d *old_node) const;
 
  private:
-  void ShrinkChildrenByHeading();
+  void ShrinkChildrenByHeadingForTailIn();
 
-  // [-pi,+pi)
+  void ShrinkChildrenByHeadingForHeadIn();
+
+  // [0,+pi]
   NodeHeadingShrink heading_shrink_;
+
+  ParkingVehDirection park_dir_;
 };
 
 }  // namespace planning

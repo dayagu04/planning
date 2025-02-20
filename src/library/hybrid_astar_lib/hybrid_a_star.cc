@@ -385,6 +385,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   ILOG_INFO << "hybrid astar begin, by cubic spiral";
 
   // init
+  result->Clear();
   obstacles_ = &obstacles;
   edt_ = edt;
   ref_line_ = ref_line;
@@ -407,11 +408,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   // (lon_min_sampling_length)
   Pose2D sampling_end = start;
   sampling_end.y = 0.0;
-  sampling_end.theta = 0.0;
+  sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
 
   const double sampling_step = 0.1;
-  size_t max_sampling_num = 30;
+  size_t max_sampling_num = 50;
 
   // ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
   //           << ", lon_min_sampling_length = " << lon_min_sampling_length
@@ -428,28 +429,30 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
   std::vector<AStarPathPoint> cubic_spiral_path;
   cubic_spiral_path.reserve(MAX_SPIRAL_PATH_POINT_NUM);
-  Pose2D real_end;
-  real_end.x = sampling_end.x;
 
   for (size_t k = 0; k < max_sampling_num; k++) {
     cubic_spiral_path.clear();
     plan_num = k;
 
-    if (!GetCubicSpiralPath(cubic_spiral_path, start, real_end, spiral_gear)) {
-      real_end.x += 0.1;
+    if (!GetCubicSpiralPath(cubic_spiral_path, start, sampling_end,
+                            spiral_gear)) {
+      sampling_end.x += 0.1;
       continue;
     }
+
     std::vector<spiral_path_point_t> states;
     states.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
     auto last_state = cubic_spiral_path.back();
-    // ILOG_INFO << "last_state.x " << last_state.x << ", real_end.x "
-    //           << real_end.x << ", last_state.y " << last_state.y
-    //           << ", real_end.y " << real_end.y << ", last_state.theta "
-    //           << last_state.phi << ", real_end.theta " << real_end.theta;
-    double end_point_error_x = last_state.x - real_end.x;
-    double end_point_error_y = last_state.y - real_end.y;
-    double end_point_error_theta = last_state.phi - real_end.theta;
+    // ILOG_INFO << "last_state.x " << last_state.x << ", sampling_end.x "
+    //           << sampling_end.x << ", last_state.y " << last_state.y
+    //           << ",sampling_end.y " << sampling_end.y << ",last_state.theta"
+    //           << last_state.phi << ", sampling_end.theta "
+    //           << sampling_end.theta;
+    double end_point_error_x = last_state.x - sampling_end.x;
+    double end_point_error_y = last_state.y - sampling_end.y;
+    double end_point_error_theta = last_state.phi - sampling_end.theta;
+    sampling_end.x += 0.1;
 
     if (std::fabs(end_point_error_x) >= 1e-2 ||
         std::fabs(end_point_error_y) >= 1e-2) {
@@ -458,42 +461,25 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     }
 
     path.Clear();
-    result->Clear();
 
     for (int i = 0; i < cubic_spiral_path.size(); i++) {
       path.x.emplace_back(cubic_spiral_path[i].x);
       path.y.emplace_back(cubic_spiral_path[i].y);
       path.phi.emplace_back(cubic_spiral_path[i].phi);
       path.gear.emplace_back(cubic_spiral_path[i].gear);
-      path.type.emplace_back(AstarPathType::CUBIC_POLYNOMIAL);
+      path.type.emplace_back(AstarPathType::SPIRAL);
       path.kappa.emplace_back(cubic_spiral_path[i].kappa);
+      path.accumulated_s.emplace_back(cubic_spiral_path[i].accumulated_s);
     }
 
     // get path lengh
     path_points_size = path.x.size();
 
-    double accumulated_s = 0.0;
-    path.accumulated_s.clear();
-    auto last_x = path.x.front();
-    auto last_y = path.y.front();
-    double x_diff;
-    double y_diff;
-
     for (size_t i = 0; i < path_points_size; ++i) {
-      x_diff = path.x[i] - last_x;
-      y_diff = path.y[i] - last_y;
-      accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
-      path.accumulated_s.emplace_back(accumulated_s);
-
-      if (accumulated_s <= lon_min_sampling_length) {
+      if (path.accumulated_s[i] <= lon_min_sampling_length) {
         expected_dist_id = i;
       }
-
-      last_x = path.x[i];
-      last_y = path.y[i];
     }
-
-    // path_points_size = std::min(path_points_size, expected_dist_id);
 
     // collision check
     size_t collision_id = GetPathCollisionIDByEDT(&path);
@@ -538,6 +524,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     valid_dist = path.accumulated_s[path_points_size - 1];
   }
   if (valid_dist >= 1.2) {
+    ILOG_INFO << "path_points_size = " << path_points_size;
     for (size_t i = 0; i < path_points_size; i++) {
       result->x.emplace_back(path.x[i]);
       result->y.emplace_back(path.y[i]);
@@ -548,6 +535,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
       result->accumulated_s.emplace_back(path.accumulated_s[i]);
     }
     result->base_pose = request.base_pose_;
+
+    if (result->accumulated_s.size() > 0 &&
+        result->accumulated_s.back() < lon_min_sampling_length - 0.1) {
+      return false;
+    }
 
     ILOG_INFO << "path valid, point size= " << result->x.size();
   } else if (valid_dist > 0.5) {
@@ -566,6 +558,9 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
     fallback_path_.base_pose = request.base_pose_;
     ILOG_INFO << "cubic spiral path invalid, point size = " << path.x.size();
     return false;
+  } else {
+    ILOG_INFO << "cubic spiral path invalid";
+    return false;
   }
 
   // for (int i = 0; i < result->x.size(); i++) {
@@ -575,7 +570,8 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   // }
 
   // double astar_end_time = IflyTime::Now_ms();
-  // ILOG_INFO << "spiral path time (ms): " << astar_end_time - astar_start_time;
+  // ILOG_INFO << "spiral path time (ms): " << astar_end_time -
+  // astar_start_time;
 
   return true;
 }
@@ -634,9 +630,9 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
         // ILOG_INFO << "gear is not expectation";
         return false;
       } else {
-        if ((current_node->GetDistToStart() +
-             std::fabs(rs_path_.paths[0].length)) <
+        if ((current_node->GetDistToStart() + rs_path_.GetFirstGearLength()) <
             request_.first_action_request.dist_request) {
+          // ILOG_INFO << "dist is not expectation";
           return false;
         }
       }
@@ -667,11 +663,13 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
 
   // last segment gear check
   if (!RsLastSegmentSatisfyRequest(&rs_path_)) {
+    // ILOG_INFO << "gear is not expectation";
     return false;
   }
 
   // single shot check
   if (!IsRSPathSingleShot(&rs_path_)) {
+    // ILOG_INFO << "gear is not expectation";
     return false;
   }
 
@@ -680,9 +678,11 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     gear = rs_path_.paths[i].gear;
     if (gear_request_info == PathGearRequest::GEAR_REVERSE_ONLY &&
         gear == AstarPathGear::DRIVE) {
+      // ILOG_INFO << "gear is not expectation";
       return false;
     } else if (gear_request_info == PathGearRequest::GEAR_DRIVE_ONLY &&
                gear == AstarPathGear::REVERSE) {
+      // ILOG_INFO << "gear is not expectation";
       return false;
     }
   }
@@ -899,38 +899,10 @@ bool HybridAStar::IsAllPathSegmentLongEnough(const RSPath* reeds_shepp_to_end,
 
 bool HybridAStar::IsRsPathFirstSegmentLongEnough(
     const RSPath* reeds_shepp_to_end, const double father_node_dist) {
-  double same_gear_path_min_dist;
+  double len = reeds_shepp_to_end->GetFirstGearLength() + father_node_dist;
 
-  int rs_path_seg_size = reeds_shepp_to_end->size;
-  int left_pointer_id = 0;
-  int right_pointer_id = 1;
-
-  AstarPathGear gear = reeds_shepp_to_end->paths[left_pointer_id].gear;
-  double len = reeds_shepp_to_end->paths[left_pointer_id].length;
-
-  same_gear_path_min_dist = std::fabs(len);
-  if (left_pointer_id == 0) {
-    same_gear_path_min_dist += father_node_dist;
-  }
-
-  // ILOG_INFO << "left_pointer_id " << left_pointer_id;
-
-  // search same gear path
-  for (right_pointer_id = left_pointer_id + 1;
-       right_pointer_id < rs_path_seg_size; right_pointer_id++) {
-    // same gear
-    if (gear == reeds_shepp_to_end->paths[right_pointer_id].gear) {
-      same_gear_path_min_dist +=
-          std::fabs(reeds_shepp_to_end->paths[right_pointer_id].length);
-
-    } else {
-      break;
-    }
-  }
-
-  if (same_gear_path_min_dist < config_.rs_path_seg_advised_dist) {
-    // ILOG_INFO << " rs path first seg len is small " <<
-    // same_gear_path_min_dist;
+  if (len < config_.rs_path_seg_advised_dist) {
+    // ILOG_INFO << " rs path first seg len " << len;
     return false;
   }
 
@@ -3334,8 +3306,8 @@ void HybridAStar::GearDrivePathAttempt(
                 << ",radius = " << current_node->GetRadius();
 
       break;
-    } else if (AnalyticExpansionByRS(current_node, gear_request,
-                                     &rs_node_to_goal)) {
+    } else if (SamplingByRSPath(PathGearRequest::GEAR_DRIVE_ONLY, current_node,
+                                &rs_node_to_goal)) {
       ILOG_INFO << "RS success";
       break;
     }
@@ -4459,6 +4431,9 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
                             config_.safe_buffer.lon_min_safe_buffer,
                             &cvx_hull_foot_print_);
 
+  PolygonDebugString(&veh_box_gear_drive_, "drive");
+  PolygonDebugString(&veh_box_gear_reverse_, "reverse");
+  PolygonDebugString(&veh_box_gear_none_, "none gear");
   // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_right, "right mirror");
@@ -4469,6 +4444,9 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
       .UpdateSafeBuffer(lat_buffer_inside, lon_buffer, lat_buffer_inside);
+
+  ILOG_INFO << "outside buffer = " << lat_buffer_outside
+            << ", inside buffer = " << lat_buffer_inside;
 
   return;
 }
@@ -4496,7 +4474,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
   // (lon_min_sampling_length)
   Pose2D sampling_end = start;
   sampling_end.y = 0.0;
-  sampling_end.theta = 0.0;
+  sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
 
   double sampling_step = 0.2;
@@ -4523,84 +4501,24 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
         &rs_path_, &is_connected_to_goal, &start, &sampling_end,
         sampling_radius, true, true, rs_request);
 
-#if 0
-  if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
-    rs_path_h_cost_debug_.emplace_back(rs_path_);
-  }
+#if PLOT_RS_EXNTEND_TO_END
+    if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
+      rs_path_h_cost_debug_.emplace_back(rs_path_);
+    }
 #endif
 
     if (rs_path_.total_length < 0.01 || !is_connected_to_goal) {
       ILOG_INFO << "rs path fail";
-
       continue;
     }
 
     // check gear
-    bool has_reverse = false;
-    for (int j = 0; j < rs_path_.size; j++) {
-      if (rs_path_.paths[j].gear == AstarPathGear::REVERSE) {
-        // ILOG_INFO << " rs path seg need single shot by drive gear ";
-        has_reverse = true;
-        break;
-      }
-    }
-    if (has_reverse) {
+    if (!IsExpectedGearForRsPath(rs_path_)) {
       // ILOG_INFO << "gear is invalid";
       continue;
     }
 
-    path.Clear();
-    RSPathSegment* last_segment = nullptr;
-    for (int i = 0; i < rs_path_.size; i++) {
-      RSPathSegment* segment = &rs_path_.paths[i];
-
-      int point_id = 0;
-      // delete first same point
-      if (last_segment != nullptr) {
-        if (segment->gear == last_segment->gear) {
-          point_id = 1;
-        }
-      }
-
-      for (; point_id < segment->size; point_id++) {
-        path.x.emplace_back(segment->points[point_id].x);
-        path.y.emplace_back(segment->points[point_id].y);
-        path.phi.emplace_back(segment->points[point_id].theta);
-        path.gear.emplace_back(segment->gear);
-        path.type.emplace_back(AstarPathType::REEDS_SHEPP);
-        path.kappa.emplace_back(segment->points[point_id].kappa);
-      }
-
-      last_segment = segment;
-    }
-
-    // get path lengh
-    path_valid_point_size = path.x.size();
-
-    double accumulated_s = 0.0;
-    path.accumulated_s.clear();
-    auto last_x = path.x.front();
-    auto last_y = path.y.front();
-    double x_diff;
-    double y_diff;
-
-    expected_dist_id = 0;
-    for (size_t i = 0; i < path_valid_point_size; ++i) {
-      x_diff = path.x[i] - last_x;
-      y_diff = path.y[i] - last_y;
-      accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
-      path.accumulated_s.emplace_back(accumulated_s);
-
-      if (accumulated_s <= lon_min_sampling_length) {
-        expected_dist_id = i;
-      }
-
-      last_x = path.x[i];
-      last_y = path.y[i];
-    }
-
-    path_valid_point_size =
-        std::min(path_valid_point_size, expected_dist_id);
+    PathTransformByRSPath(rs_path_, &path);
 
     // collision check
     size_t collision_id = GetPathCollisionIDByEDT(&path);
@@ -4608,22 +4526,14 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
     if (collision_id > 2) {
       collision_id -= 2;
     }
-
-    path_valid_point_size = std::min(path_valid_point_size, collision_id);
-    if (path_valid_point_size <= 1) {
-      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " <<
-      // k
-      //           << ", max_sampling_num=" << max_sampling_num;
-      continue;
-    }
+    path_valid_point_size = std::min(path.x.size(), collision_id);
 
 #if 0
-    ILOG_INFO << "point size= " << path.x.size()
-              << ",expected_dist_id= " << expected_dist_point_size
-              << ", path len= "
+    ILOG_INFO << "point size= " << path.x.size() << ", path len= "
               << ((path.accumulated_s.size() > 0) ? path.accumulated_s.back()
                                                   : 0.0)
-              << ", path_valid_point_size=" << path_valid_point_size;
+              << ", path_valid_point_size=" << path_valid_point_size
+              << ",collision_id = " << collision_id;
 #endif
 
     // find longer path
@@ -4632,7 +4542,17 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
       best_path = path;
     }
 
-    if (path_valid_point_size >= expected_dist_id) {
+    // check size
+    if (best_path_valid_point_size <= 1) {
+      // ILOG_INFO << "collision_id = " << collision_id << ",sampling id = " <<
+      // k;
+      continue;
+    }
+
+    // find long enough path
+    if (best_path_valid_point_size >= path.accumulated_s.size() &&
+        path.accumulated_s[best_path_valid_point_size - 1] >
+            lon_min_sampling_length) {
       break;
     }
   }
@@ -4641,15 +4561,11 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
       std::min(best_path_valid_point_size, best_path.x.size());
   double valid_dist = 0.0;
   if (best_path_valid_point_size > 0) {
-    if (best_path_valid_point_size < best_path.accumulated_s.size()) {
-      valid_dist = best_path.accumulated_s[best_path_valid_point_size];
-    } else {
-      valid_dist = best_path.accumulated_s.back();
-    }
+    valid_dist = best_path.accumulated_s.back();
   }
 
   if (valid_dist >= 1.2) {
-    for (size_t i = 0; i < path_valid_point_size; i++) {
+    for (size_t i = 0; i < best_path_valid_point_size; i++) {
       result->x.emplace_back(best_path.x[i]);
       result->y.emplace_back(best_path.y[i]);
       result->phi.emplace_back(best_path.phi[i]);
@@ -4657,6 +4573,11 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
       result->type.emplace_back(best_path.type[i]);
       result->kappa.emplace_back(best_path.kappa[i]);
       result->accumulated_s.emplace_back(best_path.accumulated_s[i]);
+
+      // no need too long path
+      if (best_path.accumulated_s[i] > lon_min_sampling_length) {
+        break;
+      }
     }
     result->base_pose = request_.base_pose_;
 
@@ -4793,22 +4714,18 @@ const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   start_spiral.y = start.y;
   start_spiral.theta = start.theta;
   start_spiral.kappa = 0.0;
-  start_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
 
   spiral_path_point_t goal_spiral;
   goal_spiral.x = end.x;
   goal_spiral.y = end.y;
   goal_spiral.theta = end.theta;
   goal_spiral.kappa = 0.0;
-  goal_spiral.dir = VEHICLE_MOVE_DIR_FORWARD;
 
   // *
   // Reverse gear requires changing the heading of the path point
   if (ref_gear == AstarPathGear::REVERSE) {
-    start_spiral.theta = start.theta + M_PI;
-    // goal_spiral.theta = -M_PI;
-    start_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
-    goal_spiral.dir = VEHICLE_MOVE_DIR_BACKWARD;
+    start_spiral.theta = IflyUnifyTheta(start.theta + M_PI, M_PI);
+    goal_spiral.theta = IflyUnifyTheta(goal_spiral.theta + M_PI, M_PI);
   }
 
   // ILOG_INFO << "start_spiral ( " << start_spiral.x << ", " << start_spiral.y
@@ -4830,7 +4747,7 @@ const bool HybridAStar::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
       &solution, states, &start_spiral, &goal_spiral, spiral_step_length);
 
   if (!success) {
-    ILOG_INFO << "generate cubic spiral path failed ";
+    // ILOG_INFO << "generate cubic spiral path failed ";
     return false;
   }
 
@@ -5259,6 +5176,12 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
   // init
   rs_node_to_goal->Clear();
   double min_straight_dist = 0.7;
+  if (request_.direction_request == ParkingVehDirection::TAIL_IN) {
+    min_straight_dist = 0.7;
+  } else if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    min_straight_dist = 0.3;
+  }
+
   double sample_range =
       astar_end_node_->GetX() - (request_.real_goal.GetX() + min_straight_dist);
   int sampline_numer = std::ceil(sample_range / 0.1);
@@ -5281,15 +5204,16 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
     }
 
     // check gear
-    bool has_gear_drive = false;
+    bool has_different_gear = false;
     for (int j = 0; j < rs_path_.size; j++) {
-      if (rs_path_.paths[j].gear == AstarPathGear::DRIVE) {
+      if (rs_path_.paths[j].gear !=
+          request_.first_action_request.gear_request) {
         // ILOG_INFO << " rs path seg need single shot by drive gear ";
-        has_gear_drive = true;
+        has_different_gear = true;
         break;
       }
     }
-    if (has_gear_drive) {
+    if (has_different_gear) {
       continue;
     }
 
@@ -5359,6 +5283,70 @@ FootPrintCircleModel* HybridAStar::GetCircleFootPrintModel(const Pose2D& pose) {
 FootPrintCircleModel* HybridAStar::GetSlotOutsideCircleFootPrint() {
   return &hierachy_circle_model_
               .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+}
+
+const bool HybridAStar::IsExpectedGearForRsPath(const RSPath& path) {
+  for (int j = 0; j < path.size; j++) {
+    if (path.paths[j].gear != request_.first_action_request.gear_request) {
+      // ILOG_INFO << " rs path seg need single shot by drive gear ";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void HybridAStar::PathTransformByRSPath(const RSPath& rs_path,
+                                        HybridAStarResult* result) {
+  result->Clear();
+
+  const RSPathSegment* last_segment = nullptr;
+  for (int i = 0; i < rs_path.size; i++) {
+    const RSPathSegment* segment = &rs_path.paths[i];
+
+    // get rs segment first point
+    int point_id = 0;
+    // delete first same point
+    if (last_segment != nullptr) {
+      if (segment->gear == last_segment->gear) {
+        point_id = 1;
+      }
+    }
+
+    for (; point_id < segment->size; point_id++) {
+      result->x.emplace_back(segment->points[point_id].x);
+      result->y.emplace_back(segment->points[point_id].y);
+      result->phi.emplace_back(segment->points[point_id].theta);
+      result->gear.emplace_back(segment->gear);
+      result->type.emplace_back(AstarPathType::REEDS_SHEPP);
+      result->kappa.emplace_back(segment->points[point_id].kappa);
+    }
+
+    last_segment = segment;
+  }
+
+  if (result->x.size() < 1) {
+    return;
+  }
+
+  // get path lengh
+  double accumulated_s = 0.0;
+  auto last_x = result->x.front();
+  auto last_y = result->y.front();
+  double x_diff;
+  double y_diff;
+
+  for (size_t i = 0; i < result->x.size(); ++i) {
+    x_diff = result->x[i] - last_x;
+    y_diff = result->y[i] - last_y;
+    accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
+    result->accumulated_s.emplace_back(accumulated_s);
+
+    last_x = result->x[i];
+    last_y = result->y[i];
+  }
+
+  return;
 }
 
 }  // namespace planning

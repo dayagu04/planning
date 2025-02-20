@@ -760,7 +760,7 @@ std::vector<Eigen::Vector3d> Update(
 
   Eigen::Vector3d end;
   end[0] = ego_slot_info.target_pose.pos[0] +
-           parking_param.astar_config.vertical_slot_end_straight_dist;
+           parking_param.astar_config.vertical_tail_in_end_straight_dist;
   end[1] = ego_slot_info.target_pose.pos[1];
   end[2] = ego_slot_info.target_pose.heading;
 
@@ -803,7 +803,7 @@ std::vector<Eigen::Vector3d> Update(
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(
         ego_slot_info,
-        parking_param.astar_config.vertical_slot_end_straight_dist,
+        parking_param.astar_config.vertical_tail_in_end_straight_dist,
         ego_global_pose);
 
     // just test rs library

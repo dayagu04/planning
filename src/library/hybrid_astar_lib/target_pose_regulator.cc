@@ -8,14 +8,17 @@
 
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
+#include "math_utils.h"
 #include "pose2d.h"
 
 namespace planning {
 
 #define DEBUG_DECIDER (0)
+#define SAFE_ENOUGH_BUFFER (0.5)
 
 bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
-  if (candidate_info_.size() > 0 && candidate_info_[0].dist_to_obs > 0.25) {
+  if (candidate_info_.size() > 0 &&
+      candidate_info_[0].dist_to_obs > SAFE_ENOUGH_BUFFER) {
     return true;
   }
 
@@ -72,6 +75,7 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
                                   const VehicleParam &veh_param) {
   Clear();
   center_line_target_ = center_line_target;
+  request_ = request;
   edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
   UpdateDefaultPoseInfo(request, veh_param, edt);
 
@@ -180,7 +184,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     ILOG_INFO << "offset = " << y_offset << ", dist = " << dist;
 #endif
 
-    if (dist > 0.25) {
+    if (dist > SAFE_ENOUGH_BUFFER) {
       break;
     }
   }
@@ -238,54 +242,12 @@ const bool TargetPoseRegulator::IsCandidatePoseSafe(
 }
 
 const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePose(
-    const double big_buffer, const double small_buffer) const {
-  if (candidate_info_.size() <= 0) {
-    return std::make_pair(center_line_target_, 0.0);
-  }
-
-  double dist;
-  double extra_buffer = 0.05;
-  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
-
-  for (auto &obj : candidate_info_) {
-    // If pose is big buffer, return
-    dist = obj.dist_to_obs - big_buffer - extra_buffer;
-    if (dist > 0.0) {
-      ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
-                << ",obs dist = " << obj.dist_to_obs;
-      return std::make_pair(obj.pose, obj.dist_to_obs);
-    }
-
-    // get relative safe pose.
-    if (obj.dist_to_obs > best_candidate->dist_to_obs) {
-      best_candidate = &obj;
-    }
-  }
-
-  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
-}
-
-const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePose(
     const double lat_buffer) const {
-  if (candidate_info_.size() <= 0) {
-    return std::make_pair(center_line_target_, 0.0);
+  if (request_->direction_request == ParkingVehDirection::TAIL_IN ) {
+    return GetCandidatePoseForTailIn(lat_buffer);
   }
 
-  double dist;
-  double extra_buffer = 0.02;
-  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
-
-  for (auto &obj : candidate_info_) {
-    // If pose is big buffer, return
-    dist = obj.dist_to_obs - lat_buffer - extra_buffer;
-    if (dist > 0.0) {
-      ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
-                << ",obs dist = " << obj.dist_to_obs;
-      return std::make_pair(obj.pose, obj.dist_to_obs);
-    }
-  }
-
-  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+  return GetCandidatePoseForHeadIn(lat_buffer);
 }
 
 void TargetPoseRegulator::DebugString() {
@@ -362,6 +324,116 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
 
   // Todo: adjust x offset
   return;
+}
+
+const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForTailIn(
+    const double lat_buffer) const {
+  if (candidate_info_.size() <= 0) {
+    return std::make_pair(center_line_target_, 0.0);
+  }
+
+  double dist;
+  double extra_buffer = 0.05;
+  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
+
+  for (auto &obj : candidate_info_) {
+    // If pose is big buffer, return
+    dist = obj.dist_to_obs - lat_buffer - extra_buffer;
+    if (dist > 0.0) {
+      ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
+                << ",obs dist = " << obj.dist_to_obs;
+      return std::make_pair(obj.pose, obj.dist_to_obs);
+    }
+
+    // get relative safe pose.
+    if (obj.dist_to_obs > best_candidate->dist_to_obs) {
+      best_candidate = &obj;
+    }
+  }
+
+  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+}
+
+const int TargetPoseRegulator::GenerateOffsetPreference() const {
+  if (request_->direction_request != ParkingVehDirection::HEAD_IN) {
+    return 0;
+  }
+
+  // 车辆在[0-170], [-170~0],说明车辆需要打方向盘调整入库，此时需要故意将目标点增加一个偏移量
+  if (std::fabs(request_->start_.theta) < ifly_deg2rad(170.0)) {
+    // right
+    if (request_->start_.theta > 0.0) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForHeadIn(
+    const double lat_buffer) const {
+  if (candidate_info_.size() <= 0) {
+    return std::make_pair(center_line_target_, 0.0);
+  }
+
+  int offset_preference = GenerateOffsetPreference();
+  const PoseRegulateCandidate *best_candidate =
+      GetCandidatePoseByOffset(lat_buffer, offset_preference);
+
+  ILOG_INFO << "offset = " << offset_preference;
+
+  if (best_candidate != nullptr) {
+    return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+  }
+
+  best_candidate = &candidate_info_[0];
+  for (auto &obj : candidate_info_) {
+    // get relative safe pose.
+    if (obj.dist_to_obs > best_candidate->dist_to_obs) {
+      best_candidate = &obj;
+    }
+  }
+
+  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+}
+
+const PoseRegulateCandidate *TargetPoseRegulator::GetCandidatePoseByOffset(
+    const double lat_buffer, const int offset) const {
+  if (candidate_info_.size() <= 0) {
+    return nullptr;
+  }
+
+  double dist;
+  double extra_buffer = 0.05;
+  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
+
+  for (auto &obj : candidate_info_) {
+    // If pose is big buffer, compare offset
+    dist = obj.dist_to_obs - lat_buffer - extra_buffer;
+    if (dist > 0.0) {
+      switch (offset) {
+        case 1:
+          if (obj.lat_offset < best_candidate->lat_offset) {
+            best_candidate = &obj;
+          }
+          break;
+        case -1:
+          if (obj.lat_offset > best_candidate->lat_offset) {
+            best_candidate = &obj;
+          }
+          break;
+        default:
+          best_candidate = &obj;
+          break;
+      }
+    }
+  }
+  ILOG_INFO << "big buffer, lat offset = " << best_candidate->lat_offset
+            << ",obs dist = " << best_candidate->dist_to_obs;
+
+  return best_candidate;
 }
 
 }  // namespace planning

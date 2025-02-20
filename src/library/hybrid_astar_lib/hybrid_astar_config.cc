@@ -49,7 +49,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   rs_path_seg_advised_dist = 0.35;
   tie_breaker_ = 1e-5;
 
-  single_shot_path_width_thresh = 0.19;
+  single_shot_path_width_thresh = 0.09;
   perpendicular_slot_node_step = 0.4;
   parallel_slot_node_step = 0.3;
 
@@ -61,17 +61,17 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   // update safe buffer
   safe_buffer.lat_safe_buffer_outside.reserve(3);
-  safe_buffer.lat_safe_buffer_outside.emplace_back(0.4);
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.2);
+  safe_buffer.lat_safe_buffer_outside.emplace_back(0.1);
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.1);
 
   safe_buffer.lat_safe_buffer_inside.reserve(3);
-  safe_buffer.lat_safe_buffer_inside.emplace_back(0.2);
+  safe_buffer.lat_safe_buffer_inside.emplace_back(0.1);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.08);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.08);
 
   safe_buffer.lon_safe_buffer.reserve(3);
-  safe_buffer.lon_safe_buffer.emplace_back(0.4);
+  safe_buffer.lon_safe_buffer.emplace_back(0.35);
   safe_buffer.lon_safe_buffer.emplace_back(0.35);
   safe_buffer.lon_safe_buffer.emplace_back(0.35);
   safe_buffer.lon_min_safe_buffer = 0.01;

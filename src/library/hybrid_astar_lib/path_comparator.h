@@ -52,6 +52,10 @@ class PathComparator : public AstarDecider {
                                const Node3d *best_node,
                                const Node3d *node_challenger);
 
+  bool CheckVerticalSlotHeadIn(const AstarRequest *request,
+                               const Node3d *best_node,
+                               const Node3d *node_challenger);
+
   PathWinReason win_reason_;
 };
 

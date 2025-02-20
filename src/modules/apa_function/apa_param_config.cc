@@ -885,10 +885,12 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
       double, "deadend_uss_stuck_replan_wait_time");
   JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.vertical_slot_end_straight_dist, double,
-      "vertical_slot_end_straight_dist");
-  ILOG_INFO << "vertical_slot_end_straight_dist "
-            << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
+      apa_param.SetPram().astar_config.vertical_tail_in_end_straight_dist,
+      double, "vertical_tail_in_end_straight_dist");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_head_in_end_straight_dist,
+      double, "vertical_head_in_end_straight_dist");
 
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.adjust_ego_y_thresh_outside_slot, double,

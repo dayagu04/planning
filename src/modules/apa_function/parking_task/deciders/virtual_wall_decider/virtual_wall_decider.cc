@@ -163,7 +163,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   double passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
   // passage left/right bound
-  const double passage_half_length = 8.0;
+  const double passage_half_length = 9.0;
   tmp_passage_boundary.y_lower = -passage_half_length;
   tmp_passage_boundary.y_upper = passage_half_length;
   tmp_passage_boundary.Combine(veh_boundary_);

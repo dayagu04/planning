@@ -1700,7 +1700,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     datas = []
     # load planning data
     if bag_loader.plan_msg['enable'] == True:
-      plan_data = bag_loader.plan_debug_msg['data'][plan_msg_idx]
+      plan_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
       plan_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
       # load func_state

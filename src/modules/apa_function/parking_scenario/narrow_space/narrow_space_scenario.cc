@@ -211,10 +211,9 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
       frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
-  if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
-    parking_finish = lat_condition && static_condition &&
-                     enter_slot_condition && remain_uss_condition;
-  }
+
+  parking_finish = lat_condition && static_condition && enter_slot_condition &&
+                   remain_uss_condition;
 
   if (parking_finish) {
     return true;
@@ -579,17 +578,18 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   } else if (apa_world_ptr_->GetSlotManagerPtr()
                  ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT) {
     end_straight_len =
-        apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+        apa_param.GetParam().astar_config.vertical_tail_in_end_straight_dist;
     slot_type = ParkSpaceType::SLANTING;
   } else {
     if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_len =
-          apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+          apa_param.GetParam().astar_config.vertical_tail_in_end_straight_dist;
 
       parking_in_type = ParkingVehDirection::TAIL_IN;
     } else {
-      end_straight_len = 0.5;
+      end_straight_len =
+          apa_param.GetParam().astar_config.vertical_head_in_end_straight_dist;
       parking_in_type = ParkingVehDirection::HEAD_IN;
     }
     slot_type = ParkSpaceType::VERTICAL;
@@ -698,22 +698,21 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     cur_request.goal_ = end;
 
   } else {
-    // gear need be different with history in next replanning
-    if (frame_.replan_reason != FIRST_PLAN) {
-      switch (current_gear_) {
-        case AstarPathGear::REVERSE:
-          cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
-          break;
-        case AstarPathGear::DRIVE:
-          cur_request.first_action_request.gear_request =
-              AstarPathGear::REVERSE;
-          break;
-        default:
-          break;
-      }
-    }
-
     cur_request.goal_ = end;
+  }
+
+  // gear need be different with history in next replanning
+  if (frame_.replan_reason != FIRST_PLAN) {
+    switch (current_gear_) {
+      case AstarPathGear::REVERSE:
+        cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
+        break;
+      case AstarPathGear::DRIVE:
+        cur_request.first_action_request.gear_request = AstarPathGear::REVERSE;
+        break;
+      default:
+        break;
+    }
   }
 
   if (is_scenario_try) {
@@ -847,8 +846,14 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
     ILOG_INFO << "set input";
 
-    frame_.total_plan_count++;
-    if (current_gear_ == AstarPathGear::REVERSE &&
+    if (!is_scenario_try) {
+      frame_.total_plan_count++;
+    }
+    
+    if (((current_gear_ == AstarPathGear::REVERSE &&
+          fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) ||
+         (current_gear_ == AstarPathGear::DRIVE &&
+          fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT)) &&
         ego_info.slot_occupied_ratio > 0.2) {
       in_slot_car_adjust_count_++;
     }
@@ -1161,10 +1166,19 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
             ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
         apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
             ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+      const std::vector<double> x_tab = {
+          ego_info_under_slot.target_pose.pos.x() - param.rear_overhanging -
+              param.front_overhanging,
+          ego_info_under_slot.slot.slot_length_};
+
+      const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+      const Eigen::Vector2d front_car_pos =
+          ego_info_under_slot.cur_pose.pos +
+          (param.wheel_base + param.front_overhanging) *
+              ego_info_under_slot.cur_pose.heading_vec;
+
       ego_info_under_slot.slot_occupied_ratio =
-          pnc::mathlib::Clamp(1.0 - (ego_info_under_slot.terminal_err.pos.x() /
-                                     ego_info_under_slot.slot.slot_length_),
-                              0.0, 1.0);
+          mathlib::Interp1(x_tab, occupied_ratio_tab, front_car_pos.x());
     } else {
       // 车尾泊入占比
       const std::vector<double> x_tab = {
@@ -1203,7 +1217,13 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   }
 
   // fix slot
-  if (ego_info_under_slot.slot_occupied_ratio > param.fix_slot_occupied_ratio &&
+  double fix_slot_ratio = param.fix_slot_occupied_ratio;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+    fix_slot_ratio = param.headin_fix_slot_occupied_ratio;
+  }
+
+  if (ego_info_under_slot.slot_occupied_ratio > fix_slot_ratio &&
       !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
     ego_info_under_slot.fix_slot = true;
     ILOG_INFO << "fix_slot";
@@ -1357,7 +1377,8 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
 const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   if (is_replan) {
     // check total plan number
-    if (frame_.total_plan_count > 30) {
+    if (frame_.total_plan_count >
+        apa_param.GetParam().headin_max_replan_count) {
       return false;
     }
   }
@@ -1365,8 +1386,15 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   // check plan number in slot
   EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-  if (is_replan && current_gear_ == AstarPathGear::REVERSE &&
-      ego_info.slot_occupied_ratio > 0.2) {
+
+  const ApaStateMachine fsm =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+
+  if (is_replan && (current_gear_ == AstarPathGear::REVERSE &&
+                    fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) ||
+      (current_gear_ == AstarPathGear::DRIVE &&
+       fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) &&
+          ego_info.slot_occupied_ratio > 0.2) {
     if (in_slot_car_adjust_count_ >= 3) {
       return false;
     }
@@ -1389,12 +1417,12 @@ const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
         apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
     if (ego_pose.x <= slot_len) {
       if (ego_lat_offset < 1.0 &&
-          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(5.0)) {
+          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(15.0)) {
         need_adjust_plan = true;
       }
     } else {
       if (ego_lat_offset < 1.0 &&
-          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(18.0)) {
+          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(20.0)) {
         need_adjust_plan = true;
       }
     }

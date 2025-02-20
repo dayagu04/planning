@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250114/20250114-15-38-41/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-14-15-38-41_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/common_frame/20250214/20250214-17-56-44/data_collection_CHERY_E0Y_20267_ALL_MANUAL_2025-02-14-17-56-44_no_camera.bag'
 #bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -192,6 +192,8 @@ class LocalViewSlider:
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
     self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
+    self.use_state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="use_state_machine", min=0, max=1, value=0, step=1)
+    self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -207,13 +209,15 @@ class LocalViewSlider:
                         lon_pos_dif = self.lon_pos_dif_slider,
                         lat_pos_dif = self.lat_pos_dif_slider,
                         heading_dif = self.heading_dif_slider,
-                        plot_child_node=self.plot_child_node
+                        plot_child_node=self.plot_child_node,
+                        use_state_machine=self.use_state_machine,
+                        state_machine=self.state_machine,
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node):
+                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine):
 
   time0 = time.time()
 
@@ -466,6 +470,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time, ms ', (end_time - start_time) * 1000)
 
   soc_state_msg_buff = BytesIO()
+  if(use_state_machine):
+    soc_state_msg.current_state = state_machine
+
   soc_state_msg.serialize(soc_state_msg_buff)
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
   current_state = soc_state_msg.current_state
