@@ -1040,6 +1040,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, side_obstacle_lat_buffer_limit,
                      "general_lateral_decider",
                      "side_obstacle_lat_buffer_limit");
+    ReadItem<double>(json, static_nudge_buffer2lane_boundary,
+                     "general_lateral_decider",
+                     "static_nudge_buffer2lane_boundary");
     /* read config from json */
   }
   bool use_obstacle_prediction_model_in_planning = false;
@@ -1122,6 +1125,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_front_lon_buffer2blockobstacle = 1.0;
   double extra_rear_lon_buffer2blockobstacle = 2.0;
   double side_obstacle_lat_buffer_limit = 0.5;
+  double static_nudge_buffer2lane_boundary = 0.1;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

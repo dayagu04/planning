@@ -585,22 +585,20 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
 
   // const auto& vehicle_param =
   //     VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-  //   lane_line_length += left_lane_boundarys.type_segments[i].length;
-  //   if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
-  //     left_lane_boundary_type = left_lane_boundarys.type_segments[i].type;
+  // // # Accumulate lane segment lengths.
+  // // Record current segment type and break loop when exceeding vehicle
+  // // wheelbase.
+  // const auto& lane_points = current_lane_ptr_->lane_points();
+  // for (int i = 0; i < lane_points.size(); i++) {
+  //   lane_line_length = lane_points[i].s;
+  //   if (lane_line_length > ego_frenet_boundary_.s_end) {
+  //     left_lane_boundary_type = lane_points[i].left_lane_border_type;
+  //     right_lane_boundary_type = lane_points[i].right_lane_border_type;
   //     break;
   //   }
   // }
-  // lane_line_length = 0.0;
-  // for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-  //   lane_line_length += right_lane_boundarys.type_segments[i].length;
-  //   if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
-  //     right_lane_boundary_type = right_lane_boundarys.type_segments[i].type;
-  //     break;
-  //   }
-  // }
-
+  // // If the lane marking is not left dashed/right solid or double dashed, return
+  // // False.
   // if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
   //     left_lane_boundary_type !=
   //         iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
@@ -608,6 +606,7 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   //         iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
   //   left_borrow_ = false;
   // }
+
   // if (left_lane_ptr_ == nullptr) {
   //   left_borrow_ = false;
   // }

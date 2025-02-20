@@ -1202,6 +1202,14 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
       lane_borrow_decider_output.is_in_lane_borrow_status;
   bool is_care_rear_obstacle = IsRearObstacle(obstacle) &&
       IsAgentPredLonOverlapWithPlanPath(obstacle);
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const std::shared_ptr<VirtualLane> flane =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  const double ego_width = vehicle_param.max_width;
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1288,6 +1296,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   double extra_lane_type_decrease_buffer =
       CalculateExtraLaneTypeDecreaseBuffer(is_nudge_left, obstacle->frenet_obstacle_boundary().s_start,
                                           obstacle->frenet_obstacle_boundary().s_end);
+  const double lane_width = flane->width_by_s(0.5 * (obstacle->frenet_obstacle_boundary().s_start +
+      obstacle->frenet_obstacle_boundary().s_end));
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
@@ -1339,10 +1349,23 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
       lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                   extra_lane_type_decrease_buffer,
                               0.);
-      if (is_side_obstacle && !session_->mutable_planning_context()
-                                    ->mutable_lateral_obstacle_decider_output()
-                                    .in_intersection) {
-        lat_buf_dis = std::fmin(lat_buf_dis, config_.side_obstacle_lat_buffer_limit);
+      if (!session_->mutable_planning_context()
+              ->lateral_obstacle_decider_output()
+              .in_intersection) {
+        if (is_nudge_left) {
+          double nudge_position = overlap_min_y - lat_buf_dis - ego_width;
+          if (nudge_position < config_.static_nudge_buffer2lane_boundary - 0.5 * lane_width) {
+            lat_buf_dis = overlap_min_y -ego_width + 0.5 * lane_width - config_.static_nudge_buffer2lane_boundary;
+          }
+        } else {
+          double nudge_position = overlap_max_y + lat_buf_dis + ego_width;
+          if (nudge_position > 0.5 * lane_width - config_.static_nudge_buffer2lane_boundary) {
+            lat_buf_dis = 0.5 * lane_width - config_.static_nudge_buffer2lane_boundary - ego_width - overlap_max_y;
+          }
+        }
+        if (is_side_obstacle) {
+          lat_buf_dis = std::fmin(lat_buf_dis, config_.side_obstacle_lat_buffer_limit);
+        }
       }
     }
 
