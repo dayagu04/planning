@@ -384,7 +384,7 @@ const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForHeadIn(
 
   ILOG_INFO << "offset = " << offset_preference;
 
-  if (best_candidate != nullptr) {
+  if (best_candidate != nullptr && best_candidate->dist_to_obs > lat_buffer) {
     return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
   }
 
