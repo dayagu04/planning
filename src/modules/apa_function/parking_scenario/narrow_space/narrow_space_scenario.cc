@@ -849,6 +849,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     if (!is_scenario_try) {
       frame_.total_plan_count++;
     }
+
+    ILOG_INFO << "frame_.total_plan_count = " << frame_.total_plan_count;
     
     if (((current_gear_ == AstarPathGear::REVERSE &&
           fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) ||
