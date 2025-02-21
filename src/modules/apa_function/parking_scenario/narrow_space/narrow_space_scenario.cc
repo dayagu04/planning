@@ -805,6 +805,10 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
         double publish_end_time = IflyTime::Now_ms();
         ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
+
+        frame_.total_plan_count++;
+        ILOG_INFO << "frame_.total_plan_count = "
+                  << static_cast<int>(frame_.total_plan_count);
       }
 
       res = PathPlannerResult::PLAN_UPDATE;
@@ -846,12 +850,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
     ILOG_INFO << "set input";
 
-    if (!is_scenario_try) {
-      frame_.total_plan_count++;
-    }
-
-    ILOG_INFO << "frame_.total_plan_count = " << frame_.total_plan_count;
-    
     if (((current_gear_ == AstarPathGear::REVERSE &&
           fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) ||
          (current_gear_ == AstarPathGear::DRIVE &&
