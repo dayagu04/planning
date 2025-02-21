@@ -1835,7 +1835,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   // headin shrink limit pose
   bool position_legal = false;
   position_legal = node_shrink_decider_.IsLegalForPos(
-      new_node->GetX(), new_node->GetY(), astar_end_node_->GetX() - 0.1,
+      new_node->GetX(), new_node->GetY(), astar_end_node_->GetX() - 1.2,
       config_.headin_limit_y_shrink);
 
   if (!position_legal) {
