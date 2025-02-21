@@ -2,6 +2,7 @@
 #define __LATERAL_MOTION_PLANNING_COST_H__
 
 #include "ilqr_cost.h"
+#include "vec2d.h"
 
 namespace pnc {
 namespace lateral_planning {
@@ -164,6 +165,10 @@ class PathSoftCorridorCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return PATH_SOFT_CORRIDOR_COST; }
+
+ private:
+  planning::planning_math::Vec2d ubound_direction_;
+  planning::planning_math::Vec2d lbound_direction_;
 };
 
 class PathHardCorridorCostTerm : public ilqr_solver::BaseCostTerm {
@@ -179,6 +184,10 @@ class PathHardCorridorCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return PATH_HARD_CORRIDOR_COST; }
+
+ private:
+  planning::planning_math::Vec2d ubound_direction_;
+  planning::planning_math::Vec2d lbound_direction_;
 };
 }  // namespace lateral_planning
 }  // namespace pnc

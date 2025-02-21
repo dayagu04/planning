@@ -183,7 +183,7 @@ void EnvironmentalModelManager::SetConfig(
 
   agent_manager_ptr_->SetConfig(config_builder);
 
-  // route_info_ptr_->SetConfig(config_builder);
+  route_info_ptr_->SetConfig(config_builder);
 
   edt_manager_ptr_->SetConfig(config_builder);
 }
@@ -241,11 +241,15 @@ bool EnvironmentalModelManager::Run() {
                   (fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE);
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+  bool hpp_mode_cruise =
+      (fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE) ||
+      (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) ||
+      (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING);
   bool hpp_mode =
       (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
       (fsm_state <=
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
-  bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
+  bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
 

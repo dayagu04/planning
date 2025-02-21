@@ -559,6 +559,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
           lat_offset_decider_output.avoid_direction);
 
   // HMI for hpp
+  const bool is_reached_target_slot =
+      session_.environmental_model().get_parking_slot_manager()->IsReachedTargetSlot();
   const auto &ego_state_manager =
       session_.environmental_model().get_ego_state_manager();
   const auto &route_info_output =
@@ -567,8 +569,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
   hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
-  hpp_info->distance_to_parking_space =
-      route_info_output.distance_to_target_slot;
+  hpp_info->distance_to_parking_space = is_reached_target_slot ?
+      0.0 : route_info_output.distance_to_target_slot;
   hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
   // hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
@@ -611,11 +613,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
       }
     }
   }
-  if (route_info_output.distance_to_target_slot < 10.0) {
-    hpp_info->distance_to_parking_space =
-        std::min(std::fabs(points.back().path_point.s() - ego_s),
-                 route_info_output.distance_to_target_slot);
-  }
+  // if (route_info_output.distance_to_target_slot < 10.0) {
+  //   hpp_info->distance_to_parking_space =
+  //       std::min(std::fabs(points.back().path_point.s() - ego_s),
+  //                route_info_output.distance_to_target_slot);
+  // }
   // hpp状态切park_in状态
   if (session_.is_hpp_scene()) {
     const auto &parking_switch_info = session_.planning_context()
@@ -951,6 +953,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   }
 
   JSON_DEBUG_VALUE("current planning_success", planning_success);
+  session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
   if (!planning_success) {
     LOG_DEBUG("Planning failed !!!! \n");
     if (!UpdateFailedPlanningResult()) {
@@ -964,7 +967,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
 
   std::cout << "The RunOnce is successed !!!!:" << std::endl;
   // 存在问题
-  session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
+  // session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
   session_.mutable_planning_context()->mutable_planning_success() = true;
 
   const auto end_timestamp = IflyTime::Now_ms();

@@ -22,11 +22,12 @@ void OccupancyGridMap::Process(const OccupancyGridBound &bound,
 }
 
 void OccupancyGridMap::Clear() {
-  for (int32_t i = 0; i < ogm_grid_x_max; i++) {
-    for (int32_t j = 0; j < ogm_grid_y_max; j++) {
-      ogm[i][j] = false;
-    }
-  }
+  std::memset(ogm, false, sizeof(ogm));
+  // for (int32_t i = 0; i < ogm_grid_x_max; i++) {
+  //   for (int32_t j = 0; j < ogm_grid_y_max; j++) {
+  //     ogm[i][j] = false;
+  //   }
+  // }
   return;
 }
 

@@ -230,6 +230,9 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_ehr_column_box");
     hpp_min_search_range =
         read_json_key<double>(json, "hpp_min_search_range");
+    raw_ref_extend_buff =
+        read_json_key<double>(json, "raw_ref_extend_buff",
+        raw_ref_extend_buff);
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -255,6 +258,7 @@ struct EgoPlanningConfig : public Config {
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
   double hpp_min_search_range = 20;
+  double raw_ref_extend_buff = 0;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {

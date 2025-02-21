@@ -93,8 +93,8 @@ void ObstacleManager::update() {
           bounding_box.GetAllCorners(&polygon_points);
           for (auto &point : polygon_points) {
             Point2D frenet_point;
-            if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
-                                      frenet_point) ||
+            if (!frenet_coord->XYToSL(point.x(), point.y(),
+                                      &frenet_point.x, &frenet_point.y) ||
                 std::isnan(frenet_point.x) || std::isnan(frenet_point.y) ||
                 ((frenet_point.x > ego_point.x + kSLowerLimitForOD) &&
                  (frenet_point.x < ego_point.x + kSUpperLimitForOD))) {
@@ -301,6 +301,27 @@ void ObstacleManager::UpdateParkingSpaceObstacle() {
 void ObstacleManager::UpdateOccObstacle() {
   static constexpr int kOccupancyObjectIdOffset = 7000000;
   const auto &local_view = session_->environmental_model().get_local_view();
+  const auto &ego_state =
+      *session_->mutable_environmental_model()->get_ego_state_manager();
+  const auto &ref_path_ptr = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .coarse_planning_info.reference_path;
+  // 自车sl
+  if (ref_path_ptr == nullptr) {
+    return;
+  }
+  const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
+  Point2D ego_point;
+  if (!frenet_coord->XYToSL(
+          Point2D(ego_state.ego_carte().x, ego_state.ego_carte().y),
+          ego_point) ||
+      std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+    return;
+  }
+
   if (local_view.fusion_occupancy_objects_info.local_point_valid) {
     const size_t occupancy_objects_size =
         local_view.fusion_occupancy_objects_info.fusion_object_size;
@@ -323,6 +344,22 @@ void ObstacleManager::UpdateOccObstacle() {
                 occupancy_objects[i].additional_occupancy_info.track_id,
             std::move(object_points), occupancy_objects[i]);
         if (obstacle.is_vaild()) {
+          // 距离过滤，临时
+          // int in_range_count = 0;
+          // for (auto &point : obstacle.perception_polygon().points()) {
+          //   Point2D sl_point;
+          //   if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
+          //                             sl_point) ||
+          //       std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
+          //       sl_point.x > ego_point.x + 8) {
+          //     in_range_count++;
+          //   }
+          // }
+          // if (in_range_count == obstacle.perception_polygon().points().size() ||
+          //     (in_range_count > 0 &&
+          //      obstacle.perception_polygon().area() < 1)) {
+          //   continue;
+          // }
           add_occupancy_obstacle(obstacle);
         }
       }
@@ -390,7 +427,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
                   std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
                   groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
                   sl_point.x < ego_point.x + 6 ||
-                  ((sl_point.x < ego_point.x + 9) &&
+                  ((sl_point.x < ego_point.x + 7.5) &&
                    groundline.resource_type ==
                        iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
                 in_range = false;

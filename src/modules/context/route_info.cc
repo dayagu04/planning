@@ -17,6 +17,13 @@ constexpr uint64_t kStaticMapOvertimeThreshold = 20000000;  // 20s
 RouteInfo::RouteInfo(const EgoPlanningConfigBuilder* config_builder,
                      planning::framework::Session* session) {
   session_ = session;
+  SetConfig(config_builder);
+}
+
+void RouteInfo::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
+  config_ = config_builder->cast<EgoPlanningConfig>();
+  virtual_extend_buff_ = config_.raw_ref_extend_buff;
 }
 
 void RouteInfo::Update() {
@@ -843,14 +850,33 @@ bool RouteInfo::GetCurrentNearestLane() {
   ad_common::hdmap::LaneInfoConstPtr nearest_lane;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
+  double sum_s = 0.0;
   // const double distance = 10.0;
   // const double central_heading = pose.heading();
   // const double max_heading_difference = PI / 4;
-  if (hd_map_.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l) !=
-      0) {
+  // [hack](bsniu): for two floors, the first is current lane
+  const auto& lines = local_view_.static_map_info.road_map().lanes();
+  if (!lines.empty()) {
+    const size_t lane_id = lines[0].lane_id();
+    nearest_lane = hd_map_.GetLaneById(lane_id);
+    if(nearest_lane->GetProjection(point, &nearest_s, &nearest_l)) {
+      sum_s = nearest_s;
+    } else {
+      std::cout << "current pose get projection fail!!" << std::endl;
+      return false;
+    }
+
+  } else {
     std::cout << "no get nearest lane!!!" << std::endl;
     return false;
   }
+
+  // if (hd_map_.GetNearestLaneAndSumDist(point,
+  //     &nearest_lane, &nearest_s, &nearest_l, &sum_s) !=
+  //     0) {
+  //   std::cout << "no get nearest lane!!!" << std::endl;
+  //   return false;
+  // }
   // const int res = hd_map.GetNearestLaneWithHeading(
   //     point, distance, central_heading, max_heading_difference,
   //     &nearest_lane, &nearest_s, &nearest_l);
@@ -862,6 +888,7 @@ bool RouteInfo::GetCurrentNearestLane() {
             << std::endl;
   nearest_lane_hpp_ = nearest_lane;
   nearest_s_hpp_ = nearest_s;
+  sum_s_hpp_ = sum_s;
   return true;
 }
 
@@ -888,7 +915,7 @@ void RouteInfo::CalculateHPPInfo() {
     }
     // calculate sum distance
     bool is_reached_trace_start_point =
-        nearest_s_hpp_ >= trace_start_point_accumulate_s;
+        sum_s_hpp_ >= trace_start_point_accumulate_s;
     const ad_common::math::Vec2d point(current_pose_.x, current_pose_.y);
     if (is_reached_trace_start_point) {
       std::cout << "reached trace start point!!" << std::endl;
@@ -934,24 +961,25 @@ void RouteInfo::ResetHpp() {
 void RouteInfo::CalculateDistanceToTargetSlot() {
   // get target slot projection point on line
   ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
-  double tar_slot_nearest_s = 0.0;
-  double tar_slot_nearest_l = 0.0;
+  double nearest_s = 0.0;
+  double nearest_l = 0.0;
+  double sum_s = 0.0;
 
   const auto& lines = local_view_.static_map_info.road_map().lanes();
   if (!lines.empty()) {
-    const auto& final_point = lines[0].points_on_central_line().rbegin();
+    const auto& final_point = lines[lines.size() - 1].points_on_central_line().rbegin();
     const double tar_slot_pose_x = final_point->x();
     const double tar_slot_pose_y = final_point->y();
-    const int tar_slot_res = hd_map_.GetNearestLane(
+    const int tar_slot_res = hd_map_.GetNearestLaneAndSumDist(
         {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
-        &tar_slot_nearest_s, &tar_slot_nearest_l);
+        &nearest_s, &nearest_l, &sum_s);
     if (tar_slot_res != 0) {
       std::cout << "not get target slot projection point on line!!!"
                 << std::endl;
       return;
     }
     route_info_output_.distance_to_target_slot =
-        tar_slot_nearest_s - nearest_s_hpp_;
+        std::fabs(sum_s - sum_s_hpp_);
   } else {
     std::cout << "lines is empty from road_map!!!" << std::endl;
   }
@@ -969,13 +997,14 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
         ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
         double speed_bump_nearest_s = 0.0;
         double speed_bump_nearest_l = 0.0;
+        double speed_bump_sum_s = 0.0;
 
         ad_common::math::Vec2d speed_bump_center_point(
             (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
             (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
-        const int speed_bump_res = hd_map_.GetNearestLane(
+        const int speed_bump_res = hd_map_.GetNearestLaneAndSumDist(
             speed_bump_center_point, &speed_bump_nearest_lane,
-            &speed_bump_nearest_s, &speed_bump_nearest_l);
+            &speed_bump_nearest_s, &speed_bump_nearest_l, &speed_bump_sum_s);
         if (speed_bump_res != 0) {
           std::cout << "not get speed_bump projection point on line!!!"
                     << std::endl;
@@ -984,7 +1013,7 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
           std::cout << "get s for speed_bump projection point on line:"
                     << speed_bump_nearest_s << std::endl;
         }
-        distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_hpp_;
+        distance_to_speed_bump_tmp = speed_bump_sum_s - sum_s_hpp_;
         if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
           route_info_output_.distance_to_next_speed_bump =
               distance_to_speed_bump_tmp;

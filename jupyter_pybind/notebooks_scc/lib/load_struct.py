@@ -3028,7 +3028,7 @@ def load_avoid(plan_debug, planning_json):
 def load_time_cost(plan_debug, planning_json):
   time_cost_keys = ["VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost"]
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", "edt_manager_cost"]
   data_dict = {}
   for key in time_cost_keys:
     try:

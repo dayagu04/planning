@@ -94,6 +94,11 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
   }
 
   // 根据最短搜索范围，重新计算边界
+  // 规划起始点
+  const PlanningInitPoint &planning_init_point =
+      session_->environmental_model()
+          .get_ego_state_manager()
+          ->planning_init_point();
   if (session_->is_hpp_scene()) {
     const auto &reference_path = session_->planning_context()
                                      .lane_change_decider_output()
@@ -101,34 +106,30 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
     if (reference_path != nullptr) {
       const auto &frenet_coord = reference_path->get_frenet_coord();
       if (frenet_coord != nullptr) {
-        // 自车sl
-        const PlanningInitPoint &planning_init_point =
-            session_->environmental_model()
-                .get_ego_state_manager()
-                ->planning_init_point();
-        Point2D ego_point;
-        if (frenet_coord->XYToSL(
-                Point2D(planning_init_point.x, planning_init_point.y),
-                ego_point) &&
-            !std::isnan(ego_point.x) && !std::isnan(ego_point.y)) {
-          Point2D end_point;
-          if (frenet_coord->SLToXY(
-                  Point2D(ego_point.x + config_.hpp_min_search_range + 7, 0),
-                  end_point) &&
-              !std::isnan(end_point.x) && !std::isnan(end_point.y)) {
-            Pose2D local;
-            ego_base.GlobalPointToULFLocal(&local,
-                                           Pose2D(end_point.x, end_point.y, 0));
-            front_x = std::max(front_x, local.x);
-            back_x = std::min(back_x, local.x);
-            left_y = std::max(left_y, local.y);
-            right_y = std::min(right_y, local.y);
-          }
+        Point2D end_point;
+        if (frenet_coord->SLToXY(
+                Point2D(reference_path->get_frenet_ego_state().s() + config_.hpp_min_search_range + 7, 0),
+                end_point) &&
+            !std::isnan(end_point.x) && !std::isnan(end_point.y)) {
+          Pose2D local;
+          ego_base.GlobalPointToULFLocal(&local,
+                                          Pose2D(end_point.x, end_point.y, 0));
+          front_x = std::max(front_x, local.x);
+          back_x = std::min(back_x, local.x);
+          left_y = std::max(left_y, local.y);
+          right_y = std::min(right_y, local.y);
         }
       }
     }
   }
-
+  if (std::fabs(front_x - back_x) > 40) {
+    front_x = planning_init_point.lat_init_state.x() + 20;
+    back_x = planning_init_point.lat_init_state.x() - 20;
+  }
+  if (std::fabs(left_y - right_y) > 40) {
+    left_y = planning_init_point.lat_init_state.y() + 20;
+    right_y = planning_init_point.lat_init_state.y() - 20;
+  }
   OccupancyGridBound grid_bound(back_x, right_y, front_x, left_y);
   // reload grid bound
   ogm_.Process(grid_bound, resolution_);
@@ -218,7 +219,8 @@ bool EdtManager::FilterObstacleForAra(
 }
 
 void EdtManager::update() {
-  if (!session_->is_hpp_scene()) {
+  if (!session_->is_hpp_scene() ||
+      !session_->planning_context().last_planning_success()) {
     return;
   }
   is_edt_valid_ = false;

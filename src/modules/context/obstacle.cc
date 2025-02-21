@@ -419,15 +419,16 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   if (perception_polygon_.is_convex() &&
       perception_polygon_.points().size() >= 3) {
     perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
+    if (perception_polygon_.area() < 0.01) {
+      valid_ = false;
+    }
   } else {
+    valid_ = false;
     planning_math::LineSegment2d axis(
         planning_math::Vec2d(perception_points_.front().x(),
                              perception_points_.front().y()),
         planning_math::Vec2d(perception_points_.back().x(),
                              perception_points_.back().y()));
-    if (axis.length() <= 1e-3) {
-      valid_ = false;
-    }
     perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
     perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
   }

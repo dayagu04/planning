@@ -671,11 +671,11 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec']
-      # hpp 
+      # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
                          "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
-                         "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second"]
+                         "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
       plan_debug_msg_dict = {}

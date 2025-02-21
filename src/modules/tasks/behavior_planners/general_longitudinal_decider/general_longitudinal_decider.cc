@@ -458,8 +458,15 @@ bool GeneralLongitudinalDecider::Execute() {
   if (session_->is_hpp_scene()) {
     // set destination bound
     double distance_to_destination = get_distance_to_destination();
-    // double distance_to_destination =
-    //   session_->environmental_model().get_parking_slot_manager()->GetDistanceToTargetSlot();
+    distance_to_destination =
+      reference_path_ptr_->get_points().back().path_point.s() -
+      planning_init_point.frenet_state.s;
+    const double ref_virtual_extend_buff =
+      session_->environmental_model().get_route_info()->get_virtual_extend_buff();
+    const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+    size_t target_slot_id =
+      parking_slot_manager->GetTargetSlotId();
     const size_t successful_slot_info_list_size =
         session_->planning_context()
             .planning_output()
@@ -518,8 +525,26 @@ bool GeneralLongitudinalDecider::Execute() {
           distance_to_destination = dist_to_nearest_slot;
         }
       }
+    } else if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+      if (parking_slot_manager->IsExistTargetSlot()) {
+        const auto &target_slot_points = parking_slot_manager->GetTargetSlotPoints();
+        planning_math::LineSegment2d axis(
+        planning_math::Vec2d(target_slot_points.front().x(),
+                             target_slot_points.front().y()),
+        planning_math::Vec2d(target_slot_points.back().x(),
+                             target_slot_points.back().y()));
+        Point2D frenet_point;
+        if (frenet_coord != nullptr) {
+          if (frenet_coord->XYToSL(
+            Point2D(axis.center().x(), axis.center().y()),
+            frenet_point)) {
+            distance_to_destination =
+              frenet_point.x + ref_virtual_extend_buff -
+              planning_init_point.frenet_state.s;
+          }
+        }
+      }
     }
-
     double destination_s =
         planning_init_point.frenet_state.s +
         std::max((distance_to_destination - stop_distance_to_destination), 0.0);

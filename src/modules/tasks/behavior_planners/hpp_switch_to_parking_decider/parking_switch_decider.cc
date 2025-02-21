@@ -24,6 +24,8 @@ bool ParkingSwitchDecider::Execute() {
   parking_slot_manager->CalculateDistanceToTargetSlot(current_reference_path);
   size_t target_slot_id =
       env.get_local_view().parking_fusion_info.select_slot_id;
+  const bool is_reached_target_slot =
+      parking_slot_manager->IsReachedTargetSlot();
   double distance_to_destination =
       env.get_route_info()->get_route_info_output().distance_to_target_slot;
   double distance_to_target_slot =
@@ -58,7 +60,8 @@ bool ParkingSwitchDecider::Execute() {
       parking_switch_info_.is_selected_slot_allowed_to_park = false;
     }
     parking_switch_info_.has_parking_slot_in_hpp_searching = true;
-  } else if ((distance_to_target_slot < config_.dist_to_parking_space_thr) &&
+  } else if ((is_reached_target_slot ||
+             (distance_to_target_slot < config_.dist_to_parking_space_thr)) &&
              (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
     for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
       if ((target_slot_id == successful_slot_info_list[i].id) && (target_slot_id > 0)) {
@@ -70,6 +73,9 @@ bool ParkingSwitchDecider::Execute() {
         (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
       parking_switch_info_.is_memory_slot_occupied = true;
     }
+  } else if (is_reached_target_slot &&
+             (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
+    parking_switch_info_.is_memory_slot_occupied = true;
   }
 
   ILOG_INFO << "parking_switch_info_.is_memory_slot_allowed_to_park"

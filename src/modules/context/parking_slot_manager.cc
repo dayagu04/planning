@@ -26,6 +26,7 @@ void ParkingSlotManager::Init() {
   target_slot_.clear();
   target_slot_id_ = 0;
   distance_to_target_slot_ = NL_NMAX;
+  is_reached_target_slot_ = false;
 }
 
 bool ParkingSlotManager::Update(const Map::StaticMap& static_map) {
@@ -80,6 +81,15 @@ bool ParkingSlotManager::Update(
   points_.clear();
   limiters_.clear();
   is_exist_target_slot_ = false;
+  is_reached_target_slot_ = false;
+  const double distance_to_target_slot =
+      session_->environmental_model()
+              .get_route_info()
+              ->get_route_info_output()
+              .distance_to_target_slot;
+  if (distance_to_target_slot > 20.0) {
+    return false;
+  }
   const size_t parking_slot_lists_size = parking_fusion_info.parking_fusion_slot_lists_size;
   const auto& parking_slot_lists = parking_fusion_info.parking_fusion_slot_lists;
   target_slot_id_ = parking_fusion_info.select_slot_id;
@@ -88,27 +98,27 @@ bool ParkingSlotManager::Update(
     const auto& parking_slot = parking_slot_lists[i];
     size_t slot_id = parking_slot.id;
     auto resource_type = parking_slot.resource_type;
-    if ((slot_id == target_slot_id_) && (resource_type == 2)) {
-      is_exist_target_slot_ = true;
-    }
-    for (const auto& corner_point : parking_slot.corner_points) {
-      if (is_exist_target_slot_) {
+    if (slot_id == target_slot_id_) {
+      for (const auto& corner_point : parking_slot.corner_points) {
         target_slot_.emplace_back(
             planning_math::Vec2d(corner_point.x, corner_point.y));
       }
+      planning_math::Polygon2d::ComputeConvexHull(target_slot_,
+                                                  &target_slot_polygon_);
+      is_exist_target_slot_ = true;
     }
 
     // limiter
-    const size_t limiters_size = parking_slot.limiters_size;
-    const auto& limiters = parking_slot.limiters;  // line segment
-    for (const auto& limiter : limiters) {
-      planning_math::LineSegment2d limiter_axis(
-          planning_math::Vec2d(limiter.end_points[0].x,
-                               limiter.end_points[0].y),
-          planning_math::Vec2d(limiter.end_points[1].x,
-                               limiter.end_points[1].y));
-      limiters_.emplace_back(std::move(limiter_axis));
-    }
+    // const size_t limiters_size = parking_slot.limiters_size;
+    // const auto& limiters = parking_slot.limiters;  // line segment
+    // for (const auto& limiter : limiters) {
+    //   planning_math::LineSegment2d limiter_axis(
+    //       planning_math::Vec2d(limiter.end_points[0].x,
+    //                            limiter.end_points[0].y),
+    //       planning_math::Vec2d(limiter.end_points[1].x,
+    //                            limiter.end_points[1].y));
+    //   limiters_.emplace_back(std::move(limiter_axis));
+    // }
   }
   return true;
 }
@@ -135,18 +145,37 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
       return false;
     }
     double slot_dist_to_ego = -NL_NMAX;
-    for (const auto& slot_point : target_slot_) {
-      Point2D cart_pt(slot_point.x(), slot_point.y());
+    if (target_slot_polygon_.is_convex()) {
+      planning_math::Box2d target_slot_box = target_slot_polygon_.MinAreaBoundingBox();
+      Point2D cart_pt(target_slot_box.center_x(), target_slot_box.center_y());
       Point2D frenet_pt{0.0, 0.0};
       if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
         slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
                                     slot_dist_to_ego);
+        if (slot_dist_to_ego <= -2.0) {
+          is_reached_target_slot_ = true;
+        }
       } else {
         slot_dist_to_ego = distance_to_target_slot_;
-        break;
+      }
+    } else {
+      for (const auto& slot_point : target_slot_) {
+        Point2D cart_pt(slot_point.x(), slot_point.y());
+        Point2D frenet_pt{0.0, 0.0};
+        if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+          slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
+                                      slot_dist_to_ego);
+          if (slot_dist_to_ego <= -2.0) {
+            is_reached_target_slot_ = true;
+          }
+        } else {
+          slot_dist_to_ego = distance_to_target_slot_;
+          break;
+        }
       }
     }
-    distance_to_target_slot_ = std::min(std::fabs(slot_dist_to_ego), distance_to_target_slot_);
+    distance_to_target_slot_ = std::fabs(slot_dist_to_ego);
+    // distance_to_target_slot_ = std::min(std::fabs(slot_dist_to_ego), distance_to_target_slot_);
   }
   return true;
 }
