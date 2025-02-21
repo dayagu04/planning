@@ -21,6 +21,7 @@
 #include "src/modules/context/planning_context.h"
 #include "st_graph/st_boundary.h"
 #include "task_basic_types.h"
+#include "task_basic_types.pb.h"
 #include "utils_math.h"
 
 namespace planning {
@@ -655,11 +656,13 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const double invade_agent_l = invade_agent_sl.y;
     const static double lat_distance_thrd =
         config_.lat_distance_close_enough_to_planned_path_thrd;
-    if (std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
-            0.5 * ego_vehi_param.width >
-        lat_distance_thrd) {  // far from ego
-                              // in lat l
-      LOG_DEBUG("agent (ID: %d) is far from ego in lat l, skip\n", id);
+    const double invade_agent_lat_distance_to_path =
+        std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
+        0.5 * ego_vehi_param.width;
+    if (invade_agent_lat_distance_to_path >
+        lat_distance_thrd) {  // far from ego in lat l
+      LOG_DEBUG("agent (ID: %d) is far from ego in lat l(%fm), skip\n", id,
+                invade_agent_lat_distance_to_path);
       continue;
     }
     if (invade_agent->agent_decision().agent_decision_type() ==
