@@ -24,7 +24,7 @@ namespace {
 constexpr double kEpsilon = 1.0e-4;
 // constexpr double kMaxHeadingDiff = 1.04;  // 60 degree
 // constexpr double kMinLowSpeedTrajLength = 3.0;
-constexpr double kIgnoreSpeedDiffThd = 5.0 / 3.6;
+constexpr double kIgnoreSpeedDiffThd = 2.5;
 constexpr double kAgentFrontEdgeSDiffThd = -0.2;
 constexpr double kHalf = 0.5;
 constexpr double kKphToMps = 0.2778;
