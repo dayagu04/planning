@@ -745,9 +745,19 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   const auto gap_front_agent = agent_manager->GetAgent(gap_front_agent_id);
   const auto gap_rear_agent = agent_manager->GetAgent(gap_rear_agent_id);
   bool ignore_rear_agent = false;
+  const auto target_lane_ptr =
+      virtual_lane_manager->get_lane_with_virtual_id(target_lane_id);
+  if (target_lane_ptr == nullptr) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No "
+        "target lane\n");
+    int default_value = -1;
+    JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
+    JSON_DEBUG_VALUE("ignore_gap_rear_agent", default_value)
+    return;
+  }
   const auto target_lane_frenet_coord =
-      virtual_lane_manager->get_lane_with_virtual_id(target_lane_id)
-          ->get_lane_frenet_coord();
+      target_lane_ptr->get_lane_frenet_coord();
   const bool ignore_gap_rear_agent =
       IgnoreLaneChangeGapRearAgent(gap_rear_agent, target_lane_frenet_coord);
   JSON_DEBUG_VALUE("ignore_gap_rear_agent", ignore_gap_rear_agent)
