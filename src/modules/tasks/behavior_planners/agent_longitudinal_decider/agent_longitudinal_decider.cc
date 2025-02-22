@@ -630,7 +630,13 @@ bool AgentLongitudinalDecider::CheckCutOutAgent(const agent::Agent& agent) {
                                   lane_change_status == kLaneChangeComplete);
 
   const auto& current_lane = virtual_lane_manager_->get_current_lane();
+  if (current_lane == nullptr) {
+    return false;
+  }
   const auto current_lane_coord = current_lane->get_lane_frenet_coord();
+  if (current_lane_coord == nullptr) {
+    return false;
+  }
 
   // 0.check the cipv agent
   // 1.should not reverse agent
