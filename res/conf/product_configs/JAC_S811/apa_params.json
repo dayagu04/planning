@@ -29,6 +29,8 @@
   "headin_min_radius_out_slot": 11.8,
   "headin_sturn_steer_ratio_dist": 0.5,
   "headin_max_replan_count": 20,
+  "in_slot_car_adjust_max_count": 20,
+
   "comment_1": "schedule params",
   "plan_time": 0.1,
   "comment_2": "car params",

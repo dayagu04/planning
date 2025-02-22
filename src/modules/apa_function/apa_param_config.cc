@@ -121,6 +121,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
+                  
+  JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
+                  "in_slot_car_adjust_max_count");
   // car params
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");

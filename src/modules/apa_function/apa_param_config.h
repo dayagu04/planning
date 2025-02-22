@@ -200,6 +200,7 @@ struct ApaParameters {
   double max_replan_remain_dist = 0.2;
   int max_replan_count = 12;
   int headin_max_replan_count = 20;
+  int in_slot_car_adjust_max_count = 20;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;

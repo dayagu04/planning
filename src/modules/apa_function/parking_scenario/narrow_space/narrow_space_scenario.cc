@@ -850,12 +850,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
     ILOG_INFO << "set input";
 
-    if (((current_gear_ == AstarPathGear::REVERSE &&
-          fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) ||
-         (current_gear_ == AstarPathGear::DRIVE &&
-          fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT)) &&
-        ego_info.slot_occupied_ratio > 0.2) {
+    if (ego_info.slot_occupied_ratio > 0.2) {
       in_slot_car_adjust_count_++;
+      ILOG_INFO << "in_slot_car_adjust_count_ = " << in_slot_car_adjust_count_;
     }
 
   } else if (thread_state_ == RequestResponseState::HAS_REQUEST) {
@@ -1390,12 +1387,9 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   const ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
 
-  if (is_replan && (current_gear_ == AstarPathGear::REVERSE &&
-                    fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) ||
-      (current_gear_ == AstarPathGear::DRIVE &&
-       fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) &&
-          ego_info.slot_occupied_ratio > 0.2) {
-    if (in_slot_car_adjust_count_ >= 3) {
+  if (is_replan && ego_info.slot_occupied_ratio > 0.2) {
+    if (in_slot_car_adjust_count_ >=
+        apa_param.GetParam().in_slot_car_adjust_max_count) {
       return false;
     }
   }
