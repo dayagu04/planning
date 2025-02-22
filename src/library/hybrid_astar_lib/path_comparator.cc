@@ -194,4 +194,35 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
   return false;
 }
 
+const bool PathComparator::NodeCompare(const Pose2D &goal,
+                                       const Node3d *best_node,
+                                       const Node3d *node_challenger) {
+  double dist1 = std::fabs(goal.y - best_node->GetPose().y);
+  double dist2 = std::fabs(goal.y - node_challenger->GetPose().y);
+
+  // 距离较近，比较heading
+  const double dist_bound = 0.05;
+  if (dist2 < dist_bound && dist1 < dist_bound) {
+    double heading_error_challenger = ad_common::math::NormalizeAngle(
+        node_challenger->GetPose().theta - goal.theta);
+    heading_error_challenger = std::fabs(heading_error_challenger);
+
+    double heading_error_best = ad_common::math::NormalizeAngle(
+        best_node->GetPose().theta - goal.theta);
+    heading_error_best = std::fabs(heading_error_best);
+    if (heading_error_challenger < heading_error_best) {
+      return true;
+    }
+  }
+  // 距离有大于0.05的,比较距离即可
+  else {
+    // closer
+    if (dist2 < dist1) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace planning

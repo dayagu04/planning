@@ -378,15 +378,15 @@ const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForHeadIn(
     return std::make_pair(center_line_target_, 0.0);
   }
 
-  int offset_preference = GenerateOffsetPreference();
-  const PoseRegulateCandidate *best_candidate =
-      GetCandidatePoseByOffset(lat_buffer, offset_preference);
+  const PoseRegulateCandidate *best_candidate;
+  // int offset_preference = GenerateOffsetPreference();
+  // best_candidate = GetCandidatePoseByOffset(lat_buffer, offset_preference);
 
-  ILOG_INFO << "offset = " << offset_preference;
+  // ILOG_INFO << "offset = " << offset_preference;
 
-  if (best_candidate != nullptr && best_candidate->dist_to_obs > lat_buffer) {
-    return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
-  }
+  // if (best_candidate != nullptr && best_candidate->dist_to_obs > lat_buffer) {
+  //   return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+  // }
 
   best_candidate = &candidate_info_[0];
   for (auto &obj : candidate_info_) {

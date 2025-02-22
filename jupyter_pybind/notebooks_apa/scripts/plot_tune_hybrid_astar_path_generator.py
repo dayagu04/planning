@@ -11,7 +11,7 @@ sys.path.append('../../../build')
 sys.path.append('../../../')
 
 sys.path.append('python_proto')
-from python_proto import common_pb2
+from jupyter_pybind.python_proto import common_pb2
 from jupyter_pybind import hybrid_astar_py
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -27,7 +27,6 @@ data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_car_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
 data_car_safe_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-data_car_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_astar_target_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_car_end_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_safe_circle_tang_pos = ColumnDataSource(data = {'x':[], 'y':[]})
@@ -84,7 +83,6 @@ fig1.multi_line('x_vec', 'y_vec', source=data_real_time_node_list, line_width=1.
 
 
 
-fig1.circle('x','y', source = data_car_start_pos, size=8, color='red', legend_label = 'car_start_pos')
 fig1.circle('x','y', source = data_car_end_pos, size=8, color='blue', legend_label = 'car_end_pos')
 fig1.circle('x','y', source = data_astar_target_pos, size=8, color='orange', legend_label = 'astar_target')
 fig1.circle('x','y', source = data_safe_circle_tang_pos, size=8, color='black', legend_label = 'safe_circle_tang_pos', visible = False)
@@ -173,10 +171,10 @@ hybrid_astar_py.Init()
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.1, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=1.6, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=45.0, step=1)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=2.2, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=286.0, step=1)
 
-    self.is_left = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
+    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=5, step=1)
     self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
 
@@ -190,7 +188,7 @@ class LocalViewSlider:
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
-    self.inside_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "inside_dx",min=-3, max=3, value=0.0, step=0.1)
+    self.plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='75%'), description= "plan_method",min=0, max=10, value=4, step=1)
 
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
@@ -200,12 +198,12 @@ class LocalViewSlider:
                         ego_heading=self.ego_heading_slider,
                         slot_pt0_x=self.slot_pt0_x_slider,
                         slot_pt0_y=self.slot_pt0_y_slider,
-                        is_left=self.is_left,
+                        parking_dir=self.parking_dir,
                         trigger_plan=self.trigger_plan,
                         slot_phi=self.slot_phi_slider,
                         slot_width=self.slot_width_slider,
                         slot_length=self.slot_length_slider,
-                        inside_dx=self.inside_dx_slider,
+                        plan_method=self.plan_method,
                         right_obj_dx=self.right_obj_dx_slider,
                         right_obj_dy=self.right_obj_dy_slider,
                         left_obj_dx=self.left_obj_dx_slider,
@@ -216,7 +214,7 @@ class LocalViewSlider:
                         )
 
 ## sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, trigger_plan, slot_phi, slot_width, slot_length, inside_dx, right_obj_dx,
+def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_dir, trigger_plan, slot_phi, slot_width, slot_length, plan_method, right_obj_dx,
                     right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x):
   kwargs = locals()
 
@@ -239,64 +237,33 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     'car_yn': car_yn,
   })
 
-  # update start point pos
-  data_car_start_pos.data.update({
-    'x': [ego_x],
-    'y': [ego_y],
-  })
-
   delta_b = 0
 
-  if is_left == 0:
-    phi_rad = slot_phi/57.3
-    heading_rad = phi_rad
-    parallelogram_a = slot_width/math.sin(phi_rad)
-    delta_b = slot_width/math.tan(phi_rad)
-    parallelogram_b = delta_b + slot_length
+  phi_rad = slot_phi/57.3
+  heading_rad = phi_rad
+  parallelogram_a = slot_width/math.sin(phi_rad)
+  delta_b = slot_width/math.tan(phi_rad)
+  parallelogram_b = delta_b + slot_length
 
-    # (x0,y0)-->(x1,y1)
-    delta_y1 = 0
-    delta_x1 = parallelogram_a
-    # (x0,y0)-->(x2,y2)
-    delta_y2 = parallelogram_b * math.sin(heading_rad)
-    delta_x2 = parallelogram_b * math.cos(heading_rad)
-    # (x2,y2)-->(x3,y3)
-    delta_y3 = 0
-    delta_x3 = parallelogram_a
+  # (x0,y0)-->(x1,y1)
+  delta_y1 = 0
+  delta_x1 = parallelogram_a
+  # (x0,y0)-->(x2,y2)
+  delta_y2 = parallelogram_b * math.sin(heading_rad)
+  delta_x2 = parallelogram_b * math.cos(heading_rad)
+  # (x2,y2)-->(x3,y3)
+  delta_y3 = 0
+  delta_x3 = parallelogram_a
 
-    slot_pt1_x = slot_pt0_x - delta_x1
-    slot_pt1_y = slot_pt0_y + delta_y1
+  slot_pt1_x = slot_pt0_x - delta_x1
+  slot_pt1_y = slot_pt0_y + delta_y1
 
-    slot_pt2_x = slot_pt0_x - delta_x2
-    slot_pt2_y = slot_pt0_y - delta_y2
+  slot_pt2_x = slot_pt0_x - delta_x2
+  slot_pt2_y = slot_pt0_y - delta_y2
 
-    slot_pt3_x = slot_pt2_x - delta_x3
-    slot_pt3_y = slot_pt2_y + delta_y3
-  else:
-    phi_rad = (180 - slot_phi)/57.3
-    heading_rad = phi_rad
-    parallelogram_a = slot_width/math.sin(180/57.3 - phi_rad)
-    delta_b = slot_width/math.tan(180/57.3 - phi_rad)
-    parallelogram_b = delta_b + slot_length
+  slot_pt3_x = slot_pt2_x - delta_x3
+  slot_pt3_y = slot_pt2_y + delta_y3
 
-    # (x0,y0)-->(x1,y1)
-    delta_y1 = 0
-    delta_x1 = parallelogram_a
-    # (x0,y0)-->(x2,y2)
-    delta_y2 = parallelogram_b * math.sin(heading_rad)
-    delta_x2 = parallelogram_b * math.cos(heading_rad)
-    # (x2,y2)-->(x3,y3)
-    delta_y3 = 0
-    delta_x3 = parallelogram_a
-
-    slot_pt1_x = slot_pt0_x - delta_x1
-    slot_pt1_y = slot_pt0_y + delta_y1
-
-    slot_pt2_x = slot_pt0_x - delta_x2
-    slot_pt2_y = slot_pt0_y - delta_y2
-
-    slot_pt3_x = slot_pt2_x - delta_x3
-    slot_pt3_y = slot_pt2_y + delta_y3
 
   slot_bound_x_vec, slot_bound_y_vec = [], []
   slot_bound_x_vec.append([slot_pt0_x, slot_pt2_x])
@@ -327,7 +294,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
                 channel_width, right_virtual_wall_x, left_virtual_wall_x]
 
   current_path_point_global_vec_ = hybrid_astar_py.Update(
-      ego_pose, slot_pt, inside_dx, obs_params, trigger_plan)
+      ego_pose, slot_pt, plan_method, obs_params, trigger_plan, parking_dir)
 
   # rs
   data_rs_path.data.update({

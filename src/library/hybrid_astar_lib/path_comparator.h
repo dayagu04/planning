@@ -47,6 +47,10 @@ class PathComparator : public AstarDecider {
   const bool PolynomialPathBetter(const PolynomialPathCost& path,
                                 const PolynomialPathCost& base);
 
+  // 比较准则：5厘米以外，距离越近越好；5厘米以内，heading越接近越好;
+  const bool NodeCompare(const Pose2D &goal, const Node3d *best_node,
+                         const Node3d *node_challenger);
+
  private:
   bool CheckVerticalSlotTailIn(const AstarRequest *request,
                                const Node3d *best_node,

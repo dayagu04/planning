@@ -1801,7 +1801,11 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   // }
 
   // generate path by bycicle model
-  GetPathByBicycleModel(&path, node_step, radius, is_forward);
+  if (std::fabs(front_wheel_angle) > 0.0001) {
+    GetPathByBicycleModel(&path, node_step, radius, is_forward);
+  } else {
+    GetPathByLine(&path, node_step, is_forward);
+  }
 
   // check if the vehicle runs outside of XY boundary
   const Pose2D& end_point = path.GetEndPoint();
@@ -1827,15 +1831,15 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     delete_queue_path_debug_.emplace_back(
         ad_common::math::Vec2d(new_node->GetX(), new_node->GetY()));
 #endif
-    new_node->ClearPath();
     // ILOG_INFO << "heading is illegal";
+    new_node->ClearPath();
     return NodeShrinkType::UNEXPECTED_HEADING;
   }
 
   // headin shrink limit pose
   bool position_legal = false;
   position_legal = node_shrink_decider_.IsLegalForPos(
-      new_node->GetX(), new_node->GetY(), astar_end_node_->GetX() - 1.2,
+      new_node->GetX(), new_node->GetY(), request_.real_goal.GetX() - 0.45,
       config_.headin_limit_y_shrink);
 
   if (!position_legal) {
@@ -1843,8 +1847,8 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     delete_queue_path_debug_.emplace_back(
         ad_common::math::Vec2d(new_node->GetX(), new_node->GetY()));
 #endif
-    new_node->ClearPath();
     // ILOG_INFO << "pos is illegal";
+    new_node->ClearPath();
     return NodeShrinkType::UNEXPECTED_POS;
   }
 
@@ -1878,7 +1882,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   // ILOG_INFO << "next node end";
-  // next_node->DebugString();
+  // new_node->GetPose().DebugString();
 
   return NodeShrinkType::NONE;
 }
@@ -3090,12 +3094,12 @@ void HybridAStar::GearDrivePathAttempt(
     return;
   }
 
-  if (start.GetX() < 8.0) {
+  if (start.GetX() < 6.0) {
     ILOG_INFO << "start.GetX() =" << start.GetX();
     return;
   }
 
-  if (start.GetY() < -3.0 || start.GetY() > 3.0) {
+  if (start.GetY() < -3.8 || start.GetY() > 3.8) {
     ILOG_INFO << "start.GetY() =" << start.GetY();
     return;
   }
@@ -3115,7 +3119,7 @@ void HybridAStar::GearDrivePathAttempt(
   collision_check_time_ms_ = 0.0;
   rs_time_ms_ = 0.0;
   rs_interpolate_time_ms_ = 0.0;
-  ILOG_INFO << "gear drive searching";
+  ILOG_INFO << "gear drive searching begin";
 
   obstacles_ = &obstacles;
   edt_ = edt;
@@ -3242,6 +3246,7 @@ void HybridAStar::GearDrivePathAttempt(
 
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
+  Node3d* best_node = nullptr;
   Node3d new_node;
   Node3d rs_node_to_goal;
   rs_node_to_goal.Clear();
@@ -3257,6 +3262,8 @@ void HybridAStar::GearDrivePathAttempt(
   PolynomialPathErrorCode poly_path_fail_type;
   polynomial_node.Clear();
 
+  PathComparator path_comparator;
+
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
 
@@ -3268,6 +3275,14 @@ void HybridAStar::GearDrivePathAttempt(
     }
 
     current_node->SetVisitedType(AstarNodeVisitedType::IN_CLOSE);
+
+    // generate best node
+    if (best_node == nullptr) {
+      best_node = current_node;
+    } else if (path_comparator.NodeCompare(request_.real_goal, best_node,
+                                           current_node)) {
+      best_node = current_node;
+    }
 
 #if DEBUG_ONE_SHOT_PATH
     if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
@@ -3323,8 +3338,8 @@ void HybridAStar::GearDrivePathAttempt(
         continue;
       }
 
-      child_node_dist = new_node.DistToPose(astar_end_node_->GetPose());
-      father_node_dist = current_node->DistToPose(astar_end_node_->GetPose());
+      child_node_dist = new_node.DistToPose(request_.real_goal);
+      father_node_dist = current_node->DistToPose(request_.real_goal);
 
       // dist is bigger
       if (child_node_dist > father_node_dist - 0.001) {
@@ -3499,6 +3514,8 @@ void HybridAStar::GearDrivePathAttempt(
     BackwardPassByPolynomialPath(result, &polynomial_node, poly_path);
   } else if (rs_node_to_goal.IsNodeValid()) {
     BackwardPassByRSPath(result, &rs_node_to_goal, &rs_path_);
+  } else if (BestNodeIsNice(best_node)) {
+    BackwardPassByNode(result, best_node);
   } else {
     result->fail_type = AstarFailType::SEARCH_TOO_MUCH_NODE;
   }
@@ -5347,6 +5364,153 @@ void HybridAStar::PathTransformByRSPath(const RSPath& rs_path,
   }
 
   return;
+}
+
+const bool HybridAStar::BackwardPassByNode(HybridAStarResult* result,
+                                           Node3d* end_node) {
+  if (end_node == nullptr) {
+    result->Clear();
+    return false;
+  }
+
+  Node3d* parent_node = nullptr;
+  Node3d* child_node = end_node;
+  end_node->SetNext(nullptr);
+
+  result->base_pose = request_.base_pose_;
+  result->gear_change_num = 0;
+
+  ILOG_INFO << "get result start backward pass by node";
+
+  // backward pass
+  while (child_node->GetPreNode() != nullptr) {
+    parent_node = child_node->GetPreNode();
+    parent_node->SetNext(child_node);
+    child_node = parent_node;
+  }
+
+  size_t point_size;
+  double kappa;
+
+  AstarPathGear last_gear_type = AstarPathGear::NONE;
+  AstarPathGear cur_gear_type;
+  // all nodes
+  std::vector<Node3d*> node_list;
+  while (child_node != nullptr) {
+    const NodePath& path = child_node->GetNodePath();
+    AstarPathType path_type = child_node->GetPathType();
+    cur_gear_type = child_node->GetGearType();
+
+    // todo
+    if (child_node->GetConstNextNode() == nullptr) {
+      point_size = path.point_size;
+    }
+    // gear change
+    else if (child_node->IsPathGearChange(
+                 child_node->GetConstNextNode()->GetGearType())) {
+      point_size = path.point_size;
+    }
+    // same gear
+    else {
+      // delete same point
+      point_size = path.point_size - 1;
+    }
+
+    kappa = std::tan(child_node->GetSteer()) / vehicle_param_.wheel_base;
+
+    for (size_t k = 0; k < point_size; k++) {
+      result->x.emplace_back(path.points[k].x);
+      result->y.emplace_back(path.points[k].y);
+      result->phi.emplace_back(path.points[k].theta);
+      result->type.emplace_back(path_type);
+      result->gear.emplace_back(cur_gear_type);
+      result->kappa.emplace_back(kappa);
+    }
+
+    // check gear switch number
+    if (last_gear_type != AstarPathGear::NONE) {
+      if (last_gear_type != cur_gear_type) {
+        result->gear_change_num++;
+      }
+    }
+
+    node_list.push_back(child_node);
+
+    last_gear_type = cur_gear_type;
+    child_node = child_node->GetMutableNextNode();
+  }
+
+  size_t pt_size = result->x.size();
+  if (pt_size != result->y.size() || pt_size != result->phi.size() ||
+      pt_size != result->gear.size()) {
+    ILOG_ERROR << "state sizes not equal, "
+               << "result->x.size(): " << result->x.size() << "result->y.size()"
+               << result->y.size() << "result->phi.size()"
+               << result->phi.size();
+
+    return false;
+  }
+
+  ReversePathBySwapStartGoal(result);
+
+  // get path lengh
+  size_t path_points_size = result->x.size();
+
+  double accumulated_s = 0.0;
+  result->accumulated_s.clear();
+  auto last_x = result->x.front();
+  auto last_y = result->y.front();
+  double x_diff;
+  double y_diff;
+  for (size_t i = 0; i < path_points_size; ++i) {
+    x_diff = result->x[i] - last_x;
+    y_diff = result->y[i] - last_y;
+    accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
+    result->accumulated_s.push_back(accumulated_s);
+    last_x = result->x[i];
+    last_y = result->y[i];
+  }
+
+  ILOG_INFO << "get result finish, path point size " << result->x.size();
+
+  result->fail_type = AstarFailType::SUCCESS;
+
+  // DebugPathString(result);
+
+#if DEBUG_SEARCH_RESULT
+  ILOG_INFO << "path node num " << node_list.size();
+  for (size_t i = 0; i < node_list.size(); i++) {
+    ILOG_INFO << "node id " << i << " node steer "
+              << node_list[i]->GetSteer() * 57.3 << " forward "
+              << static_cast<int>(node_list[i]->GetGearType()) << " is rs path "
+              << (node_list[i]->GetPathType() == AstarPathType::REEDS_SHEPP)
+              << ", length: "
+              << node_path_dist_resolution_ * node_list[i]->GetStepSize();
+  }
+#endif
+
+  return true;
+}
+
+const bool HybridAStar::BestNodeIsNice(const Node3d* node) {
+  bool node_is_good = false;
+  if (node == nullptr) {
+    return false;
+  }
+
+  // ILOG_INFO <<"check best node";
+  // node->DebugPoseString();
+
+  if (std::fabs((node->GetPose().y - request_.real_goal.y)) > 0.05) {
+    return false;
+  }
+
+  if (std::fabs(ad_common::math::NormalizeAngle(
+          node->GetPose().theta - request_.real_goal.theta)) > 0.02) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace planning
