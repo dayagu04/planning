@@ -212,7 +212,7 @@ struct ApaParameters {
   double occupied_pt_outside_dy = 0.0;
   double occupied_pt_inside_dx = 0.3;
   double occupied_pt_inside_dy = 0.0;
-  bool force_both_side_occupied = true;
+  bool enable_use_dynamic_obs = true;
   double safe_threshold = 0.2;
   double virtual_obs_y_pos = 2.5;
   double virtual_obs_x_pos = 2.68;

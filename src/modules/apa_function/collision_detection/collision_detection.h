@@ -133,6 +133,10 @@ class CollisionDetector {
       const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
       const double lat_buffer, const double lon_buffer);
 
+  const CollisionResult UpdateByObsMapUss(
+      const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
+      const double lat_buffer, const double lon_buffer);
+
   const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
       const double lon_buffer);

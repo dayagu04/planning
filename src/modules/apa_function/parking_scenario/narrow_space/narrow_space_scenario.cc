@@ -212,8 +212,6 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs = CalRemainDistFromObs(0.31);
 
-  frame_.spline_success = true;
-
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     SetParkingStatus(PARKING_FAILED);
@@ -254,7 +252,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   bool update_thread_path = UpdateThreadPath();
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
 
-  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
+  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_obs_time
             << " ,is_replan = " << is_replan;
 
   // check replan

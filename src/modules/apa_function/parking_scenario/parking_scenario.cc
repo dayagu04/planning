@@ -95,10 +95,11 @@ void ParkingScenario::UpdateStuckTime() {
   // update stuck by uss time  重规划清空
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag()) {
-    frame_.stuck_uss_time += apa_param.GetParam().plan_time;
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag() &&
+      !frame_.stuck_by_dynamic_obs) {
+    frame_.stuck_obs_time += apa_param.GetParam().plan_time;
   } else {
-    frame_.stuck_uss_time = 0.0;
+    frame_.stuck_obs_time = 0.0;
   }
 
   // 重规划不清空
@@ -274,7 +275,8 @@ void ParkingScenario::GenPlanningPath() {
 }
 
 const bool ParkingScenario::CheckStuckFailed(const double stuck_failed_time) {
-  return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
+  return frame_.stuck_time >
+         (frame_.stuck_by_dynamic_obs ? 46.8 : stuck_failed_time);
 }
 
 const double ParkingScenario::CalRemainDistFromPath() {
@@ -309,8 +311,6 @@ const double ParkingScenario::CalRemainDistFromPath() {
 const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
     const double extra_buffer_when_reversing) {
-  double remain_dist = 5.01;
-
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
@@ -319,34 +319,45 @@ const double ParkingScenario::CalRemainDistFromObs(
                                    apa_world_ptr_->GetObstacleManagerPtr(),
                                    lat_buffer);
 
-  remain_dist =
+  double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  double obs_pt_remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
+  double obs_pt_remain_dist_static =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist_static -
       safe_dist;
 
+  double obs_pt_remain_dist_dynamic =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist_dynamic -
+      1.68;
+
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    remain_dist -= extra_buffer_when_reversing;
-    obs_pt_remain_dist -= extra_buffer_when_reversing;
+    uss_remain_dist -= extra_buffer_when_reversing;
+    obs_pt_remain_dist_static -= extra_buffer_when_reversing;
+    obs_pt_remain_dist_dynamic -= extra_buffer_when_reversing;
   }
 
-  ILOG_INFO << "origin_uss remain dist = "
-            << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-            << "  uss remain dist = " << remain_dist
-            << "  enable_corner_uss_process = "
-            << apa_param.GetParam().enable_corner_uss_process;
-
-  ILOG_INFO << "origin_obs_pt remain dist = "
-            << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
-            << "  obs_pt remain dist = " << obs_pt_remain_dist;
+  ILOG_INFO
+      << "  enable_corner_uss_process = "
+      << apa_param.GetParam().enable_corner_uss_process
+      << "  uss remain dist = " << uss_remain_dist
+      << "origin_obs_pt remain dist = "
+      << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist_static
+      << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
+      << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
 
   frame_.vel_target = uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target;
 
   if (apa_param.GetParam().enable_corner_uss_process) {
-    return remain_dist;
+    frame_.stuck_by_dynamic_obs = false;
+    return uss_remain_dist;
   } else {
-    return obs_pt_remain_dist;
+    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
+      frame_.stuck_by_dynamic_obs = true;
+      return obs_pt_remain_dist_dynamic;
+    } else {
+      frame_.stuck_by_dynamic_obs = false;
+      return obs_pt_remain_dist_static;
+    }
   }
 }
 
@@ -578,20 +589,17 @@ const bool ParkingScenario::CheckReplan(const double replan_dist_path,
 
 const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
                                               const double wait_time) {
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    if (frame_.remain_dist_path < replan_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-        frame_.current_path_length > 1e-2) {
-      ILOG_INFO << "close to target, need wait a certain time!";
-      if (frame_.stuck_uss_time > wait_time) {
-        ILOG_INFO << "wait a certain time, start plan";
-        is_seg_complete = true;
-      }
+  if (frame_.remain_dist_path < replan_dist &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      frame_.current_path_length > 1e-2) {
+    ILOG_INFO << "close to target, need wait a certain time!";
+    if (frame_.stuck_obs_time > wait_time || frame_.stuck_by_dynamic_obs) {
+      ILOG_INFO << "wait a certain time, start plan";
+      return true;
     }
   }
 
-  return is_seg_complete;
+  return false;
 }
 
 const bool ParkingScenario::CheckObsStucked(const double replan_dist,
@@ -599,7 +607,7 @@ const bool ParkingScenario::CheckObsStucked(const double replan_dist,
   if (frame_.remain_dist_obs < replan_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
-    if (frame_.stuck_uss_time > wait_time) {
+    if (frame_.stuck_obs_time > wait_time) {
       ILOG_INFO << "wait a certain time, start plan";
       frame_.is_replan_by_obs = true;
       return true;
@@ -611,7 +619,7 @@ const bool ParkingScenario::CheckObsStucked(const double replan_dist,
 
 const bool ParkingScenario::CheckStuckTimeEnough(
     const double stuck_replan_time) {
-  if (frame_.stuck_uss_time > stuck_replan_time) {
+  if (frame_.stuck_obs_time > stuck_replan_time) {
     return true;
   }
   return false;

@@ -572,7 +572,7 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
       << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
       << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
       << "  stuck time(s) = " << frame_.stuck_time
-      << "  stuck uss time(s) = " << frame_.stuck_uss_time << "  slod side = "
+      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time << "  slod side = "
       << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;

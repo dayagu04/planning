@@ -75,6 +75,10 @@ class ApaObstacle final {
     pt_clout_3d_local_ = pt_clout_3d;
   }
 
+  void SetObsMovementType(const ApaObsMovementType type) {
+    obs_movement_type_ = type;
+  }
+
   void SetObsAttributeType(const ApaObsAttributeType type) {
     obs_attribute_type_ = type;
   }

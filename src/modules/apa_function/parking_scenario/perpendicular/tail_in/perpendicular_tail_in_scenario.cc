@@ -730,7 +730,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
       << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
       << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
       << "  stuck time(s) = " << frame_.stuck_time
-      << "  stuck uss time(s) = " << frame_.stuck_uss_time << "  slod side = "
+      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time << "  slod side = "
       << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
@@ -1428,7 +1428,7 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
 
   if (frame_.ego_stop_when_slot_jumps_much || !frame_.is_replan_dynamic ||
       !frame_.is_last_path || ego_info_under_slot.slot_occupied_ratio < 0.168 ||
-      ego_info_under_slot.slot_occupied_ratio > 0.518 ||
+      ego_info_under_slot.slot_occupied_ratio > 0.708 ||
       ego_info_under_slot.fix_slot ||
       frame_.remain_dist_path < ego_stop_dist + 0.168 ||
       (frame_.remain_dist_obs < ego_stop_dist + 0.168 && false)) {
@@ -1855,7 +1855,7 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
 
   // 检查是否碰撞
   const auto col_res =
-      apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
+      apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMapUss(
           optimal_path_vec, 0.08, 0.0);
   if (col_res.remain_dist < optimal_path_vec.back().s - 2e-2) {
     ILOG_INFO << "the optimal path is col";

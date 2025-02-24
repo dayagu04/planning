@@ -393,47 +393,6 @@ void UssObstacleAvoidance::GenUssArc() {
 }
 
 const bool UssObstacleAvoidance::Preprocess() {
-  // 添加障碍物 世界坐标即可  暂时只添加超声波点云障碍物,
-  // 后续应该放在一个地方统一计算所有真实的障碍物，考虑高度
-  col_det.ClearObstacles();
-  std::vector<ApaObstacle *> obs_vec;
-  // 获取超声波点云
-  if (obstacle_manager_ptr_->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
-                                         obs_vec)) {
-    std::vector<Eigen::Vector2d> obs_pt_vec;
-    for (const auto &obs : obs_vec) {
-      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
-                        obs->GetPtClout2dGlobal().end());
-    }
-    ILOG_INFO << "uss pt size = " << obs_pt_vec.size();
-    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
-  }
-
-  // 获取OCC点云
-  if (obstacle_manager_ptr_->GetObstacle(
-          ApaObsAttributeType::FUSION_POINT_CLOUD, obs_vec)) {
-    std::vector<Eigen::Vector2d> obs_pt_vec;
-    for (const auto &obs : obs_vec) {
-      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
-                        obs->GetPtClout2dGlobal().end());
-    }
-    ILOG_INFO << "occ pt size = " << obs_pt_vec.size();
-    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
-  }
-
-  // 获取接地线点云
-  if (obstacle_manager_ptr_->GetObstacle(
-          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
-    std::vector<Eigen::Vector2d> obs_pt_vec;
-    for (const auto &obs : obs_vec) {
-      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
-                        obs->GetPtClout2dGlobal().end());
-    }
-    ILOG_INFO << "gl pt size = " << obs_pt_vec.size();
-    col_det.AddObstacles(obs_pt_vec,
-                         CollisionDetector::ObsType::GROUND_LINE_OBS);
-  }
-
   if (!pnc::geometry_lib::IsValidGear(predict_path_ptr_->GetPathGear())) {
     return false;
   }
@@ -590,29 +549,25 @@ void UssObstacleAvoidance::Update(
     remain_dist_info_.is_available = false;
   }
 
-  CollisionDetector::CollisionResult result = col_det.UpdateByObsMap(
-      predict_path_ptr->GetPredictPath(), lat_buffer, 0.0);
+  CollisionDetector::CollisionResult col_res;
+  AddDynamicObs();
+  col_res =
+      col_det.UpdateByObsMapUss(predict_path_ptr->GetPredictPath(), 0.368, 0.0);
 
-  const double dist = col_det.CalClosestDistFromObsToCar(
-      pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
-                                   measure_data_ptr_->GetHeading()),
-      0.0);
-  double vel_target = 1.168;
-  if (!apa_param.GetParam().enable_corner_uss_process) {
-    // limit vel
-    if (dist + lat_buffer < 0.268) {
-      ILOG_INFO << "obs2car_dist is dangerous, reduce vel";
-      vel_target =
-          std::max(0.4, std::fabs(measure_data_ptr_->GetVel()) - 0.28 * 0.1);
-    } else {
-      ILOG_INFO << "obs2car_dist is safe, increase vel";
-      vel_target = pnc::mathlib::Constrain(
-          std::fabs(measure_data_ptr_->GetVel()) + 0.68 * 0.1, 0.768, 1.168);
-    }
+  if (col_res.collision_flag) {
+    remain_dist_info_.obs_pt_remain_dist_dynamic = col_res.remain_dist;
+  } else {
+    remain_dist_info_.obs_pt_remain_dist_dynamic = 8.68;
   }
-  ILOG_INFO << "vel_target = " << vel_target;
-  remain_dist_info_.vel_target = vel_target;
-  remain_dist_info_.obs_pt_remain_dist = result.remain_dist;
+
+  AddStaticObs();
+  col_res = col_det.UpdateByObsMapUss(predict_path_ptr->GetPredictPath(),
+                                      lat_buffer, 0.0);
+  if (col_res.collision_flag) {
+    remain_dist_info_.obs_pt_remain_dist_static = col_res.remain_dist;
+  } else {
+    remain_dist_info_.obs_pt_remain_dist_static = 3.68;
+  }
 
   std::vector<double> car_predict_x_vec;
   std::vector<double> car_predict_y_vec;
@@ -631,6 +586,100 @@ void UssObstacleAvoidance::Update(
   JSON_DEBUG_VECTOR("car_predict_x_vec", car_predict_x_vec, 3)
   JSON_DEBUG_VECTOR("car_predict_y_vec", car_predict_y_vec, 3)
   JSON_DEBUG_VECTOR("car_predict_heading_vec", car_predict_heading_vec, 3)
+}
+
+void UssObstacleAvoidance::AddDynamicObs() {
+  col_det.ClearObstacles();
+  std::vector<ApaObstacle *> obs_vec;
+  // 获取超声波点云
+  if (obstacle_manager_ptr_->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                         obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const ApaObstacle *obs : obs_vec) {
+      if (obs->GetObsMovementType() == ApaObsMovementType::MOTION) {
+        obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                          obs->GetPtClout2dGlobal().end());
+      }
+    }
+    ILOG_INFO << "uss pt size = " << obs_pt_vec.size();
+    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
+  }
+
+  // 获取OCC点云
+  if (obstacle_manager_ptr_->GetObstacle(
+          ApaObsAttributeType::FUSION_POINT_CLOUD, obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const ApaObstacle *obs : obs_vec) {
+      if (obs->GetObsMovementType() == ApaObsMovementType::MOTION) {
+        obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                          obs->GetPtClout2dGlobal().end());
+      }
+    }
+    ILOG_INFO << "occ pt size = " << obs_pt_vec.size();
+    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
+  }
+
+  // 获取接地线点云
+  if (obstacle_manager_ptr_->GetObstacle(
+          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const ApaObstacle *obs : obs_vec) {
+      if (obs->GetObsMovementType() == ApaObsMovementType::MOTION) {
+        obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                          obs->GetPtClout2dGlobal().end());
+      }
+    }
+    ILOG_INFO << "gl pt size = " << obs_pt_vec.size();
+    col_det.AddObstacles(obs_pt_vec,
+                         CollisionDetector::ObsType::GROUND_LINE_OBS);
+  }
+}
+
+void UssObstacleAvoidance::AddStaticObs() {
+  col_det.ClearObstacles();
+  std::vector<ApaObstacle *> obs_vec;
+  // 获取超声波点云
+  if (obstacle_manager_ptr_->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                         obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const ApaObstacle *obs : obs_vec) {
+      if (obs->GetObsMovementType() == ApaObsMovementType::STATIC) {
+        obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                          obs->GetPtClout2dGlobal().end());
+      }
+    }
+    ILOG_INFO << "uss pt size = " << obs_pt_vec.size();
+    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
+  }
+
+  // 获取OCC点云
+  if (obstacle_manager_ptr_->GetObstacle(
+          ApaObsAttributeType::FUSION_POINT_CLOUD, obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const ApaObstacle *obs : obs_vec) {
+      if (obs->GetObsMovementType() == ApaObsMovementType::STATIC) {
+        obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                          obs->GetPtClout2dGlobal().end());
+      }
+    }
+    ILOG_INFO << "occ pt size = " << obs_pt_vec.size();
+    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
+  }
+
+  // 获取接地线点云
+  if (obstacle_manager_ptr_->GetObstacle(
+          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const ApaObstacle *obs : obs_vec) {
+      if (obs->GetObsMovementType() == ApaObsMovementType::STATIC) {
+        obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                          obs->GetPtClout2dGlobal().end());
+      }
+    }
+    ILOG_INFO << "gl pt size = " << obs_pt_vec.size();
+    col_det.AddObstacles(obs_pt_vec,
+                         CollisionDetector::ObsType::GROUND_LINE_OBS);
+  }
 }
 
 const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {

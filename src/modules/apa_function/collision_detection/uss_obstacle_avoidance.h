@@ -39,7 +39,8 @@ class UssObstacleAvoidance {
 
   struct RemainDistInfo {
     double remain_dist = 3.0;
-    double obs_pt_remain_dist = 3.0;
+    double obs_pt_remain_dist_static = 3.0;
+    double obs_pt_remain_dist_dynamic = 3.0;
     double vel_target = 2.0;
     size_t car_index = 0;
     int uss_index = 0;
@@ -47,7 +48,8 @@ class UssObstacleAvoidance {
 
     void Reset() {
       remain_dist = 3.0;
-      obs_pt_remain_dist = 3.0;
+      obs_pt_remain_dist_static = 3.0;
+      obs_pt_remain_dist_dynamic = 3.0;
       vel_target = 2.0;
       car_index = 0;
       uss_index = 0;
@@ -127,6 +129,9 @@ class UssObstacleAvoidance {
 
   const bool IsObstacleInPolygon(
       const std::vector<Eigen::Vector2d>& vertex_vec);
+
+  void AddDynamicObs();
+  void AddStaticObs();
 
  private:
   const bool Preprocess();

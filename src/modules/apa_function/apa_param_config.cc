@@ -121,7 +121,7 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
-                  
+
   JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
                   "in_slot_car_adjust_max_count");
   // car params
@@ -367,8 +367,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().nearby_slot_corner_dist, double,
                   "nearby_slot_corner_dist");
 
-  JSON_READ_VALUE(apa_param.SetPram().force_both_side_occupied, bool,
-                  "force_both_side_occupied");
+  JSON_READ_VALUE(apa_param.SetPram().enable_use_dynamic_obs, bool,
+                  "enable_use_dynamic_obs");
 
   JSON_READ_VALUE(apa_param.SetPram().safe_threshold, double, "safe_threshold");
 

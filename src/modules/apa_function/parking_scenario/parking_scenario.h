@@ -190,7 +190,7 @@ class ParkingScenario {
       in_slot_plan_count = 0;
       is_fix_slot = false;
       stuck_time = 0.0;
-      stuck_uss_time = 0.0;
+      stuck_obs_time = 0.0;
       pause_time = 0.0;
       dynamic_plan_time = 0.0;
       remain_dist_path = 5.01;
@@ -219,6 +219,8 @@ class ParkingScenario {
 
       can_first_plan_again = true;
       is_park_out_left = true;
+
+      stuck_by_dynamic_obs = false;
     }
     bool can_first_plan_again = true;
 
@@ -247,7 +249,7 @@ class ParkingScenario {
     double path_extended_dist = 1.0;
     double vel_target = 1.168;
     double stuck_time = 0.0;
-    double stuck_uss_time = 0.0;
+    double stuck_obs_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
     // remain dist for path
@@ -274,6 +276,8 @@ class ParkingScenario {
     bool dynamic_plan_fail_flag = false;
 
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
+
+    bool stuck_by_dynamic_obs = false;
   };
 
   enum ParkingStatus {

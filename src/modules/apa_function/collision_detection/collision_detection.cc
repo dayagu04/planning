@@ -405,6 +405,52 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   return col_res;
 }
 
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMapUss(
+    const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
+    const double lat_buffer, const double lon_buffer) {
+  CollisionResult col_res;
+  if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
+    param_.lat_inflation = lat_buffer;
+    SetParam(param_);
+  }
+
+  if (pt_vec.empty()) {
+    return col_res;
+  }
+
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.reserve(car_line_local_vec_.size());
+  double safe_dist = 0.0;
+  for (const pnc::geometry_lib::PathPoint &pt : pt_vec) {
+    l2g_tf.Init(pt.pos, pnc::geometry_lib::NormalizeAngle(pt.heading));
+    for (const pnc::geometry_lib::LineSegment &car_line_local :
+         car_line_local_vec_) {
+      car_polygon.emplace_back(l2g_tf.GetPos(car_line_local.pA));
+    }
+    for (const auto &pair : obs_pt_global_map_) {
+      for (const auto &obs_pt : pair.second) {
+        if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt)) {
+          col_res.collision_flag = true;
+          break;
+        }
+      }
+      if (col_res.collision_flag) {
+        break;
+      }
+    }
+    if (col_res.collision_flag) {
+      break;
+    }
+    safe_dist = pt.s;
+  }
+
+  col_res.remain_car_dist = pt_vec.back().s;
+  col_res.remain_dist = safe_dist;
+
+  return col_res;
+}
+
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
     const double lon_buffer) {
