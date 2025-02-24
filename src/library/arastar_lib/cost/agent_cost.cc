@@ -179,7 +179,7 @@ void AgentCost::GetDirectlyBehindCost(
   }
 
   double ego_l = ego_front_l;
-  double l_buffer = ego_half_width_ + l_half_width;
+  double l_buffer = ego_half_width_ + l_half_width + 0.1;
   if (left_turn || right_turn) {
     // ego_l = (ego_front_l + 3 * ego_back_l) / 4;
     ego_l = (ego_front_l + ego_back_l) / 2;

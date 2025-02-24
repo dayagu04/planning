@@ -355,9 +355,14 @@ void ObstacleManager::UpdateOccObstacle() {
               in_range_count++;
             }
           }
-          if (in_range_count == obstacle.perception_polygon().points().size() ||
-              (in_range_count > 0 &&
-               obstacle.perception_polygon().area() < 1)) {
+          if (occupancy_objects[i].common_occupancy_info.type !=
+                  iflyauto::OBJECT_TYPE_OCC_COLUMN &&
+              occupancy_objects[i].common_occupancy_info.type !=
+                  iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
+              (in_range_count ==
+                   obstacle.perception_polygon().points().size() ||
+               (in_range_count > 0 &&
+                obstacle.perception_polygon().area() < 0.5))) {
             continue;
           }
           add_occupancy_obstacle(obstacle);
@@ -427,7 +432,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
                   std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
                   groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
                   sl_point.x < ego_point.x + 6 ||
-                  ((sl_point.x < ego_point.x + 7.5) &&
+                  ((sl_point.x < ego_point.x + 7) &&
                    groundline.resource_type ==
                        iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
                 in_range = false;
