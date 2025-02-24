@@ -567,7 +567,7 @@ void ConeRequest::ConeDir() {
                   ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
-          if (CheckTargetLaneAvailable(false, rlane)) {
+          if (CheckTargetLaneAvailable(false, rlane) && ComputeLcValid(RIGHT_CHANGE)) {
             right_change_available = true;
             LOG_DEBUG("right_change_available: %d \n", right_change_available);
           }
@@ -593,7 +593,7 @@ void ConeRequest::ConeDir() {
                   ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
-          if (CheckTargetLaneAvailable(true, llane)) {
+          if (CheckTargetLaneAvailable(true, llane) && ComputeLcValid(LEFT_CHANGE)) {
             left_change_available = true;
             LOG_DEBUG("left_change_available: %d \n", left_change_available);
           }
