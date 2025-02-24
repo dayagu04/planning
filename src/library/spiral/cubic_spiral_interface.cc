@@ -33,10 +33,10 @@ const bool CubicSpiralInterface::CubicSpiralStatesSolve(
   }
 
   *solution_usable = (bool)(sol.solve_status);
-  if (*solution_usable) /* usable */
-  {
+  /* usable */
+  if (*solution_usable) {
     if (!SampleCubicSpiralStatesBySol(states, &sol, step_length)) {
-      ILOG_ERROR << " cubic spiral sampling failed !";
+      // ILOG_ERROR << " cubic spiral sampling failed !";
       return false;
     }
   }
@@ -62,11 +62,11 @@ const bool CubicSpiralInterface::GenerateCubicSpiralPathByStrictSolve(
   }
 
   bool solution_usable = (bool)(sol.solve_status);
-  if (solution_usable) /* usable */
-  {
+  /* usable */
+  if (solution_usable) {
     ret = SampleCubicSpiralStatesBySol(states, &sol, step_length);
     if (!SampleCubicSpiralStatesBySol(states, &sol, step_length)) {
-      ILOG_ERROR << "cubic spiral sampling failed !";
+      // ILOG_ERROR << "cubic spiral sampling failed !";
       return false;
     }
   }

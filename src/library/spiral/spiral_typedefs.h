@@ -1,18 +1,11 @@
 #ifndef _SPIRAL_TYPEDEFS_H__
 #define _SPIRAL_TYPEDEFS_H__
 namespace planning {
-typedef enum VehicleMoveDirection {
-  VEHICLE_MOVE_DIR_NOT_AVAILABLE = 0,
-  VEHICLE_MOVE_DIR_FORWARD = 1,
-  VEHICLE_MOVE_DIR_BACKWARD = -1
-} vehicle_move_dir_t;
-
 typedef struct SpiralPathPoint {
   double x;
   double y;
   double theta;
   double kappa;           /* curvature of state */
-  vehicle_move_dir_t dir; /* move direction of state */
 } spiral_path_point_t;
 
 typedef struct KnotCubic {

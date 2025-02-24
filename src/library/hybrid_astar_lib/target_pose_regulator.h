@@ -38,11 +38,9 @@ class TargetPoseRegulator : public AstarDecider {
 
   void Clear();
 
+  // Get most safe target pose
   const std::pair<Pose2D, double> GetCandidatePose(
       const double lat_buffer) const;
-
-  const std::pair<Pose2D, double> GetCandidatePose(
-      const double big_buffer, const double small_buffer) const;
 
   const double GetEgoObsDist() const { return ego_dist_to_obs_; }
 
@@ -72,9 +70,24 @@ class TargetPoseRegulator : public AstarDecider {
 
   const bool IsCandidatePoseSafe(const double lat_buffer) const;
 
+  const std::pair<Pose2D, double> GetCandidatePoseForHeadIn(
+      const double lat_buffer) const;
+
+  // 0: none,
+  // -1: left;
+  // 1: right
+  const int GenerateOffsetPreference() const;
+
+  const PoseRegulateCandidate *GetCandidatePoseByOffset(const double lat_buffer,
+                                                        const int offset) const;
+
+  const std::pair<Pose2D, double> GetCandidatePoseForTailIn(
+      const double lat_buffer) const;
+
  private:
   Pose2D center_line_target_;
   std::vector<PoseRegulateCandidate> candidate_info_;
+  const AstarRequest *request_;
 
   double x_check_upper_;
   double x_check_lower_;

@@ -10,6 +10,7 @@
 #include "node3d.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "target_pose_regulator.h"
 
 namespace planning {
 
@@ -125,6 +126,18 @@ class HybridAStarInterface {
   const Pose2D& GetStartPoint();
 
   const Pose2D& GetGoalPoint();
+
+  const bool IsEgoOverlapWithSlot();
+
+  // 基于采样的揉库API
+  void PathSamplingForScenarioRunning();
+
+  void PathSearchForScenarioTry(const TargetPoseRegulator& regulator);
+
+  // 基于搜索的路径生成API
+  void PathSearchForScenarioRunning(const TargetPoseRegulator& regulator,
+                                    const double ego_obs_dist,
+                                    const bool is_ego_overlap_with_slot);
 
  private:
   // read vehicle param from file

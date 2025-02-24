@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include <Eigen/Core>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -394,7 +395,6 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
 
 int UpdateParkSpaceKeyPoints(
     const ApaParameters &parking_param, EgoInfoUnderSlot &slot_info,
-    double inside_dx,
     const std::vector<Eigen::Vector2d> &global_park_space_points,
     double cos_theta, double real_slot_length) {
   const double car_width_include_mirror =
@@ -492,10 +492,10 @@ int GenerateObstacleByJupyter(
 
   // slot back wall
   const Eigen::Vector2d back_wall_left =
-      left_obs_start + unit_vec_02 * (vec_02.norm() - left_obj_dx + 1.0);
+      left_obs_start + unit_vec_02 * (vec_02.norm() - left_obj_dx + 2.0);
 
   const Eigen::Vector2d back_wall_right =
-      right_obs_start_ + unit_vec_02 * (vec_02.norm() - right_obj_dx + 1.0);
+      right_obs_start_ + unit_vec_02 * (vec_02.norm() - right_obj_dx + 2.0);
 
   //
   std::vector<pnc::geometry_lib::LineSegment> line_vec;
@@ -568,10 +568,39 @@ int GenerateObstacleByJupyter(
   return 0;
 }
 
+// 用来调试垂直车位
+// enum class ParkingVehDirection {
+//   NONE,
+//   TAIL_IN,
+//   TAIL_OUT_TO_LEFT,
+//   TAIL_OUT_TO_RIGHT,
+//   TAIL_OUT_TO_MIDDLE,
+//   HEAD_IN,
+//   HEAD_OUT_TO_LEFT,
+//   HEAD_OUT_TO_RIGHT,
+//   HEAD_OUT_TO_MIDDLE,
+//   MAX_NUMBER,
+// };
+
+// enum class AstarPathGenerateType {
+//   NONE,
+//   REEDS_SHEPP_SAMPLING,
+//   ASTAR_SEARCHING,
+//   GEAR_REVERSE_SEARCHING,
+//   GEAR_DRIVE_SEARCHING,
+//   SPIRAL_SAMPLING,
+//   CUBIC_POLYNOMIAL_SAMPLING,
+//   QUNTIC_POLYNOMIAL_SAMPLING,
+//   // 点击车位之后，尝试搜索
+//   TRY_SEARCHING,
+//   MAX_NUMBER,
+// };
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
-    std::vector<Eigen::Vector2d> global_park_space_points, double inside_dx,
-    std::vector<double> obs_params, const bool trigger_plan) {
+    std::vector<Eigen::Vector2d> global_park_space_points,
+    const int plan_method,
+    std::vector<double> obs_params, const bool trigger_plan,
+    const int parking_dir) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   EgoInfoUnderSlot ego_slot_info;
@@ -695,10 +724,14 @@ std::vector<Eigen::Vector3d> Update(
   // cal target pos
   const ApaParameters &parking_param = apa_param.GetParam();
 
-  ego_slot_info.target_pose.pos = Eigen::Vector2d(
-      parking_param.terminal_target_x, parking_param.terminal_target_y);
-
-  ego_slot_info.target_pose.heading = parking_param.terminal_target_heading;
+  if (parking_dir == 1) {
+    ego_slot_info.target_pose.heading = parking_param.terminal_target_heading;
+    ego_slot_info.target_pose.pos = Eigen::Vector2d(
+        parking_param.terminal_target_x, parking_param.terminal_target_y);
+  } else if (parking_dir == 5) {
+    ego_slot_info.target_pose.heading = M_PI;
+    ego_slot_info.target_pose.pos = Eigen::Vector2d(4.0, 0.0);
+  }
 
   // get global
   const auto target_ego_pos_global =
@@ -729,7 +762,7 @@ std::vector<Eigen::Vector3d> Update(
                                ego_global_position, ego_global_pose,
                                ego_slot_info, frame);
 
-  UpdateParkSpaceKeyPoints(parking_param, ego_slot_info, inside_dx,
+  UpdateParkSpaceKeyPoints(parking_param, ego_slot_info,
                            global_park_space_points, cos_theta,
                            real_slot_length);
 
@@ -759,8 +792,13 @@ std::vector<Eigen::Vector3d> Update(
   // end
 
   Eigen::Vector3d end;
-  end[0] = ego_slot_info.target_pose.pos[0] +
-           parking_param.astar_config.vertical_slot_end_straight_dist;
+  end[0] = ego_slot_info.target_pose.pos[0];
+  if (parking_dir == 1) {
+    end[0] += parking_param.astar_config.vertical_tail_in_end_straight_dist;
+  } else if (parking_dir == 5) {
+    end[0] += parking_param.astar_config.vertical_head_in_end_straight_dist;
+  }
+
   end[1] = ego_slot_info.target_pose.pos[1];
   end[2] = ego_slot_info.target_pose.heading;
 
@@ -773,8 +811,29 @@ std::vector<Eigen::Vector3d> Update(
     request.slot_width = ego_slot_info.slot.GetWidth();
     request.slot_length = ego_slot_info.slot.GetLength();
     request.first_action_request.has_request = false;
-    request.path_generate_method =
-        planning::AstarPathGenerateType::ASTAR_SEARCHING;
+
+    switch (plan_method) {
+      case 2:
+        request.path_generate_method =
+            planning::AstarPathGenerateType::ASTAR_SEARCHING;
+        break;
+      case 3:
+        request.path_generate_method =
+            planning::AstarPathGenerateType::GEAR_REVERSE_SEARCHING;
+        break;
+      case 4:
+        request.path_generate_method =
+            planning::AstarPathGenerateType::GEAR_DRIVE_SEARCHING;
+        break;
+      case 8:
+        request.path_generate_method =
+            planning::AstarPathGenerateType::TRY_SEARCHING;
+        break;
+      default:
+        request.path_generate_method =
+            planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
+        break;
+    }
 
     request.start_ = Pose2D(start[0], start[1], start[2]);
     request.start_.theta =
@@ -788,10 +847,19 @@ std::vector<Eigen::Vector3d> Update(
                                ego_slot_info.target_pose.heading);
     request.base_pose_ = Pose2D(0, 0, 0);
 
+    ILOG_INFO <<"planning goal";
+    request.goal_.DebugString();
+
+    ILOG_INFO <<"real goal";
+    request.real_goal.DebugString();
+
     request.space_type = ParkSpaceType::VERTICAL;
     request.direction_request = ParkingVehDirection::TAIL_IN;
+    if (parking_dir == 5) {
+      request.direction_request = ParkingVehDirection::HEAD_IN;
+    }
     request.rs_request = RSPathRequestType::none;
-    request.history_gear = AstarPathGear::DRIVE;
+    request.history_gear = AstarPathGear::NONE;
     request.swap_start_goal = false;
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
@@ -803,7 +871,7 @@ std::vector<Eigen::Vector3d> Update(
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(
         ego_slot_info,
-        parking_param.astar_config.vertical_slot_end_straight_dist,
+        parking_param.astar_config.vertical_tail_in_end_straight_dist,
         ego_global_pose);
 
     // just test rs library

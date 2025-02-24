@@ -126,6 +126,8 @@ class HybridAStar {
       const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
       EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
 
+  // If search success, return a path linked wtih goal point;
+  // If search fail, return a path nearby goal point;
   void GearDrivePathAttempt(
       const MapBound& XYbounds, const ParkObstacleList& obstacles,
       const AstarRequest& request, const ObstacleClearZone* clear_zone,
@@ -326,6 +328,15 @@ class HybridAStar {
   const bool IsFootPrintCollision(const Transform2d& tf);
 
   FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose);
+
+  const bool IsExpectedGearForRsPath(const RSPath &path);
+
+  // copy path from rs path
+  void PathTransformByRSPath(const RSPath& rs_path, HybridAStarResult* result);
+
+  const bool BackwardPassByNode(HybridAStarResult* result, Node3d* end_node);
+
+  const bool BestNodeIsNice(const Node3d *node);
 
  private:
   PlannerOpenSpaceConfig config_;

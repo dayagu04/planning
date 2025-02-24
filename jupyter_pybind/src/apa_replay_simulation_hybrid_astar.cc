@@ -688,7 +688,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
         world->GetStateMachineManagerPtr()->GetStateMachine() ==
             ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_dist =
-          apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+          apa_param.GetParam().astar_config.vertical_tail_in_end_straight_dist;
     } else {
       end_straight_dist = 0.5;
     }

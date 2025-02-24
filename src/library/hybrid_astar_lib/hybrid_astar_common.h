@@ -158,7 +158,7 @@ struct ParkFirstActionRequest {
   AstarPathSteer steer_request;
 
   void Clear() {
-    has_request = 0.0;
+    has_request = false;
     gear_request = AstarPathGear::NONE;
     dist_request = 0.0;
 

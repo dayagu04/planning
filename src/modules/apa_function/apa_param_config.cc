@@ -121,6 +121,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
+                  
+  JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
+                  "in_slot_car_adjust_max_count");
   // car params
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
@@ -885,10 +888,12 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
       double, "deadend_uss_stuck_replan_wait_time");
   JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.vertical_slot_end_straight_dist, double,
-      "vertical_slot_end_straight_dist");
-  ILOG_INFO << "vertical_slot_end_straight_dist "
-            << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
+      apa_param.SetPram().astar_config.vertical_tail_in_end_straight_dist,
+      double, "vertical_tail_in_end_straight_dist");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_head_in_end_straight_dist,
+      double, "vertical_head_in_end_straight_dist");
 
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.adjust_ego_y_thresh_outside_slot, double,

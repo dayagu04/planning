@@ -30,7 +30,8 @@ struct AstarParkingConfig {
 
   bool cubic_polynomial_pose_adjustment = true;
   // move target point in slot to another point for easy tracking
-  double vertical_slot_end_straight_dist = 1.0;
+  double vertical_tail_in_end_straight_dist = 1.0;
+  double vertical_head_in_end_straight_dist = 0.8;
   double parallel_slot_end_straight_dist = 0.0;
   bool enable_delete_occ_in_slot;
   bool enable_delete_occ_in_ego;
@@ -198,7 +199,8 @@ struct ApaParameters {
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
   int max_replan_count = 12;
-  int headin_max_replan_count = 14;
+  int headin_max_replan_count = 20;
+  int in_slot_car_adjust_max_count = 20;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;

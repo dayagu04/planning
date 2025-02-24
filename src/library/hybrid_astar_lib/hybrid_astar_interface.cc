@@ -13,9 +13,9 @@
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "polygon_base.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
-#include "target_pose_regulator.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
@@ -164,6 +164,8 @@ void HybridAStarInterface::UpdateOutput() {
       next_path_no_gear_switch, future_path_decider.GetNextPathGearByHistory(),
       &request_);
 
+  bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
+
   TargetPoseRegulator target_pose_regulator;
   Pose2D center_line_pose;
   // 揉库时，使用车位内pose判断车位内目标点障碍物距离.
@@ -175,175 +177,17 @@ void HybridAStarInterface::UpdateOutput() {
   }
   target_pose_regulator.Process(&edt_, &request_, request_.start_,
                                 center_line_pose, vehicle_param_);
+  double ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
-  double lat_buffer_outside;
-  double advised_lat_buffer_inside;
-  double lon_buffer;
   if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
-    // judge target regulator goal if collide
-    std::pair<Pose2D, double> target_regulator_result;
-    target_regulator_result = target_pose_regulator.GetCandidatePose(
-        config_.safe_buffer.lat_safe_buffer_inside[0],
-        config_.safe_buffer.lat_safe_buffer_inside[1]);
-    advised_lat_buffer_inside =
-        config_.safe_buffer.lat_safe_buffer_inside[1];
-    if (target_regulator_result.second >
-        config_.safe_buffer.lat_safe_buffer_inside[0]) {
-      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
-    }
-    target_regulator_goal_ = target_regulator_result.first;
-
-    // If target slot is not wide enough, return.
-    if (target_regulator_result.second < advised_lat_buffer_inside) {
-      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-      ILOG_INFO << "target_regulator_goal_ will collide";
-      search_state_ = AstarSearchState::FAILURE;
-      return;
-    }
-
-    for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
-         i++) {
-      lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
-      lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
-      hybrid_astar_->UpdateCarBoxBySafeBuffer(
-          lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
-
-      // search single shot path.
-      if (advised_lat_buffer_inside > config_.single_shot_path_width_thresh) {
-        if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-          hybrid_astar_->GearDrivePathAttempt(
-              map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
-              GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
-        } else {
-          hybrid_astar_->GearRerversePathAttempt(
-              map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
-              GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
-        }
-
-        // check path
-        if (coarse_traj_.x.size() > 2) {
-          ILOG_INFO << "path is single shot";
-
-          ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
-          break;
-        }
-      }
-
-      // todo: init pointer in init function, do not transport every pointer
-      // address into internal.
-      hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                                 obs_, request_, &clear_zone_, &coarse_traj_,
-                                 &edt_, &ref_line_);
-
-      ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
-
-      // check time
-      if (coarse_traj_.time_ms > config_.max_search_time_ms) {
-        break;
-      }
-
-      // check path
-      if (coarse_traj_.x.size() > 1) {
-        break;
-      }
-    }
+    PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
+                                 is_ego_overlap_with_slot);
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::TRY_SEARCHING) {
-    lat_buffer_outside = config_.safe_buffer.scenario_try_lat_buffer_outside;
-    advised_lat_buffer_inside =
-        config_.safe_buffer.scenario_try_lat_buffer_inside;
-    lon_buffer = config_.safe_buffer.scenario_try_lon_buffer;
-    hybrid_astar_->UpdateCarBoxBySafeBuffer(
-        lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
-
-    // todo: 需要限制搜索时间
-    ILOG_INFO << "scenario try planning";
-    std::pair<Pose2D, double> target_regulator_result;
-    target_regulator_result =
-        target_pose_regulator.GetCandidatePose(advised_lat_buffer_inside);
-    if (target_regulator_result.second < advised_lat_buffer_inside) {
-      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-      ILOG_INFO << "target_regulator_goal_ will collide";
-    }
-
-    target_regulator_goal_ = target_regulator_result.first;
-    hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                               obs_, request_, &clear_zone_, &coarse_traj_,
-                               &edt_, &ref_line_);
-
+    PathSearchForScenarioTry(target_pose_regulator);
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
-    double dist_to_slot_up_edge =
-        request_.slot_length - ego_state_.DistanceToOrigin();
-    double lon_min_sampling_length;
-    if (request_.space_type == ParkSpaceType::VERTICAL ||
-        request_.space_type == ParkSpaceType::SLANTING) {
-      lon_min_sampling_length = std::max(3.0, dist_to_slot_up_edge);
-    } else {
-      lon_min_sampling_length = 0.4;
-    }
-
-    // 库内揉库时，根据车辆当前位置安全性选择buffer，而不是根据目标位置选择buffer
-    double ego_obs_dist = target_pose_regulator.GetEgoObsDist();
-    if (ego_obs_dist > config_.safe_buffer.lat_safe_buffer_inside[0]) {
-      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
-    } else {
-      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[1];
-    }
-    target_regulator_goal_ = request_.goal_;
-
-    for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size(); i++) {
-      lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
-      lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
-      hybrid_astar_->UpdateCarBoxBySafeBuffer(
-          lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
-
-      if (request_.path_generate_method ==
-          AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
-        // parallel
-        if (request_.space_type == ParkSpaceType::PARALLEL) {
-          hybrid_astar_->SamplingByCubicPolyForParallelSlot(
-              &coarse_traj_, GetStartPoint(), GetGoalPoint(),
-              lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-              &clear_zone_, &ref_line_);
-        } else {
-          if (hybrid_astar_->SamplingByCubicSpiralForVerticalSlot(
-                  &coarse_traj_, GetStartPoint(), GetGoalPoint(),
-                  lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-                  &clear_zone_, &ref_line_)) {
-          } else {
-            hybrid_astar_->PlanByRSPathSampling(
-                &coarse_traj_, GetStartPoint(), GetGoalPoint(),
-                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-                &clear_zone_, &ref_line_);
-          }
-        }
-
-      } else {
-        hybrid_astar_->PlanByRSPathSampling(
-            &coarse_traj_, GetStartPoint(), GetGoalPoint(),
-            lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-            &clear_zone_, &ref_line_);
-      }
-
-      ILOG_INFO << "hybrid astar finish, rs path point size = "
-                << coarse_traj_.x.size();
-
-      // check time
-      if (coarse_traj_.time_ms > config_.max_search_time_ms) {
-        break;
-      }
-
-      // check path
-      if (coarse_traj_.x.size() > 1) {
-        break;
-      }
-    }
-
-    if (coarse_traj_.x.size() <= 1) {
-      hybrid_astar_->CopyFallbackPath(&coarse_traj_);
-      ILOG_INFO << "copy fallback path";
-    }
+    PathSamplingForScenarioRunning();
   }
 
   search_state_ = AstarSearchState::SUCCESS;
@@ -919,6 +763,228 @@ const Pose2D& HybridAStarInterface::GetGoalPoint() {
 
 FootPrintCircleModel* HybridAStarInterface::GetSlotOutsideCircleFootPrint() {
   return hybrid_astar_->GetSlotOutsideCircleFootPrint();
+}
+
+const bool HybridAStarInterface::IsEgoOverlapWithSlot() {
+  Polygon2D ego_local_polygon;
+  Polygon2D ego_global_polygon;
+
+  GenerateUpLeftFrameBox(
+      &ego_local_polygon, -vehicle_param_.rear_edge_to_rear_axle,
+      -vehicle_param_.max_width / 2.0,
+      vehicle_param_.wheel_base + vehicle_param_.front_overhanging,
+      vehicle_param_.max_width / 2.0);
+  ULFLocalPolygonToGlobal(&ego_global_polygon, &ego_local_polygon, ego_state_);
+
+  Polygon2D slot_polygon;
+  GenerateUpLeftFrameBox(&slot_polygon, 0.0, -request_.slot_width / 2,
+                         request_.slot_length, request_.slot_width / 2);
+
+  GJK2DInterface gjk;
+  bool is_collision;
+  gjk.PolygonCollisionByCircleCheck(&is_collision, &slot_polygon,
+                                    &ego_global_polygon, 0.1);
+
+  return is_collision;
+}
+
+void HybridAStarInterface::PathSearchForScenarioRunning(
+    const TargetPoseRegulator& regulator, const double ego_obs_dist,
+    const bool is_ego_overlap_with_slot) {
+  double lat_buffer_outside;
+  double advised_lat_buffer_inside;
+  double lon_buffer;
+
+  // judge target regulator goal if collide
+  std::pair<Pose2D, double> target_regulator_result;
+  target_regulator_result =
+      regulator.GetCandidatePose(config_.safe_buffer.lat_safe_buffer_inside[0]);
+  advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[1];
+
+  // width enough
+  if (target_regulator_result.second >
+      config_.safe_buffer.lat_safe_buffer_inside[0]) {
+    // ego is outside slot
+    if (!is_ego_overlap_with_slot) {
+      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
+    } else if (ego_obs_dist > config_.safe_buffer.lat_safe_buffer_inside[0]) {
+      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
+    }
+  }
+  target_regulator_goal_ = target_regulator_result.first;
+
+  // If target slot is not wide enough, return.
+  if (target_regulator_result.second < advised_lat_buffer_inside) {
+    ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+    ILOG_INFO << "target_regulator_goal_ will collide";
+    search_state_ = AstarSearchState::FAILURE;
+    return;
+  }
+
+  for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
+       i++) {
+    lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
+    lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(
+        lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+
+    // search single shot path.
+    if (advised_lat_buffer_inside > config_.single_shot_path_width_thresh) {
+      if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+        hybrid_astar_->GearDrivePathAttempt(
+            map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
+            GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
+      } else {
+        hybrid_astar_->GearRerversePathAttempt(
+            map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
+            GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
+      }
+
+      // check path
+      if (coarse_traj_.x.size() > 2) {
+        ILOG_INFO << "path is single shot";
+
+        ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
+        break;
+      }
+    }
+
+    // todo: init pointer in init function, do not transport every pointer
+    // address into internal.
+    hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
+                               obs_, request_, &clear_zone_, &coarse_traj_,
+                               &edt_, &ref_line_);
+
+    ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
+
+    // check time
+    if (coarse_traj_.time_ms > config_.max_search_time_ms) {
+      break;
+    }
+
+    // check path
+    if (coarse_traj_.x.size() > 1) {
+      break;
+    }
+  }
+
+  return;
+}
+
+void HybridAStarInterface::PathSearchForScenarioTry(
+    const TargetPoseRegulator& regulator) {
+  double lat_buffer_outside;
+  double advised_lat_buffer_inside;
+  double lon_buffer;
+
+  lat_buffer_outside = config_.safe_buffer.scenario_try_lat_buffer_outside;
+  advised_lat_buffer_inside =
+      config_.safe_buffer.scenario_try_lat_buffer_inside;
+  lon_buffer = config_.safe_buffer.scenario_try_lon_buffer;
+  hybrid_astar_->UpdateCarBoxBySafeBuffer(
+      lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+
+  // todo: 需要限制搜索时间
+  ILOG_INFO << "scenario try planning";
+  std::pair<Pose2D, double> target_regulator_result;
+  target_regulator_result =
+      regulator.GetCandidatePose(advised_lat_buffer_inside);
+  if (target_regulator_result.second < advised_lat_buffer_inside) {
+    ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+    ILOG_INFO << "target_regulator_goal_ will collide";
+  }
+
+  target_regulator_goal_ = target_regulator_result.first;
+  hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_, obs_,
+                             request_, &clear_zone_, &coarse_traj_, &edt_,
+                             &ref_line_);
+
+  return;
+}
+
+void HybridAStarInterface::PathSamplingForScenarioRunning() {
+  double dist_to_slot_up_edge =
+      request_.slot_length - ego_state_.DistanceToOrigin();
+  double lon_min_sampling_length;
+  if (request_.space_type == ParkSpaceType::VERTICAL ||
+      request_.space_type == ParkSpaceType::SLANTING) {
+    lon_min_sampling_length = std::max(4.5, dist_to_slot_up_edge);
+  } else {
+    lon_min_sampling_length = 0.4;
+  }
+
+  target_regulator_goal_ = request_.goal_;
+
+  double lat_buffer_outside;
+  double advised_lat_buffer_inside;
+  double lon_buffer;
+
+  coarse_traj_.Clear();
+  HybridAStarResult path;
+  path.Clear();
+
+  for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
+       i++) {
+    lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
+    lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
+    advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(
+        lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+
+    if (request_.path_generate_method ==
+        AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
+      // parallel
+      if (request_.space_type == ParkSpaceType::PARALLEL) {
+        hybrid_astar_->SamplingByCubicPolyForParallelSlot(
+            &path, GetStartPoint(), GetGoalPoint(),
+            lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+            &clear_zone_, &ref_line_);
+      } else {
+        if (hybrid_astar_->SamplingByCubicSpiralForVerticalSlot(
+                &path, GetStartPoint(), GetGoalPoint(),
+                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+                &clear_zone_, &ref_line_)) {
+        } else {
+          hybrid_astar_->PlanByRSPathSampling(
+              &path, GetStartPoint(), GetGoalPoint(),
+              lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+              &clear_zone_, &ref_line_);
+        }
+      }
+
+    } else {
+      hybrid_astar_->PlanByRSPathSampling(
+          &path, GetStartPoint(), GetGoalPoint(),
+          lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+          &clear_zone_, &ref_line_);
+    }
+
+    // check time
+    if (path.time_ms > config_.max_search_time_ms) {
+      break;
+    }
+
+    // compare path
+    if (coarse_traj_.accumulated_s.size() < path.accumulated_s.size()) {
+      coarse_traj_ = path;
+    }
+
+    // check path is long enough
+    if (coarse_traj_.accumulated_s.size() > 0 &&
+        coarse_traj_.accumulated_s.back() > lon_min_sampling_length - 0.1) {
+      break;
+    }
+  }
+
+  if (coarse_traj_.x.size() <= 1) {
+    hybrid_astar_->CopyFallbackPath(&coarse_traj_);
+    ILOG_INFO << "copy fallback path";
+  }
+
+  ILOG_INFO << "hybrid astar finish, path point size = "
+            << coarse_traj_.x.size();
+
+  return;
 }
 
 }  // namespace planning

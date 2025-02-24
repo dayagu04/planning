@@ -1,5 +1,8 @@
 #include "path_comparator.h"
 
+#include <cmath>
+
+#include "ad_common/math/math_utils.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
@@ -43,10 +46,15 @@ bool PathComparator::Compare(const AstarRequest *request,
   }
 
   // 换档次数一致，继续比较
-  if (request->space_type == ParkSpaceType::VERTICAL &&
-      request->direction_request == ParkingVehDirection::TAIL_IN) {
-    if (CheckVerticalSlotTailIn(request, best_node, node_challenger)) {
-      return true;
+  if (request->space_type == ParkSpaceType::VERTICAL) {
+    if (request->direction_request == ParkingVehDirection::TAIL_IN) {
+      if (CheckVerticalSlotTailIn(request, best_node, node_challenger)) {
+        return true;
+      }
+    } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
+      if (CheckVerticalSlotHeadIn(request, best_node, node_challenger)) {
+        return true;
+      }
     }
   }
 
@@ -121,6 +129,96 @@ const bool PathComparator::PolynomialPathBetter(
       if (path.accumulated_s < base.accumulated_s) {
         return true;
       }
+    }
+  }
+
+  return false;
+}
+
+
+bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
+                                             const Node3d *best_node,
+                                             const Node3d *node_challenger) {
+  // 为了耗时考虑，暂时只会比较第一个换挡点的cost.
+  // 相同换档点，不需要比较
+  if (best_node->GearSwitchNode() != nullptr &&
+      node_challenger->GearSwitchNode() != nullptr) {
+    if (best_node->GearSwitchNode()->GetGlobalID() ==
+        node_challenger->GearSwitchNode()->GetGlobalID()) {
+      return false;
+    }
+  }
+
+  // best node pose
+  Pose2D gear_switch_pose_best;
+  if (best_node->GearSwitchNode() != nullptr) {
+    gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
+  } else {
+    gear_switch_pose_best = best_node->GetPose();
+  }
+  double heading_error_best = ad_common::math::NormalizeAngle(
+      gear_switch_pose_best.theta - request->real_goal.theta);
+  heading_error_best = std::fabs(heading_error_best);
+
+  // challenger pose
+  Pose2D gear_switch_pose_challenger;
+  if (node_challenger->GearSwitchNode() != nullptr) {
+    gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
+  } else {
+    gear_switch_pose_challenger = node_challenger->GetPose();
+  }
+
+  double heading_error_challenger = ad_common::math::NormalizeAngle(
+      gear_switch_pose_challenger.theta - request->real_goal.theta);
+  heading_error_challenger = std::fabs(heading_error_challenger);
+
+#if DEBUG_DECIDER
+  ILOG_INFO << "head 1 = " << heading_error_best * 57.4
+            << ", head 2 = " << heading_error_challenger * 57.4;
+#endif
+
+  // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
+  double x_upper = 12.0;
+  double x_lower = 4.0;
+  if (gear_switch_pose_challenger.x < x_lower ||
+      gear_switch_pose_challenger.x > x_upper) {
+    return false;
+  }
+
+  // check heading
+  if (heading_error_challenger < heading_error_best &&
+      node_challenger->GetGCost() < best_node->GetGCost() + 6.0) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool PathComparator::NodeCompare(const Pose2D &goal,
+                                       const Node3d *best_node,
+                                       const Node3d *node_challenger) {
+  double dist1 = std::fabs(goal.y - best_node->GetPose().y);
+  double dist2 = std::fabs(goal.y - node_challenger->GetPose().y);
+
+  // 距离较近，比较heading
+  const double dist_bound = 0.05;
+  if (dist2 < dist_bound && dist1 < dist_bound) {
+    double heading_error_challenger = ad_common::math::NormalizeAngle(
+        node_challenger->GetPose().theta - goal.theta);
+    heading_error_challenger = std::fabs(heading_error_challenger);
+
+    double heading_error_best = ad_common::math::NormalizeAngle(
+        best_node->GetPose().theta - goal.theta);
+    heading_error_best = std::fabs(heading_error_best);
+    if (heading_error_challenger < heading_error_best) {
+      return true;
+    }
+  }
+  // 距离有大于0.05的,比较距离即可
+  else {
+    // closer
+    if (dist2 < dist1) {
+      return true;
     }
   }
 

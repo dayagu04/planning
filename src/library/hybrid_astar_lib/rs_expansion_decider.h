@@ -37,7 +37,9 @@ class RSExpansionDecider : public AstarDecider {
 
  private:
   // 对于车辆在ref line，需要注意
-  const bool NeedRsLinkByNodeHeading(const Node3d *node) const;
+  const bool NeedRsLinkByNodeHeadingForTailIn(const Node3d *node) const;
+
+  const bool NeedRsLinkByNodeHeadingForHeadIn(const Node3d *node) const;
 
   const bool NeedRsLinkByOffset(const Node3d *node) const;
 
