@@ -496,13 +496,10 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, selected_id, substit
   })
 
 
-  print("virtual_obs_vec size = ", len(virtual_obs_vec))
   virtual_obs_x_vec, virtual_obs_y_vec = [], []
   for i in range(len(virtual_obs_vec)):
     virtual_obs_x_vec.append(virtual_obs_vec[i][0])
     virtual_obs_y_vec.append(virtual_obs_vec[i][1])
-  print("virtual_obs_x_vec size = ", len(virtual_obs_x_vec))
-  print("virtual_obs_y_vec size = ", len(virtual_obs_y_vec))
   data_virtual_obs_pos.data.update({'x_vec':virtual_obs_x_vec, 'y_vec':virtual_obs_y_vec})
 
   complete_path_x_vec, complete_path_y_vec, complete_path_heading_vec, complete_path_lat_buffer_vec = [], [], [], []

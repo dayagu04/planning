@@ -53,6 +53,7 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const bool CheckDynamicUpdate() override;
 
   PerpendicularTailInPathGenerator perpendicular_path_planner_;
+  
 
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
   std::vector<pnc::geometry_lib::PathSegment> all_plan_path_vec_;

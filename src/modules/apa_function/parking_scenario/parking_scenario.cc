@@ -10,6 +10,7 @@
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_utils.h"
+#include "collision_detection/base_collision_detector.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
@@ -311,24 +312,36 @@ const double ParkingScenario::CalRemainDistFromPath() {
 const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
     const double extra_buffer_when_reversing) {
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr();
 
-  uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
-                                   apa_world_ptr_->GetPredictPathManagerPtr(),
-                                   apa_world_ptr_->GetObstacleManagerPtr(),
-                                   lat_buffer);
+  const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetGJKCollisionDetectorPtr();
+
+  uss_obstacle_avoider_ptr->Update();
 
   double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  double obs_pt_remain_dist_static =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist_static -
-      safe_dist;
+  ColResult col_res = gjk_col_det_ptr->Update(
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), lat_buffer,
+      0.0, false, false, ColObsMovementTypeRequest::STATIC);
 
-  double obs_pt_remain_dist_dynamic =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist_dynamic -
-      1.68;
+  if (!col_res.col_flag) {
+    col_res.remain_dist_static = 3.68;
+  }
+  double obs_pt_remain_dist_static = col_res.remain_dist_static - safe_dist;
+
+  col_res = gjk_col_det_ptr->Update(
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), 0.368, 0.0,
+      false, false, ColObsMovementTypeRequest::MOTION);
+
+  if (!col_res.col_flag) {
+    col_res.remain_dist_dynamic = 6.68;
+  }
+  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.68;
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     uss_remain_dist -= extra_buffer_when_reversing;
@@ -336,16 +349,13 @@ const double ParkingScenario::CalRemainDistFromObs(
     obs_pt_remain_dist_dynamic -= extra_buffer_when_reversing;
   }
 
-  ILOG_INFO
-      << "  enable_corner_uss_process = "
-      << apa_param.GetParam().enable_corner_uss_process
-      << "  uss remain dist = " << uss_remain_dist
-      << "origin_obs_pt remain dist = "
-      << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist_static
-      << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
-      << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", lat_buffer)
 
-  frame_.vel_target = uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target;
+  ILOG_INFO << "  enable_corner_uss_process = "
+            << apa_param.GetParam().enable_corner_uss_process
+            << "  uss remain dist = " << uss_remain_dist
+            << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
+            << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
 
   if (apa_param.GetParam().enable_corner_uss_process) {
     frame_.stuck_by_dynamic_obs = false;
@@ -503,15 +513,16 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
             << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
 
   // update stop decision
-  ParkingStopDecider stop_decider = ParkingStopDecider();
-  stop_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(), apa_world_ptr_,
-                       tracking_path_collision_dist,
+  ParkingStopDecider stop_decider(
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+      apa_world_ptr_->GetMeasureDataManagerPtr());
+
+  stop_decider.Process(tracking_path_collision_dist,
                        current_path_point_global_vec_, &speed_decisions);
 
   // update speed limit decision
-  ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
-  speed_limit_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(),
-                              current_path_point_global_vec_, &speed_decisions);
+  ParkSpeedLimitDecider speed_limit_decider;
+  speed_limit_decider.Process(current_path_point_global_vec_, &speed_decisions);
 
   // get ego around speed limit decision
   const SpeedLimitDecision* min_speed_decision =
@@ -519,21 +530,15 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
           &speed_decisions, stop_decider.GetEgoPathProjectS(),
           stop_decider.GetEgoPathProjectS() + 0.6);
 
-  // todo: add uss obs dist
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
   if (min_speed_decision != nullptr) {
     double ref_v;
     ref_v = speed_limit_decider.CalcRefSpeedBySpeedLimitDecision(
         apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
         stop_decider.GetEgoPathProjectS(), min_speed_decision);
 
-    frame_.vel_target = std::min(
-        ref_v, uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+    frame_.vel_target = ref_v;
   } else {
-    frame_.vel_target =
-        std::min(apa_param.GetParam().speed_config.default_cruise_speed,
-                 uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+    frame_.vel_target = apa_param.GetParam().speed_config.default_cruise_speed;
   }
 
   return;

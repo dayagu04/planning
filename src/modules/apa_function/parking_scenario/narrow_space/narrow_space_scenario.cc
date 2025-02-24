@@ -147,8 +147,9 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   }
 
   // stucked by directly behind uss
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr();
   const bool enter_slot_condition =
       ego_info.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
@@ -415,8 +416,10 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result);
   JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2);
 
-  const auto uss_info =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  const UssObstacleAvoidance::RemainDistInfo uss_info =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr()
+          ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available);
   JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist);
   JSON_DEBUG_VALUE("uss_index", uss_info.uss_index);

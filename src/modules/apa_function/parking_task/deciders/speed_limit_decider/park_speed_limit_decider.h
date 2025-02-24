@@ -18,8 +18,7 @@ class ParkSpeedLimitDecider : public ParkingTask {
 
   ~ParkSpeedLimitDecider() = default;
 
-  void Process(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-               const std::vector<pnc::geometry_lib::PathPoint>& path,
+  void Process(const std::vector<pnc::geometry_lib::PathPoint>& path,
                SpeedDecisions* speed_decisions);
 
   // Get minimum speed limit decision

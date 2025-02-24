@@ -1046,10 +1046,7 @@ const bool CalExtendedPointByTwoPoints(const Eigen::Vector2d &start_point,
     return false;
   }
 
-  Eigen::Vector2d unit_line = line / distance;
-  Eigen::Vector2d new_line = line + extended_distance * unit_line;
-
-  extended_point = new_line + start_point;
+  extended_point = end_point + line / distance * extended_distance;
 
   return true;
 }
@@ -1442,11 +1439,11 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
   while (s < line.length) {
     pn.pos = line.pA + s * unit_line_vec;
     pn.heading = line.heading;
-    s += ds;
-    pn.s = ds;
+    pn.s = s;
     pn.lat_buffer = lat_buffer;
     pn.kappa = 0.0;
     point_set.emplace_back(pn);
+    s += ds;
   }
   // get last point
   pn.Set(line.pB, NormalizeAngle(line.heading));
@@ -1493,11 +1490,11 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
     pn.pos = pO + v_n;
     heading += dheading;
     pn.heading = NormalizeAngle(heading);
-    s += ds;
-    pn.s = ds;
+    pn.s = s;
     pn.lat_buffer = lat_buffer;
     pn.kappa = sign / arc.circle_info.radius;
     point_set.emplace_back(pn);
+    s += ds;
   }
   // get last point
   pn.Set(arc.pB, NormalizeAngle(arc.headingB));

@@ -20,11 +20,13 @@ static const uint8_t kMaxSlotReleaseCount = 8;
 
 void ApaSlotManager::Update(
     const LocalView* local_view,
-    const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
-    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
+    const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
+    const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
+    const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,
+    const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr) {
   if (local_view == nullptr || state_machine_ptr == nullptr ||
-      measure_data_ptr == nullptr || obstacle_manager_ptr == nullptr) {
+      measure_data_ptr == nullptr || obstacle_manager_ptr == nullptr ||
+      col_det_interface_ptr == nullptr) {
     ILOG_ERROR << "Update ApaSlotManager, local_view_ptr is nullptr";
     return;
   }
@@ -33,6 +35,7 @@ void ApaSlotManager::Update(
   measure_data_ptr_ = measure_data_ptr;
   state_machine_ptr_ = state_machine_ptr;
   obstacle_manager_ptr_ = obstacle_manager_ptr;
+  col_det_interface_ptr_ = col_det_interface_ptr;
 
   slots_map_.clear();
   dist_id_map_.clear();
@@ -209,11 +212,11 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 }
 
 const bool ApaSlotManager::IsEgoCloseToObs() {
-  PathSafeChecker safe_check;
-  Pose2D ego =
+  const Pose2D ego =
       Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
              measure_data_ptr_->GetHeading());
-  return safe_check.CalcEgoCollision(obstacle_manager_ptr_, ego, 0.268, 0.1);
+  return col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
+      ego, 0.268, 0.1);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
@@ -298,7 +301,6 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
       {0.20, SlotReleaseVoterType::ACCUMULATE},
       {0.16, SlotReleaseVoterType::SUBTRACT}};
 
-  PathSafeChecker safe_check;
   const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
@@ -311,10 +313,14 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
       for (const double up_dist : move_up_dist) {
         const Eigen::Vector2d origin_target_pos =
             pM01 - n * (param.wheel_base + param.front_overhanging - up_dist);
-        const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
-        const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
-        if (safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
-                                        lat_buffer_pair.first, lon_buffer)) {
+
+        const geometry_lib::PathPoint target_pose(origin_target_pos + dist * t,
+                                                  heading);
+
+        if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()
+                ->Update(std::vector<geometry_lib::PathPoint>{target_pose},
+                         lat_buffer_pair.first, 0.0, false, false)
+                .col_flag) {
           col = true;
           break;
         }
@@ -368,8 +374,8 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
 
   polygon.min_tangent_radius = 0.6;
 
-  safe_check.SetObstacle(obstacle_manager_ptr_);
-  if (safe_check.IsPolygonCollision(&polygon)) {
+  if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+          polygon, false)) {
     ILOG_INFO << "passage is occupied";
     return SlotReleaseVoterType::CLEAR;
   }
@@ -404,7 +410,6 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
 
   const std::vector<double> move_slot_dist_vec{-0.5, 0.0, 0.5};
 
-  PathSafeChecker safe_check;
   const double lat_buffer = 0.05;
   const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
@@ -413,8 +418,9 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const Eigen::Vector2d target_pos = target_ego_pos + dist * t;
     const Pose2D target_pose(target_pos.x(), target_pos.y(), slot_heading);
 
-    const bool is_collided = safe_check.CalcEgoCollision(
-        obstacle_manager_ptr_, target_pose, lat_buffer, lon_buffer);
+    const bool is_collided =
+        col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
+            target_pose, lat_buffer, lon_buffer);
 
     ILOG_INFO << "lateral moving dist = " << dist
               << ". target_pos= " << target_pose.GetX() << ", "

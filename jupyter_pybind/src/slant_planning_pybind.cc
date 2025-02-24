@@ -12,6 +12,7 @@
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "config_context.h"
 #include "geometry_path_generator.h"
 #include "math_lib.h"
@@ -426,13 +427,14 @@ std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
                 tf.GetPos(F).y()}) +
           0.0168);
 
-  collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
+  // collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
   // collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
   bool success = false;
-  planning::apa_planner::GeometryPathInput input;
-  success = pBase->ItervativeUpdatePb(input, collision_detector_ptr);
+  planning::apa_planner::GeometryPathInput ginput;
+  std::shared_ptr<CollisionDetectorInterface> collision_detector_interface_ptr;
+  success = pBase->ItervativeUpdatePb(ginput, collision_detector_interface_ptr);
 
   current_path_point_global_vec_.clear();
 

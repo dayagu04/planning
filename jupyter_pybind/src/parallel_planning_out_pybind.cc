@@ -68,7 +68,9 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_obs.SetPtClout2dGlobal(obs_vec);
   apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
   apa_obs.SetId(0);
-  apa_world_ptr->GetObstacleManagerPtr()->SetObstacles()[0] = apa_obs;
+  std::unordered_map<size_t, ApaObstacle> &obstacles =
+      apa_world_ptr->GetObstacleManagerPtr()->GetMutableObstacles();
+  obstacles[0] = apa_obs;
 
   // set function state mechine
   if (is_dirve_out_left) {

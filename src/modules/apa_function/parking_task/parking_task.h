@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include "collision_detection/collision_detector_interface.h"
+
 namespace planning {
 
 enum class TaskType {
@@ -47,10 +49,19 @@ class ParkingTask {
   // push debug info in here.
   virtual void TaskDebug();
 
+  void SetCollisionDetectorIntefacePtr(
+      const std::shared_ptr<apa_planner::CollisionDetectorInterface>&
+          collision_detector_interface_ptr) {
+    collision_detector_interface_ptr_ = collision_detector_interface_ptr;
+  }
+
  protected:
   std::string name_;
 
   TaskType type_;
+
+  std::shared_ptr<apa_planner::CollisionDetectorInterface>
+      collision_detector_interface_ptr_ = nullptr;
 };
 
 }  // namespace planning

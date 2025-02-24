@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "apa_param_config.h"
+#include "common_platform_type_soc.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
@@ -71,7 +72,21 @@ void PerpendicularTailInPathGenerator::Preprocess() {
 }
 
 const bool PerpendicularTailInPathGenerator::Update() {
+  if (collision_detector_interface_ptr_ == nullptr) {
+    return false;
+  }
   ILOG_INFO << "--------perpendicular path planner --------";
+
+  // check start ego pose if collision
+  if (collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
+          ->Update(
+              std::vector<geometry_lib::PathPoint>{
+                  input_.ego_info_under_slot.cur_pose},
+              apa_param.GetParam().car_lat_inflation_normal, 0.3)
+          .col_flag) {
+    ILOG_INFO << "ego pose has obs, force quit PathPlan, fail";
+    return false;
+  }
 
   // preprocess
   Preprocess();
@@ -125,25 +140,6 @@ const bool PerpendicularTailInPathGenerator::Update() {
 
 const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
   ILOG_INFO << "\n ---enter prepare plan---";
-
-  if (collision_detector_ptr_ == nullptr) {
-    std::cout << "collision_detector_ptr_ is nullptr\n";
-    return false;
-  }
-
-  // first check ego pose if collision
-  if (!calc_params_.is_searching_stage) {
-    const double lat_buffer =
-        CalOccupiedRatio(input_.ego_info_under_slot.cur_pose) < 1e-3
-            ? calc_params_.strict_car_lat_inflation
-            : apa_param.GetParam().car_lat_inflation_normal;
-    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(lat_buffer));
-    if (collision_detector_ptr_->IsObstacleInCar(
-            input_.ego_info_under_slot.cur_pose)) {
-      ILOG_INFO << "ego pose has obs, force quit PreparePathPlan, fail";
-      return false;
-    }
-  }
 
   ILOG_INFO << "first prepare init pos = "
             << input_.ego_info_under_slot.cur_pose.pos.transpose()
@@ -252,15 +248,15 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
 
       const double obs_dist_in_slot = rough_path.obs_dist.second;
 
-      const double max_dis = 0.70;
+      const double max_dis = 0.768;
       const double min_dis = 0.468;
       double obs_dist_cost = 0.0;
       if (obs_dist_out_slot > max_dis) {
-        obs_dist_cost += 66.8 / max_dis;
+        obs_dist_cost += 86.8 / max_dis;
       } else if (obs_dist_out_slot < min_dis) {
-        obs_dist_cost += 80.8 / obs_dist_out_slot;
+        obs_dist_cost += 92.8 / obs_dist_out_slot;
       } else {
-        obs_dist_cost += 66.8 / obs_dist_out_slot;
+        obs_dist_cost += 86.8 / obs_dist_out_slot;
       }
 
       if (rough_path.gear_change_count < 1) {
@@ -885,12 +881,13 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
     // seg_vec存储着包含障碍物离轨迹的距离 但是需要考虑库内和库外
     double min_obs_dist_out_slot = 26.8;
     double min_obs_dist_in_slot = 26.8;
-    for (const auto& seg : seg_vec) {
-      const double start_min_x = CalCarRectangleBound(seg.GetStartPose()).min_x;
-      const double end_min_x = CalCarRectangleBound(seg.GetEndPose()).min_x;
-      const double start_slot_occupied_ratio =
-          CalOccupiedRatio(seg.GetStartPose());
-      const double end_slot_occupied_ratio = CalOccupiedRatio(seg.GetEndPose());
+    const std::shared_ptr<GeometryCollisionDetector>& col_ptr =
+        collision_detector_interface_ptr_->GetGeometryCollisionDetectorPtr();
+    for (const geometry_lib::PathSegment& seg : seg_vec) {
+      const double start_min_x =
+          col_ptr->CalCarRectangleBound(seg.GetStartPose()).min_x;
+      const double end_min_x =
+          col_ptr->CalCarRectangleBound(seg.GetEndPose()).min_x;
       if (start_min_x > slot_x && end_min_x > slot_x) {
         // the seg is all out
         min_obs_dist_out_slot =
@@ -908,7 +905,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         if (start_min_x > slot_x) {
           // from out to in
           for (const geometry_lib::PathPoint& pt : pt_vec) {
-            if (CalCarRectangleBound(pt).min_x < slot_x) {
+            if (col_ptr->CalCarRectangleBound(pt).min_x < slot_x) {
               break;
             }
             s += slot_ds;
@@ -917,7 +914,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         } else {
           // from in to out
           for (const geometry_lib::PathPoint& pt : pt_vec) {
-            if (CalCarRectangleBound(pt).min_x > slot_x) {
+            if (col_ptr->CalCarRectangleBound(pt).min_x > slot_x) {
               break;
             }
             s += slot_ds;
@@ -926,7 +923,8 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         }
 
         const double ratio = CalOccupiedRatio(seg.pt_closest2obs.second);
-        if (CalCarRectangleBound(seg.pt_closest2obs.second).min_x > slot_x) {
+        if (col_ptr->CalCarRectangleBound(seg.pt_closest2obs.second).min_x >
+            slot_x) {
           min_obs_dist_out_slot =
               std::min(min_obs_dist_out_slot, seg.pt_closest2obs.first);
           // 额外计算一下库内
@@ -1085,21 +1083,6 @@ const bool PerpendicularTailInPathGenerator::MultiPreparePlan(
 
   // ILOG_INFO << "point_tangent = " << tag_point.transpose());
   return true;
-}
-
-const bool PerpendicularTailInPathGenerator::IsGeometryPathSafe(
-    geometry_lib::GeometryPath& geometry_path, const double lat_inflation,
-    const double lon_safe_dist) {
-  const double time = IflyTime::Now_ms();
-  for (auto& path_seg : geometry_path.path_segment_vec) {
-    path_seg.lat_buffer = lat_inflation;
-  }
-  const bool col_flag =
-      collision_detector_ptr_
-          ->UpdateByEDT(geometry_path, lat_inflation, lon_safe_dist)
-          .collision_flag;
-  calc_params_.col_det_time += IflyTime::Now_ms() - time;
-  return !col_flag;
 }
 
 const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
@@ -1502,56 +1485,76 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
     const bool need_cal_obs_dist, const bool use_edt_col) {
   const double time = IflyTime::Now_ms();
 
+  const bool use_gjk_col = false;
+
   path_seg.lat_buffer = lat_inflation;
-  CollisionDetector::CollisionResult col_res;
+  ColResult res;
 
   // 如果路径起点位置离障碍物较近，那么强制调用精确的几何碰撞检测
   bool force_geometry_col = false;
-  col_res = collision_detector_ptr_->UpdateByEDT(
+  res = collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()->Update(
       std::vector<geometry_lib::PathPoint>{path_seg.GetStartPose()},
-      geometry_lib::SEG_GEAR_INVALID, 0.1, lat_inflation, lon_safe_dist, true);
-  if (col_res.pt_closest2obs.first < 0.151) {
+      lat_inflation, lon_safe_dist, true);
+
+  if (res.pt_closest2obs.first < 0.151) {
     force_geometry_col = true;
-    // ILOG_INFO_IF(enable_log)
-    //     << "start pos is closed to obs, should use geometry col";
+    ILOG_INFO_IF(enable_log)
+        << "start pos is closed to obs, should use geometry col";
   }
 
-  path_seg.pt_closest2obs = col_res.pt_closest2obs;
+  path_seg.pt_closest2obs = res.pt_closest2obs;
 
   if (use_edt_col && !force_geometry_col) {
     if (need_cal_obs_dist || lat_inflation < 0.171) {
-      col_res = collision_detector_ptr_->UpdateByEDT(path_seg, lat_inflation,
-                                                     lon_safe_dist, true);
-      path_seg.pt_closest2obs = col_res.pt_closest2obs;
-      // 因为EDT碰撞碰撞检测有误差 即有碰撞也可能显示无碰撞
+      res = collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()
+                ->Update(path_seg, lat_inflation, lon_safe_dist, true);
+      path_seg.pt_closest2obs = res.pt_closest2obs;
+      // 因为EDT碰撞检测有误差 即有碰撞也可能显示无碰撞
       // 因此在横向buffer相对较小 虽无碰撞但障碍物距离自车很近的时候
       // 用几何做一次精确的碰撞检测 来绝对确保路径的安全性
-      // 7厘米目前是edt碰撞检测的最大横向误差
-      if (!col_res.collision_flag && lat_inflation < 0.171 &&
-          col_res.pt_closest2obs.first < 0.071 + lat_inflation) {
-        col_res = collision_detector_ptr_->UpdateByObsMap(
-            path_seg, lat_inflation, lon_safe_dist);
+      // 5 * 1.414  = 7.07 目前是edt碰撞检测的最大横向误差
+      if (!res.col_flag && lat_inflation < 0.171 &&
+          res.pt_closest2obs.first < 0.071 + lat_inflation) {
+        if (!use_gjk_col) {
+          res = collision_detector_interface_ptr_
+                    ->GetGeometryCollisionDetectorPtr()
+                    ->Update(path_seg, lat_inflation, lon_safe_dist);
+        } else {
+          res = collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
+                    ->Update(path_seg, lat_inflation, lon_safe_dist);
+        }
       }
     } else {
       if (path_seg.seg_type == geometry_lib::SEG_TYPE_LINE) {
-        col_res = collision_detector_ptr_->UpdateByObsMap(
-            path_seg, lat_inflation, lon_safe_dist);
+        if (!use_gjk_col) {
+          res = collision_detector_interface_ptr_
+                    ->GetGeometryCollisionDetectorPtr()
+                    ->Update(path_seg, lat_inflation, lon_safe_dist);
+        } else {
+          res = collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
+                    ->Update(path_seg, lat_inflation, lon_safe_dist);
+        }
       } else {
-        col_res = collision_detector_ptr_->UpdateByEDT(path_seg, lat_inflation,
-                                                       lon_safe_dist, false);
+        res = collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()
+                  ->Update(path_seg, lat_inflation, lon_safe_dist, false);
       }
     }
   } else {
-    col_res = collision_detector_ptr_->UpdateByObsMap(path_seg, lat_inflation,
-                                                      lon_safe_dist);
+    if (!use_gjk_col) {
+      res = collision_detector_interface_ptr_->GetGeometryCollisionDetectorPtr()
+                ->Update(path_seg, lat_inflation, lon_safe_dist);
+    } else {
+      res = collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
+                ->Update(path_seg, lat_inflation, lon_safe_dist);
+    }
   }
 
   calc_params_.col_det_time += IflyTime::Now_ms() - time;
 
-  const double remain_car_dist = col_res.remain_car_dist;
-  const double remain_obs_dist = col_res.remain_obstacle_dist;
+  const double remain_car_dist = res.remain_car_dist;
+  const double remain_obs_dist = res.remain_obs_dist;
   // the dist that the car can go
-  const double safe_remain_dist = col_res.remain_dist;
+  const double safe_remain_dist = res.remain_dist;
 
   ILOG_INFO_IF(enable_log) << "remain_car_dist = " << remain_car_dist
                            << "  remain_obs_dist = " << remain_obs_dist
@@ -3593,9 +3596,10 @@ const bool PerpendicularTailInPathGenerator::CheckCurrentGearLength() {
 
 const bool PerpendicularTailInPathGenerator::ItervativeUpdatePb(
     const GeometryPathInput& input,
-    const std::shared_ptr<CollisionDetector>& collision_detector_ptr) {
+    const std::shared_ptr<CollisionDetectorInterface>&
+        collision_detector_interface_ptr) {
   input_ = input;
-  collision_detector_ptr_ = collision_detector_ptr;
+  collision_detector_interface_ptr_ = collision_detector_interface_ptr;
   Preprocess();
   calc_params_.is_searching_stage = false;
   calc_params_.first_multi_plan = true;

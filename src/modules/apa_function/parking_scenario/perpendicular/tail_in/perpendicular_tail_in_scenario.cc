@@ -1,17 +1,17 @@
 #include "perpendicular_tail_in_scenario.h"
 
-#include <Eigen/src/Core/Matrix.h>
-
 #include <cmath>
 #include <cstddef>
 #include <utility>
 #include <vector>
 
+#include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_slot_manager.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
+#include "collision_detection/gjk_collision_detector.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
@@ -273,15 +273,19 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       geometry_lib::GenHeadingVec(
           ego_info_under_slot.origin_pose_local.heading);
 
-  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
-      ego_info_under_slot.g2l_tf);
-
   ego_info_under_slot.cur_pose.pos =
       ego_info_under_slot.g2l_tf.GetPos(measures_ptr->GetPos());
   ego_info_under_slot.cur_pose.heading =
       ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
   ego_info_under_slot.cur_pose.heading_vec =
       geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
+
+  // transform slot and obs from global to slot
+  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
+
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
 
   if (frame_.is_replan_first) {
     const Eigen::Vector2d ego_to_slot_center_vec =
@@ -377,7 +381,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       ILOG_INFO << "should correct path according limiter";
       ego_info_under_slot.fix_slot = true;
       PostProcessPathAccordingLimiter();
-      // 单纯为了确定什么时候根据的限位器裁剪路径
+      // 记录根据限位器裁剪路径时刻
       frame_.correct_path_for_limiter = true;
     }
   }
@@ -419,9 +423,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   const double mir_x = ego_info_under_slot.target_pose.pos.x() +
                        param.lon_dist_mirror_to_rear_axle - 0.368;
-
-  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
-      ego_info_under_slot.g2l_tf);
 
   const auto& obstacles =
       apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
@@ -622,8 +623,10 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   // 根据自车位置制定通道宽
   double channel_width =
-      apa_world_ptr_->GetCollisionDetectorPtr()->GetCarMaxX(
-          ego_info_under_slot.cur_pose) +
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetGJKCollisionDetectorPtr()
+          ->CalCarRectangleBound(ego_info_under_slot.cur_pose)
+          .max_x +
       3.68 -
       std::max(ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x(),
                ego_info_under_slot.slot.origin_corner_coord_local_.pt_1.x());
@@ -737,8 +740,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
 }
 
 const bool PerpendicularTailInScenario::GenObstacles() {
-  apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
-
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const TLane& obs_tlane = ego_info_under_slot.obs_tlane;
@@ -773,38 +774,28 @@ const bool PerpendicularTailInScenario::GenObstacles() {
                               point_set.end());
   }
 
-  apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
-      CollisionDetector::Paramters(
-          apa_param.GetParam().car_lat_inflation_normal));
-
-  // 临时做法 后面障碍物不应该在这里做处理 并赋值新的类型
-  // 应该统一使用障碍物管理器中的类型 对于虚拟障碍物
-  // 自车位置附近的虚拟障碍物可以删除 避免无效提升规划难度 add virtual tlane obs
-  std::vector<Eigen::Vector2d> tlane_obs_vec;
-  tlane_obs_vec.reserve(tlane_obstacle_vec.size());
-  for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
-    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-            obs_pos, ego_info_under_slot.cur_pose, 0.0168)) {
-      tlane_obs_vec.emplace_back(obs_pos);
-    }
-  }
-  apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-      tlane_obs_vec, CollisionDetector::TLANE_OBS);
-
-  // add actual obs
   const std::vector<Eigen::Vector2d> tlane_vec{
       obs_tlane.A, obs_tlane.B, obs_tlane.C, obs_tlane.D,
       obs_tlane.E, obs_tlane.F, obs_tlane.G, obs_tlane.H};
 
-  std::vector<Eigen::Vector2d> fus_obs_vec;
-  const auto& obstacles =
-      apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
-
-  Eigen::Vector2d obs_pt_slot;
-  for (const auto& pair : obstacles) {
-    for (const auto& obs : pair.second.GetPtClout2dLocal()) {
-      if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-              obs, ego_info_under_slot.cur_pose, 0.0168)) {
+  std::shared_ptr<ApaObstacleManager> obs_manager =
+      apa_world_ptr_->GetObstacleManagerPtr();
+  std::unordered_map<size_t, ApaObstacle>& obstacles =
+      obs_manager->GetMutableObstacles();
+  // 筛选真实的障碍物 并进行替换添加
+  for (auto& pair : obstacles) {
+    std::vector<Eigen::Vector2d>& pt_clout_2d =
+        pair.second.GetMutablePtClout2dLocal();
+    std::vector<Eigen::Vector2d> obs_vec;
+    obs_vec.reserve(pt_clout_2d.size());
+    for (const Eigen::Vector2d& obs : pt_clout_2d) {
+      if (apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+              ->GetGJKCollisionDetectorPtr()
+              ->Update(
+                  std::vector<geometry_lib::PathPoint>{
+                      ego_info_under_slot.cur_pose},
+                  apa_param.GetParam().car_lat_inflation_normal + 0.0168, 0.2)
+              .col_flag) {
         // temp hack, when obs is in car, lose it, only increase plan success
         // ratio, To Do, when obs change accurately, should not del any obs
         if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
@@ -812,6 +803,7 @@ const bool PerpendicularTailInScenario::GenObstacles() {
         }
         continue;
       }
+
       SlotObsType obs_type = CalSlotObsType(obs);
 
       if (obs_type == SlotObsType::DISCARD_OBS ||
@@ -824,22 +816,52 @@ const bool PerpendicularTailInScenario::GenObstacles() {
         continue;
       }
 
-      fus_obs_vec.emplace_back(obs);
+      obs_vec.emplace_back(obs);
     }
+    pt_clout_2d = obs_vec;
   }
 
-  apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-      fus_obs_vec, CollisionDetector::FUSION_OBS);
+  std::vector<Eigen::Vector2d> tlane_obs_vec;
+  tlane_obs_vec.reserve(tlane_obstacle_vec.size());
+  for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
+    if (!apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+             ->GetGJKCollisionDetectorPtr()
+             ->Update(
+                 std::vector<geometry_lib::PathPoint>{
+                     ego_info_under_slot.cur_pose},
+                 apa_param.GetParam().car_lat_inflation_normal + 0.0168, 0.2)
+             .col_flag) {
+      tlane_obs_vec.emplace_back(obs_pos);
+    }
+    tlane_obs_vec.emplace_back(obs_pos);
+  }
+  Polygon2D polygon;
+  cdl::AABB box = cdl::AABB();
+  for (const Eigen::Vector2d& pt : tlane_obs_vec) {
+    box.MergePoint(pt);
+  }
+  GeneratePolygonByAABB(&polygon, box);
+  ApaObstacle virtual_obs;
+  virtual_obs.SetPtClout2dLocal(tlane_obs_vec);
+  virtual_obs.SetObsAttributeType(ApaObsAttributeType::VIRTUAL_POINT_CLOUD);
+  virtual_obs.SetBoxLocal(box);
+  virtual_obs.SetPolygonLocal(polygon);
+  virtual_obs.SetId(obs_manager->GetObsIdGenerate());
+  obs_manager->AddObstacle(virtual_obs);
 
   const double bound_threshold = 0.68;
 
-  OccupancyGridBound bound(
+  const std::shared_ptr<CollisionDetectorInterface>&
+      collision_detector_interface_ptr_ =
+          apa_world_ptr_->GetCollisionDetectorInterfacePtr();
+
+  geometry_lib::RectangleBound bound(
       obs_tlane.min_x - bound_threshold, obs_tlane.min_y - bound_threshold,
-      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + +bound_threshold);
+      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + bound_threshold);
 
   bound.PrintInfo();
 
-  apa_world_ptr_->GetCollisionDetectorPtr()->TransObsMapToOccupancyGridMap(
+  collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()->PreProcess(
       bound);
 
   return true;
@@ -877,9 +899,10 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
   perpendicular_path_planner_.SetInput(input);
 
-  const bool path_plan_success =
-      perpendicular_path_planner_.GeometryPathGenerator::Update(
-          apa_world_ptr_->GetCollisionDetectorPtr());
+  perpendicular_path_planner_.SetCollisionDetectorIntefacePtr(
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+
+  const bool path_plan_success = perpendicular_path_planner_.Update();
 
   if (input.is_searching_stage) {
     if (path_plan_success) {
@@ -931,8 +954,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       input.is_replan_second = frame_.is_replan_second;
       input.can_first_plan_again = frame_.can_first_plan_again;
       perpendicular_path_planner_.SetInput(input);
-      if (!perpendicular_path_planner_.GeometryPathGenerator::Update(
-              apa_world_ptr_->GetCollisionDetectorPtr())) {
+      if (!perpendicular_path_planner_.Update()) {
         ILOG_INFO << "try first path plan again also fail";
         frame_.plan_fail_reason = PATH_PLAN_FAILED;
         current_plan_path_vec_.clear();
@@ -1135,21 +1157,26 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_uss_condition =
       frame_.remain_dist_obs < param.max_replan_remain_dist;
 
-  geometry_lib::PathPoint uss_pose = ego_info_under_slot.target_pose;
-  uss_pose.LocalToGlobal(ego_info_under_slot.l2g_tf);
   bool end_pos_has_obs_condition =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr()->IsObstacleInPolygon(
-          GetCarMaxPolygan(uss_pose));
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetGJKCollisionDetectorPtr()
+          ->Update(
+              std::vector<geometry_lib::PathPoint>{
+                  ego_info_under_slot.target_pose},
+              0.0, 0.0, true)
+          .col_flag;
 
   if (!end_pos_has_obs_condition) {
-    uss_pose.Set(
+    const geometry_lib::PathPoint uss_pose{
         ego_info_under_slot.target_pose.pos - 0.368 * Eigen::Vector2d(1.0, 0.0),
-        ego_info_under_slot.target_pose.heading);
-    uss_pose.LocalToGlobal(ego_info_under_slot.l2g_tf);
+        ego_info_under_slot.target_pose.heading};
 
     end_pos_has_obs_condition =
-        apa_world_ptr_->GetUssObstacleAvoidancePtr()->IsObstacleInPolygon(
-            GetCarMaxPolygan(uss_pose));
+        apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+            ->GetGJKCollisionDetectorPtr()
+            ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
+                     true)
+            .col_flag;
   }
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
@@ -1274,37 +1301,18 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
                 << "  s_proj = " << s_proj << "  s = " << s;
 
       // this path is global, need to transform to local to col det
-      CollisionDetector::CollisionResult col_res;
-      pnc::geometry_lib::PathSegment path_seg_local = path_seg_global;
-      const GlobalToLocalTf& g2l_tf =
-          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
-      if (path_seg_global.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-        path_seg_local.line_seg.pA = g2l_tf.GetPos(path_seg_global.line_seg.pA);
-        path_seg_local.line_seg.pB = g2l_tf.GetPos(path_seg_global.line_seg.pB);
-        path_seg_local.line_seg.heading =
-            g2l_tf.GetHeading(path_seg_global.line_seg.heading);
-
-        col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
-            path_seg_local.line_seg, path_seg_local.line_seg.heading);
-      } else if (path_seg_global.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-        path_seg_local.arc_seg.pA =
-            g2l_tf.GetPos(path_seg_global.GetArcSeg().pA);
-        path_seg_local.arc_seg.pB =
-            g2l_tf.GetPos(path_seg_global.GetArcSeg().pB);
-        path_seg_local.arc_seg.circle_info.center =
-            g2l_tf.GetPos(path_seg_global.GetArcSeg().circle_info.center);
-        path_seg_local.arc_seg.headingA =
-            g2l_tf.GetHeading(path_seg_global.GetArcSeg().headingA);
-        path_seg_local.arc_seg.headingB =
-            g2l_tf.GetHeading(path_seg_global.GetArcSeg().headingB);
-
-        col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
-            path_seg_local.arc_seg, path_seg_local.arc_seg.headingA);
-      }
+      path_seg_global.GlobalToLocal(
+          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
+      ColResult col_res =
+          apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+              ->GetGeometryCollisionDetectorPtr()
+              ->Update(path_seg_global,
+                       apa_param.GetParam().car_lat_inflation_normal,
+                       apa_param.GetParam().col_obs_safe_dist_normal);
 
       const double remain_dist =
           std::max(init_length,
-                   std::min(col_res.remain_obstacle_dist -
+                   std::min(col_res.remain_obs_dist -
                                 apa_param.GetParam().col_obs_safe_dist_normal,
                             col_res.remain_car_dist));
 
@@ -1854,10 +1862,10 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
   // 检查优化后的路径是否很奇怪
 
   // 检查是否碰撞
-  const auto col_res =
-      apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMapUss(
-          optimal_path_vec, 0.08, 0.0);
-  if (col_res.remain_dist < optimal_path_vec.back().s - 2e-2) {
+  if (apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetGJKCollisionDetectorPtr()
+          ->Update(optimal_path_vec, 0.08, 0.0)
+          .col_flag) {
     ILOG_INFO << "the optimal path is col";
     return false;
   }
@@ -2026,34 +2034,19 @@ void PerpendicularTailInScenario::Log() const {
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
-  const std::vector<Eigen::Vector2d>& obstacles =
-      apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();
-
   std::vector<double> obstaclesX;
-  obstaclesX.clear();
-  obstaclesX.reserve(obstacles.size());
+  obstaclesX.reserve(100);
   std::vector<double> obstaclesY;
-  obstaclesY.clear();
-  obstaclesY.reserve(obstacles.size());
-  for (const Eigen::Vector2d& obstacle : obstacles) {
-    const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(obstacle);
-    obstaclesX.emplace_back(tmp_obstacle.x());
-    obstaclesY.emplace_back(tmp_obstacle.y());
-  }
+  obstaclesY.reserve(100);
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
-      obstacles_map =
-          apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
-
-  for (const auto& obs_pair : obstacles_map) {
-    if (obs_pair.first == CollisionDetector::RECORD_OBS) {
+  for (const auto& pair :
+       apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+    if (pair.second.GetObsAttributeType() !=
+        ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
       continue;
     }
-    for (const auto& obstacle : obs_pair.second) {
-      if (obs_pair.first == CollisionDetector::FUSION_OBS) {
-        continue;
-      }
-      const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(obstacle);
+    for (const Eigen::Vector2d& pt : pair.second.GetPtClout2dLocal()) {
+      const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(pt);
       obstaclesX.emplace_back(tmp_obstacle.x());
       obstaclesY.emplace_back(tmp_obstacle.y());
     }
@@ -2180,8 +2173,10 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
-  const auto uss_info =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  const UssObstacleAvoidance::RemainDistInfo uss_info =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr()
+          ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
   JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
   JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)

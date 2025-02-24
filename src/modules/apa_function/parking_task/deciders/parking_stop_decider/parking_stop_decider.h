@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
+
+#include "apa_measure_data_manager.h"
 #include "apa_world.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "common/speed/apa_speed_decision.h"
 #include "geometry_math.h"
 #include "parking_task.h"
@@ -14,15 +18,34 @@ namespace planning {
 // If slot change too much, add a stop decision? Need a discuss.
 class ParkingStopDecider : public ParkingTask {
  public:
-  ParkingStopDecider() = default;
+  ParkingStopDecider(
+      const std::shared_ptr<apa_planner::CollisionDetectorInterface>&
+          col_det_interface_ptr,
+      const std::shared_ptr<apa_planner::ApaMeasureDataManager>&
+          measure_data_ptr) {
+    SetCollisionDetectorIntefacePtr(col_det_interface_ptr);
+    SetMeasureDataManagerPtr(measure_data_ptr);
+  }
+
+  ~ParkingStopDecider() {}
+
+  void SetCollisionDetectorIntefacePtr(
+      const std::shared_ptr<apa_planner::CollisionDetectorInterface>&
+          col_det_interface_ptr) {
+    col_det_interface_ptr_ = col_det_interface_ptr;
+  }
+
+  void SetMeasureDataManagerPtr(
+      const std::shared_ptr<apa_planner::ApaMeasureDataManager>&
+          measure_data_ptr) {
+    measure_data_ptr_ = measure_data_ptr;
+  }
 
   /**
    * [out]:path, fill path distance info;
    * [out]:speed_decisions,fill stop decision info;
    */
-  void Process(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-               const std::shared_ptr<apa_planner::ApaWorld> apa_world_ptr,
-               const double tracking_path_collision_dist,
+  void Process(const double tracking_path_collision_dist,
                std::vector<pnc::geometry_lib::PathPoint>& path,
                SpeedDecisions* speed_decisions);
 
@@ -45,6 +68,11 @@ class ParkingStopDecider : public ParkingTask {
  private:
   double tracking_path_collision_dist_;
   double ego_project_s_;
+
+  std::shared_ptr<apa_planner::CollisionDetectorInterface>
+      col_det_interface_ptr_;
+
+  std::shared_ptr<apa_planner::ApaMeasureDataManager> measure_data_ptr_;
 };
 
 }  // namespace planning

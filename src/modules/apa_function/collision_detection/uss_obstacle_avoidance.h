@@ -39,8 +39,6 @@ class UssObstacleAvoidance {
 
   struct RemainDistInfo {
     double remain_dist = 3.0;
-    double obs_pt_remain_dist_static = 3.0;
-    double obs_pt_remain_dist_dynamic = 3.0;
     double vel_target = 2.0;
     size_t car_index = 0;
     int uss_index = 0;
@@ -48,8 +46,6 @@ class UssObstacleAvoidance {
 
     void Reset() {
       remain_dist = 3.0;
-      obs_pt_remain_dist_static = 3.0;
-      obs_pt_remain_dist_dynamic = 3.0;
       vel_target = 2.0;
       car_index = 0;
       uss_index = 0;
@@ -76,7 +72,17 @@ class UssObstacleAvoidance {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  UssObstacleAvoidance() { Init(); }
+  UssObstacleAvoidance() {}
+  ~UssObstacleAvoidance() {}
+
+  UssObstacleAvoidance(
+      const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,
+      const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
+      const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr) {
+    SetObsManagerPtr(obstacle_manager_ptr);
+    SetMeasureDataManagerPtr(measure_data_ptr);
+    SetPredictPathManagerPtr(predict_path_ptr);
+  }
 
   void Reset() {
     remain_dist_info_.Reset();
@@ -87,12 +93,24 @@ class UssObstacleAvoidance {
 
   void SetDisable() { remain_dist_info_.is_available = false; }
 
+  void SetObsManagerPtr(
+      const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr) {
+    obstacle_manager_ptr_ = obstacle_manager_ptr;
+  }
+
+  void SetMeasureDataManagerPtr(
+      const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr) {
+    measure_data_ptr_ = measure_data_ptr;
+  }
+
+  void SetPredictPathManagerPtr(
+      const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr) {
+    predict_path_ptr_ = predict_path_ptr;
+  }
+
   const RemainDistInfo& GetRemainDistInfo() const { return remain_dist_info_; }
 
-  void Update(const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
-              const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
-              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
-              const double lat_buffer);
+  void Update();
 
   void SetParam(const Paramters& param) {
     param_ = param;
@@ -130,9 +148,6 @@ class UssObstacleAvoidance {
   const bool IsObstacleInPolygon(
       const std::vector<Eigen::Vector2d>& vertex_vec);
 
-  void AddDynamicObs();
-  void AddStaticObs();
-
  private:
   const bool Preprocess();
 
@@ -163,8 +178,6 @@ class UssObstacleAvoidance {
   std::shared_ptr<ApaPredictPathManager> predict_path_ptr_ = nullptr;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_ = nullptr;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_ = nullptr;
-
-  CollisionDetector col_det;
 };
 }  // namespace apa_planner
 }  // namespace planning
