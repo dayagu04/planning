@@ -58,7 +58,8 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
   const double safe_uss_remain_dist =
       apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  frame_.remain_dist_path = CalRemainDistFromPath();
+  frame_.remain_dist_obs = CalRemainDistFromObs(safe_uss_remain_dist);
 
   // update ego slot info
   UpdateEgoSlotInfo();
@@ -887,7 +888,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
   if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
     parking_finish = remain_s_condition && static_condition;
@@ -906,7 +907,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
       ego_info_under_slot.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
   if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
     parking_finish = lat_condition && static_condition &&
                      enter_slot_condition && remain_uss_condition;
@@ -1037,14 +1038,14 @@ void PerpendicularHeadOutScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -1236,7 +1237,7 @@ const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
 const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
   if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     const double current_car_s =
-        frame_.current_path_length - frame_.remain_dist;
+        frame_.current_path_length - frame_.remain_dist_path;
     // ILOG_INFO << "current_car_s " << current_car_s;
     pnc::geometry_lib::GlobalToLocalTf& g2l_tf =
         apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf;

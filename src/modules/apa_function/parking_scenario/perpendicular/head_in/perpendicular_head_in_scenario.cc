@@ -104,8 +104,12 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
            ->ego_info_under_slot_.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
           : apa_param.GetParam().safe_uss_remain_dist_in_slot;
-  // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+
+  // calculate remain dist according to plan path
+  frame_.remain_dist_path = CalRemainDistFromPath();
+
+  // calculate remain dist uss according to uss
+  frame_.remain_dist_obs = CalRemainDistFromObs(safe_uss_remain_dist);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -370,7 +374,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
   }
 
   // real time dynamic col det
-  frame_.remain_dist_col_det = frame_.remain_dist;
+  frame_.remain_dist_col_det = frame_.remain_dist_path;
   RealTimeDynamicColDet(ego_info_under_slot);
 
   // trim path according to limiter
@@ -1270,7 +1274,7 @@ const bool PerpendicularHeadInScenario::CheckFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
   // ILOG_INFO << "lon_condition = " << lon_condition
   //           << " lat_condition = " << lat_condition
@@ -1291,7 +1295,7 @@ const bool PerpendicularHeadInScenario::CheckFinished() {
       ego_info_under_slot.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
   // TODO headin stuck by front uss for headin park
   if (uss_obstacle_avoider_ptr->CheckIsDirectlyFrontUss()) {
     parking_finish = lat_condition && static_condition &&
@@ -1760,14 +1764,14 @@ void PerpendicularHeadInScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -1839,7 +1843,7 @@ void PerpendicularHeadInScenario::RealTimeDynamicColDet(
     GenObstacles();
 
     const double car_already_move_dist =
-        frame_.current_path_length - frame_.remain_dist;
+        frame_.current_path_length - frame_.remain_dist_path;
 
     // distance of vehicle motion in adjacent frames
     const double dmove_dist =
@@ -2001,7 +2005,7 @@ void PerpendicularHeadInScenario::RealTimeDynamicColDet(
     frame_.remain_dist_col_det = car_safe_move_dist;
 
     frame_.remain_dist_col_det =
-        std::min(frame_.remain_dist_col_det, frame_.remain_dist);
+        std::min(frame_.remain_dist_col_det, frame_.remain_dist_path);
 
     params.Reset();
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);

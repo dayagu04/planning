@@ -195,7 +195,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
   if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
       frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
       frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    apa_hmi_.distance_to_parking_space = frame_.remain_dist;
+    apa_hmi_.distance_to_parking_space = frame_.remain_dist_path;
   }
   return;
 }
@@ -236,13 +236,13 @@ void ParkingScenario::GenPlanningPath() {
       (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
        planning_output_.gear_command.gear_command_value ==
            iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE)) {
-    frame_.remain_dist_uss = 2.68;
+    frame_.remain_dist_obs = 2.68;
     frame_.remain_dist_col_det = 2.68;
   }
 
-  // send uss remain dist to control
+  // send obs remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
-      frame_.remain_dist_uss;
+      frame_.remain_dist_obs;
 
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
@@ -277,19 +277,6 @@ const bool ParkingScenario::CheckStuckFailed(const double stuck_failed_time) {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
 }
 
-void ParkingScenario::UpdateRemainDist(
-    const double uss_safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing) {
-  // 1. calculate remain dist according to plan path
-  frame_.remain_dist = CalRemainDistFromPath();
-
-  // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist, lat_buffer,
-                                                extra_buffer_when_reversing);
-
-  return;
-}
-
 const double ParkingScenario::CalRemainDistFromPath() {
   double remain_dist = 5.01;
 
@@ -319,7 +306,7 @@ const double ParkingScenario::CalRemainDistFromPath() {
   return remain_dist;
 }
 
-const double ParkingScenario::CalRemainDistFromUss(
+const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
     const double extra_buffer_when_reversing) {
   double remain_dist = 5.01;
@@ -497,11 +484,11 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   SpeedDecisions speed_decisions;
 
-  double tracking_path_collision_dist = frame_.remain_dist_uss;
+  double tracking_path_collision_dist = frame_.remain_dist_obs;
   tracking_path_collision_dist =
       std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
 
-  ILOG_INFO << "remain_dist_uss = " << frame_.remain_dist_uss
+  ILOG_INFO << "remain_dist_obs = " << frame_.remain_dist_obs
             << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
 
   // update stop decision
@@ -546,7 +533,7 @@ const bool ParkingScenario::CheckReplan(const double replan_dist_path,
                                         const double replan_dist_obs,
                                         const double wait_time_obs,
                                         const double stuck_replan_time) {
-  frame_.is_replan_by_uss = false;
+  frame_.is_replan_by_obs = false;
   frame_.is_replan_dynamic = false;
   frame_.replan_reason = NOT_REPLAN;
 
@@ -593,7 +580,7 @@ const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
                                               const double wait_time) {
   bool is_seg_complete = false;
   if (frame_.spline_success) {
-    if (frame_.remain_dist < replan_dist &&
+    if (frame_.remain_dist_path < replan_dist &&
         apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
         frame_.current_path_length > 1e-2) {
       ILOG_INFO << "close to target, need wait a certain time!";
@@ -609,12 +596,12 @@ const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
 
 const bool ParkingScenario::CheckObsStucked(const double replan_dist,
                                             const double wait_time) {
-  if (frame_.remain_dist_uss < replan_dist &&
+  if (frame_.remain_dist_obs < replan_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
     if (frame_.stuck_uss_time > wait_time) {
       ILOG_INFO << "wait a certain time, start plan";
-      frame_.is_replan_by_uss = true;
+      frame_.is_replan_by_obs = true;
       return true;
     }
   }

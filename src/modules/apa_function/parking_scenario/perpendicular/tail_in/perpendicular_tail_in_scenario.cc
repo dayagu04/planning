@@ -96,9 +96,8 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   UpdateEgoSlotInfo();
 
   // update remain dist
-  // UpdateRemainDist(safe_uss_remain_dist);
-  frame_.remain_dist = CalRemainDistFromPath();
-  frame_.remain_dist_uss = CalRealTimeBrakeDist();
+  frame_.remain_dist_path = CalRemainDistFromPath();
+  frame_.remain_dist_obs = CalRealTimeBrakeDist();
 
   // check finish
   if (CheckFinished()) {
@@ -1121,7 +1120,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < param.max_replan_remain_dist;
+      frame_.remain_dist_path < param.max_replan_remain_dist;
 
   bool parking_finish =
       lon_condition && lat_condition && static_condition && remain_s_condition;
@@ -1134,7 +1133,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool enter_slot_condition = ego_info_under_slot.slot_occupied_ratio >
                                     param.finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < param.max_replan_remain_dist;
+      frame_.remain_dist_obs < param.max_replan_remain_dist;
 
   geometry_lib::PathPoint uss_pose = ego_info_under_slot.target_pose;
   uss_pose.LocalToGlobal(ego_info_under_slot.l2g_tf);
@@ -1418,45 +1417,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     lat_buffer = 0.14;
   }
 
-  double remain_dist = 5.01;
-
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
-
-  uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
-                                   apa_world_ptr_->GetPredictPathManagerPtr(),
-                                   apa_world_ptr_->GetObstacleManagerPtr(),
-                                   lat_buffer);
-
-  remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - lon_buffer;
-
-  double obs_pt_remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
-      lon_buffer;
-
-  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    remain_dist -= 0.068;
-    obs_pt_remain_dist -= 0.068;
-  }
-
-  ILOG_INFO << "origin_uss remain dist = "
-            << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-            << "  uss remain dist = " << remain_dist
-            << "  enable_corner_uss_process = "
-            << apa_param.GetParam().enable_corner_uss_process;
-
-  ILOG_INFO << "origin_obs_pt remain dist = "
-            << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
-            << "  obs_pt remain dist = " << obs_pt_remain_dist;
-
-  frame_.vel_target = uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target;
-
-  if (apa_param.GetParam().enable_corner_uss_process) {
-    return remain_dist;
-  } else {
-    return obs_pt_remain_dist;
-  }
+  return CalRemainDistFromObs(lon_buffer, lat_buffer);
 }
 
 const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
@@ -1469,8 +1430,8 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
       !frame_.is_last_path || ego_info_under_slot.slot_occupied_ratio < 0.168 ||
       ego_info_under_slot.slot_occupied_ratio > 0.518 ||
       ego_info_under_slot.fix_slot ||
-      frame_.remain_dist < ego_stop_dist + 0.168 ||
-      (frame_.remain_dist_uss < ego_stop_dist + 0.168 && false)) {
+      frame_.remain_dist_path < ego_stop_dist + 0.168 ||
+      (frame_.remain_dist_obs < ego_stop_dist + 0.168 && false)) {
     return false;
   }
 
@@ -1535,7 +1496,7 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
                "plan reverse path";
 
   PostProcessPathAccordingRemainDist(frame_.current_path_length -
-                                     frame_.remain_dist + ego_stop_dist);
+                                     frame_.remain_dist_path + ego_stop_dist);
 
   return true;
 }
@@ -2178,14 +2139,14 @@ void PerpendicularTailInScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)

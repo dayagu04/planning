@@ -181,7 +181,7 @@ class ParkingScenario {
       is_replan_first = true;
       is_replan_second = false;
       is_replan_dynamic = false;
-      is_replan_by_uss = false;
+      is_replan_by_obs = false;
       is_last_path = false;
       dynamic_replan_count = 0;
       dynamic_replan_fail_count = 0;
@@ -193,8 +193,8 @@ class ParkingScenario {
       stuck_uss_time = 0.0;
       pause_time = 0.0;
       dynamic_plan_time = 0.0;
-      remain_dist = 5.01;
-      remain_dist_uss = 5.01;
+      remain_dist_path = 5.01;
+      remain_dist_obs = 5.01;
       remain_dist_col_det = 5.01;
       vel_target = 1.168;
       car_already_move_dist = 0.0;
@@ -230,7 +230,7 @@ class ParkingScenario {
     bool is_replan_first = true;
     bool is_replan_second = false;
     bool is_replan_dynamic = false;
-    bool is_replan_by_uss = false;
+    bool is_replan_by_obs = false;
     bool is_last_path = false;
     uint8_t dynamic_replan_count = 0;
     uint8_t dynamic_replan_fail_count = 0;
@@ -250,10 +250,10 @@ class ParkingScenario {
     double stuck_uss_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
-    // path remain dist
-    double remain_dist = 5.01;
-    // path remain dist by uss safe check
-    double remain_dist_uss = 5.01;
+    // remain dist for path
+    double remain_dist_path = 5.01;
+    // remain dist for obs
+    double remain_dist_obs = 5.01;
     // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
     double car_already_move_dist = 0.0;
@@ -369,13 +369,9 @@ class ParkingScenario {
   virtual void GenPlanningOutput();
   virtual void GenPlanningHmiOutput();
   virtual void GenPlanningPath();
-  virtual void UpdateRemainDist(
-      const double uss_safe_dist,
-      const double lat_buffer = apa_param.GetParam().lat_inflation,
-      const double extra_buffer_when_reversing = 0.068);
   virtual const double CalRemainDistFromPath();
-  virtual const double CalRemainDistFromUss(
-      const double safe_dist,
+  virtual const double CalRemainDistFromObs(
+      const double safe_dist = 0.3,
       const double lat_buffer = apa_param.GetParam().lat_inflation,
       const double extra_buffer_when_reversing = 0.068);
   virtual const bool PostProcessPath();

@@ -137,7 +137,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
   bool parking_finish =
       lon_condition && lat_condition && static_condition && remain_s_condition;
@@ -153,7 +153,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
       ego_info.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
                    remain_uss_condition;
@@ -191,7 +191,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetSimuParam().force_plan && CheckPlanSkip()) {
+  if (CheckPlanSkip()) {
     return;
   }
 
@@ -206,11 +206,11 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  // hack: use uss circle dist. In the future, will use uss point cloud to do
-  // safe check.
-  const double safe_uss_remain_dist = 0.31;
-  // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  // calculate remain dist according to plan path
+  frame_.remain_dist_path = CalRemainDistFromPath();
+
+  // calculate remain dist uss according to uss
+  frame_.remain_dist_obs = CalRemainDistFromObs(0.31);
 
   frame_.spline_success = true;
 
@@ -258,8 +258,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
             << " ,is_replan = " << is_replan;
 
   // check replan
-  if (apa_world_ptr_->GetSimuParam().force_plan || is_replan ||
-      update_thread_path) {
+  if (is_replan || update_thread_path) {
     ILOG_INFO << "plan reason = " << GetPlanReason(frame_.replan_reason)
               << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
               << ",thread update = " << update_thread_path
@@ -381,14 +380,14 @@ void NarrowSpaceScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -472,24 +471,6 @@ const std::string NarrowSpaceScenario::GetPlanReason(const uint8_t type) {
   }
 
   return "none";
-}
-
-void NarrowSpaceScenario::UpdateRemainDist(
-    const double uss_safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing) {
-  // 1. calculate remain dist according to plan path
-  frame_.remain_dist = CalRemainDistFromPath();
-
-  // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist, lat_buffer,
-                                                extra_buffer_when_reversing);
-
-  ILOG_INFO << "remain s = " << frame_.remain_dist
-            << ", uss s = " << frame_.remain_dist_uss
-            << ", obs s = " << frame_.remain_dist_col_det
-            << ", current path length = " << frame_.current_path_length;
-
-  return;
 }
 
 PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
@@ -1478,6 +1459,9 @@ const double NarrowSpaceScenario::CalRemainDistFromPath() {
     remain_dist = total_dist;
   }
 
+  ILOG_INFO << "remain_dist = " << remain_dist
+            << "  current_path_length = " << frame_.current_path_length;
+
   return remain_dist;
 }
 
@@ -1684,7 +1668,7 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < config.max_replan_remain_dist;
+      frame_.remain_dist_path < config.max_replan_remain_dist;
 
   bool parking_finish = rear_axis_lon_condition && lat_condition &&
                         static_condition && remain_s_condition;
