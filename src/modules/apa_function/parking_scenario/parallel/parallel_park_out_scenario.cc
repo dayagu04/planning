@@ -792,18 +792,15 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
 
 const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   // construct input
-  ParallelOutPathGenerator::Input path_planner_input;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  GeometryPathInput path_planner_input;
   path_planner_input.tlane = tlane_;
   path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = frame_.is_replan_first;
   path_planner_input.is_complete_path =
       apa_world_ptr_->GetSimuParam().is_complete_path;
-
-  const auto& ego_slot_info =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-
-  path_planner_input.ego_pose = ego_slot_info.cur_pose;
-  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
+  path_planner_input.ego_info_under_slot = ego_info_under_slot;
 
   if (frame_.is_replan_first) {
     // temprarily give driving gear
@@ -815,7 +812,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   }
 
   ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
-            << ego_slot_info.slot_occupied_ratio;
+            << ego_info_under_slot.slot_occupied_ratio;
 
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.ref_arc_steer = frame_.current_arc_steer;
@@ -887,8 +884,8 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
 
   pnc::geometry_lib::PathPoint global_point;
   for (const auto& path_point : path_planner_output.path_point_vec) {
-    global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                     ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
 
     current_path_point_global_vec_.emplace_back(global_point);
   }

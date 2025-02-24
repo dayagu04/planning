@@ -961,7 +961,7 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
     path_planner_input.ref_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
   }
 
-  perpendicular_path_planner_.SetGInput(path_planner_input);
+  perpendicular_path_planner_.SetInput(path_planner_input);
 
   // std::cout << "input gear = " << static_cast<int>(frame_.current_gear)
   //           << " input steer = " <<

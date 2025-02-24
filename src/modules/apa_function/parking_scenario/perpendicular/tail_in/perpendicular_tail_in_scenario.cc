@@ -876,7 +876,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
-  perpendicular_path_planner_.SetGInput(input);
+  perpendicular_path_planner_.SetInput(input);
 
   const bool path_plan_success =
       perpendicular_path_planner_.GeometryPathGenerator::Update(
@@ -931,7 +931,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       input.is_replan_first = frame_.is_replan_first;
       input.is_replan_second = frame_.is_replan_second;
       input.can_first_plan_again = frame_.can_first_plan_again;
-      perpendicular_path_planner_.SetGInput(input);
+      perpendicular_path_planner_.SetInput(input);
       if (!perpendicular_path_planner_.GeometryPathGenerator::Update(
               apa_world_ptr_->GetCollisionDetectorPtr())) {
         ILOG_INFO << "try first path plan again also fail";

@@ -30,7 +30,7 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const bool GenTlane() override;
   void GenTBoundaryObstacles();
   virtual const uint8_t PathPlanOnce() override;
-  const ParallelPathGenerator::Tlane& GetTlane() { return t_lane_; }
+  const Tlane& GetTlane() { return t_lane_; }
 
   virtual const bool CheckFinished() override;
 
@@ -40,7 +40,7 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
-  ParallelPathGenerator::Tlane t_lane_;
+  Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
 };

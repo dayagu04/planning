@@ -736,7 +736,7 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   //   input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   // }
 
-  perpendicular_path_planner_.SetGInput(input);
+  perpendicular_path_planner_.SetInput(input);
 
   // need replan all path
   const bool path_plan_success =

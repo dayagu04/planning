@@ -79,20 +79,22 @@ void ParallelPathGenerator::Reset() {
 
 void ParallelPathGenerator::Preprocess() {
   ILOG_INFO << "channel_y in path planner = " << input_.tlane.channel_y;
-  pnc::geometry_lib::PrintPose("start pose", input_.ego_pose);
+  pnc::geometry_lib::PrintPose("start pose",
+                               input_.ego_info_under_slot.cur_pose);
   calc_params_.Reset();
   debug_info_.debug_arc_vec.clear();
   output_.Reset();
 
-  input_.ego_pose.heading =
-      pnc::geometry_lib::NormalizeAngle(input_.ego_pose.heading);
+  input_.ego_info_under_slot.cur_pose.heading =
+      pnc::geometry_lib::NormalizeAngle(
+          input_.ego_info_under_slot.cur_pose.heading);
 
   calc_params_.is_left_side =
       (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
 
   calc_params_.slot_side_sgn =
       (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) ? -1.0
-                                                                    : 1.0;
+                                                                     : 1.0;
 
   const double target_heading = 0.0;
   calc_params_.target_pose.Set(input_.tlane.pt_terminal_pos, target_heading);
@@ -107,7 +109,7 @@ void ParallelPathGenerator::Preprocess() {
 
   CalcEgoParams();
 
-  if (input_.slot_occupied_ratio < 0.01) {
+  if (input_.ego_info_under_slot.slot_occupied_ratio < 0.01) {
     calc_params_.lat_outside_slot_buffer_vec = GetMinDistOfEgoToObs();
   }
 }
@@ -455,7 +457,8 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
   const auto path_end_pose = path_seg_vec.back().GetEndPose();
 
   if (IsDoubleEqual(path_end_pose.heading, calc_params_.target_pose.heading) &&
-      !IsDoubleEqual(path_end_pose.pos.x(), input_.tlane.pt_terminal_pos.x())) {
+      !IsDoubleEqual(path_end_pose.pos.x(),
+                     input_.tlane.pt_terminal_pos.x())) {
     const Eigen::Vector2d fixed_target_pos(input_.tlane.pt_terminal_pos.x(),
                                            path_end_pose.pos.y());
 
@@ -751,13 +754,15 @@ const bool ParallelPathGenerator::BackwardNormalPlan() {
   std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
   path_seg_vec.reserve(10);
 
-  if (OneStepDubinsTryInTripplePlan(path_seg_vec, input_.ego_pose)) {
+  if (OneStepDubinsTryInTripplePlan(path_seg_vec,
+                                    input_.ego_info_under_slot.cur_pose)) {
     AddPathSegToOutPut(path_seg_vec);
     ILOG_INFO << "ego_pose OneStepDubinsTryInTripplePlan success!";
     return true;
   }
 
-  if (PlanFromTargetToLine(path_seg_vec, input_.ego_pose)) {
+  if (PlanFromTargetToLine(path_seg_vec,
+                           input_.ego_info_under_slot.cur_pose)) {
     AddPathSegToOutPut(path_seg_vec);
     ILOG_INFO << "ego_pose PlanFromTargetToLine success!";
     return true;
@@ -793,7 +798,8 @@ const bool ParallelPathGenerator::OneStepDubinsTryInTripplePlan(
 
   std::vector<double> radius_vec = {apa_param.GetParam().min_turn_radius + 0.5,
                                     apa_param.GetParam().min_turn_radius};
-  if (input_.ego_pose.pos.x() > input_.tlane.slot_length + 1.0) {
+  if (input_.ego_info_under_slot.cur_pose.pos.x() >
+      input_.tlane.slot_length + 1.0) {
     radius_vec.insert(radius_vec.begin(),
                       apa_param.GetParam().min_turn_radius + 1.5,
                       apa_param.GetParam().min_turn_radius + 1.0);
@@ -873,11 +879,13 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   std::vector<GeometryPath> geo_path_vec;
   debug_info_.debug_all_path_vec.clear();
 
-  if (input_.ego_pose.pos.x() > input_.tlane.slot_length - 2.0) {
+  if (input_.ego_info_under_slot.cur_pose.pos.x() >
+      input_.tlane.slot_length - 2.0) {
     GeometryPath ego_line_geo_path;
     std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
-    if (BackwardNormalPlan(tmp_path_seg_vec, input_.ego_pose)) {
+    if (BackwardNormalPlan(tmp_path_seg_vec,
+                           input_.ego_info_under_slot.cur_pose)) {
       AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
 
       ILOG_INFO << "first try ego line plan success!";
@@ -893,7 +901,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
 
   // Todo: connect two line vec method
   std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
-  GenAlignedPreparingLine(preparing_pose_vec, input_.ego_pose);
+  GenAlignedPreparingLine(preparing_pose_vec,
+                          input_.ego_info_under_slot.cur_pose);
   const double aligned_size = preparing_pose_vec.size();
   ILOG_INFO << "aligned_size = " << aligned_size;
 
@@ -946,7 +955,9 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
         CollisionDetector::Paramters(min_lat_buffer, false));
 
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
-    if (!PlanToPreparingLine(prepare_seg_vec, input_.ego_pose, prepare_line)) {
+    if (!PlanToPreparingLine(prepare_seg_vec,
+                             input_.ego_info_under_slot.cur_pose,
+                             prepare_line)) {
       ILOG_INFO << "PlanToPreparingLine fail!";
       continue;
     }
@@ -1107,7 +1118,8 @@ const std::vector<double> ParallelPathGenerator::GetMinDistOfEgoToObs() {
       Eigen::Vector2d(car_vertex_x_vec[10], car_vertex_y_vec[10])};
 
   pnc::geometry_lib::LocalToGlobalTf l2g_tf;
-  l2g_tf.Init(input_.ego_pose.pos, input_.ego_pose.heading);
+  l2g_tf.Init(input_.ego_info_under_slot.cur_pose.pos,
+              input_.ego_info_under_slot.cur_pose.heading);
 
   std::vector<double> min_real_dist_vec = {2.0, 2.0};
   for (const auto& pt_pair : collision_detector_ptr_->GetObstaclesMap()) {
@@ -1158,10 +1170,12 @@ const std::vector<double> ParallelPathGenerator::GetMinDistOfEgoToObs() {
 const bool ParallelPathGenerator::GenAlignedPreparingLine(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec,
     const pnc::geometry_lib::PathPoint& ego_pose) {
-  if (std::fabs(input_.ego_pose.heading) * kRad2Deg < 1.0) {
-    if (input_.ego_pose.pos.x() > input_.tlane.slot_length ||
-        std::fabs(input_.ego_pose.pos.y() - input_.tlane.obs_pt_inside.y()) >
-            0.4) {
+  if (std::fabs(input_.ego_info_under_slot.cur_pose.heading) * kRad2Deg <
+      1.0) {
+    if (input_.ego_info_under_slot.cur_pose.pos.x() >
+            input_.tlane.slot_length ||
+        std::fabs(input_.ego_info_under_slot.cur_pose.pos.y() -
+                  input_.tlane.obs_pt_inside.y()) > 0.4) {
       preparing_pose_vec.emplace_back(ego_pose);
     }
     return true;
@@ -1714,7 +1728,7 @@ void ParallelPathGenerator::AddPathSegToOutPut(
 
 const bool ParallelPathGenerator::CheckEgoInSlot() const {
   // Todo: use slot occupied ratio
-  return input_.slot_occupied_ratio > 0.0;
+  return input_.ego_info_under_slot.slot_occupied_ratio > 0.0;
 }
 
 // search from the inside parking space to outside
@@ -2427,7 +2441,8 @@ const bool ParallelPathGenerator::CalcLineStepLimitPose(
     return false;
   }
 
-  const double line_dist_limit = input_.slot_occupied_ratio > 0.0 ? 1.5 : 4.0;
+  const double line_dist_limit =
+      input_.ego_info_under_slot.slot_occupied_ratio > 0.0 ? 1.5 : 4.0;
 
   const Eigen::Vector2d rough_limit_pt =
       start_pose.pos + line_dist_limit * dirve_sgn *
@@ -2495,7 +2510,8 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
     return false;
   }
 
-  const double arc_length_limit = input_.slot_occupied_ratio > 0.0 ? 3.5 : 4.5;
+  const double arc_length_limit =
+      input_.ego_info_under_slot.slot_occupied_ratio > 0.0 ? 3.5 : 4.5;
   if (!pnc::geometry_lib::CompleteArcInfo(arc, arc_length_limit,
                                           arc.is_anti_clockwise)) {
     return false;
@@ -2718,14 +2734,15 @@ const bool ParallelPathGenerator::RSCurvePlan(
 const bool ParallelPathGenerator::MultiPlan() {
   ILOG_INFO << "-----multi plan-----\n";
   // set init state
-  pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
+  pnc::geometry_lib::PathPoint current_pose =
+      input_.ego_info_under_slot.cur_pose;
   uint8_t current_gear = input_.ref_gear;
   uint8_t current_arc_steer = input_.ref_arc_steer;
   ILOG_INFO << "multi-plan ref gear =" << static_cast<int>(current_gear);
   ILOG_INFO << "multi-plan ref arc = " << static_cast<int>(current_arc_steer);
 
-  // check pose and slot_occupied_ratio, if error is small, multi isn't
-  // suitable
+  // check pose and ego_info_under_slot.slot_occupied_ratio, if error is small,
+  // multi isn't suitable
   if (!CheckMultiPlanSuitable(current_pose)) {
     ILOG_INFO << "pose err is relatively small, skip multi plan, directly try "
                  "adjust plan\n";
@@ -2967,7 +2984,8 @@ const bool ParallelPathGenerator::MultiAlignBody() {
   uint8_t current_gear = input_.ref_gear;
   ILOG_INFO << "ref gear = " << static_cast<int>(current_gear);
 
-  pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
+  pnc::geometry_lib::PathPoint current_pose =
+      input_.ego_info_under_slot.cur_pose;
   pnc::geometry_lib::PrintPose("start pose", current_pose);
 
   if (!pnc::geometry_lib::IsValidGear(current_gear)) {
@@ -2975,7 +2993,7 @@ const bool ParallelPathGenerator::MultiAlignBody() {
     return false;
   }
 
-  if (input_.slot_occupied_ratio < 0.3) {
+  if (input_.ego_info_under_slot.slot_occupied_ratio < 0.3) {
     ILOG_INFO << "not in slot!";
     return false;
   }
@@ -3069,7 +3087,8 @@ const bool ParallelPathGenerator::MultiAlignBody() {
 const bool ParallelPathGenerator::AdjustPlan() {
   ILOG_INFO << "-----adjust plan-----";
   // set init state
-  pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
+  pnc::geometry_lib::PathPoint current_pose =
+      input_.ego_info_under_slot.cur_pose;
   uint8_t current_gear = input_.ref_gear;
   uint8_t current_arc_steer = input_.ref_arc_steer;
 
@@ -3153,17 +3172,19 @@ const bool ParallelPathGenerator::AdjustPlan() {
 const bool ParallelPathGenerator::ParallelAdjustPlan() {
   ILOG_INFO << "-----prallel adjust plan-----";
   // set init state
-  input_.ego_pose.heading =
-      pnc::geometry_lib::NormalizeAngle(input_.ego_pose.heading);
+  input_.ego_info_under_slot.cur_pose.heading =
+      pnc::geometry_lib::NormalizeAngle(
+          input_.ego_info_under_slot.cur_pose.heading);
 
   auto current_gear = input_.ref_gear;
-  auto current_pose = input_.ego_pose;
-  pnc::geometry_lib::PrintPose("input pose =", input_.ego_pose);
+  auto current_pose = input_.ego_info_under_slot.cur_pose;
+  pnc::geometry_lib::PrintPose("input pose =",
+                               input_.ego_info_under_slot.cur_pose);
 
   // dirve backward directly if can park near target pose
   pnc::geometry_lib::LineSegment first_line;
-  first_line.pA = input_.ego_pose.pos;
-  first_line.heading = input_.ego_pose.heading;
+  first_line.pA = input_.ego_info_under_slot.cur_pose.pos;
+  first_line.heading = input_.ego_info_under_slot.cur_pose.heading;
 
   if (OneLinePlan(first_line, calc_params_.target_pose)) {
     ILOG_INFO << "firstly calc line success";

@@ -151,7 +151,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   // for simulation
   const bool ItervativeUpdatePb(
-      const GeometryPathInput &ginput,
+      const GeometryPathInput &input,
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
 
   const PlannerParams &GetCalcParams();

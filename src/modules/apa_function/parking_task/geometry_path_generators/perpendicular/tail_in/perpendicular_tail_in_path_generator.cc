@@ -34,7 +34,7 @@ void PerpendicularTailInPathGenerator::Preprocess() {
   // calc_params_.Reset();
   calc_params_.multi_plan = false;
   calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
-  calc_params_.is_searching_stage = ginput_.is_searching_stage;
+  calc_params_.is_searching_stage = input_.is_searching_stage;
   calc_params_.col_det_time = 0.0;
   calc_params_.dubins_plan_time = 0.0;
   calc_params_.rough_plan_time = 0.0;
@@ -43,7 +43,7 @@ void PerpendicularTailInPathGenerator::Preprocess() {
   calc_params_.strict_col_lon_safe_dist =
       apa_param.GetParam().col_obs_safe_dist_strict + 0.068;
 
-  if (ginput_.ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_LEFT) {
+  if (input_.ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_LEFT) {
     calc_params_.is_left_side = true;
     calc_params_.slot_side_sgn = 1.0;
   } else {
@@ -51,12 +51,12 @@ void PerpendicularTailInPathGenerator::Preprocess() {
     calc_params_.slot_side_sgn = -1.0;
   }
 
-  if (ginput_.force_mid_process_plan != 0 && ginput_.can_first_plan_again) {
-    ginput_.is_replan_first = false;
-    ginput_.is_replan_second = false;
-    ginput_.is_replan_dynamic = false;
+  if (input_.force_mid_process_plan != 0 && input_.can_first_plan_again) {
+    input_.is_replan_first = false;
+    input_.is_replan_second = false;
+    input_.is_replan_dynamic = false;
     calc_params_.pre_plan_case = PrePlanCase::MID_POINT;
-    if (ginput_.force_mid_process_plan == 2) {
+    if (input_.force_mid_process_plan == 2) {
       calc_params_.first_multi_plan = false;
     }
   }
@@ -66,8 +66,8 @@ void PerpendicularTailInPathGenerator::Preprocess() {
 
   // target line
   calc_params_.target_line = geometry_lib::BuildLineSegByPose(
-      ginput_.ego_info_under_slot.target_pose.pos,
-      ginput_.ego_info_under_slot.target_pose.heading);
+      input_.ego_info_under_slot.target_pose.pos,
+      input_.ego_info_under_slot.target_pose.heading);
 }
 
 const bool PerpendicularTailInPathGenerator::Update() {
@@ -77,7 +77,7 @@ const bool PerpendicularTailInPathGenerator::Update() {
   Preprocess();
 
   // prepare plan, only for first plan
-  if (ginput_.is_replan_first && !ginput_.is_replan_dynamic) {
+  if (input_.is_replan_first && !input_.is_replan_dynamic) {
     calc_params_.first_multi_plan = true;
     if (calc_params_.is_searching_stage) {
       return PreparePathPlan();
@@ -86,31 +86,31 @@ const bool PerpendicularTailInPathGenerator::Update() {
     }
   }
 
-  if ((ginput_.is_replan_first || ginput_.is_replan_second) &&
+  if ((input_.is_replan_first || input_.is_replan_second) &&
       calc_params_.pre_plan_case != PrePlanCase::EGO_POSE &&
-      calc_params_.should_prepare_second && !ginput_.is_replan_dynamic) {
+      calc_params_.should_prepare_second && !input_.is_replan_dynamic) {
     calc_params_.first_multi_plan = true;
     PreparePathSecondPlan();
   }
 
   bool set_multi_plan = true;
   if (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) {
-    if (ginput_.is_replan_first &&
+    if (input_.is_replan_first &&
         (output_.current_gear == geometry_lib::SEG_GEAR_DRIVE ||
          (output_.current_gear == geometry_lib::SEG_GEAR_REVERSE &&
           output_.gear_cmd_vec.size() > 0 &&
           output_.gear_cmd_vec.back() == geometry_lib::SEG_GEAR_DRIVE))) {
       set_multi_plan = false;
-    } else if (ginput_.is_replan_second &&
+    } else if (input_.is_replan_second &&
                output_.current_gear == geometry_lib::SEG_GEAR_DRIVE) {
       set_multi_plan = false;
     }
   }
 
-  if (MultiAdjustPathPlan(ginput_.ego_info_under_slot.cur_pose,
-                          ginput_.ref_gear, PlanRequest::OPTIMAL_PATH)) {
+  if (MultiAdjustPathPlan(input_.ego_info_under_slot.cur_pose, input_.ref_gear,
+                          PlanRequest::OPTIMAL_PATH)) {
     if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE &&
-        ginput_.is_replan_first &&
+        input_.is_replan_first &&
         output_.current_gear == geometry_lib::SEG_GEAR_DRIVE) {
       set_multi_plan = false;
     }
@@ -134,27 +134,27 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
   // first check ego pose if collision
   if (!calc_params_.is_searching_stage) {
     const double lat_buffer =
-        CalOccupiedRatio(ginput_.ego_info_under_slot.cur_pose) < 1e-3
+        CalOccupiedRatio(input_.ego_info_under_slot.cur_pose) < 1e-3
             ? calc_params_.strict_car_lat_inflation
             : apa_param.GetParam().car_lat_inflation_normal;
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(lat_buffer));
     if (collision_detector_ptr_->IsObstacleInCar(
-            ginput_.ego_info_under_slot.cur_pose)) {
+            input_.ego_info_under_slot.cur_pose)) {
       ILOG_INFO << "ego pose has obs, force quit PreparePathPlan, fail";
       return false;
     }
   }
 
   ILOG_INFO << "first prepare init pos = "
-            << ginput_.ego_info_under_slot.cur_pose.pos.transpose()
+            << input_.ego_info_under_slot.cur_pose.pos.transpose()
             << "  heading = "
-            << ginput_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
+            << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
   const double pre_start_time = IflyTime::Now_ms();
   std::vector<std::pair<geometry_lib::GeometryPath, geometry_lib::GeometryPath>>
       pair_geometry_path_vec;
 
-  if (PrepareSinglePathPlan(ginput_.ego_info_under_slot.cur_pose,
+  if (PrepareSinglePathPlan(input_.ego_info_under_slot.cur_pose,
                             pair_geometry_path_vec)) {
     // if is in searching stage, directly quit
     if (calc_params_.is_searching_stage) {
@@ -218,7 +218,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         dubins_path_cost +=
             std::fabs(dubins_path.gear_change_pose.back().heading) * 36.0;
 
-        if (!ginput_.can_first_plan_again) {
+        if (!input_.can_first_plan_again) {
           dubins_path_cost += 268.0;
         }
       }
@@ -321,8 +321,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
 
       // 再次尝试first plan时与参考挡位不同的代价
       double ref_gear_cost = 0.0;
-      if (!ginput_.can_first_plan_again &&
-          complete_path.cur_gear != ginput_.ref_gear) {
+      if (!input_.can_first_plan_again &&
+          complete_path.cur_gear != input_.ref_gear) {
         ref_gear_cost += 999.9;
       }
 
@@ -388,7 +388,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
     ILOG_INFO << " better_index = " << better_index;
 
     // only for debug
-    if (ginput_.is_simulation) {
+    if (input_.is_simulation) {
       output_.perferred_geometry_path_vec.clear();
       output_.perferred_geometry_path_vec.reserve(cost_index_map.size());
       for (const auto& pair : cost_index_map) {
@@ -504,13 +504,13 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       }
 
       output_.current_gear = output_.gear_cmd_vec.front();
-      ginput_.ego_info_under_slot.cur_pose =
+      input_.ego_info_under_slot.cur_pose =
           output_.path_segment_vec.back().GetEndPose();
       calc_params_.first_path_gear = output_.current_gear;
       ILOG_INFO << "first prepare target pos = "
-                << ginput_.ego_info_under_slot.cur_pose.pos.transpose()
+                << input_.ego_info_under_slot.cur_pose.pos.transpose()
                 << "  heading = "
-                << ginput_.ego_info_under_slot.cur_pose.heading * kRad2Deg
+                << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg
                 << "  safe_circle_tang_pt pos = "
                 << calc_params_.safe_circle_tang_pt.pos.transpose()
                 << " heading = "
@@ -544,16 +544,16 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   heading_offset_vec.reserve(40);
 
   double max_heading =
-      std::min(ginput_.ego_info_under_slot.slot.angle_,
+      std::min(input_.ego_info_under_slot.slot.angle_,
                apa_param.GetParam().prepare_line_max_heading_offset_slot_deg);
   max_heading = slot_side_sgn *
-                (ginput_.ego_info_under_slot.slot.angle_ - max_heading) *
+                (input_.ego_info_under_slot.slot.angle_ - max_heading) *
                 kDeg2Rad;
 
   double min_heading =
       apa_param.GetParam().prepare_line_min_heading_offset_slot_deg;
   min_heading = slot_side_sgn *
-                (ginput_.ego_info_under_slot.slot.angle_ - min_heading) *
+                (input_.ego_info_under_slot.slot.angle_ - min_heading) *
                 kDeg2Rad;
 
   const double dheading =
@@ -565,23 +565,23 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
     heading += slot_side_sgn * dheading;
   }
 
-  double min_x = ginput_.ego_info_under_slot.slot.origin_corner_coord_local_
-                     .pt_01_mid.x() +
-                 (apa_param.GetParam().max_car_width * 0.5 +
-                  calc_params_.strict_car_lat_inflation + 0.05) /
-                     ginput_.ego_info_under_slot.slot.sin_angle_;
+  double min_x =
+      input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid.x() +
+      (apa_param.GetParam().max_car_width * 0.5 +
+       calc_params_.strict_car_lat_inflation + 0.05) /
+          input_.ego_info_under_slot.slot.sin_angle_;
 
   min_x =
       std::max(min_x, cur_pose.pos.x() +
                           apa_param.GetParam().prepare_line_min_x_offset_slot /
-                              ginput_.ego_info_under_slot.slot.sin_angle_);
+                              input_.ego_info_under_slot.slot.sin_angle_);
 
   const double max_x =
       cur_pose.pos.x() + apa_param.GetParam().prepare_line_max_x_offset_slot /
-                             ginput_.ego_info_under_slot.slot.sin_angle_;
+                             input_.ego_info_under_slot.slot.sin_angle_;
 
   const double dx = apa_param.GetParam().prepare_line_dx_offset_slot /
-                    ginput_.ego_info_under_slot.slot.sin_angle_;
+                    input_.ego_info_under_slot.slot.sin_angle_;
   double x = min_x;
   while (x < max_x) {
     x_offset_vec.emplace_back(x);
@@ -710,7 +710,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
 
   calc_params_.pre_plan_case = PrePlanCase::EGO_POSE;
   // 先尝试用自车位置规划一下 看是否能规划成功
-  if (RoughMultiAdjustPathPlan(ginput_.ego_info_under_slot.cur_pose,
+  if (RoughMultiAdjustPathPlan(input_.ego_info_under_slot.cur_pose,
                                geometry_lib::SEG_GEAR_REVERSE,
                                rough_geometry_path, false, true)) {
     ILOG_INFO << "ego pose rough reverse gear plan success";
@@ -718,7 +718,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
     pair_geometry_path_vec.emplace_back(
         std::make_pair(dubins_geometry_path, rough_geometry_path));
   }
-  if (RoughMultiAdjustPathPlan(ginput_.ego_info_under_slot.cur_pose,
+  if (RoughMultiAdjustPathPlan(input_.ego_info_under_slot.cur_pose,
                                geometry_lib::SEG_GEAR_DRIVE,
                                rough_geometry_path, false, true)) {
     ILOG_INFO << "ego pose rough drive gear plan success";
@@ -846,7 +846,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
 
   const double slot_ds = 0.1;
   const double ratio_err = 0.01;
-  const double slot_x = ginput_.ego_info_under_slot.slot.slot_length_ + 0.68;
+  const double slot_x = input_.ego_info_under_slot.slot.slot_length_ + 0.68;
   for (auto& pair_geometry_path : pair_geometry_path_vec) {
     auto& dubins_geometry_path = pair_geometry_path.first;
     auto& rough_geometry_path = pair_geometry_path.second;
@@ -971,7 +971,7 @@ void PerpendicularTailInPathGenerator::CalMonoSafeCircle() {
 
   calc_params_.mono_safe_circle.radius = mono_radius;
 
-  const Eigen::Vector2d pt_inside = ginput_.ego_info_under_slot.pt_inside;
+  const Eigen::Vector2d pt_inside = input_.ego_info_under_slot.pt_inside;
 
   const double deta_x = std::sqrt(
       std::pow((mono_radius - apa_param.GetParam().car_width * 0.5 -
@@ -1028,7 +1028,7 @@ const bool PerpendicularTailInPathGenerator::MonoPreparePlan(
 }
 
 bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
-  const Eigen::Vector2d pt_inside = ginput_.ego_info_under_slot.pt_inside;
+  const Eigen::Vector2d pt_inside = input_.ego_info_under_slot.pt_inside;
 
   const double multi_radius = calc_params_.turn_radius + 0.0168;
 
@@ -1107,13 +1107,13 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
       geometry_lib::ReverseGear(calc_params_.first_path_gear);
 
   const geometry_lib::PathPoint start_pose =
-      ginput_.ego_info_under_slot.cur_pose;
+      input_.ego_info_under_slot.cur_pose;
   const geometry_lib::PathPoint target_pose = calc_params_.safe_circle_tang_pt;
 
   ILOG_INFO << "second prepare init pos = "
-            << ginput_.ego_info_under_slot.cur_pose.pos.transpose()
+            << input_.ego_info_under_slot.cur_pose.pos.transpose()
             << "  heading = "
-            << ginput_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
+            << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
   if (geometry_lib::CheckTwoPoseIsSame(start_pose, target_pose, 0.0468,
                                        0.168 * kRad2Deg)) {
@@ -1166,7 +1166,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
     arc.pA = target_pose.pos;
     arc.headingA = target_pose.heading;
     // 如果当前挡位是前进挡 延长一条直线便于控制跟踪
-    if (ref_gear == geometry_lib::SEG_GEAR_DRIVE && ginput_.is_replan_second &&
+    if (ref_gear == geometry_lib::SEG_GEAR_DRIVE && input_.is_replan_second &&
         geometry_lib::CalOneArcWithLineAndGear(
             arc, calc_params_.target_line, geometry_lib::SEG_GEAR_REVERSE)) {
       geometry_lib::PathSegment line_seg;
@@ -1190,15 +1190,15 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
     }
 
     output_.current_gear = output_.gear_cmd_vec.front();
-    ginput_.ego_info_under_slot.cur_pose =
+    input_.ego_info_under_slot.cur_pose =
         output_.path_segment_vec.back().GetEndPose();
     ILOG_INFO << "second prepare, from first prepare pos to safe circle tange "
                  "success";
 
     ILOG_INFO << "second prepare target pos = "
-              << ginput_.ego_info_under_slot.cur_pose.pos.transpose()
+              << input_.ego_info_under_slot.cur_pose.pos.transpose()
               << "  heading = "
-              << ginput_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
+              << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
     return true;
   } else {
@@ -1877,7 +1877,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   geometry_lib::GeometryPath geometry_path_copy;
 
   int max_try_count = 8;
-  if (ginput_.is_replan_dynamic) {
+  if (input_.is_replan_dynamic) {
     max_try_count = 1;
   }
 
@@ -1906,7 +1906,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       lon_buffer = apa_param.GetParam().col_obs_safe_dist_strict;
     }
 
-    if (ginput_.is_replan_dynamic) {
+    if (input_.is_replan_dynamic) {
       lat_buffer += 0.0268;
       lon_buffer += 0.0268;
     }
@@ -2220,7 +2220,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     }
 
     // 规划终点离目标终点距离代价
-    cost += (last_seg.GetEndPos() - ginput_.ego_info_under_slot.target_pose.pos)
+    cost += (last_seg.GetEndPos() - input_.ego_info_under_slot.target_pose.pos)
                 .norm() *
             46.8;
 
@@ -2238,8 +2238,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     // 针对1R路径 如果在库外有S弯可能导致控制跟不上
     // 在外侧有障碍物的情况下可能导致碰撞风险 因此 增大此路径的代价
     // 情愿多换一次挡
-    if ((ginput_.is_left_empty && !calc_params_.is_left_side) ||
-        (ginput_.is_right_empty && calc_params_.is_left_side) &&
+    if ((input_.is_left_empty && !calc_params_.is_left_side) ||
+        (input_.is_right_empty && calc_params_.is_left_side) &&
             calc_params_.first_multi_plan && complete_path.path_count > 1) {
       const geometry_lib::PathSegment& seg1 = complete_path.path_segment_vec[0];
       const geometry_lib::PathSegment& seg2 = complete_path.path_segment_vec[1];
@@ -2263,8 +2263,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
 
   optimal_geometry_path = success_geometry_path_vec[optimal_path_index];
 
-  if (ginput_.is_replan_dynamic &&
-      optimal_geometry_path.gear_change_count > 0 &&
+  if (input_.is_replan_dynamic && optimal_geometry_path.gear_change_count > 0 &&
       optimal_geometry_path.cur_gear != geometry_lib::SEG_GEAR_REVERSE &&
       optimal_geometry_path.last_steer != geometry_lib::SEG_STEER_STRAIGHT) {
     optimal_geometry_path.Reset();
@@ -2292,7 +2291,7 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
   } else if (plan_request == PlanRequest::ONE_STEP_PATH) {
     OneStepMultiAdjustPathPlan(pose, ref_gear, geometry_path);
   } else if (plan_request == PlanRequest::OPTIMAL_PATH) {
-    if (ginput_.is_replan_dynamic) {
+    if (input_.is_replan_dynamic) {
       OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_REVERSE,
                                  geometry_path);
     } else {
@@ -2316,7 +2315,7 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
         geometry_lib::GeometryPath temp_path_d(output_.path_segment_vec);
         temp_path_d.AddPath(geometry_path_d);
 
-        if (ginput_.is_replan_first) {
+        if (input_.is_replan_first) {
           if (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) {
             temp_path_d.cost += 100.0;
           } else if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
@@ -2371,7 +2370,7 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
     return true;
   }
 
-  if (ginput_.is_replan_dynamic) {
+  if (input_.is_replan_dynamic) {
     return false;
   }
 
@@ -3034,7 +3033,7 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
       ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
     const double dy = (arc_s_1.pA.y() > target_line.pA.y()) ? 0.01 : -0.01;
 
-    const double max_lat_err = (ginput_.is_replan_dynamic)
+    const double max_lat_err = (input_.is_replan_dynamic)
                                    ? apa_param.GetParam().target_pos_err
                                    : apa_param.GetParam().target_pos_err * 0.5;
 
@@ -3347,12 +3346,12 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
                                 : geometry_lib::SEG_GEAR_DRIVE;
 
   const double lat_err =
-      (line_gear == geometry_lib::SEG_GEAR_DRIVE || ginput_.is_replan_dynamic)
+      (line_gear == geometry_lib::SEG_GEAR_DRIVE || input_.is_replan_dynamic)
           ? apa_param.GetParam().target_pos_err
           : apa_param.GetParam().target_pos_err * 0.5;
 
   const double heading_err =
-      (line_gear == geometry_lib::SEG_GEAR_DRIVE || ginput_.is_replan_dynamic)
+      (line_gear == geometry_lib::SEG_GEAR_DRIVE || input_.is_replan_dynamic)
           ? apa_param.GetParam().target_heading_err * kDeg2Rad
           : apa_param.GetParam().target_heading_err * kDeg2Rad * 0.5;
 
@@ -3505,8 +3504,8 @@ const double PerpendicularTailInPathGenerator::CalOccupiedRatio(
       std::fabs(current_pose.heading) <
           apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     const std::vector<double> x_tab = {
-        ginput_.ego_info_under_slot.target_pose.pos.x(),
-        ginput_.ego_info_under_slot.slot.slot_length_ +
+        input_.ego_info_under_slot.target_pose.pos.x(),
+        input_.ego_info_under_slot.slot.slot_length_ +
             apa_param.GetParam().rear_overhanging};
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
     return mathlib::Interp1(x_tab, occupied_ratio_tab, current_pose.pos.x());
@@ -3553,7 +3552,7 @@ const bool PerpendicularTailInPathGenerator::CheckReachTargetPose(
   const double heading_err =
       std::fabs(pnc::geometry_lib::NormalizeAngle(
           current_pose.heading -
-          ginput_.ego_info_under_slot.target_pose.heading)) *
+          input_.ego_info_under_slot.target_pose.heading)) *
       kRad2Deg;
 
   if (lon_err < 0.268 && lat_err < 0.0308 && heading_err < 0.268) {
@@ -3564,7 +3563,7 @@ const bool PerpendicularTailInPathGenerator::CheckReachTargetPose(
 
 const bool PerpendicularTailInPathGenerator::CheckReachTargetPose() {
   if (output_.path_segment_vec.empty()) {
-    return CheckReachTargetPose(ginput_.ego_info_under_slot.cur_pose);
+    return CheckReachTargetPose(input_.ego_info_under_slot.cur_pose);
   }
   const auto& last_segment = output_.path_segment_vec.back();
   pnc::geometry_lib::PathPoint last_pose;
@@ -3593,9 +3592,9 @@ const bool PerpendicularTailInPathGenerator::CheckCurrentGearLength() {
 }
 
 const bool PerpendicularTailInPathGenerator::ItervativeUpdatePb(
-    const GeometryPathInput& ginput,
+    const GeometryPathInput& input,
     const std::shared_ptr<CollisionDetector>& collision_detector_ptr) {
-  ginput_ = ginput;
+  input_ = input;
   collision_detector_ptr_ = collision_detector_ptr;
   Preprocess();
   calc_params_.is_searching_stage = false;
@@ -3632,7 +3631,7 @@ const bool PerpendicularTailInPathGenerator::ItervativeUpdatePb(
     return true;
   }
 
-  MultiAdjustPathPlan(ginput_.ego_info_under_slot.cur_pose,
+  MultiAdjustPathPlan(input_.ego_info_under_slot.cur_pose,
                       geometry_lib::SEG_GEAR_REVERSE,
                       PlanRequest::OPTIMAL_PATH);
 

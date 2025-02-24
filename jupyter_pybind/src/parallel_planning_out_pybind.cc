@@ -125,16 +125,12 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   parallel_park_planner.GenTBoundaryObstacles();
   ILOG_INFO << "6";
 
-  ParallelOutPathGenerator::Input path_planner_input;
+  GeometryPathInput path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
   path_planner_input.sample_ds = apa_world_ptr->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = (ref_gear == 0);
   path_planner_input.is_complete_path = true;
-
-  const auto &ego_slot_info = ego_info_under_slot;
-  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  path_planner_input.ego_pose.Set(ego_slot_info.cur_pose.pos,
-                                  ego_slot_info.cur_pose.heading);
+  path_planner_input.ego_info_under_slot = ego_info_under_slot;
 
   auto path_planner = parallel_park_planner.GetMutablePathPlanner();
   path_planner->SetInput(path_planner_input);
