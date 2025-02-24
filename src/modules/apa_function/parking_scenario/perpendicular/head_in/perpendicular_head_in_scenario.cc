@@ -42,11 +42,6 @@ void PerpendicularHeadInScenario::Reset() {
   current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
 
-  pt_center_replan_.setZero();
-  pt_center_heading_replan_ = 0.0;
-  pt_center_replan_jump_dist_ = 0.0;
-  pt_center_replan_jump_heading_ = 0.0;
-
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
 
@@ -136,15 +131,11 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
   }
 
   // check replan
-  if (apa_world_ptr_->GetSimuParam().force_plan || CheckReplan()) {
+  if (CheckReplan()) {
     ILOG_INFO << "replan is required!";
     frame_.replan_flag = true;
     EgoInfoUnderSlot& ego_info_under_slot =
         apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-
-    pt_center_replan_ = ego_info_under_slot.origin_pose_global.pos;
-
-    pt_center_heading_replan_ = ego_info_under_slot.origin_pose_global.heading;
 
     frame_.dynamic_plan_fail_flag = false;
 
@@ -1320,121 +1311,6 @@ const bool PerpendicularHeadInScenario::CheckFinished() {
                    (ego_info_under_slot.terminal_err.pos.x() < 0.4001);
 
   return parking_finish;
-}
-
-const bool PerpendicularHeadInScenario::CheckSegCompleted() {
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      ILOG_INFO << "close to target, need wait a certain time!";
-      if (frame_.stuck_uss_time > 0.068) {
-        ILOG_INFO << "wait a certain time, start plan";
-        is_seg_complete = true;
-      }
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool PerpendicularHeadInScenario::CheckUssStucked() {
-  if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().uss_stuck_replan_wait_time) {
-      ILOG_INFO << "wait a certain time, start plan";
-      frame_.is_replan_by_uss = true;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-const bool PerpendicularHeadInScenario::CheckColDetStucked() {
-  if (frame_.remain_dist_col_det <
-          apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    ILOG_INFO << "close to obstacle by col det!, need wait a certain time!";
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().uss_stuck_replan_wait_time) {
-      ILOG_INFO << "wait a certain time, start plan";
-      return true;
-    }
-  }
-  return false;
-}
-
-const bool PerpendicularHeadInScenario::CheckDynamicUpdate() {
-  bool update_flag = false;
-  ILOG_INFO << "dynamic_replan_count = "
-            << static_cast<int>(frame_.dynamic_replan_count);
-
-  frame_.is_replan_dynamic = update_flag;
-  return update_flag;
-}
-
-const bool PerpendicularHeadInScenario::CheckReplan() {
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-
-  pt_center_replan_jump_dist_ =
-      (pt_center_replan_ - ego_info_under_slot.origin_pose_global.pos).norm();
-
-  pt_center_replan_jump_heading_ =
-      std::fabs(pnc::geometry_lib::NormalizeAngle(
-          pt_center_heading_replan_ -
-          ego_info_under_slot.origin_pose_global.heading)) *
-      kRad2Deg;
-
-  ILOG_INFO << "replan slot_jump_dist = " << pt_center_replan_jump_dist_;
-  ILOG_INFO << "replan slot_jump_heading = " << pt_center_replan_jump_heading_;
-
-  if (frame_.is_replan_first == true) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  frame_.is_replan_by_uss = false;
-  frame_.is_replan_dynamic = false;
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    return true;
-  }
-
-  if (CheckUssStucked()) {
-    ILOG_INFO << "replan by uss stucked!";
-    frame_.replan_reason = SEG_COMPLETED_USS;
-    return true;
-  }
-
-  if (CheckColDetStucked()) {
-    ILOG_INFO << "replan by col det stucked!";
-    frame_.replan_reason = SEG_COMPLETED_COL_DET;
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    // if plan once, the stuck_uss_time is clear and accumlate again
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
-    ILOG_INFO << "replan by dynamic!";
-    frame_.replan_reason = DYNAMIC;
-    return true;
-  }
-
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
 }
 
 const bool PerpendicularHeadInScenario::PostProcessPath() {

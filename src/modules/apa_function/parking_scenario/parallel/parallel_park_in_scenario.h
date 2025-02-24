@@ -32,8 +32,6 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const uint8_t PathPlanOnce() override;
   const ParallelPathGenerator::Tlane& GetTlane() { return t_lane_; }
 
-  const bool CheckSegCompleted();
-  virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
  private:

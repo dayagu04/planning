@@ -232,57 +232,6 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
             << static_cast<int>(GetPlannerStates().planning_status);
 }
 
-const bool PerpendicularTailInScenario::CheckReplan() {
-  frame_.is_replan_by_uss = false;
-  frame_.is_replan_dynamic = false;
-  frame_.replan_reason = NOT_REPLAN;
-
-  if (frame_.is_replan_first) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  if (apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "force plan";
-    frame_.replan_reason = FORCE_PLAN;
-    return true;
-  }
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    return true;
-  }
-
-  if (CheckUssStucked()) {
-    ILOG_INFO << "replan by uss stucked!";
-    frame_.replan_reason = SEG_COMPLETED_USS;
-    return true;
-  }
-
-  if (CheckColDetStucked()) {
-    ILOG_INFO << "replan by col det stucked!";
-    frame_.replan_reason = SEG_COMPLETED_COL_DET;
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    // if plan once, the stuck_uss_time is clear and accumlate again
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
-    ILOG_INFO << "replan by dynamic!";
-    frame_.replan_reason = DYNAMIC;
-    return true;
-  }
-
-  return false;
-}
-
 const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
       apa_world_ptr_->GetMeasureDataManagerPtr();
@@ -1961,22 +1910,6 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
   return true;
 }
 
-const bool PerpendicularTailInScenario::CheckSegCompleted() {
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      ILOG_INFO << "close to target, need wait a certain time!";
-      if (frame_.stuck_uss_time > 0.068) {
-        ILOG_INFO << "wait a certain time, start plan";
-        is_seg_complete = true;
-      }
-    }
-  }
-
-  return is_seg_complete;
-}
-
 const PerpendicularTailInScenario::SlotObsType
 PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   const EgoInfoUnderSlot& ego_info_under_slot =
@@ -2095,21 +2028,6 @@ PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   } else {
     return SlotObsType::OTHER_OBS;
   }
-}
-
-const bool PerpendicularTailInScenario::CheckUssStucked() {
-  if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().uss_stuck_replan_wait_time) {
-      ILOG_INFO << "wait a certain time, start plan";
-      frame_.is_replan_by_uss = true;
-      return true;
-    }
-  }
-
-  return false;
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicUpdate() {

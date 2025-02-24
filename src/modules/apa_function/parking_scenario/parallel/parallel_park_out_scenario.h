@@ -36,8 +36,6 @@ class ParallelParkOutScenario : public ParkingScenario {
 
  private:
   void Log() const override;
-  const bool CheckReplan() override;
-  const bool CheckSegCompleted();
   virtual const bool GenObstacles() override;
 
  private:

@@ -27,27 +27,13 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
 
   // virtual func
   virtual const double CalRemainDistFromPath() override;
-  virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
   virtual const bool PostProcessPath() override;
   const bool PostProcessPathAccordingLimiter() override;
-
-  const bool CheckSegCompleted() override;
-  const bool CheckUssStucked() override;
-  const bool CheckColDetStucked() override;
-
-  const bool CheckDynamicUpdate() override;
-  const uint8_t CheckParkingStatus();
-
  private:
   PerpendicularPathHeadingInPlanner perpendicular_path_planner_;
 
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
-
-  Eigen::Vector2d pt_center_replan_;
-  double pt_center_heading_replan_;
-  double pt_center_replan_jump_dist_ = 0.0;
-  double pt_center_replan_jump_heading_ = 0.0;
 };
 
 }  // namespace apa_planner

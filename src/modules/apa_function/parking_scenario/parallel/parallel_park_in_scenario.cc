@@ -1194,64 +1194,6 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   return plan_result;
 }
 
-const bool ParallelParkInScenario::CheckSegCompleted() {
-  frame_.is_replan_by_uss = false;
-
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    const auto min_remain_dist =
-        std::min(frame_.remain_dist_uss, frame_.remain_dist);
-
-    if (min_remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
-
-      if (!frame_.is_replan_by_uss) {
-        ILOG_INFO << "close to target!\n";
-        is_seg_complete = true;
-      } else {
-        ILOG_INFO << "close to obstacle by uss!\n";
-        // uss distance may not be accurate, so wait for a period of time
-        if (frame_.stuck_uss_time >
-            apa_param.GetParam().uss_stuck_replan_wait_time) {
-          is_seg_complete = true;
-        }
-      }
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool ParallelParkInScenario::CheckReplan() {
-  if (frame_.is_replan_first == true ||
-      apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    if (frame_.is_replan_by_uss) {
-      frame_.replan_reason = SEG_COMPLETED_USS;
-    }
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  // Todo: maybe CheckDynamicUpdate
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
-}
-
 const bool ParallelParkInScenario::CheckFinished() {
   const auto& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;

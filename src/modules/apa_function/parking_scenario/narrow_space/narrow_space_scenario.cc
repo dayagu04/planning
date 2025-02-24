@@ -87,63 +87,6 @@ void NarrowSpaceScenario::Init() {
   return;
 }
 
-const bool NarrowSpaceScenario::CheckSegCompleted() {
-  bool is_seg_complete = false;
-
-  if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      frame_.current_path_length > 1e-2) {
-    if (frame_.stuck_uss_time > 0.068) {
-      is_seg_complete = true;
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool NarrowSpaceScenario::CheckUssStucked() {
-  if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time) {
-      frame_.is_replan_by_uss = true;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-const bool NarrowSpaceScenario::CheckReplan() {
-  if (frame_.is_replan_first == true) {
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  frame_.is_replan_by_uss = false;
-  frame_.is_replan_dynamic = false;
-
-  if (CheckSegCompleted()) {
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    return true;
-  }
-
-  if (CheckUssStucked()) {
-    frame_.replan_reason = SEG_COMPLETED_USS;
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    // if plan once, the stuck_uss_time is clear and accumlate again
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
-}
-
 const bool NarrowSpaceScenario::CheckFinished() {
   bool ret = false;
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -269,6 +212,8 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
 
+  frame_.spline_success = true;
+
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     SetParkingStatus(PARKING_FAILED);
@@ -288,13 +233,17 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   }
 
   // check failed
-  if (CheckStuckFailed()) {
+  if (CheckStuckFailed(12.0)) {
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 
-  bool is_replan = CheckReplan();
+  bool is_replan = CheckReplan(
+      apa_param.GetParam().max_replan_remain_dist, 0.068,
+      apa_param.GetParam().max_replan_remain_dist,
+      apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time,
+      apa_param.GetParam().stuck_replan_time);
 
   if (!CheckEgoReplanNumber(is_replan)) {
     SetParkingStatus(PARKING_FAILED);
@@ -663,7 +612,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     case SEG_COMPLETED_PATH:
       cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
       break;
-    case SEG_COMPLETED_USS:
+    case SEG_COMPLETED_OBS:
       cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case STUCKED:
@@ -1230,10 +1179,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 }
 
 NarrowSpaceScenario::~NarrowSpaceScenario() {}
-
-const bool NarrowSpaceScenario::CheckStuckFailed() {
-  return frame_.stuck_time > 12.0;
-}
 
 void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==

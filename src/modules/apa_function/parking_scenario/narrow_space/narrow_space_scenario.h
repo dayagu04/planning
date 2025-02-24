@@ -40,8 +40,6 @@ class NarrowSpaceScenario : public ParkingScenario {
   }
 
  private:
-  virtual const bool CheckReplan() override;
-
   virtual const bool CheckFinished() override;
 
   const bool CheckVerticalSlotFinished();
@@ -57,8 +55,6 @@ class NarrowSpaceScenario : public ParkingScenario {
   virtual const bool GenObstacles() override;
 
   virtual const uint8_t PathPlanOnce() override;
-
-  const bool CheckStuckFailed() override;
 
   void UpdateRemainDist(
       const double uss_safe_dist,
@@ -105,10 +101,6 @@ class NarrowSpaceScenario : public ParkingScenario {
   const bool UpdateEgoSlotInfo() override;
 
   const bool UpdateVerticalSlotInfo();
-
-  const bool CheckSegCompleted();
-
-  const bool CheckUssStucked();
 
   void PathShrinkBySlotLimiter();
 

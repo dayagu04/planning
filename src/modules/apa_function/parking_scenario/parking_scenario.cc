@@ -254,17 +254,6 @@ void ParkingScenario::GenPlanningPath() {
       static_cast<double>(
           apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot_type);
 
-  // send remain dist col det to uss
-  // only set a flag let control can use it
-  // retire it, only rely on real time braking
-  // const double flag =
-  //     (apa_world_ptr_->GetSlotManagerPtr()
-  //              ->ego_info_under_slot_.slot.slot_type_ ==
-  //          SlotType::PERPENDICULAR ||
-  //      apa_world_ptr_->GetSlotManagerPtr()
-  //              ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT)
-  //         ? 1.0
-  //         : 0.0;
   planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
   planning_output_.trajectory.trajectory_points[4].distance =
@@ -284,7 +273,7 @@ void ParkingScenario::GenPlanningPath() {
   return;
 }
 
-const bool ParkingScenario::CheckStuckFailed() {
+const bool ParkingScenario::CheckStuckFailed(const double stuck_failed_time) {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
 }
 
@@ -551,6 +540,97 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   return;
 }
+
+const bool ParkingScenario::CheckReplan(const double replan_dist_path,
+                                        const double wait_time_path,
+                                        const double replan_dist_obs,
+                                        const double wait_time_obs,
+                                        const double stuck_replan_time) {
+  frame_.is_replan_by_uss = false;
+  frame_.is_replan_dynamic = false;
+  frame_.replan_reason = NOT_REPLAN;
+
+  if (frame_.is_replan_first) {
+    ILOG_INFO << "first plan";
+    frame_.replan_reason = FIRST_PLAN;
+    return true;
+  }
+
+  if (apa_world_ptr_->GetSimuParam().force_plan) {
+    ILOG_INFO << "force plan";
+    frame_.replan_reason = FORCE_PLAN;
+    return true;
+  }
+
+  if (CheckSegCompleted(replan_dist_path, wait_time_path)) {
+    ILOG_INFO << "replan by current segment completed!";
+    frame_.replan_reason = SEG_COMPLETED_PATH;
+    return true;
+  }
+
+  if (CheckObsStucked(replan_dist_obs, wait_time_obs)) {
+    ILOG_INFO << "replan by uss stucked!";
+    frame_.replan_reason = SEG_COMPLETED_OBS;
+    return true;
+  }
+
+  if (CheckStuckTimeEnough(stuck_replan_time)) {
+    ILOG_INFO << "replan by stuck!";
+    frame_.replan_reason = STUCKED;
+    return true;
+  }
+
+  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
+    ILOG_INFO << "replan by dynamic!";
+    frame_.replan_reason = DYNAMIC;
+    return true;
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
+                                              const double wait_time) {
+  bool is_seg_complete = false;
+  if (frame_.spline_success) {
+    if (frame_.remain_dist < replan_dist &&
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+        frame_.current_path_length > 1e-2) {
+      ILOG_INFO << "close to target, need wait a certain time!";
+      if (frame_.stuck_uss_time > wait_time) {
+        ILOG_INFO << "wait a certain time, start plan";
+        is_seg_complete = true;
+      }
+    }
+  }
+
+  return is_seg_complete;
+}
+
+const bool ParkingScenario::CheckObsStucked(const double replan_dist,
+                                            const double wait_time) {
+  if (frame_.remain_dist_uss < replan_dist &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
+    if (frame_.stuck_uss_time > wait_time) {
+      ILOG_INFO << "wait a certain time, start plan";
+      frame_.is_replan_by_uss = true;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::CheckStuckTimeEnough(
+    const double stuck_replan_time) {
+  if (frame_.stuck_uss_time > stuck_replan_time) {
+    return true;
+  }
+  return false;
+}
+
+const bool ParkingScenario::CheckDynamicUpdate() { return false; }
 
 }  // namespace apa_planner
 }  // namespace planning

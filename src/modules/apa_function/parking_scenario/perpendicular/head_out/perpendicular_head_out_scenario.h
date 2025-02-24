@@ -32,18 +32,12 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
-  virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
-
-  virtual const bool CheckSegCompleted() override;
-  virtual const bool CheckUssStucked() override;
-  virtual const bool CheckColDetStucked() override;
 
   const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
   const bool CheckSecurityCurrentpath();
   const bool CheckRationalityEndpointPosition();
   const bool CurrentPathTrimmed();
-  // virtual const bool CheckDynamicUpdate() override;
  private:
   PerpendicularPathOutPlanner perpendicular_path_planner_;
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;

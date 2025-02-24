@@ -103,7 +103,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   }
 
   // check replan
-  if (CheckReplan() || apa_world_ptr_->GetSimuParam().force_plan) {
+  if (CheckReplan()) {
     ILOG_INFO << "replan is required!";
 
     // generate t-lane
@@ -898,69 +898,6 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
   JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
   return plan_result;
-}
-
-const bool ParallelParkOutScenario::CheckReplan() {
-  if (frame_.is_replan_first == true ||
-      apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    if (frame_.is_replan_by_uss) {
-      frame_.replan_reason = SEG_COMPLETED_USS;
-    }
-    return true;
-  }
-
-  ILOG_INFO << "frame_.stuck_time = " << frame_.stuck_time;
-
-  if (frame_.stuck_time > apa_param.GetParam().stuck_replan_time) {
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  // Todo: maybe CheckDynamicUpdate
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
-}
-
-const bool ParallelParkOutScenario::CheckSegCompleted() {
-  ILOG_INFO << "CheckSegCompleted -------------------------------";
-  frame_.is_replan_by_uss = false;
-
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    ILOG_INFO << "frame_.remain_dist_uss = " << frame_.remain_dist_uss;
-
-    const auto min_remain_dist =
-        std::min(frame_.remain_dist_uss, frame_.remain_dist);
-
-    if (min_remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
-
-      if (!frame_.is_replan_by_uss) {
-        ILOG_INFO << "close to target!\n";
-        is_seg_complete = true;
-      } else {
-        ILOG_INFO << "close to obstacle by uss!\n";
-        // uss distance may not be accurate, so wait for a period of time
-        if (frame_.stuck_time >
-            apa_param.GetParam().uss_stuck_replan_wait_time) {
-          is_seg_complete = true;
-        }
-      }
-    }
-  }
-
-  return is_seg_complete;
 }
 
 void ParallelParkOutScenario::Log() const {

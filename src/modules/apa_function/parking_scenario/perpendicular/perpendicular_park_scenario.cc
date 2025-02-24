@@ -19,16 +19,6 @@ const uint8_t PerpendicularParkScenario::PathPlanOnce() {
   return PathPlannerResult::PLAN_FAILED;
 }
 
-const bool PerpendicularParkScenario::CheckSegCompleted() { return false; }
-
-const bool PerpendicularParkScenario::CheckUssStucked() { return false; }
-
-const bool PerpendicularParkScenario::CheckColDetStucked() { return false; }
-
-const bool PerpendicularParkScenario::CheckDynamicUpdate() { return false; }
-
-const bool PerpendicularParkScenario::CheckReplan() { return false; }
-
 const bool PerpendicularParkScenario::CheckFinished() { return false; }
 
 const bool PerpendicularParkScenario::PostProcessPathAccordingLimiter() {

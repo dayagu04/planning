@@ -62,7 +62,7 @@ class ParkingScenario {
     NOT_REPLAN,
     FIRST_PLAN,
     SEG_COMPLETED_PATH,
-    SEG_COMPLETED_USS,
+    SEG_COMPLETED_OBS,
     STUCKED,
     DYNAMIC,
     SEG_COMPLETED_COL_DET,
@@ -351,7 +351,6 @@ class ParkingScenario {
 
  protected:
   virtual const bool CheckFinished() = 0;
-  virtual const bool CheckReplan() = 0;
   virtual void Log() const = 0;
   virtual void ExcutePathPlanningTask() = 0;
 
@@ -370,7 +369,6 @@ class ParkingScenario {
   virtual void GenPlanningOutput();
   virtual void GenPlanningHmiOutput();
   virtual void GenPlanningPath();
-  virtual const bool CheckStuckFailed();
   virtual void UpdateRemainDist(
       const double uss_safe_dist,
       const double lat_buffer = apa_param.GetParam().lat_inflation,
@@ -381,6 +379,30 @@ class ParkingScenario {
       const double lat_buffer = apa_param.GetParam().lat_inflation,
       const double extra_buffer_when_reversing = 0.068);
   virtual const bool PostProcessPath();
+
+  // check if need replan
+  virtual const bool CheckReplan(
+      const double replan_dist_path =
+          apa_param.GetParam().max_replan_remain_dist,
+      const double wait_time_path = 0.068,
+      const double replan_dist_obs =
+          apa_param.GetParam().max_replan_remain_dist,
+      const double wait_time_obs =
+          apa_param.GetParam().uss_stuck_replan_wait_time,
+      const double stuck_replan_time = apa_param.GetParam().stuck_replan_time);
+
+  virtual const bool CheckSegCompleted(const double replan_dist,
+                                       const double wait_time);
+
+  virtual const bool CheckObsStucked(const double replan_dist,
+                                     const double wait_time);
+
+  virtual const bool CheckStuckTimeEnough(const double stuck_replan_time);
+
+  virtual const bool CheckDynamicUpdate();
+
+  virtual const bool CheckStuckFailed(
+      const double stuck_failed_time = apa_param.GetParam().stuck_failed_time);
 
   void CreateTasks();
 
