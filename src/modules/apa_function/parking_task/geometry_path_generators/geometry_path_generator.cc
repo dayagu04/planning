@@ -104,7 +104,7 @@ const bool GeometryPathGenerator::CheckCurrentGearLength() {
     length += output_.path_segment_vec[i].Getlength();
   }
 
-  return (length > 0.3) ? true : false;
+  return (length > 0.2) ? true : false;
 }
 
 const bool GeometryPathGenerator::SampleCurrentPathSeg() {
