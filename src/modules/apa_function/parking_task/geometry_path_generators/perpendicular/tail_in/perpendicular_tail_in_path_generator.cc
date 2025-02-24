@@ -2235,6 +2235,22 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     // 整条路径的换挡、换向和长度代价
     cost += complete_path.cost;
 
+    // 针对1R路径 如果在库外有S弯可能导致控制跟不上
+    // 在外侧有障碍物的情况下可能导致碰撞风险 因此 增大此路径的代价
+    // 情愿多换一次挡
+    if ((ginput_.is_left_empty && !calc_params_.is_left_side) ||
+        (ginput_.is_right_empty && calc_params_.is_left_side) &&
+            calc_params_.first_multi_plan && complete_path.path_count > 1) {
+      const geometry_lib::PathSegment& seg1 = complete_path.path_segment_vec[0];
+      const geometry_lib::PathSegment& seg2 = complete_path.path_segment_vec[1];
+      if (geometry_lib::IsSTrunPath(seg1, seg2) &&
+          seg1.GetArcSeg().circle_info.radius <
+              calc_params_.turn_radius * 1.05 &&
+          seg1.Getlength() < 1.68 && seg1.GetEndPos().x() > 7.168) {
+        cost += 50.0;
+      }
+    }
+
     ILOG_INFO << "gear_change_count = "
               << static_cast<int>(
                      success_geometry_path_vec[k].gear_change_count)

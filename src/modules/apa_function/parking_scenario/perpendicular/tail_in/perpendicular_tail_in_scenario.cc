@@ -526,9 +526,10 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   apa_param.SetPram().actual_mono_plan_enable = param.mono_plan_enable;
   // 如果保守的话  两侧全空才开启一把进 无意义 这个保守泊入已关闭
-  const bool left_empty = left_pq_for_x.empty();
-  const bool right_empty = right_pq_for_x.empty();
-  if (param.conservative_mono_enable && (!left_empty || !right_empty)) {
+  frame_.is_left_empty = left_pq_for_x.empty();
+  frame_.is_right_empty = right_pq_for_x.empty();
+  if (param.conservative_mono_enable &&
+      (!frame_.is_left_empty || !frame_.is_right_empty)) {
     apa_param.SetPram().actual_mono_plan_enable = false;
   }
 
@@ -917,6 +918,9 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   input.can_first_plan_again = frame_.can_first_plan_again;
 
   input.is_simulation = apa_world_ptr_->GetSimuParam().is_simulation;
+
+  input.is_left_empty = frame_.is_left_empty;
+  input.is_right_empty = frame_.is_right_empty;
 
   if (frame_.replan_reason == DYNAMIC) {
     ILOG_INFO << "dynamic replan, gear should be reverse";
