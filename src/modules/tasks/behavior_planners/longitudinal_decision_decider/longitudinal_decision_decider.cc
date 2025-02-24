@@ -21,6 +21,7 @@
 #include "src/modules/context/planning_context.h"
 #include "st_graph/st_boundary.h"
 #include "task_basic_types.h"
+#include "task_basic_types.pb.h"
 #include "utils_math.h"
 
 namespace planning {
@@ -655,11 +656,13 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const double invade_agent_l = invade_agent_sl.y;
     const static double lat_distance_thrd =
         config_.lat_distance_close_enough_to_planned_path_thrd;
-    if (std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
-            0.5 * ego_vehi_param.width >
-        lat_distance_thrd) {  // far from ego
-                              // in lat l
-      LOG_DEBUG("agent (ID: %d) is far from ego in lat l, skip\n", id);
+    const double invade_agent_lat_distance_to_path =
+        std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
+        0.5 * ego_vehi_param.width;
+    if (invade_agent_lat_distance_to_path >
+        lat_distance_thrd) {  // far from ego in lat l
+      LOG_DEBUG("agent (ID: %d) is far from ego in lat l(%fm), skip\n", id,
+                invade_agent_lat_distance_to_path);
       continue;
     }
     if (invade_agent->agent_decision().agent_decision_type() ==
@@ -745,9 +748,19 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   const auto gap_front_agent = agent_manager->GetAgent(gap_front_agent_id);
   const auto gap_rear_agent = agent_manager->GetAgent(gap_rear_agent_id);
   bool ignore_rear_agent = false;
+  const auto target_lane_ptr =
+      virtual_lane_manager->get_lane_with_virtual_id(target_lane_id);
+  if (target_lane_ptr == nullptr) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No "
+        "target lane\n");
+    int default_value = -1;
+    JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
+    JSON_DEBUG_VALUE("ignore_gap_rear_agent", default_value)
+    return;
+  }
   const auto target_lane_frenet_coord =
-      virtual_lane_manager->get_lane_with_virtual_id(target_lane_id)
-          ->get_lane_frenet_coord();
+      target_lane_ptr->get_lane_frenet_coord();
   const bool ignore_gap_rear_agent =
       IgnoreLaneChangeGapRearAgent(gap_rear_agent, target_lane_frenet_coord);
   JSON_DEBUG_VALUE("ignore_gap_rear_agent", ignore_gap_rear_agent)
