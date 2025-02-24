@@ -32,6 +32,7 @@
 
 namespace planning {
 namespace apa_planner {
+static double kInsertLineLonBuffer = 0.2;
 static double kFrontDetaXMagWhenFrontVacant = 1.98;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.4;
@@ -95,8 +96,23 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
           ->ego_info_under_slot_.slot_occupied_ratio < 0.05) {
     lat_buffer = 0.09;
     safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
+
+    const auto& path_planner_output = parallel_path_planner_.GetOutputPtr();
+    const auto& cur_path_end_pose =
+        path_planner_output
+            ->path_segment_vec[path_planner_output->path_seg_index.second]
+            .GetEndPose();
+
+    // first enter slot
+    if (frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        std::fabs(cur_path_end_pose.pos.y()) <
+            0.5 * apa_world_ptr_->GetSlotManagerPtr()
+                      ->ego_info_under_slot_.slot.slot_width_) {
+      lat_buffer = 0.04;
+      safe_uss_remain_dist = 0.12;
+    }
   } else {
-    lat_buffer = 0.02;
+    lat_buffer = 0.0;
     safe_uss_remain_dist =
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
   }
@@ -330,6 +346,13 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ILOG_INFO << "t_lane_.slot_side = " << static_cast<int>(t_lane_.slot_side);
   ILOG_INFO << "frame_.current_arc_steer = "
             << static_cast<int>(frame_.current_arc_steer);
+  ego_info_under_slot.target_pose.pos
+      << 0.5 * (ego_info_under_slot.slot.slot_length_ -
+                apa_param.GetParam().car_length) +
+             apa_param.GetParam().rear_overhanging,
+      0.0;
+  ego_info_under_slot.target_pose.heading = 0.0;
+  ego_info_under_slot.target_pose.heading_vec << 1.0, 0.0;
 
   // calc terminal error once
   ego_info_under_slot.terminal_err.Set(
@@ -605,10 +628,8 @@ const bool ParallelParkInScenario::GenTlane() {
                   0.5 * apa_param.GetParam().car_width);
 
   ego_info_under_slot.target_pose.pos.y() =
-      (side_sgn > 0.0 ? std::max(ego_info_under_slot.target_pose.pos.y(),
-                                 target_y_with_curb)
-                      : std::min(ego_info_under_slot.target_pose.pos.y(),
-                                 target_y_with_curb));
+      (side_sgn > 0.0 ? std::max(0.0, target_y_with_curb)
+                      : std::min(0.0, target_y_with_curb));
 
   const double target_x_in_slot_center =
       0.5 * (ego_info_under_slot.slot.slot_length_ -
@@ -904,11 +925,6 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             << IflyTime::Now_ms() - path_plan_start_time;
   // const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
-  frame_.total_plan_count++;
-  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
-    frame_.in_slot_plan_count++;
-  }
-
   uint8_t plan_result = 0;
   if (path_plan_success) {
     plan_result = PathPlannerResult::PLAN_UPDATE;
@@ -925,34 +941,75 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
 
+  const auto& cur_path_end_pose =
+      path_planner_output
+          .path_segment_vec[path_planner_output.path_seg_index.second]
+          .GetEndPose();
+
+  const double x_diff_mag =
+      std::fabs(cur_path_end_pose.pos.x() - t_lane_.pt_terminal_pos.x());
+
+  const double y_diff_mag =
+      std::fabs(cur_path_end_pose.pos.y() - t_lane_.pt_terminal_pos.y());
+
+  const double heading_deg_diff_mag =
+      std::fabs(cur_path_end_pose.heading * kRad2Deg);
+
+  double current_path_length = 0.0;
+  for (size_t i = path_planner_output.path_seg_index.first;
+       i <= path_planner_output.path_seg_index.second; i++) {
+    current_path_length += path_planner_output.path_segment_vec[i].Getlength();
+  }
+
   // enter slot
   if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
-    double current_path_length = 0.0;
-    for (size_t i = path_planner_output.path_seg_index.first;
-         i <= path_planner_output.path_seg_index.second; i++) {
-      current_path_length +=
-          path_planner_output.path_segment_vec[i].Getlength();
-    }
-
+    double extend_lenth = 0.0;
     if (current_path_length < apa_param.GetParam().min_path_length) {
-      const double extend_lenth = std::max(
+      extend_lenth = std::max(
           apa_param.GetParam().min_path_length - current_path_length, 0.1);
-      parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-          extend_lenth);
+
+    } else {
+      const double x_diff =
+          std::fabs(cur_path_end_pose.pos.x() - t_lane_.pt_terminal_pos.x());
+
+      if (heading_deg_diff_mag < 0.5 &&
+          pnc::mathlib::IsInBound(x_diff, 0.1,
+                                  apa_param.GetParam().min_path_length + 0.1)) {
+        extend_lenth = apa_param.GetParam().min_path_length + 0.1 - x_diff;
+      } else if (heading_deg_diff_mag > 10.0 &&
+                 frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+        extend_lenth = apa_param.GetParam().min_path_length;
+      } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+        extend_lenth = 0.0;
+      }
     }
-  } else {
-    const auto& end_pose =
-        path_planner_output
-            .path_segment_vec[path_planner_output.path_seg_index.second]
-            .GetEndPose();
-
-    pnc::geometry_lib::PrintPose("current path end pose", end_pose);
-
-    const double extend_lenth = kExtendLengthOutsideSlot;
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-        extend_lenth);
+        extend_lenth, kInsertLineLonBuffer);
+  } else {
+    // outside slot normal extended length and buffer
+    double lon_buffer = kInsertLineLonBuffer;
+    double extend_lenth = kExtendLengthOutsideSlot;
+
+    // ego is outof slot, current path is backward to slot
+    if (path_planner_output.current_gear ==
+            pnc::geometry_lib::SEG_GEAR_REVERSE &&
+        y_diff_mag < t_lane_.slot_width * 0.5 &&
+        mathlib::IsInBound(cur_path_end_pose.pos.x(), -1.5,
+                           0.75 * t_lane_.slot_length) &&
+        heading_deg_diff_mag > 5.0) {
+      extend_lenth = 0.5;
+      lon_buffer = 0.05;
+    }
+
+    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(extend_lenth,
+                                                                   lon_buffer);
   }
   parallel_path_planner_.SampleCurrentPathSeg();
+
+  frame_.total_plan_count++;
+  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    frame_.in_slot_plan_count++;
+  }
 
   // print segment info
   // pnc::geometry_lib::PrintSegmentsVecInfo(

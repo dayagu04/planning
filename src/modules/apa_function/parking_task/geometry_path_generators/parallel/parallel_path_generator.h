@@ -155,7 +155,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &pose, const uint8_t gear,
       const double extend_distance);
-  void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
+  void InsertLineSegAfterCurrentFollowLastPath(double extend_distance,
+                                               double lon_buffer = 0.2);
 
   const PlannerParams &GetPlannerParams() const { return calc_params_; }
 
@@ -424,7 +425,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool AlignBodyPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
-      const double target_heading, const uint8_t current_gear);
+      const double target_heading, const uint8_t current_gear,
+      const double length_limit = 20.0);
 
   const bool STurnParallelPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
