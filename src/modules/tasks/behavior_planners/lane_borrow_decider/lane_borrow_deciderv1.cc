@@ -142,6 +142,7 @@ void LaneBorrowDecider::Update() {
       break;
     }
   }
+  last_static_blocked_obj_id_vec_ = static_blocked_obj_id_vec_;
   if (lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow) {
     lane_borrow_decider_output_.is_in_lane_borrow_status = true;
     lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
@@ -363,11 +364,10 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
               lat_obs_iter->second != LatObstacleDecisionType::IGNORE){
             continue;
       }
-    } else {  // lon overlap origin rule
-      if (frenet_obstacle_sl.l_start > (-right_width + vehicle_param.width +
-                                        config_.static_obs_buffer) ||
-          frenet_obstacle_sl.l_end <
-              (left_width - vehicle_param.width - config_.static_obs_buffer)) {
+    } else {  // lon overlap
+      auto it = std::find(last_static_blocked_obj_id_vec_.begin(),
+                          last_static_blocked_obj_id_vec_.end(), id);
+      if (it == last_static_blocked_obj_id_vec_.end()) {
         continue;
       }
     }
@@ -455,8 +455,16 @@ bool LaneBorrowDecider::ObstacleDecision() {
       obs_end_s_ = std::max(obs_end_s_, frenet_obstacle_sl.s_end);
       static_blocked_obj_id_vec_.emplace_back(obstacle->obstacle()->id());
     } else {
+      // too dense obstacles
+      const double dist = frenet_obstacle_sl.s_start - obs_end_s_;
+      if(dist < config_.dense_obstacle_dist){
+        lane_borrow_decider_output_.lane_borrow_failed_reason =
+        CENTER_OBSTACLE;
+        return false;
+      }
       break;
     }
+
   }
 
   if (obs_left_l_ <= obs_right_l_) {
