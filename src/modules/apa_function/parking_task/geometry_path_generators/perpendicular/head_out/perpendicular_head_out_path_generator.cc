@@ -136,7 +136,7 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
   const double cos_slant_angle = cos(slant_angle_rad);
   double x_min = 2.8;
   double x_max = 4.8;
-  const double max_plan_num = 20;
+  const double max_plan_num = 30;
 
   ILOG_INFO << "current slot angle (deg) : "
             << ginput_.ego_info_under_slot.slot.angle_;
@@ -167,7 +167,8 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
     }
   } else {
     for (size_t j = 0; j < max_plan_num && !flag; ++j) {
-      ILOG_INFO << "x_offset = " << x_offset
+      ILOG_INFO << "[" << j << "] "
+                << "x_offset = " << x_offset
                 << ", (slot) ego x  = " << current_pose.pos.x();
       path_seg_vec.clear();
       if (PreparePlanOnce(path_seg_vec, x_offset, calc_params_.turn_radius,
@@ -412,13 +413,27 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
 
   const double safe_dist_r = 0.4;
   const double safe_dist_d = 0.268;
+  const double adjust_line_length = 2.0;
 
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_d,
-                   current_arc_steer, current_gear);
+    if (AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_d,
+                       current_arc_steer, current_gear)) {
+      ILOG_INFO << "arc path success ,no need for one line plan";
+    } else {
+      ILOG_INFO << "arc path failed , need for one line plan";
+      OneLinePlanOnce(tmp_path_seg_vec, current_pose, safe_dist_d,
+                      adjust_line_length, current_arc_steer, current_gear);
+    }
+
   } else if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_r,
-                   current_arc_steer, current_gear);
+    if (AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_r,
+                       current_arc_steer, current_gear)) {
+      ILOG_INFO << "arc path success ,no need for one line plan";
+    } else {
+      ILOG_INFO << "arc path failed , need for one line plan";
+      OneLinePlanOnce(tmp_path_seg_vec, current_pose, safe_dist_r,
+                      adjust_line_length, current_arc_steer, current_gear);
+    }
   }
 
   if (tmp_path_seg_vec.size() > 0) {
@@ -478,7 +493,7 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   const double current_turn_radius = calc_params_.turn_radius;
   const Eigen::Vector2d line_tangent_vec =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
-  ILOG_INFO << "current_pose heanding " << current_pose.heading;
+  // ILOG_INFO << "current_pose heanding " << current_pose.heading;
 
   const double expected_pos_x =
       ginput_.ego_info_under_slot.pt_inside.x() +
@@ -547,6 +562,8 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
                 cos((ginput_.ego_info_under_slot.slot.angle_ * kDeg2Rad));
   }
 
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.10));
+
   if (CheckArcOrLineAvailable(current_arc) &&
       pnc::geometry_lib::CompleteArcInfo(current_arc)) {
     const uint8_t tmp_arc_steer = pnc::geometry_lib::CalArcSteer(current_arc);
@@ -559,6 +576,8 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
           TrimPathByCollisionDetection(arc_seg, safe_dist);
       if (arc_path_col_det_res == PathColDetRes::INVALID ||
           arc_path_col_det_res == PathColDetRes::INSIDE_STUCK) {
+        // ILOG_INFO << "arc_path_col_det_res "
+        //           << static_cast<int>(arc_path_col_det_res);
         ILOG_INFO << "arc path is invalid, adjust plan failed";
         return false;
       }
@@ -573,15 +592,20 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
 const bool PerpendicularPathOutPlanner::OneLinePlanOnce(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     pnc::geometry_lib::PathPoint& current_pose, const double safe_dist,
-    const uint8_t current_arc_steer, const uint8_t current_gear) {
+    const double need_move_length, const uint8_t current_arc_steer,
+    const uint8_t current_gear) {
   const double current_turn_radius = calc_params_.turn_radius;
   const Eigen::Vector2d line_tangent_vec =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
 
-  const double need_move_length = 3.0;
   pnc::geometry_lib::PathPoint tmp_pose;
-  Eigen::Vector2d tmp_pos =
-      current_pose.pos - need_move_length * line_tangent_vec;
+  Eigen::Vector2d tmp_pos;
+  if (current_gear == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
+    tmp_pos = current_pose.pos + need_move_length * line_tangent_vec;
+  } else if (current_gear == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+    tmp_pos = current_pose.pos - need_move_length * line_tangent_vec;
+  }
+
   tmp_pose.Set(tmp_pos,
                current_pose.heading);  // TODO::adjust plan
 
@@ -595,11 +619,11 @@ const bool PerpendicularPathOutPlanner::OneLinePlanOnce(
     if (pnc::geometry_lib::CalLineSegGear(tmp_line) == current_gear) {
       pnc::geometry_lib::PathSegment line_seg(current_gear, tmp_line);
       line_seg.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
-      const PathColDetRes arc_path_col_det_res =
+      const PathColDetRes line_path_col_det_res =
           TrimPathByCollisionDetection(line_seg, safe_dist);
-      if (arc_path_col_det_res == PathColDetRes::INVALID ||
-          arc_path_col_det_res == PathColDetRes::INSIDE_STUCK) {
-        ILOG_INFO << "arc path is invalid, adjust plan failed";
+      if (line_path_col_det_res == PathColDetRes::INVALID ||
+          line_path_col_det_res == PathColDetRes::INSIDE_STUCK) {
+        ILOG_INFO << "line path is invalid, adjust plan failed";
         return false;
       }
       path_seg_vec.emplace_back(line_seg);
@@ -1036,6 +1060,9 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
   //             << remain_car_dist << "  remain_obs_dist = " << remain_obs_dist
   //             << "  safe_remain_dist = " << safe_remain_dist);
 
+  // ILOG_INFO << "col_pt_ego_local = " << col_res.col_pt_ego_local.transpose()
+  //           << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose();
+
   if (safe_remain_dist < 1e-5) {
     ILOG_INFO << "safe_remain_dist is samller than 0.0, the path donot meet "
                  "requirements";
@@ -1044,15 +1071,16 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
   }
 
   if (remain_car_dist > safe_remain_dist + 1e-3) {
-    if (col_res.col_pt_ego_local.transpose().x() < 2.5 &&
-        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    const bool inside_stuck_1 =
+        col_res.col_pt_ego_local.transpose().x() < 2.4 &&
+        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE;
+    const bool inside_stuck_2 =
+        col_res.col_pt_obs_global.transpose().x() <
+            ginput_.ego_info_under_slot.pt_inside.x() + 1e-2 &&
+        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE;
+    if (inside_stuck_1 || inside_stuck_2) {
       return PathColDetRes::INSIDE_STUCK;
     }
-
-    // ILOG_INFO << "col_pt_ego_local = " <<
-    // col_res.col_pt_ego_local.transpose()
-    //           << "  obs_pt_global = " <<
-    //           col_res.col_pt_obs_global.transpose();
 
     if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       auto& line = path_seg.line_seg;

@@ -1359,12 +1359,23 @@ const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
     col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
         path_point_local_vec, 0.35, 0.3);
 
-    // ILOG_INFO << "col_pt_obs_global " << col_res.col_pt_obs_global.x();
+    // ILOG_INFO << "col_pt_obs_global " << col_res.col_pt_obs_global.x() << ",
+    // "
+    //           << col_res.col_pt_obs_global.y();
 
-    if (col_res.remain_dist == frame_.current_path_length ||
-        col_res.col_pt_obs_global.x() < 6.0) {
+    if (col_res.remain_dist == frame_.current_path_length) {
       ILOG_INFO << "at this time, there is no collision in the path";
       return true;
+    }
+
+    if (col_res.col_pt_obs_global.x() <=
+        apa_world_ptr_->GetSlotManagerPtr()
+                ->ego_info_under_slot_.pt_inside.x() +
+            1.0) {
+      ILOG_INFO << "at this time, the collision occurred on the inner side";
+      // ILOG_INFO << "current pos : "
+      //           << path_point_local_vec.front().pos.transpose();
+      return false;
     }
 
     const double lon_buffer = 0.4;
