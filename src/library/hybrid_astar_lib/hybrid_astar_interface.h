@@ -139,6 +139,15 @@ class HybridAStarInterface {
                                     const double ego_obs_dist,
                                     const bool is_ego_overlap_with_slot);
 
+  // todo: move it to safe buffer decider
+  // return safe buffer when path is insidet slot.
+  // Need to consider:
+  // 1. distance from ego to obstacle;
+  // 2. distance from target pose to obstacle;
+  const double GetLatBufferForInsideSlot(const double target_obs_dist,
+                                         const double ego_obs_dist,
+                                         const bool is_ego_overlap_with_slot);
+
  private:
   // read vehicle param from file
   VehicleParam vehicle_param_;

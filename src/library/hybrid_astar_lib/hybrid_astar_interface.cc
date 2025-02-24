@@ -799,24 +799,15 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
   std::pair<Pose2D, double> target_regulator_result;
   target_regulator_result =
       regulator.GetCandidatePose(config_.safe_buffer.lat_safe_buffer_inside[0]);
-  advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[1];
+  advised_lat_buffer_inside = GetLatBufferForInsideSlot(
+      target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
-  // width enough
-  if (target_regulator_result.second >
-      config_.safe_buffer.lat_safe_buffer_inside[0]) {
-    // ego is outside slot
-    if (!is_ego_overlap_with_slot) {
-      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
-    } else if (ego_obs_dist > config_.safe_buffer.lat_safe_buffer_inside[0]) {
-      advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[0];
-    }
-  }
   target_regulator_goal_ = target_regulator_result.first;
 
   // If target slot is not wide enough, return.
   if (target_regulator_result.second < advised_lat_buffer_inside) {
-    ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-    ILOG_INFO << "target_regulator_goal_ will collide";
+    ILOG_INFO << "goal dist = " << target_regulator_result.second
+              << ", lat buffer inside = " << advised_lat_buffer_inside;
     search_state_ = AstarSearchState::FAILURE;
     return;
   }
@@ -985,6 +976,31 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
             << coarse_traj_.x.size();
 
   return;
+}
+
+const double HybridAStarInterface::GetLatBufferForInsideSlot(
+    const double target_obs_dist, const double ego_obs_dist,
+    const bool is_ego_overlap_with_slot) {
+  double safe_buffer = 0.0;
+
+  for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_inside.size();
+       i++) {
+    safe_buffer = config_.safe_buffer.lat_safe_buffer_inside[i];
+
+    // ego is inside slot
+    if (is_ego_overlap_with_slot) {
+      if (safe_buffer < ego_obs_dist && safe_buffer < target_obs_dist) {
+        break;
+      }
+    } else {
+      // ego is outside slot
+      if (safe_buffer < target_obs_dist) {
+        break;
+      }
+    }
+  }
+
+  return safe_buffer;
 }
 
 }  // namespace planning
