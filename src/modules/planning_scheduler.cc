@@ -962,6 +962,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
       return false;
     }
   } else {
+    FillPlanningRequest(iflyauto::REQUEST_LEVEL_NO_REQ, planning_output);
     UpdateSuccessfulPlanningResult();
   }
 
