@@ -234,6 +234,14 @@ void Agent::set_is_far_in_large_curv(const bool is_far_in_large_curv) {
   is_far_in_large_curv_ = is_far_in_large_curv;
 }
 
+const bool Agent::is_reverse_in_large_curv() const {
+  return is_reverse_in_large_curv_;
+}
+
+void Agent::set_is_reverse_in_large_curv(const bool is_reverse_in_large_curv) {
+  is_reverse_in_large_curv_ = is_reverse_in_large_curv;
+}
+
 const bool Agent::is_reverse_cutin() const { return is_reverse_cutin_; }
 
 void Agent::set_is_reverse_cutin(const bool is_reverse) {
