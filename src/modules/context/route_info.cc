@@ -970,16 +970,16 @@ void RouteInfo::CalculateDistanceToTargetSlot() {
     const auto& final_point = lines[lines.size() - 1].points_on_central_line().rbegin();
     const double tar_slot_pose_x = final_point->x();
     const double tar_slot_pose_y = final_point->y();
-    const int tar_slot_res = hd_map_.GetNearestLaneAndSumDist(
+    const int tar_slot_res = hd_map_.GetNearestLane(
         {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
-        &nearest_s, &nearest_l, &sum_s);
+        &nearest_s, &nearest_l);
     if (tar_slot_res != 0) {
       std::cout << "not get target slot projection point on line!!!"
                 << std::endl;
       return;
     }
     route_info_output_.distance_to_target_slot =
-        std::fabs(sum_s - sum_s_hpp_);
+        std::fabs(nearest_s - sum_s_hpp_);
   } else {
     std::cout << "lines is empty from road_map!!!" << std::endl;
   }
@@ -1002,9 +1002,9 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
         ad_common::math::Vec2d speed_bump_center_point(
             (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
             (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
-        const int speed_bump_res = hd_map_.GetNearestLaneAndSumDist(
+        const int speed_bump_res = hd_map_.GetNearestLane(
             speed_bump_center_point, &speed_bump_nearest_lane,
-            &speed_bump_nearest_s, &speed_bump_nearest_l, &speed_bump_sum_s);
+            &speed_bump_nearest_s, &speed_bump_nearest_l);
         if (speed_bump_res != 0) {
           std::cout << "not get speed_bump projection point on line!!!"
                     << std::endl;
@@ -1013,7 +1013,7 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
           std::cout << "get s for speed_bump projection point on line:"
                     << speed_bump_nearest_s << std::endl;
         }
-        distance_to_speed_bump_tmp = speed_bump_sum_s - sum_s_hpp_;
+        distance_to_speed_bump_tmp = speed_bump_nearest_s - sum_s_hpp_;
         if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
           route_info_output_.distance_to_next_speed_bump =
               distance_to_speed_bump_tmp;
