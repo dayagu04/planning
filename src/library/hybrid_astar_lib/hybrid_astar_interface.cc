@@ -157,12 +157,8 @@ void HybridAStarInterface::UpdateOutput() {
       &coarse_traj_, request_.plan_reason, request_.start_, &edt_, &ref_line_,
       vehicle_param_.min_turn_radius, request_.swap_start_goal,
       request_.path_generate_method, &request_.first_action_request);
-  bool next_path_no_gear_switch =
-      future_path_decider.IsNextPathNoGearSwitchByHistory();
 
-  RSExpansionDecider::UpdateRSPathRequest(
-      next_path_no_gear_switch, future_path_decider.GetNextPathGearByHistory(),
-      &request_);
+  RSExpansionDecider::UpdateRSPathRequest(&request_);
 
   bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
 

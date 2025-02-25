@@ -31,9 +31,7 @@ class RSExpansionDecider : public AstarDecider {
   /**
    * [out] request: update next path rs info
    */
-  static void UpdateRSPathRequest(const bool is_next_path_single_shot,
-                                  const AstarPathGear next_path_gear,
-                                  AstarRequest *request);
+  static void UpdateRSPathRequest(AstarRequest *request);
 
  private:
   // 对于车辆在ref line，需要注意
