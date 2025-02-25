@@ -2598,11 +2598,11 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double smallest_headway_threshold = 1.2;
   double headway_step = 0.1;
   std::vector<std::pair<int32_t, double>> normal_headway_table = {
-      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+      {0, 1.1}, {1, 1.3}, {2, 1.5}, {3, 2.1}, {4, 2.8}};
   std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
-      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+      {0, 1.1}, {1, 1.2}, {2, 1.4}, {3, 1.8}, {4, 2.0}};
   std::vector<std::pair<int32_t, double>> conservative_headway_table = {
-      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+      {0, 1.2}, {1, 1.8}, {2, 2.5}, {3, 3.0}, {4, 4.0}};
   std::vector<std::pair<int32_t, double>> aggressive_acc_max_table = {
       {5.0, 2.5}, {10.0, 1.9}, {20.0, 1.5}, {25.0, 1.3}, {35.0, 0.9}};
   std::vector<std::pair<int32_t, double>> normal_acc_max_table = {

@@ -4,6 +4,7 @@
 #include "environmental_model.h"
 #include "log.h"
 #include "planning_context.h"
+#include "utils/pose2d_utils.h"
 
 namespace planning {
 
@@ -148,7 +149,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
     // if (is_neighbor_target_valid) {
     //   const double neighbor_target_headway = std::fmin(
-    //       (user_time_gap - neighbor_valid_decrease_time_gap), current_headway);
+    //       (user_time_gap - neighbor_valid_decrease_time_gap),
+    //       current_headway);
     //   agents_headway_map_[st_agent_id].current_headway =
     //       std::fmin(neighbor_target_headway + headway_step, gear_headway);
     //   continue;
@@ -200,10 +202,20 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
 void AgentHeadwayDecider::MatchHeadwayWithGearTable(
     double* const matched_desired_headway) const {
-  auto headway_table = config_.normal_headway_table;
+  static auto headway_table = config_.normal_headway_table;
   // const auto gear = planning_data->system_manager_info().navi_ttc_gear();
   // get ttc through different gears
-  const int gear = 1;
+  auto time_headway_level = session_->environmental_model()
+                                .get_ego_state_manager()
+                                ->time_headway_level();
+  if (time_headway_level < 1) {
+    time_headway_level = 1;
+  } else if (time_headway_level > 5) {
+    time_headway_level = 5;
+  } else {
+    time_headway_level = time_headway_level;
+  }
+  
   // const auto driving_style =
   //     planning_data->system_manager_info().driving_style();
   const auto driving_style = DrivingStyle::NORMAL;
@@ -216,11 +228,12 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
     headway_table = config_.conservative_headway_table;
   }
 
-  if ((int)gear >= headway_table.size()) {
+  if (time_headway_level > headway_table.size()) {
     return;
   }
 
-  *matched_desired_headway = headway_table.at((int)gear).second;
+  *matched_desired_headway = headway_table.at(time_headway_level - 1).second;
+  JSON_DEBUG_VALUE("time_headway_level", time_headway_level);
   return;
 }
 
