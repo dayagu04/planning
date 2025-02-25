@@ -2000,24 +2000,36 @@ PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
-  const bool dynamic_update_flag =
-      frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      (apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.confidence ==
-           1 &&
-       mathlib::IsInBound(apa_world_ptr_->GetSlotManagerPtr()
-                              ->ego_info_under_slot_.slot_occupied_ratio,
-                          apa_param.GetParam().pose_slot_occupied_ratio,
-                          apa_param.GetParam().pose_slot_occupied_ratio_3));
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const ApaParameters& param = apa_param.GetParam();
+  const bool gear_case =
+      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
+
+  const bool car_motion_case =
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  const bool slot_confidence_case = (ego_info_under_slot.confidence == 1);
+
+  const bool car_pos_case =
+      ego_info_under_slot.cur_pose.pos.x() <
+      (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+       1.68);
+
+  const bool occupied_ratio_case = (ego_info_under_slot.slot_occupied_ratio <
+                                    param.pose_slot_occupied_ratio_3);
+
+  const bool dynamic_update_flag = gear_case && car_motion_case &&
+                                   slot_confidence_case && car_pos_case &&
+                                   occupied_ratio_case;
 
   if (dynamic_update_flag) {
-    frame_.dynamic_plan_time += apa_param.GetParam().plan_time;
+    frame_.dynamic_plan_time += param.plan_time;
   } else {
     frame_.dynamic_plan_time = 0.0;
   }
 
-  if (frame_.dynamic_plan_time >
-      apa_param.GetParam().dynamic_plan_interval_time) {
+  if (frame_.dynamic_plan_time > param.dynamic_plan_interval_time) {
     frame_.is_replan_dynamic = true;
     frame_.dynamic_plan_time = 0.0;
   }
