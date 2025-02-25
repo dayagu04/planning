@@ -102,26 +102,16 @@ void RSExpansionDecider::Process(const Pose2D &start, const Pose2D &end) {
   return;
 }
 
-void RSExpansionDecider::UpdateRSPathRequest(
-    const bool is_next_path_single_shot, const AstarPathGear next_path_gear,
-    AstarRequest *request) {
-  if (is_next_path_single_shot) {
-    if (next_path_gear == AstarPathGear::REVERSE) {
-      request->rs_request = RSPathRequestType::all_path_forbid_forward;
-    } else if (next_path_gear == AstarPathGear::DRIVE) {
-      request->rs_request = RSPathRequestType::all_path_forbid_reverse;
-    }
-  } else {
-    // check rs last path gear
-    request->rs_request = RSPathRequestType::none;
-    if (request->space_type == ParkSpaceType::VERTICAL) {
-      if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-        request->rs_request = RSPathRequestType::last_path_forbid_forward;
-        ILOG_INFO << "last rs path forbid forward";
-      } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
-        request->rs_request = RSPathRequestType::last_path_forbid_reverse;
-        ILOG_INFO << "last rs path forbid reverse";
-      }
+void RSExpansionDecider::UpdateRSPathRequest(AstarRequest *request) {
+  // check rs last path gear
+  request->rs_request = RSPathRequestType::none;
+  if (request->space_type == ParkSpaceType::VERTICAL) {
+    if (request->direction_request == ParkingVehDirection::TAIL_IN) {
+      request->rs_request = RSPathRequestType::last_path_forbid_forward;
+      ILOG_INFO << "last rs path forbid forward";
+    } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
+      request->rs_request = RSPathRequestType::last_path_forbid_reverse;
+      ILOG_INFO << "last rs path forbid reverse";
     }
   }
 
