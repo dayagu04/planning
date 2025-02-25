@@ -345,21 +345,21 @@ void ObstacleManager::UpdateOccObstacle() {
             std::move(object_points), occupancy_objects[i]);
         if (obstacle.is_vaild()) {
           // 距离过滤，临时
-          // int in_range_count = 0;
-          // for (auto &point : obstacle.perception_polygon().points()) {
-          //   Point2D sl_point;
-          //   if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
-          //                             sl_point) ||
-          //       std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
-          //       sl_point.x > ego_point.x + 8) {
-          //     in_range_count++;
-          //   }
-          // }
-          // if (in_range_count == obstacle.perception_polygon().points().size() ||
-          //     (in_range_count > 0 &&
-          //      obstacle.perception_polygon().area() < 1)) {
-          //   continue;
-          // }
+          int in_range_count = 0;
+          for (auto &point : obstacle.perception_polygon().points()) {
+            Point2D sl_point;
+            if (!frenet_coord->XYToSL(Point2D(point.x(), point.y()),
+                                      sl_point) ||
+                std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
+                sl_point.x > ego_point.x + 8) {
+              in_range_count++;
+            }
+          }
+          if (in_range_count == obstacle.perception_polygon().points().size() ||
+              (in_range_count > 0 &&
+               obstacle.perception_polygon().area() < 1)) {
+            continue;
+          }
           add_occupancy_obstacle(obstacle);
         }
       }
