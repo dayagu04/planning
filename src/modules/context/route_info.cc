@@ -95,7 +95,7 @@ void RouteInfo::UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hd_map) {
     return;
   }
   CalculateHPPInfo();
-  CalculateDistanceToTargetSlot();
+  CalculateDistanceToTraceEnd();
   CalculateDistanceToNextSpeedBump();
   return;
 }
@@ -857,10 +857,25 @@ bool RouteInfo::GetCurrentNearestLane() {
   // [hack](bsniu): for two floors, the first is current lane
   const auto& lines = local_view_.static_map_info.road_map().lanes();
   if (!lines.empty()) {
-    const size_t lane_id = lines[0].lane_id();
+    size_t lane_id = lines[0].lane_id();
+    for (const auto &line : lines) {
+      if (line.predecessor_lane_id_size() == 0) {
+        lane_id = line.lane_id();
+        break;
+      }
+    }
     nearest_lane = hd_map_.GetLaneById(lane_id);
+    if (nearest_lane == nullptr) {
+      std::cout << "get nearest lane failed!!" << std::endl;
+      return false;
+    }
+    current_lane_id_ = nearest_lane->id();
+    if (!nearest_lane->predecessor_lane_id().empty()) {
+      sum_s +=
+          CalculatePointAccumulateS(nearest_lane->predecessor_lane_id().front());
+    }
     if(nearest_lane->GetProjection(point, &nearest_s, &nearest_l)) {
-      sum_s = nearest_s;
+      sum_s += nearest_s;
     } else {
       std::cout << "current pose get projection fail!!" << std::endl;
       return false;
@@ -958,28 +973,21 @@ void RouteInfo::ResetHpp() {
   last_point_hpp_.set_y(NL_NMAX);
 }
 
-void RouteInfo::CalculateDistanceToTargetSlot() {
-  // get target slot projection point on line
-  ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
-  double nearest_s = 0.0;
-  double nearest_l = 0.0;
+void RouteInfo::CalculateDistanceToTraceEnd() {
+  // get trace end projection point on line
   double sum_s = 0.0;
-
   const auto& lines = local_view_.static_map_info.road_map().lanes();
   if (!lines.empty()) {
-    const auto& final_point = lines[lines.size() - 1].points_on_central_line().rbegin();
-    const double tar_slot_pose_x = final_point->x();
-    const double tar_slot_pose_y = final_point->y();
-    const int tar_slot_res = hd_map_.GetNearestLane(
-        {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
-        &nearest_s, &nearest_l);
-    if (tar_slot_res != 0) {
-      std::cout << "not get target slot projection point on line!!!"
-                << std::endl;
-      return;
+    size_t lane_id = lines[lines.size() - 1].lane_id();
+    for (const auto &line : lines) {
+      if (line.successor_lane_id_size() == 0) {
+        lane_id = line.lane_id();
+        break;
+      }
     }
+    sum_s += CalculatePointAccumulateS(lane_id);
     route_info_output_.distance_to_target_slot =
-        std::fabs(nearest_s - sum_s_hpp_);
+        std::fabs(sum_s - sum_s_hpp_);
   } else {
     std::cout << "lines is empty from road_map!!!" << std::endl;
   }
@@ -1013,7 +1021,12 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
           std::cout << "get s for speed_bump projection point on line:"
                     << speed_bump_nearest_s << std::endl;
         }
-        distance_to_speed_bump_tmp = speed_bump_nearest_s - sum_s_hpp_;
+        speed_bump_sum_s += speed_bump_nearest_s;
+        if (!speed_bump_nearest_lane->predecessor_lane_id().empty()) {
+          speed_bump_sum_s +=
+              CalculatePointAccumulateS(speed_bump_nearest_lane->predecessor_lane_id().front());
+        }
+        distance_to_speed_bump_tmp = speed_bump_sum_s - sum_s_hpp_;
         if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
           route_info_output_.distance_to_next_speed_bump =
               distance_to_speed_bump_tmp;
@@ -1042,6 +1055,19 @@ bool RouteInfo::IsOnHPPLane() {
     }
   }
   return false;
+}
+
+double RouteInfo::CalculatePointAccumulateS(size_t lane_id) {
+  double accumulate_s = 0.0;
+  ad_common::hdmap::LaneInfoConstPtr lane =  hd_map_.GetLaneById(lane_id);
+  if (lane != nullptr) {
+    accumulate_s += lane->total_length();
+    std::vector<uint64_t> pred_lane_id = lane->predecessor_lane_id();
+    if (!pred_lane_id.empty()) {
+      accumulate_s += CalculatePointAccumulateS(pred_lane_id.front());
+    }
+  }
+  return accumulate_s;
 }
 // bool RouteInfo::GetCurrentNearestLane(
 //     const planning::framework::Session& session) {

@@ -53,6 +53,7 @@ class RouteInfo {
   ad_common::hdmap::HDMap hd_map_;
   bool hdmap_valid_{false};
   uint64_t static_map_info_updated_timestamp_ = 0;
+  uint64_t current_lane_id_ = 0;
   Pose2D current_pose_{0.0, 0.0, 0.0};
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_hpp_;
   double nearest_s_hpp_{0.0};
@@ -109,8 +110,9 @@ class RouteInfo {
   void CalculateHPPInfo();
   void ConstructBox();
   void ResetHpp();
-  void CalculateDistanceToTargetSlot();
+  void CalculateDistanceToTraceEnd();
   void CalculateDistanceToNextSpeedBump();
   bool IsOnHPPLane();
+  double CalculatePointAccumulateS(size_t lane_id);
 };
 }  // namespace planning
