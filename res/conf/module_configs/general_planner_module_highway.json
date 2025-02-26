@@ -234,10 +234,12 @@
     "extra_hard_buffer2blockobstacle":0.0,
     "extra_buffer_for_lane_width_bp":[2.8, 3.1, 3.4, 3.7, 4.2],
     "extra_lane_width_buffer":[0.2, 0.15, 0.1, 0.05, 0.0],
-    "extra_lane_type_decrease_buffer":0.05,
     "side_obstacle_lat_buffer_limit":0.3,
     "side_obstacle_relative_position_bp":[0, 1, 2, 3, 4],
-    "side_obstacle_relative_position_decrease_extra_buffer":[0, 0, 0, 0, 0]
+    "side_obstacle_relative_position_decrease_extra_buffer":[0, 0, 0, 0, 0],
+    "extra_buffer_for_road_lane_width_bp":[2.8, 3.1, 3.3, 3.5, 3.7],
+    "extra_lane_width_road_decrease_buffer":[0.15, 0.1, 0.06, 0.02, 0.0],
+    "extra_lane_type_decrease_buffer":0.05
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
