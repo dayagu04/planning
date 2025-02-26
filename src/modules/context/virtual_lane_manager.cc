@@ -151,14 +151,14 @@ void VirtualLaneManager::construct_reference_line_msg(
 
   // ***lane reference line update***
   // in case of ego init point is not in the scope of rads_map ref line
-  auto scene_type = session_->get_scene_type();
+  /* auto scene_type = session_->get_scene_type();
   const auto cur_fsm_state = session_->environmental_model()
                                  .get_local_view()
                                  .function_state_machine_info.current_state;
   if (last_fsm_state_ == iflyauto::FunctionalState_RADS_PRE_ACTIVE &&
       cur_fsm_state == iflyauto::FunctionalState_RADS_TRACING) {
     ExtendReferenceLineForRads(func_state_machine_msg, current_lane_virtual);
-  }
+  } */
 
   const size_t points_size_rads_map = rads_map.points_size;
   const size_t points_size_refline_default = FUSION_ROAD_REFLINE_POINT_MAX_NUM;
