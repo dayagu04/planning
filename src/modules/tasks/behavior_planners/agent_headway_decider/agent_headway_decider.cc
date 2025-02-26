@@ -12,8 +12,8 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.3;
-constexpr double neighbor_valid_decrease_time_gap = 0.7;
+constexpr double lane_change_decrease_time_gap = 0.6;
+constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double first_appear_time_gap = 1.0;
 }  // namespace
 
@@ -118,10 +118,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
 
     const double v_ego = ego_state_manager->ego_v();
-    // const double v_relative = v_ego - agent->speed();
-    // if (v_relative > 0.5) {
-    //   headway_step = 0.05;
-    // }
+    const double v_relative = agent->speed() - v_ego;
+    if (v_relative > 2.78) {
+      headway_step = 0.05;
+    }
 
     // first appear
     if (iter == agents_headway_map_.end()) {
@@ -147,14 +147,14 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     //   continue;
     // }
 
-    // if (is_neighbor_target_valid) {
-    //   const double neighbor_target_headway = std::fmin(
-    //       (user_time_gap - neighbor_valid_decrease_time_gap),
-    //       current_headway);
-    //   agents_headway_map_[st_agent_id].current_headway =
-    //       std::fmin(neighbor_target_headway + headway_step, gear_headway);
-    //   continue;
-    // }
+    if (is_neighbor_target_valid) {
+      const double neighbor_target_headway = std::fmin(
+          (user_time_gap - neighbor_valid_decrease_time_gap),
+          current_headway);
+      agents_headway_map_[st_agent_id].current_headway =
+          std::fmin(neighbor_target_headway + headway_step, gear_headway);
+      continue;
+    }
 
     if (is_in_lane_change_execution) {
       const double lane_change_headway = std::fmin(
@@ -215,7 +215,7 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
   } else {
     time_headway_level = time_headway_level;
   }
-  
+
   // const auto driving_style =
   //     planning_data->system_manager_info().driving_style();
   const auto driving_style = DrivingStyle::NORMAL;
