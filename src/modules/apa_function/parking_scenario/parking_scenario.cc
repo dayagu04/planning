@@ -327,7 +327,7 @@ const double ParkingScenario::CalRemainDistFromObs(
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), lat_buffer,
-      0.0, false, false, ColObsMovementTypeRequest::STATIC);
+      0.0, false, false, ApaObsMovementType::STATIC);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_static = 3.68;
@@ -336,7 +336,7 @@ const double ParkingScenario::CalRemainDistFromObs(
 
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), 0.368, 0.0,
-      false, false, ColObsMovementTypeRequest::MOTION);
+      false, false, ApaObsMovementType::MOTION);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = 6.68;

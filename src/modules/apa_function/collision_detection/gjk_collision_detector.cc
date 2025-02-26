@@ -17,7 +17,7 @@ const ColResult GJKCollisionDetector::Update(
     const geometry_lib::PathSegment& path_seg, const double lat_buffer,
     const double lon_buffer, const bool only_check_max_car_polygon,
     const bool use_obs_base_slot,
-    const ColObsMovementTypeRequest movement_type_request) {
+    const ApaObsMovementType movement_type_request) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
   return Update(pt_vec, lat_buffer, lon_buffer, only_check_max_car_polygon,
@@ -28,7 +28,7 @@ const ColResult GJKCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint>& pt_vec, const double lat_buffer,
     const double lon_buffer, const bool only_check_max_car_polygon,
     const bool use_obs_base_slot,
-    const ColObsMovementTypeRequest movement_type_request) {
+    const ApaObsMovementType movement_type_request) {
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -51,7 +51,8 @@ const ColResult GJKCollisionDetector::Update(
     const Eigen::Vector2d end_point(path_pt_vec_[N - 1].pos.x(),
                                     path_pt_vec_[N - 1].pos.y());
 
-    const double ds = path_pt_vec_[N - 1].s - path_pt_vec_[N - 2].s;
+    const double ds =
+        std::max(path_pt_vec_[N - 1].s - path_pt_vec_[N - 2].s, 0.05);
 
     geometry_lib::PathPoint pt = path_pt_vec_.back();
     double s = 0.0;
@@ -96,13 +97,8 @@ const ColResult GJKCollisionDetector::Update(
           break;
       }
 
-      if (movement_type_request == ColObsMovementTypeRequest::MOTION &&
-          obs.GetObsMovementType() == ApaObsMovementType::STATIC) {
-        continue;
-      }
-
-      if (movement_type_request == ColObsMovementTypeRequest::STATIC &&
-          obs.GetObsMovementType() == ApaObsMovementType::MOTION) {
+      if (!CheckObsMovementTypeFeasible(obs.GetObsMovementType(),
+                                        movement_type_request)) {
         continue;
       }
 
@@ -142,11 +138,11 @@ const ColResult GJKCollisionDetector::Update(
   col_res_.col_flag = col_flag;
   col_res_.remain_dist = lon_safe_dist - lon_buffer;
 
-  if (movement_type_request == ColObsMovementTypeRequest::MOTION) {
+  if (movement_type_request == ApaObsMovementType::MOTION) {
     col_res_.remain_dist_dynamic = col_res_.remain_dist;
   }
 
-  if (movement_type_request == ColObsMovementTypeRequest::STATIC) {
+  if (movement_type_request == ApaObsMovementType::STATIC) {
     col_res_.remain_dist_static = col_res_.remain_dist;
   }
 

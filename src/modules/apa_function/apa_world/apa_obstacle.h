@@ -50,6 +50,7 @@ enum class ApaObsAttributeType : uint8_t {
 enum class ApaObsMovementType : uint8_t {
   STATIC,
   MOTION,
+  ALL,
   COUNT,
 };
 

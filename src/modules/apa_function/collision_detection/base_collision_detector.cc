@@ -1,5 +1,6 @@
 #include "base_collision_detector.h"
 
+#include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "log_glog.h"
 
@@ -147,6 +148,18 @@ const geometry_lib::RectangleBound BaseCollisionDetector::CalCarRectangleBound(
   geometry_lib::RectangleBound bound;
   bound.CalcBoundByPtVec(car_with_mirror_rectangle_vertex_);
   return bound;
+}
+
+const bool BaseCollisionDetector::CheckObsMovementTypeFeasible(
+    const ApaObsMovementType obs_type,
+    const ApaObsMovementType obs_type_request) {
+  if (obs_type_request == ApaObsMovementType::ALL) {
+    return true;
+  }
+  if (obs_type_request == obs_type) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace apa_planner

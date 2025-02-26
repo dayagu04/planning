@@ -3211,7 +3211,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       if (steer_cmd_vec[i] == SEG_STEER_STRAIGHT &&
           (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
            steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
-        steer_change_count++;
+        steer_change_count += 2;
       }
 
       // 左转到右转 或 右转到左转
@@ -3250,7 +3250,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 void GeometryPath::CalcCost() {
   gear_change_cost = 50.0 * gear_change_count;
   length_cost = 1.0 * total_length;
-  steer_change_cost = 8.0 * steer_change_count;
+  steer_change_cost = 10.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
 }

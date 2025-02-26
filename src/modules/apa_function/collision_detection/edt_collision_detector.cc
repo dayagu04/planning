@@ -581,7 +581,8 @@ const ColResult EDTCollisionDetector::Update(
     const Eigen::Vector2d end_point(path_pt_vec_[N - 1].pos.x(),
                                     path_pt_vec_[N - 1].pos.y());
 
-    const double ds = path_pt_vec_[N - 1].s - path_pt_vec_[N - 2].s;
+    const double ds =
+        std::max(path_pt_vec_[N - 1].s - path_pt_vec_[N - 2].s, 0.05);
 
     geometry_lib::PathPoint pt = path_pt_vec_.back();
     double s = 0.0;

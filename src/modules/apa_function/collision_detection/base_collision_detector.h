@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_obstacle.h"
 #include "apa_obstacle_manager.h"
 #include "math_lib.h"
 
@@ -37,12 +38,6 @@ struct ColResult {
   }
 };
 
-enum ColObsMovementTypeRequest : uint8_t {
-  ALL,
-  STATIC,
-  MOTION,
-};
-
 class BaseCollisionDetector {
  public:
   BaseCollisionDetector() {}
@@ -56,6 +51,10 @@ class BaseCollisionDetector {
 
   const geometry_lib::RectangleBound CalCarRectangleBound(
       const geometry_lib::PathPoint& current_pose);
+
+  static const bool CheckObsMovementTypeFeasible(
+      const ApaObsMovementType obs_type,
+      const ApaObsMovementType obs_type_request);
 
  protected:
   // 需要的原始自车参数顶点坐标 基于自车坐标系 逆时针旋转

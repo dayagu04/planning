@@ -172,11 +172,11 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   const bool TurnAround();
 
-  const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
-  void CalMonoSafeCircle();
+  const bool MonoPreparePlan(Eigen::Vector2d &tag_point, const double radius);
+  void CalMonoSafeCircle(const double radius);
   const bool CheckMonoIsFeasible();
-  const bool MultiPreparePlan(Eigen::Vector2d &tag_point);
-  bool CalMultiSafeCircle();
+  const bool MultiPreparePlan(Eigen::Vector2d &tag_point, const double radius);
+  bool CalMultiSafeCircle(const double radius);
   // prepare plan end
 
   const bool PreparePathPlan();

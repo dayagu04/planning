@@ -19,15 +19,15 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
                          const double lat_buffer, const double lon_buffer,
                          const bool only_check_max_car_polygon = false,
                          const bool use_obs_base_slot = true,
-                         const ColObsMovementTypeRequest movement_type_request =
-                             ColObsMovementTypeRequest::ALL);
+                         const ApaObsMovementType movement_type_request =
+                             ApaObsMovementType::ALL);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint>& pt_vec,
                          const double lat_buffer, const double lon_buffer,
                          const bool only_check_max_car_polygon = false,
                          const bool use_obs_base_slot = true,
-                         const ColObsMovementTypeRequest movement_type_request =
-                             ColObsMovementTypeRequest::ALL);
+                         const ApaObsMovementType movement_type_request =
+                             ApaObsMovementType::ALL);
 
   const bool IsPolygonCollision(const Polygon2D& polygon,
                                 const bool use_obs_base_slot = true);

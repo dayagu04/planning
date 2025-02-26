@@ -34,7 +34,7 @@ void PerpendicularTailInPathGenerator::Reset() {
 void PerpendicularTailInPathGenerator::Preprocess() {
   // calc_params_.Reset();
   calc_params_.multi_plan = false;
-  calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
+  calc_params_.turn_radius = apa_param.GetParam().min_turn_radius + 0.08;
   calc_params_.is_searching_stage = input_.is_searching_stage;
   calc_params_.col_det_time = 0.0;
   calc_params_.dubins_plan_time = 0.0;
@@ -618,69 +618,78 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   Eigen::Vector2d line_normal_vec;
   bool cal_tang_pt_success = false;
   for (uint8_t i = 0; i < 2; ++i) {
-    for (const geometry_lib::LineSegment& line : prepare_line_vec) {
-      // cal pre line tangent vec and normal vec
-      line_tangent_vec = geometry_lib::GenHeadingVec(line.heading);
+    std::vector<double> safe_circle_radius_vec;
+    if (!input_.can_first_plan_again || i == 1 || input_.is_searching_stage) {
+      safe_circle_radius_vec = std::vector<double>{calc_params_.turn_radius};
+    } else {
+      safe_circle_radius_vec =
+          std::vector<double>{6.6, calc_params_.turn_radius};
+    }
 
-      if (line_tangent_vec.y() > 0.0) {
-        line_normal_vec << -line_tangent_vec.y(), line_tangent_vec.x();
-      } else {
-        line_normal_vec << line_tangent_vec.y(), -line_tangent_vec.x();
-      }
+    for (const double radius : safe_circle_radius_vec) {
+      for (const geometry_lib::LineSegment& line : prepare_line_vec) {
+        // cal pre line tangent vec and normal vec
+        line_tangent_vec = geometry_lib::GenHeadingVec(line.heading);
 
-      // line_normal_vec(line_tangent_vec.y(), -line_tangent_vec.x());
-      // // sure line_normal_vec towards downward along the x axis.
-      // if (line_normal_vec.x() > 0.0) {
-      //   line_normal_vec = -1.0 * line_normal_vec;
-      // }
-
-      calc_params_.prepare_line = line;
-
-      calc_params_.pre_line_tangent_vec = line_tangent_vec;
-      calc_params_.pre_line_normal_vec = line_normal_vec;
-
-      cal_tang_pt_success = false;
-      geometry_lib::PathPoint pose;
-      pose.heading = line.heading;
-
-      if (i == 0 && apa_param.GetParam().actual_mono_plan_enable &&
-          MonoPreparePlan(pose.pos)) {
-        cal_tang_pt_success = true;
-      }
-
-      if (i == 1 && MultiPreparePlan(pose.pos)) {
-        cal_tang_pt_success = true;
-      }
-
-      if (!cal_tang_pt_success) {
-        continue;
-      }
-
-      geometry_lib::PathSegment arc_seg;
-      if (!geometry_lib::CalArcFromPt(gear, steer, virtual_1r_arc_length,
-                                      calc_params_.turn_radius, pose,
-                                      arc_seg)) {
-        continue;
-      }
-
-      inner_tang_pose_vec.clear();
-      inner_tang_pose_vec.reserve(count + 1);
-
-      for (uint8_t j = 0; j < count; ++j) {
-        inner_inner_tang_pose_vec.clear();
-        inner_inner_tang_pose_vec.reserve(count + 1);
-        geometry_lib::CalPtFromPathSeg(pose, arc_seg, (count - j - 1) * ds);
-        geometry_lib::PathPoint temp_pose = pose;
-        const Eigen::Vector2d heading_vec =
-            geometry_lib::GenHeadingVec(pose.heading);
-        for (uint8_t k = 0; k < count; ++k) {
-          temp_pose.pos = pose.pos + ds * k * heading_vec;
-          inner_inner_tang_pose_vec.emplace_back(temp_pose);
-          number++;
+        if (line_tangent_vec.y() > 0.0) {
+          line_normal_vec << -line_tangent_vec.y(), line_tangent_vec.x();
+        } else {
+          line_normal_vec << line_tangent_vec.y(), -line_tangent_vec.x();
         }
-        inner_tang_pose_vec.emplace_back(inner_inner_tang_pose_vec);
+
+        // line_normal_vec(line_tangent_vec.y(), -line_tangent_vec.x());
+        // // sure line_normal_vec towards downward along the x axis.
+        // if (line_normal_vec.x() > 0.0) {
+        //   line_normal_vec = -1.0 * line_normal_vec;
+        // }
+
+        calc_params_.prepare_line = line;
+
+        calc_params_.pre_line_tangent_vec = line_tangent_vec;
+        calc_params_.pre_line_normal_vec = line_normal_vec;
+
+        cal_tang_pt_success = false;
+        geometry_lib::PathPoint pose;
+        pose.heading = line.heading;
+
+        if (i == 0 && apa_param.GetParam().actual_mono_plan_enable &&
+            MonoPreparePlan(pose.pos, radius)) {
+          cal_tang_pt_success = true;
+        }
+
+        if (i == 1 && MultiPreparePlan(pose.pos, radius)) {
+          cal_tang_pt_success = true;
+        }
+
+        if (!cal_tang_pt_success) {
+          continue;
+        }
+
+        geometry_lib::PathSegment arc_seg;
+        if (!geometry_lib::CalArcFromPt(gear, steer, virtual_1r_arc_length,
+                                        radius, pose, arc_seg)) {
+          continue;
+        }
+
+        inner_tang_pose_vec.clear();
+        inner_tang_pose_vec.reserve(count + 1);
+
+        for (uint8_t j = 0; j < count; ++j) {
+          inner_inner_tang_pose_vec.clear();
+          inner_inner_tang_pose_vec.reserve(count + 1);
+          geometry_lib::CalPtFromPathSeg(pose, arc_seg, (count - j - 1) * ds);
+          geometry_lib::PathPoint temp_pose = pose;
+          const Eigen::Vector2d heading_vec =
+              geometry_lib::GenHeadingVec(pose.heading);
+          for (uint8_t k = 0; k < count; ++k) {
+            temp_pose.pos = pose.pos + ds * k * heading_vec;
+            inner_inner_tang_pose_vec.emplace_back(temp_pose);
+            number++;
+          }
+          inner_tang_pose_vec.emplace_back(inner_inner_tang_pose_vec);
+        }
+        tang_pose_vec.emplace_back(inner_tang_pose_vec);
       }
-      tang_pose_vec.emplace_back(inner_tang_pose_vec);
     }
   }
 
@@ -782,10 +791,39 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
 
         // tang_pose.PrintInfo();
 
-        result = DubinsPathPlan(
-            cur_pose, tang_pose, calc_params_.turn_radius,
-            kMinSingleGearPathLength, max_dubins_gear_change_count,
-            geometry_lib::SEG_GEAR_DRIVE, true, dubins_geometry_path);
+        bool dubins_connect_goal = false;
+        std::vector<double> dubins_radius_vec;
+        for (uint8_t dubins_gear_change_count = 0;
+             dubins_gear_change_count < max_dubins_gear_change_count;
+             ++dubins_gear_change_count) {
+          if (dubins_gear_change_count == 0) {
+            dubins_radius_vec =
+                std::vector<double>{6.6, calc_params_.turn_radius};
+            if (calc_params_.is_searching_stage) {
+              dubins_radius_vec = std::vector<double>{calc_params_.turn_radius};
+            }
+          } else if (dubins_gear_change_count == 1) {
+            dubins_radius_vec = std::vector<double>{6.6};
+          }
+          for (const double dubins_radius : dubins_radius_vec) {
+            result = DubinsPathPlan(
+                cur_pose, tang_pose, dubins_radius, kMinSingleGearPathLength,
+                dubins_gear_change_count, geometry_lib::SEG_GEAR_DRIVE, true,
+                dubins_geometry_path);
+            dubins_connect_goal = (result == DubinsPlanResult::SUCCESS);
+            if (dubins_connect_goal) {
+              break;
+            }
+          }
+          if (dubins_connect_goal) {
+            break;
+          }
+        }
+
+        // result = DubinsPathPlan(
+        //     cur_pose, tang_pose, calc_params_.turn_radius,
+        //     kMinSingleGearPathLength, max_dubins_gear_change_count,
+        //     geometry_lib::SEG_GEAR_DRIVE, true, dubins_geometry_path);
 
         if (result == DubinsPlanResult::NO_PATH) {
           continue;
@@ -960,8 +998,8 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   return pair_geometry_path_vec.size() > 0;
 }
 
-void PerpendicularTailInPathGenerator::CalMonoSafeCircle() {
-  const double mono_radius = apa_param.GetParam().safe_circle_radius;
+void PerpendicularTailInPathGenerator::CalMonoSafeCircle(const double radius) {
+  const double mono_radius = radius;
 
   calc_params_.mono_safe_circle.center.y() =
       calc_params_.target_line.pA.y() +
@@ -999,8 +1037,8 @@ const bool PerpendicularTailInPathGenerator::CheckMonoIsFeasible() {
 }
 
 const bool PerpendicularTailInPathGenerator::MonoPreparePlan(
-    Eigen::Vector2d& tag_point) {
-  CalMonoSafeCircle();
+    Eigen::Vector2d& tag_point, const double radius) {
+  CalMonoSafeCircle(radius);
 
   if (CheckMonoIsFeasible() == false) {
     // ILOG_INFO << "cal monostep safe circle fail!";
@@ -1025,10 +1063,10 @@ const bool PerpendicularTailInPathGenerator::MonoPreparePlan(
   return true;
 }
 
-bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
+bool PerpendicularTailInPathGenerator::CalMultiSafeCircle(const double radius) {
   const Eigen::Vector2d pt_inside = input_.ego_info_under_slot.pt_inside;
 
-  const double multi_radius = calc_params_.turn_radius + 0.0168;
+  const double multi_radius = radius;
 
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = pt_inside;
@@ -1052,7 +1090,7 @@ bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
     return false;
   }
 
-  auto& multi_safe_circle = calc_params_.multi_safe_circle;
+  geometry_lib::Circle& multi_safe_circle = calc_params_.multi_safe_circle;
 
   if (cross_points[0].y() * calc_params_.slot_side_sgn >
       cross_points[1].y() * calc_params_.slot_side_sgn) {
@@ -1071,8 +1109,8 @@ bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
 }
 
 const bool PerpendicularTailInPathGenerator::MultiPreparePlan(
-    Eigen::Vector2d& tag_point) {
-  if (CalMultiSafeCircle() == false) {
+    Eigen::Vector2d& tag_point, const double radius) {
+  if (CalMultiSafeCircle(radius) == false) {
     // ILOG_INFO << "cal multistep safe circle fail!";
     return false;
   }
@@ -2320,7 +2358,7 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
 
         if (input_.is_replan_first) {
           if (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) {
-            temp_path_d.cost += 100.0;
+            temp_path_d.cost += 300.0;
           } else if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
             // const auto& pose =
             //     temp_path_r.path_segment_vec.front().GetEndPose();
