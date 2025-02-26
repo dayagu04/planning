@@ -152,7 +152,7 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
       if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
         slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
                                     slot_dist_to_ego);
-        if (slot_dist_to_ego <= -2.0) {
+        if (slot_dist_to_ego < 2.0) {
           is_reached_target_slot_ = true;
         }
       } else {
@@ -165,7 +165,7 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
         if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
           slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
                                       slot_dist_to_ego);
-          if (slot_dist_to_ego <= -2.0) {
+          if (slot_dist_to_ego < 2.0) {
             is_reached_target_slot_ = true;
           }
         } else {
