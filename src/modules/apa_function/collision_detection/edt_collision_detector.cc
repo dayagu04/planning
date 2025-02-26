@@ -6,6 +6,7 @@
 #include <cstring>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgproc/types_c.h>
 #include <utility>
 
 #include "apa_obstacle.h"
@@ -608,7 +609,7 @@ const ColResult EDTCollisionDetector::Update(
     if (need_cal_obs_dist) {
       col_flag =
           IsCollisionForPoint(pt, &car_with_mirror_circles_list_, &obs_dist);
-      if (obs_dist < min_obs_dist) {
+      if (obs_dist < min_obs_dist && pt.s < col_res_.remain_car_dist + 1e-3) {
         min_obs_dist = obs_dist;
         pt_closest_to_obs = pt;
       }
