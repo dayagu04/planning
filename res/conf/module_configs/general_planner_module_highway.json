@@ -571,8 +571,8 @@
   "speed_planning": {
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,
-      "ignore_ego_ttc_to_agent_thrd" : 2.5,
-      "lat_distance_close_enough_to_planned_path_thrd": 0.38
+      "ignore_ego_ttc_to_agent_thrd" : 2.8,
+      "lat_distance_close_enough_to_planned_path_thrd": 0.45
     },
 
     "st_graph_searcher" : {
