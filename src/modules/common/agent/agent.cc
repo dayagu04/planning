@@ -111,7 +111,7 @@ const double Agent::accel() const { return accel_; }
 void Agent::set_accel(const double accel) { accel_ = accel; }
 
 const planning_math::Box2d& Agent::box() const { return box_; }
-void Agent::set_box(const planning_math::Box2d& box) { box_ = box; }
+void Agent::set_box(const planning_math::Box2d& box) { box_.set_box(box.center(), box.heading(), box.length(),  box.width()); }
 
 const unsigned int Agent::fusion_source() const { return fusion_source_; };
 void Agent::set_fusion_source(const unsigned int fusion_source) {

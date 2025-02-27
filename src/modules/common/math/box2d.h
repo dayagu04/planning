@@ -140,6 +140,8 @@ class Box2d {
    */
   double diagonal() const { return std::hypot(length_, width_); }
 
+  void set_box(const Vec2d& center, const double heading, const double length, const double width);
+
   /**
    * @brief Getter of the corners of the box
    * @param corners The vector where the corners are listed
