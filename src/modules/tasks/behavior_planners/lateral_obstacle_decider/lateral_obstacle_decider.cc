@@ -157,7 +157,8 @@ bool LateralObstacleDecider::Execute() {
 
     // determine is_avd_car
     std::vector<double> avd_car_id;
-    for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
+    std::vector<double> emergency_avoid;
+  for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
@@ -234,11 +235,59 @@ bool LateralObstacleDecider::Execute() {
       LateralObstacleDecision(*frenet_obs, lane_width);
     }
 
+    // hold lat_offset when there is a risk of collision
+    for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
+      const Obstacle *obs = frenet_obs->obstacle();
+      LateralObstacleHistoryInfo &history =
+          lateral_obstacle_history_info_[obs->id()];
+      // ignore obj without camera source
+      if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
+          !frenet_obs->b_frenet_valid() ||
+          frenet_obs->b_frenet_polygon_sequence_invalid()) {
+        continue;
+      }
+
+      if (history.last_is_avd_car) {
+        HoldLatOffset(*frenet_obs);
+      }
+
+      history.last_is_avd_car = history.is_avd_car;
+
+      if (history.is_avd_car) {
+        avd_car_id.emplace_back(obs->id());
+      }
+      if (history.emergency_avoid) {
+        emergency_avoid.emplace_back(obs->id());
+      }
+    }
+    
+    JSON_DEBUG_VECTOR("emergency_avoid", emergency_avoid, 0);
     JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
     JSON_DEBUG_VALUE("can_left_borrow", left_borrow_);
     JSON_DEBUG_VALUE("can_right_borrow", right_borrow_);
   }
   return true;
+}
+
+void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
+  const Obstacle &obstacle = *frenet_obstacle.obstacle();
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[obstacle.id()];
+
+  double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
+  double d_s_rel = frenet_obstacle.d_s_rel();
+  bool emergency_avoid =
+      (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE &&
+       !history.rear_car && v_s_rel < 0 &&
+       ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_lower) ||
+        ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_upper &&
+          d_s_rel < config_.emegency_cutin_front_area))));
+  if (emergency_avoid) {
+    history.is_avd_car = true;
+    history.emergency_avoid = true;
+  } else {
+    history.emergency_avoid = false;
+  }
 }
 
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
@@ -261,9 +310,6 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double potential_near_car_v_lb = config_.potential_near_car_v_lb;
   bool enable_static_scene = config_.enable_static_scene;
   double car_addition_decre_buffer = config_.car_addition_decre_buffer;
-  double emegency_cutin_ttc_lower = config_.emegency_cutin_ttc_lower;
-  double emegency_cutin_ttc_upper = config_.emegency_cutin_ttc_upper;
-  double emegency_cutin_front_area = config_.emegency_cutin_front_area;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   bool is_ncar = false;
@@ -305,10 +351,10 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
   double near_car_d_lane_thr = interp(d_s_rel, xp, fp);
   // lower buffer for car
-  if (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+  if (!obstacle.is_static() && (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
       type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
       type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_BUS) {
+      type == iflyauto::ObjectType::OBJECT_TYPE_BUS)) {
     // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
     near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
   }
@@ -556,11 +602,6 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
         d_min_cpath - ego_head_l_ - ego_width_ / 2 < lat_dis_thr) ||
        (d_max_cpath < 0 &&
         ego_head_l_ - d_max_cpath - ego_width_ / 2 < lat_dis_thr));
-  // bool in_lon_near_area =
-  //     (v_s_rel < 0 &&
-  //      ((d_s_rel / (-v_s_rel) < emegency_cutin_ttc_lower) ||
-  //       ((d_s_rel / (-v_s_rel) < emegency_cutin_ttc_upper &&
-  //         d_s_rel < emegency_cutin_front_area))));
   bool in_lon_near_area = (d_s_rel + v_s * 5) < farthest_distance;
 
   // cut in/out factor

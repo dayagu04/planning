@@ -43,6 +43,7 @@ class LateralObstacleDecider : public Task {
                              double lane_width);
   void UpdateLaneBorrowDirection();
   void UpdateIntersection();
+  void HoldLatOffset(FrenetObstacle &frenet_obstacle);
 
  private:
   planning::framework::Session *session_;

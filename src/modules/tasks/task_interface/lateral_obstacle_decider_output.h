@@ -18,6 +18,7 @@ struct LateralObstacleHistoryInfo {
   double ncar_count = 0;
   bool ncar_count_in = false;
   bool is_avd_car = false;
+  bool last_is_avd_car = false;
   double close_time = 0;
   double last_recv_time = 0;
   bool front_car = false;
@@ -27,6 +28,7 @@ struct LateralObstacleHistoryInfo {
   int cut_in_or_cross_count = 0;
   double front_expand_len = 0.0;
   double rear_expand_len = 0.0;
+  bool emergency_avoid = false;
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
