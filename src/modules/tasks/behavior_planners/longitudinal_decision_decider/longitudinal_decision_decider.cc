@@ -585,7 +585,7 @@ std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
       double ego_ttc_to_front_agent =
           agent_relative_s_to_ego / vel_difference_to_agent;
       JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent", ego_ttc_to_front_agent)
-      if (ego_ttc_to_front_agent < config_.ignore_agent_ttc_to_ego_thrd &&
+      if (ego_ttc_to_front_agent < config_.ignore_ego_ttc_to_agent_thrd &&
           ego_ttc_to_front_agent > 0.0) {
         ignore_gap_front_agent = false;
       }
