@@ -911,7 +911,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     ILOG_INFO << "No. " << i;
     geometry_lib::PrintPose("prepare pose", preparing_pose_vec[i]);
     if (i >= aligned_size && i < parallel_line_size &&
-        parallel_success_cnt > 0) {
+        parallel_success_cnt > 1) {
       continue;
     }
 
@@ -1309,6 +1309,7 @@ const bool ParallelPathGenerator::SelectBestPathOutsideSlot(
 
   if (index_vec.size() == 0) {
     ILOG_INFO << "calc min gear shift cnt error!";
+    return false;
   }
   ILOG_INFO << "min_gear_shift_cnt = " << min_gear_shift_cnt;
 
@@ -1317,7 +1318,29 @@ const bool ParallelPathGenerator::SelectBestPathOutsideSlot(
   for (const auto idx : index_vec) {
     const auto& path = path_vec[idx];
     // ILOG_INFO <<"path length = " << path.length);
+
     if (path.length < min_length) {
+      bool is_pass = false;
+      for (const auto& path_seg : path.path_segment_vec) {
+        if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
+            path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+          const double line_length = path_seg.Getlength();
+          const double line_heading_deg =
+              path_seg.GetLineSeg().heading * kRad2Deg;
+
+          if (line_length > 6.0 &&
+              calc_params_.slot_side_sgn * line_heading_deg < 0 &&
+              std::abs(line_heading_deg) > 5.0) {
+            is_pass = true;
+            break;
+          }
+        }
+      }
+
+      if (is_pass) {
+        continue;
+      }
+
       min_length = path.length;
       best_path_idx = idx;
     }
@@ -1326,6 +1349,7 @@ const bool ParallelPathGenerator::SelectBestPathOutsideSlot(
   if (best_path_idx >= path_vec.size()) {
     return false;
   }
+
   return true;
 }
 
@@ -1334,27 +1358,37 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
     const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec) const {
   geometry_path.Reset();
 
-  if (path_seg_vec.size() == 0) {
+  if (path_seg_vec.empty()) {
     return false;
   }
 
   geometry_path.path_segment_vec = path_seg_vec;
+  const auto& first_gear = path_seg_vec.front().seg_gear;
 
-  for (size_t i = 0; i < path_seg_vec.size(); i++) {
-    geometry_path.length += path_seg_vec[i].Getlength();
-    geometry_path.gear_cmd_vec.emplace_back(path_seg_vec[i].seg_gear);
-    if (i > 0 && path_seg_vec[i].seg_gear != path_seg_vec[i - 1].seg_gear) {
-      geometry_path.gear_change_count++;
+  int gear_change_count = 0;
+  double total_length = 0.0;
+  double first_path_length = 0.0;
+  auto prev_gear = first_gear;
+
+  for (const auto& seg : path_seg_vec) {
+    const auto seg_length = seg.Getlength();
+    total_length += seg_length;
+    geometry_path.gear_cmd_vec.push_back(seg.seg_gear);
+
+    if (seg.seg_gear != prev_gear) {
+      ++gear_change_count;
+    }
+    prev_gear = seg.seg_gear;
+
+    if (seg.seg_gear == first_gear && gear_change_count == 0) {
+      first_path_length += seg_length;
     }
   }
 
-  for (const auto& path_seg : path_seg_vec) {
-    if (path_seg.seg_gear == path_seg_vec.front().seg_gear) {
-      geometry_path.first_path_length += path_seg.Getlength();
-    } else {
-      break;
-    }
-  }
+  geometry_path.length = total_length;
+  geometry_path.first_path_length = first_path_length;
+  geometry_path.gear_change_count = gear_change_count;
+
   return true;
 }
 
@@ -1428,7 +1462,7 @@ const bool ParallelPathGenerator::DubinsPlan(
       if (!dubins_planner_.Solve(j, i)) {
         continue;
       }
-      if (IsDubinsCollided(kColBufferOutSlot)) {
+      if (IsDubinsCollided(buffer)) {
         continue;
       }
       std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
