@@ -53,9 +53,16 @@ class LaneBorrowDecider : public Task {
   bool IsSafeForLaneBorrow();
   bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
   bool IsSafeForTurn();
+  bool ChecekIfLaneBorrowToLaneBorrowCrossing();
+  bool CheckIfkLaneBorrowCrossingToNoBorrow();
+  bool CheckIfLaneBorrowCrossingToBackDriving();
+  bool CheckIfLaneBorrowBackOriginToLaneBorrowCrossing();
+  bool CheckLaneBorrowCrossingCondition();
+
+
+
   const Point2D CalTurningCenter(const Point2D& ego_pos, const double& theta,
                                  const double& radius) const;
-
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double junction_start_s_{1000.0};
@@ -71,6 +78,8 @@ class LaneBorrowDecider : public Task {
   double obs_right_l_{10.0};
   double obs_start_s_{10.0};
   double obs_end_s_{-10.0};
+  double merge_obs_distance_ = 30.0;          // 障碍物合并距离阈值
+
 
   bool left_borrow_{false};
   bool right_borrow_{false};
@@ -98,6 +107,8 @@ class LaneBorrowDecider : public Task {
   std::shared_ptr<VirtualLane> left_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
   LaneBorrowDeciderConfig config_;
+  // 新增临时存储合并后的障碍物边界
+    FrenetBoundary merged_obs_boundary_;
 };
 
 }  // namespace planning

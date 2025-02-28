@@ -7,6 +7,7 @@ namespace planning {
 enum LaneBorrowStatus {
   kNoLaneBorrow = 0,
   kLaneBorrowDriving,
+  kLaneBorrowCrossing,
   kLaneBorrowBackOriginLane,
 };
 
