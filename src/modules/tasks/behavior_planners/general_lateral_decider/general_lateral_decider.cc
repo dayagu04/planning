@@ -1170,6 +1170,8 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                                          .coarse_planning_info;
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
+  const auto &is_in_lane_borrow_status =
+      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
@@ -1177,50 +1179,52 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
   const double kDefaultDistanceToRoad = 10.0;
   const double half_ego_width = 0.5 * vehicle_param.max_width;
-  for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound soft_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    soft_bound_lane.upper =
-        std::fmin(ref_path_points_[i].distance_to_left_lane_border -
-                      half_ego_width - config_.soft_buffer2lane,
-                  soft_bound_lane.upper);
-    soft_bound_lane.lower =
-        std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
-                      half_ego_width + config_.soft_buffer2lane,
-                  soft_bound_lane.lower);
-    const auto &ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
-    if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
-      if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
-        soft_bounds_[i].emplace_back(
-            WeightedBound{ego_init_sl_info.min_l + half_ego_width,
-                          kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::EGO_POSITION}});
-        soft_bounds_[i].emplace_back(WeightedBound{
-            -kDefaultDistanceToRoad, soft_bound_lane.upper,
-            config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+  if (!is_in_lane_borrow_status) {
+    for (size_t i = 0; i < ref_traj_points_.size(); i++) {
+      Bound soft_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+      soft_bound_lane.upper =
+          std::fmin(ref_path_points_[i].distance_to_left_lane_border -
+                        half_ego_width - config_.soft_buffer2lane,
+                    soft_bound_lane.upper);
+      soft_bound_lane.lower =
+          std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
+                        half_ego_width + config_.soft_buffer2lane,
+                    soft_bound_lane.lower);
+      const auto &ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
+      if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
+        if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
+          soft_bounds_[i].emplace_back(
+              WeightedBound{ego_init_sl_info.min_l + half_ego_width,
+                            kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+                            BoundInfo{-100, BoundType::EGO_POSITION}});
+          soft_bounds_[i].emplace_back(WeightedBound{
+              -kDefaultDistanceToRoad, soft_bound_lane.upper,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+        } else {
+          soft_bounds_[i].emplace_back(WeightedBound{
+              soft_bound_lane.lower, soft_bound_lane.upper,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+        }
+      } else if (is_lane_change &&
+                lc_request_direction == RequestType::RIGHT_CHANGE) {
+        if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
+          soft_bounds_[i].emplace_back(WeightedBound{
+              -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
+              config_.kPhysicalBoundWeight,
+              BoundInfo{-100, BoundType::EGO_POSITION}});
+          soft_bounds_[i].emplace_back(WeightedBound{
+              soft_bound_lane.lower, kDefaultDistanceToRoad,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+        } else {
+          soft_bounds_[i].emplace_back(WeightedBound{
+              soft_bound_lane.lower, soft_bound_lane.upper,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+        }
       } else {
         soft_bounds_[i].emplace_back(WeightedBound{
             soft_bound_lane.lower, soft_bound_lane.upper,
             config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
       }
-    } else if (is_lane_change &&
-               lc_request_direction == RequestType::RIGHT_CHANGE) {
-      if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
-        soft_bounds_[i].emplace_back(WeightedBound{
-            -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
-            config_.kPhysicalBoundWeight,
-            BoundInfo{-100, BoundType::EGO_POSITION}});
-        soft_bounds_[i].emplace_back(WeightedBound{
-            soft_bound_lane.lower, kDefaultDistanceToRoad,
-            config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
-      } else {
-        soft_bounds_[i].emplace_back(WeightedBound{
-            soft_bound_lane.lower, soft_bound_lane.upper,
-            config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
-      }
-    } else {
-      soft_bounds_[i].emplace_back(WeightedBound{
-          soft_bound_lane.lower, soft_bound_lane.upper,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
     }
   }
 }
