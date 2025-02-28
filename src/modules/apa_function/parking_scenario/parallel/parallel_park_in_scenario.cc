@@ -40,18 +40,16 @@ static double kRearDetaXMagWhenBothSidesVacant = 0.2;
 static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.2;
 static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
-
 static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
-
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
-
 static double kMinChannelYMagIdentification = 3.3;
-
 static double kExtendLengthOutsideSlot = 0.4;
+static double kDeletedObsDistOutSlot = 0.3;
+static double kDeletedObsDistInSlot = 0.10;
 static double kTBoundarySampleDist = 0.38;
 static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
@@ -447,7 +445,8 @@ const bool ParallelParkInScenario::GenTlane() {
       }
 
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-              obs_pt_local, ego_info_under_slot.cur_pose, 0.3)) {
+              obs_pt_local, ego_info_under_slot.cur_pose,
+              kDeletedObsDistOutSlot)) {
         // in_ego_cnt++;
         continue;
       }
@@ -700,6 +699,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   //                         c-------------D
 
   apa_world_ptr_->GetCollisionDetectorPtr()->Reset();
+  const auto& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   // set T-Boundary obstacles
   const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
@@ -728,9 +729,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
                                                     channel_point_2);
 
   // sample channel boundary line
-  std::vector<Eigen::Vector2d> channel_obstacle_vec;
-  pnc::geometry_lib::SamplePointSetInLineSeg(channel_obstacle_vec, channel_line,
+  std::vector<Eigen::Vector2d> channel_line_obs_vec;
+  std::vector<Eigen::Vector2d> filtered_channel_obs_vec;
+  pnc::geometry_lib::SamplePointSetInLineSeg(channel_line_obs_vec, channel_line,
                                              kChannelSampleDist);
+  for (const auto& obs : channel_line_obs_vec) {
+    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+            obs, ego_info_under_slot.cur_pose, kDeletedObsDistOutSlot)) {
+      filtered_channel_obs_vec.emplace_back(obs);
+    }
+  }
 
   for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
     // add obs near channel
@@ -743,10 +751,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
             channel_point_1.y());
 
     if (channel_y_condition) {
-      channel_obstacle_vec.emplace_back(obstacle_point_slot);
+      filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
 
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
-                                  t_lane_.slot_length + 3.0)) {
+                                  t_lane_.slot_length + 3.5)) {
         if (t_lane_.slot_side_sgn > 0.0) {
           t_lane_.channel_y =
               std::min(obstacle_point_slot.y(), t_lane_.channel_y);
@@ -758,7 +766,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     }
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
+      filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -772,11 +780,17 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   std::vector<Eigen::Vector2d> point_set;
   std::vector<Eigen::Vector2d> tlane_obstacle_vec;
+
   for (const auto& line : tlane_line_vec) {
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
                                                kTBoundarySampleDist);
-    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
-                              point_set.end());
+
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistOutSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
   }
 
   // tlane vertical line
@@ -820,8 +834,13 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   for (const auto& line : tlane_line_vec) {
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
                                                kTBoundarySampleDist);
-    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
-                              point_set.end());
+
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
   }
 
   for (const auto& obs_pos : obs_pt_local_vec_) {
@@ -859,12 +878,20 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
 
   point_set.clear();
+  tlane_obstacle_vec.clear();
   tlane_line.SetPoints(C_curb, D_curb);
   pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
                                              kTBoundarySampleDist);
 
+  for (const auto& obs : point_set) {
+    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+            obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+      tlane_obstacle_vec.emplace_back(obs);
+    }
+  }
+
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      point_set, CollisionDetector::CURB_OBS);
+      tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 }
 
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
