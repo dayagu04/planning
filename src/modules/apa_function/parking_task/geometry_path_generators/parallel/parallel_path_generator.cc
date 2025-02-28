@@ -911,7 +911,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     ILOG_INFO << "No. " << i;
     geometry_lib::PrintPose("prepare pose", preparing_pose_vec[i]);
     if (i >= aligned_size && i < parallel_line_size &&
-        parallel_success_cnt > 0) {
+        parallel_success_cnt > 1) {
       continue;
     }
 
@@ -1309,6 +1309,7 @@ const bool ParallelPathGenerator::SelectBestPathOutsideSlot(
 
   if (index_vec.size() == 0) {
     ILOG_INFO << "calc min gear shift cnt error!";
+    return false;
   }
   ILOG_INFO << "min_gear_shift_cnt = " << min_gear_shift_cnt;
 
@@ -1428,7 +1429,7 @@ const bool ParallelPathGenerator::DubinsPlan(
       if (!dubins_planner_.Solve(j, i)) {
         continue;
       }
-      if (IsDubinsCollided(kColBufferOutSlot)) {
+      if (IsDubinsCollided(buffer)) {
         continue;
       }
       std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
