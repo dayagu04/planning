@@ -1097,7 +1097,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
             ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
       const std::vector<double> x_tab = {
-          ego_info_under_slot.target_pose.pos.x() - param.rear_overhanging -
+          ego_info_under_slot.target_pose.pos.x() - param.wheel_base -
               param.front_overhanging,
           ego_info_under_slot.slot.slot_length_};
 
