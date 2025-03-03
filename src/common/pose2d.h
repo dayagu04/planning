@@ -15,6 +15,10 @@ struct Position2D {
   double DistanceTo(const Eigen::Vector2d &p) const {
     return std::sqrt((x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]));
   }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log) << "x = " << x << "  y = " << y;
+  }
 };
 
 struct Position3D {

@@ -107,8 +107,6 @@ void UssObstacleAvoidance::Init() {
     uss_local_normal_angle_vec_.emplace_back(pnc::mathlib::Deg2Rad(
         apa_param.GetParam().uss_normal_angle_deg_vec[i] - 90.0));
   }
-
-  col_det.SetParam(CollisionDetector::Paramters(param_.lat_inflation));
 }
 
 const std::vector<Eigen::Vector2d> UssObstacleAvoidance::GetCarLocalVertex() {
@@ -393,47 +391,6 @@ void UssObstacleAvoidance::GenUssArc() {
 }
 
 const bool UssObstacleAvoidance::Preprocess() {
-  // 添加障碍物 世界坐标即可  暂时只添加超声波点云障碍物,
-  // 后续应该放在一个地方统一计算所有真实的障碍物，考虑高度
-  col_det.ClearObstacles();
-  std::vector<ApaObstacle *> obs_vec;
-  // 获取超声波点云
-  if (obstacle_manager_ptr_->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
-                                         obs_vec)) {
-    std::vector<Eigen::Vector2d> obs_pt_vec;
-    for (const auto &obs : obs_vec) {
-      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
-                        obs->GetPtClout2dGlobal().end());
-    }
-    ILOG_INFO << "uss pt size = " << obs_pt_vec.size();
-    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
-  }
-
-  // 获取OCC点云
-  if (obstacle_manager_ptr_->GetObstacle(
-          ApaObsAttributeType::FUSION_POINT_CLOUD, obs_vec)) {
-    std::vector<Eigen::Vector2d> obs_pt_vec;
-    for (const auto &obs : obs_vec) {
-      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
-                        obs->GetPtClout2dGlobal().end());
-    }
-    ILOG_INFO << "occ pt size = " << obs_pt_vec.size();
-    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
-  }
-
-  // 获取接地线点云
-  if (obstacle_manager_ptr_->GetObstacle(
-          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
-    std::vector<Eigen::Vector2d> obs_pt_vec;
-    for (const auto &obs : obs_vec) {
-      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
-                        obs->GetPtClout2dGlobal().end());
-    }
-    ILOG_INFO << "gl pt size = " << obs_pt_vec.size();
-    col_det.AddObstacles(obs_pt_vec,
-                         CollisionDetector::ObsType::GROUND_LINE_OBS);
-  }
-
   if (!pnc::geometry_lib::IsValidGear(predict_path_ptr_->GetPathGear())) {
     return false;
   }
@@ -503,20 +460,12 @@ void UssObstacleAvoidance::CalRemainDist() {
             << "  car_index = " << remain_dist_info_.car_index;
 }
 
-void UssObstacleAvoidance::Update(
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
-    const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
-    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
-    const double lat_buffer) {
-  if (measure_data_ptr == nullptr || predict_path_ptr == nullptr ||
-      obstacle_manager_ptr == nullptr) {
+void UssObstacleAvoidance::Update() {
+  if (measure_data_ptr_ == nullptr || predict_path_ptr_ == nullptr ||
+      obstacle_manager_ptr_ == nullptr) {
     ILOG_ERROR << "UssObstacleAvoidance UPDATE input_ptr is err";
     return;
   }
-  // update local_view
-  measure_data_ptr_ = measure_data_ptr;
-  predict_path_ptr_ = predict_path_ptr;
-  obstacle_manager_ptr_ = obstacle_manager_ptr;
 
   // set some necessary info, if info is abnormal, quit directly
   if (!Preprocess()) {
@@ -589,48 +538,6 @@ void UssObstacleAvoidance::Update(
   } else {
     remain_dist_info_.is_available = false;
   }
-
-  CollisionDetector::CollisionResult result = col_det.UpdateByObsMap(
-      predict_path_ptr->GetPredictPath(), lat_buffer, 0.0);
-
-  const double dist = col_det.CalClosestDistFromObsToCar(
-      pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
-                                   measure_data_ptr_->GetHeading()),
-      0.0);
-  double vel_target = 1.168;
-  if (!apa_param.GetParam().enable_corner_uss_process) {
-    // limit vel
-    if (dist + lat_buffer < 0.268) {
-      ILOG_INFO << "obs2car_dist is dangerous, reduce vel";
-      vel_target =
-          std::max(0.4, std::fabs(measure_data_ptr_->GetVel()) - 0.28 * 0.1);
-    } else {
-      ILOG_INFO << "obs2car_dist is safe, increase vel";
-      vel_target = pnc::mathlib::Constrain(
-          std::fabs(measure_data_ptr_->GetVel()) + 0.68 * 0.1, 0.768, 1.168);
-    }
-  }
-  ILOG_INFO << "vel_target = " << vel_target;
-  remain_dist_info_.vel_target = vel_target;
-  remain_dist_info_.obs_pt_remain_dist = result.remain_dist;
-
-  std::vector<double> car_predict_x_vec;
-  std::vector<double> car_predict_y_vec;
-  std::vector<double> car_predict_heading_vec;
-  const auto &car_predict_pt_vec = predict_path_ptr->GetPredictPath();
-  car_predict_x_vec.reserve(car_predict_pt_vec.size());
-  car_predict_y_vec.reserve(car_predict_pt_vec.size());
-  car_predict_heading_vec.reserve(car_predict_pt_vec.size());
-  for (const auto &pt : car_predict_pt_vec) {
-    car_predict_x_vec.emplace_back(pt.pos.x());
-    car_predict_y_vec.emplace_back(pt.pos.y());
-    car_predict_heading_vec.emplace_back(pt.heading);
-  }
-
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", lat_buffer)
-  JSON_DEBUG_VECTOR("car_predict_x_vec", car_predict_x_vec, 3)
-  JSON_DEBUG_VECTOR("car_predict_y_vec", car_predict_y_vec, 3)
-  JSON_DEBUG_VECTOR("car_predict_heading_vec", car_predict_heading_vec, 3)
 }
 
 const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {
@@ -711,11 +618,6 @@ void UssObstacleAvoidance::UpdateByPybind() {
   if (remain_dist_info_.remain_dist > 2.0) {
     remain_dist_info_.is_available = false;
   }
-}
-
-const bool UssObstacleAvoidance::IsObstacleInPolygon(
-    const std::vector<Eigen::Vector2d> &vertex_vec) {
-  return col_det.IsObstacleInPolygon(vertex_vec);
 }
 
 }  // namespace apa_planner

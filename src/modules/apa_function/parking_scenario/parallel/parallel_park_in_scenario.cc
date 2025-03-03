@@ -73,7 +73,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetSimuParam().force_plan && CheckPlanSkip()) {
+  if (CheckPlanSkip()) {
     return;
   }
 
@@ -115,8 +115,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
   }
 
-  // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist, lat_buffer, 0.0);
+  // calculate remain dist according to plan path
+  frame_.remain_dist_path = CalRemainDistFromPath();
+
+  // calculate remain dist uss according to uss
+  frame_.remain_dist_obs =
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -896,19 +900,15 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // construct input
-
-  ParallelPathGenerator::Input path_planner_input;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  GeometryPathInput path_planner_input;
   path_planner_input.tlane = t_lane_;
   path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = frame_.is_replan_first;
   path_planner_input.is_complete_path =
       apa_world_ptr_->GetSimuParam().is_complete_path;
-
-  const auto& ego_slot_info =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-
-  path_planner_input.ego_pose = ego_slot_info.cur_pose;
-  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
+  path_planner_input.ego_info_under_slot = ego_info_under_slot;
 
   if (frame_.is_replan_first) {
     // temprarily give driving gear
@@ -921,7 +921,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     path_planner_input.path_planner_state =
         ParallelPathGenerator::PrepareStepPlan;
-  } else if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio &&
+  } else if (path_planner_input.ego_info_under_slot.slot_occupied_ratio >
+                 kEnterMultiPlanSlotRatio &&
              frame_.in_slot_plan_count == 0) {
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     frame_.current_arc_steer =
@@ -930,7 +931,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             : pnc::geometry_lib::SEG_STEER_LEFT;
   }
 
-  ILOG_INFO << "slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio;
+  ILOG_INFO << "slot_occupied_ratio = "
+            << ego_info_under_slot.slot_occupied_ratio;
   ILOG_INFO << "frame_.in_slot_plan_count = " << frame_.in_slot_plan_count;
 
   path_planner_input.ref_gear = frame_.current_gear;
@@ -989,7 +991,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   }
 
   // enter slot
-  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+  if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     double extend_lenth = 0.0;
     if (current_path_length < apa_param.GetParam().min_path_length) {
       extend_lenth = std::max(
@@ -1034,7 +1036,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   parallel_path_planner_.SampleCurrentPathSeg();
 
   frame_.total_plan_count++;
-  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+  if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     frame_.in_slot_plan_count++;
   }
 
@@ -1058,7 +1060,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       return PathPlannerResult::PLAN_FAILED;
     }
 
-    if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
       // set current arc steer
       frame_.current_arc_steer =
           pnc::geometry_lib::ReverseSteer(frame_.current_arc_steer);
@@ -1150,8 +1152,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     pnc::geometry_lib::PathPoint global_point;
     for (const auto& path_point : optimized_path_vec) {
-      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
@@ -1173,8 +1176,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     pnc::geometry_lib::PathPoint global_point;
     for (const auto& path_point : planner_output.path_point_vec) {
-      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
@@ -1192,64 +1196,6 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             << current_path_point_global_vec_.size();
 
   return plan_result;
-}
-
-const bool ParallelParkInScenario::CheckSegCompleted() {
-  frame_.is_replan_by_uss = false;
-
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    const auto min_remain_dist =
-        std::min(frame_.remain_dist_uss, frame_.remain_dist);
-
-    if (min_remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
-
-      if (!frame_.is_replan_by_uss) {
-        ILOG_INFO << "close to target!\n";
-        is_seg_complete = true;
-      } else {
-        ILOG_INFO << "close to obstacle by uss!\n";
-        // uss distance may not be accurate, so wait for a period of time
-        if (frame_.stuck_uss_time >
-            apa_param.GetParam().uss_stuck_replan_wait_time) {
-          is_seg_complete = true;
-        }
-      }
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool ParallelParkInScenario::CheckReplan() {
-  if (frame_.is_replan_first == true ||
-      apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    if (frame_.is_replan_by_uss) {
-      frame_.replan_reason = SEG_COMPLETED_USS;
-    }
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  // Todo: maybe CheckDynamicUpdate
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
 }
 
 const bool ParallelParkInScenario::CheckFinished() {
@@ -1395,13 +1341,13 @@ void ParallelParkInScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)

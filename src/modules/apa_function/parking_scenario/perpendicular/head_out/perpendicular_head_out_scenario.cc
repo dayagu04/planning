@@ -58,7 +58,8 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
   const double safe_uss_remain_dist =
       apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  frame_.remain_dist_path = CalRemainDistFromPath();
+  frame_.remain_dist_obs = CalRemainDistFromObs(safe_uss_remain_dist);
 
   // update ego slot info
   UpdateEgoSlotInfo();
@@ -571,7 +572,7 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
       << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
       << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
       << "  stuck time(s) = " << frame_.stuck_time
-      << "  stuck uss time(s) = " << frame_.stuck_uss_time << "  slod side = "
+      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time << "  slod side = "
       << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
@@ -736,7 +737,7 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   //   input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   // }
 
-  perpendicular_path_planner_.SetGInput(input);
+  perpendicular_path_planner_.SetInput(input);
 
   // need replan all path
   const bool path_plan_success =
@@ -869,102 +870,6 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   return plan_result;
 }
 
-const bool PerpendicularHeadOutScenario::CheckSegCompleted() {
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      ILOG_INFO << "close to target, need wait a certain time!";
-      if (frame_.stuck_uss_time > 0.068) {
-        ILOG_INFO << "wait a certain time, start plan";
-        is_seg_complete = true;
-      }
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool PerpendicularHeadOutScenario::CheckUssStucked() {
-  if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().uss_stuck_replan_wait_time) {
-      ILOG_INFO << "wait a certain time, start plan";
-      frame_.is_replan_by_uss = true;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-const bool PerpendicularHeadOutScenario::CheckColDetStucked() {
-  if (frame_.remain_dist_col_det <
-          apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    ILOG_INFO << "close to obstacle by col det!, need wait a certain time!";
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().uss_stuck_replan_wait_time) {
-      ILOG_INFO << "wait a certain time, start plan";
-      return true;
-    }
-  }
-  return false;
-}
-
-const bool PerpendicularHeadOutScenario::CheckReplan() {
-  frame_.is_replan_by_uss = false;
-  frame_.is_replan_dynamic = false;
-  frame_.replan_reason = NOT_REPLAN;
-
-  if (frame_.is_replan_first) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  if (apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "force plan";
-    frame_.replan_reason = FORCE_PLAN;
-    return true;
-  }
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    return true;
-  }
-
-  if (CheckUssStucked()) {
-    ILOG_INFO << "replan by uss stucked!";
-    frame_.replan_reason = SEG_COMPLETED_USS;
-    return true;
-  }
-
-  if (CheckColDetStucked()) {
-    ILOG_INFO << "replan by col det stucked!";
-    frame_.replan_reason = SEG_COMPLETED_COL_DET;
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    // if plan once, the stuck_uss_time is clear and accumlate again
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
-    ILOG_INFO << "replan by dynamic!";
-    frame_.replan_reason = DYNAMIC;
-    return true;
-  }
-
-  return false;
-}
-
 const bool PerpendicularHeadOutScenario::CheckFinished() {
   bool parking_finish = false;
   const EgoInfoUnderSlot& ego_info_under_slot =
@@ -983,7 +888,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
   if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
     parking_finish = remain_s_condition && static_condition;
@@ -996,13 +901,14 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   }
 
   // stucked by directly behind uss
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr();
   const bool enter_slot_condition =
       ego_info_under_slot.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
   if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
     parking_finish = lat_condition && static_condition &&
                      enter_slot_condition && remain_uss_condition;
@@ -1133,14 +1039,14 @@ void PerpendicularHeadOutScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -1174,8 +1080,10 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
-  const auto uss_info =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  const UssObstacleAvoidance::RemainDistInfo uss_info =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr()
+          ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
   JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
   JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
@@ -1332,7 +1240,7 @@ const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
 const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
   if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     const double current_car_s =
-        frame_.current_path_length - frame_.remain_dist;
+        frame_.current_path_length - frame_.remain_dist_path;
     // ILOG_INFO << "current_car_s " << current_car_s;
     pnc::geometry_lib::GlobalToLocalTf& g2l_tf =
         apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf;

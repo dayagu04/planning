@@ -1,5 +1,7 @@
 #include "parking_stop_decider.h"
+
 #include <cstddef>
+
 #include "collision_detection/path_safe_checker.h"
 #include "debug_info_log.h"
 #include "obstacle_manager.h"
@@ -9,18 +11,17 @@ namespace planning {
 #define DECIDER_DEBUG (0)
 
 void ParkingStopDecider::Process(
-    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-    const std::shared_ptr<apa_planner::ApaWorld> apa_world_ptr,
     const double tracking_path_collision_dist,
     std::vector<pnc::geometry_lib::PathPoint>& path,
     SpeedDecisions* speed_decisions) {
   tracking_path_collision_dist_ = tracking_path_collision_dist;
-  const Pose2D pose = apa_world_ptr->GetMeasureDataManagerPtr()->GetPose();
 
-  PathSafeChecker safe_checker;
-  safe_checker.Excute(obs_manager, pose, PathCheckRequest::DISTANCE_CHECK, 0.08,
-                      0.08, path);
-  ego_project_s_ = safe_checker.GetEgoPathProjectS();
+  col_det_interface_ptr_->GetPathSafeCheckPtr()->Excute(
+      measure_data_ptr_->GetPose(), PathCheckRequest::DISTANCE_CHECK, 0.08,
+      0.08, path);
+
+  ego_project_s_ =
+      col_det_interface_ptr_->GetPathSafeCheckPtr()->GetEgoPathProjectS();
 
   AddStopDecisionByPlanningPath(path, speed_decisions);
 

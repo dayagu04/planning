@@ -11,12 +11,10 @@ namespace planning {
 #define DEBUG_PATH_CHECKER (0)
 #define NOT_CARE_SAFE_DIST (0.5)
 
-void PathSafeChecker::Excute(
-    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-    const Pose2D& ego_pose, const PathCheckRequest requst,
-    const double lat_buffer, const double lon_buffer,
-    std::vector<pnc::geometry_lib::PathPoint>& path) {
-  obs_manager_ = obs_manager;
+void PathSafeChecker::Excute(const Pose2D& ego_pose,
+                             const PathCheckRequest requst,
+                             const double lat_buffer, const double lon_buffer,
+                             std::vector<pnc::geometry_lib::PathPoint>& path) {
   lat_buffer_ = lat_buffer;
   lon_buffer_ = lon_buffer;
   ego_project_s_ = 0;
@@ -493,10 +491,9 @@ const bool PathSafeChecker::IsVehicleCollision(
   return false;
 }
 
-bool PathSafeChecker::CalcEgoCollision(
-    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-    const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer) {
-  obs_manager_ = obs_manager;
+bool PathSafeChecker::CalcEgoCollision(const Pose2D& ego_pose,
+                                       const double lat_buffer,
+                                       const double lon_buffer) {
   is_path_collision_ = false;
   is_ego_collision_ = false;
 

@@ -20,11 +20,9 @@ void ApaObstacle::Reset() {
 
   pt_clout_2d_global_.clear();
   pt_clout_2d_local_.clear();
-  pt_clout_2d_size_ = 0;
 
   pt_clout_3d_global_.clear();
   pt_clout_3d_local_.clear();
-  pt_clout_3d_size_ = 0;
 
   obs_id_ = 0;
 }

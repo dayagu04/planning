@@ -87,63 +87,6 @@ void NarrowSpaceScenario::Init() {
   return;
 }
 
-const bool NarrowSpaceScenario::CheckSegCompleted() {
-  bool is_seg_complete = false;
-
-  if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      frame_.current_path_length > 1e-2) {
-    if (frame_.stuck_uss_time > 0.068) {
-      is_seg_complete = true;
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool NarrowSpaceScenario::CheckUssStucked() {
-  if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    if (frame_.stuck_uss_time >
-        apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time) {
-      frame_.is_replan_by_uss = true;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-const bool NarrowSpaceScenario::CheckReplan() {
-  if (frame_.is_replan_first == true) {
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  frame_.is_replan_by_uss = false;
-  frame_.is_replan_dynamic = false;
-
-  if (CheckSegCompleted()) {
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    return true;
-  }
-
-  if (CheckUssStucked()) {
-    frame_.replan_reason = SEG_COMPLETED_USS;
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    // if plan once, the stuck_uss_time is clear and accumlate again
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
-}
-
 const bool NarrowSpaceScenario::CheckFinished() {
   bool ret = false;
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -194,7 +137,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
   bool parking_finish =
       lon_condition && lat_condition && static_condition && remain_s_condition;
@@ -204,13 +147,14 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   }
 
   // stucked by directly behind uss
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr();
   const bool enter_slot_condition =
       ego_info.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
                    remain_uss_condition;
@@ -248,7 +192,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetSimuParam().force_plan && CheckPlanSkip()) {
+  if (CheckPlanSkip()) {
     return;
   }
 
@@ -263,11 +207,11 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  // hack: use uss circle dist. In the future, will use uss point cloud to do
-  // safe check.
-  const double safe_uss_remain_dist = 0.31;
-  // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist);
+  // calculate remain dist according to plan path
+  frame_.remain_dist_path = CalRemainDistFromPath();
+
+  // calculate remain dist uss according to uss
+  frame_.remain_dist_obs = CalRemainDistFromObs(0.31);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -288,13 +232,17 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   }
 
   // check failed
-  if (CheckStuckFailed()) {
+  if (CheckStuckFailed(12.0)) {
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 
-  bool is_replan = CheckReplan();
+  bool is_replan = CheckReplan(
+      apa_param.GetParam().max_replan_remain_dist, 0.068,
+      apa_param.GetParam().max_replan_remain_dist,
+      apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time,
+      apa_param.GetParam().stuck_replan_time);
 
   if (!CheckEgoReplanNumber(is_replan)) {
     SetParkingStatus(PARKING_FAILED);
@@ -305,12 +253,11 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   bool update_thread_path = UpdateThreadPath();
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
 
-  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
+  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_obs_time
             << " ,is_replan = " << is_replan;
 
   // check replan
-  if (apa_world_ptr_->GetSimuParam().force_plan || is_replan ||
-      update_thread_path) {
+  if (is_replan || update_thread_path) {
     ILOG_INFO << "plan reason = " << GetPlanReason(frame_.replan_reason)
               << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
               << ",thread update = " << update_thread_path
@@ -432,14 +379,14 @@ void NarrowSpaceScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -469,8 +416,10 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result);
   JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2);
 
-  const auto uss_info =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  const UssObstacleAvoidance::RemainDistInfo uss_info =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr()
+          ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available);
   JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist);
   JSON_DEBUG_VALUE("uss_index", uss_info.uss_index);
@@ -523,24 +472,6 @@ const std::string NarrowSpaceScenario::GetPlanReason(const uint8_t type) {
   }
 
   return "none";
-}
-
-void NarrowSpaceScenario::UpdateRemainDist(
-    const double uss_safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing) {
-  // 1. calculate remain dist according to plan path
-  frame_.remain_dist = CalRemainDistFromPath();
-
-  // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist, lat_buffer,
-                                                extra_buffer_when_reversing);
-
-  ILOG_INFO << "remain s = " << frame_.remain_dist
-            << ", uss s = " << frame_.remain_dist_uss
-            << ", obs s = " << frame_.remain_dist_col_det
-            << ", current path length = " << frame_.current_path_length;
-
-  return;
 }
 
 PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
@@ -663,7 +594,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     case SEG_COMPLETED_PATH:
       cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
       break;
-    case SEG_COMPLETED_USS:
+    case SEG_COMPLETED_OBS:
       cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case STUCKED:
@@ -1231,10 +1162,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
 NarrowSpaceScenario::~NarrowSpaceScenario() {}
 
-const bool NarrowSpaceScenario::CheckStuckFailed() {
-  return frame_.stuck_time > 12.0;
-}
-
 void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
@@ -1533,6 +1460,9 @@ const double NarrowSpaceScenario::CalRemainDistFromPath() {
     remain_dist = total_dist;
   }
 
+  ILOG_INFO << "remain_dist = " << remain_dist
+            << "  current_path_length = " << frame_.current_path_length;
+
   return remain_dist;
 }
 
@@ -1739,7 +1669,7 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist < config.max_replan_remain_dist;
+      frame_.remain_dist_path < config.max_replan_remain_dist;
 
   bool parking_finish = rear_axis_lon_condition && lat_condition &&
                         static_condition && remain_s_condition;

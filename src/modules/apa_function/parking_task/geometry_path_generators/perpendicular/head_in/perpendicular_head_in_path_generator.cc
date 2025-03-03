@@ -61,11 +61,11 @@ void PerpendicularPathHeadingInPlanner::PreprocessForSimu() {
 
   // for simulation
 
-  if (ginput_.ego_info_under_slot.slot_side ==
+  if (input_.ego_info_under_slot.slot_side ==
       pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     calc_params_.is_left_side = false;
     calc_params_.slot_side_sgn = 1.0;
-  } else if (ginput_.ego_info_under_slot.slot_side ==
+  } else if (input_.ego_info_under_slot.slot_side ==
              pnc::geometry_lib::SLOT_SIDE_LEFT) {
     calc_params_.is_left_side = true;
     calc_params_.slot_side_sgn = -1.0;
@@ -75,20 +75,20 @@ void PerpendicularPathHeadingInPlanner::PreprocessForSimu() {
   output_.Reset();
 
   // TODO: make sure inside and outside if is occuppied
-  if (ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_1.x() >
-      ginput_.ego_info_under_slot.slot.slot_length_ - 0.2) {
+  if (input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_1.x() >
+      input_.ego_info_under_slot.slot.slot_length_ - 0.2) {
     calc_params_.is_outside_occupied = true;
   }
 
-  if (ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x() >
-      ginput_.ego_info_under_slot.slot.slot_length_ - 0.2) {
+  if (input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x() >
+      input_.ego_info_under_slot.slot.slot_length_ - 0.2) {
     calc_params_.is_inside_occupied = true;
   }
 
-  // std::cout << " ginput_.pt_0 = " <<
-  // ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.transpose()
-  //           << " ginput_.tlane.corner_inside_slot = "
-  //           << ginput_.tlane.corner_inside_slot.transpose() << std::endl;
+  // std::cout << " input_.pt_0 = " <<
+  // input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.transpose()
+  //           << " input_.tlane.corner_inside_slot = "
+  //           << input_.tlane.corner_inside_slot.transpose() << std::endl;
 
   // std::cout << "is_outside_occupied = " << calc_params_.is_outside_occupied
   //           << " is_inside_occupied = " << calc_params_.is_inside_occupied
@@ -96,8 +96,8 @@ void PerpendicularPathHeadingInPlanner::PreprocessForSimu() {
 
   // target line
   calc_params_.target_line = pnc::geometry_lib::BuildLineSegByPose(
-      ginput_.ego_info_under_slot.target_pose.pos,
-      ginput_.ego_info_under_slot.target_pose.heading);
+      input_.ego_info_under_slot.target_pose.pos,
+      input_.ego_info_under_slot.target_pose.heading);
 }
 
 void PerpendicularPathHeadingInPlanner::Preprocess() {
@@ -113,18 +113,18 @@ void PerpendicularPathHeadingInPlanner::Preprocess() {
   calc_params_.use_adjust = false;
 
   // calculate slot side by Tlane
-  if (ginput_.ego_info_under_slot.slot_side ==
+  if (input_.ego_info_under_slot.slot_side ==
       pnc::geometry_lib::SLOT_SIDE_LEFT) {
     calc_params_.is_left_side = true;
     calc_params_.slot_side_sgn = -1.0;
-    calc_params_.is_outside_occupied = !ginput_.is_left_empty;
-    calc_params_.is_inside_occupied = !ginput_.is_right_empty;
-  } else if (ginput_.ego_info_under_slot.slot_side ==
+    calc_params_.is_outside_occupied = !input_.is_left_empty;
+    calc_params_.is_inside_occupied = !input_.is_right_empty;
+  } else if (input_.ego_info_under_slot.slot_side ==
              pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     calc_params_.is_left_side = false;
     calc_params_.slot_side_sgn = 1.0;
-    calc_params_.is_outside_occupied = !ginput_.is_right_empty;
-    calc_params_.is_inside_occupied = !ginput_.is_left_empty;
+    calc_params_.is_outside_occupied = !input_.is_right_empty;
+    calc_params_.is_inside_occupied = !input_.is_left_empty;
   }
   // std::cout << "is_outside_occupied = " << calc_params_.is_outside_occupied
   //           << " is_inside_occupied = " << calc_params_.is_inside_occupied
@@ -132,8 +132,8 @@ void PerpendicularPathHeadingInPlanner::Preprocess() {
 
   // target line
   calc_params_.target_line = pnc::geometry_lib::BuildLineSegByPose(
-      ginput_.ego_info_under_slot.target_pose.pos,
-      ginput_.ego_info_under_slot.target_pose.heading);
+      input_.ego_info_under_slot.target_pose.pos,
+      input_.ego_info_under_slot.target_pose.heading);
 }
 
 const bool PerpendicularPathHeadingInPlanner::Update(
@@ -150,7 +150,7 @@ const bool PerpendicularPathHeadingInPlanner::Update() {
   output_.Reset();
 
   // prepare plan for the first time
-  if (ginput_.is_replan_first) {
+  if (input_.is_replan_first) {
     bool prepare_success = false;
     if (TurnIntoSlotFirst()) {
       calc_params_.use_origin_multiplan = true;
@@ -181,9 +181,9 @@ const bool PerpendicularPathHeadingInPlanner::Update() {
             return true;
           } else {
             output_.gear_shift = false;
-            ginput_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-            ginput_.ref_arc_steer =
-                ginput_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
+            input_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+            input_.ref_arc_steer =
+                input_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
                     ? pnc::geometry_lib::SEG_STEER_LEFT
                     : pnc::geometry_lib::SEG_STEER_RIGHT;
           }
@@ -244,22 +244,22 @@ const bool PerpendicularPathHeadingInPlanner::Update() {
 const bool PerpendicularPathHeadingInPlanner::TurnIntoSlotFirst() {
   bool res = false;
   if (!calc_params_.is_outside_occupied) {
-    if (ginput_.ego_info_under_slot.cur_pose.pos.y() *
+    if (input_.ego_info_under_slot.cur_pose.pos.y() *
             calc_params_.slot_side_sgn >
         0.0) {
       calc_params_.search_length_arc_first_method =
-          ginput_.ego_info_under_slot.cur_pose.pos.y() *
+          input_.ego_info_under_slot.cur_pose.pos.y() *
           calc_params_.slot_side_sgn;
       res = true;
     } else {
       res = false;
     }
   } else if (!calc_params_.is_inside_occupied) {
-    if (ginput_.ego_info_under_slot.cur_pose.pos.y() *
+    if (input_.ego_info_under_slot.cur_pose.pos.y() *
             calc_params_.slot_side_sgn >
-        ginput_.ego_info_under_slot.slot.slot_width_) {
+        input_.ego_info_under_slot.slot.slot_width_) {
       calc_params_.search_length_arc_first_method =
-          ginput_.ego_info_under_slot.slot.slot_width_;
+          input_.ego_info_under_slot.slot.slot_width_;
       res = true;
     }
     res = false;
@@ -275,15 +275,15 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirst() {
     length_min += 0.1;
   }
   const Eigen::Vector2d heading_norm(
-      std::cos(ginput_.ego_info_under_slot.cur_pose.heading),
-      std::sin(ginput_.ego_info_under_slot.cur_pose.heading));
+      std::cos(input_.ego_info_under_slot.cur_pose.heading),
+      std::sin(input_.ego_info_under_slot.cur_pose.heading));
 
   geometry_lib::PathPoint start_pose;
-  start_pose.heading = ginput_.ego_info_under_slot.cur_pose.heading;
+  start_pose.heading = input_.ego_info_under_slot.cur_pose.heading;
   bool prepare_plan_success = false;
   for (int i = 0; i < length_vec.size(); i++) {
     start_pose.pos =
-        ginput_.ego_info_under_slot.cur_pose.pos + heading_norm * length_vec[i];
+        input_.ego_info_under_slot.cur_pose.pos + heading_norm * length_vec[i];
     if (PreparePlanArcFirstTry(start_pose)) {
       prepare_plan_success = true;
       break;
@@ -291,13 +291,13 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirst() {
   }
   if (prepare_plan_success) {
     const double dist =
-        (ginput_.ego_info_under_slot.cur_pose.pos - start_pose.pos).norm();
+        (input_.ego_info_under_slot.cur_pose.pos - start_pose.pos).norm();
     if (dist < apa_param.GetParam().prepare_directly_use_tangent_pos_err) {
       calc_params_.directly_use_ego_pose = true;
       ILOG_INFO << "directly use ego pose to multi plan";
     } else {
       geometry_lib::LineSegment line;
-      line.pA = ginput_.ego_info_under_slot.cur_pose.pos;
+      line.pA = input_.ego_info_under_slot.cur_pose.pos;
       line.pB = start_pose.pos;
       line.length = dist;
       line.heading = start_pose.heading;
@@ -308,7 +308,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirst() {
       output_.steer_vec.emplace_back(line_seg.seg_steer);
       output_.path_segment_vec.emplace_back(line_seg);
       output_.length += line_seg.Getlength();
-      ginput_.ego_info_under_slot.cur_pose = start_pose;
+      input_.ego_info_under_slot.cur_pose = start_pose;
     }
   }
   return prepare_plan_success;
@@ -338,8 +338,8 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirstTry(
 
   arc.is_anti_clockwise = calc_params_.is_left_side ? true : false;
   pnc::geometry_lib::CompleteArcInfo(arc, arc.length, arc.is_anti_clockwise);
-  pnc::geometry_lib::PathSegment arc_seg(ginput_.ref_arc_steer,
-                                         ginput_.ref_gear, arc);
+  pnc::geometry_lib::PathSegment arc_seg(input_.ref_arc_steer,
+                                         input_.ref_gear, arc);
   // collision detection
   CollisionDetector::Paramters param;
   param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
@@ -351,7 +351,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirstTry(
       return true;
     } else {
       if (std::fabs(arc.pB.y()) >
-          0.5 * ginput_.ego_info_under_slot.slot.slot_width_) {
+          0.5 * input_.ego_info_under_slot.slot.slot_width_) {
         return false;
       } else {
         return true;
@@ -360,14 +360,14 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirstTry(
   } else {
     if (!calc_params_.is_outside_occupied) {
       if (col_res.col_pt_ego_local.x() >
-          0.88 * ginput_.ego_info_under_slot.slot.slot_length_) {
+          0.88 * input_.ego_info_under_slot.slot.slot_length_) {
         return false;
       } else {
         return true;
       }
     } else {
       if (std::fabs(col_res.col_pt_ego_local.y()) >
-          0.5 * ginput_.ego_info_under_slot.slot.slot_width_) {
+          0.5 * input_.ego_info_under_slot.slot.slot_width_) {
         return false;
       } else {
         return true;
@@ -381,7 +381,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlan() {
   std::vector<double> heading_offset_vec;
 
   const double pt_01_x =
-      ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid.x();
+      input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid.x();
   const double x_min =
       pt_01_x + apa_param.GetParam().headin_prepare_line_min_x_offset_slot;
 
@@ -415,26 +415,26 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlan() {
   Eigen::Vector2d extend_point;
   if (calc_params_.is_left_side) {
     extend_point =
-        ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0;
+        input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0;
   } else {
     extend_point =
-        ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_1;
+        input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_1;
   }
   const double drive_allowed_path_length =
       (extend_point.y() - calc_params_.slot_side_sgn * 1.0) -
-      ginput_.ego_info_under_slot.cur_pose.pos.y();
+      input_.ego_info_under_slot.cur_pose.pos.y();
 
   ILOG_INFO << "drive_allowed_path_length = " << drive_allowed_path_length;
   pnc::geometry_lib::LineSegment line(
-      ginput_.ego_info_under_slot.cur_pose.pos,
-      ginput_.ego_info_under_slot.cur_pose.pos +
+      input_.ego_info_under_slot.cur_pose.pos,
+      input_.ego_info_under_slot.cur_pose.pos +
           drive_allowed_path_length *
               Eigen::Vector2d(
                   std::fabs(
-                      std::cos(ginput_.ego_info_under_slot.cur_pose.heading)),
+                      std::cos(input_.ego_info_under_slot.cur_pose.heading)),
                   std::fabs(
-                      std::sin(ginput_.ego_info_under_slot.cur_pose.heading))),
-      ginput_.ego_info_under_slot.cur_pose.heading);
+                      std::sin(input_.ego_info_under_slot.cur_pose.heading))),
+      input_.ego_info_under_slot.cur_pose.heading);
 
   CollisionDetector::Paramters param;
   param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
@@ -455,11 +455,11 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlan() {
       } else {
         // decide if can directly use ego pose to plan
         if (calc_params_.cal_tang_pt_success) {
-          const double dist = (ginput_.ego_info_under_slot.cur_pose.pos -
+          const double dist = (input_.ego_info_under_slot.cur_pose.pos -
                                calc_params_.safe_circle_tang_pt.pos)
                                   .norm();
           const double heading_err =
-              std::fabs(ginput_.ego_info_under_slot.cur_pose.heading -
+              std::fabs(input_.ego_info_under_slot.cur_pose.heading -
                         calc_params_.safe_circle_tang_pt.heading);
           if (dist <
                   apa_param.GetParam().prepare_directly_use_tangent_pos_err &&
@@ -475,7 +475,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlan() {
     calc_params_.verify_mono_circle_headin = true;
   }
 
-  calc_params_.pt_inside = ginput_.ego_info_under_slot.obs_tlane.B;
+  calc_params_.pt_inside = input_.ego_info_under_slot.obs_tlane.B;
 
   if (!flag) {
     ILOG_INFO << "prepare first fail";
@@ -491,7 +491,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlan() {
       return false;
     }
     ILOG_INFO << "first try dubins success";
-    ginput_.ego_info_under_slot.cur_pose = calc_params_.safe_circle_tang_pt;
+    input_.ego_info_under_slot.cur_pose = calc_params_.safe_circle_tang_pt;
   }
 
   if (calc_params_.directly_use_ego_pose) {
@@ -522,11 +522,11 @@ void PerpendicularPathHeadingInPlanner::CalMonoSafeCircle() {
 
   calc_params_.mono_safe_circle.radius = calc_params_.turn_radius;
 
-  auto pt_inside = ginput_.ego_info_under_slot.obs_tlane.B;
+  auto pt_inside = input_.ego_info_under_slot.obs_tlane.B;
 
   pt_inside.x() =
       std::max(pt_inside.x(),
-               ginput_.ego_info_under_slot.obs_tlane.B.x() -
+               input_.ego_info_under_slot.obs_tlane.B.x() -
                    apa_param.GetParam().max_pt_inside_drop_dx_mono_headin);
 
   pt_inside.y() =
@@ -601,7 +601,7 @@ const bool PerpendicularPathHeadingInPlanner::MonoPreparePlan(
 }
 
 const bool PerpendicularPathHeadingInPlanner::CalMultiSafeCircle() {
-  auto pt_inside = ginput_.ego_info_under_slot.obs_tlane.B;
+  auto pt_inside = input_.ego_info_under_slot.obs_tlane.B;
   pt_inside.x() = std::max(
       pt_inside.x(),
       pt_inside.x() - apa_param.GetParam().max_pt_inside_drop_dx_multi_headin);
@@ -673,13 +673,13 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
 
   if (calc_params_.prepare_point_condition == 0) {
     const double theta_delta =
-        ginput_.ego_info_under_slot.cur_pose.heading - target_pose.heading;
+        input_.ego_info_under_slot.cur_pose.heading - target_pose.heading;
     first_prepare_point.pos.x() =
-        ginput_.ego_info_under_slot.cur_pose.pos.x() +
+        input_.ego_info_under_slot.cur_pose.pos.x() +
         calc_params_.turn_radius * (1.0 - std::cos(theta_delta));
 
     first_prepare_point.pos.y() =
-        ginput_.ego_info_under_slot.cur_pose.pos.y() +
+        input_.ego_info_under_slot.cur_pose.pos.y() +
         calc_params_.turn_radius * std::sin(theta_delta);
 
     first_prepare_point.heading = target_pose.heading;
@@ -694,32 +694,32 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
           calc_params_.turn_radius * std::sin(theta_delta);
 
       first_prepare_point.heading =
-          ginput_.ego_info_under_slot.cur_pose.heading;
+          input_.ego_info_under_slot.cur_pose.heading;
     }
   } else if (calc_params_.prepare_point_condition == 1) {
-    first_prepare_point = ginput_.ego_info_under_slot.cur_pose;
+    first_prepare_point = input_.ego_info_under_slot.cur_pose;
     // TODO: x below may cause coredump by inf while()
     first_prepare_point.pos.x() = std::max(
         first_prepare_point.pos.x(),
-        ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x() +
+        input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x() +
             2.68);
 
     double move_straight_length = 0.0;
     if (calc_params_.is_outside_occupied) {
       if (calc_params_.is_inside_occupied) {
         move_straight_length =
-            -ginput_.ego_info_under_slot.cur_pose.pos.y() -
+            -input_.ego_info_under_slot.cur_pose.pos.y() -
             calc_params_.slot_side_sgn *
                 std::max(0.2 * calc_params_.turn_radius, 2.88);
       } else {
         move_straight_length =
-            -ginput_.ego_info_under_slot.cur_pose.pos.y() -
+            -input_.ego_info_under_slot.cur_pose.pos.y() -
             calc_params_.slot_side_sgn *
                 std::max(0.2 * calc_params_.turn_radius, 1.88);
       }
 
     } else {
-      move_straight_length = -ginput_.ego_info_under_slot.cur_pose.pos.y() -
+      move_straight_length = -input_.ego_info_under_slot.cur_pose.pos.y() -
                              calc_params_.slot_side_sgn *
                                  std::max(0.2 * calc_params_.turn_radius, 2.08);
     }
@@ -731,11 +731,11 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
     ILOG_INFO << "move_straight_length = " << move_straight_length;
     first_prepare_point.pos.x() +=
         move_straight_length *
-        std::fabs(std::cos(ginput_.ego_info_under_slot.cur_pose.heading));
+        std::fabs(std::cos(input_.ego_info_under_slot.cur_pose.heading));
 
     first_prepare_point.pos.y() +=
         move_straight_length *
-        std::fabs(std::sin(ginput_.ego_info_under_slot.cur_pose.heading));
+        std::fabs(std::sin(input_.ego_info_under_slot.cur_pose.heading));
 
     const std::vector<double> heading_tab = {0.0, 3.8, 6.8, 8.8, 9.8};
     const std::vector<double> length_tab = {0.0, 1.0, 2.0, 3.8, 5.0};
@@ -756,8 +756,8 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
     ILOG_INFO << "first_prepare_point = " << first_prepare_point.pos.transpose()
               << " heading = " << first_prepare_point.heading * kRad2Deg
               << std::endl;
-    input.Set(ginput_.ego_info_under_slot.cur_pose.pos, first_prepare_point.pos,
-              ginput_.ego_info_under_slot.cur_pose.heading,
+    input.Set(input_.ego_info_under_slot.cur_pose.pos, first_prepare_point.pos,
+              input_.ego_info_under_slot.cur_pose.heading,
               first_prepare_point.heading);
 
     dubins_planner_.SetRadius(calc_params_.turn_radius);
@@ -770,10 +770,10 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
     }
     // TODO: need judge if two arc collide
     first_prepare_point.heading +=
-        0.5 * (ginput_.ego_info_under_slot.cur_pose.heading -
+        0.5 * (input_.ego_info_under_slot.cur_pose.heading -
                first_prepare_point.heading);
     first_prepare_point.pos.x() +=
-        0.5 * (ginput_.ego_info_under_slot.cur_pose.pos.x() -
+        0.5 * (input_.ego_info_under_slot.cur_pose.pos.x() -
                first_prepare_point.pos.x());
     iter_num++;
   }
@@ -788,7 +788,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     const double& radius) {
   const double start_heading =
       calc_params_.slot_side_sgn *
-      (ginput_.ego_info_under_slot.slot.angle_ * kDeg2Rad - heading_offset);
+      (input_.ego_info_under_slot.slot.angle_ * kDeg2Rad - heading_offset);
 
   pnc::geometry_lib::PathPoint start_pose;
   start_pose.Set(Eigen::Vector2d(x_offset, 0.0), start_heading);
@@ -884,8 +884,8 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
   while (!prepare_success) {
     // first use mono prepare to find target point
     if (calc_params_.use_mono_circle_headin) {
-      input.Set(ginput_.ego_info_under_slot.cur_pose.pos, target_pose.pos,
-                ginput_.ego_info_under_slot.cur_pose.heading,
+      input.Set(input_.ego_info_under_slot.cur_pose.pos, target_pose.pos,
+                input_.ego_info_under_slot.cur_pose.heading,
                 target_pose.heading);
 
       dubins_planner_.SetInput(input);
@@ -908,17 +908,17 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     if (!calc_params_.is_inside_occupied || !calc_params_.is_outside_occupied) {
       if (MonoPreparePlan(target_pose.pos)) {
         ILOG_INFO << "ego_pose = "
-                  << ginput_.ego_info_under_slot.cur_pose.pos.transpose()
+                  << input_.ego_info_under_slot.cur_pose.pos.transpose()
                   << " heading = "
-                  << ginput_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
+                  << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
         ILOG_INFO << "point_tangent = " << target_pose.pos.transpose()
                   << " heading = " << target_pose.heading * kRad2Deg;
 
         calc_params_.cal_tang_pt_success = true;
         calc_params_.safe_circle_tang_pt = target_pose;
         // TODO: to find a suitable current pose by dubins
-        input.Set(ginput_.ego_info_under_slot.cur_pose.pos, target_pose.pos,
-                  ginput_.ego_info_under_slot.cur_pose.heading,
+        input.Set(input_.ego_info_under_slot.cur_pose.pos, target_pose.pos,
+                  input_.ego_info_under_slot.cur_pose.heading,
                   target_pose.heading);
 
         dubins_planner_.SetInput(input);
@@ -926,7 +926,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
             dubins_planner_.OneStepDubinsUpdateByVer(kMinSingleGearPathLength);
 
         if (!prepare_success &&
-            (target_pose.pos.x() - ginput_.ego_info_under_slot.slot
+            (target_pose.pos.x() - input_.ego_info_under_slot.slot
                                        .origin_corner_coord_local_.pt_0.x() <
              apa_param.GetParam().channel_width)) {
           prepare_success = ComputePreparePointSecond(input, target_pose);
@@ -947,17 +947,17 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     // if mono prepare fail, use multi prepare to find target point
     if (MultiPreparePlan(target_pose.pos)) {
       ILOG_INFO << "ego_pose = "
-                << ginput_.ego_info_under_slot.cur_pose.pos.transpose()
+                << input_.ego_info_under_slot.cur_pose.pos.transpose()
                 << " heading = "
-                << ginput_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
+                << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
       ILOG_INFO << "point_tangent = " << target_pose.pos.transpose()
                 << " heading = " << target_pose.heading * kRad2Deg;
 
       calc_params_.cal_tang_pt_success = true;
       calc_params_.safe_circle_tang_pt = target_pose;
       // TODO: to find a suitable current pose by dubins
-      input.Set(ginput_.ego_info_under_slot.cur_pose.pos, target_pose.pos,
-                ginput_.ego_info_under_slot.cur_pose.heading,
+      input.Set(input_.ego_info_under_slot.cur_pose.pos, target_pose.pos,
+                input_.ego_info_under_slot.cur_pose.heading,
                 target_pose.heading);
 
       dubins_planner_.SetInput(input);
@@ -965,7 +965,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
           dubins_planner_.OneStepDubinsUpdateByVer(kMinSingleGearPathLength);
 
       if (!prepare_success &&
-          (target_pose.pos.x() - ginput_.ego_info_under_slot.slot
+          (target_pose.pos.x() - input_.ego_info_under_slot.slot
                                      .origin_corner_coord_local_.pt_0.x() <
            apa_param.GetParam().channel_width)) {
         prepare_success = ComputePreparePointSecond(input, target_pose);
@@ -1062,7 +1062,7 @@ const bool PerpendicularPathHeadingInPlanner::CheckReachTargetPose(
           apa_param.GetParam().target_pos_err &&
       std::fabs(pnc::geometry_lib::NormalizeAngle(
           current_pose.heading -
-          ginput_.ego_info_under_slot.target_pose.heading)) <=
+          input_.ego_info_under_slot.target_pose.heading)) <=
           apa_param.GetParam().target_heading_err * kDeg2Rad) {
     return true;
   }
@@ -1225,7 +1225,7 @@ const bool PerpendicularPathHeadingInPlanner::OneArcPlan(
       // if (!calc_params_.use_mono_circle_headin &&
       // calc_params_.is_inside_occupied &&
       //     (arc.pB.x() < 0.5 *
-      //     ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x()))
+      //     input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x()))
       //     {
       //   double heading_low = arc.headingA;
       //   double heading_high = arc.headingB;
@@ -1233,7 +1233,7 @@ const bool PerpendicularPathHeadingInPlanner::OneArcPlan(
       //   double heading_tmp = arc.headingB;
       //   const auto OA = arc.pA - arc.circle_info.center;
       //   while (pos_tmp.x() <
-      //   ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
+      //   input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
       //   {
       //     heading_tmp = 0.5 * (heading_low + heading_high);
       //     const double heading_error = heading_tmp - heading_low;
@@ -1242,7 +1242,7 @@ const bool PerpendicularPathHeadingInPlanner::OneArcPlan(
       //               OA;
 
       //     if (pos_tmp.x() <
-      //     ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
+      //     input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
       //     {
       //       heading_high = heading_tmp;
       //     }
@@ -1425,7 +1425,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
     pnc::geometry_lib::LineSegment line_seg;
     line_seg.pA = temp_pose.pos;
     line_seg.heading = temp_pose.heading;
-    if (OneLinePlan(line_seg, tmp_path_seg_vec, ginput_.ref_gear)) {
+    if (OneLinePlan(line_seg, tmp_path_seg_vec, input_.ref_gear)) {
       temp_pose.pos = line_seg.pB;
       temp_pose.heading = line_seg.heading;
       ILOG_INFO << "OneLinePlan success";
@@ -1524,7 +1524,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
     pnc::geometry_lib::LineSegment line_seg;
     line_seg.pA = temp_pose.pos;
     line_seg.heading = temp_pose.heading;
-    if (OneLinePlan(line_seg, tmp_path_seg_vec, ginput_.ref_gear)) {
+    if (OneLinePlan(line_seg, tmp_path_seg_vec, input_.ref_gear)) {
       temp_pose.pos = line_seg.pB;
       temp_pose.heading = line_seg.heading;
       ILOG_INFO << "OneLinePlan success";
@@ -1611,13 +1611,13 @@ const bool PerpendicularPathHeadingInPlanner::MultiPlan() {
   ILOG_INFO << "-----multiplan-----";
   // set init state
   pnc::geometry_lib::PathPoint current_pose =
-      ginput_.ego_info_under_slot.cur_pose;
-  uint8_t current_gear = ginput_.ref_gear;
-  uint8_t current_arc_steer = ginput_.ref_arc_steer;
+      input_.ego_info_under_slot.cur_pose;
+  uint8_t current_gear = input_.ref_gear;
+  uint8_t current_arc_steer = input_.ref_arc_steer;
 
   // check pose and slot_occupied_ratio, if error is small, exit multiplan
   if (!CheckMultiPlanSuitable(
-          current_pose, ginput_.ego_info_under_slot.slot_occupied_ratio)) {
+          current_pose, input_.ego_info_under_slot.slot_occupied_ratio)) {
     return false;
   }
 
@@ -1707,7 +1707,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiPlan() {
   }
 
   if (multi_output.path_segment_vec.size() > 0 &&
-      multi_output.gear_cmd_vec.front() != ginput_.ref_gear) {
+      multi_output.gear_cmd_vec.front() != input_.ref_gear) {
     multi_output.Reset();
     success = false;
   }
@@ -1769,9 +1769,9 @@ const bool PerpendicularPathHeadingInPlanner::CheckAdjustPlanSuitable(
 const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
   // set init state
   pnc::geometry_lib::PathPoint current_pose =
-      ginput_.ego_info_under_slot.cur_pose;
-  uint8_t current_gear = ginput_.ref_gear;
-  uint8_t current_arc_steer = ginput_.ref_arc_steer;
+      input_.ego_info_under_slot.cur_pose;
+  uint8_t current_gear = input_.ref_gear;
+  uint8_t current_arc_steer = input_.ref_arc_steer;
   if (output_.path_segment_vec.size() > 0 && output_.gear_cmd_vec.size() > 0) {
     const auto& last_seg = output_.path_segment_vec.back();
     if (last_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
@@ -2074,7 +2074,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     // TODO:cut the path if end pos is deeply into slot
     // bool trim_condition =
     //     (arc.pB.x() < 0.8 *
-    //     ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
+    //     input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
     //     && (std::fabs(arc.pB.y() - calc_params_.target_line.pA.y()) > 0.1);
 
     // if (calc_params_.is_inside_occupied && trim_condition) {
@@ -2084,7 +2084,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     //   double heading_tmp = arc.headingB;
     //   const auto OA = arc.pA - arc.circle_info.center;
     //   while (pos_tmp.x() <
-    //   ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x()) {
+    //   input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x()) {
     //     heading_tmp = 0.5 * (heading_low + heading_high);
     //     const double heading_error = heading_tmp - heading_low;
     //     pos_tmp = arc.circle_info.center +
@@ -2092,7 +2092,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     //               OA;
 
     //     if (pos_tmp.x() <
-    //     ginput_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
+    //     input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x())
     //     {
     //       heading_high = heading_tmp;
     //     }
@@ -2593,7 +2593,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     pnc::geometry_lib::LineSegment line_seg;
     line_seg.pA = temp_pose.pos;
     line_seg.heading = temp_pose.heading;
-    if (OneLinePlan(line_seg, tmp_path_seg_vec, ginput_.ref_gear)) {
+    if (OneLinePlan(line_seg, tmp_path_seg_vec, input_.ref_gear)) {
       temp_pose.pos = line_seg.pB;
       temp_pose.heading = line_seg.heading;
       ILOG_INFO << "OneLinePlan success";
@@ -2632,7 +2632,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
       pnc::geometry_lib::LineSegment line_seg;
       line_seg.pA = tmp_current_pose.pos;
       line_seg.heading = tmp_current_pose.heading;
-      success = OneLinePlan(line_seg, tmp_path_seg_vec, ginput_.ref_gear);
+      success = OneLinePlan(line_seg, tmp_path_seg_vec, input_.ref_gear);
       if (success) {
         tmp_current_pose.Set(line_seg.pB, line_seg.heading);
       } else {
@@ -2662,7 +2662,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     pnc::geometry_lib::LineSegment line_seg;
     line_seg.pA = temp_pose.pos;
     line_seg.heading = temp_pose.heading;
-    if (OneLinePlan(line_seg, tmp_path_seg_vec, ginput_.ref_gear)) {
+    if (OneLinePlan(line_seg, tmp_path_seg_vec, input_.ref_gear)) {
       temp_pose.pos = line_seg.pB;
       temp_pose.heading = line_seg.heading;
       ILOG_INFO << "OneLinePlan success";
@@ -2747,9 +2747,9 @@ const bool PerpendicularPathHeadingInPlanner::AdjustPlan() {
   ILOG_INFO << "-----adjust plan-----";
   // set init state
   pnc::geometry_lib::PathPoint current_pose =
-      ginput_.ego_info_under_slot.cur_pose;
-  uint8_t current_gear = ginput_.ref_gear;
-  uint8_t current_arc_steer = ginput_.ref_arc_steer;
+      input_.ego_info_under_slot.cur_pose;
+  uint8_t current_gear = input_.ref_gear;
+  uint8_t current_arc_steer = input_.ref_arc_steer;
   size_t fail_count = 0;
   if (output_.path_segment_vec.size() > 0 && output_.gear_cmd_vec.size() > 0) {
     const auto& last_seg = output_.path_segment_vec.back();
@@ -2976,7 +2976,7 @@ PerpendicularPathHeadingInPlanner::TrimPathByCollisionDetection(
 // path postprocess
 void PerpendicularPathHeadingInPlanner::InsertLineSegAfterCurrentFollowLastPath(
     double extend_distance) {
-  if ((ginput_.is_replan_first || ginput_.is_replan_second) &&
+  if ((input_.is_replan_first || input_.is_replan_second) &&
       !output_.gear_shift) {
     return;
   }
@@ -3047,7 +3047,7 @@ void PerpendicularPathHeadingInPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
     if (insert_case == 0) {
       double min_path_length = apa_param.GetParam().min_one_step_path_length;
-      if (ginput_.ego_info_under_slot.slot_occupied_ratio > 0.086 &&
+      if (input_.ego_info_under_slot.slot_occupied_ratio > 0.086 &&
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
         const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
         const std::vector<double> path_length_tab = {
@@ -3219,7 +3219,7 @@ const bool PerpendicularPathHeadingInPlanner::GenPathOutputByDubins() {
 // some utils
 const bool PerpendicularPathHeadingInPlanner::CheckReachTargetPose() {
   if (output_.path_segment_vec.empty()) {
-    return CheckReachTargetPose(ginput_.ego_info_under_slot.cur_pose);
+    return CheckReachTargetPose(input_.ego_info_under_slot.cur_pose);
   }
   const auto& last_segment = output_.path_segment_vec.back();
   pnc::geometry_lib::PathPoint last_pose;
@@ -3240,7 +3240,7 @@ const double PerpendicularPathHeadingInPlanner::CalOccupiedRatio(
   terminal_err.Set(current_pose.pos - calc_params_.target_line.pA,
                    std::fabs(pnc::geometry_lib::NormalizeAngle(
                        current_pose.heading -
-                       ginput_.ego_info_under_slot.target_pose.heading)));
+                       input_.ego_info_under_slot.target_pose.heading)));
   double slot_occupied_ratio;
   if (std::fabs(terminal_err.pos.y()) <
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
@@ -3261,7 +3261,7 @@ const bool PerpendicularPathHeadingInPlanner::UpdatePb() {
   // preprocess
   PreprocessForSimu();
   // prepare plan for the first time
-  if (ginput_.is_replan_first) {
+  if (input_.is_replan_first) {
     bool prepare_success = false;
     if (TurnIntoSlotFirst()) {
       ILOG_INFO << "TurnIntoSlotFirst";
@@ -3274,9 +3274,9 @@ const bool PerpendicularPathHeadingInPlanner::UpdatePb() {
                        "directly multi plan";
         } else {
           output_.gear_shift = true;
-          ginput_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-          ginput_.ref_arc_steer =
-              ginput_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
+          input_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+          input_.ref_arc_steer =
+              input_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
                   ? pnc::geometry_lib::SEG_STEER_LEFT
                   : pnc::geometry_lib::SEG_STEER_RIGHT;
         }
@@ -3301,9 +3301,9 @@ const bool PerpendicularPathHeadingInPlanner::UpdatePb() {
             // return true;
           } else {
             output_.gear_shift = false;
-            ginput_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-            ginput_.ref_arc_steer =
-                ginput_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
+            input_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+            input_.ref_arc_steer =
+                input_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
                     ? pnc::geometry_lib::SEG_STEER_LEFT
                     : pnc::geometry_lib::SEG_STEER_RIGHT;
           }
@@ -3312,9 +3312,9 @@ const bool PerpendicularPathHeadingInPlanner::UpdatePb() {
                        "plan, need second prepare!";
           // output_.gear_shift = true;
           // return true;
-          ginput_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-          ginput_.ref_arc_steer =
-              ginput_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
+          input_.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+          input_.ref_arc_steer =
+              input_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT
                   ? pnc::geometry_lib::SEG_STEER_LEFT
                   : pnc::geometry_lib::SEG_STEER_RIGHT;
         } else {
@@ -3371,8 +3371,8 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanPybind() {
 }
 
 const bool PerpendicularPathHeadingInPlanner::GenPathOutputByDubinsPybind() {
-  ginput_.ego_info_under_slot.cur_pose.pos = dubins_planner_.GetInput().p2;
-  ginput_.ego_info_under_slot.cur_pose.heading =
+  input_.ego_info_under_slot.cur_pose.pos = dubins_planner_.GetInput().p2;
+  input_.ego_info_under_slot.cur_pose.heading =
       dubins_planner_.GetInput().heading2;
   return GenPathOutputByDubins();
 }

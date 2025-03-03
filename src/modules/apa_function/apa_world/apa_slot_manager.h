@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "apa_obstacle_manager.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "geometry_math.h"
 #include "local_view.h"
 
@@ -48,7 +50,7 @@ struct TLane {
     max_y = std::max({A.y(), B.y(), C.y(), D.y(), E.y(), F.y(), G.y(), H.y()});
   }
 
-  void PrintInfo(const bool enable_print = true) {
+  void PrintInfo(const bool enable_print = true) const {
     ILOG_INFO_IF(enable_print)
         << "A = " << A.transpose() << "  B = " << B.transpose()
         << "  C = " << C.transpose() << "  D = " << D.transpose()
@@ -134,17 +136,20 @@ enum class SlotReleaseVoterType : uint8_t {
   MAXIMUM,
 };
 
-const std::string GetSlotReleaseVoterTypeString(const SlotReleaseVoterType release_voter_type);
+const std::string GetSlotReleaseVoterTypeString(
+    const SlotReleaseVoterType release_voter_type);
 
 class ApaSlotManager final {
  public:
   ApaSlotManager() {}
   ~ApaSlotManager() {}
 
-  void Update(const LocalView* local_view,
-              const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
-              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
+  void Update(
+      const LocalView* local_view,
+      const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
+      const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
+      const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,
+      const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr);
 
   void Reset() {
     ego_info_under_slot_.Reset();
@@ -162,6 +167,14 @@ class ApaSlotManager final {
 
   const bool IsTargetSlotReleaseByRule() const;
 
+  const EgoInfoUnderSlot& GetEgoInfoUnderSlot() const {
+    return ego_info_under_slot_;
+  }
+
+  EgoInfoUnderSlot& GetMutableEgoInfoUnderSlot() {
+    return ego_info_under_slot_;
+  }
+
  public:
   EgoInfoUnderSlot ego_info_under_slot_;
 
@@ -172,9 +185,11 @@ class ApaSlotManager final {
 
   const bool IsSlotCoarseRelease(const ApaSlot& slot);
 
-  const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot);
+  const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(
+      const ApaSlot& slot);
 
-  const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(const ApaSlot& slot);
+  const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
+      const ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;
@@ -186,6 +201,7 @@ class ApaSlotManager final {
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
+  std::shared_ptr<CollisionDetectorInterface> col_det_interface_ptr_;
 };
 }  // namespace apa_planner
 }  // namespace planning

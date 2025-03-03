@@ -156,7 +156,7 @@
   "curb_offset": 0.45,
   "curb_offset_when_ego_outside_slot": 0.0,
   "nearby_slot_corner_dist": 0.6,
-  "force_both_side_occupied": false,
+  "enable_use_dynamic_obs": true,
   "safe_threshold": 0.042,
   "virtual_obs_y_pos": 0.386,
   "virtual_obs_x_pos": 2.068,

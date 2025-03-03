@@ -165,120 +165,6 @@ void CollisionDetector::AddObstacles(const Eigen::Vector2d &obs_pt_global,
   }
 }
 
-void CollisionDetector::TransObsMapToParkObstacleList() {
-  obs_list_.Clear();
-  PointCloudObstacle pt_cloud;
-  Position2D pt_2d;
-  for (const auto &obs_pt_pair : obs_pt_global_map_) {
-    for (const auto &obs_pt : obs_pt_pair.second) {
-      pt_2d.x = obs_pt.x();
-      pt_2d.y = obs_pt.y();
-      pt_cloud.points.emplace_back(pt_2d);
-    }
-  }
-  obs_list_.point_cloud_list.emplace_back(pt_cloud);
-}
-
-void CollisionDetector::TransObsMapToOccupancyGridMap(
-    const OccupancyGridBound &bound, const double _ogm_resolution) {
-  TransObsMapToParkObstacleList();
-
-  // grid map origin, make all indexes positive
-  // Pose2D ogm_base_pose(-3.0, -20.0, 0.0);
-  // ogm_base_pose.x = -3.0;
-  // ogm_base_pose.y = -20.0;
-  // ogm_base_pose.theta = 0.0;
-  // occupancy_grid_map_.Clear();
-  // occupancy_grid_map_.Process(ogm_base_pose, _ogm_resolution);
-  // occupancy_grid_map_.AddParkingObs(obs_list_);
-  // edt_col_det_.Excute(occupancy_grid_map_, ogm_base_pose, _ogm_resolution);
-
-  occupancy_grid_map_.Clear();
-  occupancy_grid_map_.Process(bound, _ogm_resolution);
-  occupancy_grid_map_.AddParkingObs(obs_list_);
-  edt_col_det_.Excute(occupancy_grid_map_, bound, _ogm_resolution);
-}
-
-const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
-    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
-    const uint8_t gear, const double lat_buffer, const double lon_buffer) {
-  CollisionResult result;
-  if (path_pt_vec.empty()) {
-    return result;
-  }
-
-  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
-
-  result.collision_flag = edt_col_det_.IsCollisionForPath(path_pt_vec, gear);
-
-  return result;
-}
-
-const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
-    const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
-    const double lon_buffer, const bool need_cal_obs_dist) {
-  std::vector<pnc::geometry_lib::PathPoint> point_set;
-  CollisionResult col_res;
-  if (!pnc::geometry_lib::SamplePointSetInPathSeg(point_set, path_seg,
-                                                  col_sample_ds)) {
-    ILOG_INFO << "UpdateByEDT sample pt fail";
-    col_res.remain_car_dist = 0.0;
-    col_res.remain_dist = 0.0;
-    return col_res;
-  }
-
-  return UpdateByEDT(point_set, path_seg.seg_gear, col_sample_ds, lat_buffer,
-                     lon_buffer, need_cal_obs_dist);
-}
-
-const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
-    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
-    const uint8_t gear, const double sample_ds, const double lat_buffer,
-    const double lon_buffer, const bool need_cal_obs_dist) {
-  CollisionResult col_res;
-  if (path_pt_vec.size() < 1) {
-    col_res.remain_car_dist = 0.0;
-    col_res.remain_dist = 0.0;
-    return col_res;
-  }
-
-  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer, 0.5);
-
-  col_res.remain_car_dist = path_pt_vec.back().s;
-
-  if (need_cal_obs_dist) {
-    std::pair<double, std::pair<double, pnc::geometry_lib::PathPoint>>
-        remain_dist_obs_dist_pair = edt_col_det_.CalPathRemainDistAndObsDist(
-            path_pt_vec, sample_ds, gear);
-    col_res.remain_dist = remain_dist_obs_dist_pair.first;
-    col_res.pt_closest2obs = remain_dist_obs_dist_pair.second;
-    col_res.pt_closest2obs.first += lat_buffer;
-  } else {
-    col_res.remain_dist =
-        edt_col_det_.CalPathRemainDist(path_pt_vec, sample_ds, gear);
-  }
-
-  col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;
-
-  return col_res;
-}
-
-const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
-    const pnc::geometry_lib::GeometryPath &geometry_path,
-    const double lat_buffer, const double lon_buffer) {
-  return UpdateByEDT(pnc::geometry_lib::SamplePathSegVec(
-                         geometry_path.path_segment_vec, col_sample_ds),
-                     geometry_path.cur_gear, lat_buffer, lon_buffer);
-}
-
-const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
-    const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-    const uint8_t gear, const double lat_buffer, const double lon_buffer) {
-  return UpdateByEDT(
-      pnc::geometry_lib::SamplePathSegVec(path_seg_vec, col_sample_ds), gear,
-      lat_buffer, lon_buffer);
-}
-
 const CollisionDetector::CollisionResult CollisionDetector::Update(
     const pnc::geometry_lib::LineSegment &line_seg,
     const double heading_start) {
@@ -401,6 +287,52 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   } else {
     col_res.remain_dist = pt_vec[i - 1].s;
   }
+
+  return col_res;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMapUss(
+    const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
+    const double lat_buffer, const double lon_buffer) {
+  CollisionResult col_res;
+  if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
+    param_.lat_inflation = lat_buffer;
+    SetParam(param_);
+  }
+
+  if (pt_vec.empty()) {
+    return col_res;
+  }
+
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.reserve(car_line_local_vec_.size());
+  double safe_dist = 0.0;
+  for (const pnc::geometry_lib::PathPoint &pt : pt_vec) {
+    l2g_tf.Init(pt.pos, pnc::geometry_lib::NormalizeAngle(pt.heading));
+    for (const pnc::geometry_lib::LineSegment &car_line_local :
+         car_line_local_vec_) {
+      car_polygon.emplace_back(l2g_tf.GetPos(car_line_local.pA));
+    }
+    for (const auto &pair : obs_pt_global_map_) {
+      for (const auto &obs_pt : pair.second) {
+        if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt)) {
+          col_res.collision_flag = true;
+          break;
+        }
+      }
+      if (col_res.collision_flag) {
+        break;
+      }
+    }
+    if (col_res.collision_flag) {
+      break;
+    }
+    safe_dist = pt.s;
+  }
+
+  col_res.remain_car_dist = pt_vec.back().s;
+  col_res.remain_dist = safe_dist;
 
   return col_res;
 }
@@ -1834,7 +1766,7 @@ const double CollisionDetector::CalClosestDistFromObsToCar(
   return min_dist;
 }
 
-const std::vector<Eigen::Vector2d> GetCarMaxPolygan(
+const std::vector<Eigen::Vector2d> GetCarMaxPolygon(
     const pnc::geometry_lib::PathPoint &current_pose) {
   const Eigen::Vector2d t =
       pnc::geometry_lib::GenHeadingVec(current_pose.heading);
@@ -1858,7 +1790,7 @@ const std::vector<Eigen::Vector2d> GetCarMaxPolygan(
 const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
     const pnc::geometry_lib::PathPoint &current_pose) {
   pnc::geometry_lib::RectangleBound bound;
-  bound.CalcBoundByPtVec(GetCarMaxPolygan(current_pose));
+  bound.CalcBoundByPtVec(GetCarMaxPolygon(current_pose));
   return bound;
 }
 

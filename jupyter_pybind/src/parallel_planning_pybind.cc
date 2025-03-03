@@ -166,7 +166,9 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_obs.SetPtClout2dGlobal(obs_vec);
   apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
   apa_obs.SetId(0);
-  apa_world_ptr->GetObstacleManagerPtr()->SetObstacles()[0] = apa_obs;
+  std::unordered_map<size_t, ApaObstacle> &obstacles =
+      apa_world_ptr->GetObstacleManagerPtr()->GetMutableObstacles();
+  obstacles[0] = apa_obs;
 
   ILOG_INFO << "1";
   SimulationParam simu_param;
@@ -203,16 +205,12 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   parallel_park_planner.GenTBoundaryObstacles();
   ILOG_INFO << "6";
 
-  ParallelPathGenerator::Input path_planner_input;
+  GeometryPathInput path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
-  path_planner_input.sample_ds = path_ds;
+  path_planner_input.sample_ds = apa_world_ptr->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = true;
   path_planner_input.is_complete_path = true;
-
-  const auto &ego_slot_info = ego_info_under_slot;
-  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  path_planner_input.ego_pose.Set(ego_slot_info.cur_pose.pos,
-                                  ego_slot_info.cur_pose.heading);
+  path_planner_input.ego_info_under_slot = ego_info_under_slot;
 
   pBase->SetInput(path_planner_input);
   ILOG_INFO << "7";
@@ -330,10 +328,9 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   channel_y = slot_side_sgn * std::fabs(channel_y);
   curb_y = -slot_side_sgn * std::fabs(curb_y);
 
-  planning::apa_planner::ParallelPathGenerator::Input input;
-
-  input.ego_pose.pos << ego_x, ego_y;
-  input.ego_pose.heading = ego_heading;
+  GeometryPathInput input;
+  input.ego_info_under_slot.cur_pose.pos << ego_x, ego_y;
+  input.ego_info_under_slot.cur_pose.heading = ego_heading;
 
   input.tlane.obs_pt_inside << obs_pt_in_x, obs_pt_in_y;
   input.tlane.obs_pt_outside << obs_pt_out_x, obs_pt_out_y;
@@ -363,8 +360,8 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   // std::cout << "---------------" << std::endl;
   pBase->SetInput(input);
 
-  const Eigen::Vector2d terminal_err =
-      input.ego_pose.pos - Eigen::Vector2d(p_target_x, p_target_y);
+  const Eigen::Vector2d terminal_err = input.ego_info_under_slot.cur_pose.pos -
+                                       Eigen::Vector2d(p_target_x, p_target_y);
 
   ParallelParkInScenario park_planner;
   const double slot_occupied_ratio = park_planner.CalcSlotOccupiedRatio(

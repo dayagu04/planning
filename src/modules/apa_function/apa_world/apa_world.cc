@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <vector>
 
 #include "apa_obstacle_manager.h"
@@ -27,9 +28,11 @@ void ApaWorld::Init() {
   state_machine_ptr_ = std::make_shared<ApaStateMachineManager>();
   obstacle_manager_ptr_ = std::make_shared<ApaObstacleManager>();
   retired_slot_manager_ptr_ = std::make_shared<SlotManager>();
-  uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
   lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
+  collision_detector_interface_ptr_ =
+      std::make_shared<CollisionDetectorInterface>(
+          obstacle_manager_ptr_, measure_data_ptr_, predict_path_ptr_);
 }
 
 void ApaWorld::Reset() {
@@ -39,9 +42,9 @@ void ApaWorld::Reset() {
   measure_data_ptr_->Reset();
   predict_path_ptr_->Reset();
   retired_slot_manager_ptr_->Reset();
-  uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
   lateral_path_optimizer_ptr_->Reset();
+  collision_detector_interface_ptr_->Reset();
   local_view_ptr_ = nullptr;
 }
 
@@ -62,7 +65,8 @@ const bool ApaWorld::Update() {
   obstacle_manager_ptr_->Update(local_view_ptr_);
 
   slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,
-                            measure_data_ptr_, obstacle_manager_ptr_);
+                            measure_data_ptr_, obstacle_manager_ptr_,
+                            collision_detector_interface_ptr_);
 
   // 旧的车位管理 需要等其他模块适配新车位管理后尽快删除
   // retired_slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,

@@ -6,6 +6,7 @@
 
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
+#include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "environmental_model.h"
 #include "local_view.h"
@@ -89,7 +90,19 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
       GeneratePolygonByAABB(&polygon, box);
 
+      const iflyauto::ObjectType obs_type =
+          local_view->fusion_occupancy_objects_info.fusion_object[i]
+              .common_occupancy_info.type;
+
       ApaObstacle apa_obs;
+      if (apa_param.GetParam().enable_use_dynamic_obs) {
+        if (obs_type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+            obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE) {
+          ILOG_INFO << "there are people or dynamic obs";
+          apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
+        }
+      }
+
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
       apa_obs.SetBoxGlobal(box);

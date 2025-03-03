@@ -18,7 +18,7 @@
 namespace planning {
 namespace apa_planner {
 
-const std::vector<Eigen::Vector2d> GetCarMaxPolygan(
+const std::vector<Eigen::Vector2d> GetCarMaxPolygon(
     const pnc::geometry_lib::PathPoint &current_pose);
 
 const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
@@ -98,38 +98,14 @@ class CollisionDetector {
   void Init();
   void Reset();
 
-  void TransObsMapToParkObstacleList();
-
-  void TransObsMapToOccupancyGridMap(
-      const OccupancyGridBound &bound = OccupancyGridBound(-3.68, -10.68, 14.68,
-                                                           10.68),
-      const double _ogm_resolution = ogm_resolution);
-
-  const CollisionResult UpdateByEDT(
-      const pnc::geometry_lib::GeometryPath &geometry_path,
-      const double lat_buffer, const double lon_buffer);
-
-  const CollisionResult UpdateByEDT(
-      const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
-      const double lon_buffer, const bool need_cal_obs_dist = false);
-
-  const CollisionResult UpdateByEDT(
-      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
-      const uint8_t gear, const double sample_ds, const double lat_buffer,
-      const double lon_buffer, const bool need_cal_obs_dist = false);
-
-  const CollisionResult UpdateByEDT(
-      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
-      const uint8_t gear, const double lat_buffer, const double lon_buffer);
-
-  const CollisionResult UpdateByEDT(
-      const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t gear, const double lat_buffer, const double lon_buffer);
-
   const CollisionResult Update(const pnc::geometry_lib::LineSegment &line_seg,
                                const double heading_start);
 
   const CollisionResult UpdateByObsMap(
+      const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
+      const double lat_buffer, const double lon_buffer);
+
+  const CollisionResult UpdateByObsMapUss(
       const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
       const double lat_buffer, const double lon_buffer);
 
@@ -282,14 +258,6 @@ class CollisionDetector {
   std::vector<Eigen::Vector2d> origin_car_local_rectangle_vertex_vec_;
 
   Paramters param_;
-
-  PathSafeChecker gjk_col_det_;
-
-  ParkObstacleList obs_list_;
-
-  EulerDistanceTransform edt_col_det_;
-
-  OccupancyGridMap occupancy_grid_map_;
 };
 }  // namespace apa_planner
 }  // namespace planning

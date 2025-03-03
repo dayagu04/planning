@@ -34,9 +34,16 @@ class ApaObstacleManager final {
     return obstacles_;
   }
 
-  std::unordered_map<size_t, ApaObstacle> &SetObstacles() { return obstacles_; }
+  std::unordered_map<size_t, ApaObstacle> &GetMutableObstacles() {
+    return obstacles_;
+  }
 
   const size_t GetObsIdGenerate() const { return obs_id_generate_; }
+
+  void AddObstacle(const ApaObstacle &apa_obs) {
+    obstacles_[obs_id_generate_] = apa_obs;
+    obs_id_generate_++;
+  }
 
   void SetObstacle(const size_t id, const ApaObstacle &apa_obs);
 

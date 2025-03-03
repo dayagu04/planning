@@ -122,10 +122,6 @@ class PerpendicularPathOutPlanner : public PerpendicularPathGenerator {
 
   virtual const bool UpdateByPrePlan() override;
 
-  const bool UpdatePyband(
-      const Input &input,
-      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
-
   const PlannerParams &GetCalcParams();
 
  private:

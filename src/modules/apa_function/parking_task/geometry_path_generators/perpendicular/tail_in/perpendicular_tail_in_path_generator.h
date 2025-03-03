@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "collision_detection/collision_detection.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
@@ -151,18 +151,15 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   // for simulation
   const bool ItervativeUpdatePb(
-      const GeometryPathInput &ginput,
-      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
+      const GeometryPathInput &input,
+      const std::shared_ptr<CollisionDetectorInterface>
+          &collision_detector_interface_ptr);
 
   const PlannerParams &GetCalcParams();
 
  private:
   // member function
   virtual void Preprocess() override;
-
-  const bool IsGeometryPathSafe(pnc::geometry_lib::GeometryPath &geometry_path,
-                                const double lat_inflation,
-                                const double lon_safe_dist);
 
   const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,
@@ -175,11 +172,11 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   const bool TurnAround();
 
-  const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
-  void CalMonoSafeCircle();
+  const bool MonoPreparePlan(Eigen::Vector2d &tag_point, const double radius);
+  void CalMonoSafeCircle(const double radius);
   const bool CheckMonoIsFeasible();
-  const bool MultiPreparePlan(Eigen::Vector2d &tag_point);
-  bool CalMultiSafeCircle();
+  const bool MultiPreparePlan(Eigen::Vector2d &tag_point, const double radius);
+  bool CalMultiSafeCircle(const double radius);
   // prepare plan end
 
   const bool PreparePathPlan();
@@ -283,8 +280,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                           const double lon_buffer,
                                           const bool enable_log = true);
 
-  const double CalOccupiedRatio(
-      const pnc::geometry_lib::PathPoint &current_pose);
+  const double CalOccupiedRatio(const geometry_lib::PathPoint &current_pose);
 
   const bool CheckTwoPoseInCircle(const Eigen::Vector2d &ego_pos0,
                                   const double ego_heading0,

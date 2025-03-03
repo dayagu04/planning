@@ -16,7 +16,6 @@ namespace planning {
 ParkSpeedLimitDecider::ParkSpeedLimitDecider() {}
 
 void ParkSpeedLimitDecider::Process(
-    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
     const std::vector<pnc::geometry_lib::PathPoint>& path,
     SpeedDecisions* speed_decisions) {
   UpdateConfig();
