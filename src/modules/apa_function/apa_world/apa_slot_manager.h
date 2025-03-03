@@ -134,6 +134,7 @@ enum class SlotReleaseVoterType : uint8_t {
   SUBTRACT,
   CLEAR,
   MAXIMUM,
+  HOLD,
 };
 
 const std::string GetSlotReleaseVoterTypeString(
