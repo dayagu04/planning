@@ -898,6 +898,33 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     return;
   }
 
+  // TODO: only insert ego_right_rear_node_id in target_lane_rear_agents
+  //       if want consider more rear agent, insert there
+  int64_t target_lane_rear_node_id = -1;
+  std::unordered_set<int32_t> target_lane_rear_agents;
+  if (lc_request_direction == LEFT_CHANGE) {
+    if (lane_change_state == kLaneChangeExecution ||
+        lane_change_state == kLaneChangeComplete) {
+      target_lane_rear_node_id = dynamic_world_->ego_rear_node_id();
+    } else {
+      target_lane_rear_node_id = dynamic_world_->ego_left_rear_node_id();
+    }
+  } else if (lc_request_direction == RIGHT_CHANGE) {
+    if (lane_change_state == kLaneChangeExecution ||
+        lane_change_state == kLaneChangeComplete) {
+      target_lane_rear_node_id = dynamic_world_->ego_rear_node_id();
+    } else {
+      target_lane_rear_node_id = dynamic_world_->ego_right_rear_node_id();
+    }
+  }
+  if (target_lane_rear_node_id != -1) {
+    auto* target_lane_rear_node =
+        dynamic_world_->GetNode(target_lane_rear_node_id);
+    if (target_lane_rear_node != nullptr) {
+      target_lane_rear_agents.insert(target_lane_rear_node->node_agent_id());
+    }
+  }
+
   // vehicle param
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -980,27 +1007,6 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       continue;
     }
 
-    // rear agents
-    // TODO: only insert ego_right_rear_node_id in target_lane_rear_agents
-    //       if want consider more rear agent, insert there
-    int64_t target_lane_rear_node_id = -1;
-    std::unordered_set<int32_t> target_lane_rear_agents;
-    if (is_in_lane_change_execution) {
-      if (lc_request_direction == LEFT_CHANGE) {
-        target_lane_rear_node_id = dynamic_world_->ego_left_rear_node_id();
-      } else if (lc_request_direction == RIGHT_CHANGE) {
-        target_lane_rear_node_id = dynamic_world_->ego_right_rear_node_id();
-      }
-    } else if (is_lane_change_complete) {
-      target_lane_rear_node_id = dynamic_world_->ego_rear_node_id();
-    }
-    if (target_lane_rear_node_id != -1) {
-      auto* target_lane_rear_node =
-          dynamic_world_->GetNode(target_lane_rear_node_id);
-      if (target_lane_rear_node != nullptr) {
-        target_lane_rear_agents.insert(target_lane_rear_node->node_agent_id());
-      }
-    }
     if (is_in_lane_change_execution || is_lane_change_complete) {
       if (target_lane_rear_agents.find(agent->agent_id()) !=
           target_lane_rear_agents.end()) {
