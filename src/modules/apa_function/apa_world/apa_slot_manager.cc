@@ -295,7 +295,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
     move_dist += 0.05;
   }
 
-  const std::vector<double> move_up_dist{0.68, 1.08, 1.48};
+  const std::vector<double> move_up_dist{0.68, 0.88, 1.08, 1.28, 1.48};
   // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
   // 0.26米如果没有碰撞 直接释放
   // 0.20米如果没有碰撞 累加
