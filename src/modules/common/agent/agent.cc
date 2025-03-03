@@ -17,7 +17,29 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kDecayJerkMps3 = -0.2;
 constexpr double kPredictionHorizon = 5.0;
 }  // namespace
-Agent::Agent() {}
+Agent::Agent(const Agent& agent)
+    : agent_id_(agent.agent_id()),
+      box_(agent.box().center(), agent.box().heading(), agent.box().length(), agent.box().width()),
+      is_static_(agent.is_static()) {
+    x_ = agent.x();
+    y_ = agent.y();
+    theta_ = agent.theta();
+    speed_ = agent.speed();
+    accel_ = agent.accel();
+    length_ = agent.length();
+    width_ = agent.width();
+    type_ = agent.type();
+    fusion_source_ = agent.fusion_source();
+    timestamp_us_ = agent.timestamp_us();
+    timestamp_s_ = agent.timestamp_s();
+
+    is_vru_ = agent.is_vru();
+
+    // 当前默认trajectories_中只存一条轨迹
+    trajectories_.clear();
+    trajectories_ = agent.trajectories();
+
+}
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
              double start_relative_timestamp)
