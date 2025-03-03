@@ -326,7 +326,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     t_cruise_target_vec.append(item.t)
   for item in (plan_debug_info.lon_target_s_ref.cruise_target.cruise_target_s_ref):
     s_cruise_target_vec.append(item.s)
-  
+
   ## neighbor target
   t_neighbor_target_vec = []
   s_neighbor_target_vec = []
@@ -1045,6 +1045,12 @@ def load_lon_global_figure(bag_loader):
 
   fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = x_range, width=600, height=300)
   f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
+  fig_fsm_state.text(x=x_value, y=24, text=['MANUAL:0'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=22, text=['ERROR:1'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=20, text=['MRC:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=18, text=['DRIVING_PASSIVE(行车抑制):3'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=16, text=['ACC_OVERRIDE:6'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=14, text=['ACC_STANDBY:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=8, text=['SCC_STANDBY:7'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=10, text=['SCC_ACTIVE:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
@@ -1153,8 +1159,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                               'st_path_final_nodes_g_cost' : [],
                                                               'st_path_final_nodes_h_cost' : [],
                                                               })
-  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 
-                                         't_cruise_target':[], 's_cruise_target':[], 
+  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[],
+                                         't_cruise_target':[], 's_cruise_target':[],
                                          't_follow_target':[], 's_follow_target':[]})
   data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
   #obstacles st data, key is id, value is time and s list
@@ -1334,7 +1340,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                ('node_vel', '@vel_search'),
                                ('node_acc', '@acc_search'),
                                ('node_jerk', '@jerk_search'),])
-                               
+
   fig3.add_tools(hover3)
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'
