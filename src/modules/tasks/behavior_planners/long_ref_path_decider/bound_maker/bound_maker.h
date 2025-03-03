@@ -103,7 +103,7 @@ class BoundMaker {
   std::vector<UpperBoundInfo> upper_bound_infos_;
   double min_follow_distance_m_ = 3.0;
 
-  const double _A_MAX = 2.0;
+  const double _A_MAX = 1.5;
   const double _A_MIN = -4.0;
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};

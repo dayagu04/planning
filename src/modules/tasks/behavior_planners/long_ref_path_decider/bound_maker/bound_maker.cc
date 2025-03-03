@@ -114,6 +114,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       session_->planning_context().agent_headway_decider_output();
   const auto& agents_headway_map =
       agent_headway_decider_output.agents_headway_Info();
+  const auto start_stop_decider_output =
+      session_->planning_context().start_stop_decider_output();
 
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -142,6 +144,11 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
     acc_upper_bound_[i] =
         std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
+    // only allow acc upper bound over 1.0 in start state
+    if (start_stop_decider_output.ego_start_stop_info().state() !=
+        common::StartStopInfo::START) {
+      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
+    }
   }
 }
 
