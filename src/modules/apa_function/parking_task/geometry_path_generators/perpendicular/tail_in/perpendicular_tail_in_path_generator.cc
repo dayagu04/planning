@@ -1796,19 +1796,8 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
         // the target line, should enter this logic
         if (geometry_path.collide_flag &&
             geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE) {
-          const bool case1 = (geometry_path.end_pose.pos.y() +
-                              calc_params_.target_line.pA.y()) *
-                                 (geometry_path.start_pose.pos.y() +
-                                  calc_params_.target_line.pA.y()) >
-                             0.068;
-          const bool case2 = std::fabs(geometry_path.start_pose.pos.y()) >
-                             std::fabs(geometry_path.end_pose.pos.y());
-          const bool case3 =
-              std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8;
-          ILOG_INFO_IF(enable_log)
-              << "case1 = " << case1 << "  case2 = " << case2
-              << "  case3 = " << case3;
-          if (case1 && case2 && case3) {
+          if (CheckStuckedByInside(geometry_path.start_pose,
+                                   geometry_path.end_pose, enable_log)) {
             reverse_1arc_safe = false;
             ILOG_INFO_IF(enable_log) << "reverse_1arc is not safe";
             break;
@@ -2113,18 +2102,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
         if (geometry_path.collide_flag &&
             geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
             compensate_line_try_count < max_compensate_line_try_count) {
-          const bool case1 = (geometry_path.end_pose.pos.y() +
-                              calc_params_.target_line.pA.y()) *
-                                 (geometry_path.start_pose.pos.y() +
-                                  calc_params_.target_line.pA.y()) >
-                             0.068;
-          const bool case2 = std::fabs(geometry_path.start_pose.pos.y()) >
-                             std::fabs(geometry_path.end_pose.pos.y());
-          const bool case3 =
-              std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8;
-          ILOG_INFO << "case1 = " << case1 << "  case2 = " << case2
-                    << "  case3 = " << case3;
-          if (case1 && case2 && case3) {
+          if (CheckStuckedByInside(geometry_path.start_pose,
+                                   geometry_path.end_pose)) {
             ILOG_INFO << "try use a reverse gear straight line to cast off "
                          "inside stuck";
             i = -1;
@@ -2600,13 +2579,27 @@ const bool PerpendicularTailInPathGenerator::OneArcPathPlan(
 
   if (res == PathColDetRes::SHORTEN) {
     ILOG_INFO_IF(enable_log) << "one arc path col shorten\n";
+    double length = 0.0;
+    geometry_lib::PathSegment new_line_seg;
+    geometry_lib::GeometryPath new_geometry_path;
+    while (length < 0.86) {
+      length += 0.15;
+      geometry_lib::CalLineFromPt(gear, length, pose, new_line_seg);
+      if (TwoArcPathPlan(new_line_seg.GetEndPose(), gear, lat_buffer,
+                         lon_buffer, new_geometry_path, false, enable_log) &&
+          !CheckStuckedByInside(new_geometry_path.start_pose,
+                                new_geometry_path.end_pose, enable_log)) {
+        geometry_path.SetPath(new_line_seg);
+        geometry_path.AddPath(new_geometry_path);
+        break;
+      }
+    }
   }
 
   if (res == PathColDetRes::NORMAL) {
     ILOG_INFO_IF(enable_log) << "one arc path no col\n";
+    geometry_path.SetPath(arc_seg);
   }
-
-  geometry_path.SetPath(arc_seg);
 
   if (geometry_path.path_count > 0) {
     ILOG_INFO_IF(enable_log) << "one arc plan has path";
@@ -2719,17 +2712,36 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
 
       if (col_res2 == PathColDetRes::NORMAL) {
         ILOG_INFO_IF(enable_log) << "same gear, arc normal, add arc to path";
+        path_seg_vec.emplace_back(arc_seg);
+        geometry_path.SetPath(path_seg_vec);
+        break;
       }
 
       if (col_res2 == PathColDetRes::SHORTEN) {
         ILOG_INFO_IF(enable_log)
-            << "same gear, arc shorten, add arc to path, quit";
+            << "same gear, arc shorten,  try extend line and use two arc";
+        arc_seg.PrintInfo();
+        double length = line_seg.Getlength();
+        geometry_lib::PathSegment new_line_seg;
+        geometry_lib::GeometryPath new_geometry_path;
+        while (length < line_seg.Getlength() + 0.86) {
+          length += 0.15;
+          geometry_lib::CalLineFromPt(line_gear, length, pose, new_line_seg);
+          if (TwoArcPathPlan(new_line_seg.GetEndPose(), line_gear, lat_buffer,
+                             lon_buffer, new_geometry_path, false,
+                             enable_log) &&
+              !CheckStuckedByInside(new_geometry_path.start_pose,
+                                    new_geometry_path.end_pose, enable_log)) {
+            geometry_path.SetPath(new_line_seg);
+            geometry_path.AddPath(new_geometry_path);
+            break;
+          }
+        }
+        if (geometry_path.path_count > 0) {
+          break;
+        }
         continue;
       }
-      path_seg_vec.emplace_back(arc_seg);
-      geometry_path.SetPath(path_seg_vec);
-
-      break;
     }
 
     else {
@@ -2943,15 +2955,45 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
             break;
           }
           if (col_res2 == PathColDetRes::SHORTEN) {
-            ILOG_INFO_IF(enable_log) << "arc2 col is shorten, extend line "
-                                        "after arc1, add arc1 and line to path";
-            geometry_lib::LineSegment line(arc1_seg.GetEndPos(),
-                                           arc1_seg.GetEndHeading(), 0.86,
-                                           arc1_gear);
-            geometry_lib::PathSegment line_seg(arc1_gear, line);
-            TrimPathByObs(line_seg, 0.168, 0.486, enable_log, true, true);
-            geometry_path.SetPath(arc1_seg);
-            geometry_path.AddPath(line_seg);
+            if (arc1_gear == geometry_lib::SEG_GEAR_REVERSE) {
+              ILOG_INFO_IF(enable_log)
+                  << "arc2 col is shorten, extend line "
+                     "after arc1, add arc1 and line to path";
+              geometry_lib::LineSegment line(arc1_seg.GetEndPos(),
+                                             arc1_seg.GetEndHeading(), 0.86,
+                                             arc1_gear);
+              geometry_lib::PathSegment line_seg(arc1_gear, line);
+              TrimPathByObs(line_seg, 0.168, 0.486, enable_log, true, true);
+              geometry_path.SetPath(arc1_seg);
+              geometry_path.AddPath(line_seg);
+            } else {
+              double length = arc1_seg.Getlength();
+              geometry_lib::PathSegment new_arc_seg;
+              geometry_lib::GeometryPath new_geometry_path;
+              while (length - 0.15 > 0.68) {
+                length -= 0.15;
+                geometry_lib::CalArcFromPt(arc1_gear, arc1_steer, length,
+                                           radius, pose, new_arc_seg);
+                // new_arc_seg.PrintInfo(enable_log);
+                if (CheckStuckedByInside(new_arc_seg.GetStartPose(),
+                                         new_arc_seg.GetEndPose())) {
+                  break;
+                }
+                if (TwoArcPathPlan(new_arc_seg.GetEndPose(),
+                                   geometry_lib::ReverseGear(arc1_gear),
+                                   lat_buffer, lon_buffer, new_geometry_path,
+                                   false, enable_log) &&
+                    !CheckStuckedByInside(new_geometry_path.start_pose,
+                                          new_geometry_path.end_pose,
+                                          enable_log)) {
+                  geometry_path.SetPath(new_arc_seg);
+                  break;
+                }
+              }
+              if (geometry_path.path_count < 1) {
+                geometry_path.SetPath(arc1_seg);
+              }
+            }
             break;
           }
 
@@ -3014,7 +3056,7 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
     ILOG_INFO_IF(enable_log) << "force cur heading equal to tar_heading";
     cur_heading = tar_heading;
   } else if (std::fabs(geometry_lib::NormalizeAngle(
-                 cur_heading - tar_heading)) > 31.68 * kDeg2Rad) {
+                 cur_heading - tar_heading)) > 42.68 * kDeg2Rad) {
     ILOG_INFO_IF(enable_log)
         << "cur heading is not unsuited AlignAndSTurnPathPlan";
     return false;
@@ -3535,6 +3577,21 @@ const bool PerpendicularTailInPathGenerator::InsertLineInGeometryPath(
 
   ILOG_INFO_IF(enable_log) << "insert line fail";
   return false;
+}
+
+const bool PerpendicularTailInPathGenerator::CheckStuckedByInside(
+    const geometry_lib::PathPoint& start_pose,
+    const geometry_lib::PathPoint& end_pose, const bool enable_log) {
+  const bool case1 =
+      (end_pose.pos.y() - calc_params_.target_line.pA.y()) *
+          (start_pose.pos.y() - calc_params_.target_line.pA.y()) >
+      0.068;
+  const bool case2 =
+      std::fabs(start_pose.pos.y()) > std::fabs(end_pose.pos.y());
+  const bool case3 = std::fabs(end_pose.heading * kRad2Deg) > 6.8;
+  ILOG_INFO_IF(enable_log) << "case1 = " << case1 << "  case2 = " << case2
+                           << "  case3 = " << case3;
+  return case1 && case2 && case3;
 }
 
 const bool PerpendicularTailInPathGenerator::ConstructReverseVaildPathSeg(
