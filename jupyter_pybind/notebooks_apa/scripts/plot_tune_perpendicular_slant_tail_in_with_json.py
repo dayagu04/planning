@@ -210,7 +210,7 @@ class LocalViewSlider:
     self.trigger_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "trigger_plan",min=0, max=1, value=0, step=1)
     self.force_mid_process_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_mid_process_plan",min=0, max=2, value=0, step=1)
     self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "selected_id",min=0, max=20, value=0, step=1)
-    self.substitute_path_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "substitute_path_id",min=0, max=20, value=0, step=1)
+    self.substitute_path_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "substitute_path_id",min=0, max=80, value=0, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.1, step=0.02)
     self.car_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.30, value=0.0, step=0.01)
     self.data_json_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "data_json_id",min=1, max=80, value=1, step=1)

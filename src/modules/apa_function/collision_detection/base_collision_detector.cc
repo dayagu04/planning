@@ -65,9 +65,9 @@ void BaseCollisionDetector::Init() {
   car_with_mirror_rectangle_vertex_.clear();
   car_with_mirror_rectangle_vertex_.resize(4);
   car_with_mirror_rectangle_vertex_[0] << -param.rear_overhanging,
-      -0.5 * param.max_car_width;
-  car_with_mirror_rectangle_vertex_[1] << -param.rear_overhanging,
       0.5 * param.max_car_width;
+  car_with_mirror_rectangle_vertex_[1] << -param.rear_overhanging,
+      -0.5 * param.max_car_width;
   car_with_mirror_rectangle_vertex_[2]
       << param.wheel_base + param.front_overhanging,
       -0.5 * param.max_car_width;

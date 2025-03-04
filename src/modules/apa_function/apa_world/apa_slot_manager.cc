@@ -255,6 +255,8 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
     } else {
       slot_release_voter_[slot.id_] = 0;
     }
+  } else if (release_voter_type == SlotReleaseVoterType::HOLD) {
+    // do nothing
   } else {
     slot_release_voter_[slot.id_] = 0;
   }
@@ -293,12 +295,17 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
     move_dist += 0.05;
   }
 
-  const std::vector<double> move_up_dist{0.68, 1.08, 1.48};
+  const std::vector<double> move_up_dist{0.68, 0.88, 1.08, 1.28, 1.48};
   // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
-  // 单侧buffer 0.16米 碰撞直接清0 0.16-0.19 累减 0.20-0.26累加 0.26直接释放
+  // 0.26米如果没有碰撞 直接释放
+  // 0.20米如果没有碰撞 累加
+  // 0.17米如果没有碰撞 维持不变
+  // 0.16米如果没有碰撞 累减
+  // 0.16米如果碰撞 直接不释放
   std::vector<std::pair<double, SlotReleaseVoterType>> lat_buffer_pair_vec = {
       {0.26, SlotReleaseVoterType::MAXIMUM},
       {0.20, SlotReleaseVoterType::ACCUMULATE},
+      {0.17, SlotReleaseVoterType::HOLD},
       {0.16, SlotReleaseVoterType::SUBTRACT}};
 
   const double lon_buffer = 0.1;
