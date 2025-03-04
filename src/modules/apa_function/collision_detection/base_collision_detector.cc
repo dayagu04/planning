@@ -74,6 +74,34 @@ void BaseCollisionDetector::Init() {
   car_with_mirror_rectangle_vertex_[3]
       << param.wheel_base + param.front_overhanging,
       0.5 * param.max_car_width;
+
+  // 后视镜到前悬矩形
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_.clear();
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_.resize(4);
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_[0] =
+      left_mirror_rectangle_vertex_[2];
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_[1] =
+      right_mirror_rectangle_vertex_[1];
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_[2]
+      << param.wheel_base + param.front_overhanging,
+      -0.5 * param.max_car_width;
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_[3]
+      << param.wheel_base + param.front_overhanging,
+      0.5 * param.max_car_width;
+
+  // 后视镜到后悬矩形
+  mirror_to_rear_overhanging_rectangle_vertex_.clear();
+  mirror_to_rear_overhanging_rectangle_vertex_.resize(4);
+  mirror_to_rear_overhanging_rectangle_vertex_[0] =
+      left_mirror_rectangle_vertex_[3];
+  mirror_to_rear_overhanging_rectangle_vertex_[1]
+      << -param.rear_overhanging,
+      0.5 * param.max_car_width;
+  mirror_to_rear_overhanging_rectangle_vertex_[2]
+      << -param.rear_overhanging,
+      -0.5 * param.max_car_width;
+  mirror_to_rear_overhanging_rectangle_vertex_[3] =
+      right_mirror_rectangle_vertex_[0];
 }
 
 void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
@@ -140,6 +168,28 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
     vertex.x() = pt.x();
     vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer : pt.y() - lat_buffer;
     car_with_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
+  }
+
+  // 后视镜到前悬矩形
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_.clear();
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_.reserve(4);
+  for (const Eigen::Vector2d& pt :
+       mirror_to_front_overhanging_rectangle_vertex_expand_front_) {
+    vertex.x() = pt.x();
+    vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer : pt.y() - lat_buffer;
+    mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
+        .emplace_back(vertex);
+  }
+
+  // 后视镜到后悬矩形
+  mirror_to_rear_overhanging_rectangle_vertex_with_buffer_.clear();
+  mirror_to_rear_overhanging_rectangle_vertex_with_buffer_.reserve(4);
+  for (const Eigen::Vector2d& pt :
+       mirror_to_rear_overhanging_rectangle_vertex_) {
+    vertex.x() = pt.x();
+    vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer : pt.y() - lat_buffer;
+    mirror_to_rear_overhanging_rectangle_vertex_with_buffer_
+        .emplace_back(vertex);
   }
 }
 

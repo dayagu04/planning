@@ -303,6 +303,12 @@ struct PathPoint {
   }
 };
 
+const PathPoint TransformPoseFromGlobalToLocal(const PathPoint &pose_global,
+                                               const GlobalToLocalTf &g2l_tf);
+
+const PathPoint TransformPoseFromLocalToGlobal(const PathPoint &pose_local,
+                                               const LocalToGlobalTf &l2g_tf);
+
 struct LineSegment {
   LineSegment() = default;
   LineSegment(const Eigen::Vector2d &p1, const Eigen::Vector2d &p2) {

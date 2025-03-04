@@ -68,10 +68,13 @@ struct EgoInfoUnderSlot {
   uint32 confidence = 0;
 
   geometry_lib::PathPoint cur_pose;
+  geometry_lib::PathPoint origin_target_pose;
   geometry_lib::PathPoint target_pose;
   geometry_lib::PathPoint terminal_err;
 
   double slot_occupied_ratio = 0.0;
+
+  double slot_occupied_ratio_postprocess = 0.0;
 
   double channel_width = 0.0;
 
@@ -83,8 +86,14 @@ struct EgoInfoUnderSlot {
 
   // 根据障碍物移动车位 对于垂直车位 向左为正
   double move_slot_dist = 0.0;
-  double last_move_slot_dist = 0.0;
-  double replan_move_slot_dist = 0.0;
+
+  // 重规划成功时的移动距离 重规划成功时才更新
+  double lat_move_dist_replan_success = 0.0;
+  double lon_move_dist_replan_success = 0.0;
+
+  // 每次重规划的移动距离 只要重规划就更新
+  double lat_move_dist_every_replan = 0.0;
+  double lon_move_dist_every_replan = 0.0;
 
   Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
 
@@ -106,6 +115,7 @@ struct EgoInfoUnderSlot {
 
     confidence = 0;
 
+    slot_occupied_ratio_postprocess = 0.0;
     slot_occupied_ratio = 0.0;
     channel_width = 0.0;
 
@@ -116,8 +126,12 @@ struct EgoInfoUnderSlot {
     l2g_tf.Reset();
 
     move_slot_dist = 0.0;
-    last_move_slot_dist = 0.0;
-    replan_move_slot_dist = 0.0;
+
+    lat_move_dist_replan_success = 0.0;
+    lon_move_dist_replan_success = 0.0;
+
+    lat_move_dist_every_replan = 0.0;
+    lon_move_dist_every_replan = 0.0;
 
     pt_inside.setZero();
 

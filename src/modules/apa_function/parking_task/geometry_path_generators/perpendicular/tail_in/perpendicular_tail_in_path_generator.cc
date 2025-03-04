@@ -82,7 +82,8 @@ const bool PerpendicularTailInPathGenerator::Update() {
           ->Update(
               std::vector<geometry_lib::PathPoint>{
                   input_.ego_info_under_slot.cur_pose},
-              apa_param.GetParam().car_lat_inflation_normal, 0.3)
+              apa_param.GetParam().car_lat_inflation_normal, 0.3,
+              GJKColDetRequest())
           .col_flag) {
     ILOG_INFO << "ego pose has obs, force quit PathPlan, fail";
     return false;
@@ -1586,7 +1587,8 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
                     ->Update(path_seg, lat_inflation, lon_safe_dist);
         } else {
           res = collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
-                    ->Update(path_seg, lat_inflation, lon_safe_dist);
+                    ->Update(path_seg, lat_inflation, lon_safe_dist,
+                             GJKColDetRequest());
         }
       }
     } else {
@@ -1597,7 +1599,8 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
                     ->Update(path_seg, lat_inflation, lon_safe_dist);
         } else {
           res = collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
-                    ->Update(path_seg, lat_inflation, lon_safe_dist);
+                    ->Update(path_seg, lat_inflation, lon_safe_dist,
+                             GJKColDetRequest());
         }
       } else {
         res = collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()
@@ -1610,7 +1613,8 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
                 ->Update(path_seg, lat_inflation, lon_safe_dist);
     } else {
       res = collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
-                ->Update(path_seg, lat_inflation, lon_safe_dist);
+                ->Update(path_seg, lat_inflation, lon_safe_dist,
+                         GJKColDetRequest());
     }
   }
 
