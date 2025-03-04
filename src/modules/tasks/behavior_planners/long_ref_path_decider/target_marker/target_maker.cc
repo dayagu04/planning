@@ -104,7 +104,7 @@ common::Status TargetMaker::Run() {
           continue;
         }
       }
-      if (neighbor_target_value.target_type() == TargetType::kNeighborYeild) {
+      if (neighbor_target_value.target_type() == TargetType::kNeighborYield) {
         if (util::WithinBound(lower_target_value.s_target_val(),
                               upper_target_value.s_target_val(),
                               neighbor_target_value.s_target_val())) {

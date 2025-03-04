@@ -124,7 +124,7 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
     variable_coordinate_param.s_start =
         yield_s - config_.neighbor_target_neighbor_yield_distance;
     variable_coordinate_param.v = yield_v;
-    neighbor_target_type_ = TargetType::kNeighborYeild;
+    neighbor_target_type_ = TargetType::kNeighborYield;
   } else if (!is_yield_valid && is_overtake_valid) {
     variable_coordinate_param.s_start =
         overtake_s + config_.neighbor_target_neighbor_overtake_distance;

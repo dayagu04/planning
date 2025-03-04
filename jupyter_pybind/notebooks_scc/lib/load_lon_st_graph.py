@@ -361,7 +361,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_target_s_overtake'].data.update({
     't_overtake_target': t_overtake_target_vec,
     's_overtake_target': s_overtake_target_vec})
-    
   ## caution target
   t_caution_target_vec = []
   s_caution_target_vec = []
@@ -372,6 +371,17 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_target_s_caution'].data.update({
     't_caution_target': t_caution_target_vec,
     's_caution_target': s_caution_target_vec})
+
+  ## max decel s curve
+  t_max_decel_vec = []
+  s_max_decel_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
+    t_max_decel_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
+    s_max_decel_vec.append(item.s)
+  lon_plan_data['data_target_s_max_decel'].data.update({
+    't_max_decel': t_max_decel_vec,
+    's_max_decel': s_max_decel_vec})
 
   lon_plan_data['data_target'].data.update({
     't_final_target': t_final_target_vec,
@@ -1189,6 +1199,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
   data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
+  data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -1235,6 +1246,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_target_s_neighbor': data_target_s_neighbor, \
                    'data_target_s_overtake': data_target_s_overtake, \
                    'data_target_s_caution': data_target_s_caution, \
+                   'data_target_s_max_decel': data_target_s_max_decel, \
                    'data_st_search_text' : data_st_search_text, \
   }
 
@@ -1365,6 +1377,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('t_overtake_target', 's_overtake_target', source = data_target_s_overtake, line_width = 3.0, line_color = 'black', line_dash = 'solid', legend_label = 's_overtake_target')
   fig3.line('t_caution_target', 's_caution_target', source = data_target_s_caution, line_width = 3.0, line_color = 'yellow', line_dash = 'solid', legend_label = 's_caution_target')
   fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
+  fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel')
 
   hover3 = HoverTool(tooltips=[('node_s', '@s_search'),
                                ('node_vel', '@vel_search'),

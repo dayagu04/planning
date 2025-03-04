@@ -36,7 +36,7 @@ bool LongRefPathDecider::Execute() {
   // 1. calculate s_ref
   target_maker_->Run();
   // 2. calculate bound
-  bound_maker_->Run();
+  bound_maker_->Run(*target_maker_);
   // 3. calculate weight
   weight_maker_->Run(*target_maker_);
   // 4. update lon ref path

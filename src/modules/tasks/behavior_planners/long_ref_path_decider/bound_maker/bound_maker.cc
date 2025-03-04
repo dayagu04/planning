@@ -4,8 +4,8 @@
 
 namespace planning {
 namespace {
-constexpr double IsoAccLimitUpper = -3.5;
-constexpr double IsoAccLimitLower = -5.0;
+constexpr double IsoAccLimitUpper = -3.0;
+constexpr double IsoAccLimitLower = -4.0;
 constexpr double IsoAccLimitSpeedUpper = 20.0;
 constexpr double IsoAccLimitSpeedLower = 5.0;
 
@@ -20,6 +20,9 @@ constexpr double kOvertakeBuffer = 2.0;
 constexpr double kSpeedBoundFactor = 1.1;
 constexpr double kPerSecondPlanLenth = 50.0;
 
+constexpr double kJerkLowerComfortableBound = -1.2;
+constexpr double kBrakeTimeBuffer = 0.3;
+
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
                        framework::Session* session)
@@ -29,8 +32,9 @@ BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
   plan_points_num_ = static_cast<int32_t>(plan_time_ / dt_) + 1;
 }
 
-common::Status BoundMaker::Run() {
+common::Status BoundMaker::Run(const TargetMaker& target_maker) {
   LOG_DEBUG("=======LongRefPathDecider: BoundMaker======= \n");
+  max_decel_target_pb_.Clear();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& lateral_behavior_planner_output =
@@ -52,7 +56,7 @@ common::Status BoundMaker::Run() {
   MakeVBound();
 
   // 4. jerk bound
-  MakeJerkBound();
+  MakeJerkBound(target_maker);
 
   return common::Status::OK();
 }
@@ -259,7 +263,7 @@ void BoundMaker::MakeVBound() {
   v_upper_bound_ = std::vector<double>(plan_points_num_, max_speed);
 }
 
-void BoundMaker::MakeJerkBound() {
+void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   // @gpxu 待补充
   double jerk_upper_bound =
       speed_planning_config_.speed_planning_bound.jerk_upper_bound;
@@ -270,6 +274,48 @@ void BoundMaker::MakeJerkBound() {
       speed_planning_config_.speed_planning_bound.jerk_lower_bound;
   jerk_upper_bound_ = std::vector<double>(plan_points_num_, jerk_upper_bound);
   jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
+
+  // store max decel s curve in proto
+  auto max_deceleration_curve = GenerateMaxDecelerationCurve();
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_follow_target_data =
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_max_decel_target();
+  for (int32_t i = 0; i < plan_points_num_; i++) {
+    auto* ptr = max_decel_target_pb_.add_max_decel_s_ref();
+    const double t = i * dt_;
+    const auto s = max_deceleration_curve.Evaluate(0, t);
+    ptr->set_s(s);
+    ptr->set_t(t);
+  }
+  mutable_follow_target_data->CopyFrom(max_decel_target_pb_);
+
+  // Hack: add jerk bound if s_target is safety
+  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
+  bool is_need_comfortable_decel = true;
+  for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
+    const double t = i * dt_;
+    const double s_safe = max_deceleration_curve.Evaluate(0, t);
+    const double vel = virtual_acc_curve->Evaluate(1, t);
+    const double brake_buffer = vel * kBrakeTimeBuffer;
+    auto target_value = target_maker.target_value(t);
+    if (target_value.target_type() == TargetType::kFollow ||
+        target_value.target_type() == TargetType::kNeighborYield ||
+        target_value.target_type() == TargetType::kCautionYield) {
+      // check s_target by s_safe
+      if (target_value.s_target_val() < s_safe) {
+        is_need_comfortable_decel = false;
+        break;
+      }
+    }
+    const auto& agent_id = upper_bound_infos_[i].agent_id;
+    if (agent_id == -1) {
+      continue;
+    }
+  }
+  if (is_need_comfortable_decel) {
+    jerk_lower_bound_ =
+        std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
+  }
 }
 
 SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve()
@@ -301,12 +347,6 @@ SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve()
   init_state.a = init_lon_state_[2];
   StateLimit state_limit;
 
-  //
-  //   iso_acc_limit_upper : -3.5
-  // iso_acc_limit_lower : -5.0
-  // iso_acc_limit_speed_upper : 20.0
-  // iso_acc_limit_speed_lower : 5.0
-  //
   const double acc_lower_bound = planning_math::LerpWithLimit(
       IsoAccLimitLower, IsoAccLimitSpeedLower, IsoAccLimitUpper,
       IsoAccLimitSpeedUpper, init_lon_state_[1]);

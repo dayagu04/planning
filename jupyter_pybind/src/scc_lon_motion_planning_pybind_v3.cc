@@ -84,7 +84,7 @@ std::vector<double> MakeSWeight(double default_s_weight, double follow_s_weight,
     } else if (type == TargetType::kOvertake) {
       s_weights[i] = overtake_s_weight;
     } else if (type == TargetType::kNeighbor ||
-               type == TargetType::kNeighborYeild ||
+               type == TargetType::kNeighborYield ||
                type == TargetType::kNeighborOvertake) {
       s_weights[i] = neighbor_s_weight;
     }
