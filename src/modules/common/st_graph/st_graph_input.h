@@ -36,7 +36,7 @@ class StGraphInput {
   void MakePlanningInitPointBox();
 
   void FilterAgentsByDecisionType(
-      const std::vector<const agent::Agent*>& origin_agents);
+      const std::vector<std::shared_ptr<agent::Agent>>& origin_agents);
 
   void ExtendProcessedPath(
       const bool is_lane_keeping,
@@ -86,7 +86,7 @@ class StGraphInput {
 
   const int32_t reserve_num() const;
 
-  const std::vector<const agent::Agent*>& filtered_agents() const;
+  const std::vector<std::shared_ptr<agent::Agent>>& filtered_agents() const;
 
   std::shared_ptr<agent::AgentManager> mutable_agent_manager();
 
@@ -154,7 +154,7 @@ class StGraphInput {
   std::pair<double, double> path_range_;
   std::pair<double, double> time_range_;
   std::shared_ptr<planning_math::KDPath> processed_path_ = nullptr;
-  std::vector<const agent::Agent*> filtered_agents_;
+  std::vector<std::shared_ptr<agent::Agent>> filtered_agents_;
   const agent::Agent* front_agent_of_target_ = nullptr;
   const agent::Agent* rear_agent_of_target_ = nullptr;
   // The path border that is expanded by veh_width

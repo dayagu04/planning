@@ -91,7 +91,7 @@ bool STGraph::InsertAgent(const agent::Agent& agent,
 void STGraph::MakeAgentStBoundaries() {
   ignore_agent_ids_.clear();
   const auto& agents = st_graph_input_->filtered_agents();
-  for (const agent::Agent* agent : agents) {
+  for (const auto agent : agents) {
     if (nullptr == agent) {
       continue;
     }
@@ -103,7 +103,7 @@ void STGraph::MakeAgentStBoundaries() {
     }
   }
 
-  for (const agent::Agent* agent : agents) {
+  for (const auto agent : agents) {
     if (nullptr == agent) {
       continue;
     }

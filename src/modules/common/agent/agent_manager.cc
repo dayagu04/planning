@@ -31,7 +31,7 @@ void AgentManager::Reset() {
   historical_agents_.clear();
 }
 
-const std::vector<const Agent*>& AgentManager::GetAllCurrentAgents() const {
+const std::vector<std::shared_ptr<Agent>>& AgentManager::GetAllCurrentAgents() const {
   return current_agents_;
 }
 const std::unordered_set<int32_t>& AgentManager::GetAgentSet() const {
@@ -165,11 +165,11 @@ void AgentManager::Append(
     if (current_agents_ids_.count(data.first) > 0) {
       continue;
     }
-    auto agent = std::make_unique<Agent>(data.second);
+    auto agent = std::make_shared<Agent>(data.second);
     if (nullptr == agent) {
       continue;
     }
-    current_agents_.emplace_back(agent.get());
+    current_agents_.emplace_back(agent);
     current_agents_ids_.insert(agent->agent_id());
     historical_agents_[agent->agent_id()].emplace_back(std::move(agent));
   }

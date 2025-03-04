@@ -217,7 +217,7 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
   cut_in_distance_range_m =
       std::fmin(cut_in_distance_range_m, kMaxCutInDistanceM);
 
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (nullptr == agent) {
       continue;
     }
@@ -938,7 +938,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
   const double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
   const double ego_center_s = ego_s + rear_axle_to_center;
 
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }
@@ -1001,7 +1001,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     }
 
     // filter consider rear agent
-    if (IsConsiderBackObs(ego_lane_coord, planning_init_point, agent,
+    if (IsConsiderBackObs(ego_lane_coord, planning_init_point, agent.get(),
                           ego_front_edge_s, front_corner_s, ego_center_s,
                           front_edge_s_diff, min_lat_l_from_ego)) {
       continue;
@@ -1263,7 +1263,7 @@ void AgentLongitudinalDecider::FilterUltradistantObs() {
   filter_ultra_distance =
       GetFilterUltraDistanceWithEgoVel(planning_init_point.v);
 
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }
@@ -1332,7 +1332,7 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
   current_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
                              &planning_init_point_s, &planning_init_point_l);
 
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }
@@ -1353,7 +1353,7 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     const auto agent_box_center = agent->box().center();
 
     // only consider reverse agent
-    if (!IsReverseAgent(agent, current_lane)) {
+    if (!IsReverseAgent(agent.get(), current_lane)) {
       continue;
     }
     mutable_agent->set_is_reverse(true);
