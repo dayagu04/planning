@@ -194,7 +194,6 @@ void LaneBorrowDecider::ClearLaneBorrowStatus() {
   obs_direction_map_.clear();
 }
 
-
 bool LaneBorrowDecider::CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane() {
   if (!IsSafeForBackOriginLane()) {
     return false;
@@ -410,7 +409,7 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     }
 
     static_blocked_obstacles_.emplace_back(obstacle);  // really needed
-    static_blocked_obj_id_vec_.emplace_back(id);  // tmperal used
+    static_blocked_obj_id_vec_.emplace_back(id);       // tmperal used
     if (obs_direction_map_.empty() ||
         obs_direction_map_.find(id) == obs_direction_map_.end()) {  // add
       obs_direction_map_[id] = std::make_pair(BorrowDirection::NO_BORROW, 0);
@@ -456,7 +455,8 @@ bool LaneBorrowDecider::ObstacleDecision() {
     for (const auto& obstacle : static_blocked_obstacles_) {
       const auto& id = obstacle->obstacle()->id();
       const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
-      BorrowDirection obs_bypass_direction = GetBypassDirection(frenet_obstacle_sl, id);
+      BorrowDirection obs_bypass_direction =
+          GetBypassDirection(frenet_obstacle_sl, id);
 
       //  extend  static area
       if (id == static_blocked_obstacles_[0]->obstacle()->id() ||
@@ -469,11 +469,11 @@ bool LaneBorrowDecider::ObstacleDecision() {
       }
     }
   } else {
-
     const auto& front_obstacle_sl =
         static_blocked_obstacles_[0]->frenet_obstacle_boundary();
     const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
-    BorrowDirection front_obs_bypass_direction = GetBypassDirection(front_obstacle_sl, id);
+    BorrowDirection front_obs_bypass_direction =
+        GetBypassDirection(front_obstacle_sl, id);
     const double front_obs_center_l =
         0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
     lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
@@ -540,7 +540,6 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
 BorrowDirection LaneBorrowDecider::GetBypassDirection(
     const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
-
   const double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
 
@@ -569,14 +568,16 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
 
   double lane_line_length = 0.0;
   const auto& left_lane_boundarys = current_lane_ptr_->get_left_lane_boundary();
-  const auto& right_lane_boundarys =current_lane_ptr_->get_right_lane_boundary();
+  const auto& right_lane_boundarys =
+      current_lane_ptr_->get_right_lane_boundary();
   iflyauto::LaneBoundaryType left_lane_boundary_type;
   iflyauto::LaneBoundaryType right_lane_boundary_type;
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   // # Accumulate lane segment lengths.
-  // Record current segment type and break loop when exceeding vehicle wheelbase.
+  // Record current segment type and break loop when exceeding vehicle
+  // wheelbase.
   for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
     lane_line_length += left_lane_boundarys.type_segments[i].length;
     if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
@@ -593,7 +594,8 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
     }
   }
 
-  // If the lane marking is not left dashed/right solid or double dashed, return False.
+  // If the lane marking is not left dashed/right solid or double dashed, return
+  // False.
   if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
       left_lane_boundary_type !=
           iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
@@ -1103,23 +1105,33 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
       session_->environmental_model().get_ego_state_manager()->ego_pose().y;
 
   // Get the corner points' Cartesian coordinates while traveling straight
-  Point2D corner_front_left_xy(vehicle_param.front_edge_to_rear_axle, vehicle_param.width * 0.5);
-  Point2D corner_front_right_xy(vehicle_param.front_edge_to_rear_axle, -vehicle_param.width * 0.5);
-  Point2D corner_rear_left_xy(-vehicle_param.rear_edge_to_rear_axle, vehicle_param.width * 0.5);
-  Point2D corner_rear_right_xy(-vehicle_param.rear_edge_to_rear_axle, -vehicle_param.width * 0.5);
+  Point2D corner_front_left_xy(vehicle_param.front_edge_to_rear_axle,
+                               vehicle_param.width * 0.5);
+  Point2D corner_front_right_xy(vehicle_param.front_edge_to_rear_axle,
+                                -vehicle_param.width * 0.5);
+  Point2D corner_rear_left_xy(-vehicle_param.rear_edge_to_rear_axle,
+                              vehicle_param.width * 0.5);
+  Point2D corner_rear_right_xy(-vehicle_param.rear_edge_to_rear_axle,
+                               -vehicle_param.width * 0.5);
 
-  SLPoint corner_front_left, corner_rear_left, corner_front_right,corner_rear_right;
+  SLPoint corner_front_left, corner_rear_left, corner_front_right,
+      corner_rear_right;
 
   if (left_borrow_) {
     double original_x = corner_front_left_xy.x;  // Translate
     double original_y = corner_front_left_xy.y;
-    corner_front_left_xy.x = original_x * cos(heading_angle) - original_y * sin(heading_angle) + ego_x;  // Apply the rotation matrix
-    corner_front_left_xy.y = original_x * sin(heading_angle) + original_y * cos(heading_angle) + ego_y;
+    corner_front_left_xy.x = original_x * cos(heading_angle) -
+                             original_y * sin(heading_angle) +
+                             ego_x;  // Apply the rotation matrix
+    corner_front_left_xy.y = original_x * sin(heading_angle) +
+                             original_y * cos(heading_angle) + ego_y;
 
     original_x = corner_rear_left_xy.x;
     original_y = corner_rear_left_xy.y;
-    corner_rear_left_xy.x = original_x * cos(heading_angle) - original_y * sin(heading_angle) + ego_x;
-    corner_rear_left_xy.y = original_x * sin(heading_angle) + original_y * cos(heading_angle) + ego_y;
+    corner_rear_left_xy.x = original_x * cos(heading_angle) -
+                            original_y * sin(heading_angle) + ego_x;
+    corner_rear_left_xy.y = original_x * sin(heading_angle) +
+                            original_y * cos(heading_angle) + ego_y;
 
     // Back to the SL coordinate system and compare with the lane lines.
     current_frenet_coord->XYToSL(corner_front_left_xy.x, corner_front_left_xy.y,
@@ -1140,13 +1152,18 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
   } else if (right_borrow_) {
     double original_x = corner_front_right_xy.x;  // Translate
     double original_y = corner_front_right_xy.y;
-    corner_front_right_xy.x = original_x * cos(heading_angle) - original_y * sin(heading_angle) + ego_x;  // Apply the rotation matrix
-    corner_front_right_xy.y = original_x * sin(heading_angle) + original_y * cos(heading_angle) + ego_y;
+    corner_front_right_xy.x = original_x * cos(heading_angle) -
+                              original_y * sin(heading_angle) +
+                              ego_x;  // Apply the rotation matrix
+    corner_front_right_xy.y = original_x * sin(heading_angle) +
+                              original_y * cos(heading_angle) + ego_y;
 
     original_x = corner_rear_right_xy.x;
     original_y = corner_rear_right_xy.y;
-    corner_rear_right_xy.x = original_x * cos(heading_angle) - original_y * sin(heading_angle) + ego_x;
-    corner_rear_right_xy.y = original_x * sin(heading_angle) + original_y * cos(heading_angle) + ego_y;
+    corner_rear_right_xy.x = original_x * cos(heading_angle) -
+                             original_y * sin(heading_angle) + ego_x;
+    corner_rear_right_xy.y = original_x * sin(heading_angle) +
+                             original_y * cos(heading_angle) + ego_y;
 
     current_frenet_coord->XYToSL(corner_front_right_xy.x,
                                  corner_front_right_xy.y, &corner_front_right.s,

@@ -107,8 +107,7 @@ class LaneBorrowDecider : public Task {
   std::shared_ptr<VirtualLane> left_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
   LaneBorrowDeciderConfig config_;
-  // 新增临时存储合并后的障碍物边界
-    FrenetBoundary merged_obs_boundary_;
+
 };
 
 }  // namespace planning
