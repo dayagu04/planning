@@ -1258,6 +1258,15 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
                        (!lat_obs_position_iter->second.front_car);
   }
 
+  BoundType bound_type = BoundType::AGENT;
+  // // judge emergency_avoid_direction
+  // if (lat_obs_position_iter != lat_obstacle_position.end() &&
+  //     lat_obs_position_iter->second.emergency_avoid) {
+  //   is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+  //   bound_type = BoundType::ADJACENT_AGENT;
+  // }
+
+  // lane borrow
   const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
     if (borrow_direction == LEFT_BORROW) {
@@ -1270,9 +1279,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     is_care_rear_obstacle = false;
   }
 
-  BoundType bound_type = BoundType::AGENT;
   if (is_care_rear_obstacle) {
-    BoundType bound_type = BoundType::REAR_AGENT;
+    bound_type = BoundType::REAR_AGENT;
   }
 
   bool is_cross_obj{false};
@@ -1767,8 +1775,15 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
                        (!lat_obs_position_iter->second.front_car);
   }
 
-  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+  // judge emergency_avoid_direction
+  if (lat_obs_position_iter != lat_obstacle_position.end() &&
+      lat_obs_position_iter->second.emergency_avoid) {
+    is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+    bound_type = BoundType::ADJACENT_AGENT;
+  }
 
+  // lane borrow
+  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
     if (borrow_direction == LEFT_BORROW) {
       // 向左借道
@@ -1805,9 +1820,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   double extra_lane_type_decrease_buffer = CalculateExtraLaneTypeDecreaseBuffer(
       is_nudge_left, overlap_start_s_, overlap_end_s_);
-
-  const std::shared_ptr<agent::AgentManager> agent_manager = session_->environmental_model().get_agent_manager();
-  const auto *agent = agent_manager->GetAgent(obstacle->id());
 
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
@@ -2240,6 +2252,10 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
             (lat_obs_position_iter->second.side_car)) {
           return true;
         }
+      }
+      if (lat_obs_position_iter != lat_obstacle_position.end() &&
+          lat_obs_position_iter->second.emergency_avoid) {
+        return true;
       }
     }
   }
