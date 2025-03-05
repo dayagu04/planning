@@ -99,7 +99,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         // 在propose阶段计算靠近车道线的横向偏移量
         //  CalculateLatCloseValue();
 
-        if (is_propose_to_execution && is_dashed_line) {
+        if (is_propose_to_execution && is_dashed_line && !is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
@@ -258,12 +258,18 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
 bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
     const RequestType &lane_change_direction,
     const RequestSource &lane_change_type) {
-  const double propose_time_threshold = 15;
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
-  bool propose_time_out =
-      lc_req_mgr_->GetReqStartTime(lc_req_mgr_->request_source()) -
-          IflyTime::Now_s() >
-      propose_time_threshold;
+
+  //当前规划为10hz，则每帧时间大约为0.1s，拨杆变道在等待状态满15s后，还未变道，则取消当前次的拨杆变道
+  const double propose_frame_threshold = 150;
+
+  bool propose_time_out = (transition_info_.lane_change_type == INT_REQUEST &&
+                           propose_state_frame_nums_ > propose_frame_threshold);
+  // bool propose_time_out =
+  //     lc_req_mgr_->GetReqStartTime(lc_req_mgr_->request_source()) -
+  //         IflyTime::Now_s() >
+  //     propose_time_threshold;
+
   if (is_no_lc_request || propose_time_out) {
     return true;
   }

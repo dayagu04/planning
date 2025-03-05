@@ -1460,20 +1460,34 @@ void EnvironmentalModelManager::RunBlinkState(
        (state == kLaneChangePropose)) &&
       (lc_request_direction == RIGHT_CHANGE) && (lc_source == INT_REQUEST);
   bool is_cancel = state == kLaneChangeCancel;
+  if (is_firmly_touch_) {
+    num_firmly_touch_++;
+  }
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
         // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
-        if ((history_lc_source_[0] == INT_REQUEST &&
-             history_lc_source_[1] != INT_REQUEST) ||
-            (state == kLaneKeeping)) {
+        if (history_lc_source_[0] == INT_REQUEST &&
+             history_lc_source_[1] != INT_REQUEST) {
+          current_turn_signal_ = common::TurnSignalType::NONE;
+        } else if (state == kLaneKeeping && num_firmly_touch_ > 200) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         }
+        // if ((history_lc_source_[0] == INT_REQUEST &&
+        //      history_lc_source_[1] != INT_REQUEST) ||
+        //     (state == kLaneKeeping)) {
+        //   if (num_firmly_touch_ > 200) {
+
+        //   }
+        //   current_turn_signal_ = common::TurnSignalType::NONE;
+        // }
       } else {
         current_turn_signal_ = common::TurnSignalType::NONE;
       }
       break;
     case LEFT_FIRMLY_TOUCH:
+      is_firmly_touch_ = true;
+      num_firmly_touch_ = 0;
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
@@ -1489,6 +1503,8 @@ void EnvironmentalModelManager::RunBlinkState(
       break;
     case RIGHT_FIRMLY_TOUCH:
       // 与上同理
+      is_firmly_touch_ = true;
+      num_firmly_touch_ = 0;
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
@@ -1501,18 +1517,34 @@ void EnvironmentalModelManager::RunBlinkState(
       }
       break;
     case LEFT_LIGHTLY_TOUCH:
+      is_firmly_touch_ = false;
+      num_firmly_touch_ = 0;
       // 只有在向右变道的过程中才会起作用
       if (last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       }
+      // 防止在变道动作完成时，正好有轻拨杆信号，比如1分2场景中
+      if (history_lc_source_[0] == INT_REQUEST &&
+          history_lc_source_[1] != INT_REQUEST) {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      }
       break;
     case RIGHT_LIGHTLY_TOUCH:
+      is_firmly_touch_ = false;
+      num_firmly_touch_ = 0;
       // 只有在向左变道的过程中才会起作用
       if (last_frame_turn_sinagl_ == common::TurnSignalType::LEFT) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       }
+      // 防止在变道动作完成时，正好有轻拨杆信号，比如1分2场景中
+      if (history_lc_source_[0] == INT_REQUEST &&
+          history_lc_source_[1] != INT_REQUEST) {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      }
       break;
     case ERROR:
+      is_firmly_touch_ = false;
+      num_firmly_touch_ = 0;
       current_turn_signal_ = common::TurnSignalType::NONE;
       break;
   }

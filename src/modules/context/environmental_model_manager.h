@@ -118,6 +118,10 @@ class EnvironmentalModelManager {
   EgoPlanningConfig ego_config_;
   int current_turn_signal_ = 0;
   int last_frame_turn_sinagl_ = 0;
+  bool is_firmly_touch_ = false;
+  int num_firmly_touch_ = 0;
+  // bool is_right_firmly_touch_ = false;
+  // int num_right_firmly_touch_ = 0;
   std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
   uint64_t faultcode_ = 39999;
 };
