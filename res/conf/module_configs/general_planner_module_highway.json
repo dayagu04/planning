@@ -717,7 +717,8 @@
   "obs_static_vel_thold": 0.2,
   "observe_frames": 15,
   "centric_obs_frames":10,
-  "dense_obstacle_dist":8.0
+  "dense_obstacle_dist":8.0,
+  "merge_obs_distance_":30.0
 },
 "sample_poly_speed_adjust": {
   "sample_v_nums": 15,

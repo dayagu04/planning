@@ -1,5 +1,4 @@
 #include "lane_borrow_deciderv1.h"
-
 #include <Eigen/src/Core/Matrix.h>
 #include <math.h>
 
@@ -460,7 +459,7 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
       //  extend  static area
       if (id == static_blocked_obstacles_[0]->obstacle()->id() ||
-          frenet_obstacle_sl.s_start - obs_end_s_ < merge_obs_distance_) {
+          frenet_obstacle_sl.s_start - obs_end_s_ < config_.merge_obs_distance_) {
         obs_left_l_ = std::max(obs_left_l_, frenet_obstacle_sl.l_end);
         obs_right_l_ = std::min(obs_right_l_, frenet_obstacle_sl.l_start);
         obs_start_s_ = std::min(obs_start_s_, frenet_obstacle_sl.s_start);
