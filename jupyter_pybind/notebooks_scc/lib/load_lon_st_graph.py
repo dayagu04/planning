@@ -1340,7 +1340,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                ('node_vel', '@vel_search'),
                                ('node_acc', '@acc_search'),
                                ('node_jerk', '@jerk_search'),])
-
   fig3.add_tools(hover3)
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'

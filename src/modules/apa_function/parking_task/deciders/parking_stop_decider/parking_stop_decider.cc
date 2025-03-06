@@ -5,6 +5,7 @@
 #include "collision_detection/path_safe_checker.h"
 #include "debug_info_log.h"
 #include "obstacle_manager.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -75,11 +76,11 @@ void ParkingStopDecider::AddDebugInfo(
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
   speed_debug->Clear();
-  common::SVGraphSpeedConstraint* speed_limit_debug =
-      speed_debug->mutable_speed_limit();
+  common::SVGraphSpeedConstraint* dp_speed_constraint =
+      speed_debug->mutable_dp_speed_constraint();
 
   for (size_t i = 0; i < path.size(); i++) {
-    speed_limit_debug->add_obs_dist(path[i].dist_to_obs);
+    dp_speed_constraint->add_obs_dist(path[i].dist_to_obs);
 
 #if DECIDER_DEBUG
 

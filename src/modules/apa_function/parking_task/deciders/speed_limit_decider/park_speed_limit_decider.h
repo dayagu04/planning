@@ -12,6 +12,7 @@ namespace planning {
 // 1. path kappa change
 // 2. gap too much bettwen car steering wheel kappa with path kappa.
 // 3. obstacle distance
+// 4. path kappa too large
 class ParkSpeedLimitDecider : public ParkingTask {
  public:
   ParkSpeedLimitDecider();
@@ -36,6 +37,12 @@ class ParkSpeedLimitDecider : public ParkingTask {
       const double ego_v, const double ego_s,
       const SpeedLimitDecision* decision);
 
+  const SpeedLimitProfile& GetSpeedLimitProfile() const {
+    return speed_limit_profile_;
+  }
+
+  const double GetCruiseSpeed() const { return default_cruise_speed_; }
+
  private:
   void AddSpeedLimitDecisions(
       const std::vector<pnc::geometry_lib::PathPoint>& path,
@@ -52,13 +59,25 @@ class ParkSpeedLimitDecider : public ParkingTask {
   double min_cruise_speed_;
   SpeedLimitProfile speed_limit_profile_;
 
+  // todo: speed limit should designed to linear shape, not ladder shape.
   // parameter: if gap is big, ego need speed down.
-  double kappa_gap_in_path_point_ = 0.128;
-  double kappa_gap_in_path_with_wheel_ = 0.045;
-  double obs_dist_for_speed_limit_;
+  double kappa_gap_in_path_point_;
+  double kappa_gap_speed_limit_;
+
+  // kappa speed limit related
+  double kappa_thresh_;
+  double kappa_speed_limit_;
+
+  double obs_dist_thresh_;
+  double obs_dist_speed_limit_;
 
   // for keep a safe lon buffer with obstacles, stop decision need a lon buffer.
   double stop_decision_lon_buffer_ = 0.1;
+
+  double acc_upper_;
+  double acc_lower_;
+  double jerk_upper_;
+  double jerk_lower_;
 };
 
 }  // namespace planning

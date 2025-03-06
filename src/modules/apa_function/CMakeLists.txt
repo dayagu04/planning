@@ -33,6 +33,7 @@ set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/narrow_space_decider
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/speed_limit_decider
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/traj_stitcher
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers/sv_dp_optimizer
   )
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})

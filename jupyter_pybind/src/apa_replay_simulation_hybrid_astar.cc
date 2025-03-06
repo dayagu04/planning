@@ -896,31 +896,31 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
   }
 
   int size = 0;
-  if (speed_debug->has_speed_limit()) {
-    size = speed_debug->speed_limit().s_size();
+  if (speed_debug->has_dp_speed_constraint()) {
+    size = speed_debug->dp_speed_constraint().s_size();
   }
 
   for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->speed_limit().s(i);
+    v[0] = speed_debug->dp_speed_constraint().s(i);
 
-    if (i < speed_debug->speed_limit().obs_dist_size()) {
-      v[1] = speed_debug->speed_limit().obs_dist(i);
+    if (i < speed_debug->dp_speed_constraint().obs_dist_size()) {
+      v[1] = speed_debug->dp_speed_constraint().obs_dist(i);
     }
 
-    if (i < speed_debug->speed_limit().v_upper_bound_size()) {
-      v[2] = speed_debug->speed_limit().v_upper_bound(i);
+    if (i < speed_debug->dp_speed_constraint().v_upper_bound_size()) {
+      v[2] = speed_debug->dp_speed_constraint().v_upper_bound(i);
     }
 
-    if (i < speed_debug->speed_limit().a_upper_bound_size()) {
-      v[3] = speed_debug->speed_limit().a_upper_bound(i);
+    if (i < speed_debug->dp_speed_constraint().a_upper_bound_size()) {
+      v[3] = speed_debug->dp_speed_constraint().a_upper_bound(i);
     }
 
-    if (i < speed_debug->speed_limit().a_lower_bound_size()) {
-      v[4] = speed_debug->speed_limit().a_lower_bound(i);
+    if (i < speed_debug->dp_speed_constraint().a_lower_bound_size()) {
+      v[4] = speed_debug->dp_speed_constraint().a_lower_bound(i);
     }
 
-    if (i < speed_debug->speed_limit().jerk_upper_bound_size()) {
-      v[5] = speed_debug->speed_limit().jerk_upper_bound(i);
+    if (i < speed_debug->dp_speed_constraint().jerk_upper_bound_size()) {
+      v[5] = speed_debug->dp_speed_constraint().jerk_upper_bound(i);
     }
 
     speed_limit_profile.emplace_back(v);

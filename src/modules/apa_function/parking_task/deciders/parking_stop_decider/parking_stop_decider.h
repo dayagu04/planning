@@ -51,12 +51,12 @@ class ParkingStopDecider : public ParkingTask {
 
   const double GetEgoPathProjectS() const { return ego_project_s_; }
 
+  void AddDebugInfo(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
  private:
   void AddStopDecisionByPlanningPath(
       std::vector<pnc::geometry_lib::PathPoint>& path,
       SpeedDecisions* speed_decisions);
-
-  void AddDebugInfo(const std::vector<pnc::geometry_lib::PathPoint>& path);
 
   void AddStopDecisionByPredictedPath(
       const std::vector<pnc::geometry_lib::PathPoint>& path,

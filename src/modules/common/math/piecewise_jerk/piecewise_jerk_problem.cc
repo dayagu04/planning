@@ -11,14 +11,13 @@ namespace planning {
 
 constexpr double kMaxVariableRange = 1.0e10;
 
+#define DEBUG_PWJ (1)
+
 PiecewiseJerkProblem::PiecewiseJerkProblem(
     const size_t num_of_knots, const double delta_s,
     const std::array<double, 3>& x_init) {
-  CHECK_GE(num_of_knots, 2U);
   num_of_knots_ = num_of_knots;
-
   x_init_ = x_init;
-
   delta_s_ = delta_s;
 
   x_bounds_.resize(num_of_knots_,
@@ -30,17 +29,17 @@ PiecewiseJerkProblem::PiecewiseJerkProblem(
   ddx_bounds_.resize(num_of_knots_,
                      std::make_pair(-kMaxVariableRange, kMaxVariableRange));
 
-  weight_x_ref_vec_ = std::vector<double>(num_of_knots_, 0.0);
 }
 
-int PiecewiseJerkProblem::piece_wise_jerk_problem_init(
+void PiecewiseJerkProblem::Init(
     const size_t num_of_knots, const double delta_s,
     const std::array<double, 3>& x_init) {
-  CHECK_GE(num_of_knots, 2U);
+  if (num_of_knots < 2) {
+    return;
+  }
+
   num_of_knots_ = num_of_knots;
-
   x_init_ = x_init;
-
   delta_s_ = delta_s;
 
   x_bounds_.resize(num_of_knots_,
@@ -52,9 +51,7 @@ int PiecewiseJerkProblem::piece_wise_jerk_problem_init(
   ddx_bounds_.resize(num_of_knots_,
                      std::make_pair(-kMaxVariableRange, kMaxVariableRange));
 
-  weight_x_ref_vec_ = std::vector<double>(num_of_knots_, 0.0);
-
-  return 0;
+  return;
 }
 
 OSQPData* PiecewiseJerkProblem::FormulateProblem() {
@@ -101,6 +98,8 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
 
   OSQPSettings* settings = SolverDefaultSettings();
   settings->max_iter = max_iter;
+
+  DebugString();
 
   OSQPWorkspace* osqp_work = nullptr;
   osqp_work = osqp_setup(data, settings);
@@ -150,14 +149,27 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
     std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
     std::vector<c_float>* upper_bounds) {
   // 3N params bounds on x, x', x''
-  // 3(N-1) constraints on x, x', x''
-  // 3 constraints on x_init_
+  // 3N boundary constraints on x, x', x''
+  // 3 init constraints on x_init_
+  // 3(N-1) continous constraints on x, x', x''
+  // 3 end state constraints
   const int n = static_cast<int>(num_of_knots_);
   const int num_of_variables = 3 * n;
-  const int num_of_constraints = num_of_variables + 3 * (n - 1) + 3;
+
+  // check end state constraints
+  int end_state_constraint_num = 0;
+  if (has_end_state_ref_) {
+    end_state_constraint_num = 3;
+  }
+
+  int num_of_constraints =
+      num_of_variables + 3 * (n - 1) + 3 + end_state_constraint_num;
+
+  // L<Ax<U; lower bounds record L
   lower_bounds->resize(num_of_constraints);
   upper_bounds->resize(num_of_constraints);
 
+  // variables: record A matrix
   std::vector<std::vector<std::pair<c_int, c_float>>> variables(
       num_of_variables);
 
@@ -165,12 +177,14 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   // set x, x', x'' bounds
   for (int i = 0; i < num_of_variables; ++i) {
     if (i < n) {
+      // x
       variables[i].emplace_back(constraint_index, 1.0);
       lower_bounds->at(constraint_index) =
           x_bounds_[i].first * scale_factor_[0];
       upper_bounds->at(constraint_index) =
           x_bounds_[i].second * scale_factor_[0];
     } else if (i < 2 * n) {
+      // x'
       variables[i].emplace_back(constraint_index, 1.0);
 
       lower_bounds->at(constraint_index) =
@@ -178,7 +192,9 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
       upper_bounds->at(constraint_index) =
           dx_bounds_[i - n].second * scale_factor_[1];
     } else {
+      // x''
       variables[i].emplace_back(constraint_index, 1.0);
+
       lower_bounds->at(constraint_index) =
           ddx_bounds_[i - 2 * n].first * scale_factor_[2];
       upper_bounds->at(constraint_index) =
@@ -188,10 +204,12 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   }
   CHECK_EQ(constraint_index, num_of_variables);
 
+  // continous constraints
   // x(i->i+1)''' = (x(i+1)'' - x(i)'') / delta_s
   for (int i = 0; i + 1 < n; ++i) {
     variables[2 * n + i].emplace_back(constraint_index, -1.0);
     variables[2 * n + i + 1].emplace_back(constraint_index, 1.0);
+
     lower_bounds->at(constraint_index) =
         dddx_bound_.first * delta_s_ * scale_factor_[2];
     upper_bounds->at(constraint_index) =
@@ -199,6 +217,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
     ++constraint_index;
   }
 
+  // continuous constraints
   // x(i+1)' - x(i)' - 0.5 * delta_s * x(i)'' - 0.5 * delta_s * x(i+1)'' = 0
   for (int i = 0; i + 1 < n; ++i) {
     variables[n + i].emplace_back(constraint_index, -1.0 * scale_factor_[2]);
@@ -207,11 +226,13 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
                                       -0.5 * delta_s_ * scale_factor_[1]);
     variables[2 * n + i + 1].emplace_back(constraint_index,
                                           -0.5 * delta_s_ * scale_factor_[1]);
+
     lower_bounds->at(constraint_index) = 0.0;
     upper_bounds->at(constraint_index) = 0.0;
     ++constraint_index;
   }
 
+  // continous constraints
   // x(i+1) - x(i) - delta_s * x(i)'
   // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)''
   auto delta_s_sq_ = delta_s_ * delta_s_;
@@ -245,10 +266,38 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   upper_bounds->at(constraint_index) = x_init_[1] * scale_factor_[1];
   ++constraint_index;
 
+  double ddx_slack_bound = 0.08;
   variables[2 * n].emplace_back(constraint_index, 1.0);
-  lower_bounds->at(constraint_index) = x_init_[2] * scale_factor_[2];
-  upper_bounds->at(constraint_index) = x_init_[2] * scale_factor_[2];
+  lower_bounds->at(constraint_index) =
+      x_init_[2] * scale_factor_[2] - ddx_slack_bound;
+  upper_bounds->at(constraint_index) =
+      x_init_[2] * scale_factor_[2] + ddx_slack_bound;
   ++constraint_index;
+
+  // constraints on end state
+  if (has_end_state_ref_) {
+    double s_slack_bound = 0.01;
+    variables[n - 1].emplace_back(constraint_index, 1.0);
+    lower_bounds->at(constraint_index) = end_state_ref_[0] * scale_factor_[0];
+    upper_bounds->at(constraint_index) =
+        end_state_ref_[0] * scale_factor_[0] + s_slack_bound;
+    ++constraint_index;
+
+    double dx_slack_bound = 0.001;
+    variables[2 * n - 1].emplace_back(constraint_index, 1.0);
+    lower_bounds->at(constraint_index) = end_state_ref_[1] * scale_factor_[1];
+    upper_bounds->at(constraint_index) =
+        end_state_ref_[1] * scale_factor_[1] + dx_slack_bound;
+    ++constraint_index;
+
+    double ddx_slack_bound = 0.1;
+    variables[3 * n - 1].emplace_back(constraint_index, 1.0);
+    lower_bounds->at(constraint_index) =
+        end_state_ref_[2] * scale_factor_[2] - ddx_slack_bound;
+    upper_bounds->at(constraint_index) =
+        end_state_ref_[2] * scale_factor_[2] + ddx_slack_bound;
+    ++constraint_index;
+  }
 
   CHECK_EQ(constraint_index, num_of_constraints);
 
@@ -267,6 +316,8 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   // We indeed need this line because of
   // https://github.com/oxfordcontrol/osqp/blob/master/src/cs.c#L255
   A_indptr->push_back(ind_p);
+
+  return;
 }
 
 OSQPSettings* PiecewiseJerkProblem::SolverDefaultSettings() {
@@ -284,18 +335,24 @@ void PiecewiseJerkProblem::set_x_bounds(
     std::vector<std::pair<double, double>> x_bounds) {
   CHECK_EQ(x_bounds.size(), num_of_knots_);
   x_bounds_ = std::move(x_bounds);
+
+  return;
 }
 
 void PiecewiseJerkProblem::set_dx_bounds(
     std::vector<std::pair<double, double>> dx_bounds) {
   CHECK_EQ(dx_bounds.size(), num_of_knots_);
   dx_bounds_ = std::move(dx_bounds);
+
+  return;
 }
 
 void PiecewiseJerkProblem::set_ddx_bounds(
     std::vector<std::pair<double, double>> ddx_bounds) {
   CHECK_EQ(ddx_bounds.size(), num_of_knots_);
   ddx_bounds_ = std::move(ddx_bounds);
+
+  return;
 }
 
 void PiecewiseJerkProblem::set_x_bounds(const double x_lower_bound,
@@ -304,6 +361,8 @@ void PiecewiseJerkProblem::set_x_bounds(const double x_lower_bound,
     x.first = x_lower_bound;
     x.second = x_upper_bound;
   }
+
+  return;
 }
 
 void PiecewiseJerkProblem::set_dx_bounds(const double dx_lower_bound,
@@ -312,6 +371,8 @@ void PiecewiseJerkProblem::set_dx_bounds(const double dx_lower_bound,
     x.first = dx_lower_bound;
     x.second = dx_upper_bound;
   }
+
+  return;
 }
 
 void PiecewiseJerkProblem::set_ddx_bounds(const double ddx_lower_bound,
@@ -320,26 +381,18 @@ void PiecewiseJerkProblem::set_ddx_bounds(const double ddx_lower_bound,
     x.first = ddx_lower_bound;
     x.second = ddx_upper_bound;
   }
+
+  return;
 }
 
 void PiecewiseJerkProblem::set_x_ref(const double weight_x_ref,
                                      std::vector<double> x_ref) {
   CHECK_EQ(x_ref.size(), num_of_knots_);
   weight_x_ref_ = weight_x_ref;
-  // set uniform weighting
-  weight_x_ref_vec_ = std::vector<double>(num_of_knots_, weight_x_ref);
   x_ref_ = std::move(x_ref);
   has_x_ref_ = true;
-}
 
-void PiecewiseJerkProblem::set_x_ref(std::vector<double> weight_x_ref_vec,
-                                     std::vector<double> x_ref) {
-  CHECK_EQ(x_ref.size(), num_of_knots_);
-  CHECK_EQ(weight_x_ref_vec.size(), num_of_knots_);
-  // set piecewise weighting
-  weight_x_ref_vec_ = std::move(weight_x_ref_vec);
-  x_ref_ = std::move(x_ref);
-  has_x_ref_ = true;
+  return;
 }
 
 void PiecewiseJerkProblem::set_end_state_ref(
@@ -348,6 +401,8 @@ void PiecewiseJerkProblem::set_end_state_ref(
   weight_end_state_ = weight_end_state;
   end_state_ref_ = end_state_ref;
   has_end_state_ref_ = true;
+
+  return;
 }
 
 void PiecewiseJerkProblem::FreeData(OSQPData* data) {
@@ -362,6 +417,43 @@ void PiecewiseJerkProblem::FreeData(OSQPData* data) {
   delete[] data->A->i;
   delete[] data->A->p;
   delete[] data->A->x;
+
+  return;
+}
+
+void PiecewiseJerkProblem::DebugString() {
+#if DEBUG_PWJ
+  ILOG_INFO << "size = " << num_of_knots_;
+  ILOG_INFO << "init0, s = " << x_init_[0];
+  ILOG_INFO << "init1, v = " << x_init_[1];
+  ILOG_INFO << "init2, acc = " << x_init_[2];
+  ILOG_INFO << "delta_x = " << delta_s_;
+
+  ILOG_INFO << "x bound";
+  for (size_t i = 0; i < x_bounds_.size(); i++) {
+    ILOG_INFO << "t=" << delta_s_ * i
+              << ", lower, upper = " << x_bounds_.at(i).first << ", "
+              << x_bounds_.at(i).second;
+  }
+
+  ILOG_INFO << "dx bound";
+  for (size_t i = 0; i < dx_bounds_.size(); i++) {
+    ILOG_INFO << "lower, upper = " << dx_bounds_.at(i).first << ", "
+              << dx_bounds_.at(i).second;
+  }
+
+  ILOG_INFO << "ddx bound";
+  for (size_t i = 0; i < ddx_bounds_.size(); i++) {
+    ILOG_INFO << "lower,upper = " << ddx_bounds_.at(i).first << ", "
+              << ddx_bounds_.at(i).second;
+  }
+
+  ILOG_INFO << "dddx bound";
+  ILOG_INFO << "lower, upper = " << dddx_bound_.first << ", "
+            << dddx_bound_.second;
+
+#endif
+  return;
 }
 
 }  // namespace planning

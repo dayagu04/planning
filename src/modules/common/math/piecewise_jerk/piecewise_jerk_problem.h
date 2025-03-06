@@ -28,14 +28,14 @@ namespace planning {
  * which makes the line P(start), P0, P(1) ... P(k-1) "smooth".
  */
 
+// point size must bigger than 1.
 class PiecewiseJerkProblem {
  public:
   PiecewiseJerkProblem(const size_t num_of_knots, const double delta_s,
                        const std::array<double, 3>& x_init);
 
-  int piece_wise_jerk_problem_init(const size_t num_of_knots,
-                                   const double delta_s,
-                                   const std::array<double, 3>& x_init);
+  void Init(const size_t num_of_knots, const double delta_s,
+            const std::array<double, 3>& x_init);
 
   virtual ~PiecewiseJerkProblem() = default;
 
@@ -49,6 +49,8 @@ class PiecewiseJerkProblem {
 
   void set_ddx_bounds(std::vector<std::pair<double, double>> ddx_bounds);
 
+  // deceleration:(-inf, 0]
+  // acceleration:[0, inf)
   void set_ddx_bounds(const double ddx_lower_bound,
                       const double ddx_upper_bound);
 
@@ -82,19 +84,10 @@ class PiecewiseJerkProblem {
    */
   void set_x_ref(const double weight_x_ref, std::vector<double> x_ref);
 
-  /**
-   * @brief Set the x ref object and piecewised x_ref weightings
-   *
-   * @param weight_x_ref_vec: piecewised x_ref weightings
-   * @param x_ref: objective value of x
-   */
-  void set_x_ref(std::vector<double> weight_x_ref_vec,
-                 std::vector<double> x_ref);
-
   void set_end_state_ref(const std::array<double, 3>& weight_end_state,
                          const std::array<double, 3>& end_state_ref);
 
-  virtual bool Optimize(const int max_iter = 4000);
+  virtual bool Optimize(const int max_iter);
 
   const std::vector<double>& opt_x() const { return x_; }
 
@@ -102,45 +95,16 @@ class PiecewiseJerkProblem {
 
   const std::vector<double>& opt_ddx() const { return ddx_; }
 
-  int debugString() {
-    // ILOG_INFO << "size " << num_of_knots_;
-    // ILOG_INFO << "init0, s: " << x_init_[0];
-    // ILOG_INFO << "init1, v: " << x_init_[1];
-    // ILOG_INFO << "init2, acc: " << x_init_[2];
-    // ILOG_INFO << "delta_x: " << delta_s_;
-
-    // ILOG_INFO << "x: **********";
-    // for (size_t i = 0; i < x_bounds_.size(); i++) {
-    //   ILOG_INFO << "t: " << 0.1 * i
-    //             << " ,lower, upper: " << x_bounds_.at(i).first << ", "
-    //             << x_bounds_.at(i).second;
-    // }
-
-    // ILOG_INFO << "dx: **********";
-    // for (size_t i = 0; i < dx_bounds_.size(); i++) {
-    //   ILOG_INFO << "lower,upper: " << dx_bounds_.at(i).first << ", "
-    //             << dx_bounds_.at(i).second;
-    // }
-
-    // ILOG_INFO << "ddx: **********";
-    // for (size_t i = 0; i < ddx_bounds_.size(); i++) {
-    //   ILOG_INFO << "lower,upper: " << ddx_bounds_.at(i).first << ", "
-    //             << ddx_bounds_.at(i).second;
-    // }
-
-    // ILOG_INFO << "dddx: **********";
-    // ILOG_INFO << "lower, upper: " << dddx_bound_.first << ", "
-    //           << dddx_bound_.second;
-
-    return 0;
-  }
+  void DebugString();
 
  protected:
   // naming convention follows osqp solver.
+  // square cost, hessian matrix
   virtual void CalculateKernel(std::vector<c_float>* P_data,
                                std::vector<c_int>* P_indices,
                                std::vector<c_int>* P_indptr) = 0;
 
+  // linear cost
   virtual void CalculateOffset(std::vector<c_float>* q) = 0;
 
   virtual void CalculateAffineConstraint(std::vector<c_float>* A_data,
@@ -188,8 +152,6 @@ class PiecewiseJerkProblem {
   bool has_x_ref_ = false;
   double weight_x_ref_ = 0.0;
   std::vector<double> x_ref_;
-  // un-uniformed weighting
-  std::vector<double> weight_x_ref_vec_;
 
   bool has_end_state_ref_ = false;
   std::array<double, 3> weight_end_state_ = {{0.0, 0.0, 0.0}};

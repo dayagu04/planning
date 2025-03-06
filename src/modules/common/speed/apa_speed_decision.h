@@ -29,6 +29,7 @@ enum class SpeedLimitReason {
   PATH_KAPPA_CHANGE = 2,
   // 方向盘和路径曲率，差距大要限速.
   KAPPA_GAP_BETTWEN_PATH_WITH_WHEEL = 3,
+  PATH_KAPPA = 4,
 };
 
 struct StopDecision {
