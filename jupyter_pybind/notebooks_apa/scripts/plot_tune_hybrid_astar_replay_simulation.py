@@ -48,8 +48,8 @@ end_time = time.time()
 print('load_local_view_figure_parking, ms===== ', (end_time - start_time) * 1000)
 
 # plot speed
-velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
-pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
+# velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
+# pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
 
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -1114,13 +1114,14 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if (is_reset):
     replay_simulation_hybrid_astar.StopPybind()
 
-  speed_data = replay_simulation_hybrid_astar.GetApaSpeedLimit()
-  update_lon_plan_online_data(speed_data,lon_plan_data)
-  update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
+  # speed_data = replay_simulation_hybrid_astar.GetApaSpeedLimit()
+  # update_lon_plan_online_data(speed_data,lon_plan_data)
+  # update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 
   push_notebook()
 
   print('pybind end')
 
-bkp.show(row(fig1, pans), notebook_handle=True)
+# bkp.show(row(fig1, pans), notebook_handle=True)
+bkp.show(row(fig1), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

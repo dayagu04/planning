@@ -22,6 +22,10 @@ class SpeedLimitProfile {
 
   const size_t GetIndexByS(const double s);
 
+  // return lowest speed
+  double GetSpeedLimitByRange(const double range_start_s,
+                              const double range_end_s) const;
+
  private:
   void DebugString();
 

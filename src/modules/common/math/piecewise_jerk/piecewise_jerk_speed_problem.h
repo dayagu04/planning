@@ -7,36 +7,21 @@
 #include "piecewise_jerk_problem.h"
 
 namespace planning {
-/*
- * @brief:
- * This class solve the path time optimization problem:
- * s
- * |
- * |                       P(t1, s1)  P(t2, s2)
- * |            P(t0, s0)                       ... P(t(k-1), s(k-1))
- * |P(start)
- * |
- * |________________________________________________________ t
- *
- * we suppose t(k+1) - t(k) == t(k) - t(k-1)
- *
- * Given the s, s', s'' at P(start),  The goal is to find t0, t1, ... t(k-1)
- * which makes the line P(start), P0, P(1) ... P(k-1) "smooth".
- */
 
+// point size must bigger than 1.
 class PiecewiseJerkSpeedProblem : public PiecewiseJerkProblem {
  public:
   PiecewiseJerkSpeedProblem(const size_t num_of_knots, const double delta_s,
                             const std::array<double, 3>& x_init);
 
-  int init(const size_t num_of_knots, const double delta_s,
-           const std::array<double, 3>& x_init);
+  void Init(const size_t num_of_knots, const double delta_s,
+            const std::array<double, 3>& x_init);
 
-  int set_init_state(const std::array<double, 3>& x_init);
+  void set_init_state(const std::array<double, 3>& x_init);
 
   virtual ~PiecewiseJerkSpeedProblem() = default;
 
-  void set_dx_ref(const double weight_dx_ref, const double dx_ref);
+  void set_dx_ref(const double weight_dx_ref, std::vector<double>& dx_ref);
 
   void set_penalty_dx(std::vector<double> penalty_dx);
 
@@ -53,9 +38,9 @@ class PiecewiseJerkSpeedProblem : public PiecewiseJerkProblem {
   bool has_dx_ref_ = false;
   // 速度系数为0
   double weight_dx_ref_ = 0.0;
-  double dx_ref_ = 0.0;
+  std::vector<double> dx_ref_;
 
-  // 速度惩罚系数
+  // v cost, not (v-v_ref) cost. Normally, these weights are zero.
   std::vector<double> penalty_dx_;
 };
 

@@ -47,6 +47,12 @@ struct ParkingSpeedConfig {
   double min_cruise_speed;
   // If obs dist is smaller than this value, add speed limit.
   double obs_dist_for_speed_limit;
+
+  // speed limit
+  double acc_upper = 0.51;
+  double acc_lower = -2.0;
+  double jerk_upper = 10.0;
+  double jerk_lower = -10.0;
 };
 
 // todo

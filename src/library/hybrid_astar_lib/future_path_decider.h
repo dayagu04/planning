@@ -67,6 +67,11 @@ class FuturePathDecider : public AstarDecider {
 
   const bool IsNextPathNoGearSwitchByHistory();
 
+  // if left, radius is positive
+  void GetPathByRadius(const Pose2D *start_pose, const double length,
+                       const double radius, const bool is_forward,
+                       std::vector<Pose2D> *path);
+
  private:
   std::string PathGearSwitchNumberString(
       const PathGearSwitchNumber &gear_number);
@@ -89,6 +94,12 @@ class FuturePathDecider : public AstarDecider {
                        const double radius, const bool is_forward,
                        std::vector<Pose2D> *path);
 
+  void GetPathByLine(const Pose2D *start_pose, const double length,
+                     const bool is_forward, std::vector<Pose2D> *path);
+
+  void GetStraightLinePoint(const Pose2D *start_state,
+                            const double dist_to_start,
+                            const Pose2D *unit_vector, Pose2D *goal_state);
   // arc is positive.
   // inverse_radius is positive
   void InterpolateByArcOffset(const VehicleCircle *veh_circle,

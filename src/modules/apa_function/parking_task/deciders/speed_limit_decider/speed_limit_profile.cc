@@ -13,6 +13,8 @@ void SpeedLimitProfile::AppendSpeedLimit(const double s, const double v) {
     }
   }
   speed_limit_points_.emplace_back(s, v);
+
+  return;
 }
 
 const std::vector<std::pair<double, double>>&
@@ -91,6 +93,49 @@ void SpeedLimitProfile::SetSpeedLimitByIndex(const int index, const double v) {
   }
 
   speed_limit_points_[index].second = v;
+}
+
+double SpeedLimitProfile::GetSpeedLimitByRange(const double range_start_s,
+                                               const double range_end_s) const {
+  if (speed_limit_points_.empty()) {
+    ILOG_INFO << "no points";
+    return 10.0;
+  }
+
+  if (range_start_s > speed_limit_points_.back().first) {
+    return speed_limit_points_.back().first;
+  }
+
+  if (range_end_s < speed_limit_points_.front().first) {
+    return speed_limit_points_.front().first;
+  }
+
+  bool find_point = false;
+  double min_speed = 100.0;
+  for (size_t i = 0; i < speed_limit_points_.size(); i++) {
+    if (speed_limit_points_[i].first <= range_end_s &&
+        speed_limit_points_[i].first >= range_start_s) {
+      min_speed = std::min(min_speed, speed_limit_points_[i].second);
+      find_point = true;
+    }
+  }
+
+  if (!find_point) {
+    auto compare_s = [](const std::pair<double, double>& point,
+                        const double s) { return point.first < s; };
+
+    auto it_lower =
+        std::lower_bound(speed_limit_points_.begin(), speed_limit_points_.end(),
+                         (range_start_s + range_end_s) / 2.0, compare_s);
+
+    if (it_lower == speed_limit_points_.end()) {
+      min_speed = (it_lower - 1)->second;
+    } else {
+      min_speed = it_lower->second;
+    }
+  }
+
+  return min_speed;
 }
 
 }  // namespace planning

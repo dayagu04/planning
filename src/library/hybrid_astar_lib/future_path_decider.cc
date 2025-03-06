@@ -481,4 +481,67 @@ void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
   return;
 }
 
+void FuturePathDecider::GetStraightLinePoint(const Pose2D *start_state,
+                                             const double dist_to_start,
+                                             const Pose2D *unit_vector,
+                                             Pose2D *goal_state) {
+  goal_state->x = start_state->x + dist_to_start * unit_vector->x;
+  goal_state->y = start_state->y + dist_to_start * unit_vector->y;
+
+  goal_state->theta = start_state->theta;
+
+  return;
+}
+
+void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
+                                      const double length,
+                                      const bool is_forward,
+                                      std::vector<Pose2D> *path) {
+  int path_point_num = std::ceil(length / 0.1);
+
+  double inc_dist;
+  if (is_forward) {
+    inc_dist = 0.1;
+  } else {
+    inc_dist = -0.1;
+  }
+
+  double acc_s = 0.0;
+
+  // get unit vector
+  Pose2D unit_vector;
+  unit_vector.x = std::cos(start_pose->theta);
+  unit_vector.y = std::sin(start_pose->theta);
+
+  Pose2D next_pose;
+
+  path->clear();
+  path->push_back(*start_pose);
+
+  for (int j = 0; j < path_point_num; j++) {
+    acc_s += inc_dist;
+
+    GetStraightLinePoint(start_pose, acc_s, &unit_vector, &next_pose);
+    path->push_back(next_pose);
+  }
+
+  return;
+}
+
+// if left, radius is positive
+void FuturePathDecider::GetPathByRadius(const Pose2D *start_pose,
+                                        const double length,
+                                        const double radius,
+                                        const bool is_forward,
+                                        std::vector<Pose2D> *path) {
+  if (std::fabs(radius) > 100000.0) {
+    GetPathByLine(start_pose, length, is_forward, path);
+
+  } else {
+    GetPathByCircle(start_pose, length, radius, is_forward, path);
+  }
+
+  return;
+}
+
 }  // namespace planning
