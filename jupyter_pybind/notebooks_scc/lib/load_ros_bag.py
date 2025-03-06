@@ -634,7 +634,7 @@ class LoadRosbag:
                          "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                          "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
-                         "front_node_id", "rear_node_id","prohibit_acc_", \
+                         "front_node_id", "rear_node_id","prohibit_acc_", "lane_borrow_agent_id", "lane_borrow_agent_v_limit", 'ego_ttc_to_front_invade_agent', \
                          "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", \
