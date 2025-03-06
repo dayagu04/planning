@@ -39,7 +39,7 @@ class FollowTarget : public Target {
 
   // generate stable curve
   std::shared_ptr<VariableCoordinateTimeOptimalTrajectory>
-  GenerateStableFollowSlowCurve(const double matched_desired_headway) const;
+  GenerateStableFollowSlowCurve(const double matched_desired_headway, const bool enable_stable_jlt) const;
 
   // generate far slow curve
   std::shared_ptr<VariableCoordinateTimeOptimalTrajectory>
@@ -62,6 +62,8 @@ class FollowTarget : public Target {
   bool MakeSValueWithTargetFollowCurve(const int32_t index,
                                        const bool has_valid_s_value,
                                        double* const target_s_value) const;
+
+  bool JudgeStableCar(const double matched_desired_headway) const;
 
   bool JudgeFarSlowCar(const double matched_desired_headway) const;
 

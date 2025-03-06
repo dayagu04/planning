@@ -611,18 +611,20 @@ void STGraph::BackwardExtendStBoundaries() {
       std::vector<trajectory::Trajectory> trajectories;
       const auto origin_trajectories_num = agent->trajectories().size();
       const bool use_origin_trajectories = idx < origin_trajectories_num;
-      if (use_origin_trajectories) {
-        trajectories = agent->trajectories();
-      } else {
-        trajectories = agent->trajectories();
-      }
+      // if (use_origin_trajectories) {
+      //   trajectories = agent->trajectories();
+      // } else {
+      //   trajectories = agent->trajectories();
+      // }
+      trajectories = agent->trajectories();
       if (trajectories.empty()) {
         continue;
       }
-      const auto& trajectory =
-          use_origin_trajectories ? trajectories[idx]
-                                  : trajectories[idx - origin_trajectories_num];
+      // const auto& trajectory =
+      //     use_origin_trajectories ? trajectories[idx]
+      //                             : trajectories[idx - origin_trajectories_num];
 
+      const auto& trajectory = trajectories.front();
       if (trajectory.empty()) {
         continue;
       }

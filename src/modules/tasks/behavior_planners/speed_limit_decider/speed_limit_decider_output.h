@@ -20,7 +20,8 @@ enum class SpeedLimitType {
   MERGE_ALC = 10,
   MAP_NEAR_RAMP = 11,
   MAP_ON_RAMP = 12,
-  INTERSECTION = 13
+  INTERSECTION = 13,
+  Lane_Borrow = 14
 };
 
 class SpeedLimitDeciderOutput {
@@ -91,7 +92,8 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::ROUNDABOUT,   SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT,
       SpeedLimitType::NORMAL_KAPPA, SpeedLimitType::VRU_ROUND,
       SpeedLimitType::MERGE_ALC,    SpeedLimitType::MAP_NEAR_RAMP,
-      SpeedLimitType::MAP_ON_RAMP,  SpeedLimitType::INTERSECTION};
+      SpeedLimitType::MAP_ON_RAMP,  SpeedLimitType::INTERSECTION,
+      SpeedLimitType::Lane_Borrow};
 };
 
 }  // namespace planning

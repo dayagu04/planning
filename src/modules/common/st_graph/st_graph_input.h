@@ -145,7 +145,7 @@ class StGraphInput {
   // PlanningInitPoint planning_init_point_;
   // PlanningInitPoint time_aligned_ego_state_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
-  std::shared_ptr<VirtualLane> ego_lane_;
+//   std::shared_ptr<VirtualLane> ego_lane_;
   VehicleParam vehicle_param_;
   bool is_lane_keeping_;
   std::shared_ptr<agent::AgentManager> mutable_agent_manager_;

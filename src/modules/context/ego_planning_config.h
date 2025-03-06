@@ -2357,7 +2357,7 @@ struct STGraphConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
   }
-  bool enable_backward_extend_st_boundary = false;
+  bool enable_backward_extend_st_boundary = true;
   double backward_extend_length_for_lane_change = 50.0;
   double backward_extend_sample_resolution = 3.0;
   double lane_keeping_lower_lateral_buffer_m = 0.2;
@@ -2367,7 +2367,7 @@ struct STGraphConfig : public EgoPlanningConfig {
   double lane_keeping_large_agent_lateral_buffer_m = 0.2;
   double lane_change_lateral_buffer_m = 0.2;
   double lane_keeping_large_agent_lower_lateral_buffer_m = 0.2;
-  double lane_keeping_large_agent_upper_lateral_buffer_m = 0.3;
+  double lane_keeping_large_agent_upper_lateral_buffer_m = 0.2;
   double lane_keeping_large_agent_lower_speed_kph = 10.0;
   double lane_keeping_large_agent_upper_speed_kph = 30.0;
   double front_agent_lower_s_safety_buffer_for_lane_change = 8.0;

@@ -176,6 +176,9 @@ void Agent::set_is_prediction_cutin(const bool is_prediction_cutin) {
 const bool Agent::is_cutin() const { return is_cutin_; }
 void Agent::set_is_cutin(const bool is_cutin) { is_cutin_ = is_cutin; }
 
+const bool Agent::is_cutout() const { return is_cutout_; }
+void Agent::set_is_cutout(const bool is_cutout) { is_cutout_ = is_cutout; }
+
 const bool Agent::is_rule_base_cutin() const { return is_rule_base_cutin_; }
 void Agent::set_is_rule_base_cutin(const bool is_rule_base_cutin) {
   is_rule_base_cutin_ = is_rule_base_cutin;
