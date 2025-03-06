@@ -14,7 +14,7 @@ namespace planning {
 #define DEBUG_INIT_COST_TABLE (0)
 #define DEBUG_RETRIEVE_SPEED_PROFILE (0)
 #define DEBUG_SEARCH (0)
-#define DEBUG_RESULT (1)
+#define DEBUG_RESULT (0)
 
 static constexpr double kDoubleEpsilon = 1e-6;
 

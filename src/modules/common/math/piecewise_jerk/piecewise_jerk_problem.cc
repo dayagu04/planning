@@ -11,7 +11,7 @@ namespace planning {
 
 constexpr double kMaxVariableRange = 1.0e10;
 
-#define DEBUG_PWJ (1)
+#define DEBUG_PWJ (0)
 
 PiecewiseJerkProblem::PiecewiseJerkProblem(
     const size_t num_of_knots, const double delta_s,

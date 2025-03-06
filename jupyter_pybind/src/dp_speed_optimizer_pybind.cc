@@ -179,11 +179,24 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       std::make_shared<ApaObstacleManager>();
   obstacles->Reset();
 
-  SpeedDecisions speed_decisions;
+  std::shared_ptr<apa_planner::ApaMeasureDataManager> localization_ptr =
+      std::make_shared<apa_planner::ApaMeasureDataManager>();
+  localization_ptr->SetPose(Eigen::Vector2d(start_pose.x, start_pose.y),
+                       start_pose.theta);
+
+  std::shared_ptr<apa_planner::ApaPredictPathManager> predict_path =
+      std::make_shared<ApaPredictPathManager>();
+
+  std::shared_ptr<apa_planner::CollisionDetectorInterface>
+      col_det_interface_ptr =
+          std::make_shared<apa_planner::CollisionDetectorInterface>(
+              obstacles, localization_ptr, predict_path);
 
   // collision check
-  ParkingStopDecider stop_decider = ParkingStopDecider();
-  stop_decider.Process(obstacles, start_pose, 100, path2, &speed_decisions);
+  SpeedDecisions speed_decisions;
+  ParkingStopDecider stop_decider =
+      ParkingStopDecider(col_det_interface_ptr, localization_ptr);
+  stop_decider.Process(100, path2, &speed_decisions);
 
   // use boken obs dist, need retire
   UpdatePathObsDistance(path2, obs_s, dist_to_obs);
@@ -191,7 +204,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   // update speed limit decision
   ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
-  speed_limit_decider.Process(obstacles, path2, &speed_decisions);
+  speed_limit_decider.Process(path2, &speed_decisions);
   const SpeedLimitProfile &speed_limit =
       speed_limit_decider.GetSpeedLimitProfile();
 

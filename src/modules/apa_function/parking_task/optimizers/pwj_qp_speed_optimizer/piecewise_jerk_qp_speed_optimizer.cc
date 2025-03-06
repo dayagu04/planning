@@ -13,7 +13,7 @@
 
 namespace planning {
 
-#define DECIDER_DEBUG (1)
+#define DECIDER_DEBUG (0)
 
 PiecewiseJerkSpeedQPOptimizer::PiecewiseJerkSpeedQPOptimizer() {}
 
