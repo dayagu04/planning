@@ -271,6 +271,7 @@ struct PathPoint {
   double lat_buffer = 0.0;
   bool col_flag = false;
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
+  // Distance from obstacle to vehicle safe buffer border
   double dist_to_obs = 26.8;
 
   void PrintInfo(const bool enable_log = true) const {

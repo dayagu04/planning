@@ -95,6 +95,8 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
                   car_static_timer_by_vel_normal_ >
                       param.car_static_keep_time_by_vel_normal);
 
+  acceleration_ = localization_info.acceleration.acceleration_body.ax;
+
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
   ILOG_INFO << "pos = " << pos_.transpose()
             << "  heading = " << heading_ * kRad2Deg << "  vel = " << vel_

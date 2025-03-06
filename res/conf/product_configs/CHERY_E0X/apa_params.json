@@ -334,7 +334,7 @@
   "astar_parallel_finish_heading_err" : 2.5,
   "adjust_ego_y_thresh_outside_slot": 0.2,
 
-  "enable_apa_speed_plan" : true,
+  "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.4,
   "obs_dist_for_speed_limit" : 0.4,

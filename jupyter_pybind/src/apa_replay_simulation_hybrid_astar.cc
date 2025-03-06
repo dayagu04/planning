@@ -412,7 +412,8 @@ const void UpdateLocalView(
 
   iflyauto::GroundLinePerceptionInfo ground_line_ =
       BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(ground_line_info_bytes);
+                    struct_msgs::GroundLinePerceptionInfo>(
+          ground_line_info_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -880,9 +881,10 @@ const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
   return all_searched_node_;
 }
 
-std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
-  std::vector<Eigen::VectorXd> speed_limit_profile;
-  Eigen::VectorXd v(6);
+std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
+  std::vector<Eigen::VectorXd> speed_debug_data;
+  Eigen::VectorXd v(7);
+  v.setZero();
 
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaSpeedDebug *speed_debug;
@@ -891,8 +893,8 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
   }
 
   if (speed_debug == nullptr) {
-    speed_limit_profile.emplace_back(v);
-    return speed_limit_profile;
+    speed_debug_data.emplace_back(v);
+    return speed_debug_data;
   }
 
   int size = 0;
@@ -923,14 +925,55 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
       v[5] = speed_debug->dp_speed_constraint().jerk_upper_bound(i);
     }
 
-    speed_limit_profile.emplace_back(v);
+    if (i < speed_debug->dp_speed_constraint().jerk_lower_bound_size()) {
+      v[6] = speed_debug->dp_speed_constraint().jerk_lower_bound(i);
+    }
+
+    speed_debug_data.emplace_back(v);
   }
 
-  if (speed_limit_profile.size() == 0) {
-    speed_limit_profile.emplace_back(v);
+  if (speed_debug_data.size() == 0) {
+    speed_debug_data.emplace_back(v);
   }
 
-  return speed_limit_profile;
+  return speed_debug_data;
+}
+
+std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
+  std::vector<Eigen::Vector2d> speed_debug_data;
+  Eigen::Vector2d v;
+  v.setZero();
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_debug_data.emplace_back(v);
+    return speed_debug_data;
+  }
+
+  int size = 0;
+  if (speed_debug->has_qp_speed_constraint()) {
+    size = speed_debug->qp_speed_constraint().s_size();
+  }
+
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->qp_speed_constraint().s(i);
+    if (i < speed_debug->qp_speed_constraint().v_upper_bound_size()) {
+      v[1] = speed_debug->qp_speed_constraint().v_upper_bound(i);
+    }
+
+    speed_debug_data.emplace_back(v);
+  }
+
+  if (speed_debug_data.size() == 0) {
+    speed_debug_data.emplace_back(v);
+  }
+
+  return speed_debug_data;
 }
 
 const std::vector<Eigen::Vector3d> &GetFootPrintModel(const int32_t gear) {
@@ -946,6 +989,82 @@ const std::vector<Eigen::Vector3d> &GetFootPrintModel(const int32_t gear) {
   }
 
   return footprint_circle_model_normal_gear_;
+}
+
+const double GetRefCruiseSpeed() {
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+  if (speed_debug == nullptr) {
+    return 0.0;
+  }
+
+  double speed = 0.0;
+  if (speed_debug->has_ref_cruise_speed()) {
+    speed = speed_debug->ref_cruise_speed();
+  }
+
+  return speed;
+}
+
+std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd v(5);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_profile.emplace_back(v);
+    return speed_profile;
+  }
+
+  int size = speed_debug->dp_profile_size();
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->dp_profile(i).s();
+    v[1] = speed_debug->dp_profile(i).t();
+    v[2] = speed_debug->dp_profile(i).vel();
+    v[3] = speed_debug->dp_profile(i).acc();
+    v[4] = speed_debug->dp_profile(i).jerk();
+
+    speed_profile.push_back(v);
+  }
+
+  return speed_profile;
+}
+
+std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd v(5);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_profile.emplace_back(v);
+    return speed_profile;
+  }
+
+  int size = speed_debug->qp_profile_size();
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->qp_profile(i).s();
+    v[1] = speed_debug->qp_profile(i).t();
+    v[2] = speed_debug->qp_profile(i).vel();
+    v[3] = speed_debug->qp_profile(i).acc();
+    v[4] = speed_debug->qp_profile(i).jerk();
+
+    speed_profile.push_back(v);
+  }
+
+  return speed_profile;
 }
 
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
@@ -975,7 +1094,11 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetDelNodeSequencePath", GetDelNodeSequencePath)
       .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetAllSearchNode", &GetAllSearchNode)
-      .def("GetApaSpeedLimit", &GetApaSpeedLimit)
+      .def("GetDpSpeedConstraints", &GetDpSpeedConstraints)
+      .def("GetQPSpeedConstraints", &GetQPSpeedConstraints)
+      .def("GetRefCruiseSpeed", &GetRefCruiseSpeed)
+      .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
+      .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetDynamicState", &GetDynamicState);
 }

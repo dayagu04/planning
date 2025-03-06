@@ -21,17 +21,18 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     const SVPoint& init_point, const SpeedLimitProfile* speed_limit_profile,
     const SpeedData& dp_speed_data) {
   qp_config_.Init();
+  speed_limit_profile_ = speed_limit_profile;
+  qp_speed_data_ = dp_speed_data;
 
-  if (dp_speed_data.empty()) {
+  if (speed_limit_profile == nullptr || dp_speed_data.size() < 2) {
     ILOG_INFO << "speed data is null";
     return;
   }
 
-  ILOG_INFO << "qp speed optimizer";
-  speed_limit_profile_ = speed_limit_profile;
+  ILOG_INFO << "speed qp optimizer";
 
-  qp_speed_data_ = dp_speed_data;
-  std::array<double, 3> init_state = {0.0, init_point.v, init_point.acc};
+  std::array<double, 3> init_state = {init_point.s, init_point.v,
+                                      init_point.acc};
   init_point.DebugString();
 
   double delta_time = qp_config_.delta_time;
@@ -40,7 +41,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   num_of_knots_ = std::ceil(total_time / delta_time) + 1;
 
   // model
-  // f = 1/2*x*H*x + Q*x
+  // f = 1/2 * x^T * H * x + Q * x
   // Ax<=U
 
   PiecewiseJerkSpeedProblem piecewise_jerk_problem(num_of_knots_, delta_time,
@@ -136,8 +137,6 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   DebugPiecewiseJerkProblem(piecewise_jerk_problem);
 #endif
 
-  RecordDebugInfo(x_ref, s_dot_bounds);
-
   qp_speed_data_.clear();
   qp_speed_data_.AppendSpeedPoint(s[0], 0.0, ds[0], dds[0], 0.0);
   for (int i = 1; i < num_of_knots_; ++i) {
@@ -148,6 +147,10 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     qp_speed_data_.AppendSpeedPoint(s[i], delta_time * i, ds[i], dds[i],
                                     (dds[i] - dds[i - 1]) / delta_time);
   }
+
+  RecordDebugInfo(x_ref, s_dot_bounds);
+
+  ILOG_INFO << "speed qp opt finish";
 
   return;
 }
@@ -178,6 +181,18 @@ void PiecewiseJerkSpeedQPOptimizer::RecordDebugInfo(
   for (size_t i = 0; i < x_ref.size(); i++) {
     qp_speed_constraint_debug->add_s(x_ref[i]);
     qp_speed_constraint_debug->add_v_upper_bound(s_dot_bounds[i].second);
+  }
+
+  common::StPoint2D proto_point;
+  for (size_t i = 0; i < qp_speed_data_.size(); i++) {
+    const SpeedPoint& point = qp_speed_data_[i];
+    proto_point.set_s(point.s);
+    proto_point.set_t(point.t);
+    proto_point.set_vel(point.v);
+    proto_point.set_acc(point.a);
+    proto_point.set_jerk(point.da);
+
+    speed_debug->add_qp_profile()->CopyFrom(proto_point);
   }
 
   return;
@@ -219,4 +234,5 @@ void PiecewiseJerkSpeedQPOptimizer::DebugLinearConstraints(
 
   return;
 }
+
 }  // namespace planning

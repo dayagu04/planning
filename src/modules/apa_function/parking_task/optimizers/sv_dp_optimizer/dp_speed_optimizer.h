@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "dp_speed_common.h"
 #include "dp_speed_cost.h"
 #include "geometry_math.h"
 #include "parking_task.h"
@@ -36,6 +37,21 @@ class DpSpeedOptimizer : public ParkingTask {
   bool Init() override;
 
   const SpeedData& SpeedProfile() const { return speed_data_; }
+
+  const SVPoint GetStartSpeedPoint() const {
+    if (start_node_ != nullptr) {
+      return start_node_->GetSVPoint();
+    }
+
+    SVPoint point_sv;
+    point_sv.s = 0;
+    point_sv.acc = 0;
+    point_sv.v = ego_v_;
+    point_sv.t = 0.0;
+    point_sv.jerk = 0.0;
+
+    return point_sv;
+  }
 
  private:
   // dp搜索
@@ -90,6 +106,8 @@ class DpSpeedOptimizer : public ParkingTask {
   void DebugSpeedData();
 
   void DebugSpeedLimitLookUp() const;
+
+  void RecordDebugInfo();
 
  private:
   const SpeedDecisions *speed_decisions_;
