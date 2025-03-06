@@ -1177,9 +1177,13 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
+  bool in_intersection = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->GetIntersectionState() ==
+                         common::IntersectionState::IN_INTERSECTION;
   const double kDefaultDistanceToRoad = 10.0;
   const double half_ego_width = 0.5 * vehicle_param.max_width;
-  if (!is_in_lane_borrow_status) {
+  if (!is_in_lane_borrow_status && !in_intersection) {
     for (size_t i = 0; i < ref_traj_points_.size(); i++) {
       Bound soft_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
       soft_bound_lane.upper =
