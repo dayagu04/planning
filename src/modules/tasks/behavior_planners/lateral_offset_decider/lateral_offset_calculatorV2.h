@@ -25,6 +25,7 @@ class LateralOffsetCalculatorV2 {
   double lat_offset() const { return avoid_info_.lat_offset; }
   bool enable_bound() const { return enable_bound_; }
   void Reset();
+  void ResetOffsetHysteresisMaps();
 
  private:
   void CalLaneWidth();

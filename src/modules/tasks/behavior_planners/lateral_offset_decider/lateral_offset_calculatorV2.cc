@@ -1250,6 +1250,36 @@ void LateralOffsetCalculatorV2::Reset() {
   // TODO(clren)
 }
 
+void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
+  avoid_info_.Reset();
+  avoid_id_ = -1;
+
+  auto &enough_space_hysteresis_map =
+      std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
+          max_opposite_offset_hysteresis_maps_
+              [HysteresisType::EnoughSpaceHysteresis]);
+  enough_space_hysteresis_map.clear();
+
+  auto &is_in_consider_lateral_range_hysteresis_map =
+      std::get<std::map<int, HysteresisDecision>>(
+          max_opposite_offset_hysteresis_maps_
+              [HysteresisType::IsInConsiderLateralRangeHysteresis]);
+  is_in_consider_lateral_range_hysteresis_map.clear();
+
+  auto &avoid_way_select_hysteresis_map =
+      std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
+          max_opposite_offset_hysteresis_maps_[HysteresisType::AvoidWaySelect]);
+  avoid_way_select_hysteresis_map.clear();
+
+  auto &is_obstacle_considered_hysteresis_map =
+      std::get<std::map<int, HysteresisDecision>>(
+          max_opposite_offset_hysteresis_maps_
+              [HysteresisType::IsObstacleConsideredHysteresis]);
+  is_obstacle_considered_hysteresis_map.clear();
+  SaveDebugInfo();
+  // TODO(huwang5)
+}
+
 void LateralOffsetCalculatorV2::SaveDebugInfo() {
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
