@@ -13,6 +13,7 @@
 #include "lateral_obstacle.h"
 #include "planning_context.h"
 #include "st_graph/st_point.h"
+#include "task_basic_types.h"
 #include "trajectory1d/quartic_poly_trajectory1d.h"
 
 using planning::planning_data::DynamicAgentNode;
@@ -26,6 +27,7 @@ constexpr double kNormalSceneWeightLeadingSafeS = 5.5;
 constexpr double kNormalSceneWeightLeadingSafeV = 0.0;
 constexpr double kNormalSceneWeightVelVariable = 1.4;
 constexpr double kNormalSceneWeightGapAvailable = 1.0;
+constexpr double kNormalSceneWeightAccLimit = 10.0;
 
 constexpr double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
 constexpr double kPurseFlowVelSceneWeightMatchGapS = 0.0;
@@ -35,6 +37,7 @@ constexpr double kPurseFlowVelSceneWeightLeadingSafeS = 5.5;
 constexpr double kPurseFlowVelSceneWeightLeadingSafeV = 0.0;
 constexpr double kPurseFlowVelSceneWeightVelVariable = 0.8;
 constexpr double kPurseFlowVelSceneWeightGapAvailable = 0.5;
+constexpr double kPurseFlowVelSceneWeightAccLimit = 10.0;
 
 constexpr double kDeclerationSceneWeightMatchGapVel = 1.5;
 constexpr double kDeclerationSceneWeightMatchGapS = 1.5;
@@ -44,6 +47,7 @@ constexpr double kDeclerationSceneWeightLeadingSafeS = 5.5;
 constexpr double kDeclerationSceneWeightLeadingSafeV = 0.0;
 constexpr double kDeclerationSceneWeightVelVariable = 1.4;
 constexpr double kDeclerationSceneWeightGapAvailable = 1.0;
+constexpr double kDeclerationSceneWeightAccLimit = 0.0;
 }  // namespace
 namespace planning {
 
@@ -158,7 +162,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           quartic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-          weight_gap_avaliable_);
+          weight_gap_avaliable_, weight_acc_limit_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -459,7 +463,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             resample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
             weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-            weight_gap_avaliable_);
+            weight_gap_avaliable_,weight_acc_limit_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
     planning::speed::STPoint stitched_poly_checked_lower_st_point,
@@ -538,6 +542,7 @@ void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
   weight_leading_safe_v_ = kNormalSceneWeightLeadingSafeV;
   weight_vel_variable_ = kNormalSceneWeightVelVariable;
   weight_gap_avaliable_ = kNormalSceneWeightGapAvailable;
+  weight_acc_limit_ = kNormalSceneWeightAccLimit;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
@@ -549,6 +554,7 @@ void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
   weight_leading_safe_v_ = kPurseFlowVelSceneWeightLeadingSafeV;
   weight_vel_variable_ = kPurseFlowVelSceneWeightVelVariable;
   weight_gap_avaliable_ = kPurseFlowVelSceneWeightGapAvailable;
+  weight_acc_limit_ = kPurseFlowVelSceneWeightAccLimit;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
@@ -560,6 +566,7 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
   weight_leading_safe_v_ = kDeclerationSceneWeightLeadingSafeV;
   weight_vel_variable_ = kDeclerationSceneWeightVelVariable;
   weight_gap_avaliable_ = kDeclerationSceneWeightGapAvailable;
+  weight_acc_limit_ = kDeclerationSceneWeightAccLimit;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
@@ -890,5 +897,7 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
       weight_vel_variable_);
   sample_poly_speed_pb_info->mutable_sample_param()->set_weight_gap_avaliable(
       weight_gap_avaliable_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_acc_limit(
+      weight_acc_limit_);
 }
 }  // namespace planning
