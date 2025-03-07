@@ -8,6 +8,7 @@
 
 #include "log_glog.h"
 #include "sv_graph_node.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -449,6 +450,8 @@ void DpSpeedOptimizer::Search() {
 
   DebugSpeedData();
 
+  RecordDebugInfo();
+
   return;
 }
 
@@ -562,6 +565,25 @@ void DpSpeedOptimizer::DebugSpeedData() {
 void DpSpeedOptimizer::DebugSpeedLimitLookUp() const {
   for (int32_t i = 0; i < speed_limit_by_index_.size(); ++i) {
     ILOG_INFO <<"i = " <<i <<", speed limit = " <<speed_limit_by_index_[i];
+  }
+
+  return;
+}
+
+void DpSpeedOptimizer::RecordDebugInfo() {
+  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+
+  common::StPoint2D proto_point;
+  for (size_t i = 0; i < speed_data_.size(); i++) {
+    const SpeedPoint& point = speed_data_[i];
+    proto_point.set_s(point.s);
+    proto_point.set_t(point.t);
+    proto_point.set_vel(point.v);
+    proto_point.set_acc(point.a);
+    proto_point.set_jerk(point.da);
+
+    speed_debug->add_dp_profile()->CopyFrom(proto_point);
   }
 
   return;

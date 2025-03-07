@@ -76,6 +76,7 @@ void ParkingStopDecider::AddDebugInfo(
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
   speed_debug->Clear();
+
   common::SVGraphSpeedConstraint* dp_speed_constraint =
       speed_debug->mutable_dp_speed_constraint();
 

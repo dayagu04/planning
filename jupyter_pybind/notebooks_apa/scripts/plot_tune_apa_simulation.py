@@ -671,7 +671,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
 
   if plot_speed_graph == True:
 
-    speed_data = apa_simulation_py.GetApaSpeedLimit()
+    speed_data = apa_simulation_py.GetDpSpeedConstraints()
     update_lon_plan_online_data(speed_data,lon_plan_data)
     update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 

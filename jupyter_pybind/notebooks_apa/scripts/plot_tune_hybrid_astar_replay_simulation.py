@@ -48,8 +48,10 @@ end_time = time.time()
 print('load_local_view_figure_parking, ms===== ', (end_time - start_time) * 1000)
 
 # plot speed
-# velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
-# pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
+plot_speed = True
+if plot_speed:
+  velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
+  pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
 
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -1114,14 +1116,24 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if (is_reset):
     replay_simulation_hybrid_astar.StopPybind()
 
-  # speed_data = replay_simulation_hybrid_astar.GetApaSpeedLimit()
-  # update_lon_plan_online_data(speed_data,lon_plan_data)
-  # update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
+  if plot_speed:
+    dp_speed_constraints = replay_simulation_hybrid_astar.GetDpSpeedConstraints()
+    qp_speed_constraints = replay_simulation_hybrid_astar.GetQPSpeedConstraints()
+    ref_cruise_speed = replay_simulation_hybrid_astar.GetRefCruiseSpeed()
+    dp_speed_data = replay_simulation_hybrid_astar.GetDPSpeedOptimizationData()
+    qp_speed_data = replay_simulation_hybrid_astar.GetQPSpeedOptimizationData()
+
+    update_lon_plan_online_data(
+        dp_speed_constraints, qp_speed_constraints, ref_cruise_speed, dp_speed_data, qp_speed_data, lon_plan_data)
+
+    update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 
   push_notebook()
 
   print('pybind end')
 
-# bkp.show(row(fig1, pans), notebook_handle=True)
-bkp.show(row(fig1), notebook_handle=True)
+if plot_speed:
+  bkp.show(row(fig1, pans), notebook_handle=True)
+else:
+  bkp.show(row(fig1), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

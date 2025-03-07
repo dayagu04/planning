@@ -320,9 +320,9 @@ void DynamicsSwitchBuf(double x, double y, double heading) {
       PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
 }
 
-std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
-  std::vector<Eigen::VectorXd> speed_limit_profile;
-  Eigen::VectorXd v(6);
+std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
+  std::vector<Eigen::VectorXd> speed_debug_data;
+  Eigen::VectorXd v(7);
 
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaSpeedDebug *speed_debug;
@@ -331,8 +331,8 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
   }
 
   if (speed_debug == nullptr) {
-    speed_limit_profile.emplace_back(v);
-    return speed_limit_profile;
+    speed_debug_data.emplace_back(v);
+    return speed_debug_data;
   }
 
   int size = 0;
@@ -363,14 +363,18 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
       v[5] = speed_debug->dp_speed_constraint().jerk_upper_bound(i);
     }
 
-    speed_limit_profile.emplace_back(v);
+    if (i < speed_debug->dp_speed_constraint().jerk_lower_bound_size()) {
+      v[6] = speed_debug->dp_speed_constraint().jerk_lower_bound(i);
+    }
+
+    speed_debug_data.emplace_back(v);
   }
 
-  if (speed_limit_profile.size() == 0) {
-    speed_limit_profile.emplace_back(v);
+  if (speed_debug_data.size() == 0) {
+    speed_debug_data.emplace_back(v);
   }
 
-  return speed_limit_profile;
+  return speed_debug_data;
 }
 
 PYBIND11_MODULE(apa_simulation_py, m) {
@@ -384,6 +388,6 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
       .def("DynamicsUpdate", &DynamicsUpdate)
       .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
-      .def("GetApaSpeedLimit", &GetApaSpeedLimit)
+      .def("GetDpSpeedConstraints", &GetDpSpeedConstraints)
       .def("GetDynamicState", &GetDynamicState);
 }

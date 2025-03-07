@@ -21,6 +21,9 @@
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
 #include "pose2d.h"
+#include "sv_dp_optimizer/dp_speed_optimizer.h"
+#include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
+#include "traj_stitcher/apa_trajectory_stitcher.h"
 
 namespace planning {
 namespace apa_planner {
@@ -503,7 +506,13 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
-  SpeedDecisions speed_decisions;
+  // task
+  ApaTrajectoryStitcher traj_stitcher;
+  traj_stitcher.Process(
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
+      current_path_point_global_vec_,
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle());
 
   double tracking_path_collision_dist = frame_.remain_dist_obs;
   tracking_path_collision_dist =
@@ -512,34 +521,36 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   ILOG_INFO << "remain_dist_obs = " << frame_.remain_dist_obs
             << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
 
-  // update stop decision
+  // task: update stop decision
   ParkingStopDecider stop_decider(
       apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
       apa_world_ptr_->GetMeasureDataManagerPtr());
 
+  SpeedDecisions speed_decisions;
   stop_decider.Process(tracking_path_collision_dist,
-                       current_path_point_global_vec_, &speed_decisions);
+                       traj_stitcher.GetMutableStichTrajectory(),
+                       &speed_decisions);
 
-  // update speed limit decision
+  // task: update speed limit decision
   ParkSpeedLimitDecider speed_limit_decider;
-  speed_limit_decider.Process(current_path_point_global_vec_, &speed_decisions);
+  speed_limit_decider.Process(traj_stitcher.GetConstStichTrajectory(),
+                              &speed_decisions);
 
-  // get ego around speed limit decision
-  const SpeedLimitDecision* min_speed_decision =
-      speed_limit_decider.GetSpeedLimitDecisionBySRange(
-          &speed_decisions, stop_decider.GetEgoPathProjectS(),
-          stop_decider.GetEgoPathProjectS() + 0.6);
+  // task: generate dp speed
+  DpSpeedOptimizer dp_speed_optimizer;
+  dp_speed_optimizer.Init();
+  dp_speed_optimizer.Excute(
+      traj_stitcher.GetConstStichTrajectory(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
+      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()), 0.0,
+      &speed_decisions, &speed_limit_decider.GetSpeedLimitProfile());
 
-  if (min_speed_decision != nullptr) {
-    double ref_v;
-    ref_v = speed_limit_decider.CalcRefSpeedBySpeedLimitDecision(
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
-        stop_decider.GetEgoPathProjectS(), min_speed_decision);
-
-    frame_.vel_target = ref_v;
-  } else {
-    frame_.vel_target = apa_param.GetParam().speed_config.default_cruise_speed;
-  }
+  // task: generate qp speed
+  PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
+  const SpeedData& dp_speed = dp_speed_optimizer.SpeedProfile();
+  qp_speed_optimizer.Execute(dp_speed_optimizer.GetStartSpeedPoint(),
+                             &speed_limit_decider.GetSpeedLimitProfile(),
+                             dp_speed);
 
   return;
 }

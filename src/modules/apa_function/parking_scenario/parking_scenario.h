@@ -424,8 +424,6 @@ class ParkingScenario {
 
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
 
-  // todo: update speed data
-  trajectory::Trajectory trajectory_;
   std::vector<pnc::geometry_lib::PathPoint> complete_path_point_global_vec_;
 
   // only debug for choosing the best path
