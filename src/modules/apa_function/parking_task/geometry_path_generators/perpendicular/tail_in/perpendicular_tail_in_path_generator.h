@@ -280,6 +280,10 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                           const double lon_buffer,
                                           const bool enable_log = true);
 
+  const bool CheckStuckedByInside(const geometry_lib::PathPoint &start_pose,
+                                  const geometry_lib::PathPoint &end_pose,
+                                  const bool enable_log = true);
+
   const double CalOccupiedRatio(const geometry_lib::PathPoint &current_pose);
 
   const bool CheckTwoPoseInCircle(const Eigen::Vector2d &ego_pos0,

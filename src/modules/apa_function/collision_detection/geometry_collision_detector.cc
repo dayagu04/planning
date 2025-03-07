@@ -135,11 +135,10 @@ void GeometryCollisionDetector::Update(
 
   col_res_.remain_obs_dist = min_obs_move_dist;
 
-  col_res_.remain_dist =
-      std::min(col_res_.remain_obs_dist, col_res_.remain_car_dist);
+  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - lon_buffer_,
+                                  col_res_.remain_car_dist);
 
-  col_res_.col_flag =
-      (col_res_.remain_obs_dist < col_res_.remain_car_dist + lon_buffer_);
+  col_res_.col_flag = (col_res_.remain_dist < col_res_.remain_car_dist);
 }
 
 void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
@@ -284,11 +283,10 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   col_res_.remain_obs_dist =
       std::fabs(min_obs_rot_limit_angle) * arc_seg.circle_info.radius;
 
-  col_res_.remain_dist =
-      std::min(col_res_.remain_obs_dist, col_res_.remain_car_dist);
+  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - lon_buffer_,
+                                  col_res_.remain_car_dist);
 
-  col_res_.col_flag =
-      (col_res_.remain_obs_dist < col_res_.remain_car_dist + lon_buffer_);
+  col_res_.col_flag = (col_res_.remain_dist < col_res_.remain_car_dist);
 }
 
 void GeometryCollisionDetector::CalPathSegBound(
@@ -320,7 +318,7 @@ void GeometryCollisionDetector::CalPathSegBound(
     }
   }
 
-  double x_min = 0.0, y_min = 0.0, x_max = 0.0, y_max = 0.0;
+  double x_min = 168.0, y_min = 168.0, x_max = -168.0, y_max = -168.0;
   geometry_lib::GetPolygonBound(&x_min, &x_max, &y_min, &y_max, car_vertex_vec);
   x_min -= 0.5;
   y_min -= 0.5;
