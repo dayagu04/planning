@@ -1104,33 +1104,21 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
       session_->environmental_model().get_ego_state_manager()->ego_pose().y;
 
   // Get the corner points' Cartesian coordinates while traveling straight
-  Point2D corner_front_left_xy(vehicle_param.front_edge_to_rear_axle,
+  Point2D corner_front_left_point_xy(vehicle_param.front_edge_to_rear_axle,
                                vehicle_param.width * 0.5);
-  Point2D corner_front_right_xy(vehicle_param.front_edge_to_rear_axle,
+  Point2D corner_front_right_point_xy(vehicle_param.front_edge_to_rear_axle,
                                 -vehicle_param.width * 0.5);
-  Point2D corner_rear_left_xy(-vehicle_param.rear_edge_to_rear_axle,
+  Point2D corner_rear_left_point_xy(-vehicle_param.rear_edge_to_rear_axle,
                               vehicle_param.width * 0.5);
-  Point2D corner_rear_right_xy(-vehicle_param.rear_edge_to_rear_axle,
+  Point2D corner_rear_right_point_xy(-vehicle_param.rear_edge_to_rear_axle,
                                -vehicle_param.width * 0.5);
 
   SLPoint corner_front_left, corner_rear_left, corner_front_right,
       corner_rear_right;
 
   if (left_borrow_) {
-    double original_x = corner_front_left_xy.x;  // Translate
-    double original_y = corner_front_left_xy.y;
-    corner_front_left_xy.x = original_x * cos(heading_angle) -
-                             original_y * sin(heading_angle) +
-                             ego_x;  // Apply the rotation matrix
-    corner_front_left_xy.y = original_x * sin(heading_angle) +
-                             original_y * cos(heading_angle) + ego_y;
-
-    original_x = corner_rear_left_xy.x;
-    original_y = corner_rear_left_xy.y;
-    corner_rear_left_xy.x = original_x * cos(heading_angle) -
-                            original_y * sin(heading_angle) + ego_x;
-    corner_rear_left_xy.y = original_x * sin(heading_angle) +
-                            original_y * cos(heading_angle) + ego_y;
+    Point2D corner_front_left_xy = Cartesianrotation(corner_front_left_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_rear_left_xy = Cartesianrotation(corner_rear_left_point_xy, heading_angle, ego_x, ego_y);
 
     // Back to the SL coordinate system and compare with the lane lines.
     current_frenet_coord->XYToSL(corner_front_left_xy.x, corner_front_left_xy.y,
@@ -1149,20 +1137,8 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
     return false;
 
   } else if (right_borrow_) {
-    double original_x = corner_front_right_xy.x;  // Translate
-    double original_y = corner_front_right_xy.y;
-    corner_front_right_xy.x = original_x * cos(heading_angle) -
-                              original_y * sin(heading_angle) +
-                              ego_x;  // Apply the rotation matrix
-    corner_front_right_xy.y = original_x * sin(heading_angle) +
-                              original_y * cos(heading_angle) + ego_y;
-
-    original_x = corner_rear_right_xy.x;
-    original_y = corner_rear_right_xy.y;
-    corner_rear_right_xy.x = original_x * cos(heading_angle) -
-                             original_y * sin(heading_angle) + ego_x;
-    corner_rear_right_xy.y = original_x * sin(heading_angle) +
-                             original_y * cos(heading_angle) + ego_y;
+    Point2D corner_front_right_xy = Cartesianrotation(corner_front_right_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_rear_right_xy = Cartesianrotation(corner_rear_right_point_xy, heading_angle, ego_x, ego_y);
 
     current_frenet_coord->XYToSL(corner_front_right_xy.x,
                                  corner_front_right_xy.y, &corner_front_right.s,
@@ -1175,14 +1151,26 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
     const double current_rear_right_lane_l =
         current_lane_ptr_->width_by_s(corner_rear_right.s) * 0.5;
 
-    if (corner_front_right.l < current_front_right_lane_l &&
-        corner_rear_right.l < current_rear_right_lane_l) {
+    if (corner_front_right.l < -current_front_right_lane_l &&
+        corner_rear_right.l < -current_rear_right_lane_l) {
       return true;
     }
     return false;
   }
   return false;
 }
+
+Point2D LaneBorrowDecider::Cartesianrotation(const Point2D& Cartesian_point,
+                                    double heading_angle,
+                                    double ego_x,
+                                    double ego_y) {
+    double cos_theta = cos(heading_angle);
+    double sin_theta = sin(heading_angle);
+    return {
+        Cartesian_point.x * cos_theta - Cartesian_point.y * sin_theta + ego_x,
+        Cartesian_point.x * sin_theta + Cartesian_point.y * cos_theta + ego_y
+    };
+};
 
 bool LaneBorrowDecider::CheckIfkLaneBorrowCrossingToNoBorrow() {
   if (!CheckLaneBorrowCrossingCondition()) {
