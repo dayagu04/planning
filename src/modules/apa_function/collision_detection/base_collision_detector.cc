@@ -196,7 +196,13 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
 const geometry_lib::RectangleBound BaseCollisionDetector::CalCarRectangleBound(
     const geometry_lib::PathPoint& current_pose) {
   geometry_lib::RectangleBound bound;
-  bound.CalcBoundByPtVec(car_with_mirror_rectangle_vertex_);
+  geometry_lib::LocalToGlobalTf l2g_tf(current_pose.pos, current_pose.heading);
+  std::vector<Eigen::Vector2d> polygon;
+  polygon.reserve(car_with_mirror_rectangle_vertex_.size());
+  for (const Eigen::Vector2d& pt : car_with_mirror_rectangle_vertex_) {
+    polygon.emplace_back(l2g_tf.GetPos(pt));
+  }
+  bound.CalcBoundByPtVec(polygon);
   return bound;
 }
 
