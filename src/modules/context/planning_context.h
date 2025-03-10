@@ -20,6 +20,7 @@
 #include "../tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
+#include "../tasks/task_interface/parking_switch_decider_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
@@ -166,6 +167,14 @@ class PlanningContext {
     return vision_lateral_motion_planner_output_;
   }
 
+  const LateralObstacleDeciderOutput &lateral_obstacle_decider_output() const {
+    return lateral_obstacle_decider_output_;
+  }
+
+  LateralObstacleDeciderOutput &mutable_lateral_obstacle_decider_output() {
+    return lateral_obstacle_decider_output_;
+  }
+
   const GeneralLateralDeciderOutput &general_lateral_decider_output() const {
     return general_lateral_decider_output_;
   }
@@ -181,6 +190,14 @@ class PlanningContext {
 
   HppGeneralLateralDeciderOutput &mutable_hpp_general_lateral_decider_output() {
     return hpp_general_lateral_decider_output_;
+  }
+
+  const ParkingSwitchDeciderOutput &parking_switch_decider_output() const {
+    return parking_switch_decider_output_;
+  }
+
+  ParkingSwitchDeciderOutput &mutable_parking_switch_decider_output() {
+    return parking_switch_decider_output_;
   }
 
   const VisionLongitudinalBehaviorPlannerOutput &
@@ -276,14 +293,6 @@ class PlanningContext {
 
   LateralBehaviorPlannerOutput &mutable_lateral_behavior_planner_output() {
     return lateral_behavior_planner_output_;
-  }
-
-  const LateralObstacleDeciderOutput &lateral_obstacle_decider_output() const {
-    return lateral_obstacle_decider_output_;
-  }
-
-  LateralObstacleDeciderOutput &mutable_lateral_obstacle_decider_output() {
-    return lateral_obstacle_decider_output_;
   }
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output() const {
@@ -416,6 +425,11 @@ class PlanningContext {
     status_info_.Clear();
   }
 
+  void ResetTaskOutput() {
+    // TODO(bsniu):注意Task成员变量的清空
+    lateral_offset_decider_output_.Reset();
+  }
+
   void reset() {
     planning_success_ = false;
     last_planning_success_ = false;
@@ -462,6 +476,7 @@ class PlanningContext {
   // used in HppGeneralLateralDecider and GeneralLateralDecider
   GeneralLateralDeciderOutput general_lateral_decider_output_;
   HppGeneralLateralDeciderOutput hpp_general_lateral_decider_output_;
+  ParkingSwitchDeciderOutput parking_switch_decider_output_;
 
   // longitudinal task pipeline
   VisionLongitudinalBehaviorPlannerOutput

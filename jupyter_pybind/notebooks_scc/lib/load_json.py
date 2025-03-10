@@ -18,8 +18,8 @@ def LoadVector(ctrl_data, json_struct, name, N = 51):
     return 1
   except:
     tmp = []
-    for i in range(N):
-      tmp.append(0.0)
+    # for i in range(N):
+    #   tmp.append(0.0)
 
     ctrl_data[name] = tmp
     return 0

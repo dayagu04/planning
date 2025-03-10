@@ -43,10 +43,16 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     return;
   }
 
+  ILOG_INFO << "fusion_object_num = "
+            << (size_t)(local_view->fusion_objects_info.fusion_object_size)
+            << ", ground_lines_size = "
+            << static_cast<size_t>(
+                   local_view->ground_line_perception.groundline_size);
+
   size_t number =
       static_cast<size_t>(
           local_view->fusion_occupancy_objects_info.fusion_object_size) +
-      static_cast<size_t>(local_view->ground_line_perception.ground_lines_size);
+      static_cast<size_t>(local_view->ground_line_perception.groundline_size);
 
   obs_list.point_cloud_list.resize(number + 1);
 
@@ -121,20 +127,19 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     }
   }
 
-  uint8 ground_line_number =
-      local_view->ground_line_perception.ground_lines_size;
+  uint8 ground_line_number = local_view->ground_line_perception.groundline_size;
   for (uint8 i = 0; i < ground_line_number; i++) {
-    const iflyauto::GroundLine& gl =
-        local_view->ground_line_perception.ground_lines[i];
+    const iflyauto::FusionGroundLine& gl =
+        local_view->ground_line_perception.groundline[i];
 
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
     obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box = cdl::AABB();
 
-    for (uint8 j = 0; j < gl.points_3d_size; j++) {
-      global.x = gl.points_3d[j].x;
-      global.y = gl.points_3d[j].y;
+    for (uint8 j = 0; j < gl.groundline_point_size; j++) {
+      global.x = gl.groundline_point[j].x;
+      global.y = gl.groundline_point[j].y;
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 

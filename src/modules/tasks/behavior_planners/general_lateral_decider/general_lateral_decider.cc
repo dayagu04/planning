@@ -50,14 +50,7 @@ bool GeneralLateralDecider::InitInfo() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  general_lateral_decider_output.enu_ref_path.clear();
-  general_lateral_decider_output.last_enu_ref_path.clear();
-  general_lateral_decider_output.soft_bounds.clear();
-  general_lateral_decider_output.hard_bounds.clear();
-  general_lateral_decider_output.soft_bounds_cart_point.clear();
-  general_lateral_decider_output.hard_bounds_cart_point.clear();
-  general_lateral_decider_output.enu_ref_theta.clear();
-  general_lateral_decider_output.last_enu_ref_theta.clear();
+  general_lateral_decider_output.Clear();
 
   lat_lane_change_info_ = LatDeciderLaneChangeInfo::NONE;
 
@@ -125,7 +118,7 @@ bool GeneralLateralDecider::Execute() {
   CalcLateralBehaviorOutput();
 
   SaveLatDebugInfo(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info,
-                   hard_bounds_info);
+                   hard_bounds_info, general_lateral_decider_output);
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("GeneralLateralDeciderCostTime", end_time - start_time);
@@ -2222,7 +2215,8 @@ void GeneralLateralDecider::SaveLatDebugInfo(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
+    std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
+    GeneralLateralDeciderOutput &general_lateral_decider_output) {
   lat_debug_info_.Clear();
   lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
   lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
@@ -2234,6 +2228,14 @@ void GeneralLateralDecider::SaveLatDebugInfo(
   lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
 
+  auto &hard_bounds_frenet_output =
+      general_lateral_decider_output.hard_bounds_frenet_point;
+  auto &soft_bounds_frenet_output =
+      general_lateral_decider_output.soft_bounds_frenet_point;
+  auto &hard_bounds_info_output =
+      general_lateral_decider_output.hard_bounds_info;
+  auto &soft_bounds_info_output =
+      general_lateral_decider_output.soft_bounds_info;
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
 
@@ -2268,6 +2270,11 @@ void GeneralLateralDecider::SaveLatDebugInfo(
         soft_bounds_info[i].second.id);
     soft_upper_bound_info->mutable_bound_info()->set_type(
         BoundType2String(soft_bounds_info[i].second.type));
+
+    hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
+    soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
+    hard_bounds_info_output.emplace_back(soft_bounds_info[i]);
+    soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
   }
 
   DebugInfoManager::GetInstance()

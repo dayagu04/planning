@@ -1,0 +1,69 @@
+syntax = "proto2";
+
+package planning.common;
+
+import "basic_types.proto";
+
+message HybridARAPath {
+  repeated double x = 1;
+  repeated double y = 2;
+  repeated double phi = 3;
+  repeated double s = 4;
+  repeated double l = 5;
+}
+
+message HybridARAPathCostInfo {
+  repeated double x = 1;
+  repeated double y = 2;
+  repeated double phi = 3;
+  repeated double agent_cost = 4;
+  repeated double boundary_cost = 5;
+  repeated double center_cost = 6;
+  repeated double motion_cost = 7;
+}
+
+message HybridARANode {
+  optional double x = 1;
+  optional double y = 2;
+  optional double phi = 3;
+  optional double agent_cost = 4;
+  optional double boundary_cost = 5;
+  optional double center_cost = 6;
+  optional double motion_cost = 7;
+  optional double heuristic_cost = 8;
+  optional double total_cost = 9;
+  optional double min_dist = 10;
+  optional double dist_cost = 11;
+  optional double area_cost = 12;
+  optional double directly_behind_cost = 13;
+  optional double pass_interval_cost = 14;
+}
+
+message HybridARAExpandNode {
+  optional HybridARANode current_node = 1;
+  repeated HybridARANode open_list = 2;
+}
+
+message HybridARAExpand {
+  repeated HybridARAExpandNode hybrid_ara_expand = 1;
+}
+
+message HybridARAObstacle {
+  optional uint32 id = 1;
+  optional double x_center = 2;
+  optional double y_center = 3;
+  optional double heading_angle = 4;
+  optional double x_relative_center = 5;
+  optional double y_relative_center = 6;
+  optional double relative_heading_angle = 7;
+  optional double length = 8;
+  optional double width = 9;
+  repeated Point2d polygon_points = 10;
+}
+
+message HybridARAInfo {
+  optional HybridARAPath hybrid_ara_path = 1;
+  optional HybridARAPathCostInfo hybrid_ara_path_cost = 2;
+  optional HybridARAExpand hybrid_ara_expand = 3;
+  repeated HybridARAObstacle ara_obstacles = 4;
+}

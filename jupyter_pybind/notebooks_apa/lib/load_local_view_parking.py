@@ -31,6 +31,7 @@ from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 from lib.local_view_lib import *
 import rosbag
+from ifly_parking_map_pb2 import *
 
 plan_debug_ts = []
 plan_debug_timestamps = []
@@ -152,6 +153,9 @@ class LoadCyberbag:
 
     self.parking_flag = parking_flag
 
+    # ehr static map msg
+    self.ehr_parking_map_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
     self.max_time = 0
 
     # time offset
@@ -193,6 +197,8 @@ class LoadCyberbag:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!')
 
+    self.max_time = max_time
+
     # load vehicle service msg
     try:
       vs_msg_dict = {}
@@ -205,7 +211,7 @@ class LoadCyberbag:
           self.vs_msg['abs_t'].append(t)
           self.vs_msg['data'].append(msg)
       # print("self.vs_msg['t'][0]:", self.vs_msg['t'][0])
-      smallest_abs_t = min(smallest_abs_t, self.vs_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.vs_msg['t'][0])
       self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
       print('vs time:',self.vs_msg['t'][-1])
@@ -231,7 +237,7 @@ class LoadCyberbag:
           self.plan_msg['data'].append(msg)
       print("plan init t:", self.plan_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.plan_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.plan_msg['t'][0])
       t0_plan = self.plan_msg['t'][0]
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
@@ -306,7 +312,7 @@ class LoadCyberbag:
         correct_path_for_limiter_time_list[i] = round(correct_path_for_limiter_time_list[i], 2)
       # print("self.plan_debug_msg['t'][0]:", self.plan_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.plan_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.plan_debug_msg['t'][0])
       t0_plan_debug = self.plan_debug_msg['t'][0]
       self.plan_debug_msg['t'] = [tmp - t0_plan_debug  for tmp in self.plan_debug_msg['t']]
       max_time = max(max_time, self.plan_debug_msg['t'][-1])
@@ -333,7 +339,7 @@ class LoadCyberbag:
           self.ctrl_msg['data'].append(msg)
       # print("self.ctrl_msg['t'][0]:", self.ctrl_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.ctrl_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.ctrl_msg['t'][0])
       self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
       print('ctrl_msg time:',self.ctrl_msg['t'][-1])
@@ -380,7 +386,7 @@ class LoadCyberbag:
           print('except',jserr)
       # print("self.ctrl_debug_msg['t'][0]:", self.ctrl_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.ctrl_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.ctrl_debug_msg['t'][0])
       self.ctrl_debug_msg['t'] = [tmp - self.ctrl_debug_msg['t'][0]  for tmp in self.ctrl_debug_msg['t']]
       max_time = max(max_time, self.ctrl_debug_msg['t'][-1])
       print('ctrl_debug_msg time:',self.ctrl_debug_msg['t'][-1])
@@ -405,7 +411,7 @@ class LoadCyberbag:
           self.fus_parking_msg['data'].append(msg)
       # print("self.fus_parking_msg['t'][0]:", self.fus_parking_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.fus_parking_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.fus_parking_msg['t'][0])
       if (abs(self.fus_parking_msg['t'][0]) < 0.0001):
         self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][1]  for tmp in self.fus_parking_msg['t']]
       else:
@@ -434,7 +440,7 @@ class LoadCyberbag:
           self.fus_ground_line_msg['data'].append(msg)
       # print("self.fus_ground_line_msg['t'][0]:", self.fus_ground_line_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.fus_ground_line_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.fus_ground_line_msg['t'][0])
       if (abs(self.fus_ground_line_msg['t'][0]) < 0.0001):
         self.fus_ground_line_msg['t'] = [tmp - self.fus_ground_line_msg['t'][1]  for tmp in self.fus_ground_line_msg['t']]
       else:
@@ -494,7 +500,7 @@ class LoadCyberbag:
 
       # print("self.fus_occupancy_objects_msg['t'][0]:", self.fus_occupancy_objects_msg['t'][0])
       # print("self.fus_occupancy_objects_msg['t'][-1]:", self.fus_occupancy_objects_msg['t'][-1])
-      smallest_abs_t = min(smallest_abs_t, self.fus_occupancy_objects_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.fus_occupancy_objects_msg['t'][0])
       self.fus_occupancy_objects_msg['t'] = [tmp - t0  for tmp in self.fus_occupancy_objects_msg['t']]
       print('fus_occupancy_objects_msg time:',self.fus_occupancy_objects_msg['t'][-1])
       if len(self.fus_occupancy_objects_msg['t']) > 0:
@@ -521,7 +527,7 @@ class LoadCyberbag:
           self.vis_parking_msg['data'].append(msg)
       # print("self.vis_parking_msg['t'][0]:", self.vis_parking_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.vis_parking_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.vis_parking_msg['t'][0])
       if (abs(self.vis_parking_msg['t'][0]) < 0.0001):
         self.vis_parking_msg['t'] = [tmp - self.vis_parking_msg['t'][1]  for tmp in self.vis_parking_msg['t']]
       else:
@@ -558,7 +564,7 @@ class LoadCyberbag:
           first_enter_apa = True
       # print("self.soc_state_msg['t'][0]:", self.soc_state_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.soc_state_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.soc_state_msg['t'][0])
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -571,7 +577,7 @@ class LoadCyberbag:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/fsm/soc_state !!!')
 
-    self.max_time = max_time
+    # self.max_time = max_time
 
     # add obstacles in plot apa
     # load precept_info msg
@@ -632,7 +638,7 @@ class LoadCyberbag:
           self.wave_msg['data'].append(msg)
       # print("self.wave_msg['t'][0]:", self.wave_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.wave_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.wave_msg['t'][0])
       self.wave_msg['t'] = [tmp - t0  for tmp in self.wave_msg['t']]
       self.wave_msg['enable'] = True
       print('wave time:',self.wave_msg['t'][-1])
@@ -657,7 +663,7 @@ class LoadCyberbag:
           self.adas_debug_msg['data'].append(msg)
       # print("self.adas_debug_msg['t'][0]:", self.adas_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.adas_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.adas_debug_msg['t'][0])
       self.adas_debug_msg['t'] = [tmp - t0  for tmp in self.adas_debug_msg['t']]
       self.adas_debug_msg['enable'] = True
       print('adas_debug time:',self.adas_debug_msg['t'][-1])
@@ -683,7 +689,7 @@ class LoadCyberbag:
           self.wave_debug_msg['data'].append(msg)
       # print("self.wave_debug_msg['t'][0]:", self.wave_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.wave_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.wave_debug_msg['t'][0])
       self.wave_debug_msg['t'] = [tmp - t0  for tmp in self.wave_debug_msg['t']]
       self.wave_debug_msg['enable'] = True
       print('wave_debug time:',self.wave_debug_msg['t'][-1])
@@ -711,7 +717,7 @@ class LoadCyberbag:
         t0 = self.uss_percept_msg['t'][0]
         # print("self.uss_percept_msg['t'][0]:", self.uss_percept_msg['t'][0])
 
-        smallest_abs_t = min(smallest_abs_t, self.uss_percept_msg['t'][0])
+        # smallest_abs_t = min(smallest_abs_t, self.uss_percept_msg['t'][0])
         self.uss_percept_msg['t'] = [tmp - t0  for tmp in self.uss_percept_msg['t']]
         self.uss_percept_msg['enable'] = True
         print('uss_percept time:',self.uss_percept_msg['t'][-1])
@@ -736,7 +742,7 @@ class LoadCyberbag:
   def get_msg_index(self, bag_time):
     ### step 1: 时间戳对齐
     abs_t = bag_time + smallest_abs_t
-    # print("smallest_abs_t:", smallest_abs_t)
+    print("smallest_abs_t:", smallest_abs_t)
     out = {}
     loc_msg_idx = 0
     if self.loc_msg['enable'] == True:
@@ -1193,6 +1199,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_fusion_parking_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
 
     # 1 camera; 2 uss; 3 camera and uss;
+    slots_x0_vec = []
+    slots_y0_vec = []
+
     slots_x1_vec = []
     slots_y1_vec = []
 
@@ -1240,6 +1249,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       elif slot.fusion_source == 3:
         slots_x3_vec.append(slot_plot_x_vec)
         slots_y3_vec.append(slot_plot_y_vec)
+
+      if slot.resource_type == 1:
+        slots_x0_vec.append(slot_plot_x_vec)
+        slots_y0_vec.append(slot_plot_y_vec)
+
       # 1.2 update slots limiter points in same slot_plot_vec
       single_limiter_x_vec = []
       single_limiter_y_vec = []
@@ -1282,6 +1296,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       if slot.allow_parking == 1:
         fus_release_solts_id.append(slot.id)
 
+    local_view_data['data_fusion_slot0'].data.update({'corner_point_x': slots_x0_vec, 'corner_point_y': slots_y0_vec,})
     local_view_data['data_fusion_slot1'].data.update({'corner_point_x': slots_x1_vec, 'corner_point_y': slots_y1_vec,})
     local_view_data['data_fusion_slot2'].data.update({'corner_point_x': slots_x2_vec, 'corner_point_y': slots_y2_vec,})
     local_view_data['data_fusion_slot3'].data.update({'corner_point_x': slots_x3_vec, 'corner_point_y': slots_y3_vec,})
@@ -1411,13 +1426,16 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
       corner_point = maganed_slot_vec.corner_points.corner_point
-      # if maganed_slot_vec.id == select_slot_id:
-      #     target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
-      #     target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
-      #     local_view_data['data_target_managed_slot'].data.update({
-      #       'corner_point_x': target_managed_slot_x_vec,
-      #       'corner_point_y': target_managed_slot_y_vec,
-      #       })
+      if len(maganed_slot_vec.corner_points.corner_point) != 4:
+        continue
+
+      if maganed_slot_vec.id == select_slot_id:
+          target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+          target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+          local_view_data['data_target_managed_slot'].data.update({
+            'corner_point_x': target_managed_slot_x_vec,
+            'corner_point_y': target_managed_slot_y_vec,
+            })
           #break
       slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
       slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
@@ -2168,6 +2186,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
     for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]
+
+      # hack: need to retire
+      if obj.common_info.type == 58:
+        continue
+
       polygon_points =  obj.additional_occupancy_info.polygon_points
       for j in range(obj.additional_occupancy_info.polygon_points_size):
         x = polygon_points[j].x
@@ -2234,14 +2257,17 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    #print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size)
-    for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size):
-      ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines[i]
-      points_3d = ground_line.points_3d
-      for j in range(ground_line.points_3d_size):
-        point_3d = points_3d[j]
-        pos_x.append(point_3d.x - cur_pos_xn0)
-        pos_y.append(point_3d.y - cur_pos_yn0)
+    print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size)
+    for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size):
+      ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline[i]
+
+      if(ground_line.resource_type != 2):
+        continue
+
+      for j in range(ground_line.groundline_point_size):
+        point_2d = ground_line.shape[j]
+        pos_x.append(point_2d.x)
+        pos_y.append(point_2d.y)
     # for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:
     #   points_3d = ground_line.points_3d
     #   for point_3d in points_3d:
@@ -2277,6 +2303,8 @@ def load_local_view_figure_parking():
                                           'mpc_dy':[],})
   data_ref_mpc_vec = ColumnDataSource(data = {'dx_ref_mpc_vec':[], 'dy_ref_mpc_vec':[],})
   data_ref_vec = ColumnDataSource(data = {'dx_ref_vec':[], 'dy_ref_vec':[],})
+  data_ehr_slot = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+  data_fusion_slot0 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_fusion_slot1 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_fusion_slot2= ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_fusion_slot3 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
@@ -2353,6 +2381,8 @@ def load_local_view_figure_parking():
                      'data_ref_mpc_vec':data_ref_mpc_vec, \
                      'data_ref_vec':data_ref_vec, \
                      'ctrl_debug_data':ctrl_debug_data, \
+                     'data_ehr_slot':data_ehr_slot, \
+                     'data_fusion_slot0':data_fusion_slot0, \
                      'data_fusion_slot1':data_fusion_slot1, \
                      'data_fusion_slot2':data_fusion_slot2, \
                      'data_fusion_slot3':data_fusion_slot3, \
@@ -2408,6 +2438,7 @@ def load_local_view_figure_parking():
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot0, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 0.6, legend_label = 'map_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot1, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot2, line_width = 2, line_color = 'cyan', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot3, line_width = 2, line_color = 'purple', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
@@ -2533,8 +2564,9 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, d
       abs_t = bag_time + smallest_abs_t
       while bag_loader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= abs_t and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['abs_t'])-1):
           ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
-      ctrl_debug_json = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
+
       t_debug.append(bag_time)
+      ctrl_debug_json = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
       controller_status.append(ctrl_debug_json['controller_status'])
       lon_enable.append(ctrl_debug_json['lon_enable'])
       lat_enable.append(ctrl_debug_json['lat_enable'])

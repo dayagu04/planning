@@ -41,6 +41,8 @@ class HistoryObstacleManager {
                          planning::framework::Session *session);
   virtual ~HistoryObstacleManager();
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   bool Update();
 
   void AddNewDeductionObstacles(

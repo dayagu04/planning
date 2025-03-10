@@ -40,12 +40,23 @@ void LaneReferencePath::update(planning::framework::Session *session) {
 
   // Step 2) get reference_points
   ReferencePathPoints raw_reference_path_points;
-  bool ok = get_ref_points(raw_reference_path_points);
 
+  bool ok = false;
+  if (session_->is_hpp_scene()) {
+    ok = get_ref_points_hpp(raw_reference_path_points);
+  } else {
+    ok = get_ref_points(raw_reference_path_points);
+  }
+  
   // Step 3) update
   if (ok) {
     auto current_time = IflyTime::Now_ms();
-    update_refpath_points(raw_reference_path_points);
+    if (session_->is_hpp_scene()) {
+      update_refpath_points_in_hpp(ego_projection_length_in_reference_path_,
+                                   raw_reference_path_points);
+    } else {
+      update_refpath_points(raw_reference_path_points);
+    }
     valid_ = refined_ref_path_points_.size() >= 3;
     if (!valid_) {
       return;
@@ -206,6 +217,122 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
           ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
           extend_length);
       ref_path_points.emplace_back(std::move(extend_point));
+    }
+  }
+  return ref_path_points.size() >= 3;
+}
+
+bool LaneReferencePath::get_ref_points_hpp(ReferencePathPoints &ref_path_points) {
+  auto virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto virtual_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
+  auto &lane_points = virtual_lane->lane_points();
+  std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
+  const double width = virtual_lane->width();
+  ref_path_points.clear();
+  auto is_enu_valid = session_->environmental_model().location_valid();
+  for (auto &refline_pt : lane_points) {
+    constexpr double kDefaultLaneBorderDis = 20.0;
+    ReferencePathPoint ref_path_pt;
+    if (is_enu_valid) {
+      ref_path_pt.path_point.set_x(refline_pt.local_point.x);
+      ref_path_pt.path_point.set_y(refline_pt.local_point.y);
+      ref_path_pt.path_point.set_z(refline_pt.local_point.z);
+      ref_path_pt.path_point.set_theta(refline_pt.enu_heading);
+
+    } else {
+      ref_path_pt.path_point.set_x(refline_pt.car_point.x);
+      ref_path_pt.path_point.set_y(refline_pt.car_point.y);
+      ref_path_pt.path_point.set_z(0.0);
+      ref_path_pt.path_point.set_theta(refline_pt.car_heading);
+    }
+    ref_path_pt.path_point.set_kappa(refline_pt.curvature);
+    ref_path_pt.distance_to_left_road_border = 5.0;
+    ref_path_pt.distance_to_right_road_border = 5.0;
+    ref_path_pt.distance_to_left_lane_border = 5.0;
+    ref_path_pt.distance_to_right_lane_border = 5.0;
+    ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
+    ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
+    ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
+    ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type;
+    ref_path_pt.lane_width = width;
+    ref_path_pt.max_velocity = refline_pt.speed_limit_max;
+    ref_path_pt.min_velocity = refline_pt.speed_limit_min;
+    ref_path_pt.type = ReferencePathPointType::MAP;
+    ref_path_pt.is_in_intersection = refline_pt.is_in_intersection;
+
+    // check direction
+    // if (not ref_path_points.empty()) {
+    //   const auto &pre_pt = ref_path_points.back();
+    //   Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
+    //               ref_path_pt.path_point.y - pre_pt.path_point.y};
+    //   Vec2d cur_direction =
+    //       Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta());
+    //   if (cur_direction.InnerProd(delta) < 0) {
+    // temporaly skip direction check since input data is bad @clren
+    // continue;
+    //   }
+    // }
+    ref_path_points.emplace_back(std::move(ref_path_pt));
+  }
+  // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
+  //  calculate reference path origin total length
+  double origin_reference_path_total_length = 0;
+  for (int i = 1; i < ref_path_points.size(); i++) {
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
+    origin_reference_path_total_length += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
+  }
+  origin_reference_path_length_ = origin_reference_path_total_length;
+  if (ref_path_points.size() >= 2) {
+    double extend_buff =
+      session_->environmental_model().get_route_info()->get_virtual_extend_buff();
+    ego_projection_length_in_reference_path_ =
+        CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+    double target_slot_projection_length_in_reference_path = origin_reference_path_length_;
+    const auto &parking_slot_manager = session_->environmental_model().get_parking_slot_manager();
+    if (parking_slot_manager->IsExistTargetSlot()) {
+      const auto &target_slot_points = parking_slot_manager->GetTargetSlotPoints();
+      const auto &target_slot_polygon = parking_slot_manager->GetTargetSlotPolygon();
+      if (target_slot_polygon.is_convex()) {
+        planning_math::Box2d target_slot_box = target_slot_polygon.MinAreaBoundingBox();
+        target_slot_projection_length_in_reference_path =
+          CalculatePointProjectionDistanceInReferencePath(
+            target_slot_box.center_x(),
+            target_slot_box.center_y(),
+            ref_path_points);
+      } else {
+        planning_math::LineSegment2d axis(
+        planning_math::Vec2d(target_slot_points.front().x(),
+                             target_slot_points.front().y()),
+        planning_math::Vec2d(target_slot_points.back().x(),
+                             target_slot_points.back().y()));
+        target_slot_projection_length_in_reference_path =
+          CalculatePointProjectionDistanceInReferencePath(
+            axis.center().x(),
+            axis.center().y(),
+            ref_path_points);
+      }
+      if ((target_slot_projection_length_in_reference_path + extend_buff) >
+          origin_reference_path_total_length) {
+        if (ego_projection_length_in_reference_path_ >
+          (target_slot_projection_length_in_reference_path + extend_buff)) {
+          extend_buff =
+            ego_projection_length_in_reference_path_ - target_slot_projection_length_in_reference_path;
+        }
+        const double extend_length =
+          target_slot_projection_length_in_reference_path +
+          extend_buff -
+          origin_reference_path_total_length;
+        ReferencePathPoint extend_point;
+        const int point_nums = ref_path_points.size();
+        extend_point = CalculateExtendedReferencePathPoint(
+            ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
+            extend_length);
+        ref_path_points.emplace_back(std::move(extend_point));
+      }
     }
   }
   return ref_path_points.size() >= 3;
@@ -437,6 +564,44 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   const double ego_projection_distance_in_reference_path =
       projection_length + accumulate_distance_for_nearest_point;
   return ego_projection_distance_in_reference_path;
+}
+
+double LaneReferencePath::CalculatePointProjectionDistanceInReferencePath(
+    const double point_x, const double point_y,
+    const ReferencePathPoints &ref_path_points) const {
+  double dx = point_x - ref_path_points[0].path_point.x();
+  double dy = point_y - ref_path_points[0].path_point.y();
+  const int point_nums = ref_path_points.size();
+  int nearest_point_index = 0;
+  double accumulate_distance_for_nearest_point = 0;
+  double accumulate_distance_reference_path = 0;
+  double min_distance_square_to_point = dx * dx + dy * dy;
+  // find nearest point
+  for (int i = 1; i < point_nums; i++) {
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
+    accumulate_distance_reference_path += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
+    dx = point_x - cur_point.x();
+    dy = point_y - cur_point.y();
+    double temp_min_distance_square_to_point = dx * dx + dy * dy;
+    if (temp_min_distance_square_to_point <
+        min_distance_square_to_point) {
+      nearest_point_index = i;
+      accumulate_distance_for_nearest_point =
+          accumulate_distance_reference_path;
+      min_distance_square_to_point = temp_min_distance_square_to_point;
+    }
+  }
+  // calculate projection distance in reference path
+  const auto &nearest_point = ref_path_points[nearest_point_index].path_point;
+  dx = point_x - nearest_point.x();
+  dy = point_y - nearest_point.y();
+  const double projection_length = dx * std::cos(nearest_point.theta()) +
+                                   dy * std::sin(nearest_point.theta());
+  const double projection_distance_in_reference_path =
+      projection_length + accumulate_distance_for_nearest_point;
+  return projection_distance_in_reference_path;
 }
 
 }  // namespace planning

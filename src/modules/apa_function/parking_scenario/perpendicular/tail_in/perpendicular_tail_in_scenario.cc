@@ -1307,7 +1307,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     }
     const double total_length = s + extend_length;
     while (s <= total_length) {
-      if (x_vec.size() > PLANNING_TRAJ_POINTS_NUM - 1) {
+      if (x_vec.size() > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
         break;
       }
       s += apa_world_ptr_->GetSimuParam().sample_ds;
@@ -1749,7 +1749,7 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
   }
 
   const size_t max_pt_number =
-      PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+      PLANNING_TRAJ_POINTS_MAX_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_MAX_NUM;
   optimal_path_vec.clear();
   optimal_path_vec.reserve(max_pt_number + 2);
   if (origin_optimized_path_vec.size() <= max_pt_number) {

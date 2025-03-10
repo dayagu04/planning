@@ -2,8 +2,20 @@
 
 #include <memory>
 
-#include "planning_intf.h"
 #include "ehr.pb.h"
+#include "ehr_sdmap.pb.h"
+#include "planning_intf.h"
+// #include "ifly_parking_map.pb.h"
+#include "func_state_machine_c.h"
+#include "fusion_deceler_c.h"
+#include "fusion_groundline_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
+#include "fusion_parking_slot_c.h"
+#include "fusion_road_c.h"
+#include "hmi_inner_c.h"
+#include "ifly_localization_c.h"
+#include "ifly_parking_map_c.h"
 #include "interface/src/legacy/interface2.4.5/hmi_mcu_inner_c.h"
 #include "interface/src/legacy/interface2.4.6/localization_c.h"
 
@@ -64,11 +76,14 @@ struct LocalView {
   iflyauto::CameraPerceptionTsrInfo perception_tsr_info;
   double perception_tsr_info_recv_time = 0.0;
 
-  // iflyauto::ParkingInfo parking_map_info;
+  // IFLYParkingMap::ParkingInfo parking_map_info;
   // double parking_map_info_recv_time = 0.0;
 
-  iflyauto::GroundLinePerceptionInfo ground_line_perception;
+  iflyauto::FusionGroundLineInfo ground_line_perception;
   double ground_line_perception_recv_time = 0.0;
+
+  iflyauto::FusionDecelerInfo fusion_speed_bump_info;
+  double fusion_speed_bump_info_recv_time = 0.0;
 };
 
 }  // namespace planning

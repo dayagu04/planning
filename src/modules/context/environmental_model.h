@@ -11,7 +11,7 @@
 #include "dynamic_world/dynamic_world.h"
 #include "ego_planning_config.h"
 #include "fusion_objects_c.h"
-#include "groundline_decider.h"
+#include "ground_line_manager.h"
 #include "history_obstacle_manager.h"
 #include "ifly_time.h"
 #include "local_view.h"
@@ -61,6 +61,7 @@ class TrafficLightDecisionManager;
 class LateralObstacle;
 class LaneTracksManager;
 class AgentNodeManager;
+class EdtManager;
 class EnvironmentalModel {
  public:
   EnvironmentalModel();
@@ -95,11 +96,13 @@ class EnvironmentalModel {
     return prediction_info_;
   }
 
-  const std::vector<GroundLinePoint> &get_ground_line_point_info() const {
-    return ground_line_point_info_;
+  const std::shared_ptr<GroundLineManager> &get_ground_line_manager() const {
+    return ground_line_manager_;
   }
-  std::vector<GroundLinePoint> &get_mutable_ground_line_point_info() {
-    return ground_line_point_info_;
+
+  void set_ground_line_manager(
+      std::shared_ptr<GroundLineManager> ground_line_manager) {
+    ground_line_manager_ = ground_line_manager;
   }
 
   const std::shared_ptr<EgoStateManager> &get_ego_state_manager() const {
@@ -221,12 +224,22 @@ class EnvironmentalModel {
     dynamic_world_ = dynamic_world;
   }
 
-  void set_route_info(const std::shared_ptr<RouteInfo> route_info) {
+  void set_route_info (const std::shared_ptr<RouteInfo> route_info) {
     route_info_ = route_info;
   }
 
   const std::shared_ptr<RouteInfo> &get_route_info() const {
     return route_info_;
+  }
+
+  const std::shared_ptr<EdtManager> &get_edt_manager() const {
+    return edt_manager_;
+  }
+  std::shared_ptr<EdtManager> &mutable_edt_manager() {
+    return edt_manager_;
+  }
+  void set_edt_manager(std::shared_ptr<EdtManager> edt_manager) {
+    edt_manager_ = edt_manager;
   }
 
   const std::string &get_module_config_file_dir() const {
@@ -314,9 +327,10 @@ class EnvironmentalModel {
   std::shared_ptr<HistoryObstacleManager> history_obstacle_manager_ = nullptr;
   std::shared_ptr<agent::AgentManager> agent_manager_ = nullptr;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_ = nullptr;
-  std::vector<GroundLinePoint> ground_line_point_info_;
+  std::shared_ptr<GroundLineManager> ground_line_manager_ = nullptr;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
   std::shared_ptr<RouteInfo> route_info_ = nullptr;
+  std::shared_ptr<EdtManager> edt_manager_ = nullptr;
   bool location_valid_{true};
   // planning::VehicleParam vehicle_param_;
   std::string config_file_dir_;

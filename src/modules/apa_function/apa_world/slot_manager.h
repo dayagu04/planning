@@ -19,7 +19,7 @@
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
-#include "camera_preception_parking_slot_c.h"
+#include "camera_perception_parking_slot_c.h"
 #include "collision_detection/collision_detection.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"
@@ -275,7 +275,7 @@ class SlotManager {
   };
 
   struct EgoSlotInfo {
-    uint8_t select_slot_id = 0;
+    uint32_t select_slot_id = 0;
     uint8_t slot_type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_INVALID;
     uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     iflyauto::ParkingFusionSlot select_fusion_slot;
@@ -479,6 +479,8 @@ class SlotManager {
 
   const bool IsReleaseByRuleBased(const uint32_t select_slot_id);
 
+  const bool IsReleaseByRuleBased();
+
  private:
   Frame frame_;
 
@@ -530,7 +532,12 @@ class SlotManager {
       common::SlotInfo& slot_info,
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
 
+  void Log();
+
+
   void CopySlotReleaseInfo();
+
+  const bool IsHPPMAPSlot(const iflyauto::ParkingFusionSlot& fusion_slot);
 };
 }  // namespace apa_planner
 }  // namespace planning

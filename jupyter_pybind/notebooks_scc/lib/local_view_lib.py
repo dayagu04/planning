@@ -18,8 +18,7 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.basic_data_generator import *
 from lib.load_struct import *
-from lib.load_ros_bag import is_bag_main, get_g_is_display_enu
-import lib.load_ros_bag
+import lib.load_global_var as global_var
 
 plan_debug_ts = []
 plan_debug_timestamps = []
@@ -42,8 +41,11 @@ fr_object_timestamps = []
 rl_object_timestamps = []
 rr_object_timestamps = []
 lidar_object_timestamps = []
-ehr_parking_map_timestamps = []
+ehr_static_map_timestamps = []
 ground_line_timestamps = []
+parking_slot_timestamps = []
+speed_bump_timestamps = []
+occupancy_object_timestamps = []
 car_xb, car_yb = load_car_params_patch()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
@@ -478,32 +480,123 @@ control_params = {
 }
 
 parking_space_params = {
-    'fill_color' : "gray",
-    'line_color' : "black",
-    'line_width' : 1,
-    'fill_alpha' : 0.3,
-    'legend_label' : 'parking_space'
+  'fill_color' : "gray",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'parking_space'
 }
 
 road_mark_params = {
-    'fill_color' : "green",
-    'line_color' : "black",
-    'line_width' : 1,
-    'fill_alpha' : 0.7,
-    'legend_label' : 'road_mark'
+  'fill_color' : "green",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.7,
+  'legend_label' : 'road_mark'
+}
+
+road_obstacle_params = {
+  'legend_label' : 'ehr_groundline',
+  'line_width' : 2,
+  'line_color' : 'black',
+  'line_dash' : 'dotted',
+  'line_alpha' : 1
 }
 
 ground_line_params = {
-    'legend_label' : 'ground_line',
-    'line_width' : 2,
-    'line_color' : 'green',
-    'line_dash' : 'dotted',
-    'line_alpha' : 1
+  'legend_label' : 'ground_line',
+  'line_width' : 2,
+  'line_color' : 'green',
+  'line_dash' : 'dotted',
+  'line_alpha' : 1
+}
+
+parking_slot_params = {
+  'fill_color' : "turquoise",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'parking_slot'
+}
+
+parking_slot_text_params = {
+  'legend_label' : 'slot_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
+}
+
+release_slot_params = {
+  'fill_color' : "turquoise",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.8,
+  'legend_label' : 'parking_slot'
+}
+
+release_slot_text_params = {
+  'legend_label' : 'slot_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
+}
+
+parking_release_slot_params = {
+  'fill_color' : "orange",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'parking_slot'
+}
+
+plan_release_slot_text_params = {
+  'legend_label' : 'slot_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
+}
+
+select_parking_slot_params = {
+  'fill_color' : "blue",
+  'line_color' : "black",
+  'line_width' : 2,
+  'fill_alpha' : 0.3,
+  'legend_label' : 'parking_slot'
+}
+
+select_parking_slot_text_params = {
+  'legend_label' : 'slot_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
+}
+
+speed_bump_params = {
+  'fill_color' : "yellow",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.7,
+  'legend_label' : 'speed_bump'
+}
+
+occupancy_object_params = {
+  'fill_color' : "chocolate",
+  'line_color' : "black",
+  'line_width' : 1,
+  'fill_alpha' : 0.7,
+  'legend_label' : 'occ_obj'
+}
+
+occupancy_object_text_params = {
+  'legend_label' : 'occ_obj_info',
+  'text_color' : "red",
+  'text_align':"center",
+  'text_font_size':"10pt"
 }
 
 table_params={
-    'width': 600,
-    'height':500,
+  'width': 600,
+  'height':500,
 }
 
 # MeasureTools类,用于在fig中测试距离
@@ -718,8 +811,6 @@ def findME(data, t):
 
 
 def draw_local_view(dataLoader, layer_manager):
-    g_is_display_enu = get_g_is_display_enu()
-    print("g_is_display_enu:", g_is_display_enu)
     #define figure
     # 定义 local_view fig
     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=1000, match_aspect = True, aspect_scale=1)
@@ -748,10 +839,19 @@ def draw_local_view(dataLoader, layer_manager):
     global rl_object_timestamps
     global rr_object_timestamps
     global lidar_object_timestamps
-    global ehr_parking_map_timestamps
+    global ehr_static_map_timestamps
     global ground_line_timestamps
+    global parking_slot_timestamps
+    global speed_bump_timestamps
+    global occupancy_object_timestamps
+    g_is_display_enu = global_var.get_value('g_is_display_enu')
+    # print("g_is_display_enu:", g_is_display_enu)
     # if len(dataLoader.plan_debug_msg['data'] != 0):
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      scene_type = plan_debug.frame_info.scene_type
+      if scene_type == 'HPP':
+        global_var.set_value('g_is_display_enu', True)
+        g_is_display_enu = True
       t = dataLoader.plan_debug_msg["t"][i]
       plan_debug_ts.append(t)
       plan_debug_timestamps.append(dataLoader.plan_debug_msg["timestamp"][i])
@@ -767,8 +867,11 @@ def draw_local_view(dataLoader, layer_manager):
       prediction_timestamp = input_topic_timestamp.prediction
       vehicle_service_timestamp = input_topic_timestamp.vehicle_service
       control_output_timestamp = input_topic_timestamp.control_output
-      ehr_parking_map_timestamp = input_topic_timestamp.ehr_parking_map
+      ehr_static_map_timestamp = input_topic_timestamp.map
       ground_line_timestamp = input_topic_timestamp.ground_line
+      parking_slot_timestamp = input_topic_timestamp.parking_fusion
+      speed_bump_timestamp = input_topic_timestamp.fusion_speed_bump
+      occupancy_object_timestamp = input_topic_timestamp.fusion_occupancy_object
       fusion_object_timestamps.append(fusion_object_timestamp)
       fusion_road_timestamps.append(fusion_road_timestamp)
       localization_timestamps.append(localization_timestamp)
@@ -776,8 +879,11 @@ def draw_local_view(dataLoader, layer_manager):
       prediction_timestamps.append(prediction_timestamp)
       vehicle_service_timestamps.append(vehicle_service_timestamp)
       control_output_timestamps.append(control_output_timestamp)
-      ehr_parking_map_timestamps.append(ehr_parking_map_timestamp)
+      ehr_static_map_timestamps.append(ehr_static_map_timestamp)
       ground_line_timestamps.append(ground_line_timestamp)
+      parking_slot_timestamps.append(parking_slot_timestamp)
+      speed_bump_timestamps.append(speed_bump_timestamp)
+      occupancy_object_timestamps.append(occupancy_object_timestamp)
     #print(vehicle_service_timestamps)
     #print(control_output_timestamps)
     #print(localization_timestamps)
@@ -924,6 +1030,7 @@ def draw_local_view(dataLoader, layer_manager):
     # 加载车道线
     lane_generator_dict = {}
     centerline_generator_dict = {}
+    line_info_list = []
     center_line_list = []
     if dataLoader.road_msg['enable'] == True:
       #print(dataLoader.road_msg['timestamp'])
@@ -1155,11 +1262,11 @@ def draw_local_view(dataLoader, layer_manager):
             else:
               plan_traj_x, plan_traj_y = [], []
 
-          plan_point_1_generator.xys.append((plan_dict[0]['y'], plan_dict[0]['x'],[0.03]*len(plan_dict[0]['x'])))
-          plan_point_2_generator.xys.append((plan_dict[1]['y'], plan_dict[1]['x'],[0.03]*len(plan_dict[1]['x'])))
-          plan_point_3_generator.xys.append((plan_dict[2]['y'], plan_dict[2]['x'],[0.03]*len(plan_dict[2]['x'])))
-          plan_point_4_generator.xys.append((plan_dict[3]['y'], plan_dict[3]['x'],[0.03]*len(plan_dict[3]['x'])))
-          plan_point_5_generator.xys.append((plan_dict[4]['y'], plan_dict[4]['x'],[0.03]*len(plan_dict[4]['x'])))
+        plan_point_1_generator.xys.append((plan_dict[0]['y'], plan_dict[0]['x'],[0.03]*len(plan_dict[0]['x'])))
+        plan_point_2_generator.xys.append((plan_dict[1]['y'], plan_dict[1]['x'],[0.03]*len(plan_dict[1]['x'])))
+        plan_point_3_generator.xys.append((plan_dict[2]['y'], plan_dict[2]['x'],[0.03]*len(plan_dict[2]['x'])))
+        plan_point_4_generator.xys.append((plan_dict[3]['y'], plan_dict[3]['x'],[0.03]*len(plan_dict[3]['x'])))
+        plan_point_5_generator.xys.append((plan_dict[4]['y'], plan_dict[4]['x'],[0.03]*len(plan_dict[4]['x'])))
         plan_generator.xys.append((plan_traj_y, plan_traj_x))
       plan_generator.ts = np.array(plan_debug_ts)
 
@@ -1193,7 +1300,10 @@ def draw_local_view(dataLoader, layer_manager):
             control_generator.xys.append(([], []))
             continue
           loc_msg = find(dataLoader.loc_msg, localization_timestamps[i_index])
-          mpc_dx, mpc_dy, mpc_dtheta = generate_control(ctrl_msg, loc_msg, g_is_display_enu)
+          try:
+            mpc_dx, mpc_dy, mpc_dtheta = generate_control(ctrl_msg, loc_msg, g_is_display_enu)
+          except:
+            mpc_dx, mpc_dy, mpc_dtheta = [], [], []
           control_generator.xys.append((mpc_dy, mpc_dx))
       control_generator.ts = np.array(plan_debug_ts)
       control_layer = CurveLayer(fig_local_view, control_params)
@@ -1408,9 +1518,12 @@ def draw_local_view(dataLoader, layer_manager):
     # # # 加载雷达障碍物
     load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
 
-    # 加载hpp ehr
-    load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
-    load_ground_line(dataLoader, layer_manager, fig_local_view)
+    # # 加载hpp
+    load_ehr_static_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    load_ground_line(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    load_parking_slot(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    load_speed_bump(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    load_occupancy_object(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
 
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 
@@ -2022,41 +2135,170 @@ def load_obstacle_radar(dataLoader, layer_manager, fig_local_view):
       layer_manager.AddLayer(obstacle_text_layer6, 'obstacle_text_layer6', obstacle_rl_text_generate, 'obstacle_rl_text_generate', 3)
       layer_manager.AddLayer(obstacle_text_layer7, 'obstacle_text_layer7', obstacle_rr_text_generate, 'obstacle_rr_text_generate', 3)
 
-def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
-  if dataLoader.ehr_parking_map_msg['enable'] == True:
+def load_ehr_static_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
+  if dataLoader.ehr_static_map_msg['enable'] == True:
     parking_space_generate = CommonGenerator()
     road_mark_generate = CommonGenerator()
+    road_obstacle_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, ehr_parking_map_msg = find(dataLoader.ehr_parking_map_msg, ehr_parking_map_timestamps[i])
-      if not flag:
+      ehr_static_map_msg = find(dataLoader.ehr_static_map_msg, ehr_static_map_timestamps[i])
+      if ehr_static_map_msg == None:
         parking_space_generate.xys.append(([], [], []))
         road_mark_generate.xys.append(([], [], []))
-        # print('find ehr_parking_map_msg error')
+        road_obstacle_generate.xys.append(([], [], []))
+        # print('find ehr_static_map_msg error')
         continue
-      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-      parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu)
+      loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+      parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y, road_obstacle_x_vec, road_obstacle_y_vec = generate_ehr_static_map(ehr_static_map_msg, loc_msg, g_is_display_enu)
       road_mark_generate.xys.append((road_mark_boxes_y, road_mark_boxes_x))
       parking_space_generate.xys.append((parking_space_boxes_y, parking_space_boxes_x))
+      road_obstacle_generate.xys.append((road_obstacle_y_vec, road_obstacle_x_vec))
 
     parking_space_generate.ts = np.array(plan_debug_ts)
-    parkingspace_params_layer = PatchLayer(fig_local_view ,parking_space_params)
-    layer_manager.AddLayer(parkingspace_params_layer, 'parkingspace_params_layer', parking_space_generate, 'parking_space_generate', 2)
+    parking_space_layer = PatchLayer(fig_local_view, parking_space_params)
+    layer_manager.AddLayer(parking_space_layer, 'parking_space_layer', parking_space_generate, 'parking_space_generate', 2)
 
     road_mark_generate.ts = np.array(plan_debug_ts)
-    road_mark_params_layer = PatchLayer(fig_local_view ,road_mark_params)
-    layer_manager.AddLayer(road_mark_params_layer, 'road_mark_params_layer', road_mark_generate, 'road_mark_generate', 2)
+    road_mark_layer = PatchLayer(fig_local_view, road_mark_params)
+    layer_manager.AddLayer(road_mark_layer, 'road_mark_layer', road_mark_generate, 'road_mark_generate', 2)
+
+    road_obstacle_generate.ts = np.array(plan_debug_ts)
+    road_obstacle_layer = MultiCurveLayer(fig_local_view, road_obstacle_params)
+    layer_manager.AddLayer(road_obstacle_layer, 'road_obstacle_layer', road_obstacle_generate, 'road_obstacle_generate', 2)
 
 def load_ground_line(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
-  if dataLoader.ground_line_msg['enable'] == True:
-    groundline_generate = CommonGenerator()
+  if dataLoader.fus_ground_line_msg['enable'] == True:
+    ground_line_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      flag, ground_line_msg = find(dataLoader.ground_line_msg, ground_line_timestamps[i])
-      if not flag:
-        groundline_generate.xys.append(([], []))
+      ground_line_msg = find(dataLoader.fus_ground_line_msg, ground_line_timestamps[i])
+      if ground_line_msg == None:
+        ground_line_generate.xys.append(([], []))
         continue
-      flag, loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-      groundline_x_vec, groundline_y_vec, groundline_id_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
-      groundline_generate.xys.append((groundline_y_vec, groundline_x_vec))
-    groundline_generate.ts = np.array(plan_debug_ts)
-    groundline_params_layer = MultiCurveLayer(fig_local_view ,ground_line_params)
-    layer_manager.AddLayer(groundline_params_layer, 'groundline_params_layer', groundline_generate, 'groundline_generate', 2)
+      loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+      groundline_x_vec, groundline_y_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
+      ground_line_generate.xys.append((groundline_y_vec, groundline_x_vec))
+    ground_line_generate.ts = np.array(plan_debug_ts)
+    ground_line_layer = MultiCurveLayer(fig_local_view, ground_line_params)
+    layer_manager.AddLayer(ground_line_layer, 'ground_line_layer', ground_line_generate, 'ground_line_generate', 2)
+
+def load_parking_slot(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
+  if dataLoader.fus_parking_msg['enable'] == True:
+    parking_slot_generate = CommonGenerator()
+    release_slot_generate = CommonGenerator()
+    plan_release_slot_generate = CommonGenerator()
+    select_parking_slot_generate = CommonGenerator()
+    parking_slot_text_generate = TextGenerator()
+    release_slot_text_generate = TextGenerator()
+    plan_release_slot_text_generate = TextGenerator()
+    select_parking_slot_text_generate = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      parking_slot_msg = find(dataLoader.fus_parking_msg, parking_slot_timestamps[i])
+      if parking_slot_msg == None:
+        parking_slot_generate.xys.append(([], []))
+        release_slot_generate.xys.append(([], []))
+        plan_release_slot_generate.xys.append(([], []))
+        select_parking_slot_generate.xys.append(([], []))
+        parking_slot_text_generate.xys.append(([], [], []))
+        release_slot_text_generate.xys.append(([], [], []))
+        plan_release_slot_text_generate.xys.append(([], [], []))
+        select_parking_slot_text_generate.xys.append(([], [], []))
+        continue
+      plan_msg = find(dataLoader.plan_msg, plan_debug_timestamps[i])
+      if plan_msg == None:
+        successful_slot_info_list = []
+      else:
+        successful_slot_info_list = plan_msg.successful_slot_info_list
+      loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+      parking_slot_info, release_slot_info, plan_release_slot_info, select_parking_slot_info = generate_parking_slot(parking_slot_msg, loc_msg, successful_slot_info_list)
+      if g_is_display_enu:
+        parking_slot_generate.xys.append((parking_slot_info['parking_slot_y'], parking_slot_info['parking_slot_x']))
+        release_slot_generate.xys.append((release_slot_info['parking_slot_y'], release_slot_info['parking_slot_x']))
+        plan_release_slot_generate.xys.append((plan_release_slot_info['parking_slot_y'], plan_release_slot_info['parking_slot_x']))
+        select_parking_slot_generate.xys.append((select_parking_slot_info['parking_slot_y'], select_parking_slot_info['parking_slot_x']))
+        parking_slot_text_generate.xys.append((parking_slot_info['pos_y'], parking_slot_info['pos_x'], parking_slot_info['parking_slot_label']))
+        release_slot_text_generate.xys.append((release_slot_info['pos_y'], release_slot_info['pos_x'], release_slot_info['parking_slot_label']))
+        plan_release_slot_text_generate.xys.append((plan_release_slot_info['pos_y'], plan_release_slot_info['pos_x'], plan_release_slot_info['parking_slot_label']))
+        select_parking_slot_text_generate.xys.append((select_parking_slot_info['pos_y'], select_parking_slot_info['pos_x'], select_parking_slot_info['parking_slot_label']))
+      else:
+        parking_slot_generate.xys.append((parking_slot_info['parking_slot_y_rel'], parking_slot_info['parking_slot_x_rel']))
+        release_slot_generate.xys.append((release_slot_info['parking_slot_y_rel'], release_slot_info['parking_slot_x_rel']))
+        plan_release_slot_generate.xys.append((plan_release_slot_info['parking_slot_y_rel'], plan_release_slot_info['parking_slot_x_rel']))
+        select_parking_slot_generate.xys.append((select_parking_slot_info['parking_slot_y_rel'], select_parking_slot_info['parking_slot_x_rel']))
+        parking_slot_text_generate.xys.append((parking_slot_info['pos_y_rel'], parking_slot_info['pos_x_rel'], parking_slot_info['parking_slot_label']))
+        release_slot_text_generate.xys.append((release_slot_info['pos_y_rel'], release_slot_info['pos_x_rel'], release_slot_info['parking_slot_label']))
+        plan_release_slot_text_generate.xys.append((plan_release_slot_info['pos_y_rel'], plan_release_slot_info['pos_x_rel'], plan_release_slot_info['parking_slot_label']))
+        select_parking_slot_text_generate.xys.append((select_parking_slot_info['pos_y_rel'], select_parking_slot_info['pos_x_rel'], select_parking_slot_info['parking_slot_label']))
+
+    parking_slot_generate.ts = np.array(plan_debug_ts)
+    release_slot_generate.ts = np.array(plan_debug_ts)
+    plan_release_slot_generate.ts = np.array(plan_debug_ts)
+    select_parking_slot_generate.ts = np.array(plan_debug_ts)
+    parking_slot_text_generate.ts = np.array(plan_debug_ts)
+    release_slot_text_generate.ts = np.array(plan_debug_ts)
+    plan_release_slot_text_generate.ts = np.array(plan_debug_ts)
+    select_parking_slot_text_generate.ts = np.array(plan_debug_ts)
+
+    parking_slot_layer = PatchLayer(fig_local_view, parking_slot_params)
+    layer_manager.AddLayer(parking_slot_layer, 'parking_slot_layer', parking_slot_generate, 'parking_slot_generate', 2)
+    parking_slot_text_layer = TextLayer(fig_local_view, parking_slot_text_params)
+    layer_manager.AddLayer(parking_slot_text_layer, 'parking_slot_text_layer', parking_slot_text_generate, 'parking_slot_text_generate', 3)
+
+    release_slot_layer = PatchLayer(fig_local_view, release_slot_params)
+    layer_manager.AddLayer(release_slot_layer, 'release_slot_layer', release_slot_generate, 'release_slot_generate', 2)
+    release_slot_text_layer = TextLayer(fig_local_view, release_slot_text_params)
+    layer_manager.AddLayer(release_slot_text_layer, 'release_slot_text_layer', release_slot_text_generate, 'release_slot_text_generate', 3)
+
+    plan_release_slot_layer = PatchLayer(fig_local_view, parking_release_slot_params)
+    layer_manager.AddLayer(plan_release_slot_layer, 'plan_release_slot_layer', plan_release_slot_generate, 'plan_release_slot_generate', 2)
+    plan_release_slot_text_layer = TextLayer(fig_local_view, plan_release_slot_text_params)
+    layer_manager.AddLayer(plan_release_slot_text_layer, 'plan_release_slot_text_layer', plan_release_slot_text_generate, 'plan_release_slot_text_generate', 3)
+
+    select_parking_slot_layer = PatchLayer(fig_local_view, select_parking_slot_params)
+    layer_manager.AddLayer(select_parking_slot_layer, 'select_parking_slot_layer', select_parking_slot_generate, 'select_parking_slot_generate', 2)
+    select_parking_slot_text_layer = TextLayer(fig_local_view, select_parking_slot_text_params)
+    layer_manager.AddLayer(select_parking_slot_text_layer, 'select_parking_slot_text_layer', select_parking_slot_text_generate, 'select_parking_slot_text_generate', 3)
+
+def load_speed_bump(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
+  if dataLoader.fus_speed_bump_msg['enable'] == True:
+    speed_bump_generate = CommonGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      speed_bump_msg = find(dataLoader.fus_speed_bump_msg, speed_bump_timestamps[i])
+      if speed_bump_msg == None:
+        speed_bump_generate.xys.append(([], []))
+        continue
+      loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+      speed_bump_info = generate_speed_bump(speed_bump_msg, loc_msg)
+      if g_is_display_enu:
+        speed_bump_generate.xys.append((speed_bump_info['speed_bump_y'], speed_bump_info['speed_bump_x']))
+      else:
+        speed_bump_generate.xys.append((speed_bump_info['speed_bump_y_rel'], speed_bump_info['speed_bump_x_rel']))
+    speed_bump_generate.ts = np.array(plan_debug_ts)
+    speed_bump_layer = PatchLayer(fig_local_view, speed_bump_params)
+    layer_manager.AddLayer(speed_bump_layer, 'speed_bump_layer', speed_bump_generate, 'speed_bump_generate', 2)
+
+def load_occupancy_object(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
+  if dataLoader.fus_occ_objects_msg['enable'] == True:
+    occupancy_object_generate = CommonGenerator()
+    occupancy_object_text_generate = TextGenerator()
+    for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+      fus_occ_obj_msg = find(dataLoader.fus_occ_objects_msg, occupancy_object_timestamps[i])
+      if fus_occ_obj_msg == None:
+        occupancy_object_generate.xys.append(([], []))
+        occupancy_object_text_generate.xys.append(([], [], []))
+        continue
+      loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+      obstacles_info_all = load_occupancy_obstacle(fus_occ_obj_msg, True, loc_msg, plan_debug.environment_model_info)
+      obstacles_info = obstacles_info_all[0]
+      if g_is_display_enu:
+        occupancy_object_generate.xys.append((obstacles_info['obstacles_y'], obstacles_info['obstacles_x']))
+        occupancy_object_text_generate.xys.append((obstacles_info['pos_y'], obstacles_info['pos_x'], obstacles_info['obs_label']))
+      else:
+        occupancy_object_generate.xys.append((obstacles_info['obstacles_y_rel'], obstacles_info['obstacles_x_rel']))
+        occupancy_object_text_generate.xys.append((obstacles_info['pos_y_rel'], obstacles_info['pos_x_rel'], obstacles_info['obs_label']))
+
+    occupancy_object_generate.ts = np.array(plan_debug_ts)
+    occupancy_object_text_generate.ts = np.array(plan_debug_ts)
+    occupancy_object_layer = PatchLayer(fig_local_view, occupancy_object_params)
+    layer_manager.AddLayer(occupancy_object_layer, 'occupancy_object_layer', occupancy_object_generate, 'occupancy_object_generate', 2)
+    occupancy_object_text_layer = TextLayer(fig_local_view, occupancy_object_text_params)
+    layer_manager.AddLayer(occupancy_object_text_layer, 'occupancy_object_text_layer', occupancy_object_text_generate, 'occupancy_object_text_generate', 3)

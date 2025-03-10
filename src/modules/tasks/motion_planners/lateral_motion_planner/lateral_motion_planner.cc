@@ -91,28 +91,25 @@ bool LateralMotionPlanner::Execute() {
   auto start_time = IflyTime::Now_ms();
 
   // assemble input
-  AssembleInput();
-
+  if (!AssembleInput()) {
+    LOG_DEBUG("LateralMotionPlanner AssembleInput failed\n");
+    SaveDebugInfo();
+    return false;
+  }
   // update
-  Update();
-
-  // record input and output
-  DebugInfoManager::GetInstance()
-      .GetDebugInfoPb()
-      ->mutable_lateral_motion_planning_input()
-      ->CopyFrom(planning_input_);
-  DebugInfoManager::GetInstance()
-      .GetDebugInfoPb()
-      ->mutable_lateral_motion_planning_output()
-      ->CopyFrom(planning_problem_ptr_->GetOutput());
+  if (!Update()) {
+    LOG_DEBUG("LateralMotionPlanner Solve failed\n");
+    SaveDebugInfo();
+    return false;
+  }
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LateralMotionCostTime", end_time - start_time);
-
+  SaveDebugInfo();
   return true;
 }
 
-void LateralMotionPlanner::AssembleInput() {
+bool LateralMotionPlanner::AssembleInput() {
   // set init state
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -145,6 +142,11 @@ void LateralMotionPlanner::AssembleInput() {
       general_lateral_decider_output.lane_change_scene;
   const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
+
+  if (enu_ref_path.size() == 0 || enu_ref_theta.size() == 0 ||
+      !session_->environmental_model().location_valid()) {
+    return false;
+  }
 
   // static const double min_v_cruise = 0.5;
   const double ref_vel =
@@ -319,6 +321,34 @@ void LateralMotionPlanner::AssembleInput() {
   const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
+  double max_wheel_angle =
+      360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc/noa
+  double max_wheel_angle_rate =
+      240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc/noa
+  if (session_->is_hpp_scene()) {
+    max_wheel_angle = 540.0 / 13.0 / 57.3;  // 360 deg steering angle for hpp
+    max_wheel_angle_rate =
+        360.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for hpp
+  }
+  const double kv2 =
+      config_.curv_factor *
+      std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
+  planning_weight_ptr_->SetMaxAcc(std::max(max_wheel_angle * kv2, 0.2));
+  planning_weight_ptr_->SetMaxJerk(std::max(max_wheel_angle_rate * kv2, 0.2));
+
+  if (session_->is_hpp_scene()) {
+    // const bool &search_success = session_->mutable_planning_context()
+    //                                ->mutable_lateral_obstacle_decider_output()
+    //                                .search_success;
+    const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+    planning_weight_ptr_->SetIsSearchSuccess(search_success);
+    planning_weight_ptr_->SetLateralMotionWeight(
+        pnc::lateral_planning::LANE_KEEP, planning_input_);
+    planning_input_.set_complete_follow(complete_follow);
+    planning_input_.set_motion_plan_concerned_index(
+        config_.motion_plan_concerned_end_index);
+    return true;
+  }
 
   // split
   bool split_scene = false;
@@ -394,6 +424,7 @@ void LateralMotionPlanner::AssembleInput() {
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
 
+  planning_weight_ptr_->SetIsSearchSuccess(false);
   // set weight
   if (lane_change_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
@@ -487,9 +518,11 @@ void LateralMotionPlanner::AssembleInput() {
   planning_input_.set_complete_follow(complete_follow);
   planning_input_.set_motion_plan_concerned_index(
       motion_plan_concerned_end_index);
+
+  return true;
 }
 
-void LateralMotionPlanner::Update() {
+bool LateralMotionPlanner::Update() {
   const double concerned_start_q_jerk =
       planning_weight_ptr_->GetConcernedStartQJerk();
   JSON_DEBUG_VALUE("concerned_start_q_jerk", concerned_start_q_jerk);
@@ -509,6 +542,10 @@ void LateralMotionPlanner::Update() {
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
 
+  // if (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL) {
+  //   return false;
+  // }
+  bool is_solver_success = true;
   // update planning_output
   const auto &planning_output = planning_problem_ptr_->GetOutput();
 
@@ -553,8 +590,14 @@ void LateralMotionPlanner::Update() {
     }
     s_vec[i + 1] = s;
     t_vec[i + 1] = t;
+    if (std::fabs(planning_output.theta_vec(i) - planning_input_.ref_theta_vec(i)) * 57.3 > 90) {
+      is_solver_success = false;
+    }
   }
 
+  if ((!is_solver_success) || (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL)) {
+    return false;
+  }
   // generate motion planning output into planning_context
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
@@ -696,6 +739,7 @@ void LateralMotionPlanner::Update() {
           i, traj_points[i].s, traj_points[i].l);
     }
   }
+  return true;
 }
 
 std::shared_ptr<planning_math::KDPath>
@@ -723,5 +767,17 @@ LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
     return nullptr;
   }
   return std::make_shared<planning_math::KDPath>(std::move(lat_path_points));
+}
+
+void LateralMotionPlanner::SaveDebugInfo() {
+  // record input and output
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_lateral_motion_planning_input()
+      ->CopyFrom(planning_input_);
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_lateral_motion_planning_output()
+      ->CopyFrom(planning_problem_ptr_->GetOutput());
 }
 }  // namespace planning

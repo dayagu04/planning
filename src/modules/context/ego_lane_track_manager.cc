@@ -66,10 +66,14 @@ constexpr double kAverageThetaDiffCostWeight = 0.5;
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
-    const EgoPlanningConfigBuilder* config_builder,planning::framework::Session* session) {
+    const EgoPlanningConfigBuilder* config_builder, planning::framework::Session* session) {
   session_ = session;
-  config_ = config_builder->cast<EgoPlanningConfig>();
+  SetConfig(config_builder);
   // order_ids_of_same_zero_relative_id_.clear();
+}
+
+void EgoLaneTrackManger::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+  config_ = config_builder->cast<EgoPlanningConfig>();
 }
 
 void EgoLaneTrackManger::TrackEgoLane(
@@ -2377,7 +2381,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
       return;
     }
 
-    const auto& right_lane_frenet_crd = 
+    const auto& right_lane_frenet_crd =
         relative_right_lane->get_lane_frenet_coord();
     double ego_s_base_right = 0.0;
     double ego_l_base_right = 0.0;

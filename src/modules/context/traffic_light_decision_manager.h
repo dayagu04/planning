@@ -12,6 +12,8 @@ class TrafficLightDecisionManager {
 
   ~TrafficLightDecisionManager(){};
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   bool Update(const iflyauto::CameraPerceptionTsrInfo &tsr_info);
 
   const iflyauto::CameraPerceptionTrafficStatus &GetTrafficStatus() {

@@ -1,7 +1,11 @@
 #pragma once
-
+#include <string>
 #include <unordered_map>
 
+#include <utility>
+#include <vector>
+
+#include "src/library/arastar_lib/hybrid_ara_data.h"
 #include "task_basic_types.h"
 
 namespace planning {
@@ -19,10 +23,19 @@ struct LateralObstacleHistoryInfo {
   bool rear_car = false;
 };
 
+enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
+
 struct LateralObstacleDeciderOutput {
+  ara_star::HybridARAStarResult hybrid_ara_result;
   std::unordered_map<uint32_t, LatObstacleDecisionType> lat_obstacle_decision;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
-};
+  SearchResult search_result = SearchResult::NO_SEARCH;
 
+  void Clear() {
+    hybrid_ara_result.Clear();
+    lat_obstacle_decision.clear();
+    search_result = SearchResult::NO_SEARCH;
+  }
+};
 }  // namespace planning

@@ -68,10 +68,6 @@ const bool ApaWorld::Update() {
                             measure_data_ptr_, obstacle_manager_ptr_,
                             collision_detector_interface_ptr_);
 
-  // 旧的车位管理 需要等其他模块适配新车位管理后尽快删除
-  // retired_slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,
-  //                           measure_data_ptr_, obstacle_manager_ptr_);
-
   return true;
 }
 

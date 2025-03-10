@@ -7,6 +7,8 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "log_glog.h"
+#include "planning_plan_c.h"
+#include "apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -53,7 +55,7 @@ void ApaPredictPathManager::Update(
     l2g_tf.Init(measure_data_ptr->GetPos(), measure_data_ptr->GetHeading());
     for (size_t i = 0;
          i < std::min(control_trajectory.control_result_points_size,
-                      static_cast<uint8>(CONTROL_RESULT_POINTS_NUM));
+                      static_cast<uint8>(CONTROL_RESULT_POINTS_MAX_NUM));
          ++i) {
       const auto& pt = control_trajectory.control_result_points[i];
       pnc::geometry_lib::PathPoint car_predict_pt;
@@ -89,7 +91,7 @@ void ApaPredictPathManager::Update(
       int min_index = -1;
       for (int i = 0;
            i < std::min(planning_output->trajectory.trajectory_points_size,
-                        static_cast<uint8>(PLANNING_TRAJ_POINTS_NUM));
+                        static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
            ++i) {
         const iflyauto::TrajectoryPoint& planning_pt =
             planning_output->trajectory.trajectory_points[i];
@@ -105,7 +107,7 @@ void ApaPredictPathManager::Update(
       pnc::geometry_lib::PathPoint car_predict_pt;
       for (int i = min_index + 1;
            i < std::min(planning_output->trajectory.trajectory_points_size,
-                        static_cast<uint8>(PLANNING_TRAJ_POINTS_NUM)) &&
+                        static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
            predict_pt_vec_.back().s < predict_distance;
            ++i) {
         car_predict_pt.pos

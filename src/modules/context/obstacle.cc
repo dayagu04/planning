@@ -1,5 +1,7 @@
 #include "obstacle.h"
 
+#include <cstddef>
+
 #include "common.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
@@ -138,6 +140,7 @@ namespace planning {
 Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
                    const bool is_static, double start_timestamp)
     : id_(id),
+      source_type_(SourceType::OD),
       perception_id_(prediction_object.id),
       timestamp_(prediction_object.timestamp_us / 1000000.0),
       is_static_(is_static),
@@ -292,6 +295,7 @@ Obstacle::Obstacle(const Obstacle *obstacle) {
   car_ego_polygon_ = obstacle->car_ego_polygon_;
   perception_points_.reserve(obstacle->perception_points().size());
   perception_points_ = obstacle->perception_points();
+  source_type_ = obstacle->source_type();
 }
 
 // Obstacle::Obstacle(int id,
@@ -392,11 +396,117 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_id_(id),
       is_static_(true),
       perception_points_(points) {
-  type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
   velocity_ = 0.0;
-  if (id_ > 6000000) {
+  acc_ = 0.0;
+  fusion_source_ = 1;
+
+  if (id_ > 8000000) {  // ehr column box
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN;
+    source_type_ = SourceType::MAP;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
+  } else if (id_ > 6000000) {  // parking space
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_SOLT;
+    source_type_ = SourceType::ParkingSlot;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  } else if (id_ > 5000000) {  // ground line
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE;
+    source_type_ = SourceType::GroundLine;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  }
+  if (perception_polygon_.is_convex() &&
+      perception_polygon_.points().size() >= 3) {
+    perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
+    if (perception_polygon_.area() < 0.01) {
+      valid_ = false;
+    }
+  } else {
+    valid_ = false;
+    planning_math::LineSegment2d axis(
+        planning_math::Vec2d(perception_points_.front().x(),
+                             perception_points_.front().y()),
+        planning_math::Vec2d(perception_points_.back().x(),
+                             perception_points_.back().y()));
+    perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
+    perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
+  }
+  x_center_ = perception_bounding_box_.center_x();
+  y_center_ = perception_bounding_box_.center_y();
+  width_ = perception_bounding_box_.width();
+  length_ = perception_bounding_box_.length();
+  yaw_ = perception_bounding_box_.heading();
+  velocity_angle_ = perception_bounding_box_.heading();
+  std::vector<planning_math::Vec2d> ego_polygon_points;
+  for (const auto &point : perception_polygon_.points()) {
+    ego_polygon_points.emplace_back(
+        planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
+  }
+  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
+                                                   &obstacle_ego_polygon_)) {
+    LOG_DEBUG("polygon_debug invalid ego polygon\n");
+  }
+}
+
+Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
+                   const iflyauto::FusionOccupancyObject &occupancy_objects)
+    : id_(id),
+      perception_id_(id),
+      is_static_(true),
+      perception_points_(points) {
+  velocity_ = 0.0;
+  acc_ = 0.0;
+  fusion_source_ = 1;
+
+  if (id_ > 7000000) {  // occupancy object
+    type_ = occupancy_objects.common_occupancy_info.type;
+    if (type_ < iflyauto::OBJECT_TYPE_OCC_EMPTY) {
+      type_ = iflyauto::OBJECT_TYPE_OCC_EMPTY;
+    }
+    source_type_ = SourceType::OCC;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  }
+  if (perception_polygon_.is_convex() &&
+      perception_polygon_.points().size() >= 3) {
+    perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
+    if (perception_polygon_.area() < 0.01) {
+      valid_ = false;
+    }
+  } else {
+    valid_ = false;
+    planning_math::LineSegment2d axis(
+        planning_math::Vec2d(perception_points_.front().x(),
+                             perception_points_.front().y()),
+        planning_math::Vec2d(perception_points_.back().x(),
+                             perception_points_.back().y()));
+    perception_bounding_box_ = planning_math::Box2d(axis, 0.01);
+    perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
+  }
+  x_center_ = perception_bounding_box_.center_x();
+  y_center_ = perception_bounding_box_.center_y();
+  width_ = perception_bounding_box_.width();
+  length_ = perception_bounding_box_.length();
+  yaw_ = planning_math::NormalizeAngle(
+      occupancy_objects.common_occupancy_info.heading_angle);
+  velocity_ = std::hypot(occupancy_objects.common_occupancy_info.velocity.x,
+                         occupancy_objects.common_occupancy_info.velocity.y);
+  velocity_angle_ =
+      std::atan2(occupancy_objects.common_occupancy_info.velocity.y,
+                 occupancy_objects.common_occupancy_info.velocity.x);
+  acc_ = 0;
+  is_VRU_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) || (type_ == iflyauto::OBJECT_TYPE_OCC_CYCLIST);
+  is_car_ = (type_ == iflyauto::OBJECT_TYPE_OCC_CAR);
+
+  std::vector<planning_math::Vec2d> ego_polygon_points;
+  for (const auto &point : perception_polygon_.points()) {
+    ego_polygon_points.emplace_back(
+        planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
+  }
+  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
+                                                   &obstacle_ego_polygon_)) {
+    LOG_DEBUG("polygon_debug invalid ego polygon\n");
   }
 }
 

@@ -16,9 +16,10 @@
 #include "Eigen/Core"
 
 #include "apa_param_config.h"
+#include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "common.h"
 #include "common.pb.h"
 #include "common_c.h"
@@ -135,7 +136,11 @@ const bool SlotManager::ProcessRawSlot(
     const iflyauto::ParkingFusionSlot &parking_fusion_slot,
     common::SlotInfo &slot_info) {
   slot_info.Clear();
-  // transform perception slot to planning slot.
+
+  ILOG_INFO << "id= " << parking_fusion_slot.id
+            << ",fusion release = " << parking_fusion_slot.allow_parking
+            << ",type = " << parking_fusion_slot.resource_type;
+
   if (!SlotInfoTransfer(parking_fusion_slot, slot_info)) {
     ILOG_INFO << "fusion slot is err";
     return false;
@@ -162,6 +167,12 @@ const bool SlotManager::ProcessRawSlot(
 
   // make slot more rectangular
   ModifySlot2Rectangle(slot_info);
+
+  // do not consider hpp map slot
+  if (IsHPPMAPSlot(parking_fusion_slot)) {
+    ILOG_INFO << "hpp map slot ";
+    return false;
+  }
 
   return true;
 }
@@ -348,7 +359,7 @@ const bool SlotManager::SlotInfoTransfer(
   double accumulated_x = 0.0;
   double accumulated_y = 0.0;
   static const int fusion_slots_size = 4;
-  if (NUM_OF_CORNER_POINT_NUM != fusion_slots_size) {
+  if (FUSION_PARKING_SLOT_CORNER_POINT_NUM != fusion_slots_size) {
     return false;
   }
   for (int j = 0; j < fusion_slots_size; j++) {
@@ -825,8 +836,6 @@ const double SlotManager::CalAngleSlot2Car(
 }
 
 bool SlotManager::UpdateSlotsInParking() {
-  ILOG_INFO << "apa state is in parking";
-
   size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
 
   if (state_machine_ptr_->GetStateMachine() ==
@@ -1529,6 +1538,15 @@ void SlotManager::UpdateReleaseSlotIdVec() {
   }
 }
 
+const bool SlotManager::IsHPPMAPSlot(
+    const iflyauto::ParkingFusionSlot &fusion_slot) {
+  if (fusion_slot.resource_type == iflyauto::RESOURCE_TYPE_MAP) {
+    return true;
+  }
+
+  return false;
+}
+
 void SlotManager::CopySlotReleaseInfo() {
   // for hmi
   UpdateReleaseSlotIdVec();
@@ -1594,6 +1612,15 @@ const bool SlotManager::IsReleaseByRuleBased(const uint32_t select_slot_id) {
   }
 
   return false;
+}
+
+const bool SlotManager::IsReleaseByRuleBased() {
+  if (frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace apa_planner

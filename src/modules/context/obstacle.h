@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "config/message_type.h"
+#include "fusion_groundline_c.h"
 #include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
@@ -14,6 +16,15 @@
 #include "vec2d.h"
 
 namespace planning {
+
+enum class SourceType {
+    NONE,
+    OD,
+    GroundLine,
+    OCC,
+    ParkingSlot,
+    MAP,
+};
 
 class Obstacle {
  public:
@@ -37,7 +48,10 @@ class Obstacle {
   // for ground line
   explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points);
-
+  explicit Obstacle(int id,
+                    const iflyauto::FusionGroundLine &groundline_cluster);
+  explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
+                    const iflyauto::FusionOccupancyObject &occupancy_objects);
   const std::vector<planning_math::Vec2d> &perception_points() const {
     return perception_points_;
   }
@@ -71,6 +85,7 @@ class Obstacle {
   double velocity_angle() const { return velocity_angle_; }
   bool is_static() const { return is_static_; }
   iflyauto::ObjectType type() const { return type_; }
+  SourceType source_type() const { return source_type_; }
   bool is_vaild() const { return valid_; }
   bool abnormal_data_dectection(const PredictionObject &prediction_object);
   bool is_oversize_vehicle() const { return is_oversize_vehicle_; }
@@ -142,6 +157,7 @@ class Obstacle {
   planning_math::Polygon2d car_ego_polygon_;
   std::vector<planning_math::Vec2d> perception_points_;
   unsigned int fusion_source_;
+  SourceType source_type_;
 };
 
 // typedef IndexedList<int, Obstacle> IndexedObstacles;

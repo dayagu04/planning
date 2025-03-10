@@ -18,6 +18,10 @@ AgentManager::AgentManager(const EgoPlanningConfigBuilder* config_builder,
                            planning::framework::Session* session)
     : session_(session) {
   // TODO: 添加AgentManager的config
+  SetConfig(config_builder);
+}
+
+void AgentManager::SetConfig(const EgoPlanningConfigBuilder* config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
 }
 

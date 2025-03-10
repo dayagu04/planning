@@ -1,7 +1,7 @@
 import sys, os
 sys.path.append("..")
 sys.path.append("../lib/")
-# from lib.load_cyberbag import *
+from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')

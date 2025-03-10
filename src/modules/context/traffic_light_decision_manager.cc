@@ -7,6 +7,11 @@ TrafficLightDecisionManager::TrafficLightDecisionManager(
     const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session* session) {
   session_ = session;
+  SetConfig(config_builder);
+}
+
+void TrafficLightDecisionManager::SetConfig(
+    const EgoPlanningConfigBuilder* config_builder) {
   config_ =
       config_builder->cast<EgoPlanningTrafficLightDecisionManagerConfig>();
 }

@@ -1,13 +1,14 @@
 import sys, os
 sys.path.append("..")
 sys.path.append("../lib/")
-# from lib.load_cyberbag import *
+from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240701/20240701-18-12-17/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-07-01-18-12-17_no_camera.bag"
+
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -369,7 +370,7 @@ def slider_callback(bag_time):
     cur_yaw = loc_msg.orientation.euler_boot.yaw
 
   coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
-  if g_is_display_enu:
+  if global_var.get_value('g_is_display_enu'):
     dx_ref_mpc_vec, dy_ref_mpc_vec = coord_tf.local_to_global(dx_ref_mpc_vec, dy_ref_mpc_vec)
     dx_mpc_vec, dy_mpc_vec = coord_tf.local_to_global(dx_mpc_vec, dy_mpc_vec)
 

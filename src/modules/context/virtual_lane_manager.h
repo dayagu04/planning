@@ -39,6 +39,8 @@ class VirtualLaneManager {
   // VirtualLaneManager() = default;
   ~VirtualLaneManager(){};
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   void UpdateAllVirtualLaneInfo();
 
   std::shared_ptr<VirtualLane> get_left_neighbor(
@@ -238,7 +240,7 @@ class VirtualLaneManager {
   double ego_pose_x_;
   double ego_pose_y_;
   double yaw_;
-  bool in_intersection_ = false;
+  // bool in_intersection_ = false;
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
 
   // NOA

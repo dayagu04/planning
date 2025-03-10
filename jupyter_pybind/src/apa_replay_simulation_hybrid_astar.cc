@@ -18,12 +18,13 @@
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "apa_world/apa_world.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "collision_detection/path_safe_checker.h"
 #include "config_context.h"
 #include "control_command_c.h"
 #include "debug_info_log.h"
 #include "func_state_machine_c.h"
+#include "fusion_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
@@ -32,8 +33,6 @@
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
-#include "log_glog.h"
-#include "narrow_space_scenario.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -45,11 +44,12 @@
 #include "src/library/convex_collision_detection/gjk2d_interface.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
-#include "struct_convert/camera_preception_groundline_c.h"
+#include "src/modules/apa_function/parking_scenario/narrow_space/narrow_space_scenario.h"
+#include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/control_command_c.h"
 #include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_groundline_c.h"
 #include "struct_convert/fusion_objects_c.h"
 #include "struct_convert/fusion_occupancy_objects_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
@@ -61,9 +61,9 @@
 #include "struct_convert/vehicle_service_c.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
-#include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
@@ -410,9 +410,9 @@ const void UpdateLocalView(
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_ =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(
+    iflyauto::FusionGroundLineInfo ground_line_ =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
           ground_line_info_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
@@ -521,9 +521,10 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_info =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(ground_line_bytes);
+  iflyauto::FusionGroundLineInfo ground_line_info =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
+          ground_line_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -559,7 +560,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   ILOG_INFO << "pybind select slot id " << select_id;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   double plan_time = IflyTime::Now_us();
@@ -824,8 +826,8 @@ const bool SetLocalization(py::bytes &localization_info_bytes) {
 }
 
 const bool SetGroundLine(py::bytes &line) {
-  auto ground_line = BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                                   struct_msgs::GroundLinePerceptionInfo>(line);
+  auto ground_line = BytesToStruct<iflyauto::FusionGroundLineInfo,
+                                   struct_msgs::FusionGroundLineInfo>(line);
 
   local_view.ground_line_perception = ground_line;
 

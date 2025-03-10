@@ -23,7 +23,7 @@ static const double kCurvFactor = 0.3;
 static const double kMaxDelta = 400 / 57.3 / 15;
 static const double kRefVel = 0.6;
 static const size_t PlanningTraPointsNum =
-    PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+    PLANNING_TRAJ_POINTS_MAX_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_MAX_NUM;
 
 namespace planning {
 namespace apa_planner {

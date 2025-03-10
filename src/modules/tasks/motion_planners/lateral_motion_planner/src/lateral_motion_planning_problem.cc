@@ -13,10 +13,6 @@
 
 using namespace ilqr_solver;
 
-static const double kMaxWheelAngle =
-    360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc
-static const double kMaxWheelAngleRate =
-    240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc
 namespace pnc {
 namespace lateral_planning {
 void LateralMotionPlanningProblem::Init() {
@@ -84,10 +80,8 @@ uint8_t LateralMotionPlanningProblem::Update(
 
   for (size_t i = 0; i < N; ++i) {
     // calculate delta_bound and omega_bound
-    double delta_bound =
-        std::min(kMaxWheelAngle, planning_input.acc_bound() / kv2);
-    double omega_bound =
-        std::min(kMaxWheelAngleRate, planning_input.jerk_bound() / kv2);
+    double delta_bound = planning_input.acc_bound() / kv2;
+    double omega_bound = planning_input.jerk_bound() / kv2;
     // reference
     cost_config_vec.at(i)[REF_X] = planning_input.ref_x_vec(i);
     cost_config_vec.at(i)[REF_Y] = planning_input.ref_y_vec(i);
@@ -292,6 +286,10 @@ uint8_t LateralMotionPlanningProblem::Update(
     iter_info->set_du_norm(soler_info_ptr->iteration_info_vec[i].du_norm);
   }
 
+  // temp debug
+//   if (planning_output_.solver_info().iter_info(planning_output_.solver_info().iter_info_size()-1).cost() > 10000) {
+//     return ilqr_solver::iLqr::NON_POSITIVE_EXPECT;
+//   }
   return solver_condition;
 }
 
@@ -312,10 +310,8 @@ uint8_t LateralMotionPlanningProblem::Update(
 
   for (size_t i = 0; i < N; ++i) {
     // calculate delta_bound and omega_bound
-    double delta_bound =
-        std::min(kMaxWheelAngle, planning_input.acc_bound() / kv2);
-    double omega_bound =
-        std::min(kMaxWheelAngleRate, planning_input.jerk_bound() / kv2);
+    double delta_bound = planning_input.acc_bound() / kv2;
+    double omega_bound = planning_input.jerk_bound() / kv2;
     // reference
     cost_config_vec.at(i)[REF_X] = planning_input.ref_x_vec(i);
     cost_config_vec.at(i)[REF_Y] = planning_input.ref_y_vec(i);

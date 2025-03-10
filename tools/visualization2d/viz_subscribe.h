@@ -53,7 +53,7 @@ struct VizSubscribe {
 
   IFLYLocalization::IFLYLocalization localization;
 
-  GroundLinePerception::GroundLinePerceptionInfo ground_line_perception;
+  GroundLinePerception::FusionGroundLineInfo ground_line_perception;
 
   FusionObjects::FusionObjectsInfo fusion_objects_info;
 

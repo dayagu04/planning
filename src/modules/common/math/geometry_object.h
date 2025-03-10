@@ -8,6 +8,7 @@
 #include "aabox2d.h"
 #include "box2d.h"
 #include "line_segment2d.h"
+#include "obstacle.h"
 #include "polygon2d.h"
 #include "vec2d.h"
 

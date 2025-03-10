@@ -1,9 +1,11 @@
 #include "reference_path.h"
 
 #include <cmath>
+#include <cstddef>
 
 #include "ego_state_manager.h"
 #include "ifly_time.h"
+#include "log.h"
 #include "math/math_utils.h"
 #include "obstacle_manager.h"
 #include "session.h"
@@ -16,7 +18,7 @@ ReferencePath::ReferencePath() { init(); }
 
 void ReferencePath::init() {
   valid_ = false;
-
+  frenet_coord_ = nullptr;
   // init frenet parameters
   // frenet_parameters_.zero_speed_threshold = 0.1;
   // frenet_parameters_.coord_transform_precision = 0.01;
@@ -78,6 +80,116 @@ void ReferencePath::update_refpath_points(
   refined_ref_path_points_.clear();
   refined_ref_path_points_.reserve(raw_ref_path_points.size());
   for (auto pt : raw_ref_path_points) {
+    if (std::isnan(pt.path_point.x()) || std::isnan(pt.path_point.y())) {
+      LOG_ERROR("raw_ref_path_points: skip NaN point");
+      continue;
+    }
+    Point2D frenet_point;
+    if (frenet_coord_->XYToSL(pt.path_point.x(), pt.path_point.y(),
+                              &frenet_point.x, &frenet_point.y)) {
+      pt.path_point.set_s(frenet_point.x);
+      if (!refined_ref_path_points_.empty() &&
+          pt.path_point.s() < refined_ref_path_points_.back().path_point.s()) {
+        continue;
+      }
+      auto kd_path_point = frenet_coord_->GetPathPointByS(frenet_point.x);
+      pt.path_point.set_kappa(kd_path_point.kappa());
+      pt.path_point.set_theta(kd_path_point.theta());
+
+      refined_ref_path_points_.emplace_back(pt);
+    }
+  }
+}
+
+void ReferencePath::update_refpath_points_in_hpp(
+    const double ego_projection_length_in_reference_path,
+    const ReferencePathPoints &raw_ref_path_points) {
+  if (raw_ref_path_points.size() <= 2) {
+    LOG_ERROR("update_refpath_points: points size < 2");
+    return;
+  }
+
+  //
+  const auto &lat_init_state = session_->mutable_environmental_model()
+                                   ->get_ego_state_manager()
+                                   ->planning_init_point()
+                                   .lat_init_state;
+  const auto &v_ref_cruise = std::fmax(
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise(),
+      2.0);
+
+  const float kPreviewTime = 10.0;
+  const double kMinPreviewLength = 30.0;
+  const double kMaxRearDistance = 25.0;
+  double drop_length =
+      std::max(ego_projection_length_in_reference_path - kMaxRearDistance, 0.0);
+  double init_length = ego_projection_length_in_reference_path;
+  double preview_length =
+      std::max(v_ref_cruise * kPreviewTime, kMinPreviewLength);
+  // Step 1) reset coord system from refined_ref_path_points_
+  std::vector<planning_math::PathPoint> coord_path_points;
+  coord_path_points.reserve(raw_ref_path_points.size());
+  double ref_length = 0.0;
+  size_t start_index = 0;
+  size_t end_index = raw_ref_path_points.size();
+  for (size_t i = 0; i < raw_ref_path_points.size(); ++i) {
+    if (std::isnan(raw_ref_path_points[i].path_point.x()) ||
+        std::isnan(raw_ref_path_points[i].path_point.y())) {
+      LOG_ERROR("update_refpath_points: skip NaN point");
+      continue;
+    }
+    auto pt = planning_math::PathPoint(raw_ref_path_points[i].path_point.x(),
+                                       raw_ref_path_points[i].path_point.y());
+    // std ::cout << "path_point: " << pt.x() << "," << pt.y() <<std::endl;
+    if (i > 1) {
+      const auto &last_pt = raw_ref_path_points[i - 1].path_point;
+      double diff_s =
+          planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y())
+              .Length();
+      ref_length += diff_s;
+      if (diff_s < 1e-2) {
+        continue;
+      }
+      // check direction
+      planning_math::Vec2d last_direction = planning_math::Vec2d::CreateUnitVec2d(last_pt.theta());
+      planning_math::Vec2d cur_direction =
+          planning_math::Vec2d::CreateUnitVec2d(raw_ref_path_points[i].path_point.theta());
+      if (cur_direction.InnerProd(last_direction) < 0) {
+        if (ref_length > init_length) {
+          end_index = i;
+          break;
+        } else {
+          coord_path_points.clear();
+          start_index = i;
+          drop_length = std::max(drop_length, ref_length);
+        }
+        LOG_DEBUG("ref path direction check error since input data is bad! \n");
+      }
+    }
+    if (ref_length >= drop_length) {
+      if (ref_length <= (init_length + preview_length)) {
+        end_index = i + 1;
+        coord_path_points.emplace_back(pt);
+      } else {
+        break;
+      }
+    } else {
+      start_index = i + 1;
+    }
+  }
+  // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
+  if (coord_path_points.size() < 2) {
+    LOG_DEBUG("drop_length = %f, init_length = %f\n", drop_length, init_length);
+    LOG_ERROR("update_refpath_points_in_hpp: coord points size < 2");
+    return;
+  }
+  frenet_coord_ = std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
+
+  // Step 2) 1. update refined_ref_path_points_' frenet points by frenet_coord_
+  refined_ref_path_points_.clear();
+  refined_ref_path_points_.reserve(raw_ref_path_points.size());
+  for (size_t i = start_index; i < end_index; ++i) {
+    auto pt = raw_ref_path_points[i];
     if (std::isnan(pt.path_point.x()) || std::isnan(pt.path_point.y())) {
       LOG_ERROR("raw_ref_path_points: skip NaN point");
       continue;

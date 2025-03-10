@@ -615,13 +615,12 @@ int GetBoundingBoxByPolygon(cdl::AABB *box, const Polygon2D *polygon) {
   return 0;
 }
 
-void PolygonDebugString(const Polygon2D *polygon,const std::string &name) {
+void PolygonDebugString(const Polygon2D *polygon, const std::string &name) {
   if (nullptr == polygon) {
     return;
   }
 
   ILOG_INFO << "polygon name = " << name;
-
 
   ILOG_INFO << "poly_type= " << static_cast<int>(polygon->shape)
             << " poly_vertex_num= " << polygon->vertex_num

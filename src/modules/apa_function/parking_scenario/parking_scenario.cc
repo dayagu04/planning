@@ -20,6 +20,7 @@
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
+#include "planning_plan_c.h"
 #include "pose2d.h"
 #include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
@@ -200,7 +201,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
   if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
       frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
       frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    apa_hmi_.distance_to_parking_space = frame_.remain_dist_path;
+    apa_hmi_.remain_dist = frame_.remain_dist;
   }
   return;
 }
@@ -208,6 +209,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
 void ParkingScenario::GenPlanningPath() {
   // planning_output_.Clear();
   memset(&planning_output_, 0, sizeof(planning_output_));
+  planning_output_.planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
   planning_output_.planning_status.apa_planning_status =
       iflyauto::APA_IN_PROGRESS;
 
@@ -217,9 +219,9 @@ void ParkingScenario::GenPlanningPath() {
   trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
 
   size_t N = current_path_point_global_vec_.size();
-  if (N > PLANNING_TRAJ_POINTS_NUM - 1) {
+  if (N > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
     ILOG_INFO << "sample ds is possible err";
-    N = PLANNING_TRAJ_POINTS_NUM - 1;
+    N = PLANNING_TRAJ_POINTS_MAX_NUM - 1;
   }
   trajectory->trajectory_points_size = N;
 

@@ -24,7 +24,7 @@
 #include "spline.h"
 #include "spline_projection.h"
 
-#define APA_COMPARE_PLANNING_TRAJ_POINTS_NUM 26
+#define APA_COMPARE_PLANNING_TRAJ_POINTS_MAX_NUM 26
 
 namespace planning {
 namespace apa_planner {

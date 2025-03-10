@@ -133,13 +133,13 @@ void UpdateFusionObs(std::vector<std::vector<Eigen::Vector2d>> obs_vec) {
 void UpdateGroundLineObs(std::vector<std::vector<Eigen::Vector2d>> obs_vec) {
   ILOG_INFO << "UpdateGroundLineObs";
   auto& gl_obs = g_local_view.ground_line_perception;
-  gl_obs.ground_lines_size = obs_vec.size();
+  gl_obs.groundline_size = obs_vec.size();
   for (size_t i = 0; i < obs_vec.size(); ++i) {
-    auto& obs = gl_obs.ground_lines[i];
-    obs.points_3d_size = obs_vec[i].size();
+    auto& obs = gl_obs.groundline[i];
+    obs.groundline_point_size = obs_vec[i].size();
     for (size_t j = 0; j < obs_vec[i].size(); ++j) {
-      obs.points_3d[j].x = obs_vec[i][j].x();
-      obs.points_3d[j].y = obs_vec[i][j].y();
+      obs.groundline_point[j].x = obs_vec[i][j].x();
+      obs.groundline_point[j].y = obs_vec[i][j].y();
     }
   }
 }

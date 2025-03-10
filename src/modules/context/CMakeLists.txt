@@ -11,6 +11,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_common
   ad_common
   geometry_lib
+  occupancy_grid_map
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

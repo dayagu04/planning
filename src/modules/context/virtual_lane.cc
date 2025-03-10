@@ -59,8 +59,8 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   }
   const int num_of_reflane_point =
       lane.lane_reference_line.virtual_lane_refline_points_size;
-  c_poly_.resize(NUM_OF_POLYNOMIAL);
-  for (int i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+  c_poly_.resize(FUSION_ROAD_LINE_POLYNOMIAL_NUM);
+  for (int i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
     c_poly_[i] = lane.lane_reference_line.poly_coefficient_car[i];
   }
   virtual_lane_refline_points_.resize(num_of_reflane_point);
@@ -86,7 +86,7 @@ bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保
     output.assign(4, 0.0);
     return true;
   } else if (lane_status_ == LEFT_AVAILABLE) {
-    for (size_t i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+    for (size_t i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
       output.push_back((left_lane_boundary_.poly_coefficient[i]));
       if (i == 0) {
         output[0] =
@@ -97,7 +97,7 @@ bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保
       }
     }
   } else if (lane_status_ == RIGHT_AVAILABLE) {
-    for (size_t i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+    for (size_t i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
       output.push_back((right_lane_boundary_.poly_coefficient[i]));
       if (i == 0) {
         output[0] =
@@ -108,7 +108,7 @@ bool VirtualLane::calc_c_poly(std::vector<double> &output) {  // 该函数先保
       }
     }
   } else {
-    for (size_t i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+    for (size_t i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
       output.push_back((left_lane_boundary_.poly_coefficient[i] +
                         right_lane_boundary_.poly_coefficient[i]) /
                        2.0);

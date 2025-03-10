@@ -1,10 +1,12 @@
 from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
+import lib.load_global_var as global_var
 
 sys.path.append('../../python_proto')
 from planning_debug_info_pb2 import *
 from control_debug_info_pb2 import *
+from ehr_pb2 import *
 from ehr_sdmap_pb2 import *
 
 import numpy as np
@@ -31,15 +33,10 @@ import rosbag
 import rospy
 import time
 
-is_bag_main = True # False: main分支之前的包   True: main分支之后的包
-g_is_display_enu = False # True: local_view显示enu坐标系   False: local_view显示自车坐标系
-is_new_loc = False #   True:新定位 False:老定位; 目前是自适应的，有新定位就用新定位，没有就用老定位
-is_match_planning = True  #True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
-is_vis_map = False
-is_vis_sdmap = True
 
-def get_g_is_display_enu():
-  return g_is_display_enu
+global_var.init()
+
+
 class LoadRosbag:
   def __init__(self, path) -> None:
     self.bag_path = path
@@ -99,7 +96,7 @@ class LoadRosbag:
     # control debug msg
     self.ctrl_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
 
-    # parking fusion msg
+    # fusion parking slot msg
     self.fus_parking_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
 
     # soc state machine
@@ -111,11 +108,20 @@ class LoadRosbag:
     # ehr sd map msg
     self.ehr_sd_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
-    # ehr parking map msg
-    self.ehr_parking_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    # fusion ground line msg
+    self.fus_ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
-    # ground_line_msg
-    self.ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    # fusion speed bump msg
+    self.fus_speed_bump_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # fusion occ object msg
+    self.fus_occ_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # uss perception msg
+    self.uss_perception_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # uss wave msg
+    self.uss_wave_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     # planning hmi msg
     self.planning_hmi_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
@@ -125,18 +131,33 @@ class LoadRosbag:
 
     self.lane_topo_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
+    # perception ground line msg
+    self.rdg_ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception parking slot msg
+    self.rdg_parking_slot_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception 3d general objects msg
+    self.rdg_general_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception 3d occupancy objects msg
+    self.rdg_occ_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception parking lane line msg
+    self.rdg_parking_lane_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
+
     # time offset
     t0 = 0
 
     # is_new_loc
-    global is_new_loc
     topics = self.bag.get_type_and_topic_info().topics
     for topic in topics:
       if topic == "/iflytek/localization/egomotion":
-        is_new_loc = True
+        global_var.set_value('is_new_loc', True)
 
   def load_all_data(self, normal_print = True):
     print('load bag')
+    scene_type = 'HIGHWAY'
     start_time = time.time()
     max_time = 0.0
     t0 = 0
@@ -162,7 +183,7 @@ class LoadRosbag:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!') """
 
-    if is_new_loc:
+    if global_var.get_value('is_new_loc'):
       try:
         loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
@@ -331,7 +352,7 @@ class LoadRosbag:
     except Exception as e:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines topic !!!')
-    print('mobileye_lane_lines_msg[enable]:', self.mobileye_lane_lines_msg['enable'])
+
     # load rdg lane_lines msg
     try:
       rdg_lane_lines_msg_dict = {}
@@ -621,7 +642,7 @@ class LoadRosbag:
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                          "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
                          "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region', 'is_split_region', 'merge_lane_virtual_id', \
-                          'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
+                         'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
                          'sdmap_min_curv_radius',"is_static_avoid_scene", \
                          "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
                          'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
@@ -650,7 +671,13 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec']
-
+      # hpp
+      json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
+                         "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
+                         "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
+                         "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost"]
+      json_vector_list += ["lon_collision_object_position_x_vec",
+                           "lon_collision_object_position_y_vec",'expand_num_vec']
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         planning_debug_output = PlanningDebugInfo()
@@ -661,6 +688,8 @@ class LoadRosbag:
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['data'].append(msg)
         self.plan_debug_msg['timestamp'].append(msg.timestamp)
+        if msg.frame_info.scene_type != 'HIGHWAY':
+          scene_type = msg.frame_info.scene_type
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -834,12 +863,14 @@ class LoadRosbag:
     try:
       ehr_static_map_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/static_map"):
-        ehr_static_map_msg_dict[msg.msg_header.stamp / 1e3] = msg
+        static_map = StaticMap()
+        static_map.ParseFromString(msg.debug_info)
+        ehr_static_map_msg_dict[static_map.header.timestamp / 1e6] = static_map
       ehr_static_map_msg_dict = {key: val for key, val in sorted(ehr_static_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_static_map_msg_dict.items():
         self.ehr_static_map_msg['t'].append(t)
         self.ehr_static_map_msg['data'].append(msg)
-        self.ehr_static_map_msg['timestamp'].append(msg.msg_header.stamp)
+        self.ehr_static_map_msg['timestamp'].append(msg.header.timestamp)
       self.ehr_static_map_msg['t'] = [tmp - t0  for tmp in self.ehr_static_map_msg['t']]
       print('ehr_static_map_msg time:',self.ehr_static_map_msg['t'][-1])
       if len(self.ehr_static_map_msg['t']) > 0:
@@ -872,45 +903,108 @@ class LoadRosbag:
       self.ehr_sd_map_msg['enable'] = False
       print('missing /iflytek/ehr/sdmap topic !!!')
 
-    # load ehr parking map msg
+    # load fus_ground_line_msg
     try:
-      ehr_parking_map_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/parking_map"):
-        ehr_parking_map_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      ehr_parking_map_msg_dict = {key: val for key, val in sorted(ehr_parking_map_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in ehr_parking_map_msg_dict.items():
-        self.ehr_parking_map_msg['t'].append(t)
-        self.ehr_parking_map_msg['data'].append(msg)
-        self.ehr_parking_map_msg['timestamp'].append(msg.msg_header.stamp)
-      self.ehr_parking_map_msg['t'] = [tmp - t0  for tmp in self.ehr_parking_map_msg['t']]
-      print('ehr_parking_map_msg time:',self.ehr_parking_map_msg['t'][-1])
-      if len(self.ehr_parking_map_msg['t']) > 0:
-        self.ehr_parking_map_msg['enable'] = True
-      else:
-        self.ehr_parking_map_msg['enable'] = False
-    except Exception as e:
-      self.ehr_parking_map_msg['enable'] = False
-      print('missing /iflytek/ehr/parking_map topic !!!')
-
-    # load ground_line_msg
-    try:
-      ground_line_msg_dict = {}
+      fus_ground_line_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
-        ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      ground_line_msg_dict = {key: val for key, val in sorted(ground_line_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in ground_line_msg_dict.items():
-        self.ground_line_msg['t'].append(t)
-        self.ground_line_msg['data'].append(msg)
-        self.ground_line_msg['timestamp'].append(msg.msg_header.stamp)
-      self.ground_line_msg['t'] = [tmp - t0  for tmp in self.ground_line_msg['t']]
-      print('ground_line_msg time:',self.ground_line_msg['t'][-1])
-      if len(self.ground_line_msg['t']) > 0:
-        self.ground_line_msg['enable'] = True
+        fus_ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        # print("fus_ground_line_msg: ", msg)
+      fus_ground_line_msg_dict = {key: val for key, val in sorted(fus_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_ground_line_msg_dict.items():
+        self.fus_ground_line_msg['t'].append(t)
+        self.fus_ground_line_msg['data'].append(msg)
+        self.fus_ground_line_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_ground_line_msg['t'] = [tmp - t0  for tmp in self.fus_ground_line_msg['t']]
+      print('fus_ground_line_msg time:',self.fus_ground_line_msg['t'][-1])
+      if len(self.fus_ground_line_msg['t']) > 0:
+        self.fus_ground_line_msg['enable'] = True
       else:
-        self.ground_line_msg['enable'] = False
+        self.fus_ground_line_msg['enable'] = False
     except Exception as e:
-      self.ground_line_msg['enable'] = False
+      self.fus_ground_line_msg['enable'] = False
       print('missing /iflytek/fusion/ground_line topic !!!')
+
+    # load fus_speed_bump_msg
+    try:
+      fus_speed_bump_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/speed_bump"):
+        fus_speed_bump_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        # print("fus_speed_bump_msg: ", msg)
+      fus_speed_bump_msg_dict = {key: val for key, val in sorted(fus_speed_bump_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_speed_bump_msg_dict.items():
+        self.fus_speed_bump_msg['t'].append(t)
+        self.fus_speed_bump_msg['data'].append(msg)
+        self.fus_speed_bump_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_speed_bump_msg['t'] = [tmp - t0  for tmp in self.fus_speed_bump_msg['t']]
+      print('fus_speed_bump_msg time:',self.fus_speed_bump_msg['t'][-1])
+      if len(self.fus_speed_bump_msg['t']) > 0:
+        self.fus_speed_bump_msg['enable'] = True
+      else:
+        self.fus_speed_bump_msg['enable'] = False
+    except Exception as e:
+      self.fus_speed_bump_msg['enable'] = False
+      print('missing /iflytek/fusion/speed_bump topic !!!')
+
+    # load fus_occ_objects_msg
+    try:
+      fus_occ_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
+        fus_occ_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      fus_occ_objects_msg_dict = {key: val for key, val in sorted(fus_occ_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_occ_objects_msg_dict.items():
+        self.fus_occ_objects_msg['t'].append(t)
+        self.fus_occ_objects_msg['data'].append(msg)
+        self.fus_occ_objects_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_occ_objects_msg['t'] = [tmp - t0  for tmp in self.fus_occ_objects_msg['t']]
+      print('fus_occ_objects_msg time:',self.fus_occ_objects_msg['t'][-1])
+      if len(self.fus_occ_objects_msg['t']) > 0:
+        self.fus_occ_objects_msg['enable'] = True
+      else:
+        self.fus_occ_objects_msg['enable'] = False
+    except Exception as e:
+      self.fus_occ_objects_msg['enable'] = False
+      print('missing /iflytek/fusion/occupancy/objects topic !!!')
+
+    # load uss_perception_msg
+    # Todo(bsniu): plot uss
+    # try:
+    #   uss_perception_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
+    #     uss_perception_msg_dict[msg.msg_header.stamp / 1e6] = msg
+    #   uss_perception_msg_dict = {key: val for key, val in sorted(uss_perception_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in uss_perception_msg_dict.items():
+    #     self.uss_perception_msg['t'].append(t)
+    #     self.uss_perception_msg['data'].append(msg)
+    #     self.uss_perception_msg['timestamp'].append(msg.msg_header.stamp)
+    #   self.uss_perception_msg['t'] = [tmp - t0  for tmp in self.uss_perception_msg['t']]
+    #   print('uss_perception_msg time:',self.uss_perception_msg['t'][-1])
+    #   if len(self.uss_perception_msg['t']) > 0:
+    #     self.uss_perception_msg['enable'] = True
+    #   else:
+    #     self.uss_perception_msg['enable'] = False
+    # except Exception as e:
+    #   self.uss_perception_msg['enable'] = False
+    #   print('missing /iflytek/uss/uss_perception_info topic !!!')
+
+    # # load uss_wave_msg
+    # try:
+    #   uss_wave_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
+    #     uss_wave_msg_dict[msg.msg_header.stamp / 1e6] = msg
+    #   uss_wave_msg_dict = {key: val for key, val in sorted(uss_wave_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in uss_wave_msg_dict.items():
+    #     self.uss_wave_msg['t'].append(t)
+    #     self.uss_wave_msg['data'].append(msg)
+    #     self.uss_wave_msg['timestamp'].append(msg.msg_header.stamp)
+    #   self.uss_wave_msg['t'] = [tmp - t0  for tmp in self.uss_wave_msg['t']]
+    #   print('uss_wave_msg time:',self.uss_wave_msg['t'][-1])
+    #   if len(self.uss_wave_msg['t']) > 0:
+    #     self.uss_wave_msg['enable'] = True
+    #   else:
+    #     self.uss_wave_msg['enable'] = False
+    # except Exception as e:
+    #   self.uss_wave_msg['enable'] = False
+    #   print('missing /iflytek/uss/usswave_info topic !!!')
 
     # load planning hmi msg
     try:
@@ -932,6 +1026,107 @@ class LoadRosbag:
       self.planning_hmi_msg['enable'] = False
       print('missing /iflytek/planning/hmi topic !!!')
 
+    # load perception ground line msg
+    try:
+      rdg_ground_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/ground_line"):
+        rdg_ground_line_msg_dict[msg.isp_timestamp  / 1e6] = msg
+      rdg_ground_line_msg_dict = {key: val for key, val in sorted(rdg_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_ground_line_msg_dict.items():
+        self.rdg_ground_line_msg['t'].append(t)
+        self.rdg_ground_line_msg['data'].append(msg)
+        self.rdg_ground_line_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_ground_line_msg['t'] = [tmp - t0  for tmp in self.rdg_ground_line_msg['t']]
+      print('rdg_ground_line_msg time:',self.rdg_ground_line_msg['t'][-1])
+      if len(self.rdg_ground_line_msg['t']) > 0:
+        self.rdg_ground_line_msg['enable'] = True
+      else:
+        self.rdg_ground_line_msg['enable'] = False
+    except Exception as e:
+      self.rdg_ground_line_msg['enable'] = False
+      print('missing /iflytek/camera_perception/ground_line topic !!!')
+
+    # load perception parking slot msg
+    try:
+      rdg_parking_slot_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
+        rdg_parking_slot_msg_dict[msg.isp_timestamp  / 1e6] = msg
+      rdg_parking_slot_msg_dict = {key: val for key, val in sorted(rdg_parking_slot_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_parking_slot_msg_dict.items():
+        self.rdg_parking_slot_msg['t'].append(t)
+        self.rdg_parking_slot_msg['data'].append(msg)
+        self.rdg_parking_slot_msg['timestamp'].append(msg.isp_timestamp )
+      self.rdg_parking_slot_msg['t'] = [tmp - t0  for tmp in self.rdg_parking_slot_msg['t']]
+      print('rdg_parking_slot_msg time:',self.rdg_parking_slot_msg['t'][-1])
+      if len(self.rdg_parking_slot_msg['t']) > 0:
+        self.rdg_parking_slot_msg['enable'] = True
+      else:
+        self.rdg_parking_slot_msg['enable'] = False
+    except Exception as e:
+      self.rdg_parking_slot_msg['enable'] = False
+      print('missing /iflytek/camera_perception/parking_slot_list topic !!!')
+
+    # load perception 3d general objects msg
+    try:
+      rdg_general_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/3d_general_objects"):
+        rdg_general_objects_msg_dict[msg.isp_timestamp  / 1e6] = msg
+      rdg_general_objects_msg_dict = {key: val for key, val in sorted(rdg_general_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_general_objects_msg_dict.items():
+        self.rdg_general_objects_msg['t'].append(t)
+        self.rdg_general_objects_msg['data'].append(msg)
+        self.rdg_general_objects_msg['timestamp'].append(msg.isp_timestamp )
+      self.rdg_general_objects_msg['t'] = [tmp - t0  for tmp in self.rdg_general_objects_msg['t']]
+      print('rdg_general_objects_msg time:',self.rdg_general_objects_msg['t'][-1])
+      if len(self.rdg_general_objects_msg['t']) > 0:
+        self.rdg_general_objects_msg['enable'] = True
+      else:
+        self.rdg_general_objects_msg['enable'] = False
+    except Exception as e:
+      self.rdg_general_objects_msg['enable'] = False
+      print('missing /iflytek/camera_perception/3d_general_objects topic !!!')
+
+    # # load perception 3d occupancy objects msg
+    try:
+      rdg_occ_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/occupancy_objects"):
+        rdg_occ_objects_msg_dict[msg.isp_timestamp / 1e6] = msg
+      rdg_occ_objects_msg_dict = {key: val for key, val in sorted(rdg_occ_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_occ_objects_msg_dict.items():
+        self.rdg_occ_objects_msg['t'].append(t)
+        self.rdg_occ_objects_msg['data'].append(msg)
+        self.rdg_occ_objects_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_occ_objects_msg['t'] = [tmp - t0  for tmp in self.rdg_occ_objects_msg['t']]
+      print('rdg_occ_objects_msg time:',self.rdg_occ_objects_msg['t'][-1])
+      if len(self.rdg_occ_objects_msg['t']) > 0:
+        self.rdg_occ_objects_msg['enable'] = True
+      else:
+        self.rdg_occ_objects_msg['enable'] = False
+    except Exception as e:
+      self.rdg_occ_objects_msg['enable'] = False
+      print('missing /iflytek/camera_perception/occupancy_objects topic !!!')
+
+    # load perception parking lane line msg
+    try:
+      rdg_parking_lane_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_lane_line"):
+        rdg_parking_lane_line_msg_dict[msg.isp_timestamp / 1e6] = msg
+      rdg_parking_lane_line_msg_dict = {key: val for key, val in sorted(rdg_parking_lane_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_parking_lane_line_msg_dict.items():
+        self.rdg_parking_lane_line_msg['t'].append(t)
+        self.rdg_parking_lane_line_msg['data'].append(msg)
+        self.rdg_parking_lane_line_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_parking_lane_line_msg['t'] = [tmp - t0  for tmp in self.rdg_parking_lane_line_msg['t']]
+      print('rdg_parking_lane_line_msg time:',self.rdg_parking_lane_line_msg['t'][-1])
+      if len(self.rdg_parking_lane_line_msg['t']) > 0:
+        self.rdg_parking_lane_line_msg['enable'] = True
+      else:
+        self.rdg_parking_lane_line_msg['enable'] = False
+    except Exception as e:
+      self.rdg_parking_lane_line_msg['enable'] = False
+      print('missing /iflytek/camera_perception/parking_lane_line topic !!!')
+
+    global_var.set_value_by_scene(scene_type)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print("load bag 耗时：", elapsed_time, "秒")
