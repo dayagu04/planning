@@ -1032,6 +1032,7 @@ struct GeometryPath {
   std::vector<uint8_t> gear_cmd_vec;
   std::vector<uint8_t> gear_index_vec;
   std::vector<PathSegment> path_segment_vec;
+  std::vector<PathSegment> cur_gear_path_segments_vec;
   std::vector<PathPoint> path_pt_vec;
   bool collide_flag = false;
 
@@ -1077,6 +1078,7 @@ struct GeometryPath {
 
   void Reset() {
     path_segment_vec.clear();
+    cur_gear_path_segments_vec.clear();
     gear_change_count = 0;
     steer_change_count = 0;
     total_length = 0.0;

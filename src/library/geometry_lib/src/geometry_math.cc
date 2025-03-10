@@ -3185,6 +3185,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 
     for (int i = 0; i < path_count; ++i) {
       if (gear_cmd_vec[i] == cur_gear) {
+        cur_gear_path_segments_vec.emplace_back(path_segment_vec[i]);
         cur_gear_length += path_segment_vec[i].Getlength();
       } else {
         break;

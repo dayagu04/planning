@@ -165,7 +165,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                     const double lat_inflation,
                                     const double lon_safe_dist,
                                     const bool enable_log = true,
-                                    const bool need_cal_obs_dist = false,
+                                    const bool need_cal_obs_dist = true,
                                     const bool use_edt_col = true);
 
   const bool CalTurnAroundPose();
