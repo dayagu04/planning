@@ -201,7 +201,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
   if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
       frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
       frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    apa_hmi_.remain_dist = frame_.remain_dist;
+    apa_hmi_.remain_dist = frame_.remain_dist_path;
   }
   return;
 }

@@ -233,7 +233,7 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr = pose.DistanceSquareTo(path[i].pos);
+    dist_sqr = ego_pose.DistanceSquareTo(path[i].pos);
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
