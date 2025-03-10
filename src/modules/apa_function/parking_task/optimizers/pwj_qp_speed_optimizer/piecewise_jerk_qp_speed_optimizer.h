@@ -6,13 +6,14 @@
 #include "src/modules/apa_function/parking_task/deciders/speed_limit_decider/speed_limit_profile.h"
 #include "src/modules/common/math/piecewise_jerk/piecewise_jerk_speed_problem.h"
 #include "src/modules/common/speed/speed_data.h"
+#include "optimizer_common.h"
 
 namespace planning {
 
-  // model
-  // x = [x0, x1, x2,...,x_{n-1}, x0',x1',...,x0'',x1'',...x_{n-1}'']
-  // f = 1/2*x^T*H*x + Q*x
-  // L<=Ax<=U
+// model
+// x = [x0, x1, x2,...,x_{n-1}, x0',x1',...,x0'',x1'',...x_{n-1}'']
+// f = 1/2*x^T*H*x + Q*x
+// L<=Ax<=U
 class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
  public:
   PiecewiseJerkSpeedQPOptimizer();
@@ -24,6 +25,8 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
                const SpeedData& dp_speed_data);
 
   const SpeedData& GetSpeedData() const { return qp_speed_data_; }
+
+  const SpeedOptimizerState GetQPState() const { return solver_state_; }
 
  private:
   void DebugPiecewiseJerkProblem(const PiecewiseJerkSpeedProblem& pwj);
@@ -46,6 +49,8 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
   int num_of_knots_;
 
   SpeedData qp_speed_data_;
+
+  SpeedOptimizerState solver_state_;
 };
 
 }  // namespace planning

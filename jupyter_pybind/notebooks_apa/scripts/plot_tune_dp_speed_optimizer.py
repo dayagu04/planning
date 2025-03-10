@@ -11,7 +11,7 @@ sys.path.append('../../../build')
 sys.path.append('../../../')
 
 sys.path.append('python_proto')
-from python_proto import common_pb2
+# from python_proto import common_pb2
 from jupyter_pybind import dp_speed_optimizer_py
 
 
@@ -111,6 +111,7 @@ class LocalViewSlider:
     self.obs_s_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "dist_s",min=0.0, max=20.0, value=0.5, step=0.1)
     self.dist_to_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "dist_to_obs",min=-2.0, max=20.0, value=0.3, step=0.1)
     self.max_cruise_speed_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "max_speed",min=-2.0, max=20.0, value=1.0, step=0.1)
+    self.jlt_acc_lower = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "jlt_acc_lower",min=-10.0, max=0.0, value=-1.0, step=0.1)
 
 
     ipywidgets.interact(slider_callback, ego_x=self.ego_x_slider,
@@ -123,10 +124,11 @@ class LocalViewSlider:
                         obs_s=self.obs_s_slider,
                         dist_to_obs=self.dist_to_obs_slider,
                         max_cruise_speed=self.max_cruise_speed_slider,
+                        jlt_acc_lower=self.jlt_acc_lower,
                     )
 
 ## sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, path_length, path_radius, ego_v, ego_acc, obs_s,dist_to_obs,max_cruise_speed):
+def slider_callback(ego_x, ego_y, ego_heading, path_length, path_radius, ego_v, ego_acc, obs_s,dist_to_obs,max_cruise_speed,jlt_acc_lower):
 
   kwargs = locals()
 
@@ -157,7 +159,7 @@ def slider_callback(ego_x, ego_y, ego_heading, path_length, path_radius, ego_v, 
   ego_pose = [ego_x, ego_y, ego_heading / 57.3]
 
   current_path_point_global_vec = dp_speed_optimizer_py.Update(
-      ego_pose, path_length, path_radius, ego_v, ego_acc,obs_s,dist_to_obs,max_cruise_speed)
+      ego_pose, path_length, path_radius, ego_v, ego_acc,obs_s,dist_to_obs,max_cruise_speed, jlt_acc_lower)
 
   # plot path
   plan_path_x = []
@@ -226,6 +228,10 @@ def slider_callback(ego_x, ego_y, ego_heading, path_length, path_radius, ego_v, 
   qp_speed_data = dp_speed_optimizer_py.GetQPSpeedOptimizationData()
   update_lon_plan_online_data(
       dp_speed_constraints,qp_speed_constraints, ref_cruise_speed, dp_speed_data,qp_speed_data, lon_plan_data)
+
+  # jlt data
+  jlt_speed_data = dp_speed_optimizer_py.GetJLTSpeedData()
+  update_jlt_online_data(jlt_speed_data, lon_plan_data)
 
   push_notebook()
 

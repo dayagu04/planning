@@ -6,6 +6,7 @@
 #include <limits>
 #include <string>
 
+#include "dp_speed_common.h"
 #include "log_glog.h"
 #include "sv_graph_node.h"
 #include "debug_info_log.h"
@@ -23,6 +24,9 @@ DpSpeedOptimizer::DpSpeedOptimizer() {}
 
 bool DpSpeedOptimizer::Init() {
   config_.Init();
+
+  start_node_ = nullptr;
+  end_node_ = nullptr;
   return true;
 }
 
@@ -32,6 +36,7 @@ void DpSpeedOptimizer::Excute(
     const SpeedDecisions* speed_decisions,
     const SpeedLimitProfile* speed_limit_profile) {
   speed_data_.clear();
+  solver_state_ = SpeedOptimizerState::NONE;
 
   if (speed_decisions == nullptr || speed_limit_profile == nullptr) {
     return;
@@ -54,13 +59,17 @@ void DpSpeedOptimizer::Excute(
     config_.unit_v = config_.unit_v_for_short_path;
     config_.unit_s = config_.unit_s_for_short_path;
 
-    ILOG_INFO <<"need use trapezoid speed profile";
+    ILOG_INFO <<"need use jlt speed profile";
   }
 
   ego_v_ = ego_v;
   ego_acc_ = ego_acc;
   speed_decisions_ = speed_decisions;
   speed_limit_profile_ = speed_limit_profile;
+
+  if (total_s_ < config_.enable_dp_by_path_length) {
+    return;
+  }
 
   cost_generator_.Init(total_s_, &config_);
 
@@ -452,6 +461,8 @@ void DpSpeedOptimizer::Search() {
 
   RecordDebugInfo();
 
+  solver_state_ = SpeedOptimizerState::SUCCESS;
+
   return;
 }
 
@@ -587,6 +598,21 @@ void DpSpeedOptimizer::RecordDebugInfo() {
   }
 
   return;
+}
+
+const SVPoint DpSpeedOptimizer::GetStartSpeedPoint() const {
+  if (start_node_ != nullptr) {
+    return start_node_->GetSVPoint();
+  }
+
+  SVPoint point_sv;
+  point_sv.s = 0;
+  point_sv.acc = 0;
+  point_sv.v = ego_v_;
+  point_sv.t = 0.0;
+  point_sv.jerk = 0.0;
+
+  return point_sv;
 }
 
 }  // namespace planning

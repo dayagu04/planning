@@ -17,6 +17,7 @@
 #include "src/modules/common/speed/speed_data.h"
 #include "dp_cost_generator.h"
 #include "dp_error_code.h"
+#include "optimizer_common.h"
 
 namespace planning {
 
@@ -38,20 +39,9 @@ class DpSpeedOptimizer : public ParkingTask {
 
   const SpeedData& SpeedProfile() const { return speed_data_; }
 
-  const SVPoint GetStartSpeedPoint() const {
-    if (start_node_ != nullptr) {
-      return start_node_->GetSVPoint();
-    }
+  const SVPoint GetStartSpeedPoint() const;
 
-    SVPoint point_sv;
-    point_sv.s = 0;
-    point_sv.acc = 0;
-    point_sv.v = ego_v_;
-    point_sv.t = 0.0;
-    point_sv.jerk = 0.0;
-
-    return point_sv;
-  }
+  const SpeedOptimizerState GetDPState() const { return solver_state_; }
 
  private:
   // dp搜索
@@ -140,6 +130,8 @@ class DpSpeedOptimizer : public ParkingTask {
   SVGraphNode* end_node_;
 
   SpeedData speed_data_;
+
+  SpeedOptimizerState solver_state_;
 };
 
 }  // namespace planning

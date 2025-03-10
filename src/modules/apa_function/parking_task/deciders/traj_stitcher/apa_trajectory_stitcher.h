@@ -29,16 +29,18 @@ class ApaTrajectoryStitcher {
                const std::vector<pnc::geometry_lib::PathPoint>& path,
                const double ego_v, const double front_wheel_angle);
 
-  const std::vector<pnc::geometry_lib::PathPoint>& GetConstStichTrajectory()
+  const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchTrajectory()
       const {
     return trajectory_;
   }
 
-  std::vector<pnc::geometry_lib::PathPoint>& GetMutableStichTrajectory() {
+  std::vector<pnc::geometry_lib::PathPoint>& GetMutableStitchTrajectory() {
     return trajectory_;
   }
 
   const double DrivedDistance() const { return drived_distance_; }
+
+  const double GetStitchTrajLength() const;
 
  private:
   // If vehicle speed is zero, use vehicle state to generate stitch point.

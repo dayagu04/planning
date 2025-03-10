@@ -51,8 +51,8 @@ struct ParkingSpeedConfig {
   // speed limit
   double acc_upper = 0.51;
   double acc_lower = -2.0;
-  double jerk_upper = 10.0;
-  double jerk_lower = -10.0;
+  double jerk_upper = 7.0;
+  double jerk_lower = -7.0;
 };
 
 // todo

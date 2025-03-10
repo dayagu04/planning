@@ -34,4 +34,5 @@ message ApaSpeedDebug {
   optional SVGraphSpeedConstraint qp_speed_constraint = 3;
   repeated StPoint2D dp_profile = 4;
   repeated StPoint2D qp_profile = 5;
+  repeated StPoint2D jlt_profile = 6;
 }

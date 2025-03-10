@@ -30,10 +30,10 @@ class JerkLimitedTrajectory {
 
   VelocityParam GetVelocityParam() { return velocity_param_; };
   PositionParam GetPositionParam() { return position_param_; };
-  std::vector<double> GetSCurve() { return s_curve_; };
-  std::vector<double> GetVelCurve() { return v_curve_; };
-  std::vector<double> GetAccCurve() { return a_curve_; };
-  std::vector<double> GetJerkCurve() { return j_curve_; };
+  const std::vector<double>& GetSCurve() { return s_curve_; };
+  const std::vector<double>& GetVelCurve() { return v_curve_; };
+  const std::vector<double>& GetAccCurve() { return a_curve_; };
+  const std::vector<double>& GetJerkCurve() { return j_curve_; };
 
  private:
   VelocityParam VelocityTargetSolver(const StateLimitParam &state_limit,

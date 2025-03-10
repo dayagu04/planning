@@ -378,6 +378,42 @@ def update_lon_plan_online_data(dp_speed_constraints,qp_speed_constraints, ref_c
   })
 
 
+def update_jlt_online_data(jlt_speed,lon_plan_data):
+  # plot jlt optimization data
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(jlt_speed)):
+    s.append(jlt_speed[i][0])
+    t.append(jlt_speed[i][1])
+    v.append(jlt_speed[i][2])
+
+    acc.append(jlt_speed[i][3])
+    jerk.append(jlt_speed[i][4])
+
+  lon_plan_data['jlt_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
+
+  lon_plan_data['jlt_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['jlt_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['jlt_data_st'].data.update({
+    't': t,
+    's': s,
+  })
+
+
 # plot 离线所有帧数据
 def load_lon_global_data_figure(bag_loader):
   #real time global figure data process
@@ -485,6 +521,12 @@ def create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig,
   qp_data_sv_bound = ColumnDataSource(data = {'s':[], 'v':[]})
   online_data_sobs = ColumnDataSource(data = {'online_s':[], 'online_obs_dist':[]})
 
+  # jlt
+  jlt_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  jlt_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  jlt_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  jlt_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
   # offline data
   offline_data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   offline_st_curve = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
@@ -532,6 +574,10 @@ def create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig,
                    'offline_data_st':offline_data_st,
                    'offline_st_curve':offline_st_curve,
                    'offline_sv_curve':offline_sv_curve,
+                   'jlt_data_sv':jlt_data_sv,
+                   'jlt_data_st':jlt_data_st,
+                   'jlt_data_s_acc':jlt_data_s_acc,
+                   'jlt_data_s_jerk':jlt_data_s_jerk,
   }
 
   columns = [
@@ -584,6 +630,11 @@ def create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig,
   f7 = fig_js.line('s', 'jerk', source = dp_data_s_jerk, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_jerk')
   f7 = fig_js.line('s', 'jerk', source =qp_data_s_jerk, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_jerk')
 
+  # plot jlt data
+  fig_sv.line('s', 'v', source = jlt_data_sv, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt sv')
+  fig_s_time.line('t', 's', source = jlt_data_st, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt_st')
+  fig_as.line('s', 'acc', source = jlt_data_s_acc, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt acc')
+  fig_js.line('s', 'jerk', source=jlt_data_s_jerk, line_width=2, line_color='black', line_dash='solid', legend_label='jlt jerk')
 
   # offline data
   # f2 = fig_s_time.line('t', 's', source = offline_data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
@@ -678,6 +729,12 @@ def create_online_lon_plan_figure(fig1):
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                     'plan_traj_x':[],})
 
+  # jlt
+  jlt_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  jlt_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  jlt_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  jlt_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
   lon_plan_data = {'data_text':data_text, \
                    'data_s_vref':data_s_vref, \
                    'dp_data_sv':dp_data_sv, \
@@ -697,6 +754,10 @@ def create_online_lon_plan_figure(fig1):
                    'online_data_sobs':online_data_sobs,
                    'dp_st_data':dp_st_data,
                    'qp_st_data':qp_st_data,
+                   'jlt_data_sv':jlt_data_sv,
+                   'jlt_data_st':jlt_data_st,
+                   'jlt_data_s_acc':jlt_data_s_acc,
+                   'jlt_data_s_jerk':jlt_data_s_jerk,
   }
 
   columns = [
@@ -723,15 +784,18 @@ def create_online_lon_plan_figure(fig1):
   # fig7 j-s
   fig_js = bkp.figure(x_axis_label='s', y_axis_label='jerk',x_range = [-0.1, 6], width=400, height=200)
 
-  # plot
+  # plot sv
   f3 = fig_sv.line('s_ref', 'v_ref', source = data_s_vref, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'v_ref')
   fig_sv.line('dp_sv_s', 'dp_sv_v', source = dp_data_sv, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_sv')
   fig_sv.line('qp_sv_s', 'qp_sv_v', source = qp_data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_sv')
   fig_sv.line('dp_sv_bound_s', 'dp_sv_bound_v', source = dp_data_sv_bound, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'dp v bound')
   fig_sv.line('s', 'v', source = qp_data_sv_bound, line_width = 2, line_color = 'orange', line_dash = 'solid', legend_label = 'qp v bound')
+  fig_sv.line('s', 'v', source = jlt_data_sv, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt sv')
 
+  # st
   f2 = fig_s_time.line('t', 's', source = dp_st_data, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_st')
   f2 = fig_s_time.line('t', 's', source = qp_st_data, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_st')
+  f2 = fig_s_time.line('t', 's', source = jlt_data_st, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt_st')
 
   # obs dist
   f5 = fig_sobs.line('online_s', 'online_obs_dist', source = online_data_sobs, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'obs dist')
@@ -741,6 +805,7 @@ def create_online_lon_plan_figure(fig1):
   f6 = fig_as.line('s', 'acc', source = qp_data_s_acc, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_acc')
   f6 = fig_as.line('s', 'acc', source = data_s_acc_upper, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'acc_upper')
   f6 = fig_as.line('s', 'acc', source = data_s_acc_lower, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'acc_lower')
+  f6 = fig_as.line('s', 'acc', source = jlt_data_s_acc, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt acc')
 
   # jerk
   f7 = fig_js.line('s', 'jerk', source = dp_data_s_jerk, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_jerk')
@@ -748,6 +813,7 @@ def create_online_lon_plan_figure(fig1):
   f7 = fig_js.line('s', 'jerk', source = data_s_jerk_upper, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'jerk_upper')
   f7 = fig_js.line('s', 'jerk', source=data_s_jerk_lower, line_width=2,
                    line_color='red', line_dash='solid', legend_label='jerk_lower')
+  f7 = fig_js.line('s', 'jerk', source=jlt_data_s_jerk, line_width=2, line_color='black', line_dash='solid', legend_label='jlt jerk')
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
