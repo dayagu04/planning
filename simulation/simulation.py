@@ -82,7 +82,7 @@ print("Creat out_dir successfully !")
 start_time = time.time()
 PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 result_path = f"{out_dir}/case_result.json"
-command = f"/root/planning/install/bin/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
+command = f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
