@@ -107,14 +107,15 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   const bool lon_condition =
       ego_info.terminal_err.pos.x() < config.finish_lon_err;
 
-  const double lat_offset = std::fabs(ego_info.cur_pose.pos.y() -
-                                      thread_.GetAstarTargetPose().GetY());
+  const double astar_target_pose_y = thread_.GetAstarTargetPose().GetY();
+  const double lat_offset =
+      std::fabs(ego_info.cur_pose.pos.y() - astar_target_pose_y);
 
   const double ego_head_lat_offset = std::fabs(
       (ego_info.cur_pose.pos + (config.wheel_base + config.front_overhanging) *
                                    ego_info.cur_pose.heading_vec)
           .y() -
-      thread_.GetAstarTargetPose().GetY());
+      astar_target_pose_y);
 
   const bool ego_center_lat_condition =
       std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict;
