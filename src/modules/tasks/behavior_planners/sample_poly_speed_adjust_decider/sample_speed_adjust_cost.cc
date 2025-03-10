@@ -178,19 +178,20 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
   double poly_end_dis_to_stop_line =
       stop_line_dis_to_ego - poly_end_s_dis_to_ego;
 
+  double adaptive_penalty = std::log(kStopLineBasicPenaltyDis);
+  double distance_penalty_factor = poly_end_dis_to_stop_line / adaptive_penalty;
+
   if (poly_end_dis_to_stop_line > kStopLineBasicPenaltyDis) {
     cost_ = 0.0;
   } else if (poly_end_dis_to_stop_line > kStopLineNormalPenaltyDis) {
-    cost_ = weight_ *
-            std::exp(-(poly_end_dis_to_stop_line + kStopLineNormalPenaltyDis) /
-                     kStopLineBasicPenaltyDis);
-
+    cost_ = weight_ * (1 + mid_stop_dis_penalty_coef_ *
+                               pow(distance_penalty_factor, 2.5));
   } else if (poly_end_dis_to_stop_line > 0) {
-    cost_ = weight_ *
-            std::exp(-(poly_end_dis_to_stop_line) / kStopLineNormalPenaltyDis);
-
+    cost_ = weight_ * (1 + near_stop_dis_penalty_coef_ *
+                               pow(distance_penalty_factor, 2.5));
   } else {
-    cost_ = weight_ * std::exp(0);
+    cost_ = weight_ *
+            std::exp(-poly_end_dis_to_stop_line / kStopLineNormalPenaltyDis);
   }
 }
 

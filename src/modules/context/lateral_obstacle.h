@@ -22,6 +22,8 @@ class LateralObstacle {
                   planning::framework::Session *session);
   virtual ~LateralObstacle();
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   bool update();
 
   bool fvf_dead() const { return fvf_dead_; }
@@ -65,6 +67,8 @@ class LateralObstacle {
 
   const std::vector<TrackedObject> &all_tracks() const { return all_tracks_; }
 
+  const std::unordered_map<int, TrackedObject> &tracks_map() const { return tracks_map_; }
+
   bool find_track(int track_id, TrackedObject &dest);
 
   const std::unordered_map<uint16_t, LatObstacleDecisionType>
@@ -97,6 +101,7 @@ class LateralObstacle {
   std::vector<TrackedObject> side_tracks_l_;
   std::vector<TrackedObject> side_tracks_r_;
   std::vector<TrackedObject> all_tracks_;
+  std::unordered_map<int, TrackedObject> tracks_map_;
   LeadCars lead_cars_;
   std::shared_ptr<planning::TrackletMaintainer> maintainer_ = nullptr;
   planning::framework::Session *session_ = nullptr;

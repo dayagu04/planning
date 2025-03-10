@@ -1,8 +1,16 @@
 #pragma once
 
+#include <cstdint>
+#include <map>
+#include <utility>
+
+#include "common/agent/agent_manager.h"
 #include "src/modules/common/agent/agent.h"
+#include "st_graph/st_graph_helper.h"
+#include "task_basic_types.h"
 #include "tasks/task.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 
@@ -36,8 +44,24 @@ class LongitudinalDecisionDecider : public Task {
       const PlanningInitPoint &init_point) const;
 
   bool IgnoreLaneChangeGapRearAgent(const agent::Agent *gap_rear_agent,
-                                    const std::shared_ptr<planning_math::KDPath>&
-                                        target_lane_frenet_coord) const;
+                                    const std::shared_ptr<planning_math::KDPath>
+                                        &target_lane_frenet_coord) const;
+
+  std::pair<bool, bool> IgnoreInvadeNeighborAgents(
+      const agent::Agent *invade_gap_rear_agent,
+      const agent::Agent *invade_gap_front_agent,
+      const std::shared_ptr<planning_math::KDPath> &planned_path) const;
+
+  void DetermineClosestInvadeNeighborGapInfo(
+      const std::shared_ptr<VirtualLane> &ego_cur_lane,
+      const double planning_init_x, const double planning_init_y,
+      const double planned_path_length,
+      const std::unordered_map<uint32_t, LatObstacleDecisionType>
+          &lat_obstacle_decision,
+      const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
+      const std::shared_ptr<agent::AgentManager> &agent_manager,
+      const speed::StGraphHelper *st_graph_helper,
+      const std::shared_ptr<planning_math::KDPath> &planned_path);
 
  private:
   LongitudinalDecisionDeciderConfig config_;
@@ -59,6 +83,11 @@ class LongitudinalDecisionDecider : public Task {
   static constexpr double kAroundEgoLateralDistanceThd = 5.4;
   static constexpr double kAroundEgoLongitudinalPreviewTimeThd = 3.0;
   static constexpr double kAroundEgoLongitudinalBackwardTimeThd = 1.0;
+
+  // closet gap of neighbor invade agents
+  // first: lower agent id, second: upper agent id
+  std::pair<int32_t, int32_t> closest_neighbor_invade_gap_agents_id_{-1, -1};
+  bool has_lon_decision_to_invade_agents_{false};
 };
 
 }  // namespace planning

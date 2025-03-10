@@ -71,7 +71,7 @@ void UpdateSlot(
   auto& park_slot = g_local_view.parking_fusion_info;
   park_slot.parking_fusion_slot_lists_size = id_vec.size();
   park_slot.select_slot_id = select_id;
-  g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.id = select_id;
+  g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.id = select_id;
 
   for (size_t i = 0; i < id_vec.size(); ++i) {
     auto& slot = park_slot.parking_fusion_slot_lists[i];
@@ -80,15 +80,15 @@ void UpdateSlot(
     if (slot.id == select_id) {
       switch (slot.type) {
         case iflyauto::PARKING_SLOT_TYPE_VERTICAL:
-          g_apa_world_ptr->GetNewSlotManagerPtr()
+          g_apa_world_ptr->GetSlotManagerPtr()
               ->ego_info_under_slot_.slot_type = SlotType::PERPENDICULAR;
           break;
         case iflyauto::PARKING_SLOT_TYPE_SLANTING:
-          g_apa_world_ptr->GetNewSlotManagerPtr()
+          g_apa_world_ptr->GetSlotManagerPtr()
               ->ego_info_under_slot_.slot_type = SlotType::SLANT;
           break;
         case ::iflyauto::PARKING_SLOT_TYPE_HORIZONTAL:
-          g_apa_world_ptr->GetNewSlotManagerPtr()
+          g_apa_world_ptr->GetSlotManagerPtr()
               ->ego_info_under_slot_.slot_type = SlotType::PARALLEL;
           break;
         default:
@@ -131,13 +131,13 @@ void UpdateFusionObs(std::vector<std::vector<Eigen::Vector2d>> obs_vec) {
 void UpdateGroundLineObs(std::vector<std::vector<Eigen::Vector2d>> obs_vec) {
   ILOG_INFO << "UpdateGroundLineObs";
   auto& gl_obs = g_local_view.ground_line_perception;
-  gl_obs.ground_lines_size = obs_vec.size();
+  gl_obs.groundline_size = obs_vec.size();
   for (size_t i = 0; i < obs_vec.size(); ++i) {
-    auto& obs = gl_obs.ground_lines[i];
-    obs.points_3d_size = obs_vec[i].size();
+    auto& obs = gl_obs.groundline[i];
+    obs.groundline_point_size = obs_vec[i].size();
     for (size_t j = 0; j < obs_vec[i].size(); ++j) {
-      obs.points_3d[j].x = obs_vec[i][j].x();
-      obs.points_3d[j].y = obs_vec[i][j].y();
+      obs.groundline_point[j].x = obs_vec[i][j].x();
+      obs.groundline_point[j].y = obs_vec[i][j].y();
     }
   }
 }
@@ -182,7 +182,7 @@ std::vector<std::vector<Eigen::Vector4d>> GetPerferredPlanPath() {
   path_vec_vec.reserve(g_scenario_ptr->GetPerferredGeometryPathVec().size() +
                        6);
   const auto& l2g_tf =
-      g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
   for (auto& geometry_path : g_scenario_ptr->GetPerferredGeometryPathVec()) {
     geometry_path.Sample(g_simu_param.sample_ds);
     std::vector<Eigen::Vector4d> path_vec;
@@ -235,7 +235,7 @@ std::vector<Eigen::Vector2d> GetObsVec() {
           g_apa_world_ptr->GetCollisionDetectorPtr()->GetObstaclesMap();
 
   const auto& l2g_tf =
-      g_apa_world_ptr->GetNewSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
 
   for (const auto& obs_pair : obstacles_map) {
     if (obs_pair.first != CollisionDetector::TLANE_OBS) {

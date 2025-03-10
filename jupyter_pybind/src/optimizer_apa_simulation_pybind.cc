@@ -88,7 +88,8 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
 
   apa_interface_ptr->UpdateDebugInfo();
 
@@ -124,7 +125,8 @@ const bool InterfaceUpdateClosedLoop(
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -191,7 +193,8 @@ const bool InterfaceUpdateParam(
 
   apa_interface_ptr->SetSimuParam(param);
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

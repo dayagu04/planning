@@ -41,6 +41,10 @@ class StopLineCost : public CurveCost {
  public:
   StopLineCost() = default;
   void GetCost(const double stop_line_s, const double poly_end_s);
+
+  private:
+  double mid_stop_dis_penalty_coef_ = 3.0;
+  double near_stop_dis_penalty_coef_ = 4.0;
 };
 
 class LeadingVehSafeCost : public CurveCost {

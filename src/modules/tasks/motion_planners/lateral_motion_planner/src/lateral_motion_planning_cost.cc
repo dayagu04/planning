@@ -194,7 +194,19 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
                     cost_config_ptr_->at(SOFT_UPPER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1);
   const double d1 = Square(a1) + Square(b1);
-  if (d1 > kEps) {
+  // check direction continuity
+  double ubound_result = 0;
+  planning::planning_math::Vec2d cur_ubound_direction{
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_X0),
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)};
+  if (ubound_direction_.Length() > 0) {
+    // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
+  }
+
+  if (d1 > kEps && ubound_result >= 0) {
+    ubound_direction_ = cur_ubound_direction;
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
     const double distance_to_soft_upper_bound =
         std::abs(numerator1) / std::sqrt(d1);
@@ -215,7 +227,19 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
                     cost_config_ptr_->at(SOFT_LOWER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1);
   const double d2 = Square(a2) + Square(b2);
-  if (d2 > kEps) {
+  // check direction continuity
+  double lbound_result = 0;
+  planning::planning_math::Vec2d cur_lbound_direction{
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_X0),
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)};
+  if (lbound_direction_.Length() > 0) {
+    // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
+  }
+
+  if (d2 > kEps && lbound_result >= 0) {
+    lbound_direction_ = cur_lbound_direction;
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
     const double distance_to_soft_lower_bound =
         std::abs(numerator2) / std::sqrt(d2);
@@ -244,7 +268,19 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
                         cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1);
   const double d1 = Square(a1) + Square(b1);
 
-  if (d1 > kEps) {
+  // check direction continuity
+  double ubound_result = 0;
+  planning::planning_math::Vec2d cur_ubound_direction{
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_X0),
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
+    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)};
+  if (ubound_direction_.Length() > 0) {
+    // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
+  }
+
+  if (d1 > kEps && ubound_result >= 0) {
+    ubound_direction_ = cur_ubound_direction;
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
     const double distance_to_soft_upper_bound =
         std::abs(numerator1) / std::sqrt(d1);
@@ -268,7 +304,19 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
                     cost_config_ptr_->at(SOFT_LOWER_BOUND_X0) *
                         cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1);
   const double d2 = Square(a2) + Square(b2);
-  if (d2 > kEps) {
+  // check direction continuity
+  double lbound_result = 0;
+  planning::planning_math::Vec2d cur_lbound_direction{
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_X0),
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
+    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)};
+  if (lbound_direction_.Length() > 0) {
+    // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
+  }
+
+  if (d2 > kEps && lbound_result >= 0) {
+    lbound_direction_ = cur_lbound_direction;
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
     const double distance_to_soft_lower_bound =
         std::abs(numerator2) / std::sqrt(d2);
@@ -296,7 +344,19 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
                     cost_config_ptr_->at(HARD_UPPER_BOUND_X0) *
                         cost_config_ptr_->at(HARD_UPPER_BOUND_Y1);
   const double d1 = Square(a1) + Square(b1);
-  if (d1 > kEps) {
+  // check direction continuity
+  double ubound_result = 0;
+  planning::planning_math::Vec2d cur_ubound_direction{
+    cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+    cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
+    cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+    cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
+  if (ubound_direction_.Length() > 0) {
+    // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
+  }
+
+  if (d1 > kEps && ubound_result >= 0) {
+    ubound_direction_ = cur_ubound_direction;
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
     const double distance_to_hard_upper_bound =
         std::abs(numerator1) / std::sqrt(d1);
@@ -316,7 +376,19 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
                     cost_config_ptr_->at(HARD_LOWER_BOUND_X0) *
                         cost_config_ptr_->at(HARD_LOWER_BOUND_Y1);
   const double d2 = Square(a2) + Square(b2);
-  if (d2 > kEps) {
+  // check direction continuity
+  double lbound_result = 0;
+  planning::planning_math::Vec2d cur_lbound_direction{
+    cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+    cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
+    cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+    cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
+  if (lbound_direction_.Length() > 0) {
+    // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
+  }
+
+  if (d2 > kEps && lbound_result >= 0) {
+    lbound_direction_ = cur_lbound_direction;
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
     const double distance_to_hard_lower_bound =
         std::abs(numerator2) / std::sqrt(d2);
@@ -343,7 +415,19 @@ void PathHardCorridorCostTerm::GetGradientHessian(
                     cost_config_ptr_->at(HARD_UPPER_BOUND_X0) *
                         cost_config_ptr_->at(HARD_UPPER_BOUND_Y1);
   const double d1 = Square(a1) + Square(b1);
-  if (d1 > kEps) {
+  // check direction continuity
+  double ubound_result = 0;
+  planning::planning_math::Vec2d cur_ubound_direction{
+    cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+    cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
+    cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+    cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
+  if (ubound_direction_.Length() > 0) {
+    // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
+  }
+
+  if (d1 > kEps && ubound_result >= 0) {
+    ubound_direction_ = cur_ubound_direction;
     const double numerator1 = a1 * x[X] + b1 * x[Y] + c1;
     const double distance_to_hard_upper_bound =
         std::abs(numerator1) / std::sqrt(d1);
@@ -367,15 +451,27 @@ void PathHardCorridorCostTerm::GetGradientHessian(
                     cost_config_ptr_->at(HARD_LOWER_BOUND_X0) *
                         cost_config_ptr_->at(HARD_LOWER_BOUND_Y1);
   const double d2 = Square(a2) + Square(b2);
-  if (d2 > kEps) {
+  // check direction continuity
+  double lbound_result = 0;
+  planning::planning_math::Vec2d cur_lbound_direction{
+    cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+    cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
+    cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+    cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
+  if (lbound_direction_.Length() > 0) {
+    // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
+  }
+
+  if (d2 > kEps && lbound_result >= 0) {
+    lbound_direction_ = cur_lbound_direction;
     const double numerator2 = a2 * x[X] + b2 * x[Y] + c2;
     const double distance_to_hard_lower_bound =
         std::abs(numerator2) / std::sqrt(d2);
     if (numerator2 > 0. && distance_to_hard_lower_bound > kEps) {
       lx(X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * a2 *
-               (a2 * x[X] + b2 * x[Y] + c2) / d2;
+              (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lx(Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * b2 *
-               (a2 * x[X] + b2 * x[Y] + c2) / d2;
+              (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lxx(X, X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(a2) / d2;
       lxx(Y, Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(b2) / d2;
     }

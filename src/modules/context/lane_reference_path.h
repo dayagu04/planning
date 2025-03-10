@@ -54,7 +54,11 @@ class LaneReferencePath
       const double length) const;
   double CalculateEgoProjectionDistanceInReferencePath(
       const ReferencePathPoints &ref_path_points) const;
+  double CalculatePointProjectionDistanceInReferencePath(
+      const double point_x, const double point_y,
+      const ReferencePathPoints &ref_path_points) const;
   bool get_ref_points(ReferencePathPoints &points);
+  bool get_ref_points_hpp(ReferencePathPoints &points);
 
   int lane_virtual_id_ = 0;
   std::vector<int> lane_obstacles_id_;
@@ -63,6 +67,7 @@ class LaneReferencePath
   int current_leadone_obstacle_to_ego_{-1};
   int current_leadtwo_obstacle_to_ego_{-1};
   double origin_reference_path_length_ = -1;
+  double ego_projection_length_in_reference_path_ = 0;
 };
 
 }  // namespace planning

@@ -135,6 +135,20 @@ bool Polygon2d::HasOverlap(const Polygon2d &polygon) const {
   return DistanceTo(polygon) <= kMathEpsilon;
 }
 
+bool Polygon2d::HasOverlap(const Box2d &box) const {
+  assert(points_.size() >= 3);
+  if (box.max_x() < min_x() || box.min_x() > max_x() || box.max_y() < min_y() ||
+      box.min_y() > max_y()) {
+    return false;
+  }
+  for (auto &corner : box.GetAllCorners()) {
+    if (IsPointIn(corner)) {
+      return true;
+    }
+  }
+  return DistanceTo(box) <= kMathEpsilon;
+}
+
 bool Polygon2d::Contains(const LineSegment2d &line_segment) const {
   if (line_segment.length() <= kMathEpsilon) {
     return IsPointIn(line_segment.start());

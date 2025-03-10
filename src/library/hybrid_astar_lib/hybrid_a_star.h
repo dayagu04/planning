@@ -46,7 +46,8 @@ class HybridAStar {
 
   void Init();
 
-  void UpdateCarBoxBySafeBuffer(const double lat_buffer,
+  void UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
+                                const double lat_buffer_inside,
                                 const double lon_buffer);
 
   int UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf);
@@ -125,6 +126,8 @@ class HybridAStar {
       const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
       EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
 
+  // If search success, return a path linked wtih goal point;
+  // If search fail, return a path nearby goal point;
   void GearDrivePathAttempt(
       const MapBound& XYbounds, const ParkObstacleList& obstacles,
       const AstarRequest& request, const ObstacleClearZone* clear_zone,
@@ -141,6 +144,9 @@ class HybridAStar {
       const ParkObstacleList& obstacles, const AstarRequest& request,
       EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
       ParkReferenceLine* ref_line);
+
+  // debug
+  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
@@ -280,6 +286,7 @@ class HybridAStar {
   const bool IsPointBeyondBound(const double x, const double y) const;
 
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
+                        const bool need_anchor_point,
                         const RSPathRequestType rs_request,
                         const double rs_radius);
 
@@ -302,8 +309,9 @@ class HybridAStar {
                                const Pose2D& start, const double start_kappa,
                                const Pose2D& end);
 
-//   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-//                           const Pose2D& start, const Pose2D& end);
+  const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+                                const Pose2D& start, const Pose2D& end,
+                                const AstarPathGear ref_gear);
 
   const bool BackwardPassByPolynomialPath(
       HybridAStarResult* result, Node3d* poly_node,
@@ -318,6 +326,17 @@ class HybridAStar {
   const bool IsPolygonCollision(const Polygon2D* polygon);
 
   const bool IsFootPrintCollision(const Transform2d& tf);
+
+  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose);
+
+  const bool IsExpectedGearForRsPath(const RSPath &path);
+
+  // copy path from rs path
+  void PathTransformByRSPath(const RSPath& rs_path, HybridAStarResult* result);
+
+  const bool BackwardPassByNode(HybridAStarResult* result, Node3d* end_node);
+
+  const bool BestNodeIsNice(const Node3d *node);
 
  private:
   PlannerOpenSpaceConfig config_;
@@ -394,6 +413,12 @@ class HybridAStar {
   GJK2DInterface gjk_interface_;
 
   HybridAStarResult fallback_path_;
+
+  // 用于区分库内库外
+  cdl::AABB slot_box_;
+
+  // 根据车辆位置，使用不同buffer
+  HierarchyBufferCircleFootPrint hierachy_circle_model_;
 
   // just for debug, display all result in hmi/plot
   std::vector<DebugAstarSearchPoint> child_node_debug_;

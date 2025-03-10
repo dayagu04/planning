@@ -22,16 +22,34 @@ void OccupancyGridMap::Process(const OccupancyGridBound &bound,
 }
 
 void OccupancyGridMap::Clear() {
-  for (int32_t i = 0; i < ogm_grid_x_max; i++) {
-    for (int32_t j = 0; j < ogm_grid_y_max; j++) {
-      ogm[i][j] = false;
-    }
-  }
+  std::memset(ogm, false, sizeof(ogm));
+  // for (int32_t i = 0; i < ogm_grid_x_max; i++) {
+  //   for (int32_t j = 0; j < ogm_grid_y_max; j++) {
+  //     ogm[i][j] = false;
+  //   }
+  // }
   return;
 }
 
 template <typename T>
 void OccupancyGridMap::AddSlotPoint(const T &point) {
+  Pose2D local;
+
+  local.x = point.x - bound_.min_x;
+  local.y = point.y - bound_.min_y;
+
+  OgmIndex index;
+  OgmPoseToIndex(&index, local);
+
+  if (IsIndexValid(index)) {
+    ogm[index.x][index.y] = true;
+  }
+
+  return;
+}
+
+void OccupancyGridMap::AddSlotCoordinatePoint(
+    const Position2D &point) {
   Pose2D local;
 
   local.x = point.x - bound_.min_x;

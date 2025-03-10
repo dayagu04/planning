@@ -517,11 +517,11 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
     sample_scene_ = DecelerationPriorityScene;
     count_hover_to_normal_state_ = 0;
     count_normal_to_hover_state_ = 0;
-    SetNormalSceneWeight();
+    SetDeclerationSceneWeight();
     ClearStitchedPolyPtr();
   } else {
     if (sample_scene_ == NormalSampleScene) {
-      SetDeclerationSceneWeight();
+      SetNormalSceneWeight();
     } else if (sample_scene_ == PurseFlowVelScene) {
       v_suggestted_ = target_lane_objs_flow_vel_;
       SetPurseFlowVelSceneWeight();

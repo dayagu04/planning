@@ -15,6 +15,7 @@
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tasks/task.h"
+#include <unordered_map>
 #include "virtual_lane.h"
 namespace planning {
 
@@ -46,7 +47,7 @@ class LaneBorrowDecider : public Task {
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
   BorrowDirection GetBypassDirection(
-      const FrenetObstacleBoundary& frenet_obstacle_sl);
+      const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
   bool UpdateLaneBorrowDirection();
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
@@ -85,10 +86,12 @@ class LaneBorrowDecider : public Task {
   double heading_angle_{0.0};
 
   int observe_frame_num_{0};
+  std::unordered_map<int, std::pair<BorrowDirection, int>> obs_direction_map_;
   int lane_change_state_{0};
   double current_left_lane_width_{1.75};
   double current_right_lane_width_{1.75};
-  std::vector<int> static_blocked_obj_id_vec_;
+  std::vector<int> static_blocked_obj_id_vec_;//after decision
+  std::vector<int> last_static_blocked_obj_id_vec_;
   std::vector<std::shared_ptr<FrenetObstacle>> static_blocked_obstacles_;
   std::shared_ptr<ReferencePath> current_reference_path_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> current_lane_ptr_ = nullptr;

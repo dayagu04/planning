@@ -15,7 +15,7 @@
 #include "apa_debug_data.pb.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "config_context.h"
 #include "control_command_c.h"
 #include "debug_info_log.h"
@@ -29,10 +29,11 @@
 #include "planning_plan_c.h"
 #include "serialize_utils.h"
 #include "spline.h"
-#include "struct_convert/camera_preception_groundline_c.h"
+#include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/control_command_c.h"
 #include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_groundline_c.h"
 #include "struct_convert/fusion_objects_c.h"
 #include "struct_convert/fusion_occupancy_objects_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
@@ -46,6 +47,7 @@
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
@@ -119,7 +121,8 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -154,7 +157,8 @@ const bool InterfaceUpdateClosedLoop(
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
@@ -214,9 +218,14 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
           localization_info_bytes);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_info =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(
+  // iflyauto::GroundLinePerceptionInfo ground_line_info =
+  //     BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+  //                   struct_msgs::GroundLinePerceptionInfo>(
+  //         ground_line_info_bytes);
+
+  iflyauto::FusionGroundLineInfo ground_line_info =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
           ground_line_info_bytes);
 
   iflyauto::FusionObjectsInfo fus_obj_info =
@@ -244,6 +253,45 @@ const bool InterfaceUpdateParam(
   iflyauto::UssPerceptInfo uss_perception_info =
       BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
           uss_perception_info_bytes);
+
+  // ground_line_info.groundline_size = gl_coord.size();
+  // for (size_t i = 0; i < ground_line_info.groundline_size; ++i) {
+  //   ground_line_info.groundline[i].groundline_point_size = gl_coord[i].size();
+  //   for (size_t j = 0; j < ground_line_info.groundline[i].groundline_point_size;
+  //        ++j) {
+  //     ground_line_info.groundline[i].groundline_point[j].x = gl_coord[i][j].x();
+  //     ground_line_info.groundline[i].groundline_point[j].y = gl_coord[i][j].y();
+  //   }
+  // }
+  // fus_obj_info.fusion_object_size = fus_obj_coord.size();
+  // for (size_t i = 0; i < fus_obj_info.fusion_object_size; ++i) {
+  //   fus_obj_info.fusion_object[i].additional_info.polygon_points_size =
+  //       fus_obj_coord[i].size();
+  //   for (size_t j = 0;
+  //        j < fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
+  //        ++j) {
+  //     fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
+  //         fus_obj_coord[i][j].x();
+  //     fus_obj_info.fusion_object[i].additional_info.polygon_points[j].y =
+  //         fus_obj_coord[i][j].y();
+  //   }
+  // }
+  // fus_occ_obj_info.fusion_object_size = fus_occ_obj_coord.size();
+  // for (size_t i = 0; i < fus_occ_obj_info.fusion_object_size; ++i) {
+  //   fus_occ_obj_info.fusion_object[i]
+  //       .additional_occupancy_info.polygon_points_size =
+  //       fus_occ_obj_coord[i].size();
+  //   for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
+  //                              .additional_occupancy_info.polygon_points_size;
+  //        ++j) {
+  //     fus_occ_obj_info.fusion_object[i]
+  //         .additional_occupancy_info.polygon_points[j]
+  //         .x = fus_occ_obj_coord[i][j].x();
+  //     fus_occ_obj_info.fusion_object[i]
+  //         .additional_occupancy_info.polygon_points[j]
+  //         .y = fus_occ_obj_coord[i][j].y();
+  //   }
+  // }
 
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
@@ -278,11 +326,16 @@ const bool InterfaceUpdateParam(
 
   apa_interface_ptr->SetSimuParam(param);
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   if (apa_interface_ptr->GetPlaningOutput()
-          .planning_status.apa_planning_status != iflyauto::APA_IN_PROGRESS) {
+              .planning_status.apa_planning_status ==
+          iflyauto::APA_IN_PROGRESS ||
+      apa_interface_ptr->GetPlaningOutput()
+              .planning_status.hpp_planning_status == iflyauto::HPP_RUNNING) {
     return false;
   }
+
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

@@ -378,11 +378,10 @@ bool StGraphSearcher::SearchStPath(
     }
 
     // generate success nodes
-    auto successor_nodes =
-        GenerateSuccessorNodes(st_search_input_info, current_node,
-                               target_lane_rear_agent_st_boundaries);
+    GenerateSuccessorNodes(st_search_input_info, current_node,
+                           target_lane_rear_agent_st_boundaries);
 
-    for (auto& child_node : successor_nodes) {
+    for (auto& child_node : successor_nodes_) {
       if (close_set.find(child_node.id()) != close_set.end()) {
         continue;
       }
@@ -603,16 +602,15 @@ bool StGraphSearcher::IsReachGoal(const StSearchInput& input_info,
   return false;
 }
 
-std::vector<StSearchNode> StGraphSearcher::GenerateSuccessorNodes(
+void StGraphSearcher::GenerateSuccessorNodes(
     const StSearchInput& input_info, const StSearchNode& current_node,
-    const std::unordered_set<int64_t>& target_lane_agent_boundaries) const {
-  std::vector<StSearchNode> successor_nodes;
-
+    const std::unordered_set<int64_t>& target_lane_agent_boundaries) {
+  successor_nodes_.clear();
   const double speed_limit_scale = config_.speed_limit_scale;
   const double min_lower_collision_dist = config_.min_lower_collision_dist;
   const double max_lower_collision_dist = config_.max_lower_collision_dist;
   const double speed_scale = config_.lower_collision_dist_speed_scale;
-
+  successor_nodes_.reserve(input_info.accel_step().size());
   for (size_t i = 0; i < input_info.accel_step().size(); ++i) {
     const double accel_succ = input_info.accel_step().at(i);
     // ignore nodes with unreasonable jerk
@@ -724,9 +722,8 @@ std::vector<StSearchNode> StGraphSearcher::GenerateSuccessorNodes(
 
     // compute cost
     ComputeNodeCost(input_info, current_node, &succ_node);
-    successor_nodes.emplace_back(std::move(succ_node));
+    successor_nodes_.emplace_back(std::move(succ_node));
   }
-  return successor_nodes;
 }
 
 void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,

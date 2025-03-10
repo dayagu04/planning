@@ -53,7 +53,7 @@ class CubicSpiralInterface {
   const bool GenerateCubicSpiralPathByStrictSolve(
       solution_cubic_t *solution, std::vector<spiral_path_point_t> &states,
       const spiral_path_point_t *start, const spiral_path_point_t *goal,
-      const double step_length, const bool is_drive);
+      const double step_length);
 };
 
 }  // namespace planning

@@ -41,6 +41,16 @@ class Polygon2d {
   const std::vector<Vec2d> &points() const { return points_; }
 
   /**
+   * @brief Setter takes a vector of points as its vertices.
+   * @param points The points to describe vertices.
+   */
+  void set_points(std::vector<Vec2d> &points) {
+    points_ = points;
+    line_segments_.clear();
+    BuildFromPoints();
+  }
+
+  /**
    * @brief Get the edges of the polygon.
    * @return The edges of the polygon.
    */
@@ -217,6 +227,14 @@ class Polygon2d {
    * @return If this polygon has overlap with another polygon.
    */
   bool HasOverlap(const Polygon2d &polygon) const;
+
+  /**
+   * @brief Check if this polygon has overlap with a box.
+   * @param box The target box. To check if it has overlap
+   *        with this polygon.
+   * @return If this polygon has overlap with a box.
+   */
+  bool HasOverlap(const Box2d &box) const;
 
   // Only compute overlaps between two convex polygons.
   /**

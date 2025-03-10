@@ -31,6 +31,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
 
   switch (fun_state_machine_info.current_state) {
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
+    case iflyauto::FunctionalState_HPP_CRUISE_ROUTING:
+    case iflyauto::FunctionalState_HPP_CRUISE_SEARCHING:
       if (parking_fusion_info.select_slot_id == 0) {
         state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
       } else {
@@ -67,7 +69,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       }
       break;
     case iflyauto::FunctionalState_PARK_GUIDANCE:
-    case iflyauto::FunctionalState_PARK_HANDSHAKE:
+    case iflyauto::FunctionalState_PARK_PRE_ACTIVE:
+    case iflyauto::FunctionalState_HPP_PARKING_IN:
       if (fun_state_machine_info.parking_req.apa_work_mode ==
           iflyauto::APA_WORK_MODE_PARKING_IN) {
         if (fun_state_machine_info.parking_req.apa_parking_direction ==
@@ -98,9 +101,11 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       }
       break;
     case iflyauto::FunctionalState_PARK_SUSPEND:
+    case iflyauto::FunctionalState_HPP_SUSPEND:
       state_machine_ = ApaStateMachine::SUSPEND;
       break;
     case iflyauto::FunctionalState_PARK_COMPLETED:
+    case iflyauto::FunctionalState_HPP_COMPLETE:
       state_machine_ = ApaStateMachine::COMPLETE;
       break;
     default:

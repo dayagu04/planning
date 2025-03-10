@@ -1,3 +1,4 @@
+#include <bits/stdint-intn.h>
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -17,12 +18,13 @@
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "apa_world/apa_world.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "collision_detection/path_safe_checker.h"
 #include "config_context.h"
 #include "control_command_c.h"
 #include "debug_info_log.h"
 #include "func_state_machine_c.h"
+#include "fusion_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
@@ -31,8 +33,6 @@
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
-#include "log_glog.h"
-#include "narrow_space_scenario.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -44,11 +44,12 @@
 #include "src/library/convex_collision_detection/gjk2d_interface.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
-#include "struct_convert/camera_preception_groundline_c.h"
+#include "src/modules/apa_function/parking_scenario/narrow_space/narrow_space_scenario.h"
+#include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/control_command_c.h"
 #include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_groundline_c.h"
 #include "struct_convert/fusion_objects_c.h"
 #include "struct_convert/fusion_occupancy_objects_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
@@ -60,9 +61,9 @@
 #include "struct_convert/vehicle_service_c.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
-#include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
@@ -108,7 +109,10 @@ Eigen::Vector3d coordinate_system_;
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
 AstarPathGear history_gear_request_;
-std::vector<Eigen::Vector3d> footprint_circle_model_;
+// local coordinate system
+std::vector<Eigen::Vector3d> footprint_circle_model_normal_gear_;
+std::vector<Eigen::Vector3d> footprint_circle_model_drive_gear_;
+std::vector<Eigen::Vector3d> footprint_circle_model_reverse_gear_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -139,23 +143,37 @@ int StopPybind() {
   return 0;
 }
 
-void UpdateFootprintCircle() {
-  const EulerDistanceTransform *edt_ =
-      hybrid_astar_interface_->GetEulerDistanceTransform();
+void UpdateFootprintCircle(const AstarPathGear gear,
+                           std::vector<Eigen::Vector3d> &footprint_circle) {
+  footprint_circle.clear();
+
+  FootPrintCircleModel *model =
+      hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
-  footprint_circle_model_.clear();
+      model->GetLocalFootPrintCircleByGear(gear);
+
   const FootPrintCircle *circle = &circle_footprint.max_circle;
-
-  footprint_circle_model_.push_back(
+  footprint_circle.push_back(
       Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
-
   for (int i = 0; i < circle_footprint.size; i++) {
     circle = &circle_footprint.circles[i];
 
-    footprint_circle_model_.push_back(
+    footprint_circle.push_back(
         Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
   }
+
+  return;
+}
+
+void UpdateFootprintCircleList() {
+  UpdateFootprintCircle(AstarPathGear::NORMAL,
+                        footprint_circle_model_normal_gear_);
+
+  UpdateFootprintCircle(AstarPathGear::DRIVE,
+                        footprint_circle_model_drive_gear_);
+
+  UpdateFootprintCircle(AstarPathGear::REVERSE,
+                        footprint_circle_model_reverse_gear_);
 
   return;
 }
@@ -349,7 +367,7 @@ int GetPathFromHybridAstar() {
   AstarRequest request = thread_solver_->GetAstarRequest();
   history_gear_request_ = request.first_action_request.gear_request;
 
-  UpdateFootprintCircle();
+  UpdateFootprintCircleList();
 
   ILOG_INFO << "receive finish";
 
@@ -361,7 +379,8 @@ const void UpdateLocalView(
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes,
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
-    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, bool force_plan,
+    py::bytes &ground_line_info_bytes, py::bytes &fus_objs,
+    py::bytes &fus_occ_obj_msg_bytes, bool force_plan,
     std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
@@ -391,9 +410,10 @@ const void UpdateLocalView(
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  // auto ground_line_ =
-  //     BytesToStruct<GroundLinePerception::GroundLinePerceptionInfo>(
-  //         ground_line);
+    iflyauto::FusionGroundLineInfo ground_line_ =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
+          ground_line_info_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -410,7 +430,7 @@ const void UpdateLocalView(
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
-  // local_view.ground_line_perception = ground_line_;
+  local_view.ground_line_perception = ground_line_;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
@@ -449,7 +469,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     py::bytes &localization_info_bytes,
                     py::bytes &vehicle_service_output_info_bytes,
                     py::bytes &uss_wave_info_bytes,
-                    py::bytes &uss_perception_info_bytes, py::bytes &fus_objs,
+                    py::bytes &uss_perception_info_bytes,
+                    py::bytes &ground_line_bytes, py::bytes &fus_objs,
                     py::bytes &fus_occ_obj_msg_bytes, int select_id,
                     bool force_plan, bool is_path_optimization,
                     bool is_cilqr_optimization, bool is_reset,
@@ -500,9 +521,10 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-  // auto ground_line_ =
-  //     BytesToStruct<GroundLinePerception::GroundLinePerceptionInfo>(
-  //         ground_line);
+  iflyauto::FusionGroundLineInfo ground_line_info =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(
+          ground_line_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -519,7 +541,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
-  // local_view.ground_line_perception = ground_line_;
+  local_view.ground_line_perception = ground_line_info;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
@@ -538,7 +560,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   ILOG_INFO << "pybind select slot id " << select_id;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   double plan_time = IflyTime::Now_us();
@@ -550,7 +573,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info =
-        scenario->GetApaWorldPtr()->GetNewSlotManagerPtr()->ego_info_under_slot_;
+        scenario->GetApaWorldPtr()->GetSlotManagerPtr()->ego_info_under_slot_;
     ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();
@@ -617,13 +640,12 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                                    ego_info.origin_pose_global.heading);
 
     // start
-    Pose2D start =
-        Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
-               ego_info.cur_pose.heading);
+    Pose2D start = Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
+                          ego_info.cur_pose.heading);
 
-    Pose2D real_end = Pose2D(ego_info.target_pose.pos[0],
-                             ego_info.target_pose.pos[1],
-                             ego_info.target_pose.heading);
+    Pose2D real_end =
+        Pose2D(ego_info.target_pose.pos[0], ego_info.target_pose.pos[1],
+               ego_info.target_pose.heading);
     PointCloudObstacleTransform obstacle_generator;
 
     ParkSpaceType slot_type;
@@ -650,10 +672,10 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     VirtualWallDecider *wall_decider =
         hybrid_astar_park_->MutableVirtualWallDecider();
-    wall_decider->Process(hybrid_astar_obs_.virtual_obs,
-                          ego_info.slot.GetWidth(), ego_info.slot.GetLength(),
-                          start, real_end, slot_type,
-                          pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID, parking_in_type);
+    wall_decider->Process(
+        hybrid_astar_obs_.virtual_obs, ego_info.slot.GetWidth(),
+        ego_info.slot.GetLength(), start, real_end, slot_type,
+        pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID, parking_in_type);
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_info.slot.GetLength(),
@@ -669,7 +691,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
         world->GetStateMachineManagerPtr()->GetStateMachine() ==
             ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_dist =
-          apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+          apa_param.GetParam().astar_config.vertical_tail_in_end_straight_dist;
     } else {
       end_straight_dist = 0.5;
     }
@@ -804,8 +826,8 @@ const bool SetLocalization(py::bytes &localization_info_bytes) {
 }
 
 const bool SetGroundLine(py::bytes &line) {
-  auto ground_line = BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                                   struct_msgs::GroundLinePerceptionInfo>(line);
+  auto ground_line = BytesToStruct<iflyauto::FusionGroundLineInfo,
+                                   struct_msgs::FusionGroundLineInfo>(line);
 
   local_view.ground_line_perception = ground_line;
 
@@ -914,8 +936,19 @@ std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
   return speed_limit_profile;
 }
 
-const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
-  return footprint_circle_model_;
+const std::vector<Eigen::Vector3d> &GetFootPrintModel(const int32_t gear) {
+  switch (gear) {
+    case 0:
+      return footprint_circle_model_normal_gear_;
+    case 4:
+      return footprint_circle_model_drive_gear_;
+    case 2:
+      return footprint_circle_model_reverse_gear_;
+    default:
+      break;
+  }
+
+  return footprint_circle_model_normal_gear_;
 }
 
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {

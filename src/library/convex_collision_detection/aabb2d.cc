@@ -1,6 +1,7 @@
 #include "aabb2d.h"
 
 #include "gjk2d.h"
+#include "pose2d.h"
 
 namespace cdl {
 AABB::AABB()
@@ -61,6 +62,18 @@ bool AABB::contain(const Vector2r &p) const {
 }
 
 bool AABB::contain(const planning::Position2D &p) const {
+  if (min_[0] > p.x || min_[1] > p.y) {
+    return false;
+  }
+
+  if (max_[0] < p.x || max_[1] < p.y) {
+    return false;
+  }
+
+  return true;
+}
+
+bool AABB::contain(const planning::Pose2D &p) const {
   if (min_[0] > p.x || min_[1] > p.y) {
     return false;
   }

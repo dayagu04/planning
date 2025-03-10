@@ -35,6 +35,7 @@ bool ClosestInPathVehicleDecider::Execute() {
   res = DetermineIfConeBucketCIPV();
   const auto cipv_decider_output =
       session_->planning_context().cipv_decider_output();
+  DetermineCIPVInfoForHMI();
   JSON_DEBUG_VALUE("cipv_id_st", cipv_decider_output.cipv_id())
   JSON_DEBUG_VALUE("cipv_acc", cipv_decider_output.acceleration())
   return true;
@@ -47,6 +48,8 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
     return false;
   }
   const auto &st_boundaries = ptr_st_graph_helper->GetAllStBoundaries();
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
   double min_s = std::numeric_limits<double>::max();
   int32_t id = kInvalidId;
   double releative_s = 0.0;
@@ -87,6 +90,10 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
         min_s = lower_s;
         id = lower_point.agent_id();
       }
+      agents_distance_id_map_[lower_s] = std::make_pair(
+          agent_manager->GetAgent(lower_point.agent_id())->type() ==
+              agent::AgentType::VIRTUAL,
+          lower_point.agent_id());
       if (kInvalidId == id) {
         mutable_cipv_decider_output.Reset();
       } else {
@@ -193,6 +200,26 @@ bool ClosestInPathVehicleDecider::DetermineIfConeBucketCIPV() {
   return true;
 }
 
+void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() const {
+  auto hmi_info =
+      session_->mutable_planning_context()->mutable_planning_hmi_info();
+  for (const auto &[agent_cur_distance_to_ego, isvirtual_agentid] :
+       agents_distance_id_map_) {
+    if (isvirtual_agentid.first) {  // if virtual, skip
+      continue;
+    } else {
+      hmi_info->cipv_info.cipv_id = isvirtual_agentid.second;
+      hmi_info->cipv_info.has_cipv = true;
+      JSON_DEBUG_VALUE("cipv_id_hmi", hmi_info->cipv_info.cipv_id)
+      return;
+    }
+  }
+  hmi_info->cipv_info.cipv_id = -1;
+  hmi_info->cipv_info.has_cipv = false;
+  JSON_DEBUG_VALUE("cipv_id_hmi", hmi_info->cipv_info.cipv_id)
+  return;
+}
+
 void ClosestInPathVehicleDecider::Reset(int32_t *const cipv_id,
                                         double *const relative_s,
                                         double *const v_frenet,
@@ -218,5 +245,6 @@ void ClosestInPathVehicleDecider::Reset() {
   mutable_cipv_decider_output.set_ttc(std::numeric_limits<double>::max());
   mutable_cipv_decider_output.set_dangerous_level(-1);
   mutable_cipv_decider_output.set_is_virtual(true);
+  agents_distance_id_map_.clear();
 }
 }  // namespace planning

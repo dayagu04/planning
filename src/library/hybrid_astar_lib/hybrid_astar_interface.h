@@ -10,6 +10,7 @@
 #include "node3d.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "target_pose_regulator.h"
 
 namespace planning {
 
@@ -64,11 +65,11 @@ class HybridAStarInterface {
   const Pose2D GetAstarTargetPose() const { return target_regulator_goal_; }
 
   // multi-thread, input
-  int UpdateInput(const ParkObstacleList& obs_list,
+  void UpdateInput(const ParkObstacleList& obs_list,
                   const AstarRequest& request);
 
   // multi-thread, output
-  int UpdateOutput();
+  void UpdateOutput();
 
   const EulerDistanceTransform* GetEulerDistanceTransform() const {
     return &edt_;
@@ -105,6 +106,8 @@ class HybridAStarInterface {
 
   void UpdateEDTByObs(const ParkObstacleList& obs_list);
 
+  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
+
  private:
   // if ego pose is good, seleted real end is ok
   const bool IsSelectedRealTargetPose() const;
@@ -123,6 +126,27 @@ class HybridAStarInterface {
   const Pose2D& GetStartPoint();
 
   const Pose2D& GetGoalPoint();
+
+  const bool IsEgoOverlapWithSlot();
+
+  // 基于采样的揉库API
+  void PathSamplingForScenarioRunning();
+
+  void PathSearchForScenarioTry(const TargetPoseRegulator& regulator);
+
+  // 基于搜索的路径生成API
+  void PathSearchForScenarioRunning(const TargetPoseRegulator& regulator,
+                                    const double ego_obs_dist,
+                                    const bool is_ego_overlap_with_slot);
+
+  // todo: move it to safe buffer decider
+  // return safe buffer when path is insidet slot.
+  // Need to consider:
+  // 1. distance from ego to obstacle;
+  // 2. distance from target pose to obstacle;
+  const double GetLatBufferForInsideSlot(const double target_obs_dist,
+                                         const double ego_obs_dist,
+                                         const bool is_ego_overlap_with_slot);
 
  private:
   // read vehicle param from file

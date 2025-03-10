@@ -106,44 +106,59 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   std::string config_file = common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
+  auto config_builder =
+      session_.environmental_model().config_builder(scene_type);
+  config_ = config_builder->cast<GeneralPlanningConfig>();
+  environmental_model_manager_.SetConfig(scene_type);
   // all parameters can be changed here
   JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
                   "planner_type");
 }
 
-bool PlanningScheduler::RunOnce(
-    iflyauto::PlanningOutput *const planning_output,
-    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  double start_timestamp = IflyTime::Now_ms();
-
-  LOG_ERROR("PlanningScheduler::RunOnce \n");
-
-  session_.mutable_planning_context()->Clear();
-  session_.mutable_planning_context()->feed_planning_hmi_info(
-      planning_hmi_info);
-
+planning::common::SceneType PlanningScheduler::DetermineSceneType(
+    const iflyauto::FuncStateMachine &func_state_machine) {
   auto scene_type = planning::common::SceneType::HIGHWAY;
-  const auto &state_machine = local_view_->function_state_machine_info;
 
-  if (IsUndefinedScene(state_machine.current_state)) {
+  if (IsUndefinedScene(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;
-  } else if (IsValidParkingState(state_machine.current_state)) {
+  } else if (IsSwitchApaState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::PARKING_APA;
-  } else if (IsValidHppState(state_machine.current_state)) {
+  } else if (IsValidHppState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HPP;
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
-
   session_.set_scene_type(scene_type);
 
   auto frame_info =
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
 
+  ILOG_INFO << "scene_type " << scene_type;
+  return scene_type;
+}
+
+bool PlanningScheduler::RunOnce(
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  LOG_ERROR("PlanningScheduler::RunOnce \n");
+  auto &planning_result =
+      session_.mutable_planning_context()->mutable_planning_result();
+  const double start_timestamp = IflyTime::Now_ms();
   bool planning_success = false;
-  if (scene_type == common::PARKING_APA) {
-    // 泊车规划部分
+  session_.mutable_planning_context()->Clear();
+  session_.mutable_planning_context()->feed_planning_hmi_info(
+      planning_hmi_info);
+
+  const auto &state_machine = local_view_->function_state_machine_info;
+  auto function_type = DetermineSceneType(state_machine);
+  planning_result.scene_type = function_type;
+  planning_result.timestamp = start_timestamp;
+  planning_output->successful_slot_info_list_size = 0;
+
+  // reset
+  if (function_type == common::PARKING_APA || function_type == common::HPP) {
+    const auto &state_machine = local_view_->function_state_machine_info;
     if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
         state_machine.current_state !=
             iflyauto::FunctionalState_PARK_GUIDANCE) {
@@ -152,65 +167,16 @@ bool PlanningScheduler::RunOnce(
 
       ResetGLogFile();
     }
-    planning_success = apa_function_->Plan();
-    *planning_output = session_.planning_context().planning_output();
-    return planning_success;
   }
 
-  // 行车规划部分
-  // TODO(xjli32): 功能切换时，reset
-  ClearParkingInfo(planning_output);
-  auto &planning_result =
-      session_.mutable_planning_context()->mutable_planning_result();
-  planning_result.timestamp = start_timestamp;
-  // planning_output->msg_header.stamp = start_timestamp_us; 统一放在adapter处
-
-  // sync parameters only if scene_type or dbw_status changes
-  const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
-  if ((scene_type != GENERAL_PLANNING_CONTEXT.GetStatemachine().scene_type ||
-       (dbw_status != GENERAL_PLANNING_CONTEXT.GetStatemachine().dbw_status))) {
-    SyncParameters(scene_type);
-  }
-  GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
-  GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = scene_type;
-
-  // update environment model
-  if (!environmental_model_manager_.Run()) {
-    session_.mutable_planning_context()->Clear();
-    return false;
+  bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
+  if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
+    planning_success = ExcuteParkingFunction(function_type, planning_output);
   }
 
-  if (scene_type == planning::common::SceneType::HIGHWAY) {
-    planning_success = scc_function_->Plan();
-  } else if (scene_type == planning::common::SceneType::HPP) {
-    planning_success = hpp_function_->Plan();
-  } else {
-    planning_success = scc_function_->Plan();
-  }
-  session_.mutable_planning_context()->mutable_planning_success() =
-      planning_success;
-  if (!planning_success) {
-    LOG_DEBUG("Planning failed !!!! \n");
-    if (!UpdateFailedPlanningResult()) {
-      LOG_DEBUG("RunOnce failed !!!! \n");
-      FillPlanningRequest(iflyauto::REQUEST_LEVEL_MIDDLE, planning_output);
-      return false;
-    }
-  } else {
-    UpdateSuccessfulPlanningResult();
-  }
-  std::cout << "The RunOnce is successed !!!!:" << std::endl;
-  session_.mutable_planning_context()->mutable_last_planning_success() =
-      session_.planning_context().planning_success();
-
-  const auto end_timestamp = IflyTime::Now_ms();
-  const double time_consumption = end_timestamp - start_timestamp;
-  LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
-  JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
-  FillPlanningTrajectory(start_timestamp, planning_output);
-  FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  if (session_.is_hpp_scene()) {
-    PrepareForApa();
+  if (function_type == common::HIGHWAY || function_type == common::HPP) {
+    planning_success = ExcuteNavigationFunction(
+        function_type, start_timestamp, planning_output, planning_hmi_info);
   }
 
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
@@ -551,248 +517,62 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->cipv_info.has_cipv = cipv_info.has_cipv;
   planning_hmi_info->cipv_info.cipv_id = cipv_info.cipv_id;
 
-  const auto &ego_state_manager =
-      session_.environmental_model().get_ego_state_manager();
-  planning_hmi_info->ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
-
   // HMI for ad_info
-  const auto &virtual_lane_manager =
-      session_.environmental_model().get_virtual_lane_manager();
-  const auto &route_info_output =
-      session_.environmental_model().get_route_info()->get_route_info_output();
+  const auto &ad_info =
+      session_.planning_context().planning_hmi_info().ad_info;
+  planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
   planning_hmi_info->ad_info.lane_change_direction =
-      (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
+      ad_info.lane_change_direction;
+  planning_hmi_info->ad_info.lane_change_status = ad_info.lane_change_status;
+  planning_hmi_info->ad_info.status_update_reason =
+      ad_info.status_update_reason;
+  planning_hmi_info->ad_info.obstacle_info[0] = ad_info.obstacle_info[0];
+  planning_hmi_info->ad_info.lane_change_reason = ad_info.lane_change_reason;
 
-  // planning_hmi_info->ad_info.lane_change_status =
-  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
-  // update LaneChangeStatus
-  const auto curr_state = lane_change_decider_output.curr_state;
-  const auto lasr_frame_state = session_.planning_context()
-                                    .lane_change_decider_output()
-                                    .coarse_planning_info.source_state;
-  if (curr_state == kLaneKeeping) {
-    if (lasr_frame_state == kLaneChangeComplete) {
-      planning_hmi_info->ad_info.lane_change_status =
-          iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
-    } else {
-      planning_hmi_info->ad_info.lane_change_status =
-          iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-      // for turn signal road to ramp
-      const auto dir_turn_signal_road_to_ramp =
-          lane_change_decider_output.dir_turn_signal_road_to_ramp;
-      if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
-        planning_hmi_info->ad_info.lane_change_status =
-            iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
-        planning_hmi_info->ad_info.lane_change_direction =
-            iflyauto::LaneChangeDirection::LC_DIR_LEFT;
-      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
-        planning_hmi_info->ad_info.lane_change_direction =
-            iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
-      }
-    }
-  } else if (curr_state == kLaneChangePropose) {
-    planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_WAITING;
-  } else if (curr_state == kLaneChangeExecution) {
-    planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-  } else if (curr_state == kLaneChangeComplete) {
-    planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-  } else if (curr_state == kLaneChangeCancel) {
-    planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
-  }
-  // update StatusUpdateReason
-  const auto int_request_cancel_reason =
-      lane_change_decider_output.int_request_cancel_reason;
-  const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
-  const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (int_request_cancel_reason == SOLID_LC &&
-      lane_change_decider_output.lc_request_source == INT_REQUEST) {
-    planning_hmi_info->ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
-    // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
-    // 在此更新变道状态和变道方向的值！！！！！！！
-    //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
-    planning_hmi_info->ad_info.lane_change_direction =
-        (iflyauto::LaneChangeDirection)
-            lane_change_decider_output.ilc_virtual_req;
-    planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-  } else if (int_request_cancel_reason == MANUAL_CANCEL) {
-    planning_hmi_info->ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
-  } else if (lc_invalid_reason == "side view invalid" ||
-             lc_invalid_reason == "front view invalid" ||
-             lc_back_reason == "side view back" ||
-             lc_back_reason == "front view back" ||
-             lc_back_reason == "but back cnt below threshold") {
-    planning_hmi_info->ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
-    iflyauto::ObstacleInfo obstacle;
-    obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
-    planning_hmi_info->ad_info.obstacle_info[0] = obstacle;
-  } else {
-    planning_hmi_info->ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
-  }
-  // update LaneChangeReason
-  const auto lc_request_source = lane_change_decider_output.lc_request_source;
-  if (lc_request_source == NO_REQUEST) {
-    planning_hmi_info->ad_info.lane_change_reason =
-        iflyauto::LaneChangeReason::LC_REASON_NONE;
-  } else if (lc_request_source == INT_REQUEST) {
-    planning_hmi_info->ad_info.lane_change_reason =
-        iflyauto::LaneChangeReason::LC_REASON_MANUAL;
-  } else if (lc_request_source == OVERTAKE_REQUEST) {
-    planning_hmi_info->ad_info.lane_change_reason =
-        iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
-  } else if (lc_request_source == MAP_REQUEST) {
-    if (route_info_output.dis_to_ramp <
-        route_info_output.distance_to_first_road_merge) {
-      planning_hmi_info->ad_info.lane_change_reason =
-          iflyauto::LaneChangeReason::LC_REASON_SPLIT;
-    } else {
-      planning_hmi_info->ad_info.lane_change_reason =
-          iflyauto::LaneChangeReason::LC_REASON_MERGE;
-    }
-  } else if (lc_request_source == MERGE_REQUEST) {
-    planning_hmi_info->ad_info.lane_change_reason =
-        iflyauto::LaneChangeReason::LC_REASON_MERGE;
-  }
+  planning_hmi_info->ad_info.distance_to_ramp = ad_info.distance_to_ramp;
+  planning_hmi_info->ad_info.distance_to_split = ad_info.distance_to_split;
+  planning_hmi_info->ad_info.distance_to_merge = ad_info.distance_to_merge;
+  planning_hmi_info->ad_info.distance_to_toll_station =
+      ad_info.distance_to_toll_station;
+  planning_hmi_info->ad_info.noa_exit_warning_level_distance =
+      ad_info.noa_exit_warning_level_distance;
+  // planning_hmi_info->ad_info.distance_to_tunnel = ;
+  // planning_hmi_info->ad_info.is_within_hdmap = ;
+  planning_hmi_info->ad_info.ramp_direction = ad_info.ramp_direction;
+  planning_hmi_info->ad_info.dis_to_reference_line =
+      ad_info.dis_to_reference_line;
+  planning_hmi_info->ad_info.angle_to_roaddirection =
+      ad_info.angle_to_roaddirection;
+  planning_hmi_info->ad_info.is_in_sdmaproad = ad_info.is_in_sdmaproad;
+  planning_hmi_info->ad_info.road_type = ad_info.road_type;
+  planning_hmi_info->ad_info.ramp_pass_sts = ad_info.ramp_pass_sts;
+  planning_hmi_info->ad_info.landing_point = ad_info.landing_point;
 
   planning_hmi_info->ad_info.avoid_status =
       lat_offset_decider_output.avoid_id > 0
           ? iflyauto::AvoidObstacle::AVOID_HIDING
-          : iflyauto::AvoidObstacle::AVOID_NO_HIDING;  // 晨亮填写
+          : iflyauto::AvoidObstacle::AVOID_NO_HIDING;
   planning_hmi_info->ad_info.aovid_id =
-      lat_offset_decider_output.avoid_id;  // 晨亮填写
+      lat_offset_decider_output.avoid_id;
   planning_hmi_info->ad_info.avoiddirect =
       static_cast<iflyauto::AvoidObstacleDirection>(
           lat_offset_decider_output.avoid_direction);
 
-  if (!route_info_output.is_on_ramp) {
-    planning_hmi_info->ad_info.distance_to_ramp = route_info_output.dis_to_ramp;
-  } else {
-    planning_hmi_info->ad_info.distance_to_ramp = NL_NMAX;
-  }
-  planning_hmi_info->ad_info.distance_to_split =
-      route_info_output.distance_to_first_road_split;
-  if (route_info_output.is_ramp_merge_to_road_on_expressway) {
-    planning_hmi_info->ad_info.distance_to_merge =
-        route_info_output.distance_to_first_road_merge;
-  } else {
-    planning_hmi_info->ad_info.distance_to_merge = NL_NMAX;
-  }
-  planning_hmi_info->ad_info.distance_to_toll_station =
-      route_info_output.distance_to_toll_station;
-  planning_hmi_info->ad_info.noa_exit_warning_level_distance =
-      route_info_output.distance_to_route_end;
-  // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
-  // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
-  const int ramp_direction = route_info_output.ramp_direction;
-  planning_hmi_info->ad_info.ramp_direction =
-      (iflyauto::RampDirection)ramp_direction;
-  // planning_hmi_info->ad_info.ramp_pass_sts = ;       // 义龙填写
-  auto fix_reference_path =
-      lane_change_decider_output.coarse_planning_info.reference_path;
-  if (fix_reference_path != nullptr) {
-    planning_hmi_info->ad_info.dis_to_reference_line =
-        std::abs(fix_reference_path->get_frenet_ego_state().l() * 100);
-    planning_hmi_info->ad_info.angle_to_roaddirection =
-        fix_reference_path->get_frenet_ego_state().heading_angle();
-  }
-
-  planning_hmi_info->ad_info.is_in_sdmaproad =
-      route_info_output.is_in_sdmaproad;
-  if (route_info_output.is_ego_on_expressway_hmi) {
-    planning_hmi_info->ad_info.road_type =
-        iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
-    //update RampPassSts
-    if (planning_hmi_info->ad_info.distance_to_ramp < 200) {
-      if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_LEFT &&
-          !lane_change_decider_output.is_ego_on_leftmost_lane) {
-        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
-      } else if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_RIGHT &&
-          !lane_change_decider_output.is_ego_on_rightmost_lane) {
-        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
-      }
-    }
-  } else if (route_info_output.is_ego_on_city_expressway_hmi) {
-    planning_hmi_info->ad_info.road_type =
-        iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
-    //update RampPassSts
-    if (planning_hmi_info->ad_info.distance_to_ramp < 50) {
-      if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_LEFT &&
-          !lane_change_decider_output.is_ego_on_leftmost_lane) {
-        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
-      } else if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_RIGHT &&
-          !lane_change_decider_output.is_ego_on_rightmost_lane) {
-        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
-      }
-    }
-  } else {
-    planning_hmi_info->ad_info.road_type =
-        iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
-  }
-
-  if (curr_state == kLaneChangePropose || curr_state == kLaneChangeExecution ||
-      curr_state == kLaneChangeComplete || curr_state == kLaneChangeCancel) {
-    int target_reference_virtual_id;
-    if (curr_state == kLaneChangeCancel) {
-      target_reference_virtual_id =
-          lane_change_decider_output.fix_lane_virtual_id;
-    } else {
-      target_reference_virtual_id =
-          lane_change_decider_output.target_lane_virtual_id;
-    }
-    auto target_reference =
-        session_.environmental_model()
-            .get_reference_path_manager()
-            ->get_reference_path_by_lane(target_reference_virtual_id, false);
-    if (target_reference != nullptr) {
-      Point2D cart_point;
-      if (target_reference->get_frenet_coord()->SLToXY(
-              Point2D(target_reference->get_frenet_ego_state().s(), 0),
-              cart_point)) {
-        const auto &ego_pose =
-            session_.environmental_model().get_ego_state_manager()->ego_pose();
-        const double theta_ori = ego_pose.theta;
-        double landing_point_theta_global = 0;
-        ReferencePathPoint reference_path_point{};
-        if (target_reference->get_reference_point_by_lon(
-                target_reference->get_frenet_ego_state().s(),
-                reference_path_point)) {
-          landing_point_theta_global = reference_path_point.path_point.theta();
-        }
-        Eigen::Vector2d pos_n_ori(ego_pose.x, ego_pose.y);
-        pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori,
-                                                              theta_ori);
-        Eigen::Vector2d p_n(cart_point.x, cart_point.y);
-        Eigen::Vector2d landing_point_body = global_to_local_tf.GetPos(p_n);
-        const double landing_point_theta_local =
-            global_to_local_tf.GetHeading(landing_point_theta_global);
-        planning_hmi_info->ad_info.landing_point.relative_pos.x =
-            landing_point_body.x();
-        planning_hmi_info->ad_info.landing_point.relative_pos.y =
-            landing_point_body.y();
-        planning_hmi_info->ad_info.landing_point.relative_pos.z = 0;
-        planning_hmi_info->ad_info.landing_point.heading =
-            landing_point_theta_local;
-      }
-    }
-  }
-
   // HMI for hpp
+  const bool is_reached_target_slot =
+      session_.environmental_model().get_parking_slot_manager()->IsReachedTargetSlot();
+  const auto &ego_state_manager =
+      session_.environmental_model().get_ego_state_manager();
+  const auto &route_info_output =
+      session_.environmental_model().get_route_info()->get_route_info_output();
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
   hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
-  hpp_info->distance_to_parking_space =
-      route_info_output.distance_to_target_slot;
+  hpp_info->distance_to_parking_space = is_reached_target_slot ?
+      0.0 : route_info_output.distance_to_target_slot;
   hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
+  // hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
       route_info_output.is_reached_hpp_start_point;
   hpp_info->accumulated_driving_distance =
@@ -800,6 +580,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;
+  hpp_info->is_parking_space_occupied = false;
+  hpp_info->is_new_parking_space_found = false;
+  hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_NONE;
   auto reference_path_manager =
       session_.environmental_model().get_reference_path_manager();
   auto current_reference_path =
@@ -807,10 +590,10 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const double kCheckTurnDistance = 15.0;
   const double kEgoIsOnTurnDistance1 = -3.0;
   const double kEgoIsOnTurnDistance2 = 5.0;
+  auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
+  auto &points = current_reference_path->get_points();
+  double ego_s = frenet_ego_state.s();
   if (current_reference_path != nullptr) {
-    auto frenet_ego_state = current_reference_path->get_frenet_ego_state();
-    auto points = current_reference_path->get_points();
-    double ego_s = frenet_ego_state.s();
     for (auto &point : points) {
       double distance = point.path_point.s() - ego_s;
       if (distance > kEgoIsOnTurnDistance1 &&
@@ -830,6 +613,33 @@ void PlanningScheduler::FillPlanningHmiInfo(
       }
     }
   }
+  // if (route_info_output.distance_to_target_slot < 10.0) {
+  //   hpp_info->distance_to_parking_space =
+  //       std::min(std::fabs(points.back().path_point.s() - ego_s),
+  //                route_info_output.distance_to_target_slot);
+  // }
+  // hpp状态切park_in状态
+  if (session_.is_hpp_scene()) {
+    const auto &parking_switch_info = session_.planning_context()
+                                          .parking_switch_decider_output()
+                                          .parking_switch_info;
+    if (parking_switch_info.is_memory_slot_allowed_to_park) {
+      hpp_info->hpp_state_switch =
+          iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    } else if (parking_switch_info.is_memory_slot_occupied) {
+      hpp_info->is_parking_space_occupied = true;
+    } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
+      hpp_info->hpp_state_switch =
+          iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+    }
+
+    // todo: is_new_parking_space_found is unused.
+    if (parking_switch_info.has_parking_slot_in_hpp_searching) {
+      hpp_info->is_new_parking_space_found = true;
+    }
+  }
+
+  return;
 }
 
 void PlanningScheduler::FillPlanningRequest(
@@ -850,58 +660,7 @@ void PlanningScheduler::ClearParkingInfo(
       ->mutable_planning_output()
       .successful_slot_info_list_size = 0;
 
-  planning_output->successful_slot_info_list_size = 0;
-
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
-}
-
-void PlanningScheduler::PrepareForApa() {
-  const double kDistanceToDestination = 8.;
-  auto virtual_lane_manager =
-      session_.environmental_model().get_virtual_lane_manager();
-  auto &ego_state = session_.environmental_model().get_ego_state_manager();
-
-  auto planning_context = session_.mutable_planning_context();
-
-  auto &planning_output = planning_context->mutable_planning_output();
-
-  auto gear_command = &(planning_output.gear_command);
-  double distance_to_destination = std::numeric_limits<double>::max();
-  const auto &route_info_output =
-      session_.environmental_model().get_route_info()->get_route_info_output();
-  distance_to_destination = route_info_output.distance_to_target_slot;
-  bool entering_parking_area = distance_to_destination < kDistanceToDestination;
-  double ego_v = ego_state->ego_v();
-  auto fsm_state = session_.environmental_model()
-                       .get_local_view()
-                       .function_state_machine_info.current_state;
-
-  if (fsm_state != iflyauto::FunctionalState_HPP_IN_SECURE &&
-      entering_parking_area && ego_v < 0.1) {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
-    if (ego_state->ego_gear() == planning::common::GearType::PARK) {
-      planning_context->mutable_planning_completed() = true;
-      std::cout << "HPP has arrived destination !!! " << std::endl;
-    }
-  } else {
-    if (fsm_state == iflyauto::FunctionalState_HPP_IN_SECURE && ego_v < 0.1) {
-      if (ego_state->ego_gear() == planning::common::GearType::PARK) {
-        planning_context->mutable_planning_completed() = true;
-        std::cout << "[general_planning] The HPP gear has been changed to PARK "
-                     "by fsm_state HPP_IN_SECURE !!! "
-                  << std::endl;
-      }
-      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
-      std::cout << "[general planning] The HPP has stopped by MFF because of "
-                   "SECURE situation"
-                << std::endl;
-    } else {
-      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-      planning_context->mutable_planning_completed() = false;
-      std::cout << "[general_planning] reset planning_completed to false"
-                << std::endl;
-    }
-  }
 }
 
 bool PlanningScheduler::IsUndefinedScene(
@@ -913,12 +672,8 @@ bool PlanningScheduler::IsUndefinedScene(
 
 bool PlanningScheduler::IsValidHppState(
     const iflyauto::FunctionalState &current_state) {
-  return current_state == iflyauto::FunctionalState_HPP_IN_MEMORY ||
-         current_state == iflyauto::FunctionalState_HPP_IN_READY_EXISTROUTE ||
-         current_state == iflyauto::FunctionalState_HPP_IN_READY_REENTRYROUTE ||
-         current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_READY ||
-         current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE ||
-         current_state == iflyauto::FunctionalState_HPP_IN_SECURE;
+  return current_state >= iflyauto::FunctionalState_HPP_STANDBY &&
+         current_state <= iflyauto::FunctionalState_HPP_ERROR;
 }
 
 void PlanningScheduler::InitSccFunction() {
@@ -961,17 +716,14 @@ void PlanningScheduler::interpolate_with_last_trajectory_points() {
   const auto &last_planning_result =
       session_.planning_context().last_planning_result();
 
-  auto curr_time = session_.mutable_environmental_model()
-                       ->get_ego_state_manager()
-                       ->navi_timestamp();
-  auto start_time = curr_time - last_planning_result.timestamp;
-  assert(start_time >= 0);
-
   // interpolate traj points
   // todo @xbliu config
 
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
+  auto start_time =
+      (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
+  assert(start_time >= 0);
   planning_result.traj_points.clear();
   auto backup_num_points = 201;
   auto delta_time = 0.025;
@@ -1027,13 +779,15 @@ bool PlanningScheduler::UpdateFailedPlanningResult() {
       session_.planning_context().last_planning_result();
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
+  if (last_planning_result.scene_type != planning_result.scene_type) {
+    return false;
+  }
+
   if (last_planning_result.target_lane_id ==
           coarse_planning_info.target_lane_id &&
       last_planning_result.use_backup_cnt <= config_.failure_counter_thrshld) {
-    auto cur_time = session_.mutable_environmental_model()
-                        ->get_ego_state_manager()
-                        ->navi_timestamp();
-    auto delta_time = cur_time - last_planning_result.timestamp;
+    auto delta_time =
+        (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
     if (0.0 < delta_time && delta_time < 1.0) {
       interpolate_with_last_trajectory_points();
       planning_result.use_backup_cnt = last_planning_result.use_backup_cnt + 1;
@@ -1122,6 +876,110 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
   }
 
   return reference_intercept_bound;
+}
+
+bool PlanningScheduler::IsHppSlotSearchingByDistance() {
+  // check state
+  const auto &state_machine = local_view_->function_state_machine_info;
+  if (!IsHppSlotSearchingStage(state_machine.current_state)) {
+    return false;
+  }
+
+  // check dist
+  if (state_machine.current_state ==
+      iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    double dist = session_.environmental_model()
+                      .get_parking_slot_manager()
+                      ->GetDistanceToTargetSlot();
+    const double kdistance_thresh = 10.0;
+    if (dist > kdistance_thresh) {
+      return false;
+    }
+  }
+
+  //  check speed
+  const auto &ego_state =
+      session_.environmental_model().get_ego_state_manager();
+  const double kspeed_thresh = 5.0;
+  if (ego_state->ego_v() > kspeed_thresh) {
+    return false;
+  }
+
+  return true;
+}
+
+const bool PlanningScheduler::ExcuteParkingFunction(
+    const common::SceneType function_type,
+    iflyauto::PlanningOutput *const planning_output) {
+  // 泊车规划部分
+  bool planning_success = apa_function_->Plan();
+
+  *planning_output = session_.planning_context().planning_output();
+
+  return planning_success;
+}
+
+const bool PlanningScheduler::ExcuteNavigationFunction(
+    const common::SceneType function_type, const double start_timestamp,
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  // 行车规划部分
+  // TODO(xjli32): 功能切换时，reset
+  // ClearParkingInfo(planning_output);
+
+  // sync parameters only if scene_type or dbw_status changes
+  const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
+  if ((function_type != GENERAL_PLANNING_CONTEXT.GetStatemachine().scene_type ||
+       (dbw_status != GENERAL_PLANNING_CONTEXT.GetStatemachine().dbw_status))) {
+    session_.mutable_planning_context()->ResetTaskOutput();
+    SyncParameters(function_type);
+  }
+  GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
+  GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = function_type;
+
+  // update environment model
+  if (!environmental_model_manager_.Run()) {
+    session_.mutable_planning_context()->Clear();
+    return false;
+  }
+
+  bool planning_success;
+  if (function_type == planning::common::SceneType::HIGHWAY) {
+    planning_success = scc_function_->Plan();
+  } else if (function_type == planning::common::SceneType::HPP) {
+    planning_success = hpp_function_->Plan();
+  } else {
+    planning_success = scc_function_->Plan();
+  }
+
+  JSON_DEBUG_VALUE("current planning_success", planning_success);
+  session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
+  if (!planning_success) {
+    LOG_DEBUG("Planning failed !!!! \n");
+    if (!UpdateFailedPlanningResult()) {
+      LOG_DEBUG("RunOnce failed !!!! \n");
+      FillPlanningRequest(iflyauto::REQUEST_LEVEL_MIDDLE, planning_output);
+      return false;
+    }
+  } else {
+    FillPlanningRequest(iflyauto::REQUEST_LEVEL_NO_REQ, planning_output);
+    UpdateSuccessfulPlanningResult();
+  }
+
+  std::cout << "The RunOnce is successed !!!!:" << std::endl;
+  // 存在问题
+  // session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
+  session_.mutable_planning_context()->mutable_planning_success() = true;
+
+  const auto end_timestamp = IflyTime::Now_ms();
+  const double time_consumption = end_timestamp - start_timestamp;
+  LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
+  JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
+  FillPlanningTrajectory(start_timestamp, planning_output);
+  FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  ClearParkingInfo(planning_output);
+
+  return true;
 }
 
 }  // namespace planning

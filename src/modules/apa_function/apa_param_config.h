@@ -30,11 +30,15 @@ struct AstarParkingConfig {
 
   bool cubic_polynomial_pose_adjustment = true;
   // move target point in slot to another point for easy tracking
-  double vertical_slot_end_straight_dist = 1.0;
+  double vertical_tail_in_end_straight_dist = 1.0;
+  double vertical_head_in_end_straight_dist = 0.8;
   double parallel_slot_end_straight_dist = 0.0;
   bool enable_delete_occ_in_slot;
   bool enable_delete_occ_in_ego;
   double deadend_uss_stuck_replan_wait_time;
+  // 车辆到中线的距离小于阈值, 可以使用spiral/dubins库外揉库.
+  // 注意：要限制库外揉库API的使用，该API只会让车辆来到中心线附近，不能保证车辆能正确进库.
+  double adjust_ego_y_thresh_outside_slot;
 };
 
 struct ParkingSpeedConfig {
@@ -141,7 +145,7 @@ struct ApaParameters {
   double finish_parallel_lon_err = 0.3;
   double finish_parallel_lon_overhaing_error = 0.2;
   double finish_parallel_heading_err = 2.3;
-  double finish_parallel_rear_stop_buffer = 0.55;
+  double finish_parallel_out_heading_mag = 0.55;
   double finish_parallel_lat_rac_err = 0.35;
 
   // check fail params
@@ -195,7 +199,8 @@ struct ApaParameters {
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
   int max_replan_count = 12;
-  int headin_max_replan_count = 14;
+  int headin_max_replan_count = 20;
+  int in_slot_car_adjust_max_count = 20;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;
@@ -225,7 +230,7 @@ struct ApaParameters {
   double parallel_occupied_pt_inside_dx = 0.0;
   double parallel_occupied_pt_inside_dy = 0.3;
   double curb_offset = 3.0;
-  double mov_curb_out_dist = 0.3;
+  double curb_offset_when_ego_outside_slot = 0.0;
 
   // construce obstacles params
   double channel_width = 12.28;
@@ -242,6 +247,7 @@ struct ApaParameters {
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
   bool use_uss_pt_clound = false;
+  bool use_ground_line = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
@@ -321,8 +327,8 @@ struct ApaParameters {
   double target_pos_err = 0.068;
   double target_heading_err = 0.88;
   double target_radius_err = 0.036;
-  double perpendicular_park_out_max_target_heading = 95;
-  double perpendicular_park_out_min_target_heading = 85;
+  double perpendicular_park_out_max_target_heading = 100;
+  double perpendicular_park_out_min_target_heading = 70;
   double path_extend_distance = 0.3;
   bool actual_mono_plan_enable = false;
   bool mono_plan_enable = false;
@@ -336,14 +342,11 @@ struct ApaParameters {
   double min_gear_path_length = 0.25;
   double parallel_multi_plan_radius_eps = 0.03;
   double parallel_search_out_heading = 0.0;
+  double x_max_internal_obstacles = 6.68;
+  double min_x_value_park_out_position = 2.3;
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
-  bool use_a_cubic_polynomial_for_adjustment = true;
-  // move target point in slot to another point for easy tracking
-  double vertical_slot_target_adjust_dist = 1.0;
-  bool enable_delete_fusion_obj_in_slot = true;
-  double deadend_uss_stuck_replan_wait_time;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
@@ -355,7 +358,7 @@ struct ApaParameters {
   bool lock_parallel_slot = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
-  double slot_release_car_lat_buffer = 0.15;
+  double slot_release_channel_width = 4.86;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;

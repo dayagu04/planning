@@ -1,4 +1,5 @@
 #include "environmental_model.h"
+#include <iostream>
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"

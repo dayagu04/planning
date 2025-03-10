@@ -24,6 +24,8 @@ class FrenetObstacle {
 
   double frenet_s() const { return frenet_s_; }
   double frenet_l() const { return frenet_l_; }
+  double width() const { return width_; }
+  double length() const { return length_; }
   double frenet_velocity_s() const { return frenet_velocity_s_; }
   double frenet_velocity_l() const { return frenet_velocity_l_; }
   double frenet_velocity_lateral() const { return frenet_velocity_lateral_; };
@@ -48,6 +50,11 @@ class FrenetObstacle {
   double velocity() const { return obstacle_ptr_->velocity(); }
   const bool b_frenet_valid() const { return b_frenet_valid_; }
 
+  const bool b_frenet_polygon_sequence_invalid() const {
+    return b_frenet_polygon_sequence_invalid_;
+  }
+  const bool is_static() const { return is_static_; }
+  SourceType source_type() const { return source_type_; }
   const FrenetObstacleBoundary& frenet_obstacle_boundary() const {
     return frenet_obstacle_boundary_;
   }
@@ -59,6 +66,8 @@ class FrenetObstacle {
   const SLPolygonSeq& frenet_polygon_sequence() const {
     return frenet_polygon_sequence_;
   }
+
+  const std::vector<planning_math::Vec2d>& corner_points() const { return corner_points_; }
 
   bool get_polygon_at_time(const double relative_time,
                            const std::shared_ptr<ReferencePath>& reference_path,
@@ -108,6 +117,11 @@ class FrenetObstacle {
   bool b_frenet_valid_ = false;
   bool b_frenet_polygon_sequence_invalid_ = false;
   bool is_location_valid_ = false;
+  bool is_static_ = false;
+  double width_;
+  double length_;
+  std::vector<planning_math::Vec2d> corner_points_;
+  SourceType source_type_;
 };
 
 }  // namespace planning

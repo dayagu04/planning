@@ -2,6 +2,8 @@ syntax = "proto2";
 
 package planning.common;
 
+import "basic_types.proto";
+
 message EnvironmentModelInfo {
   optional int32 currrent_lane_vitual_id = 1;
   optional double ego_s = 2;
@@ -14,7 +16,7 @@ message Obstacle {
   optional uint32 type = 2;
   optional double s = 3;
   optional double l = 4;
-  optional double s_to_ego = 5; 
+  optional double s_to_ego = 5;
   optional double max_l_to_ref = 6;
   optional double min_l_to_ref = 7;
   optional double nearest_l_to_desire_path = 8;
@@ -35,4 +37,5 @@ message Obstacle {
   optional double cutin_p = 23;
   optional uint32 lat_decision = 24;
   optional bool is_static = 25;
+  repeated Point2d polygon_points = 26;
 }

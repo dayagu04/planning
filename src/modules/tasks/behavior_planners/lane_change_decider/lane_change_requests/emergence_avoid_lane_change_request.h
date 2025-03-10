@@ -29,7 +29,6 @@ class EmergenceAvoidRequest : public LaneChangeRequest {
   std::shared_ptr<ReferencePath> left_reference_path_ = nullptr;
   std::shared_ptr<ReferencePath> right_reference_path_ = nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
-  std::unordered_map<int, TrackedObject> tracks_map_;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
 };
 

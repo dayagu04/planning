@@ -1,11 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <unordered_map>
 
-#include "ego_state_manager.h"
 #include "frenet_obstacle.h"
 #include "obstacle.h"
 #include "session.h"
+#include "src/library/arastar_lib/hybrid_ara_star.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "utils/kd_path.h"
@@ -19,6 +20,7 @@ class LateralObstacleDecider : public Task {
   virtual ~LateralObstacleDecider() = default;
 
   bool Execute() override;
+  bool ExecuteTest(bool pipeline_test);
 
  private:
   bool IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle,
@@ -26,14 +28,24 @@ class LateralObstacleDecider : public Task {
                               double farthest_distance);
   void LateralObstacleDecision(FrenetObstacle &frenet_obstacle,
                                double lane_width, double expand_length);
+  bool CheckEnableSearch(
+      const std::shared_ptr<ReferencePath> &reference_path_ptr,
+      SearchResult search_result);
+  bool ARAStar();
+  void UpdateLatDecision(
+      const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  void UpdateLatDecisionWithARAStar(
+      const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
 
+ private:
   planning::framework::Session *session_;
-  PotentialAvoidDeciderConfig config_;
-
+  LateralObstacleDeciderConfig config_;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       &lateral_obstacle_history_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
-
+  std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
+  SearchResult &search_result_;
   // ego info
   double ego_rear_axis_to_front_edge_;
   double ego_length_;
@@ -43,6 +55,7 @@ class LateralObstacleDecider : public Task {
   double ego_v_ = 0;
   double ego_v_s_ = 0;
   double ego_v_l_ = 0;
+  double ego_rear_edge_to_rear_axle_ = 0;
 };
 
 }  // namespace planning

@@ -1,11 +1,13 @@
 #pragma once
 
 // c struct
-#include "interface/src/c/camera_preception_parking_slot_c.h"
-#include "interface/src/c/camera_preception_tsr_c.h"
+#include "interface/src/c/camera_perception_parking_slot_c.h"
+#include "interface/src/c/camera_perception_tsr_c.h"
 #include "interface/src/c/common_c.h"
 #include "interface/src/c/control_command_c.h"
 #include "interface/src/c/func_state_machine_c.h"
+#include "interface/src/c/fusion_deceler_c.h"
+#include "interface/src/c/fusion_groundline_c.h"
 #include "interface/src/c/fusion_objects_c.h"
 #include "interface/src/c/fusion_occupancy_objects_c.h"
 #include "interface/src/c/fusion_parking_slot_c.h"
@@ -28,6 +30,8 @@
 #include "struct_msgs/CameraPerceptionTsrInfo.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionDecelerInfo.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
@@ -49,11 +53,13 @@
 #include "struct_msgs_legacy_v2_4_6/LocalizationEstimate.h"
 
 // struct schema
-#include "interface/type_convert/struct_convert/camera_preception_parking_slot_c.h"
-#include "interface/type_convert/struct_convert/camera_preception_tsr_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_parking_slot_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_tsr_c.h"
 #include "interface/type_convert/struct_convert/common_c.h"
 #include "interface/type_convert/struct_convert/control_command_c.h"
 #include "interface/type_convert/struct_convert/func_state_machine_c.h"
+#include "interface/type_convert/struct_convert/fusion_deceler_c.h"
+#include "interface/type_convert/struct_convert/fusion_groundline_c.h"
 #include "interface/type_convert/struct_convert/fusion_objects_c.h"
 #include "interface/type_convert/struct_convert/fusion_occupancy_objects_c.h"
 #include "interface/type_convert/struct_convert/fusion_parking_slot_c.h"

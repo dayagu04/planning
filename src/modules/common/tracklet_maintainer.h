@@ -49,6 +49,8 @@ class TrackletMaintainer {
                      const LateralObstacleConfig &config);
   virtual ~TrackletMaintainer();
 
+  void SetConfig(const LateralObstacleConfig &config);
+
   void apply_update(const std::shared_ptr<EgoStateManager> ego_state,
                     const std::vector<PredictionObject> &predictions,
                     std::vector<TrackedObject> &tracked_objects,

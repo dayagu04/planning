@@ -11,6 +11,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_common
   modules_adas_function
   ilqr_lib
+  arastar_lib
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

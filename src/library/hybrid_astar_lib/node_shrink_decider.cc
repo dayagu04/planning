@@ -1,4 +1,5 @@
 #include "node_shrink_decider.h"
+#include <algorithm>
 
 #include "astar_decider.h"
 #include "hybrid_astar_common.h"
@@ -11,7 +12,7 @@ namespace planning {
 void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
   AstarDecider::Process(start, end);
 
-  ShrinkChildrenByHeading();
+  ShrinkChildrenByHeadingForTailIn();
 
   return;
 }
@@ -22,7 +23,9 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
 
   heading_shrink_.limit_search_heading_ = false;
   if (park_dir == ParkingVehDirection::TAIL_IN) {
-    ShrinkChildrenByHeading();
+    ShrinkChildrenByHeadingForTailIn();
+  } else if (park_dir == ParkingVehDirection::HEAD_IN) {
+    ShrinkChildrenByHeadingForHeadIn();
   }
 
   return;
@@ -34,6 +37,7 @@ bool NodeShrinkDecider::IsLegalForHeading(const double heading) {
   }
 
   double normalize_heading = IflyUnifyTheta(heading, M_PI);
+  normalize_heading = std::fabs(normalize_heading);
 
   if (normalize_heading < heading_shrink_.heading_low_bound_ ||
       normalize_heading > heading_shrink_.heading_up_bound_) {
@@ -52,23 +56,42 @@ bool NodeShrinkDecider::IsLegalForPos(const double x, const double y,
   return true;
 }
 
-void NodeShrinkDecider::ShrinkChildrenByHeading() {
+void NodeShrinkDecider::ShrinkChildrenByHeadingForTailIn() {
+  // heading shrink
+
+  // 搜索时,heading 尽量不超过150度
+  double heading_check_bound = ifly_deg2rad(150.0);
+  double heading_buffer = ifly_deg2rad(20.0);
+
+  heading_shrink_.limit_search_heading_ = true;
+
+  heading_shrink_.heading_low_bound_ = 0.0;
+
+  heading_shrink_.heading_up_bound_ =
+      std::max(heading_check_bound, std::fabs(start_.theta) + heading_buffer);
+  heading_shrink_.heading_up_bound_ =
+      std::min(heading_shrink_.heading_up_bound_, M_PI);
+
+  return;
+}
+
+void NodeShrinkDecider::ShrinkChildrenByHeadingForHeadIn() {
   // heading shrink
   double theta_diff = start_.theta - end_.theta;
   theta_diff = IflyUnifyTheta(theta_diff, M_PI);
 
-  double heading_check_bound = ifly_deg2rad(150.0);
+  // 搜索时,heading 尽量大于30度. 且heading接近180度更好.
+  double heading_check_bound = ifly_deg2rad(30.0);
   double heading_buffer = ifly_deg2rad(20.0);
 
-  if (std::fabs(theta_diff) < heading_check_bound) {
-    heading_shrink_.limit_search_heading_ = true;
+  heading_shrink_.limit_search_heading_ = true;
 
-    heading_shrink_.heading_low_bound_ =
-        std::min(-heading_check_bound, start_.theta - heading_buffer);
+  heading_shrink_.heading_low_bound_ =
+      std::min(heading_check_bound, std::fabs(start_.theta) - heading_buffer);
+  heading_shrink_.heading_low_bound_ =
+      std::max(0.0, heading_shrink_.heading_low_bound_);
 
-    heading_shrink_.heading_up_bound_ =
-        std::max(heading_check_bound, start_.theta + heading_buffer);
-  }
+  heading_shrink_.heading_up_bound_ = M_PI;
 
   return;
 }

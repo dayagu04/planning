@@ -2,26 +2,71 @@
 
 #include <assert.h>
 
+#include <algorithm>
+#include <climits>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "adas_function/adaptive_cruise_control.h"
 #include "adas_function/mrc_condition.h"
 #include "adas_function/start_stop_enable.h"
+#include "common/common.h"
+#include "common/constraint_check/collision_checker.h"
+#include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "func_state_machine_c.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "session.h"
+#include "task_basic_types.h"
+#include "trajectory1d/third_order_time_optimal_trajectory.h"
+#include "vec2d.h"
+#include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
 
 using namespace planning_math;
+
+namespace {
+inline bool is_point_within_range(const Point3d &point,
+                                  const common::Point3d &location,
+                                  double xy_range) {
+  if (xy_range <= 0) {
+    return true;
+  }
+  return (fabs(location.x() - point.x) < xy_range) &&
+         (fabs(location.y() - point.y) < xy_range);
+}
+
+inline bool is_point_within_range(const Point3d &point, const Point3d &location,
+                                  double xy_range) {
+  if (xy_range <= 0) {
+    return true;
+  }
+  return (fabs(location.x - point.x) < xy_range) &&
+         (fabs(location.y - point.y) < xy_range);
+}
+
+inline bool is_point_within_range(const Pose2D &point,
+                                  const planning_math::Vec2d &location,
+                                  double xy_range) {
+  if (xy_range <= 0) {
+    return true;
+  }
+  return (fabs(location.x() - point.x) < xy_range) &&
+         (fabs(location.y() - point.y) < xy_range);
+}
+}  // namespace
 
 GeneralLongitudinalDecider::GeneralLongitudinalDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -29,6 +74,7 @@ GeneralLongitudinalDecider::GeneralLongitudinalDecider(
   config_ = config_builder->cast<LongitudinalDeciderV3Config>();
   config_acc_ = config_builder->cast<AdaptiveCruiseControlConfig>();
   config_start_stop_ = config_builder->cast<StartStopEnableConfig>();
+  lon_collision_checker_ = std::make_shared<CollisionChecker>();
   name_ = "GeneralLongitudinalDecider";
 }
 
@@ -39,6 +85,9 @@ bool GeneralLongitudinalDecider::Execute() {
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+  reference_path_ptr_ = session_->environmental_model()
+                            .get_reference_path_manager()
+                            ->get_reference_path_by_current_lane();
 
   double start_time = IflyTime::Now_ms();
   obstacle_decisions_.clear();
@@ -80,16 +129,35 @@ bool GeneralLongitudinalDecider::Execute() {
   generate_lon_decision_from_path(ego_planning_result.traj_points,
                                   refpath_points, obstacle_decisions_,
                                   lon_ref_path);
-  double time_2 = IflyTime::Now_ms();
   LOG_DEBUG("generate_lon_decision_from_path cost is [%f]ms:\n",
-            time_2 - time_1);
-
+            IflyTime::Now_ms() - time_1);
+  double time_2 = IflyTime::Now_ms();
+  std::vector<planning_math::CollisionCheckStatus> hpp_collision_results;
+  if (session_->is_hpp_scene()) {
+    GetHppCollisionCheckResult(ego_planning_result.traj_points,
+                               hpp_collision_results);
+  }
+  double time_2_1 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("hpp_lon_collision_check_time_cost", time_2_1 - time_2)
+  LOG_DEBUG("GetHppCollisionCheckResult cost is [%f]ms:\n", time_2_1 - time_2);
+  std::vector<double> collison_object_position_x_vec;
+  std::vector<double> collison_object_position_y_vec;
+  for (auto &collision_result : hpp_collision_results) {
+    collison_object_position_x_vec.emplace_back(
+        collision_result.collision_object_position.x);
+    collison_object_position_y_vec.emplace_back(
+        collision_result.collision_object_position.y);
+  }
+  JSON_DEBUG_VECTOR("lon_collision_object_position_x_vec",
+                    collison_object_position_x_vec, 3)
+  JSON_DEBUG_VECTOR("lon_collision_object_position_y_vec",
+                    collison_object_position_y_vec, 3)
   // execution leadone & cutin information
   auto &lon_decision_information =
       session_->mutable_planning_context()->mutable_lon_decision_result();
   get_lon_decision_info(lon_decision_information);
   double time_3 = IflyTime::Now_ms();
-  LOG_DEBUG("get_lon_decision_info cost is [%f]ms:\n", time_3 - time_2);
+  LOG_DEBUG("get_lon_decision_info cost is [%f]ms:\n", time_3 - time_2_1);
 
   // enter into the ACC function
   auto acc_function =
@@ -307,14 +375,180 @@ bool GeneralLongitudinalDecider::Execute() {
       WeightedBound{std::numeric_limits<double>::min(), stop_line_s, -1.0,
                     BoundInfo{0, BoundType::TRAFFIC_LIGHT}});
 
+  if (session_->is_hpp_scene() && reference_path_ptr_) {
+    // set pnp collision check bound
+    const auto &current_lane_frenet_coord =
+        reference_path_ptr_->get_frenet_coord();
+    double collision_point_s = std::numeric_limits<double>::max();
+    double collision_bound = std::numeric_limits<double>::max();
+    int collision_obstacle_id = 0;
+    int collision_position_index = std::numeric_limits<int>::max();
+    auto collison_type = CollisionCheckStatus::CollisionType::NONE_COLLISION;
+    // MDEBUG_JSON_BEGIN_ARRAY(pnp_longitudinal_collision_results);
+    size_t i = 0;
+    for (auto collision_result : hpp_collision_results) {
+      Point2D pt_catresian, pt_frenet;
+      pt_catresian.x = collision_result.ego_point.x;
+      pt_catresian.y = collision_result.ego_point.y;
+      // if (frenet_coord->CartCoord2FrenetCoord(pt_catresian, pt_frenet) !=
+      //     TRANSFORM_SUCCESS) {
+      //   // Cart --> Frenet failed
+      //   // NTRACE_FAIL(
+      //   //     "The collision_result is failed to trans to frenet, whose id :
+      //   "
+      //   //     "%d, and the collision_position_index is : %d",
+      //   //     collision_result.obstacle_id, collision_result.point_index);
+      //   continue;
+      // }
+      if (!current_lane_frenet_coord->XYToSL(pt_catresian, pt_frenet)) {
+        continue;
+      }
+      collision_point_s = pt_frenet.x;
+      collision_obstacle_id = collision_result.obstacle_id;
+      collision_position_index = collision_result.point_index;
+
+      if (static_cast<size_t>(collision_position_index) >=
+          lon_ref_path.hard_bounds.size()) {
+        continue;
+      }
+      // 结构待优化
+      double safe_distance_collision = 0.5;
+      double collision_TTC = 1.0;
+      double distance_safe_buffer = 0.0;
+      double ego_velocity =
+          reference_path_ptr_->get_frenet_ego_state().velocity_s();
+      distance_safe_buffer =
+          safe_distance_collision + ego_velocity * collision_TTC;
+      collision_bound = collision_point_s - distance_safe_buffer;
+
+      // MDEBUG_JSON_BEGIN_OBJECT(i);
+      // MDEBUG_JSON_ADD_ITEM(collision_result_index, i, i);
+      // MDEBUG_JSON_ADD_ITEM(collision_point_s, collision_point_s, i);
+      // MDEBUG_JSON_ADD_ITEM(collision_obstacle_id, collision_obstacle_id, i);
+      // MDEBUG_JSON_ADD_ITEM(collision_position_index,
+      // collision_position_index,
+      //                      i);
+      // MDEBUG_JSON_END_OBJECT(i);
+      BoundType bound_type = BoundType::DEFAULT;
+      if (collison_type ==
+          CollisionCheckStatus::CollisionType::AGENT_COLLISION) {
+        bound_type = BoundType::AGENT;
+      } else if (collison_type ==
+                 CollisionCheckStatus::CollisionType::GROUNDLINE_COLLISION) {
+        bound_type = BoundType::GROUNDLINE;
+      } else if (collison_type ==
+                 CollisionCheckStatus::CollisionType::ROAD_EDGE_COLLISION) {
+        bound_type = BoundType::ROAD_BORDER;
+      }
+      if (i == 0) {
+        // set first collision info to end point bound
+        lon_ref_path.hard_bounds.back().emplace_back(
+            WeightedBound{std::numeric_limits<double>::min(), collision_bound,
+                          -1.0, BoundInfo{collision_obstacle_id, bound_type}});
+      }
+      lon_ref_path.hard_bounds[collision_position_index].emplace_back(
+          WeightedBound{std::numeric_limits<double>::min(), collision_bound,
+                        -1.0, BoundInfo{collision_obstacle_id, bound_type}});
+      i++;
+    }
+    // MDEBUG_JSON_END_ARRAY(pnp_longitudinal_collision_results);
+  }
+
   // set destination bound for PNP
   if (session_->is_hpp_scene()) {
     // set destination bound
     double distance_to_destination = get_distance_to_destination();
+    distance_to_destination =
+      reference_path_ptr_->get_points().back().path_point.s() -
+      planning_init_point.frenet_state.s;
+    const double ref_virtual_extend_buff =
+      session_->environmental_model().get_route_info()->get_virtual_extend_buff();
+    const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+    size_t target_slot_id =
+      parking_slot_manager->GetTargetSlotId();
+    const size_t successful_slot_info_list_size =
+        session_->planning_context()
+            .planning_output()
+            .successful_slot_info_list_size;
+    const auto &successful_slot_info_list = session_->planning_context()
+                                                .planning_output()
+                                                .successful_slot_info_list;
+    const auto &parking_slots = reference_path_ptr_->get_parking_space();
+    const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+    const auto &current_state = session_->environmental_model()
+                                    .get_local_view()
+                                    .function_state_machine_info.current_state;
     double stop_distance_to_destination = config_.stop_distance_to_destination;
-    double destination_s = planning_init_point.frenet_state.s +
-                           distance_to_destination -
-                           stop_distance_to_destination;
+    if ((current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) &&
+        (successful_slot_info_list_size > 0)) {
+      distance_to_destination = 0.0;
+      std::vector<size_t> successful_slot_id;
+      successful_slot_id.reserve(successful_slot_info_list_size);
+      for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
+        successful_slot_id.emplace_back(successful_slot_info_list[i].id);
+      }
+      bool find_slot = false;
+      double dist_to_nearest_slot = NL_NMAX;
+      int32_t nearest_slot_id = -1;
+      double nearest_slot_width = 3.0;
+      double s_diff_from_nearest_slot_to_ego = 0.0;
+      for (const auto &parking_slot : parking_slots) {
+        if (std::find(successful_slot_id.begin(), successful_slot_id.end(),
+                      parking_slot->id() - 6000000) !=
+            successful_slot_id.end()) {
+          Point2D cart_point, frenet_point;
+          cart_point.x = parking_slot->x_center();
+          cart_point.y = parking_slot->y_center();
+          if (frenet_coord != nullptr) {
+            if (frenet_coord->XYToSL(cart_point, frenet_point)) {
+              find_slot = true;
+              double s_diff =
+                  frenet_point.x - planning_init_point.frenet_state.s;
+              dist_to_nearest_slot =
+                  std::min(std::fabs(s_diff), dist_to_nearest_slot);
+              nearest_slot_id = parking_slot->id();
+              nearest_slot_width = parking_slot->width();
+              s_diff_from_nearest_slot_to_ego = s_diff;
+            }
+          }
+        }
+      }
+      if (find_slot) {
+        if (s_diff_from_nearest_slot_to_ego < kMathEpsilon) {
+          // released slot is behind ego
+          stop_distance_to_destination = 0.0;
+          distance_to_destination = 0.0;
+        } else {
+          // released slot is front ego
+          stop_distance_to_destination = 0.5 * nearest_slot_width;
+          distance_to_destination = dist_to_nearest_slot;
+        }
+      }
+    } else if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+      if (parking_slot_manager->IsExistTargetSlot()) {
+        const auto &target_slot_points = parking_slot_manager->GetTargetSlotPoints();
+        planning_math::LineSegment2d axis(
+        planning_math::Vec2d(target_slot_points.front().x(),
+                             target_slot_points.front().y()),
+        planning_math::Vec2d(target_slot_points.back().x(),
+                             target_slot_points.back().y()));
+        Point2D frenet_point;
+        if (frenet_coord != nullptr) {
+          if (frenet_coord->XYToSL(
+            Point2D(axis.center().x(), axis.center().y()),
+            frenet_point)) {
+            distance_to_destination =
+              frenet_point.x + ref_virtual_extend_buff -
+              planning_init_point.frenet_state.s;
+          }
+        }
+      }
+    }
+    double destination_s =
+        planning_init_point.frenet_state.s +
+        std::max((distance_to_destination - stop_distance_to_destination), 0.0);
+
     lon_ref_path.hard_bounds.back().emplace_back(
         WeightedBound{std::numeric_limits<double>::min(), destination_s, -1.0,
                       BoundInfo{0, BoundType::DESTINATION}});
@@ -505,7 +739,8 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   }
 
   if (session_->is_hpp_scene()) {
-    static constexpr double kVelocityPreviewDistance = 3.0;
+    // static constexpr double kVelocityPreviewDistance = 3.0;
+    double kVelocityPreviewDistance = ego_v * 1.0;
     // auto mff_cruise_velocity = session_
     //                                ->environmental_model()
     //                                .get_vehicle_status()
@@ -527,7 +762,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
     if (reference_path_ptr->get_reference_point_by_lon(
             frenet_ego_state.s() + kVelocityPreviewDistance, refpath_pt)) {
       user_velocity_limit = map_velocity_limit;
-      if (std::fabs(refpath_pt.path_point.kappa()) > 0.1) {
+      if (std::fabs(refpath_pt.path_point.kappa()) > 0.07) {
         user_velocity_limit =
             std::min((1.0 - std::fabs(refpath_pt.path_point.kappa())) *
                          map_velocity_limit,
@@ -546,7 +781,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
 
   // get comfort brake traj
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  constexpr double kComfortBrakeJerk = -0.25;
+  constexpr double kComfortBrakeJerk = -1.0;
   constexpr double kEmergencyBrakeJerk = -3.0;
   constexpr double kDeltaJerkThld = 0.2;
   constexpr double kTimeToBrakeThld = 0.5;
@@ -1106,6 +1341,8 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
           ? std::max(1.0, std::max(0.0, GetRSSDistance(obstacle, ego_velocity,
                                                        config_acc_)))
           : 0.0;
+  // TODO: hack no soft distance buffer because of perception issue
+  distance_buff = 0.0;
   auto ini_ds = obstacle_sl_boundary.s_start - ego_sl_boundary.s_end;
   auto lat_overlap_ratio =
       is_CIPV
@@ -1854,7 +2091,75 @@ double GeneralLongitudinalDecider::get_distance_to_destination() {
 }
 
 double GeneralLongitudinalDecider::get_narrow_area_velocity_limit() {
-  return std::numeric_limits<double>::max();
+  double suggest_velocity_limit = std::numeric_limits<double>::max();
+  constexpr double narrow_space_width_thrshld_safe = 1.5;
+  constexpr double narrow_space_width_thrshld_easy = 0.8;
+  constexpr double narrow_space_width_thrshld_hard = 0.4;
+  double kVelocityAttenLimit = config_.narrow_v_limit_attention;
+  double kVelocityWarnLimit = config_.narrow_v_limit_warn;
+  double kVelocityDangerLimit = config_.narrow_v_limit_danger;
+  double narrow_space_width_stop_thrshld =
+      config_.narrow_space_width_stop_thrshld;
+  double narrow_space_distance_stop_thrshld =
+      config_.narrow_space_distance_stop_thrshld;
+  // get lateral bound info
+  const auto &general_lateral_decider_output =
+      session_->planning_context().general_lateral_decider_output();
+  // <upper:left lower:right>
+  const auto &lateral_hard_bounds =
+      general_lateral_decider_output.hard_bounds_frenet_point;
+  const auto &lateral_soft_bounds =
+      general_lateral_decider_output.soft_bounds_frenet_point;
+  const auto &lateral_hard_bound_info =
+      general_lateral_decider_output.hard_bounds_info;
+  const auto &lateral_soft_bound_info =
+      general_lateral_decider_output.soft_bounds_info;
+  // calc passable area info
+  // std::vector<PassableAreaInfo> passable_area_info;
+  std::pair<BoundInfo, BoundInfo> min_width_bound_info; // <hard bound, soft bound>
+  double width_minimum = std::numeric_limits<double>::max();
+  for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+    const auto &hard_bounds = lateral_hard_bounds[i];
+    const auto &soft_bounds = lateral_soft_bounds[i];
+    const auto &hard_bounds_info = lateral_hard_bound_info[i];
+    const auto &soft_bounds_info = lateral_soft_bound_info[i];
+    double passable_area_width = hard_bounds.second - hard_bounds.first;
+    if (passable_area_width < width_minimum) {
+      width_minimum = passable_area_width;
+      min_width_bound_info.first.id = hard_bounds_info.first.id;
+      min_width_bound_info.first.type = hard_bounds_info.first.type;
+      min_width_bound_info.second.id = hard_bounds_info.second.id;
+      min_width_bound_info.second.type = hard_bounds_info.second.type;
+    }
+  }
+  // calc closest distance
+  double closest_distance = std::numeric_limits<double>::max();
+
+  if (width_minimum < narrow_space_width_thrshld_hard) {
+    LOG_DEBUG("Dangerous! The minimum path width is = : %f", width_minimum);
+    suggest_velocity_limit = kVelocityDangerLimit;
+  } else if (width_minimum < narrow_space_width_thrshld_easy) {
+    LOG_DEBUG("Warning! The minimum path width is = : %f", width_minimum);
+    suggest_velocity_limit = kVelocityWarnLimit;
+  } else if (width_minimum < narrow_space_width_thrshld_safe) {
+    LOG_DEBUG("Attention! The minimum path width is = : %f", width_minimum);
+    suggest_velocity_limit =
+        kVelocityWarnLimit +
+        (kVelocityAttenLimit - kVelocityWarnLimit) /
+            (narrow_space_width_thrshld_safe -
+             narrow_space_width_thrshld_easy) *
+            (width_minimum - narrow_space_width_thrshld_easy);
+  }
+  // The vehicle should stop
+  // if (width_minimum < narrow_space_width_stop_thrshld &&
+  //     closest_distance < narrow_space_distance_stop_thrshld) {
+  //   LOG_DEBUG(
+  //       "Dangerous! The vehilce can't get through the area whose minimum path "
+  //       "width is = : %f",
+  //       width_minimum);
+  //   suggest_velocity_limit = 0.0;
+  // }
+  return suggest_velocity_limit;
 }
 
 double GeneralLongitudinalDecider::get_s_bound_by_target_parking_space() {
@@ -2116,6 +2421,179 @@ void GeneralLongitudinalDecider::GenerateLonRefPathPB(
     lon_bound_jerk_pb->set_lower(lon_bound_jerk.lower);
     lon_bound_jerk_pb->set_upper(lon_bound_jerk.upper);
   }
+}
+
+void GeneralLongitudinalDecider::GetHppCollisionCheckResult(
+    const TrajectoryPoints &traj_points,
+    std::vector<planning_math::CollisionCheckStatus> &collision_results) {
+  if (!reference_path_ptr_) {
+    return;
+  }
+  constexpr double kpnp_collision_check_range = 20.0;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto &ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
+  // double start_time = MTIME()->timestamp().ms();
+
+  // 1.get cartesian traj from traj_points
+  // 2.set collision checker
+  // the traj's point is centre of vehicle
+  double deviation_length = vehicle_param.rear_axle_to_center;
+  auto &ego_model = lon_collision_checker_->get_ego_model();
+  ego_model->set_model_type(EgoModelType::ORIGIN);
+  double lon_expansion = 0.0;
+  double ego_velocity =
+      ego_state_manager->planning_init_point().lon_init_state.v();
+  uint8_t curvature_index = traj_points.size() / 2;
+  double pre_curvature = traj_points.at(curvature_index).curvature;
+  // v: 0m/s → 0.0m ~ 3.0m/s → 1.5m
+  // curvature: 0 → 0m ~ 0.3 → 1.0m
+  lon_expansion = std::min(0.5 * ego_velocity, 1.5) +
+                  std::min(std::fabs(pre_curvature) * ego_velocity, 1.0);
+  // NLOGD("The lon_expansion is%f, ego_velocity is: %f, ego_velocity is: %f",
+  //       lon_expansion, ego_velocity, pre_curvature);
+  // TODO: hack for the expansion
+  lon_expansion = 0.0;
+  ego_model->set_expansion(0.0, lon_expansion);
+  lon_collision_checker_->set_params(deviation_length);
+
+  // 3.get the collision point
+  double collision_threshold = config_.hpp_collision_threshold;
+  auto &ground_lines_cartesian =
+      reference_path_ptr_->get_free_space_ground_lines();
+  auto &obstacles = reference_path_ptr_->get_obstacles();
+  auto &road_edges_cartesian = reference_path_ptr_->get_road_edges();
+
+  int16_t traj_point_index = 0;
+  collision_results.clear();
+  for (auto &traj_pt : traj_points) {
+    auto obstacle_pos_time = traj_pt.t;
+    Pose2D traj_check_point;
+    traj_check_point.x = traj_pt.x;
+    traj_check_point.y = traj_pt.y;
+    traj_check_point.theta = traj_pt.heading_angle;
+    lon_collision_checker_->set_point(traj_check_point);
+    // 1.check ground lines
+    if (!ground_lines_cartesian.empty()) {
+      for (auto &ground_line : ground_lines_cartesian) {
+        if (nullptr == ground_line) {
+          continue;
+        }
+        int8_t collision_cntr = 0;
+        CollisionCheckStatus result_tmp;
+        result_tmp.is_collision = false;
+        const std::vector<planning_math::Vec2d> &line_vec2d_points =
+            ground_line->perception_points();
+        for (auto point : line_vec2d_points) {
+          if (!is_point_within_range(traj_check_point, point,
+                                     kpnp_collision_check_range)) {
+            continue;
+          }
+          result_tmp = lon_collision_checker_->collision_check(
+              point, collision_threshold,
+              CollisionCheckStatus::CollisionType::GROUNDLINE_COLLISION);
+          result_tmp.point_index = traj_point_index;
+          if (result_tmp.is_collision) {
+            collision_cntr++;
+            if (collision_cntr > 3) {
+              result_tmp.obstacle_id = ground_line->id();
+              collision_results.emplace_back(result_tmp);
+              // NLOGE(
+              //     "The trajectory has collision with ground_line %i, the "
+              //     "distance is: %f",
+              //     ground_line->id(), result_tmp.min_distance);
+              // NLOGE("The collision point x: %f, y: %f, theta: %f, index: %i",
+              //       result_tmp.ego_poit.x, result_tmp.ego_poit.y,
+              //       result_tmp.ego_poit.theta, result_tmp.point_index);
+            }
+          }
+        }
+      }
+    }
+
+    // TODO: RADS Scene
+    //  1.1.check lidar road edges
+    //  if (frame_->session()->is_rads_scene()) {
+    //    for (auto &road_edge : road_edges_cartesian) {
+    //      int8_t collision_cntr = 0;
+    //      CollisionCheckStatus result_tmp;
+    //      result_tmp.is_collision = false;
+    //      const std::vector<planning_math::Vec2d> &line_vec2d_points =
+    //          road_edge->perception_points();
+    //      for (auto point : line_vec2d_points) {
+    //        if (!is_point_within_range(traj_check_point, point,
+    //                                   kpnp_collision_check_range)) {
+    //          continue;
+    //        }
+    //        result_tmp = lon_collision_checker_->collision_check(
+    //            point, collision_threshold);
+    //        result_tmp.point_index = traj_point_index;
+    //        if (result_tmp.is_collision) {
+    //          collision_cntr++;
+    //          if (collision_cntr > 3) {
+    //            result_tmp.obstacle_id = road_edge->id();
+    //            collision_results.emplace_back(result_tmp);
+    //            NLOGE(
+    //                "The trajectory has collision with road_edge %i, the "
+    //                "distance is: %f",
+    //                road_edge->id(), result_tmp.min_distance);
+    //            NLOGE("The collision point x: %f, y: %f, theta: %f, index:
+    //            %i",
+    //                  result_tmp.ego_poit.x, result_tmp.ego_poit.y,
+    //                  result_tmp.ego_poit.theta, result_tmp.point_index);
+    //          }
+    //        }
+    //      }
+    //    }
+    //  }
+
+    // 3.check obstacles
+    if (!obstacles.empty()) {
+      for (auto &obstacle : obstacles) {
+        if (nullptr == obstacle) {
+          continue;
+        }
+        CollisionCheckStatus result_tmp;
+        result_tmp.is_collision = false;
+        double obstacle_pos_time_on_ego_side = 100.0;
+
+        if (check_longitudinal_ignore_obstacle(obstacle)) {
+          continue;
+        }
+        if (check_obstacle_both_sides(obstacle)) {
+          obstacle_pos_time_on_ego_side = 0.0;
+        }
+        // only check 0s when obj is at the side of ego
+        obstacle_pos_time =
+            std::min(obstacle_pos_time, obstacle_pos_time_on_ego_side);
+        auto obstacle_point =
+            obstacle->obstacle()->get_point_at_time(obstacle_pos_time);
+        const planning_math::Polygon2d &polygon =
+            obstacle->obstacle()->get_polygon_at_point(obstacle_point);
+        result_tmp = lon_collision_checker_->collision_check(
+            polygon, collision_threshold,
+            CollisionCheckStatus::CollisionType::AGENT_COLLISION);
+        result_tmp.point_index = traj_point_index;
+        if (result_tmp.is_collision) {
+          result_tmp.obstacle_id = obstacle->id();
+          collision_results.emplace_back(result_tmp);
+          // NLOGE(
+          //     "The trajectory has collision with obstacle %i, the distance "
+          //     "is: %f",
+          //     obstacle.obstacle()->id(), result_tmp.min_distance);
+          // NLOGE("The collision point x: %f, y: %f, theta: %f, index: %i",
+          //       result_tmp.ego_poit.x, result_tmp.ego_poit.y,
+          //       result_tmp.ego_poit.theta, result_tmp.point_index);
+        }
+      }
+    }
+    traj_point_index++;
+  }
+  // double end_time = MTIME()->timestamp().ms();
+  // NLOGI("pnp_collision_check_debug, total time: %f", end_time - start_time);
 }
 
 }  // namespace planning

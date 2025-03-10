@@ -22,8 +22,8 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250110/20250110-18-29-57/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-10-18-29-58_no_camera.bag'
-# bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18049/common_frame/20250222/20250222-20-03-50/data_collection_CHERY_E0Y_18049_ALL_MANUAL_2025-02-22-20-03-50_no_camera.bag'
+#bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -112,20 +112,16 @@ fig1.js_on_event(Tap, callback)
 # try before sliders
 replay_simulation_hybrid_astar.Init()
 
-data_planning_left = ColumnDataSource(data = {'plan_path_x':[],
-                                              'plan_path_y':[]})
-data_planning_right = ColumnDataSource(data = {'plan_path_x':[],
-                                              'plan_path_y':[]})
-
 data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 # record包中的定位信息
 data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-# 轨迹点pose，融合仿真使用
-data_path_end_stop_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_collision_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-data_veh_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
+# 路径关键点处的圆
+data_anchor_point_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
+# 路径所有的圆
+data_path_all_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
 data_rs_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
@@ -156,8 +152,6 @@ data_all_delete_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 
-fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_left, size = 4, color = 'green', legend_label = 'cur_path_left')
-fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_right, size = 4, color = 'purple', legend_label = 'cur_path_right')
 fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width = 2, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref_line')
@@ -168,16 +162,14 @@ fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
-fig1.patch('car_yn', 'car_xn', source = data_astar_collision_pos, fill_color = "red",fill_alpha = 0.8, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'collision_pose', visible = True)
-fig1.line('y', 'x', source = data_path_end_stop_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'path_end_stop_line', visible = False)
-# fig1.multi_line('y_vec', 'x_vec', source=data_virtual_wall, line_width=1.5, line_color='purple', line_dash='solid', legend_label='virtual_wall')
 fig1.multi_line('y_vec', 'x_vec', source=data_record_node_list, line_width=1.0, line_color='green', line_dash='solid', legend_label='record_node_list')
 fig1.multi_line('y_vec', 'x_vec', source=data_real_time_node_list, line_width=1.0, line_color='red', line_dash='solid', legend_label='real_time_node_list')
-fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'veh_body_envelope', visible = False)
+fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'all_path_envelop', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_current_gear_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'current_path_envelop', visible = False)
 fig1.multi_line('y', 'x',source = all_rs_heuristic_path, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'rs_h_path')
 fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend_label = 'virtual_wall')
-fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
+fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_anchor_point_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'anchor_point_circle', visible = False)
+fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_path_all_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'path_circle', visible = False)
 fig1.line('y_vec', 'x_vec', source = data_search_sequence_path, line_width = 2, line_color = 'blue', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_sequence',visible = False)
 fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
@@ -200,6 +192,8 @@ class LocalViewSlider:
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
     self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
+    self.use_state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="use_state_machine", min=0, max=1, value=0, step=1)
+    self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -215,13 +209,15 @@ class LocalViewSlider:
                         lon_pos_dif = self.lon_pos_dif_slider,
                         lat_pos_dif = self.lat_pos_dif_slider,
                         heading_dif = self.heading_dif_slider,
-                        plot_child_node=self.plot_child_node
+                        plot_child_node=self.plot_child_node,
+                        use_state_machine=self.use_state_machine,
+                        state_machine=self.state_machine,
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node):
+                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine):
 
   time0 = time.time()
 
@@ -261,12 +257,12 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   else:
     fus_obj_msg = FusionObjectsInfo()
 
-  if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
-    ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
-    data_valid['fus_ground_line_msg_idx'] = True
+  # if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
+  #   ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
+  #   data_valid['fus_ground_line_msg_idx'] = True
 
-    print('ground line size',ground_line_msg.ground_lines_size)
-  else:
+  #   print('ground line size',ground_line_msg.ground_lines_size)
+  # else:
     ground_line_msg = GroundLinePerceptionInfo()
 
   if index_map['fus_parking_msg_idx'] < len(bag_loader.fus_parking_msg['data']):
@@ -324,9 +320,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   else:
     fus_occ_obj_msg = FusionOccupancyObjectsInfo()
 
-  plan_path_x =[]
-  plan_path_y =[]
-  plan_path_heading =[]
+  record_plan_path_x =[]
+  record_plan_path_y =[]
+  record_plan_path_heading =[]
   rs_plan_path_x =[]
   rs_plan_path_y =[]
   rs_plan_path_heading =[]
@@ -335,9 +331,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if index_map['plan_debug_msg_idx'] < len(bag_loader.plan_debug_msg['data']):
     for i in range(len(bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].refline_info)):
       path_point = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].refline_info[i]
-      plan_path_x.append(path_point.x)
-      plan_path_y.append(path_point.y)
-      plan_path_heading.append(path_point.heading_angle)
+      record_plan_path_x.append(path_point.x)
+      record_plan_path_y.append(path_point.y)
+      record_plan_path_heading.append(path_point.heading_angle)
 
       if(path_point.l < 0.0):
         rs_plan_path_x.append(path_point.x)
@@ -347,9 +343,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
     # update value
     data_record_astar_path.data.update({
-        'plan_path_x': plan_path_x,
-        'plan_path_y': plan_path_y,
-        'plan_path_heading': plan_path_heading,
+        'plan_path_x': record_plan_path_x,
+        'plan_path_y': record_plan_path_y,
+        'plan_path_heading': record_plan_path_heading,
     })
 
     # update value
@@ -474,6 +470,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time, ms ', (end_time - start_time) * 1000)
 
   soc_state_msg_buff = BytesIO()
+  if(use_state_machine):
+    soc_state_msg.current_state = state_machine
+
   soc_state_msg.serialize(soc_state_msg_buff)
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
   current_state = soc_state_msg.current_state
@@ -502,10 +501,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   uss_perception_msg.serialize(uss_perception_msg_buff)
   uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
 
-  if data_valid['fus_ground_line_msg_idx'] == True:
-    ground_line_perception_msg_buff = BytesIO()
-    ground_line_msg.serialize(ground_line_perception_msg_buff)
-    ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
+
+  ground_line_perception_msg_buff = BytesIO()
+  ground_line_msg.serialize(ground_line_perception_msg_buff)
+  ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
 
   fus_obj_msg_buff = BytesIO()
   fus_obj_msg.serialize(fus_obj_msg_buff)
@@ -529,7 +528,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         vs_msg_bytes,
         wave_msg_bytes,
         uss_perception_msg_bytes,
-        # ground_line_msg,
+        ground_line_perception_msg_bytes,
         fus_obj_msg_bytes,
         fus_occ_obj_msg_bytes,
         select_id, force_plan, is_path_optimization,
@@ -638,14 +637,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   end_time2 = time.time()
   print('time2, ms ', (end_time2 - end_time) * 1000)
 
-  data_planning_left.data = {'plan_path_x': [],
-                             'plan_path_y': [],}
-  data_planning_right.data = {'plan_path_x': [],
-                             'plan_path_y': []}
-
-  plan_path_x = []
-  plan_path_y = []
-  plan_path_heading = []
+  current_gear_path_x = []
+  current_gear_path_y = []
+  current_gear_path_heading = []
   line_xn = []
   line_yn = []
   car_xn = []
@@ -655,8 +649,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   current_gear_end_x=0
   current_gear_end_y=0
   current_gear_end_theta=0
-  left_turn_path_x_vec, left_turn_path_y_vec = [], []
-  right_turn_path_x_vec, right_turn_path_y_vec = [], []
 
   if res == True:
     tuned_planning_output = PlanningOutput()
@@ -664,26 +656,19 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
       point = tuned_planning_output.trajectory.trajectory_points[i]
-      plan_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
-      plan_path_y.append(tuned_planning_output.trajectory.trajectory_points[i].y)
-      plan_path_heading.append(tuned_planning_output.trajectory.trajectory_points[i].heading_yaw)
+      current_gear_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
+      current_gear_path_y.append(tuned_planning_output.trajectory.trajectory_points[i].y)
+      current_gear_path_heading.append(tuned_planning_output.trajectory.trajectory_points[i].heading_yaw)
 
       current_gear_end_x = tuned_planning_output.trajectory.trajectory_points[i].x
       current_gear_end_y = tuned_planning_output.trajectory.trajectory_points[i].y
       current_gear_end_theta = tuned_planning_output.trajectory.trajectory_points[i].heading_yaw
 
-      if tuned_planning_output.trajectory.trajectory_points[i].curvature >= 0.0 :
-        left_turn_path_x_vec.append(point.x)
-        left_turn_path_y_vec.append(point.y)
-      else:
-        right_turn_path_x_vec.append(point.x)
-        right_turn_path_y_vec.append(point.y)
-
-    if (len(plan_path_x) > 1):
+    if (len(current_gear_path_x) > 1):
       half_car_width = 0.9
-      last_x = plan_path_x[-1]
-      last_y = plan_path_y[-1]
-      last_heading = plan_path_heading[-1]
+      last_x = current_gear_path_x[-1]
+      last_y = current_gear_path_y[-1]
+      last_heading = current_gear_path_heading[-1]
       for i in range(len(car_polygon_x)):
         tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], last_x, last_y, last_heading)
         car_xn.append(tmp_x)
@@ -704,7 +689,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       car_xn = []
       car_yn = []
       for i in range(len(car_polygon_x)):
-          tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
+          tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], current_gear_path_x[k], current_gear_path_y[k], current_gear_path_heading[k])
           car_xn.append(tmp_x)
           car_yn.append(tmp_y)
       car_box_x_vec.append(car_xn)
@@ -712,26 +697,14 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
     print("tuned_gear_command = ", tuned_planning_output.gear_command.gear_command_value)
 
-  print(len(left_turn_path_x_vec))
-  print(len(right_turn_path_x_vec))
-
-  data_planning_left.data.update({
-    'plan_path_x': left_turn_path_x_vec,
-    'plan_path_y': left_turn_path_y_vec,
-  })
-  data_planning_right.data.update({
-    'plan_path_x': right_turn_path_x_vec,
-    'plan_path_y': right_turn_path_y_vec,
-  })
-
   # draw current gear path envelop
   cur_gear_path_box_x_vec = []
   cur_gear_path_box_y_vec = []
-  for k in range(len(plan_path_x)):
+  for k in range(len(current_gear_path_x)):
     car_xn = []
     car_yn = []
     for i in range(len(car_polygon_x)):
-        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
+        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], current_gear_path_x[k], current_gear_path_y[k], current_gear_path_heading[k])
         car_xn.append(tmp_x)
         car_yn.append(tmp_y)
     cur_gear_path_box_x_vec.append(car_xn)
@@ -749,14 +722,14 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     })
 
   path_collision_info = replay_simulation_hybrid_astar.GetAstarPathCollisionID()
-  point_size = len(plan_path_x)
+  point_size = len(current_gear_path_x)
   if path_collision_info[1] >0 and path_collision_info[0] >= 0 and path_collision_info[0] < point_size:
     pose = []
 
     id = path_collision_info[0]
-    pose.append(plan_path_x[id])
-    pose.append( plan_path_y[id])
-    pose.append(plan_path_heading[id])
+    pose.append(current_gear_path_x[id])
+    pose.append( current_gear_path_y[id])
+    pose.append(current_gear_path_heading[id])
 
     car_xn = []
     car_yn = []
@@ -784,19 +757,19 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         'plan_path_heading': [],
     })
 
-    plan_path_x = []
-    plan_path_y = []
-    plan_path_heading = []
+    path_x = []
+    path_y = []
+    path_heading = []
 
     for i in range(len(rs_path)):
-        plan_path_x.append(rs_path[i][0])
-        plan_path_y.append(rs_path[i][1])
-        plan_path_heading.append(rs_path[i][2])
+        path_x.append(rs_path[i][0])
+        path_y.append(rs_path[i][1])
+        path_heading.append(rs_path[i][2])
 
     data_rs_path.data.update({
-        'plan_path_x': plan_path_x,
-        'plan_path_y': plan_path_y,
-        'plan_path_heading': plan_path_heading,
+        'plan_path_x': path_x,
+        'plan_path_y': path_y,
+        'plan_path_heading': path_heading,
     })
 
   end_time4 = time.time()
@@ -807,15 +780,15 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     line_list_x_vec, line_list_y_vec = [], []
     node_list = replay_simulation_hybrid_astar.GetAstarAllNodes()
     for i in range(len(node_list)):
-      plan_path_x =[]
-      plan_path_y =[]
+      path_x =[]
+      path_y =[]
       for j in range(len(node_list[i])):
         path_point = node_list[i][j]
-        plan_path_x.append(path_point[0])
-        plan_path_y.append(path_point[1])
+        path_x.append(path_point[0])
+        path_y.append(path_point[1])
 
-      line_list_x_vec.append(plan_path_x)
-      line_list_y_vec.append(plan_path_y)
+      line_list_x_vec.append(path_x)
+      line_list_y_vec.append(path_y)
 
     data_real_time_node_list.data.update({
           'x_vec': [],
@@ -836,10 +809,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   end_time5 = time.time()
   print('time5, ms ', (end_time5 - end_time4) * 1000)
 
-  astar_path = replay_simulation_hybrid_astar.GetAstarPath()
-
-  # print('astar_path',len(astar_path))
-
   # astar target
   pose = replay_simulation_hybrid_astar.GetAstarEndPose()
   car_xn = []
@@ -856,7 +825,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     'car_yn': car_yn,
   })
 
-  # end pose circle
+  # anchor point circle
   car_circle_xn = []
   car_circle_yn = []
   car_circle_rn = []
@@ -865,7 +834,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   car_circle_y = []
   car_circle_r = []
 
-  footprint_model = replay_simulation_hybrid_astar.GetFootPrintModel()
+  current_gear = tuned_planning_output.gear_command.gear_command_value
+  print('gear',current_gear)
+  footprint_model = replay_simulation_hybrid_astar.GetFootPrintModel(current_gear)
   for i in range(len(footprint_model)):
     car_circle_x.append(footprint_model[i][0])
     car_circle_y.append(footprint_model[i][1])
@@ -898,7 +869,30 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     car_circle_yn.append(tmp_y)
     car_circle_rn.append(car_circle_r[i])
 
-  data_veh_circle.data.update({
+  data_anchor_point_circle.data.update({
+    'car_circle_xn': car_circle_xn,
+    'car_circle_yn': car_circle_yn,
+    'car_circle_rn': car_circle_rn,
+  })
+
+  # plot current gear path circle
+  car_circle_xn = []
+  car_circle_yn = []
+  car_circle_rn = []
+  for k in range(len(current_gear_path_x)):
+    for i in range(len(car_circle_x)):
+      # 最大圆不需要plot
+      if i== 0:
+        continue
+
+      tmp_x, tmp_y = local2global(
+        car_circle_x[i], car_circle_y[i], current_gear_path_x[k], current_gear_path_y[k], current_gear_path_heading[k])
+
+      car_circle_xn.append(tmp_x)
+      car_circle_yn.append(tmp_y)
+      car_circle_rn.append(car_circle_r[i])
+
+  data_path_all_circle.data.update({
     'car_circle_xn': car_circle_xn,
     'car_circle_yn': car_circle_yn,
     'car_circle_rn': car_circle_rn,
@@ -914,29 +908,31 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         'plan_path_heading': [],
     })
 
-  if (len(astar_path) > 0):
-    plan_path_x = []
-    plan_path_y = []
-    plan_path_heading = []
+  path_x = []
+  path_y = []
+  path_heading = []
+  astar_path = replay_simulation_hybrid_astar.GetAstarPath()
 
+  # print('astar_path',len(astar_path))
+  if (len(astar_path) > 0):
     for i in range(len(astar_path)):
-        plan_path_x.append(astar_path[i][0])
-        plan_path_y.append(astar_path[i][1])
-        plan_path_heading.append(astar_path[i][2])
+        path_x.append(astar_path[i][0])
+        path_y.append(astar_path[i][1])
+        path_heading.append(astar_path[i][2])
 
     # update value
     data_astar_path.data.update({
-        'plan_path_x': plan_path_x,
-        'plan_path_y': plan_path_y,
-        'plan_path_heading': plan_path_heading,
+        'plan_path_x': path_x,
+        'plan_path_y': path_y,
+        'plan_path_heading': path_heading,
     })
 
   # envelop
-  for k in range(len(plan_path_x)):
+  for k in range(len(path_x)):
     car_xn = []
     car_yn = []
     for i in range(len(car_polygon_x)):
-        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
+        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], path_x[k], path_y[k], path_heading[k])
         car_xn.append(tmp_x)
         car_yn.append(tmp_y)
     car_box_x_vec.append(car_xn)
@@ -950,11 +946,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_path_end.data.update({
     'car_xn': car_xn,
     'car_yn': car_yn,
-  })
-
-  data_path_end_stop_line.data.update({
-    'x' : line_xn,
-    'y' : line_yn,
   })
 
   # print('envelop')
@@ -998,12 +989,12 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
   # get all rs path
   paths = replay_simulation_hybrid_astar.GetRSHeuristicPath()
-  plan_path_x = []
-  plan_path_y = []
+  path_x = []
+  path_y = []
 
   all_rs_heuristic_path.data.update({
-       'x': plan_path_x,
-       'y': plan_path_y,
+       'x': path_x,
+       'y': path_y,
   })
 
   start=[]
@@ -1015,12 +1006,12 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
         end = paths[k][i+1]
 
-        plan_path_x.append([start[0], end[0]])
-        plan_path_y.append([start[1], end[1]])
+        path_x.append([start[0], end[0]])
+        path_y.append([start[1], end[1]])
 
   all_rs_heuristic_path.data.update({
-      'x': plan_path_x,
-      'y': plan_path_y,
+      'x': path_x,
+      'y': path_y,
   })
 
   # ref line
@@ -1048,18 +1039,18 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   })
 
   path = replay_simulation_hybrid_astar.GetSearchSequencePath()
-  plan_path_x = []
-  plan_path_y = []
+  path_x = []
+  path_y = []
 
   for i in range(len(path)):
      if (i > search_sequence_num):
        break
-     plan_path_x.append(path[i][0])
-     plan_path_y.append(path[i][1])
+     path_x.append(path[i][0])
+     path_y.append(path[i][1])
 
   data_search_sequence_path.data.update({
-    'x_vec': plan_path_x,
-    'y_vec': plan_path_y
+    'x_vec': path_x,
+    'y_vec': path_y
   })
 
   end_time6 = time.time()

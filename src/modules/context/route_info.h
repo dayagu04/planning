@@ -19,18 +19,25 @@ class RouteInfo {
             planning::framework::Session* session);
   ~RouteInfo() = default;
 
+  void SetConfig(const EgoPlanningConfigBuilder* config_builder);
+
   void Update();
 
   void UpdateMLCInfoDecider(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+
+  void UpdateVisionInfo() const;
   const RouteInfoOutput& get_route_info_output() { return route_info_output_; }
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool get_sdmap_valid() const { return sdmap_valid_; }
   const ad_common::sdmap::SDMap& get_sd_map() const { return sd_map_; }
   const ad_common::hdmap::HDMap& get_hd_map() const { return hd_map_; }
 
+  const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
+
  private:
   const planning::framework::Session* session_ = nullptr;
+  EgoPlanningConfig config_;
   RouteInfoOutput route_info_output_;
   LocalView local_view_;
 
@@ -49,13 +56,13 @@ class RouteInfo {
   Pose2D current_pose_{0.0, 0.0, 0.0};
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_hpp_;
   double nearest_s_hpp_{0.0};
+  double sum_s_hpp_{0.0};
   ad_common::math::Box2d ego_box_hpp_;
   ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
   double sum_distance_driving_ = -1;
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
-
-  void UpdateVisionInfo();
+  double virtual_extend_buff_ = 0.0;
 
   // for NOA function
   void UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sdmap);
@@ -104,5 +111,6 @@ class RouteInfo {
   void ResetHpp();
   void CalculateDistanceToTargetSlot();
   void CalculateDistanceToNextSpeedBump();
+  bool IsOnHPPLane();
 };
 }  // namespace planning

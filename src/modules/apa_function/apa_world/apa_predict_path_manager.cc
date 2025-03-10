@@ -6,6 +6,8 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "log_glog.h"
+#include "planning_plan_c.h"
+#include "apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -52,7 +54,7 @@ void ApaPredictPathManager::Update(
     l2g_tf.Init(measure_data_ptr->GetPos(), measure_data_ptr->GetHeading());
     for (size_t i = 0;
          i < std::min(control_trajectory.control_result_points_size,
-                      static_cast<uint8>(CONTROL_RESULT_POINTS_NUM));
+                      static_cast<uint8>(CONTROL_RESULT_POINTS_MAX_NUM));
          ++i) {
       const auto& pt = control_trajectory.control_result_points[i];
       pnc::geometry_lib::PathPoint car_predict_pt;
@@ -88,7 +90,7 @@ void ApaPredictPathManager::Update(
       int min_index = -1;
       for (int i = 0;
            i < std::min(planning_output->trajectory.trajectory_points_size,
-                        static_cast<uint8>(PLANNING_TRAJ_POINTS_NUM));
+                        static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
            ++i) {
         const iflyauto::TrajectoryPoint& planning_pt =
             planning_output->trajectory.trajectory_points[i];
@@ -104,7 +106,7 @@ void ApaPredictPathManager::Update(
       pnc::geometry_lib::PathPoint car_predict_pt;
       for (int i = min_index + 1;
            i < std::min(planning_output->trajectory.trajectory_points_size,
-                        static_cast<uint8>(PLANNING_TRAJ_POINTS_NUM)) &&
+                        static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
            predict_pt_vec_.back().s < predict_distance;
            ++i) {
         car_predict_pt.pos
@@ -121,17 +123,20 @@ void ApaPredictPathManager::Update(
         predict_pt_vec_.emplace_back(car_predict_pt);
       }
 
-      // 延长避免压速
-      const size_t pt_size = predict_pt_vec_.size();
-      Eigen::Vector2d extended_point;
-      if (pt_size > 1 &&
+      // 延长避免压速  多延长几个点
+      if (predict_pt_vec_.size() > 1) {
+        Eigen::Vector2d extended_point;
+        size_t pt_size;
+        for (size_t i = 0; i < 10; ++i) {
+          pt_size = predict_pt_vec_.size();
           pnc::geometry_lib::CalExtendedPointByTwoPoints(
               predict_pt_vec_[pt_size - 2].pos,
-              predict_pt_vec_[pt_size - 1].pos, extended_point, 0.86)) {
-        car_predict_pt.pos = extended_point;
-        car_predict_pt.heading = predict_pt_vec_.back().heading;
-        car_predict_pt.s = predict_pt_vec_.back().s + 0.86;
-        predict_pt_vec_.emplace_back(car_predict_pt);
+              predict_pt_vec_[pt_size - 1].pos, extended_point, 0.1);
+          car_predict_pt.pos = extended_point;
+          car_predict_pt.heading = predict_pt_vec_.back().heading;
+          car_predict_pt.s = predict_pt_vec_.back().s + 0.1;
+          predict_pt_vec_.emplace_back(car_predict_pt);
+        }
       }
     }
   }

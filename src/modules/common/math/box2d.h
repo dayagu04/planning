@@ -231,6 +231,13 @@ class Box2d {
   void LateralExtend(const double extension_length);
 
   /**
+   * @brief Extend the box longitudinally and laterally
+   * @param long_length the length to extend longitudinally
+   * @param lat_length the length to extend laterally
+   */
+  void LongAndLatExtend(const double long_length, const double lat_length);
+
+  /**
    * @brief Gets a human-readable description of the box
    * @return A debug-string
    */

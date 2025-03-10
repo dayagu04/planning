@@ -53,11 +53,6 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
-  const auto& tracks = lateral_obstacle_->all_tracks();
-  tracks_map_.clear();
-  for (auto track : tracks) {
-    tracks_map_[track.track_id] = track;
-  }
 
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
@@ -126,9 +121,9 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   bool enable_left = llane && left_reference_path_;
   bool enable_right = rlane && right_reference_path_;
   const bool is_left_lane_change_safe =
-      (enable_left && compute_lc_valid_info(LEFT_CHANGE));
+      (enable_left && ComputeLcValid(LEFT_CHANGE));
   const bool is_right_lane_change_safe =
-      (enable_right && compute_lc_valid_info(RIGHT_CHANGE));
+      (enable_right && ComputeLcValid(RIGHT_CHANGE));
   const bool emergency_avoidance_valid =
       (is_left_lane_change_safe || is_right_lane_change_safe);
   bool lane_change_to_left = true;
@@ -271,9 +266,10 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   double long_gap = std::numeric_limits<double>::max();
   const std::vector<TrackedObject>& front_obstacles_array =
       lateral_obstacle_->front_tracks();
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
   for (const auto& front_obstacle : front_obstacles_array) {
-    auto front_vehicle_iter = tracks_map_.find(front_obstacle.track_id);
-    if (front_vehicle_iter != tracks_map_.end()) {
+    auto front_vehicle_iter = tracks_map.find(front_obstacle.track_id);
+    if (front_vehicle_iter != tracks_map.end()) {
       if (front_vehicle_iter->second.track_id == kInvalidAgentId) {
         continue;
       }

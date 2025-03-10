@@ -16,6 +16,14 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); }
 
+  enum class SlotObsType : uint8_t {
+    INSIDE_OBS,
+    OUTSIDE_OBS,
+    IN_OBS,
+    OTHER_OBS,
+    DISCARD_OBS,
+  };
+
  private:
   // virtual func
   virtual const uint8_t PathPlanOnce() override;
@@ -30,18 +38,17 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   virtual const bool CheckSegCompleted() override;
   virtual const bool CheckUssStucked() override;
   virtual const bool CheckColDetStucked() override;
+
+  const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
+  const bool CheckSecurityCurrentpath();
+  const bool CheckRationalityEndpointPosition();
+  const bool CurrentPathTrimmed();
   // virtual const bool CheckDynamicUpdate() override;
  private:
-  PerpendicularPathOutPlanner::Tlane slot_t_lane_;
-  PerpendicularPathOutPlanner::Tlane obstacle_t_lane_;
   PerpendicularPathOutPlanner perpendicular_path_planner_;
-
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
-
-  Eigen::Vector2d pt_center_replan_;
-  double pt_center_heading_replan_;
-  double pt_center_replan_jump_dist_ = 0.0;
-  double pt_center_replan_jump_heading_ = 0.0;
+  bool path_trim_flag_ = false;
+  bool end_position_correction_flag_ = false;
 };
 
 }  // namespace apa_planner

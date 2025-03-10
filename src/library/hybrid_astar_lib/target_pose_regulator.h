@@ -17,6 +17,7 @@ namespace planning {
 
 struct PoseRegulateCandidate {
   Pose2D pose;
+  // 位姿对应的车辆真实外壳到障碍物的距离.
   double dist_to_obs;
   double lat_offset;
 };
@@ -37,9 +38,11 @@ class TargetPoseRegulator : public AstarDecider {
 
   void Clear();
 
-  const Pose2D GetCandidatePose(const double lat_buffer) const;
+  // Get most safe target pose
+  const std::pair<Pose2D, double> GetCandidatePose(
+      const double lat_buffer) const;
 
-  const bool IsCandidatePoseSafe(const double lat_buffer) const;
+  const double GetEgoObsDist() const { return ego_dist_to_obs_; }
 
  private:
   const bool IsParkingIn(const AstarRequest *request);
@@ -54,19 +57,44 @@ class TargetPoseRegulator : public AstarDecider {
 
   // 检查目标点直线入库路径，和障碍物距离
   // return true: 直线路径没有障碍物
-  const float GetDistToObs(Pose2D *global_pose, EulerDistanceTransform *edt);
+  const float GetDistToObs(const Pose2D *global_pose,
+                           EulerDistanceTransform *edt);
 
   void DebugString();
 
+  void UpdateDefaultPoseInfo(const AstarRequest *request,
+                             const VehicleParam &veh_param,
+                             EulerDistanceTransform *edt);
+
+  bool IsDefaultPoseSafeEnough();
+
+  const bool IsCandidatePoseSafe(const double lat_buffer) const;
+
+  const std::pair<Pose2D, double> GetCandidatePoseForHeadIn(
+      const double lat_buffer) const;
+
+  // 0: none,
+  // -1: left;
+  // 1: right
+  const int GenerateOffsetPreference() const;
+
+  const PoseRegulateCandidate *GetCandidatePoseByOffset(const double lat_buffer,
+                                                        const int offset) const;
+
+  const std::pair<Pose2D, double> GetCandidatePoseForTailIn(
+      const double lat_buffer) const;
+
  private:
   Pose2D center_line_target_;
-
   std::vector<PoseRegulateCandidate> candidate_info_;
+  const AstarRequest *request_;
 
   double x_check_upper_;
   double x_check_lower_;
   double x_step_;
   int x_sample_num_;
+
+  double ego_dist_to_obs_;
 };
 
 }  // namespace planning

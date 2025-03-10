@@ -349,5 +349,14 @@ void Box2d::LateralExtend(const double extension_length) {
   InitCorners();
 }
 
+void Box2d::LongAndLatExtend(const double long_length,
+                             const double lat_length) {
+  length_ += long_length;
+  half_length_ += long_length / 2.0;
+  width_ += lat_length;
+  half_width_ += lat_length / 2.0;
+  InitCorners();
+}
+
 }  // namespace planning_math
 }  // namespace planning

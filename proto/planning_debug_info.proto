@@ -29,6 +29,7 @@ import "st_search_decider.proto";
 import "st_graph.proto";
 import "st_graph_searcher.proto";
 import "lon_target_maker.proto";
+import "hybrid_ara_star.proto";
 import "lane_borrow_decider.proto";
 import "apa_debug_data.proto";
 
@@ -51,6 +52,8 @@ message TopicTimeList {
   optional uint64 uss_perception = 16;
   optional uint64 fusion_occupancy_object = 17;
   optional uint64 perception_tsr = 18;
+  optional uint64 fusion_speed_bump = 19;
+  optional uint64 sd_map = 20;
 }
 
 message FrameInfo {
@@ -118,4 +121,5 @@ message PlanningDebugInfo {
   optional LaneBorrowDeciderInfo lane_borrow_decider_info = 34;
   optional ApaSpeedDebug apa_speed_debug = 35;
   optional WeightMaker weight_maker = 36;
+  optional HybridARAInfo hybrid_ara_info = 37;
 }

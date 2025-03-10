@@ -32,9 +32,17 @@ static const double curve_factor = 0.30;
 EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
     : session_(session) {
+  SetConfig(config_builder);
+  // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
+  v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
+}
+
+void EgoStateManager::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
   steer_ratio_ = config_.steer_ratio;
-  parking_cruise_speed_ = config_.parking_cruise_speed;
+  cruise_routing_speed_ = config_.cruise_routing_speed;
+  cruise_searching_speed_ = config_.cruise_searching_speed;
   max_replan_lat_err_ = config_.max_replan_lat_err;
   max_replan_theta_err_ = config_.max_replan_theta_err;
   max_replan_dist_err_ = config_.max_replan_dist_err;
@@ -49,8 +57,6 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
     enable_ego_state_compensation_ = false;
   }
 #endif
-  // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
-  v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }
 
 void EgoStateManager::set_ego_carte(const Point2D &ego_carte) {
@@ -128,7 +134,15 @@ void EgoStateManager::set_ego_v_cruise(
   }
   ego_v_cruise_ = v_cruise_filter_.GetOutput();
   if (session_->is_hpp_scene()) {
-    ego_v_cruise_ = parking_cruise_speed_;
+    if (session_->environmental_model()
+            .get_local_view()
+            .function_state_machine_info.current_state ==
+        iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
+      const double kMaxSearchingSpeed = 15 / 3.6;
+      ego_v_cruise_ = std::min(cruise_searching_speed_, kMaxSearchingSpeed);
+    } else {
+      ego_v_cruise_ = cruise_routing_speed_;
+    }
   }
 }
 
@@ -315,6 +329,12 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   double max_replan_lon_err = max_replan_lon_err_;
   double max_replan_dist_err = max_replan_dist_err_;
   if (session_->is_hpp_scene()) {
+    hpp_max_replan_lat_err_ =
+        interp(ego_v_, config_.hpp_replan_threshold_speed,
+              config_.hpp_replan_lat_err_threshold_value);
+    hpp_max_replan_lon_err_ =
+        interp(ego_v_, config_.hpp_replan_threshold_speed,
+              config_.hpp_replan_lon_err_threshold_value);
     max_replan_lat_err = hpp_max_replan_lat_err_;
     max_replan_theta_err = hpp_max_replan_theta_err_ / 57.3;
     max_replan_lon_err = hpp_max_replan_lon_err_;
@@ -686,9 +706,9 @@ bool EgoStateManager::LateralStitch() {
     // const double s = motion_planner_output.s_t_spline(planning_loop_dt);
 
     // max delta as equivalent steer angle = 120 deg
-    double max_delta = 120.0 / 57.3 / 15.7;
+    double max_delta = 120.0 / 57.3 / steer_ratio_;
     if (session_->is_hpp_scene()) {
-      max_delta = 470.0 / 57.3 / 15.7;
+      max_delta = 540.0 / 57.3 / steer_ratio_;
     }
 
     lat_init_state.set_x(motion_planner_output.x_t_spline(planning_loop_dt));

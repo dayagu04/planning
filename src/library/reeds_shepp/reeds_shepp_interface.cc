@@ -10,7 +10,8 @@ namespace planning {
 int RSPathInterface::GeneShortestRSPath(
     RSPath *rs_path, bool *is_connected_to_goal, const Pose2D *start,
     const Pose2D *end, const double min_radius, const bool need_interpolate,
-    const RSPathRequestType request_type, const double rs_path_sample_dist) {
+    const bool need_anchor_point, const RSPathRequestType request_type,
+    const double rs_path_sample_dist) {
   // init
   rs_path->size = 0;
   rs_path->total_length = 0.0;
@@ -65,6 +66,7 @@ int RSPathInterface::GeneShortestRSPath(
         get_signed_segment_dir(kappa_list.path_kappa[i].length);
     rs_path->paths[i].length = kappa_list.path_kappa[i].length;
     rs_path->paths[i].kappa = kappa_list.path_kappa[i].kappa;
+    rs_path->paths[i].size = 0;
 
     // update steer
     if (kappa_list.path_kappa[i].kappa > 0.0) {
@@ -75,45 +77,46 @@ int RSPathInterface::GeneShortestRSPath(
       rs_path->paths[i].steer = RS_STRAIGHT;
     }
   }
-
-  if (need_interpolate) {
+  if (need_anchor_point) {
     // update anchor
     RSAnchorPoints rs_path_anchor_pts;
     rs_interpolate_.UpdateAnchorPoint(&rs_path_anchor_pts, start, &kappa_list);
-
+    SetAnchorPoint(rs_path_anchor_pts);
     // ILOG_INFO << "update anchor point";
 
     // attention:
     // rs_path_anchor_pts.size = kappa_list.size + 1
 
-    // interpolate
-    // double rs_path_sample_dist;
-    RSPoint *anchor_point;
-    // rs_path_sample_dist = 0.1;
+    if (need_interpolate) {
+      // interpolate
+      // double rs_path_sample_dist;
+      RSPoint *anchor_point;
+      // rs_path_sample_dist = 0.1;
 
-    for (i = 0; i < rs_path->size; i++) {
-      anchor_point = &rs_path_anchor_pts.points[i];
+      for (i = 0; i < rs_path->size; i++) {
+        anchor_point = &rs_path_anchor_pts.points[i];
 
-      // ILOG_INFO << "i " << i;
-      // ILOG_INFO << "steer " << kappa_list.path_kappa[i].steer_type;
+        // ILOG_INFO << "i " << i;
+        // ILOG_INFO << "steer " << kappa_list.path_kappa[i].steer_type;
 
-      // interpolate by line
-      if (kappa_list.path_kappa[i].steer_type == RS_STRAIGHT) {
-        rs_interpolate_.PathSegmentInterpolateByLine(
-            &rs_path->paths[i], anchor_point, &rs_path_anchor_pts.points[i + 1],
-            kappa_list.path_kappa[i].kappa, kappa_list.path_kappa[i].length,
-            rs_path_sample_dist);
-      } else {
-        // interpolate by arc
-        rs_interpolate_.PathSegmentInterpolateByArc(
-            &rs_path->paths[i], anchor_point, kappa_list.path_kappa[i].kappa,
-            kappa_list.path_kappa[i].length, rs_path_sample_dist, min_radius,
-            inverse_radius);
+        // interpolate by line
+        if (kappa_list.path_kappa[i].steer_type == RS_STRAIGHT) {
+          rs_interpolate_.PathSegmentInterpolateByLine(
+              &rs_path->paths[i], anchor_point,
+              &rs_path_anchor_pts.points[i + 1], kappa_list.path_kappa[i].kappa,
+              kappa_list.path_kappa[i].length, rs_path_sample_dist);
+        } else {
+          // interpolate by arc
+          rs_interpolate_.PathSegmentInterpolateByArc(
+              &rs_path->paths[i], anchor_point, kappa_list.path_kappa[i].kappa,
+              kappa_list.path_kappa[i].length, rs_path_sample_dist, min_radius,
+              inverse_radius);
+        }
+
+        // rs_interpolate_.RSPathSegmentInterpolate(
+        //     &rs_path->paths[i], anchor_point, &kappa_list.path_kappa[i],
+        //     rs_path_sample_dist);
       }
-
-      // rs_interpolate_.RSPathSegmentInterpolate(
-      //     &rs_path->paths[i], anchor_point, &kappa_list.path_kappa[i],
-      //     rs_path_sample_dist);
     }
   }
 
@@ -194,7 +197,7 @@ int RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
   // update anchor
   RSAnchorPoints rs_path_anchor_pts;
   rs_interpolate_.UpdateAnchorPoint(&rs_path_anchor_pts, start, &kappa_list);
-
+  SetAnchorPoint(rs_path_anchor_pts);
   // ILOG_INFO << "update anchor point";
 
   // attention:
@@ -246,7 +249,7 @@ int RSPathInterface::RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
 
   // update anchor
   rs_interpolate_.UpdateAnchorPoint(&rs_path_anchor_pts, start, rs_path);
-
+  SetAnchorPoint(rs_path_anchor_pts);
   // attention:
   // rs_path_anchor_pts.size = kappa_list.size + 1
 

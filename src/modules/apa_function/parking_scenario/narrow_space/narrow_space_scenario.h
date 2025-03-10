@@ -60,7 +60,10 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckStuckFailed() override;
 
-  void UpdateRemainDist(const double uss_safe_dist) override;
+  void UpdateRemainDist(
+      const double uss_safe_dist,
+      const double lat_buffer = apa_param.GetParam().lat_inflation,
+      const double extra_buffer_when_reversing = 0.068) override;
 
   const std::string GetPlanReason(const uint8_t type);
 
@@ -113,9 +116,9 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckEgoReplanNumber(const bool is_replan);
 
-  const bool IsEgoNeedDriveForwardInSlot(const Pose2D& ego_pose,
-                                         const double slot_width,
-                                         const double slot_len);
+  const bool IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
+                                   const double slot_width,
+                                   const double slot_len);
 
   const double CalRemainDistFromPath() override;
 

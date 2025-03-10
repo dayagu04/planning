@@ -51,6 +51,11 @@ class StGraphHelper {
   const std::unordered_map<int32_t, std::vector<int64_t>>&
   GetAgentIdSTBoundariesMap() const;
 
+  const std::unordered_map<int32_t, std::vector<int64_t>>&
+  GetNeighborAgentIdSTBoundariesMap() const {
+    return st_graph_.neighbor_agent_id_st_boundaries_map();
+  }
+
   void DetermineIfConeBucketCIPV(
       const std::vector<const agent::Agent*>& agents);
 

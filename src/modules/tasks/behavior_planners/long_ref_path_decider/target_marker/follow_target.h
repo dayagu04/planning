@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
 #include "ego_planning_config.h"
 #include "lon_target_maker.pb.h"
 #include "session.h"
@@ -23,6 +25,8 @@ class FollowTarget : public Target {
   FollowTarget(const SpeedPlannerConfig config, framework::Session* session);
   ~FollowTarget() = default;
 
+  void Update();
+
   double MakeSlowerFollowSTarget(const double speed, const double upper_bound_s,
                                  const double time_gap) const;
 
@@ -34,12 +38,12 @@ class FollowTarget : public Target {
   void MakeMinFollowDistance();
 
   // generate stable curve
-  std::unique_ptr<VariableCoordinateTimeOptimalTrajectory>
+  std::shared_ptr<VariableCoordinateTimeOptimalTrajectory>
   GenerateStableFollowSlowCurve(const double matched_desired_headway) const;
 
   // generate far slow curve
-  std::unique_ptr<VariableCoordinateTimeOptimalTrajectory>
-  GenerateFarFollowSlowCurve(const double matched_desired_headway) const;
+  std::shared_ptr<VariableCoordinateTimeOptimalTrajectory>
+  GenerateFarFollowSlowCurve(const bool enable_far_slow_jlt) const;
 
   VariableCoordinateTimeOptimalTrajectory MakeSafeFarSlowCurve(
       const CoordinateParam& relative_coordinate_param) const;
@@ -59,7 +63,10 @@ class FollowTarget : public Target {
                                        const bool has_valid_s_value,
                                        double* const target_s_value) const;
 
-  bool JudgeFarSlowCar() const;
+  bool JudgeFarSlowCar(const double matched_desired_headway) const;
+
+  bool JudgeSrefValid(
+      std::shared_ptr<VariableCoordinateTimeOptimalTrajectory> jlt_curve) const;
 
   void AddFollowTargetDataToProto();
 

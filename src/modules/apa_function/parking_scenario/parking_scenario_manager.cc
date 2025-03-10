@@ -112,7 +112,8 @@ bool ParkingScenarioManager::Init(
 }
 
 void ParkingScenarioManager::Excute() {
-  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute --------------------";
+  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute "
+               "--------------------";
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
@@ -124,7 +125,7 @@ void ParkingScenarioManager::Excute() {
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
   const auto &ego_info_under_slot =
-      apa_world_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
@@ -213,6 +214,8 @@ std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
 
 void ParkingScenarioManager::ScenarioRunning() {
   if (current_scenario_ == nullptr) {
+    Reset();
+    planning_output_.planning_status.apa_planning_status = iflyauto::APA_FAILED;
     return;
   }
   current_scenario_->ScenarioRunning();
@@ -229,7 +232,7 @@ void ParkingScenarioManager::ScenarioTry() {
     return;
   }
 
-  if (!apa_world_->GetNewSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
+  if (!apa_world_->GetSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
     ILOG_INFO << "not release by rule";
     return;
   }
@@ -238,7 +241,7 @@ void ParkingScenarioManager::ScenarioTry() {
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
   const auto &ego_info_under_slot =
-      apa_world_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ILOG_INFO << "GEOMETRY_PLANNING_RELEASE = "
             << (ego_info_under_slot.slot.release_info_
@@ -299,17 +302,19 @@ void ParkingScenarioManager::ScenarioTry() {
 
 const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
   SlotReleaseState astar_path_release =
-      apa_world_->GetNewSlotManagerPtr()
+      apa_world_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
 
   SlotReleaseState geometry_path_release =
-      apa_world_->GetNewSlotManagerPtr()
+      apa_world_->GetSlotManagerPtr()
           ->ego_info_under_slot_.slot.release_info_
           .release_state[GEOMETRY_PLANNING_RELEASE];
 
   if (planning_output_.planning_status.apa_planning_status ==
-      iflyauto::APA_IN_PROGRESS) {
+          iflyauto::APA_IN_PROGRESS ||
+      planning_output_.planning_status.hpp_planning_status ==
+          iflyauto::HPP_RUNNING) {
     JSON_DEBUG_VALUE("geometry_path_release",
                      geometry_path_release == SlotReleaseState::RELEASE)
   }

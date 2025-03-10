@@ -1,7 +1,11 @@
 #include "perpendicular_head_out_scenario.h"
 
+#include <math.h>
+
+#include <cstddef>
 #include <queue>
 
+#include "apa_state_machine_manager.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
@@ -12,21 +16,16 @@ namespace apa_planner {
 
 void PerpendicularHeadOutScenario::Reset() {
   frame_.Reset();
-  slot_t_lane_.Reset();
-  obstacle_t_lane_.Reset();
   perpendicular_path_planner_.Reset();
   current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
+  path_trim_flag_ = false;
+  end_position_correction_flag_ = false;
 
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
 
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
-
-  pt_center_replan_.setZero();
-  pt_center_heading_replan_ = 0.0;
-  pt_center_replan_jump_dist_ = 0.0;
-  pt_center_replan_jump_heading_ = 0.0;
 
   ParkingScenario::Reset();
 }
@@ -62,12 +61,7 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
   UpdateRemainDist(safe_uss_remain_dist);
 
   // update ego slot info
-  if (!UpdateEgoSlotInfo()) {
-    ILOG_INFO << "update ego slot info";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
-    return;
-  }
+  UpdateEgoSlotInfo();
 
   // check finish
   if (CheckFinished()) {
@@ -84,22 +78,22 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  GenTlane();
+  frame_.replan_flag = CheckReplan();
 
+  GenTlane();
   GenObstacles();
 
   // check replan
-  if (apa_world_ptr_->GetSimuParam().force_plan || CheckReplan()) {
+  if (frame_.replan_flag) {
     ILOG_INFO << "replan is required!";
 
-    frame_.replan_flag = true;
-    pt_center_replan_ = frame_.ego_slot_info.slot_center;
-    pt_center_heading_replan_ = frame_.ego_slot_info.slot_origin_heading;
     frame_.dynamic_plan_fail_flag = false;
 
     const double start_time = IflyTime::Now_ms();
 
-    frame_.total_plan_count++;
+    if (frame_.replan_reason != FORCE_PLAN && frame_.replan_reason != DYNAMIC) {
+      frame_.total_plan_count++;
+    }
 
     uint8_t pathplan_result = PathPlannerResult::PLAN_FAILED;
 
@@ -111,9 +105,9 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
       frame_.plan_fail_reason = PLAN_COUNT_EXCEED_LIMIT;
     }
 
-    if (!frame_.dynamic_plan_fail_flag) {
-      frame_.car_already_move_dist = 0.0;
-    }
+    // if (!frame_.dynamic_plan_fail_flag) {
+    //   frame_.car_already_move_dist = 0.0;
+    // }
 
     JSON_DEBUG_VALUE("replan_count", frame_.total_plan_count)
 
@@ -151,174 +145,119 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     SetParkingStatus(PARKING_RUNNING);
   }
 
+  // check finish
+  if (CheckFinished()) {
+    ILOG_INFO << "check apa finished!";
+    SetParkingStatus(PARKING_FINISHED);
+    return;
+  }
+
+  // check failed
+  if (CheckStuckFailed()) {
+    ILOG_INFO << "check stuck failed!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    return;
+  }
+
+  // check if the current path is safe
+  if (CheckSecurityCurrentpath()) {
+    if (CurrentPathTrimmed()) {
+      path_trim_flag_ = true;
+    }
+  }
+
+  // check if the key positions need to be corrected
+  if (CheckRationalityEndpointPosition()) {
+    if (CurrentPathTrimmed()) {
+      end_position_correction_flag_ = true;
+    }
+  }
+
   // check planning status
   ILOG_INFO << "parking status = "
             << static_cast<int>(GetPlannerStates().planning_status);
 }
 
 const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
-  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
-  const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
+  const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
+      apa_world_ptr_->GetMeasureDataManagerPtr();
 
-  frame_.correct_path_for_limiter = false;
-  frame_.replan_flag = false;
+  const ApaParameters& param = apa_param.GetParam();
 
-  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+  // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
-  if (!frame_.is_fix_slot) {
-    ego_slot_info.target_managed_slot =
-        slot_manager_ptr_->GetEgoSlotInfo().select_slot_filter;
+  ego_info_under_slot.origin_pose_global.heading_vec =
+      ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
+          .normalized();
 
-    const auto& slot_points =
-        ego_slot_info.target_managed_slot.corner_points().corner_point();
-    ILOG_INFO << "*************** slot_points size **************  "
-              << slot_points.size();
-    std::vector<Eigen::Vector2d> pt;
-    pt.resize(4);
-    for (size_t i = 0; i < 4; ++i) {
-      if (apa_world_ptr_->GetSimuParam().is_simulation &&
-          apa_world_ptr_->GetSimuParam().target_managed_slot_x_vec.size() ==
-              4 &&
-          apa_world_ptr_->GetSimuParam().use_slot_in_bag) {
-        pt[i] << apa_world_ptr_->GetSimuParam().target_managed_slot_x_vec[i],
-            apa_world_ptr_->GetSimuParam().target_managed_slot_y_vec[i];
-      } else {
-        if (slot_points.size() > 0) {
-          pt[i] << slot_points[i].x(), slot_points[i].y();
-        } else {
-          ILOG_INFO << "ego slot points size is 0";
-          return false;
-        }
-      }
-    }
-    const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
-    const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
-    const double real_slot_length = (pM01 - pM23).norm();
-    const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
-    // n is vec that slot opening orientation
-    const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
-    // const Eigen::Vector2d n = (pM01 - pM23).normalized();
-    pt[2] = pt[0] - real_slot_length * n;
-    pt[3] = pt[1] - real_slot_length * n;
+  ego_info_under_slot.origin_pose_global.heading =
+      std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
+                 ego_info_under_slot.origin_pose_global.heading_vec.x());
 
-    ego_slot_info.slot_corner = pt;
+  ego_info_under_slot.origin_pose_global.pos =
+      ego_info_under_slot.slot.processed_corner_coord_global_.pt_01_mid -
+      ego_info_under_slot.slot.slot_length_ *
+          ego_info_under_slot.origin_pose_global.heading_vec;
 
-    ego_slot_info.slot_center = (pt[0] + pt[1] + pt[2] + pt[3]) * 0.25;
+  ego_info_under_slot.g2l_tf = geometry_lib::GlobalToLocalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
 
-    // const double virtual_slot_length =
-    //     apa_param.GetParam().car_length +
-    //     apa_param.GetParam().slot_compare_to_car_length;
+  ego_info_under_slot.l2g_tf = geometry_lib::LocalToGlobalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
 
-    // const double use_slot_length =
-    //     std::min(real_slot_length, virtual_slot_length);
+  ego_info_under_slot.origin_pose_local.pos = ego_info_under_slot.g2l_tf.GetPos(
+      ego_info_under_slot.origin_pose_global.pos);
 
-    const double use_slot_length = real_slot_length;
+  ego_info_under_slot.origin_pose_local.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(
+          ego_info_under_slot.origin_pose_global.heading);
 
-    ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
-    ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
-    ego_slot_info.slot_origin_heading_vec = n;
-    ego_slot_info.slot_length = use_slot_length;
-    ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
+  ego_info_under_slot.origin_pose_local.heading_vec =
+      geometry_lib::GenHeadingVec(
+          ego_info_under_slot.origin_pose_local.heading);
 
-    ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
+  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
 
-    ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
+  ego_info_under_slot.cur_pose.pos =
+      ego_info_under_slot.g2l_tf.GetPos(measures_ptr->GetPos());
+  ego_info_under_slot.cur_pose.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
+  ego_info_under_slot.cur_pose.heading_vec =
+      geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
 
-    if (ego_slot_info.target_managed_slot.slot_type() ==
-        Common::PARKING_SLOT_TYPE_SLANTING) {
-      const Eigen::Vector2d origin_pt_0 =
-          Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[0]
-                              .x,
-                          slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[0]
-                              .y);
+  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+          param.slot_occupied_ratio_max_lat_err &&
+      std::fabs(ego_info_under_slot.cur_pose.heading) <
+          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
+    const std::vector<double> x_tab = {
+        ego_info_under_slot.target_pose.pos.x(),
+        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
 
-      const Eigen::Vector2d origin_pt_1 =
-          Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[1]
-                              .x,
-                          slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[1]
-                              .y);
-
-      ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(origin_pt_0);
-      ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
-
-      if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
-        std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
-      }
-
-      const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-
-      double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                         Eigen::Vector2d(real_slot_length, 0.0), pt_01_vec)) *
-                     kRad2Deg;
-
-      if (angle > 90.0) {
-        angle = 180.0 - angle;
-      }
-
-      angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
-      ego_slot_info.sin_angle = std::sin(angle * kDeg2Rad);
-      ego_slot_info.origin_pt_0_heading = 90.0 - angle;
-    } else {
-      ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(pt[0]);
-      ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(pt[1]);
-      if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
-        std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
-      }
-      ego_slot_info.sin_angle = 1.0;
-      ego_slot_info.origin_pt_0_heading = 0.0;
-    }
+    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
+        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+  } else {
+    ego_info_under_slot.slot_occupied_ratio = 0.0;
   }
 
-  ego_slot_info.ego_pos_slot =
-      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
-
-  ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
-
-  ego_slot_info.ego_heading_slot_vec
-      << std::cos(ego_slot_info.ego_heading_slot),
-      std::sin(ego_slot_info.ego_heading_slot);
-
-  ego_slot_info.target_ego_pos_slot << apa_param.GetParam().terminal_target_x,
-      apa_param.GetParam().terminal_target_y;
-
-  ego_slot_info.target_ego_heading_slot =
-      apa_param.GetParam().terminal_target_heading;
-
-  ego_slot_info.fus_obj_valid_flag =
-      slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
-
-  UpdateObstacleLocal();
-
-  //**************************
-  // limiter,cal target pos,cal terminal error,cal slot occupied ratio
-  //**************************
-
-  // calc slot side and init gear and init steer at first
+  // calc init gear and init steer at first
   if (frame_.is_replan_first) {
-    pt_center_replan_ = ego_slot_info.slot_center;
-    pt_center_heading_replan_ = ego_slot_info.slot_origin_heading;
-    frame_.car_already_move_dist = 0.0;
-
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
         ApaParkOutDirection::RIGHT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
-      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
     } else if (apa_world_ptr_->GetStateMachineManagerPtr()
                    ->GetParkOutDirection() == ApaParkOutDirection::LEFT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
-      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
     } else if (apa_world_ptr_->GetStateMachineManagerPtr()
                    ->GetParkOutDirection() == ApaParkOutDirection::FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
-      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     }
 
     ILOG_INFO << "Now default to turn right at first";
@@ -326,714 +265,436 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     // ...
   }
 
-  // fix slot
-  if (ego_slot_info.slot_occupied_ratio >
-          apa_param.GetParam().fix_slot_occupied_ratio &&
-      !frame_.is_fix_slot && measures_ptr->GetStaticFlag()) {
-    frame_.is_fix_slot = true;
-  }
-
   ILOG_INFO << "frame_.current_gear = "
             << static_cast<int>(frame_.current_gear);
   ILOG_INFO << "frame_.current_arc_steer = "
             << static_cast<int>(frame_.current_arc_steer);
 
+  ILOG_INFO << "slot_occupied_ratio = "
+            << ego_info_under_slot.slot_occupied_ratio;
+
   return true;
 }
 
 const bool PerpendicularHeadOutScenario::GenTlane() {
-  using namespace pnc::geometry_lib;
-  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
-
-  const Eigen::Vector2d pt_01_norm_vec =
-      (ego_slot_info.pt_1 - ego_slot_info.pt_0).normalized();
-  const Eigen::Vector2d pt_10_norm_vec =
-      (ego_slot_info.pt_0 - ego_slot_info.pt_1).normalized();
-  const Eigen::Vector2d pt_01_norm_up_vec(pt_01_norm_vec.y(),
-                                          -pt_01_norm_vec.x());
-  const Eigen::Vector2d pt_01_norm_down_vec(-pt_01_norm_vec.y(),
-                                            pt_01_norm_vec.x());
-
-  const double x_max =
-      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
-       apa_param.GetParam().obs_consider_long_threshold * pt_01_norm_up_vec)
-          .x();
-
-  const double y_max = std::fabs(
-      (ego_slot_info.pt_1 +
-       apa_param.GetParam().obs_consider_lat_threshold * pt_01_norm_vec)
-          .y());
-
-  // construct channel width and length
-  if (!ego_slot_info.fus_obj_valid_flag) {
-    // use uss obs
-    std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
-        channel_width_pq_for_x(Compare(1));
-    for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-      if (obstacle_point_slot.x() < x_max ||
-          std::fabs(obstacle_point_slot.y()) > y_max) {
-        continue;
-      }
-      channel_width_pq_for_x.emplace(obstacle_point_slot);
-    }
-
-    if (channel_width_pq_for_x.empty()) {
-      channel_width_pq_for_x.emplace(Eigen::Vector2d(
-          apa_param.GetParam().channel_width +
-              ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x(),
-          0.0));
-    }
-
-    const double channel_width =
-        channel_width_pq_for_x.top().x() -
-        ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x();
-
-    ego_slot_info.channel_width = pnc::mathlib::DoubleConstrain(
-        channel_width, apa_param.GetParam().min_channel_width,
-        apa_param.GetParam().channel_width);
-  } else {
-    // use fus obs
-    ego_slot_info.channel_width = apa_param.GetParam().channel_width - 1.5;
-  }
-
-  ILOG_INFO << "channel_width = " << ego_slot_info.channel_width;
-
   // construct tlane pq
   // left y is positive, right y is negative
   // left y should be smallest, right y should be largest
   // all x should be largest
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
-      left_pq_for_y(Compare(3));
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
-      left_pq_for_x(Compare(0));
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
-      right_pq_for_y(Compare(2));
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
-      right_pq_for_x(Compare(0));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      left_pq_for_y(geometry_lib::Compare(3));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      left_pq_for_x(geometry_lib::Compare(0));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      right_pq_for_y(geometry_lib::Compare(2));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      right_pq_for_x(geometry_lib::Compare(0));
 
-  // only hack for obs is not accurate
-  // const double y_min = ego_slot_info.slot_width * 0.5 - 0.068;
-  // const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
-  //                       4.28 * pt_01_norm_down_vec)
-  //                          .x();
+  const auto& param = apa_param.GetParam();
 
-  CollisionDetector::ObsSlotType obs_slot_type;
-  const std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
-      std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
-  const bool is_left_side =
-      (slot_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
-  double max_obs_lat_invasion_slot_dist = 0.0;
   const double mir_width =
-      (apa_param.GetParam().max_car_width - apa_param.GetParam().car_width) *
-      0.5;
+      (param.max_car_width - param.car_width) * 0.5 - 0.0168;
 
-  const double mir_x = ego_slot_info.target_ego_pos_slot.x() +
-                       apa_param.GetParam().lon_dist_mirror_to_rear_axle -
-                       0.368;
-  // sift obstacles that meet requirement
-  for (Eigen::Vector2d obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-    // if (std::fabs(obstacle_point_slot.x()) > x_max ||
-    //     obstacle_point_slot.x() < x_min ||
-    //     std::fabs(obstacle_point_slot.y()) > y_max ||
-    //     std::fabs(obstacle_point_slot.y()) < y_min) {
-    //   continue;
-    // }
-    obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
-        obstacle_point_slot, slot_pt, is_left_side, frame_.replan_flag);
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
-    if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
-        !apa_param.GetParam().believe_in_fus_obs) {
-      max_obs_lat_invasion_slot_dist =
-          frame_.replan_flag
-              ? apa_param.GetParam().max_obs_lat_invasion_slot_dist
-              : apa_param.GetParam().max_obs_lat_invasion_slot_dist_dynamic_col;
-      const double min_left_y =
-          0.5 * ego_slot_info.slot_width - max_obs_lat_invasion_slot_dist;
-      const double max_right_y =
-          -0.5 * ego_slot_info.slot_width + max_obs_lat_invasion_slot_dist;
-      // obs is in slot, temp hack, when believe_in_fus_obs is false,
-      // force move obs to out slot
-      if (obstacle_point_slot.y() < min_left_y &&
-          obstacle_point_slot.y() > 0.0) {
-        obstacle_point_slot.y() = min_left_y;
+  const double mir_x = ego_info_under_slot.target_pose.pos.x() +
+                       param.lon_dist_mirror_to_rear_axle - 0.368;
+
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
+
+  const auto& obstacles =
+      apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
+
+  Eigen::Vector2d obs_pt_slot;
+  size_t obs_count_in_slot = 0;
+  for (const auto& pair : obstacles) {
+    for (const auto& obs : pair.second.GetPtClout2dLocal()) {
+      obs_pt_slot = obs;
+      SlotObsType obs_slot_type = CalSlotObsType(obs_pt_slot);
+      if (obs_slot_type == SlotObsType::IN_OBS) {
+        obs_count_in_slot++;
       }
-      if (obstacle_point_slot.y() > max_right_y &&
-          obstacle_point_slot.y() < 0.0) {
-        obstacle_point_slot.y() = max_right_y;
+      if (obs_slot_type != SlotObsType::INSIDE_OBS &&
+          obs_slot_type != SlotObsType::OUTSIDE_OBS) {
+        continue;
       }
-    } else if (obs_slot_type !=
-                   CollisionDetector::ObsSlotType::SLOT_INSIDE_OBS &&
-               obs_slot_type !=
-                   CollisionDetector::ObsSlotType::SLOT_OUTSIDE_OBS) {
-      continue;
-    }
-    // the obs lower mir can relax requirements
-    if (obstacle_point_slot.x() < mir_x) {
-      if (obstacle_point_slot.y() > 1e-6) {
-        obstacle_point_slot.y() += mir_width;
+
+      // the obs lower mir can relax lat requirements
+      if (obs_pt_slot.x() < mir_x) {
+        if (obs_pt_slot.y() > 1e-6) {
+          obs_pt_slot.y() += mir_width;
+        } else {
+          obs_pt_slot.y() -= mir_width;
+        }
+      }
+
+      // the obs far from slot can relax lon equirements
+      if (std::fabs(obs_pt_slot.y()) >
+          ego_info_under_slot.slot.slot_width_ * 0.5 + 0.468) {
+        obs_pt_slot.x() -= 0.268;
+      }
+
+      if (obs_pt_slot.y() > 1e-6) {
+        left_pq_for_y.emplace(std::move(obs_pt_slot));
+        left_pq_for_x.emplace(std::move(obs_pt_slot));
       } else {
-        obstacle_point_slot.y() -= mir_width;
-      }
-    }
-    // the obs far from slot can relax requirements
-    if (std::fabs(obstacle_point_slot.y()) >
-        ego_slot_info.slot_width * 0.5 + 0.468) {
-      obstacle_point_slot.x() -= 0.268;
-    }
-    if (obstacle_point_slot.y() > 1e-6) {
-      left_pq_for_y.emplace(std::move(obstacle_point_slot));
-      left_pq_for_x.emplace(std::move(obstacle_point_slot));
-    } else {
-      right_pq_for_y.emplace(std::move(obstacle_point_slot));
-      right_pq_for_x.emplace(std::move(obstacle_point_slot));
-    }
-  }
-
-  if (apa_param.GetParam().conservative_mono_enable) {
-    if (!left_pq_for_x.empty() || !right_pq_for_x.empty()) {
-      apa_param.SetPram().mono_plan_enable = false;
-    }
-  }
-
-  // If there are no obstacles on either side, set up a virtual obstacle that is
-  // farther away
-  const double virtual_x =
-      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
-       apa_param.GetParam().virtual_obs_x_pos * pt_01_norm_down_vec)
-          .x();
-
-  const double virtual_left_y =
-      (ego_slot_info.pt_1 +
-       apa_param.GetParam().virtual_obs_y_pos * pt_01_norm_vec)
-          .y();
-  const double virtual_right_y =
-      (ego_slot_info.pt_0 +
-       apa_param.GetParam().virtual_obs_y_pos * pt_10_norm_vec)
-          .y();
-
-  bool left_empty = false;
-  bool right_empty = false;
-
-  if (left_pq_for_x.empty()) {
-    ILOG_INFO << "left space is empty";
-    left_empty = true;
-    left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
-    left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
-  }
-  if (right_pq_for_x.empty()) {
-    ILOG_INFO << "right space is empty";
-    right_empty = true;
-    right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
-    right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
-  }
-
-  const double car_half_width_with_mirror =
-      apa_param.GetParam().max_car_width * 0.5;
-
-  const double virtual_slot_width =
-      apa_param.GetParam().max_car_width +
-      apa_param.GetParam().slot_compare_to_car_width;
-
-  const double real_slot_width = ego_slot_info.slot_width;
-
-  ILOG_INFO << "max_car_width = " << apa_param.GetParam().max_car_width
-            << "  virtual slot width = " << virtual_slot_width
-            << "  real slot width = " << real_slot_width;
-
-  double left_y = left_pq_for_y.top().y();
-  double real_left_y = left_y;
-
-  double left_x = left_pq_for_x.top().x();
-  double real_left_x = left_x;
-
-  double right_y = right_pq_for_y.top().y();
-  double real_right_y = right_y;
-
-  double right_x = right_pq_for_x.top().x();
-  double real_right_x = right_x;
-
-  // temp hack, when use uss obs, obs lat y is set virtual value
-  if (apa_param.GetParam().tmp_no_consider_obs_dy &&
-      !ego_slot_info.fus_obj_valid_flag) {
-    if (!left_empty) {
-      left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
-    }
-    if (!right_empty) {
-      right_y =
-          -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
-    }
-  }
-
-  // set t lane area
-  const double threshold = 0.6868;
-  if (ego_slot_info.fus_obj_valid_flag) {
-    left_y = std::max(left_y, car_half_width_with_mirror + threshold);
-    left_y = std::min(left_y, virtual_left_y);
-    left_x = std::min(left_x, ego_slot_info.pt_1.x() - 1.68 * threshold);
-    left_x = std::max(left_x, virtual_x);
-    right_y = std::min(right_y, -car_half_width_with_mirror - threshold);
-    right_y = std::max(right_y, virtual_right_y);
-    right_x = std::min(right_x, ego_slot_info.pt_0.x() - 1.68 * threshold);
-    right_x = std::max(right_x, virtual_x);
-  }
-
-  ILOG_INFO << "real_left_y = " << real_left_y
-            << "  real_right_y = " << real_right_y;
-
-  ILOG_INFO << "left_y = " << left_y << "  right_y = " << right_y
-            << "  left_x = " << left_x << "  right_x = " << right_x;
-
-  // todo: consider actual obs pos to let slot release or not release or move
-  // target pose
-  double left_dis_obs_car = 0.0;
-  double right_dis_obs_car = 0.0;
-  if (ego_slot_info.fus_obj_valid_flag) {
-    // use fus obj
-    left_dis_obs_car = real_left_y - car_half_width_with_mirror;
-    right_dis_obs_car = -car_half_width_with_mirror - real_right_y;
-  } else {
-    // use uss obj
-    left_dis_obs_car = left_y - car_half_width_with_mirror;
-    right_dis_obs_car = -car_half_width_with_mirror - right_y;
-  }
-
-  bool left_obs_meet_safe_require = false;
-  bool right_obs_meet_safe_require = false;
-
-  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal +
-                                apa_param.GetParam().safe_threshold;
-
-  left_obs_meet_safe_require = left_dis_obs_car > safe_threshold ? true : false;
-  right_obs_meet_safe_require =
-      right_dis_obs_car > safe_threshold ? true : false;
-
-  if (ego_slot_info.slot_occupied_ratio < 0.618 && frame_.replan_flag) {
-    // if two side is all no safe, the slot would not release in slot managment,
-    // and should not move target pose
-    if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
-      // left side is dangerous, should move toward right
-      ego_slot_info.move_slot_dist = safe_threshold - left_dis_obs_car;
-      ego_slot_info.move_slot_dist *= -1.0;
-    } else if (left_obs_meet_safe_require && !right_obs_meet_safe_require) {
-      // right side is dangerous, should move toward left
-      ego_slot_info.move_slot_dist = safe_threshold - right_dis_obs_car;
-    }
-    ILOG_INFO << "left_dis_obs_car = " << left_dis_obs_car
-              << "  right_dis_obs_car = " << right_dis_obs_car;
-  }
-
-  const bool need_move_slot =
-      (pnc::mathlib::IsDoubleEqual(ego_slot_info.move_slot_dist, 0.0)) ? false
-                                                                       : true;
-
-  if (need_move_slot) {
-    // cal max_move_slot_dist to avoid car press line
-    // no consider mirror
-    const double half_car_width = apa_param.GetParam().car_width * 0.5;
-    const double half_slot_width = ego_slot_info.slot_width * 0.5;
-    const double car2line_dist_threshold =
-        apa_param.GetParam().car2line_dist_threshold;
-
-    // first sure if car is parked in the center, does it meet the slot line
-    // distance requirement
-    const double max_move_slot_dist =
-        half_slot_width - half_car_width - car2line_dist_threshold;
-    if (max_move_slot_dist > 0.0 &&
-        (std::fabs(ego_slot_info.move_slot_dist) > max_move_slot_dist)) {
-      if (ego_slot_info.move_slot_dist > 0.0) {
-        ego_slot_info.move_slot_dist = max_move_slot_dist;
-      }
-      if (ego_slot_info.move_slot_dist < 0.0) {
-        ego_slot_info.move_slot_dist = -max_move_slot_dist;
+        right_pq_for_y.emplace(std::move(obs_pt_slot));
+        right_pq_for_x.emplace(std::move(obs_pt_slot));
       }
     }
   }
 
-  JSON_DEBUG_VALUE("move_slot_dist", ego_slot_info.move_slot_dist)
-
-  // construct slot_t_lane_, left is positive, right is negative
-  const double slot_width = std::min(virtual_slot_width, real_slot_width);
-
-  Eigen::Vector2d corner_left_slot(ego_slot_info.slot_length, 0.5 * slot_width);
-
-  Eigen::Vector2d corner_right_slot(ego_slot_info.slot_length,
-                                    -0.5 * slot_width);
-
-  const auto& slot_side = slot_t_lane_.slot_side;
-  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-    // inside is right, outside is left
-    slot_t_lane_.corner_outside_slot = corner_left_slot;
-    slot_t_lane_.corner_inside_slot = corner_right_slot;
-    slot_t_lane_.pt_outside = corner_left_slot;
-    slot_t_lane_.pt_inside = corner_right_slot;
-    slot_t_lane_.pt_inside.x() =
-        std::min(real_right_x, ego_slot_info.pt_0.x()) +
-        apa_param.GetParam().tlane_safe_dx;
-    slot_t_lane_.pt_inside.y() =
-        std::min(real_right_y, ego_slot_info.pt_0.y() + 0.05);
-  } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    // outside is right, inside is left
-    slot_t_lane_.corner_outside_slot = corner_right_slot;
-    slot_t_lane_.corner_inside_slot = corner_left_slot;
-    slot_t_lane_.pt_outside = corner_right_slot;
-    slot_t_lane_.pt_inside = corner_left_slot;
-    slot_t_lane_.pt_inside.x() = std::min(real_left_x, ego_slot_info.pt_1.x()) +
-                                 apa_param.GetParam().tlane_safe_dx;
-    slot_t_lane_.pt_inside.y() =
-        std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    if (obs_count_in_slot > 0) {
+      ILOG_INFO << "there are obs in slot";
+      return false;
+    }
   }
 
-  slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
-      ego_slot_info.target_ego_pos_slot.y();
+  // apa_param.SetPram().actual_mono_plan_enable = param.mono_plan_enable;
+  // // 如果保守的话  两侧全空才开启一把进 无意义 这个保守泊入已关闭
+  // const bool left_empty = left_pq_for_x.empty();
+  // const bool right_empty = right_pq_for_x.empty();
+  // if (param.conservative_mono_enable && (!left_empty || !right_empty)) {
+  //   apa_param.SetPram().actual_mono_plan_enable = false;
+  // }
 
-  slot_t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
+  // 加入左右侧的虚拟障碍物
+  const Eigen::Vector2d pt_01_unit_vec =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
+          .normalized();
 
-  if (need_move_slot) {
-    slot_t_lane_.pt_terminal_pos.y() += ego_slot_info.move_slot_dist;
-    slot_t_lane_.pt_inside.y() += ego_slot_info.move_slot_dist;
-    slot_t_lane_.pt_outside.y() += ego_slot_info.move_slot_dist;
-    std::cout << "should move slot according to obs pt, move dist = "
-              << ego_slot_info.move_slot_dist << std::endl;
+  const Eigen::Vector2d pt_01_mid =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid;
 
-    ego_slot_info.terminal_err.Set(
-        ego_slot_info.ego_pos_slot - slot_t_lane_.pt_terminal_pos,
-        ego_slot_info.ego_heading_slot - slot_t_lane_.pt_terminal_heading);
+  double half_origin_slot_width =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec.norm() *
+      0.5;
+  half_origin_slot_width =
+      std::max(half_origin_slot_width, param.max_car_width * 0.5 + 0.168);
+
+  const Eigen::Vector2d virtual_left_obs =
+      pt_01_mid -
+      param.virtual_obs_x_pos *
+          ego_info_under_slot.origin_pose_local.heading_vec +
+      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+
+  const Eigen::Vector2d virtual_right_obs =
+      pt_01_mid -
+      param.virtual_obs_x_pos *
+          ego_info_under_slot.origin_pose_local.heading_vec -
+      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+
+  left_pq_for_y.emplace(virtual_left_obs);
+  left_pq_for_x.emplace(virtual_left_obs);
+  right_pq_for_y.emplace(virtual_right_obs);
+  right_pq_for_x.emplace(virtual_right_obs);
+
+  // 找到左侧和右侧障碍物极限位置
+  const Eigen::Vector2d left_obs(left_pq_for_x.top().x(),
+                                 left_pq_for_y.top().y());
+  const Eigen::Vector2d right_obs(right_pq_for_x.top().x(),
+                                  right_pq_for_y.top().y());
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
+      ApaParkOutDirection::LEFT_FRONT) {
+    ego_info_under_slot.pt_inside = left_obs;
+  } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                 ->GetParkOutDirection() == ApaParkOutDirection::RIGHT_FRONT) {
+    ego_info_under_slot.pt_inside = right_obs;
   }
 
-  slot_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_terminal_pos;
-  slot_t_lane_.pt_lower_boundry_pos.x() =
-      slot_t_lane_.pt_lower_boundry_pos.x() -
-      apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
+  const double car_width_fold_mirror = apa_param.GetParam().car_width + 0.06;
+  const double car_width_no_fold_mirror = apa_param.GetParam().max_car_width;
+  double car_width = car_width_no_fold_mirror;
 
-  // construct obstacle_t_lane_
-  // for onstacle_t_lane    right is inside, left is outside
-  obstacle_t_lane_.slot_side = slot_side;
-  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-    obstacle_t_lane_.pt_inside.x() = right_x + apa_param.GetParam().obs_safe_dx;
-    obstacle_t_lane_.pt_inside.y() = right_y;
-    obstacle_t_lane_.pt_outside.x() = left_x + apa_param.GetParam().obs_safe_dx;
-    obstacle_t_lane_.pt_outside.y() = left_y;
-  } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    obstacle_t_lane_.pt_inside.x() = left_x + apa_param.GetParam().obs_safe_dx;
-    obstacle_t_lane_.pt_inside.y() = left_y;
-    obstacle_t_lane_.pt_outside.x() =
-        right_x + apa_param.GetParam().obs_safe_dx;
-    obstacle_t_lane_.pt_outside.y() = right_y;
+  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    car_width = car_width_fold_mirror;
   }
 
-  obstacle_t_lane_.pt_terminal_pos = slot_t_lane_.pt_terminal_pos;
-  obstacle_t_lane_.pt_terminal_heading = slot_t_lane_.pt_terminal_heading;
-  obstacle_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_lower_boundry_pos;
+  const Eigen::Vector2d left_car(2.168, car_width * 0.5);
+  const Eigen::Vector2d right_car(2.168, -car_width * 0.5);
 
-  // tmp method, obstacle is temporarily unavailable, force lift slot_t_lane
-  // pt_inside and pt_outside
-  if (apa_param.GetParam().force_both_side_occupied) {
-    slot_t_lane_.pt_inside.x() = corner_right_slot.x();
-    slot_t_lane_.pt_outside.x() = corner_left_slot.x();
+  const double left_dis_obs_car =
+      (left_obs - left_car).y() / ego_info_under_slot.slot.sin_angle_;
+  const double right_dis_obs_car =
+      (right_car - right_obs).y() / ego_info_under_slot.slot.sin_angle_;
 
-    slot_t_lane_.pt_inside +=
-        Eigen::Vector2d(apa_param.GetParam().occupied_pt_inside_dx,
-                        apa_param.GetParam().occupied_pt_inside_dy);
+  ILOG_INFO << "left_dis_obs_car = " << left_dis_obs_car
+            << "  right_dis_obs_car = " << right_dis_obs_car;
 
-    slot_t_lane_.pt_outside +=
-        Eigen::Vector2d(apa_param.GetParam().occupied_pt_outside_dx,
-                        apa_param.GetParam().occupied_pt_outside_dy);
+  const double suitable_safe_threshold =
+      apa_param.GetParam().car_lat_inflation_normal +
+      apa_param.GetParam().safe_threshold;
+
+  const double min_safe_threshold =
+      apa_param.GetParam().car_lat_inflation_normal + 0.0168;
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    if (left_dis_obs_car + right_dis_obs_car <
+        2.0 * suitable_safe_threshold + 0.01) {
+      ILOG_INFO << "left and right obs dis is not meed need";
+      return false;
+    }
   }
 
-  ILOG_INFO << "-- slot_t_lane_ --";
-  ILOG_INFO << "pt_outside = " << slot_t_lane_.pt_outside.transpose();
-  ILOG_INFO << "pt_inside = " << slot_t_lane_.pt_inside.transpose();
-  ILOG_INFO << "pt_terminal_pos = " << slot_t_lane_.pt_terminal_pos.transpose();
-  ILOG_INFO << "pt_terminal_heading = " << slot_t_lane_.pt_terminal_heading;
-  ILOG_INFO << "pt_lower_boundry_pos = "
-            << slot_t_lane_.pt_lower_boundry_pos.transpose();
+  // const bool left_obs_meet_safe_require =
+  //     left_dis_obs_car > suitable_safe_threshold ? true : false;
 
-  ILOG_INFO << "-- obstacle_t_lane_ --";
-  ILOG_INFO << "pt_outside = " << obstacle_t_lane_.pt_outside.transpose();
-  ILOG_INFO << "pt_inside = " << obstacle_t_lane_.pt_inside.transpose();
-  ILOG_INFO << "pt_terminal_pos = "
-            << obstacle_t_lane_.pt_terminal_pos.transpose();
-  ILOG_INFO << "pt_terminal_heading = " << obstacle_t_lane_.pt_terminal_heading;
-  ILOG_INFO << "pt_lower_boundry_pos = "
-            << obstacle_t_lane_.pt_lower_boundry_pos.transpose();
+  // const bool right_obs_meet_safe_require =
+  //     right_dis_obs_car > suitable_safe_threshold ? true : false;
 
-  std::vector<double> x_vec = {0.0};
-  std::vector<double> y_vec = {0.0};
-  std::vector<double> phi_vec = {0.0};
+  // // 一旦重规划失败 用上次重规划的车位移动距离
+  // ego_info_under_slot.last_move_slot_dist =
+  // ego_info_under_slot.move_slot_dist;
+  // //
+  // 只有在重规划且没有完全入库的时候才需要根据障碍物来改变是否移动车位或者移动车位的距离
+  // if (frame_.replan_flag) {
+  //   if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
+  //     ego_info_under_slot.move_slot_dist =
+  //         -1.0 * std::min(right_dis_obs_car - min_safe_threshold,
+  //                         suitable_safe_threshold - left_dis_obs_car);
+  //     ILOG_INFO << "left side is dangerous, should move toward right";
+  //   } else if (left_obs_meet_safe_require && !right_obs_meet_safe_require) {
+  //     ego_info_under_slot.move_slot_dist =
+  //         std::min(left_dis_obs_car - min_safe_threshold,
+  //                  suitable_safe_threshold - right_dis_obs_car);
+  //     ILOG_INFO << "right side is dangerous, should move toward left";
+  //   } else if (left_obs_meet_safe_require && right_obs_meet_safe_require) {
+  //     ego_info_under_slot.move_slot_dist = 0.0;
+  //     ILOG_INFO << "two side is safe, should not move slot";
+  //   } else if (!left_obs_meet_safe_require && !right_obs_meet_safe_require) {
+  //     // 往两侧障碍物正中停
+  //     const double mid_dist = (left_dis_obs_car + right_dis_obs_car) * 0.5;
+  //     if (mid_dist < left_dis_obs_car) {
+  //       // 往右移
+  //       ego_info_under_slot.move_slot_dist = mid_dist - left_dis_obs_car;
+  //     } else if (mid_dist < right_dis_obs_car) {
+  //       // 往左移
+  //       ego_info_under_slot.move_slot_dist = right_dis_obs_car - mid_dist;
+  //     }
+  //     ILOG_INFO << "two side is dangerous, park in middle of two side obs";
+  //   }
 
-  JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
-  JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
-  JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
+  //   // 计算最大移动车位距离 因为不仅要考虑安全
+  //   // 也要考虑到底自车车体能侵入旁边空间多少
+  //   // 车体能压线的距离 正数表示不能越过线 负数表示可以越过
+  //   const double max_move_slot_dist =
+  //       ego_info_under_slot.slot.slot_width_ * 0.5 -
+  //       car_width_fold_mirror * 0.5 -
+  //       apa_param.GetParam().car2line_dist_threshold;
+  //   if (ego_info_under_slot.move_slot_dist > 0.0) {
+  //     ego_info_under_slot.move_slot_dist =
+  //         std::min(ego_info_under_slot.move_slot_dist, max_move_slot_dist);
+  //   } else {
+  //     ego_info_under_slot.move_slot_dist =
+  //         std::max(ego_info_under_slot.move_slot_dist, -max_move_slot_dist);
+  //   }
+  // }
+
+  // ILOG_INFO << "move_slot_dist = " << ego_info_under_slot.move_slot_dist
+  //           << "  last move_slot_dist = "
+  //           << ego_info_under_slot.last_move_slot_dist;
+  // JSON_DEBUG_VALUE("move_slot_dist", ego_info_under_slot.move_slot_dist)
+
+  // // 根据车位移动距离更新终点位置
+  // ego_info_under_slot.target_pose.pos +=
+  //     ego_info_under_slot.move_slot_dist * pt_01_unit_vec;
+
+  // ego_info_under_slot.terminal_err.Set(
+  //     ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
+  //     geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+  //                                  ego_info_under_slot.target_pose.heading));
+
+  // 根据自车位置制定通道宽
+  double channel_width =
+      apa_world_ptr_->GetCollisionDetectorPtr()->GetCarMaxX(
+          ego_info_under_slot.cur_pose) +
+      3.168 -
+      std::max(ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x(),
+               ego_info_under_slot.slot.origin_corner_coord_local_.pt_1.x());
+
+  channel_width = std::max(channel_width, apa_param.GetParam().channel_width);
+  // if (ego_info_under_slot.slot_occupied_ratio > 0.768 &&
+  //     channel_width > apa_param.GetParam().min_channel_width) {
+  //   channel_width = apa_param.GetParam().min_channel_width;
+  // }
+
+  // 根据实际障碍物计算一个宽泛的障碍物tlane 为了后续产生虚拟障碍物
+  TLane& obs_tlane = ego_info_under_slot.obs_tlane;
+  obs_tlane.B = virtual_left_obs;
+  obs_tlane.E = virtual_right_obs;
+  if (ego_info_under_slot.slot_occupied_ratio < 1e-3) {
+    obs_tlane.B.x() += 2.0;
+    obs_tlane.E.x() += 2.0;
+  }
+
+  const double area_length = 12.0 / ego_info_under_slot.slot.sin_angle_;
+  const double area_width = channel_width + param.virtual_obs_x_pos;
+
+  obs_tlane.A = obs_tlane.B + pt_01_unit_vec * area_length;
+  obs_tlane.H = obs_tlane.A +
+                ego_info_under_slot.origin_pose_local.heading_vec * area_width;
+
+  const double origin_slot_length =
+      (ego_info_under_slot.slot.origin_corner_coord_local_.pt_0 -
+       ego_info_under_slot.slot.origin_corner_coord_local_.pt_2)
+          .norm();
+
+  obs_tlane.C =
+      obs_tlane.B - ego_info_under_slot.origin_pose_local.heading_vec *
+                        (origin_slot_length - param.virtual_obs_x_pos + 0.68);
+
+  obs_tlane.D =
+      obs_tlane.E - ego_info_under_slot.origin_pose_local.heading_vec *
+                        (origin_slot_length - param.virtual_obs_x_pos + 0.68);
+
+  obs_tlane.F = obs_tlane.E - pt_01_unit_vec * area_length;
+  obs_tlane.G = obs_tlane.F +
+                ego_info_under_slot.origin_pose_local.heading_vec * area_width;
+
+  obs_tlane.CalcBound();
+
+  ILOG_INFO
+      << "cur pose = " << ego_info_under_slot.cur_pose.pos.transpose() << "  "
+      << ego_info_under_slot.cur_pose.heading * kRad2Deg
+      << "  tar_pose = " << ego_info_under_slot.target_pose.pos.transpose()
+      << "  " << ego_info_under_slot.target_pose.heading * kRad2Deg
+      << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.transpose()
+      << "  " << ego_info_under_slot.terminal_err.heading * kRad2Deg
+      << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
+      << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
+      << "  stuck time(s) = " << frame_.stuck_time
+      << "  stuck uss time(s) = " << frame_.stuck_uss_time << "  slod side = "
+      << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
 }
 
 const bool PerpendicularHeadOutScenario::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
-  // set obstacles
-  // double channel_width = frame_.ego_slot_info.channel_width;
-  geometry_lib::PathPoint cur_pose;
-  cur_pose.pos = frame_.ego_slot_info.ego_pos_slot;
-  cur_pose.heading = frame_.ego_slot_info.ego_heading_slot;
-  cur_pose.heading_vec = frame_.ego_slot_info.ego_heading_slot_vec;
-  double channel_width =
-      apa_world_ptr_->GetCollisionDetectorPtr()->GetCarMaxX(cur_pose) + 3.168 -
-      std::max(frame_.ego_slot_info.pt_0.x(), frame_.ego_slot_info.pt_1.x());
 
-  channel_width =
-      std::max(channel_width, apa_param.GetParam().channel_width - 1.5);
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const TLane& obs_tlane = ego_info_under_slot.obs_tlane;
 
-  double channel_length = apa_param.GetParam().channel_length + 3.0;
-
-  if (apa_param.GetParam().force_both_side_occupied) {
-    obstacle_t_lane_ = slot_t_lane_;
-  }
-
-  // add tlane obstacle
-  //  B is always outside
-  int slot_side = 1;
-  bool is_left_side = false;
-  if (obstacle_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-    slot_side = -1;
-    is_left_side = false;
-  } else if (obstacle_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    slot_side = 1;
-    is_left_side = true;
-  }
-  Eigen::Vector2d B(obstacle_t_lane_.pt_outside);
-  const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
-  const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-  const Eigen::Vector2d pt_01_norm_vec = pt_01_vec.normalized();
-  const double obs_length = (channel_length - pt_01_vec.norm()) * 0.5;
-  Eigen::Vector2d A = B - slot_side * pt_01_norm_vec * obs_length;
-
-  Eigen::Vector2d C(obstacle_t_lane_.pt_lower_boundry_pos);
-  C.y() = B.y();
-
-  Eigen::Vector2d E(obstacle_t_lane_.pt_inside);
-  Eigen::Vector2d D(obstacle_t_lane_.pt_lower_boundry_pos);
-  D.y() = E.y();
-
-  Eigen::Vector2d F = E + slot_side * pt_01_norm_vec * obs_length;
-
-  // add channel obstacle
-  const double pt_01_x = ((ego_slot_info.pt_0 + ego_slot_info.pt_1) * 0.5).x();
-  const double top_x = pt_01_x + channel_width / ego_slot_info.sin_angle;
-  Eigen::Vector2d channel_point_1 =
-      Eigen::Vector2d(top_x, 0.0) -
-      slot_side * pt_01_norm_vec * channel_length * 0.5;
-  Eigen::Vector2d channel_point_2 =
-      Eigen::Vector2d(top_x, 0.0) +
-      slot_side * pt_01_norm_vec * channel_length * 0.5;
-
-  Eigen::Vector2d channel_point_3;
-  pnc::geometry_lib::LineSegment channel_line;
-  std::vector<pnc::geometry_lib::LineSegment> channel_line_vec;
-  channel_point_3 = F;
-  channel_point_2.y() = channel_point_3.y();
-  channel_line.SetPoints(channel_point_2, channel_point_3);
-  channel_line_vec.emplace_back(channel_line);
-  channel_point_3 = A;
-  channel_point_1.y() = channel_point_3.y();
-  channel_line.SetPoints(channel_point_1, channel_point_3);
-  channel_line_vec.emplace_back(channel_line);
-  channel_line.SetPoints(channel_point_1, channel_point_2);
-  channel_line_vec.emplace_back(channel_line);
-
-  const double ds = apa_param.GetParam().obstacle_ds;
-  std::vector<Eigen::Vector2d> point_set;
-  std::vector<Eigen::Vector2d> channel_obstacle_vec;
-  channel_obstacle_vec.clear();
-  channel_obstacle_vec.reserve(68);
-  for (const auto& line : channel_line_vec) {
-    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line, ds);
-    channel_obstacle_vec.insert(channel_obstacle_vec.end(), point_set.begin(),
-                                point_set.end());
-  }
-
-  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
-  // apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
-
-  pnc::geometry_lib::LineSegment tlane_line;
-  std::vector<pnc::geometry_lib::LineSegment> tlane_line_vec;
-  tlane_line.SetPoints(A, B);
+  geometry_lib::LineSegment tlane_line;
+  std::vector<geometry_lib::LineSegment> tlane_line_vec;
+  tlane_line.SetPoints(obs_tlane.A, obs_tlane.B);
   tlane_line_vec.emplace_back(tlane_line);
-  tlane_line.SetPoints(B, C);
+  tlane_line.SetPoints(obs_tlane.B, obs_tlane.C);
   tlane_line_vec.emplace_back(tlane_line);
-  tlane_line.SetPoints(C, D);
+  tlane_line.SetPoints(obs_tlane.C, obs_tlane.D);
   tlane_line_vec.emplace_back(tlane_line);
-  tlane_line.SetPoints(D, E);
+  tlane_line.SetPoints(obs_tlane.D, obs_tlane.E);
   tlane_line_vec.emplace_back(tlane_line);
-  tlane_line.SetPoints(E, F);
+  tlane_line.SetPoints(obs_tlane.E, obs_tlane.F);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(obs_tlane.F, obs_tlane.G);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(obs_tlane.G, obs_tlane.H);
+  tlane_line_vec.emplace_back(tlane_line);
+  tlane_line.SetPoints(obs_tlane.H, obs_tlane.A);
   tlane_line_vec.emplace_back(tlane_line);
 
-  // tmp method, should modify
   std::vector<Eigen::Vector2d> tlane_obstacle_vec;
   tlane_obstacle_vec.clear();
-  tlane_obstacle_vec.reserve(88);
+  tlane_obstacle_vec.reserve(188);
+  std::vector<Eigen::Vector2d> point_set;
   for (const auto& line : tlane_line_vec) {
-    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line, ds);
+    geometry_lib::SamplePointSetInLineSeg(point_set, line,
+                                          apa_param.GetParam().obstacle_ds);
     tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
                               point_set.end());
   }
-  pnc::geometry_lib::PathPoint ego_pose;
-  ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
-               frame_.ego_slot_info.ego_heading_slot);
 
-  // if (apa_world_ptr_->GetSimuParam().is_simulation &&
-  //     apa_world_ptr_->GetSimuParam().use_obs_in_bag &&
-  //     apa_world_ptr_->GetSimuParam().obs_x_vec.size() > 0) {
-  //   std::vector<Eigen::Vector2d> obs_vec;
-  //   obs_vec.reserve(
-  //       apa_world_ptr_->GetSimuParam().obs_x_vec.size());
-  //   Eigen::Vector2d obs;
-  //   for (size_t i = 0;
-  //        i < apa_world_ptr_->GetSimuParam().obs_x_vec.size();
-  //        ++i) {
-  //     obs = ego_slot_info.g2l_tf.GetPos(Eigen::Vector2d(
-  //         apa_world_ptr_->GetSimuParam().obs_x_vec[i],
-  //         apa_world_ptr_->GetSimuParam().obs_y_vec[i]));
-  //     obs_vec.emplace_back(obs);
-  //   }
-  //   apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-  //       obs_vec, CollisionDetector::RECORD_OBS);
-  //   return;
-  // }
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
+      CollisionDetector::Paramters(
+          apa_param.GetParam().car_lat_inflation_normal));
 
-  if (!ego_slot_info.fus_obj_valid_flag) {
-    // when no fus obj, temp hack, only increase plan success ratio
-    double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
-    if (frame_.ego_slot_info.slot_occupied_ratio >
-            apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
-        std::fabs(frame_.ego_slot_info.terminal_err.heading) * kRad2Deg <
-            36.6) {
-      safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
+  // 临时做法 后面障碍物不应该在这里做处理 并赋值新的类型
+  // 应该统一使用障碍物管理器中的类型 对于虚拟障碍物
+  // 自车位置附近的虚拟障碍物可以删除 避免无效提升规划难度 add virtual tlane obs
+  std::vector<Eigen::Vector2d> tlane_obs_vec;
+  tlane_obs_vec.reserve(tlane_obstacle_vec.size());
+  for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
+    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+            obs_pos, ego_info_under_slot.cur_pose, 0.0168)) {
+      tlane_obs_vec.emplace_back(obs_pos);
     }
-    for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
-      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-              obs_pos, ego_pose, safe_dist)) {
-        apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-            obs_pos, CollisionDetector::TLANE_OBS);
-      }
-    }
-  } else {
-    const double safe_dist = 0.0268;
-    // add virtual tlane obs
-    std::vector<Eigen::Vector2d> tlane_obs_vec;
-    tlane_obs_vec.reserve(tlane_obstacle_vec.size());
-    for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
-      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-              obs_pos, ego_pose, safe_dist)) {
-        tlane_obs_vec.emplace_back(obs_pos);
-      }
-    }
-    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-        tlane_obs_vec, CollisionDetector::TLANE_OBS);
+  }
+  apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+      tlane_obs_vec, CollisionDetector::TLANE_OBS);
 
-    // add actual fus obs
-    Eigen::Vector2d pt_left = obstacle_t_lane_.pt_outside;
-    Eigen::Vector2d pt_right = obstacle_t_lane_.pt_inside;
-    if (obstacle_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-      std::swap(pt_left, pt_right);
-    }
-    double max_obs_lat_invasion_slot_dist = 0.0;
-    std::vector<Eigen::Vector2d> fus_obs_vec;
-    std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
-        std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
-    CollisionDetector::ObsSlotType obs_slot_type;
-    std::vector<Eigen::Vector2d> tlane_vec;
-    tlane_vec.emplace_back(A);
-    tlane_vec.emplace_back(B);
-    tlane_vec.emplace_back(C);
-    tlane_vec.emplace_back(D);
-    tlane_vec.emplace_back(E);
-    tlane_vec.emplace_back(F);
-    tlane_vec.emplace_back(channel_point_2);
-    tlane_vec.emplace_back(channel_point_1);
+  // add actual obs
+  const std::vector<Eigen::Vector2d> tlane_vec{
+      obs_tlane.A, obs_tlane.B, obs_tlane.C, obs_tlane.D,
+      obs_tlane.E, obs_tlane.F, obs_tlane.G, obs_tlane.H};
 
-    for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
-      obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
-          obs_pos, slot_pt, is_left_side, frame_.replan_flag);
+  std::vector<Eigen::Vector2d> fus_obs_vec;
+  const auto& obstacles =
+      apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
 
+  Eigen::Vector2d obs_pt_slot;
+  for (const auto& pair : obstacles) {
+    for (const auto& obs : pair.second.GetPtClout2dLocal()) {
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-              obs_pos, ego_pose, safe_dist)) {
+              obs, ego_info_under_slot.cur_pose, 0.0168)) {
         // temp hack, when obs is in car, lose it, only increase plan success
         // ratio, To Do, when obs change accurately, should not del any obs
-        // ILOG_INFO << "obs is in car, lost it, obs = "
-        //             << ego_slot_info.l2g_tf.GetPos(obs_pos).transpose())
+        if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+          return false;
+        }
         continue;
       }
+      SlotObsType obs_type = CalSlotObsType(obs);
 
-      if (!apa_param.GetParam().believe_in_fus_obs) {
-        if (obs_slot_type ==
-                CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS &&
-            frame_.replan_flag) {
-          // obs is slot entrance, when replan, no conside it, but when dynamic
-          // move and col det, conside it
-          continue;
-        }
-
-        if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS) {
-          max_obs_lat_invasion_slot_dist =
-              frame_.replan_flag
-                  ? apa_param.GetParam().max_obs_lat_invasion_slot_dist
-                  : apa_param.GetParam()
-                        .max_obs_lat_invasion_slot_dist_dynamic_col;
-          const double min_left_y =
-              0.5 * ego_slot_info.slot_width - max_obs_lat_invasion_slot_dist;
-          const double max_right_y =
-              -0.5 * ego_slot_info.slot_width + max_obs_lat_invasion_slot_dist;
-          // obs is in slot, temp hack, when believe_in_fus_obs is false,
-          // force move obs to out slot
-          if (obs_pos.y() < min_left_y && obs_pos.y() > 0.0) {
-            obs_pos.y() = min_left_y;
-          }
-          if (obs_pos.y() > max_right_y && obs_pos.y() < 0.0) {
-            obs_pos.y() = max_right_y;
-          }
-        }
-
-        if (obs_slot_type ==
-            CollisionDetector::ObsSlotType::SLOT_DIRECTLY_BEHIND_OBS) {
-          if (frame_.replan_flag) {
-            // when replan, temp del obs directly behind slot
-            continue;
-          }
-          // obs is directly behind slot, temp hack, when believe_in_fus_obs is
-          // false, force move obs to out slot
-          // if (obs_pos.y() > 0.0) {
-          //   obs_pos.y() =
-          //       0.5 * ego_slot_info.slot_width -
-          //       max_obs_lat_invasion_slot_dist;
-          // } else {
-          //   obs_pos.y() = -0.5 * ego_slot_info.slot_width +
-          //                 max_obs_lat_invasion_slot_dist;
-          // }
-        }
+      if (obs_type == SlotObsType::DISCARD_OBS ||
+          obs_type == SlotObsType::IN_OBS) {
+        continue;
       }
 
       // if obs is not in tlane area lose it
-      if (!pnc::geometry_lib::IsPointInPolygon(tlane_vec, obs_pos)) {
+      if (!geometry_lib::IsPointInPolygon(tlane_vec, obs)) {
         continue;
       }
 
-      fus_obs_vec.emplace_back(std::move(obs_pos));
+      fus_obs_vec.emplace_back(obs);
     }
-
-    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-        fus_obs_vec, CollisionDetector::FUSION_OBS);
   }
+
+  apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+      fus_obs_vec, CollisionDetector::FUSION_OBS);
+
+  const double bound_threshold = 0.68;
+
+  OccupancyGridBound bound(
+      obs_tlane.min_x - bound_threshold, obs_tlane.min_y - bound_threshold,
+      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + +bound_threshold);
+
+  bound.PrintInfo();
+
+  // apa_world_ptr_->GetCollisionDetectorPtr()->TransObsMapToOccupancyGridMap(
+  //     bound);
+
   return true;
 }
 
 const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
+  ILOG_INFO << "-------------- PathPlanOnce --------------";
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const bool conditions_1 =
-      frame_.ego_slot_info.ego_pos_slot.x() < 5.5 && frame_.is_replan_second;
+      ego_info_under_slot.cur_pose.pos.x() < 5.5 && frame_.is_replan_second;
 
   const bool fix_shift_conditions = conditions_1 || frame_.is_replan_first;
-  ILOG_INFO << "ego_pos_slot x " << frame_.ego_slot_info.ego_pos_slot.x();
+  ILOG_INFO << "ego_pos_slot x " << ego_info_under_slot.cur_pose.pos.x();
 
   if (!fix_shift_conditions) {
     ILOG_INFO << "current plan should shift gear";
@@ -1058,33 +719,37 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
     }
   }
 
-  ILOG_INFO << "-------------- PathPlanOnce --------------";
-  // construct input
-  const auto& ego_slot_info = frame_.ego_slot_info;
-  PerpendicularTailInPathGenerator::Input path_planner_input;
-  path_planner_input.pt_0 = ego_slot_info.pt_0;
-  path_planner_input.pt_1 = ego_slot_info.pt_1;
-  path_planner_input.sin_angle = ego_slot_info.sin_angle;
-  path_planner_input.origin_pt_0_heading = ego_slot_info.origin_pt_0_heading;
-  // path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  path_planner_input.tlane = slot_t_lane_;
-  path_planner_input.is_complete_path =
-      apa_world_ptr_->GetSimuParam().is_complete_path;
-  path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
-  path_planner_input.ref_arc_steer = frame_.current_arc_steer;
-  path_planner_input.ref_gear = frame_.current_gear;
-  path_planner_input.is_replan_first = frame_.is_replan_first;
-  path_planner_input.is_replan_second = frame_.is_replan_second;
-  // path_planner_input.is_replan_dynamic = frame_.is_replan_dynamic;
-  path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
-                                  ego_slot_info.ego_heading_slot);
+  GeometryPathInput input;
+  input.ego_info_under_slot = ego_info_under_slot;
+  input.is_complete_path = apa_world_ptr_->GetSimuParam().is_complete_path;
+  input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
+  input.ref_gear = frame_.current_gear;
+  input.ref_arc_steer = frame_.current_arc_steer;
+  input.is_replan_first = frame_.is_replan_first;
+  input.is_replan_second = frame_.is_replan_second;
+  input.is_replan_dynamic = frame_.is_replan_dynamic;
+  input.is_searching_stage =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
 
-  perpendicular_path_planner_.SetInput(path_planner_input);
+  // if (frame_.replan_reason == DYNAMIC) {
+  //   ILOG_INFO << "dynamic replan, gear should be reverse";
+  //   input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+  // }
+
+  perpendicular_path_planner_.SetGInput(input);
 
   // need replan all path
   const bool path_plan_success =
       perpendicular_path_planner_.GeometryPathGenerator::Update(
           apa_world_ptr_->GetCollisionDetectorPtr());
+
+  if (input.is_searching_stage) {
+    if (path_plan_success) {
+      return PathPlannerResult::PLAN_UPDATE;
+    } else {
+      return PathPlannerResult::PLAN_FAILED;
+    }
+  }
 
   uint8_t plan_result = 0;
   if (!path_plan_success && !apa_world_ptr_->GetSimuParam().is_simulation) {
@@ -1123,40 +788,16 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   current_plan_path_vec_.clear();
   current_plan_path_vec_.reserve(5);
 
-  if (apa_param.GetParam().dynamic_col_det_enable) {
-    for (size_t i = planner_output.path_seg_index.first;
-         i <= planner_output.path_seg_index.second; ++i) {
-      const auto& path_seg_local = planner_output.path_segment_vec[i];
-      pnc::geometry_lib::PathSegment path_seg_global = path_seg_local;
-      if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-        path_seg_global.line_seg.pA =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pA);
-        path_seg_global.line_seg.pB =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pB);
-        path_seg_global.line_seg.heading = ego_slot_info.l2g_tf.GetHeading(
-            path_seg_local.GetLineSeg().heading);
-      } else if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-        path_seg_global.arc_seg.pA =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pA);
-        path_seg_global.arc_seg.pB =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pB);
-        path_seg_global.arc_seg.circle_info.center =
-            ego_slot_info.l2g_tf.GetPos(
-                path_seg_local.GetArcSeg().circle_info.center);
-        path_seg_global.arc_seg.headingA = ego_slot_info.l2g_tf.GetHeading(
-            path_seg_local.GetArcSeg().headingA);
-        path_seg_global.arc_seg.headingB = ego_slot_info.l2g_tf.GetHeading(
-            path_seg_local.GetArcSeg().headingB);
-      }
-      current_plan_path_vec_.emplace_back(std::move(path_seg_global));
+  geometry_lib::PathSegment path_seg_global;
+  for (size_t i = planner_output.path_seg_index.first;
+       i < planner_output.path_segment_vec.size(); ++i) {
+    path_seg_global = planner_output.path_segment_vec[i];
+    path_seg_global.LocalToGlobal(ego_info_under_slot.l2g_tf);
+
+    if (i <= planner_output.path_seg_index.second) {
+      current_plan_path_vec_.emplace_back(path_seg_global);
     }
   }
-
-  // const bool gear_steer_shift =
-  //     (frame_.is_replan_first && planner_output.gear_shift) ||
-  //     (frame_.is_replan_second && planner_output.gear_shift) ||
-  //     (!frame_.is_replan_first && !frame_.is_replan_second &&
-  //      frame_.replan_reason != DYNAMIC);
 
   if (frame_.is_replan_first) {
     frame_.is_replan_first = false;
@@ -1177,108 +818,41 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
 
   frame_.gear_command = planner_output.current_gear;
 
-  // lateral path optimization
-  bool is_use_optimizer = true;
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(planner_output.path_point_vec.size() +
+                                         18);
 
-  // refuse optimizer
-  if (planner_output.path_point_vec.size() < 3) {
-    ILOG_INFO << " input size is too small";
-    is_use_optimizer = false;
-  } else {
-    const auto path_length = (planner_output.path_point_vec.front().pos -
-                              planner_output.path_point_vec.back().pos)
-                                 .norm();
-    if (path_length < apa_param.GetParam().min_opt_path_length) {
-      ILOG_INFO << "path length is too short, optimizer is closed ";
-      is_use_optimizer = false;
-    }
+  complete_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.reserve(
+      planner_output.all_gear_path_point_vec.size() + 18);
+
+  std::vector<pnc::geometry_lib::PathPoint> path_pt_vec;
+
+  // if (LateralPathOptimize(path_pt_vec)) {
+  //   JSON_DEBUG_VALUE("is_path_lateral_optimized", true);
+  // } else {
+  //   path_pt_vec = planner_output.path_point_vec;
+  //   JSON_DEBUG_VALUE("is_path_lateral_optimized", false);
+  // }
+
+  path_pt_vec = planner_output.path_point_vec;
+
+  geometry_lib::PathPoint global_point;
+  for (const auto& path_point : path_pt_vec) {
+    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+    global_point.lat_buffer = path_point.lat_buffer;
+    global_point.s = path_point.s;
+    global_point.kappa = path_point.kappa;
+    current_path_point_global_vec_.emplace_back(global_point);
   }
-
-  bool cilqr_optimization_enable = true;
-  bool perpendicular_optimization_enable = true;
-
-  if (!apa_world_ptr_->GetSimuParam().is_simulation) {
-    perpendicular_optimization_enable =
-        apa_param.GetParam().perpendicular_lat_opt_enable;
-
-    cilqr_optimization_enable =
-        apa_param.GetParam().cilqr_path_optimization_enable;
-
-  } else {
-    perpendicular_optimization_enable =
-        apa_world_ptr_->GetSimuParam().is_path_optimization;
-    cilqr_optimization_enable =
-        apa_world_ptr_->GetSimuParam().is_cilqr_optimization;
-  }
-
-  double lat_path_opt_cost_time_ms = 0.0;
-  if (perpendicular_optimization_enable && is_use_optimizer) {
-    ILOG_INFO << "------------------------ lateral path optimization "
-                 "------------------------";
-    ILOG_INFO << "frame_.gear_command= "
-              << static_cast<int>(frame_.gear_command);
-    ILOG_INFO << "origin path size= " << planner_output.path_point_vec.size();
-
-    LateralPathOptimizer::Parameter param;
-    param.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
-    param.q_ref_xy = apa_world_ptr_->GetSimuParam().q_ref_xy;
-    param.q_ref_theta = apa_world_ptr_->GetSimuParam().q_ref_theta;
-    param.q_terminal_xy = apa_world_ptr_->GetSimuParam().q_terminal_xy;
-    param.q_terminal_theta = apa_world_ptr_->GetSimuParam().q_terminal_theta;
-    param.q_k = apa_world_ptr_->GetSimuParam().q_k;
-    param.q_u = apa_world_ptr_->GetSimuParam().q_u;
-    param.q_k_bound = apa_world_ptr_->GetSimuParam().q_k_bound;
-    param.q_u_bound = apa_world_ptr_->GetSimuParam().q_u_bound;
-
-    apa_world_ptr_->GetLateralPathOptimizerPtr()->Init(
-        cilqr_optimization_enable);
-    apa_world_ptr_->GetLateralPathOptimizerPtr()->SetParam(param);
-    auto time_start = IflyTime::Now_ms();
-    apa_world_ptr_->GetLateralPathOptimizerPtr()->Update(
-        planner_output.path_point_vec, frame_.gear_command);
-
-    auto time_end = IflyTime::Now_ms();
-    lat_path_opt_cost_time_ms = time_end - time_start;
-
-    const auto& optimized_path_vec =
-        apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputPathVec();
-    // TODO: longitudinal path optimization
-    current_path_point_global_vec_.clear();
-    current_path_point_global_vec_.reserve(optimized_path_vec.size());
-
-    pnc::geometry_lib::PathPoint global_point;
-    for (const auto& path_point : optimized_path_vec) {
-      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
-      global_point.lat_buffer = path_point.lat_buffer;
-      global_point.s = path_point.s;
-      global_point.kappa = path_point.kappa;
-      current_path_point_global_vec_.emplace_back(global_point);
-    }
-    const auto plan_debug_info =
-        apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
-
-    ILOG_INFO << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms;
-
-    ILOG_INFO << "terminal point error = "
-              << plan_debug_info.terminal_pos_error();
-
-    ILOG_INFO << "terminal heading error = "
-              << plan_debug_info.terminal_heading_error();
-  } else {
-    current_path_point_global_vec_.clear();
-    current_path_point_global_vec_.reserve(
-        planner_output.path_point_vec.size());
-
-    pnc::geometry_lib::PathPoint global_point;
-    for (const auto& path_point : planner_output.path_point_vec) {
-      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
-      global_point.lat_buffer = path_point.lat_buffer;
-      global_point.s = path_point.s;
-      global_point.kappa = path_point.kappa;
-      current_path_point_global_vec_.emplace_back(global_point);
-    }
+  for (const auto& path_point : planner_output.all_gear_path_point_vec) {
+    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+    global_point.lat_buffer = path_point.lat_buffer;
+    global_point.s = path_point.s;
+    global_point.kappa = path_point.kappa;
+    complete_path_point_global_vec_.emplace_back(global_point);
   }
 
   JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3)
@@ -1286,8 +860,8 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
   JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
 
-  JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
-  JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
+  // JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
+  // JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
   ILOG_INFO << "current_path_point_global_vec_.size() = "
             << current_path_point_global_vec_.size();
@@ -1341,24 +915,21 @@ const bool PerpendicularHeadOutScenario::CheckColDetStucked() {
 }
 
 const bool PerpendicularHeadOutScenario::CheckReplan() {
-  pt_center_replan_jump_dist_ =
-      (pt_center_replan_ - frame_.ego_slot_info.slot_center).norm();
-  pt_center_replan_jump_heading_ =
-      std::fabs(pnc::geometry_lib::NormalizeAngle(
-          pt_center_heading_replan_ -
-          frame_.ego_slot_info.slot_origin_heading)) *
-      kRad2Deg;
-  ILOG_INFO << "replan slot_jump_dist = " << pt_center_replan_jump_dist_;
-  ILOG_INFO << "replan slot_jump_heading = " << pt_center_replan_jump_heading_;
+  frame_.is_replan_by_uss = false;
+  frame_.is_replan_dynamic = false;
+  frame_.replan_reason = NOT_REPLAN;
 
-  if (frame_.is_replan_first == true) {
+  if (frame_.is_replan_first) {
     ILOG_INFO << "first plan";
     frame_.replan_reason = FIRST_PLAN;
     return true;
   }
 
-  frame_.is_replan_by_uss = false;
-  // frame_.is_replan_dynamic = false;
+  if (apa_world_ptr_->GetSimuParam().force_plan) {
+    ILOG_INFO << "force plan";
+    frame_.replan_reason = FORCE_PLAN;
+    return true;
+  }
 
   if (CheckSegCompleted()) {
     ILOG_INFO << "replan by current segment completed!";
@@ -1391,20 +962,20 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
     return true;
   }
 
-  frame_.replan_reason = NOT_REPLAN;
-
   return false;
 }
 
 const bool PerpendicularHeadOutScenario::CheckFinished() {
   bool parking_finish = false;
-  const auto& ego_slot_info = frame_.ego_slot_info;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const bool heading_condition_1 =
-      std::fabs(ego_slot_info.ego_heading_slot) <= 100.0 * kDeg2Rad;  // TODU::
+      std::fabs(ego_info_under_slot.cur_pose.heading) <=
+      100.0 * kDeg2Rad;  // TODU::
 
   const bool heading_condition_2 =
-      std::fabs(ego_slot_info.ego_heading_slot) >= 80.0 * kDeg2Rad;
+      std::fabs(ego_info_under_slot.cur_pose.heading) >= 70.0 * kDeg2Rad;
 
   const bool lat_condition = heading_condition_1 && heading_condition_2;
 
@@ -1428,7 +999,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
   const bool enter_slot_condition =
-      frame_.ego_slot_info.slot_occupied_ratio >
+      ego_info_under_slot.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
   const bool remain_uss_condition =
       frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
@@ -1441,24 +1012,13 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
 }
 
 void PerpendicularHeadOutScenario::Log() const {
-  const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
-  const auto& l2g_tf = ego_slot_info.l2g_tf;
-  const auto p0_g = l2g_tf.GetPos(slot_t_lane_.pt_outside);
-  const auto p1_g = l2g_tf.GetPos(slot_t_lane_.pt_inside);
-  const auto pt_g = l2g_tf.GetPos(slot_t_lane_.pt_terminal_pos);
-
-  JSON_DEBUG_VALUE("tlane_p0_x", p0_g.x())
-  JSON_DEBUG_VALUE("tlane_p0_y", p0_g.y())
-  JSON_DEBUG_VALUE("tlane_p1_x", p1_g.x())
-  JSON_DEBUG_VALUE("tlane_p1_y", p1_g.y())
-  JSON_DEBUG_VALUE("tlane_pt_x", pt_g.x())
-  JSON_DEBUG_VALUE("tlane_pt_y", pt_g.y())
-  JSON_DEBUG_VALUE("slot_side", slot_t_lane_.slot_side)
-
   JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
-  JSON_DEBUG_VALUE("slot_replan_jump_dist", pt_center_replan_jump_dist_)
-  JSON_DEBUG_VALUE("slot_replan_jump_heading", pt_center_replan_jump_heading_)
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+
+  const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();
@@ -1484,9 +1044,7 @@ void PerpendicularHeadOutScenario::Log() const {
       continue;
     }
     for (const auto& obstacle : obs_pair.second) {
-      if (obs_pair.first == CollisionDetector::FUSION_OBS &&
-          !(std::fabs(obstacle.y()) < 1.568 && obstacle.x() < 5.568 &&
-            obstacle.x() > -0.468)) {
+      if (obs_pair.first == CollisionDetector::FUSION_OBS) {
         continue;
       }
       const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(obstacle);
@@ -1499,67 +1057,79 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
   std::vector<double> slot_corner_X;
-  const size_t corner_size = ego_slot_info.slot_corner.size();
   slot_corner_X.clear();
-  slot_corner_X.reserve(4 * corner_size);
+  slot_corner_X.reserve(16);
   std::vector<double> slot_corner_Y;
   slot_corner_Y.clear();
-  slot_corner_Y.reserve(4 * corner_size);
-  std::vector<Eigen::Vector2d> pt_vec;
-  pt_vec.clear();
-  pt_vec.reserve(corner_size);
-  for (const auto& corner : ego_slot_info.slot_corner) {
-    slot_corner_X.emplace_back(corner.x());
-    slot_corner_Y.emplace_back(corner.y());
-    pt_vec.emplace_back(corner);
+  slot_corner_Y.reserve(16);
+
+  const auto& origin_corner_coord_global =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  std::vector<Eigen::Vector2d> pt_vec{
+      origin_corner_coord_global.pt_0, origin_corner_coord_global.pt_1,
+      origin_corner_coord_global.pt_2, origin_corner_coord_global.pt_3};
+
+  for (const Eigen::Vector2d& pt : pt_vec) {
+    slot_corner_X.emplace_back(pt.x());
+    slot_corner_Y.emplace_back(pt.y());
   }
 
-  if (corner_size == 4) {
-    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
-    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
-    const Eigen::Vector2d vec_01 = (pt_vec[1] - pt_vec[0]).normalized();
-    const Eigen::Vector2d vec_23 = (pt_vec[3] - pt_vec[2]).normalized();
-    pt_vec[0] = pt_vec[0] + ego_slot_info.move_slot_dist * vec_01;
-    pt_vec[1] = pt_vec[1] + ego_slot_info.move_slot_dist * vec_01;
-    pt_vec[2] = pt_vec[2] + ego_slot_info.move_slot_dist * vec_23;
-    pt_vec[3] = pt_vec[3] + ego_slot_info.move_slot_dist * vec_23;
-    for (const Eigen::Vector2d& pt : pt_vec) {
-      slot_corner_X.emplace_back(pt.x());
-      slot_corner_Y.emplace_back(pt.y());
-    }
-    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
-    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
-    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
-  }
-  slot_corner_X.emplace_back(l2g_tf.GetPos(slot_t_lane_.pt_terminal_pos).x());
-  slot_corner_Y.emplace_back(l2g_tf.GetPos(slot_t_lane_.pt_terminal_pos).y());
+  slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
 
-  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 6)
-  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 6)
+  pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_01_vec.normalized();
+  pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_01_vec.normalized();
+  pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_23_vec.normalized();
+  pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
+                              origin_corner_coord_global.pt_23_vec.normalized();
+
+  for (const Eigen::Vector2d& pt : pt_vec) {
+    slot_corner_X.emplace_back(pt.x());
+    slot_corner_Y.emplace_back(pt.y());
+  }
+
+  slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+
+  slot_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).x());
+  slot_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).y());
+
+  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 3)
+  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 3)
 
   std::vector<double> limiter_corner_X;
   limiter_corner_X.clear();
-  limiter_corner_X.reserve(frame_.ego_slot_info.limiter_corner.size());
+  limiter_corner_X.reserve(3);
   std::vector<double> limiter_corner_Y;
   limiter_corner_Y.clear();
-  limiter_corner_Y.reserve(frame_.ego_slot_info.limiter_corner.size());
-  for (const auto& corner : frame_.ego_slot_info.limiter_corner) {
-    const auto tmp_corner = l2g_tf.GetPos(corner);
-    limiter_corner_X.emplace_back(tmp_corner.x());
-    limiter_corner_Y.emplace_back(tmp_corner.y());
-  }
+  limiter_corner_Y.reserve(3);
+
+  limiter_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).x());
+  limiter_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).x());
+  limiter_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).y());
+  limiter_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).y());
+
   JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2)
   JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
 
-  JSON_DEBUG_VALUE("terminal_error_x",
-                   frame_.ego_slot_info.terminal_err.pos.x())
-  JSON_DEBUG_VALUE("terminal_error_y",
-                   frame_.ego_slot_info.terminal_err.pos.y())
+  JSON_DEBUG_VALUE("terminal_error_x", ego_info_under_slot.terminal_err.pos.x())
+  JSON_DEBUG_VALUE("terminal_error_y", ego_info_under_slot.terminal_err.pos.y())
   JSON_DEBUG_VALUE("terminal_error_heading",
-                   frame_.ego_slot_info.terminal_err.heading)
+                   ego_info_under_slot.terminal_err.heading)
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
@@ -1574,28 +1144,26 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
-  JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
-  JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
 
-  JSON_DEBUG_VALUE("selected_slot_id", frame_.ego_slot_info.selected_slot_id)
-  JSON_DEBUG_VALUE("slot_length", frame_.ego_slot_info.slot_length)
-  JSON_DEBUG_VALUE("slot_width", frame_.ego_slot_info.slot_width)
+  JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.id)
+  JSON_DEBUG_VALUE("slot_length", ego_info_under_slot.slot.slot_length_)
+  JSON_DEBUG_VALUE("slot_width", ego_info_under_slot.slot.slot_width_)
 
   JSON_DEBUG_VALUE("slot_origin_pos_x",
-                   frame_.ego_slot_info.slot_origin_pos.x())
+                   ego_info_under_slot.origin_pose_global.pos.x())
 
   JSON_DEBUG_VALUE("slot_origin_pos_y",
-                   frame_.ego_slot_info.slot_origin_pos.y())
+                   ego_info_under_slot.origin_pose_global.pos.y())
 
   JSON_DEBUG_VALUE("slot_origin_heading",
-                   frame_.ego_slot_info.slot_origin_heading)
+                   ego_info_under_slot.origin_pose_global.heading)
 
   JSON_DEBUG_VALUE("slot_occupied_ratio",
-                   frame_.ego_slot_info.slot_occupied_ratio)
+                   ego_info_under_slot.slot_occupied_ratio)
 
   std::vector<double> target_ego_pos_slot = {
-      frame_.ego_slot_info.target_ego_pos_slot.x(),
-      frame_.ego_slot_info.target_ego_pos_slot.y()};
+      ego_info_under_slot.target_pose.pos.x(),
+      ego_info_under_slot.target_pose.pos.y()};
 
   JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
   JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2)
@@ -1612,20 +1180,248 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
   JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
   JSON_DEBUG_VALUE("uss_car_index", uss_info.car_index)
+}
 
-  // lateral optimization
-  const auto plan_debug_info =
-      apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
+const PerpendicularHeadOutScenario::SlotObsType
+PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  // 2米2的车位重规划考虑的障碍物单侧最多入侵车位15厘米
+  double dy1 = 0.15 / 1.1 * (ego_info_under_slot.slot.slot_width_ * 0.5);
 
-  if (plan_debug_info.has_terminal_pos_error()) {
-    JSON_DEBUG_VALUE("optimization_terminal_pose_error",
-                     plan_debug_info.terminal_pos_error())
-    JSON_DEBUG_VALUE("optimization_terminal_heading_error",
-                     plan_debug_info.terminal_heading_error())
-  } else {
-    JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
-    JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
+  // 内外侧障碍物往远离车位的一遍考虑1.68米就可以
+  double dy2 = apa_param.GetParam().x_max_internal_obstacles;
+
+  // 最多高于车位3.468米的障碍物可以当做内外侧障碍物
+  double dx1 = 3.468;
+  // // 但是如果自车位置本身较低 那么内外侧障碍物考虑的x值也应该降低
+  // dx1 = std::min(dx1, ego_info_under_slot.cur_pose.pos.x() -
+  //                         apa_param.GetParam().car_width * 0.5 -
+  //                         ego_info_under_slot.slot.slot_length_);
+  // // 也需要有个最低考虑位置
+  // dx1 = std::max(dx1, 0.368);
+
+  // 对于5米长的车位 从车位线往内延长3.86米当做内外侧障碍物即可
+  // 这个时候可以参考当做根据障碍物移动车位的标准， 再深就无需横向移动
+  double dx2 = 4.86 / 5.0 * ego_info_under_slot.slot.slot_length_;
+
+  // 对于5米长的车位 最多往后5.2米的障碍物可以在重规划的时候不考虑
+  // 再往后就要考虑
+  double dx3 = 5.2 / 5.0 * ego_info_under_slot.slot.slot_length_ - dx2;
+
+  Eigen::Vector2d slot_left_pt =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_1;
+  Eigen::Vector2d slot_right_pt =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_0;
+  if (slot_left_pt.y() < slot_right_pt.y()) {
+    std::swap(slot_left_pt, slot_right_pt);
   }
+
+  bool is_left_side = false;
+  if (ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_LEFT) {
+    is_left_side = true;
+  }
+
+  std::vector<Eigen::Vector2d> inside_area;
+  std::vector<Eigen::Vector2d> outside_area;
+  std::vector<Eigen::Vector2d> in_area;
+  std::vector<Eigen::Vector2d> discard_area;
+  inside_area.resize(4);
+  outside_area.resize(4);
+  in_area.resize(4);
+  discard_area.resize(4);
+
+  const Eigen::Vector2d unit_right2left_vec =
+      (slot_left_pt - slot_right_pt).normalized();
+  const Eigen::Vector2d unit_left2right_vec = -unit_right2left_vec;
+  const Eigen::Vector2d unit_up2down_vec(-1.0, 0.0);
+  const Eigen::Vector2d unit_down2up_vec = -unit_up2down_vec;
+
+  // Firstly, the default right side is the inner side, and the left side is the
+  // outer side
+  Eigen::Vector2d pt;
+  // cal inside area
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx1 * unit_down2up_vec;
+  inside_area[0] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec + dx1 * unit_down2up_vec;
+  inside_area[1] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  inside_area[2] = pt;
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  inside_area[3] = pt;
+
+  // cal outside area
+  pt = slot_left_pt + dy2 * unit_right2left_vec + dx1 * unit_down2up_vec;
+  outside_area[0] = pt;
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx1 * unit_down2up_vec;
+  outside_area[1] = pt;
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  outside_area[2] = pt;
+  pt = slot_left_pt + dy2 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  outside_area[3] = pt;
+
+  if (is_left_side) {
+    std::swap(inside_area, outside_area);
+  }
+
+  // cal in_area
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx1 * unit_down2up_vec;
+  in_area[0] = pt;
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx1 * unit_down2up_vec;
+  in_area[1] = pt;
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  in_area[2] = pt;
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  in_area[3] = pt;
+
+  // cal discard area
+  pt = slot_left_pt + dy2 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  discard_area[0] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  discard_area[1] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec +
+       (dx2 + dx3) * unit_up2down_vec;
+  discard_area[2] = pt;
+  pt =
+      slot_left_pt + dy2 * unit_right2left_vec + (dx2 + dx3) * unit_up2down_vec;
+  discard_area[3] = pt;
+
+  if (geometry_lib::IsPointInPolygon(inside_area, obs_slot)) {
+    return SlotObsType::INSIDE_OBS;
+  } else if (geometry_lib::IsPointInPolygon(outside_area, obs_slot)) {
+    return SlotObsType::OUTSIDE_OBS;
+  } else if (geometry_lib::IsPointInPolygon(in_area, obs_slot)) {
+    return SlotObsType::IN_OBS;
+  } else if (geometry_lib::IsPointInPolygon(discard_area, obs_slot)) {
+    return SlotObsType::DISCARD_OBS;
+  } else {
+    return SlotObsType::OTHER_OBS;
+  }
+}
+
+const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
+  return !path_trim_flag_ &&
+         apa_world_ptr_->GetSlotManagerPtr()
+                 ->ego_info_under_slot_.slot_occupied_ratio < 0.15 &&
+         fabs(frame_.current_path_last_point_heading * kRad2Deg) > 80;
+}
+
+const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
+  if (current_path_point_global_vec_.size() > 0) {
+    const pnc::geometry_lib::PathPoint& current_path_last_point =
+        current_path_point_global_vec_.back();
+    Eigen::Vector2d current_path_last_local_point =
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf.GetPos(
+            current_path_last_point.pos);
+
+    frame_.current_path_last_point_heading =
+        apa_world_ptr_->GetSlotManagerPtr()
+            ->ego_info_under_slot_.g2l_tf.GetHeading(
+                current_path_last_point.heading);
+
+    const bool conditions_endpoint_correction =
+        current_path_last_local_point.x() < 7.0 &&
+        frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+        fabs(frame_.current_path_last_point_heading * kRad2Deg) > 60;
+    return conditions_endpoint_correction;
+  } else {
+    return false;
+  }
+}
+
+const bool PerpendicularHeadOutScenario::CurrentPathTrimmed() {
+  if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    const double current_car_s =
+        frame_.current_path_length - frame_.remain_dist;
+    // ILOG_INFO << "current_car_s " << current_car_s;
+    pnc::geometry_lib::GlobalToLocalTf& g2l_tf =
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf;
+
+    pnc::geometry_lib::LocalToGlobalTf& l2g_tf =
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+
+    std::vector<pnc::geometry_lib::PathPoint> path_point_local_vec;
+    pnc::geometry_lib::PathPoint path_point_local;
+    path_point_local_vec.clear();
+    path_point_local_vec.reserve(200);
+    for (const auto& point : current_path_point_global_vec_) {
+      // *
+      // move the starting point forward by 100 centimeters to ensure that the
+      // collision detection path is outside the slot
+      if (point.s >= current_car_s + 1.5) {
+        path_point_local = point;
+        path_point_local.GlobalToLocal(g2l_tf);
+        path_point_local_vec.emplace_back(path_point_local);
+      }
+    }
+
+    CollisionDetector::CollisionResult col_res;
+    col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
+        path_point_local_vec, 0.35, 0.3);
+
+    // ILOG_INFO << "col_pt_obs_global " << col_res.col_pt_obs_global.x() << ",
+    // "
+    //           << col_res.col_pt_obs_global.y();
+
+    if (col_res.remain_dist == frame_.current_path_length) {
+      ILOG_INFO << "at this time, there is no collision in the path";
+      return true;
+    }
+
+    if (col_res.col_pt_obs_global.x() <=
+        apa_world_ptr_->GetSlotManagerPtr()
+                ->ego_info_under_slot_.pt_inside.x() +
+            1.0) {
+      ILOG_INFO << "at this time, the collision occurred on the inner side";
+      // ILOG_INFO << "current pos : "
+      //           << path_point_local_vec.front().pos.transpose();
+      return false;
+    }
+
+    const double lon_buffer = 0.4;
+    const double safe_remain_dist = col_res.remain_dist - lon_buffer;
+
+    // ILOG_INFO << "safe_remain_dist : " << safe_remain_dist;
+
+    auto new_end = std::remove_if(
+        current_path_point_global_vec_.begin(),
+        current_path_point_global_vec_.end(),
+        [this, safe_remain_dist](const pnc::geometry_lib::PathPoint& point) {
+          return point.s > safe_remain_dist;
+        });
+
+    current_path_point_global_vec_.erase(new_end,
+                                         current_path_point_global_vec_.end());
+
+    PostProcessPath();
+    ILOG_INFO << "the current path has been trimmed";
+
+    return true;
+  } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    const double heading_condition =
+        frame_.current_path_last_point_heading * kRad2Deg;
+    ILOG_INFO << "current_path_last_point_heading : " << heading_condition;
+    size_t size = current_path_point_global_vec_.size();
+    if (size > 0) {
+      if (fabs(heading_condition) > 70) {
+        size_t half_size = static_cast<size_t>(size / 2);
+        current_path_point_global_vec_.resize(half_size);
+      } else if (fabs(heading_condition) > 60 &&
+                 fabs(heading_condition) <= 70) {
+        size_t half_size = static_cast<size_t>(size * 2 / 3);
+        current_path_point_global_vec_.resize(half_size);
+      }
+
+    } else {
+      return false;
+    }
+
+    PostProcessPath();
+    ILOG_INFO << "the current path has been trimmed";
+
+    return true;
+  }
+  return true;
 }
 
 }  // namespace apa_planner

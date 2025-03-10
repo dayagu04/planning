@@ -578,7 +578,8 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
     lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
     vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
             'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
-              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle']
+              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle',
+              'front_obs_center']
     names  = []
     datas = []
     for name in vars:
@@ -631,7 +632,8 @@ def plotOnce(bag_path, html_file):
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
 
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
-
+    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
+    tab_lane_borrow_decider = load_lane_borrow_tab_info(dataLoader, layer_manager)
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j, sample_base_s = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
@@ -783,9 +785,9 @@ def plotOnce(bag_path, html_file):
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
-    # pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
+    pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
     # pan_sample_poly_info = Panel(child = row(column(fig_st_new, fig_sample_vt), column(fig_sample_at, fig_sample_jt)), title="SamplePolyInfo")
-    pans = Tabs(tabs=[pan_general_info, pan_speed_search_info])
+    pans = Tabs(tabs=[pan_lane_borrow_info,pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():

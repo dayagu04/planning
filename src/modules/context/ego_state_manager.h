@@ -42,6 +42,8 @@ class EgoStateManager {
         64,  // lateral and longitudinal states reset when stitch fails
   };
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   bool update(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_carte(const Point2D &ego_carte);
 
@@ -144,7 +146,8 @@ class EgoStateManager {
   framework::Session *session_ = nullptr;
   EgoPlanningEgoStateManagerConfig config_;
   double steer_ratio_;  // hack
-  double parking_cruise_speed_;
+  double cruise_routing_speed_;
+  double cruise_searching_speed_;
   double max_replan_lat_err_;
   double max_replan_theta_err_;
   double max_replan_lon_err_;

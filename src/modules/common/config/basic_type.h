@@ -43,13 +43,15 @@ struct LaneChangeGapInfo {
   int rear_node_id = -1;
 };
 struct RouteInfoOutput {
-  // for NOA output
+  //for NOA output
   int split_seg_forward_lane_nums = 0;
   int split_next_seg_forward_lane_nums = 0;
   int lc_nums_for_split = 0;
   int cur_seg_forward_lane_num = 0;
   int need_continue_lc_num_on_off_ramp_region = 0;
   int lane_num_except_emergency = 0;
+  int merge_seg_forward_lane_nums = 0;
+  int merge_last_seg_forward_lane_nums = 0;
   bool is_update_segment_success = false;
   bool is_on_ramp = false;
   bool is_in_sdmaproad = false;
@@ -139,6 +141,8 @@ struct RouteInfoOutput {
     is_ego_on_split_region = false;
     need_continue_lc_num_on_off_ramp_region = 0;
     lane_num_except_emergency = 0;
+    merge_seg_forward_lane_nums = 0;
+    merge_last_seg_forward_lane_nums = 0;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;
@@ -567,6 +571,7 @@ struct GapSelectorInfo {
   GapSelectorPathSpline last_gap_selector_path_spline;
 };
 struct PlanningResult {
+  planning::common::SceneType scene_type;
   int target_lane_id;
   // ScenarioStateEnum target_scenario_state = ROAD_NONE;
   TrajectoryPoints traj_points;
@@ -622,7 +627,7 @@ struct CoarsePlanningInfo {
   int source_lane_id;
   int target_lane_id;
   bool bind_end_state;
-  std::shared_ptr<ReferencePath> reference_path;
+  std::shared_ptr<ReferencePath> reference_path = nullptr;
   TrajectoryPoints trajectory_points;
   // overtake_obstacles and yield_obstacles are used only under wait state
   std::vector<int> overtake_obstacles;
@@ -732,6 +737,16 @@ struct LateralOffsetDeciderOutput {
   // hmi
   int avoid_id = -1;
   int avoid_direction = 0;
+
+  void Reset() {
+    bool is_valid = false;
+    double lateral_offset = 0.0;
+    bool enable_bound = false;
+
+    // hmi
+    int avoid_id = -1;
+    int avoid_direction = 0;
+  }
 };
 
 struct LatDeciderOutput {

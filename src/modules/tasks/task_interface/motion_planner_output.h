@@ -46,6 +46,8 @@ struct MotionPlannerOutput {
 
   // lateral kd path
   std::shared_ptr<planning_math::KDPath> lateral_path_coord;
+
+  double path_backward_appended_length;
 };
 
 }  // namespace planning

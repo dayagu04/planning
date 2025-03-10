@@ -29,6 +29,8 @@
 namespace planning {
 namespace apa_planner {
 
+ApaPlanInterface::ApaPlanInterface() {}
+
 void ApaPlanInterface::Init(const bool is_simulation) {
   // sync parameters
   SyncParkingParameters(is_simulation);
@@ -53,16 +55,19 @@ void ApaPlanInterface::Reset() {
   apa_world_ptr_->Reset();
   scenario_manager_.Reset();
 
+  ILOG_INFO << "reset apa plan interface";
   return;
 }
 
-const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
+const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
+                                     const PlanningResult *navigation_traj) {
   ILOG_INFO << "\n------------------------ apa_interface: Update() "
                "------------------------";
-  if (local_view_ptr == nullptr) {
+  if (local_view_ptr == nullptr || navigation_traj == nullptr) {
     ILOG_INFO << "\nlocal_view_ptr is nullptr, quit apa";
     return false;
   }
+  navigation_traj_ = navigation_traj;
 
   RecordNodeReceiveTime(local_view_ptr);
 
@@ -95,10 +100,10 @@ void ApaPlanInterface::AddReleasedSlotInfo(
     iflyauto::PlanningOutput &planning_output) {
   planning_output.successful_slot_info_list_size = 0;
 
-  apa_world_ptr_->GetNewSlotManagerPtr()->GenerateReleaseSlotIdVec();
+  apa_world_ptr_->GetSlotManagerPtr()->GenerateReleaseSlotIdVec();
 
   const std::vector<size_t> &release_slot_id_vec =
-      apa_world_ptr_->GetNewSlotManagerPtr()->GetReleaseSlotIdVec();
+      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
 
   std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {

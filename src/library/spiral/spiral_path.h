@@ -9,7 +9,7 @@
 #include "math_matrix.h"
 #include "spiral_typedefs.h"
 namespace planning {
-#define UOS_MAX_STEER_STATE_NUM (400)
+#define MAX_SPIRAL_PATH_POINT_NUM (400)
 
 /**
  *  \brief convert the global_state to a local state in the frame of the

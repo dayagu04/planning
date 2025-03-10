@@ -30,5 +30,17 @@ void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
 void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
                            const pnc::geometry_lib::PathPoint& ego_pose);
 
-bool IsValidParkingState(const iflyauto::FunctionalState& func_state_machine);
+// if in apa function: can switch to apa;
+// if in hpp searching or parking, can switch to apa;
+bool IsSwitchApaState(const iflyauto::FunctionalState& func_state_machine);
+
+bool IsHppSlotSearchingStage(const iflyauto::FunctionalState& current_state);
+
+bool IsHppParkingStage(const iflyauto::FunctionalState& current_state);
+
+bool IsValidApaState(const iflyauto::FunctionalState& current_state);
+
+// check need slot searching, or need parking in apa or hpp.
+bool IsSlotSearchingOrParking(const iflyauto::FunctionalState& current_state);
+
 }  // namespace  planning

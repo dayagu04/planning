@@ -33,7 +33,8 @@ bool ApaFunction::Reset() {
 
 bool ApaFunction::Plan() {
   (void)apa_plan_interface_->Update(
-      &(session_->environmental_model().get_local_view()));
+      &(session_->environmental_model().get_local_view()),
+      &(session_->planning_context().last_planning_result()));
   // set planning output
   session_->mutable_planning_context()->mutable_planning_output() =
       apa_plan_interface_->GetPlaningOutput();
@@ -41,8 +42,7 @@ bool ApaFunction::Plan() {
   // currently only remaining distance is sent to planning hmi!
   session_->mutable_planning_context()
       ->mutable_planning_hmi_info()
-      ->apa_info.distance_to_parking_space =
-      apa_plan_interface_->GetAPAHmi().distance_to_parking_space;
+      ->apa_info.remain_dist = apa_plan_interface_->GetAPAHmi().remain_dist;
   return true;
 }
 

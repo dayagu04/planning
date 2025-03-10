@@ -42,10 +42,10 @@ constexpr double kBoundaryCrossEgoBehindThr = 5.0;
 constexpr double kBoundaryCrossEgoFrontThr = 10.0;
 constexpr double kCrossLaneCostDefault = 0.2;
 constexpr double kInitPosCostStandardThr = 3.6;
-constexpr double kInitPosCostWeight = 1.0;
+constexpr double kInitPosCostWeight = 2.0;
 constexpr double kCumuLateralDistanceCostWeight = 1.5;
 constexpr double kCrossLaneCostWeight = 1.0;
-constexpr double kLaneChangeExecutionWeightRatio = 4.0;
+constexpr double kLaneChangeExecutionWeightRatio = 0.5;
 constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kLaneLineSegmentLength = 5.0;
 constexpr double kConsiderLaneLineLength = 50.0;
@@ -60,13 +60,20 @@ constexpr double kEgoPreviewTimeMaxThd = 5.0;
 constexpr double kExistSplitLateralDisThd = 1.5;
 constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kNearPreviewDistanceThd = 20.0;
+
+constexpr double kAverageKappaCostWeight = 2.5;
+constexpr double kAverageThetaDiffCostWeight = 0.5;
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
-    const EgoPlanningConfigBuilder* config_builder,planning::framework::Session* session) {
+    const EgoPlanningConfigBuilder* config_builder, planning::framework::Session* session) {
   session_ = session;
-  config_ = config_builder->cast<EgoPlanningConfig>();
+  SetConfig(config_builder);
   // order_ids_of_same_zero_relative_id_.clear();
+}
+
+void EgoLaneTrackManger::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+  config_ = config_builder->cast<EgoPlanningConfig>();
 }
 
 void EgoLaneTrackManger::TrackEgoLane(
@@ -1267,6 +1274,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
     }
   }
 
+  const double ego_heading_angle = ego_state->heading_angle();
   double clane_min_cost_total = std::numeric_limits<double>::max();
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
@@ -1276,6 +1284,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         continue;
       }
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
+        double total_cost = 0.0;
+        double average_heading_angle_cost = 0.0;
+        double heading_angle_cost = 0.0;
         double average_kappa_cost = 0.0;
         double total_kappa_cost = 0.0;
         std::shared_ptr<KDPath> frenet_coord =
@@ -1295,6 +1306,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
+        int theta_diff_iter_count = 0;
         for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
              s += kLaneLineSegmentLength) {
           if (s > kDefaultMappingConsiderLaneLength + ego_s) {
@@ -1304,12 +1316,21 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           frenet_coord->GetKappaByS(s, &current_kappa);
           total_kappa_cost += std::fabs(current_kappa);
           iter_count++;
+
+          double heading_angle = frenet_coord->GetPathCurveHeading(s);
+          double theta_diff = NormalizeAngle(heading_angle - ego_heading_angle);
+          heading_angle_cost += std::fabs(theta_diff);
+          theta_diff_iter_count++;
         }
         iter_count = std::max(1, iter_count);
         average_kappa_cost = total_kappa_cost / iter_count;
+        theta_diff_iter_count = std::max(1, theta_diff_iter_count);
+        average_heading_angle_cost = heading_angle_cost / theta_diff_iter_count;
 
-        if (average_kappa_cost < clane_min_cost_total) {
-          clane_min_cost_total = average_kappa_cost;
+        total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
+            kAverageKappaCostWeight * average_kappa_cost;
+        if (total_cost < clane_min_cost_total) {
+          clane_min_cost_total = total_cost;
           origin_order_id = relative_id_lane->get_order_id();
           relative_id_lane->set_relative_id(0);
           last_zero_relative_id_order_id_index_ = i;
@@ -2360,7 +2381,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
       return;
     }
 
-    const auto& right_lane_frenet_crd = 
+    const auto& right_lane_frenet_crd =
         relative_right_lane->get_lane_frenet_coord();
     double ego_s_base_right = 0.0;
     double ego_l_base_right = 0.0;

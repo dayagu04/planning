@@ -70,6 +70,7 @@ void SetStoppingPlanningOutput(iflyauto::PlanningOutput& planning_output,
 
 void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
                                const pnc::geometry_lib::PathPoint& ego_pose) {
+  planning_output.planning_status.hpp_planning_status = iflyauto::HPP_COMPLETED;
   planning_output.planning_status.apa_planning_status = iflyauto::APA_FINISHED;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
@@ -78,6 +79,8 @@ void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
 
 void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
                              const pnc::geometry_lib::PathPoint& ego_pose) {
+  planning_output.planning_status.hpp_planning_status =
+      iflyauto::HPP_RUNNING_FAILED;
   planning_output.planning_status.apa_planning_status = iflyauto::APA_FAILED;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
@@ -86,19 +89,55 @@ void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
 
 void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
                            const pnc::geometry_lib::PathPoint& ego_pose) {
+  planning_output.planning_status.hpp_planning_status = iflyauto::HPP_UNKNOWN;
   planning_output.planning_status.apa_planning_status = iflyauto::APA_NONE;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
   std::cout << "set idle planning output" << std::endl;
 }
 
-bool IsValidParkingState(const iflyauto::FunctionalState& current_state) {
-  std::cout << "current_state:" << current_state << std::endl;
-
+bool IsValidApaState(const iflyauto::FunctionalState& current_state) {
   if (current_state >= iflyauto::FunctionalState_PARK_STANDBY &&
-      current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
+      current_state <= iflyauto::FunctionalState_PARK_PRE_ACTIVE) {
     return true;
   }
+  return false;
+}
+
+bool IsSwitchApaState(const iflyauto::FunctionalState& current_state) {
+  std::cout << "current_state:" << current_state << std::endl;
+
+  if (IsValidApaState(current_state) || IsHppParkingStage(current_state)) {
+    return true;
+  }
+  return false;
+}
+
+bool IsHppSlotSearchingStage(const iflyauto::FunctionalState& current_state) {
+  if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING ||
+      current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsHppParkingStage(const iflyauto::FunctionalState& current_state) {
+  if (current_state == iflyauto::FunctionalState_HPP_PARKING_OUT ||
+      current_state == iflyauto::FunctionalState_HPP_PARKING_IN ||
+      current_state == iflyauto::FunctionalState_HPP_SUSPEND) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsSlotSearchingOrParking(const iflyauto::FunctionalState& current_state) {
+  if (IsSwitchApaState(current_state) ||
+      IsHppSlotSearchingStage(current_state)) {
+    return true;
+  }
+
   return false;
 }
 

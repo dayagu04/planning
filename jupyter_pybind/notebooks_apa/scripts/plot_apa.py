@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250102/20250102-19-24-00/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2025-01-02-19-24-00_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250117/20250117-17-21-26/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-01-17-17-21-26_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250121/20250121-19-56-11/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-01-21-19-56-12_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -192,45 +192,49 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
     print("save_data")
 
     fusion_obs = []
-    for i in range(fus_occupancy_objects_msg.fusion_object_size):
-      single_fus_obs = []
-      origin_single_fus_obs = fus_occupancy_objects_msg.fusion_object[i].additional_occupancy_info
-      for j in range(origin_single_fus_obs.polygon_points_size):
-        single_fus_obs.append([origin_single_fus_obs.polygon_points[j].x, origin_single_fus_obs.polygon_points[j].y])
-      fusion_obs.append(single_fus_obs)
+    if bag_loader.fus_occupancy_objects_msg['enable'] == True:
+      for i in range(fus_occupancy_objects_msg.fusion_object_size):
+        single_fus_obs = []
+        origin_single_fus_obs = fus_occupancy_objects_msg.fusion_object[i].additional_occupancy_info
+        for j in range(origin_single_fus_obs.polygon_points_size):
+          single_fus_obs.append([origin_single_fus_obs.polygon_points[j].x, origin_single_fus_obs.polygon_points[j].y])
+        fusion_obs.append(single_fus_obs)
 
     uss_obs = []
-    for i in range(4):
-      single_uss_obs = []
-      origin_single_uss_obs = uss_percept_msg.out_line_dataori[i]
-      for j in range(origin_single_uss_obs.obj_pt_cnt):
-        single_uss_obs.append([origin_single_uss_obs.obj_pt_global[j].x, origin_single_uss_obs.obj_pt_global[j].y])
-      uss_obs.append(single_uss_obs)
+    if bag_loader.uss_percept_msg['enable'] == True:
+      for i in range(4):
+        single_uss_obs = []
+        origin_single_uss_obs = uss_percept_msg.out_line_dataori[i]
+        for j in range(origin_single_uss_obs.obj_pt_cnt):
+          single_uss_obs.append([origin_single_uss_obs.obj_pt_global[j].x, origin_single_uss_obs.obj_pt_global[j].y])
+        uss_obs.append(single_uss_obs)
 
     gl_obs = []
-    for i in range(fus_ground_line_msg.ground_lines_size):
-      single_gl_obs = []
-      origin_single_gl_obs = fus_ground_line_msg.ground_lines[i]
-      for j in range(origin_single_gl_obs.points_3d_size):
-        single_gl_obs.append([origin_single_gl_obs.points_3d[j].x, origin_single_gl_obs.points_3d[j].y])
-      gl_obs.append(single_gl_obs)
+    if bag_loader.fus_ground_line_msg['enable'] == True:
+      for i in range(fus_ground_line_msg.ground_lines_size):
+        single_gl_obs = []
+        origin_single_gl_obs = fus_ground_line_msg.ground_lines[i]
+        for j in range(origin_single_gl_obs.points_3d_size):
+          single_gl_obs.append([origin_single_gl_obs.points_3d[j].x, origin_single_gl_obs.points_3d[j].y])
+        gl_obs.append(single_gl_obs)
 
     fusion_slot = []
-    for i in range(fus_parking_msg.parking_fusion_slot_lists_size):
-      single_fusion_slot = []
-      origin_single_fusion_slot = fus_parking_msg.parking_fusion_slot_lists[i]
-      single_fusion_slot.append(origin_single_fusion_slot.id)
-      single_fusion_slot.append(origin_single_fusion_slot.type)
-      corner_points = origin_single_fusion_slot.corner_points
-      single_fusion_slot.append([[corner_points[0].x, corner_points[0].y], [corner_points[1].x, corner_points[1].y],
-                                 [corner_points[2].x, corner_points[2].y], [corner_points[3].x, corner_points[3].y]])
+    if bag_loader.fus_parking_msg['enable'] == True:
+      for i in range(fus_parking_msg.parking_fusion_slot_lists_size):
+        single_fusion_slot = []
+        origin_single_fusion_slot = fus_parking_msg.parking_fusion_slot_lists[i]
+        single_fusion_slot.append(origin_single_fusion_slot.id)
+        single_fusion_slot.append(origin_single_fusion_slot.type)
+        corner_points = origin_single_fusion_slot.corner_points
+        single_fusion_slot.append([[corner_points[0].x, corner_points[0].y], [corner_points[1].x, corner_points[1].y],
+                                  [corner_points[2].x, corner_points[2].y], [corner_points[3].x, corner_points[3].y]])
 
-      limiter = []
-      for j in range(origin_single_fusion_slot.limiters_size):
-        limiter.append([[origin_single_fusion_slot.limiters[j].end_points[0].x, origin_single_fusion_slot.limiters[j].end_points[0].y],
-                        [origin_single_fusion_slot.limiters[j].end_points[1].x, origin_single_fusion_slot.limiters[j].end_points[1].y]])
-      single_fusion_slot.append(limiter)
-      fusion_slot.append(single_fusion_slot)
+        limiter = []
+        for j in range(origin_single_fusion_slot.limiters_size):
+          limiter.append([[origin_single_fusion_slot.limiters[j].end_points[0].x, origin_single_fusion_slot.limiters[j].end_points[0].y],
+                          [origin_single_fusion_slot.limiters[j].end_points[1].x, origin_single_fusion_slot.limiters[j].end_points[1].y]])
+        single_fusion_slot.append(limiter)
+        fusion_slot.append(single_fusion_slot)
 
     plan_traj_x_vec = planning_json["plan_traj_x"]
     plan_traj_y_vec = planning_json["plan_traj_y"]

@@ -35,7 +35,7 @@ enum class AstarSearchState {
 // polynomial curve, cubic spiral.
 enum class AstarPathGenerateType {
   NONE,
-  REEDS_SHEPP,
+  REEDS_SHEPP_SAMPLING,
   ASTAR_SEARCHING,
   GEAR_REVERSE_SEARCHING,
   GEAR_DRIVE_SEARCHING,
@@ -158,7 +158,7 @@ struct ParkFirstActionRequest {
   AstarPathSteer steer_request;
 
   void Clear() {
-    has_request = 0.0;
+    has_request = false;
     gear_request = AstarPathGear::NONE;
     dist_request = 0.0;
 

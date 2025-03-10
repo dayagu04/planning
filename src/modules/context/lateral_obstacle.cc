@@ -33,6 +33,12 @@ LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
 
 LateralObstacle::~LateralObstacle() { lead_cars_.clear(); }
 
+void LateralObstacle::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
+  config_ = config_builder->cast<LateralObstacleConfig>();
+  maintainer_->SetConfig(config_);
+}
+
 bool LateralObstacle::update() {
   update_sensors(
       session_->environmental_model().get_ego_state_manager(),
@@ -96,8 +102,8 @@ void LateralObstacle::LateralObstacleDecision(
     const std::vector<TrackedObject> &tracked_objects) {
   auto config_builder =
       session_->environmental_model().highway_config_builder();
-  PotentialAvoidDeciderConfig config =
-      config_builder->cast<PotentialAvoidDeciderConfig>();
+  LateralObstacleDeciderConfig config =
+      config_builder->cast<LateralObstacleDeciderConfig>();
   const auto ego_l = DebugInfoManager::GetInstance()
                          .GetDebugInfoPb()
                          ->environment_model_info()
@@ -198,7 +204,9 @@ void LateralObstacle::update_tracks(
   side_tracks_l_.clear();
   side_tracks_r_.clear();
   all_tracks_ = tracked_objects;
+  tracks_map_.clear();
   for (auto &tr : tracked_objects) {
+    tracks_map_[tr.track_id] = tr;
     if (tr.d_rel >= 0.0) {
       auto it = front_tracks_.begin();
       while (it != front_tracks_.end() && it->d_rel < tr.d_rel) {

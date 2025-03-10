@@ -105,7 +105,6 @@ class ParkingScenario {
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
     bool fix_limiter = false;
-    bool is_park_out_left = true;
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
@@ -152,7 +151,6 @@ class ParkingScenario {
       slot_occupied_ratio = 0.0;
 
       fix_limiter = false;
-      is_park_out_left = true;
 
       obs_pt_vec_slot.clear();
 
@@ -200,6 +198,7 @@ class ParkingScenario {
       remain_dist_col_det = 5.01;
       vel_target = 1.168;
       car_already_move_dist = 0.0;
+      current_path_last_point_heading = 0.0;
       spline_success = false;
       current_path_length = 0.0;
       headin_current_path_length = 0.0;
@@ -219,11 +218,13 @@ class ParkingScenario {
       is_right_empty = false;
 
       can_first_plan_again = true;
+      is_park_out_left = true;
     }
     bool can_first_plan_again = true;
 
     bool is_left_empty = false;
     bool is_right_empty = false;
+    bool is_park_out_left = true;
 
     bool replan_flag = false;
     bool is_replan_first = true;
@@ -256,6 +257,7 @@ class ParkingScenario {
     // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
     double car_already_move_dist = 0.0;
+    double current_path_last_point_heading = 0.0;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
     pnc::mathlib::spline headin_x_s_spline;
@@ -313,7 +315,7 @@ class ParkingScenario {
     return;
   }
 
-  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
+  std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
 
   // 点击开始泊车之后，更新speed and path
   virtual void ScenarioRunning();
@@ -369,10 +371,15 @@ class ParkingScenario {
   virtual void GenPlanningHmiOutput();
   virtual void GenPlanningPath();
   virtual const bool CheckStuckFailed();
-  virtual const bool UpdateObstacleLocal();
-  virtual void UpdateRemainDist(const double uss_safe_dist);
+  virtual void UpdateRemainDist(
+      const double uss_safe_dist,
+      const double lat_buffer = apa_param.GetParam().lat_inflation,
+      const double extra_buffer_when_reversing = 0.068);
   virtual const double CalRemainDistFromPath();
-  virtual const double CalRemainDistFromUss(const double safe_dist);
+  virtual const double CalRemainDistFromUss(
+      const double safe_dist,
+      const double lat_buffer = apa_param.GetParam().lat_inflation,
+      const double extra_buffer_when_reversing = 0.068);
   virtual const bool PostProcessPath();
 
   void CreateTasks();

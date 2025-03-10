@@ -23,7 +23,7 @@
 #include "spline.h"
 #include "spline_projection.h"
 
-#define APA_COMPARE_PLANNING_TRAJ_POINTS_NUM 26
+#define APA_COMPARE_PLANNING_TRAJ_POINTS_MAX_NUM 26
 
 namespace planning {
 namespace apa_planner {
@@ -69,7 +69,9 @@ class ApaWorld {
                     const iflyauto::PlanningOutput& planning_output);
   const bool Update();
 
-  std::shared_ptr<SlotManager> GetSlotManagerPtr() { return slot_manager_ptr_; }
+  std::shared_ptr<SlotManager> GetRetiredSlotManagerPtr() {
+    return retired_slot_manager_ptr_;
+  }
 
   std::shared_ptr<UssObstacleAvoidance> GetUssObstacleAvoidancePtr() {
     return uss_obstacle_avoider_ptr_;
@@ -99,8 +101,8 @@ class ApaWorld {
     return obstacle_manager_ptr_;
   }
 
-  std::shared_ptr<ApaSlotManager> GetNewSlotManagerPtr() {
-    return new_slot_manager_ptr_;
+  std::shared_ptr<ApaSlotManager> GetSlotManagerPtr() {
+    return slot_manager_ptr_;
   }
 
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
@@ -110,19 +112,14 @@ class ApaWorld {
     simu_param_ = simu_param;
   }
 
-  // need delete when no use old slot_manager, temp public varible
-  uint8_t slot_type_ = Common::PARKING_SLOT_TYPE_INVALID;
-  uint8_t slot_id_ = 0;
-  bool is_slot_type_fixed_ = false;
-
  private:
-  std::shared_ptr<ApaSlotManager> new_slot_manager_ptr_;
+  std::shared_ptr<ApaSlotManager> slot_manager_ptr_;
   std::shared_ptr<ApaPredictPathManager> predict_path_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
   // will be retired
-  std::shared_ptr<SlotManager> slot_manager_ptr_;
+  std::shared_ptr<SlotManager> retired_slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;

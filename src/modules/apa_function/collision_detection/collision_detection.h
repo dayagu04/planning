@@ -17,6 +17,13 @@
 
 namespace planning {
 namespace apa_planner {
+
+const std::vector<Eigen::Vector2d> GetCarMaxPolygan(
+    const pnc::geometry_lib::PathPoint &current_pose);
+
+const pnc::geometry_lib::RectangleBound CalCarRectangleBound(
+    const pnc::geometry_lib::PathPoint &current_pose);
+
 class CollisionDetector {
  public:
   enum ObsType {
@@ -254,6 +261,9 @@ class CollisionDetector {
       const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
       const bool is_left_side, const bool is_replan,
       const bool is_vertical_slot = true);
+
+  const bool IsObstacleInPolygon(
+      const std::vector<Eigen::Vector2d> &vertex_vec);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;

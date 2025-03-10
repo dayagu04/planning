@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from contruct_scenario import construct_scenario
 from lib.load_local_view_parking import *
 from bokeh.events import Tap
-from bokeh.models import Range1d
+from bokeh.models import Range1d, Arrow, NormalHead
 from bokeh.io import export_svgs
 from jupyter_pybind import parallel_planning_py
 from bokeh.models import SingleIntervalTicker
@@ -24,8 +24,8 @@ from bokeh.io import export_png
 kRad2Deg = 180.0 / pi
 kDeg2Rad = pi / 180.0
 name = "parking_out_normal_channel"
-name = "parking_out_narrow_channel"
 
+name = "parking_out_narrow_channel"
 
 
 if name == "parking_out_narrow_channel":
@@ -181,6 +181,12 @@ data_obs_car_polygon = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 data_arc_center = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_lines = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_swap_line = ColumnDataSource(data = {'x0':[], 'y0':[], 'x1':[], 'y1':[]})
+data_text = ColumnDataSource(data={
+    'x': [],
+    'y': [],
+    'text': []
+})
 
 # fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=700, height=600, match_aspect = True, aspect_scale=1)
 
@@ -312,22 +318,55 @@ fig1.circle('x_vec', 'y_vec', source = data_arc_center, size=4, color='black')
 
 fig1.multi_line('x_vec', 'y_vec', source = data_lines, line_width = 0.5, line_dash = 'dotted', line_color='black')
 
-label = Label(x=-2.0 , y=5.4, text="step 1 circle", text_color="black", text_font_size=word_size,
+label = Label(x=-2.0 , y=5.4, text="Step 1 circle", text_color="black", text_font_size=word_size,
               x_offset=0, y_offset=0)
 fig1.add_layout(label)
 
 if name == "parking_out_normal_channel":
+  arrow_start = Arrow(
+    end=NormalHead(size=10, fill_color="black"),
+    x_start='x0',
+    y_start='y0',
+    x_end='x1',
+    y_end='y1',
+    line_width=0.0,
+    line_color="black",
+    source=data_swap_line  # 绑定数据源
+  )
+
+  arrow_end = Arrow(
+    end=NormalHead(size=10, fill_color="black"),
+    x_start='x1',
+    y_start='y1',
+    x_end='x0',
+    y_end='y0',
+    line_width=0.0,
+    line_color="black",
+    source=data_swap_line  # 绑定数据源
+  )
+  fig1.add_layout(arrow_start)
+  fig1.add_layout(arrow_end)
+
+  fig1.text(
+    x='x',
+    y='y',
+    text='text',
+    source=data_text,
+    text_color="black",
+    text_align="center",
+    text_font_size= word_size
+  )
   x2 = 7.8
   y2 = -2.9
 else:
   x2 = 3.5
   y2 = -2.9
-  label = Label(x=9.5, y=-2.9, text="step 3 circle", text_color="black", text_font_size=word_size,
+  label = Label(x=9.5, y=-2.9, text="Step 3 circle", text_color="black", text_font_size=word_size,
               x_offset=0, y_offset=0)
   fig1.add_layout(label)
 
 
-label = Label(x=x2, y=y2, text="step 2 circle", text_color="black", text_font_size=word_size,
+label = Label(x=x2, y=y2, text="Step 2 circle", text_color="black", text_font_size=word_size,
               x_offset=0, y_offset=0)
 fig1.add_layout(label)
 
@@ -397,7 +436,7 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
                     ds):
   kwargs = locals()
 
-  print("before construct_scenario")
+  # print("before construct_scenario")
 
   front_car_heading_rad = front_car_heading * kDeg2Rad
   rear_car_heading_rad = rear_car_heading * kDeg2Rad
@@ -541,10 +580,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
                                           reversed_park_out_x_vec[2], reversed_park_out_y_vec[2])
     center_1 = np.array(center_1)
     curvature_change_idx = 0
-    print("radius1 = ", radius1)
+    # print("radius1 = ", radius1)
     for i in range(len(reversed_park_out_x_vec)):
       dist = math.sqrt( (center_1[0] - reversed_park_out_x_vec[i])**2 + (center_1[1] - reversed_park_out_y_vec[i])**2)
-      print("i = ", i, ", dist = ", dist)
+      # print("i = ", i, ", dist = ", dist)
       if dist > radius1 + 1e-8:
         curvature_change_idx = i
         break
@@ -624,8 +663,35 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
 
       line_x_vec.append([reversed_park_out_x_vec[-1], center_3[0]])
       line_y_vec.append([reversed_park_out_y_vec[-1], center_3[1]])
+    else:
+      ego_fl_corner_x0 = fl_corner_x_vec[0]
+      ego_fl_corner_y0 = fl_corner_y_vec[0]
+      line_x_vec.append([ego_fl_corner_x0 + 0.3, 12.2])
+      line_y_vec.append([ego_fl_corner_y0, ego_fl_corner_y0])
 
+      max_y_idx = fl_corner_y_vec.index(max(fl_corner_y_vec))
+      peak_x = fl_corner_x_vec[max_y_idx]
+      peak_y = fl_corner_y_vec[max_y_idx]
 
+      line_x_vec.append([peak_x, 12.2])
+      line_y_vec.append([peak_y, peak_y])
+
+      line_x_vec.append([12, 12])
+      line_y_vec.append([ego_fl_corner_y0, peak_y])
+
+      data_swap_line.data.update({
+        'x0': [12],
+        'y0': [peak_y],
+        'x1': [12],
+        'y1': [ego_fl_corner_y0]
+      })
+
+      data_text.data.update({
+        'x': [13],
+        'y': [0.5 * (peak_y + ego_fl_corner_y0) + 0.5],
+        'text': ["Minimal lateral distance"]
+      })
+      print("minimal lateral dist = ",peak_y - ego_fl_corner_y0)
 
     data_arc_center.data.update({
       'x_vec': data_arc_center_x_vec,
@@ -744,10 +810,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       obs_car_polygon_y_vec.append(list(tmp_y))
 
   rear_obs_car_matrix = json_data["rear_obs_car_matrix"]
-  print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
+  # print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
 
   if len(rear_obs_car_matrix) > 0:
-    print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
+    # print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
     points = np.column_stack((rear_obs_car_matrix[0], rear_obs_car_matrix[1]))
     hull = ConvexHull(points)
     polygon = Polygon(points[hull.vertices])
@@ -757,10 +823,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       obs_car_polygon_y_vec.append(list(tmp_y))
 
   front_obs_car_matrix = json_data["front_obs_car_matrix"]
-  print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
+  # print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
 
   if len(front_obs_car_matrix) > 0:
-    print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
+    # print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
     points = np.column_stack((front_obs_car_matrix[0], front_obs_car_matrix[1]))
     hull = ConvexHull(points)
     polygon = Polygon(points[hull.vertices])

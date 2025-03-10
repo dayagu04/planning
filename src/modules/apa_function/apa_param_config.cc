@@ -121,6 +121,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
+                  
+  JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
+                  "in_slot_car_adjust_max_count");
   // car params
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
@@ -219,8 +222,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_heading_err, double,
                   "finish_parallel_heading_err");
 
-  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_rear_stop_buffer, double,
-                  "finish_parallel_rear_stop_buffer");
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_out_heading_mag, double,
+                  "finish_parallel_out_heading_mag");
 
   // check fail params
   JSON_READ_VALUE(apa_param.SetPram().stuck_failed_time, double,
@@ -414,8 +417,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().curb_offset, double, "curb_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().mov_curb_out_dist, double,
-                  "mov_curb_out_dist");
+  JSON_READ_VALUE(apa_param.SetPram().curb_offset_when_ego_outside_slot, double,
+                  "curb_offset_when_ego_outside_slot");
 
   // construce obstacles params
   JSON_READ_VALUE(apa_param.SetPram().channel_width, double, "channel_width");
@@ -455,6 +458,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
                   "use_uss_pt_clound");
+
+  JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
 
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
@@ -721,6 +726,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
                   "parallel_search_out_heading");
 
+  JSON_READ_VALUE(apa_param.SetPram().x_max_internal_obstacles, double,
+                  "x_max_internal_obstacles");
+
+  JSON_READ_VALUE(apa_param.SetPram().min_x_value_park_out_position, double,
+                  "min_x_value_park_out_position");
+
   JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");
 
@@ -754,8 +765,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().max_limiter_window_size, int,
                   "max_limiter_window_size");
 
-  JSON_READ_VALUE(apa_param.SetPram().slot_release_car_lat_buffer, double,
-                  "slot_release_car_lat_buffer");
+  JSON_READ_VALUE(apa_param.SetPram().slot_release_channel_width, double,
+                  "slot_release_channel_width");
 
   // slot update
   JSON_READ_VALUE(apa_param.SetPram().slot_update_in_or_out_occupied_ratio,
@@ -879,10 +890,16 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
       double, "deadend_uss_stuck_replan_wait_time");
   JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.vertical_slot_end_straight_dist, double,
-      "vertical_slot_end_straight_dist");
-  ILOG_INFO << "vertical_slot_end_straight_dist "
-            << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
+      apa_param.SetPram().astar_config.vertical_tail_in_end_straight_dist,
+      double, "vertical_tail_in_end_straight_dist");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_head_in_end_straight_dist,
+      double, "vertical_head_in_end_straight_dist");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.adjust_ego_y_thresh_outside_slot, double,
+      "adjust_ego_y_thresh_outside_slot");
 
   JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");

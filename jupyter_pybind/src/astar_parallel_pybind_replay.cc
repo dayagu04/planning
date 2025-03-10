@@ -18,7 +18,7 @@
 #include "apa_plan_interface.h"
 #include "apa_slot_manager.h"
 #include "apa_world/apa_world.h"
-#include "camera_preception_groundline_c.h"
+#include "camera_perception_groundline_c.h"
 #include "config_context.h"
 #include "control_command_c.h"
 #include "debug_info_log.h"
@@ -46,11 +46,12 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
-#include "struct_convert/camera_preception_groundline_c.h"
+#include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
 #include "struct_convert/fusion_objects_c.h"
 #include "struct_convert/fusion_occupancy_objects_c.h"
+#include "struct_convert/fusion_groundline_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
 #include "struct_convert/hmi_inner_c.h"
 #include "struct_convert/ifly_localization_c.h"
@@ -58,6 +59,7 @@
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
 #include "struct_convert/vehicle_service_c.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
@@ -506,7 +508,8 @@ const bool PlanOnce(
 
   ILOG_INFO << "pybind select slot id " << select_id;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   double plan_time = IflyTime::Now_us();
@@ -518,7 +521,7 @@ const bool PlanOnce(
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info = scenario->GetApaWorldPtr()
-                                                        ->GetNewSlotManagerPtr()
+                                                        ->GetSlotManagerPtr()
                                                         ->ego_info_under_slot_;
     ego_slot_info_ = ego_info;
 
@@ -752,8 +755,9 @@ const bool SetLocalization(py::bytes &localization_info_bytes) {
 }
 
 const bool SetGroundLine(py::bytes &line) {
-  auto ground_line = BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                                   struct_msgs::GroundLinePerceptionInfo>(line);
+  iflyauto::FusionGroundLineInfo ground_line =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(line);
 
   local_view.ground_line_perception = ground_line;
 

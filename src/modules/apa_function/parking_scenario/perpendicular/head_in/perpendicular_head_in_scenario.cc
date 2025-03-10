@@ -105,7 +105,8 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
   }
 
   const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+      (apa_world_ptr_->GetSlotManagerPtr()
+           ->ego_info_under_slot_.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
           : apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
@@ -139,7 +140,7 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
     ILOG_INFO << "replan is required!";
     frame_.replan_flag = true;
     EgoInfoUnderSlot& ego_info_under_slot =
-        apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
     pt_center_replan_ = ego_info_under_slot.origin_pose_global.pos;
 
@@ -215,7 +216,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
   const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   const ApaParameters& param = apa_param.GetParam();
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   frame_.correct_path_for_limiter = false;
   frame_.replan_flag = false;
@@ -439,7 +440,7 @@ const bool PerpendicularHeadInScenario::GenTlane() {
   using namespace pnc::geometry_lib;
   const ApaParameters& param = apa_param.GetParam();
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   // construct tlane pq
   // left y is positive, right y is negative
@@ -832,7 +833,7 @@ const bool PerpendicularHeadInScenario::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   // set obstacles
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const TLane& obs_tlane = ego_info_under_slot.obs_tlane;
   const ApaParameters& param = apa_param.GetParam();
 
@@ -941,7 +942,7 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
   ILOG_INFO << "-------------- PathPlanOnce --------------";
   // construct input
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   GeometryPathInput path_planner_input;
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
@@ -1242,7 +1243,7 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
 
 const bool PerpendicularHeadInScenario::CheckFinished() {
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const bool lon_condition = ego_info_under_slot.terminal_err.pos.x() <
                              apa_param.GetParam().finish_lon_err;
@@ -1377,7 +1378,7 @@ const bool PerpendicularHeadInScenario::CheckDynamicUpdate() {
 
 const bool PerpendicularHeadInScenario::CheckReplan() {
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   pt_center_replan_jump_dist_ =
       (pt_center_replan_ - ego_info_under_slot.origin_pose_global.pos).norm();
@@ -1595,7 +1596,7 @@ const bool PerpendicularHeadInScenario::PostProcessPathAccordingLimiter() {
   bool success = false;
   double s_proj = 0.0;
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   // to avoid one of the front wheel crash to limiter when heading in
   Eigen::Vector2d limit_mid_local =
@@ -1766,7 +1767,7 @@ const bool PerpendicularHeadInScenario::PostProcessPathAccordingLimiter() {
 
 void PerpendicularHeadInScenario::Log() const {
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
