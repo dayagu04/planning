@@ -76,6 +76,16 @@ class BaseCollisionDetector {
   // 包含左右后视镜的矩形
   std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_;
   std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_with_buffer_;
+  // 后视镜到前悬矩形
+  std::vector<Eigen::Vector2d>
+      mirror_to_front_overhanging_rectangle_vertex_expand_front_;
+  std::vector<Eigen::Vector2d>
+      mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_;
+  // 后视镜到后悬矩形
+  std::vector<Eigen::Vector2d>
+      mirror_to_rear_overhanging_rectangle_vertex_;
+  std::vector<Eigen::Vector2d>
+      mirror_to_rear_overhanging_rectangle_vertex_with_buffer_;
 
   double lat_buffer_{0.};
   double lon_buffer_{0.};

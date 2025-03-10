@@ -15,20 +15,15 @@ namespace apa_planner {
 
 const ColResult GJKCollisionDetector::Update(
     const geometry_lib::PathSegment& path_seg, const double lat_buffer,
-    const double lon_buffer, const bool only_check_max_car_polygon,
-    const bool use_obs_base_slot,
-    const ApaObsMovementType movement_type_request) {
+    const double lon_buffer, const GJKColDetRequest gjk_col_det_request) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
-  return Update(pt_vec, lat_buffer, lon_buffer, only_check_max_car_polygon,
-                use_obs_base_slot, movement_type_request);
+  return Update(pt_vec, lat_buffer, lon_buffer, gjk_col_det_request);
 }
 
 const ColResult GJKCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint>& pt_vec, const double lat_buffer,
-    const double lon_buffer, const bool only_check_max_car_polygon,
-    const bool use_obs_base_slot,
-    const ApaObsMovementType movement_type_request) {
+    const double lon_buffer, const GJKColDetRequest gjk_col_det_request) {
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -91,25 +86,43 @@ const ColResult GJKCollisionDetector::Update(
           polygon_vec.emplace_back(polygon_foot_print_global_.body);
           break;
         default:
-          polygon_vec.emplace_back(polygon_foot_print_global_.body);
-          polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
-          polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
+          if (gjk_col_det_request.car_body_type == CarBodyType::NORMAL) {
+            polygon_vec.emplace_back(polygon_foot_print_global_.body);
+            polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
+            polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
+          } else if (gjk_col_det_request.car_body_type ==
+                     CarBodyType::EXPAND_MIRROR_TO_FRONT) {
+            polygon_vec.emplace_back(
+                polygon_foot_print_global_
+                    .mirror_to_front_overhang_expand_front);
+            polygon_vec.emplace_back(
+                polygon_foot_print_global_.mirror_to_rear_overhang);
+          } else if (gjk_col_det_request.car_body_type ==
+                     CarBodyType::EXPAND_MIRROR_TO_END) {
+            // todo: should use right polygon for end expansion
+            polygon_vec.emplace_back(
+                polygon_foot_print_global_
+                    .mirror_to_front_overhang_expand_front);
+            polygon_vec.emplace_back(
+                polygon_foot_print_global_.mirror_to_rear_overhang);
+          }
+
           break;
       }
 
       if (!CheckObsMovementTypeFeasible(obs.GetObsMovementType(),
-                                        movement_type_request)) {
+                                        gjk_col_det_request.movement_type)) {
         continue;
       }
 
       for (size_t i = 0; i < polygon_vec.size(); ++i) {
-        col_flag = IsPolygonCollision(polygon_vec[i], obs, use_obs_base_slot);
+        col_flag = IsPolygonCollision(polygon_vec[i], obs, gjk_col_det_request);
         if (i == 0) {
           if (!col_flag) {
             // max polygan no col, safe, quit
             break;
           } else {
-            if (only_check_max_car_polygon) {
+            if (gjk_col_det_request.only_check_max_car_polygon) {
               // if only check max polygon, consider is col
               break;
             }
@@ -138,11 +151,11 @@ const ColResult GJKCollisionDetector::Update(
   col_res_.col_flag = col_flag;
   col_res_.remain_dist = lon_safe_dist - lon_buffer;
 
-  if (movement_type_request == ApaObsMovementType::MOTION) {
+  if (gjk_col_det_request.movement_type == ApaObsMovementType::MOTION) {
     col_res_.remain_dist_dynamic = col_res_.remain_dist;
   }
 
-  if (movement_type_request == ApaObsMovementType::STATIC) {
+  if (gjk_col_det_request.movement_type == ApaObsMovementType::STATIC) {
     col_res_.remain_dist_static = col_res_.remain_dist;
   }
 
@@ -150,13 +163,13 @@ const ColResult GJKCollisionDetector::Update(
 }
 
 const bool GJKCollisionDetector::IsPolygonCollision(
-    const Polygon2D& polygon, const bool use_obs_base_slot) {
+    const Polygon2D& polygon, const GJKColDetRequest gjk_col_det_request) {
   const std::unordered_map<size_t, ApaObstacle>& obs_map =
       obs_manager_->GetObstacles();
 
   for (const auto& obs_pair : obs_map) {
     const ApaObstacle& obs = obs_pair.second;
-    if (IsPolygonCollision(polygon, obs, use_obs_base_slot)) {
+    if (IsPolygonCollision(polygon, obs, gjk_col_det_request)) {
       return true;
     }
   }
@@ -166,12 +179,12 @@ const bool GJKCollisionDetector::IsPolygonCollision(
 
 const bool GJKCollisionDetector::IsPolygonCollision(
     const Polygon2D& polygon, const ApaObstacle& obs,
-    const bool use_obs_base_slot) {
+    const GJKColDetRequest gjk_col_det_request) {
   bool col_flag = false;
 
   const Polygon2D* obs_polygon = &obs.GetPolygon2DLocal();
   const std::vector<Eigen::Vector2d>* pt_clout = &obs.GetPtClout2dLocal();
-  if (!use_obs_base_slot) {
+  if (!gjk_col_det_request.use_obs_base_slot) {
     obs_polygon = &obs.GetPolygon2DGlobal();
     pt_clout = &obs.GetPtClout2dGlobal();
   }
@@ -209,6 +222,14 @@ void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(
 
   ULFLocalPolygonToGlobal(&polygon_foot_print_global_.chassis,
                           &polygon_foot_print_local_.chassis, tf);
+
+  ULFLocalPolygonToGlobal(
+      &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
+      &polygon_foot_print_local_.mirror_to_front_overhang_expand_front, tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.mirror_to_rear_overhang,
+                          &polygon_foot_print_local_.mirror_to_rear_overhang,
+                          tf);
 }
 
 void GJKCollisionDetector::GenCarPolygon() {
@@ -226,6 +247,13 @@ void GJKCollisionDetector::GenCarPolygon() {
 
   polygon_foot_print_local_.max_polygon.FillTangentCircleParams(
       car_with_mirror_rectangle_vertex_with_buffer_);
+
+  polygon_foot_print_local_.mirror_to_front_overhang_expand_front
+      .FillTangentCircleParams(
+          mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_);
+
+  polygon_foot_print_local_.mirror_to_rear_overhang.FillTangentCircleParams(
+      mirror_to_rear_overhanging_rectangle_vertex_with_buffer_);
 }
 
 void GJKCollisionDetector::Reset() {}

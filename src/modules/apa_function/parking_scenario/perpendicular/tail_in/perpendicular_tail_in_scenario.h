@@ -7,6 +7,7 @@
 #include "geometry_math.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"
+#include "target_pose_decider/target_pose_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -53,7 +54,6 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const bool CheckDynamicUpdate() override;
 
   PerpendicularTailInPathGenerator perpendicular_path_planner_;
-  
 
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
   std::vector<pnc::geometry_lib::PathSegment> all_plan_path_vec_;

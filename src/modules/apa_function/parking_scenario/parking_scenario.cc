@@ -328,18 +328,23 @@ const double ParkingScenario::CalRemainDistFromObs(
   double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
+  GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
+                                       ApaObsMovementType::STATIC);
+
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), lat_buffer,
-      0.0, false, false, ApaObsMovementType::STATIC);
+      0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_static = 3.68;
   }
   double obs_pt_remain_dist_static = col_res.remain_dist_static - safe_dist;
 
+  gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
+
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), 0.368, 0.0,
-      false, false, ApaObsMovementType::MOTION);
+      gjl_col_det_request);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = 6.68;

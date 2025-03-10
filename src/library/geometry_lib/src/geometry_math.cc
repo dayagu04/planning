@@ -3497,5 +3497,21 @@ const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
   return true;
 }
 
+const PathPoint TransformPoseFromGlobalToLocal(const PathPoint &pose_global,
+                                               const GlobalToLocalTf &g2l_tf) {
+  PathPoint pose_local;
+  pose_local.pos = g2l_tf.GetPos(pose_global.pos);
+  pose_local.heading = g2l_tf.GetHeading(pose_global.heading);
+  return pose_local;
+}
+
+const PathPoint TransformPoseFromLocalToGlobal(const PathPoint &pose_local,
+                                               const LocalToGlobalTf &l2g_tf) {
+  PathPoint pose_global;
+  pose_global.pos = l2g_tf.GetPos(pose_local.pos);
+  pose_global.heading = l2g_tf.GetHeading(pose_local.heading);
+  return pose_global;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

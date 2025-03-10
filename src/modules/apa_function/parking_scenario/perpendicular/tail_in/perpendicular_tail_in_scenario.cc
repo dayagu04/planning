@@ -93,7 +93,11 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   }
 
   // update ego slot info
-  UpdateEgoSlotInfo();
+  if (!UpdateEgoSlotInfo()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    return;
+  }
 
   // update remain dist
   frame_.remain_dist_path = CalRemainDistFromPath();
@@ -116,8 +120,17 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
 
   frame_.replan_flag = CheckReplan();
 
-  GenTlane();
-  GenObstacles();
+  if (!GenTlane()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    return;
+  }
+
+  if (!GenObstacles()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    return;
+  }
 
   if (frame_.replan_flag) {
     ILOG_INFO << "replan is required!";
@@ -142,30 +155,42 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     const bool ego_should_stop = CheckShouldStopWhenSlotJumpsMuch();
     JSON_DEBUG_VALUE("ego_should_stop", ego_should_stop)
 
-    if (frame_.dynamic_plan_fail_flag ||
-        pathplan_result == PathPlannerResult::PLAN_FAILED) {
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    EgoInfoUnderSlot& ego_info_under_slot =
+        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+
+    // dynamic replan fail
+    if (frame_.dynamic_plan_fail_flag) {
       frame_.dynamic_replan_fail_count++;
-      EgoInfoUnderSlot& ego_info_under_slot =
-          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-      ego_info_under_slot.move_slot_dist =
-          ego_info_under_slot.last_move_slot_dist;
-
-      ego_info_under_slot.target_pose.pos
-          << ego_info_under_slot.virtual_limiter.first.x(),
-          apa_param.GetParam().terminal_target_y;
-
-      ego_info_under_slot.target_pose.pos +=
-          ego_info_under_slot.move_slot_dist *
-          ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
-              .normalized();
-
+      // follow last plan path
+      // restore target pose and terminal err
+      ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+      ego_info_under_slot.target_pose.pos.y() +=
+          ego_info_under_slot.lat_move_dist_replan_success;
+      ego_info_under_slot.target_pose.pos.x() +=
+          ego_info_under_slot.lon_move_dist_replan_success;
       ego_info_under_slot.terminal_err.Set(
           ego_info_under_slot.cur_pose.pos -
               ego_info_under_slot.target_pose.pos,
           geometry_lib::NormalizeAngle(
               ego_info_under_slot.cur_pose.heading -
               ego_info_under_slot.target_pose.heading));
+    }
+
+    // static replan fail
+    if (!frame_.dynamic_plan_fail_flag &&
+        pathplan_result == PathPlannerResult::PLAN_FAILED) {
+      // directly quit
+    }
+
+    // static or dynamic replan success
+    if (!frame_.dynamic_plan_fail_flag &&
+        pathplan_result == PathPlannerResult::PLAN_UPDATE) {
+      // update slot move dist replan success
+      ego_info_under_slot.lat_move_dist_replan_success =
+          ego_info_under_slot.lat_move_dist_every_replan;
+
+      ego_info_under_slot.lon_move_dist_replan_success =
+          ego_info_under_slot.lon_move_dist_every_replan;
     }
 
     JSON_DEBUG_VALUE("replan_count", frame_.total_plan_count)
@@ -210,6 +235,23 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
   }
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  ILOG_INFO << "lat_move_dist_replan_success = "
+            << ego_info_under_slot.lat_move_dist_replan_success
+            << "  lon_move_dist_replan_success = "
+            << ego_info_under_slot.lon_move_dist_replan_success
+            << "  lat_move_dist_every_replan = "
+            << ego_info_under_slot.lat_move_dist_every_replan
+            << "  lon_move_dist_every_replan = "
+            << ego_info_under_slot.lon_move_dist_every_replan;
+
+  JSON_DEBUG_VALUE("move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_every_replan)
 
   // check finish
   if (CheckFinished()) {
@@ -313,55 +355,48 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     }
   }
 
-  // 计算停车位置
-  double virtual_tar_x = 0.0;
-  if (ego_info_under_slot.slot.limiter_.valid) {
-    // 根据原始限位器点计算停车终点
-    Eigen::Vector2d pt1 = ego_info_under_slot.g2l_tf.GetPos(
-        ego_info_under_slot.slot.limiter_.start_pt);
-    Eigen::Vector2d pt2 = ego_info_under_slot.g2l_tf.GetPos(
-        ego_info_under_slot.slot.limiter_.end_pt);
+  // no consider obs target pose, real-time update
+  TargetPoseDecider target_pose_decider(
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr());
 
-    virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
-  } else {
-    // 根据后面两个角点计算停车终点
-    virtual_tar_x =
-        ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
-        param.terminal_target_x;
-  }
+  TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
+      ego_info_under_slot.slot, std::vector<double>{0.15}, 0.3,
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false);
 
-  // 如果限位器很靠后 可以结合一下前面两个车位角点信息
-  virtual_tar_x = std::max(
-      virtual_tar_x,
-      ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid.x() -
-          param.limiter_length - param.wheel_base - param.front_overhanging);
+  ego_info_under_slot.origin_target_pose = res.target_pose_local;
 
-  ego_info_under_slot.virtual_limiter.first.x() = virtual_tar_x;
-  ego_info_under_slot.virtual_limiter.second.x() = virtual_tar_x;
-  ego_info_under_slot.virtual_limiter.first.y() =
+  ego_info_under_slot.virtual_limiter.first
+      << ego_info_under_slot.origin_target_pose.pos.x(),
       0.5 * ego_info_under_slot.slot.slot_width_;
-  ego_info_under_slot.virtual_limiter.second.y() =
-      -0.5 * ego_info_under_slot.slot.slot_width_;
 
-  // 后续横向终点位置会随着障碍物而进行改变
-  ego_info_under_slot.target_pose.pos
-      << ego_info_under_slot.virtual_limiter.first.x(),
-      param.terminal_target_y;
-  ego_info_under_slot.target_pose.heading = param.terminal_target_heading;
+  ego_info_under_slot.virtual_limiter.second
+      << ego_info_under_slot.origin_target_pose.pos.x(),
+      -0.5 * ego_info_under_slot.slot.slot_width_;
 
   if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
           param.slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_info_under_slot.cur_pose.heading) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     const std::vector<double> x_tab = {
+        ego_info_under_slot.origin_target_pose.pos.x(),
+        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+
+    const std::vector<double> x_postprocess_tab = {
         ego_info_under_slot.target_pose.pos.x(),
         ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
 
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+
     ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
         x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+
+    ego_info_under_slot.slot_occupied_ratio_postprocess =
+        mathlib::Interp1(x_postprocess_tab, occupied_ratio_tab,
+                         ego_info_under_slot.cur_pose.pos.x());
+
   } else {
     ego_info_under_slot.slot_occupied_ratio = 0.0;
+    ego_info_under_slot.slot_occupied_ratio_postprocess = 0.0;
   }
 
   // trim or extend path according to limiter, only run once
@@ -369,8 +404,10 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
       !ego_info_under_slot.fix_slot) {
     const geometry_lib::LineSegment limiter_line(
-        ego_info_under_slot.virtual_limiter.first,
-        ego_info_under_slot.virtual_limiter.second);
+        Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
+                        0.5 * ego_info_under_slot.slot.slot_width_),
+        Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
+                        -0.5 * ego_info_under_slot.slot.slot_width_));
 
     const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
         ego_info_under_slot.cur_pose.pos, limiter_line);
@@ -387,7 +424,8 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   }
 
   // fix slot
-  if (ego_info_under_slot.slot_occupied_ratio > param.fix_slot_occupied_ratio &&
+  if (ego_info_under_slot.slot_occupied_ratio_postprocess >
+          param.fix_slot_occupied_ratio &&
       !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
     ego_info_under_slot.fix_slot = true;
   }
@@ -466,12 +504,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
     }
   }
 
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
-    if (obs_count_in_slot > 0) {
-      ILOG_INFO << "there are obs in slot";
-      return false;
-    }
-  }
+  // now determine it is possible to park in through the target pose decider
+  // (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+  //   if (obs_count_in_slot > 0) {
+  //     ILOG_INFO << "there are obs in slot";
+  //     return false;
+  //   }
+  // }
 
   apa_param.SetPram().actual_mono_plan_enable = param.mono_plan_enable;
   // 如果保守的话  两侧全空才开启一把进 无意义 这个保守泊入已关闭
@@ -526,100 +565,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
     car_width = car_width_fold_mirror;
   }
-
-  const Eigen::Vector2d left_car(2.168, car_width * 0.5);
-  const Eigen::Vector2d right_car(2.168, -car_width * 0.5);
-
-  const double left_dis_obs_car =
-      (left_obs - left_car).y() / ego_info_under_slot.slot.sin_angle_;
-  const double right_dis_obs_car =
-      (right_car - right_obs).y() / ego_info_under_slot.slot.sin_angle_;
-
-  ILOG_INFO << "left_dis_obs_car = " << left_dis_obs_car
-            << "  right_dis_obs_car = " << right_dis_obs_car;
-
-  const double suitable_safe_threshold =
-      apa_param.GetParam().car_lat_inflation_normal +
-      apa_param.GetParam().safe_threshold;
-
-  const double min_safe_threshold =
-      apa_param.GetParam().car_lat_inflation_normal + 0.0168;
-
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
-    if (left_dis_obs_car + right_dis_obs_car <
-        2.0 * suitable_safe_threshold + 0.01) {
-      ILOG_INFO << "left and right obs dis is not meed need";
-      return false;
-    }
-  }
-
-  const bool left_obs_meet_safe_require =
-      left_dis_obs_car > suitable_safe_threshold ? true : false;
-
-  const bool right_obs_meet_safe_require =
-      right_dis_obs_car > suitable_safe_threshold ? true : false;
-
-  // 一旦重规划失败 用上次重规划的车位移动距离
-  ego_info_under_slot.last_move_slot_dist = ego_info_under_slot.move_slot_dist;
-  // 只有在重规划且没有完全入库的时候才需要根据障碍物来改变是否移动车位或者移动车位的距离
-  if (frame_.replan_flag) {
-    if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
-      ego_info_under_slot.move_slot_dist =
-          -1.0 * std::min(right_dis_obs_car - min_safe_threshold,
-                          suitable_safe_threshold - left_dis_obs_car);
-      ILOG_INFO << "left side is dangerous, should move toward right";
-    } else if (left_obs_meet_safe_require && !right_obs_meet_safe_require) {
-      ego_info_under_slot.move_slot_dist =
-          std::min(left_dis_obs_car - min_safe_threshold,
-                   suitable_safe_threshold - right_dis_obs_car);
-      ILOG_INFO << "right side is dangerous, should move toward left";
-    } else if (left_obs_meet_safe_require && right_obs_meet_safe_require) {
-      ego_info_under_slot.move_slot_dist = 0.0;
-      ILOG_INFO << "two side is safe, should not move slot";
-    } else if (!left_obs_meet_safe_require && !right_obs_meet_safe_require) {
-      // 往两侧障碍物正中停
-      const double mid_dist = (left_dis_obs_car + right_dis_obs_car) * 0.5;
-      if (mid_dist < left_dis_obs_car) {
-        // 往右移
-        ego_info_under_slot.move_slot_dist = mid_dist - left_dis_obs_car;
-      } else if (mid_dist < right_dis_obs_car) {
-        // 往左移
-        ego_info_under_slot.move_slot_dist = right_dis_obs_car - mid_dist;
-      }
-      ILOG_INFO << "two side is dangerous, park in middle of two side obs";
-    }
-
-    // 计算最大移动车位距离 因为不仅要考虑安全
-    // 也要考虑到底自车车体能侵入旁边空间多少
-    // 车体能压线的距离 正数表示不能越过线 负数表示可以越过
-    const double max_move_slot_dist =
-        ego_info_under_slot.slot.slot_width_ * 0.5 -
-        car_width_fold_mirror * 0.5 -
-        apa_param.GetParam().car2line_dist_threshold;
-    if (ego_info_under_slot.move_slot_dist > 0.0) {
-      ego_info_under_slot.move_slot_dist =
-          std::min(ego_info_under_slot.move_slot_dist, max_move_slot_dist);
-    } else {
-      ego_info_under_slot.move_slot_dist =
-          std::max(ego_info_under_slot.move_slot_dist, -max_move_slot_dist);
-    }
-    ego_info_under_slot.replan_move_slot_dist =
-        ego_info_under_slot.move_slot_dist;
-  }
-
-  ILOG_INFO << "move_slot_dist = " << ego_info_under_slot.move_slot_dist
-            << "  last move_slot_dist = "
-            << ego_info_under_slot.last_move_slot_dist;
-  JSON_DEBUG_VALUE("move_slot_dist", ego_info_under_slot.move_slot_dist)
-
-  // 根据车位移动距离更新终点位置
-  ego_info_under_slot.target_pose.pos +=
-      ego_info_under_slot.move_slot_dist * pt_01_unit_vec;
-
-  ego_info_under_slot.terminal_err.Set(
-      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
-      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-                                   ego_info_under_slot.target_pose.heading));
 
   // 根据自车位置制定通道宽
   double channel_width =
@@ -723,13 +668,49 @@ const bool PerpendicularTailInScenario::GenTlane() {
         0.0268;
   }
 
+  if (frame_.replan_flag) {
+    // 重规划时根据障碍物计算终点位置
+    TargetPoseDecider target_pose_decider(
+        apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+    TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
+        ego_info_under_slot.slot, std::vector<double>{0.15, 0.13, 0.11, 0.09},
+        0.3, ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true);
+
+    if (!res.exist_target_pose && !frame_.is_replan_dynamic) {
+      return false;
+    }
+
+    ego_info_under_slot.target_pose = res.target_pose_local;
+
+    // 记录每次重规划移动距离
+    ego_info_under_slot.lon_move_dist_every_replan = res.safe_lon_move_dist;
+    ego_info_under_slot.lat_move_dist_every_replan = res.safe_lat_move_dist;
+  } else {
+    ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+    // 根据上次重规划成功的移动距离来移动终点位置
+    ego_info_under_slot.target_pose.pos.x() +=
+        ego_info_under_slot.lon_move_dist_replan_success;
+    ego_info_under_slot.target_pose.pos.y() +=
+        ego_info_under_slot.lat_move_dist_replan_success;
+  }
+
+  ego_info_under_slot.terminal_err.Set(
+      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
+      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+                                   ego_info_under_slot.target_pose.heading));
+
   ILOG_INFO
       << "cur pose = " << ego_info_under_slot.cur_pose.pos.transpose() << "  "
       << ego_info_under_slot.cur_pose.heading * kRad2Deg
+      << "  origin_tar_pose = "
+      << ego_info_under_slot.origin_target_pose.pos.transpose() << "  "
+      << ego_info_under_slot.origin_target_pose.heading * kRad2Deg
       << "  tar_pose = " << ego_info_under_slot.target_pose.pos.transpose()
       << "  " << ego_info_under_slot.target_pose.heading * kRad2Deg
       << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.transpose()
       << "  " << ego_info_under_slot.terminal_err.heading * kRad2Deg
+      << "  slot_occupied_ratio_postprocess = "
+      << ego_info_under_slot.slot_occupied_ratio_postprocess
       << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
       << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
       << "  stuck time(s) = " << frame_.stuck_time
@@ -743,6 +724,8 @@ const bool PerpendicularTailInScenario::GenObstacles() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const TLane& obs_tlane = ego_info_under_slot.obs_tlane;
+
+  const ApaParameters& param = apa_param.GetParam();
 
   geometry_lib::LineSegment tlane_line;
   std::vector<geometry_lib::LineSegment> tlane_line_vec;
@@ -768,8 +751,7 @@ const bool PerpendicularTailInScenario::GenObstacles() {
   tlane_obstacle_vec.reserve(188);
   std::vector<Eigen::Vector2d> point_set;
   for (const auto& line : tlane_line_vec) {
-    geometry_lib::SamplePointSetInLineSeg(point_set, line,
-                                          apa_param.GetParam().obstacle_ds);
+    geometry_lib::SamplePointSetInLineSeg(point_set, line, param.obstacle_ds);
     tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
                               point_set.end());
   }
@@ -780,8 +762,13 @@ const bool PerpendicularTailInScenario::GenObstacles() {
 
   std::shared_ptr<ApaObstacleManager> obs_manager =
       apa_world_ptr_->GetObstacleManagerPtr();
+
   std::unordered_map<size_t, ApaObstacle>& obstacles =
       obs_manager->GetMutableObstacles();
+
+  const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr();
+
   // 筛选真实的障碍物 并进行替换添加
   for (auto& pair : obstacles) {
     std::vector<Eigen::Vector2d>& pt_clout_2d =
@@ -789,27 +776,30 @@ const bool PerpendicularTailInScenario::GenObstacles() {
     std::vector<Eigen::Vector2d> obs_vec;
     obs_vec.reserve(pt_clout_2d.size());
     for (const Eigen::Vector2d& obs : pt_clout_2d) {
-      if (apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-              ->GetGJKCollisionDetectorPtr()
+      if (col_det_interface_ptr->GetGJKCollisionDetectorPtr()
               ->Update(
                   std::vector<geometry_lib::PathPoint>{
                       ego_info_under_slot.cur_pose},
-                  apa_param.GetParam().car_lat_inflation_normal + 0.0168, 0.2)
+                  param.car_lat_inflation_normal + 0.0168, 0.0,
+                  GJKColDetRequest())
               .col_flag) {
         // temp hack, when obs is in car, lose it, only increase plan success
         // ratio, To Do, when obs change accurately, should not del any obs
         if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
           return false;
         }
-        continue;
+        if (!param.believe_in_fus_obs) {
+          continue;
+        }
       }
 
-      SlotObsType obs_type = CalSlotObsType(obs);
+      // no longer remove obs due to slot
+      // SlotObsType obs_type = CalSlotObsType(obs);
 
-      if (obs_type == SlotObsType::DISCARD_OBS ||
-          obs_type == SlotObsType::IN_OBS) {
-        continue;
-      }
+      // if (obs_type == SlotObsType::DISCARD_OBS ||
+      //     obs_type == SlotObsType::IN_OBS) {
+      //   continue;
+      // }
 
       // if obs is not in tlane area lose it
       if (!geometry_lib::IsPointInPolygon(tlane_vec, obs)) {
@@ -824,16 +814,14 @@ const bool PerpendicularTailInScenario::GenObstacles() {
   std::vector<Eigen::Vector2d> tlane_obs_vec;
   tlane_obs_vec.reserve(tlane_obstacle_vec.size());
   for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
-    if (!apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-             ->GetGJKCollisionDetectorPtr()
+    if (!col_det_interface_ptr->GetGJKCollisionDetectorPtr()
              ->Update(
                  std::vector<geometry_lib::PathPoint>{
                      ego_info_under_slot.cur_pose},
-                 apa_param.GetParam().car_lat_inflation_normal + 0.0168, 0.2)
+                 0.3, 0.0, GJKColDetRequest())
              .col_flag) {
       tlane_obs_vec.emplace_back(obs_pos);
     }
-    tlane_obs_vec.emplace_back(obs_pos);
   }
   Polygon2D polygon;
   cdl::AABB box = cdl::AABB();
@@ -851,18 +839,13 @@ const bool PerpendicularTailInScenario::GenObstacles() {
 
   const double bound_threshold = 0.68;
 
-  const std::shared_ptr<CollisionDetectorInterface>&
-      collision_detector_interface_ptr_ =
-          apa_world_ptr_->GetCollisionDetectorInterfacePtr();
-
   geometry_lib::RectangleBound bound(
       obs_tlane.min_x - bound_threshold, obs_tlane.min_y - bound_threshold,
       obs_tlane.max_x + bound_threshold, obs_tlane.max_y + bound_threshold);
 
   bound.PrintInfo();
 
-  collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()->PreProcess(
-      bound);
+  col_det_interface_ptr->GetEDTCollisionDetectorPtr()->PreProcess(bound);
 
   return true;
 }
@@ -1157,13 +1140,15 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_uss_condition =
       frame_.remain_dist_obs < param.max_replan_remain_dist;
 
+  GJKColDetRequest gjl_col_det_request(true, true);
+
   bool end_pos_has_obs_condition =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetGJKCollisionDetectorPtr()
           ->Update(
               std::vector<geometry_lib::PathPoint>{
                   ego_info_under_slot.target_pose},
-              0.0, 0.0, true)
+              0.0, 0.0, gjl_col_det_request)
           .col_flag;
 
   if (!end_pos_has_obs_condition) {
@@ -1175,7 +1160,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
         apa_world_ptr_->GetCollisionDetectorInterfacePtr()
             ->GetGJKCollisionDetectorPtr()
             ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
-                     true)
+                     gjl_col_det_request)
             .col_flag;
   }
 
@@ -1227,13 +1212,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
   heading_vec.reserve(traj_size);
 
   const Eigen::Vector2d limiter_mid =
-      (apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf.GetPos(
-           apa_world_ptr_->GetSlotManagerPtr()
-               ->ego_info_under_slot_.virtual_limiter.first) +
-       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf.GetPos(
-           apa_world_ptr_->GetSlotManagerPtr()
-               ->ego_info_under_slot_.virtual_limiter.second)) *
-      0.5;
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf.GetPos(
+          apa_world_ptr_->GetSlotManagerPtr()
+              ->ego_info_under_slot_.origin_target_pose.pos);
 
   // If the target pose is very close to the previously planned
   // endpoint, there is no need to run the following steps
@@ -1389,21 +1370,12 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                                 ? param.safe_uss_remain_dist_out_slot
                                 : param.safe_uss_remain_dist_in_slot;
 
-  ILOG_INFO << "replan_move_slot_dist = "
-            << ego_info_under_slot.replan_move_slot_dist;
-  JSON_DEBUG_VALUE("replan_move_slot_dist",
-                   ego_info_under_slot.replan_move_slot_dist)
   // 根据车位上次重规划移动距离更新终点位置
-  geometry_lib::PathPoint tar_pose(
-      Eigen::Vector2d(ego_info_under_slot.virtual_limiter.first.x(),
-                      param.terminal_target_y),
-      param.terminal_target_heading);
+  geometry_lib::PathPoint tar_pose = ego_info_under_slot.origin_target_pose;
+  tar_pose.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
+  tar_pose.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
 
-  tar_pose.pos += ego_info_under_slot.replan_move_slot_dist *
-                  ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
-                      .normalized();
-
-  geometry_lib::PathPoint terminal_err(
+  const geometry_lib::PathPoint terminal_err(
       ego_info_under_slot.cur_pose.pos - tar_pose.pos,
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                    tar_pose.heading));
@@ -1694,7 +1666,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
                              apa_param.GetParam().finish_heading_err * 0.5;
   const double y_err = std::fabs((tar_pose_bef.pos - tar_pose_now.pos).y());
   const std::vector<double> occupied_ratio_tab{0.0, 0.2, 0.4, 0.6, 0.8};
-  const std::vector<double> y_err_ratio_tab{0.368, 0.268, 0.168, 0.068, 0.0368};
+  const std::vector<double> y_err_ratio_tab{0.368, 0.268, 0.168, 0.078, 0.0368};
   const bool err_case3 =
       y_err < mathlib::Interp1(occupied_ratio_tab, y_err_ratio_tab,
                                ego_info_under_slot.slot_occupied_ratio);
@@ -1864,7 +1836,7 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
   // 检查是否碰撞
   if (apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetGJKCollisionDetectorPtr()
-          ->Update(optimal_path_vec, 0.08, 0.0)
+          ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
           .col_flag) {
     ILOG_INFO << "the optimal path is col";
     return false;
@@ -2091,13 +2063,13 @@ void PerpendicularTailInScenario::Log() const {
   slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
   slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
 
-  pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
+  pt_vec[0] = pt_vec[0] + ego_info_under_slot.lat_move_dist_every_replan *
                               origin_corner_coord_global.pt_01_vec.normalized();
-  pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
+  pt_vec[1] = pt_vec[1] + ego_info_under_slot.lat_move_dist_every_replan *
                               origin_corner_coord_global.pt_01_vec.normalized();
-  pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
+  pt_vec[2] = pt_vec[2] + ego_info_under_slot.lat_move_dist_every_replan *
                               origin_corner_coord_global.pt_23_vec.normalized();
-  pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
+  pt_vec[3] = pt_vec[3] + ego_info_under_slot.lat_move_dist_every_replan *
                               origin_corner_coord_global.pt_23_vec.normalized();
 
   for (const Eigen::Vector2d& pt : pt_vec) {

@@ -130,6 +130,8 @@ struct Polygon2D {
 // in system, you can use polygon foot_print or circle foot print.
 struct PolygonFootPrint {
   Polygon2D chassis;
+  Polygon2D mirror_to_front_overhang_expand_front;
+  Polygon2D mirror_to_rear_overhang;
   Polygon2D body;
   Polygon2D mirror_left;
   Polygon2D mirror_right;
