@@ -449,12 +449,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
     for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
          i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
-      if (prediction_obj_id_set.find(obj.additional_info.track_id) ==
-          prediction_obj_id_set.end()) {
-        transform_fusion_to_prediction_longtime(
-            obj, (double)local_view.fusion_objects_info.msg_header.stamp,
-            prediction_info);
-      }
+      // if (prediction_obj_id_set.find(obj.additional_info.track_id) ==
+      //     prediction_obj_id_set.end()) {
+      //   transform_fusion_to_prediction_longtime(
+      //       obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+      //       prediction_info);
+      // }
       transform_fusion_to_prediction_longtime(
           obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           fusion_objs_info);
