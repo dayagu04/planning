@@ -2731,15 +2731,16 @@ const bool PerpendicularTailInPathGenerator::OneArcPathPlan(
     double length = 0.0;
     geometry_lib::PathSegment new_line_seg;
     geometry_lib::GeometryPath new_geometry_path;
-    while (length < 0.86) {
+    while (length < 1.26) {
       length += 0.15;
       geometry_lib::CalLineFromPt(gear, length, pose, new_line_seg);
-      if (TwoArcPathPlan(new_line_seg.GetEndPose(), gear, lat_buffer,
+      if (TwoArcPathPlan(new_line_seg.GetEndPose(), gear, lat_buffer + 0.068,
                          lon_buffer, new_geometry_path, false, enable_log) &&
           !CheckStuckedByInside(new_geometry_path.start_pose,
                                 new_geometry_path.end_pose, enable_log)) {
         geometry_path.SetPath(new_line_seg);
         geometry_path.AddPath(new_geometry_path);
+        ILOG_INFO_IF(enable_log) << "line twoarc, the line length = " << length;
         break;
       }
     }
@@ -2873,16 +2874,18 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
         double length = line_seg.Getlength();
         geometry_lib::PathSegment new_line_seg;
         geometry_lib::GeometryPath new_geometry_path;
-        while (length < line_seg.Getlength() + 0.86) {
+        while (length < line_seg.Getlength() + 1.26) {
           length += 0.15;
           geometry_lib::CalLineFromPt(line_gear, length, pose, new_line_seg);
-          if (TwoArcPathPlan(new_line_seg.GetEndPose(), line_gear, lat_buffer,
-                             lon_buffer, new_geometry_path, false,
-                             enable_log) &&
+          if (TwoArcPathPlan(new_line_seg.GetEndPose(), line_gear,
+                             lat_buffer + 0.068, lon_buffer, new_geometry_path,
+                             false, enable_log) &&
               !CheckStuckedByInside(new_geometry_path.start_pose,
                                     new_geometry_path.end_pose, enable_log)) {
             geometry_path.SetPath(new_line_seg);
             geometry_path.AddPath(new_geometry_path);
+            ILOG_INFO_IF(enable_log)
+                << "line twoarc, the line length = " << length;
             break;
           }
         }
@@ -3065,6 +3068,7 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
         if (col_res2 == PathColDetRes::NORMAL) {
           ILOG_INFO_IF(enable_log)
               << "same gear, arc2 normal, add arc2 to path";
+          path_seg_vec.emplace_back(arc2_seg);
         }
 
         if (col_res2 == PathColDetRes::SHORTEN) {
@@ -3073,16 +3077,33 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                 << "same gear, radius is bigger, abort this arc";
             continue;
           }
-          ILOG_INFO_IF(enable_log) << "same gear, radius is small, arc2 "
-                                      "shorten, add arc2 to path";
+          ILOG_INFO_IF(enable_log)
+              << "same gear, radius is small, arc2 shorten, then insert line "
+                 "after arc1, and use two reverse arc to target line";
+          double length = 0.0;
+          geometry_lib::PathSegment new_line_seg;
+          geometry_lib::GeometryPath new_geometry_path;
+
+          while (length < 1.26) {
+            length += 0.15;
+            geometry_lib::CalLineFromPt(arc1_gear, length,
+                                        arc1_seg.GetEndPose(), new_line_seg);
+            if (TwoArcPathPlan(new_line_seg.GetEndPose(), arc1_gear,
+                               lat_buffer + 0.068, lon_buffer,
+                               new_geometry_path, false, enable_log) &&
+                !CheckStuckedByInside(new_geometry_path.start_pose,
+                                      new_geometry_path.end_pose, enable_log)) {
+              path_seg_vec.emplace_back(new_line_seg);
+              path_seg_vec.emplace_back(
+                  new_geometry_path.path_segment_vec.front());
+              ILOG_INFO_IF(enable_log)
+                  << "arc line two arc, the line length = " << length;
+              break;
+            }
+          }
         }
 
-        path_seg_vec.emplace_back(arc2_seg);
         geometry_path.SetPath(path_seg_vec);
-
-        if (col_res2 == PathColDetRes::SHORTEN) {
-          geometry_path.collide_flag = true;
-        }
 
         break;
       }
