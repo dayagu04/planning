@@ -450,10 +450,10 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
     centric_obs_frames = read_json_keys<int>(
         json, std::vector<std::string>{"lane_borrow", "centric_obs_frames"});
-    dense_obstacle_dist = read_json_keys<int>(
+    dense_obstacle_dist = read_json_keys<double>(
         json, std::vector<std::string>{"lane_borrow", "dense_obstacle_dist"});
-    merge_obs_distance_ = read_json_keys<int>(
-        json, std::vector<std::string>{"lane_borrow", "merge_obs_distance_"});
+    extend_obs_distance = read_json_keys<double>(
+        json, std::vector<std::string>{"lane_borrow", "extend_obs_distance"});
   }
   double max_concern_obs_distance = 40.0;
   double obs_static_vel_thold = 0.1;
@@ -461,7 +461,7 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double static_obs_buffer = 0.5;
   int centric_obs_frames = 10;
   double dense_obstacle_dist = 8.0;
-  double merge_obs_distance_ = 30.0;
+  double extend_obs_distance = 30.0;
 };
 
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
