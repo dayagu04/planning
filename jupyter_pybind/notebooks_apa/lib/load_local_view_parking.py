@@ -2188,7 +2188,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]
 
       # hack: need to retire
-      if obj.common_info.type == 58:
+      if obj.common_occupancy_info.type == 58:
         continue
 
       polygon_points =  obj.additional_occupancy_info.polygon_points

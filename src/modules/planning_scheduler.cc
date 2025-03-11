@@ -30,6 +30,7 @@
 #include "planning_context.h"
 #include "planning_debug_info.pb.h"
 #include "planning_hmi_c.h"
+#include "planning_plan_c.h"
 #include "scene_type_config.pb.h"
 #include "struct_container.hpp"
 #include "utils/file.h"
@@ -155,6 +156,8 @@ bool PlanningScheduler::RunOnce(
   planning_result.scene_type = function_type;
   planning_result.timestamp = start_timestamp;
   planning_output->successful_slot_info_list_size = 0;
+  planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
+  planning_output->planning_status.hpp_planning_status = iflyauto::HPP_UNKNOWN;
 
   // reset
   if (function_type == common::PARKING_APA || function_type == common::HPP) {

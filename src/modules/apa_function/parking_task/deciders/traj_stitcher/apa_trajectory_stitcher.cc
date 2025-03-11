@@ -6,15 +6,6 @@
 #include "apa_param_config.h"
 #include "math/vec2d.h"
 #include "pose2d.h"
-#include "src/library/reeds_shepp/rs_path_interpolate.h"
-
-#include <cmath>
-#include <cstddef>
-
-#include "apa_param_config.h"
-#include "math/vec2d.h"
-#include "pose2d.h"
-#include "src/library/reeds_shepp/rs_path_interpolate.h"
 
 namespace planning {
 
