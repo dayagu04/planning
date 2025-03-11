@@ -35,7 +35,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-01-11-39-17.bag_2025-03-03-09-48-46",
+                "data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20241218/20241218-16-16-50/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2024-12-18-16-16-50_no_camera.bag",
                 "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留
