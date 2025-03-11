@@ -60,7 +60,7 @@ class LaneBorrowDecider : public Task {
   bool CheckLaneBorrowCrossingCondition();
   const Point2D CalTurningCenter(const Point2D& ego_pos, const double& theta,
                                  const double& radius) const;
-  Point2D Cartesianrotation(const Point2D& Cartesian_point,
+  Point2D CartesianRotation(const Point2D& Cartesian_point,
                             double heading_angle, double ego_x, double ego_y);
 
  private:

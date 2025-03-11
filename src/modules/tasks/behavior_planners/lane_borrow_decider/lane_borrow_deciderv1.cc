@@ -1118,9 +1118,9 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
       corner_rear_right;
 
   if (left_borrow_) {
-    Point2D corner_front_left_xy = Cartesianrotation(
+    Point2D corner_front_left_xy = CartesianRotation(
         corner_front_left_point_xy, heading_angle, ego_x, ego_y);
-    Point2D corner_rear_left_xy = Cartesianrotation(
+    Point2D corner_rear_left_xy = CartesianRotation(
         corner_rear_left_point_xy, heading_angle, ego_x, ego_y);
 
     // Back to the SL coordinate system and compare with the lane lines.
@@ -1140,9 +1140,9 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
     return false;
 
   } else if (right_borrow_) {
-    Point2D corner_front_right_xy = Cartesianrotation(
+    Point2D corner_front_right_xy = CartesianRotation(
         corner_front_right_point_xy, heading_angle, ego_x, ego_y);
-    Point2D corner_rear_right_xy = Cartesianrotation(
+    Point2D corner_rear_right_xy = CartesianRotation(
         corner_rear_right_point_xy, heading_angle, ego_x, ego_y);
 
     current_frenet_coord->XYToSL(corner_front_right_xy.x,
@@ -1165,7 +1165,7 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
   return false;
 }
 
-Point2D LaneBorrowDecider::Cartesianrotation(const Point2D& Cartesian_point,
+Point2D LaneBorrowDecider::CartesianRotation(const Point2D& Cartesian_point,
                                              double heading_angle, double ego_x,
                                              double ego_y) {
   double cos_theta = cos(heading_angle);
