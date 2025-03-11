@@ -107,19 +107,22 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   const bool lon_condition =
       ego_info.terminal_err.pos.x() < config.finish_lon_err;
 
-  const double lat_offset = ego_info.cur_pose.pos.y();
-  const double ego_head_lat_offset =
+  const double astar_target_pose_y = thread_.GetAstarTargetPose().GetY();
+  const double lat_offset =
+      std::fabs(ego_info.cur_pose.pos.y() - astar_target_pose_y);
+
+  const double ego_head_lat_offset = std::fabs(
       (ego_info.cur_pose.pos + (config.wheel_base + config.front_overhanging) *
                                    ego_info.cur_pose.heading_vec)
-          .y();
+          .y() -
+      astar_target_pose_y);
 
   const bool ego_center_lat_condition =
       std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict;
 
   const bool ego_head_lat_condition =
-      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict &&
-      std::fabs(ego_head_lat_offset) <=
-          apa_param.GetParam().finish_lat_err_strict;
+      ego_center_lat_condition &&
+      std::fabs(ego_head_lat_offset) <= apa_param.GetParam().finish_lat_err;
 
   const bool heading_condition_1 =
       std::fabs(ego_info.terminal_err.heading) <=
@@ -1095,7 +1098,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
             ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
       const std::vector<double> x_tab = {
-          ego_info_under_slot.target_pose.pos.x() - param.rear_overhanging -
+          ego_info_under_slot.target_pose.pos.x() - param.wheel_base -
               param.front_overhanging,
           ego_info_under_slot.slot.slot_length_};
 
