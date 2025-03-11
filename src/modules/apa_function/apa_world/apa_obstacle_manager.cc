@@ -168,8 +168,9 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
         continue;
       }
 
-      const uint8 points_3d_size = std::min(
-          gl.groundline_point_size, static_cast<uint8>(FUSION_GROUNDLINE_MAX_NUM));
+      const uint8 points_3d_size =
+          std::min(gl.groundline_point_size,
+                   static_cast<uint8>(FUSION_GROUNDLINE_POINT_MAX_NUM));
       if (points_3d_size < 1) {
         continue;
       }

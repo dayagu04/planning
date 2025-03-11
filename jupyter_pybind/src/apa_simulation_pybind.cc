@@ -329,10 +329,10 @@ const bool InterfaceUpdateParam(
   PlanningResult navigation_traj;
   const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   if (apa_interface_ptr->GetPlaningOutput()
-              .planning_status.apa_planning_status ==
+              .planning_status.apa_planning_status !=
           iflyauto::APA_IN_PROGRESS ||
       apa_interface_ptr->GetPlaningOutput()
-              .planning_status.hpp_planning_status == iflyauto::HPP_RUNNING) {
+              .planning_status.hpp_planning_status != iflyauto::HPP_RUNNING) {
     return false;
   }
 
