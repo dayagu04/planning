@@ -13,7 +13,7 @@ namespace planning {
 
 #define DEBUG_POINT_CLOUD_OBS (0)
 
-void PointCloudObstacleTransform::GenerateLocalObstacle(
+void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
     ParkObstacleList& obs_list, const LocalView* local_view,
     const double slot_length, const double slot_width,
     const Pose2D& slot_base_pose, const Pose2D& ego_start,
@@ -318,4 +318,38 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   return;
 }
 
+void PointCloudObstacleTransform::GenerateLocalObstacle(
+    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+    ParkObstacleList& obs_list, cdl::AABB& box) {
+  if (obs_manager == nullptr) {
+    return;
+  }
+
+  planning::PointCloudObstacle obs;
+  for (auto& pair : obs_manager->GetObstacles()) {
+    obs.points.clear();
+    obs.points.reserve(pair.second.GetPtClout2dLocal().size());
+
+    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
+      if (box.contain(cdl::Vector2r(pt.x(), pt.y()))) {
+        continue;
+      }
+
+      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
+    }
+
+    pair.second.GenerateLocalBoundingbox(&obs.box);
+
+    if (pair.second.GetPtClout2dLocal().size() > 0) {
+      GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
+    } else {
+      obs.envelop_polygon = pair.second.GetPolygon2DLocal();
+    }
+
+    obs.obs_type = pair.second.GetObsAttributeType();
+    obs_list.point_cloud_list.emplace_back(obs);
+  }
+
+  return;
+}
 }  // namespace planning
