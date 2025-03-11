@@ -459,7 +459,8 @@ bool LaneBorrowDecider::ObstacleDecision() {
 
       //  extend  static area
       if (id == static_blocked_obstacles_[0]->obstacle()->id() ||
-          frenet_obstacle_sl.s_start - obs_end_s_ < config_.merge_obs_distance_) {
+          frenet_obstacle_sl.s_start - obs_end_s_ <
+              config_.extend_obs_distance) {
         obs_left_l_ = std::max(obs_left_l_, frenet_obstacle_sl.l_end);
         obs_right_l_ = std::min(obs_right_l_, frenet_obstacle_sl.l_start);
         obs_start_s_ = std::min(obs_start_s_, frenet_obstacle_sl.s_start);
@@ -1105,20 +1106,22 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
 
   // Get the corner points' Cartesian coordinates while traveling straight
   Point2D corner_front_left_point_xy(vehicle_param.front_edge_to_rear_axle,
-                               vehicle_param.width * 0.5);
+                                     vehicle_param.width * 0.5);
   Point2D corner_front_right_point_xy(vehicle_param.front_edge_to_rear_axle,
-                                -vehicle_param.width * 0.5);
+                                      -vehicle_param.width * 0.5);
   Point2D corner_rear_left_point_xy(-vehicle_param.rear_edge_to_rear_axle,
-                              vehicle_param.width * 0.5);
+                                    vehicle_param.width * 0.5);
   Point2D corner_rear_right_point_xy(-vehicle_param.rear_edge_to_rear_axle,
-                               -vehicle_param.width * 0.5);
+                                     -vehicle_param.width * 0.5);
 
   SLPoint corner_front_left, corner_rear_left, corner_front_right,
       corner_rear_right;
 
   if (left_borrow_) {
-    Point2D corner_front_left_xy = Cartesianrotation(corner_front_left_point_xy, heading_angle, ego_x, ego_y);
-    Point2D corner_rear_left_xy = Cartesianrotation(corner_rear_left_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_front_left_xy = Cartesianrotation(
+        corner_front_left_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_rear_left_xy = Cartesianrotation(
+        corner_rear_left_point_xy, heading_angle, ego_x, ego_y);
 
     // Back to the SL coordinate system and compare with the lane lines.
     current_frenet_coord->XYToSL(corner_front_left_xy.x, corner_front_left_xy.y,
@@ -1137,8 +1140,10 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
     return false;
 
   } else if (right_borrow_) {
-    Point2D corner_front_right_xy = Cartesianrotation(corner_front_right_point_xy, heading_angle, ego_x, ego_y);
-    Point2D corner_rear_right_xy = Cartesianrotation(corner_rear_right_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_front_right_xy = Cartesianrotation(
+        corner_front_right_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_rear_right_xy = Cartesianrotation(
+        corner_rear_right_point_xy, heading_angle, ego_x, ego_y);
 
     current_frenet_coord->XYToSL(corner_front_right_xy.x,
                                  corner_front_right_xy.y, &corner_front_right.s,
@@ -1161,15 +1166,13 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
 }
 
 Point2D LaneBorrowDecider::Cartesianrotation(const Point2D& Cartesian_point,
-                                    double heading_angle,
-                                    double ego_x,
-                                    double ego_y) {
-    double cos_theta = cos(heading_angle);
-    double sin_theta = sin(heading_angle);
-    return {
-        Cartesian_point.x * cos_theta - Cartesian_point.y * sin_theta + ego_x,
-        Cartesian_point.x * sin_theta + Cartesian_point.y * cos_theta + ego_y
-    };
+                                             double heading_angle, double ego_x,
+                                             double ego_y) {
+  double cos_theta = cos(heading_angle);
+  double sin_theta = sin(heading_angle);
+  return {
+      Cartesian_point.x * cos_theta - Cartesian_point.y * sin_theta + ego_x,
+      Cartesian_point.x * sin_theta + Cartesian_point.y * cos_theta + ego_y};
 };
 
 bool LaneBorrowDecider::CheckIfkLaneBorrowCrossingToNoBorrow() {
