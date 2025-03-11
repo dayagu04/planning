@@ -870,9 +870,9 @@ bool RouteInfo::GetCurrentNearestLane() {
       return false;
     }
     current_lane_id_ = nearest_lane->id();
-    if (!nearest_lane->predecessor_lane_id().empty()) {
+    if (!nearest_lane->lane().predecessor_lane_id().empty()) {
       sum_s +=
-          CalculatePointAccumulateS(nearest_lane->predecessor_lane_id().front());
+          CalculatePointAccumulateS(nearest_lane->lane().predecessor_lane_id(0));
     }
     if(nearest_lane->GetProjection(point, &nearest_s, &nearest_l)) {
       sum_s += nearest_s;
@@ -1022,9 +1022,9 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
                     << speed_bump_nearest_s << std::endl;
         }
         speed_bump_sum_s += speed_bump_nearest_s;
-        if (!speed_bump_nearest_lane->predecessor_lane_id().empty()) {
+        if (!speed_bump_nearest_lane->lane().predecessor_lane_id().empty()) {
           speed_bump_sum_s +=
-              CalculatePointAccumulateS(speed_bump_nearest_lane->predecessor_lane_id().front());
+              CalculatePointAccumulateS(speed_bump_nearest_lane->lane().predecessor_lane_id(0));
         }
         distance_to_speed_bump_tmp = speed_bump_sum_s - sum_s_hpp_;
         if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
@@ -1062,9 +1062,8 @@ double RouteInfo::CalculatePointAccumulateS(size_t lane_id) {
   ad_common::hdmap::LaneInfoConstPtr lane =  hd_map_.GetLaneById(lane_id);
   if (lane != nullptr) {
     accumulate_s += lane->total_length();
-    std::vector<uint64_t> pred_lane_id = lane->predecessor_lane_id();
-    if (!pred_lane_id.empty()) {
-      accumulate_s += CalculatePointAccumulateS(pred_lane_id.front());
+    if (!lane->lane().predecessor_lane_id().empty()) {
+      accumulate_s += CalculatePointAccumulateS(lane->lane().predecessor_lane_id(0));
     }
   }
   return accumulate_s;
