@@ -136,6 +136,8 @@ void BoundMaker::MakeAccBound(const double v_ego,
       agent_headway_decider_output.agents_headway_Info();
   const auto start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
+  const auto steering_wheel_stationary_decider_output =
+      session_->planning_context().steering_wheel_stationary_decider_output();
   const auto cipv_info = session_->planning_context().cipv_decider_output();
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
@@ -253,6 +255,13 @@ void BoundMaker::MakeAccBound(const double v_ego,
     for (int32_t i = 0; i < plan_points_num_; i++) {
       acc_upper_bound_[i] =
           std::fmax(acc_upper_bound_[i], kLaneChangeAccUpperBound);
+    }
+  }
+
+  if (steering_wheel_stationary_decider_output.is_need_start_slowly) {
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      acc_upper_bound_[i] =
+          std::fmin(acc_upper_bound_[i], 0.2);
     }
   }
 

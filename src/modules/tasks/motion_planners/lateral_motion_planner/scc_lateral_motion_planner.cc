@@ -233,8 +233,8 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   const auto& route_info = session_->environmental_model().get_route_info();
   double distance_to_first_road_merge = 10000.0;
   if (route_info != nullptr) {
-    distance_to_first_road_merge = 
-        route_info->get_route_info_output().distance_to_first_road_merge;    
+    distance_to_first_road_merge =
+        route_info->get_route_info_output().distance_to_first_road_merge;
   }
   dist_to_merge_point =
       std::min(dist_to_merge_point, distance_to_first_road_merge);
@@ -482,6 +482,18 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   }
   // search
   planning_weight_ptr_->SetIsSearchSuccess(false);
+  // static steering
+  const auto &static_steering_status =
+      session_->planning_context()
+              .steering_wheel_stationary_decider_output()
+              .static_steering_status;
+  if (static_steering_status == kStaticSteeringExecution ||
+      static_steering_status == kStaticSteeringReady ||
+      static_steering_status == kStaticSteeringComplete) {
+    planning_weight_ptr_->SetIsStaticSteering(true);
+  } else {
+    planning_weight_ptr_->SetIsStaticSteering(false);
+  }
   // set weight
   if (lane_change_scene || is_enter_low_speed_lane_change_cooldown) {
     planning_weight_ptr_->SetLateralMotionWeight(

@@ -81,6 +81,7 @@ void BaseWeight::Init() {
   weight_.dt = config_.delta_t;
   is_enter_low_speed_lane_change_cooldown_ = false;
   is_emergency_avoid_ = false;
+  is_static_steering_ = false;
 }
 
 void BaseWeight::SetLateralMotionWeight(
@@ -1015,6 +1016,9 @@ void BaseWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     jerk_bound = config_.jerk_bound_ramp;
   }
+  if (is_static_steering_) {  // 1.0
+    jerk_bound = std::max(config_.jerk_bound_steering, jerk_bound);
+  }
   if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
       (is_bound_avoid_ || is_emergency_avoid_)) {
     // recommended avoid
@@ -1204,6 +1208,9 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
                            config_.map_jerk_bound_ramp) +
           0.5;
     }
+  }
+  if (is_static_steering_) {  // 1.0
+    jerk_bound = std::max(config_.jerk_bound_steering, jerk_bound);
   }
   if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
       (is_bound_avoid_ || is_emergency_avoid_)) {
@@ -1867,7 +1874,7 @@ void BaseWeight::MakeDynamicPosBoundWeight(
     std::vector<double> fp_ratio_with_vel{0.3, 1.0, 1.0, 1.0, 1.0, 1.0};
     double start_vel = ref_vel_;
     if (!planning_input.ref_vel_vec().empty()) {
-      start_vel = planning_input.ref_vel_vec(0);      
+      start_vel = planning_input.ref_vel_vec(0);
     }
     init_ratio = planning::interp(std::fabs(start_vel), xp_v, fp_ratio_with_vel);
   }
@@ -2047,7 +2054,11 @@ void BaseWeight::SetMotionPlanConcernedEndIndex(
   } else if (lateral_motion_scene_ == LateralMotionScene::LANE_BORROW) {
     weight_.remotely_index = 19;
   }
-
+  if (is_static_steering_) {
+    end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy_low_vel;
+    end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
+    planning_input.set_q_continuity(config_.q_continuity_lane_change);
+  }
   // set complete hold flag, concerned index
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);

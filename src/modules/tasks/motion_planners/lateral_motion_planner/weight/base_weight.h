@@ -257,6 +257,10 @@ class BaseWeight {
     is_search_success_ = is_search_success;
   }
 
+  void SetIsStaticSteering(const bool is_static_steering) {
+    is_static_steering_ = is_static_steering;
+  }
+
   void SetIsUseSpatioPlannerResult(const bool is_use_spatio_planner_result) {
     is_use_spatio_planner_result_ = is_use_spatio_planner_result;
   }
@@ -413,6 +417,7 @@ class BaseWeight {
   bool is_in_intersection_;
   bool is_search_success_;
   bool is_s_bend_;
+  bool is_static_steering_;
   bool is_use_spatio_planner_result_;
   bool is_sharp_turn_;
   bool is_bound_avoid_;

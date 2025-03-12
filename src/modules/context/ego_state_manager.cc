@@ -933,6 +933,16 @@ void EgoStateManager::UpdatePlanningInitState() {
       set_lat_replan = true;
       set_lon_replan = true;
     }
+
+    const bool is_need_replan =
+        session_->planning_context()
+                .steering_wheel_stationary_decider_output()
+                .is_need_replan;
+    if (is_need_replan && ego_v_ < config_.kEpsilon_v) {
+      set_lat_replan = true;
+      set_lon_replan = true;
+    }
+
     replan_type_.clear();
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
   } else {

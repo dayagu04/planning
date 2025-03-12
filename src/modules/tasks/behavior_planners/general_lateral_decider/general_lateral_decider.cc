@@ -634,16 +634,29 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
       kMinAcc = std::min(kMinAcc, kMinAccTmp);
     }
   }
-
+  const auto &static_steering_status=
+    session_->planning_context()
+            .steering_wheel_stationary_decider_output()
+            .static_steering_status;
   if (lane_borrow_decider_output.is_in_lane_borrow_status) {
     kMaxAcc = 0.6;
   }
   if (is_LC_CHANGE) {
-    ego_v = std::max(ego_v, config_.lc_min_v_cruise);
+    if (static_steering_status == kStaticSteeringReady ||
+        static_steering_status == kStaticSteeringComplete) {
+      ego_v = std::max(ego_v, config_.static_lc_min_v_cruise);
+    } else {
+      ego_v = std::max(ego_v, config_.lc_min_v_cruise);
+    }
     kMaxAcc = config_.lc_ref_acc;
   }
   if (is_LC_BACK || is_LC_HOLD) {
-    ego_v = std::max(ego_v, config_.lc_min_v_cruise);
+    if (static_steering_status == kStaticSteeringReady ||
+        static_steering_status == kStaticSteeringComplete) {
+      ego_v = std::max(ego_v, config_.static_lc_min_v_cruise);
+    } else {
+      ego_v = std::max(ego_v, config_.lc_min_v_cruise);
+    }
     kMaxAcc = 1e-6;
   }
   if (is_use_spatio_planner_result) {

@@ -44,6 +44,7 @@
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
+#include "tasks/behavior_planners/steering_wheel_stationary_decider/steering_wheel_stationary_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/scc_lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
@@ -120,6 +121,10 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
   bool enable_lane_borrow_deciderV3_ = false;
+
+  // steering wheel angle
+  std::unique_ptr<SteeringWheelStationaryDecider>
+      steering_wheel_stationary_decider_;
 };
 
 }  // namespace planning

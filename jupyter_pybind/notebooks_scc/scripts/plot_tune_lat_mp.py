@@ -157,10 +157,10 @@ class LocalViewSlider:
     self.q_virtual_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_virtual_xy",min=0.1, max=1000.0, value=0.0, step=0.1)
     self.q_virtual_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_virtual_theta",min=0.1, max=100000.0, value=0.0, step=0.1)
 
-    self.q_acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_acc_bound, step=0.1)
+    self.q_acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc_bound",min=0.0, max=1000000.0, value=lat_motion_plan_input0.q_acc_bound, step=0.1)
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=1000000.0, value=lat_motion_plan_input0.q_jerk_bound, step=0.1)
-    self.acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "acc_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.acc_bound, step=0.1)
-    self.jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.1)
+    self.acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "acc_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.acc_bound, step=0.01)
+    self.jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.01)
     self.q_soft_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_soft_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1)
     self.q_hard_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_hard_corridor, step=0.1)
 

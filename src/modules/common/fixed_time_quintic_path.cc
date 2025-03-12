@@ -67,7 +67,15 @@ bool QuinticPathPlanner::InitializeState(const double remain_lc_duration,
 
   auto v_cruise =
       use_ego_v_ ? ego_state_mgr_->ego_v() : ego_state_mgr_->ego_v_cruise();
-  ego_v_ = std::fmax(v_cruise, config_.min_ego_v_cruise);
+  ego_v_ = std::fmax(v_cruise, config_.min_lc_cruise_v);
+  const auto &static_steering_status=
+    session_->planning_context()
+            .steering_wheel_stationary_decider_output()
+            .static_steering_status;
+  if (static_steering_status == kStaticSteeringReady ||
+      static_steering_status == kStaticSteeringComplete) {
+    ego_v_ = std::fmax(v_cruise, config_.min_static_lc_cruise_v);
+  }
 
   // 获取初始状态
   lat_state_ = ego_state_mgr_->planning_init_point().lat_init_state;
