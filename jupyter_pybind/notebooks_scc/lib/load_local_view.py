@@ -23,6 +23,7 @@ import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS, CheckboxGroup,TapTool
 from bokeh.events import Tap
 from google.protobuf.json_format import MessageToJson
+import itertools
 
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
@@ -954,9 +955,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     for key in obstacles_info_all:
       obstacles_info = obstacles_info_all[0]
       if g_is_display_enu:
+        obstacles_x = list(itertools.chain.from_iterable(obstacles_info['obstacles_x']))
+        obstacles_y = list(itertools.chain.from_iterable(obstacles_info['obstacles_y']))
+        local_view_data['data_fus_occ'].data.update({
+          'obstacles_x': obstacles_x,
+          'obstacles_y': obstacles_y
+        })
         local_view_data['data_fus_occ_obj'].data.update({
-          'obstacles_x': obstacles_info['obstacles_x'],
-          'obstacles_y': obstacles_info['obstacles_y'],
           'polygon_x': obstacles_info['polygon_x'],
           'polygon_y': obstacles_info['polygon_y'],
           'pos_x' : obstacles_info['pos_x'],
@@ -965,9 +970,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'obs_label' : obstacles_info['obs_label'],
         })
       else:
+        obstacles_x_rel = list(itertools.chain.from_iterable(obstacles_info['obstacles_x_rel']))
+        obstacles_y_rel = list(itertools.chain.from_iterable(obstacles_info['obstacles_y_rel']))
+        local_view_data['data_fus_occ'].data.update({
+          'obstacles_x': obstacles_x_rel,
+          'obstacles_y': obstacles_y_rel
+        })
         local_view_data['data_fus_occ_obj'].data.update({
-          'obstacles_x': obstacles_info['obstacles_x_rel'],
-          'obstacles_y': obstacles_info['obstacles_y_rel'],
           'polygon_x': obstacles_info['polygon_x_rel'],
           'polygon_y': obstacles_info['polygon_y_rel'],
           'pos_x' : obstacles_info['pos_x_rel'],
@@ -1282,7 +1291,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       environment_model_info = None
     parking_space_boxes_x, parking_space_boxes_y, \
     road_mark_boxes_x, road_mark_boxes_y, \
-    road_obstacle_x_vec, road_obstacle_y_vec, \
+    ehr_ground_line_x_vec, ehr_ground_line_y_vec, \
     polygon_obstacle_x_vec, polygon_obstacle_y_vec, polygon_obstacle_label_vec, \
     polygon_x_vec, polygon_y_vec, polygon_id_vec = generate_ehr_static_map(ehr_static_map_msg, loc_msg, environment_model_info, g_is_display_enu)
     local_view_data['data_parking_space'].data.update({
@@ -1293,9 +1302,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'road_mark_x' : road_mark_boxes_x,
       'road_mark_y' : road_mark_boxes_y,
     })
-    local_view_data['data_road_obstacle'].data.update({
-      'road_obstacle_x' : road_obstacle_x_vec,
-      'road_obstacle_y' : road_obstacle_y_vec,
+    local_view_data['data_ehr_ground_line'].data.update({
+      'ehr_ground_line_x' : ehr_ground_line_x_vec,
+      'ehr_ground_line_y' : ehr_ground_line_y_vec,
     })
     polygon_obstacle_center_x = []
     for polygon_obstacle_x in polygon_obstacle_x_vec:
@@ -1346,12 +1355,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     if bag_loader.plan_debug_msg['enable'] == False:
       environment_model_info = None
     groundline_x_vec, groundline_y_vec, ground_line_id_vec, pos_x_vec, pos_y_vec, ground_line_label_vec, polygon_x_vec, polygon_y_vec = generate_ground_line(ground_line_msg, loc_msg, environment_model_info, g_is_display_enu)
+    # 接地线构造的polygon
     local_view_data['data_ground_line'].data.update({
-      'ground_line_x' : groundline_x_vec,
-      'ground_line_y' : groundline_y_vec,
       'polygon_y': polygon_y_vec,
       'polygon_x': polygon_x_vec,
       'ground_line_id' : ground_line_id_vec,
+    })
+
+    # data_ground_line_point 融合接地线点集（实时+地图接地线）
+    local_view_data['data_ground_line_point'].data.update({
+      'ground_line_x' : groundline_x_vec,
+      'ground_line_y' : groundline_y_vec,
     })
 
     local_view_data['data_ground_line_label'].data.update({
@@ -1360,16 +1374,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'ground_line_label' : ground_line_label_vec,
     })
 
-    ground_line_point_x_vec, ground_line_point_y_vec, groundline_x_vec, groundline_y_vec, groundline_id_vec = generate_ground_line_clusters(ground_line_msg, loc_msg, g_is_display_enu)
-    local_view_data['data_ground_line_point'].data.update({
-      'ground_line_x' : ground_line_point_x_vec,
-      'ground_line_y' : ground_line_point_y_vec,
-    })
-    local_view_data['data_ground_line_clusters'].data.update({
-      'ground_line_x' : groundline_x_vec,
-      'ground_line_y' : groundline_y_vec,
-      'ground_line_id' : groundline_id_vec
-    })
 
   # 加载fusion parking slot
   if bag_loader.fus_parking_msg['enable'] == True:
@@ -1471,10 +1475,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # 加载rdg ground line
   if bag_loader.rdg_ground_line_msg['enable'] == True:
-    groundline_x_vec, groundline_y_vec = generate_rdg_ground_line(rdg_ground_line_msg, loc_msg, g_is_display_enu)
+    rdg_groundline_x_vec, rdg_groundline_y_vec = generate_rdg_ground_line(rdg_ground_line_msg, loc_msg, g_is_display_enu)
     local_view_data['data_rdg_ground_line'].data.update({
-      'ground_line_x' : groundline_x_vec,
-      'ground_line_y' : groundline_y_vec,
+      'ground_line_x' : rdg_groundline_x_vec,
+      'ground_line_y' : rdg_groundline_y_vec,
     })
 
   # 加载rdg parking slot
@@ -1896,8 +1900,8 @@ def load_local_view_figure():
                                                      'parking_space_id_vec':[],})
   data_road_mark = ColumnDataSource(data = {'road_mark_y':[],
                                             'road_mark_x':[],})
-  data_road_obstacle = ColumnDataSource(data = {'road_obstacle_y':[],
-                                                'road_obstacle_x':[],})
+  data_ehr_ground_line = ColumnDataSource(data = {'ehr_ground_line_y':[],
+                                                'ehr_ground_line_x':[],})
   data_polygon_obstacle = ColumnDataSource(data = {'polygon_obstacle_y':[],
                                                    'polygon_obstacle_x':[],
                                                    'polygon_obstacle_label':[],
@@ -1910,9 +1914,7 @@ def load_local_view_figure():
                                                 'trace_start_x':[],
                                                 'trace_end_y':[],
                                                 'trace_end_x':[]})
-  data_ground_line = ColumnDataSource(data = {'ground_line_y':[],
-                                              'ground_line_x':[],
-                                              'polygon_y':[],
+  data_ground_line = ColumnDataSource(data = {'polygon_y':[],
                                               'polygon_x':[],
                                               'ground_line_id':[]})
   data_ground_line_label = ColumnDataSource(data = {'pos_y':[],
@@ -1925,9 +1927,10 @@ def load_local_view_figure():
                                                        'ground_line_id':[],})
   data_rdg_ground_line = ColumnDataSource(data = {'ground_line_y':[],
                                                   'ground_line_x':[],})
-  data_fus_occ_obj = ColumnDataSource(data = {'obstacles_y':[],
-                                              'obstacles_x':[],
-                                              'polygon_y':[],
+  data_fus_occ = ColumnDataSource(data = {'obstacles_y':[],
+                                          'obstacles_x':[]})
+
+  data_fus_occ_obj = ColumnDataSource(data = {'polygon_y':[],
                                               'polygon_x':[],
                                               'pos_y':[],
                                               'pos_x':[],
@@ -2099,7 +2102,7 @@ def load_local_view_figure():
                      'data_parking_space' : data_parking_space , \
                      'data_parking_space_text' : data_parking_space_text , \
                      'data_road_mark' : data_road_mark , \
-                     'data_road_obstacle': data_road_obstacle, \
+                     'data_ehr_ground_line': data_ehr_ground_line, \
                      'data_polygon_obstacle': data_polygon_obstacle, \
                      'data_map_key_point': data_map_key_point, \
                      'data_ground_line' : data_ground_line, \
@@ -2114,6 +2117,7 @@ def load_local_view_figure():
                      'data_rdg_parking_slot': data_rdg_parking_slot, \
                      'data_rdg_ground_mark': data_rdg_ground_mark, \
                      'data_speed_bump': data_speed_bump, \
+                     'data_fus_occ' : data_fus_occ, \
                      'data_fus_occ_obj' : data_fus_occ_obj, \
                      'data_fus_obj':data_fus_obj, \
                      'data_me_obj':data_me_obj, \
@@ -2442,7 +2446,7 @@ def load_local_view_figure():
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
     fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_occ_obj, fill_color = "chocolate", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'occ obj')
+    fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 3,color='red', legend_label = 'occ obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)
@@ -2450,13 +2454,13 @@ def load_local_view_figure():
     fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'ehr_road_mark')
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
     # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
-    fig1.multi_line('road_obstacle_y', 'road_obstacle_x', source = data_road_obstacle, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'ehr_ground_line', visible = False)
+    # fig1.multi_line('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'ehr_ground_line', visible = False)
+    fig1.scatter('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, size = 2,color='black', legend_label = 'ehr_ground_line', visible = False)
     fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig_ground_line = fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
+
     fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ground_line_info', visible = False)
-    fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
-    fig_ground_line_cluster = fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster', visible = False)
-    fig1.multi_line('ground_line_y', 'ground_line_x', source = data_rdg_ground_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'rdg_ground_line', visible = False)
+    fig_ground_line = fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
+    fig1.scatter('ground_line_y', 'ground_line_x', source = data_rdg_ground_line, size = 2,color='black', legend_label = 'rdg_ground_line', visible = False)
     fig1.patches('parking_slot_y', 'parking_slot_x', source = data_rdg_parking_slot, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg parking slot', visible = False)
     # fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_rdg_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg slot_info', visible = False)
     fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_general_obj, fill_color = "yellow", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg gobj', visible = False)
