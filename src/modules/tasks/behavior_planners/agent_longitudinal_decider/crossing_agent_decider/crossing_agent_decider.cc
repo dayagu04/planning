@@ -65,7 +65,7 @@ bool CrossingAgentDecider::Execute() {
   if (agents.empty()) {
     return true;
   }
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }
@@ -73,8 +73,8 @@ bool CrossingAgentDecider::Execute() {
         agent::AgentDecisionType::IGNORE) {
       continue;
     }
-    MakeYieldToVRUDecision(agent);
-    MakeYieldToVehicleDecision(agent);
+    MakeYieldToVRUDecision(agent.get());
+    MakeYieldToVehicleDecision(agent.get());
   }
 
   ClearVRUIdReverseCrossingMap();
@@ -289,7 +289,7 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
   const double k_vehicle_lateral_thd = ego_half_width;
 
   std::vector<int32_t> all_agents_ids;
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }

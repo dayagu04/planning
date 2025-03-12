@@ -49,12 +49,12 @@ StGraphHelper::GetAllStBoundaries() const {
 }
 
 void StGraphHelper::DetermineIfConeBucketCIPV(
-    const std::vector<const agent::Agent*>& agents) {
+    const std::vector<std::shared_ptr<agent::Agent>>& agents) {
   std::vector<const planning::agent::Agent*> speed_limited_cone_buckets;
   speed_limited_cone_buckets.reserve(agents.size());
   std::unordered_map<int64_t, std::unique_ptr<STBoundary>>
       cone_boundary_id_st_boundaries_map;
-  for (const auto* agent : agents) {
+  for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }
@@ -88,15 +88,14 @@ void StGraphHelper::DetermineIfConeBucketCIPV(
   }
   if (is_cone_bucket_cipv) {
     const auto agent_id = closest_cone_boundary_id >> 8;
-    for (const auto* agent : agents) {
+    for (auto agent : agents) {
       if (agent == nullptr) {
         continue;
       }
       if (agent->agent_id() != agent_id) {
         continue;
       }
-      auto* mutable_agent = const_cast<agent::Agent*>(agent);
-      mutable_agent->set_is_cone_bucket_cipv(true);
+      agent->set_is_cone_bucket_cipv(true);
       break;
     }
   }

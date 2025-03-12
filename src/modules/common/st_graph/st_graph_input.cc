@@ -171,13 +171,13 @@ void StGraphInput::GetAgentOfTargetLane(
 }
 
 void StGraphInput::FilterAgentsByDecisionType(
-    const std::vector<const agent::Agent*>& origin_agents) {
+    const std::vector<std::shared_ptr<agent::Agent>>& origin_agents) {
   if (origin_agents.empty()) {
     return;
   }
   filtered_agents_.clear();
   filtered_agents_.reserve(origin_agents.size());
-  for (const auto* agent : origin_agents) {
+  for (const auto agent : origin_agents) {
     if (agent == nullptr) {
       continue;
     }
@@ -451,7 +451,7 @@ const int32_t StGraphInput::reserve_num() const {
          1;
 }
 
-const std::vector<const agent::Agent*>& StGraphInput::filtered_agents() const {
+const std::vector<std::shared_ptr<agent::Agent>>& StGraphInput::filtered_agents() const {
   return filtered_agents_;
 }
 

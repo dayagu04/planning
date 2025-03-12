@@ -114,7 +114,7 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
     return;
   }
   const auto &agents = agent_manager->GetAllCurrentAgents();
-  for (const auto *ptr_agent : agents) {
+  for (const auto ptr_agent : agents) {
     if (ptr_agent == nullptr) {
       continue;
     }
@@ -233,7 +233,7 @@ double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
 
   std::vector<int64_t> agents_around_ego;
   agents_around_ego.reserve(agents.size());
-  for (const auto *ptr_agent : agents) {
+  for (const auto ptr_agent : agents) {
     double agent_s_base_ego_lane = 0.0, agent_l_base_ego_lane = 0.0;
     if (!ego_lane_coord->XYToSL(ptr_agent->x(), ptr_agent->y(),
                                 &agent_s_base_ego_lane,

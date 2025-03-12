@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ego_planning_config.h"
+#include "lon_target_maker.pb.h"
 #include "follow_target.h"
 #include "target.h"
 
@@ -25,8 +26,11 @@ class OvertakeTarget : public Target {
 
   void MakeOvertakeTarget(const FollowTarget& follow_target);
 
+  void AddOvertakeTargetDataToProto();
+
  private:
   std::vector<OvertakeBound> overtake_bounds_;
+  planning::common::OvertakeTarget overtake_target_pb_;
 };
 
 }  // namespace planning

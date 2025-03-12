@@ -30,7 +30,7 @@ class AgentManager {
 
   void Reset();
 
-  const std::vector<const Agent*>& GetAllCurrentAgents() const;
+  const std::vector<std::shared_ptr<Agent>>& GetAllCurrentAgents() const;
 
   Agent* mutable_agent(const int32_t id);
 
@@ -47,9 +47,9 @@ class AgentManager {
  private:
   planning::framework::Session* session_ = nullptr;
   EgoPlanningObstacleManagerConfig config_;
-  std::vector<const Agent*> current_agents_;
+  std::vector<std::shared_ptr<Agent>> current_agents_;
   std::unordered_set<int32_t> current_agents_ids_;
-  std::unordered_map<int32_t, std::list<std::unique_ptr<Agent>>>
+  std::unordered_map<int32_t, std::list<std::shared_ptr<Agent>>>
       historical_agents_;
 };
 

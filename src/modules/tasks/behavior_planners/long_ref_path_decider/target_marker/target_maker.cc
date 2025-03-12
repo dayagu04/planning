@@ -7,6 +7,7 @@
 #include "follow_target.h"
 #include "neighbor_target.h"
 #include "overtake_target.h"
+#include "caution_target.h"
 #include "planning_context.h"
 
 namespace planning {
@@ -35,7 +36,7 @@ common::Status TargetMaker::Run() {
   NeighborTarget neighbor_target(speed_planning_config_, session_);
 
   // 5. caution target @国朋
-  // CautionTarget caution_target(config_, session_);
+  CautionTarget caution_target(speed_planning_config_, session_);
 
   // 6. decider final target values
   const auto& start_stop_decider_output =
@@ -50,8 +51,8 @@ common::Status TargetMaker::Run() {
         overtake_target.target_value(relative_t);
     TargetValue neighbor_target_value =
         neighbor_target.target_value(relative_t);
-    //  TargetValue caution_target_value =
-    //  caution_target.target_value(relative_t);
+    TargetValue caution_target_value =
+      caution_target.target_value(relative_t);
 
     TargetValue upper_target_value(0.0, false,
                                    std::numeric_limits<double>::max(), 0.0,
@@ -86,10 +87,10 @@ common::Status TargetMaker::Run() {
 
     // TBD: 国朋合入caution
     // 2.update upper value by caution yield target
-    // if (caution_target_value.has_target()) {
-    //   upper_target_value =
-    //       Target::TargetMin(caution_target_value, upper_target_value);
-    //}
+    if (caution_target_value.has_target()) {
+       upper_target_value =
+          Target::TargetMin(caution_target_value, upper_target_value);
+    }
 
     // TBD: 建伟合入neighbor
     // 3.update lower and upper value by neighbor target

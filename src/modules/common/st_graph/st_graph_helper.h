@@ -57,7 +57,7 @@ class StGraphHelper {
   }
 
   void DetermineIfConeBucketCIPV(
-      const std::vector<const agent::Agent*>& agents);
+      const std::vector<std::shared_ptr<agent::Agent>>& agents);
 
   const bool GetExpandStBoundary(const int64_t boundary_id,
                                  STBoundary* const st_boundary) const;
