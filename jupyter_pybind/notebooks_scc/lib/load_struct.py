@@ -8,6 +8,7 @@ sys.path.append('../../python_proto')
 from ehr_sdmap_pb2 import *
 from bokeh.models import TextInput
 import ipywidgets
+import itertools
 
 def isINJupyter():
     try:
@@ -2162,6 +2163,8 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
           polygon_y_vec.append(polygon_y)
   except:
     print('generate_ehr_static_map error')
+  road_obstacle_x_vec = list(itertools.chain.from_iterable(road_obstacle_x_vec))
+  road_obstacle_y_vec = list(itertools.chain.from_iterable(road_obstacle_y_vec))
   return parking_space_boxes_x, parking_space_boxes_y, \
          road_mark_boxes_x, road_mark_boxes_y, \
          road_obstacle_x_vec, road_obstacle_y_vec, \
@@ -2190,8 +2193,8 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
         single_groundline_y_vec = []
         groundline_point_size = groundline.groundline_point_size
         for k in range(groundline_point_size):
-          ground_x_enu = groundline.shape[k].x
-          ground_y_enu = groundline.shape[k].y
+          ground_x_enu = groundline.groundline_point[k].x
+          ground_y_enu = groundline.groundline_point[k].y
           single_groundline_x_vec.append(ground_x_enu)
           single_groundline_y_vec.append(ground_y_enu)
         groundline_x_vec.append(single_groundline_x_vec)
@@ -2243,8 +2246,8 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
           single_groundline_y_vec = []
           groundline_point_size = groundline.groundline_point_size
           for k in range(groundline_point_size):
-            ground_x_enu = groundline.shape[k].x
-            ground_y_enu = groundline.shape[k].y
+            ground_x_enu = groundline.groundline_point[k].x
+            ground_y_enu = groundline.groundline_point[k].y
             local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
             single_groundline_x_vec.append(local_x)
             single_groundline_y_vec.append(local_y)
@@ -2285,6 +2288,8 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
           polygon_y_vec.append(polygon_y)
   except:
     print('groundline error')
+  groundline_x_vec = list(itertools.chain.from_iterable(groundline_x_vec))
+  groundline_y_vec = list(itertools.chain.from_iterable(groundline_y_vec))
   return groundline_x_vec, groundline_y_vec, groundline_id_vec, pos_x_vec, pos_y_vec, ground_line_label_vec, polygon_x_vec, polygon_y_vec
 
 def generate_rdg_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
@@ -2329,6 +2334,8 @@ def generate_rdg_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu =
           groundline_y_vec.append(single_groundline_y_vec)
   except:
     print('rdg ground line error')
+  groundline_x_vec = list(itertools.chain.from_iterable(groundline_x_vec))
+  groundline_y_vec = list(itertools.chain.from_iterable(groundline_y_vec))
   return groundline_x_vec, groundline_y_vec
 
 def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
