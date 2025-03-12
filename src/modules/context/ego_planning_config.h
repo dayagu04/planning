@@ -2642,7 +2642,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     enable_constanct_velocity_in_predicted_vehicle_state = read_json_key<bool>(
         json, "enable_constanct_velocity_in_predicted_vehicle_state",
         enable_constanct_velocity_in_predicted_vehicle_state);
-    steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
     enable_delta_stitch_in_replan = read_json_key<bool>(
         json, "enable_delta_stitch_in_replan", enable_delta_stitch_in_replan);
     enable_ego_state_compensation = read_json_key<bool>(
@@ -2681,7 +2680,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double kEpsilon_v = 0.0;
   double kEpsilon_a = 0.0;
 
-  double steer_ratio = 16.5;
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
 };
