@@ -26,6 +26,7 @@ bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 # global_var.set_value('g_is_display_enu', False)
 # global_var.set_value('is_vis_map', True)
+plot_turning_circle = False
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
@@ -35,6 +36,8 @@ fig1.height = 1500
 load_measure_distance_tool(fig1)
 fig_lat_offset = load_lateral_offset(bag_loader)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
+if plot_turning_circle:
+  data_turning_circle = load_turning_circle(fig1)
 
 behavior_data_1 = ColumnDataSource({
   'name':[],
@@ -44,7 +47,7 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=250)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=850)
 
 def update_lat_behavior_data(lat_behavior_common):
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
@@ -79,7 +82,7 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=600)
+data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=450)
 
 def update_hmi_hpp_info(hmi_hpp_info):
   vars = ['is_avaliable', 'distance_to_parking_space', 'avoid_status', \
@@ -98,6 +101,33 @@ def update_hmi_hpp_info(hmi_hpp_info):
       pass
 
   hmi_hpp_info_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+
+open_loop_steering_command_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
+columns = [
+        TableColumn(field="name", title="name",),
+        TableColumn(field="data", title="data"),
+    ]
+data_open_loop_steering_command_table = DataTable(source=open_loop_steering_command_data, columns=columns, width=400, height=125)
+
+def update_open_loop_steering_command(open_loop_steering_command):
+  vars = ['available', 'jerk_factor', \
+          'need_steering_wheel_stationary', 'steering_wheel_rad_limit']
+  names  = []
+  datas = []
+  for name in vars:
+    try:
+      datas.append(getattr(open_loop_steering_command, name))
+      names.append(name)
+    except:
+      pass
+
+  open_loop_steering_command_data.data.update({
     'name': names,
     'data': datas,
   })
@@ -197,16 +227,21 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
+  if plot_turning_circle:
+    update_turning_circle(data_turning_circle, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
     update_lat_behavior_data(lat_behavior_common)
   if bag_loader.planning_hmi_msg['enable'] ==True:
     hmi_hpp_info = local_view_data['data_msg']['planning_hmi_msg'].hpp_info
     data_hmi_hpp_info_table = update_hmi_hpp_info(hmi_hpp_info)
+  if bag_loader.plan_msg['enable'] ==True:
+    open_loop_steering_command = local_view_data['data_msg']['plan_msg'].open_loop_steering_command
+    data_open_loop_steering_command_table = update_open_loop_steering_command(open_loop_steering_command)
   push_notebook()
 
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, row(fig8, fig11))), title="CurveFigure")
-pan2 = Panel(child=row(column(fig_lat_offset, data_behavior_table_1, data_hmi_hpp_info_table)), title="TableInfo")
+pan2 = Panel(child=row(column(fig_lat_offset, row(data_behavior_table_1, column(data_hmi_hpp_info_table, data_open_loop_steering_command_table)))), title="TableInfo")
 pan3 = Panel(child=row(column(fig7)), title="!figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3 ])
 if global_fig_plot:

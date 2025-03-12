@@ -17,6 +17,8 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<GeneralLongitudinalDecider>(config_builder, session);
   longitudinal_motion_planner_ =
       std::make_unique<LongitudinalMotionPlanner>(config_builder, session);
+  steering_wheel_stationary_decider_ =
+      std::make_unique<SteeringWheelStationaryDecider>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
   parking_switch_decider_ =
@@ -73,21 +75,29 @@ bool HppTaskPipeline::Run() {
   auto time7 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LongitudinalMotionPlannerTime", time7 - time6);
 
+  ok = steering_wheel_stationary_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(steering_wheel_stationary_decider_->Name());
+    return false;
+  }
+  auto time8 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("SteeringWheelStationaryDeciderTime", time8 - time7);
+
   ok = result_trajectory_generator_->Execute();
   if (!ok) {
     AddErrorInfo(result_trajectory_generator_->Name());
     return false;
   }
-  auto time8 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("ResultTrajectoryGeneratorTime", time8 - time7);
+  auto time9 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ResultTrajectoryGeneratorTime", time9 - time8);
 
   ok = parking_switch_decider_->Execute();
   if (!ok) {
     AddErrorInfo(parking_switch_decider_->Name());
     return false;
   }
-  auto time9 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("ParkingSwitchDeciderTime", time9 - time8);
+  auto time10 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ParkingSwitchDeciderTime", time10 - time9);
 
   return true;
 }

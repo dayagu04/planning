@@ -32,6 +32,7 @@
 #include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
+#include "tasks/behavior_planners/steering_wheel_stationary_decider/steering_wheel_stationary_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/behavior_planners/truck_longitudinal_avoid_decider/truck_longitudinal_avoid_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
@@ -96,6 +97,10 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::shared_ptr<speed::StGraphInput> st_graph_input_;
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
+
+  // steering wheel angle
+  std::unique_ptr<SteeringWheelStationaryDecider>
+      steering_wheel_stationary_decider_;
 };
 
 }  // namespace planning

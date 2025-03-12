@@ -48,7 +48,7 @@
   "cruise_searching_speed": 1.5,
   "kEpsilon_v": 0.1,
   "kEpsilon_a": 0.4,
-  "steer_angle_thr": 5.0,
+  "steer_angle_thr": 3.0,
   "max_replan_lat_err": 0.6,
   "max_replan_theta_err": 5.0,
   "max_replan_lon_err": 1.0,
@@ -555,7 +555,12 @@
     "straight_ramp_v_limit": 19.44,
     "v_intersection_min_limit": 11.11
   },
-
+  "steering_wheel_stationary_decider": {
+    "safe_buffer": 0.3,
+    "steer_angle_step": 5.0,
+    "min_steer_angle": 50.0,
+    "steer_angle_thr": 5.0
+  },
   "result_trajectory_generator": {
     "enable_lat_traj": false
   },

@@ -23,6 +23,7 @@
 #include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
 #include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
+#include "tasks/behavior_planners/steering_wheel_stationary_decider/steering_wheel_stationary_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
@@ -60,6 +61,8 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<SamplePolySpeedAdjustDecider>
       sample_poly_speed_adjust_decider_;
+  std::unique_ptr<SteeringWheelStationaryDecider>
+      steering_wheel_stationary_decider_;
 };
 
 }  // namespace planning

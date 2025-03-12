@@ -774,6 +774,8 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
+  const auto &general_lateral_decider_output =
+      session_->planning_context().general_lateral_decider_output();
   const auto &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   const auto &vehicle_param =
@@ -795,7 +797,8 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       right_outline_s.emplace_back(ref_traj_points_[0].s - 0.3 * j);
       right_outline_l.emplace_back(-half_ego_width);
     }
-    if (config_.enable_last_lat_path) {
+    if (config_.enable_last_lat_path ||
+        !general_lateral_decider_output.enable_ara_ref) {
       const auto &motion_planner_output =
           session_->planning_context().motion_planner_output();
       double final_t = 5.0;

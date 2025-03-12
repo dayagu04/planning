@@ -637,6 +637,94 @@ def update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data
                                             'polygon_x': select_obstacle_polygon_x,
                                             'polygon_id': select_obstacle_polygon_id})
 
+def load_turning_circle(fig1):
+  data_turning_circle = ColumnDataSource(data = {'x':[],
+                                                 'y':[],
+                                                 'inner_r':[],
+                                                 'outer_r':[],
+                                                 'steer_angle':[],
+                                                 'obs_id':[],
+                                                 'obs_x': [],
+                                                 'obs_y': [],
+                                                 'direction': []})
+  fig_turning_circle = fig1.circle('y', 'x', radius = 0.2, source = data_turning_circle, line_width = 2,  line_color = 'red', line_dash = 'dashed', line_alpha = 1, fill_alpha = 0, legend_label = 'turning_circle')
+  fig1.circle('obs_y', 'obs_x', radius = 0.1, source = data_turning_circle, line_width = 2,  line_color = 'red', line_dash = 'dashed', line_alpha = 1, fill_alpha = 0, legend_label = 'turning_circle')
+  fig1.circle('y', 'x', radius = 'inner_r', source = data_turning_circle, line_width = 2,  line_color = 'red', line_dash = 'dashed', line_alpha = 1, fill_alpha = 0, legend_label = 'turning_circle')
+  fig1.circle('y', 'x', radius = 'outer_r', source = data_turning_circle, line_width = 2,  line_color = 'red', line_dash = 'dashed', line_alpha = 1, fill_alpha = 0, legend_label = 'turning_circle')
+  hover_turning_circle = HoverTool(renderers=[fig_turning_circle],
+                                   tooltips=[('x', '@x'), ('y', '@y'),
+                                             ('inner_r', '@inner_r'), ('outer_r', '@outer_r'),
+                                             ('steer_angle', '@steer_angle'), ('obs_id', '@obs_id'),
+                                             ('obs_x', '@obs_x'), ('obs_y', '@obs_y'),
+                                             ('direction', '@direction')])
+  fig1.add_tools(hover_turning_circle)
+  return data_turning_circle
+
+def update_turning_circle(data_turning_circle, local_view_data):
+  g_is_display_enu = global_var.get_value('g_is_display_enu')
+  plan_msg = local_view_data['data_msg']['plan_msg']
+  plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
+  print("lane_borrow_decider_status: ", plan_debug_msg.lane_borrow_decider_info.lane_borrow_decider_status)
+  print("static_blocked_obj_id_vec: ", plan_debug_msg.lane_borrow_decider_info.static_blocked_obj_id_vec)
+  print("target_l: ", plan_debug_msg.lane_borrow_decider_info.target_left_l, plan_debug_msg.lane_borrow_decider_info.target_right_l)
+  if not plan_msg.open_loop_steering_command.need_steering_wheel_stationary:
+    data_turning_circle.data.update({'x': [],
+                                     'y': [],
+                                     'inner_r': [],
+                                     'outer_r': [],
+                                     'steer_angle': [],
+                                     'obs_id': [],
+                                     'obs_x': [],
+                                     'obs_y': [],
+                                     'direction': []})
+    return
+  loc_msg = local_view_data['data_msg']['loc_msg']
+  plan_debug_json = local_view_data['data_msg']['plan_debug_json_msg']
+  turning_direction = plan_debug_json['turning_direction']
+  turning_target_obstacle_id = plan_debug_json['turning_target_obstacle_id']
+  target_turning_point_x = plan_debug_json['target_turning_point_x']
+  target_turning_point_y = plan_debug_json['target_turning_point_y']
+  target_steering_angle = plan_debug_json['target_steering_angle']
+  target_delta = math.fabs(target_steering_angle) / 13.0 / 57.3
+  inner_r = 3.0 / math.tan(target_delta)
+  if turning_direction > 0:
+    turning_direction = 1.0
+  elif turning_direction < 0:
+    turning_direction = -1.0
+  else:
+    turning_direction = 0
+  try:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    circle_x = [cur_pos_xn - turning_direction * inner_r * math.sin(cur_yaw)]
+    circle_y = [cur_pos_yn + turning_direction * inner_r * math.cos(cur_yaw)]
+    obs_point_x, obs_point_y = [target_turning_point_x], [target_turning_point_y]
+    if not g_is_display_enu:
+      circle_x, circle_y = coord_tf.global_to_local(circle_x, circle_y)
+      obs_point_x, obs_point_y = coord_tf.global_to_local(obs_point_x, obs_point_y)
+    outer_r = math.sqrt(4.025 * 4.025 +
+                        ((2.229 * 0.5) + inner_r) * ((2.229 * 0.5) + inner_r))
+    data_turning_circle.data.update({'x': circle_x,
+                                     'y': circle_y,
+                                     'inner_r': [inner_r],
+                                     'outer_r': [outer_r],
+                                     'steer_angle': [target_steering_angle],
+                                     'obs_id': [turning_target_obstacle_id],
+                                     'obs_x': obs_point_x,
+                                     'obs_y': obs_point_y,
+                                     'direction': [turning_direction]})
+  except:
+    data_turning_circle.data.update({'x': [],
+                                     'y': [],
+                                     'inner_r': [],
+                                     'outer_r': [],
+                                     'steer_angle': [],
+                                     'obs_id': [],
+                                     'obs_x': [],
+                                     'obs_y': [],
+                                     'direction': []})
 
 def load_lateral_offset(bag_loader):
   data_fig = ColumnDataSource(data ={

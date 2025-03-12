@@ -23,6 +23,7 @@
 #include "../tasks/task_interface/motion_planner_output.h"
 #include "../tasks/task_interface/parking_switch_decider_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
+#include "../tasks/task_interface/steering_wheel_stationary_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
@@ -233,6 +234,14 @@ class PlanningContext {
 
   MotionPlannerOutput &mutable_motion_planner_output() {
     return motion_planner_output_;
+  }
+
+  const SteeringWheelStationaryDeciderOutput &steering_wheel_stationary_decider_output() const {
+    return steering_wheel_stationary_decider_output_;
+  }
+
+  SteeringWheelStationaryDeciderOutput &mutable_steering_wheel_stationary_decider_output() {
+    return steering_wheel_stationary_decider_output_;
   }
 
   void feed_planning_hmi_info(
@@ -500,6 +509,8 @@ class PlanningContext {
   LongitudinalDecisionDeciderOutput longitudinal_decision_decider_output_;
   TrafficLightDeciderOutput traffic_light_decider_output_;
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
+
+  SteeringWheelStationaryDeciderOutput steering_wheel_stationary_decider_output_;
 
   // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;

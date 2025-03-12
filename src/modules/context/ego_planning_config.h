@@ -2512,6 +2512,37 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_speed_adjust = 5.0;
 };
 
+struct SteeringWheelStationaryDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    safe_buffer = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"steering_wheel_stationary_decider",
+                                 "safe_buffer"},
+        safe_buffer);
+    steer_angle_step = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"steering_wheel_stationary_decider",
+                                 "steer_angle_step"},
+        steer_angle_step);
+    min_steer_angle = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"steering_wheel_stationary_decider",
+                                 "min_steer_angle"},
+        min_steer_angle);
+    steer_angle_thr = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"steering_wheel_stationary_decider",
+                                 "steer_angle_thr"},
+        steer_angle_thr);
+  }
+  double safe_buffer = 0.3;
+  double steer_angle_step = 5.0;
+  double min_steer_angle = 50.0;
+  double steer_angle_thr = 5.0;
+};
+
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -2656,6 +2687,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                           hpp_replan_lat_err_threshold_value);
     read_json_vec<double>(json, "hpp_replan_lon_err_threshold_value",
                           hpp_replan_lon_err_threshold_value);
+    steer_angle_thr = read_json_key<double>(
+        json, "steer_angle_thr", steer_angle_thr);
   }
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
@@ -2682,6 +2715,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
 
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
+  double steer_angle_thr = 5.0;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

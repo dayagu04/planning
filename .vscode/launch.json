@@ -60,7 +60,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240606/20240606-15-01-45/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-06-15-01-45_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_e0y_20260/common_frame/20250304/20250304-17-15-55/data_collection_CHERY_E0Y_20260_ALL_MANUAL_2025-03-04-17-15-56_no_camera.bag",
                 "--no-debug"
             ],
             "stopAtEntry": false, // 不在调试入口停留
