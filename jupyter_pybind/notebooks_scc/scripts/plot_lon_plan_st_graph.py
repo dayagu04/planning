@@ -3,6 +3,7 @@ sys.path.append("..")
 sys.path.append("../lib/")
 from load_local_view import *
 from load_lon_st_graph import *
+from lib.load_ros_bag import LoadRosbag
 sys.path.append('../..')
 sys.path.append('../../../')
 
