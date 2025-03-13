@@ -2128,7 +2128,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   int optimal_path_index = -1;
   double min_cost = std::numeric_limits<double>::infinity();
   for (int k = 0; k < success_geometry_path_vec.size(); ++k) {
-    success_geometry_path_vec[k].PrintInfo();
+    // success_geometry_path_vec[k].PrintInfo();
     geometry_lib::GeometryPath complete_path;
     if (output_.path_segment_vec.size() > 0) {
       complete_path.SetPath(output_.path_segment_vec);
@@ -2642,7 +2642,7 @@ const bool PerpendicularTailInPathGenerator::OneArcPathPlan(
     double length = 0.0;
     geometry_lib::PathSegment new_line_seg;
     geometry_lib::GeometryPath new_geometry_path;
-    while (length < 1.26) {
+    while (length < 2.26) {
       length += 0.15;
       geometry_lib::CalLineFromPt(gear, length, pose, new_line_seg);
       if (TrimPathByObs(new_line_seg, lat_buffer, lon_buffer, enable_log) ==
@@ -2787,7 +2787,7 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
         double length = line_seg.Getlength();
         geometry_lib::PathSegment new_line_seg;
         geometry_lib::GeometryPath new_geometry_path;
-        while (length < line_seg.Getlength() + 1.26) {
+        while (length < line_seg.Getlength() + 2.26) {
           length += 0.15;
           geometry_lib::CalLineFromPt(line_gear, length, pose, new_line_seg);
           if (TwoArcPathPlan(new_line_seg.GetEndPose(), line_gear,
@@ -2997,7 +2997,7 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
           geometry_lib::PathSegment new_line_seg;
           geometry_lib::GeometryPath new_geometry_path;
 
-          while (length < 1.26) {
+          while (length < 2.26) {
             length += 0.15;
             geometry_lib::CalLineFromPt(arc1_gear, length,
                                         arc1_seg.GetEndPose(), new_line_seg);
