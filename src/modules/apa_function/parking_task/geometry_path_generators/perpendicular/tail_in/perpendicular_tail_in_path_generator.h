@@ -52,6 +52,21 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     COUNT,
   };
 
+  /// @brief 车辆姿态相对于泊车位的状态枚举
+  enum class PoseTypeRelativeToSlot : uint8_t {
+    OUT_SLOT,     ///< 完全在泊车位外部的状态
+    IN_SLOT,      ///< 完全进入泊车位内部的状态
+    OUT_IN_SLOT,  ///< 横跨泊车位内外的临界状态（部分在内外）
+  };
+
+  enum class ColDetMethod : uint8_t {
+    EDT_GEOMETRY,
+    EDT_GJK,
+    GJK,
+    GEOMETRY,
+    COUNT,
+  };
+
   struct PlannerParams {
     bool is_left_side = true;
     double slot_side_sgn = 1.0;
@@ -161,12 +176,10 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   // member function
   virtual void Preprocess() override;
 
-  const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
-                                    const double lat_inflation,
-                                    const double lon_safe_dist,
-                                    const bool enable_log = true,
-                                    const bool need_cal_obs_dist = true,
-                                    const bool use_edt_col = true);
+  const PathColDetRes TrimPathByObs(
+      geometry_lib::PathSegment &path_seg, const double lat_inflation,
+      const double lon_safe_dist, const bool enable_log = true,
+      const ColDetMethod method = ColDetMethod::EDT_GEOMETRY);
 
   const bool CalTurnAroundPose();
 
@@ -304,6 +317,14 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       const pnc::geometry_lib::PathPoint &current_pose);
 
   const bool CheckReachTargetPose();
+
+  const PoseTypeRelativeToSlot GetPoseTypeRelativeToSlot(
+      const geometry_lib::PathPoint &pose);
+
+  void CalcObsDistConsiderSlotForPathSeg(geometry_lib::PathSegment &path_seg);
+
+  void CalcObsDistConsiderSlotForGeometryPath(
+      geometry_lib::GeometryPath &geometry_path);
 
   PlannerParams calc_params_;
 };

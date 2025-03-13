@@ -66,8 +66,6 @@ class CollisionDetector {
     double remain_dist = 25.0;
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
-    std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{
-        26.8, pnc::geometry_lib::PathPoint()};
     Eigen::Vector2d col_pt_ego_global;
     Eigen::Vector2d col_pt_ego_local;
     Eigen::Vector2d col_pt_obs_global;

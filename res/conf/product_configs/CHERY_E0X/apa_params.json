@@ -229,7 +229,7 @@
   "last_update_slot_occupied_ratio": 0.836,
 
   "comment_15": "path planner params",
-  "new_itervative_solution": true,
+  "use_average_obs_dist": false,
   "min_turn_radius": 5.5786,
   "safe_circle_radius": 5.98,
   "max_radius_in_slot": 12.66,

@@ -305,7 +305,7 @@ struct ApaParameters {
   double last_update_slot_occupied_ratio = 0.836;
 
   // path planner params
-  bool new_itervative_solution = false;
+  bool use_average_obs_dist = false;
   double prepare_max_reverse_heading_err = 1.68;
   double prepare_line_min_x_offset_slot = 7.2;
   double prepare_line_dx_offset_slot = 0.1;

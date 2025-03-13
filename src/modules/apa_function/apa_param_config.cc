@@ -582,8 +582,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "last_update_slot_occupied_ratio");
 
   // path planner params
-  JSON_READ_VALUE(apa_param.SetPram().new_itervative_solution, bool,
-                  "new_itervative_solution");
+  JSON_READ_VALUE(apa_param.SetPram().use_average_obs_dist, bool,
+                  "use_average_obs_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().min_turn_radius, double,
                   "min_turn_radius");

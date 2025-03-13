@@ -152,7 +152,7 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   // return min dist between obs and car circle
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
                                  CarFootPrintCircleList *car_circle_list,
-                                 double *min_dist,
+                                 double *min_dist, int *circle_id,
                                  const double safe_dist = 0.5);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,

@@ -872,6 +872,11 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
   input.is_simulation = apa_world_ptr_->GetSimuParam().is_simulation;
 
+  if (input.is_simulation) {
+    apa_param.SetPram().use_average_obs_dist =
+        apa_world_ptr_->GetSimuParam().use_average_obs_dist;
+  }
+
   input.is_left_empty = frame_.is_left_empty;
   input.is_right_empty = frame_.is_right_empty;
 

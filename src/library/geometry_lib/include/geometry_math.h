@@ -303,6 +303,48 @@ struct PathPoint {
   }
 };
 
+enum class CarSafePos : uint8_t {
+  CAR_FRONT,
+  CAR_REAR,
+  ALL,
+};
+
+struct Pt2ObsDistInfo {
+  std::pair<double, PathPoint> dist_pt{26.8, PathPoint()};
+  int circle_id = -1;
+  CarSafePos car_safe_pos = CarSafePos::ALL;
+
+  Pt2ObsDistInfo() = default;
+  ~Pt2ObsDistInfo() = default;
+  Pt2ObsDistInfo(const std::pair<double, PathPoint> &_dist_pt,
+                 const int _circle_id, const CarSafePos _car_safe_pos) {
+    Set(_dist_pt, _circle_id, _car_safe_pos);
+  }
+  void Set(const std::pair<double, PathPoint> &_dist_pt, const int _circle_id,
+           const CarSafePos _car_safe_pos) {
+    dist_pt = _dist_pt;
+    circle_id = _circle_id;
+    car_safe_pos = _car_safe_pos;
+  }
+};
+
+struct ObsDistConsiderSlot {
+  // first is dist, second is pose
+  std::pair<double, PathPoint> out_slot{26.8, PathPoint()};
+
+  std::pair<double, PathPoint> in_slot{26.8, PathPoint()};
+
+  std::pair<double, PathPoint> integrated{26.8, PathPoint()};
+
+  void Reset() {
+    out_slot = std::pair<double, PathPoint>{26.8, PathPoint()};
+
+    in_slot = std::pair<double, PathPoint>{26.8, PathPoint()};
+
+    integrated = std::pair<double, PathPoint>{26.8, PathPoint()};
+  }
+};
+
 const PathPoint TransformPoseFromGlobalToLocal(const PathPoint &pose_global,
                                                const GlobalToLocalTf &g2l_tf);
 
@@ -473,8 +515,11 @@ struct PathSegment {
 
   double lat_buffer = 0.0;
 
-  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{26.8,
-                                                                 PathPoint()};
+  std::vector<Pt2ObsDistInfo> pt_obs_dist_info_vec;
+
+  ObsDistConsiderSlot obs_dist_info;
+
+  double average_obs_dist = 26.8;
 
   LineSegment line_seg;
   Arc arc_seg;
@@ -1014,10 +1059,9 @@ struct GeometryPath {
   double cur_gear_length = 0.0;
   uint8_t path_count = 0;
   double cost = 0.0;
-  std::pair<double, pnc::geometry_lib::PathPoint> pt_closest2obs{26.8,
-                                                                 PathPoint()};
-  // first is outslot, second is in slot
-  std::pair<double, double> obs_dist{26.8, 26.8};
+
+  ObsDistConsiderSlot obs_dist_info;
+  double average_obs_dist = 26.8;
   double gear_change_cost = 0.0;
   double length_cost = 0.0;
   double steer_change_cost = 0.0;
@@ -1083,8 +1127,8 @@ struct GeometryPath {
     steer_change_count = 0;
     total_length = 0.0;
     cur_gear_length = 0.0;
-    pt_closest2obs = std::make_pair(26.8, PathPoint());
-    obs_dist = std::make_pair(26.8, 26.8);
+    obs_dist_info.Reset();
+    average_obs_dist = 26.8;
     cost = 0.0;
     gear_change_cost = 0.0;
     length_cost = 0.0;

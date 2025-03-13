@@ -1,16 +1,18 @@
 #include "edt_collision_detector.h"
 
+#include <opencv2/imgproc/types_c.h>
+
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/imgproc/types_c.h>
 #include <utility>
 
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
+#include "collision_detection/base_collision_detector.h"
 #include "geometry_math.h"
 #include "log_glog.h"
 
@@ -500,7 +502,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const geometry_lib::PathPoint &pt, CarFootPrintCircleList *car_circle_list,
-    double *min_dist, const double safe_dist) {
+    double *min_dist, int *circle_id, const double safe_dist) {
   car_circle_list->LocalToGlobal(pt);
 
   CarFootPrintCircle *circle = nullptr;
@@ -514,12 +516,14 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
   center_index = GetIndexFromSlotPose(circle->center_global);
   if (!IsIndexValid(center_index)) {
     *min_dist = 0.0;
+    *circle_id = -1;
     return true;
   }
   dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
          circle->radius;
   if (dist > safe_dist) {
     *min_dist = dist;
+    *circle_id = -1;
     return false;
   }
 
@@ -531,16 +535,19 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     center_index = GetIndexFromSlotPose(circle->center_global);
     if (!IsIndexValid(center_index)) {
       *min_dist = 0.0;
+      *circle_id = -1;
       return true;
     }
     dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
            circle->radius;
     if (dist < 0.0f) {
       *min_dist = dist;
+      *circle_id = -1;
       return true;
     }
     if (dist < *min_dist) {
       *min_dist = dist;
+      *circle_id = i;
     }
   }
 
@@ -604,14 +611,30 @@ const ColResult EDTCollisionDetector::Update(
   double min_obs_dist = 26.8;
   geometry_lib::PathPoint pt_closest_to_obs;
   double obs_dist = 0.0;
+  int circle_id = -1;
+  geometry_lib::CarSafePos car_safe_pos = geometry_lib::CarSafePos::ALL;
   CarFootPrintCircleList *car_circle_list = nullptr;
   for (const geometry_lib::PathPoint &pt : path_pt_vec_) {
     if (need_cal_obs_dist) {
-      col_flag =
-          IsCollisionForPoint(pt, &car_with_mirror_circles_list_, &obs_dist);
+      col_flag = IsCollisionForPoint(pt, &car_with_mirror_circles_list_,
+                                     &obs_dist, &circle_id);
       if (obs_dist < min_obs_dist && pt.s < col_res_.remain_car_dist + 1e-3) {
         min_obs_dist = obs_dist;
         pt_closest_to_obs = pt;
+      }
+      if (pt.s < col_res_.remain_car_dist + 1e-3) {
+        if (circle_id == -1) {
+          car_safe_pos = geometry_lib::CarSafePos::ALL;
+        } else if (circle_id >= 0 && circle_id <= 6 && circle_id != 3 &&
+                   circle_id != 4) {
+          car_safe_pos = geometry_lib::CarSafePos::CAR_REAR;
+        } else {
+          car_safe_pos = geometry_lib::CarSafePos::CAR_FRONT;
+        }
+        col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
+            std::pair<double, geometry_lib::PathPoint>{obs_dist + lat_buffer,
+                                                       pt},
+            circle_id, car_safe_pos));
       }
     } else {
       col_flag = IsCollisionForPoint(pt, &car_with_mirror_circles_list_);
@@ -622,8 +645,8 @@ const ColResult EDTCollisionDetector::Update(
     }
 #if have_different_height_car_circle
     if (need_cal_obs_dist) {
-      col_flag =
-          IsCollisionForPoint(pt, &car_without_mirror_circles_list_, &obs_dist);
+      col_flag = IsCollisionForPoint(pt, &car_without_mirror_circles_list_,
+                                     &obs_dist, &circle_id);
       if (obs_dist < min_obs_dist) {
         min_obs_dist = obs_dist;
         pt_closest_to_obs = pt;
@@ -637,7 +660,8 @@ const ColResult EDTCollisionDetector::Update(
     }
 
     if (need_cal_obs_dist) {
-      col_flag = IsCollisionForPoint(pt, &car_chassis_circles_list_, &obs_dist);
+      col_flag = IsCollisionForPoint(pt, &car_chassis_circles_list_, &obs_dist,
+                                     &circle_id);
       if (obs_dist < min_obs_dist) {
         min_obs_dist = obs_dist;
         pt_closest_to_obs = pt;
