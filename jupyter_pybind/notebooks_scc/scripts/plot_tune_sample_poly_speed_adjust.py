@@ -74,6 +74,7 @@ output_notebook()
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
+global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 fig1.height = 1550
 

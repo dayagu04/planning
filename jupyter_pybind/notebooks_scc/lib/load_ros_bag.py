@@ -688,8 +688,6 @@ class LoadRosbag:
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['data'].append(msg)
         self.plan_debug_msg['timestamp'].append(msg.timestamp)
-        if msg.frame_info.scene_type != 'HIGHWAY':
-          scene_type = msg.frame_info.scene_type
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -848,6 +846,12 @@ class LoadRosbag:
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['data'].append(msg)
         self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
+        # if msg.current_state > 13 and msg.current_state < 19:
+        #   scene_type = 'PARKING_APA'
+        if msg.current_state >= 4 and msg.current_state <= 12:
+          scene_type = 'HIGHWAY'
+        elif msg.current_state >= 50 and msg.current_state <= 62:
+          scene_type = 'HPP'
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
