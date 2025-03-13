@@ -260,13 +260,11 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                             const bool same_gear = false,
                             const bool enable_log = true);
 
-  const bool AlignAndSTurnPathPlan(const geometry_lib::PathPoint &pose,
-                                   const uint8_t ref_gear,
-                                   const double lat_buffer,
-                                   const double lon_buffer,
-                                   geometry_lib::GeometryPath &geometry_path,
-                                   const bool enable_log = true,
-                                   const bool easy_to_line = false);
+  const bool AlignAndSTurnPathPlan(
+      const geometry_lib::PathPoint &pose, const uint8_t ref_gear,
+      const double lat_buffer, const double lon_buffer,
+      geometry_lib::GeometryPath &geometry_path, const bool same_gear = false,
+      const bool enable_log = true, const bool easy_to_line = false);
 
   const bool DubinsPathPlan(const geometry_lib::PathPoint &pose,
                             const uint8_t ref_gear, const double lat_buffer,

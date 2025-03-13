@@ -1855,7 +1855,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   const size_t max_seg_path_count = 222;
   std::vector<geometry_lib::GeometryPath> geometry_path_vec;
   geometry_path_vec.reserve(max_seg_path_count);
-  const size_t max_path_count = 5;
+  const size_t max_path_count = 10;
   std::vector<geometry_lib::GeometryPath> success_geometry_path_vec;
   success_geometry_path_vec.reserve(max_path_count);
   geometry_lib::GeometryPath geometry_path;
@@ -2222,19 +2222,17 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
                                   .GetEndPos()
                                   .y()));
 
-    // 从库内往库外运动时 尽量x值不要太大 否则增加代价
+    // 前进挡 尽量x值不要太大 否则增加代价
+    const double slot_max_x = input_.ego_info_under_slot.slot
+                                  .processed_corner_coord_local_.pt_01_mid.x() +
+                              1.28;
     for (const auto& seg : complete_path.path_segment_vec) {
       if (seg.seg_gear == geometry_lib::SEG_GEAR_DRIVE) {
-        const double slot_x = input_.ego_info_under_slot.slot
-                                  .processed_corner_coord_local_.pt_01_mid.x();
-        if (seg.GetStartPos().x() < slot_x &&
-            seg.GetEndPos().x() > slot_x + 1.28) {
-          cost += (seg.GetEndPos().x() - slot_x - 1.28) * 16.8;
+        if (seg.GetEndPos().x() > slot_max_x) {
+          cost += (seg.GetEndPos().x() - slot_max_x) * 68.0;
         }
       }
     }
-
-    // 当当前段
 
     // 整条路径的换挡、换向和长度代价
     cost += complete_path.cost;
@@ -2425,7 +2423,7 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
         TrimPathByObs(arc_seg, lat_buffer, lon_buffer, false);
         if (AlignAndSTurnPathPlan(arc_seg.GetEndPose(),
                                   geometry_lib::SEG_GEAR_REVERSE, lat_buffer,
-                                  lon_buffer, new_geometry_path, false, true)) {
+                                  lon_buffer, new_geometry_path, true, true)) {
           // leave some length redundancy
           double actual_length = length + 0.368;
           actual_length =
@@ -2479,7 +2477,7 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
         TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
         if (AlignAndSTurnPathPlan(line_seg.GetEndPose(),
                                   geometry_lib::SEG_GEAR_REVERSE, lat_buffer,
-                                  lon_buffer, new_geometry_path, false, true)) {
+                                  lon_buffer, new_geometry_path, true, true)) {
           // leave some length redundancy
           double actual_length = length + 0.368;
           actual_length =
@@ -2533,7 +2531,12 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
   }
 
   if (AlignAndSTurnPathPlan(pose, ref_gear, lat_buffer, lon_buffer,
-                            geometry_path, enable_log)) {
+                            geometry_path, true, enable_log)) {
+    geometry_path_vec.emplace_back(geometry_path);
+  }
+
+  if (AlignAndSTurnPathPlan(pose, ref_gear, lat_buffer, lon_buffer,
+                            geometry_path, false, enable_log)) {
     geometry_path_vec.emplace_back(geometry_path);
   }
 
@@ -3126,9 +3129,10 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
 const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
     const geometry_lib::PathPoint& pose, const uint8_t ref_gear,
     const double lat_buffer, const double lon_buffer,
-    geometry_lib::GeometryPath& geometry_path, const bool enable_log,
-    const bool easy_to_line) {
-  ILOG_INFO_IF(enable_log) << "\n----enter align and s_turn path plan----";
+    geometry_lib::GeometryPath& geometry_path, const bool same_gear,
+    const bool enable_log, const bool easy_to_line) {
+  ILOG_INFO_IF(enable_log) << "\n----enter" << same_gear
+                           << "and s_turn path plan----";
   geometry_path.Reset();
   bool success = false;
   const double tar_heading = calc_params_.target_line.heading;
@@ -3220,16 +3224,18 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
                                  1.0 * radius};
 
   if (easy_to_line) {
-    radius_vec =
-        std::vector<double>{2.5 * radius,  2.25 * radius, 2.0 * radius,
-                            1.75 * radius, 1.5 * radius,  1.25 * radius};
+    radius_vec = std::vector<double>{2.5 * radius, 2.25 * radius, 2.0 * radius,
+                                     1.75 * radius, 1.5 * radius};
   }
+
+  const uint8_t s_turn_ref_gear =
+      same_gear ? ref_gear : geometry_lib::ReverseGear(ref_gear);
 
   std::vector<geometry_lib::PathPoint> virtual_target_pose_vec;
 
   if (CalOccupiedRatio(geometry_lib::PathPoint(arc_s_1.pA, arc_s_1.headingA)) >
           0.168 &&
-      ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
+      s_turn_ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
     const double dy = (arc_s_1.pA.y() > target_line.pA.y()) ? 0.01 : -0.01;
 
     double max_lat_err = (input_.is_replan_dynamic)
@@ -3265,7 +3271,7 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
       arc_s_2.headingB = virtual_target_pose.heading;
 
       success = pnc::geometry_lib::CalTwoArcWithSameHeading(arc_s_1, arc_s_2,
-                                                            ref_gear);
+                                                            s_turn_ref_gear);
 
       success =
           success &&
@@ -3282,7 +3288,8 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
       const uint8_t steer2 = geometry_lib::CalArcSteer(arc_s_2);
       const uint8_t gear2 = geometry_lib::CalArcGear(arc_s_2);
 
-      success = success && (gear1 == ref_gear) && (gear2 == ref_gear);
+      success =
+          success && (gear1 == s_turn_ref_gear) && (gear2 == s_turn_ref_gear);
 
       geometry_lib::PathSegment arc_seg1(steer1, gear1, arc_s_1);
       geometry_lib::PathSegment arc_seg2(steer2, gear2, arc_s_2);
@@ -3293,7 +3300,7 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
                 (TrimPathByObs(arc_seg2, lat_buffer, lon_buffer, enable_log) ==
                  PathColDetRes::NORMAL);
 
-      if (success && ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
+      if (success && s_turn_ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
         // ensure that there is a straight line connecting the end
         // pose
         success =
@@ -3302,8 +3309,10 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
 
       if (success) {
         find_res = true;
-        geometry_path.AddPath(
-            std::vector<geometry_lib::PathSegment>{arc_seg1, arc_seg2});
+        if (same_gear) {
+          geometry_path.AddPath(
+              std::vector<geometry_lib::PathSegment>{arc_seg1, arc_seg2});
+        }
         break;
       }
     }
