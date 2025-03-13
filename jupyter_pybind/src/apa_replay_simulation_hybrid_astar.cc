@@ -1069,6 +1069,35 @@ std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
   return speed_profile;
 }
 
+std::vector<Eigen::VectorXd> GetJLTSpeedData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd point(5);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_profile.emplace_back(point);
+    return speed_profile;
+  }
+
+  int size = speed_debug->jlt_profile_size();
+  for (int i = 0; i < size; i++) {
+    point[0] = speed_debug->jlt_profile(i).s();
+    point[1] = speed_debug->jlt_profile(i).t();
+    point[2] = speed_debug->jlt_profile(i).vel();
+    point[3] = speed_debug->jlt_profile(i).acc();
+    point[4] = speed_debug->jlt_profile(i).jerk();
+
+    speed_profile.push_back(point);
+  }
+
+  return speed_profile;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -1101,6 +1130,7 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetRefCruiseSpeed", &GetRefCruiseSpeed)
       .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
       .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
+      .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetDynamicState", &GetDynamicState);
 }

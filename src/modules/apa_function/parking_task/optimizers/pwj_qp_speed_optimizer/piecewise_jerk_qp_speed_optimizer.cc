@@ -13,7 +13,7 @@
 
 namespace planning {
 
-#define DECIDER_DEBUG (0)
+#define DECIDER_DEBUG (1)
 
 PiecewiseJerkSpeedQPOptimizer::PiecewiseJerkSpeedQPOptimizer() {}
 
@@ -23,6 +23,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   qp_config_.Init();
   speed_limit_profile_ = speed_limit_profile;
   qp_speed_data_ = dp_speed_data;
+  solver_state_ = SpeedOptimizerState::NONE;
 
   if (speed_limit_profile == nullptr || dp_speed_data.size() < 2) {
     ILOG_INFO << "speed data is null";
@@ -37,6 +38,11 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
 
   double delta_time = qp_config_.delta_time;
   double total_length = qp_speed_data_.back().s;
+
+  if (total_length < qp_config_.enable_qp_by_path_length) {
+    return;
+  }
+
   double total_time = qp_speed_data_.back().t;
   num_of_knots_ = std::ceil(total_time / delta_time) + 1;
 
@@ -95,6 +101,8 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   }
   if (x_ref.empty() || dx_ref.empty()) {
     ILOG_INFO << "size is null";
+
+    solver_state_ = SpeedOptimizerState::FAIL;
     return;
   }
 
@@ -125,6 +133,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   // Solve the problem
   if (!piecewise_jerk_problem.Optimize(10000)) {
     ILOG_INFO << "Piecewise jerk speed optimizer failed!";
+    solver_state_ = SpeedOptimizerState::FAIL;
     return;
   }
 
@@ -150,6 +159,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
 
   RecordDebugInfo(x_ref, s_dot_bounds);
 
+  solver_state_ = SpeedOptimizerState::SUCCESS;
   ILOG_INFO << "speed qp opt finish";
 
   return;

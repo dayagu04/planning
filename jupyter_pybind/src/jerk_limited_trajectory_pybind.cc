@@ -11,6 +11,7 @@ namespace py = pybind11;
 using namespace planning;
 
 static planning::jlt::JerkLimitedTrajectory *pBase = nullptr;
+double delta_time = 0.1;
 
 int Init() {
   pBase = new jlt::JerkLimitedTrajectory();
@@ -35,13 +36,26 @@ int UpdateByParams(double s0, double v0, double a0, double s_des, double v_des,
   init_point_state.v = v0;
   init_point_state.a = a0;
 
-  pBase->Update(init_point_state, state_limit, planning::jlt::SOLVE_VEL, 0.1);
+  pBase->Update(init_point_state, state_limit, planning::jlt::SOLVE_POS,
+                delta_time);
 
   return 0;
 }
 
 double GetTotalTime() {
   auto time = pBase->ParamLength();
+  return time;
+}
+
+std::vector<double> GetTimeVector() {
+  auto p = pBase->GetSCurve();
+
+  std::vector<double> time;
+  time.emplace_back(0.0);
+  for (size_t i = 1; i < p.size(); i++) {
+    time.emplace_back(time.back() + delta_time);
+  }
+
   return time;
 }
 
@@ -63,6 +77,29 @@ std::vector<double> GetAccOutput() {
 std::vector<double> GetJerkOutput() {
   auto j = pBase->GetJerkCurve();
   return j;
+}
+
+std::vector<Eigen::VectorXd> GetJLTSpeedData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd point(5);
+
+  auto s = GetSOutput();
+  auto t = GetTimeVector();
+  auto v = GetVelOutput();
+  auto acc = GetAccOutput();
+  auto jerk = GetJerkOutput();
+
+  for (int i = 0; i < s.size(); i++) {
+    v[0] = s[i];
+    v[1] = t[i];
+    v[2] = v[i];
+    v[3] = acc[i];
+    v[4] = jerk[i];
+
+    speed_profile.push_back(point);
+  }
+
+  return speed_profile;
 }
 
 PYBIND11_MODULE(jerk_limited_trajectory_py, m) {

@@ -332,4 +332,12 @@ void ApaTrajectoryStitcher::EvaluateStitchTraj(
   return;
 }
 
+const double ApaTrajectoryStitcher::GetStitchTrajLength() const {
+  if (trajectory_.empty()) {
+    return 0.0;
+  }
+
+  return trajectory_.back().s;
+}
+
 }  // namespace planning

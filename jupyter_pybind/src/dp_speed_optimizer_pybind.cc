@@ -40,17 +40,25 @@
 #include "src/modules/apa_function/parking_task/optimizers/sv_dp_optimizer/dp_speed_optimizer.h"
 #include "transform2d.h"
 #include "virtual_wall_decider.h"
+#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 using namespace planning;
 using namespace pnc::geometry_lib;
 
+// test item:
+// pwj qp speed planning
+// sv dynamic programming speed planning
+// jerk limited trajectory speed planning
+// lattice speed planning;
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
 static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
 std::vector<Eigen::Vector3d> global_path_;
 SpeedData dp_speed_profile_;
 SpeedData qp_speed_profile_;
+SpeedData jlt_speed_profile_;
+double delta_time = 0.1;
 
 void Init() {
   FilePath::SetName("dp_speed_optimizer");
@@ -144,7 +152,8 @@ void UpdatePathObsDistance(std::vector<pnc::geometry_lib::PathPoint> &path,
 std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     double path_length, double path_radius,
                                     double ego_v, double ego_acc, double obs_s,
-                                    double dist_to_obs, double max_cruise_speed) {
+                                    double dist_to_obs, double max_cruise_speed,
+                                    double jlt_acc_lower) {
   // generate path
   global_path_.clear();
 
@@ -225,6 +234,10 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   qp_speed_optimizer.Execute(init_point, &speed_limit, dp_speed_profile_);
   qp_speed_profile_ = qp_speed_optimizer.GetSpeedData();
+
+  JerkLimitedTrajOptimizer jlt_optimizer;
+  jlt_optimizer.Execute(init_point, path_length);
+  jlt_speed_profile_ = jlt_optimizer.GetSpeedData();
 
   return global_path_;
 }
@@ -374,6 +387,23 @@ std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
   return speed_profile;
 }
 
+std::vector<Eigen::VectorXd> GetJLTSpeedData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd v(5);
+
+  for (int i = 0; i < jlt_speed_profile_.size(); i++) {
+    v[0] = jlt_speed_profile_[i].s;
+    v[1] = jlt_speed_profile_[i].t;
+    v[2] = jlt_speed_profile_[i].v;
+    v[3] = jlt_speed_profile_[i].a;
+    v[4] = jlt_speed_profile_[i].da;
+
+    speed_profile.push_back(v);
+  }
+
+  return speed_profile;
+}
+
 PYBIND11_MODULE(dp_speed_optimizer_py, m) {
   m.doc() = "m";
 
@@ -382,6 +412,7 @@ PYBIND11_MODULE(dp_speed_optimizer_py, m) {
       .def("GetRefCruiseSpeed", &GetRefCruiseSpeed)
       .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
       .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
+      .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetQPSpeedConstraints", &GetQPSpeedConstraints)
       .def("GetDpSpeedConstraints", &GetDpSpeedConstraints);
 }

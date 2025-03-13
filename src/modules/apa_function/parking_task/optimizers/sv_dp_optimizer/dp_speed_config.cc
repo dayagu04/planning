@@ -39,6 +39,8 @@ void DpSpeedConfig::Init() {
 
   s_interpolate_step = 0.02;
 
+  enable_dp_by_path_length = 0.6;
+
   return;
 }
 

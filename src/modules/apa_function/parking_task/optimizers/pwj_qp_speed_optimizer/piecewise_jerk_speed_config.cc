@@ -11,6 +11,8 @@ void PiecewiseJerkSpeedQPConfig::Init() {
   ref_v_weight = 10.0;
   ref_s_weight = 1.0;
 
+  enable_qp_by_path_length = 0.6;
+
   return;
 }
 

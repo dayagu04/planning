@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18049/common_frame/20250222/20250222-20-03-50/data_collection_CHERY_E0Y_18049_ALL_MANUAL_2025-02-22-20-03-50_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250310/20250310-10-38-13/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-03-10-10-38-13_no_camera.bag'
 #bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -262,7 +262,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
     ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
     data_valid['fus_ground_line_msg_idx'] = True
-    print('ground line size',ground_line_msg.ground_lines_size)
   else:
     ground_line_msg = GroundLinePerceptionInfo()
 
@@ -1124,6 +1123,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
     update_lon_plan_online_data(
         dp_speed_constraints, qp_speed_constraints, ref_cruise_speed, dp_speed_data, qp_speed_data, lon_plan_data)
+
+    # jlt data
+    jlt_speed_data = replay_simulation_hybrid_astar.GetJLTSpeedData()
+    update_jlt_online_data(jlt_speed_data, lon_plan_data)
 
     update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 

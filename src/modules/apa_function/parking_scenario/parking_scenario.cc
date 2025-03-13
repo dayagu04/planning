@@ -14,9 +14,11 @@
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "dp_speed_common.h"
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
+#include "optimizer_common.h"
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
@@ -25,6 +27,7 @@
 #include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
 #include "traj_stitcher/apa_trajectory_stitcher.h"
+#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 
 namespace planning {
 namespace apa_planner {
@@ -513,7 +516,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
-  // task
+  // task: update traj stitcher
   ApaTrajectoryStitcher traj_stitcher;
   traj_stitcher.Process(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
@@ -535,19 +538,19 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   SpeedDecisions speed_decisions;
   stop_decider.Process(tracking_path_collision_dist,
-                       traj_stitcher.GetMutableStichTrajectory(),
+                       traj_stitcher.GetMutableStitchTrajectory(),
                        &speed_decisions);
 
   // task: update speed limit decision
   ParkSpeedLimitDecider speed_limit_decider;
-  speed_limit_decider.Process(traj_stitcher.GetConstStichTrajectory(),
+  speed_limit_decider.Process(traj_stitcher.GetConstStitchTrajectory(),
                               &speed_decisions);
 
   // task: generate dp speed
   DpSpeedOptimizer dp_speed_optimizer;
   dp_speed_optimizer.Init();
   dp_speed_optimizer.Excute(
-      traj_stitcher.GetConstStichTrajectory(),
+      traj_stitcher.GetConstStitchTrajectory(),
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
       std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()), 0.0,
       &speed_decisions, &speed_limit_decider.GetSpeedLimitProfile());
@@ -555,9 +558,16 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   // task: generate qp speed
   PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
   const SpeedData& dp_speed = dp_speed_optimizer.SpeedProfile();
-  qp_speed_optimizer.Execute(dp_speed_optimizer.GetStartSpeedPoint(),
-                             &speed_limit_decider.GetSpeedLimitProfile(),
-                             dp_speed);
+  SVPoint init_point = dp_speed_optimizer.GetStartSpeedPoint();
+  qp_speed_optimizer.Execute(
+      init_point, &speed_limit_decider.GetSpeedLimitProfile(), dp_speed);
+
+  // task: generate jlt speed
+  if (dp_speed_optimizer.GetDPState() != SpeedOptimizerState::SUCCESS ||
+      qp_speed_optimizer.GetQPState() != SpeedOptimizerState::SUCCESS) {
+    JerkLimitedTrajOptimizer jlt_optimizer;
+    jlt_optimizer.Execute(init_point, traj_stitcher.GetStitchTrajLength());
+  }
 
   return;
 }

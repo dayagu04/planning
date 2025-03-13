@@ -45,6 +45,9 @@ class DpSpeedConfig {
   double jerk_penalty;
 
   double s_interpolate_step;
+
+  // If path is short, qp is not valid because of discret time nodes.
+  double enable_dp_by_path_length;
 };
 
 }  // namespace planning
