@@ -67,6 +67,13 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     COUNT,
   };
 
+  enum class GeometryPathType : uint8_t {
+    ONE_ARC,
+    LINE_ARC,
+    TWO_ARC,
+    ALIGNBODY_STURN,
+  };
+
   struct PlannerParams {
     bool is_left_side = true;
     double slot_side_sgn = 1.0;
@@ -323,6 +330,12 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   void CalcObsDistConsiderSlotForGeometryPath(
       geometry_lib::GeometryPath &geometry_path);
+
+  const bool FindPtCanReverseToSlot(
+      std::vector<geometry_lib::PathSegment> &seg_vec, const uint8_t gear,
+      const uint8_t steer, const double radius, const double max_length,
+      const geometry_lib::PathPoint &pose, const double lat_buffer,
+      const double lon_buffer, const GeometryPathType type);
 
   PlannerParams calc_params_;
 };

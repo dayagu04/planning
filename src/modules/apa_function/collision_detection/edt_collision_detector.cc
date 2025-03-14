@@ -625,8 +625,8 @@ const ColResult EDTCollisionDetector::Update(
       if (pt.s < col_res_.remain_car_dist + 1e-3) {
         if (circle_id == -1) {
           car_safe_pos = geometry_lib::CarSafePos::ALL;
-        } else if (circle_id >= 0 && circle_id <= 6 && circle_id != 3 &&
-                   circle_id != 4) {
+        } else if (circle_id == 0 || circle_id == 1 || circle_id == 2 ||
+                   circle_id == 5 || circle_id == 6) {
           car_safe_pos = geometry_lib::CarSafePos::CAR_REAR;
         } else {
           car_safe_pos = geometry_lib::CarSafePos::CAR_FRONT;
