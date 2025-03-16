@@ -225,7 +225,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       if (dubins_path.path_count > 0 && dubins_path.gear_change_count < 1) {
         double weight = 0.0;
         if (dubins_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
-          weight = 60.0;
+          weight = 66.0;
         } else {
           weight = 26.0;
         }
@@ -270,13 +270,13 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         if (obs_dist_out_slot > max_dis) {
           obs_dist_cost_out_slot += 86.8 / max_dis;
         } else if (obs_dist_out_slot < min_dis) {
-          obs_dist_cost_out_slot += 106.8 / obs_dist_out_slot;
+          obs_dist_cost_out_slot += 168.8 / obs_dist_out_slot;
         } else {
           obs_dist_cost_out_slot += 86.8 / obs_dist_out_slot;
         }
 
-        if (obs_dist_in_slot > 0.268) {
-          obs_dist_cost_in_slot += 18.6 / 0.268;
+        if (obs_dist_in_slot > 0.25) {
+          obs_dist_cost_in_slot += 18.6 / 0.25;
         } else if (obs_dist_in_slot < 0.18) {
           obs_dist_cost_in_slot += 26.8 / obs_dist_in_slot;
         } else {
@@ -347,8 +347,18 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         if (std::fabs(pose.pos.y()) > 3.68) {
           far_to_slot_cost += (std::fabs(pose.pos.y()) - 3.67) * 68.8;
         }
-        if (std::fabs(pose.pos.x()) > 7.56) {
-          far_to_slot_cost += (std::fabs(pose.pos.x()) - 7.55) * 30.8;
+        if (std::fabs(pose.pos.x()) > 7.96) {
+          far_to_slot_cost += (std::fabs(pose.pos.x()) - 7.95) * 30.8;
+        }
+      }
+
+      // 路径超过目标终点代价
+      double path_out_target_cost = 0.0;
+      for (const auto& seg : complete_path.path_segment_vec) {
+        if (seg.GetStartPos().x() <
+            input_.ego_info_under_slot.target_pose.pos.x()) {
+          path_out_target_cost += 168.0;
+          break;
         }
       }
 
@@ -366,10 +376,11 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       // gear_change_in_slot_cost = 0.0;
       // last_line_length_cost = 0.0;
       // 整条路径的换挡、换向和长度代价
-      cost += (complete_path.cost + one_step_cost + cur_gear_path_length_cost +
-               obs_dist_cost + fist_reverse_path_err_cost + ego_pose_cost +
-               dubins_path_cost + gear_change_in_slot_cost +
-               last_line_length_cost + ref_gear_cost + far_to_slot_cost);
+      cost +=
+          (complete_path.cost + one_step_cost + cur_gear_path_length_cost +
+           obs_dist_cost + fist_reverse_path_err_cost + ego_pose_cost +
+           dubins_path_cost + gear_change_in_slot_cost + last_line_length_cost +
+           ref_gear_cost + far_to_slot_cost + path_out_target_cost);
 
       if (cost_index_map.size() > debug_path_number - 1) {
         cost_index_map.erase(std::prev(cost_index_map.end()));
@@ -399,7 +410,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
                   << "  last_line_length_cost = " << last_line_length_cost
                   << "  one_step_cost = " << one_step_cost
                   << "  far_to_slot_cost = " << far_to_slot_cost
-                  << "  ref_gear_cost = " << ref_gear_cost;
+                  << "  ref_gear_cost = " << ref_gear_cost
+                  << "  path_out_target_cost = " << path_out_target_cost;
       }
     }
 
@@ -427,6 +439,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
             pair_geometry_path_vec[pair.second].second;
         geometry_lib::GeometryPath complete_path = dubins_path;
         complete_path.AddPath(rough_path);
+        // complete_path.PrintInfo();
         output_.perferred_geometry_path_vec.emplace_back(complete_path);
         ILOG_INFO << "gear_change_count = "
                   << static_cast<int>(complete_path.gear_change_count)
@@ -2243,7 +2256,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
         (26.8 *
              std::max(std::fabs(complete_path.cur_gear_path_segments_vec.back()
                                     .GetEndHeading()),
-                      8.6 * kRad2Deg) +
+                      8.6 * kDeg2Rad) +
          16.8 *
              std::max(std::fabs(complete_path.cur_gear_path_segments_vec.back()
                                     .GetEndPos()
@@ -2254,11 +2267,26 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     const double slot_max_x = input_.ego_info_under_slot.slot
                                   .processed_corner_coord_local_.pt_01_mid.x() +
                               1.08;
-    for (const auto& seg : complete_path.path_segment_vec) {
-      if (seg.seg_gear == geometry_lib::SEG_GEAR_DRIVE) {
-        if (seg.GetEndPos().x() > slot_max_x) {
-          cost += (seg.GetEndPos().x() - slot_max_x) * 106.8;
+    double drive_max_x = -168.0;
+    for (size_t i = 0; i < complete_path.path_count; ++i) {
+      if (complete_path.path_segment_vec[i].seg_gear ==
+          geometry_lib::SEG_GEAR_DRIVE) {
+        drive_max_x = std::max(
+            drive_max_x, complete_path.path_segment_vec[i].GetEndPos().x());
+      } else {
+        if (drive_max_x > slot_max_x) {
+          cost += ((drive_max_x - slot_max_x) * 106.8);
         }
+        drive_max_x = -168.0;
+      }
+    }
+
+    // 路径超过目标终点代价
+    for (const auto& seg : complete_path.path_segment_vec) {
+      if (seg.GetStartPos().x() <
+          input_.ego_info_under_slot.target_pose.pos.x()) {
+        cost += 168.0;
+        break;
       }
     }
 
@@ -2484,16 +2512,84 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
       new_geometry_path.PrintInfo(enable_log);
       geometry_path_vec.emplace_back(new_geometry_path);
     }
+
+    if (geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        geometry_path.path_count == 1 &&
+        geometry_path.path_segment_vec.back().seg_type ==
+            geometry_lib::SEG_TYPE_ARC &&
+        !geometry_path.collide_flag &&
+        geometry_path.end_pose.pos.x() <
+            calc_params_.target_line.pA.x() + 0.0168) {
+      double length = geometry_path.total_length;
+      geometry_lib::PathSegment seg;
+      while (length > 1.68) {
+        length -= 0.2;
+        geometry_lib::CalArcFromPt(
+            geometry_path.cur_gear, geometry_path.cur_steer, length,
+            geometry_path.path_segment_vec[0].arc_seg.circle_info.radius, pose,
+            seg);
+        if (seg.GetEndPos().x() > calc_params_.target_line.pA.x() + 0.86) {
+          geometry_path_vec.emplace_back(geometry_lib::GeometryPath(seg));
+          break;
+        }
+      }
+    }
   }
 
   if (TwoArcPathPlan(pose, ref_gear, lat_buffer, lon_buffer, geometry_path,
                      false, enable_log)) {
     geometry_path_vec.emplace_back(geometry_path);
+
+    if (geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        !geometry_path.collide_flag && geometry_path.path_count == 1 &&
+        geometry_path.end_pose.pos.x() <
+            calc_params_.target_line.pA.x() + 1.26) {
+      double length = geometry_path.total_length;
+      geometry_lib::PathSegment seg;
+      while (length > 1.68) {
+        length -= 0.168;
+        geometry_lib::CalArcFromPt(
+            geometry_path.cur_gear, geometry_path.cur_steer, length,
+            geometry_path.path_segment_vec[0].arc_seg.circle_info.radius, pose,
+            seg);
+        if (seg.GetEndPos().x() > calc_params_.target_line.pA.x() + 1.26) {
+          geometry_path_vec.emplace_back(geometry_lib::GeometryPath(seg));
+          break;
+        }
+      }
+    }
   }
 
   if (TwoArcPathPlan(pose, ref_gear, lat_buffer, lon_buffer, geometry_path,
                      true, enable_log)) {
     geometry_path_vec.emplace_back(geometry_path);
+
+    if (geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        geometry_path.path_count == 2 &&
+        geometry_path.path_segment_vec[0].Getlength() <
+            geometry_path.path_segment_vec[1].Getlength() &&
+        geometry_path.path_segment_vec.back().seg_type ==
+            geometry_lib::SEG_TYPE_ARC &&
+        !geometry_path.collide_flag &&
+        geometry_path.end_pose.pos.x() <
+            calc_params_.target_line.pA.x() + 0.0168) {
+      double length = geometry_path.path_segment_vec[1].Getlength();
+      geometry_lib::PathSegment seg;
+      while (length > 1.68) {
+        length -= 0.2;
+        geometry_lib::CalArcFromPt(
+            geometry_path.path_segment_vec[1].seg_gear,
+            geometry_path.path_segment_vec[1].seg_steer, length,
+            geometry_path.path_segment_vec[1].arc_seg.circle_info.radius,
+            geometry_path.path_segment_vec[1].GetStartPose(), seg);
+        if (seg.GetEndPos().x() > calc_params_.target_line.pA.x() + 0.86) {
+          geometry_path_vec.emplace_back(
+              geometry_lib::GeometryPath(std::vector<geometry_lib::PathSegment>{
+                  geometry_path.path_segment_vec[0], seg}));
+          break;
+        }
+      }
+    }
   }
 
   if (LineArcPathPlan(pose, ref_gear, lat_buffer, lon_buffer, geometry_path,
@@ -2534,6 +2630,33 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
       new_geometry_path.PrintInfo(enable_log);
       geometry_path_vec.emplace_back(new_geometry_path);
     }
+
+    if (geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        geometry_path.path_count == 2 &&
+        geometry_path.path_segment_vec[0].Getlength() <
+            geometry_path.path_segment_vec[1].Getlength() &&
+        geometry_path.path_segment_vec.back().seg_type ==
+            geometry_lib::SEG_TYPE_ARC &&
+        !geometry_path.collide_flag &&
+        geometry_path.end_pose.pos.x() <
+            calc_params_.target_line.pA.x() + 0.0168) {
+      double length = geometry_path.path_segment_vec[1].Getlength();
+      geometry_lib::PathSegment seg;
+      while (length > 1.68) {
+        length -= 0.2;
+        geometry_lib::CalArcFromPt(
+            geometry_path.path_segment_vec[1].seg_gear,
+            geometry_path.path_segment_vec[1].seg_steer, length,
+            geometry_path.path_segment_vec[1].arc_seg.circle_info.radius,
+            geometry_path.path_segment_vec[1].GetStartPose(), seg);
+        if (seg.GetEndPos().x() > calc_params_.target_line.pA.x() + 0.86) {
+          geometry_path_vec.emplace_back(
+              geometry_lib::GeometryPath(std::vector<geometry_lib::PathSegment>{
+                  geometry_path.path_segment_vec[0], seg}));
+          break;
+        }
+      }
+    }
   }
 
   if (LineArcPathPlan(pose, ref_gear, lat_buffer, lon_buffer, geometry_path,
@@ -2564,11 +2687,61 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
         geometry_path_vec.emplace_back(geometry_path);
       }
     }
+
+    if (geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        !geometry_path.collide_flag && geometry_path.path_count == 1 &&
+        geometry_path.end_pose.pos.x() <
+            calc_params_.target_line.pA.x() + 1.26) {
+      double length = geometry_path.total_length;
+      geometry_lib::PathSegment seg;
+      while (length > 1.68) {
+        length -= 0.168;
+        geometry_lib::CalLineFromPt(geometry_path.cur_gear, length, pose, seg);
+        if (seg.GetEndPos().x() > calc_params_.target_line.pA.x() + 1.26) {
+          geometry_path_vec.emplace_back(geometry_lib::GeometryPath(seg));
+          break;
+        }
+      }
+    }
   }
 
   if (AlignAndSTurnPathPlan(pose, ref_gear, lat_buffer, lon_buffer,
                             geometry_path, true, enable_log)) {
     geometry_path_vec.emplace_back(geometry_path);
+
+    if (geometry_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE &&
+        (geometry_path.path_count == 2 || geometry_path.path_count == 3)) {
+      geometry_lib::PathPoint temp_pose;
+      uint8_t steer = 0;
+      double max_length = 0.0;
+      double radius = 0.0;
+      if (geometry_path.path_count == 2) {
+        temp_pose = geometry_path.path_segment_vec[0].GetEndPose();
+        steer = geometry_path.path_segment_vec[1].seg_steer;
+        max_length = geometry_path.path_segment_vec[1].Getlength();
+        radius =
+            geometry_path.path_segment_vec[1].GetArcSeg().circle_info.radius;
+      } else if (geometry_path.path_count == 3) {
+        temp_pose = geometry_path.path_segment_vec[1].GetEndPose();
+        steer = geometry_path.path_segment_vec[2].seg_steer;
+        max_length = geometry_path.path_segment_vec[2].Getlength();
+        radius =
+            geometry_path.path_segment_vec[2].GetArcSeg().circle_info.radius;
+      }
+      std::vector<geometry_lib::PathSegment> seg_vec;
+      if (geometry_path.path_count == 2) {
+        seg_vec.emplace_back(geometry_path.path_segment_vec[0]);
+      } else if (geometry_path.path_count == 3) {
+        seg_vec.emplace_back(geometry_path.path_segment_vec[0]);
+        seg_vec.emplace_back(geometry_path.path_segment_vec[1]);
+      }
+      if (FindPtCanReverseToSlot(seg_vec, geometry_lib::SEG_GEAR_DRIVE, steer,
+                                 radius, max_length, temp_pose, lat_buffer,
+                                 lon_buffer,
+                                 GeometryPathType::ALIGNBODY_STURN)) {
+        geometry_path_vec.emplace_back(geometry_lib::GeometryPath(seg_vec));
+      }
+    }
   }
 
   if (AlignAndSTurnPathPlan(pose, ref_gear, lat_buffer, lon_buffer,
@@ -3074,7 +3247,8 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                                            radius, pose, new_arc_seg);
                 // new_arc_seg.PrintInfo(enable_log);
                 if (CheckStuckedByInside(new_arc_seg.GetStartPose(),
-                                         new_arc_seg.GetEndPose())) {
+                                         new_arc_seg.GetEndPose(),
+                                         enable_log)) {
                   break;
                 }
                 if (TwoArcPathPlan(new_arc_seg.GetEndPose(),

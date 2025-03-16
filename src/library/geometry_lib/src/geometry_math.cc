@@ -3249,9 +3249,9 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 }
 
 void GeometryPath::CalcCost() {
-  gear_change_cost = 50.0 * gear_change_count;
+  gear_change_cost = 80.0 * gear_change_count;
   length_cost = 1.68 * total_length;
-  steer_change_cost = 10.0 * steer_change_count;
+  steer_change_cost = 8.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
 }

@@ -608,7 +608,6 @@ const ColResult EDTCollisionDetector::Update(
 
   bool col_flag = false;
   double lon_safe_dist = 0.0;
-  double min_obs_dist = 26.8;
   geometry_lib::PathPoint pt_closest_to_obs;
   double obs_dist = 0.0;
   int circle_id = -1;
@@ -618,10 +617,6 @@ const ColResult EDTCollisionDetector::Update(
     if (need_cal_obs_dist) {
       col_flag = IsCollisionForPoint(pt, &car_with_mirror_circles_list_,
                                      &obs_dist, &circle_id);
-      if (obs_dist < min_obs_dist && pt.s < col_res_.remain_car_dist + 1e-3) {
-        min_obs_dist = obs_dist;
-        pt_closest_to_obs = pt;
-      }
       if (pt.s < col_res_.remain_car_dist + 1e-3) {
         if (circle_id == -1) {
           car_safe_pos = geometry_lib::CarSafePos::ALL;
@@ -647,10 +642,6 @@ const ColResult EDTCollisionDetector::Update(
     if (need_cal_obs_dist) {
       col_flag = IsCollisionForPoint(pt, &car_without_mirror_circles_list_,
                                      &obs_dist, &circle_id);
-      if (obs_dist < min_obs_dist) {
-        min_obs_dist = obs_dist;
-        pt_closest_to_obs = pt;
-      }
     } else {
       col_flag = IsCollisionForPoint(pt, &car_without_mirror_circles_list_);
     }
@@ -662,10 +653,6 @@ const ColResult EDTCollisionDetector::Update(
     if (need_cal_obs_dist) {
       col_flag = IsCollisionForPoint(pt, &car_chassis_circles_list_, &obs_dist,
                                      &circle_id);
-      if (obs_dist < min_obs_dist) {
-        min_obs_dist = obs_dist;
-        pt_closest_to_obs = pt;
-      }
     } else {
       col_flag = IsCollisionForPoint(pt, &car_chassis_circles_list_);
     }
@@ -680,6 +667,18 @@ const ColResult EDTCollisionDetector::Update(
 
   col_res_.col_flag = col_flag;
   col_res_.remain_dist = lon_safe_dist - lon_buffer;
+  const int safe_pt_number =
+      static_cast<int>(col_res_.remain_dist / sample_ds_) + 1;
+  if (col_res_.pt_obs_dist_info_vec.size() > safe_pt_number) {
+    col_res_.pt_obs_dist_info_vec.resize(safe_pt_number);
+  }
+  double min_obs_dist = 26.8;
+  for (auto &info : col_res_.pt_obs_dist_info_vec) {
+    if (info.dist_pt.first < min_obs_dist) {
+      min_obs_dist = info.dist_pt.first;
+      pt_closest_to_obs = info.dist_pt.second;
+    }
+  }
   // min_obs_dist is the dist that obs to expanded car
   col_res_.pt_closest2obs =
       std::make_pair(min_obs_dist + lat_buffer, pt_closest_to_obs);
