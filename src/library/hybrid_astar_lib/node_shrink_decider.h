@@ -13,6 +13,11 @@ struct NodeHeadingShrink {
   double heading_up_bound_;
 };
 
+struct XCoordinateShrinkBound {
+  double upper;
+  double lower;
+};
+
 // in searching, we need shrink some nodes which are not necessary directions or
 // gears for accelerate computation.
 class NodeShrinkDecider : public AstarDecider {
@@ -22,7 +27,8 @@ class NodeShrinkDecider : public AstarDecider {
   void Process(const Pose2D &start, const Pose2D &end) override;
 
   void Process(const Pose2D &start, const Pose2D &end,
-               const ParkingVehDirection park_dir);
+               const ParkingVehDirection park_dir, const Pose2D &limiter_pose,
+               const MapBound &XYbounds);
 
   bool IsLegalForHeading(const double heading);
 
@@ -43,6 +49,8 @@ class NodeShrinkDecider : public AstarDecider {
   const bool IsSameGridNodeContinuous(const Node3d *new_node,
                                       const Node3d *old_node) const;
 
+  bool IsLegalByXBound(const double x);
+
  private:
   void ShrinkChildrenByHeadingForTailIn();
 
@@ -52,6 +60,8 @@ class NodeShrinkDecider : public AstarDecider {
   NodeHeadingShrink heading_shrink_;
 
   ParkingVehDirection park_dir_;
+
+  XCoordinateShrinkBound x_bound_;
 };
 
 }  // namespace planning

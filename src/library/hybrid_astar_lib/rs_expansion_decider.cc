@@ -104,13 +104,13 @@ void RSExpansionDecider::Process(const Pose2D &start, const Pose2D &end) {
 
 void RSExpansionDecider::UpdateRSPathRequest(AstarRequest *request) {
   // check rs last path gear
-  request->rs_request = RSPathRequestType::none;
+  request->rs_request = RSPathRequestType::NONE;
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-      request->rs_request = RSPathRequestType::last_path_forbid_forward;
+      request->rs_request = RSPathRequestType::LAST_PATH_FORBID_FORWARD;
       ILOG_INFO << "last rs path forbid forward";
     } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
-      request->rs_request = RSPathRequestType::last_path_forbid_reverse;
+      request->rs_request = RSPathRequestType::LAST_PATH_FORBID_REVERSE;
       ILOG_INFO << "last rs path forbid reverse";
     }
   }

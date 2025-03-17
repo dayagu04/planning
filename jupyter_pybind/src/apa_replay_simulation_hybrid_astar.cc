@@ -410,10 +410,9 @@ const void UpdateLocalView(
       BytesToStruct<iflyauto::FusionObjectsInfo,
                     struct_msgs::FusionObjectsInfo>(fus_objs);
 
-    iflyauto::FusionGroundLineInfo ground_line_ =
+  iflyauto::FusionGroundLineInfo ground_line_ =
       BytesToStruct<iflyauto::FusionGroundLineInfo,
-                    struct_msgs::FusionGroundLineInfo>(
-          ground_line_info_bytes);
+                    struct_msgs::FusionGroundLineInfo>(ground_line_info_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -523,8 +522,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   iflyauto::FusionGroundLineInfo ground_line_info =
       BytesToStruct<iflyauto::FusionGroundLineInfo,
-                    struct_msgs::FusionGroundLineInfo>(
-          ground_line_bytes);
+                    struct_msgs::FusionGroundLineInfo>(ground_line_bytes);
 
   iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
       BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
@@ -729,7 +727,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
       request.direction_request = ParkingVehDirection::TAIL_IN;
     }
 
-    request.rs_request = RSPathRequestType::none;
+    request.rs_request = RSPathRequestType::NONE;
     request.slot_width = ego_info.slot.GetWidth();
     request.slot_length = ego_info.slot.GetLength();
     request.history_gear = history_gear_request_;
@@ -889,7 +887,7 @@ std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
   v.setZero();
 
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
   }
@@ -947,7 +945,7 @@ std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
   v.setZero();
 
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
   }
@@ -995,7 +993,7 @@ const std::vector<Eigen::Vector3d> &GetFootPrintModel(const int32_t gear) {
 
 const double GetRefCruiseSpeed() {
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
   }
@@ -1016,7 +1014,7 @@ std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {
   Eigen::VectorXd v(5);
 
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
   }
@@ -1045,7 +1043,7 @@ std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
   Eigen::VectorXd v(5);
 
   auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
   }

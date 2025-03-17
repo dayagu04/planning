@@ -6,17 +6,17 @@
 namespace planning {
 
 enum class RSPathRequestType {
-  none,
-  all_path_forbid_reverse,
-  all_path_forbid_forward,
-  first_path_forbid_reverse,
-  first_path_forbid_forward,
-  last_path_forbid_forward,
-  last_path_forbid_reverse,
-  forbid_gear_change,
+  NONE,
+  ALL_PATH_FORBID_REVERSE,
+  ALL_PATH_FORBID_FORWARD,
+  FIRST_PATH_FORBID_REVERSE,
+  FIRST_PATH_FORBID_FORWARD,
+  LAST_PATH_FORBID_FORWARD,
+  LAST_PATH_FORBID_REVERSE,
+  FORBID_GEAR_CHANGE,
   // gear switch < 2,
-  gear_switch_less_than_twice,
-  max_num
+  GEAR_SWITCH_LESS_THAN_TWICE,
+  MAX_NUM
 };
 
 #define RS_REQUST_MAX_NUM (8)
