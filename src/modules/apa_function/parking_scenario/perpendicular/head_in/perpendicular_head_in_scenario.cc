@@ -218,8 +218,8 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
 
   // update target slot info
   ego_info_under_slot.origin_pose_global.heading_vec =
-      ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
-          .normalized();
+      ego_info_under_slot.slot.processed_corner_coord_global_
+          .pt_23mid_01mid_unit_vec;
 
   ego_info_under_slot.origin_pose_global.heading =
       std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
@@ -543,11 +543,10 @@ const bool PerpendicularHeadInScenario::GenTlane() {
   // If there are no obstacles on either side, set a virtual obstacle that is
   // farther away
   const auto pt_01_norm_vec =
-      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
-          .normalized();
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_unit_vec;
 
   const auto pt_01_tan_vec = ego_info_under_slot.slot.origin_corner_coord_local_
-                                 .pt_23mid_01_mid.normalized();
+                                 .pt_23mid_01mid_unit_vec;
   const double virtual_x =
       (ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid -
        param.headin_virtual_obs_x_pos * pt_01_tan_vec)
@@ -1249,7 +1248,7 @@ const bool PerpendicularHeadInScenario::CheckFinished() {
                      (apa_param.GetParam().wheel_base +
                       apa_param.GetParam().front_overhanging) *
                          ego_info_under_slot.slot.processed_corner_coord_local_
-                             .pt_23mid_01_mid.normalized())
+                             .pt_23mid_01mid_unit_vec)
                         .y();
 
   const bool lat_condition_1 =
@@ -1714,13 +1713,13 @@ void PerpendicularHeadInScenario::Log() const {
   slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
 
   pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
   pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
 
   for (const Eigen::Vector2d& pt : pt_vec) {
     slot_corner_X.emplace_back(pt.x());

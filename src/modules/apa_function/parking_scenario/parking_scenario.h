@@ -41,6 +41,13 @@ enum PathPlannerResult {
   WAIT_PATH,
 };
 
+enum class ProcessObsMethod : uint8_t {
+  DO_NOTHING,
+  MOVE_OBS_OUT_SLOT,
+  MOVE_OBS_OUT_CAR_SAFE_POS,
+  COUNT,
+};
+
 void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
 
 const std::string GetApaScenarioStatusString(
@@ -221,8 +228,21 @@ class ParkingScenario {
       is_park_out_left = true;
 
       stuck_by_dynamic_obs = false;
+
+      process_obs_method = ProcessObsMethod::DO_NOTHING;
+
+      dynamic_plan_path_superior = false;
+
+      last_channel_width = 0.0;
+      last_channel_length = 0.0;
     }
+
+    ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
+
     bool can_first_plan_again = true;
+
+    double last_channel_width = 0.0;
+    double last_channel_length = 0.0;
 
     bool is_left_empty = false;
     bool is_right_empty = false;
@@ -274,6 +294,7 @@ class ParkingScenario {
 
     bool correct_path_for_limiter = false;
     bool dynamic_plan_fail_flag = false;
+    bool dynamic_plan_path_superior = false;
 
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
@@ -301,6 +322,7 @@ class ParkingScenario {
     CHECK_GEAR_LENGTH,
     PATH_PLAN_FAILED,
     PLAN_COUNT_EXCEED_LIMIT,
+    DYNAMIC_PATH_NOT_SUPERIOR,
   };
 
  public:
@@ -403,6 +425,10 @@ class ParkingScenario {
 
   virtual const bool CheckStuckFailed(
       const double stuck_failed_time = apa_param.GetParam().stuck_failed_time);
+
+  virtual const bool CheckEgoPoseInBelieveObsArea(
+      const double lat_expand, const double lon_expand,
+      const double heading_err = 60.0);
 
   void CreateTasks();
 

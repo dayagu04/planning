@@ -15,12 +15,13 @@ namespace apa_planner {
 const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
     const ApaSlot& slot, const std::vector<double>& lat_buffer_vec,
     const double lon_buffer, const ParkingScenarioType request,
-    const bool consider_obs) {
+    const bool consider_obs, const bool base_on_slot) {
   result_.Reset();
   slot_ = slot;
   lat_buffer_vec_ = lat_buffer_vec;
   lon_buffer_ = lon_buffer;
   consider_obs_ = consider_obs;
+  base_on_slot_ = base_on_slot;
 
   if (request == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     return CalcTargetPoseForPerpendicularTailIn();
@@ -39,7 +40,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   const ApaParameters& param = apa_param.GetParam();
   // 根据车位建立车位坐标系，方便计算终点与逻辑判断
   const Eigen::Vector2d heading_vec =
-      slot_.processed_corner_coord_global_.pt_23mid_01_mid.normalized();
+      slot_.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
   const double origin_heading = std::atan2(heading_vec.y(), heading_vec.x());
 
@@ -97,11 +98,17 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     return result_;
   }
 
-  const Eigen::Vector2d lon_move_dir =
-      (slot_.origin_corner_coord_global_.pt_23mid_01_mid).normalized();
+  Eigen::Vector2d lon_move_dir =
+      slot_.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
-  const Eigen::Vector2d lat_move_dir =
-      (slot_.origin_corner_coord_global_.pt_01_vec).normalized();
+  Eigen::Vector2d lat_move_dir =
+      slot_.origin_corner_coord_global_.pt_01_unit_vec;
+
+  if (base_on_slot_) {
+    lon_move_dir = slot_.origin_corner_coord_local_.pt_23mid_01mid_unit_vec;
+
+    lat_move_dir = slot_.origin_corner_coord_local_.pt_01_unit_vec;
+  }
 
   // calc max_lat_move_dist and max_lon_move_dist
   double max_lat_move_dist{0.};
@@ -122,7 +129,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   // calc lat_move_step and lon_move_step
   double lat_move_step{0.01};
-  double lon_move_step{0.05};
+  double lon_move_step{0.025};
 
   // 检查终点位置是否碰撞
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
@@ -145,7 +152,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_dist_vec.emplace_back(-lat_move_dist);
   }
 
-  GJKColDetRequest gjl_col_det_request(false, false,
+  GJKColDetRequest gjl_col_det_request(base_on_slot_, false,
                                        CarBodyType::EXPAND_MIRROR_TO_FRONT);
   geometry_lib::PathPoint tmp_pose;
   for (const double lat_buffer : lat_buffer_vec_) {
@@ -157,9 +164,13 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
             lon_move_dist, lon_move_dist - lon_buffer_, lon_move_dist + 1.0,
             lon_move_dist + 2.0};
         for (const double dist : lon_path_vec) {
-          tmp_pose.heading = tar_pose_global.heading;
-          tmp_pose.pos = tar_pose_global.pos + lat_move_dist * lat_move_dir +
-                         dist * lon_move_dir;
+          if (base_on_slot_) {
+            tmp_pose = tar_pose_local;
+          } else {
+            tmp_pose = tar_pose_global;
+          }
+          tmp_pose.pos =
+              tmp_pose.pos + lat_move_dist * lat_move_dir + dist * lon_move_dir;
           tmp_pose_vec.emplace_back(tmp_pose);
         }
         if (!gjl_det_ptr
@@ -169,10 +180,17 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
           result_.safe_lon_move_dist = lon_move_dist;
           result_.safe_lat_move_dist = lat_move_dist;
           result_.safe_lat_buffer = lat_buffer;
-          result_.target_pose_global = tmp_pose_vec.front();
-          result_.target_pose_local =
-              geometry_lib::TransformPoseFromGlobalToLocal(
-                  result_.target_pose_global, g2l_tf);
+          if (base_on_slot_) {
+            result_.target_pose_local = tmp_pose_vec.front();
+            result_.target_pose_global =
+                geometry_lib::TransformPoseFromLocalToGlobal(
+                    result_.target_pose_local, l2g_tf);
+          } else {
+            result_.target_pose_global = tmp_pose_vec.front();
+            result_.target_pose_local =
+                geometry_lib::TransformPoseFromGlobalToLocal(
+                    result_.target_pose_global, g2l_tf);
+          }
 
           ILOG_INFO << "exist_target_pose = " << result_.exist_target_pose
                     << "  safe_lon_move_dist = " << result_.safe_lon_move_dist

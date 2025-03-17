@@ -680,8 +680,7 @@ const ColResult EDTCollisionDetector::Update(
     }
   }
   // min_obs_dist is the dist that obs to expanded car
-  col_res_.pt_closest2obs =
-      std::make_pair(min_obs_dist + lat_buffer, pt_closest_to_obs);
+  col_res_.pt_closest2obs = std::make_pair(min_obs_dist, pt_closest_to_obs);
 
   return col_res_;
 }

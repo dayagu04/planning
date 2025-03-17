@@ -372,8 +372,8 @@ struct ApaParameters {
   bool parallel_lat_opt_enable = false;
   double min_opt_path_length = 0.7;
   // slot managent params
-  bool release_slot_by_prepare = false;
-  bool lock_parallel_slot = false;
+  bool prohibit_move_slot = false;
+  bool move_slot_with_little_buffer = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
   double slot_release_channel_width = 4.86;
@@ -404,7 +404,7 @@ struct ApaParameters {
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
   double easy_slot_release_channel_width = 7.68;
 
-  double terminal_length = 1.2;
+  double believe_obs_ego_area = 2.68;
   double limiter_length = 0.0;
 
   double slot_occupied_ratio_max_lat_err = 0.9;

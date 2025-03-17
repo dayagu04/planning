@@ -753,11 +753,11 @@ void SyncParkingParameters(const bool is_simulation) {
             << static_cast<int>(apa_param.GetParam().path_generator_type);
 
   // slot managent params
-  JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
-                  "release_slot_by_prepare");
+  JSON_READ_VALUE(apa_param.SetPram().prohibit_move_slot, bool,
+                  "prohibit_move_slot");
 
-  JSON_READ_VALUE(apa_param.SetPram().lock_parallel_slot, bool,
-                  "lock_parallel_slot");
+  JSON_READ_VALUE(apa_param.SetPram().move_slot_with_little_buffer, bool,
+                  "move_slot_with_little_buffer");
 
   JSON_READ_VALUE(apa_param.SetPram().max_slot_window_size, int,
                   "max_slot_window_size");
@@ -840,8 +840,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().easy_slot_release_channel_width, double,
                   "easy_slot_release_channel_width");
 
-  JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
-                  "terminal_length");
+  JSON_READ_VALUE(apa_param.SetPram().believe_obs_ego_area, double,
+                  "believe_obs_ego_area");
 
   JSON_READ_VALUE(apa_param.SetPram().limiter_length, double, "limiter_length");
 

@@ -149,11 +149,14 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
       }
     } else {
       if (ego_info_under_slot_.slot.release_info_
-                  .release_state[GEOMETRY_PLANNING_RELEASE] ==
-              SlotReleaseState::RELEASE ||
-          ego_info_under_slot_.slot.release_info_
-                  .release_state[ASTAR_PLANNING_RELEASE] ==
-              SlotReleaseState::RELEASE) {
+                  .release_state[RULE_BASED_RELEASE] ==
+              SlotReleaseState::RELEASE &&
+          (ego_info_under_slot_.slot.release_info_
+                   .release_state[GEOMETRY_PLANNING_RELEASE] ==
+               SlotReleaseState::RELEASE ||
+           ego_info_under_slot_.slot.release_info_
+                   .release_state[ASTAR_PLANNING_RELEASE] ==
+               SlotReleaseState::RELEASE)) {
         release_slot_id_vec_.emplace_back(pair.first);
       } else if (ego_info_under_slot_.slot.release_info_
                          .release_state[RULE_BASED_RELEASE] ==
@@ -293,10 +296,9 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   const ApaParameters& param = apa_param.GetParam();
   const Eigen::Vector2d pM01 = slot.processed_corner_coord_global_.pt_01_mid;
   const Eigen::Vector2d pM23 = slot.processed_corner_coord_global_.pt_23_mid;
-  const Eigen::Vector2d t =
-      slot.processed_corner_coord_global_.pt_01_vec.normalized();
+  const Eigen::Vector2d t = slot.processed_corner_coord_global_.pt_01_unit_vec;
   const Eigen::Vector2d n =
-      slot.processed_corner_coord_global_.pt_23mid_01_mid.normalized();
+      slot.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
   // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
   // 0.26米如果没有碰撞 直接释放
@@ -310,7 +312,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   //                            {0.17, SlotReleaseVoterType::HOLD},
   //                            {0.16, SlotReleaseVoterType::SUBTRACT}};
 
-  std::vector<double> lat_buffer_vec{0.26, 0.20, 0.17, 0.16};
+  std::vector<double> lat_buffer_vec{0.23, 0.17, 0.14, 0.13};
 
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
   TargetPoseDeciderResult res = tar_pose_decider.CalcTargetPose(
@@ -327,13 +329,13 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
             << "  lat_buffer = " << res.safe_lat_buffer;
 
   SlotReleaseVoterType release_voter_type;
-  if (geometry_lib::IsTwoNumerEqual(0.26, res.safe_lat_buffer)) {
+  if (geometry_lib::IsTwoNumerEqual(0.23, res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::MAXIMUM;
-  } else if (geometry_lib::IsTwoNumerEqual(0.20, res.safe_lat_buffer)) {
-    release_voter_type = SlotReleaseVoterType::ACCUMULATE;
   } else if (geometry_lib::IsTwoNumerEqual(0.17, res.safe_lat_buffer)) {
+    release_voter_type = SlotReleaseVoterType::ACCUMULATE;
+  } else if (geometry_lib::IsTwoNumerEqual(0.14, res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::HOLD;
-  } else if (geometry_lib::IsTwoNumerEqual(0.16, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(0.13, res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::SUBTRACT;
   }
 
@@ -349,6 +351,12 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   pt_1 = pt_1 + res.safe_lat_move_dist * t;
 
   double channel_width = param.slot_release_channel_width;
+
+  if (release_voter_type == SlotReleaseVoterType::MAXIMUM) {
+    channel_width = param.slot_release_channel_width - 0.2;
+  } else if (release_voter_type == SlotReleaseVoterType::HOLD) {
+    channel_width = param.slot_release_channel_width + 0.2;
+  }
 
   // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
   Polygon2D polygon;

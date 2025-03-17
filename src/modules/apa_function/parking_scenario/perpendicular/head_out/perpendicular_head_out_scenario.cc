@@ -191,8 +191,8 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ego_info_under_slot.origin_pose_global.heading_vec =
-      ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
-          .normalized();
+      ego_info_under_slot.slot.processed_corner_coord_global_
+          .pt_23mid_01mid_unit_vec;
 
   ego_info_under_slot.origin_pose_global.heading =
       std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
@@ -368,8 +368,7 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
 
   // 加入左右侧的虚拟障碍物
   const Eigen::Vector2d pt_01_unit_vec =
-      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
-          .normalized();
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_unit_vec;
 
   const Eigen::Vector2d pt_01_mid =
       ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid;
@@ -987,13 +986,13 @@ void PerpendicularHeadOutScenario::Log() const {
   slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
 
   pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
   pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
 
   for (const Eigen::Vector2d& pt : pt_vec) {
     slot_corner_X.emplace_back(pt.x());

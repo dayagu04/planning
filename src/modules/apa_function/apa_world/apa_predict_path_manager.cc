@@ -1,14 +1,17 @@
 #include "apa_predict_path_manager.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 
 #include "apa_param_config.h"
+#include "apa_utils.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "local_view.h"
 #include "log_glog.h"
 #include "planning_plan_c.h"
-#include "apa_utils.h"
+#include "spline.h"
 
 namespace planning {
 namespace apa_planner {
@@ -36,7 +39,53 @@ void ApaPredictPathManager::Update(
     return;
   }
 
-  const double predict_distance = 3.0;
+  // 计算预测距离  当前位置往后3米  或者
+  // 当前位置投影点到规划轨迹的终点距离加上一个阈值
+  // 首先计算当前位置投影点到规划轨迹终点的距离
+  double min_dist = std::numeric_limits<double>::infinity();
+  int min_index = -1;
+  double path_length = 0.0;
+  double proj_s = 0.0;
+  int i = 0;
+  for (i = 0; i < std::min(planning_output->trajectory.trajectory_points_size,
+                           static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
+       ++i) {
+    const iflyauto::TrajectoryPoint& planning_pt =
+        planning_output->trajectory.trajectory_points[i];
+
+    if (i > 1) {
+      path_length += (std::hypot(
+          planning_pt.x -
+              planning_output->trajectory.trajectory_points[i - 1].x,
+          planning_pt.y -
+              planning_output->trajectory.trajectory_points[i - 1].y));
+    }
+
+    const double dist =
+        std::hypot(planning_pt.x - measure_data_ptr->GetPos().x(),
+                   planning_pt.y - measure_data_ptr->GetPos().y());
+    if (dist < min_dist) {
+      min_index = i;
+      min_dist = dist;
+      proj_s = path_length;
+    }
+  }
+
+  if (i == -1) {
+    return;
+  }
+
+  bool control_err_big = false;
+  if (std::hypot(
+          measure_data_ptr->GetPos().x() -
+              planning_output->trajectory.trajectory_points[min_index].x,
+          measure_data_ptr->GetPos().y() -
+              planning_output->trajectory.trajectory_points[min_index].y) >
+      0.068) {
+    control_err_big = true;
+  }
+
+  const double predict_distance = std::min(3.0, path_length - proj_s + 1.86);
 
   bool use_steer_angle_flag = false;
 
@@ -53,9 +102,8 @@ void ApaPredictPathManager::Update(
         measure_data_ptr->GetPos(), measure_data_ptr->GetHeading()));
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
     l2g_tf.Init(measure_data_ptr->GetPos(), measure_data_ptr->GetHeading());
-    for (size_t i = 0;
-         i < std::min(control_trajectory.control_result_points_size,
-                      static_cast<uint8>(CONTROL_RESULT_POINTS_MAX_NUM));
+    for (i = 0; i < std::min(control_trajectory.control_result_points_size,
+                             static_cast<uint8>(CONTROL_RESULT_POINTS_MAX_NUM));
          ++i) {
       const auto& pt = control_trajectory.control_result_points[i];
       pnc::geometry_lib::PathPoint car_predict_pt;
@@ -84,59 +132,73 @@ void ApaPredictPathManager::Update(
       predict_pt_vec_.emplace_back(std::move(car_predict_pt));
     }
 
-    if (predict_pt_vec_.back().s < predict_distance) {
-      const pnc::geometry_lib::PathPoint& last_car_predict_pt =
-          predict_pt_vec_.back();
-      double min_dist = std::numeric_limits<double>::infinity();
-      int min_index = -1;
-      for (int i = 0;
-           i < std::min(planning_output->trajectory.trajectory_points_size,
-                        static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
-           ++i) {
-        const iflyauto::TrajectoryPoint& planning_pt =
-            planning_output->trajectory.trajectory_points[i];
-        const double dist =
-            std::hypot(planning_pt.x - last_car_predict_pt.pos.x(),
-                       planning_pt.y - last_car_predict_pt.pos.y());
-        if (dist < min_dist) {
-          min_index = i;
-          min_dist = dist;
-        }
-      }
-
+    if (predict_pt_vec_.back().s < predict_distance &&
+        predict_pt_vec_.size() > 2) {
+      // 最后一个点的s小于predict_distance，需要补全到predict_distance
       pnc::geometry_lib::PathPoint car_predict_pt;
-      for (int i = min_index + 1;
-           i < std::min(planning_output->trajectory.trajectory_points_size,
-                        static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
-           predict_pt_vec_.back().s < predict_distance;
-           ++i) {
-        car_predict_pt.pos
-            << planning_output->trajectory.trajectory_points[i].x,
-            planning_output->trajectory.trajectory_points[i].y;
-        car_predict_pt.heading =
-            planning_output->trajectory.trajectory_points[i].heading_yaw;
-
-        const double ds =
-            std::hypot(car_predict_pt.pos.x() - predict_pt_vec_.back().pos.x(),
-                       car_predict_pt.pos.y() - predict_pt_vec_.back().pos.y());
-
-        car_predict_pt.s = ds + predict_pt_vec_.back().s;
-        predict_pt_vec_.emplace_back(car_predict_pt);
-      }
-
-      // 延长避免压速  多延长几个点
-      if (predict_pt_vec_.size() > 1) {
-        Eigen::Vector2d extended_point;
-        size_t pt_size;
-        for (size_t i = 0; i < 10; ++i) {
-          pt_size = predict_pt_vec_.size();
+      const double step = 0.1;
+      if (control_err_big) {
+        // 直线延长
+        do {
+          size_t n = predict_pt_vec_.size();
           pnc::geometry_lib::CalExtendedPointByTwoPoints(
-              predict_pt_vec_[pt_size - 2].pos,
-              predict_pt_vec_[pt_size - 1].pos, extended_point, 0.1);
-          car_predict_pt.pos = extended_point;
-          car_predict_pt.heading = predict_pt_vec_.back().heading;
-          car_predict_pt.s = predict_pt_vec_.back().s + 0.1;
+              predict_pt_vec_[n - 2].pos, predict_pt_vec_[n - 1].pos,
+              car_predict_pt.pos, 0.1);
+          car_predict_pt.heading = predict_pt_vec_[n - 1].heading;
+          car_predict_pt.s = predict_pt_vec_[n - 1].s + step;
           predict_pt_vec_.emplace_back(car_predict_pt);
+        } while (predict_pt_vec_.back().s < predict_distance);
+      } else {
+        // 拼接规划轨迹
+        const pnc::geometry_lib::PathPoint& last_car_predict_pt =
+            predict_pt_vec_.back();
+        min_dist = std::numeric_limits<double>::infinity();
+        min_index = -1;
+        for (i = 0;
+             i < std::min(planning_output->trajectory.trajectory_points_size,
+                          static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
+             ++i) {
+          const iflyauto::TrajectoryPoint& planning_pt =
+              planning_output->trajectory.trajectory_points[i];
+          const double dist =
+              std::hypot(planning_pt.x - last_car_predict_pt.pos.x(),
+                         planning_pt.y - last_car_predict_pt.pos.y());
+          if (dist < min_dist) {
+            min_index = i;
+            min_dist = dist;
+          }
+        }
+
+        for (i = min_index + 1;
+             i < std::min(planning_output->trajectory.trajectory_points_size,
+                          static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
+             predict_pt_vec_.back().s < predict_distance;
+             ++i) {
+          car_predict_pt.pos
+              << planning_output->trajectory.trajectory_points[i].x,
+              planning_output->trajectory.trajectory_points[i].y;
+          car_predict_pt.heading =
+              planning_output->trajectory.trajectory_points[i].heading_yaw;
+
+          const double ds = std::hypot(
+              car_predict_pt.pos.x() - predict_pt_vec_.back().pos.x(),
+              car_predict_pt.pos.y() - predict_pt_vec_.back().pos.y());
+
+          car_predict_pt.s = ds + predict_pt_vec_.back().s;
+          predict_pt_vec_.emplace_back(car_predict_pt);
+        }
+
+        if (predict_pt_vec_.back().s < predict_distance &&
+            predict_pt_vec_.size() > 2) {
+          do {
+            size_t n = predict_pt_vec_.size();
+            pnc::geometry_lib::CalExtendedPointByTwoPoints(
+                predict_pt_vec_[n - 2].pos, predict_pt_vec_[n - 1].pos,
+                car_predict_pt.pos, 0.1);
+            car_predict_pt.heading = predict_pt_vec_[n - 1].heading;
+            car_predict_pt.s = predict_pt_vec_[n - 1].s + step;
+            predict_pt_vec_.emplace_back(car_predict_pt);
+          } while (predict_pt_vec_.back().s < predict_distance);
         }
       }
     }

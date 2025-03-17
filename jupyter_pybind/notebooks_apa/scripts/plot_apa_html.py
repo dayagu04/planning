@@ -25,7 +25,7 @@ from lib.local_view_lib import *
 from lib.load_local_view_parking import LoadCyberbag
 from lib.load_local_view_parking import apa_draw_local_view, apa_draw_local_view_parking_ctrl
 
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241125/20241125-18-26-02/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-25-18-26-02_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250306/20250306-14-10-19/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2025-03-06-14-10-19_no_camera.bag'
 html_file = bag_path +".apa.html"
 plot_ctrl_flag = True
 fig1_time_step = 0.1

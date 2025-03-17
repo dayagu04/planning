@@ -39,7 +39,7 @@ class TargetPoseDecider : public ParkingTask {
   const TargetPoseDeciderResult CalcTargetPose(
       const ApaSlot& slot, const std::vector<double>& lat_buffer_vec,
       const double lon_buffer, const ParkingScenarioType request,
-      const bool consider_obs);
+      const bool consider_obs, const bool base_on_slot=false);
 
   const TargetPoseDeciderResult CalcTargetPoseForPerpendicularTailIn();
 
@@ -60,6 +60,7 @@ class TargetPoseDecider : public ParkingTask {
   std::vector<double> lat_buffer_vec_;
   double lon_buffer_{0.};
   bool consider_obs_ = false;
+  bool base_on_slot_ = false;
   TargetPoseDeciderResult result_;
 };
 }  // namespace apa_planner

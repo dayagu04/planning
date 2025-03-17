@@ -205,6 +205,19 @@ const bool GJKCollisionDetector::IsPolygonCollision(
   return false;
 }
 
+const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
+                                            const double lat_buffer,
+                                            const Eigen::Vector2d& obs) {
+  UpdateSafeBuffer(lat_buffer, 0.0);
+  GenCarPolygon();
+  TransformPolygonFootPrintLocalToGlobal(pose);
+  bool col_flag = false;
+  gjk_interface_.PolygonPointCollisionDetect(
+      &polygon_foot_print_global_.max_polygon,
+      Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
+  return col_flag;
+}
+
 void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(
     const geometry_lib::PathPoint& pt) {
   Transform2d tf(Pose2D(pt.pos.x(), pt.pos.y(), pt.heading));
@@ -254,7 +267,7 @@ void GJKCollisionDetector::GenCarPolygon() {
           mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_);
 
   polygon_foot_print_local_.mirror_to_rear_overhang.FillTangentCircleParams(
-      mirror_to_rear_overhanging_rectangle_vertex_with_buffer_);
+      mirror_to_rear_overhanging_polygon_vertex_with_buffer_);
 }
 
 void GJKCollisionDetector::Reset() {}

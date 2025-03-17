@@ -1140,6 +1140,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     plan_traj_y_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_y"]
     plan_traj_heading_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_heading"]
     plan_traj_lat_buffert_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_lat_buffer"]
+    complete_x_vec, complete_y_vec = [], []
     if len(plan_traj_x_vec) < 21:
       for i in range(len(plan_x)):
         car_xn = []
@@ -1153,6 +1154,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
           car_box_y_vec.append(car_yn)
     else:
       for i in range(len(plan_traj_x_vec)):
+        complete_x_vec.append(plan_traj_x_vec[i])
+        complete_y_vec.append(plan_traj_y_vec[i])
         car_xn = []
         car_yn = []
         car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_traj_lat_buffert_vec[i])
@@ -1166,6 +1169,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_car_box'].data.update({
       'x_vec': car_box_x_vec,
       'y_vec': car_box_y_vec,
+    })
+
+    local_view_data['data_complete_planning'].data.update({
+      'plan_traj_x': complete_x_vec,
+      'plan_traj_y': complete_y_vec,
     })
 
   # load control
@@ -2311,6 +2319,10 @@ def load_local_view_figure_parking():
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                       'plan_traj_x':[],})
+
+  data_complete_planning = ColumnDataSource(data = {'plan_traj_y':[],
+                                    'plan_traj_x':[],})
+
   data_control = ColumnDataSource(data = {'mpc_dx':[],
                                           'mpc_dy':[],})
   data_ref_mpc_vec = ColumnDataSource(data = {'dx_ref_mpc_vec':[], 'dy_ref_mpc_vec':[],})
@@ -2390,6 +2402,7 @@ def load_local_view_figure_parking():
                      'data_car_prediction_traj_box': data_car_prediction_traj_box, \
                      'data_text':data_text, \
                      'data_planning':data_planning,\
+                     'data_complete_planning':data_complete_planning,\
                      'data_control':data_control,\
                      'data_ref_mpc_vec':data_ref_mpc_vec, \
                      'data_ref_vec':data_ref_vec, \
@@ -2445,8 +2458,9 @@ def load_local_view_figure_parking():
   fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='obs')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_complete_planning, line_width = 2.5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.6, legend_label = 'complete_planning', visible = False)
   # fig1.circle('y', 'x', source = data_col_det_path, size=4, color='red', legend_label = 'col_det_path')
-  fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path', visible = False)
+  # fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path', visible = False)
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc', visible = False)
   # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
@@ -2463,10 +2477,10 @@ def load_local_view_figure_parking():
 
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_managed_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'target_managed_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_line, line_width = 3, line_color = 'green', line_dash = 'dashed',legend_label = 'target_managed_slot')
-  fig1.circle('corner_point_y', 'corner_point_x', source = data_origin_pose, size=6, color='grey', legend_label = 'origin_pose')
+  fig1.circle('corner_point_y', 'corner_point_x', source = data_origin_pose, size=6, color='grey', legend_label = 'planning_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_planning_slot, line_width = 3, line_color = 'blue', line_dash = 'solid',legend_label = 'planning_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_planning_line, line_width = 3, line_color = 'blue', line_dash = 'dashed',legend_label = 'planning_slot')
-  fig1.circle('corner_point_y', 'corner_point_x', source = data_planning_pose, size=6, color='black', legend_label = 'planning_pose')
+  fig1.circle('corner_point_y', 'corner_point_x', source = data_planning_pose, size=6, color='black', legend_label = 'planning_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot', visible = True)
@@ -2476,11 +2490,11 @@ def load_local_view_figure_parking():
   fig1.text(x = 'wave_text_x', y = 'wave_text_y', text = 'length', source = data_wave_length_text, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'uss_wave', visible = False)
 
   # debug
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
-  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_all_managed_slot_id, text_color='blue', text_align='center', text_font_size='10pt',legend_label = 'all managed slot', visible = False)
+  # fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
+  # fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_all_managed_slot_id, text_color='blue', text_align='center', text_font_size='10pt',legend_label = 'all managed slot', visible = False)
 
   fig1.line('limiter_point_y', 'limiter_point_x', source = data_all_managed_limiter, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'managed limiter')
-  fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
+  # fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
 
   # dluss
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
@@ -2875,7 +2889,7 @@ target_slot_line_params_apa = {
 origin_pose_params_apa = {
   "size" : 6,
   "color" : 'grey',
-  'legend_label' : 'origin_pose'
+  'legend_label' : 'planning_slot'
 }
 
 planning_slot_params_apa = {
@@ -2895,7 +2909,7 @@ planning_line_params_apa = {
 plan_pose_params_apa = {
   "size" : 6,
   "color" : 'black',
-  'legend_label' : 'planning_pose'
+  'legend_label' : 'planning_slot'
 }
 
 all_slot_params_apa = {
@@ -2954,6 +2968,10 @@ uss_text_params = {
 
 plan_params = {
   'line_width' : 2.5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
+}
+
+complete_plan_params = {
+  'line_width' : 2.5, 'line_color' : 'red', 'line_dash' : 'dashed', 'line_alpha' : 0.6, 'legend_label' : 'complete_plan', 'visible' : False
 }
 
 mpc_params = {
@@ -3633,6 +3651,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
   # load planning traj
     plan_generator = CommonGenerator()
+    complete_plan_generator = CommonGenerator()
     target_line_generator = CommonGenerator()
     target_pos_generator = CommonGenerator()
     target_pt_generator = CommonGenerator()
@@ -3647,6 +3666,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         target_pos_xn, target_pos_yn = [], []
         target_pt_x, target_pt_y = [], []
         car_box_x_vec, car_box_y_vec = [], []
+        complete_x_vec, complete_y_vec = [], []
       else:
         trajectory = plan_msg.trajectory
         plan_traj_x, plan_traj_y, plan_heading = [], [], []
@@ -3654,6 +3674,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         target_pos_xn, target_pos_yn = [], []
         target_pt_x, target_pt_y = [], []
         car_box_x_vec, car_box_y_vec = [], []
+        complete_x_vec, complete_y_vec = [], []
         for j in range(trajectory.trajectory_points_size):
           plan_traj_x.append(trajectory.trajectory_points[j].x)
           plan_traj_y.append(trajectory.trajectory_points[j].y)
@@ -3700,6 +3721,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             for i in range(len(plan_traj_x_vec)):
               car_xn = []
               car_yn = []
+              complete_x_vec.append(plan_traj_x_vec[i])
+              complete_y_vec.append(plan_traj_y_vec[i])
               car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_traj_lat_buffer_vec[i])
               for j in range(len(car_xb_temp)):
                 tmp_x, tmp_y = local2global(car_xb_temp[j], car_yb_temp[j], plan_traj_x_vec[i], plan_traj_y_vec[i], plan_traj_heading_vec[i])
@@ -3714,12 +3737,14 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       target_pt_generator.xys.append((target_pt_y,target_pt_x))
       target_pos_generator.xys.append(([target_pos_yn],[target_pos_xn]))
       car_box_generator.xys.append((car_box_y_vec,car_box_x_vec))
+      complete_plan_generator.xys.append((complete_y_vec,complete_x_vec))
 
     target_pos_generator.ts = np.array(ctrl_debug_ts)
     target_pt_generator.ts = np.array(ctrl_debug_ts)
     plan_generator.ts = np.array(ctrl_debug_ts)
     target_line_generator.ts = np.array(ctrl_debug_ts)
     car_box_generator.ts = np.array(ctrl_debug_ts)
+    complete_plan_generator.ts = np.array(ctrl_debug_ts)
 
   # load mpc traj
     mpc_generator = CommonGenerator()
@@ -4080,12 +4105,12 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       plan_slot_layer = MultiCurveLayer(fig_local_view, planning_slot_params_apa)
       plan_line_layer = CurveLayer(fig_local_view, planning_line_params_apa)
       plan_pose_layer = DotLayer(fig_local_view, plan_pose_params_apa)
-      all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
-      all_slot_id_layer = TextLayer(fig_local_view, all_slot_id_params_apa)
-      all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
+      # all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
+      # all_slot_id_layer = TextLayer(fig_local_view, all_slot_id_params_apa)
+      # all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
       all_managed_limiter_layer = CurveLayer(fig_local_view, all_managed_limiter_params_apa)
       tlane_layer = DotLayer(fig_local_view, tlane_params)
-      col_det_path_layer = CurveLayer(fig_local_view, col_det_path_params)
+      # col_det_path_layer = CurveLayer(fig_local_view, col_det_path_params)
       car_predict_traj_path1_layer = CurveLayer(fig_local_view, car_predict_traj_path_params1)
       car_predict_traj_path2_layer = DotLayer(fig_local_view, car_predict_traj_path_params2)
       car_predict_traj_path3_layer = PatchLayer(fig_local_view, car_predict_traj_path_params3)
@@ -4096,12 +4121,12 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(plan_slot_layer, 'plan_slot_layer',planning_slot_generate,'planning_slot_generate',2)
       layer_manager.AddLayer(plan_line_layer, 'plan_line_layer',planning_line_generate,'planning_line_generate',2)
       layer_manager.AddLayer(plan_pose_layer, 'plan_pose_layer',plan_pose_generate,'plan_pose_generate',2)
-      layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
-      layer_manager.AddLayer(all_slot_id_layer, 'all_slot_id_layer',all_slot_id_generate,'all_slot_id_generate',3)
-      layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
+      # layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
+      # layer_manager.AddLayer(all_slot_id_layer, 'all_slot_id_layer',all_slot_id_generate,'all_slot_id_generate',3)
+      # layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
       layer_manager.AddLayer(all_managed_limiter_layer, 'all_managed_limiter_layer',all_managed_limiter_generate,'all_managed_limiter_generate',2)
       layer_manager.AddLayer(tlane_layer, 'tlane_layer',tlane_generate,'tlane_generate',2)
-      layer_manager.AddLayer(col_det_path_layer, 'col_det_path_layer',col_det_path_generate,'col_det_path_generate',2)
+      #layer_manager.AddLayer(col_det_path_layer, 'col_det_path_layer',col_det_path_generate,'col_det_path_generate',2)
       layer_manager.AddLayer(car_predict_traj_path1_layer, 'car_predict_traj_path1_layer',car_predict_traj_path1_generate,'car_predict_traj_path1_generate',2)
       layer_manager.AddLayer(car_predict_traj_path2_layer, 'car_predict_traj_path2_layer',car_predict_traj_path2_generate,'car_predict_traj_path2_generate',2)
       layer_manager.AddLayer(car_predict_traj_path3_layer, 'car_predict_traj_path3_layer',car_predict_traj_path3_generate,'car_predict_traj_path3_generate',2)
@@ -4110,6 +4135,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     if dataLoader.plan_msg['enable'] == True:
       plan_layer = CurveLayer(fig_local_view, plan_params)
       layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+      complete_plan_layer = CurveLayer(fig_local_view, complete_plan_params)
+      layer_manager.AddLayer(complete_plan_layer, 'complete_plan_layer', complete_plan_generator, 'complete_plane_generator', 2)
 
     # mpc
     if dataLoader.ctrl_msg['enable'] == True:
