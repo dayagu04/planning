@@ -930,6 +930,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double vehicle_length = vehicle_param.length;
   const double vehicle_width = vehicle_param.width;
+  const double rear_axle_to_front_axle = vehicle_param.wheel_base;
   const double rear_axle_to_rear_edge =
       vehicle_length - vehicle_param.front_edge_to_rear_axle;
   const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
@@ -937,6 +938,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
   const double ego_rear_edge_s = ego_s - rear_axle_to_rear_edge;
   const double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
   const double ego_center_s = ego_s + rear_axle_to_center;
+  const double ego_front_axle_s = ego_s + rear_axle_to_front_axle;
 
   for (const auto agent : agents) {
     if (agent == nullptr) {
@@ -955,7 +957,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
 
     bool is_no_need_expand_agent = false;
     // update no need for expansion agents.
-    if (ego_front_edge_s > agent_s + half_length) {
+    if (ego_front_axle_s > agent_s + half_length) {
       is_no_need_expand_agent = true;
     }
 
@@ -994,7 +996,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       continue;
     }
 
-    const double front_edge_s_diff = front_corner_s - ego_front_edge_s;
+    const double front_edge_s_diff = front_corner_s - ego_front_axle_s;
     // filter front agent
     if (front_edge_s_diff > kEpsilon) {
       continue;

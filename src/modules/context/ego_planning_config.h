@@ -3331,7 +3331,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double high_speed_threshold_with_acc_upper_bound = 16.67;
     double acc_lower_bound = -5.0;
     double jerk_lower_bound = -5.0;
-    double jerk_upper_bound = 10.0;
+    double jerk_upper_bound = 5.0;
   };
 
   struct KappaSpeedLimitTable {

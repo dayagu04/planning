@@ -19,7 +19,7 @@ class BoundMaker {
              framework::Session* session);
   ~BoundMaker() = default;
 
-  common::Status Run();
+  common::Status Run(const TargetMaker& target_maker);
 
   double s_lower_bound(const double t) const;
 
@@ -56,7 +56,7 @@ class BoundMaker {
 
   void MakeVBound();
 
-  void MakeJerkBound();
+  void MakeJerkBound(const TargetMaker& target_maker);
 
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string& lc_request);
@@ -103,7 +103,9 @@ class BoundMaker {
   std::vector<UpperBoundInfo> upper_bound_infos_;
   double min_follow_distance_m_ = 3.0;
 
-  const double _A_MAX = 2.0;
+  const double _A_MAX = 1.5;
+  planning::common::MaxDecelTarget max_decel_target_pb_;
+
   const double _A_MIN = -4.0;
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};
