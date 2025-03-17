@@ -129,9 +129,11 @@ class LaneChangeStateMachineManager {
   void MakeFixLane();
   void UpdateStateMachine();
   void GenerateStateMachineOutput();
-  bool CalculateSideGapFeasible(const planning_data::DynamicAgentNode*const agent);
+  bool CalculateSideGapFeasible(
+      const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontGapFeasible(LaneChangeStageInfo* const lc_state_info);
-  bool CalculateSideAreaIsSafetyExecution(const planning_data::DynamicAgentNode*const agent);
+  bool CalculateSideAreaIsSafetyExecution(
+      const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
                const double& threshold);
@@ -177,14 +179,14 @@ class LaneChangeStateMachineManager {
       const TrajectoryPoints& agent_traj,
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
       const bool is_front_agent);
-  bool IsFilterAgent(const planning_data::DynamicAgentNode* agent_node,
-                     const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-                     TrajectoryPoints* agent_prediction_trajs,
-                         const bool is_ego_lane_agent);
-  void StoreObjDebugPredictionInfo(const planning_data::DynamicAgentNode* agent_node,
-                         const TrajectoryPoints* agent_prediction_trajs,
-                         const bool is_front_agent,
-                         const bool is_ego_lane_agent);
+  bool IsFilterAgent(
+      const planning_data::DynamicAgentNode* agent_node,
+      const std::shared_ptr<planning_math::KDPath> target_lane_coor,
+      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent);
+  void StoreObjDebugPredictionInfo(
+      const planning_data::DynamicAgentNode* agent_node,
+      const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
+      const bool is_ego_lane_agent);
 
  private:
   ScenarioStateMachineConfig config_;
