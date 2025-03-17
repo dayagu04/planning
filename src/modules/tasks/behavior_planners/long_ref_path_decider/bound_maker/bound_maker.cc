@@ -21,7 +21,7 @@ constexpr double kSpeedBoundFactor = 1.1;
 constexpr double kPerSecondPlanLenth = 50.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
-constexpr double kBrakeTimeBuffer = 0.3;
+constexpr double kBrakeDelayTimeBuffer = 0.3;
 
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -296,7 +296,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     const double t = i * dt_;
     const double s_safe = max_deceleration_curve.Evaluate(0, t);
     const double vel = virtual_acc_curve->Evaluate(1, t);
-    const double brake_buffer = vel * kBrakeTimeBuffer;
+    const double brake_buffer = vel * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
     if (target_value.target_type() == TargetType::kFollow ||
         target_value.target_type() == TargetType::kNeighborYield ||
