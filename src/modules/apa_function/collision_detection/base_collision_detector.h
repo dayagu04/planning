@@ -26,6 +26,8 @@ struct ColResult {
       26.8, geometry_lib::PathPoint()};
   geometry_lib::RectangleBound path_rectangle_bound;
 
+  std::vector<geometry_lib::Pt2ObsDistInfo> pt_obs_dist_info_vec;
+
   void Reset() {
     col_flag = false;
     remain_dist = 26.8;
@@ -35,6 +37,7 @@ struct ColResult {
     remain_dist_dynamic = 26.8;
     pt_closest2obs = std::make_pair(26.8, geometry_lib::PathPoint());
     path_rectangle_bound.Reset();
+    pt_obs_dist_info_vec.clear();
   }
 };
 
@@ -82,8 +85,7 @@ class BaseCollisionDetector {
   std::vector<Eigen::Vector2d>
       mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_;
   // 后视镜到后悬矩形
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_rectangle_vertex_;
+  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_rectangle_vertex_;
   std::vector<Eigen::Vector2d>
       mirror_to_rear_overhanging_rectangle_vertex_with_buffer_;
 

@@ -164,7 +164,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       const iflyauto::FusionGroundLine& gl =
           local_view->ground_line_perception.groundline[i];
 
-      if (gl.resource_type != iflyauto::RESOURCE_TYPE_REAL_TIME_FUSION) {
+      if (gl.resource_type == iflyauto::RESOURCE_TYPE_MAP) {
         continue;
       }
 

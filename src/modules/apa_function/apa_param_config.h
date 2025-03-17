@@ -305,7 +305,7 @@ struct ApaParameters {
   double last_update_slot_occupied_ratio = 0.836;
 
   // path planner params
-  bool new_itervative_solution = false;
+  bool use_average_obs_dist = false;
   double prepare_max_reverse_heading_err = 1.68;
   double prepare_line_min_x_offset_slot = 7.2;
   double prepare_line_dx_offset_slot = 0.1;
@@ -393,7 +393,7 @@ struct ApaParameters {
   double min_slot_release_long_dist_slot2mirror = 3.86;
   double min_parallel_vis_slot_release_long_dist_slot2mirror = 1.87;
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
-  double max_dist_from_slot2car_release = 7.68;
+  double easy_slot_release_channel_width = 7.68;
 
   double terminal_length = 1.2;
   double limiter_length = 0.0;

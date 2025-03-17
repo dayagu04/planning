@@ -582,8 +582,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "last_update_slot_occupied_ratio");
 
   // path planner params
-  JSON_READ_VALUE(apa_param.SetPram().new_itervative_solution, bool,
-                  "new_itervative_solution");
+  JSON_READ_VALUE(apa_param.SetPram().use_average_obs_dist, bool,
+                  "use_average_obs_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().min_turn_radius, double,
                   "min_turn_radius");
@@ -837,8 +837,8 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().min_parallel_vis_slot_release_long_dist_slot2mirror,
       double, "min_parallel_vis_slot_release_long_dist_slot2mirror");
 
-  JSON_READ_VALUE(apa_param.SetPram().max_dist_from_slot2car_release, double,
-                  "max_dist_from_slot2car_release");
+  JSON_READ_VALUE(apa_param.SetPram().easy_slot_release_channel_width, double,
+                  "easy_slot_release_channel_width");
 
   JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
                   "terminal_length");

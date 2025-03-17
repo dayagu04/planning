@@ -41,6 +41,7 @@ struct SimulationParam {
   bool is_path_optimization = false;
   bool is_cilqr_optimization = false;
   bool is_reset = false;
+  bool use_average_obs_dist = false;
   double sample_ds = 0.02;
   std::vector<double> target_managed_slot_x_vec;
   std::vector<double> target_managed_slot_y_vec;

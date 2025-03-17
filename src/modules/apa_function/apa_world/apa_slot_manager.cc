@@ -335,25 +335,30 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   pt_0 = pt_0 + res.safe_lat_move_dist * t;
   pt_1 = pt_1 + res.safe_lat_move_dist * t;
 
-  const double channel_width = param.slot_release_channel_width;
+  double channel_width = param.slot_release_channel_width;
+
+  // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
   Polygon2D polygon;
-  polygon.vertexes[0].x = pt_0.x();
-  polygon.vertexes[0].y = pt_0.y();
 
-  polygon.vertexes[1].x = (pt_0 + channel_width * n).x();
-  polygon.vertexes[1].y = (pt_0 + channel_width * n).y();
+  polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+      pM01 + 2.0 * n, pM01 + slot.slot_width_ * t + 2.0 * n,
+      pM01 + slot.slot_width_ * t - 2.0 * n, pM01 - 2.0 * n});
 
-  polygon.vertexes[2].x = (pt_1 + channel_width * n).x();
-  polygon.vertexes[2].y = (pt_1 + channel_width * n).y();
+  if (!col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+          polygon, GJKColDetRequest(false))) {
+    channel_width = param.easy_slot_release_channel_width;
+  } else {
+    polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+        pM01 + 2.0 * n, pM01 - 2.0 * n, pM01 - slot.slot_width_ * t - 2.0 * n,
+        pM01 - slot.slot_width_ * t + 2.0 * n});
+    if (!col_det_interface_ptr_->GetGJKCollisionDetectorPtr()
+             ->IsPolygonCollision(polygon, GJKColDetRequest(false))) {
+      channel_width = param.easy_slot_release_channel_width;
+    }
+  }
 
-  polygon.vertexes[3].x = pt_1.x();
-  polygon.vertexes[3].y = pt_1.y();
-
-  polygon.vertex_num = 4;
-  polygon.shape = PolygonShape::box;
-  UpdatePolygonValue(&polygon, NULL, 0, false, POLYGON_MAX_RADIUS);
-
-  polygon.min_tangent_radius = 0.6;
+  polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+      pt_0, pt_0 + channel_width * n, pt_1 + channel_width * n, pt_1});
 
   if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false))) {

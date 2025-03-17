@@ -47,12 +47,13 @@ void Init() {
 }
 
 void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
-                      int is_complete_path, int force_mid_process_plan, double sample_ds) {
+                      int is_complete_path, int use_average_obs_dist, int force_mid_process_plan, double sample_ds) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
   g_simu_param.is_cilqr_optimization = is_cilqr_enable;
   g_simu_param.is_complete_path = is_complete_path;
+  g_simu_param.use_average_obs_dist = use_average_obs_dist;
   g_simu_param.force_mid_process_plan = force_mid_process_plan;
   g_simu_param.sample_ds = sample_ds;
 }

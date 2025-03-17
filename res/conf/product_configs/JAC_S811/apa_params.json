@@ -228,7 +228,7 @@
   "last_update_slot_occupied_ratio": 0.836,
 
   "comment_15": "path planner params",
-  "new_itervative_solution": false,
+  "use_average_obs_dist": false,
   "min_turn_radius": 5.43086,
   "safe_circle_radius": 5.98,
   "max_radius_in_slot": 12.66,
@@ -306,7 +306,7 @@
   "min_slot_release_long_dist_slot2mirror": 1.968,
   "min_parallel_uss_slot_release_long_dist_slot2mirror": 3.968,
   "min_parallel_vis_slot_release_long_dist_slot2mirror": 2.56,
-  "max_dist_from_slot2car_release": 7.68,
+  "easy_slot_release_channel_width": 4.08,
   "terminal_length": 1.2,
   "limiter_length": 0.268,
   "slot_occupied_ratio_max_lat_err": 2.068,
