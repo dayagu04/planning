@@ -33,7 +33,7 @@ fig1.height = 1500
 
 load_measure_distance_tool(fig1)
 fig_lat_offset = load_lateral_offset(bag_loader)
-data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
+# data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 
 behavior_data_1 = ColumnDataSource({
   'name':[],
@@ -195,7 +195,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
-  update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
+  # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
     update_lat_behavior_data(lat_behavior_common)

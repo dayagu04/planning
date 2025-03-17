@@ -890,6 +890,32 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #   'text_xn': [text_xn],
     #   'text_yn': [text_yn],
     # })
+
+    obstacle_polygon_id = local_view_data['data_select_obs_id'].data['obstacle_polygon_id']
+    plan_obstacle_info = load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_enu_to_car, loc_msg)
+    if g_is_display_enu:
+      local_view_data['data_obj_polygon'].data.update({
+        'polygon_x' : plan_obstacle_info['polygon_x'],
+        'polygon_y' : plan_obstacle_info['polygon_y'],
+        'obs_id' : plan_obstacle_info['id'],
+        'obs_type' : plan_obstacle_info['type'],
+        'obs_vs' : plan_obstacle_info['frenet_vs'],
+        'obs_vl' : plan_obstacle_info['frenet_vl'],
+        'obs_lat_decision' : plan_obstacle_info['lat_decision'],
+        'obs_is_static' : plan_obstacle_info['is_static'],
+      })
+    else:
+      local_view_data['data_obj_polygon'].data.update({
+        'polygon_x' : plan_obstacle_info['polygon_x_rel'],
+        'polygon_y' : plan_obstacle_info['polygon_y_rel'],
+        'obs_id' : plan_obstacle_info['id'],
+        'obs_type' : plan_obstacle_info['type'],
+        'obs_vs' : plan_obstacle_info['frenet_vs'],
+        'obs_vl' : plan_obstacle_info['frenet_vl'],
+        'obs_lat_decision' : plan_obstacle_info['lat_decision'],
+        'obs_is_static' : plan_obstacle_info['is_static'],
+      })
+
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
@@ -1937,6 +1963,15 @@ def load_local_view_figure():
                                               'obs_id':[],
                                               'obs_label':[]})
 
+  data_obj_polygon = ColumnDataSource(data = {'polygon_y':[],
+                                              'polygon_x':[],
+                                              'obs_id':[],
+                                              'obs_type':[],
+                                              'obs_vs':[],
+                                              'obs_vl':[],
+                                              'obs_lat_decision':[],
+                                              'obs_is_static':[]})
+
   data_rdg_general_obj = ColumnDataSource(data = {'obstacles_y':[],
                                                   'obstacles_x':[],
                                                   'pos_y':[],
@@ -2120,6 +2155,7 @@ def load_local_view_figure():
                      'data_fus_occ' : data_fus_occ, \
                      'data_fus_occ_obj' : data_fus_occ_obj, \
                      'data_fus_obj':data_fus_obj, \
+                     'data_obj_polygon':data_obj_polygon, \
                      'data_me_obj':data_me_obj, \
                      'data_rdg_obj':data_rdg_obj, \
                      'data_rdg_general_obj': data_rdg_general_obj, \
@@ -2444,19 +2480,20 @@ def load_local_view_figure():
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_plan_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
     fig1.patches('parking_slot_y', 'parking_slot_x', source = data_select_parking_slot, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 2, legend_label = 'parking slot')
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
-    fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
+    # fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    # fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 3,color='red', legend_label = 'occ obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)
-    fig_ehr_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    # fig_ehr_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'ehr_road_mark')
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
     # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
     # fig1.multi_line('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'ehr_ground_line', visible = False)
     fig1.scatter('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, size = 2,color='black', legend_label = 'ehr_ground_line', visible = False)
-    fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    # fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
 
     fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ground_line_info', visible = False)
     fig_ground_line = fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
@@ -2497,16 +2534,20 @@ def load_local_view_figure():
   if is_vis_hpp:
     # hover1_12 = HoverTool(renderers=[fig_ground_line], tooltips=[('id', '@ground_line_id')])
     # hover1_13 = HoverTool(renderers=[fig_ground_line_cluster], tooltips=[('id', '@ground_line_id')])
-    hover1_14 = HoverTool(renderers=[fig_fus_obj_polygon], tooltips=[('id', '@obs_id')])
-    hover1_15 = HoverTool(renderers=[fig_fus_occ_obj_polygon], tooltips=[('id', '@obs_id')])
-    hover1_16 = HoverTool(renderers=[fig_ehr_polygon], tooltips=[('id', '@polygon_id')])
-    hover1_17 = HoverTool(renderers=[fig_ground_line_polygon], tooltips=[('id', '@ground_line_id')])
+    # hover1_14 = HoverTool(renderers=[fig_fus_obj_polygon], tooltips=[('id', '@obs_id')])
+    # hover1_15 = HoverTool(renderers=[fig_fus_occ_obj_polygon], tooltips=[('id', '@obs_id')])
+    # hover1_16 = HoverTool(renderers=[fig_ehr_polygon], tooltips=[('id', '@polygon_id')])
+    # hover1_17 = HoverTool(renderers=[fig_ground_line_polygon], tooltips=[('id', '@ground_line_id')])
+    hover1_18 = HoverTool(renderers=[fig_obs_polygon_in_plan], tooltips=[('id', '@obs_id'), ('type', '@obs_type'),
+                                                                         ('v_s', '@obs_vs'), ('v_l', '@obs_vl'),
+                                                                         ('lat_decision', '@obs_lat_decision'), ('is_static', '@obs_is_static')])
     # fig1.add_tools(hover1_12)
     # fig1.add_tools(hover1_13)
-    fig1.add_tools(hover1_14)
-    fig1.add_tools(hover1_15)
-    fig1.add_tools(hover1_16)
-    fig1.add_tools(hover1_17)
+    # fig1.add_tools(hover1_14)
+    # fig1.add_tools(hover1_15)
+    # fig1.add_tools(hover1_16)
+    # fig1.add_tools(hover1_17)
+    fig1.add_tools(hover1_18)
 
   # tap1 = TapTool(renderers=[fig_virtual_line])
   # fig1.add_tools(tap1)
