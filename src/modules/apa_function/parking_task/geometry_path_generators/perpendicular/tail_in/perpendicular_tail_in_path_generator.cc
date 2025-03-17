@@ -1441,7 +1441,7 @@ PerpendicularTailInPathGenerator::RSPathPlan(
   Pose2D start(start_pose.pos.x(), start_pose.pos.y(), start_pose.heading);
   Pose2D end(target_pose.pos.x(), target_pose.pos.y(), target_pose.heading);
   RSPathRequestType request_type =
-      RSPathRequestType::gear_switch_less_than_twice;
+      RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
   rs.GeneShortestRSPath(&path, &is_connected_to_goal, &start, &end, turn_radius,
                         true, true, request_type, 100.0);
 

@@ -515,7 +515,7 @@ static int CCCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
     *Lmin = L;
   }
 
-  if (re_request_type_ == RSPathRequestType::gear_switch_less_than_twice) {
+  if (re_request_type_ == RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE) {
     return 0;
   }
   // C|C_beta C_beta|C
@@ -799,7 +799,7 @@ static int CCSCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
   bool pass;
   double t, u, v, L;
 
-  if (re_request_type_ == RSPathRequestType::gear_switch_less_than_twice) {
+  if (re_request_type_ == RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE) {
     return 0;
   }
 
@@ -971,7 +971,7 @@ int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
     return 0;
   }
 
-  RSPathRequestType rs_request = RSPathRequestType::none;
+  RSPathRequestType rs_request = RSPathRequestType::NONE;
   GetShortestRSPathParam(path, start_pose, goal_pose, min_turn_radius,
                          1.0 / min_turn_radius, rs_request);
 
@@ -1028,7 +1028,7 @@ int GetRSPathDist(double *distance, const Pose2D *start_pose,
     return 0;
   }
 
-  RSPathRequestType rs_request = RSPathRequestType::none;
+  RSPathRequestType rs_request = RSPathRequestType::NONE;
   GetShortestRSPathParam(path, start_pose, goal_pose, min_turn_radius,
                          1.0 / min_turn_radius, rs_request);
 

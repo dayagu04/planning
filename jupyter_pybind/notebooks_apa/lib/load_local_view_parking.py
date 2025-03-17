@@ -2265,7 +2265,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         continue
 
       for j in range(ground_line.groundline_point_size):
-        point_2d = ground_line.shape[j]
+        point_2d = ground_line.groundline_point[j]
         pos_x.append(point_2d.x)
         pos_y.append(point_2d.y)
     # for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:

@@ -18,7 +18,9 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
 }
 
 void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
-                                const ParkingVehDirection park_dir) {
+                                const ParkingVehDirection park_dir,
+                                const Pose2D &limiter_pose,
+                                const MapBound &XYbounds) {
   AstarDecider::Process(start, end);
 
   heading_shrink_.limit_search_heading_ = false;
@@ -27,6 +29,9 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
   } else if (park_dir == ParkingVehDirection::HEAD_IN) {
     ShrinkChildrenByHeadingForHeadIn();
   }
+
+  x_bound_.upper = XYbounds.x_max;
+  x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
 
   return;
 }
@@ -51,6 +56,13 @@ bool NodeShrinkDecider::IsLegalForPos(const double x, const double y,
                                       const double x_limit,
                                       const double y_limit) {
   if (std::fabs(y) < y_limit && x < x_limit) {
+    return false;
+  }
+  return true;
+}
+
+bool NodeShrinkDecider::IsLegalByXBound(const double x) {
+  if (x < x_bound_.lower || x > x_bound_.upper) {
     return false;
   }
   return true;

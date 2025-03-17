@@ -717,7 +717,7 @@ std::vector<Eigen::Vector3d> Update(
 
     request.space_type = ParkSpaceType::PARALLEL;
     request.direction_request = ParkingVehDirection::NONE;
-    request.rs_request = RSPathRequestType::none;
+    request.rs_request = RSPathRequestType::NONE;
     request.slot_width = ego_slot_info.slot.GetWidth();
     request.slot_length = ego_slot_info.slot.GetLength();
     request.history_gear = AstarPathGear::DRIVE;
@@ -743,7 +743,7 @@ std::vector<Eigen::Vector3d> Update(
 
     RSPathInterface rs_interface;
     RSPath rs_path;
-    RSPathRequestType rs_request = RSPathRequestType::none;
+    RSPathRequestType rs_request = RSPathRequestType::NONE;
     rs_interface.GeneSCSPath(&rs_path, &is_connected_to_goal, &start_pose,
                              &end_pose, parking_param.min_turn_radius,
                              rs_request);

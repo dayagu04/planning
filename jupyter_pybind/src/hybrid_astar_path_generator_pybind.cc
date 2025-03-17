@@ -858,7 +858,7 @@ std::vector<Eigen::Vector3d> Update(
     if (parking_dir == 5) {
       request.direction_request = ParkingVehDirection::HEAD_IN;
     }
-    request.rs_request = RSPathRequestType::none;
+    request.rs_request = RSPathRequestType::NONE;
     request.history_gear = AstarPathGear::NONE;
     request.swap_start_goal = false;
 
@@ -883,7 +883,7 @@ std::vector<Eigen::Vector3d> Update(
 
     RSPathInterface rs_interface;
     RSPath rs_path;
-    RSPathRequestType rs_request = RSPathRequestType::none;
+    RSPathRequestType rs_request = RSPathRequestType::NONE;
     rs_interface.GeneSCSPath(&rs_path, &is_connected_to_goal, &start_pose,
                              &end_pose, parking_param.min_turn_radius,
                              rs_request);

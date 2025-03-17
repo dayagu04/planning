@@ -581,7 +581,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   cur_request.space_type = slot_type;
   cur_request.direction_request = parking_in_type;
-  cur_request.rs_request = RSPathRequestType::none;
+  cur_request.rs_request = RSPathRequestType::NONE;
   cur_request.timestamp_ms = astar_start_time;
   cur_request.slot_id = ego_info.id;
 
