@@ -645,10 +645,6 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetCenterWay(
     }
   }
 
-  if (config_.use_obstacle_prediction_model_in_planning) {
-    lat_offset -= 0.1;
-  }
-
   if (lat_offset >= 0) {
     lat_offset = std::min(lat_offset, avoid_info_.normal_left_avoid_threshold);
   } else {

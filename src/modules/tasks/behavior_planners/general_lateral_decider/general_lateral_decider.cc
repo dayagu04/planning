@@ -2842,7 +2842,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
 bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   // const double KDynamicLonOverlapDisBuffer = 1.0;
-  const double KDynamicLonOverlapDisBuffer =
+  const double dynamic_lon_overlap_dis_buffer =
       general_lateral_decider_utils::CalDesireLonOverlapDistance(
           ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(),
           config_.use_obstacle_prediction_model_in_planning);
@@ -2878,7 +2878,7 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
 
     double start_s = std::max(ego_s_start, obstacle_s_start);
     double end_s = std::min(ego_s_end, obstacle_s_end);
-    if (start_s - KDynamicLonOverlapDisBuffer < end_s) {
+    if (start_s - dynamic_lon_overlap_dis_buffer < end_s) {
       overlap_start_s_ = start_s;
       overlap_end_s_ = end_s;
       return true;
