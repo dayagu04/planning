@@ -125,7 +125,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-      acc_upper_bound_[i] = std::fmax(init_lon_state_[2], acc_target.second);
+      acc_upper_bound_[i] =
+          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
       continue;
     }
 
