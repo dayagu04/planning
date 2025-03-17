@@ -123,6 +123,8 @@ class NarrowSpaceScenario : public ParkingScenario {
                                           const double slot_width,
                                           const Pose2D& ego_start);
 
+  const bool NeedBlindZonePlanning(const EgoInfoUnderSlot& ego_info);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
@@ -138,6 +140,11 @@ class NarrowSpaceScenario : public ParkingScenario {
   VirtualWallDecider virtual_wall_decider_;
 
   NarrowScenarioDecider narrow_space_decider_;
+
+  // Allow path planning fail one time.
+  // If fail in history planning, consider blind zone, delete obstacles in blind
+  // zone.
+  int path_planning_fail_num_;
 };
 
 }  // namespace apa_planner

@@ -900,6 +900,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.adjust_ego_y_thresh_outside_slot, double,
       "adjust_ego_y_thresh_outside_slot");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.enable_blind_zone, bool,
+                  "enable_blind_zone");
 
   JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");

@@ -334,6 +334,7 @@
   "astar_parallel_finish_head_lat_err" : 0.25,
   "astar_parallel_finish_heading_err" : 2.5,
   "adjust_ego_y_thresh_outside_slot": 0.2,
+  "enable_blind_zone" : true,
 
   "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 1.0,
