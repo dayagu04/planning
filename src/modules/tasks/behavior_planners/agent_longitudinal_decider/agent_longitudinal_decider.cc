@@ -930,7 +930,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double vehicle_length = vehicle_param.length;
   const double vehicle_width = vehicle_param.width;
-  const double rear_axle_to_front_axle = 3.0;
+  const double rear_axle_to_front_axle = vehicle_param.wheel_base;
   const double rear_axle_to_rear_edge =
       vehicle_length - vehicle_param.front_edge_to_rear_axle;
   const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
