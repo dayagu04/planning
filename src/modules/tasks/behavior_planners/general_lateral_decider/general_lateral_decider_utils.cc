@@ -8,17 +8,14 @@ namespace planning {
 namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
-                                iflyauto::ObjectType type,
+                                const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 GeneralLateralDeciderConfig &config) {
-  double base_dis = 0.8;
-  if (IsVRU(type)) {
-    base_dis = 1.0;
-  } else if (IsTruck(type)) {
-    base_dis = 0.8;
-  }
-  if (config.use_obstacle_prediction_model_in_planning) {
-    base_dis -= 0.1;
+  double base_dis = 0.7;
+  if (IsVRU(obstacle->type())) {
+    base_dis = 0.9;
+  } else if (IsTruck(obstacle)) {
+    base_dis = 0.7;
   }
   if (in_intersection) {
     base_dis += config.nudge_extra_buffer_in_intersection;
@@ -47,9 +44,9 @@ double CalDesireStaticLateralDistance(const double base_distance,
                                       iflyauto::ObjectType type,
                                       bool is_update_hard_bound,
                                       GeneralLateralDeciderConfig &config) {
-  const double kStaticVRUMaxExtraLateralBuffer = 0.65;
+  const double kStaticVRUMaxExtraLateralBuffer = 0.55;
   const double kConeMaxExtraLateralBuffer = 0.15;
-  const double kStaticOtherMaxExtraLateralBuffer = 0.45;
+  const double kStaticOtherMaxExtraLateralBuffer = 0.35;
   const double kMaxEgoLCoeff = 0.5;
 
   if (is_update_hard_bound) {
@@ -63,11 +60,6 @@ double CalDesireStaticLateralDistance(const double base_distance,
     max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
   } else {
     max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
-  }
-
-  if (config.use_obstacle_prediction_model_in_planning &&
-      !IsCone(type)) {
-    max_extra_lateral_buffer -= 0.1;
   }
 
   double min_extra_lateral_buffer =
@@ -201,9 +193,10 @@ bool IsCone(iflyauto::ObjectType type) {
   return type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE;
 }
 
-bool IsTruck(iflyauto::ObjectType type) {
-  return (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
-          type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK);
+bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle) {
+  return (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+          (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
+          obstacle->length() > 6));
 }
 
 }  // namespace general_lateral_decider_utils

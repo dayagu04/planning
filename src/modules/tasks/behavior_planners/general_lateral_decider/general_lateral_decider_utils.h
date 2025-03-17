@@ -4,11 +4,13 @@
 #include "ego_planning_config.h"
 #include "math.h"
 #include "task_basic_types.h"
+#include "obstacle_manager.h"
+
 namespace planning {
 namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
-                                iflyauto::ObjectType type,
+                                const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 GeneralLateralDeciderConfig &config);
 
@@ -33,6 +35,6 @@ TrajectoryPoint GetTrajectoryPointAtTime(
 
 bool IsVRU(iflyauto::ObjectType type);
 bool IsCone(iflyauto::ObjectType type);
-bool IsTruck(iflyauto::ObjectType type);
+bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle);
 }  // namespace general_lateral_decider_utils
 }  // namespace planning

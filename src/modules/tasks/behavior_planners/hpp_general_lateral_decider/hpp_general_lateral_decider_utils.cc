@@ -10,13 +10,13 @@ namespace planning {
 namespace hpp_general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
-                                iflyauto::ObjectType type,
+                                const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 HppGeneralLateralDeciderConfig &config) {
   double base_dis = 0.8;
-  if (IsVRU(type)) {
+  if (IsVRU(obstacle->type())) {
     base_dis = 1.0;
-  } else if (IsTruck(type)) {
+  } else if (IsTruck(obstacle)) {
     base_dis = 0.8;
   }
   if (in_intersection) {
@@ -185,9 +185,10 @@ bool IsCone(iflyauto::ObjectType type) {
   return type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE;
 }
 
-bool IsTruck(iflyauto::ObjectType type) {
-  return (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
-          type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK);
+bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle) {
+  return (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+          (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
+          obstacle->length() > 6));
 }
 
 ObstacleBorderInfo GetNearestObstacleBorder(

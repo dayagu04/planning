@@ -279,7 +279,7 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
   // keep_time_level: keep stability
   const auto &lateral_obstacle_history_info =
       session_->mutable_planning_context()
-          ->mutable_lateral_obstacle_decider_output()
+          ->lateral_obstacle_decider_output()
           .lateral_obstacle_history_info;
   TrackedObject *lead_one = lateral_obstacle->leadone();
 
@@ -348,7 +348,7 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
   std::vector<AvoidObstacleInfo> avd_temp_cars;
   const auto &lateral_obstacle_history_info =
       session_->mutable_planning_context()
-          ->mutable_lateral_obstacle_decider_output()
+          ->lateral_obstacle_decider_output()
           .lateral_obstacle_history_info;
   if (lateral_obstacle->front_tracks_copy().size() > 0) {
     for (auto &tr : lateral_obstacle->front_tracks_copy()) {
