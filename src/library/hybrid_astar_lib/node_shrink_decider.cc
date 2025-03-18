@@ -141,7 +141,7 @@ bool NodeShrinkDecider::IsShrinkByStartNode(const size_t start_id,
 }
 
 bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
-  if (child->GetGearSwitchNum() > 20) {
+  if (child->GetGearSwitchNum() > 15) {
     return true;
   }
 
