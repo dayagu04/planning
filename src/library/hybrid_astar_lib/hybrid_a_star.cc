@@ -1816,9 +1816,6 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::OUT_OF_BOUNDARY;
   }
 
-  // todo, check collision
-
-  // maybe search the same point, but new a node?
   new_node->Set(path, XYbounds_, config_, path.path_dist);
 
   // check search bound
@@ -1840,13 +1837,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   // headin shrink limit pose
-  bool position_legal = false;
-  double min_x = std::min(request_.start_.x, request_.real_goal.GetX());
-  position_legal = node_shrink_decider_.IsLegalForPos(
-      new_node->GetX(), new_node->GetY(), min_x - 0.1,
-      config_.headin_limit_y_shrink);
-
-  if (!position_legal) {
+  if (!node_shrink_decider_.IsLegalByXBound(new_node->GetX())) {
 #if PLOT_DELETE_NODE
     delete_queue_path_debug_.emplace_back(
         ad_common::math::Vec2d(new_node->GetX(), new_node->GetY()));
@@ -3560,6 +3551,7 @@ bool HybridAStar::AstarSearch(
   // debug
   child_node_debug_.clear();
   queue_path_debug_.clear();
+  delete_queue_path_debug_.clear();
   rs_path_h_cost_debug_.clear();
   rs_path_.Clear();
   result->Clear();
@@ -3792,8 +3784,8 @@ bool HybridAStar::AstarSearch(
         break;
       }
 
-      // total gear switch number is 0 or 1, break;
-      if (rs_node_to_goal.GetGearSwitchNum() < 2) {
+      // total gear switch number is 0, break;
+      if (rs_node_to_goal.GetGearSwitchNum() < 1) {
         break;
       }
 
@@ -3840,10 +3832,6 @@ bool HybridAStar::AstarSearch(
       }
 
       if (node_shrink_decider_.IsShrinkByGearSwitchNumber(&new_node)) {
-        continue;
-      }
-
-      if (!node_shrink_decider_.IsLegalByXBound(new_node.GetPose().x)) {
         continue;
       }
 
