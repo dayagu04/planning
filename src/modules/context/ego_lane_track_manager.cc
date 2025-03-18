@@ -53,7 +53,7 @@ constexpr double kDefaultRoadRadius = 750.0;
 constexpr int32_t kDefaultPointNums = 35;
 constexpr int32_t kLeastDefaultPointNums = 3;
 constexpr double kConsiderLaneStraightFrontEgo = 30.0;
-constexpr double kDefaultMappingConsiderLaneLength = 75.0;
+constexpr double kDefaultMappingConsiderLaneLength = 80.0;
 constexpr double kDefaultConsiderLaneMarksLength = 80.0;
 constexpr double kEgoPreviewTimeMinThd = 3.0;
 constexpr double kEgoPreviewTimeMaxThd = 5.0;
@@ -62,8 +62,9 @@ constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kExistSplitEgoRearLateralDisThd = 1.5;
 constexpr double kNearPreviewDistanceThd = 20.0;
 
-constexpr double kAverageKappaCostWeight = 2.5;
-constexpr double kAverageThetaDiffCostWeight = 0.5;
+constexpr double kAverageKappaCostWeight = 2.0;
+constexpr double kAverageThetaDiffCostWeight = 6.0;
+constexpr double kEgoLateralDistanceCostWeight = 0.5;
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
@@ -1290,6 +1291,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         double heading_angle_cost = 0.0;
         double average_kappa_cost = 0.0;
         double total_kappa_cost = 0.0;
+        double lateral_dis_cost = 0.0;
         std::shared_ptr<KDPath> frenet_coord =
             relative_id_lane->get_lane_frenet_coord();
         double ego_s = 0.0;
@@ -1327,9 +1329,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         average_kappa_cost = total_kappa_cost / iter_count;
         theta_diff_iter_count = std::max(1, theta_diff_iter_count);
         average_heading_angle_cost = heading_angle_cost / theta_diff_iter_count;
-
+        lateral_dis_cost = std::fabs(ego_l);
         total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
-            kAverageKappaCostWeight * average_kappa_cost;
+            kAverageKappaCostWeight * average_kappa_cost + lateral_dis_cost * kEgoLateralDistanceCostWeight;
         if (total_cost < clane_min_cost_total) {
           clane_min_cost_total = total_cost;
           origin_order_id = relative_id_lane->get_order_id();
