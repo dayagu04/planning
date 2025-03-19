@@ -28,13 +28,20 @@ bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
 void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
                                                 const VehicleParam &veh_param,
                                                 EulerDistanceTransform *edt) {
+  double min_passage_width = 2.5;
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-      x_check_upper_ = center_line_target_.x + 1.5;
+      double x_upper = min_passage_width + request->slot_length -
+                       veh_param.front_edge_to_rear_axle;
+      x_check_upper_ = std::min(center_line_target_.x + 1.5, x_upper);
+      x_check_upper_ = std::max(center_line_target_.x, x_check_upper_);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
       // todo: 使用新的方式，加速这里的计算. 采样的计算方式并不快.
-      x_check_upper_ = center_line_target_.x + veh_param.wheel_base;
+      double x_upper = min_passage_width + request->slot_length -
+                       veh_param.rear_edge_to_rear_axle;
+      x_check_upper_ = std::min(center_line_target_.x + 3.0, x_upper);
+      x_check_upper_ = std::max(center_line_target_.x, x_check_upper_);
     }
   } else {
     x_check_upper_ = center_line_target_.x + 0.6;

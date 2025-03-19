@@ -802,7 +802,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   // If target slot is not wide enough, return.
   if (target_regulator_result.second < advised_lat_buffer_inside) {
-    ILOG_INFO << "goal dist = " << target_regulator_result.second
+    ILOG_INFO << "goal dist to obs = " << target_regulator_result.second
               << ", lat buffer inside = " << advised_lat_buffer_inside;
     search_state_ = AstarSearchState::FAILURE;
     return;
@@ -895,7 +895,8 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
   double lon_min_sampling_length;
   if (request_.space_type == ParkSpaceType::VERTICAL ||
       request_.space_type == ParkSpaceType::SLANTING) {
-    lon_min_sampling_length = std::max(4.5, dist_to_slot_up_edge);
+    lon_min_sampling_length =
+        std::max(config_.adjust_dist_inside_slot, dist_to_slot_up_edge);
   } else {
     lon_min_sampling_length = 0.4;
   }

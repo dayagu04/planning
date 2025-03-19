@@ -85,6 +85,7 @@ class TargetPoseRegulator : public AstarDecider {
       const double lat_buffer) const;
 
  private:
+  // decide by end straight distance
   Pose2D center_line_target_;
   std::vector<PoseRegulateCandidate> candidate_info_;
   const AstarRequest *request_;
