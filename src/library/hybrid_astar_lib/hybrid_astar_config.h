@@ -84,6 +84,9 @@ struct PlannerOpenSpaceConfig {
   // 无换档路径最大搜索时间: 默认100ms
   double max_search_time_ms_for_no_gear_switch;
 
+  // for sampling method, set a distance for adjust car inside slot.
+  double adjust_dist_inside_slot;
+
   OpenSpaceSafeBuffer safe_buffer;
 
   void InitConfig();

@@ -5058,7 +5058,7 @@ void HybridAStar::UpdateConfig(const AstarRequest& request) {
   } else {
     slot_box_ = cdl::AABB(
         cdl::Vector2r(0.0, -request.slot_width / 2),
-        cdl::Vector2r(request.slot_length + 3.0, request.slot_width / 2));
+        cdl::Vector2r(request.slot_length + 1.5, request.slot_width / 2));
   }
 
   slot_box_.DebugString();
@@ -5287,7 +5287,9 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
 }
 
 FootPrintCircleModel* HybridAStar::GetCircleFootPrintModel(const Pose2D& pose) {
-  if (slot_box_.contain(pose)) {
+  if (slot_box_.contain(pose) &&
+      std::fabs(ad_common::math::NormalizeAngle(pose.theta -
+                                                request_.goal_.theta)) < 1.05) {
     return &hierachy_circle_model_
                 .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
   }
