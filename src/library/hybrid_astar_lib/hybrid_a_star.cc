@@ -395,7 +395,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
   request_ = request;
   DebugAstarRequestString(request_);
-
+  child_node_debug_.clear();
   clear_zone_ = clear_zone;
 
   const AstarPathGear spiral_gear =
@@ -421,7 +421,6 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   //           << ", end.y " << end.y << ", end.theta " << end.theta
   //           << ", sampling_step " << sampling_step;
 
-  size_t plan_num = 0;
   HybridAStarResult path;
   path.Clear();
   size_t path_points_size = 1000;
@@ -432,7 +431,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
   for (size_t k = 0; k < max_sampling_num; k++) {
     cubic_spiral_path.clear();
-    plan_num = k;
+
+#if PLOT_CHILD_NODE
+    child_node_debug_.emplace_back(
+        DebugAstarSearchPoint(sampling_end.x, sampling_end.y, true));
+#endif
 
     if (!GetCubicSpiralPath(cubic_spiral_path, start, sampling_end,
                             spiral_gear)) {
@@ -489,13 +492,10 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
 
     path_points_size = std::min(path_points_size, collision_id);
     if (path_points_size <= 1) {
-      // ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " <<
-      // k
-      //           << ", max_sampling_num=" << max_sampling_num;
       continue;
     }
 
-    // ILOG_INFO << plan_num << " point size = " << path.x.size()
+    // ILOG_INFO << " point size = " << path.x.size()
     //           << ", expected_dist_id = " << expected_dist_id
     //           << ", path_points_size = " << path_points_size
     //           << ", path len= " << path.accumulated_s.back()
@@ -507,14 +507,7 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
   }
 
   result->base_pose = request.base_pose_;
-
-  // if (plan_num > max_sampling_num - 1 || plan_num == max_sampling_num - 1) {
-  //   ILOG_INFO << "cubic plan fail";
-  //   return false;
-  // }
-
   path_points_size = std::min(path_points_size, path.x.size());
-
   if (path_points_size < 2) {
     return false;
   }
@@ -533,6 +526,11 @@ bool HybridAStar::SamplingByCubicSpiralForVerticalSlot(
       result->type.emplace_back(path.type[i]);
       result->kappa.emplace_back(path.kappa[i]);
       result->accumulated_s.emplace_back(path.accumulated_s[i]);
+
+      // no need too long path
+      if (path.accumulated_s[i] > lon_min_sampling_length) {
+        break;
+      }
     }
     result->base_pose = request.base_pose_;
 
