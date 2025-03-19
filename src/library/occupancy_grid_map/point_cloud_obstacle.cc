@@ -43,12 +43,6 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
     return;
   }
 
-  ILOG_INFO << "fusion_object_num = "
-            << (size_t)(local_view->fusion_objects_info.fusion_object_size)
-            << ", ground_lines_size = "
-            << static_cast<size_t>(
-                   local_view->ground_line_perception.groundline_size);
-
   size_t number =
       static_cast<size_t>(
           local_view->fusion_occupancy_objects_info.fusion_object_size) +
@@ -82,6 +76,16 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
     const iflyauto::FusionOccupancyAdditional& points =
         local_view->fusion_occupancy_objects_info.fusion_object[i]
             .additional_occupancy_info;
+
+    const iflyauto::ObjectType obs_type =
+        local_view->fusion_occupancy_objects_info.fusion_object[i]
+            .common_occupancy_info.type;
+    if (obs_type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+        obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE ||
+        obs_type == iflyauto::OBJECT_TYPE_OCC_PEOPLE ||
+        obs_type == iflyauto::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
+      continue;
+    }
 
     obs = &obs_list.point_cloud_list[i];
     obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
@@ -296,6 +300,11 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
+    if (pair.second.GetObsMovementType() ==
+        apa_planner::ApaObsMovementType::MOTION) {
+      continue;
+    }
+
     obs.points.clear();
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 
@@ -327,6 +336,11 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
+    if (pair.second.GetObsMovementType() ==
+        apa_planner::ApaObsMovementType::MOTION) {
+      continue;
+    }
+
     obs.points.clear();
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 

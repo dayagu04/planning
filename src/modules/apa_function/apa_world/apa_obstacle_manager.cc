@@ -104,7 +104,9 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       ApaObstacle apa_obs;
       if (apa_param.GetParam().enable_use_dynamic_obs) {
         if (obs_type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
-            obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE) {
+            obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE ||
+            obs_type == iflyauto::OBJECT_TYPE_OCC_PEOPLE ||
+            obs_type == iflyauto::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
           ILOG_INFO << "there are people or dynamic obs";
           apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
         }
