@@ -2183,6 +2183,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
   if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
     box_x_vec, box_y_vec = [], []
+    text_vec = []
+    text_x_vec = []
+    text_y_vec = []
+    local_view_data['data_fusion_obj_semantic'].data.update({'text':[], 'text_x':[], 'text_y':[],})
 
     for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]
@@ -2207,10 +2211,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       box_x_vec.append(box_x)
       box_y_vec.append(box_y)
 
+      # plot text
+      if len(polygon_points) > 0 :
+        text_vec.append(obj.common_occupancy_info.type)
+        text_x_vec.append(polygon_points[0].x)
+        text_y_vec.append(polygon_points[0].y)
+
     local_view_data['data_fusion_obj'].data.update({
       'y': pos_y,
       'x': pos_x,
     })
+
+    local_view_data['data_fusion_obj_semantic'].data.update({'text':text_vec,'text_x':text_x_vec,'text_y':text_y_vec,})
 
     # print("box_y_vec = ", box_y_vec)
     # print("box_x_vec = ", box_x_vec)
@@ -2327,6 +2339,7 @@ def load_local_view_figure_parking():
 
   data_fusion_obj = ColumnDataSource(data = {'y':[], 'x':[]})
   data_fusion_obj_box = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_fusion_obj_semantic = ColumnDataSource(data = {'text':[], 'text_x':[], 'text_y':[]})
 
   data_ground_line_obj = ColumnDataSource(data = {'yn':[], 'xn':[]})
 
@@ -2411,6 +2424,7 @@ def load_local_view_figure_parking():
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
                      'data_fusion_obj':data_fusion_obj,\
                      'data_fusion_obj_box':data_fusion_obj_box,\
+                     'data_fusion_obj_semantic':data_fusion_obj_semantic,\
                      'data_ground_line_obj' :data_ground_line_obj,\
                      }
   ### figures config
@@ -2474,7 +2488,8 @@ def load_local_view_figure_parking():
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
-  fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 3, line_color = 'yellow', line_dash = 'solid',legend_label = 'fusion_objects', visible = False)
+  fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = False)
+  fig1.text(x = 'text_y', y = 'text_x', text = 'text', source = data_fusion_obj_semantic, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'fusion_objects', visible = True)
 
   # car prediction traj
   fig1.circle('y', 'x', source = data_car_prediction_traj, size=4, color='orange', legend_label = 'car_prediction_traj', visible = False)
