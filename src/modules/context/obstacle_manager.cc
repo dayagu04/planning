@@ -342,7 +342,9 @@ void ObstacleManager::UpdateOccObstacle() {
       // 防止出现直角墙构成三角形区域
       if (polygon_points_size > 100 &&
           occupancy_objects[i].common_occupancy_info.type ==
-              iflyauto::OBJECT_TYPE_OCC_WALL) {
+              iflyauto::OBJECT_TYPE_OCC_WALL ||
+          occupancy_objects[i].common_occupancy_info.type ==
+              iflyauto::OBJECT_TYPE_OCC_EMPTY) {
         ProcessOccupancyWall(occupancy_objects[i], polygon_points,
                              polygon_points_size, frenet_coord, ego_point);
 
