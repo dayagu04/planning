@@ -1,6 +1,7 @@
 #include "obstacle_manager.h"
 
 #include <climits>
+#include <cmath>
 #include <cstddef>
 #include <tuple>
 
@@ -421,16 +422,18 @@ void ObstacleManager::split_points(
     const iflyauto::Point2f *points, const double polygon_points_size,
     vector<vector<planning_math::Vec2d>> &result) {
   constexpr double THRESHOLD = 2;
+  constexpr double MAXDISTANCETHRESHOLD = 2;
   vector<planning_math::Vec2d> current_segment;
-
+  double sum_distance = 0;
   current_segment.push_back(planning_math::Vec2d(points[0].x, points[0].y));
 
   for (size_t i = 1; i < polygon_points_size; ++i) {
     double dx = fabs(points[i].x - points[i - 1].x);
     double dy = fabs(points[i].y - points[i - 1].y);
-
-    if (dx > THRESHOLD || dy > THRESHOLD) {
+    sum_distance += std::hypot(dx, dy);
+    if (dx > THRESHOLD || dy > THRESHOLD || sum_distance > MAXDISTANCETHRESHOLD) {
       // 当前点与前一个点相差超过阈值，开启新分割
+      sum_distance = 0;
       result.push_back(current_segment);
       current_segment.clear();
     }
