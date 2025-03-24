@@ -666,6 +666,7 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
+    return;
   }
 
   auto fusion_occ_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
@@ -696,6 +697,7 @@ void PlanningPlayer::PlayOneFrame(
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
+      return;
     }
   }
 
@@ -2023,7 +2025,10 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
       bool find_function_state_machine = false;
       struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
-      uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
+      uint8_t functional_state = func_state_machine_ros_msg.current_state;
+      if (is_close_loop) {
+        uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
+      }
 
       auto cached_func_state_machine_ros_msg =
           find_ros_msg_with_header_time_upper_bound<
