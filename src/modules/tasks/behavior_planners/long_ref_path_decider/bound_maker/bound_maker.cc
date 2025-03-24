@@ -280,6 +280,10 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_follow_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_max_decel_target();
+  const auto& st_graph = session_->planning_context().st_graph_helper();
+  if (!st_graph) {
+    return;
+  }
   for (int32_t i = 0; i < plan_points_num_; i++) {
     auto* ptr = max_decel_target_pb_.add_max_decel_s_ref();
     const double t = i * dt_;
@@ -295,6 +299,8 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
     const double t = i * dt_;
     const double s_safe = max_deceleration_curve.Evaluate(0, t);
+    const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
+    const double agent_s = corridor_upper_point.s();
     const double vel = virtual_acc_curve->Evaluate(1, t);
     const double brake_buffer = vel * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
@@ -302,7 +308,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
         target_value.target_type() == TargetType::kNeighborYield ||
         target_value.target_type() == TargetType::kCautionYield) {
       // check s_target by s_safe
-      if (target_value.s_target_val() < s_safe) {
+      if (agent_s - brake_buffer < s_safe) {
         is_need_comfortable_decel = false;
         break;
       }

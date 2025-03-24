@@ -1,5 +1,8 @@
 #include "weight_maker.h"
 
+#include <cstdint>
+
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "planning_context.h"
 #include "status/status.h"
@@ -12,6 +15,7 @@ constexpr double kUrgentWeightStartTime = 0.0;
 constexpr double kUrgentWeightEndTime = 3.0;
 constexpr double kAddUrgentWeightEndTime = 2.0;
 constexpr double kUrgentSpeedThres = 4.0;
+constexpr double kMoreUrgentSpeedThres = 2.0;
 constexpr double lower_urgent_distance = 0.5;
 constexpr double upper_urgent_distance = 1.5;
 constexpr double lower_urgent_speed = 20.0 / 3.6;
@@ -77,6 +81,7 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
       speed_planning_config_.weight_maker_config.s_speed_lower_weight;
 
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
+  auto max_decel_curve = GenerateMaxDecelerationCurve();
   const auto& st_graph = session_->planning_context().st_graph_helper();
   const auto& agent_manager =
       session_->environmental_model().get_agent_manager();
@@ -90,6 +95,9 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
 
   int closest_index = -1;
   double min_urgent_dist = std::numeric_limits<double>::max();
+  int32_t closest_agent_id = -1;
+  JSON_DEBUG_VALUE("closest_agent_id", -1.0)
+  JSON_DEBUG_VALUE("min_urgent_dist", -1.0)
   for (int i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     if (!st_graph) {
@@ -98,11 +106,7 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     const auto corridor_upper_point =
         st_graph->GetPassCorridorUpperBound(relative_t);
     if (corridor_upper_point.valid() && corridor_upper_point.agent_id() != -1) {
-      // const auto* agent =
-      //     agent_manager->GetAgent(corridor_upper_point.agent_id());
-      // if (!agent) {
-      //   break;
-      // }
+      const int32_t agent_id = corridor_upper_point.agent_id();
       const double agent_speed = corridor_upper_point.velocity();
       const double ego_s = virtual_acc_curve->Evaluate(0, relative_t);
       const double ego_s_to_front =
@@ -114,12 +118,14 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
         if (curr_dist < min_urgent_dist) {
           min_urgent_dist = curr_dist;
           closest_index = i;
+          closest_agent_id = agent_id;
         }
       }
     }
   }
 
   is_urgent_ = false;
+  is_more_urgent_ = false;
   double urgent_scale = 1.0;
   if (closest_index >= 0) {
     double relative_t = closest_index * dt_;
@@ -129,16 +135,28 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     const double agent_speed = corridor_upper_point.velocity();
     const double ego_s = virtual_acc_curve->Evaluate(0, relative_t);
     const double ego_s_to_front = ego_s + vehicle_param.front_edge_to_rear_axle;
+    const double ego_s_max_decel = max_decel_curve.Evaluate(0, relative_t);
+    const double ego_s_max_decel_to_front =
+        ego_s_max_decel + vehicle_param.front_edge_to_rear_axle;
     const double agent_s = corridor_upper_point.s();
     const double urgent_distance = planning_math::LerpWithLimit(
         lower_urgent_distance, lower_urgent_speed, upper_urgent_distance,
         upper_urgent_speed, ego_speed);
-    if (agent_speed - ego_speed < kUrgentSpeedThres &&
-        agent_s - ego_s_to_front < urgent_distance) {
-      is_urgent_ = true;
+    if (agent_speed - ego_speed < kMoreUrgentSpeedThres &&
+        agent_s - ego_s_max_decel_to_front < urgent_distance) {
+      is_more_urgent_ = true;
       urgent_scale = planning_math::LerpWithLimit(
           upper_urgent_scale, 0.0, lower_urgent_scale, urgent_distance,
-          agent_s - ego_s_to_front);
+          agent_s - ego_s_max_decel_to_front);
+      JSON_DEBUG_VALUE("closest_agent_id", closest_agent_id)
+      JSON_DEBUG_VALUE("min_urgent_dist", agent_s - ego_s_max_decel_to_front)
+    } else if (agent_speed - ego_speed < kUrgentSpeedThres &&
+               agent_s - ego_s_to_front < urgent_distance) {
+      is_urgent_ = true;
+      urgent_scale = planning_math::LerpWithLimit(
+          7.0, 0.0, 5.0, urgent_distance, agent_s - ego_s_to_front);
+      JSON_DEBUG_VALUE("closest_agent_id", closest_agent_id)
+      JSON_DEBUG_VALUE("min_urgent_dist", agent_s - ego_s_to_front)
     }
   }
 
@@ -173,7 +191,8 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
       s_weight_[i] = s_weight_[i] * back_time_scale;
     }
     s_weight_[i] = s_weight_[i] * speed_scale;
-    if (is_urgent_ && relative_t >= kUrgentWeightStartTime &&
+    if ((is_more_urgent_ || is_urgent_) &&
+        relative_t >= kUrgentWeightStartTime &&
         relative_t <= kAddUrgentWeightEndTime) {
       s_weight_[i] = s_weight_[i] * urgent_scale;
     }
@@ -238,6 +257,38 @@ std::unique_ptr<Trajectory1d> WeightMaker::MakeVirtualZeroAccCurve() {
     virtual_zero_acc_curve->AppendSegment(a_next, dt_);
   }
   return virtual_zero_acc_curve;
+}
+
+SecondOrderTimeOptimalTrajectory WeightMaker::GenerateMaxDecelerationCurve() {
+  constexpr double IsoAccLimitUpper = -3.0;
+  constexpr double IsoAccLimitLower = -4.0;
+  constexpr double IsoAccLimitSpeedUpper = 20.0;
+  constexpr double IsoAccLimitSpeedLower = 5.0;
+  constexpr double IsoJerkLimitUpper = -3.5;
+  constexpr double IsoJerkLimitLower = -5.0;
+  constexpr double IsoJerkLimitSpeedUpper = 20.0;
+  constexpr double IsoJerkLimitSpeedLower = 5.0;
+
+  LonState init_state;
+  init_state.p = init_lon_state_[0];
+  init_state.v = init_lon_state_[1];
+  init_state.a = init_lon_state_[2];
+  StateLimit state_limit;
+
+  const double acc_lower_bound = planning_math::LerpWithLimit(
+      IsoAccLimitLower, IsoAccLimitSpeedLower, IsoAccLimitUpper,
+      IsoAccLimitSpeedUpper, init_lon_state_[1]);
+
+  const double jerk_lower_bound = planning_math::LerpWithLimit(
+      IsoJerkLimitLower, IsoJerkLimitSpeedLower, IsoJerkLimitUpper,
+      IsoJerkLimitSpeedUpper, init_lon_state_[1]);
+
+  constexpr double kSlowAccLowerBound = -3.0;
+  state_limit.a_max = 1.0;
+  state_limit.a_min = acc_lower_bound;
+  state_limit.j_max = 5.0;
+  state_limit.j_min = jerk_lower_bound;
+  return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
 
 double WeightMaker::s_weight(const double t) const {
