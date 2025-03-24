@@ -480,52 +480,7 @@ bool GeneralLongitudinalDecider::Execute() {
                                     .get_local_view()
                                     .function_state_machine_info.current_state;
     double stop_distance_to_destination = config_.stop_distance_to_destination;
-    if ((current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) &&
-        (successful_slot_info_list_size > 0)) {
-      distance_to_destination = 0.0;
-      std::vector<size_t> successful_slot_id;
-      successful_slot_id.reserve(successful_slot_info_list_size);
-      for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
-        successful_slot_id.emplace_back(successful_slot_info_list[i].id);
-      }
-      bool find_slot = false;
-      double dist_to_nearest_slot = NL_NMAX;
-      int32_t nearest_slot_id = -1;
-      double nearest_slot_width = 3.0;
-      double s_diff_from_nearest_slot_to_ego = 0.0;
-      for (const auto &parking_slot : parking_slots) {
-        if (std::find(successful_slot_id.begin(), successful_slot_id.end(),
-                      parking_slot->id() - 6000000) !=
-            successful_slot_id.end()) {
-          Point2D cart_point, frenet_point;
-          cart_point.x = parking_slot->x_center();
-          cart_point.y = parking_slot->y_center();
-          if (frenet_coord != nullptr) {
-            if (frenet_coord->XYToSL(cart_point, frenet_point)) {
-              find_slot = true;
-              double s_diff =
-                  frenet_point.x - planning_init_point.frenet_state.s;
-              dist_to_nearest_slot =
-                  std::min(std::fabs(s_diff), dist_to_nearest_slot);
-              nearest_slot_id = parking_slot->id();
-              nearest_slot_width = parking_slot->width();
-              s_diff_from_nearest_slot_to_ego = s_diff;
-            }
-          }
-        }
-      }
-      if (find_slot) {
-        if (s_diff_from_nearest_slot_to_ego < kMathEpsilon) {
-          // released slot is behind ego
-          stop_distance_to_destination = 0.0;
-          distance_to_destination = 0.0;
-        } else {
-          // released slot is front ego
-          stop_distance_to_destination = 0.5 * nearest_slot_width;
-          distance_to_destination = dist_to_nearest_slot;
-        }
-      }
-    } else if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
       if (parking_slot_manager->IsExistTargetSlot()) {
         const auto &target_slot_points = parking_slot_manager->GetTargetSlotPoints();
         planning_math::LineSegment2d axis(
@@ -543,6 +498,14 @@ bool GeneralLongitudinalDecider::Execute() {
               planning_init_point.frenet_state.s;
           }
         }
+      }
+    } else if (current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
+      bool find_slot =
+          parking_slot_manager->CalculateDistanceToNearestSlot(reference_path_ptr_);
+      if (find_slot) {
+        stop_distance_to_destination = 0.0;
+        distance_to_destination =
+            parking_slot_manager->GetDistanceToNearestSlot();
       }
     }
     double destination_s =
