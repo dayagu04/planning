@@ -89,7 +89,7 @@ void ApaObstacle::GenerateLocalBoundingbox(cdl::AABB* box) const {
   *box = cdl::AABB();
 
   for (const auto& pt : pt_clout_2d_local_) {
-    box->MergePoint(pt);
+    box->MergePointfloat64(pt);
   }
 
   return;

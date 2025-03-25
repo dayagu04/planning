@@ -6,7 +6,7 @@
 namespace planning {
 
 void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose,
-                                      const double _ogm_resolution) {
+                                      const float _ogm_resolution) {
   ogm_tf_.SetBasePose(ogm_pose);
   ogm_base_pose_ = ogm_pose;
 
@@ -24,7 +24,7 @@ void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose,
 }
 
 void OccupancyGridCoordinate::Process(const OccupancyGridBound &bound,
-                                      const double _ogm_resolution) {
+                                      const float _ogm_resolution) {
   Pose2D ogm_pose(bound.min_x, bound.min_y, 0.0);
   ogm_tf_.SetBasePose(ogm_pose);
   ogm_base_pose_ = ogm_pose;

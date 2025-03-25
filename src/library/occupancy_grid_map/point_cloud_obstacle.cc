@@ -15,7 +15,7 @@ namespace planning {
 
 void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
     ParkObstacleList& obs_list, const LocalView* local_view,
-    const double slot_length, const double slot_width,
+    const float slot_length, const float slot_width,
     const Pose2D& slot_base_pose, const Pose2D& ego_start,
     const bool enable_limiter_obs) {
   Transform2d slot_tf;
@@ -26,14 +26,16 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
   Polygon2D ego_global_polygon;
-  double veh_x_buffer = 0.3;
-  double veh_y_buffer = 0.11;
+  float veh_x_buffer = 0.3;
+  float veh_y_buffer = 0.11;
 
   GenerateUpLeftFrameBox(
-      &ego_local_polygon, -config.rear_overhanging - veh_x_buffer,
-      -config.max_car_width / 2 - veh_y_buffer,
-      config.car_length - config.rear_overhanging + veh_x_buffer,
-      config.max_car_width / 2 + veh_y_buffer);
+      &ego_local_polygon,
+      -static_cast<float>(config.rear_overhanging) - veh_x_buffer,
+      -static_cast<float>(config.max_car_width / 2) - veh_y_buffer,
+      static_cast<float>(config.car_length) -
+          static_cast<float>(config.rear_overhanging) + veh_x_buffer,
+      static_cast<float>(config.max_car_width / 2) + veh_y_buffer);
   ULFLocalPolygonToGlobal(&ego_global_polygon, &ego_local_polygon, ego_start);
 
   // generate local obs
@@ -53,12 +55,15 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   // slot aabb
   cdl::AABB slot_box;
 
-  double slot_x_buffer = 1.0;
-  double slot_y_buffer = 0.05;
-  double safe_slot_width =
-      std::max(slot_width, config.max_car_width + veh_x_buffer) + slot_y_buffer;
-  double safe_slot_length =
-      std::max(slot_length, config.car_length) + slot_x_buffer;
+  float slot_x_buffer = 1.0;
+  float slot_y_buffer = 0.05;
+  float safe_slot_width =
+      std::max(slot_width,
+               static_cast<float>(config.max_car_width) + veh_x_buffer) +
+      slot_y_buffer;
+  float safe_slot_length =
+      std::max(slot_length, static_cast<float>(config.car_length)) +
+      slot_x_buffer;
 
   slot_box.min_ = cdl::Vector2r(-0.5, -safe_slot_width / 2);
   slot_box.max_ = cdl::Vector2r(safe_slot_length, safe_slot_width / 2);
@@ -202,8 +207,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
         const iflyauto::ParkingFusionLimiter* limiter = &slot->limiters[j];
 
         SampleInLineSegment(
-            Eigen::Vector2d(limiter->end_points[0].x, limiter->end_points[0].y),
-            Eigen::Vector2d(limiter->end_points[1].x, limiter->end_points[1].y),
+            Eigen::Vector2f(limiter->end_points[0].x, limiter->end_points[0].y),
+            Eigen::Vector2f(limiter->end_points[1].x, limiter->end_points[1].y),
             &limiter_points);
 
         // ILOG_INFO << "limiter point size " << limiter_points.size();
@@ -259,11 +264,11 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
 }
 
 void PointCloudObstacleTransform::SampleInLineSegment(
-    const Eigen::Vector2d& start, const Eigen::Vector2d& end,
+    const Eigen::Vector2f& start, const Eigen::Vector2f& end,
     std::vector<Position2D>* points) {
   points->clear();
 
-  const Eigen::Vector2d line = end - start;
+  const Eigen::Vector2f line = end - start;
 
   if (std::sqrt(line.x() * line.x() + line.y() * line.y()) < 0.1) {
     points->emplace_back(Position2D(start.x(), start.y()));
@@ -271,13 +276,13 @@ void PointCloudObstacleTransform::SampleInLineSegment(
     return;
   }
 
-  const Eigen::Vector2d unit_line_vec = line.normalized();
-  double len = line.norm();
+  const Eigen::Vector2f unit_line_vec = line.normalized();
+  float len = line.norm();
 
-  double s = 0.0;
-  double ds = 0.1;
+  float s = 0.0;
+  float ds = 0.1;
 
-  Eigen::Vector2d point;
+  Eigen::Vector2f point;
   while (s < len) {
     point = start + s * unit_line_vec;
 
@@ -309,7 +314,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 
     for (const auto& pt : pair.second.GetPtClout2dLocal()) {
-      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
+      obs.points.emplace_back(
+          Position2D(static_cast<float>(pt.x()), static_cast<float>(pt.y())));
     }
 
     pair.second.GenerateLocalBoundingbox(&obs.box);

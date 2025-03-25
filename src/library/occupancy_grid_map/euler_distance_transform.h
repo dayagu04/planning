@@ -17,17 +17,17 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   // use default ROI bound to generate ogm.
   void Process(const Pose2D &ogm_pose,
-               const double _ogm_resolution = ogm_resolution) override;
+               const float _ogm_resolution = ogm_resolution) override;
 
   bool Excute(const OccupancyGridMap &map, const Pose2D &ogm_pose,
-              const double _ogm_resolution = ogm_resolution);
+              const float _ogm_resolution = ogm_resolution);
 
   // use user ROI bound to generate ogm.
   void Process(const OccupancyGridBound &bound,
-               const double _ogm_resolution = ogm_resolution) override;
+               const float _ogm_resolution = ogm_resolution) override;
 
   bool Excute(const OccupancyGridMap &map, const OccupancyGridBound &bound,
-              const double _ogm_resolution = ogm_resolution);
+              const float _ogm_resolution = ogm_resolution);
 
   void CVMatrixToArray(cv::Mat *edt_matrix);
 
@@ -73,13 +73,13 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   void UpdateSafeBuffer(const float car_body_lat_safe_buffer,
                         const float lon_safe_buffer, const float mirror_buffer,
-                        const double big_circle_safe_buffer = 0.35);
+                        const float big_circle_safe_buffer = 0.35);
 
   const EDTData &GetConstEDTData() const { return data_; }
 
   const FootPrintCircleList GetCircleFootPrint(const AstarPathGear gear) const;
 
-  const double GetLatetalSafeBuffer() const { return latetal_safe_buffer_; }
+  const float GetLatetalSafeBuffer() const { return latetal_safe_buffer_; }
 
   const bool IsCollisionForPoint(Transform2d *tf, const AstarPathGear gear,
                                  FootPrintCircleModel *footprint_model);
@@ -91,7 +91,7 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   float latetal_safe_buffer_ = 0.1;
   float mirror_safe_buffer_ = 0.1;
   float lon_safe_buffer_ = 0.3;
-  double big_circle_safe_buffer_ = 0.35;
+  float big_circle_safe_buffer_ = 0.35;
 };
 
 }  // namespace planning

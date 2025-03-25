@@ -6,7 +6,7 @@ namespace planning {
 const bool CubicSpiralInterface::CubicSpiralStatesSolve(
     bool *solution_usable, std::vector<spiral_path_point_t> &states,
     const spiral_path_point_t *start, const spiral_path_point_t *goal,
-    double step_length, bool constrain_start_k, bool constrain_goal_k) {
+    float step_length, bool constrain_start_k, bool constrain_goal_k) {
   bool ret = false;
   solution_cubic_t sol;
 
@@ -47,7 +47,7 @@ const bool CubicSpiralInterface::CubicSpiralStatesSolve(
 const bool CubicSpiralInterface::GenerateCubicSpiralPathByStrictSolve(
     solution_cubic_t *solution, std::vector<spiral_path_point_t> &states,
     const spiral_path_point_t *start, const spiral_path_point_t *goal,
-    const double step_length) {
+    const float step_length) {
   bool ret = false;
   solution_cubic_t sol;
   if (start == NULL || goal == NULL) {

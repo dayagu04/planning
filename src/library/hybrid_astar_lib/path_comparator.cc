@@ -80,7 +80,7 @@ bool PathComparator::CheckVerticalSlotTailIn(const AstarRequest *request,
   } else {
     gear_switch_pose_best = best_node->GetPose();
   }
-  double heading_error_best = std::fabs(gear_switch_pose_best.theta);
+  float heading_error_best = std::fabs(gear_switch_pose_best.theta);
 
   Pose2D gear_switch_pose_challenger;
   if (node_challenger->GearSwitchNode() != nullptr) {
@@ -89,7 +89,7 @@ bool PathComparator::CheckVerticalSlotTailIn(const AstarRequest *request,
     gear_switch_pose_challenger = node_challenger->GetPose();
   }
 
-  double heading_error_challenger =
+  float heading_error_challenger =
       std::fabs(gear_switch_pose_challenger.theta);
 
 #if DEBUG_DECIDER
@@ -98,8 +98,8 @@ bool PathComparator::CheckVerticalSlotTailIn(const AstarRequest *request,
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
-  double x_upper = 10.0;
-  double x_lower = 4.0;
+  float x_upper = 10.0;
+  float x_lower = 4.0;
   if (gear_switch_pose_challenger.x < x_lower ||
       gear_switch_pose_challenger.x > x_upper) {
     return false;
@@ -156,7 +156,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
   } else {
     gear_switch_pose_best = best_node->GetPose();
   }
-  double heading_error_best = ad_common::math::NormalizeAngle(
+  float heading_error_best = ad_common::math::NormalizeAngle(
       gear_switch_pose_best.theta - request->real_goal.theta);
   heading_error_best = std::fabs(heading_error_best);
 
@@ -168,7 +168,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
     gear_switch_pose_challenger = node_challenger->GetPose();
   }
 
-  double heading_error_challenger = ad_common::math::NormalizeAngle(
+  float heading_error_challenger = ad_common::math::NormalizeAngle(
       gear_switch_pose_challenger.theta - request->real_goal.theta);
   heading_error_challenger = std::fabs(heading_error_challenger);
 
@@ -178,8 +178,8 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
-  double x_upper = 12.0;
-  double x_lower = 4.0;
+  float x_upper = 12.0;
+  float x_lower = 4.0;
   if (gear_switch_pose_challenger.x < x_lower ||
       gear_switch_pose_challenger.x > x_upper) {
     return false;
@@ -197,17 +197,17 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
 const bool PathComparator::NodeCompare(const Pose2D &goal,
                                        const Node3d *best_node,
                                        const Node3d *node_challenger) {
-  double dist1 = std::fabs(goal.y - best_node->GetPose().y);
-  double dist2 = std::fabs(goal.y - node_challenger->GetPose().y);
+  float dist1 = std::fabs(goal.y - best_node->GetPose().y);
+  float dist2 = std::fabs(goal.y - node_challenger->GetPose().y);
 
   // 距离较近，比较heading
-  const double dist_bound = 0.05;
+  const float dist_bound = 0.05;
   if (dist2 < dist_bound && dist1 < dist_bound) {
-    double heading_error_challenger = ad_common::math::NormalizeAngle(
+    float heading_error_challenger = ad_common::math::NormalizeAngle(
         node_challenger->GetPose().theta - goal.theta);
     heading_error_challenger = std::fabs(heading_error_challenger);
 
-    double heading_error_best = ad_common::math::NormalizeAngle(
+    float heading_error_best = ad_common::math::NormalizeAngle(
         best_node->GetPose().theta - goal.theta);
     heading_error_best = std::fabs(heading_error_best);
     if (heading_error_challenger < heading_error_best) {

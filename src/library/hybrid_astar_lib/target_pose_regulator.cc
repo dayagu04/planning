@@ -28,19 +28,19 @@ bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
 void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
                                                 const VehicleParam &veh_param,
                                                 EulerDistanceTransform *edt) {
-  double min_passage_width = 2.5;
+  float min_passage_width = 2.5;
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-      double x_upper = min_passage_width + request->slot_length -
+      float x_upper = min_passage_width + request->slot_length -
                        veh_param.front_edge_to_rear_axle;
-      x_check_upper_ = std::min(center_line_target_.x + 1.5, x_upper);
+      x_check_upper_ = std::min(center_line_target_.x + 1.5f, x_upper);
       x_check_upper_ = std::max(center_line_target_.x, x_check_upper_);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
       // todo: 使用新的方式，加速这里的计算. 采样的计算方式并不快.
-      double x_upper = min_passage_width + request->slot_length -
+      float x_upper = min_passage_width + request->slot_length -
                        veh_param.rear_edge_to_rear_axle;
-      x_check_upper_ = std::min(center_line_target_.x + 3.0, x_upper);
+      x_check_upper_ = std::min(center_line_target_.x + 3.0f, x_upper);
       x_check_upper_ = std::max(center_line_target_.x, x_check_upper_);
     }
   } else {
@@ -63,7 +63,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   tf.SetBasePose(request->start_);
   AstarPathGear gear = AstarPathGear::NONE;
   edt->DistanceCheckForPoint(&dist, &tf, gear);
-  ego_dist_to_obs_ = static_cast<double>(dist);
+  ego_dist_to_obs_ = static_cast<float>(dist);
 
 #if DEBUG_DECIDER
     DebugString();
@@ -137,16 +137,16 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   Pose2D global_pose;
   global_pose = center_line_target_;
 
-  double y_upper = request->slot_width / 2 - veh_param.width / 2;
-  y_upper = std::max(0.0, y_upper);
-  double y_lower = -request->slot_width / 2 + veh_param.width / 2;
-  y_lower = std::min(0.0, y_lower);
+  float y_upper = request->slot_width / 2 - veh_param.width / 2;
+  y_upper = std::max(0.0f, y_upper);
+  float y_lower = -request->slot_width / 2 + veh_param.width / 2;
+  y_lower = std::min(0.0f, y_lower);
 
-  double y_step = 0.03;
+  float y_step = 0.03;
   int y_sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
-  double y_offset = 0.0;
-  double left_y_offset = 0.0;
-  double right_y_offset = 0.0;
+  float y_offset = 0.0;
+  float left_y_offset = 0.0;
+  float right_y_offset = 0.0;
 
   float dist;
   PoseRegulateCandidate candidate;
@@ -234,7 +234,7 @@ const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
 }
 
 const bool TargetPoseRegulator::IsCandidatePoseSafe(
-    const double lat_buffer) const {
+    const float lat_buffer) const {
   if (candidate_info_.size() <= 0) {
     return false;
   }
@@ -248,8 +248,8 @@ const bool TargetPoseRegulator::IsCandidatePoseSafe(
   return false;
 }
 
-const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePose(
-    const double lat_buffer) const {
+const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePose(
+    const float lat_buffer) const {
   if (request_->direction_request == ParkingVehDirection::TAIL_IN ) {
     return GetCandidatePoseForTailIn(lat_buffer);
   }
@@ -281,16 +281,16 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   AstarPathGear gear = AstarPathGear::NONE;
   global_pose = center_line_target_;
 
-  double y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2;
-  y_upper = std::max(0.0, y_upper);
-  double y_lower = -request->slot_width / 2 + veh_param.width / 2 - 0.2;
-  y_lower = std::min(0.0, y_lower);
+  float y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2f;
+  y_upper = std::max(0.0f, y_upper);
+  float y_lower = -request->slot_width / 2 + veh_param.width / 2 - 0.2f;
+  y_lower = std::min(0.0f, y_lower);
 
-  double y_step = 0.03;
+  float y_step = 0.03;
   int y_sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
-  double y_offset = 0.0;
-  double left_y_offset = 0.0;
-  double right_y_offset = 0.0;
+  float y_offset = 0.0;
+  float left_y_offset = 0.0;
+  float right_y_offset = 0.0;
 
   float dist;
   PoseRegulateCandidate candidate;
@@ -311,7 +311,7 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
     global_pose.y = y_offset;
 
     dist = GetDistToObs(&global_pose, edt);
-    if (dist > 0.06) {
+    if (dist > 0.06f) {
       PoseRegulateCandidate candidate;
       candidate.lat_offset = y_offset;
       candidate.dist_to_obs = dist;
@@ -333,14 +333,14 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   return;
 }
 
-const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForTailIn(
-    const double lat_buffer) const {
+const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePoseForTailIn(
+    const float lat_buffer) const {
   if (candidate_info_.size() <= 0) {
     return std::make_pair(center_line_target_, 0.0);
   }
 
-  double dist;
-  double extra_buffer = 0.05;
+  float dist;
+  float extra_buffer = 0.05;
   const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
 
   for (auto &obj : candidate_info_) {
@@ -379,8 +379,8 @@ const int TargetPoseRegulator::GenerateOffsetPreference() const {
   return 0;
 }
 
-const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForHeadIn(
-    const double lat_buffer) const {
+const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePoseForHeadIn(
+    const float lat_buffer) const {
   if (candidate_info_.size() <= 0) {
     return std::make_pair(center_line_target_, 0.0);
   }
@@ -407,13 +407,13 @@ const std::pair<Pose2D, double> TargetPoseRegulator::GetCandidatePoseForHeadIn(
 }
 
 const PoseRegulateCandidate *TargetPoseRegulator::GetCandidatePoseByOffset(
-    const double lat_buffer, const int offset) const {
+    const float lat_buffer, const int offset) const {
   if (candidate_info_.size() <= 0) {
     return nullptr;
   }
 
-  double dist;
-  double extra_buffer = 0.05;
+  float dist;
+  float extra_buffer = 0.05;
   const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
 
   for (auto &obj : candidate_info_) {

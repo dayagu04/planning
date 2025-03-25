@@ -53,8 +53,8 @@ struct AstarRequest {
   // real goal for park in, decide by slot limiter
   Pose2D real_goal;
 
-  double slot_width;
-  double slot_length;
+  float slot_width;
+  float slot_length;
 
   bool swap_start_goal;
 };

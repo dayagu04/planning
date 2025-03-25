@@ -489,15 +489,15 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   // start
   Pose2D start;
-  start.x = ego_info.cur_pose.pos[0];
-  start.y = ego_info.cur_pose.pos[1];
-  start.theta = ego_info.cur_pose.heading;
+  start.x = static_cast<float>(ego_info.cur_pose.pos[0]);
+  start.y = static_cast<float>(ego_info.cur_pose.pos[1]);
+  start.theta = static_cast<float>(ego_info.cur_pose.heading);
 
   // real target pose in slot
   Pose2D real_end;
-  real_end.x = ego_info.target_pose.pos[0];
-  real_end.y = ego_info.target_pose.pos[1];
-  real_end.theta = ego_info.target_pose.heading;
+  real_end.x = static_cast<float>(ego_info.target_pose.pos[0]);
+  real_end.y = static_cast<float>(ego_info.target_pose.pos[1]);
+  real_end.theta = static_cast<float>(ego_info.target_pose.heading);
 
   // astar end, maybe different with real end.
   Pose2D end = real_end;
@@ -529,12 +529,13 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     }
     slot_type = ParkSpaceType::VERTICAL;
   }
-  end.x = real_end.x + end_straight_len;
+  end.x = real_end.x + static_cast<float>(end_straight_len);
 
   double astar_start_time = IflyTime::Now_ms();
-  Pose2D slot_base_pose = Pose2D(ego_info.origin_pose_global.pos.x(),
-                                 ego_info.origin_pose_global.pos.y(),
-                                 ego_info.origin_pose_global.heading);
+  Pose2D slot_base_pose =
+      Pose2D(static_cast<float>(ego_info.origin_pose_global.pos.x()),
+             static_cast<float>(ego_info.origin_pose_global.pos.y()),
+             static_cast<float>(ego_info.origin_pose_global.heading));
 
   ParkObstacleList obs;
 
@@ -543,9 +544,10 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
     virtual_wall_decider_.Init(start);
   }
-  virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot.slot_width_,
-                                ego_info.slot.slot_length_, start, real_end,
-                                slot_type, ego_info.slot_side, parking_in_type);
+  virtual_wall_decider_.Process(
+      obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
+      static_cast<float>(ego_info.slot.slot_length_), start, real_end,
+      slot_type, ego_info.slot_side, parking_in_type);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
@@ -556,11 +558,13 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     cdl::AABB box;
     double y_buffer = 0.01;
     box.min_ = cdl::Vector2r(
-        slot_info.pt_23_mid.x() - 0.01,
-        std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) - y_buffer);
+        slot_info.pt_23_mid.x() - 0.01f,
+        static_cast<float>(std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) -
+                           y_buffer));
     box.max_ = cdl::Vector2r(
-        slot_info.pt_01_mid.x() + 4.0,
-        std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) + y_buffer);
+        slot_info.pt_01_mid.x() + 4.0f,
+        static_cast<float>(std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) +
+                           y_buffer));
 
     obstacle_generator.GenerateLocalObstacle(
         apa_world_ptr_->GetObstacleManagerPtr(), obs, box);

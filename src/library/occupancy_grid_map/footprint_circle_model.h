@@ -10,6 +10,23 @@ namespace planning {
 
 #define FOOTPRINT_CIRCLE_NUM (12)
 
+enum FootPrintCircleID : int8_t {
+  LEFT_UPPER_CORNER = 0,
+  RIGHT_UPPER_CORNER = 1,
+  RIGHT_MORROR = 2,
+  RIGHT_LOWER_CORNER = 3,
+  LEFT_LOWER_CORNER = 4,
+  LEFT_MORROR = 5,
+  BIG_CIRCLE_UPPER = 6,
+  BIG_CIRCLE_MIDDLE_UPPER = 7,
+  BIG_CIRCLE_MIDDLE_LOWER = 8,
+  BIG_CIRCLE_LOWER = 9,
+
+  // lon buffer
+  LON_BUFFER_LEFT_CIRCLE = 10,
+  LON_BUFFER_RIGHT_CIRCLE = 11,
+};
+
 struct FootPrintCircle {
   Position2D pos;
   float radius;
@@ -32,9 +49,14 @@ class FootPrintCircleModel {
   void Init(const float lat_safe_buffer, const float lon_safe_buffer,
             const float mirror_buffer);
 
+  // lat_safe_buffer: lateral buffer
+  // lon_safe_buffer: lon buffer
+  // mirror_buffer: mirror buffer
+  // big_circle_safe_buffer: for accelerate computation, this buffer can filt
+  // collision;
   void UpdateSafeBuffer(const float lat_safe_buffer,
                         const float lon_safe_buffer, const float mirror_buffer,
-                        const double big_circle_safe_buffer = 0.35);
+                        const float big_circle_safe_buffer = 0.35);
 
   void LocalToGlobalFast(FootPrintCircleList *global_circle,
                          const Pose2D &veh_pose);

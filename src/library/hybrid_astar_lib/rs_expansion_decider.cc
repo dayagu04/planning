@@ -12,8 +12,8 @@ namespace planning {
 #define rs_end_point_buffer (0.2)
 
 void RSExpansionDecider::Process(
-    const double min_radius, const double slot_width, const double slot_length,
-    const Pose2D &ego_pose, const Pose2D &astar_end, const double veh_width,
+    const float min_radius, const float slot_width, const float slot_length,
+    const Pose2D &ego_pose, const Pose2D &astar_end, const float veh_width,
     const ParkSpaceType slot_type, const ParkingVehDirection park_dir) {
   same_point_for_rs_with_astar_ = true;
   rs_end_pose_ = astar_end;
@@ -27,7 +27,7 @@ void RSExpansionDecider::Process(
     return;
   }
 
-  double half_width = slot_width / 2.0;
+  float half_width = slot_width / 2.0;
 
   // check width
   if (min_radius <= half_width) {
@@ -39,13 +39,13 @@ void RSExpansionDecider::Process(
     return;
   }
 
-  double dist_to_left_bord = min_radius - half_width;
+  float dist_to_left_bord = min_radius - half_width;
   rs_end_max_depth_ = std::sqrt(min_radius * min_radius -
                                 dist_to_left_bord * dist_to_left_bord);
 
   rs_end_max_depth_ -= rs_end_point_buffer;
 
-  double depth = slot_length - astar_end.x;
+  float depth = slot_length - astar_end.x;
   if (depth > rs_end_max_depth_) {
     rs_end_pose_.x = slot_length - rs_end_max_depth_;
 
@@ -59,7 +59,7 @@ void RSExpansionDecider::Process(
   return;
 }
 
-const double RSExpansionDecider::GetEndPointMaxDepth() {
+const float RSExpansionDecider::GetEndPointMaxDepth() {
   return rs_end_max_depth_;
 }
 
@@ -123,13 +123,13 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForTailIn(
   // use heuristic rule to do rs path expansion
   // use node heading and steering to check.
   // if heading > 150 degree, shrink some rs expansion.
-  double heading = node->GetPhi();
+  float heading = node->GetPhi();
   if (std::fabs(heading) > ifly_deg2rad(150.0)) {
     return false;
   }
 
   // check node steering angle
-  double check_heading_buffer = M_PI_2;
+  float check_heading_buffer = M_PI_2;
   if (node->GetGearType() == AstarPathGear::DRIVE) {
     // need turn right
     if (heading > check_heading_buffer && node->GetSteer() > 0.0) {
@@ -174,7 +174,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForHeadIn(
   // use heuristic rule to do rs path expansion
   // use node heading and steering to check.
   // if heading < 30 degree, shrink some rs expansion.
-  double heading = node->GetPhi();
+  float heading = node->GetPhi();
   if (std::fabs(heading) < ifly_deg2rad(30.0)) {
     return false;
   }
