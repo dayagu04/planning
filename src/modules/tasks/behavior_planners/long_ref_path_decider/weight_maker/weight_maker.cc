@@ -98,6 +98,7 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
   int32_t closest_agent_id = -1;
   JSON_DEBUG_VALUE("closest_agent_id", -1.0)
   JSON_DEBUG_VALUE("min_urgent_dist", -1.0)
+  JSON_DEBUG_VALUE("min_more_urgent_dist", -1.0)
   for (int i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     if (!st_graph) {
@@ -114,7 +115,7 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
       const double agent_s = corridor_upper_point.s();
       if (relative_t >= kUrgentWeightStartTime &&
           relative_t <= kUrgentWeightEndTime) {
-        const double curr_dist = agent_s - ego_s_to_front;
+        const double curr_dist = agent_s - ego_s;
         if (curr_dist < min_urgent_dist) {
           min_urgent_dist = curr_dist;
           closest_index = i;
@@ -134,7 +135,6 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     const double ego_speed = virtual_acc_curve->Evaluate(1, relative_t);
     const double agent_speed = corridor_upper_point.velocity();
     const double ego_s = virtual_acc_curve->Evaluate(0, relative_t);
-    const double ego_s_to_front = ego_s + vehicle_param.front_edge_to_rear_axle;
     const double ego_s_max_decel = max_decel_curve.Evaluate(0, relative_t);
     const double ego_s_max_decel_to_front =
         ego_s_max_decel + vehicle_param.front_edge_to_rear_axle;
@@ -149,14 +149,14 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
           upper_urgent_scale, 0.0, lower_urgent_scale, urgent_distance,
           agent_s - ego_s_max_decel_to_front);
       JSON_DEBUG_VALUE("closest_agent_id", closest_agent_id)
-      JSON_DEBUG_VALUE("min_urgent_dist", agent_s - ego_s_max_decel_to_front)
+      JSON_DEBUG_VALUE("min_more_urgent_dist", agent_s - ego_s_max_decel_to_front)
     } else if (agent_speed - ego_speed < kUrgentSpeedThres &&
-               agent_s - ego_s_to_front < urgent_distance) {
+               agent_s - ego_s < urgent_distance) {
       is_urgent_ = true;
       urgent_scale = planning_math::LerpWithLimit(
-          7.0, 0.0, 5.0, urgent_distance, agent_s - ego_s_to_front);
+          7.0, 0.0, 5.0, urgent_distance, agent_s - ego_s);
       JSON_DEBUG_VALUE("closest_agent_id", closest_agent_id)
-      JSON_DEBUG_VALUE("min_urgent_dist", agent_s - ego_s_to_front)
+      JSON_DEBUG_VALUE("min_urgent_dist", agent_s - ego_s)
     }
   }
 
