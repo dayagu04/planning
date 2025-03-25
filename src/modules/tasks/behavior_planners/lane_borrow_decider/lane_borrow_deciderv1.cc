@@ -396,13 +396,11 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
       }
     }
     // TODO: concern more scene
-    if (frenet_obstacle_sl.l_end < left_width &&
-        frenet_obstacle_sl.l_start > -right_width) {
-      if (!obstacle->obstacle()->is_static()) {
+    if (frenet_obstacle_sl.l_end < -right_width ||
+        frenet_obstacle_sl.l_start > left_width) { //away from cur lane
         continue;
-      }
     } else {
-      if (!obstacle->obstacle()->is_static()) {
+      if (!obstacle->obstacle()->is_static()) { //part in lane
         continue;
       }
     }
@@ -709,6 +707,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
     // Calculate the total width that can be borrowed from the left lane
     left_left_bounds_l =
         current_left_lane_width + neighbor_right_width + neighbor_left_width;
+    if_left_turn_center_ = true;
     safe_to_left_lane_borrow =
         IsSafeForPath(left_left_bounds_l, left_right_bounds_l);
 
@@ -732,6 +731,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
         right_lane_ptr_->width(vehicle_param.front_edge_to_rear_axle);
     right_right_bounds_l =
         -current_right_lane_width - neighbor_left_width - neighbor_right_width;
+    if_left_turn_center_ = false;
     safe_to_right_lane_borrow =
         IsSafeForPath(right_left_bounds_l, right_right_bounds_l);
     target_right_l = std::max(
@@ -1078,7 +1078,7 @@ const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos,
   Eigen::Vector2d rear_pos(ego_pos.x, ego_pos.y);
   Eigen::Vector2d ego_n_vec(-ego_heading_vec.y(), ego_heading_vec.x());
 
-  if (right_borrow_ == true) {
+  if (if_left_turn_center_ == false) {
     ego_n_vec *= -1.0;
   }
   Eigen::Vector2d center = rear_pos + ego_n_vec * radius;
@@ -1117,7 +1117,7 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
   SLPoint corner_front_left, corner_rear_left, corner_front_right,
       corner_rear_right;
 
-  if (left_borrow_) {
+  if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
     Point2D corner_front_left_xy = CartesianRotation(
         corner_front_left_point_xy, heading_angle, ego_x, ego_y);
     Point2D corner_rear_left_xy = CartesianRotation(
@@ -1139,7 +1139,7 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
     }
     return false;
 
-  } else if (right_borrow_) {
+  } else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
     Point2D corner_front_right_xy = CartesianRotation(
         corner_front_right_point_xy, heading_angle, ego_x, ego_y);
     Point2D corner_rear_right_xy = CartesianRotation(
