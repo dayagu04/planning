@@ -5,11 +5,12 @@ from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_lat_plan import *
 from bokeh.models import DataTable, TableColumn, Panel, Tabs
+from bokeh.resources import INLINE
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241207/20241207-10-49-15/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-12-07-10-49-15_no_camera.bag"
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_20260/common_frame/20250325/20250325-08-42-37/data_collection_CHERY_E0Y_20260_ALL_MANUAL_2025-03-25-08-42-37_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -19,7 +20,7 @@ frame_dt = 0.1 # sec
 global_fig_plot = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()

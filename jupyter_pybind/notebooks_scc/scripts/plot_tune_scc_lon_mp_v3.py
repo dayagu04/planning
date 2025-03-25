@@ -9,14 +9,14 @@ sys.path.append('../../../')
 sys.path.append('../../python_proto')
 from python_proto import longitudinal_motion_planner_pb2
 from jupyter_pybind import scc_lon_motion_planning_v3_py
-
+from bokeh.resources import INLINE
 # bag path and frame dt
 #bag_path = "/mnt/s811_1_0907/motion_14.00000"
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241206/20241206-15-48-40/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2024-12-06-15-48-40_no_camera.bag.1733887758.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
