@@ -146,30 +146,47 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
-  double preview_x =
-      speed_limit_config_.dis_curv + speed_limit_config_.t_curv * v_ego;
+  double preview_x = speed_limit_config_.dis_curv;
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  std::vector<double> curv_window_vec;
-  for (int idx = -3; idx <= 3; ++idx) {
-    double curv;
-    ReferencePathPoint refpath_pt;
-    if (reference_path_ptr->get_reference_point_by_lon(
-            frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
-      curv = std::fabs(refpath_pt.path_point.kappa());
-    } else {
-      curv = 0.0001;
+  double ego_start_s = frenet_ego_state.s();
+  std::vector<double> preview_curv_vec;
+  for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+    std::vector<double> curv_window_vec;
+    for (int j = -3; j <= 3; j++ ) {
+      double curv;
+      ReferencePathPoint refpath_pt;
+      if (reference_path_ptr->get_reference_point_by_lon(
+        ego_start_s + idx * 2.0 + j * 2.0, refpath_pt)) {
+        curv = std::fabs(refpath_pt.path_point.kappa());
+      } else {
+        curv = 0.0001;
+      }
+      curv_window_vec.emplace_back(curv);
     }
-    curv_window_vec.emplace_back(curv);
+    double curv_sum = 0.0;
+    for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
+      curv_sum = curv_sum + curv_window_vec[ind];
+    }
+    double avg_curv = curv_sum / curv_window_vec.size();
+
+    preview_curv_vec.emplace_back(avg_curv);
   }
-  double curv_sum = 0.0;
+  /* double curv_sum = 0.0;
   for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
     curv_sum = curv_sum + curv_window_vec[ind];
   }
   double avg_curv = curv_sum / curv_window_vec.size();
-  double road_radius = 1 / std::max(avg_curv, 0.0001);
+  double road_radius = 1 / std::max(avg_curv, 0.0001);*/
+  double max_curv = 0.0001;
+  for (int idx = 0; idx < preview_curv_vec.size(); idx++) {
+    if (preview_curv_vec[idx] > max_curv) {
+      max_curv = preview_curv_vec[idx];
+    }
+  }
+  double road_radius = 1 / std::max(max_curv, 0.0001);
   if (road_radius < 400) {
     acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
   }
