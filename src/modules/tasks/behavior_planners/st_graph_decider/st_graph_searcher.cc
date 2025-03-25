@@ -313,8 +313,10 @@ bool StGraphSearcher::SearchStPath(
   SetSearchConfigBySearchStyle(search_style);
 
   double planning_distance = planned_kd_path->Length();
-  UpdateHeuristicTargetSInLaneChange(
-      session_, search_config_.planning_time_horizon, &planning_distance);
+  /* Note: is no different in st graph when in lane change, don't need to update
+   heuristic s*/
+  //  UpdateHeuristicTargetSInLaneChange(
+  //      session_, search_config_.planning_time_horizon, &planning_distance);
   StSearchInput st_search_input_info(
       planning_init_point, planning_distance,
       search_config_.planning_time_horizon, v_cruise,
