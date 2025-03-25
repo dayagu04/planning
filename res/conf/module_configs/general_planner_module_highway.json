@@ -11,7 +11,7 @@
   "torch_model_cpu_path": "${NPP_RESOURCE_PATH}/pnp_v2_train_0811_epoch_100.pt",
   "replanning_with_navi": false,
   "use_ego_prediction_model_in_planning": true,
-  "dump_mdebug": false,
+  "dump_mdebug": false, 
   "enable_use_ground_mark_process_split": false,
   "enable_use_emergency_avoidence_lane_change_request": true,
   "enable_use_cone_change_request": true,
@@ -598,7 +598,7 @@
       "enable_only_s_t_hash": true,
       "upper_collision_dist": 1.0,
       "lower_collision_dist": 5.0,
-      "max_accel_limit": 5.0,
+      "max_accel_limit": 2.5,
       "min_accel_limit": -6.0,
       "max_jerk_limit": 10.0,
       "min_jerk_limit": -10.0,
@@ -607,7 +607,7 @@
       "t_step" : 0.5,
       "vel_step" : 0.4,
       "radical_search_style" : {
-        "max_accel_limit_radical_style": 5.0,
+        "max_accel_limit_radical_style": 2.5,
         "min_accel_limit_radical_style": -9.0,
         "max_jerk_limit_radical_style": 10.0,
         "min_jerk_limit_radical_style": -10.0,
@@ -615,6 +615,11 @@
         "s_step_radical_style" : 0.5,
         "t_step_radical_style" : 0.5,
         "vel_step_radical_style" : 0.4
+      },
+      "distance_ego_rear_edge_to_lower_bound_when_overtake": 5.0,
+      "cost_ego_overtake_has_collision_with_lower_bound": 10.0,
+      "search_weight" : {
+        "weight_accel_sign_overtake" : 5.0
       }
     },
 
