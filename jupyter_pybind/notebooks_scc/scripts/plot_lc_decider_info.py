@@ -9,12 +9,13 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
+from bokeh.resources import INLINE
 # bag path and frame dt
 bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20250121/20250121-16-02-11/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2025-01-21-16-02-11_no_camera.bag.1737510697.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()

@@ -26,6 +26,7 @@ from bokeh.models import TextInput
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 import rosbag
+from bokeh.resources import INLINE
 sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
@@ -34,7 +35,7 @@ sys.path.append('../../python_proto')
 from jupyter_pybind import st_search_py
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 # column data st source
 data_st_boundary_1 = ColumnDataSource(data = {'s':[], 't':[]})

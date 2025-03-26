@@ -33,6 +33,7 @@ from google.protobuf.descriptor import FieldDescriptor
 
 from jupyter_pybind import sample_poly_speed_adjust_decider_py
 from python_proto import st_search_decider_pb2
+from bokeh.resources import INLINE
 # load bag info
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
@@ -70,7 +71,7 @@ frame_dt = 0.1
 # -
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()

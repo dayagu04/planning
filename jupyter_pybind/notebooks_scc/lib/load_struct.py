@@ -1049,6 +1049,87 @@ def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False,
     line_y.append(car_point_y[0])
   return line_x, line_y
 
+def load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_enu_to_car = False, loc_msg = None):
+  obs_info = {
+    'polygon_x': [],
+    'polygon_y': [],
+    'polygon_x_rel': [],
+    'polygon_y_rel': [],
+    'id': [],
+    'type': [],
+    'lat_decision': [],
+    'is_static': [],
+    'frenet_vs': [],
+    'frenet_vl': [],
+  }
+  obstacles_id_vec = []
+  obstacles_type_vec = []
+  obstacles_vs_vec = []
+  obstacles_vl_vec = []
+  obstacles_lat_decision_vec = []
+  obstacles_is_static_vec = []
+  polygon_x_vec = []
+  polygon_y_vec = []
+  polygon_x_rel_vec = []
+  polygon_y_rel_vec = []
+  obs_id_num = len(obstacle_polygon_id)
+  num = 0
+  try:
+    lat_decision = "None"
+    is_static = ""
+    for obstacle in environment_model_info.obstacle:
+      if (obs_id_num > 0) and (obstacle.id not in obstacle_polygon_id):
+        continue
+      num = num + 1
+      obstacles_id_vec.append([obstacle.id])
+      obstacles_type_vec.append([obstacle.type])
+      obstacles_vs_vec.append([obstacle.vs_lon_relative])
+      obstacles_vl_vec.append([obstacle.vs_lat_relative])
+      if (0 == obstacle.lat_decision):
+        lat_decision = "LEFT"
+      elif (1 == obstacle.lat_decision):
+        lat_decision = "RIGHT"
+      elif (2 == obstacle.lat_decision):
+        lat_decision = "IGNORE"
+      obstacles_lat_decision_vec.append([lat_decision])
+      if obstacle.is_static:
+        is_static = "Static"
+      obstacles_is_static_vec.append([is_static])
+      polygon_x = []
+      polygon_y = []
+      for point in obstacle.polygon_points:
+        polygon_x.append(point.x)
+        polygon_y.append(point.y)
+      polygon_x_vec.append(polygon_x)
+      polygon_y_vec.append(polygon_y)
+      polygon_x_rel = []
+      polygon_y_rel = []
+      if is_enu_to_car:
+        coord_tf = coord_transformer()
+        if loc_msg != None: # 长时轨迹
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+          polygon_x_rel, polygon_y_rel = coord_tf.global_to_local(polygon_x, polygon_y)
+      polygon_x_rel_vec.append(polygon_x_rel)
+      polygon_y_rel_vec.append(polygon_y_rel)
+  except:
+    pass
+
+  obs_info['id'] = obstacles_id_vec
+  obs_info['type'] = obstacles_type_vec
+  obs_info['frenet_vs'] = obstacles_vs_vec
+  obs_info['frenet_vl'] = obstacles_vl_vec
+  obs_info['lat_decision'] = obstacles_lat_decision_vec
+  obs_info['is_static'] = obstacles_is_static_vec
+  obs_info['polygon_x'] = polygon_x_vec
+  obs_info['polygon_y'] = polygon_y_vec
+  obs_info['polygon_x_rel'] = polygon_x_rel_vec
+  obs_info['polygon_y_rel'] = polygon_y_rel_vec
+
+  return obs_info
+
 def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environment_model_info = None):
   obs_info_all = dict()
   fusion_object_size = fus_msg.fusion_object_size
