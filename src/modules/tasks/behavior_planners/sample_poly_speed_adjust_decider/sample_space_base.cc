@@ -244,23 +244,26 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
     lower_st_point->set_info(intervals.back().second.s(), t,
                              intervals.back().second.velocity(),
                              intervals.back().second.agent_id(), -1);
-    upper_st_point->set_info(kMaxPathLength, 0.0, 100.0, kNoAgentId, -1);
+    upper_st_point->set_info(kMaxPathLength, t, 100.0, kNoAgentId, -1);
     return true;
   }
 
   if (intervals.size() == 1) {
     const auto interval = intervals.front();
-    if (((s + front_edge_to_rear_axle_ > interval.first.s() &&
-          s + front_edge_to_rear_axle_ < interval.second.s()) ||
-         (s - rear_edge_to_rear_axle_ > interval.first.s() &&
-          s - rear_edge_to_rear_axle_ < interval.second.s()))) {
+    std::pair<double, double> ego_lon_area{s - rear_edge_to_rear_axle_,
+                                           s + front_edge_to_rear_axle_};
+    std::pair<double, double> obj_lon_area{interval.first.s(),
+                                           interval.second.s()};
+
+    if (std::fmax(ego_lon_area.first, obj_lon_area.first) <=
+        std::fmin(ego_lon_area.second, obj_lon_area.second)) {
       upper_st_point->set_info(interval.second.s(), t,
                                interval.second.velocity(),
                                interval.second.agent_id(), -1);
       lower_st_point->set_info(interval.first.s(), t, interval.first.velocity(),
                                interval.first.agent_id(), -1);
       return false;
-    } else if (s - rear_edge_to_rear_axle_ > interval.second.s()) {
+    } else if (ego_lon_area.first> interval.second.s()) {
       lower_st_point->set_info(interval.second.s(), t,
                                interval.second.velocity(),
                                interval.second.agent_id(), -1);

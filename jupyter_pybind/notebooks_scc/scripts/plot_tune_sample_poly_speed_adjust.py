@@ -66,7 +66,7 @@ bag_path = "/root/bags/speed_decider/data_collection_CHERY_E0Y_04228_EVENT_MANUA
 bag_path = "/root/bags/speed_decider/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-10-17-16-26-27.bag_2024-10-18-10-49-32.PP.1736325728.close-loop.scc.plan"
 bag_path = "/root/bags/speed_decider/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-10-21-15-39-25.bag_2024-10-22-11-41-57.PP.1736327152.close-loop.noa.plan"
 
-bag_path = "/root/code/bags/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-12-24-15-19-46.bag_2024-12-26-17-12-06.PP"
+bag_path = "/root/code/planning/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2025-02-26-16-03-29.bag_2025-03-03-16-13-00.1741420018.close-loop.noa.plan"
 frame_dt = 0.1
 # -
 
@@ -90,6 +90,7 @@ for i, debug_msg in enumerate(bag_loader.plan_debug_msg['data']):
     weight_leading_safe_v0 =sample_poly_speed_info.sample_param.weight_leading_safe_v
     weight_vel_variable0 = sample_poly_speed_info.sample_param.weight_vel_variable
     weight_gap_avaliable0 = sample_poly_speed_info.sample_param.weight_gap_avaliable
+    # v_suggestted0 = sample_poly_speed_info.sample_print_table_info.v_suggestted
     break
 # init pybind
 sample_poly_speed_adjust_decider_py.Init()
@@ -141,11 +142,6 @@ fig5.line('t', 's', source = origin_j_min_cost_traj_source, line_width=2, line_c
 ego_v_keep_traj_source = ColumnDataSource(data={'t': [], 's': []})
 fig3.line('t', 's', source = ego_v_keep_traj_source, line_width=2, line_color='green', line_dash='dashed', line_alpha=0.7, legend_label='v_cruise')
 
-table_info_name= ["match_gap_cost", "follow_vel_cost", "vel_bound_cost", "stop_line_cost", "acc_bound_cost", "jerk_cost", "leading_veh_safe_cost", "vel_variable_cost", "end_s", \
-                  "end_v", "ego_v", "v_suggested", "target_lane_objs_flow_vel", "traffic_density","leading_veh_id", "sample status", "sample_scene","count_normal_to_hover_state", "count_hover_to_normal_state",\
-                  "is_nearing_ramp","merge_emegency_distance", "is_in_merge_region", "distance_to_road_merge", "distance_to_road_split","stitched_match_front_gap_id","stitched_match_back_gap_id",\
-                   "current_match_front_gap_id", "current_match_back_gap_id"
-                    ]
 table_info =  ColumnDataSource(data = {'name':[], 'info':[]})
 info_column = [
   TableColumn(field="name", title="name"),
@@ -278,20 +274,20 @@ def extract_fields_with_names(proto, prefix=""):
 
     for field in proto.DESCRIPTOR.fields:
         field_name = field.name
-        full_name = f"{prefix}.{field_name}" if prefix else field_name
+        # full_name = f"{prefix}.{field_name}" if prefix else field_name
 
         value = getattr(proto, field_name)
         if field.type == FieldDescriptor.TYPE_MESSAGE:
             if value.ListFields():  #
-                sub_table_name, sub_table_value = extract_fields_with_names(value, full_name)
+                sub_table_name, sub_table_value = extract_fields_with_names(value)
                 table_name.extend(sub_table_name)
                 table_value.extend(sub_table_value)
             else:
-                table_name.append(full_name)
+                table_name.append(field_name)
                 table_value.append(None)
         else:
             # 普通字段直接添加
-            table_name.append(full_name)
+            table_name.append(field_name)
             table_value.append(value)
 
     return table_name, table_value
@@ -341,6 +337,7 @@ def slider_callback(enable_pybind, bag_time, update_param, weight_follow_vel,  \
 
         plot_execute_result(min_cost_traj)
         plot_table_info(update_table_info)
+        print("min cost index: \n", sample_poly_speed_adjust_decider_py.get_min_cost_index())
     else:
       print("no lane change!")
   push_notebook()
