@@ -1,5 +1,6 @@
 #include "speed_limit_decider.h"
 #include <vector>
+#include <algorithm>
 
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "ego_state_manager.h"
@@ -7,11 +8,12 @@
 #include "planning_context.h"
 
 namespace planning {
-
 namespace {
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kLaneBorrowLimitedSpeed = 5.56;
 constexpr double kSpeedlimitScale = 0.6;
+constexpr double kSSharpBendRadius = 300.0;
+constexpr double kSSharpBendCurvDis = 30.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -117,6 +119,31 @@ bool SpeedLimitDecider::Execute() {
   return true;
 }
 
+bool SpeedLimitDecider::IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec) {
+  std::vector<std::pair<double, double>> pos_curv_list;
+  std::vector<std::pair<double, double>> neg_curv_list;
+  for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
+    if (preview_curv_info_vec[idx].curv_sign > 0 && (1.0 / preview_curv_info_vec[idx].curv) < kSSharpBendRadius) {
+      pos_curv_list.emplace_back(std::make_pair(preview_curv_info_vec[idx].s, preview_curv_info_vec[idx].curv));
+    }
+    if (preview_curv_info_vec[idx].curv_sign < 0 && (1.0 / preview_curv_info_vec[idx].curv) < kSSharpBendRadius) {
+      neg_curv_list.emplace_back(std::make_pair(preview_curv_info_vec[idx].s, preview_curv_info_vec[idx].curv));
+    }
+  }
+  if (pos_curv_list.empty() || neg_curv_list.empty()) {
+    return false;
+  }
+
+  auto comp_curv = [](std::pair<double, double>& a, std::pair<double, double>& b) {return a.second > b.second;};
+  std::sort(pos_curv_list.begin(), pos_curv_list.end(), comp_curv);
+  std::sort(neg_curv_list.begin(), neg_curv_list.end(), comp_curv);
+  if (std::fabs(pos_curv_list[0].first - neg_curv_list[0].first) < kSSharpBendCurvDis) {
+    return true;
+  }
+
+  return false;
+}
+
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   LOG_DEBUG("----CalculateCurveSpeedLimit--- \n");
   const auto &vehicle_param =
@@ -136,13 +163,13 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 
   // And limit the logitudinal velocity for a safe turn
   double acc_lat_max =
-      interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
+      interp(std::fabs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
   // HACK: close v_limit_steering in high vel
   bool is_high_vel = v_ego > kHighVel;
   double v_limit_steering = 100.0;
   if (!is_high_vel) {
     v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
-                                 std::max(std::abs(angle_steers), 0.001));
+                                 std::max(std::fabs(angle_steers), 0.001));
   }
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
@@ -152,8 +179,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                        .coarse_planning_info.reference_path;
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
-  std::vector<double> preview_curv_vec;
+  std::vector<CurvInfo> preview_curv_info_vec;
   for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+    CurvInfo one_curv_info;
+    //calc curv abs and using average curv abs in curv window
     std::vector<double> curv_window_vec;
     for (int j = -3; j <= 3; j++ ) {
       double curv;
@@ -171,8 +200,19 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       curv_sum = curv_sum + curv_window_vec[ind];
     }
     double avg_curv = curv_sum / curv_window_vec.size();
+    one_curv_info.curv = avg_curv;
 
-    preview_curv_vec.emplace_back(avg_curv);
+    //calc curv direction(-1 or 1, 0 for except)
+    ReferencePathPoint refpath_pt;
+    if (reference_path_ptr->get_reference_point_by_lon(
+      ego_start_s + idx * 2.0, refpath_pt)) {
+      one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1: -1;
+    } else {
+      one_curv_info.curv_sign = 0;
+    }
+
+    one_curv_info.s = idx * 2.0;
+    preview_curv_info_vec.emplace_back(one_curv_info);
   }
   /* double curv_sum = 0.0;
   for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
@@ -180,17 +220,34 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   double avg_curv = curv_sum / curv_window_vec.size();
   double road_radius = 1 / std::max(avg_curv, 0.0001);*/
-  double max_curv = 0.0001;
-  for (int idx = 0; idx < preview_curv_vec.size(); idx++) {
-    if (preview_curv_vec[idx] > max_curv) {
-      max_curv = preview_curv_vec[idx];
+
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug_info_pb->clear_dis_curv_list();
+  for (int j = 0; j < preview_curv_info_vec.size(); j++) {
+    planning::common::DoublePair *one_curv = debug_info_pb->add_dis_curv_list();
+    one_curv->set_first(preview_curv_info_vec[j].s);
+    one_curv->set_second(preview_curv_info_vec[j].curv);
+  }
+
+  double v_limit_road = 40.0;
+  double road_radius = 10000.0;
+  bool is_s_bend = IsSSharpBend(preview_curv_info_vec);
+  if (!is_s_bend) {
+    double max_curv = 0.0001;
+    for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
+      if (preview_curv_info_vec[idx].curv > max_curv) {
+        max_curv = preview_curv_info_vec[idx].curv;
+      }
     }
+    road_radius = 1 / std::max(max_curv, 0.0001);
+    if (road_radius < 400) {
+      acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    }
+    v_limit_road = std::sqrt(acc_lat_max * road_radius);
+  } else {
+    road_radius = 50.0;
+    v_limit_road = 40.0 / 3.6;
   }
-  double road_radius = 1 / std::max(max_curv, 0.0001);
-  if (road_radius < 400) {
-    acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
-  }
-  double v_limit_road = std::sqrt(acc_lat_max * road_radius);
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
   LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
             acc_lat_max);
@@ -198,6 +255,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
             angle_steers, angle_steers_deg, v_limit_road);
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
+  JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1: 0);
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
     v_target_type_ = SpeedLimitType::CURVATURE;

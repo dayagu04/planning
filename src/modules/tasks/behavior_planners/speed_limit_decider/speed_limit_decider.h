@@ -7,7 +7,11 @@
 #include "virtual_lane_manager.h"
 
 namespace planning {
-
+struct CurvInfo {
+  int curv_sign;
+  double s;
+  double curv;
+};
 class SpeedLimitDecider : public Task {
  public:
   SpeedLimitDecider(const EgoPlanningConfigBuilder *config_builder,
@@ -37,6 +41,8 @@ class SpeedLimitDecider : public Task {
   void CalculatePOISpeedLimit();
 
   void CalculateLaneBorrowSpeedLimit();
+
+  bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
