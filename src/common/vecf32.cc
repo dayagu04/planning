@@ -66,7 +66,7 @@ Vec2df32 Vec2df32::operator*(const float ratio) const {
 }
 
 Vec2df32 Vec2df32::operator/(const float ratio) const {
-  assert(std::abs(ratio) > kMathEpsilon);
+  assert(std::abs(ratio) > kMathEpsilon32);
   return Vec2df32(x_ / ratio, y_ / ratio);
 }
 
