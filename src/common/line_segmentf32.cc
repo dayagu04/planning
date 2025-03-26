@@ -6,7 +6,6 @@
 
 #include "assert.h"
 #include "vecf32.h"
-#include "ad_common/math/math_utils.h"
 
 namespace planning {
 
@@ -114,8 +113,7 @@ float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point) const {
   if (proj >= length_) {
     return point.DistanceSquareTo(end_);
   }
-  return ad_common::math::Square<float>(x0 * unit_direction_.y() -
-                                        y0 * unit_direction_.x());
+  return std::pow(x0 * unit_direction_.y() - y0 * unit_direction_.x(), 2);
 }
 
 float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point,
@@ -137,8 +135,7 @@ float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point,
     return point.DistanceSquareTo(end_);
   }
   *nearest_pt = start_ + unit_direction_ * proj;
-  return ad_common::math::Square<float>(x0 * unit_direction_.y() -
-                                        y0 * unit_direction_.x());
+  return std::pow(x0 * unit_direction_.y() - y0 * unit_direction_.x(), 2);
 }
 
 bool LineSegmentf32::IsPointIn(const Vec2df32 &point) const {
