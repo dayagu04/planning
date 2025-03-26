@@ -121,7 +121,7 @@ class ObstacleManager {
       const iflyauto::FusionOccupancyObject &object,
       const iflyauto::Point2f *polygon_points, size_t polygon_size,
       const std::shared_ptr<planning_math::KDPath> &frenet_coord,
-      const Point2D &ego_point);
+      const Point2D &ego_point, int &index_offset);
 
   void ProcessOccupancyObject(
       const iflyauto::FusionOccupancyObject &object,

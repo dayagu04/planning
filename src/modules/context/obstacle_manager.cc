@@ -307,6 +307,7 @@ void ObstacleManager::UpdateParkingSpaceObstacle() {
 }
 
 void ObstacleManager::UpdateOccObstacle() {
+  int index_offset = 900000;
   const auto &local_view = session_->environmental_model().get_local_view();
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
@@ -341,12 +342,13 @@ void ObstacleManager::UpdateOccObstacle() {
           occupancy_objects[i].additional_occupancy_info.polygon_points;
       // 防止出现直角墙构成三角形区域
       if (polygon_points_size > 100 &&
-          occupancy_objects[i].common_occupancy_info.type ==
+          (occupancy_objects[i].common_occupancy_info.type ==
               iflyauto::OBJECT_TYPE_OCC_WALL ||
-          occupancy_objects[i].common_occupancy_info.type ==
-              iflyauto::OBJECT_TYPE_OCC_EMPTY) {
+           occupancy_objects[i].common_occupancy_info.type ==
+              iflyauto::OBJECT_TYPE_OCC_EMPTY)) {
         ProcessOccupancyWall(occupancy_objects[i], polygon_points,
-                             polygon_points_size, frenet_coord, ego_point);
+                             polygon_points_size, frenet_coord,
+                             ego_point, index_offset);
 
       } else {
         ProcessOccupancyObject(occupancy_objects[i], polygon_points,
@@ -360,23 +362,21 @@ void ObstacleManager::ProcessOccupancyWall(
     const iflyauto::FusionOccupancyObject &object,
     const iflyauto::Point2f *polygon_points, size_t polygon_size,
     const std::shared_ptr<planning_math::KDPath> &frenet_coord,
-    const Point2D &ego_point) {
+    const Point2D &ego_point, int &index_offset) {
   std::vector<std::vector<planning_math::Vec2d>> points_vec;
   split_points(polygon_points, polygon_size, points_vec);
 
-  int index = 900000;
   for (auto &object_points : points_vec) {
     if (object_points.size() < 5) {
       continue;
     }
-    Obstacle obstacle(kOccupancyObjectIdOffset +
-                          object.additional_occupancy_info.track_id + index,
+    Obstacle obstacle(kOccupancyObjectIdOffset + index_offset,
                       std::move(object_points), iflyauto::OBJECT_TYPE_OCC_WALL);
     if (obstacle.is_vaild() &&
         FilterObstacleByDistance(obstacle, frenet_coord, ego_point)) {
       add_occupancy_obstacle(obstacle);
     }
-    ++index;
+    ++index_offset;
   }
 }
 
@@ -417,7 +417,9 @@ bool ObstacleManager::FilterObstacleByDistance(
   }
 
   return !(in_range_count == obstacle.perception_polygon().points().size() ||
-           (in_range_count > 0 && obstacle.perception_polygon().area() < 0.5));
+           (in_range_count > 0 && obstacle.perception_polygon().area() < 0.5 &&
+            obstacle.perception_bounding_box().length() < 0.7 &&
+            obstacle.perception_bounding_box().width() < 0.7));
 }
 
 void ObstacleManager::split_points(
