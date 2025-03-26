@@ -150,12 +150,12 @@ void LaneBorrowDecider::Update() {
     }
 
     case LaneBorrowStatus::kLaneBorrowBackOriginLane: {
-      if (CheckIfLaneBorrowBackOriginLaneToNoBorrow()) {
-        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
+      if (CheckIfLaneBorrowBackOriginToLaneBorrowCrossing()) {
+        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowCrossing;
       } else if (CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving;
-      } else if (CheckIfLaneBorrowBackOriginToLaneBorrowCrossing()) {
-        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowCrossing;
+      } else if (CheckIfLaneBorrowBackOriginLaneToNoBorrow()) {
+        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
       }
       break;
     }
@@ -206,6 +206,9 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
+  if (last_static_blocked_obj_id_vec_[0]==static_blocked_obj_id_vec_[0]) {
+    return false;
+  }
 
   for (const auto& obstacle : obstacles) {
     const auto& id = obstacle->obstacle()->id();
