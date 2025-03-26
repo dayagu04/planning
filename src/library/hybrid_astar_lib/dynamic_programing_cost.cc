@@ -29,8 +29,8 @@ GridSearch::GridSearch(const PlannerOpenSpaceConfig& open_space_conf) {
   safe_width_ = open_space_conf.heuristic_safe_dist;
 }
 
-double GridSearch::EuclidDistance(const double x1, const double y1,
-                                  const double x2, const double y2) {
+float GridSearch::EuclidDistance(const float x1, const float y1,
+                                  const float x2, const float y2) {
   return std::sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
@@ -47,8 +47,8 @@ bool GridSearch::CheckConstraints(Node2d* node) {
     return true;
   }
 
-  const double x = node->GetX();
-  const double y = node->GetY();
+  const float x = node->GetX();
+  const float y = node->GetY();
   bool is_collision;
 
   GenerateRectPolygon(
@@ -104,9 +104,9 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
   int current_node_x = current_node->GetGridX();
   int current_node_y = current_node->GetGridY();
 
-  double current_node_path_cost = current_node->GetCost();
-  double diagonal_distance = 1.414;
-  double edge_distance = 1.0;
+  float current_node_path_cost = current_node->GetCost();
+  float diagonal_distance = 1.414;
+  float edge_distance = 1.0;
 
   Node2d up = Node2d(current_node_x, current_node_y + 1, XYbounds_,
                      heuristic_grid_resolution_);
@@ -191,10 +191,10 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
   return;
 }
 
-bool GridSearch::GenerateDpMap(const double ex, const double ey,
+bool GridSearch::GenerateDpMap(const float ex, const float ey,
                                const MapBound& XYbounds,
                                const ParkObstacleList* obstacles,
-                               const double veh_half_width_with_safe_dist) {
+                               const float veh_half_width_with_safe_dist) {
 // init
 #if DEBUG_NODE_COST
   double start_timestamp = IflyTime::Now_ms();
@@ -330,12 +330,12 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
   return true;
 }
 
-double GridSearch::CheckDpMap(const double sx, const double sy) {
+float GridSearch::CheckDpMap(const float sx, const float sy) {
   Node2dIndex index = Node2d::CalcIndex(sx, sy, inv_xy_resolution_, XYbounds_);
 
   Node2d* node = GetNodeFromPool(index);
 
-  double max_cost = 100000.0;
+  float max_cost = 100000.0;
 
   if (node == nullptr) {
     return max_cost;
@@ -357,7 +357,7 @@ void GridSearch::DebugNodePool() {
   int row_num = map_matrix.rows;
   int column_num = map_matrix.cols;
 
-  double value = 0;
+  float value = 0;
 
   for (int32_t i = 0; i < row_num; i++) {
     uchar* data = map_matrix.ptr<uchar>(i);
@@ -412,7 +412,7 @@ bool GridSearch::NodeIndexValid(const Node2dIndex& id) {
   return true;
 }
 
-bool GridSearch::NodePositionValid(const double x, const double y) {
+bool GridSearch::NodePositionValid(const float x, const float y) {
   if (x < XYbounds_.x_min || x > XYbounds_.x_max || y < XYbounds_.y_min ||
       y > XYbounds_.y_max) {
     return false;
@@ -439,7 +439,7 @@ void GridSearch::ResetNodePool() {
   return;
 }
 
-const bool GridSearch::IsPointInMapBound(const double x, const double y) {
+const bool GridSearch::IsPointInMapBound(const float x, const float y) {
   if (x >= XYbounds_.x_max || x <= XYbounds_.x_min) {
     return false;
   }

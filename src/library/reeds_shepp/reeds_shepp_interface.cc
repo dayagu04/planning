@@ -9,9 +9,9 @@ namespace planning {
 
 int RSPathInterface::GeneShortestRSPath(
     RSPath *rs_path, bool *is_connected_to_goal, const Pose2D *start,
-    const Pose2D *end, const double min_radius, const bool need_interpolate,
+    const Pose2D *end, const float min_radius, const bool need_interpolate,
     const bool need_anchor_point, const RSPathRequestType request_type,
-    const double rs_path_sample_dist) {
+    const float rs_path_sample_dist) {
   // init
   rs_path->size = 0;
   rs_path->total_length = 0.0;
@@ -34,13 +34,13 @@ int RSPathInterface::GeneShortestRSPath(
     return 1;
   }
 
-  double inverse_radius = 1.0 / min_radius;
+  float inverse_radius = 1.0 / min_radius;
   // generate shortest path
   rs_interpolate_.CalcShortestRSPathKappa(&kappa_list, start, end, min_radius,
                                           inverse_radius, request_type);
 
   // shrink path if distance is invalid.
-  double shrink_dist = 0.001;
+  float shrink_dist = 0.001;
   rs_interpolate_.ShrinkRSPathByInvalidDist(&kappa_list, shrink_dist);
 
   // ILOG_INFO << "check gear";
@@ -89,7 +89,7 @@ int RSPathInterface::GeneShortestRSPath(
 
     if (need_interpolate) {
       // interpolate
-      // double rs_path_sample_dist;
+      // float rs_path_sample_dist;
       RSPoint *anchor_point;
       // rs_path_sample_dist = 0.1;
 
@@ -129,7 +129,7 @@ int RSPathInterface::GeneShortestRSPath(
 
 int RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
                                  const Pose2D *start, const Pose2D *end,
-                                 const double min_radius,
+                                 const float min_radius,
                                  const RSPathRequestType request_type) {
   // init
   rs_path->size = 0;
@@ -151,13 +151,13 @@ int RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
     return 1;
   }
 
-  double inverse_radius = 1.0 / min_radius;
+  float inverse_radius = 1.0 / min_radius;
   // generate shortest path
   rs_interpolate_.CalcSCSPathKappa(&kappa_list, start, end, min_radius,
                                    inverse_radius, request_type);
 
   // shrink path if distance is invalid.
-  double shrink_dist = 0.001;
+  float shrink_dist = 0.001;
   rs_interpolate_.ShrinkRSPathByInvalidDist(&kappa_list, shrink_dist);
 
   // ILOG_INFO << "check gear";
@@ -204,7 +204,7 @@ int RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
   // rs_path_anchor_pts.size = kappa_list.size + 1
 
   // interpolate
-  double rs_path_sample_dist;
+  float rs_path_sample_dist;
   RSPoint *anchor_point;
   rs_path_sample_dist = 0.1;
 
@@ -241,11 +241,11 @@ int RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
 }
 
 int RSPathInterface::RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
-                                       const double min_radius) {
+                                       const float min_radius) {
   RSAnchorPoints rs_path_anchor_pts;
-  double rs_path_sample_dist;
+  float rs_path_sample_dist;
   RSPoint *anchor_point;
-  double inverse_radius = 1.0 / min_radius;
+  float inverse_radius = 1.0 / min_radius;
 
   // update anchor
   rs_interpolate_.UpdateAnchorPoint(&rs_path_anchor_pts, start, rs_path);

@@ -11,14 +11,14 @@ void Transform2d::RUFLocalPoseToGlobal(Pose2D *global_pose,
     return;
   }
 
-  double lx, ly, theta;
+  float lx, ly, theta;
 
   lx = local_pose.x;
   ly = local_pose.y;
   theta = base_pose.theta;
 
-  double sin_theta = std::sin(theta);
-  double cos_theta = std::cos(theta);
+  float sin_theta = std::sin(theta);
+  float cos_theta = std::cos(theta);
 
   global_pose->x = base_pose.x;
   global_pose->x += sin_theta * lx + cos_theta * ly;
@@ -38,7 +38,7 @@ void Transform2d::RUFLocalPoseToGlobal(Pose2D *global_pose,
     return;
   }
 
-  double lx, ly;
+  float lx, ly;
   lx = local_pose.x;
   ly = local_pose.y;
 
@@ -61,14 +61,14 @@ void Transform2d::GlobalPoseToRUFLocal(Pose2D *local_pose,
     return;
   }
 
-  double dx, dy, theta;
+  float dx, dy, theta;
 
   dx = global_pose.x - base_pose.x;
   dy = global_pose.y - base_pose.y;
   theta = base_pose.theta;
 
-  double sin_theta = std::sin(theta);
-  double cos_theta = std::cos(theta);
+  float sin_theta = std::sin(theta);
+  float cos_theta = std::cos(theta);
 
   local_pose->x = sin_theta * dx - cos_theta * dy;
   local_pose->y = cos_theta * dx + sin_theta * dy;
@@ -85,7 +85,7 @@ void Transform2d::GlobalPoseToRUFLocal(Pose2D *local_pose,
     return;
   }
 
-  double dx, dy, theta;
+  float dx, dy, theta;
 
   dx = global_pose.x - base_pose_.x;
   dy = global_pose.y - base_pose_.y;
@@ -113,11 +113,11 @@ void Transform2d::ULFLocalPoseToGlobal(Pose2D *global_pose,
     return;
   }
 
-  double sin_theta = std::sin(base_pose.theta);
-  double cos_theta = std::cos(base_pose.theta);
+  float sin_theta = std::sin(base_pose.theta);
+  float cos_theta = std::cos(base_pose.theta);
 
-  double tmp_x = local_pose.x * cos_theta - local_pose.y * sin_theta;
-  double tmp_y = local_pose.x * sin_theta + local_pose.y * cos_theta;
+  float tmp_x = local_pose.x * cos_theta - local_pose.y * sin_theta;
+  float tmp_y = local_pose.x * sin_theta + local_pose.y * cos_theta;
 
   global_pose->x = tmp_x + base_pose.x;
   global_pose->y = tmp_y + base_pose.y;
@@ -134,8 +134,8 @@ void Transform2d::ULFLocalPoseToGlobal(Pose2D *global_pose,
     return;
   }
 
-  double tmp_x = local_pose.x * cos_theta_ - local_pose.y * sin_theta_;
-  double tmp_y = local_pose.x * sin_theta_ + local_pose.y * cos_theta_;
+  float tmp_x = local_pose.x * cos_theta_ - local_pose.y * sin_theta_;
+  float tmp_y = local_pose.x * sin_theta_ + local_pose.y * cos_theta_;
 
   global_pose->x = tmp_x + base_pose_.x;
   global_pose->y = tmp_y + base_pose_.y;
@@ -152,8 +152,8 @@ void Transform2d::ULFLocalPointToGlobal(Position2D *global_pose,
     return;
   }
 
-  double tmp_x = local_pose.x * cos_theta_ - local_pose.y * sin_theta_;
-  double tmp_y = local_pose.x * sin_theta_ + local_pose.y * cos_theta_;
+  float tmp_x = local_pose.x * cos_theta_ - local_pose.y * sin_theta_;
+  float tmp_y = local_pose.x * sin_theta_ + local_pose.y * cos_theta_;
 
   global_pose->x = tmp_x + base_pose_.x;
   global_pose->y = tmp_y + base_pose_.y;
@@ -161,10 +161,10 @@ void Transform2d::ULFLocalPointToGlobal(Position2D *global_pose,
   return;
 }
 
-void Transform2d::ULFLocalPointToGlobal(Eigen::Vector2d &global_pose,
-                                        const Eigen::Vector2d &local_pose) {
-  double tmp_x = local_pose.x() * cos_theta_ - local_pose.y() * sin_theta_;
-  double tmp_y = local_pose.x() * sin_theta_ + local_pose.y() * cos_theta_;
+void Transform2d::ULFLocalPointToGlobal(Eigen::Vector2f &global_pose,
+                                        const Eigen::Vector2f &local_pose) {
+  float tmp_x = local_pose.x() * cos_theta_ - local_pose.y() * sin_theta_;
+  float tmp_y = local_pose.x() * sin_theta_ + local_pose.y() * cos_theta_;
 
   global_pose[0] = tmp_x + base_pose_.x;
   global_pose[1] = tmp_y + base_pose_.y;
@@ -179,11 +179,11 @@ void Transform2d::GlobalPoseToULFLocal(Pose2D *local_pose,
     return;
   }
 
-  double sin_theta = std::sin(base_pose.theta);
-  double cos_theta = std::cos(base_pose.theta);
+  float sin_theta = std::sin(base_pose.theta);
+  float cos_theta = std::cos(base_pose.theta);
 
-  double tmp_x = global_pose.x - base_pose.x;
-  double tmp_y = global_pose.y - base_pose.y;
+  float tmp_x = global_pose.x - base_pose.x;
+  float tmp_y = global_pose.y - base_pose.y;
 
   local_pose->x = tmp_x * cos_theta + tmp_y * sin_theta;
   local_pose->y = tmp_y * cos_theta - tmp_x * sin_theta;
@@ -200,8 +200,8 @@ void Transform2d::GlobalPoseToULFLocal(Pose2D *local_pose,
     return;
   }
 
-  double tmp_x = global_pose.x - base_pose_.x;
-  double tmp_y = global_pose.y - base_pose_.y;
+  float tmp_x = global_pose.x - base_pose_.x;
+  float tmp_y = global_pose.y - base_pose_.y;
 
   local_pose->x = tmp_x * cos_theta_ + tmp_y * sin_theta_;
   local_pose->y = tmp_y * cos_theta_ - tmp_x * sin_theta_;
@@ -218,8 +218,8 @@ void Transform2d::GlobalPointToULFLocal(Pose2D *local_pose,
     return;
   }
 
-  double tmp_x = global_pose.x - base_pose_.x;
-  double tmp_y = global_pose.y - base_pose_.y;
+  float tmp_x = global_pose.x - base_pose_.x;
+  float tmp_y = global_pose.y - base_pose_.y;
 
   local_pose->x = tmp_x * cos_theta_ + tmp_y * sin_theta_;
   local_pose->y = tmp_y * cos_theta_ - tmp_x * sin_theta_;
@@ -236,8 +236,8 @@ void Transform2d::SetBasePose(const Pose2D &base_pose) {
   return;
 }
 
-void Transform2d::SetBasePose(const Pose2D &base_pose, const double sin_theta,
-                              const double cos_theta) {
+void Transform2d::SetBasePose(const Pose2D &base_pose, const float sin_theta,
+                              const float cos_theta) {
   base_pose_ = base_pose;
   sin_theta_ = sin_theta;
   cos_theta_ = cos_theta;
@@ -250,8 +250,8 @@ void Transform2d::GlobalPointToULFLocal(const Position2D &global_pos,
     return;
   }
 
-  double tmp_x = global_pos.x - base_pose_.x;
-  double tmp_y = global_pos.y - base_pose_.y;
+  float tmp_x = global_pos.x - base_pose_.x;
+  float tmp_y = global_pos.y - base_pose_.y;
 
   local_pos->x = tmp_x * cos_theta_ + tmp_y * sin_theta_;
   local_pos->y = tmp_y * cos_theta_ - tmp_x * sin_theta_;

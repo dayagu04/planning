@@ -3,16 +3,18 @@
 #include <cmath>
 #include <cstddef>
 
+#include "collision_detect_types.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
+#include "vecf32.h"
 
 namespace planning {
 
 void FuturePathDecider::Process(
     const HybridAStarResult *history_path, const PlanningReason plan_reason,
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
-    const ParkReferenceLine *ref_line, const double min_turn_radius,
+    const ParkReferenceLine *ref_line, const float min_turn_radius,
     const bool swap_start_goal, const AstarPathGenerateType path_generate_type,
     ParkFirstActionRequest *future_path_request) {
   ILOG_INFO << "plan reason=" << static_cast<int>(plan_reason);
@@ -41,7 +43,7 @@ const AstarPathGear FuturePathDecider::GetNextPathGearByHistory() {
   return history_path_info_.gear_;
 }
 
-const double FuturePathDecider::GetNextPathLenByHistory() {
+const float FuturePathDecider::GetNextPathLenByHistory() {
   return history_path_info_.dist_;
 }
 
@@ -83,26 +85,26 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line) {
   // update dist to ref line
-  ad_common::math::Vec2d ego_line_segment =
-      ad_common::math::Vec2d(ego_pose.x, ego_pose.y) -
+  Vec2df32 ego_line_segment =
+      Vec2df32(ego_pose.x, ego_pose.y) -
       ref_line->GetStartPoint();
 
-  double vertical_dist = ref_line->UnitDirection().CrossProd(ego_line_segment);
+  float vertical_dist = ref_line->UnitDirection().CrossProd(ego_line_segment);
   future_drive_dist_info_.dist_to_ref_line = std::fabs(vertical_dist);
 
   // update gear drive safe dist
   Pose2D global_pose;
   Transform2d tf;
-  double sin_theta = std::sin(ego_pose.theta);
-  double cos_theta = std::cos(ego_pose.theta);
+  float sin_theta = std::sin(ego_pose.theta);
+  float cos_theta = std::cos(ego_pose.theta);
 
-  const Eigen::Vector2d line_seg_start =
-      Eigen::Vector2d(ego_pose.x, ego_pose.y);
-  const Eigen::Vector2d unit_line_vec = Eigen::Vector2d(cos_theta, sin_theta);
-  double s = 0.01;
-  double ds = 0.1;
+  const Eigen::Vector2f line_seg_start =
+      Eigen::Vector2f(ego_pose.x, ego_pose.y);
+  const Eigen::Vector2f unit_line_vec = Eigen::Vector2f(cos_theta, sin_theta);
+  float s = 0.01;
+  float ds = 0.1;
 
-  Eigen::Vector2d point;
+  Eigen::Vector2f point;
   future_drive_dist_info_.gear_drive_has_obs = false;
   while (s < 10.0) {
     point = line_seg_start + s * unit_line_vec;
@@ -160,8 +162,8 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
   // update gear drive safe dist
   Pose2D global_pose;
   Transform2d tf;
-  double s = 0.0;
-  double ds = 0.1;
+  float s = 0.0;
+  float ds = 0.1;
 
   std::vector<Pose2D> path;
 
@@ -398,7 +400,7 @@ void FuturePathDecider::UpdateFuturePathRequest(
 
 // radius: if left turn, radius is positive
 void FuturePathDecider::GetVehCircleByPose(const Pose2D *pose,
-                                           const double radius,
+                                           const float radius,
                                            const AstarPathGear gear,
                                            VehicleCircle *veh_circle) {
   veh_circle->radius = radius;
@@ -411,7 +413,7 @@ void FuturePathDecider::GetVehCircleByPose(const Pose2D *pose,
 }
 
 void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
-                                        const double arc, const double radius,
+                                        const float arc, const float radius,
                                         const bool is_forward,
                                         std::vector<Pose2D> *path) {
   int path_point_num = std::ceil(arc / 0.1);
@@ -429,9 +431,9 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
 
   // interpolate
   Pose2D next_pose;
-  double inv_radius = std::fabs(1.0 / radius);
+  float inv_radius = std::fabs(1.0 / radius);
 
-  double acc_s = 0.0;
+  float acc_s = 0.0;
 
   path->clear();
   path->push_back(*start_point_pose);
@@ -450,10 +452,10 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
 
 void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
                                                const Pose2D *start_pose,
-                                               const double arc,
-                                               const double inverse_radius,
+                                               const float arc,
+                                               const float inverse_radius,
                                                Pose2D *pose) {
-  double delta_theta, theta;
+  float delta_theta, theta;
 
   delta_theta = arc * inverse_radius;
 
@@ -472,7 +474,7 @@ void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
   // update next point theta
   theta = start_pose->theta + delta_theta;
 
-  double radius = veh_circle->radius;
+  float radius = veh_circle->radius;
 
   pose->x = veh_circle->center.x + radius * std::sin(theta);
   pose->y = veh_circle->center.y - radius * std::cos(theta);
@@ -482,7 +484,7 @@ void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
 }
 
 void FuturePathDecider::GetStraightLinePoint(const Pose2D *start_state,
-                                             const double dist_to_start,
+                                             const float dist_to_start,
                                              const Pose2D *unit_vector,
                                              Pose2D *goal_state) {
   goal_state->x = start_state->x + dist_to_start * unit_vector->x;
@@ -494,19 +496,19 @@ void FuturePathDecider::GetStraightLinePoint(const Pose2D *start_state,
 }
 
 void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
-                                      const double length,
+                                      const float length,
                                       const bool is_forward,
                                       std::vector<Pose2D> *path) {
   int path_point_num = std::ceil(length / 0.1);
 
-  double inc_dist;
+  float inc_dist;
   if (is_forward) {
     inc_dist = 0.1;
   } else {
     inc_dist = -0.1;
   }
 
-  double acc_s = 0.0;
+  float acc_s = 0.0;
 
   // get unit vector
   Pose2D unit_vector;
@@ -530,8 +532,8 @@ void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
 
 // if left, radius is positive
 void FuturePathDecider::GetPathByRadius(const Pose2D *start_pose,
-                                        const double length,
-                                        const double radius,
+                                        const float length,
+                                        const float radius,
                                         const bool is_forward,
                                         std::vector<Pose2D> *path) {
   if (std::fabs(radius) > 100000.0) {

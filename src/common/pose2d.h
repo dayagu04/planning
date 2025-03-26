@@ -6,13 +6,13 @@
 
 namespace planning {
 struct Position2D {
-  double x;
-  double y;
+  float x;
+  float y;
 
   Position2D() = default;
-  Position2D(const double x_, const double y_) : x(x_), y(y_) {}
+  Position2D(const float x_, const float y_) : x(x_), y(y_) {}
 
-  double DistanceTo(const Eigen::Vector2d &p) const {
+  float DistanceTo(const Eigen::Vector2f &p) const {
     return std::sqrt((x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]));
   }
 
@@ -22,47 +22,48 @@ struct Position2D {
 };
 
 struct Position3D {
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 
   Position3D() = default;
-  Position3D(const double x_, const double y_, const double z_)
+  Position3D(const float x_, const float y_, const float z_)
       : x(x_), y(y_), z(z_) {}
 };
 
+// TODO: make it a template class.
 struct Pose2D {
-  double x = 0.0;
-  double y = 0.0;
+  float x = 0.0;
+  float y = 0.0;
   /* theta of head against east (unit: r) [-pi,pi)*/
-  double theta = 0.0;
+  float theta = 0.0;
 
   Pose2D() = default;
-  Pose2D(const double x_, const double y_, const double theta_)
+  Pose2D(const float x_, const float y_, const float theta_)
       : x(x_), y(y_), theta(theta_) {}
-  void SetPose(const double x_, const double y_, const double theta_) {
+  void SetPose(const float x_, const float y_, const float theta_) {
     x = x_;
     y = y_;
     theta = theta_;
   }
 
-  const double GetX() const { return x; }
-  const double GetY() const { return y; }
-  const double GetPhi() const { return theta; }
+  const float GetX() const { return x; }
+  const float GetY() const { return y; }
+  const float GetPhi() const { return theta; }
 
-  double DistanceTo(const Pose2D &p) const {
+  float DistanceTo(const Pose2D &p) const {
     return std::sqrt((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y));
   }
 
-  double DistanceTo(const Pose2D *p) const {
+  float DistanceTo(const Pose2D *p) const {
     return std::sqrt((x - p->x) * (x - p->x) + (y - p->y) * (y - p->y));
   }
 
-  double DistanceSquareTo(const Pose2D *p) const {
+  float DistanceSquareTo(const Pose2D *p) const {
     return (x - p->x) * (x - p->x) + (y - p->y) * (y - p->y);
   }
 
-  double DistanceToOrigin() const { return std::sqrt(x * x + y * y); }
+  float DistanceToOrigin() const { return std::sqrt(x * x + y * y); }
 
   bool IsSame(const Pose2D &p) const {
     if (ifly_fequal(x, p.x) && ifly_fequal(y, p.y)) {
@@ -85,14 +86,14 @@ struct Pose2D {
     return;
   }
 
-  double DistanceSquareTo(const Eigen::Vector2d &p) const {
+  float DistanceSquareTo(const Eigen::Vector2f &p) const {
     return (x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]);
   }
 };
 
 /* Calculate distance from two points */
 template <typename T>
-inline double CalcPointDist(T *p1, T *p2) {
+inline float CalcPointDist(T *p1, T *p2) {
   return std::sqrt((p1->x - p2->x) * (p1->x - p2->x) +
                    (p1->y - p2->y) * (p1->y - p2->y));
 }
@@ -110,7 +111,7 @@ inline double CalcPointDist(T *p1, T *p2) {
   (ifly_fequal((pt1)->x, (pt2)->x) && (ifly_fequal((pt1)->y, (pt2)->y)))
 
 /* Unify theta to [-base, -base + 2*M_PI) */
-double IflyUnifyTheta(double theta, double base);
+float IflyUnifyTheta(float theta, float base);
 
 /* Get difference of two theta, unify it to [-PI, PI) */
 #define GetThetaDiff(theta1, theta2) IflyUnifyTheta((theta1) - (theta2), M_PI)
@@ -160,14 +161,14 @@ void CvtPosLocalToGlobal(Position2D *global_pos, const Position2D *local_pos,
  */
 void CvtPosLocalToGlobalFast(Position2D *global_pos,
                              const Position2D *local_pos,
-                             const Pose2D *base_pose, const double sin_theta,
-                             const double cos_theta);
+                             const Pose2D *base_pose, const float sin_theta,
+                             const float cos_theta);
 
-void CvtThetaGlobalToLocal(double *local_theta, const double global_theta,
-                           const double base_theta);
+void CvtThetaGlobalToLocal(float *local_theta, const float global_theta,
+                           const float base_theta);
 
-void CvtThetaLocalToGlobal(double *global_theta, const double local_theta,
-                           const double base_theta);
+void CvtThetaLocalToGlobal(float *global_theta, const float local_theta,
+                           const float base_theta);
 
 void CvtPoseGlobalToLocal(Pose2D *local_pose, const Pose2D *global_pose,
                           const Pose2D *base_pose);
@@ -176,13 +177,13 @@ void IsLineSegmentIntersection(bool *is, const Position2D *p1,
                                const Position2D *p2, const Position2D *p3,
                                const Position2D *p4);
 
-inline double GetDotProduct(const Pose2D &a, const Pose2D &b) {
+inline float GetDotProduct(const Pose2D &a, const Pose2D &b) {
   return a.x * b.x + a.y * b.y;
 }
 
-inline double HorizonProjectionLength(const Pose2D &base,
+inline float HorizonProjectionLength(const Pose2D &base,
                                       const Pose2D &vector) {
-  double base_length = std::sqrt(base.x * base.x + base.y * base.y);
+  float base_length = std::sqrt(base.x * base.x + base.y * base.y);
   if (base_length < 1e-7) {
     return 0.0;
   }
@@ -193,7 +194,7 @@ inline double HorizonProjectionLength(const Pose2D &base,
 /*
  * Vector cross product
  */
-const double inline CrossProduct(const Pose2D &base, const Pose2D &vector) {
+const float inline CrossProduct(const Pose2D &base, const Pose2D &vector) {
   return base.x * vector.y - base.y * vector.x;
 }
 

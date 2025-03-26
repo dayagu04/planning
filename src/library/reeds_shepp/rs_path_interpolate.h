@@ -19,10 +19,10 @@ struct RSPathSegment {
   RSPathSteer steer;
 
   // signed length
-  double length;
+  float length;
 
   // left is positive
-  double kappa;
+  float kappa;
 };
 
 struct RSPath {
@@ -31,14 +31,14 @@ struct RSPath {
   int size;
 
   // always > 0
-  double total_length;
+  float total_length;
 
   int gear_change_number;
 
   // todo
   int steering_change_number;
 
-  double radius;
+  float radius;
 
   void BackPoint(RSPoint *point) {
     if (size < 1) {
@@ -76,12 +76,12 @@ struct RSPath {
     return;
   }
 
-  double GetFirstGearLength() const {
+  float GetFirstGearLength() const {
     if (size < 1) {
       return 0.0;
     }
 
-    double len = 0.0;
+    float len = 0.0;
     for (int i = 0; i < size; i++) {
       if (paths[i].gear == paths[0].gear) {
         len += paths[i].length;
@@ -98,7 +98,7 @@ struct VehicleCircle {
   Position2D center;
 
   // left is positive
-  double radius;
+  float radius;
   AstarPathGear gear;
 };
 
@@ -120,17 +120,17 @@ class RSPathInterpolator {
    **/
   int CalcShortestRSPathKappa(RSPathKappaParam *kappa_list,
                               const Pose2D *start_pose, const Pose2D *goal_pose,
-                              double min_turn_radius,
-                              const double inverse_radius,
+                              float min_turn_radius,
+                              const float inverse_radius,
                               const RSPathRequestType request_type);
 
   int CalcSCSPathKappa(RSPathKappaParam *kappa_list, const Pose2D *start_pose,
-                       const Pose2D *goal_pose, double min_turn_radius,
-                       const double inverse_radius,
+                       const Pose2D *goal_pose, float min_turn_radius,
+                       const float inverse_radius,
                        const RSPathRequestType request_type);
 
   int ShrinkRSPathByInvalidDist(RSPathKappaParam *kappa_list,
-                                double dist_thres);
+                                float dist_thres);
 
   int UpdateGearSwitchNum(RSPathKappaParam *kappa_list,
                           const AstarPathGear initial_pose_dir);
@@ -143,41 +143,41 @@ class RSPathInterpolator {
 
   int RSPathSegmentInterpolate(RSPathSegment *path, const RSPoint *start_pose,
                                const RSSegmentKappaParam *path_kappa,
-                               double inc_dist);
+                               float inc_dist);
 
   int PathSegmentInterpolateByLine(RSPathSegment *path,
                                    const RSPoint *start_pose,
                                    const RSPoint *next_pose,
-                                   const double path_kappa, const double length,
-                                   const double inc_dist);
+                                   const float path_kappa, const float length,
+                                   const float inc_dist);
 
   int PathSegmentInterpolateByArc(RSPathSegment *path,
                                   const RSPoint *start_pose,
-                                  const double path_kappa, const double length,
-                                  const double inc_dist, const double radius,
-                                  const double inv_radius);
+                                  const float path_kappa, const float length,
+                                  const float inc_dist, const float radius,
+                                  const float inv_radius);
 
  public:
   int CalcRSPathKappa(RSPathKappaParam *kappa_list, const RSPathParam *path,
-                      double inverse_radius);
+                      float inverse_radius);
 
   int GetStraightLinePoint(RSPoint *goal_state, const RSPoint *start_state,
-                           AstarPathGear direction, double length);
+                           AstarPathGear direction, float length);
 
   int GetStraightLinePoint(RSPoint *goal_state, const RSPoint *start_state,
-                           AstarPathGear direction, const double dist_to_start,
+                           AstarPathGear direction, const float dist_to_start,
                            const Pose2D *unit_vector);
 
   int GetCirclePoint(RSPoint *goal_state, const RSPoint *start_state,
-                     AstarPathGear direction, double length);
+                     AstarPathGear direction, float length);
 
   int InterpolateByKappa(RSPoint *next_point, const RSPoint *point,
-                         const AstarPathGear dir, const double abs_len);
+                         const AstarPathGear dir, const float abs_len);
 
   int CopyRSPathKappaParam(RSPathKappaParam *dst_list,
                            const RSPathKappaParam *src_list);
 
-  AstarPathGear GetGearBySignLen(const double signed_length) {
+  AstarPathGear GetGearBySignLen(const float signed_length) {
     if (signed_length > 0.0) {
       return AstarPathGear::DRIVE;
     } else if (signed_length < 0.0) {
@@ -188,11 +188,11 @@ class RSPathInterpolator {
   }
 
   int GetVehCircleByPose(VehicleCircle *veh_circle, const RSPoint *pose,
-                         double radius, AstarPathGear gear);
+                         float radius, AstarPathGear gear);
 
   int InterpolateByArcOffset(RSPoint *pose, const VehicleCircle *veh_circle,
-                             const RSPoint *start_pose, const double arc,
-                             const double inverse_radius);
+                             const RSPoint *start_pose, const float arc,
+                             const float inverse_radius);
 };
 
 }  // namespace planning

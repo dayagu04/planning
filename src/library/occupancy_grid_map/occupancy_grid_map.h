@@ -19,10 +19,10 @@ class OccupancyGridMap : public OccupancyGridCoordinate {
   void Clear();
 
   void Process(const Pose2D &ogm_pose,
-               const double _ogm_resolution = ogm_resolution) override;
+               const float _ogm_resolution = ogm_resolution) override;
 
   void Process(const OccupancyGridBound &bound,
-               const double _ogm_resolution = ogm_resolution) override;
+               const float _ogm_resolution = ogm_resolution) override;
 
   template <typename T>
   void AddSlotPoint(const T &point);

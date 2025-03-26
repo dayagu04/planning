@@ -9,13 +9,13 @@ namespace planning {
 
 struct NodeHeadingShrink {
   bool limit_search_heading_;
-  double heading_low_bound_;
-  double heading_up_bound_;
+  float heading_low_bound_;
+  float heading_up_bound_;
 };
 
 struct XCoordinateShrinkBound {
-  double upper;
-  double lower;
+  float upper;
+  float lower;
 };
 
 // in searching, we need shrink some nodes which are not necessary directions or
@@ -30,10 +30,10 @@ class NodeShrinkDecider : public AstarDecider {
                const ParkingVehDirection park_dir, const Pose2D &limiter_pose,
                const MapBound &XYbounds);
 
-  bool IsLegalForHeading(const double heading);
+  bool IsLegalForHeading(const float heading);
 
-  bool IsLegalForPos(const double x, const double y, const double x_limit,
-                     const double y_limit);
+  bool IsLegalForPos(const float x, const float y, const float x_limit,
+                     const float y_limit);
 
   bool IsShrinkByParent(const Node3d *parent, const Node3d *child_node);
 
@@ -49,7 +49,7 @@ class NodeShrinkDecider : public AstarDecider {
   const bool IsSameGridNodeContinuous(const Node3d *new_node,
                                       const Node3d *old_node) const;
 
-  bool IsLegalByXBound(const double x);
+  bool IsLegalByXBound(const float x);
 
  private:
   void ShrinkChildrenByHeadingForTailIn();

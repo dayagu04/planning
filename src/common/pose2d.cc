@@ -4,7 +4,7 @@ namespace planning {
 
 void CvtPosGlobalToLocal(Position2D *local_pos, const Position2D *global_pos,
                          const Pose2D *base_pose) {
-  double dx, dy, theta;
+  float dx, dy, theta;
 
   dx = global_pos->x - base_pose->x;
   dy = global_pos->y - base_pose->y;
@@ -16,7 +16,7 @@ void CvtPosGlobalToLocal(Position2D *local_pos, const Position2D *global_pos,
   return;
 }
 
-double IflyUnifyTheta(double theta, double base) {
+float IflyUnifyTheta(float theta, float base) {
   if (((theta) + (base)) >= 0.0) {
     return ifly_fmod((theta) + (base), M_PI * 2) - (base);
   } else {
@@ -32,7 +32,7 @@ double IflyUnifyTheta(double theta, double base) {
 
 void CvtPosLocalToGlobal(Position2D *global_pos, const Position2D *local_pos,
                          const Pose2D *base_pose) {
-  double lx, ly, theta;
+  float lx, ly, theta;
 
   lx = local_pos->x;
   ly = local_pos->y;
@@ -48,9 +48,9 @@ void CvtPosLocalToGlobal(Position2D *global_pos, const Position2D *local_pos,
 
 void CvtPosLocalToGlobalFast(Position2D *global_pos,
                              const Position2D *local_pos,
-                             const Pose2D *base_pose, const double sin_theta,
-                             const double cos_theta) {
-  double lx, ly;
+                             const Pose2D *base_pose, const float sin_theta,
+                             const float cos_theta) {
+  float lx, ly;
 
   lx = local_pos->x;
   ly = local_pos->y;
@@ -63,15 +63,15 @@ void CvtPosLocalToGlobalFast(Position2D *global_pos,
   return;
 }
 
-void CvtThetaGlobalToLocal(double *local_theta, const double global_theta,
-                           const double base_theta) {
+void CvtThetaGlobalToLocal(float *local_theta, const float global_theta,
+                           const float base_theta) {
   *local_theta = IflyUnifyTheta(M_PI / 2.0 + global_theta - base_theta, 0.0);
 
   return;
 }
 
-void CvtThetaLocalToGlobal(double *global_theta, const double local_theta,
-                           const double base_theta) {
+void CvtThetaLocalToGlobal(float *global_theta, const float local_theta,
+                           const float base_theta) {
   *global_theta = IflyUnifyTheta(local_theta + base_theta - M_PI / 2.0, 0.0);
 
   return;
@@ -79,7 +79,7 @@ void CvtThetaLocalToGlobal(double *global_theta, const double local_theta,
 
 void CvtPoseGlobalToLocal(Pose2D *local_pose, const Pose2D *global_pose,
                           const Pose2D *base_pose) {
-  double dx, dy, theta;
+  float dx, dy, theta;
 
   dx = global_pose->x - base_pose->x;
   dy = global_pose->y - base_pose->y;
@@ -98,7 +98,7 @@ void IsLineSegmentIntersection(bool *is, const Position2D *p1,
                                const Position2D *p2, const Position2D *p3,
                                const Position2D *p4) {
   Position2D p3p1, p3p4, p3p2, p1p3, p1p2, p1p4;
-  double cross_result1, cross_result2;
+  float cross_result1, cross_result2;
 
   p3p1.x = p1->x - p3->x;
   p3p1.y = p1->y - p3->y;

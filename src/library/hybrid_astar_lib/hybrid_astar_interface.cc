@@ -27,12 +27,12 @@ HybridAStarInterface::HybridAStarInterface() {}
 
 HybridAStarInterface::~HybridAStarInterface() {}
 
-int HybridAStarInterface::Init(const double back_edge_to_rear_axis,
-                               const double car_length, const double car_width,
-                               const double steer_ratio,
-                               const double wheel_base,
-                               const double min_turn_radius,
-                               const double mirror_width) {
+int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
+                               const float car_length, const float car_width,
+                               const float steer_ratio,
+                               const float wheel_base,
+                               const float min_turn_radius,
+                               const float mirror_width) {
   config_.InitConfig();
 
   // read vehicle params
@@ -43,12 +43,13 @@ int HybridAStarInterface::Init(const double back_edge_to_rear_axis,
       car_length - back_edge_to_rear_axis - wheel_base;
   vehicle_param_.steer_ratio = steer_ratio;
   vehicle_param_.wheel_base = wheel_base;
-  vehicle_param_.min_turn_radius = min_turn_radius;
+  vehicle_param_.min_turn_radius = min_turn_radius + config_.turn_radius_buffer;
   vehicle_param_.mirror_width = mirror_width;
   vehicle_param_.rear_edge_to_rear_axle = back_edge_to_rear_axis;
   vehicle_param_.front_edge_to_rear_axle = car_length - back_edge_to_rear_axis;
-  double front_wheel =
-      std::atan(vehicle_param_.wheel_base / std::max(0.001, min_turn_radius));
+  float front_wheel =
+      std::atan(vehicle_param_.wheel_base /
+                std::max(0.001, vehicle_param_.min_turn_radius));
 
   vehicle_param_.max_steer_angle =
       std::fabs(front_wheel * vehicle_param_.steer_ratio);
@@ -173,7 +174,7 @@ void HybridAStarInterface::UpdateOutput() {
   }
   target_pose_regulator.Process(&edt_, &request_, request_.start_,
                                 center_line_pose, vehicle_param_);
-  double ego_obs_dist = target_pose_regulator.GetEgoObsDist();
+  float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
   if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
@@ -256,8 +257,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   target_pose_regulator.Process(&edt_, &request_, request_.start_,
                                 center_line_pose, vehicle_param_);
 
-  double lat_buffer = 0.1;
-  double lon_buffer = 0.2;
+  float lat_buffer = 0.1;
+  float lon_buffer = 0.2;
   if (request_.space_type == ParkSpaceType::PARALLEL) {
     lat_buffer = 0.1;
     lon_buffer = 0.2;
@@ -268,7 +269,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer, lon_buffer);
   }
 
-  std::pair<Pose2D, double> target_regulator_result;
+  std::pair<Pose2D, float> target_regulator_result;
   target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);
 
   if (target_regulator_result.second < lat_buffer) {
@@ -308,12 +309,12 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
     search_state_ = AstarSearchState::SEARCHING;
 
-    double dist_to_slot_up_edge =
+    float dist_to_slot_up_edge =
         request.slot_length - ego_state_.DistanceToOrigin();
-    double lon_min_sampling_dist;
+    float lon_min_sampling_dist;
     if (request_.space_type == ParkSpaceType::VERTICAL ||
         request_.space_type == ParkSpaceType::SLANTING) {
-      lon_min_sampling_dist = std::max(2.0, dist_to_slot_up_edge);
+      lon_min_sampling_dist = std::max(2.0f, dist_to_slot_up_edge);
     } else {
       lon_min_sampling_dist = 0.4;
     }
@@ -357,7 +358,7 @@ void HybridAStarInterface::ExtendPathToRealParkSpacePoint(
     return;
   }
 
-  Eigen::Vector2d astar_end_point;
+  Eigen::Vector2f astar_end_point;
   astar_end_point[0] = result->x.back();
   astar_end_point[1] = result->y.back();
 
@@ -366,23 +367,23 @@ void HybridAStarInterface::ExtendPathToRealParkSpacePoint(
     return;
   }
 
-  double extend_dist = real_end.DistanceTo(
+  float extend_dist = real_end.DistanceTo(
       Pose2D(astar_end_point[0], astar_end_point[1], result->phi.back()));
   if (extend_dist < 0.1) {
     return;
   }
 
-  double phi = result->phi.back();
+  float phi = result->phi.back();
   AstarPathGear gear = result->gear.back();
-  double astar_end_s = result->accumulated_s.back();
+  float astar_end_s = result->accumulated_s.back();
   AstarPathType path_type = AstarPathType::LINE_SEGMENT;
 
-  Eigen::Vector2d unit_line_vec = Eigen::Vector2d(-1.0, 0.0);
+  Eigen::Vector2f unit_line_vec = Eigen::Vector2f(-1.0, 0.0);
 
-  double s = 0.1;
-  double ds = 0.1;
+  float s = 0.1;
+  float ds = 0.1;
 
-  Eigen::Vector2d point;
+  Eigen::Vector2f point;
   while (s < extend_dist) {
     point = astar_end_point + s * unit_line_vec;
     result->x.emplace_back(point[0]);
@@ -396,10 +397,10 @@ void HybridAStarInterface::ExtendPathToRealParkSpacePoint(
     s += ds;
   }
 
-  double x_diff = real_end.x - result->x.back();
-  double dist_diff = std::sqrt(x_diff * x_diff);
+  float x_diff = real_end.x - result->x.back();
+  float dist_diff = std::sqrt(x_diff * x_diff);
   if (dist_diff > 1e-2) {
-    double last_s = result->accumulated_s.back();
+    float last_s = result->accumulated_s.back();
 
     // add end
     result->x.emplace_back(real_end.x);
@@ -419,18 +420,18 @@ HybridAStarInterface::GetChildNodeForDebug() {
   return hybrid_astar_->GetChildNodeForDebug();
 }
 
-const std::vector<ad_common::math::Vec2d>&
+const std::vector<Vec2df32>&
 HybridAStarInterface::GetPriorQueueNode() {
   return hybrid_astar_->GetQueuePathForDebug();
 }
 
-const std::vector<ad_common::math::Vec2d>&
+const std::vector<Vec2df32>&
 HybridAStarInterface::GetDelNodeQueueNode() {
   return hybrid_astar_->GetDelQueuePathForDebug();
 }
 
 void HybridAStarInterface::GetRSPathHeuristic(
-    std::vector<std::vector<ad_common::math::Vec2d>>& path_list) {
+    std::vector<std::vector<Vec2df32>>& path_list) {
   if (hybrid_astar_ == nullptr) {
     return;
   }
@@ -438,7 +439,7 @@ void HybridAStarInterface::GetRSPathHeuristic(
   const std::vector<RSPath>& paths = hybrid_astar_->GetRSPathHeuristic();
 
   for (size_t i = 0; i < paths.size(); i++) {
-    std::vector<ad_common::math::Vec2d> tmp_path;
+    std::vector<Vec2df32> tmp_path;
 
     const RSPath& path = paths[i];
 
@@ -448,7 +449,7 @@ void HybridAStarInterface::GetRSPathHeuristic(
       const RSPathSegment* path_segment = &path.paths[j];
 
       for (int k = 0; k < path_segment->size; k++) {
-        tmp_path.emplace_back(ad_common::math::Vec2d(
+        tmp_path.emplace_back(Vec2df32(
             path_segment->points[k].x, path_segment->points[k].y));
       }
     }
@@ -493,7 +494,7 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
   result.clear();
 
   AStarPathPoint point;
-  double kappa_bound = 0.15;
+  float kappa_bound = 0.15;
   bool kappa_change_too_much = false;
 
   if (coarse_traj_.x.size() > 0) {
@@ -502,7 +503,7 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
     size_t phi_size = coarse_traj_.phi.size();
     size_t gear_size = coarse_traj_.gear.size();
     size_t accumulated_s_size = coarse_traj_.accumulated_s.size();
-    double kappa_diff;
+    float kappa_diff;
 
     AstarPathGear first_point_gear = coarse_traj_.gear[0];
     for (size_t i = 0; i < x_size; i++) {
@@ -604,7 +605,7 @@ const AstarSearchState HybridAStarInterface::TransformFirstSegmentPath(
 }
 
 const bool HybridAStarInterface::IsSelectedRealTargetPose() const {
-  double y_diff = std::fabs(request_.start_.y);
+  float y_diff = std::fabs(request_.start_.y);
 
   // car heading and car position is near ref_line_
   if (y_diff < request_.slot_width * 0.5) {
@@ -615,7 +616,7 @@ const bool HybridAStarInterface::IsSelectedRealTargetPose() const {
 }
 
 void HybridAStarInterface::GetRSPathInFullPath(
-    std::vector<double>& x, std::vector<double>& y, std::vector<double>& phi,
+    std::vector<float>& x, std::vector<float>& y, std::vector<float>& phi,
     const HybridAStarResult& result) {
   x.clear();
   y.clear();
@@ -657,7 +658,7 @@ void HybridAStarInterface::GetNodeListMessage(
 }
 
 void HybridAStarInterface::GetNodeListMessage(
-    std::vector<std::vector<Eigen::Vector2d>>& list) {
+    std::vector<std::vector<Eigen::Vector2f>>& list) {
   list.clear();
 
   if (PUBLISH_ASTAR_NODE_MESSAGE) {
@@ -675,9 +676,9 @@ const ParkObstacleList& HybridAStarInterface::GetConstObstacles() const {
   return obs_;
 }
 
-void HybridAStarInterface::GetRSPathForDebug(std::vector<double>& x,
-                                             std::vector<double>& y,
-                                             std::vector<double>& phi) {
+void HybridAStarInterface::GetRSPathForDebug(std::vector<float>& x,
+                                             std::vector<float>& y,
+                                             std::vector<float>& phi) {
   if (hybrid_astar_ != nullptr) {
     hybrid_astar_->GetRSPathForDebug(x, y, phi);
   }
@@ -693,9 +694,9 @@ const ParkReferenceLine& HybridAStarInterface::GetConstRefLine() const {
   return ref_line_;
 }
 
-void HybridAStarInterface::GetPolynomialPathForDebug(std::vector<double>& x,
-                                                     std::vector<double>& y,
-                                                     std::vector<double>& phi) {
+void HybridAStarInterface::GetPolynomialPathForDebug(std::vector<float>& x,
+                                                     std::vector<float>& y,
+                                                     std::vector<float>& phi) {
   for (size_t i = 0; i < coarse_traj_.x.size(); i++) {
     if (coarse_traj_.type[i] == AstarPathType::QUNTIC_POLYNOMIAL) {
       x.push_back(coarse_traj_.x[i]);
@@ -785,14 +786,14 @@ const bool HybridAStarInterface::IsEgoOverlapWithSlot() {
 }
 
 void HybridAStarInterface::PathSearchForScenarioRunning(
-    const TargetPoseRegulator& regulator, const double ego_obs_dist,
+    const TargetPoseRegulator& regulator, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
-  double lat_buffer_outside;
-  double advised_lat_buffer_inside;
-  double lon_buffer;
+  float lat_buffer_outside;
+  float advised_lat_buffer_inside;
+  float lon_buffer;
 
   // judge target regulator goal if collide
-  std::pair<Pose2D, double> target_regulator_result;
+  std::pair<Pose2D, float> target_regulator_result;
   target_regulator_result =
       regulator.GetCandidatePose(config_.safe_buffer.lat_safe_buffer_inside[0]);
   advised_lat_buffer_inside = GetLatBufferForInsideSlot(
@@ -860,9 +861,9 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
 void HybridAStarInterface::PathSearchForScenarioTry(
     const TargetPoseRegulator& regulator) {
-  double lat_buffer_outside;
-  double advised_lat_buffer_inside;
-  double lon_buffer;
+  float lat_buffer_outside;
+  float advised_lat_buffer_inside;
+  float lon_buffer;
 
   lat_buffer_outside = config_.safe_buffer.scenario_try_lat_buffer_outside;
   advised_lat_buffer_inside =
@@ -873,7 +874,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   // todo: 需要限制搜索时间
   ILOG_INFO << "scenario try planning";
-  std::pair<Pose2D, double> target_regulator_result;
+  std::pair<Pose2D, float> target_regulator_result;
   target_regulator_result =
       regulator.GetCandidatePose(advised_lat_buffer_inside);
   if (target_regulator_result.second < advised_lat_buffer_inside) {
@@ -890,9 +891,9 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 }
 
 void HybridAStarInterface::PathSamplingForScenarioRunning() {
-  double dist_to_slot_up_edge =
+  float dist_to_slot_up_edge =
       request_.slot_length - ego_state_.DistanceToOrigin();
-  double lon_min_sampling_length;
+  float lon_min_sampling_length;
   if (request_.space_type == ParkSpaceType::VERTICAL ||
       request_.space_type == ParkSpaceType::SLANTING) {
     lon_min_sampling_length =
@@ -903,9 +904,9 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
 
   target_regulator_goal_ = request_.goal_;
 
-  double lat_buffer_outside;
-  double advised_lat_buffer_inside;
-  double lon_buffer;
+  float lat_buffer_outside;
+  float advised_lat_buffer_inside;
+  float lon_buffer;
 
   coarse_traj_.Clear();
   HybridAStarResult path;
@@ -975,10 +976,10 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
   return;
 }
 
-const double HybridAStarInterface::GetLatBufferForInsideSlot(
-    const double target_obs_dist, const double ego_obs_dist,
+const float HybridAStarInterface::GetLatBufferForInsideSlot(
+    const float target_obs_dist, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
-  double safe_buffer = 0.0;
+  float safe_buffer = 0.0;
 
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_inside.size();
        i++) {

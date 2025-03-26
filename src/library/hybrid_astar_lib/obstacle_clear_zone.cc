@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "./../convex_collision_detection/aabb2d.h"
+#include "collision_detect_types.h"
 #include "log_glog.h"
 
 namespace planning {
@@ -39,9 +40,9 @@ bool ObstacleClearZone::GenerateBoundingBox(const Pose2D& start,
   box_.ExtendX(0.5);
   box_.ExtendY(0.8);
 
-  double max_x_extend = 10;
-  double max_y_extend = 15;
-  double step = 0.2;
+  float max_x_extend = 10;
+  float max_y_extend = 15;
+  float step = 0.2;
 
   cdl::AABB max_box;
   max_box.min_[0] = start.x - max_x_extend;

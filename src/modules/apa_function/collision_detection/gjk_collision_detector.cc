@@ -194,7 +194,8 @@ const bool GJKCollisionDetector::IsPolygonCollision(
 
   if (col_flag) {
     for (const Eigen::Vector2d& pt : *pt_clout) {
-      gjk_interface_.PolygonPointCollisionDetect(&polygon, pt, &col_flag);
+      gjk_interface_.PolygonPointCollisionDetect(
+          &polygon, Eigen::Vector2f(pt[0], pt[1]), &col_flag);
       if (col_flag) {
         return true;
       }

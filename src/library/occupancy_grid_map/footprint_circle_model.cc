@@ -18,17 +18,17 @@ void FootPrintCircleModel::Init(const float lat_safe_buffer,
 
 void FootPrintCircleModel::UpdateSafeBuffer(
     const float lat_safe_buffer, const float lon_safe_buffer,
-    const float mirror_buffer, const double big_circle_safe_buffer) {
-  const std::vector<double> &circle_x = apa_param.GetParam().footprint_circle_x;
-  const std::vector<double> &circle_y = apa_param.GetParam().footprint_circle_y;
-  const std::vector<double> &circle_r = apa_param.GetParam().footprint_circle_r;
+    const float mirror_buffer, const float big_circle_safe_buffer) {
+  const std::vector<float> &circle_x = apa_param.GetParam().footprint_circle_x;
+  const std::vector<float> &circle_y = apa_param.GetParam().footprint_circle_y;
+  const std::vector<float> &circle_r = apa_param.GetParam().footprint_circle_r;
 
   // min_lon_buffer:
   // 1. gear is reverse, car head buffer;
   // 2. gear is drive, car tail buffer
   // Perception object is invading, so this value is small, or else planning
   // is often failed.
-  double min_lon_buffer = 0.01;
+  float min_lon_buffer = 0.01;
   local_circles_.max_circle.pos = Position2D(circle_x[0], circle_y[0]);
   local_circles_.max_circle.radius =
       (float)(circle_r[0] + big_circle_safe_buffer);

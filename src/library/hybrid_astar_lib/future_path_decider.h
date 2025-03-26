@@ -23,9 +23,9 @@ enum class PathGearSwitchNumber {
 struct HistoryPathDriveInfo {
   PathGearSwitchNumber gear_switch_number_;
 
-  double start_point_s_;
-  double end_point_s_;
-  double dist_;
+  float start_point_s_;
+  float end_point_s_;
+  float dist_;
   size_t start_point_id_;
   size_t end_point_id_;
 
@@ -34,15 +34,15 @@ struct HistoryPathDriveInfo {
 
 // use line model to inference next drive info.
 struct InferenceDriveDist {
-  double dist_to_ref_line;
+  float dist_to_ref_line;
 
   bool gear_drive_has_obs;
-  double gear_drive_dist_to_obs;
+  float gear_drive_dist_to_obs;
 
   bool gear_reverse_has_obs;
-  double gear_reverse_dist_to_obs;
+  float gear_reverse_dist_to_obs;
 
-  double advised_drive_dist;
+  float advised_drive_dist;
 };
 
 // decider: check path drive distance.
@@ -53,7 +53,7 @@ class FuturePathDecider : public AstarDecider {
   void Process(const HybridAStarResult *history_path,
                const PlanningReason plan_reason, const Pose2D &ego_pose,
                EulerDistanceTransform *edt, const ParkReferenceLine *ref_line,
-               const double min_turn_radius, const bool swap_start_goal,
+               const float min_turn_radius, const bool swap_start_goal,
                const AstarPathGenerateType path_generate_type,
                ParkFirstActionRequest *future_path_request);
 
@@ -61,15 +61,15 @@ class FuturePathDecider : public AstarDecider {
 
   const AstarPathGear GetNextPathGearByHistory();
 
-  const double GetNextPathLenByHistory();
+  const float GetNextPathLenByHistory();
 
   const size_t GetNextPathStartPointId();
 
   const bool IsNextPathNoGearSwitchByHistory();
 
   // if left, radius is positive
-  void GetPathByRadius(const Pose2D *start_pose, const double length,
-                       const double radius, const bool is_forward,
+  void GetPathByRadius(const Pose2D *start_pose, const float length,
+                       const float radius, const bool is_forward,
                        std::vector<Pose2D> *path);
 
  private:
@@ -86,25 +86,25 @@ class FuturePathDecider : public AstarDecider {
   void UpdateFuturePathRequest(ParkFirstActionRequest *future_path_request);
 
   // radius: if left turn, radius is positive
-  void GetVehCircleByPose(const Pose2D *pose, const double radius,
+  void GetVehCircleByPose(const Pose2D *pose, const float radius,
                           const AstarPathGear gear, VehicleCircle *veh_circle);
 
   // if left, radius is positive
-  void GetPathByCircle(const Pose2D *start_pose, const double arc,
-                       const double radius, const bool is_forward,
+  void GetPathByCircle(const Pose2D *start_pose, const float arc,
+                       const float radius, const bool is_forward,
                        std::vector<Pose2D> *path);
 
-  void GetPathByLine(const Pose2D *start_pose, const double length,
+  void GetPathByLine(const Pose2D *start_pose, const float length,
                      const bool is_forward, std::vector<Pose2D> *path);
 
   void GetStraightLinePoint(const Pose2D *start_state,
-                            const double dist_to_start,
+                            const float dist_to_start,
                             const Pose2D *unit_vector, Pose2D *goal_state);
   // arc is positive.
   // inverse_radius is positive
   void InterpolateByArcOffset(const VehicleCircle *veh_circle,
-                              const Pose2D *start_pose, const double arc,
-                              const double inverse_radius, Pose2D *pose);
+                              const Pose2D *start_pose, const float arc,
+                              const float inverse_radius, Pose2D *pose);
 
   void CalcDriveDistByCircleModel(const Pose2D &ego_pose,
                                   EulerDistanceTransform *edt,
@@ -117,13 +117,13 @@ class FuturePathDecider : public AstarDecider {
   // use raycast path safe distance as an heuristic info
   InferenceDriveDist future_drive_dist_info_;
 
-  double min_turn_radius_;
+  float min_turn_radius_;
 
   bool swap_start_goal_;
 
   AstarPathGenerateType path_generate_type_;
   // todo: move to config
-  double astar_step_;
+  float astar_step_;
 };
 
 }  // namespace planning

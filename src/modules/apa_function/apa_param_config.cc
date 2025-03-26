@@ -854,11 +854,11 @@ void SyncParkingParameters(const bool is_simulation) {
   // gen output params
   JSON_READ_VALUE(apa_param.SetPram().max_velocity, double, "max_velocity");
 
-  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_x, std::vector<double>,
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_x, std::vector<float>,
                   "footprint_circle_x");
-  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_y, std::vector<double>,
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_y, std::vector<float>,
                   "footprint_circle_y");
-  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<double>,
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<float>,
                   "footprint_circle_r");
 
   JSON_READ_VALUE(

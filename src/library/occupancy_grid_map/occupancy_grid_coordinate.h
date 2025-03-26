@@ -8,15 +8,15 @@
 namespace planning {
 
 struct OccupancyGridBound {
-  double min_x;
-  double min_y;
-  double max_x;
-  double max_y;
+  float min_x;
+  float min_y;
+  float max_x;
+  float max_y;
 
   OccupancyGridBound() = default;
 
-  OccupancyGridBound(const double x_min_, const double y_min_,
-                     const double x_max_, const double y_max_)
+  OccupancyGridBound(const float x_min_, const float y_min_,
+                     const float x_max_, const float y_max_)
       : min_x(x_min_), min_y(y_min_), max_x(x_max_), max_y(y_max_){};
 
   void PrintInfo(const bool enable_log = true) const {
@@ -31,18 +31,18 @@ class OccupancyGridCoordinate {
   OccupancyGridCoordinate() = default;
 
   virtual void Process(const Pose2D &ogm_pose,
-                       const double _ogm_resolution = ogm_resolution);
+                       const float _ogm_resolution = ogm_resolution);
 
   virtual void Process(const OccupancyGridBound &bound,
-                       const double _ogm_resolution = ogm_resolution);
+                       const float _ogm_resolution = ogm_resolution);
 
   const bool IsIndexValid(const OgmIndex &id) const;
 
-  const double GetBoundMinX() const { return bound_.min_x; }
+  const float GetBoundMinX() const { return bound_.min_x; }
 
-  const double GetBoundMinY() const { return bound_.min_y; }
+  const float GetBoundMinY() const { return bound_.min_y; }
 
-  const double GetOgmResolutionInv() const { return ogm_resolution_inv_; }
+  const float GetOgmResolutionInv() const { return ogm_resolution_inv_; }
 
   // ogm local pose to index
   void OgmPoseToIndex(OgmIndex *index, const Pose2D &point);
@@ -69,8 +69,8 @@ class OccupancyGridCoordinate {
   // in slot system.
   OccupancyGridBound bound_;
 
-  double ogm_resolution_ = ogm_resolution;
+  float ogm_resolution_ = ogm_resolution;
 
-  double ogm_resolution_inv_ = 1 / ogm_resolution_;
+  float ogm_resolution_inv_ = 1 / ogm_resolution_;
 };
 }  // namespace planning
