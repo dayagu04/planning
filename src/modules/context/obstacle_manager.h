@@ -115,6 +115,7 @@ class ObstacleManager {
 
   void split_points(const iflyauto::Point2f *points,
                     const double polygon_points_size,
+                    const std::shared_ptr<planning_math::KDPath> &frenet_coord,
                     vector<vector<planning_math::Vec2d>> &result);
 
   void ProcessOccupancyWall(
@@ -133,6 +134,13 @@ class ObstacleManager {
       const Obstacle &obstacle,
       const std::shared_ptr<planning_math::KDPath> &frenet_coord,
       const Point2D &ego_point);
+
+  bool FilterGroundLineByDistance(
+      const std::vector<planning_math::Vec2d> &points,
+      const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+      const Point2D &ego_point,
+      const iflyauto::GroundLineType type,
+      const iflyauto::StaticFusionResourceType resource_type);
 
  private:
   void clear();
