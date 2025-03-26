@@ -1,5 +1,8 @@
 #include "future_path_decider.h"
 
+#include <bits/stdint-intn.h>
+
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 
@@ -7,9 +10,36 @@
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
+#include "transform2d.h"
 #include "vecf32.h"
 
 namespace planning {
+
+void FuturePathDecider::Clear() {
+  path_check_dist_ = 3.0;
+  point_resolution_ = 0.1;
+  future_drive_dist_info_.dist_to_ref_line = 0.0;
+  future_drive_dist_info_.gear_drive_path.clear();
+
+  float s = 0.0;
+  int32_t size = std::ceil(path_check_dist_ / point_resolution_);
+  for (int32_t i = 0; i < size; i++) {
+    future_drive_dist_info_.gear_drive_path.emplace_back(
+        Eigen::Vector2f(s, 10.0));
+    s += point_resolution_;
+  }
+
+  future_drive_dist_info_.gear_reverse_path.clear();
+
+  s = 0.0;
+  for (int32_t i = 0; i < size; i++) {
+    future_drive_dist_info_.gear_reverse_path.emplace_back(
+        Eigen::Vector2f(s, 10.0));
+    s += point_resolution_;
+  }
+
+  return;
+}
 
 void FuturePathDecider::Process(
     const HybridAStarResult *history_path, const PlanningReason plan_reason,
@@ -17,46 +47,26 @@ void FuturePathDecider::Process(
     const ParkReferenceLine *ref_line, const float min_turn_radius,
     const bool swap_start_goal, const AstarPathGenerateType path_generate_type,
     ParkFirstActionRequest *future_path_request) {
-  ILOG_INFO << "plan reason=" << static_cast<int>(plan_reason);
+  if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
+    future_path_request->Clear();
+    return;
+  }
 
   min_turn_radius_ = min_turn_radius;
   swap_start_goal_ = swap_start_goal;
   path_generate_type_ = path_generate_type;
-  astar_step_ = 0.4;
+  gear_request_ = future_path_request->gear_request;
+  Clear();
+
+  edt->UpdateSafeBuffer(0.01, 0.01, 0.01);
 
   CalcDriveDistByLineModel(ego_pose, edt, ref_line);
 
-  CalcDriveDistByCircleModel(ego_pose, edt, ref_line);
-
-  CalcDriveDistByHistoryPath(history_path, plan_reason);
+  CalcDriveDistByCircleModel(ego_pose, edt);
 
   UpdateFuturePathRequest(future_path_request);
 
-  if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
-    future_path_request->Clear();
-  }
-
   return;
-}
-
-const AstarPathGear FuturePathDecider::GetNextPathGearByHistory() {
-  return history_path_info_.gear_;
-}
-
-const float FuturePathDecider::GetNextPathLenByHistory() {
-  return history_path_info_.dist_;
-}
-
-const size_t FuturePathDecider::GetNextPathStartPointId() {
-  return history_path_info_.start_point_id_;
-}
-
-const bool FuturePathDecider::IsNextPathNoGearSwitchByHistory() {
-  if (history_path_info_.gear_switch_number_ == PathGearSwitchNumber::NONE) {
-    return true;
-  }
-
-  return false;
 }
 
 void FuturePathDecider::Process(const Pose2D &start, const Pose2D &end) {
@@ -65,29 +75,12 @@ void FuturePathDecider::Process(const Pose2D &start, const Pose2D &end) {
   return;
 }
 
-std::string FuturePathDecider::PathGearSwitchNumberString(
-    const PathGearSwitchNumber &gear_number) {
-  switch (gear_number) {
-    case PathGearSwitchNumber::NONE:
-      return "none";
-    case PathGearSwitchNumber::ONCE:
-      return "single_shot_path";
-    case PathGearSwitchNumber::MANY_TIMES:
-      return "multi_shot_path";
-    default:
-      break;
-  }
-
-  return "error shot number";
-}
-
 void FuturePathDecider::CalcDriveDistByLineModel(
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line) {
   // update dist to ref line
   Vec2df32 ego_line_segment =
-      Vec2df32(ego_pose.x, ego_pose.y) -
-      ref_line->GetStartPoint();
+      Vec2df32(ego_pose.x, ego_pose.y) - ref_line->GetStartPoint();
 
   float vertical_dist = ref_line->UnitDirection().CrossProd(ego_line_segment);
   future_drive_dist_info_.dist_to_ref_line = std::fabs(vertical_dist);
@@ -101,12 +94,11 @@ void FuturePathDecider::CalcDriveDistByLineModel(
   const Eigen::Vector2f line_seg_start =
       Eigen::Vector2f(ego_pose.x, ego_pose.y);
   const Eigen::Vector2f unit_line_vec = Eigen::Vector2f(cos_theta, sin_theta);
-  float s = 0.01;
-  float ds = 0.1;
 
+  float s = 0.0;
   Eigen::Vector2f point;
-  future_drive_dist_info_.gear_drive_has_obs = false;
-  while (s < 10.0) {
+  float obs_dist;
+  for (int32_t i = 0; i < future_drive_dist_info_.gear_drive_path.size(); i++) {
     point = line_seg_start + s * unit_line_vec;
 
     global_pose.x = point[0];
@@ -114,21 +106,23 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     global_pose.theta = ego_pose.theta;
     tf.SetBasePose(global_pose, sin_theta, cos_theta);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::DRIVE)) {
-      future_drive_dist_info_.gear_drive_has_obs = true;
+    edt->DistanceCheckForPoint(&obs_dist, &tf, AstarPathGear::DRIVE);
+
+    if (obs_dist < future_drive_dist_info_.gear_drive_path[i][1]) {
+      future_drive_dist_info_.gear_drive_path[i][1] = obs_dist;
+    }
+
+    if (obs_dist < 0.05) {
       break;
     }
 
-    s += ds;
+    s += point_resolution_;
   }
 
-  future_drive_dist_info_.gear_drive_dist_to_obs = s - ds - astar_step_;
-
   // gear reverse drive dist
-  s = 0.01;
-  ds = 0.1;
-  future_drive_dist_info_.gear_reverse_has_obs = false;
-  while (s < 5.0) {
+  s = 0.0;
+  for (int32_t i = 0; i < future_drive_dist_info_.gear_reverse_path.size();
+       i++) {
     point = line_seg_start - s * unit_line_vec;
 
     global_pose.x = point[0];
@@ -136,218 +130,48 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     global_pose.theta = ego_pose.theta;
     tf.SetBasePose(global_pose, sin_theta, cos_theta);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::REVERSE)) {
-      future_drive_dist_info_.gear_reverse_has_obs = true;
+    edt->DistanceCheckForPoint(&obs_dist, &tf, AstarPathGear::REVERSE);
 
-      break;
+    if (obs_dist < future_drive_dist_info_.gear_reverse_path[i][1]) {
+      future_drive_dist_info_.gear_reverse_path[i][1] = obs_dist;
     }
 
-    s += ds;
+    if (obs_dist < 0.05) {
+      break;
+    }
+    s += point_resolution_;
   }
-  future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds - astar_step_;
-  future_drive_dist_info_.advised_drive_dist = 1.2;
 
-  ILOG_INFO << "dist to ref line=" << future_drive_dist_info_.dist_to_ref_line
-            << ", drive straight dist="
-            << future_drive_dist_info_.gear_drive_dist_to_obs
-            << ", reverse straight dist="
-            << future_drive_dist_info_.gear_reverse_dist_to_obs;
+  ILOG_INFO << "dist to ref line=" << future_drive_dist_info_.dist_to_ref_line;
 
   return;
 }
 
 void FuturePathDecider::CalcDriveDistByCircleModel(
-    const Pose2D &ego_pose, EulerDistanceTransform *edt,
-    const ParkReferenceLine *ref_line) {
-  // update gear drive safe dist
-  Pose2D global_pose;
-  Transform2d tf;
-  float s = 0.0;
-  float ds = 0.1;
-
+    const Pose2D &ego_pose, EulerDistanceTransform *edt) {
+  // update path safe dist
   std::vector<Pose2D> path;
 
-  // left
-  GetPathByCircle(&ego_pose, 5.0, min_turn_radius_, true, &path);
+  // left turn
+  GetPathByCircle(&ego_pose, path_check_dist_, min_turn_radius_, true, &path);
+  UpdatePathDistInfo(path, AstarPathGear::DRIVE, edt,
+                     future_drive_dist_info_.gear_drive_path);
 
-  for (size_t i = 0; i < path.size(); i++) {
-    global_pose = path[i];
-    tf.SetBasePose(global_pose);
-
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::DRIVE)) {
-      future_drive_dist_info_.gear_drive_has_obs = true;
-      break;
-    }
-    s += ds;
-  }
-
-  if (s < future_drive_dist_info_.gear_drive_dist_to_obs) {
-    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds - astar_step_;
-  }
-
-  ILOG_INFO << "dirve, left s=" << s;
-
-  // right
-  s = 0.0;
-  GetPathByCircle(&ego_pose, 5.0, -min_turn_radius_, true, &path);
-
-  for (size_t i = 0; i < path.size(); i++) {
-    global_pose = path[i];
-    tf.SetBasePose(global_pose);
-
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::DRIVE)) {
-      future_drive_dist_info_.gear_drive_has_obs = true;
-      break;
-    }
-    s += ds;
-  }
-
-  if (s < future_drive_dist_info_.gear_drive_dist_to_obs) {
-    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds - astar_step_;
-  }
-  ILOG_INFO << "dirve, right s=" << s;
+  // right turn
+  GetPathByCircle(&ego_pose, path_check_dist_, -min_turn_radius_, true, &path);
+  UpdatePathDistInfo(path, AstarPathGear::DRIVE, edt,
+                     future_drive_dist_info_.gear_drive_path);
 
   // gear reverse drive dist
   // left
-  s = 0.0;
-  GetPathByCircle(&ego_pose, 5.0, min_turn_radius_, false, &path);
-
-  for (size_t i = 0; i < path.size(); i++) {
-    global_pose = path[i];
-    tf.SetBasePose(global_pose);
-
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::REVERSE)) {
-      future_drive_dist_info_.gear_reverse_has_obs = true;
-      break;
-    }
-    s += ds;
-  }
-  if (s < future_drive_dist_info_.gear_reverse_dist_to_obs) {
-    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds - astar_step_;
-  }
-  ILOG_INFO << "reverse, left s=" << s;
+  GetPathByCircle(&ego_pose, path_check_dist_, min_turn_radius_, false, &path);
+  UpdatePathDistInfo(path, AstarPathGear::REVERSE, edt,
+                     future_drive_dist_info_.gear_reverse_path);
 
   // right
-  s = 0.0;
-  GetPathByCircle(&ego_pose, 5.0, -min_turn_radius_, false, &path);
-
-  for (size_t i = 0; i < path.size(); i++) {
-    global_pose = path[i];
-    tf.SetBasePose(global_pose);
-
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::REVERSE)) {
-      future_drive_dist_info_.gear_reverse_has_obs = true;
-      break;
-    }
-    s += ds;
-  }
-  if (s < future_drive_dist_info_.gear_reverse_dist_to_obs) {
-    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds - astar_step_;
-  }
-
-  ILOG_INFO << "reverse, right s=" << s;
-
-  return;
-}
-
-void FuturePathDecider::CalcDriveDistByHistoryPath(
-    const HybridAStarResult *history_path, const PlanningReason plan_reason) {
-  history_path_info_.gear_ = AstarPathGear::NONE;
-  history_path_info_.gear_switch_number_ = PathGearSwitchNumber::NONE;
-  history_path_info_.dist_ = 0;
-
-  if (history_path == nullptr) {
-    return;
-  }
-
-  if (history_path->x.size() <= 1) {
-    return;
-  }
-
-  // 如果path被障碍物阻挡，不好推理下次path的信息
-  if (plan_reason == PlanningReason::PATH_STUCKED) {
-    if (history_path->gear.size() > 0) {
-      if (history_path->gear[0] == AstarPathGear::DRIVE) {
-        history_path_info_.gear_ = AstarPathGear::REVERSE;
-      } else {
-        history_path_info_.gear_ = AstarPathGear::DRIVE;
-      }
-    }
-    history_path_info_.gear_switch_number_ = PathGearSwitchNumber::MANY_TIMES;
-
-    return;
-  }
-
-  AstarPathGear first_point_gear = history_path->gear[0];
-  AstarPathGear second_path_gear = AstarPathGear::NONE;
-
-  history_path_info_.start_point_id_ = 0;
-  history_path_info_.end_point_id_ = 0;
-  history_path_info_.start_point_s_ = 0;
-  size_t accumulated_s_size = 1;
-  PathGearSwitchNumber gear_numer = PathGearSwitchNumber::NONE;
-
-  if (history_path->x.size() > 0) {
-    size_t x_size = history_path->x.size();
-    size_t y_size = history_path->y.size();
-    size_t phi_size = history_path->phi.size();
-    size_t gear_size = history_path->gear.size();
-    accumulated_s_size = history_path->accumulated_s.size();
-
-    for (size_t i = 0; i < x_size; i++) {
-      if (i >= gear_size || i >= x_size || i >= y_size || i >= phi_size ||
-          i >= accumulated_s_size) {
-        ILOG_ERROR << "point size " << i;
-        break;
-      }
-
-      if (second_path_gear == AstarPathGear::NONE) {
-        if (history_path->gear[i] == first_point_gear) {
-          continue;
-        }
-
-        // gear is change
-        second_path_gear = history_path->gear[i];
-
-        history_path_info_.start_point_id_ = i;
-        history_path_info_.start_point_s_ = history_path->accumulated_s[i];
-
-        gear_numer = PathGearSwitchNumber::ONCE;
-      } else {
-        history_path_info_.end_point_id_ = i;
-        history_path_info_.end_point_s_ = history_path->accumulated_s[i];
-
-        // multi shot path
-        if (second_path_gear != history_path->gear[i]) {
-          gear_numer = PathGearSwitchNumber::MANY_TIMES;
-          break;
-        }
-      }
-    }
-  }
-
-  history_path_info_.gear_ = second_path_gear;
-
-  // 下次path的挡位数量
-  switch (gear_numer) {
-    case PathGearSwitchNumber::NONE:
-    case PathGearSwitchNumber::ONCE:
-      history_path_info_.gear_switch_number_ = PathGearSwitchNumber::NONE;
-      break;
-    default:
-      history_path_info_.gear_switch_number_ = PathGearSwitchNumber::MANY_TIMES;
-      break;
-  }
-
-  history_path_info_.dist_ =
-      history_path->accumulated_s[history_path_info_.end_point_id_] -
-      history_path->accumulated_s[history_path_info_.start_point_id_];
-
-  ILOG_INFO << "drive distance decider by history, gear = "
-            << PathGearDebugString(second_path_gear)
-            << ", dist = " << history_path_info_.dist_ << ", shot number = "
-            << PathGearSwitchNumberString(
-                   history_path_info_.gear_switch_number_);
+  GetPathByCircle(&ego_pose, path_check_dist_, -min_turn_radius_, false, &path);
+  UpdatePathDistInfo(path, AstarPathGear::REVERSE, edt,
+                     future_drive_dist_info_.gear_reverse_path);
 
   return;
 }
@@ -363,36 +187,41 @@ void FuturePathDecider::UpdateFuturePathRequest(
 
   // advised path: drive to ref line.
   future_path_request->dist_request =
-      std::max(future_drive_dist_info_.dist_to_ref_line,
-               future_drive_dist_info_.advised_drive_dist);
+      std::max(future_drive_dist_info_.dist_to_ref_line, 1.2f);
+
+  future_drive_dist_info_.advised_gear_drive_dist =
+      SearchAdvisedDriveDist(0.4, future_drive_dist_info_.gear_drive_path);
+  future_drive_dist_info_.advised_gear_reverse_dist =
+      SearchAdvisedDriveDist(0.4, future_drive_dist_info_.gear_reverse_path);
+
+  ILOG_INFO << "drive gear dist = "
+            << future_drive_dist_info_.advised_gear_drive_dist
+            << ", reverse gear dist = "
+            << future_drive_dist_info_.advised_gear_reverse_dist;
 
   if (future_path_request->gear_request == AstarPathGear::DRIVE) {
-    if (future_drive_dist_info_.gear_drive_dist_to_obs <
+    if (future_drive_dist_info_.advised_gear_drive_dist <
         future_path_request->dist_request) {
       future_path_request->dist_request =
-          future_drive_dist_info_.gear_drive_dist_to_obs;
+          future_drive_dist_info_.advised_gear_drive_dist;
     }
   } else if (future_path_request->gear_request == AstarPathGear::REVERSE) {
-    if (future_drive_dist_info_.gear_reverse_dist_to_obs <
+    if (future_drive_dist_info_.advised_gear_reverse_dist <
         future_path_request->dist_request) {
       future_path_request->dist_request =
-          future_drive_dist_info_.gear_reverse_dist_to_obs;
+          future_drive_dist_info_.advised_gear_reverse_dist;
     }
   } else {
-    if (future_drive_dist_info_.gear_reverse_dist_to_obs <
+    if (future_drive_dist_info_.advised_gear_reverse_dist <
         future_path_request->dist_request) {
       future_path_request->dist_request =
-          future_drive_dist_info_.gear_reverse_dist_to_obs;
+          future_drive_dist_info_.advised_gear_reverse_dist;
     }
-    if (future_drive_dist_info_.gear_drive_dist_to_obs <
+    if (future_drive_dist_info_.advised_gear_drive_dist <
         future_path_request->dist_request) {
       future_path_request->dist_request =
-          future_drive_dist_info_.gear_drive_dist_to_obs;
+          future_drive_dist_info_.advised_gear_drive_dist;
     }
-  }
-
-  if (future_path_request->dist_request > 2.5) {
-    future_path_request->dist_request -= 0.4;
   }
 
   return;
@@ -496,8 +325,7 @@ void FuturePathDecider::GetStraightLinePoint(const Pose2D *start_state,
 }
 
 void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
-                                      const float length,
-                                      const bool is_forward,
+                                      const float length, const bool is_forward,
                                       std::vector<Pose2D> *path) {
   int path_point_num = std::ceil(length / 0.1);
 
@@ -532,8 +360,7 @@ void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
 
 // if left, radius is positive
 void FuturePathDecider::GetPathByRadius(const Pose2D *start_pose,
-                                        const float length,
-                                        const float radius,
+                                        const float length, const float radius,
                                         const bool is_forward,
                                         std::vector<Pose2D> *path) {
   if (std::fabs(radius) > 100000.0) {
@@ -541,6 +368,80 @@ void FuturePathDecider::GetPathByRadius(const Pose2D *start_pose,
 
   } else {
     GetPathByCircle(start_pose, length, radius, is_forward, path);
+  }
+
+  return;
+}
+
+int32_t FuturePathDecider::SearchIdByS(
+    const float s, const std::vector<Eigen::Vector2f> &path) {
+  if (path.empty()) {
+    return -1;
+  }
+
+  int32_t path_end_id = static_cast<int32_t>(path.size()) - 1;
+  int32_t guess_id = std::round(s / point_resolution_);
+
+  int32_t search_start_id = guess_id - 3;
+  search_start_id = std::max(search_start_id, 0);
+
+  int32_t search_end_id = guess_id + 3;
+  search_end_id = std::min(search_end_id, path_end_id);
+
+  float min_dist = 1000.0;
+  int32_t min_dist_id = guess_id;
+  for (int32_t i = search_start_id; i <= search_end_id; i++) {
+    if (std::fabs(path[i][0] - s) < min_dist) {
+      min_dist = std::fabs(path[i][0] - s);
+      min_dist_id = i;
+    }
+  }
+
+  if (min_dist > 0.05) {
+    return -1;
+  }
+
+  return min_dist_id;
+}
+
+const float FuturePathDecider::SearchAdvisedDriveDist(
+    const float safe_buffer, const std::vector<Eigen::Vector2f> &path) const {
+  if (path.empty()) {
+    return 0.0f;
+  }
+
+  for (size_t i = 0; i < path.size(); i++) {
+    if (path[i][1] < safe_buffer) {
+      if (i == 0) {
+        return 0.0;
+      }
+      return path[i - 1][0];
+    }
+  }
+
+  return path[path.size() - 1][0];
+}
+
+void FuturePathDecider::UpdatePathDistInfo(
+    const std::vector<Pose2D> &path, const AstarPathGear gear,
+    EulerDistanceTransform *edt, std::vector<Eigen::Vector2f> &path_dist_info) {
+  float obs_dist;
+  Transform2d tf;
+  for (size_t i = 0; i < path.size(); i++) {
+    tf.SetBasePose(path[i]);
+    edt->DistanceCheckForPoint(&obs_dist, &tf, gear);
+
+    if (i >= path_dist_info.size()) {
+      break;
+    }
+
+    if (obs_dist < path_dist_info[i][1]) {
+      path_dist_info[i][1] = obs_dist;
+    }
+
+    if (obs_dist < 0.05) {
+      break;
+    }
   }
 
   return;

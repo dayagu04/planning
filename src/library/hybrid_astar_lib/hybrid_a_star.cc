@@ -4444,9 +4444,9 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
                             config_.safe_buffer.lon_min_safe_buffer,
                             &cvx_hull_foot_print_);
 
-  PolygonDebugString(&veh_box_gear_drive_, "drive");
-  PolygonDebugString(&veh_box_gear_reverse_, "reverse");
-  PolygonDebugString(&veh_box_gear_none_, "none gear");
+  // PolygonDebugString(&veh_box_gear_drive_, "drive");
+  // PolygonDebugString(&veh_box_gear_reverse_, "reverse");
+  // PolygonDebugString(&veh_box_gear_none_, "none gear");
   // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_right, "right mirror");
