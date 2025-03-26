@@ -5,6 +5,7 @@
 #include "speed_limit_decider_output.h"
 #include "tasks/task.h"
 #include "virtual_lane_manager.h"
+#include "traffic_light_decision_manager.h"
 
 namespace planning {
 struct CurvInfo {
@@ -41,6 +42,8 @@ class SpeedLimitDecider : public Task {
   void CalculatePOISpeedLimit();
 
   void CalculateLaneBorrowSpeedLimit();
+
+  void CalculateSpeedLimitFromTFLDis();
 
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 

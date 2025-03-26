@@ -14,6 +14,7 @@ constexpr double kLaneBorrowLimitedSpeed = 5.56;
 constexpr double kSpeedlimitScale = 0.6;
 constexpr double kSSharpBendRadius = 300.0;
 constexpr double kSSharpBendCurvDis = 30.0;
+constexpr double kTFLSpeedLimitDis = 160.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -112,6 +113,8 @@ bool SpeedLimitDecider::Execute() {
   CalculatePOISpeedLimit();
   // 7. speed limit from lane borrow agent
   CalculateLaneBorrowSpeedLimit();
+  // 8. speed limit from tfl distance
+  CalculateSpeedLimitFromTFLDis();
 
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
@@ -338,6 +341,28 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
 
 void SpeedLimitDecider::CalculateStaticAgentLimit() {}
 
+void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
+  LOG_DEBUG("----calc_speed_limit_from_tfl_dis--- \n");
+  double v_limit_tfl_dis = 40.0;
+  const auto &environmental_model = session_->environmental_model();
+  const auto tfl_manager =
+      environmental_model.get_traffic_light_decision_manager();
+  double dis_tfl = tfl_manager->GetNearestTFLDis();
+  if (dis_tfl < kTFLSpeedLimitDis) {
+    v_limit_tfl_dis = 55 / 3.6;
+  }
+  if (v_limit_tfl_dis < v_target_) {
+    v_target_ = v_limit_tfl_dis;
+    v_target_type_ = SpeedLimitType::NEAR_TFL;
+  }
+  JSON_DEBUG_VALUE("dis_to_tfl", dis_tfl);
+  JSON_DEBUG_VALUE("v_limit_tfl_dis", v_limit_tfl_dis);
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_limit_tfl_dis,
+                                           SpeedLimitType::NEAR_TFL);
+}
+
 void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
   LOG_DEBUG("----calc_speed_limit_for_intersection--- \n");
   const auto &environmental_model = session_->environmental_model();
@@ -478,7 +503,7 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
   if (it != speed_limit_agents.end()) {
     if (it->v_limit < v_target_) {
       v_target_ = it->v_limit;
-      v_target_type_ = SpeedLimitType::Lane_Borrow;
+      v_target_type_ = SpeedLimitType::LANE_BORROW;
       JSON_DEBUG_VALUE("lane_borrow_agent_id", it->id)
       JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", v_target_)
     }
