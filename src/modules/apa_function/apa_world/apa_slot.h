@@ -108,6 +108,8 @@ enum class SlotReleaseState : uint8_t {
   UNKOWN = 0,
   RELEASE = 1,
   NOT_RELEASE = 2,
+  // 计算中
+  COMPUTING = 3,
 };
 
 enum class SlotSourceType : uint8_t {

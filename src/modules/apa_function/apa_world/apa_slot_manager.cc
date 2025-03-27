@@ -149,6 +149,13 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
                   .release_state[ASTAR_PLANNING_RELEASE] ==
               SlotReleaseState::RELEASE) {
         release_slot_id_vec_.emplace_back(pair.first);
+      } else if (ego_info_under_slot_.slot.release_info_
+                         .release_state[RULE_BASED_RELEASE] ==
+                     SlotReleaseState::RELEASE &&
+                 ego_info_under_slot_.slot.release_info_
+                         .release_state[ASTAR_PLANNING_RELEASE] ==
+                     SlotReleaseState::COMPUTING) {
+        release_slot_id_vec_.emplace_back(pair.first);
       }
     }
   }
