@@ -152,7 +152,6 @@ void HybridAStarInterface::UpdateOutput() {
   }
 
   // update future path decider
-  edt_.UpdateSafeBuffer(0.2, 0.4, 0.2);
   FuturePathDecider future_path_decider;
   future_path_decider.Process(
       &coarse_traj_, request_.plan_reason, request_.start_, &edt_, &ref_line_,

@@ -12,40 +12,19 @@
 
 namespace planning {
 
-enum class PathGearSwitchNumber {
-  NONE,
-  ONCE,
-  TWICE,
-  MANY_TIMES,
-};
-
-// use history path 推理下一次换档信息，行驶距离信息等
-struct HistoryPathDriveInfo {
-  PathGearSwitchNumber gear_switch_number_;
-
-  float start_point_s_;
-  float end_point_s_;
-  float dist_;
-  size_t start_point_id_;
-  size_t end_point_id_;
-
-  AstarPathGear gear_;
-};
-
-// use line model to inference next drive info.
+// use bicycle model to inference next drive info.
 struct InferenceDriveDist {
+  // Eigen::Vector2f: the first is dist, the second is obstacle distance.
+  std::vector<Eigen::Vector2f> gear_drive_path;
+  std::vector<Eigen::Vector2f> gear_reverse_path;
+
   float dist_to_ref_line;
-
-  bool gear_drive_has_obs;
-  float gear_drive_dist_to_obs;
-
-  bool gear_reverse_has_obs;
-  float gear_reverse_dist_to_obs;
-
-  float advised_drive_dist;
+  // default drive distance is 1.2 meter, you can shrink it by obstacle.
+  float advised_gear_drive_dist;
+  float advised_gear_reverse_dist;
 };
 
-// decider: check path drive distance.
+// decider: check path drive distance by obstacle distance check.
 class FuturePathDecider : public AstarDecider {
  public:
   FuturePathDecider() = default;
@@ -59,29 +38,15 @@ class FuturePathDecider : public AstarDecider {
 
   void Process(const Pose2D &start, const Pose2D &end);
 
-  const AstarPathGear GetNextPathGearByHistory();
-
-  const float GetNextPathLenByHistory();
-
-  const size_t GetNextPathStartPointId();
-
-  const bool IsNextPathNoGearSwitchByHistory();
-
   // if left, radius is positive
   void GetPathByRadius(const Pose2D *start_pose, const float length,
                        const float radius, const bool is_forward,
                        std::vector<Pose2D> *path);
 
  private:
-  std::string PathGearSwitchNumberString(
-      const PathGearSwitchNumber &gear_number);
-
   void CalcDriveDistByLineModel(const Pose2D &ego_pose,
                                 EulerDistanceTransform *edt,
                                 const ParkReferenceLine *ref_line);
-
-  void CalcDriveDistByHistoryPath(const HybridAStarResult *history_path,
-                                  const PlanningReason plan_reason);
 
   void UpdateFuturePathRequest(ParkFirstActionRequest *future_path_request);
 
@@ -107,23 +72,30 @@ class FuturePathDecider : public AstarDecider {
                               const float inverse_radius, Pose2D *pose);
 
   void CalcDriveDistByCircleModel(const Pose2D &ego_pose,
-                                  EulerDistanceTransform *edt,
-                                  const ParkReferenceLine *ref_line);
+                                  EulerDistanceTransform *edt);
+
+  void Clear();
+
+  int32_t SearchIdByS(const float s, const std::vector<Eigen::Vector2f> &path);
+
+  const float SearchAdvisedDriveDist(
+      const float safe_buffer, const std::vector<Eigen::Vector2f> &path) const;
+
+  void UpdatePathDistInfo(const std::vector<Pose2D> &path,
+                          const AstarPathGear gear, EulerDistanceTransform *edt,
+                          std::vector<Eigen::Vector2f> &path_dist_info);
 
  private:
-  // use history path info as an heuristic info
-  HistoryPathDriveInfo history_path_info_;
-
-  // use raycast path safe distance as an heuristic info
+  // use bicycle path safe distance as an heuristic info
   InferenceDriveDist future_drive_dist_info_;
-
+  AstarPathGear gear_request_;
+  float path_check_dist_;
   float min_turn_radius_;
+  float point_resolution_;
 
   bool swap_start_goal_;
 
   AstarPathGenerateType path_generate_type_;
-  // todo: move to config
-  float astar_step_;
 };
 
 }  // namespace planning

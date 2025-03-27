@@ -63,17 +63,17 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
   if (slot_type == ParkSpaceType::VERTICAL ||
       slot_type == ParkSpaceType::SLANTING) {
     float virtual_wall_x_offset =
-        apa_param.GetParam().tail_in_slot_virtual_wall_x_offset;
+        apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
 
     float virtual_wall_y_offset =
-        apa_param.GetParam().tail_in_slot_virtual_wall_y_offset;
+        apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;
 
     if (parking_in_type == ParkingVehDirection::HEAD_IN) {
       virtual_wall_x_offset =
-          apa_param.GetParam().head_in_slot_virtual_wall_x_offset;
+          apa_param.GetParam().astar_config.head_in_slot_virtual_wall_x_offset;
 
       virtual_wall_y_offset =
-          apa_param.GetParam().head_in_slot_virtual_wall_y_offset;
+          apa_param.GetParam().astar_config.head_in_slot_virtual_wall_y_offset;
     }
 
     CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,
@@ -159,11 +159,13 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   VirtualWallBoundary tmp_passage_boundary;
   tmp_passage_boundary.x_lower = slot_length - virtual_wall_x_offset;
   // passage up bound
-  float passage_height = 8.0;
+  float passage_height =
+      apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
   float passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
   // passage left/right bound
-  const float passage_half_length = 9.0;
+  const float passage_half_length =
+      apa_param.GetParam().astar_config.vertical_slot_passage_length_bound / 2;
   tmp_passage_boundary.y_lower = -passage_half_length;
   tmp_passage_boundary.y_upper = passage_half_length;
   tmp_passage_boundary.Combine(veh_boundary_);

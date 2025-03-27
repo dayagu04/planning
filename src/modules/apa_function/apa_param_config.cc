@@ -902,6 +902,12 @@ void SyncParkingParameters(const bool is_simulation) {
       "adjust_ego_y_thresh_outside_slot");
   JSON_READ_VALUE(apa_param.SetPram().astar_config.enable_blind_zone, bool,
                   "enable_blind_zone");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_passage_height_bound,
+      float, "vertical_slot_passage_height_bound");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_passage_length_bound,
+      float, "vertical_slot_passage_length_bound");
 
   JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");
@@ -913,17 +919,21 @@ void SyncParkingParameters(const bool is_simulation) {
                   double, "obs_dist_for_speed_limit");
 
   // hybrid a star params
-  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_x_offset,
-                  double, "tail_in_slot_virtual_wall_x_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.tail_in_slot_virtual_wall_x_offset,
+      float, "tail_in_slot_virtual_wall_x_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_y_offset,
-                  double, "tail_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.tail_in_slot_virtual_wall_y_offset,
+      float, "tail_in_slot_virtual_wall_y_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_x_offset,
-                  double, "head_in_slot_virtual_wall_x_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.head_in_slot_virtual_wall_x_offset,
+      float, "head_in_slot_virtual_wall_x_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_y_offset,
-                  double, "head_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.head_in_slot_virtual_wall_y_offset,
+      float, "head_in_slot_virtual_wall_y_offset");
   return;
 }
 
