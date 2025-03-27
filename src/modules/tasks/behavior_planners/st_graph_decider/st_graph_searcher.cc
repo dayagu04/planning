@@ -926,6 +926,7 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
     return 0.0;
   }
 
+  // TODO: need consider lane change hold status in the future
   if ((cur_lane_change_state !=
            StateMachineLaneChangeStatus::kLaneChangeComplete &&
        cur_lane_change_state !=
