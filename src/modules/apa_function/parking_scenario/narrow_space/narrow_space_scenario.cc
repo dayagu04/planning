@@ -1751,11 +1751,12 @@ void NarrowSpaceScenario::ScenarioTry() {
     SlotReleaseState astar_release_state =
         ego_info_under_slot.slot.release_info_
             .release_state[ASTAR_PLANNING_RELEASE];
-    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，使用上一帧的结果填充.
-    if (astar_release_state == SlotReleaseState::RELEASE) {
+    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，不改变上一帧结果;
+    // 如果上一帧结果未知，使用计算中状态填充;
+    if (astar_release_state == SlotReleaseState::UNKOWN) {
       ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
+          SlotReleaseState::COMPUTING;
     }
   }
 
