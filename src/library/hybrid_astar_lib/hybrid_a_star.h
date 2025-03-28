@@ -329,7 +329,8 @@ class HybridAStar {
 
   const bool IsFootPrintCollision(const Transform2d& tf);
 
-  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose);
+  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose,
+                                                const bool is_circle_path);
 
   const bool IsExpectedGearForRsPath(const RSPath &path);
 
@@ -340,6 +341,22 @@ class HybridAStar {
 
   const bool BestNodeIsNice(const Node3d *node);
 
+  inline const bool IsCirclePathBySteeringWheel(const float front_wheel_angle) {
+    if (front_wheel_angle > 0.2f || front_wheel_angle < -0.2f) {
+      return true;
+    }
+
+    return false;
+  }
+
+  inline const bool IsCirclePathByKappa(const float kappa) {
+    if (kappa > 0.067f || kappa < -0.067f) {
+      return true;
+    }
+
+    return false;
+  }
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
@@ -348,6 +365,7 @@ class HybridAStar {
   float inv_radius_;
 
   // todo, width = vehicle width + mirror width + safe width, bounding box
+  // to accelerate collision detection.
   Polygon2D veh_box_gear_none_;
   Polygon2D veh_box_gear_drive_;
   Polygon2D veh_box_gear_reverse_;

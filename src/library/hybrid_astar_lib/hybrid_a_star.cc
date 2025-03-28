@@ -1138,6 +1138,9 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
   AstarPathGear node_gear = node->GetGearType();
   AstarPathGear point_gear;
   Polygon2D* veh_local_polygon = GetVehPolygon(node_gear);
+  bool is_circle_path = IsCirclePathBySteeringWheel(node->GetSteer());
+  FootPrintCircleModel* footprint_model =
+      GetCircleFootPrintModel(path.points[0], is_circle_path);
 
   float dist = 100.0;
   float min_dist = 100.0;
@@ -1187,8 +1190,7 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
     }
 #else
 
-    if (edt_->IsCollisionForPoint(&tf, point_gear,
-                                  GetCircleFootPrintModel(global_pose))) {
+    if (edt_->IsCollisionForPoint(&tf, point_gear, footprint_model)) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       // node->SetCollisionID(i);
 
@@ -1360,6 +1362,7 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
 
   Polygon2D* veh_local_polygon = nullptr;
   AstarPathGear point_gear;
+  bool is_circle_path;
 
   for (int seg_id = 0; seg_id < reeds_shepp_path->size; seg_id++) {
     const RSPathSegment* segment = &reeds_shepp_path->paths[seg_id];
@@ -1370,6 +1373,7 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
     } else {
       check_start_index = 1;
     }
+    is_circle_path = IsCirclePathByKappa(segment->kappa);
 
     for (size_t i = check_start_index; i < point_size; ++i) {
       // check bound
@@ -1401,8 +1405,9 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
         point_gear = AstarPathGear::NONE;
       }
 
-      if (edt_->IsCollisionForPoint(&tf, point_gear,
-                                    GetCircleFootPrintModel(global_pose))) {
+      if (edt_->IsCollisionForPoint(
+              &tf, point_gear,
+              GetCircleFootPrintModel(global_pose, is_circle_path))) {
         node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
         return false;
       }
@@ -1469,8 +1474,10 @@ const bool HybridAStar::IsPolynomialPathSafeByEDT(
       point_gear = AstarPathGear::NONE;
     }
 
-    if (edt_->IsCollisionForPoint(&tf, point_gear,
-                                  GetCircleFootPrintModel(global_pose))) {
+    if (edt_->IsCollisionForPoint(
+            &tf, point_gear,
+            GetCircleFootPrintModel(global_pose,
+                                    false))) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       return false;
     }
@@ -1606,7 +1613,7 @@ size_t HybridAStar::GetPathCollisionIDByEDT(HybridAStarResult* result) {
     }
 
     if (edt_->IsCollisionForPoint(&tf, result->gear[i],
-                                  GetCircleFootPrintModel(global_pose))) {
+                                  GetCircleFootPrintModel(global_pose,false))) {
       return i;
     }
   }
@@ -4414,7 +4421,7 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
                                            const float lon_buffer) {
   // gear d
   float safe_half_width =
-      (vehicle_param_.max_width + lat_buffer_outside * 2) * 0.5;
+      (vehicle_param_.max_width + lat_buffer_outside * 2 + 0.1) * 0.5;
 
   GetRightUpCoordinatePolygonByParam(
       &veh_box_gear_drive_,
@@ -4457,6 +4464,18 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
       .UpdateSafeBuffer(lat_buffer_inside, lon_buffer, lat_buffer_inside);
+
+  float lat_buffer = lat_buffer_outside +
+              config_.safe_buffer.circle_path_extra_buffer_outside;
+  hierachy_circle_model_
+      .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+
+  lat_buffer = lat_buffer_inside +
+              config_.safe_buffer.circle_path_extra_buffer_inside;
+  hierachy_circle_model_
+      .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
 
   ILOG_INFO << "outside buffer = " << lat_buffer_outside
             << ", inside buffer = " << lat_buffer_inside;
@@ -5031,8 +5050,10 @@ size_t HybridAStar::GetPathCollisionIDByEDT(
       continue;
     }
 
-    if (edt_->IsCollisionForPoint(&tf, poly_path[i].gear,
-                                  GetCircleFootPrintModel(global_pose))) {
+    if (edt_->IsCollisionForPoint(
+            &tf, poly_path[i].gear,
+            GetCircleFootPrintModel(global_pose,
+                                    IsCirclePathByKappa(poly_path[i].kappa)))) {
       return i;
     }
   }
@@ -5283,14 +5304,25 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
   return true;
 }
 
-FootPrintCircleModel* HybridAStar::GetCircleFootPrintModel(const Pose2D& pose) {
+FootPrintCircleModel* HybridAStar::GetCircleFootPrintModel(
+    const Pose2D& pose, const bool is_circle_path) {
+  // 60 degree
   if (slot_box_.contain(pose) &&
       std::fabs(ad_common::math::NormalizeAngle(pose.theta -
                                                 request_.goal_.theta)) < 1.05) {
+    if (is_circle_path) {
+      return &hierachy_circle_model_.footprint_model
+                  [HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER];
+    }
+
     return &hierachy_circle_model_
                 .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
   }
 
+  if (is_circle_path) {
+    return &hierachy_circle_model_.footprint_model
+                [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER];
+  }
   return &hierachy_circle_model_
               .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
 }

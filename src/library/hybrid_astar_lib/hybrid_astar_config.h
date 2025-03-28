@@ -10,8 +10,11 @@ struct OpenSpaceSafeBuffer {
   // If vehicle is outside slot, need more safe buffer than inside slot;
   // If vehicle's path is circle, need more safe buffer than straight path;
   std::vector<float> lat_safe_buffer_outside;
+  float circle_path_extra_buffer_outside;
+
   // 车位内部的横向安全buffer，需要设定小一些
   std::vector<float> lat_safe_buffer_inside;
+  float circle_path_extra_buffer_inside;
 
   // 纵向buffer不区分库内库外
   std::vector<float> lon_safe_buffer;

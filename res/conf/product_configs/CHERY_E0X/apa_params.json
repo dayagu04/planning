@@ -319,7 +319,7 @@
   "comment_17": "gen output params",
   "max_velocity": 0.6,
 
-  "path_generator_type": 0,
+  "path_generator_type": 1,
   "vertical_tail_in_end_straight_dist": 1.5,
   "vertical_head_in_end_straight_dist": 0.8,
   "parallel_slot_end_straight_dist": 0.0,
@@ -344,7 +344,7 @@
   "obs_dist_for_speed_limit" : 0.4,
 
   "comment_18": "hybrid a star params",
-  "tail_in_slot_virtual_wall_x_offset" : 3.0,
+  "tail_in_slot_virtual_wall_x_offset" : 4.5,
   "tail_in_slot_virtual_wall_y_offset" : 1.5,
   "head_in_slot_virtual_wall_x_offset" : 0.1,
   "head_in_slot_virtual_wall_y_offset" : 2.0
