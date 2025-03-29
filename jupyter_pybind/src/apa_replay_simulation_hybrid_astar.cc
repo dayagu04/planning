@@ -107,7 +107,7 @@ EigenPointSet2d deletenode_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
 // all search node, not only include: open + close, and include deleted node.
-std::vector<Eigen::Vector3d> all_searched_node_;
+std::vector<Eigen::Vector4d> all_searched_node_;
 AstarPathGear history_gear_request_;
 // local coordinate system
 std::vector<Eigen::Vector3d> footprint_circle_model_normal_gear_;
@@ -353,15 +353,17 @@ int GetPathFromHybridAstar() {
 
   all_searched_node_.clear();
   double is_safe = 0;
+  double is_gear_switch_node = 0;
   for (i = 0; i < all_search_node.size(); i++) {
     local_position.x = all_search_node[i].pos.x;
     local_position.y = all_search_node[i].pos.y;
     tf.ULFLocalPoseToGlobal(&global_position, local_position);
 
     is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+    is_gear_switch_node = all_search_node[i].gear_switch_point ? 1.0 : 0.0;
 
-    all_searched_node_.emplace_back(
-        Eigen::Vector3d(global_position.x, global_position.y, is_safe));
+    all_searched_node_.emplace_back(Eigen::Vector4d(
+        global_position.x, global_position.y, is_safe, is_gear_switch_node));
   }
 
   AstarRequest request = thread_solver_->GetAstarRequest();
@@ -877,7 +879,7 @@ const std::vector<Eigen::Vector2d> &GetDelNodeSequencePath() {
 
 const Eigen::Vector3d GetCoordinateSystem() { return coordinate_system_; }
 
-const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+const std::vector<Eigen::Vector4d> &GetAllSearchNode() {
   return all_searched_node_;
 }
 

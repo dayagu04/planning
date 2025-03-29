@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstddef>
 #include <string>
 #include "astar_decider.h"
@@ -34,6 +35,7 @@ class FuturePathDecider : public AstarDecider {
                EulerDistanceTransform *edt, const ParkReferenceLine *ref_line,
                const float min_turn_radius, const bool swap_start_goal,
                const AstarPathGenerateType path_generate_type,
+               const float sampling_lon_resolution,
                ParkFirstActionRequest *future_path_request);
 
   void Process(const Pose2D &start, const Pose2D &end);
@@ -92,6 +94,8 @@ class FuturePathDecider : public AstarDecider {
   float path_check_dist_;
   float min_turn_radius_;
   float point_resolution_;
+  float sampling_lon_resolution_;
+  float path_inference_lat_buffer_;
 
   bool swap_start_goal_;
 

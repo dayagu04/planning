@@ -21,7 +21,7 @@
 
 namespace planning {
 #define DEBUG_HYBRID_ASTAR_INTERFACE (0)
-#define PUBLISH_ASTAR_NODE_MESSAGE (1)
+#define PUBLISH_ASTAR_NODE_MESSAGE (0)
 
 HybridAStarInterface::HybridAStarInterface() {}
 
@@ -156,7 +156,8 @@ void HybridAStarInterface::UpdateOutput() {
   future_path_decider.Process(
       &coarse_traj_, request_.plan_reason, request_.start_, &edt_, &ref_line_,
       vehicle_param_.min_turn_radius, request_.swap_start_goal,
-      request_.path_generate_method, &request_.first_action_request);
+      request_.path_generate_method, config_.node_step,
+      &request_.first_action_request);
 
   RSExpansionDecider::UpdateRSPathRequest(&request_);
 

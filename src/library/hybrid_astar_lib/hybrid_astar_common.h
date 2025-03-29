@@ -277,12 +277,24 @@ struct AstarSamplingAngle {
 struct DebugAstarSearchPoint {
   Position2D pos;
   bool safe;
+  // If this point is first path end point, and is a geat switch point without
+  // collision, true.
+  bool gear_switch_point;
 
   DebugAstarSearchPoint() = default;
 
   DebugAstarSearchPoint(const float x, const float y, const bool is_safe) {
     pos.x = x;
     pos.y = y;
+    safe = is_safe;
+    gear_switch_point = false;
+  }
+
+  DebugAstarSearchPoint(const float x, const float y,
+                        const bool is_gear_switch_point, const bool is_safe) {
+    pos.x = x;
+    pos.y = y;
+    gear_switch_point = is_gear_switch_point;
     safe = is_safe;
   }
 };

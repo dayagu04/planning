@@ -42,6 +42,7 @@ namespace planning {
 #define DEBUG_EDT (0)
 
 #define DEBUG_NODE_MAX_NUM (10000)
+#define DEBUG_NODE_GEAR_SWITCH_NUMBER (0)
 
 #define LOG_TIME_PROFILE (0)
 #define DEBUG_GJK (0)
@@ -3782,6 +3783,15 @@ bool HybridAStar::AstarSearch(
         best_rs_path = rs_path_;
       }
 
+#if PLOT_CHILD_NODE
+      // if node is gear switch point, plot it also.
+      if (current_node->GearSwitchNode() != nullptr) {
+        child_node_debug_.emplace_back(DebugAstarSearchPoint(
+            current_node->GearSwitchNode()->GetX(),
+            current_node->GearSwitchNode()->GetY(), true, true));
+      }
+#endif
+
       // in try searching, no need optimal path.
       if (request_.path_generate_method ==
           AstarPathGenerateType::TRY_SEARCHING) {
@@ -3854,7 +3864,9 @@ bool HybridAStar::AstarSearch(
       if (!is_safe) {
 #if PLOT_CHILD_NODE
         // if node is unsafe, plot it also.
-        if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+        int gear_switch_num = new_node.GetGearSwitchNum();
+        if (explored_node_num < DEBUG_NODE_MAX_NUM &&
+            gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
           child_node_debug_.emplace_back(
               DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), false));
         }
@@ -3971,7 +3983,9 @@ bool HybridAStar::AstarSearch(
       }
 
 #if PLOT_CHILD_NODE
-      if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+      int gear_switch_num = new_node.GetGearSwitchNum();
+      if (explored_node_num < DEBUG_NODE_MAX_NUM &&
+          gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
         child_node_debug_.emplace_back(
             DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), true));
       }
