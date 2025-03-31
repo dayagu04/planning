@@ -44,6 +44,9 @@ class LateralObstacleDecider : public Task {
   void UpdateLaneBorrowDirection();
   void UpdateIntersection();
   void HoldLatOffset(FrenetObstacle &frenet_obstacle);
+  bool CheckSideObstacle(
+        const std::shared_ptr<ReferencePath> &reference_path_ptr,
+        FrenetObstacle &frenet_obstacle);
 
  private:
   planning::framework::Session *session_;

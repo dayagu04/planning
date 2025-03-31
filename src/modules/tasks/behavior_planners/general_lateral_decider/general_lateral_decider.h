@@ -210,7 +210,6 @@ class GeneralLateralDecider : public Task {
   TrajectoryPoints ref_traj_points_;
   TrajectoryPoints plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
-  std::unordered_map<uint32_t, LatObstacleDecisionType> last_lat_obstacle_decision_;
   std::unordered_map<int,HysteresisDecision> is_exceed_obstacle_hysteresis_map_;
   bool is_agent_current_pred_lonoverlap_ = false;
 

@@ -191,7 +191,11 @@ bool LateralObstacleDecider::Execute() {
       } else if (frenet_obs->d_s_rel() >=
                    -(ego_length_ + history.rear_expand_len) &&
                  frenet_obs->d_s_rel() <= history.front_expand_len) {
-        history.side_car = true;
+        if (CheckSideObstacle(reference_path_ptr, *frenet_obs)) {
+          history.side_car = true;
+        } else {
+          history.side_car = false;
+        }
       } else {
         history.front_car = false;
         history.side_car = false;
@@ -1184,5 +1188,39 @@ void LateralObstacleDecider::Log(
       }
     }
   }
+}
+
+bool LateralObstacleDecider::CheckSideObstacle(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    FrenetObstacle &frenet_obstacle) {
+  const double KOverlapSThrt = 0.3;
+  const double KOverlapLThrt = 0.5;
+  const auto ego_frenet_state = reference_path_ptr->get_frenet_ego_state();
+  const auto ego_s_start = ego_frenet_state.boundary().s_start;
+  const auto ego_s_end = ego_frenet_state.boundary().s_start;
+  const auto obstacle_boundary_s_start = frenet_obstacle.frenet_obstacle_boundary().s_start;
+  const auto obstacle_boundary_s_end = frenet_obstacle.frenet_obstacle_boundary().s_end;
+  if ((obstacle_boundary_s_end - ego_s_start > 0 &&
+      obstacle_boundary_s_end - ego_s_start <= KOverlapSThrt)) {
+    // 障碍物在自车前方先不考虑
+    // (ego_s_end - obstacle_boundary_s_start > 0 &&
+    // ego_s_end - obstacle_boundary_s_start <= KOverlapSThrt)
+    Polygon2d obstacle_sl_polygon;
+    const auto ok = frenet_obstacle.get_polygon_at_time(0, reference_path_ptr,
+                                                obstacle_sl_polygon);
+    const auto ego_sl_polygon = ego_frenet_state.polygon();
+    if (ok) {
+      Polygon2d care_overlap_polygon;
+      bool b_overlap_with_care = false;
+      b_overlap_with_care =
+          obstacle_sl_polygon.ComputeOverlap(ego_sl_polygon, &care_overlap_polygon);
+      if (b_overlap_with_care) {
+        if (care_overlap_polygon.max_y() - care_overlap_polygon.min_y() > KOverlapLThrt) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 }  // namespace planning

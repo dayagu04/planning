@@ -83,7 +83,6 @@ bool GeneralLateralDecider::Execute() {
 
   if (!PreCheck()) {
     LOG_DEBUG("PreCheck failed\n");
-    last_lat_obstacle_decision_.clear();
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
@@ -94,7 +93,6 @@ bool GeneralLateralDecider::Execute() {
   auto start_time = IflyTime::Now_ms();
 
   if (!InitInfo()) {
-    last_lat_obstacle_decision_.clear();
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
@@ -1137,7 +1135,6 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   // }
 
   if (!lateral_offset_decider_output.enable_bound) {
-    last_lat_obstacle_decision_.clear();
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
     LOG_DEBUG("Enable_bound is invalid!");
@@ -1145,7 +1142,6 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   }
 
   if (plan_history_traj_.empty() || ref_path_points_.empty()) {
-    last_lat_obstacle_decision_.clear();
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
     LOG_ERROR("Ref traj points or ref path points is null!");
@@ -1260,14 +1256,6 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   bool is_side_obstacle = false;
   const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
   if (lat_obs_position_iter != lat_obstacle_position.end()) {
-    if (lat_obs_position_iter->second.side_car) {
-      last_lat_obstacle_decision_[obstacle->id()] = lat_obstacle_decision.at(obstacle->id());
-    } else {
-      if (last_lat_obstacle_decision_.find(obstacle->id()) !=
-          last_lat_obstacle_decision_.end()) {
-        last_lat_obstacle_decision_.erase(obstacle->id());
-      }
-    }
     is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
                        (!lat_obs_position_iter->second.front_car);
   }
@@ -1760,25 +1748,12 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   BoundType bound_type = BoundType::DYNAMIC_AGENT;
   const auto lat_obs_position_iter =
       lat_obstacle_position.find(obstacle->id());
-  const auto last_lat_obs_decision_iter =
-      last_lat_obstacle_decision_.find(obstacle->id());
   if (lat_obs_position_iter != lat_obstacle_position.end()) {
     if (lat_obs_position_iter->second.side_car) {
-      if (last_lat_obs_decision_iter != last_lat_obstacle_decision_.end()) {
-        if (last_lat_obs_decision_iter->second !=
-          LatObstacleDecisionType::IGNORE &&
-          lat_obstacle_decision.at(obstacle->id()) ==
-          LatObstacleDecisionType::IGNORE) {
-          is_nudge_left = last_lat_obs_decision_iter->second ==
-                            LatObstacleDecisionType::RIGHT;
-          bound_type = BoundType::ADJACENT_AGENT;
-        }
-      } else {
-        last_lat_obstacle_decision_[obstacle->id()] = lat_obstacle_decision.at(obstacle->id());
-      }
-    } else {
-      if (last_lat_obs_decision_iter != last_lat_obstacle_decision_.end()) {
-        last_lat_obstacle_decision_.erase(obstacle->id());
+      if (lat_obstacle_decision.at(obstacle->id()) ==
+        LatObstacleDecisionType::IGNORE) {
+        is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+        bound_type = BoundType::ADJACENT_AGENT;
       }
     }
     is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
@@ -2313,14 +2288,8 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     } else {
       const auto lat_obs_position_iter =
           lat_obstacle_position.find(obstacle->id());
-      const auto last_lat_obs_decision_iter =
-          last_lat_obstacle_decision_.find(obstacle->id());
-      if ((last_lat_obs_decision_iter !=
-          last_lat_obstacle_decision_.end()) &&
-          (lat_obs_position_iter != lat_obstacle_position.end())) {
-        if ((last_lat_obs_decision_iter->second !=
-            LatObstacleDecisionType::IGNORE) &&
-            (lat_obs_position_iter->second.side_car)) {
+      if (lat_obs_position_iter != lat_obstacle_position.end()) {
+        if (lat_obs_position_iter->second.side_car) {
           return true;
         }
       }
