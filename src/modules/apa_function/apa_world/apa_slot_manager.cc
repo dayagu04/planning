@@ -86,6 +86,7 @@ void ApaSlotManager::Update(
       ParkingLotCruiseProcess();
       if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) !=
           0) {
+        ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
         ego_info_under_slot_.id =
             local_view->parking_fusion_info.select_slot_id;
         ego_info_under_slot_.slot_type =
@@ -105,6 +106,7 @@ void ApaSlotManager::Update(
   }
 
   ILOG_INFO << "select slot id = " << ego_info_under_slot_.id
+            << ",history_slot_id = " << ego_info_under_slot_.history_slot_id
             << "  type = " << GetSlotTypeString(ego_info_under_slot_.slot_type);
 
   const SlotReleaseState last_geometry_release =
@@ -124,10 +126,14 @@ void ApaSlotManager::Update(
   }
 
   // keep last release state here, and would change later when searching
-  ego_info_under_slot_.slot.release_info_
-      .release_state[GEOMETRY_PLANNING_RELEASE] = last_geometry_release;
-  ego_info_under_slot_.slot.release_info_
-      .release_state[ASTAR_PLANNING_RELEASE] = last_astar_release;
+  if (ego_info_under_slot_.history_slot_id == ego_info_under_slot_.slot.id_) {
+    ego_info_under_slot_.slot.release_info_
+        .release_state[GEOMETRY_PLANNING_RELEASE] = last_geometry_release;
+    ego_info_under_slot_.slot.release_info_
+        .release_state[ASTAR_PLANNING_RELEASE] = last_astar_release;
+  }
+
+  return;
 }
 
 void ApaSlotManager::GenerateReleaseSlotIdVec() {
