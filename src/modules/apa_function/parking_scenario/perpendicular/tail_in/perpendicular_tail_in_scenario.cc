@@ -1297,28 +1297,57 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                                 ? param.safe_uss_remain_dist_out_slot
                                 : param.safe_uss_remain_dist_in_slot;
 
-  // 根据车位上次重规划移动距离更新终点位置
-  geometry_lib::PathPoint tar_pose = ego_info_under_slot.origin_target_pose;
-  tar_pose.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
-  tar_pose.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
+  // 计算当前的真实车位终点位置
+  geometry_lib::PathPoint real_target_pose =
+      ego_info_under_slot.origin_target_pose;
+  real_target_pose.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
+  real_target_pose.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
 
   const geometry_lib::PathPoint terminal_err(
-      ego_info_under_slot.cur_pose.pos - tar_pose.pos,
+      ego_info_under_slot.cur_pose.pos - real_target_pose.pos,
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-                                   tar_pose.heading));
+                                   real_target_pose.heading));
 
   double lat_buffer = apa_param.GetParam().lat_inflation;
 
+  // 如果当前车位姿已经摆正，但是自车横向误差依然较大，可以增大横向buffer保证安全
   const bool case_1 = frame_.is_last_path;
   const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.428;
   const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 2.68;
-  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.078;
+  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.08;
+  const bool case_5 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
 
-  lat_buffer = (case_1 && case_2 && case_3 && case_4) ? 0.14 : lat_buffer;
+  if (case_1 && case_2 && case_3 && case_4 && case_5) {
+    lat_buffer = std::max(lat_buffer, 0.14);
+  }
 
   ILOG_INFO << "lat_buffer = " << lat_buffer << "  case_1 = " << case_1
             << "  case_2 = " << case_2 << "  case_3 = " << case_3
             << "  case_4 = " << case_4;
+
+  // 计算上次规划路径终点的位置
+  geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
+  geometry_path_bef.GlobalToLocal(
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
+  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+
+  // 计算当前的真实车位终点位置与上次规划路径终点的横向距离
+  const double lat_dist =
+      std::fabs((real_target_pose.pos - tar_pose_bef.pos).y());
+
+  const double heading_err =
+      std::fabs(real_target_pose.heading - tar_pose_bef.heading) * kRad2Deg;
+
+  ILOG_INFO << "lat_dist = " << lat_dist;
+
+  // 如果相差较大， 说明车位跳动较大，需要增大刹停buffer
+  const bool case2_1 = (lat_dist > 0.08 || heading_err > 1.48);
+  const bool case2_2 = ego_info_under_slot.slot_occupied_ratio > 1e-3;
+  const bool case2_3 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
+
+  if (case2_1 && case2_2 && case2_3) {
+    lat_buffer = std::max(0.14, lat_buffer);
+  }
 
   const double slot_x =
       ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid.x();
@@ -1330,9 +1359,9 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                         ->GetSteerWheelAngle()) *
               kRad2Deg >
           200.68) {
-        lat_buffer = std::max(0.268, lat_buffer);
+        lat_buffer = std::max(0.198, lat_buffer);
       } else {
-        lat_buffer = std::max(0.168, lat_buffer);
+        lat_buffer = std::max(0.14, lat_buffer);
       }
     }
   }
@@ -1371,7 +1400,8 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   const double ego_stop_dist = 1.0;
 
   if (frame_.ego_stop_when_slot_jumps_much || !frame_.is_replan_dynamic ||
-      !frame_.is_last_path || ego_info_under_slot.slot_occupied_ratio > 0.708 ||
+      !frame_.is_last_path || ego_info_under_slot.slot_occupied_ratio < 1e-3 ||
+      ego_info_under_slot.slot_occupied_ratio > 0.708 ||
       ego_info_under_slot.fix_slot ||
       frame_.remain_dist_path < ego_stop_dist + 0.168 ||
       (frame_.remain_dist_obs < ego_stop_dist + 0.168 && false)) {
@@ -1379,7 +1409,7 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
     return false;
   }
 
-  if (!frame_.dynamic_plan_fail_flag) {
+  if (!frame_.dynamic_plan_fail_flag && frame_.dynamic_plan_path_superior) {
     ILOG_INFO << "should not stop when slot jumps much 2";
     frame_.dynamic_replan_fail_count = 0;
     return false;
@@ -1390,20 +1420,22 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
     return false;
   }
 
-  pnc::geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
+  // 计算上一次规划终点
+  geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
-
   const pnc::geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
 
-  const pnc::geometry_lib::PathPoint tar_pose_now =
-      ego_info_under_slot.target_pose;
+  // 计算当前的真实车位终点位置
+  geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
+  tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
+  tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
 
   const auto& param = apa_param.GetParam();
 
   std::vector<double> fail_count_tab{3.0, 4.0, 5.0, 6.0, 7.0};
   const double dlat =
-      (param.should_stop_lat_err - (param.finish_lat_err + 1e-3)) /
+      (param.should_stop_lat_err - (param.finish_lat_err_strict + 1e-3)) /
       (fail_count_tab.size() - 1);
   const double dheading =
       (param.should_stop_heading_err - (param.finish_heading_err + 1e-3)) /
@@ -1416,6 +1448,7 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
     lat_err_tab.emplace_back(param.should_stop_lat_err - i * dlat);
     heading_err_tab.emplace_back(param.should_stop_heading_err - i * dheading);
   }
+
   const double lat_err_threshold =
       mathlib::Interp1(fail_count_tab, lat_err_tab,
                        static_cast<double>(frame_.dynamic_replan_fail_count));

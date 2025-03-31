@@ -85,6 +85,8 @@ void ApaPredictPathManager::Update(
     control_err_big = true;
   }
 
+  ILOG_INFO << "control_err_big: " << control_err_big;
+
   const double predict_distance = std::min(3.0, path_length - proj_s + 1.86);
 
   bool use_steer_angle_flag = false;
@@ -169,10 +171,21 @@ void ApaPredictPathManager::Update(
           }
         }
 
-        for (i = min_index + 1;
-             i < std::min(planning_output->trajectory.trajectory_points_size,
-                          static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
-             predict_pt_vec_.back().s < predict_distance;
+        // i indicates spling index from plan traj, can not be last index
+        i = min_index + 1;
+        bool use_planning_traj_flag = false;
+        if (i <
+            planning_output->trajectory.trajectory_points_size - 1) {
+          ILOG_INFO << "splice mpc and planning traj";
+          use_planning_traj_flag = true;
+        } else {
+          ILOG_INFO << "directly extend mpc traj";
+        }
+
+        for (; use_planning_traj_flag &&
+               i < std::min(planning_output->trajectory.trajectory_points_size,
+                            static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
+               predict_pt_vec_.back().s < predict_distance;
              ++i) {
           car_predict_pt.pos
               << planning_output->trajectory.trajectory_points[i].x,
