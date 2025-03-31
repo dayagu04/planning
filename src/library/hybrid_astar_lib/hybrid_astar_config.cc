@@ -66,11 +66,13 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.4);
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.2);
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.1);
+  safe_buffer.circle_path_extra_buffer_outside = 0.10;
 
   safe_buffer.lat_safe_buffer_inside.reserve(3);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.2);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.15);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.08);
+  safe_buffer.circle_path_extra_buffer_inside = 0.0;
 
   safe_buffer.lon_safe_buffer.reserve(3);
   safe_buffer.lon_safe_buffer.emplace_back(0.4);

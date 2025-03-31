@@ -96,10 +96,16 @@ class FootPrintCircleModel {
   FootPrintCircleList global_reverse_gear_circles_;
 };
 
+// If path is circle, need more safe buffer than straight path to decrease human
+// fear.
 enum HierarchySafeBuffer : int8_t {
+  // straight path
   INSIDE_SLOT_BUFFER = 0,
   OUTSIDE_SLOT_BUFFER = 1,
-  MAX_NUMBER = 2,
+  // circle path
+  CIRCLE_PATH_INSIDE_SLOT_BUFFER = 2,
+  CIRCLE_PATH_OUTSIDE_SLOT_BUFFER = 3,
+  MAX_NUMBER = 4,
 };
 
 struct HierarchyBufferCircleFootPrint {

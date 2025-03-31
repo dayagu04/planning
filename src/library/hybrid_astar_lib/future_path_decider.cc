@@ -46,6 +46,7 @@ void FuturePathDecider::Process(
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line, const float min_turn_radius,
     const bool swap_start_goal, const AstarPathGenerateType path_generate_type,
+    const float sampling_lon_resolution,
     ParkFirstActionRequest *future_path_request) {
   if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
     future_path_request->Clear();
@@ -56,9 +57,11 @@ void FuturePathDecider::Process(
   swap_start_goal_ = swap_start_goal;
   path_generate_type_ = path_generate_type;
   gear_request_ = future_path_request->gear_request;
+  sampling_lon_resolution_ = sampling_lon_resolution;
+  path_inference_lat_buffer_ = 0.1;
   Clear();
 
-  edt->UpdateSafeBuffer(0.01, 0.01, 0.01);
+  edt->UpdateSafeBuffer(0.01, 0.01, 0.4);
 
   CalcDriveDistByLineModel(ego_pose, edt, ref_line);
 
@@ -189,10 +192,10 @@ void FuturePathDecider::UpdateFuturePathRequest(
   future_path_request->dist_request =
       std::max(future_drive_dist_info_.dist_to_ref_line, 1.2f);
 
-  future_drive_dist_info_.advised_gear_drive_dist =
-      SearchAdvisedDriveDist(0.4, future_drive_dist_info_.gear_drive_path);
-  future_drive_dist_info_.advised_gear_reverse_dist =
-      SearchAdvisedDriveDist(0.4, future_drive_dist_info_.gear_reverse_path);
+  future_drive_dist_info_.advised_gear_drive_dist = SearchAdvisedDriveDist(
+      path_inference_lat_buffer_, future_drive_dist_info_.gear_drive_path);
+  future_drive_dist_info_.advised_gear_reverse_dist = SearchAdvisedDriveDist(
+      path_inference_lat_buffer_, future_drive_dist_info_.gear_reverse_path);
 
   ILOG_INFO << "drive gear dist = "
             << future_drive_dist_info_.advised_gear_drive_dist
@@ -223,6 +226,10 @@ void FuturePathDecider::UpdateFuturePathRequest(
           future_drive_dist_info_.advised_gear_drive_dist;
     }
   }
+
+  future_path_request->dist_request =
+      std::floor(future_path_request->dist_request / sampling_lon_resolution_) *
+      sampling_lon_resolution_;
 
   return;
 }

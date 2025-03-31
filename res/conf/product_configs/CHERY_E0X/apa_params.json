@@ -344,7 +344,7 @@
   "obs_dist_for_speed_limit" : 0.4,
 
   "comment_18": "hybrid a star params",
-  "tail_in_slot_virtual_wall_x_offset" : 3.0,
+  "tail_in_slot_virtual_wall_x_offset" : 4.5,
   "tail_in_slot_virtual_wall_y_offset" : 1.5,
   "head_in_slot_virtual_wall_x_offset" : 0.1,
   "head_in_slot_virtual_wall_y_offset" : 2.0
