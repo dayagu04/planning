@@ -489,7 +489,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         return;
       }
     }
-    if (!cur_lane_is_continue && is_left_edge_side_lane && !is_split_region &&
+    if (is_left_edge_side_lane && !is_split_region &&
         function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
       if (exist_right_direction_merge) {
         is_exist_right_merge_direction_ = true;

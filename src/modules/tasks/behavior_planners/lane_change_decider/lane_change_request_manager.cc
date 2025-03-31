@@ -90,8 +90,11 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
                                           .ego_lane_road_right_decider_output()
                                           .boundary_merge_point;
   const auto& cur_lane = virtual_lane_mgr_->get_current_lane();
-  double ego_distance_to_boundary_merge = 0.0;
-  if (cur_lane != nullptr) {
+  const bool is_merge_region = session_->planning_context()
+                                    .ego_lane_road_right_decider_output()
+                                    .is_merge_region;
+  double ego_distance_to_boundary_merge = 100.0;
+  if (cur_lane != nullptr && is_merge_region) {
     const auto& curr_reference_path = reference_path_mgr->get_reference_path_by_lane(
         cur_lane->get_virtual_id(), false);
     if (curr_reference_path != nullptr && boundary_merge_point_valid) {
