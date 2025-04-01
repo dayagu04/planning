@@ -65,7 +65,8 @@ load_uss_wave_from_uss_percept_msg = False
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
-read_fus_obj_msg = not load_fusion_object_from_occupancy
+# OD obstacle
+read_fus_obj_msg = True
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
@@ -2188,12 +2189,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'end_angle':[],
       })
 
+  obs_text_vec = []
+  obs_text_x_vec = []
+  obs_text_y_vec = []
   if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
     box_x_vec, box_y_vec = [], []
-    text_vec = []
-    text_x_vec = []
-    text_y_vec = []
+
     local_view_data['data_fusion_obj_semantic'].data.update({'text':[], 'text_x':[], 'text_y':[],})
 
     for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size):
@@ -2221,36 +2223,28 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
       # plot text
       if len(polygon_points) > 0 :
-        text_vec.append(obj.common_occupancy_info.type)
-        text_x_vec.append(polygon_points[0].x)
-        text_y_vec.append(polygon_points[0].y)
+        obs_text_vec.append(obj.common_occupancy_info.type)
+        obs_text_x_vec.append(polygon_points[0].x)
+        obs_text_y_vec.append(polygon_points[0].y)
 
     local_view_data['data_fusion_obj'].data.update({
       'y': pos_y,
       'x': pos_x,
     })
 
-    local_view_data['data_fusion_obj_semantic'].data.update({'text':text_vec,'text_x':text_x_vec,'text_y':text_y_vec,})
-
     # print("box_y_vec = ", box_y_vec)
     # print("box_x_vec = ", box_x_vec)
 
-    local_view_data['data_fusion_obj_box'].data.update({
-      'y': box_y_vec,
-      'x': box_x_vec,
-    })
-  elif bag_loader.fus_objects_msg['enable'] == True and not load_fusion_object_from_occupancy:
+  if bag_loader.fus_objects_msg['enable'] == True and read_fus_obj_msg:
     pos_x, pos_y = [], []
     box_x_vec, box_y_vec = [], []
 
     for i in range(bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
-      polygon_points =  obj.additional_info.polygon_points
-      for j in range(obj.additional_info.polygon_points_size):
-        x = polygon_points[j].x
-        y = polygon_points[j].y
-        pos_x.append(x)
-        pos_y.append(y)
+
+      if (obj.common_info.type == 23 or obj.common_info.type == 26):
+        continue
+
       box_x, box_y = [], []
       center_x = obj.common_info.center_position.x
       center_y = obj.common_info.center_position.y
@@ -2262,18 +2256,24 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       box_x_vec.append(box_x)
       box_y_vec.append(box_y)
 
-    local_view_data['data_fusion_obj'].data.update({
-      'y': pos_y,
-      'x': pos_x,
-    })
+      # plot text
+      speed = obj.common_info.velocity.x *obj.common_info.velocity.x + obj.common_info.velocity.y*obj.common_info.velocity.y
+      speed = math.sqrt(speed)
+      speed = '%.1f'%speed
+      obs_text_vec.append(str(obj.common_info.type)+',v '+str(speed))
+      obs_text_x_vec.append(center_x)
+      obs_text_y_vec.append(center_y)
 
-    print("box_y_vec = ", box_y_vec)
-    print("box_x_vec = ", box_x_vec)
+    # print("box_y_vec = ", box_y_vec)
+    # print("box_x_vec = ", box_x_vec)
 
     local_view_data['data_fusion_obj_box'].data.update({
       'y': box_y_vec,
       'x': box_x_vec,
     })
+
+  # plot occ+od type
+  local_view_data['data_fusion_obj_semantic'].data.update({'text':obs_text_vec,'text_x':obs_text_x_vec,'text_y':obs_text_y_vec,})
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
@@ -2502,7 +2502,7 @@ def load_local_view_figure_parking():
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
-  fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = False)
+  fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = True)
   fig1.text(x = 'text_y', y = 'text_x', text = 'text', source = data_fusion_obj_semantic, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'fusion_objects', visible = True)
 
   # car prediction traj

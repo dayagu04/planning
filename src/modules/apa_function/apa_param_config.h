@@ -266,6 +266,7 @@ struct ApaParameters {
   bool use_fus_occ_obj = true;
   bool use_uss_pt_clound = false;
   bool use_ground_line = true;
+  bool use_object_detect;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;

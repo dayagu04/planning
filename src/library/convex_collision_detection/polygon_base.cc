@@ -790,4 +790,77 @@ void GenerateMirrorPolygon(const float x_length, const float y_length,
   return;
 }
 
+void GenerateBoundingBox(const float x_length, const float y_length,
+                         const Eigen::Vector2f &center,
+                         std::vector<Eigen::Vector2f> &box) {
+  Eigen::Vector2f pt;
+  pt[0] = center.x() + x_length / 2;
+  pt[1] = center.y() - y_length / 2;
+  box.emplace_back(pt);
+
+  pt[0] = center.x() + x_length / 2;
+  pt[1] = center.y() + y_length / 2;
+  box.emplace_back(pt);
+
+  pt[0] = center.x() - x_length / 2;
+  pt[1] = center.y() + y_length / 2;
+  box.emplace_back(pt);
+
+  pt[0] = center.x() - x_length / 2;
+  pt[1] = center.y() - y_length / 2;
+  box.emplace_back(pt);
+
+  return;
+}
+
+void LocalPolygonToGlobal(const std::vector<Eigen::Vector2f> &poly_local,
+                          const Pose2D &global_pose,
+                          std::vector<Eigen::Vector2f> &poly_global) {
+  Transform2d tf;
+  tf.SetBasePose(global_pose);
+
+  Eigen::Vector2f point;
+  for (int i = 0; i < poly_local.size(); i++) {
+    tf.ULFLocalPointToGlobal(point, poly_local[i]);
+    poly_global.emplace_back(point);
+  }
+
+  return;
+}
+
+void GeneratePolygonByPoints(const std::vector<Eigen::Vector2f> &points,
+                             Polygon2D *polygon) {
+  if (polygon == nullptr) {
+    return;
+  }
+
+  polygon->vertex_num = static_cast<int>(points.size());
+  polygon->vertex_num = std::min(MAX_POLYGON_VERTEX_NUM, polygon->vertex_num);
+
+  switch (polygon->vertex_num) {
+    case 1:
+      polygon->shape = PolygonShape::point;
+      break;
+    case 2:
+      polygon->shape = PolygonShape::line_segment;
+      break;
+    case 4:
+      polygon->shape = PolygonShape::box;
+      break;
+    default:
+      polygon->shape = PolygonShape::multi_edge;
+      break;
+  }
+
+  for (int i = 0; i < polygon->vertex_num; i++) {
+    polygon->vertexes[i].x = points[i].x();
+    polygon->vertexes[i].y = points[i].y();
+  }
+
+  UpdatePolygonValue(polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
+  polygon->min_tangent_radius = 0;
+
+  return;
+}
+
 }  // namespace planning
