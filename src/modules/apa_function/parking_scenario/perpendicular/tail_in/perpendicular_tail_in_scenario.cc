@@ -658,8 +658,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   GenerateObstacleRequest gen_obs_request(
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
-      frame_.process_obs_method, frame_.last_channel_width,
-      frame_.last_channel_width);
+      frame_.process_obs_method);
 
   gen_obs_decider.GenObs(ego_info_under_slot, gen_obs_request);
 
