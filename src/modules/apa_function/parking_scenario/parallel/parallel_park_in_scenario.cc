@@ -257,11 +257,11 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
         pnc::geometry_lib::GetCrossFromTwoVec2d(
             measures_ptr->GetHeadingVec(),
             ego_info_under_slot.slot.origin_corner_coord_global_
-                .pt_23mid_01_mid);
+                .pt_23mid_01mid_vec);
     ILOG_INFO << "ego_info_under_slot.slot.processed_corner_coord_global_.pt_"
                  "23mid_01_mid = "
               << ego_info_under_slot.slot.origin_corner_coord_global_
-                     .pt_23mid_01_mid.transpose();
+                     .pt_23mid_01mid_vec.transpose();
 
     ILOG_INFO
         << "ego_info_under_slot.slot.origin_corner_coord_global_.pt_center = "

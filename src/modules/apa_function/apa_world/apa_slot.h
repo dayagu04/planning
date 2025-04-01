@@ -45,17 +45,23 @@ struct SlotCoord {
 
   Eigen::Vector2d pt_01_mid = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_23_mid = Eigen::Vector2d::Zero();
-  Eigen::Vector2d pt_23mid_01_mid = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_23mid_01mid_vec = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_01_vec = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_23_vec = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_01_unit_vec = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_23_unit_vec = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_23mid_01mid_unit_vec = Eigen::Vector2d::Zero();
 
   void CalExtraCoord() {
     pt_center = 0.25 * (pt_1 + pt_0 + pt_2 + pt_3);
     pt_01_mid = (pt_1 + pt_0) * 0.5;
     pt_23_mid = (pt_3 + pt_2) * 0.5;
-    pt_23mid_01_mid = pt_01_mid - pt_23_mid;
+    pt_23mid_01mid_vec = pt_01_mid - pt_23_mid;
     pt_01_vec = pt_1 - pt_0;
     pt_23_vec = pt_3 - pt_2;
+    pt_01_unit_vec = pt_01_vec.normalized();
+    pt_23_unit_vec = pt_23_vec.normalized();
+    pt_23mid_01mid_unit_vec = pt_23mid_01mid_vec.normalized();
   }
 
   void Reset() {
@@ -67,9 +73,12 @@ struct SlotCoord {
 
     pt_01_mid.setZero();
     pt_23_mid.setZero();
-    pt_23mid_01_mid.setZero();
+    pt_23mid_01mid_vec.setZero();
     pt_01_vec.setZero();
     pt_23_vec.setZero();
+    pt_01_unit_vec.setZero();
+    pt_23_unit_vec.setZero();
+    pt_23mid_01mid_unit_vec.setZero();
   }
 
   const SlotCoord GlobalToLocal(const geometry_lib::GlobalToLocalTf& g2l_tf) {
@@ -81,8 +90,13 @@ struct SlotCoord {
     slot_coord.pt_center = g2l_tf.GetPos(pt_center);
     slot_coord.pt_01_mid = (slot_coord.pt_1 + slot_coord.pt_0) * 0.5;
     slot_coord.pt_23_mid = (slot_coord.pt_2 + slot_coord.pt_3) * 0.5;
-    slot_coord.pt_23mid_01_mid = slot_coord.pt_01_mid - slot_coord.pt_23_mid;
+    slot_coord.pt_23mid_01mid_vec = slot_coord.pt_01_mid - slot_coord.pt_23_mid;
     slot_coord.pt_01_vec = slot_coord.pt_1 - slot_coord.pt_0;
+    slot_coord.pt_23_vec = slot_coord.pt_3 - slot_coord.pt_2;
+    slot_coord.pt_01_unit_vec = slot_coord.pt_01_vec.normalized();
+    slot_coord.pt_23_unit_vec = slot_coord.pt_23_vec.normalized();
+    slot_coord.pt_23mid_01mid_unit_vec =
+        slot_coord.pt_23mid_01mid_vec.normalized();
     return slot_coord;
   }
 };
@@ -184,6 +198,21 @@ class ApaSlot final {
 
     release_info_.Clear();
   }
+
+  const std::vector<Eigen::Vector2d> GetSlotPolygon(
+      const double slot_entrance_width = 0.0, const bool base_on_slot = true,
+      const double lat_move_dist = 0.0, const double lon_move_dist = 0.0) const;
+
+  const bool IsPointInSlot(const Eigen::Vector2d& pt,
+                           const double slot_entrance_width,
+                           const bool base_on_slot = true,
+                           const double lat_move_dist = 0.0,
+                           const double lon_move_dist = 0.0) const;
+
+  const bool IsPointInExpandSlot(const Eigen::Vector2d& pt,
+                                 const bool base_on_slot = true,
+                                 const double lat_expand = 0.0,
+                                 const double lon_expand = 0.0) const;
 
   void TransformCoordFromGlobalToLocal(
       const geometry_lib::GlobalToLocalTf& g2l_tf);

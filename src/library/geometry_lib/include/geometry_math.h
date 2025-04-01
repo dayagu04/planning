@@ -326,6 +326,14 @@ struct Pt2ObsDistInfo {
     circle_id = _circle_id;
     car_safe_pos = _car_safe_pos;
   }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log)
+        << "pos = " << dist_pt.second.pos.transpose()
+        << "  heading = " << dist_pt.second.heading * kRad2Deg
+        << "  dist = " << dist_pt.first << "  circle_id = " << circle_id
+        << "  car_safe_pos = " << static_cast<int>(car_safe_pos);
+  }
 };
 
 struct ObsDistConsiderSlot {
@@ -342,6 +350,19 @@ struct ObsDistConsiderSlot {
     in_slot = std::pair<double, PathPoint>{26.8, PathPoint()};
 
     integrated = std::pair<double, PathPoint>{26.8, PathPoint()};
+  }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log)
+        << "out slot pt = " << out_slot.second.pos.transpose()
+        << "  heading = " << out_slot.second.heading * kRad2Deg
+        << "out_slot dist= " << out_slot.first
+        << "in slot pt = " << out_slot.second.pos.transpose()
+        << "  heading = " << in_slot.second.heading * kRad2Deg
+        << "  in_slot = " << in_slot.first
+        << "  integrated pt = " << integrated.second.pos.transpose()
+        << "  heading = " << integrated.second.heading * kRad2Deg
+        << "  integrated = " << integrated.first;
   }
 };
 
@@ -1060,6 +1081,8 @@ struct GeometryPath {
   uint8_t path_count = 0;
   double cost = 0.0;
 
+  bool all_path_safe = false;
+
   ObsDistConsiderSlot obs_dist_info;
   double average_obs_dist = 26.8;
   double gear_change_cost = 0.0;
@@ -1067,6 +1090,8 @@ struct GeometryPath {
   double steer_change_cost = 0.0;
   PathPoint start_pose;
   PathPoint end_pose;
+  std::vector<std::vector<PathSegment>> drive_seg_vec;
+  std::vector<std::vector<PathSegment>> reverse_seg_vec;
   std::vector<PathPoint> gear_change_pose;
   uint8_t cur_gear = SEG_GEAR_INVALID;
   uint8_t cur_steer = SEG_STEER_INVALID;
@@ -1137,6 +1162,7 @@ struct GeometryPath {
     start_pose.Reset();
     end_pose.Reset();
     gear_change_pose.clear();
+    all_path_safe = false;
     cur_gear = geometry_lib::SEG_GEAR_INVALID;
     cur_steer = geometry_lib::SEG_STEER_INVALID;
     last_gear = geometry_lib::SEG_GEAR_INVALID;
@@ -1146,6 +1172,8 @@ struct GeometryPath {
     gear_index_vec.clear();
     path_pt_vec.clear();
     collide_flag = false;
+    drive_seg_vec.clear();
+    reverse_seg_vec.clear();
   }
   ~GeometryPath() {}
 
