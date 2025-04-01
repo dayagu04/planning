@@ -20,13 +20,13 @@
 #include "log_glog.h"
 #include "math_lib.h"
 #include "parking_scenario.h"
+#include "perpendicular_tail_in_path_generator.h"
 
 namespace planning {
 namespace apa_planner {
 
 void PerpendicularTailInScenario::Reset() {
   frame_.Reset();
-  perpendicular_path_planner_.Reset();
   current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
 
@@ -652,18 +652,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
     move_slot_with_little_buffer = true;
   }
 
-  GenerateObstacleDecider gen_obs_decider(
-      apa_world_ptr_->GetObstacleManagerPtr(),
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr());
-
   GenerateObstacleRequest gen_obs_request(
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
       frame_.process_obs_method);
 
-  gen_obs_decider.GenObs(ego_info_under_slot, gen_obs_request);
-
-  frame_.last_channel_width = gen_obs_decider.GetVirtualTLane().channel_width;
-  frame_.last_channel_length = gen_obs_decider.GetVirtualTLane().channel_length;
+  apa_world_ptr_->GetParkingTaskInterfacePtr()
+      ->GetGenerateObstacleDeciderPtr()
+      ->GenObs(ego_info_under_slot, gen_obs_request);
 
   CalcPtInside();
 
@@ -702,9 +697,14 @@ const bool PerpendicularTailInScenario::GenTlane() {
     if (prohibit_move_slot || move_slot_with_little_buffer) {
       lat_buffer_vec = std::vector<double>{min_lat_buffer};
     }
-    TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
-        ego_info_under_slot.slot, lat_buffer_vec, 0.3,
-        ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true);
+
+    TargetPoseDeciderResult res =
+        apa_world_ptr_->GetParkingTaskInterfacePtr()
+            ->GetTargetPoseDeciderPtr()
+            ->CalcTargetPose(
+                ego_info_under_slot.slot, lat_buffer_vec, 0.3,
+                ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true,
+                true);
 
     if (!res.exist_target_pose) {
       ILOG_ERROR << "can not find target pose";
@@ -793,12 +793,13 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
-  perpendicular_path_planner_.SetInput(input);
+  const std::shared_ptr<PerpendicularTailInPathGenerator>&
+      per_path_planner_ptr = apa_world_ptr_->GetParkingTaskInterfacePtr()
+                                 ->GetPerpendicularTailInPathGeneratorPtr();
 
-  perpendicular_path_planner_.SetCollisionDetectorIntefacePtr(
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+  per_path_planner_ptr->SetInput(input);
 
-  const bool path_plan_success = perpendicular_path_planner_.Update();
+  const bool path_plan_success = per_path_planner_ptr->Update();
 
   if (input.is_searching_stage) {
     if (path_plan_success) {
@@ -859,8 +860,8 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       input.is_replan_first = frame_.is_replan_first;
       input.is_replan_second = frame_.is_replan_second;
       input.can_first_plan_again = frame_.can_first_plan_again;
-      perpendicular_path_planner_.SetInput(input);
-      if (!perpendicular_path_planner_.Update()) {
+      per_path_planner_ptr->SetInput(input);
+      if (!per_path_planner_ptr->Update()) {
         ILOG_INFO << "try first path plan again also fail";
         frame_.plan_fail_reason = PATH_PLAN_FAILED;
         current_plan_path_vec_.clear();
@@ -873,7 +874,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
         return plan_result;
       }
-      if (perpendicular_path_planner_.GetOutput().current_gear !=
+      if (per_path_planner_ptr->GetOutput().current_gear !=
           frame_.current_gear) {
         // return PathPlannerResult::PLAN_FAILED;
       }
@@ -882,26 +883,25 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     }
   }
 
-  if (!perpendicular_path_planner_.SetCurrentPathSegIndex()) {
+  if (!per_path_planner_ptr->SetCurrentPathSegIndex()) {
     ILOG_INFO << "path plan fail";
     plan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = SET_SEG_INDEX;
     return plan_result;
   }
 
-  if (!perpendicular_path_planner_.CheckCurrentGearLength()) {
+  if (!per_path_planner_ptr->CheckCurrentGearLength()) {
     ILOG_INFO << "path plan fail";
     plan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = CHECK_GEAR_LENGTH;
     return plan_result;
   }
 
-  perpendicular_path_planner_.SampleCurrentPathSeg();
+  per_path_planner_ptr->SampleCurrentPathSeg();
 
-  perpendicular_path_planner_.PrintOutputSegmentsInfo();
+  per_path_planner_ptr->PrintOutputSegmentsInfo();
 
-  const GeometryPathOutput& planner_output =
-      perpendicular_path_planner_.GetOutput();
+  const GeometryPathOutput& planner_output = per_path_planner_ptr->GetOutput();
   current_plan_path_vec_.clear();
   current_plan_path_vec_.reserve(5);
   all_plan_path_vec_.clear();
@@ -1623,7 +1623,10 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
 
   // 拿到现在的路径
   const geometry_lib::GeometryPath geometry_path_now(
-      perpendicular_path_planner_.GetOutput().path_segment_vec);
+      apa_world_ptr_->GetParkingTaskInterfacePtr()
+          ->GetPerpendicularTailInPathGeneratorPtr()
+          ->GetOutput()
+          .path_segment_vec);
 
   // 拿到之前的规划终点
   const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
@@ -1723,7 +1726,9 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
 const bool PerpendicularTailInScenario::LateralPathOptimize(
     std::vector<geometry_lib::PathPoint>& optimal_path_vec) {
   const GeometryPathOutput& path_plan_output =
-      perpendicular_path_planner_.GetOutput();
+      apa_world_ptr_->GetParkingTaskInterfacePtr()
+          ->GetPerpendicularTailInPathGeneratorPtr()
+          ->GetOutput();
   const double sample_ds = path_plan_output.actual_ds;
   const std::vector<pnc::geometry_lib::PathPoint>& pt_vec =
       path_plan_output.path_point_vec;
@@ -2194,7 +2199,10 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
   JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2)
 
-  const auto& path_plan_output = perpendicular_path_planner_.GetOutput();
+  const auto& path_plan_output = apa_world_ptr_->GetParkingTaskInterfacePtr()
+                                     ->GetPerpendicularTailInPathGeneratorPtr()
+                                     ->GetOutput();
+
   JSON_DEBUG_VALUE("path_start_seg_index",
                    path_plan_output.path_seg_index.first)
   JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)

@@ -6,6 +6,7 @@
 #include "log_glog.h"
 
 namespace planning {
+namespace apa_planner {
 class SpeedLimitProfile {
  public:
   SpeedLimitProfile() = default;
@@ -36,5 +37,5 @@ class SpeedLimitProfile {
   // std::pair<double, double>: s, v
   std::vector<std::pair<double, double>> speed_limit_points_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

@@ -174,6 +174,14 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   };
 
  public:
+  PerpendicularTailInPathGenerator() {}
+  PerpendicularTailInPathGenerator(
+      const std::shared_ptr<CollisionDetectorInterface>
+          &collision_detector_interface_ptr) {
+    collision_detector_interface_ptr_ = collision_detector_interface_ptr;
+  }
+  ~PerpendicularTailInPathGenerator() {}
+
   virtual void Reset() override;
   virtual const bool Update() override;
   virtual const bool CheckCurrentGearLength() override;

@@ -207,14 +207,14 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
           ->CalCarRectangleBound(ego_info_under_slot_.cur_pose);
 
   virtual_tlane_.channel_width =
-      std::max({request_.min_channel_width, param.channel_width,
+      std::max({virtual_tlane_.channel_width, param.channel_width,
                 bound.max_x -
                     ego_info_under_slot_.slot.processed_corner_coord_local_
                         .pt_01_mid.x() +
                     0.68});
 
   virtual_tlane_.channel_length = std::max(
-      {request_.min_channel_length, 12.0 / slot.sin_angle_,
+      {virtual_tlane_.channel_length, 12.0 / slot.sin_angle_,
        std::max(std::fabs(bound.min_y), std::fabs(bound.max_y) + 1.68)});
 
   const double area_length = virtual_tlane_.channel_length;

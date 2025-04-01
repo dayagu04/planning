@@ -1,7 +1,7 @@
 #pragma once
 
 namespace planning {
-
+namespace apa_planner {
 class DpSpeedConfig {
  public:
   DpSpeedConfig() = default;
@@ -49,5 +49,5 @@ class DpSpeedConfig {
   // If path is short, qp is not valid because of discret time nodes.
   double enable_dp_by_path_length;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

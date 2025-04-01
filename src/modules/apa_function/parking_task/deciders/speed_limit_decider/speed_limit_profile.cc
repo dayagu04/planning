@@ -6,6 +6,7 @@
 #include "log_glog.h"
 
 namespace planning {
+namespace apa_planner {
 void SpeedLimitProfile::AppendSpeedLimit(const double s, const double v) {
   if (!speed_limit_points_.empty()) {
     if (s < speed_limit_points_.back().first) {
@@ -137,5 +138,5 @@ double SpeedLimitProfile::GetSpeedLimitByRange(const double range_start_s,
 
   return min_speed;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

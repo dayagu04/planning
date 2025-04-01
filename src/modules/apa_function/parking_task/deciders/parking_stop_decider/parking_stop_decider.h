@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "apa_measure_data_manager.h"
-#include "apa_world.h"
 #include "collision_detection/collision_detector_interface.h"
 #include "common/speed/apa_speed_decision.h"
 #include "geometry_math.h"
@@ -11,7 +10,7 @@
 #include "point_cloud_obstacle.h"
 
 namespace planning {
-
+namespace apa_planner {
 // If bycle/car/human is passing, need add a stop decision.
 // If planning/prediction path is collided, need add a stop decision.
 // If path point is a end point, need add a stop decision.
@@ -74,5 +73,5 @@ class ParkingStopDecider : public ParkingTask {
 
   std::shared_ptr<apa_planner::ApaMeasureDataManager> measure_data_ptr_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

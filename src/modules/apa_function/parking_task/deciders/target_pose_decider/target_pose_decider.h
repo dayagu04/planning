@@ -2,7 +2,6 @@
 #include <vector>
 
 #include "apa_slot.h"
-#include "parking_scenario_manager.h"
 #include "parking_task.h"
 
 namespace planning {
@@ -27,7 +26,7 @@ struct TargetPoseDeciderResult {
   }
 };
 
-class TargetPoseDecider : public ParkingTask {
+class TargetPoseDecider final : public ParkingTask {
  public:
   TargetPoseDecider(
       const std::shared_ptr<apa_planner::CollisionDetectorInterface>&
@@ -39,7 +38,7 @@ class TargetPoseDecider : public ParkingTask {
   const TargetPoseDeciderResult CalcTargetPose(
       const ApaSlot& slot, const std::vector<double>& lat_buffer_vec,
       const double lon_buffer, const ParkingScenarioType request,
-      const bool consider_obs, const bool base_on_slot=false);
+      const bool consider_obs, const bool base_on_slot = false);
 
   const TargetPoseDeciderResult CalcTargetPoseForPerpendicularTailIn();
 

@@ -63,7 +63,7 @@ void NarrowSpaceScenario::Reset() {
 
   ParkingScenario::Reset();
 
-  narrow_space_decider_.Clear();
+  narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
 
   return;

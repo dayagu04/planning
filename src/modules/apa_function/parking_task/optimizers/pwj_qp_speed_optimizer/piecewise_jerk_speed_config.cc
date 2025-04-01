@@ -1,7 +1,7 @@
 #include "piecewise_jerk_speed_config.h"
 
 namespace planning {
-
+namespace apa_planner {
 void PiecewiseJerkSpeedQPConfig::Init() {
   // second
   delta_time = 0.06;
@@ -15,5 +15,5 @@ void PiecewiseJerkSpeedQPConfig::Init() {
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

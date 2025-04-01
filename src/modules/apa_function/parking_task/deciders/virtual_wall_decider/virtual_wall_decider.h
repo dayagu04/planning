@@ -7,7 +7,7 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
 
 namespace planning {
-
+namespace apa_planner {
 struct VirtualWallBoundary {
   float x_upper;
   float x_lower;
@@ -116,5 +116,5 @@ class VirtualWallDecider : public ParkingTask {
   // vehicle boundary
   VirtualWallBoundary veh_boundary_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

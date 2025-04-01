@@ -3,10 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+
 #include "debug_info_log.h"
 
 namespace planning {
-
+namespace apa_planner {
 #define DEBUG_OPTIMIZER (1)
 
 bool JerkLimitedTrajOptimizer::Init() { return true; }
@@ -136,8 +137,7 @@ void JerkLimitedTrajOptimizer::CopySpeedData(
 
   for (int i = 0; i < s_profile.size(); ++i) {
     speed_data_.AppendSpeedPoint(s_profile[i], delta_time_ * i, v_profile[i],
-                                 acc_profile[i],
-                                 jerk_profile[i]);
+                                 acc_profile[i], jerk_profile[i]);
 
 #if DEBUG_OPTIMIZER
     ILOG_INFO << "i = " << i << ",s = " << s_profile[i]
@@ -163,7 +163,6 @@ void JerkLimitedTrajOptimizer::DebugJLTSpeed(
     ILOG_INFO << "i = " << i << ",s = " << s_profile[i]
               << ", t = " << delta_time_ * i << ",v = " << v_profile[i]
               << ", acc =" << acc_profile[i] << ",jerk = " << jerk_profile[i];
-
   }
 
   return;
@@ -172,7 +171,7 @@ void JerkLimitedTrajOptimizer::DebugJLTSpeed(
 void JerkLimitedTrajOptimizer::UpdateFallbackTraj(const SVPoint& init_point,
                                                   const double s_des) {
   if (init_point.v < 0.01) {
-    double half_s = s_des/2.0;
+    double half_s = s_des / 2.0;
     double acc = 0.3;
     double dec = -0.2;
 
@@ -180,8 +179,8 @@ void JerkLimitedTrajOptimizer::UpdateFallbackTraj(const SVPoint& init_point,
                 (2.0 * acc - 2.0 * dec);
     double max_v = std::sqrt(2 * acc * s1 + init_point.v * init_point.v);
 
-    double time1 = (max_v- init_point.v)/acc;
-    double time2   = -max_v / dec + time1;
+    double time1 = (max_v - init_point.v) / acc;
+    double time2 = -max_v / dec + time1;
 
     speed_data_.clear();
     double time = 0.0;
@@ -255,5 +254,5 @@ void JerkLimitedTrajOptimizer::RecordDebugInfo() {
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

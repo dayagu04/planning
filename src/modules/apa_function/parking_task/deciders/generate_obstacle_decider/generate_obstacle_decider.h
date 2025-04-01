@@ -4,9 +4,7 @@
 
 #include "apa_obstacle_manager.h"
 #include "apa_slot_manager.h"
-#include "collision_detection/collision_detector_interface.h"
-#include "parking_scenario.h"
-#include "parking_scenario_manager.h"
+#include "parking_task.h"
 namespace planning {
 namespace apa_planner {
 using namespace pnc;
@@ -35,7 +33,7 @@ struct GenerateObstacleRequest {
   }
 };
 
-class GenerateObstacleDecider {
+class GenerateObstacleDecider final : public ParkingTask {
  public:
   GenerateObstacleDecider(
       const std::shared_ptr<ApaObstacleManager>& obs_manager_ptr,
@@ -55,7 +53,7 @@ class GenerateObstacleDecider {
 
   const bool GenObsForPerpendicularHeadingIn();
 
-  void Reset() {
+  virtual void Reset() override {
     ego_info_under_slot_.Reset();
     request_.Reset();
     virtual_tlane_.Reset();

@@ -1,15 +1,15 @@
 #pragma once
 
 #include "dp_speed_common.h"
+#include "optimizer_common.h"
 #include "parking_task.h"
 #include "piecewise_jerk_speed_config.h"
 #include "src/modules/apa_function/parking_task/deciders/speed_limit_decider/speed_limit_profile.h"
 #include "src/modules/common/math/piecewise_jerk/piecewise_jerk_speed_problem.h"
 #include "src/modules/common/speed/speed_data.h"
-#include "optimizer_common.h"
 
 namespace planning {
-
+namespace apa_planner {
 // model
 // x = [x0, x1, x2,...,x_{n-1}, x0',x1',...,x0'',x1'',...x_{n-1}'']
 // f = 1/2*x^T*H*x + Q*x
@@ -52,5 +52,5 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
 
   SpeedOptimizerState solver_state_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

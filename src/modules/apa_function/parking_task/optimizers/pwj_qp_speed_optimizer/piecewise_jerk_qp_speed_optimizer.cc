@@ -12,7 +12,7 @@
 #include "log_glog.h"
 
 namespace planning {
-
+namespace apa_planner {
 #define DECIDER_DEBUG (1)
 
 PiecewiseJerkSpeedQPOptimizer::PiecewiseJerkSpeedQPOptimizer() {}
@@ -244,5 +244,5 @@ void PiecewiseJerkSpeedQPOptimizer::DebugLinearConstraints(
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

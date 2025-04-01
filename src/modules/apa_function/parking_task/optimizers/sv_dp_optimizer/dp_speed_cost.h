@@ -1,7 +1,7 @@
 #pragma once
 
 namespace planning {
-
+namespace apa_planner {
 // todo: physical dimension is different, unify them in a same physical
 // dimension.
 struct DpSpeedCost {
@@ -19,5 +19,5 @@ struct DpSpeedCost {
   void Clear();
   void DebugCost() const;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

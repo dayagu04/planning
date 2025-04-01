@@ -47,7 +47,8 @@ void Init() {
 }
 
 void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
-                      int is_complete_path, int use_average_obs_dist, int force_mid_process_plan, double sample_ds) {
+                      int is_complete_path, int use_average_obs_dist,
+                      int force_mid_process_plan, double sample_ds) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
@@ -83,16 +84,16 @@ void UpdateSlot(
     if (slot.id == select_id) {
       switch (slot.type) {
         case iflyauto::PARKING_SLOT_TYPE_VERTICAL:
-          g_apa_world_ptr->GetSlotManagerPtr()
-              ->ego_info_under_slot_.slot_type = SlotType::PERPENDICULAR;
+          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
+              SlotType::PERPENDICULAR;
           break;
         case iflyauto::PARKING_SLOT_TYPE_SLANTING:
-          g_apa_world_ptr->GetSlotManagerPtr()
-              ->ego_info_under_slot_.slot_type = SlotType::SLANT;
+          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
+              SlotType::SLANT;
           break;
         case ::iflyauto::PARKING_SLOT_TYPE_HORIZONTAL:
-          g_apa_world_ptr->GetSlotManagerPtr()
-              ->ego_info_under_slot_.slot_type = SlotType::PARALLEL;
+          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
+              SlotType::PARALLEL;
           break;
         default:
           break;
@@ -170,6 +171,7 @@ void UpdateStateMachine() {
 
 void Update() {
   iflyauto::PlanningOutput planning_output;
+  g_apa_world_ptr->GetParkingTaskInterfacePtr()->Reset();
   g_apa_world_ptr->SetSimuParam(g_simu_param);
   g_apa_world_ptr->Update(&g_local_view, planning_output);
   g_scenario_ptr->Reset();

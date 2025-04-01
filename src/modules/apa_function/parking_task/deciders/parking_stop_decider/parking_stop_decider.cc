@@ -8,7 +8,7 @@
 #include "pose2d.h"
 
 namespace planning {
-
+namespace apa_planner {
 #define DECIDER_DEBUG (0)
 
 void ParkingStopDecider::Process(
@@ -128,5 +128,5 @@ void ParkingStopDecider::AddStopDecisionByPredictedPath(
 }
 
 void ParkingStopDecider::TaskDebug() { return; }
-
+}  // namespace apa_planner
 }  // namespace planning

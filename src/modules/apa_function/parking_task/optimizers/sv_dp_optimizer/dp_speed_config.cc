@@ -3,7 +3,7 @@
 #include "apa_param_config.h"
 
 namespace planning {
-
+namespace apa_planner {
 void DpSpeedConfig::Init() {
   const apa_planner::ParkingSpeedConfig& speed_config =
       apa_param.GetParam().speed_config;
@@ -43,5 +43,5 @@ void DpSpeedConfig::Init() {
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning
