@@ -119,6 +119,13 @@ bool SpeedLimitDecider::Execute() {
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
+  auto &ad_info =
+      session_->mutable_planning_context()->mutable_planning_hmi_info()->ad_info;
+  if (SpeedLimitType::CURVATURE == v_target_type_) {
+    ad_info.is_curva = true;
+  } else {
+    ad_info.is_curva = false;
+  }
   return true;
 }
 
