@@ -3053,6 +3053,11 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
     radius_vec = std::vector<double>{2.0 * temp_radius, 1.75 * temp_radius,
                                      1.5 * temp_radius, 1.25 * temp_radius,
                                      1.0 * temp_radius};
+
+    if (input_.is_replan_dynamic) {
+      radius_vec = std::vector<double>{2.0 * temp_radius, 1.75 * temp_radius,
+                                       1.5 * temp_radius};
+    }
   } else {
     radius_vec = std::vector<double>{1.0 * temp_radius};
   }
@@ -3136,6 +3141,11 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
         if (col_res2 == PathColDetRes::NORMAL) {
           ILOG_INFO_IF(enable_log)
               << "same gear, arc2 normal, add arc2 to path";
+          if (input_.is_replan_dynamic &&
+              arc2_seg.GetEndPos().x() <
+                  calc_params_.target_line.pA.x() + 0.368) {
+            break;
+          }
           path_seg_vec.emplace_back(arc2_seg);
           geometry_path.SetPath(path_seg_vec);
           all_path_safe = true;
@@ -3411,6 +3421,9 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
   if (easy_to_line) {
     radius_vec = std::vector<double>{2.5 * radius, 2.25 * radius, 2.0 * radius,
                                      1.75 * radius};
+  } else if (input_.is_replan_dynamic) {
+    radius_vec = std::vector<double>{2.5 * radius, 2.25 * radius, 2.0 * radius,
+                                     1.75 * radius, 1.5 * radius};
   }
 
   const uint8_t s_turn_ref_gear =
@@ -3491,6 +3504,8 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
         double min_line_length = 0.268;
         if (easy_to_line) {
           min_line_length = 0.68;
+        } else if (input_.is_replan_dynamic) {
+          min_line_length = 0.368;
         }
         success = arc_seg2.GetEndPos().x() >
                   calc_params_.target_line.pA.x() + min_line_length;
