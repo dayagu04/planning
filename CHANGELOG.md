@@ -33,9 +33,11 @@
 8. 优化2.5m侧方停车
 9. 修复steering在车位内A*搜索
 10. 修复path cross limiter
+11. 修复异常释放不可泊车位
 
 HPP Bugfix
 1. 修复巡航至终点，无可泊车位刹停但状态不跳Abort的问题
+2. hpp临时不使用预测信息
 
 # planning2.8.0
 ###  修改说明
