@@ -444,17 +444,22 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
     auto timestamp = 0 != input_topic_timestamp->localization_estimate()
                          ? local_view.localization_estimate.header.timestamp
                          : local_view.localization.msg_header.stamp;
-    truncate_prediction_info(local_view.prediction_result, timestamp,
-                             prediction_obj_id_set);
+    if (!session_->is_hpp_scene()) {
+      truncate_prediction_info(local_view.prediction_result, timestamp,
+        prediction_obj_id_set);
+    } else {
+      // hack:hpp暂时只用融合障碍物
+      for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size; i++) {
+        const auto &obj = local_view.fusion_objects_info.fusion_object[i];
+          transform_fusion_to_prediction_longtime(
+              obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+              prediction_info);
+      }
+    }
+
     for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
          i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
-      // if (prediction_obj_id_set.find(obj.additional_info.track_id) ==
-      //     prediction_obj_id_set.end()) {
-      //   transform_fusion_to_prediction_longtime(
-      //       obj, (double)local_view.fusion_objects_info.msg_header.stamp,
-      //       prediction_info);
-      // }
       transform_fusion_to_prediction_longtime(
           obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           fusion_objs_info);
