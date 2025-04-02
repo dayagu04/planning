@@ -672,7 +672,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
       safe_circle_radius_vec = std::vector<double>{calc_params_.turn_radius};
     } else {
       safe_circle_radius_vec =
-          std::vector<double>{6.6, calc_params_.turn_radius};
+          std::vector<double>{8.68, calc_params_.turn_radius};
     }
 
     for (const double radius : safe_circle_radius_vec) {
@@ -2254,7 +2254,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       cost += 100.0;
     } else {
       if (last_seg.Getlength() < 2.06) {
-        cost += 16.8 / last_seg.Getlength();
+        cost += 12.8 / last_seg.Getlength();
       }
       if (complete_path.path_segment_vec.size() > 1) {
         const auto& pre_seg =
@@ -3179,14 +3179,14 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
           PathColDetRes col_res2 =
               TrimPathByObs(arc2_seg, lat_buffer, lon_buffer, enable_log);
 
-          std::vector<geometry_lib::PathSegment> path_seg_vec{arc1_seg};
-
           if (col_res2 == PathColDetRes::NORMAL) {
             ILOG_INFO_IF(enable_log) << "arc2 col is normal, add arc1 to path";
-            geometry_path.SetPath(path_seg_vec);
+            geometry_path.SetPath(arc1_seg);
             all_path_safe = true;
             break;
           }
+
+          std::vector<geometry_lib::PathSegment> path_seg_vec{};
 
           if (col_res2 == PathColDetRes::SHORTEN) {
             ILOG_INFO_IF(enable_log) << "arc2 col is shorten";
@@ -3204,6 +3204,7 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                                                    arc1_seg.GetEndHeading(),
                                                    length, arc1_gear);
               geometry_lib::PathSegment line_seg(arc1_gear, line);
+              path_seg_vec.emplace_back(arc1_seg);
               if (TrimPathByObs(line_seg, 0.12, 0.4, enable_log) !=
                       PathColDetRes::INVALID &&
                   line_seg.GetEndPos().x() >
@@ -3222,6 +3223,7 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                     << "the arc1 gear is drive, reduce arc1 length and use "
                        "two reverve arc to target line ";
               } else {
+                path_seg_vec.emplace_back(arc1_seg);
                 ILOG_INFO_IF(enable_log) << "add arc1 to path";
               }
             }
