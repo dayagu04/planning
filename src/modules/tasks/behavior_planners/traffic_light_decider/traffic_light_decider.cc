@@ -105,10 +105,11 @@ bool TrafficLightDecider::Execute() {
 
     } else if (traffic_status.go_straight == 20 ||
                traffic_status.go_straight == 22) {
-      // yellow blink in intersection, use last frame
+      // yellow blink in intersection, can pass
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      can_pass_ = true;
 
     } else {
       // others, can go
@@ -132,6 +133,12 @@ bool TrafficLightDecider::Execute() {
       green_blink_timer_ = 0.0;
       can_pass_ = true;
 
+    } else if (traffic_status.go_straight == 20 || traffic_status.go_straight == 22) {
+      //wrong yellow light brake in intersection then yellow blink, can pass
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = true;
     } else {
       can_pass_ = false;
     }
@@ -182,6 +189,7 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   double dis_to_crosswalk = session_->environmental_model()
                                 .get_virtual_lane_manager()
                                 ->GetEgoDistanceToCrosswalk();
+
   auto &car2enu =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
   Eigen::Vector3d car_point, enu_point;
