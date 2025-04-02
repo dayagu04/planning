@@ -190,7 +190,22 @@ bool TrafficLightDecider::AddVirtualObstacle() {
                                 .get_virtual_lane_manager()
                                 ->GetEgoDistanceToCrosswalk();
 
-  auto &car2enu =
+  const auto &reference_path_ptr = session_->planning_context()
+                                .lane_change_decider_output()
+                                .coarse_planning_info.reference_path;
+  const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  double ego_start_s = frenet_ego_state.s();
+  double virtual_obs_dis = std::min(dis_to_stopline + 4.0, dis_to_crosswalk + 2.0);
+  ReferencePathPoint refpath_pt;
+  if (reference_path_ptr->get_reference_point_by_lon(
+    ego_start_s + virtual_obs_dis, refpath_pt)) {
+    virtual_agent.set_x(refpath_pt.path_point.x());  //几何中心
+    virtual_agent.set_y(refpath_pt.path_point.y());
+  } else {
+    return false;
+  }
+
+  /* auto &car2enu =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
   Eigen::Vector3d car_point, enu_point;
   car_point.x() = std::min(dis_to_stopline + 4.0, dis_to_crosswalk + 2.0);
@@ -198,7 +213,7 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   car_point.z() = 0.0;
   enu_point = car2enu * car_point;
   virtual_agent.set_x(enu_point.x());  //几何中心
-  virtual_agent.set_y(enu_point.y());
+  virtual_agent.set_y(enu_point.y()); */
   virtual_agent.set_length(5.0);
   virtual_agent.set_width(2.0);
   virtual_agent.set_fusion_source(1);
