@@ -706,7 +706,7 @@ class LoadCyberbag:
     if read_uss_per_msg == True:
       try:
         uss_percept_msg_dict = {}
-        for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
+        for topic, msg, t in self.bag.read_messages("/iflytek/fusion/uss_perception_info"):
           uss_percept_msg_dict[msg.msg_header.stamp / 1e6] = msg
         uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in uss_percept_msg_dict.items():
@@ -728,10 +728,10 @@ class LoadCyberbag:
           self.uss_percept_msg['enable'] = False
       except:
         self.uss_percept_msg['enable'] = False
-        print("missing /iflytek/uss/uss_perception_info !!!")
+        print("missing /iflytek/fusion/uss_perception_info !!!")
     else:
       self.uss_percept_msg['enable'] = False
-      print("no read /iflytek/uss/uss_perception_info !!!")
+      print("no read /iflytek/fusion/uss_perception_info !!!")
 
     print("smallest_abs_t = ", smallest_abs_t)
     time_array = time.localtime(smallest_abs_t)
@@ -2035,15 +2035,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       'obj_pt_y': model_y,
     })
 
-    if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
-      for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
-        for corner_index in [0,3,2,1]:
-          parking_slot_x.append(parking_slot.global_corner_point[corner_index].x)
-          parking_slot_y.append(parking_slot.global_corner_point[corner_index].y)
-    local_view_data['data_spatial_parking_slot'].data.update({
-      'corner_point_x': [parking_slot_x],
-      'corner_point_y': [parking_slot_y],
-    })
+    # if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
+    #   for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
+    #     for corner_index in [0,3,2,1]:
+    #       parking_slot_x.append(parking_slot.global_corner_point[corner_index].x)
+    #       parking_slot_y.append(parking_slot.global_corner_point[corner_index].y)
+    # local_view_data['data_spatial_parking_slot'].data.update({
+    #   'corner_point_x': [parking_slot_x],
+    #   'corner_point_y': [parking_slot_y],
+    # })
 
   if bag_loader.uss_percept_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
     # load uss wave for uss_percept_msg

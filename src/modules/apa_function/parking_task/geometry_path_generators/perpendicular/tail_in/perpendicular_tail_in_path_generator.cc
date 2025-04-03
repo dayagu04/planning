@@ -672,7 +672,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
       safe_circle_radius_vec = std::vector<double>{calc_params_.turn_radius};
     } else {
       safe_circle_radius_vec =
-          std::vector<double>{6.6, calc_params_.turn_radius};
+          std::vector<double>{8.68, calc_params_.turn_radius};
     }
 
     for (const double radius : safe_circle_radius_vec) {
@@ -2254,7 +2254,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       cost += 100.0;
     } else {
       if (last_seg.Getlength() < 2.06) {
-        cost += 16.8 / last_seg.Getlength();
+        cost += 12.8 / last_seg.Getlength();
       }
       if (complete_path.path_segment_vec.size() > 1) {
         const auto& pre_seg =
@@ -3053,6 +3053,11 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
     radius_vec = std::vector<double>{2.0 * temp_radius, 1.75 * temp_radius,
                                      1.5 * temp_radius, 1.25 * temp_radius,
                                      1.0 * temp_radius};
+
+    if (input_.is_replan_dynamic) {
+      radius_vec = std::vector<double>{2.0 * temp_radius, 1.75 * temp_radius,
+                                       1.5 * temp_radius};
+    }
   } else {
     radius_vec = std::vector<double>{1.0 * temp_radius};
   }
@@ -3136,6 +3141,11 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
         if (col_res2 == PathColDetRes::NORMAL) {
           ILOG_INFO_IF(enable_log)
               << "same gear, arc2 normal, add arc2 to path";
+          if (input_.is_replan_dynamic &&
+              arc2_seg.GetEndPos().x() <
+                  calc_params_.target_line.pA.x() + 0.368) {
+            break;
+          }
           path_seg_vec.emplace_back(arc2_seg);
           geometry_path.SetPath(path_seg_vec);
           all_path_safe = true;
@@ -3179,14 +3189,14 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
           PathColDetRes col_res2 =
               TrimPathByObs(arc2_seg, lat_buffer, lon_buffer, enable_log);
 
-          std::vector<geometry_lib::PathSegment> path_seg_vec{arc1_seg};
-
           if (col_res2 == PathColDetRes::NORMAL) {
             ILOG_INFO_IF(enable_log) << "arc2 col is normal, add arc1 to path";
-            geometry_path.SetPath(path_seg_vec);
+            geometry_path.SetPath(arc1_seg);
             all_path_safe = true;
             break;
           }
+
+          std::vector<geometry_lib::PathSegment> path_seg_vec{};
 
           if (col_res2 == PathColDetRes::SHORTEN) {
             ILOG_INFO_IF(enable_log) << "arc2 col is shorten";
@@ -3204,6 +3214,7 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                                                    arc1_seg.GetEndHeading(),
                                                    length, arc1_gear);
               geometry_lib::PathSegment line_seg(arc1_gear, line);
+              path_seg_vec.emplace_back(arc1_seg);
               if (TrimPathByObs(line_seg, 0.12, 0.4, enable_log) !=
                       PathColDetRes::INVALID &&
                   line_seg.GetEndPos().x() >
@@ -3222,6 +3233,7 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                     << "the arc1 gear is drive, reduce arc1 length and use "
                        "two reverve arc to target line ";
               } else {
+                path_seg_vec.emplace_back(arc1_seg);
                 ILOG_INFO_IF(enable_log) << "add arc1 to path";
               }
             }
@@ -3409,6 +3421,9 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
   if (easy_to_line) {
     radius_vec = std::vector<double>{2.5 * radius, 2.25 * radius, 2.0 * radius,
                                      1.75 * radius};
+  } else if (input_.is_replan_dynamic) {
+    radius_vec = std::vector<double>{2.5 * radius, 2.25 * radius, 2.0 * radius,
+                                     1.75 * radius, 1.5 * radius};
   }
 
   const uint8_t s_turn_ref_gear =
@@ -3489,6 +3504,8 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
         double min_line_length = 0.268;
         if (easy_to_line) {
           min_line_length = 0.68;
+        } else if (input_.is_replan_dynamic) {
+          min_line_length = 0.368;
         }
         success = arc_seg2.GetEndPos().x() >
                   calc_params_.target_line.pA.x() + min_line_length;

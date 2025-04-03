@@ -3231,7 +3231,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
           (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
            steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
         steer_change_count += static_cast<uint8_t>(std::round(
-            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+            3.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
 
       // 左转到右转 或 右转到左转
@@ -3240,7 +3240,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
           (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
            steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
         steer_change_count += static_cast<uint8_t>(std::round(
-            3.0 * 5.5 / path_segment_vec[i + 1].arc_seg.circle_info.radius));
+            4.0 * 5.5 / path_segment_vec[i + 1].arc_seg.circle_info.radius));
 
         // 如果第一段圆弧路径较短，施加额外惩罚
         std::vector<double> radius_tab{5.5, 5.9, 6.3, 6.7, 7.1, 7.5};
@@ -3259,8 +3259,8 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
            steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
           steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
-        steer_change_count += static_cast<uint8_t>(
-            std::round(5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+        steer_change_count += static_cast<uint8_t>(std::round(
+            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
     }
 
@@ -3271,7 +3271,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 void GeometryPath::CalcCost() {
   gear_change_cost = 80.0 * gear_change_count;
   length_cost = 1.68 * total_length;
-  steer_change_cost = 8.0 * steer_change_count;
+  steer_change_cost = 10.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
 }

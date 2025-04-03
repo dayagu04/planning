@@ -658,8 +658,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   GenerateObstacleRequest gen_obs_request(
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
-      frame_.process_obs_method, frame_.last_channel_width,
-      frame_.last_channel_width);
+      frame_.process_obs_method);
 
   gen_obs_decider.GenObs(ego_info_under_slot, gen_obs_request);
 
@@ -1293,9 +1292,16 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   const ApaParameters& param = apa_param.GetParam();
-  const double lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
-                                ? param.safe_uss_remain_dist_out_slot
-                                : param.safe_uss_remain_dist_in_slot;
+  double lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
+                          ? param.safe_uss_remain_dist_out_slot
+                          : param.safe_uss_remain_dist_in_slot;
+
+  // 在当前路径较短的情况下尽量使用小的纵向安全buffer，避免揉库空间不够
+  if (frame_.current_path_length < 0.6) {
+    lon_buffer *= 0.5;
+  }
+
+  double lat_buffer = param.lat_inflation;
 
   // 计算当前的真实车位终点位置
   geometry_lib::PathPoint real_target_pose =
@@ -1308,17 +1314,15 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                    real_target_pose.heading));
 
-  double lat_buffer = apa_param.GetParam().lat_inflation;
-
-  // 如果当前车位姿已经摆正，但是自车横向误差依然较大，可以增大横向buffer保证安全
+  // 如果当前车位姿已经几乎摆正，但是自车横向误差依然较大，可以增大横向buffer保证安全
   const bool case_1 = frame_.is_last_path;
-  const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.428;
-  const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 2.68;
-  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.08;
+  const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.368;
+  const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 6.8;
+  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.07;
   const bool case_5 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
 
   if (case_1 && case_2 && case_3 && case_4 && case_5) {
-    lat_buffer = std::max(lat_buffer, 0.14);
+    lat_buffer = std::max(lat_buffer, 0.146);
   }
 
   ILOG_INFO << "lat_buffer = " << lat_buffer << "  case_1 = " << case_1
@@ -1346,9 +1350,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const bool case2_3 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
 
   if (case2_1 && case2_2 && case2_3) {
-    lat_buffer = std::max(0.14, lat_buffer);
+    lat_buffer = std::max(0.146, lat_buffer);
   }
 
+  // 库外在空间足够的情况下尽量使用较大的安全buffer
   const double slot_x =
       ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid.x();
   if (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE) {
@@ -1361,7 +1366,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
           200.68) {
         lat_buffer = std::max(0.198, lat_buffer);
       } else {
-        lat_buffer = std::max(0.14, lat_buffer);
+        lat_buffer = std::max(0.146, lat_buffer);
       }
     }
   }
@@ -1385,9 +1390,45 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
           std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 1.68) {
         lat_buffer = std::max(0.0968, lat_buffer);
       } else {
-        lat_buffer = std::max(0.326, lat_buffer);
+        lat_buffer = std::max(0.20, lat_buffer);
       }
     }
+  }
+
+  // 计算当前段的规划轨迹是否与障碍物碰撞  如果碰撞
+  // 说明障碍物的位置相比于重规划时刻已经发生变化，那么增大横向buffer，从而保证安全
+  if (current_path_point_global_vec_.size() > 0 &&
+      frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
+    ColResult res =
+        apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+            ->GetGJKCollisionDetectorPtr()
+            ->Update(current_path_point_global_vec_,
+                     current_path_point_global_vec_.front().lat_buffer, 0.0,
+                     GJKColDetRequest(false));
+    if (res.col_flag) {
+      ILOG_INFO << "current plan path has collision, it indicate the obs has "
+                   "changed, and should increase realtime brake "
+                   "lat buffer";
+      lat_buffer = std::max(0.146, lat_buffer);
+    }
+  }
+
+  // 倒库时，如果车辆已经入库，但是比如车在中心线左侧 但是方向盘往右打
+  // 就类似于把车头往左甩  相对比较危险， 此时车辆安全buffer应该相对较大
+  const bool case3_1 = frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE;
+  const bool case3_2 = ego_info_under_slot.slot_occupied_ratio > 0.368;
+  const bool case3_3 =
+      (ego_info_under_slot.cur_pose.pos.y() > 0.04 &&
+       apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
+               kRad2Deg <
+           -168.8);
+  const bool case3_4 =
+      (ego_info_under_slot.cur_pose.pos.y() < -0.04 &&
+       apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
+               kRad2Deg >
+           168.8);
+  if (case3_1 && case3_2 && (case3_3 || case3_4)) {
+    lat_buffer = std::max(0.146, lat_buffer);
   }
 
   return CalRemainDistFromObs(lon_buffer, lat_buffer);
