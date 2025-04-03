@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250328/20250328-15-17-23/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-03-28-15-17-24_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250315/20250315-11-17-25/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-03-15-11-17-26_no_camera.bag'
 #bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True

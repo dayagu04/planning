@@ -232,4 +232,15 @@ void GenerateVehCompactPolygon(const float lateral_safe_buffer,
 void GenerateMirrorPolygon(const float x_length, const float y_length,
                            const Position2D &center, Polygon2D *box);
 
+void GenerateBoundingBox(const float x_length, const float y_length,
+                         const Eigen::Vector2f &center,
+                         std::vector<Eigen::Vector2f> &box);
+
+void LocalPolygonToGlobal(const std::vector<Eigen::Vector2f> &poly_local,
+                          const Pose2D &global_pose,
+                          std::vector<Eigen::Vector2f> &poly_global);
+
+void GeneratePolygonByPoints(const std::vector<Eigen::Vector2f> &points,
+                             Polygon2D *polygon);
+
 }  // namespace planning

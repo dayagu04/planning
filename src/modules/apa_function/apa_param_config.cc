@@ -460,6 +460,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "use_uss_pt_clound");
 
   JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
+  JSON_READ_VALUE(apa_param.SetPram().use_object_detect, bool,
+                  "use_object_detect");
 
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
