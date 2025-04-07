@@ -545,12 +545,19 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
 
   const auto &current_reference_path =
       reference_path_mgr->get_reference_path_by_lane(clane_virtual_id);
+  const auto &frenet_coord = current_reference_path->get_frenet_coord();
   const auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
-
+  const auto &planning_init_point = frenet_ego_state.planning_init_point();
+  double diff_heading_angle = planning_math::NormalizeAngle(
+      planning_init_point.heading_angle -
+      frenet_coord->GetPathCurveHeading(planning_init_point.frenet_state.s));
   bool perfect_in_lane = false;
+  // perfect_in_lane =
+  //     ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
+  //      (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
   perfect_in_lane =
-      ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
-       (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+      ((std::fabs(planning_init_point.frenet_state.r) < dist_threshold) &&
+       (std::fabs(diff_heading_angle) < angle_threshold));
   return perfect_in_lane;
 }
 

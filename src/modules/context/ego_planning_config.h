@@ -365,6 +365,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     lc_finish_heading_deg_thr =
         read_json_key<double>(json, "lc_finish_heading_deg_thr");
     read_json_vec<double>(json, "lc_finished_dist_thr", lc_finished_dist_thr);
+    read_json_vec<double>(json, "lc_back_finished_dist_thr", lc_back_finished_dist_thr);
     min_ego_v_cruise = read_json_key<double>(json, "min_ego_v_cruise");
   }
   double lc_t_actuator_delay = 0.03;
@@ -374,6 +375,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   double lc_finish_dist_thr = 0.5;
   double lc_finish_heading_deg_thr = 1.0;
   std::vector<double> lc_finished_dist_thr{0.1, 0.15, 0.2, 0.3};
+  std::vector<double> lc_back_finished_dist_thr{0.1, 0.15, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;
 };
 
@@ -910,14 +912,23 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "lc_second_dist_thr"},
         lc_second_dist_thr);
+    lc_finished_second_dist_thr = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "lc_finished_second_dist_thr"},
+        lc_finished_second_dist_thr);
     use_obstacle_prediction_model_in_planning =
         read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
                             use_obstacle_prediction_model_in_planning);
 
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
-                                                   "dynamic_ref_buffer"},
-                          dynamic_ref_buffer);
+                                                   "dynamic_lc_ref_buffer"},
+                          dynamic_lc_ref_buffer);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "dynamic_lc_finished_ref_buffer"},
+                          dynamic_lc_finished_ref_buffer);
     ReadItem<bool>(json, not_use_gap_flag, "general_lateral_decider",
                    "not_use_gap_flag");
 
@@ -1057,7 +1068,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double ramp_limit_v = 19.44;
   bool ramp_limit_v_valid = false;
   double lc_second_dist_thr = 1.5;
-  std::vector<double> dynamic_ref_buffer{0.0, 0.1, 0.2, 0.3};
+  double lc_finished_second_dist_thr = 1.5;
+  std::vector<double> dynamic_lc_ref_buffer{0.0, 0.1, 0.2, 0.3};
+  std::vector<double> dynamic_lc_finished_ref_buffer{0.0, 0.05, 0.1, 0.2};
   bool not_use_gap_flag = true;
   double min_v_cruise = 5.0;
 

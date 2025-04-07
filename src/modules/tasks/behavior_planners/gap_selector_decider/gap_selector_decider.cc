@@ -451,8 +451,8 @@ GapSelectorStatus GapSelectorDecider::Update() {
     double lb_end_s{0.0}, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
     if (remain_lb_time > 1.0) {
-      lb_target_l =
-          lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_;
+      lb_target_l = std::max(std::fabs(avoid_lat_offset),
+          lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
 
       FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
                                traj_points);

@@ -498,10 +498,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
   double dynamic_ref_buffer =
-      interp(v_ego, xp_v_ego, config_.dynamic_ref_buffer);
+      interp(v_ego, xp_v_ego, config_.dynamic_lc_ref_buffer);
+  if (is_LC_BACK) {
+    dynamic_ref_buffer =
+        interp(v_ego, xp_v_ego, config_.dynamic_lc_finished_ref_buffer);
+  }
   double init_dist_to_ref =
       std::fabs(planning_init_point.frenet_state.r - lateral_offset) - dynamic_ref_buffer;
   double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
+  if (is_LC_BACK) {
+    dist_to_second_stage = init_dist_to_ref - config_.lc_finished_second_dist_thr;
+  }
   if (dist_to_second_stage < -1e-6) {
     dynamic_ref_buffer =
         std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
