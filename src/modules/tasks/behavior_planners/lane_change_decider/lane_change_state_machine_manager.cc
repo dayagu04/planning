@@ -23,6 +23,7 @@
 #include "task_interface/lane_change_utils.h"
 #include "trajectory1d/constant_jerk_trajectory1d.h"
 #include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
+#include "utils/cartesian_coordinate_system.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 
@@ -132,10 +133,10 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfExecutionToCancel(transition_info_.lane_change_direction,
                                      transition_info_.lane_change_type);
         // execution -> hold
-        // bool is_execution_to_hold =
-        //     CheckIfExecutionToHold(transition_info_.lane_change_direction,
-        //                            transition_info_.lane_change_type);
-        bool is_execution_to_hold = false;  // now no hold state,temp hack
+        bool is_execution_to_hold =
+            CheckIfExecutionToHold(transition_info_.lane_change_direction,
+                                   transition_info_.lane_change_type);
+
         if (is_lane_change_complete) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeComplete;
@@ -148,7 +149,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_execution_to_hold) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeHold;
-          lc_lane_mgr_->set_fix_lane_to_origin();
+          lc_hold_state_lat_offset_ = CalculateLCHoldStateLatOffset();
+          // lc_lane_mgr_->set_fix_lane_to_origin();
           execution_state_frame_nums_ = 0;
         }
       }
@@ -157,12 +159,15 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangeHold: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangeHold) {
-        bool is_hold_to_cancel =
-            CheckIfHoldToCancel(transition_info_.lane_change_direction,
-                                transition_info_.lane_change_type);
+        hold_state_frame_nums_++;
+
+        //在hold状态下最多维持8s，不满足变道条件那么就返回原车道
+        bool is_hold_to_cancel = hold_state_frame_nums_ > 80;
+
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
+        
         bool is_hold_to_complete =
             CheckIfLaneChangeComplete(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
@@ -174,15 +179,18 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           lc_timer_.Reset();
           lc_lane_mgr_->set_fix_lane_to_target();
           lane_change_stage_info_.Reset();
+          hold_state_frame_nums_ = 0;
         } else if (is_hold_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
           lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
           lane_change_stage_info_.Reset();
+          hold_state_frame_nums_ = 0;
         } else if (is_hold_to_execution) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
+          hold_state_frame_nums_ = 0;
         }
       }
       break;
@@ -358,12 +366,13 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
 bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     const RequestType &lane_change_direction,
     const RequestSource &lane_change_type) {
+
   // check if execution time out
   const double time_out_threshold_execute_time_s = 8.0;
   bool execution_time_out =
       TimeOut(true, &lc_timer_.execution_time_count_,
               &lc_timer_.execution_at_time_, time_out_threshold_execute_time_s);
-  //(fengwang31)TODO:temp debug
+
   execution_time_out = false;
   if (execution_time_out) {
     return true;
@@ -384,40 +393,28 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
 
   // check if driver cancel
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
-
-  // NOTICE: some cancel needs to check whether lane change can be cancelled
-  if ((lane_change_stage_info_.lc_should_back || is_no_lc_request)) {
+  if (is_no_lc_request) {
     return true;
   }
+
+  // NOTICE: some cancel needs to check whether lane change can be cancelled
+  if (lane_change_stage_info_.lc_should_back) {
+    lane_change_stage_info_.is_cancel_to_hold = true;
+    return false;
+  }
+
   return false;
 }
 
 bool LaneChangeStateMachineManager::CheckIfExecutionToHold(
     const RequestType &lane_change_direction,
     const RequestSource &lane_change_type) {
-  // check if execution time out
-  const double time_out_threshold_execute_time_s = 8.0;
-  bool execution_time_out =
-      TimeOut(true, &lc_timer_.execution_time_count_,
-              &lc_timer_.execution_at_time_, time_out_threshold_execute_time_s);
-  //(fengwang31)TODO:temp debug
-  execution_time_out = false;
-  if (execution_time_out) {
+
+  if (lane_change_stage_info_.lc_should_back &&
+      lane_change_stage_info_.is_cancel_to_hold) {
     return true;
   }
-  CheckLaneChangeBackValid(lane_change_direction);
-  const double time_out_threshold_gap_not_available_time_s = 0.15;
-  (void)TimeOut(lane_change_stage_info_.lc_should_back,
-                &lc_timer_.gap_not_available_time_count_,
-                &lc_timer_.gap_not_available_at_time_,
-                time_out_threshold_gap_not_available_time_s);
 
-  const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
-
-  if ((lane_change_stage_info_.lc_should_back || is_no_lc_request) &&
-      lane_change_type == MAP_REQUEST) {
-    return true;
-  }
   return false;
 }
 
@@ -1007,6 +1004,9 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   }
   JSON_DEBUG_VALUE("HPP turn signal",
                    int(lane_change_decider_output.hpp_turn_signal))
+
+  lane_change_decider_output.lc_hold_state_lat_offset =
+      lc_hold_state_lat_offset_;
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode *const agent) {
@@ -1177,6 +1177,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   must_change_lane_ = false;
   propose_state_frame_nums_ = 0;
   execution_state_frame_nums_ = 0;
+  hold_state_frame_nums_ = 0;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
@@ -1645,7 +1646,8 @@ void LaneChangeStateMachineManager::PreProcess() {
   int64_t ego_lane_front_node_id = planning_data::kInvalidId;
   if (direction == LEFT_CHANGE) {
     if (current_lc_state == kLaneChangeExecution ||
-        current_lc_state == kLaneChangeComplete) {
+        current_lc_state == kLaneChangeComplete ||
+        current_lc_state == kLaneChangeHold) {
       target_lane_front_node_id = dynamic_world->ego_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
     } else {
@@ -1656,7 +1658,8 @@ void LaneChangeStateMachineManager::PreProcess() {
     }
   } else {
     if (current_lc_state == kLaneChangeExecution ||
-        current_lc_state == kLaneChangeComplete) {
+        current_lc_state == kLaneChangeComplete ||
+        current_lc_state == kLaneChangeHold) {
       target_lane_front_node_id = dynamic_world->ego_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
     } else {
@@ -2384,7 +2387,8 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       }
       lc_back_track_.set_value(after_filter_agent->node_agent_id(),
                                distance_rel, node_v);
-    } else if (transition_info_.lane_change_status == kLaneChangePropose) {
+    } else if (transition_info_.lane_change_status == kLaneChangePropose ||
+        transition_info_.lane_change_status == kLaneChangeHold) {
       lc_invalid_track_.set_value(after_filter_agent->node_agent_id(),
                                   distance_rel, node_v);
       lc_state_info->gap_insertable = false;
@@ -2923,5 +2927,141 @@ bool LaneChangeStateMachineManager::
   }
 
   return false;
+}
+bool LaneChangeStateMachineManager::IsCancelToHold () {
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto origin_lane = virtual_lane_manager->get_lane_with_virtual_id(
+      lc_lane_mgr_->origin_lane_virtual_id());
+  if (origin_lane == nullptr) {
+    return false;
+  }
+
+  const auto &reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto &origin_ref_path =
+      reference_path_manager->get_reference_path_by_lane(
+          lc_lane_mgr_->origin_lane_virtual_id());
+  if (origin_ref_path == nullptr) {
+    return false;
+  }
+
+  const auto& origin_ego_state = origin_ref_path->get_frenet_ego_state();
+
+  const double ego_origin_l =
+      std::abs(origin_ego_state.l());
+  const double origin_lane_width = origin_lane->width();
+  if (ego_origin_l > origin_lane_width / 4.0) {
+    return true;
+  }
+
+  return false;
+}
+
+double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const{
+  double lc_hold_state_lat_offset = 0.0;
+
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+      
+  const auto& cur_lane = virtual_lane_manager->get_current_lane();
+
+  if (cur_lane == nullptr) {
+    return lc_hold_state_lat_offset;
+  }
+
+  const double cur_lane_width = cur_lane->width();
+  
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double kEgoWidth = vehicle_param.width;
+  
+  if (transition_info_.lane_change_direction == LEFT_CHANGE) {
+    lc_hold_state_lat_offset = -(cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2);
+  } else {
+    lc_hold_state_lat_offset = cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
+  }
+
+  return lc_hold_state_lat_offset;
+}
+
+ThirdOrderTimeOptimalTrajectory
+LaneChangeStateMachineManager::GenerateLatMaxDecelerationCurve(
+    const std::shared_ptr<ReferencePath> ref_path, const double p_end) {
+  const auto frenet_ego_state = ref_path->get_frenet_ego_state();
+  // 车辆参数
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double kEgoWidth = vehicle_param.width;
+
+  const double k = 1 / vehicle_param.wheel_base;
+
+  const double ego_steer_angle = session_->environmental_model()
+                                     .get_ego_state_manager()
+                                     ->ego_steer_angle();
+
+  const double steer_ratio = vehicle_param.steer_ratio;
+  LonState init_state;
+  init_state.p = frenet_ego_state.planning_init_point().frenet_state.r;
+  init_state.v = frenet_ego_state.planning_init_point().frenet_state.dr_ds;
+  init_state.a = frenet_ego_state.planning_init_point().frenet_state.ddr_dsds;
+
+  StateLimit state_limit;
+  double v_max =  0.075;
+  state_limit.p_end = p_end;
+  state_limit.v_end = 0;
+  state_limit.v_max = v_max;
+  state_limit.v_min = -v_max;
+  state_limit.a_max = v_max;
+  state_limit.a_min = -v_max;
+  state_limit.j_max = v_max;
+  state_limit.j_min = -v_max;
+
+  const double p_precision = 0.1;
+
+  const auto lat_max_deceleration_curve =
+      ThirdOrderTimeOptimalTrajectory(init_state, state_limit, p_precision);
+
+  const auto ref_frenet_coord = ref_path->get_frenet_coord();
+  if (ref_frenet_coord == nullptr) {
+    return lat_max_deceleration_curve;
+  }
+
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> l_vec;
+  std::vector<double> s_vec;
+
+  const double all_time = lat_max_deceleration_curve.ParamLength();
+  const double dt = 1;
+
+  for (double t = 0; t < all_time; t += dt) {
+    double l = lat_max_deceleration_curve.Evaluate(0, t);
+    double s =
+        ref_path->get_frenet_ego_state().s() + t;
+    l_vec.emplace_back(l);
+    s_vec.emplace_back(s);
+    Point2D sl_point{s, l};
+    Point2D xy_point;
+    if (!ref_frenet_coord->SLToXY(sl_point, xy_point)) {
+      break;
+    }
+    x_vec.emplace_back(xy_point.x);
+    y_vec.emplace_back(xy_point.y);
+  }
+
+  std::vector<double> ori_x_vec;
+  std::vector<double> ori_y_vec;
+  for (const auto &path_point : ref_frenet_coord->path_points()) {
+    ori_x_vec.emplace_back(path_point.x());
+    ori_y_vec.emplace_back(path_point.y());
+  }
+
+  JSON_DEBUG_VECTOR("ori_lat_path_x", ori_x_vec, 2);
+  JSON_DEBUG_VECTOR("ori_lat_path_y", ori_y_vec, 2);
+  JSON_DEBUG_VECTOR("lat_path_x", x_vec, 2);
+  JSON_DEBUG_VECTOR("lat_path_y", y_vec, 2);
+
+  return lat_max_deceleration_curve;
 }
 }  // namespace planning

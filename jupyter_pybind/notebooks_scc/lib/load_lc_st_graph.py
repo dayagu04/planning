@@ -21,9 +21,16 @@ from bokeh.plotting import ColumnDataSource
 from lib.load_json import *
 from lib.load_struct import *
 
-def load_lc_path_figure():
+coord_tf = coord_transformer()
+
+def load_lc_path_figure(fig1):
   data_st = ColumnDataSource(data = {'front_obj_s':[], 'rear_obj_s':[], 'ego_s':[], 't':[], 'front_obj_s_tar_lane':[],
   'front_obj_need_dis_vec':[], 'rear_obj_need_dis_vec':[], 'front_obj_future_v_vec':[], 'rear_obj_future_v_vec':[], 'ego_future_v_vec':[]})
+  lat_data_vec = ColumnDataSource(data={'lat_path_x_vec':[], 'lat_path_y_vec':[]})
+  ori_lat_data_vec = ColumnDataSource(data={'ori_lat_path_x_vec':[], 'ori_lat_path_y_vec':[]})
+
+  fig1.line('lat_path_y_vec', 'lat_path_x_vec', source = lat_data_vec, legend_label="Lat Path", line_width=2, color = "green")
+  fig1.line('ori_lat_path_y_vec','ori_lat_path_x_vec', source = ori_lat_data_vec, legend_label="ori Lat Path", line_width=2, color = "red", line_dash="dashed")
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=500, height=500, match_aspect = True, aspect_scale=1)
   fig2.line('t', 'front_obj_s', source = data_st, legend_label="FObj S", line_width=2, color = "purple")
   fig2.line('t', 'rear_obj_s', source = data_st, legend_label="RObj S", line_width=2, color = "blue")
@@ -39,10 +46,33 @@ def load_lc_path_figure():
   fig3.line('t', 'ego_future_v_vec', source = data_st, legend_label="Ego_V", line_width=2, color = "black")
   fig3.legend.click_policy="hide"
   
-  return fig2, fig3, data_st
+  return fig1, fig2, fig3, data_st, lat_data_vec, ori_lat_data_vec
 
-def update_lc_path_figure(data_st,bag_loader, bag_time, local_view_data):
+def update_lc_path_figure(data_st, lat_data_vec, ori_lat_data_vec,bag_loader, bag_time, local_view_data):
   plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
+
+  lat_path_x_vec = []
+  lat_path_y_vec = []
+  ori_lat_path_x_vec = []
+  ori_lat_path_y_vec = []
+
+  lat_path_x_vec = plan_debug_json_info['lat_path_x']
+  lat_path_y_vec = plan_debug_json_info['lat_path_y']
+  ori_lat_path_x_vec = plan_debug_json_info['ori_lat_path_x']
+  ori_lat_path_y_vec = plan_debug_json_info['ori_lat_path_y']
+
+  # 加载转换坐标系##########
+  if bag_loader.loc_msg['enable'] == True:
+    cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
+    cur_pos_yn = local_view_data['data_msg']['loc_msg'].position.position_boot.y
+    cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
+
+    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+  ########################
+
+  lat_path_x_vec, lat_path_y_vec = coord_tf.global_to_local(lat_path_x_vec, lat_path_y_vec)
+  ori_lat_path_x_vec, ori_lat_path_y_vec = coord_tf.global_to_local(ori_lat_path_x_vec, ori_lat_path_y_vec)
+
   # 调整 front_obj_s_vec 的长度以匹配 t_vec 的长度
   front_obj_s_vec = []
   front_obj_s_tar_lane_vec = []
@@ -131,5 +161,15 @@ def update_lc_path_figure(data_st,bag_loader, bag_time, local_view_data):
     'front_obj_future_v_vec': front_obj_future_v_vec,
     'rear_obj_future_v_vec': rear_obj_future_v_vec,
     'ego_future_v_vec': ego_future_v_vec,
+  })
+
+  lat_data_vec.data.update({
+    'lat_path_x_vec': lat_path_x_vec,
+    'lat_path_y_vec': lat_path_y_vec
+  })
+
+  ori_lat_data_vec.data.update({
+    'ori_lat_path_x_vec': ori_lat_path_x_vec,
+    'ori_lat_path_y_vec': ori_lat_path_y_vec
   })
 

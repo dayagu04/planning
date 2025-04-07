@@ -55,6 +55,7 @@ struct LaneChangeDeciderOutput {
   LaneChangeGapInfo lc_gap_info;
   bool is_nearing_ramp = false;
   RequestType hpp_turn_signal = NO_CHANGE;
+  double lc_hold_state_lat_offset = 0;
 };
 
 }  // namespace planning
