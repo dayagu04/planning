@@ -407,7 +407,9 @@ GapSelectorStatus GapSelectorDecider::Update() {
     }
   } else if (coarse_planning_info.target_state == kLaneChangeExecution ||
              coarse_planning_info.target_state == kLaneChangeComplete) {
-    lc_timer_ += 0.1;
+    if (ego_v > 1e-2) {
+      lc_timer_ += 0.1;
+    }
     is_lc_scene = true;
   } else if (coarse_planning_info.target_state == kLaneChangeCancel) {
     lc_back_timer_ += 0.1;
@@ -625,7 +627,9 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
 
 void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
                                       const double lat_avoid_offset) {
-  if (*remain_lc_time > 1.0 || use_ego_v_) {
+  const auto &ego_state_mgr =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  if (ego_state_mgr->ego_v() >= config_.min_ego_v_cruise && (*remain_lc_time > 1.0 || use_ego_v_ )) {
     return;
   }
 
