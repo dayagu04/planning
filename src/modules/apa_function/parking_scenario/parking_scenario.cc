@@ -336,7 +336,8 @@ const double ParkingScenario::CalRemainDistFromPath() {
 
 const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing) {
+    const double extra_buffer_when_reversing, const double dynamic_lat_buffer,
+    const bool is_parallel_condition) {
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetUssObsAvoidancePtr();
@@ -365,8 +366,8 @@ const double ParkingScenario::CalRemainDistFromObs(
   gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
 
   col_res = gjk_col_det_ptr->Update(
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), 0.368, 0.0,
-      gjl_col_det_request);
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
+      dynamic_lat_buffer, 0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = 6.68;
@@ -391,10 +392,17 @@ const double ParkingScenario::CalRemainDistFromObs(
     frame_.stuck_by_dynamic_obs = false;
     return uss_remain_dist;
   } else {
-    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
-      frame_.stuck_by_dynamic_obs = true;
-      return obs_pt_remain_dist_dynamic;
+    if (!is_parallel_condition) {
+      ILOG_INFO << "perpendicular or tilt condition!";
+      if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
+        frame_.stuck_by_dynamic_obs = true;
+        return obs_pt_remain_dist_dynamic;
+      } else {
+        frame_.stuck_by_dynamic_obs = false;
+        return obs_pt_remain_dist_static;
+      }
     } else {
+      ILOG_INFO << "parallel condition! Currently don't need dynamic check!";
       frame_.stuck_by_dynamic_obs = false;
       return obs_pt_remain_dist_static;
     }

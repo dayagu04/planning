@@ -115,12 +115,17 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
   }
 
+  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
+  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
+
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0);
+  frame_.remain_dist_obs = CalRemainDistFromObs(
+      safe_uss_remain_dist, lat_buffer, 0.0, lat_buffer, true);
+
+  ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {

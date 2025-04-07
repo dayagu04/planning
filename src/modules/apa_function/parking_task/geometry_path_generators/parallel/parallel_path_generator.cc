@@ -2153,10 +2153,10 @@ const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
 
       GeometryPath geo_path;
       AssempleGeometryPath(geo_path, path_seg_vec);
-      if (geo_path.first_path_length < 0.2) {
-        // ILOG_INFO <<"first path length is too short!");
-        continue;
-      }
+      // if (geo_path.first_path_length < 0.2) {
+      //   // ILOG_INFO <<"first path length is too short!");
+      //   continue;
+      // }
       // ILOG_INFO <<"geo_path gear change cnt = " <<
       // geo_path.gear_change_count);
       total_path_vec.emplace_back(geo_path);
@@ -4259,16 +4259,16 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
-  ILOG_INFO << "remain_car_dist = " << remain_car_dist;
-  ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
-  ILOG_INFO << "buffer = " << buffer;
+  // ILOG_INFO << "remain_car_dist = " << remain_car_dist;
+  // ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
+  // ILOG_INFO << "buffer = " << buffer;
 
-  ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
-  ILOG_INFO << "col_pt_obs in slot = " << col_res.col_pt_obs_global.transpose();
+  // ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
+  // ILOG_INFO << "col_pt_obs in slot = " << col_res.col_pt_obs_global.transpose();
 
   if (safe_remain_dist < 0.0) {
-    ILOG_INFO << "the distance between obstacle and ego is smaller than "
-                 "min_safe_distance, collided! ";
+    // ILOG_INFO << "the distance between obstacle and ego is smaller than "
+    //              "min_safe_distance, collided! ";
 
     return PATH_COL_INVALID;
   }
