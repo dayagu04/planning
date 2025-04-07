@@ -1065,7 +1065,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_uss_condition =
       frame_.remain_dist_obs < param.max_replan_remain_dist;
 
-  GJKColDetRequest gjl_col_det_request(true, true);
+  GJKColDetRequest gjl_col_det_request(true, false);
 
   bool end_pos_has_obs_condition =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
@@ -1076,9 +1076,11 @@ const bool PerpendicularTailInScenario::CheckFinished() {
               0.0, 0.0, gjl_col_det_request)
           .col_flag;
 
+  ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
+
   if (!end_pos_has_obs_condition) {
     const geometry_lib::PathPoint uss_pose{
-        ego_info_under_slot.target_pose.pos - 0.368 * Eigen::Vector2d(1.0, 0.0),
+        ego_info_under_slot.target_pose.pos - 0.168 * Eigen::Vector2d(1.0, 0.0),
         ego_info_under_slot.target_pose.heading};
 
     end_pos_has_obs_condition =
@@ -1087,6 +1089,8 @@ const bool PerpendicularTailInScenario::CheckFinished() {
             ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
                      gjl_col_det_request)
             .col_flag;
+
+    ILOG_INFO << "after_pos_has_obs_condition = " << end_pos_has_obs_condition;
   }
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&

@@ -66,7 +66,7 @@ read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
 # OD obstacle
-read_fus_obj_msg = True
+read_fus_obj_msg = False
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0

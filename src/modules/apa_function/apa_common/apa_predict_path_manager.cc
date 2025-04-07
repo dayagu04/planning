@@ -120,7 +120,7 @@ void ApaPredictPathManager::Update(
       const double dphi = pnc::geometry_lib::NormalizeAngle(
           car_predict_pt.heading - predict_pt_vec_.back().heading);
 
-      if (ds > 0.5 || dphi * kRad2Deg > 5.1) {
+      if (ds > 1.0 || dphi * kRad2Deg > 6.8) {
         ILOG_ERROR << "control output is err";
         predict_pt_vec_.clear();
         break;
@@ -174,8 +174,7 @@ void ApaPredictPathManager::Update(
         // i indicates spling index from plan traj, can not be last index
         i = min_index + 1;
         bool use_planning_traj_flag = false;
-        if (i <
-            planning_output->trajectory.trajectory_points_size - 1) {
+        if (i < planning_output->trajectory.trajectory_points_size - 1) {
           ILOG_INFO << "splice mpc and planning traj";
           use_planning_traj_flag = true;
         } else {

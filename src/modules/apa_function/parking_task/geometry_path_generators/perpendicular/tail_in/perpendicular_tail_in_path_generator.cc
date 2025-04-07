@@ -2281,6 +2281,12 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
                 .norm() *
             46.8;
 
+    // 规划终点离目标终点横向误差代价
+    cost += std::fabs((last_seg.GetEndPos() -
+                       input_.ego_info_under_slot.target_pose.pos)
+                          .y()) *
+            4006.8;
+
     // 库内换挡的代价
     for (const auto& pose : complete_path.gear_change_pose) {
       const double ratio = CalOccupiedRatio(pose);
