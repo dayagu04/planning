@@ -694,7 +694,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
          lat_buffer -= step) {
       lat_buffer_vec.emplace_back(lat_buffer);
     }
-    if (prohibit_move_slot || move_slot_with_little_buffer) {
+    if (apa_param.GetParam().force_use_little_buffer_move_slot ||
+        prohibit_move_slot || move_slot_with_little_buffer) {
       lat_buffer_vec = std::vector<double>{min_lat_buffer};
     }
 

@@ -183,7 +183,7 @@
   "max_obs_lon_invasion_slot_dist": 1.68,
   "max_obs_lon_invasion_slot_dist_dynamic_col": 0.268,
   "slot_entrance_obs_x": 3.468,
-  "tmp_no_consider_obs_dy": true,
+  "force_use_little_buffer_move_slot": true,
   "believe_in_fus_obs": false,
   "use_fus_occ_obj": true,
   "use_uss_pt_clound": false,
