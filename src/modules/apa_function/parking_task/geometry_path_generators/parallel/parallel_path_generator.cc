@@ -2153,10 +2153,10 @@ const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
 
       GeometryPath geo_path;
       AssempleGeometryPath(geo_path, path_seg_vec);
-      if (geo_path.first_path_length < 0.2) {
-        // ILOG_INFO <<"first path length is too short!");
-        continue;
-      }
+      // if (geo_path.first_path_length < 0.2) {
+      //   // ILOG_INFO <<"first path length is too short!");
+      //   continue;
+      // }
       // ILOG_INFO <<"geo_path gear change cnt = " <<
       // geo_path.gear_change_count);
       total_path_vec.emplace_back(geo_path);
