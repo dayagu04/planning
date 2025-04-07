@@ -1,7 +1,6 @@
 
 #include "point_cloud_obstacle.h"
 
-#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "aabb2d.h"
 #include "log_glog.h"
 #include "modules/apa_function/apa_world/apa_obstacle.h"
@@ -26,16 +25,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
   Polygon2D ego_global_polygon;
-  float veh_x_buffer = 0.3;
-  float veh_y_buffer = 0.11;
 
-  GenerateUpLeftFrameBox(
-      &ego_local_polygon,
-      -static_cast<float>(config.rear_overhanging) - veh_x_buffer,
-      -static_cast<float>(config.max_car_width / 2) - veh_y_buffer,
-      static_cast<float>(config.car_length) -
-          static_cast<float>(config.rear_overhanging) + veh_x_buffer,
-      static_cast<float>(config.max_car_width / 2) + veh_y_buffer);
+  GetCompactCarPolygonByParam(&ego_local_polygon, 1e-3, 1e-3);
   ULFLocalPolygonToGlobal(&ego_global_polygon, &ego_local_polygon, ego_start);
 
   // generate local obs
@@ -58,8 +49,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   float slot_x_buffer = 1.0;
   float slot_y_buffer = 0.05;
   float safe_slot_width =
-      std::max(slot_width,
-               static_cast<float>(config.max_car_width) + veh_x_buffer) +
+      std::max(slot_width, static_cast<float>(config.max_car_width) + 0.1f) +
       slot_y_buffer;
   float safe_slot_length =
       std::max(slot_length, static_cast<float>(config.car_length)) +
@@ -71,7 +61,6 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   Pose2D global;
   Pose2D local;
   bool is_collision;
-  GJK2DInterface gjk;
   planning::PointCloudObstacle* obs;
 
   // fusion obj
@@ -115,7 +104,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
 
       // delete by ego
       if (config.astar_config.enable_delete_occ_in_ego) {
-        gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
+        gjk_.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                         Position2D(local.x, local.y));
 
         if (is_collision) {
@@ -164,7 +153,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
 
       // delete by ego
       if (config.astar_config.enable_delete_occ_in_ego) {
-        gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
+        gjk_.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                         Position2D(local.x, local.y));
 
         if (is_collision) {
@@ -231,8 +220,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
 
           // delete by ego
           if (config.astar_config.enable_delete_occ_in_ego) {
-            gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
-                                            Position2D(local.x, local.y));
+            gjk_.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
+                                             Position2D(local.x, local.y));
 
             if (is_collision) {
               // ILOG_INFO << "xy " << local.x << " " << local.y
@@ -298,10 +287,21 @@ void PointCloudObstacleTransform::SampleInLineSegment(
 
 void PointCloudObstacleTransform::GenerateLocalObstacle(
     std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-    ParkObstacleList& obs_list) {
+    ParkObstacleList& obs_list, const Pose2D& ego_pose,
+    const cdl::AABB& slot_box, const bool delete_slot_obs) {
   if (obs_manager == nullptr) {
     return;
   }
+
+  Polygon2D ego_local_polygon;
+  GetCompactCarPolygonByParam(&ego_local_polygon, 1e-3, 1e-3);
+
+  Polygon2D ego_global_polygon;
+  ULFLocalPolygonToGlobal(&ego_global_polygon, &ego_local_polygon, ego_pose);
+
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
+  bool is_collision;
+  Position2D position;
 
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
@@ -314,8 +314,22 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 
     for (const auto& pt : pair.second.GetPtClout2dLocal()) {
-      obs.points.emplace_back(
-          Position2D(static_cast<float>(pt.x()), static_cast<float>(pt.y())));
+      if (delete_slot_obs && slot_box.contain(cdl::Vector2r(pt.x(), pt.y()))) {
+        continue;
+      }
+
+      position.x = static_cast<float>(pt.x());
+      position.y = static_cast<float>(pt.y());
+      if (config.astar_config.enable_delete_occ_in_ego) {
+        gjk_.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
+                                         position);
+
+        if (is_collision) {
+          continue;
+        }
+      }
+
+      obs.points.emplace_back(position);
     }
 
     pair.second.GenerateLocalBoundingbox(&obs.box);
@@ -333,42 +347,56 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   return;
 }
 
-void PointCloudObstacleTransform::GenerateLocalObstacle(
-    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-    ParkObstacleList& obs_list, cdl::AABB& box) {
-  if (obs_manager == nullptr) {
-    return;
-  }
+void PointCloudObstacleTransform::GetCompactCarPolygonByParam(
+    Polygon2D* box, const float lat_buffer, const float lon_buffer) {
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
 
-  planning::PointCloudObstacle obs;
-  for (auto& pair : obs_manager->GetObstacles()) {
-    if (pair.second.GetObsMovementType() ==
-        apa_planner::ApaObsMovementType::MOTION) {
-      continue;
-    }
+  box->vertexes[0].x =
+      static_cast<float>(config.car_vertex_x_vec[2]) + lon_buffer;
+  box->vertexes[0].y =
+      static_cast<float>(config.car_vertex_y_vec[2]) + lat_buffer;
 
-    obs.points.clear();
-    obs.points.reserve(pair.second.GetPtClout2dLocal().size());
+  box->vertexes[1].x =
+      static_cast<float>(config.car_vertex_x_vec[0]) + lon_buffer;
+  box->vertexes[1].y =
+      static_cast<float>(config.car_vertex_y_vec[0]) + lat_buffer;
 
-    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
-      if (box.contain(cdl::Vector2r(pt.x(), pt.y()))) {
-        continue;
-      }
+  box->vertexes[2].x =
+      static_cast<float>(config.car_vertex_x_vec[15]) - lon_buffer;
+  box->vertexes[2].y =
+      static_cast<float>(config.car_vertex_y_vec[15]) + lat_buffer;
 
-      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
-    }
+  box->vertexes[3].x =
+      static_cast<float>(config.car_vertex_x_vec[13]) - lon_buffer;
+  box->vertexes[3].y =
+      static_cast<float>(config.car_vertex_y_vec[13]) + lat_buffer;
 
-    pair.second.GenerateLocalBoundingbox(&obs.box);
+  box->vertexes[4].x =
+      static_cast<float>(config.car_vertex_x_vec[12]) - lon_buffer;
+  box->vertexes[4].y =
+      static_cast<float>(config.car_vertex_y_vec[12]) - lat_buffer;
 
-    if (pair.second.GetPtClout2dLocal().size() > 0) {
-      GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
-    } else {
-      obs.envelop_polygon = pair.second.GetPolygon2DLocal();
-    }
+  box->vertexes[5].x =
+      static_cast<float>(config.car_vertex_x_vec[10]) - lon_buffer;
+  box->vertexes[5].y =
+      static_cast<float>(config.car_vertex_y_vec[10]) - lat_buffer;
 
-    obs.obs_type = pair.second.GetObsAttributeType();
-    obs_list.point_cloud_list.emplace_back(obs);
-  }
+  box->vertexes[6].x =
+      static_cast<float>(config.car_vertex_x_vec[5]) + lon_buffer;
+  box->vertexes[6].y =
+      static_cast<float>(config.car_vertex_y_vec[5]) - lat_buffer;
+
+  box->vertexes[7].x =
+      static_cast<float>(config.car_vertex_x_vec[3]) + lon_buffer;
+  box->vertexes[7].y =
+      static_cast<float>(config.car_vertex_y_vec[3]) - lat_buffer;
+
+  box->vertex_num = 8;
+
+  box->shape = PolygonShape::multi_edge;
+  UpdatePolygonValue(box, NULL, 0, false, POLYGON_MAX_RADIUS);
+
+  box->min_tangent_radius = config.car_width / 2 + lat_buffer;
 
   return;
 }

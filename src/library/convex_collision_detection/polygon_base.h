@@ -17,10 +17,11 @@ namespace planning {
 #define POLYGON_MAX_RADIUS (1000000.0)
 
 enum class PolygonShape {
-  multi_edge,
-  box,
   point,
   line_segment,
+  triangle,
+  box,
+  multi_edge,
 };
 
 struct Polygon2D {
