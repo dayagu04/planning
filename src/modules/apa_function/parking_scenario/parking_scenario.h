@@ -399,7 +399,9 @@ class ParkingScenario {
   virtual const double CalRemainDistFromObs(
       const double safe_dist = 0.3,
       const double lat_buffer = apa_param.GetParam().lat_inflation,
-      const double extra_buffer_when_reversing = 0.068);
+      const double extra_buffer_when_reversing = 0.068,
+      const double dynamic_lat_buffer = 0.368,
+      const bool is_parallel_condition = false);
   virtual const bool PostProcessPath();
 
   // check if need replan
