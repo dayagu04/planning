@@ -275,7 +275,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
   //         IflyTime::Now_s() >
   //     propose_time_threshold;
 
-  if (is_no_lc_request || propose_time_out) {
+  bool is_target_lane_merge_to_origin_lane = IsNeedCancelLCTargetLaneMergeToOriginLane();
+
+  if (is_no_lc_request || propose_time_out || is_target_lane_merge_to_origin_lane) {
     return true;
   }
   return false;
@@ -360,10 +362,19 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   if (execution_time_out) {
     return true;
   }
+
+  bool is_target_lane_merge_to_origin_lane =
+      IsNeedCancelLCTargetLaneMergeToOriginLane();
+  if (is_target_lane_merge_to_origin_lane) {
+    return true;
+  }
+
   // check if gap is dangerous
   CheckLaneChangeBackValid(lane_change_direction);
+
   // check if driver cancel
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
+
   // NOTICE: some cancel needs to check whether lane change can be cancelled
   if ((lane_change_stage_info_.lc_should_back || is_no_lc_request)) {
     return true;
@@ -1147,6 +1158,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   pre_ego_l_ = 0;
   lc_valid_cnt_ = 0;
   lc_back_cnt_ = 0;
+  lc_target_lane_merge_to_origin_lane_cnt_ = 0;
   lc_invalid_track_.reset();
   lc_back_track_.reset();
   must_change_lane_ = false;
@@ -2822,5 +2834,61 @@ std::unique_ptr<Trajectory1d> LaneChangeStateMachineManager::MakeVirtualZeroAccC
     virtual_zero_acc_curve->AppendSegment(a_next, dt);
   }
   return virtual_zero_acc_curve;
+}
+
+bool LaneChangeStateMachineManager::IsTargetLaneMergeToOriginLane() const {
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+
+  bool is_merge_region = ego_lane_road_right_decider_output.is_merge_region;
+  bool cur_lane_is_continue =
+      ego_lane_road_right_decider_output.cur_lane_is_continue;
+  int merge_lane_virtual_id =
+      ego_lane_road_right_decider_output.merge_lane_virtual_id;
+
+  const int fix_lane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
+  const int origin_lane_virtual_id = lc_lane_mgr_->origin_lane_virtual_id();
+  const int target_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
+
+  const auto &current_lane_virtual_id = session_->environmental_model()
+                                            .get_virtual_lane_manager()
+                                            ->current_lane_virtual_id();
+  
+  bool is_same_lane = current_lane_virtual_id == fix_lane_virtual_id;
+
+  if (transition_info_.lane_change_status == kLaneChangeExecution) {
+    if (is_merge_region && 
+        !cur_lane_is_continue &&
+        origin_lane_virtual_id == merge_lane_virtual_id &&
+        is_same_lane) {
+      return true;
+    }
+  } else if (transition_info_.lane_change_status == kLaneChangePropose) {
+    if (is_merge_region && 
+        cur_lane_is_continue &&
+        target_lane_virtual_id == merge_lane_virtual_id &&
+        is_same_lane) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool LaneChangeStateMachineManager::IsNeedCancelLCTargetLaneMergeToOriginLane() {
+  bool is_target_lane_merge_to_origin_lane = IsTargetLaneMergeToOriginLane();
+  
+  if (is_target_lane_merge_to_origin_lane) {
+    lc_target_lane_merge_to_origin_lane_cnt_++;
+    if (lc_target_lane_merge_to_origin_lane_cnt_ >= 3) {
+      lane_change_stage_info_.lc_back_reason =
+          "target lane merge to origin lane";
+      return true;
+    }
+  } else {
+    lc_target_lane_merge_to_origin_lane_cnt_ = 0;
+  }
+
+  return false;
 }
 }  // namespace planning

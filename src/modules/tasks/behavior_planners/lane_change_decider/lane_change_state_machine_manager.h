@@ -193,6 +193,10 @@ class LaneChangeStateMachineManager {
   double CalculateLCSafetyCheckTime() const;
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(const std::array<double, 3> init_lon_state) const;
 
+  bool IsTargetLaneMergeToOriginLane() const;
+
+  bool IsNeedCancelLCTargetLaneMergeToOriginLane();
+
  private:
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
@@ -206,6 +210,7 @@ class LaneChangeStateMachineManager {
   double pre_lane_change_finish_time_ = 0.0;
   int lc_back_cnt_ = 0;
   int lc_valid_cnt_ = 0;
+  int lc_target_lane_merge_to_origin_lane_cnt_ = 0;
   RequestType map_turn_signal_ = NO_CHANGE;
 
   TrackInfo lc_invalid_track_;
