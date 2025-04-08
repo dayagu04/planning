@@ -20,8 +20,10 @@ constexpr double lower_urgent_distance = 0.5;
 constexpr double upper_urgent_distance = 1.5;
 constexpr double lower_urgent_speed = 20.0 / 3.6;
 constexpr double upper_urgent_speed = 80.0 / 3.6;
-constexpr double upper_urgent_scale = 14.0;
-constexpr double lower_urgent_scale = 10.0;
+constexpr double upper_more_urgent_scale = 14.0;
+constexpr double lower_more_urgent_scale = 10.0;
+constexpr double upper_urgent_scale = 10.0;
+constexpr double lower_urgent_scale = 5.0;
 }  // namespace
 
 WeightMaker::WeightMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -143,18 +145,19 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
         lower_urgent_distance, lower_urgent_speed, upper_urgent_distance,
         upper_urgent_speed, ego_speed);
     if (agent_speed - ego_speed < kMoreUrgentSpeedThres &&
-        agent_s - ego_s_max_decel_to_front < urgent_distance) {
+        agent_s - ego_s_max_decel < urgent_distance) {
       is_more_urgent_ = true;
       urgent_scale = planning_math::LerpWithLimit(
-          upper_urgent_scale, 0.0, lower_urgent_scale, urgent_distance,
-          agent_s - ego_s_max_decel_to_front);
+          upper_more_urgent_scale, 0.0, lower_more_urgent_scale,
+          urgent_distance, agent_s - ego_s_max_decel);
       JSON_DEBUG_VALUE("closest_agent_id", closest_agent_id)
-      JSON_DEBUG_VALUE("min_more_urgent_dist", agent_s - ego_s_max_decel_to_front)
+      JSON_DEBUG_VALUE("min_more_urgent_dist", agent_s - ego_s_max_decel)
     } else if (agent_speed - ego_speed < kUrgentSpeedThres &&
                agent_s - ego_s < urgent_distance) {
       is_urgent_ = true;
       urgent_scale = planning_math::LerpWithLimit(
-          7.0, 0.0, 5.0, urgent_distance, agent_s - ego_s);
+          upper_urgent_scale, 0.0, lower_urgent_scale, urgent_distance,
+          agent_s - ego_s);
       JSON_DEBUG_VALUE("closest_agent_id", closest_agent_id)
       JSON_DEBUG_VALUE("min_urgent_dist", agent_s - ego_s)
     }
