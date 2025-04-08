@@ -47,6 +47,7 @@ constexpr double kObsFilterVel = 2.5;
 constexpr double kBlockHeading = 0.17;
 constexpr double kCheckTurningDistance = 10.0;
 constexpr double kMaxCentricOffset = 0.75;
+constexpr double kBackNeededDistance = 5.0;
 };  // namespace
 
 namespace planning {
@@ -316,7 +317,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   }
 
 
-  if ((forward_solid_start_dis_ < obs_end_s_ + 8.0 &&
+  if ((forward_solid_start_dis_ < obs_end_s_ - ego_frenet_boundary_.s_start + kBackNeededDistance &&
        forward_solid_start_dis_ > 0) ||
       (distance_to_cross_walk_ < kMinDisToCrossWalk &&
        distance_to_cross_walk_ > 0.0) ||
@@ -638,7 +639,8 @@ bool LaneBorrowDecider::IsLaneTypeDashedOrMixed(
     const iflyauto::LaneBoundaryType& type) {
   return type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
          type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
-         type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED;
+         type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED||
+         type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
 }
 
 void LaneBorrowDecider::UpdateJunctionInfo() {
@@ -1213,7 +1215,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCrossingCondition() {
   }
 
 
-  if ((forward_solid_start_dis_ < obs_end_s_ + 8.0 &&
+  if ((forward_solid_start_dis_ < obs_end_s_ - ego_frenet_boundary_.s_start + kBackNeededDistance &&
        forward_solid_start_dis_ > 0) ||
       (distance_to_cross_walk_ < kMinDisToCrossWalk &&
        distance_to_cross_walk_ > 0.0) ||
