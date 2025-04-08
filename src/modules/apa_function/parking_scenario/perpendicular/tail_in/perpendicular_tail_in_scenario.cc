@@ -672,7 +672,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
             << "  can not move slot = " << prohibit_move_slot
-            << "  update_slot_move_dist = " << update_slot_move_dist;
+            << "  update_slot_move_dist = " << update_slot_move_dist
+            << "  process_obs_method = "
+            << static_cast<int>(frame_.process_obs_method);
 
   if (update_slot_move_dist) {
     // 重规划时根据障碍物计算终点位置
@@ -1434,6 +1436,15 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
            168.8);
   if (case3_1 && case3_2 && (case3_3 || case3_4)) {
     lat_buffer = std::max(0.146, lat_buffer);
+  }
+
+  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) < 0.4 &&
+      ego_info_under_slot.slot_occupied_ratio > 0.728 &&
+      std::fabs(
+          apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
+          kRad2Deg) < 216.0) {
+    lat_buffer = std::min(0.07, lat_buffer);
   }
 
   return CalRemainDistFromObs(lon_buffer, lat_buffer);
