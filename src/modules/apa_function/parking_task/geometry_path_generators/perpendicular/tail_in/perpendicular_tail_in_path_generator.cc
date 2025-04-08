@@ -1907,7 +1907,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   int i = 0;
   const int max_compensate_line_try_count = 6;
   int compensate_line_try_count = 0;
-  const double compensate_line_length_step = 0.5;
+  const double compensate_line_length_step = 0.25;
   const size_t max_seg_path_count = 222;
   std::vector<geometry_lib::GeometryPath> geometry_path_vec;
   geometry_path_vec.reserve(max_seg_path_count);
