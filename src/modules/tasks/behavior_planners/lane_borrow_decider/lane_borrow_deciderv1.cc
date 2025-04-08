@@ -303,7 +303,20 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToNoBorrow() {
 bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   UpdateJunctionInfo();
 
-  if ((forward_solid_start_dis_ < kMinDisToSolidLane &&
+  if (!UpdateLaneBorrowDirection()) {
+    return false;
+  }
+
+  if (!SelectStaticBlockingObstcales()) {
+    return false;
+  }
+
+  if (!ObstacleDecision()) {
+    return false;
+  }
+
+
+  if ((forward_solid_start_dis_ < obs_end_s_ + 8.0 &&
        forward_solid_start_dis_ > 0) ||
       (distance_to_cross_walk_ < kMinDisToCrossWalk &&
        distance_to_cross_walk_ > 0.0) ||
@@ -316,17 +329,6 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
     return false;
   }
 
-  if (!UpdateLaneBorrowDirection()) {
-    return false;
-  }
-
-  if (!SelectStaticBlockingObstcales()) {
-    return false;
-  }
-
-  if (!ObstacleDecision()) {
-    return false;
-  }
 
   observe_frame_num_++;
   if (observe_frame_num_ < config_.observe_frames) {
@@ -1195,7 +1197,20 @@ bool LaneBorrowDecider::CheckIfLaneBorrowCrossingToBackDriving() {
 bool LaneBorrowDecider::CheckLaneBorrowCrossingCondition() {
   UpdateJunctionInfo();
 
-  if ((forward_solid_start_dis_ < kMinDisToSolidLane &&
+  if (!UpdateLaneBorrowDirection()) {
+    return false;
+  }
+
+  if (!SelectStaticBlockingObstcales()) {
+    return false;
+  }
+
+  if (!ObstacleDecision()) {
+    return false;
+  }
+
+
+  if ((forward_solid_start_dis_ < obs_end_s_ + 8.0 &&
        forward_solid_start_dis_ > 0) ||
       (distance_to_cross_walk_ < kMinDisToCrossWalk &&
        distance_to_cross_walk_ > 0.0) ||
@@ -1208,17 +1223,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCrossingCondition() {
     return false;
   }
 
-  if (!UpdateLaneBorrowDirection()) {
-    return false;
-  }
 
-  if (!SelectStaticBlockingObstcales()) {
-    return false;
-  }
-
-  if (!ObstacleDecision()) {
-    return false;
-  }
 
   observe_frame_num_++;
   if (observe_frame_num_ < config_.observe_frames) {
