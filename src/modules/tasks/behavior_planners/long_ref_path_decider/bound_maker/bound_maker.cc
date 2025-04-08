@@ -21,7 +21,7 @@ constexpr double kSpeedBoundFactor = 1.1;
 constexpr double kPerSecondPlanLenth = 50.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
-constexpr double kBrakeDelayTimeBuffer = 0.3;
+constexpr double kBrakeDelayTimeBuffer = 0.5;
 
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
