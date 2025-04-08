@@ -553,24 +553,32 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       ego_info.g2l_tf);
 
   PointCloudObstacleTransform obstacle_generator;
+  cdl::AABB slot_box;
   if (NeedBlindZonePlanning(ego_info)) {
     const SlotCoord slot_info = ego_info.slot.GetProcessedCornerCoordLocal();
-    cdl::AABB box;
-    double y_buffer = 0.01;
-    box.min_ = cdl::Vector2r(
+    double y_buffer;
+    if (path_planning_fail_num_ == 1) {
+      y_buffer = 0.01;
+    } else if (path_planning_fail_num_ == 2) {
+      // obstacles invade slot too much, delete bigger range obstacle around
+      // slot.
+      y_buffer = 0.1;
+    }
+
+    slot_box.min_ = cdl::Vector2r(
         slot_info.pt_23_mid.x() - 0.01f,
         static_cast<float>(std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) -
                            y_buffer));
-    box.max_ = cdl::Vector2r(
+    slot_box.max_ = cdl::Vector2r(
         slot_info.pt_01_mid.x() + 4.0f,
         static_cast<float>(std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) +
                            y_buffer));
 
     obstacle_generator.GenerateLocalObstacle(
-        apa_world_ptr_->GetObstacleManagerPtr(), obs, box);
+        apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, true);
   } else {
     obstacle_generator.GenerateLocalObstacle(
-        apa_world_ptr_->GetObstacleManagerPtr(), obs);
+        apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, false);
   }
 
   double search_start_time = IflyTime::Now_ms();
@@ -758,13 +766,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
-      if (path_planning_fail_num_ == 0) {
+      path_planning_fail_num_ +=1;
+      if (path_planning_fail_num_ == 1 || path_planning_fail_num_ == 2) {
         res = PathPlannerResult::WAIT_PATH;
       } else {
         res = PathPlannerResult::PLAN_FAILED;
       }
-
-      path_planning_fail_num_ +=1;
 
       // publish fallback path
       GenerateFallBackPath();
@@ -1813,15 +1820,19 @@ const bool NarrowSpaceScenario::IsVehicleOverlapWithSlotLine(
 
 const bool NarrowSpaceScenario::NeedBlindZonePlanning(
     const EgoInfoUnderSlot& ego_info) {
-  if (!apa_param.GetParam().astar_config.enable_blind_zone ||
-      path_planning_fail_num_ != 1) {
+  if (!apa_param.GetParam().astar_config.enable_blind_zone) {
+    return false;
+  }
+
+  if (path_planning_fail_num_ <= 0 || path_planning_fail_num_ >= 3) {
     return false;
   }
 
   double position_y_error = std::fabs(ego_info.cur_pose.pos[1]);
   double position_x_error = std::fabs(ego_info.cur_pose.pos[0]);
   if (position_y_error < ego_info.slot.slot_width_ / 2 &&
-      position_x_error < ego_info.slot.slot_length_) {
+      (position_x_error > 0.0 &&
+       position_x_error < ego_info.slot.slot_length_ + 1.0)) {
     return false;
   }
 
