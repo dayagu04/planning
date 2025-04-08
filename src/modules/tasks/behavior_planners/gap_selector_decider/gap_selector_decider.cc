@@ -337,7 +337,12 @@ GapSelectorStatus GapSelectorDecider::Update() {
   const double ego_v = ego_state_mgr->ego_v();
   std::vector<double> xp_ego_v{10.0, 15.0, 20.0, 25.0};
   double lat_ref_offset = interp(ego_v, xp_ego_v, config_.lat_ref_offset);
-  if (ego_frenet_pose.y > 1e-6) {
+  if (coarse_planning_info.target_state == kLaneChangeCancel) {
+    lat_ref_offset -= 0.05;
+  }
+  if (ego_frenet_pose.y < std::fabs(lat_ref_offset)) {
+    avoid_lat_offset += 0.;
+  } else if (ego_frenet_pose.y >= 1e-6) {
     avoid_lat_offset += lat_ref_offset;
   } else {
     avoid_lat_offset -= lat_ref_offset;
@@ -452,13 +457,19 @@ GapSelectorStatus GapSelectorDecider::Update() {
   } else if (is_lc_back_scene) {
     double lb_end_s{0.0}, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
-    if (remain_lb_time > 1.0) {
-      lb_target_l = std::max(std::fabs(avoid_lat_offset),
-          lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
+    if (ego_frenet_pose.y >= std::fabs(avoid_lat_offset)) {
+      if (ego_frenet_pose.y >= 1e-6) {
+        lb_target_l = std::max(avoid_lat_offset,
+            lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
+      } else {
+        lb_target_l = std::min(avoid_lat_offset,
+            lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
+      }
 
       FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
-                               traj_points);
-      gap_selector_decider_output.gap_selector_trustworthy = true;
+                                traj_points);
+      gap_selector_decider_output.gap_selector_trustworthy =
+          remain_lb_time < 1.0 ? false : true;
     }
   }
 

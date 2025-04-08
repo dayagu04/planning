@@ -603,7 +603,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
        gap_selector_decider_output.gap_selector_trustworthy)) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
-    if ((dist_to_second_stage < -1e-6) && !is_LC_HOLD) {
+    if ((dist_to_second_stage < -1e-6 ||
+        !gap_selector_decider_output.gap_selector_trustworthy) && !is_LC_HOLD) {
       HandleAvoidScene(traj_points, dynamic_ref_buffer);
     }
   } else {
