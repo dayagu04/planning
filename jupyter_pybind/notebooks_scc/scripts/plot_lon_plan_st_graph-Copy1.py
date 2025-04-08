@@ -4,6 +4,7 @@ sys.path.append("../lib/")
 from load_local_view import *
 from load_lon_st_graph import *
 from lib.load_ros_bag import LoadRosbag
+from bokeh.resources import INLINE
 sys.path.append('../..')
 sys.path.append('../../../')
 
@@ -12,7 +13,7 @@ bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241126/20241
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 #bag_loader = LoadCyberbag(bag_path)
 bag_loader = LoadRosbag(bag_path)
