@@ -545,8 +545,11 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
     const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
   const double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
-
-  if (std::fabs(obs_center_l) <= kMaxCentricOffset) {
+  double scale = 1.0;
+  if(lane_borrow_status_!=kNoLaneBorrow){
+    scale = 0.5;
+  }
+  if (std::fabs(obs_center_l) <= scale* kMaxCentricOffset) {
     if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {
       obs_direction_map_[obs_id].second += 1;
       return obs_direction_map_[obs_id].first;
@@ -554,7 +557,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
       obs_direction_map_[obs_id].first = NO_BORROW;
       return NO_BORROW;
     }
-  } else if (obs_center_l < -kMaxCentricOffset) {
+  } else if (obs_center_l < -scale* kMaxCentricOffset) {
     obs_direction_map_[obs_id].first = LEFT_BORROW;
     obs_direction_map_[obs_id].second = 0;
     return LEFT_BORROW;
