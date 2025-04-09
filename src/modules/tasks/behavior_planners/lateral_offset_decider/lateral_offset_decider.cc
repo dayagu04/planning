@@ -185,12 +185,12 @@ void LateralOffsetDecider::GenerateOutput() {
       }
     }
   }
-  if (lateral_offset_decider_output.avoid_id != -1) {
-    if (std::find(lateral_offset_decider_output.avoid_ids.begin(),
-        lateral_offset_decider_output.avoid_ids.end(),
-        lateral_offset_decider_output.avoid_id) == lateral_offset_decider_output.avoid_ids.end()) {
-      lateral_offset_decider_output.avoid_ids.emplace_back(lateral_offset_decider_output.avoid_id);
-    }
-  }
+  // if (lateral_offset_decider_output.avoid_id != -1) {
+  //   if (std::find(lateral_offset_decider_output.avoid_ids.begin(),
+  //       lateral_offset_decider_output.avoid_ids.end(),
+  //       lateral_offset_decider_output.avoid_id) == lateral_offset_decider_output.avoid_ids.end()) {
+  //     lateral_offset_decider_output.avoid_ids.emplace_back(lateral_offset_decider_output.avoid_id);
+  //   }
+  // }
 }
 }  // namespace planning

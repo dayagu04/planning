@@ -2729,6 +2729,15 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
       ego_frenet_state_.planning_init_point().frenet_state.r;
   for (int i = 0; i < frenet_soft_bounds.size(); i++) {
     // lower bound 是否影响自车
+    auto find_object = reference_path_ptr_->get_obstacles_map().find(soft_bounds_info[i].first.id);
+    if (find_object == reference_path_ptr_->get_obstacles_map().end()) {
+      continue;
+    }
+    auto frenet_obstacle = find_object->second;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+          frenet_obstacle->frenet_obstacle_boundary().s_end) {
+      continue;
+    }
     if ((soft_bounds_info[i].first.type == BoundType::DYNAMIC_AGENT ||
          soft_bounds_info[i].first.type == BoundType::AGENT) &&
          soft_bounds_info[i].first.id != -100) {
@@ -2742,6 +2751,15 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
       }
     }
     // upper bound 是否影响自车
+    find_object = reference_path_ptr_->get_obstacles_map().find(soft_bounds_info[i].second.id);
+    if (find_object == reference_path_ptr_->get_obstacles_map().end()) {
+      continue;
+    }
+    frenet_obstacle = find_object->second;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+          frenet_obstacle->frenet_obstacle_boundary().s_end) {
+      continue;
+    }
     if ((soft_bounds_info[i].second.type == BoundType::DYNAMIC_AGENT ||
          soft_bounds_info[i].second.type == BoundType::AGENT) &&
          soft_bounds_info[i].second.id != -100) {
