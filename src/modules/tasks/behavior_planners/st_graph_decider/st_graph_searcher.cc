@@ -587,11 +587,12 @@ StSearchNode StGraphSearcher::GenerateStartNode(
         lower_bound.boundary_id(), speed::STBoundary::DecisionType::OVERTAKE));
   }
 
+  start_node.set_upper_bound(upper_bound);
+  start_node.set_lower_bound(lower_bound);
   start_node.set_decision_table(start_decision_table);
   // Same dicision table for start node.
   start_node.set_current_decision_table(start_decision_table);
   start_node.set_is_valid(true);
-
   return start_node;
 }
 

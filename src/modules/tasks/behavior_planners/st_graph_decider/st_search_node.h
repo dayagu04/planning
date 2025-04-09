@@ -14,7 +14,12 @@ class StSearchNode {
   StSearchNode() = default;
   StSearchNode(double s, double t, double vel, double s_step, double t_step,
                double vel_step, bool only_s_t_hash = false);
+  StSearchNode(const StSearchNode& st_search_node);
+  StSearchNode(StSearchNode&& st_search_node);
   ~StSearchNode() = default;
+
+  // copy assignment
+  StSearchNode& operator=(const StSearchNode& st_search_node);
 
   struct EdgeSubCost {
     double fathernode_to_childnode_cost_yield = 0.0;
