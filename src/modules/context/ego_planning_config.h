@@ -1677,8 +1677,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
   double valid_perception_range = 60.0;
-  std::vector<double> map_qxy{80.0, 400.0, 500.0};
-  std::vector<double> map_qtheta{3000.0, 5000.0, 8000.0, 15000.0, 30000.0};
+  std::vector<double> map_qxy{80.0, 80.0, 400.0, 500.0};
+  std::vector<double> map_qtheta{3000.0, 5000.0, 7000.0, 10000.0};
   std::vector<double> map_qjerk1{45.0, 10.0, 100.0, 300.0, 600.0};
   std::vector<double> map_qjerk2{10.0, 5.0, 50.0, 150.0, 400.0};
   double end_ratio_for_qrefxy = 1.0;

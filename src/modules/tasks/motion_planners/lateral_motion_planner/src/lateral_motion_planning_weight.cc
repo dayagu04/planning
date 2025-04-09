@@ -390,12 +390,12 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
 
 void LateralMotionPlanningWeight::MakeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
-  std::vector<double> xp_v{5.0, 10.0, 20.0};
+  std::vector<double> xp_v{1.0, 5.0, 10.0, 20.0};
   double q_xy = planning::interp(ego_vel_, xp_v, config_.map_qxy);
   std::vector<double> xp_xy{0.2, 0.4, 0.8, 1.5, 3.0};
-  std::vector<double> fp_ratio_to_xy1{1.0, 0.9,0.5, 0.25, 0.15};
+  std::vector<double> fp_ratio_to_xy1{1.0, 0.9,0.8, 0.6, 0.5};
   std::vector<double> xp_theta{0.5, 2.0, 5.0};
-  std::vector<double> fp_ratio_to_xy2{1.0, 0.5, 0.2};
+  std::vector<double> fp_ratio_to_xy2{1.0, 0.5, 0.3};
   double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
   double q_xy_ratio1 =
     planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
@@ -405,14 +405,14 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   planning_input.set_q_ref_y(q_xy_ratio1 * q_xy_ratio2 * q_xy);
 
 
-  std::vector<double> fp_ratio_to_theta1{1.0, 0.9, 0.5, 0.2, 0.1};
-  std::vector<double> fp_ratio_to_theta2{1.0, 1.2, 2.0};
-  std::vector<double> fp_ratio_to_theta3{1.0, 2.0, 4.0};
-  double q_theta = planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy, config_.map_qtheta);
+  std::vector<double> fp_ratio_to_theta1{1.0, 1.1, 1.3, 1.5, 1.8};
+  std::vector<double> fp_ratio_to_theta2{1.0, 1.3, 1.8, 2.5, 4.0};
+  std::vector<double> fp_ratio_to_theta3{1.0, 1.5, 3.0};
+  double q_theta = planning::interp(ego_vel_, xp_v, config_.map_qtheta);
   double q_theta_ratio1 =
-    planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta1);
+    planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy, fp_ratio_to_theta1);
   double q_theta_ratio2 =
-    planning::interp(ego_vel_, xp_v, fp_ratio_to_theta2);
+    planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta2);
   double q_theta_ratio3 =
     planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_theta3);
   planning_input.set_q_ref_theta(q_theta_ratio1 * q_theta_ratio2 * q_theta_ratio3 * q_theta);
