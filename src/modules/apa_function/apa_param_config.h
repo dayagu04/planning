@@ -39,6 +39,9 @@ struct AstarParkingConfig {
   // 车辆到中线的距离小于阈值, 可以使用spiral/dubins库外揉库.
   // 注意：要限制库外揉库API的使用，该API只会让车辆来到中心线附近，不能保证车辆能正确进库.
   double adjust_ego_y_thresh_outside_slot;
+
+  // If ego is in blind zone, ignore some obstacles.
+  bool enable_blind_zone;
 };
 
 struct ParkingSpeedConfig {
@@ -47,6 +50,12 @@ struct ParkingSpeedConfig {
   double min_cruise_speed;
   // If obs dist is smaller than this value, add speed limit.
   double obs_dist_for_speed_limit;
+
+  // speed limit
+  double acc_upper = 0.51;
+  double acc_lower = -2.0;
+  double jerk_upper = 7.0;
+  double jerk_lower = -7.0;
 };
 
 // todo
@@ -212,7 +221,7 @@ struct ApaParameters {
   double occupied_pt_outside_dy = 0.0;
   double occupied_pt_inside_dx = 0.3;
   double occupied_pt_inside_dy = 0.0;
-  bool force_both_side_occupied = true;
+  bool enable_use_dynamic_obs = true;
   double safe_threshold = 0.2;
   double virtual_obs_y_pos = 2.5;
   double virtual_obs_x_pos = 2.68;
@@ -296,7 +305,7 @@ struct ApaParameters {
   double last_update_slot_occupied_ratio = 0.836;
 
   // path planner params
-  bool new_itervative_solution = false;
+  bool use_average_obs_dist = false;
   double prepare_max_reverse_heading_err = 1.68;
   double prepare_line_min_x_offset_slot = 7.2;
   double prepare_line_dx_offset_slot = 0.1;
@@ -384,7 +393,7 @@ struct ApaParameters {
   double min_slot_release_long_dist_slot2mirror = 3.86;
   double min_parallel_vis_slot_release_long_dist_slot2mirror = 1.87;
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
-  double max_dist_from_slot2car_release = 7.68;
+  double easy_slot_release_channel_width = 7.68;
 
   double terminal_length = 1.2;
   double limiter_length = 0.0;

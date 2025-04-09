@@ -168,7 +168,7 @@ fig1.js_on_event(Tap, callback)
 
 # start drawing debug info
 fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible = False)
-# fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = False)
+fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = True)
 fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'Car Path', visible = True)
 
 # target slot
@@ -489,7 +489,8 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       parallel_planning_py.SampleAllDebugPaths()
       x_debug_paths = parallel_planning_py.GetDebugPathsX()
       y_debug_paths = parallel_planning_py.GetDebugPathsY()
-      # 将 C++ 返回的二维数据转换为 Python 列表列表格式
+      print("x_debug_paths size = ", len(x_debug_paths))
+
       x_vec = [list(x_path) for x_path in x_debug_paths]
       y_vec = [list(y_path) for y_path in y_debug_paths]
       data_all_debug_path.data.update({

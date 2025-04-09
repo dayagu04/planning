@@ -4,21 +4,21 @@ namespace planning {
 
 std::string GetRSRequestType(const RSPathRequestType type) {
   switch (type) {
-    case RSPathRequestType::gear_switch_less_than_twice:
+    case RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE:
       return "gear_switch_less_than_twice";
-    case RSPathRequestType::all_path_forbid_forward:
+    case RSPathRequestType::ALL_PATH_FORBID_FORWARD:
       return "all_path_forbid_forward";
-    case RSPathRequestType::all_path_forbid_reverse:
+    case RSPathRequestType::ALL_PATH_FORBID_REVERSE:
       return "all_path_forbid_reverse";
-    case RSPathRequestType::first_path_forbid_forward:
+    case RSPathRequestType::FIRST_PATH_FORBID_FORWARD:
       return "first_path_forbid_forward";
-    case RSPathRequestType::first_path_forbid_reverse:
+    case RSPathRequestType::FIRST_PATH_FORBID_REVERSE:
       return "first_path_forbid_reverse";
-    case RSPathRequestType::forbid_gear_change:
+    case RSPathRequestType::FORBID_GEAR_CHANGE:
       return "forbid_gear_change";
-    case RSPathRequestType::last_path_forbid_forward:
+    case RSPathRequestType::LAST_PATH_FORBID_FORWARD:
       return "last_path_forbid_forward";
-    case RSPathRequestType::last_path_forbid_reverse:
+    case RSPathRequestType::LAST_PATH_FORBID_REVERSE:
       return "last_path_forbid_reverse";
     default:
       break;

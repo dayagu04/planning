@@ -40,18 +40,16 @@ static double kRearDetaXMagWhenBothSidesVacant = 0.2;
 static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.2;
 static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
-
 static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
-
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
-
 static double kMinChannelYMagIdentification = 3.3;
-
 static double kExtendLengthOutsideSlot = 0.4;
+static double kDeletedObsDistOutSlot = 0.3;
+static double kDeletedObsDistInSlot = 0.10;
 static double kTBoundarySampleDist = 0.38;
 static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
@@ -75,7 +73,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetSimuParam().force_plan && CheckPlanSkip()) {
+  if (CheckPlanSkip()) {
     return;
   }
 
@@ -117,8 +115,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
   }
 
-  // update remain dist
-  UpdateRemainDist(safe_uss_remain_dist, lat_buffer, 0.0);
+  // calculate remain dist according to plan path
+  frame_.remain_dist_path = CalRemainDistFromPath();
+
+  // calculate remain dist uss according to uss
+  frame_.remain_dist_obs =
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -447,7 +449,8 @@ const bool ParallelParkInScenario::GenTlane() {
       }
 
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-              obs_pt_local, ego_info_under_slot.cur_pose, 0.3)) {
+              obs_pt_local, ego_info_under_slot.cur_pose,
+              kDeletedObsDistOutSlot)) {
         // in_ego_cnt++;
         continue;
       }
@@ -700,6 +703,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   //                         c-------------D
 
   apa_world_ptr_->GetCollisionDetectorPtr()->Reset();
+  const auto& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   // set T-Boundary obstacles
   const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
@@ -728,9 +733,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
                                                     channel_point_2);
 
   // sample channel boundary line
-  std::vector<Eigen::Vector2d> channel_obstacle_vec;
-  pnc::geometry_lib::SamplePointSetInLineSeg(channel_obstacle_vec, channel_line,
+  std::vector<Eigen::Vector2d> channel_line_obs_vec;
+  std::vector<Eigen::Vector2d> filtered_channel_obs_vec;
+  pnc::geometry_lib::SamplePointSetInLineSeg(channel_line_obs_vec, channel_line,
                                              kChannelSampleDist);
+  for (const auto& obs : channel_line_obs_vec) {
+    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+            obs, ego_info_under_slot.cur_pose, kDeletedObsDistOutSlot)) {
+      filtered_channel_obs_vec.emplace_back(obs);
+    }
+  }
 
   for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
     // add obs near channel
@@ -743,10 +755,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
             channel_point_1.y());
 
     if (channel_y_condition) {
-      channel_obstacle_vec.emplace_back(obstacle_point_slot);
+      filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
 
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
-                                  t_lane_.slot_length + 3.0)) {
+                                  t_lane_.slot_length + 3.5)) {
         if (t_lane_.slot_side_sgn > 0.0) {
           t_lane_.channel_y =
               std::min(obstacle_point_slot.y(), t_lane_.channel_y);
@@ -758,7 +770,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     }
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
+      filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -772,11 +784,17 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   std::vector<Eigen::Vector2d> point_set;
   std::vector<Eigen::Vector2d> tlane_obstacle_vec;
+
   for (const auto& line : tlane_line_vec) {
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
                                                kTBoundarySampleDist);
-    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
-                              point_set.end());
+
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistOutSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
   }
 
   // tlane vertical line
@@ -820,8 +838,13 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   for (const auto& line : tlane_line_vec) {
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
                                                kTBoundarySampleDist);
-    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
-                              point_set.end());
+
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
   }
 
   for (const auto& obs_pos : obs_pt_local_vec_) {
@@ -859,29 +882,33 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
 
   point_set.clear();
+  tlane_obstacle_vec.clear();
   tlane_line.SetPoints(C_curb, D_curb);
   pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
                                              kTBoundarySampleDist);
 
+  for (const auto& obs : point_set) {
+    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+            obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+      tlane_obstacle_vec.emplace_back(obs);
+    }
+  }
+
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      point_set, CollisionDetector::CURB_OBS);
+      tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 }
 
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // construct input
-
-  ParallelPathGenerator::Input path_planner_input;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  GeometryPathInput path_planner_input;
   path_planner_input.tlane = t_lane_;
   path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = frame_.is_replan_first;
   path_planner_input.is_complete_path =
       apa_world_ptr_->GetSimuParam().is_complete_path;
-
-  const auto& ego_slot_info =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-
-  path_planner_input.ego_pose = ego_slot_info.cur_pose;
-  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
+  path_planner_input.ego_info_under_slot = ego_info_under_slot;
 
   if (frame_.is_replan_first) {
     // temprarily give driving gear
@@ -894,7 +921,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     path_planner_input.path_planner_state =
         ParallelPathGenerator::PrepareStepPlan;
-  } else if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio &&
+  } else if (path_planner_input.ego_info_under_slot.slot_occupied_ratio >
+                 kEnterMultiPlanSlotRatio &&
              frame_.in_slot_plan_count == 0) {
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     frame_.current_arc_steer =
@@ -903,7 +931,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             : pnc::geometry_lib::SEG_STEER_LEFT;
   }
 
-  ILOG_INFO << "slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio;
+  ILOG_INFO << "slot_occupied_ratio = "
+            << ego_info_under_slot.slot_occupied_ratio;
   ILOG_INFO << "frame_.in_slot_plan_count = " << frame_.in_slot_plan_count;
 
   path_planner_input.ref_gear = frame_.current_gear;
@@ -962,7 +991,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   }
 
   // enter slot
-  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+  if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     double extend_lenth = 0.0;
     if (current_path_length < apa_param.GetParam().min_path_length) {
       extend_lenth = std::max(
@@ -1007,7 +1036,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   parallel_path_planner_.SampleCurrentPathSeg();
 
   frame_.total_plan_count++;
-  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+  if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     frame_.in_slot_plan_count++;
   }
 
@@ -1031,7 +1060,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       return PathPlannerResult::PLAN_FAILED;
     }
 
-    if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
       // set current arc steer
       frame_.current_arc_steer =
           pnc::geometry_lib::ReverseSteer(frame_.current_arc_steer);
@@ -1123,8 +1152,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     pnc::geometry_lib::PathPoint global_point;
     for (const auto& path_point : optimized_path_vec) {
-      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
@@ -1146,8 +1176,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     pnc::geometry_lib::PathPoint global_point;
     for (const auto& path_point : planner_output.path_point_vec) {
-      global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
-                       ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
@@ -1165,64 +1196,6 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             << current_path_point_global_vec_.size();
 
   return plan_result;
-}
-
-const bool ParallelParkInScenario::CheckSegCompleted() {
-  frame_.is_replan_by_uss = false;
-
-  bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    const auto min_remain_dist =
-        std::min(frame_.remain_dist_uss, frame_.remain_dist);
-
-    if (min_remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-      frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
-
-      if (!frame_.is_replan_by_uss) {
-        ILOG_INFO << "close to target!\n";
-        is_seg_complete = true;
-      } else {
-        ILOG_INFO << "close to obstacle by uss!\n";
-        // uss distance may not be accurate, so wait for a period of time
-        if (frame_.stuck_uss_time >
-            apa_param.GetParam().uss_stuck_replan_wait_time) {
-          is_seg_complete = true;
-        }
-      }
-    }
-  }
-
-  return is_seg_complete;
-}
-
-const bool ParallelParkInScenario::CheckReplan() {
-  if (frame_.is_replan_first == true ||
-      apa_world_ptr_->GetSimuParam().force_plan) {
-    ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
-    return true;
-  }
-
-  if (CheckSegCompleted()) {
-    ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
-    if (frame_.is_replan_by_uss) {
-      frame_.replan_reason = SEG_COMPLETED_USS;
-    }
-    return true;
-  }
-
-  if (frame_.stuck_uss_time > apa_param.GetParam().stuck_replan_time) {
-    ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
-    return true;
-  }
-
-  // Todo: maybe CheckDynamicUpdate
-  frame_.replan_reason = NOT_REPLAN;
-
-  return false;
 }
 
 const bool ParallelParkInScenario::CheckFinished() {
@@ -1368,13 +1341,13 @@ void ParallelParkInScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
-  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)

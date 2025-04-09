@@ -26,8 +26,9 @@ void ParallelOutPathGenerator::Preprocess() {
   using namespace pnc::geometry_lib;
 
   Reset();
-  input_.ego_pose.heading = NormalizeAngle(input_.ego_pose.heading);
-  PrintPose("start pose", input_.ego_pose);
+  input_.ego_info_under_slot.cur_pose.heading =
+      NormalizeAngle(input_.ego_info_under_slot.cur_pose.heading);
+  PrintPose("start pose", input_.ego_info_under_slot.cur_pose);
 
   ILOG_INFO << "input_.is_replan_first = " << input_.is_replan_first;
   ILOG_INFO << "input_.is_complete_path = " << input_.is_complete_path;
@@ -75,7 +76,8 @@ const bool ParallelOutPathGenerator::Update() {
   bool success = false;
   std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
   if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
-    success = InverseSearchLoopInSlot(inversed_path_seg_vec, input_.ego_pose);
+    success = InverseSearchLoopInSlot(inversed_path_seg_vec,
+                                      input_.ego_info_under_slot.cur_pose);
 
     if (success) {
       const auto &start_seg = inversed_path_seg_vec.front();
@@ -90,12 +92,13 @@ const bool ParallelOutPathGenerator::Update() {
 
     if (!success) {
       inversed_path_seg_vec.clear();
-      success =
-          InversedTrialsByGivenGear(inversed_path_seg_vec, input_.ego_pose,
-                                    pnc::geometry_lib::SEG_GEAR_DRIVE);
+      success = InversedTrialsByGivenGear(inversed_path_seg_vec,
+                                          input_.ego_info_under_slot.cur_pose,
+                                          pnc::geometry_lib::SEG_GEAR_DRIVE);
     }
   } else {
-    success = InversedTrialsByGivenGear(inversed_path_seg_vec, input_.ego_pose,
+    success = InversedTrialsByGivenGear(inversed_path_seg_vec,
+                                        input_.ego_info_under_slot.cur_pose,
                                         input_.ref_gear);
   }
 
@@ -124,7 +127,6 @@ const bool ParallelOutPathGenerator::Update() {
   calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
 
   for (const auto &prepare_pose : preparing_pose_vec) {
-
     if (PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
       ReversePathSegVec(park_out_path_vec);
       ILOG_INFO << "park_out_path_vec ----------------------";

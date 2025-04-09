@@ -203,17 +203,17 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   parallel_park_planner.GenTlane();
   parallel_park_planner.GenTBoundaryObstacles();
 
-  ParallelPathGenerator::Input path_planner_input;
+  GeometryPathInput path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
-  path_planner_input.sample_ds = path_ds;
+  path_planner_input.sample_ds = apa_world_ptr->GetSimuParam().sample_ds;
   path_planner_input.is_replan_first = true;
   path_planner_input.is_complete_path = true;
 
   const auto &ego_slot_info = parallel_park_planner.GetFrame().ego_slot_info;
-  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
-                                  ego_slot_info.ego_heading_slot);
-
+  path_planner_input.ego_info_under_slot.slot_occupied_ratio =
+      ego_slot_info.slot_occupied_ratio;
+  path_planner_input.ego_info_under_slot.cur_pose.Set(
+      ego_slot_info.ego_pos_slot, ego_slot_info.ego_heading_slot);
   pBase->SetInput(path_planner_input);
   apa_world_ptr->GetCollisionDetectorPtr()->SetParam(
       CollisionDetector::Paramters(0.2, true));

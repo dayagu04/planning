@@ -14,6 +14,7 @@
 #include "apa_slot_manager.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "collision_detection/uss_obstacle_avoidance.h"
 #include "common.pb.h"
 #include "lateral_path_optimizer.h"
@@ -40,6 +41,7 @@ struct SimulationParam {
   bool is_path_optimization = false;
   bool is_cilqr_optimization = false;
   bool is_reset = false;
+  bool use_average_obs_dist = false;
   double sample_ds = 0.02;
   std::vector<double> target_managed_slot_x_vec;
   std::vector<double> target_managed_slot_y_vec;
@@ -73,12 +75,13 @@ class ApaWorld {
     return retired_slot_manager_ptr_;
   }
 
-  std::shared_ptr<UssObstacleAvoidance> GetUssObstacleAvoidancePtr() {
-    return uss_obstacle_avoider_ptr_;
-  }
-
   std::shared_ptr<CollisionDetector> GetCollisionDetectorPtr() {
     return collision_detector_ptr_;
+  }
+
+  const std::shared_ptr<CollisionDetectorInterface>&
+  GetCollisionDetectorInterfacePtr() const {
+    return collision_detector_interface_ptr_;
   }
 
   std::shared_ptr<LateralPathOptimizer> GetLateralPathOptimizerPtr() {
@@ -120,9 +123,9 @@ class ApaWorld {
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
   // will be retired
   std::shared_ptr<SlotManager> retired_slot_manager_ptr_;
-  std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
+  std::shared_ptr<CollisionDetectorInterface> collision_detector_interface_ptr_;
 
   SimulationParam simu_param_;
   const LocalView* local_view_ptr_ = nullptr;

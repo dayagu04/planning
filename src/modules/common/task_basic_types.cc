@@ -10,6 +10,8 @@ const std::string BoundType2String(BoundType in) {
       return "LANE";
     case BoundType::AGENT:
       return "AGENT";
+    case BoundType::REAR_AGENT:
+      return "REAR_AGENT";
     case BoundType::DYNAMIC_AGENT:
       return "DYNAMIC_AGENT";
     case BoundType::ADJACENT_AGENT:

@@ -62,6 +62,8 @@ class ApaMeasureDataManager final {
   const Pose2D GetPose() { return Pose2D(pos_[0], pos_[1], heading_); }
 
  private:
+  // drive gear, vel is positive
+  // reverse gear, vel is negative
   double vel_ = 0.0;
   Eigen::Vector2d pos_ = Eigen::Vector2d::Zero();
   double heading_ = 0.0;
@@ -75,12 +77,15 @@ class ApaMeasureDataManager final {
   double car_static_timer_by_vel_normal_ = 0.0;
   bool static_flag_ = true;
 
+  // left is positive
   double steer_wheel_angle_ = 0.0;
   double front_wheel_angle_ = 0.0;
 
   bool brake_flag_ = false;
 
   bool fold_mirror_flag_ = false;
+
+  double acceleration_ = 0.0;
 };
 }  // namespace apa_planner
 }  // namespace planning

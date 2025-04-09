@@ -169,17 +169,17 @@ struct AvoidInfo {
     is_use_ego_position = avoid_info.is_use_ego_position;
   }
 
-  double normal_left_avoid_threshold;
-  double normal_right_avoid_threshold;
-  double static_left_avoid_threshold;
-  double static_right_avoid_threshold;
+  double normal_left_avoid_threshold = -1000;
+  double normal_right_avoid_threshold = -1000;
+  double static_left_avoid_threshold = -1000;
+  double static_right_avoid_threshold = -1000;
   double desire_lat_offset = 0.0;
   double lat_offset = 0.0;
-  AvoidWay avoid_way;
+  AvoidWay avoid_way = AvoidWay::None;
   bool is_use_ego_position = false;
-  double allow_front_max_opposite_offset;
+  double allow_front_max_opposite_offset = 0;
   int allow_front_max_opposite_offset_id = kDefaultLimitId;
-  double allow_side_max_opposite_offset;
+  double allow_side_max_opposite_offset = 0;
   int allow_side_max_opposite_offset_id = kDefaultLimitId;
 };
 

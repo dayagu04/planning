@@ -57,10 +57,10 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
   }
 
   // TODO: add cautin yield and cross agent decision first
-  // StGraphUtils::DetermineCautionYieldDecision(
-  //     st_graph_input_, st_graph_input.lane_change_status(),
-  //     st_graph_input.lane_change_request(), agent_id_st_boundaries_map_,
-  //     boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
+  StGraphUtils::DetermineCautionYieldDecision(
+       st_graph_input_, st_graph_input->lane_change_status(),
+       st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
+       boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
   // StGraphUtils::SetCrossingAgentCautionYieldDecision(
   //     st_graph_input_, agent_id_st_boundaries_map_,
   //     boundary_id_st_boundaries_map_);
@@ -91,7 +91,7 @@ bool STGraph::InsertAgent(const agent::Agent& agent,
 void STGraph::MakeAgentStBoundaries() {
   ignore_agent_ids_.clear();
   const auto& agents = st_graph_input_->filtered_agents();
-  for (const agent::Agent* agent : agents) {
+  for (const auto agent : agents) {
     if (nullptr == agent) {
       continue;
     }
@@ -103,7 +103,7 @@ void STGraph::MakeAgentStBoundaries() {
     }
   }
 
-  for (const agent::Agent* agent : agents) {
+  for (const auto agent : agents) {
     if (nullptr == agent) {
       continue;
     }
@@ -611,18 +611,20 @@ void STGraph::BackwardExtendStBoundaries() {
       std::vector<trajectory::Trajectory> trajectories;
       const auto origin_trajectories_num = agent->trajectories().size();
       const bool use_origin_trajectories = idx < origin_trajectories_num;
-      if (use_origin_trajectories) {
-        trajectories = agent->trajectories();
-      } else {
-        trajectories = agent->trajectories();
-      }
+      // if (use_origin_trajectories) {
+      //   trajectories = agent->trajectories();
+      // } else {
+      //   trajectories = agent->trajectories();
+      // }
+      trajectories = agent->trajectories();
       if (trajectories.empty()) {
         continue;
       }
-      const auto& trajectory =
-          use_origin_trajectories ? trajectories[idx]
-                                  : trajectories[idx - origin_trajectories_num];
+      // const auto& trajectory =
+      //     use_origin_trajectories ? trajectories[idx]
+      //                             : trajectories[idx - origin_trajectories_num];
 
+      const auto& trajectory = trajectories.front();
       if (trajectory.empty()) {
         continue;
       }

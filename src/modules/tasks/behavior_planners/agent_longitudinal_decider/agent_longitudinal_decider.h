@@ -46,7 +46,15 @@ class AgentLongitudinalDecider : public Task {
                          const double cut_in_lateral_threshold_m,
                          agent::AgentManager* const mutable_agent_manager);
 
-  void DeciderCutOutAgent();
+  void DeciderCutOutAgent(agent::AgentManager* const mutable_agent_manager);
+
+  bool CheckCutOutAgent(const agent::Agent& agent);
+
+  bool HaveCutOutIntention(
+      const agent::Agent& agent,
+      const std::shared_ptr<planning_math::KDPath>& current_lane_coord,
+      const planning_math::PathPoint& agent_matched_point_in_lane,
+      const double agent_trajetory_end_point_l_in_lane);
 
   bool IsLargeAgentCutIn(
       const std::shared_ptr<VirtualLane> ego_lane,
@@ -125,6 +133,9 @@ class AgentLongitudinalDecider : public Task {
   std::unordered_map<int32_t, int32_t> pred_cut_in_agent_count_;
   std::unordered_map<int32_t, int32_t> rule_based_cut_in_agent_count_;
   std::unordered_set<int32_t> current_agent_ids_;
+  // cut-out data
+  std::unordered_map<int32_t, int32_t> steady_cut_out_agent_count_;
+  std::unordered_map<int32_t, int32_t> cut_out_agent_count_;
 
   std::shared_ptr<CrossingAgentDecider> crossing_agent_decider_;
 };

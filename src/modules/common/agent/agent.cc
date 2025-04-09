@@ -17,7 +17,29 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kDecayJerkMps3 = -0.2;
 constexpr double kPredictionHorizon = 5.0;
 }  // namespace
-Agent::Agent() {}
+Agent::Agent(const Agent& agent)
+    : agent_id_(agent.agent_id()),
+      box_(agent.box().center(), agent.box().heading(), agent.box().length(), agent.box().width()),
+      is_static_(agent.is_static()) {
+    x_ = agent.x();
+    y_ = agent.y();
+    theta_ = agent.theta();
+    speed_ = agent.speed();
+    accel_ = agent.accel();
+    length_ = agent.length();
+    width_ = agent.width();
+    type_ = agent.type();
+    fusion_source_ = agent.fusion_source();
+    timestamp_us_ = agent.timestamp_us();
+    timestamp_s_ = agent.timestamp_s();
+
+    is_vru_ = agent.is_vru();
+
+    // 当前默认trajectories_中只存一条轨迹
+    trajectories_.clear();
+    trajectories_ = agent.trajectories();
+
+}
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
              double start_relative_timestamp)
@@ -111,7 +133,7 @@ const double Agent::accel() const { return accel_; }
 void Agent::set_accel(const double accel) { accel_ = accel; }
 
 const planning_math::Box2d& Agent::box() const { return box_; }
-void Agent::set_box(const planning_math::Box2d& box) { box_ = box; }
+void Agent::set_box(const planning_math::Box2d& box) { box_.set_box(box.center(), box.heading(), box.length(),  box.width()); }
 
 const unsigned int Agent::fusion_source() const { return fusion_source_; };
 void Agent::set_fusion_source(const unsigned int fusion_source) {
@@ -175,6 +197,9 @@ void Agent::set_is_prediction_cutin(const bool is_prediction_cutin) {
 
 const bool Agent::is_cutin() const { return is_cutin_; }
 void Agent::set_is_cutin(const bool is_cutin) { is_cutin_ = is_cutin; }
+
+const bool Agent::is_cutout() const { return is_cutout_; }
+void Agent::set_is_cutout(const bool is_cutout) { is_cutout_ = is_cutout; }
 
 const bool Agent::is_rule_base_cutin() const { return is_rule_base_cutin_; }
 void Agent::set_is_rule_base_cutin(const bool is_rule_base_cutin) {

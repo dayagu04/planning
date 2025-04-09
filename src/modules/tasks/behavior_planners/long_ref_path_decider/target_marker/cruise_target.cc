@@ -125,6 +125,7 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::MAP_NEAR_RAMP:
     case SpeedLimitType::MAP_ON_RAMP:
     case SpeedLimitType::INTERSECTION:
+    case SpeedLimitType::Lane_Borrow:
       break;
     default:
       break;

@@ -9,6 +9,7 @@ import boto3
 begin_time = time.time()
 
 config_file_path = os.getenv('CONFIG_FILE_PATH')
+enable_static_fusion = os.getenv('ENABLE_STATIC_FUSION')
 
 with open(config_file_path, "r") as file:
     data = json.load(file)
@@ -78,11 +79,29 @@ except Exception as e:
     print(f"Creating out_dir error: {e}")
 print("Creat out_dir successfully !")
 
+# 运行前置模块
+if (enable_static_fusion == "1"):
+    start_time = time.time()
+    command = f"cd /root/planning/system_integration/components/static_fusion/core/install/staticFusion/bin/ && chmod 777 write_fusionroad_rosbag && ./write_fusionroad_rosbag {file_path}"
+    try:
+        result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as e:
+        print("Run static_fusion Error:", e.stderr)
+    print("Run static_fusion successfully !")
+    # 更新file_path
+    parts = file_path.rsplit('.', 1)
+    if len(parts) == 2:
+        file_path = parts[0] + "_road_fusion.bag"
+    else:
+        print("Run static_fusion Error: file_path中没有找到'.'")
+    end_time = time.time()
+    print(f"Run static_fusion 耗时：{end_time - start_time}秒")
+
 # 运行PP
 start_time = time.time()
 PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 result_path = f"{out_dir}/case_result.json"
-command = f"/root/planning/install/bin/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
+command = f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:

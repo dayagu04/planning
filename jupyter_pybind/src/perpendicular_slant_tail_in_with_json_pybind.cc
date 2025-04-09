@@ -10,9 +10,11 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "apa_slot.h"
+#include "apa_slot_manager.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
 #include "common_c.h"
@@ -45,12 +47,13 @@ void Init() {
 }
 
 void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
-                      int is_complete_path, int force_mid_process_plan, double sample_ds) {
+                      int is_complete_path, int use_average_obs_dist, int force_mid_process_plan, double sample_ds) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
   g_simu_param.is_cilqr_optimization = is_cilqr_enable;
   g_simu_param.is_complete_path = is_complete_path;
+  g_simu_param.use_average_obs_dist = use_average_obs_dist;
   g_simu_param.force_mid_process_plan = force_mid_process_plan;
   g_simu_param.sample_ds = sample_ds;
 }
@@ -230,19 +233,19 @@ std::vector<Eigen::Vector2d> GetObsVec() {
       ParkingScenario::ParkingStatus::PARKING_FAILED) {
     return obs_vec;
   }
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
-      obstacles_map =
-          g_apa_world_ptr->GetCollisionDetectorPtr()->GetObstaclesMap();
-
-  const auto& l2g_tf =
+  const geometry_lib::LocalToGlobalTf& l2g_tf =
       g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
 
-  for (const auto& obs_pair : obstacles_map) {
-    if (obs_pair.first != CollisionDetector::TLANE_OBS) {
+  const std::unordered_map<size_t, ApaObstacle>& obs =
+      g_apa_world_ptr->GetObstacleManagerPtr()->GetObstacles();
+
+  for (const auto& pair : obs) {
+    if (pair.second.GetObsAttributeType() !=
+        ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
       continue;
     }
-    for (const auto& obstacle : obs_pair.second) {
-      obs_vec.emplace_back(l2g_tf.GetPos(obstacle));
+    for (const Eigen::Vector2d& pt : pair.second.GetPtClout2dLocal()) {
+      obs_vec.emplace_back(l2g_tf.GetPos(pt));
     }
   }
   return obs_vec;

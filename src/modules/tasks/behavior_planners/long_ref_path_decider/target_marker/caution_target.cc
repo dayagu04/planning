@@ -20,6 +20,7 @@ CautionTarget::CautionTarget(const SpeedPlannerConfig& config,
   GenerateUpperBoundInfo();
   GenerateCautionTarget();
   // AddDebugToProto(TargetType::kCautionYield, planning_debug_msg);
+  AddCautionTargetDataToProto();
 }
 
 void CautionTarget::GenerateUpperBoundInfo() {
@@ -70,6 +71,21 @@ void CautionTarget::GenerateCautionTarget() {
     target_value.set_s_target_val(s_target_value);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
   }
+}
+
+void CautionTarget::AddCautionTargetDataToProto() {
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_caution_target_data =
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_caution_target();
+  if (!target_values_.empty()) {
+    for (const auto& value : target_values_) {
+      auto* ptr = caution_target_pb_.add_caution_target_s_ref();
+      ptr->set_s(value.s_target_val());
+      ptr->set_t(value.relative_t());
+      ptr->set_target_type(static_cast<int32_t>(value.target_type()));
+    }
+  }
+  mutable_caution_target_data->CopyFrom(caution_target_pb_);
 }
 
 }  // namespace planning

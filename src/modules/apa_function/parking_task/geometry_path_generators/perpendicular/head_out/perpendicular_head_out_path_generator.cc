@@ -23,14 +23,14 @@ const bool PerpendicularPathOutPlanner::Update() {
   // reset output
   output_.Reset();
   ILOG_INFO << "is_replan_first is "
-            << static_cast<int>(ginput_.is_replan_first);
-  ILOG_INFO << "ref_gear is " << static_cast<int>(ginput_.ref_gear);
-  ILOG_INFO << "ref_arc_steer is " << static_cast<int>(ginput_.ref_arc_steer);
-  ILOG_INFO << "cur_pose is " << ginput_.ego_info_under_slot.cur_pose.pos.x()
-            << ", " << ginput_.ego_info_under_slot.cur_pose.pos.y() << ", "
-            << ginput_.ego_info_under_slot.cur_pose.heading;
+            << static_cast<int>(input_.is_replan_first);
+  ILOG_INFO << "ref_gear is " << static_cast<int>(input_.ref_gear);
+  ILOG_INFO << "ref_arc_steer is " << static_cast<int>(input_.ref_arc_steer);
+  ILOG_INFO << "cur_pose is " << input_.ego_info_under_slot.cur_pose.pos.x()
+            << ", " << input_.ego_info_under_slot.cur_pose.pos.y() << ", "
+            << input_.ego_info_under_slot.cur_pose.heading;
 
-  if (ginput_.ego_info_under_slot.cur_pose.pos.x() < 3.0) {
+  if (input_.ego_info_under_slot.cur_pose.pos.x() < 3.0) {
     if (PreparePlan()) {
       ILOG_INFO << "parking out prepare plan success";
     } else {
@@ -57,44 +57,6 @@ const bool PerpendicularPathOutPlanner::Update() {
   return false;
 }
 
-const bool PerpendicularPathOutPlanner::UpdatePyband(
-    const Input& input,
-    const std::shared_ptr<CollisionDetector>& collision_detector_ptr) {
-  ILOG_INFO << "--------perpendicular path planner pyband --------";
-
-  input_ = input;
-  collision_detector_ptr_ = collision_detector_ptr;
-
-  // preprocess
-  Preprocess();
-
-  // // reset output
-  // output_.Reset();
-
-  if (PreparePlan()) {
-    ILOG_INFO << "parking out prepare plan success";
-  } else {
-    ILOG_INFO << " prepare plan fail , enter s t turn paralle plan";
-    if (STurnParallelPlan()) {
-      ILOG_INFO << "parking out s t turn paralle plan success";
-    } else {
-      ILOG_INFO << "frist plan fail";
-      return false;
-    };
-  }
-
-  if (CheckReachTargetPose()) {
-    ILOG_INFO << "parking out prepare plan to target pose";
-    return true;
-  }
-
-  if (AdjustPlan()) {
-    ILOG_INFO << "parking out adjust plan success";
-    return true;
-  }
-  return false;
-}
-
 const bool PerpendicularPathOutPlanner::UpdateByPrePlan() { return false; };
 
 void PerpendicularPathOutPlanner::Preprocess() {
@@ -107,7 +69,7 @@ void PerpendicularPathOutPlanner::Preprocess() {
   calc_params_.can_insert_line = true;
 
   // // calc slot side by Tlane
-  // if (ginput_.tlane.pt_inside.y() > ginput_.tlane.pt_outside.y()) {
+  // if (input_.tlane.pt_inside.y() > input_.tlane.pt_outside.y()) {
   //   calc_params_.is_left_side = true;
   //   calc_params_.slot_side_sgn = 1.0;
   // } else {
@@ -120,27 +82,27 @@ void PerpendicularPathOutPlanner::Preprocess() {
 
   // target line
   calc_params_.target_line = geometry_lib::BuildLineSegByPose(
-      ginput_.ego_info_under_slot.target_pose.pos,
-      ginput_.ego_info_under_slot.target_pose.heading);
+      input_.ego_info_under_slot.target_pose.pos,
+      input_.ego_info_under_slot.target_pose.heading);
 }
 
 const bool PerpendicularPathOutPlanner::PreparePlan() {
   ILOG_INFO << "-----prking out prepare plan-----";
-  uint8_t current_gear = ginput_.ref_gear;
-  uint8_t current_arc_steer = ginput_.ref_arc_steer;
+  uint8_t current_gear = input_.ref_gear;
+  uint8_t current_arc_steer = input_.ref_arc_steer;
   pnc::geometry_lib::PathPoint current_pose =
-      ginput_.ego_info_under_slot.cur_pose;
+      input_.ego_info_under_slot.cur_pose;
   std::vector<double> x_offset_vec;
   const double slant_angle_rad =
-      (ginput_.ego_info_under_slot.slot.angle_) * kDeg2Rad;
+      (input_.ego_info_under_slot.slot.angle_) * kDeg2Rad;
   const double cos_slant_angle = cos(slant_angle_rad);
   double x_min = 2.8;
   double x_max = 4.8;
   const double max_plan_num = 30;
 
   ILOG_INFO << "current slot angle (deg) : "
-            << ginput_.ego_info_under_slot.slot.angle_;
-  if (ginput_.ego_info_under_slot.slot.angle_ != 90) {
+            << input_.ego_info_under_slot.slot.angle_;
+  if (input_.ego_info_under_slot.slot.angle_ != 90) {
     x_min = 4.0 / cos_slant_angle;
     x_max = 5.0 / cos_slant_angle;
   }
@@ -287,11 +249,11 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
 
     current_arc.pB << current_turn_center.x() +
                           current_turn_radius *
-                              sin((ginput_.ego_info_under_slot.slot.angle_) *
+                              sin((input_.ego_info_under_slot.slot.angle_) *
                                   kDeg2Rad),
         current_turn_center.y() +
             current_turn_radius *
-                cos((ginput_.ego_info_under_slot.slot.angle_) * kDeg2Rad);
+                cos((input_.ego_info_under_slot.slot.angle_) * kDeg2Rad);
 
     if (CheckArcOrLineAvailable(current_arc) &&
         pnc::geometry_lib::CompleteArcInfo(current_arc)) {
@@ -342,9 +304,9 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
   ILOG_INFO << "-----prking out adjust plan-----";
   // set init state
   pnc::geometry_lib::PathPoint current_pose =
-      ginput_.ego_info_under_slot.cur_pose;
-  uint8_t current_gear = ginput_.ref_gear;
-  uint8_t current_arc_steer = ginput_.ref_arc_steer;
+      input_.ego_info_under_slot.cur_pose;
+  uint8_t current_gear = input_.ref_gear;
+  uint8_t current_arc_steer = input_.ref_arc_steer;
   if (current_pose.pos.x() < 3.0) {
     ILOG_INFO
         << "check : the current location does not require adjust planning";
@@ -496,7 +458,7 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   // ILOG_INFO << "current_pose heanding " << current_pose.heading;
 
   const double expected_pos_x =
-      ginput_.ego_info_under_slot.pt_inside.x() +
+      input_.ego_info_under_slot.pt_inside.x() +
       apa_param.GetParam().min_x_value_park_out_position;
   const double tmp_x =
       expected_pos_x -
@@ -547,19 +509,19 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
   if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     current_arc.pB << current_turn_center.x() -
                           current_turn_radius *
-                              sin((ginput_.ego_info_under_slot.slot.angle_ *
+                              sin((input_.ego_info_under_slot.slot.angle_ *
                                    kDeg2Rad)),
         current_turn_center.y() -
             current_turn_radius *
-                cos((ginput_.ego_info_under_slot.slot.angle_ * kDeg2Rad));
+                cos((input_.ego_info_under_slot.slot.angle_ * kDeg2Rad));
   } else if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     current_arc.pB << current_turn_center.x() +
                           current_turn_radius *
-                              sin((ginput_.ego_info_under_slot.slot.angle_ *
+                              sin((input_.ego_info_under_slot.slot.angle_ *
                                    kDeg2Rad)),
         current_turn_center.y() +
             current_turn_radius *
-                cos((ginput_.ego_info_under_slot.slot.angle_ * kDeg2Rad));
+                cos((input_.ego_info_under_slot.slot.angle_ * kDeg2Rad));
   }
 
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.10));
@@ -636,9 +598,9 @@ const bool PerpendicularPathOutPlanner::OneLinePlanOnce(
 
 const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
   ILOG_INFO << "-----prking out s turn paralle plan-----";
-  uint8_t current_gear = ginput_.ref_gear;
+  uint8_t current_gear = input_.ref_gear;
   pnc::geometry_lib::PathPoint current_pose =
-      ginput_.ego_info_under_slot.cur_pose;
+      input_.ego_info_under_slot.cur_pose;
 
   double steer_change_radius = apa_param.GetParam().max_radius_in_slot;
   std::vector<double> offset_y_vec;
@@ -648,10 +610,10 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
 
   for (size_t i = 0; i < max_offset_num; i++) {
     offset_y_vec.emplace_back(offset_y);
-    if (ginput_.ref_arc_steer ==
+    if (input_.ref_arc_steer ==
         pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT) {
       offset_y -= 0.01;
-    } else if (ginput_.ref_arc_steer ==
+    } else if (input_.ref_arc_steer ==
                pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT) {
       offset_y += 0.01;
     }
@@ -666,7 +628,7 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
     const double& offset_y = offset_y_vec[j];
     path_seg_vec.clear();
     if (STurnParallelPlanOnce(path_seg_vec, offset_y, calc_params_.turn_radius,
-                              current_pose, current_gear, ginput_.ref_arc_steer,
+                              current_pose, current_gear, input_.ref_arc_steer,
                               steer_change_radius)) {
       prepare_success = true;
       ILOG_INFO << "y_offset = " << offset_y;
@@ -691,7 +653,7 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
       last_pose.Set(last_segment.GetLineSeg().pB,
                     last_segment.GetLineSeg().heading);
       ILOG_INFO << "last_segment not is arc path, current_arc_steer is : "
-                << static_cast<int>(ginput_.ref_arc_steer);
+                << static_cast<int>(input_.ref_arc_steer);
     }
     current_pose = last_pose;
   }
@@ -891,11 +853,11 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
 
     current_arc.pB << current_turn_center.x() +
                           current_turn_radius *
-                              sin((ginput_.ego_info_under_slot.slot.angle_) *
+                              sin((input_.ego_info_under_slot.slot.angle_) *
                                   kDeg2Rad),
         current_turn_center.y() +
             current_turn_radius *
-                cos((ginput_.ego_info_under_slot.slot.angle_) * kDeg2Rad);
+                cos((input_.ego_info_under_slot.slot.angle_) * kDeg2Rad);
 
     if (CheckArcOrLineAvailable(current_arc) &&
         pnc::geometry_lib::CompleteArcInfo(current_arc)) {
@@ -947,7 +909,7 @@ const double PerpendicularPathOutPlanner::CalOccupiedRatio(
   terminal_err.Set(current_pose.pos - calc_params_.target_line.pA,
                    std::fabs(pnc::geometry_lib::NormalizeAngle(
                        current_pose.heading -
-                       ginput_.ego_info_under_slot.terminal_err.heading)));
+                       input_.ego_info_under_slot.terminal_err.heading)));
   double slot_occupied_ratio;
   if (std::fabs(terminal_err.pos.y()) <
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
@@ -963,12 +925,12 @@ const double PerpendicularPathOutPlanner::CalOccupiedRatio(
 }
 
 const bool PerpendicularPathOutPlanner::CheckReachTargetPose() {
-  if (ginput_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
+  if (input_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
     return true;
   }
 
   if (output_.path_segment_vec.empty()) {
-    return CheckReachTargetPose(ginput_.ego_info_under_slot.cur_pose);
+    return CheckReachTargetPose(input_.ego_info_under_slot.cur_pose);
   }
   const auto& last_segment = output_.path_segment_vec.back();
   pnc::geometry_lib::PathPoint last_pose;
@@ -987,11 +949,11 @@ const bool PerpendicularPathOutPlanner::CheckReachTargetPose(
     const pnc::geometry_lib::PathPoint& current_pose) {
   if (std::fabs(pnc::geometry_lib::NormalizeAngle(current_pose.heading)) <=
           (apa_param.GetParam().perpendicular_park_out_max_target_heading -
-           ginput_.ego_info_under_slot.slot.angle_ - 90) *
+           input_.ego_info_under_slot.slot.angle_ - 90) *
               kDeg2Rad &&
       std::fabs(pnc::geometry_lib::NormalizeAngle(current_pose.heading)) >=
           (apa_param.GetParam().perpendicular_park_out_min_target_heading -
-           ginput_.ego_info_under_slot.slot.angle_ - 90) *
+           input_.ego_info_under_slot.slot.angle_ - 90) *
               kDeg2Rad) {
     return true;
   }
@@ -1076,7 +1038,7 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
         path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE;
     const bool inside_stuck_2 =
         col_res.col_pt_obs_global.transpose().x() <
-            ginput_.ego_info_under_slot.pt_inside.x() + 1e-2 &&
+            input_.ego_info_under_slot.pt_inside.x() + 1e-2 &&
         path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE;
     if (inside_stuck_1 || inside_stuck_2) {
       return PathColDetRes::INSIDE_STUCK;

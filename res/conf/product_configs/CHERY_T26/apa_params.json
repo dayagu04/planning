@@ -156,7 +156,7 @@
   "curb_offset": 0.45,
   "curb_offset_when_ego_outside_slot": 0.0,
   "nearby_slot_corner_dist": 0.6,
-  "force_both_side_occupied": false,
+  "enable_use_dynamic_obs": true,
   "safe_threshold": 0.042,
   "virtual_obs_y_pos": 0.386,
   "virtual_obs_x_pos": 2.068,
@@ -229,7 +229,7 @@
   "last_update_slot_occupied_ratio": 0.836,
 
   "comment_15": "path planner params",
-  "new_itervative_solution": false,
+  "use_average_obs_dist": false,
   "min_turn_radius": 5.5986,
   "safe_circle_radius": 5.98,
   "max_radius_in_slot": 12.66,
@@ -307,7 +307,7 @@
   "min_slot_release_long_dist_slot2mirror": 1.968,
   "min_parallel_uss_slot_release_long_dist_slot2mirror": 3.968,
   "min_parallel_vis_slot_release_long_dist_slot2mirror": 2.56,
-  "max_dist_from_slot2car_release": 7.68,
+  "easy_slot_release_channel_width": 4.08,
   "terminal_length": 1.2,
   "limiter_length": 0.268,
   "slot_occupied_ratio_max_lat_err": 2.068,
@@ -334,9 +334,10 @@
   "astar_parallel_finish_head_lat_err" : 0.25,
   "astar_parallel_finish_heading_err" : 2.5,
   "adjust_ego_y_thresh_outside_slot": 0.2,
+  "enable_blind_zone" : true,
 
   "enable_apa_speed_plan" : false,
-  "default_cruise_speed" : 0.5,
+  "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.3,
   "obs_dist_for_speed_limit" : 0.4,
 

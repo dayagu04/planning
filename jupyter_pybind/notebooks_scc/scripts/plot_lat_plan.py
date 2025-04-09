@@ -9,7 +9,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241207/20241207-10-49-15/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-12-07-10-49-15_no_camera.bag"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250226/20250226-16-49-20/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2025-02-26-16-49-20_no_camera.bag.1741327084.open-loop.noa.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -23,6 +23,7 @@ output_notebook()
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
+# global_var.set_value('g_is_display_enu', False)
 # global_var.set_value('is_vis_map', True)
 fig1, local_view_data = load_local_view_figure()
 

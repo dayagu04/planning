@@ -102,7 +102,7 @@ bool DynamicWorld::ConstructDynamicWorld() {
       }
       agent_id_set.insert(agent->agent_id());
       auto agent_node = std::make_unique<DynamicAgentNode>(
-          agent, *static_lane, *ref_line, ego_state);
+          agent.get(), *static_lane, *ref_line, ego_state);
       if (agent_node == nullptr || !agent_node->is_valid()) {
         continue;
       }

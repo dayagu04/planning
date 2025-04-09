@@ -121,7 +121,7 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
-                  
+
   JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
                   "in_slot_car_adjust_max_count");
   // car params
@@ -367,8 +367,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().nearby_slot_corner_dist, double,
                   "nearby_slot_corner_dist");
 
-  JSON_READ_VALUE(apa_param.SetPram().force_both_side_occupied, bool,
-                  "force_both_side_occupied");
+  JSON_READ_VALUE(apa_param.SetPram().enable_use_dynamic_obs, bool,
+                  "enable_use_dynamic_obs");
 
   JSON_READ_VALUE(apa_param.SetPram().safe_threshold, double, "safe_threshold");
 
@@ -582,8 +582,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "last_update_slot_occupied_ratio");
 
   // path planner params
-  JSON_READ_VALUE(apa_param.SetPram().new_itervative_solution, bool,
-                  "new_itervative_solution");
+  JSON_READ_VALUE(apa_param.SetPram().use_average_obs_dist, bool,
+                  "use_average_obs_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().min_turn_radius, double,
                   "min_turn_radius");
@@ -837,8 +837,8 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().min_parallel_vis_slot_release_long_dist_slot2mirror,
       double, "min_parallel_vis_slot_release_long_dist_slot2mirror");
 
-  JSON_READ_VALUE(apa_param.SetPram().max_dist_from_slot2car_release, double,
-                  "max_dist_from_slot2car_release");
+  JSON_READ_VALUE(apa_param.SetPram().easy_slot_release_channel_width, double,
+                  "easy_slot_release_channel_width");
 
   JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
                   "terminal_length");
@@ -900,6 +900,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.adjust_ego_y_thresh_outside_slot, double,
       "adjust_ego_y_thresh_outside_slot");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.enable_blind_zone, bool,
+                  "enable_blind_zone");
 
   JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");

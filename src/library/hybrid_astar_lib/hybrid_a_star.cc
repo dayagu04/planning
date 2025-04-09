@@ -587,7 +587,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
 
   const double rs_radius = vehicle_param_.min_turn_radius + 0.2;
 
-  RSPathRequestType rs_request = RSPathRequestType::gear_switch_less_than_twice;
+  RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
   bool need_anchor_point = false;
   if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
     need_anchor_point = true;
@@ -667,24 +667,10 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
-  // single shot check
-  if (!IsRSPathSingleShot(&rs_path_)) {
+  // gear check
+  if (!CheckRSPathGear(&rs_path_, gear_request_info)) {
     // ILOG_INFO << "gear is not expectation";
     return false;
-  }
-
-  AstarPathGear gear;
-  for (int i = 0; i < rs_path_.size; i++) {
-    gear = rs_path_.paths[i].gear;
-    if (gear_request_info == PathGearRequest::GEAR_REVERSE_ONLY &&
-        gear == AstarPathGear::DRIVE) {
-      // ILOG_INFO << "gear is not expectation";
-      return false;
-    } else if (gear_request_info == PathGearRequest::GEAR_DRIVE_ONLY &&
-               gear == AstarPathGear::REVERSE) {
-      // ILOG_INFO << "gear is not expectation";
-      return false;
-    }
   }
 
   // interpolation
@@ -920,45 +906,52 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
   const AstarPathGear last_gear =
       reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
-  if (request_.space_type == ParkSpaceType::VERTICAL &&
-      request_.direction_request == ParkingVehDirection::TAIL_IN &&
-      request_.rs_request == RSPathRequestType::last_path_forbid_forward) {
-    if (last_gear == AstarPathGear::DRIVE) {
-      // ILOG_INFO << " rs path last seg len is drive gear ";
+  if (request_.space_type == ParkSpaceType::VERTICAL) {
+    if (request_.direction_request == ParkingVehDirection::TAIL_IN &&
+        request_.rs_request == RSPathRequestType::LAST_PATH_FORBID_FORWARD) {
+      if (last_gear == AstarPathGear::DRIVE) {
+        // ILOG_INFO << " rs path last seg len is drive gear ";
 
-      return false;
-    }
-  } else if (request_.space_type == ParkSpaceType::VERTICAL &&
-             request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    if (request_.rs_request == RSPathRequestType::last_path_forbid_reverse &&
-        last_gear == AstarPathGear::REVERSE) {
-      // ILOG_INFO << " rs path last seg len is reverse gear ";
-      return false;
-    } else if (first_gear == AstarPathGear::DRIVE) {
-      int i = 1;
-      while (i < rs_path_seg_size && first_gear == AstarPathGear::DRIVE) {
-        first_gear = reeds_shepp_to_end->paths[i].gear;
-        i++;
-      }
-      const RSPoint first_drive_path_end_pos =
-          rs_path_interface_.GetAnchorPoint().points[i];
-      // ILOG_INFO << "first drive end pos = " << first_drive_path_end_pos.x
-      //           << ", " << first_drive_path_end_pos.y;
-
-      if (first_drive_path_end_pos.x < astar_end_node_->GetX() - 0.15 &&
-          std::fabs(first_drive_path_end_pos.y) <
-              config_.headin_limit_y_shrink) {
         return false;
+      }
+    } else if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+      if (request_.rs_request == RSPathRequestType::LAST_PATH_FORBID_REVERSE &&
+          last_gear == AstarPathGear::REVERSE) {
+        // ILOG_INFO << " rs path last seg len is reverse gear ";
+        return false;
+      } else if (first_gear == AstarPathGear::DRIVE) {
+        int i = 1;
+        while (i < rs_path_seg_size && first_gear == AstarPathGear::DRIVE) {
+          first_gear = reeds_shepp_to_end->paths[i].gear;
+          i++;
+        }
+        const RSPoint first_drive_path_end_pos =
+            rs_path_interface_.GetAnchorPoint().points[i];
+        // ILOG_INFO << "first drive end pos = " << first_drive_path_end_pos.x
+        //           << ", " << first_drive_path_end_pos.y;
+
+        if (first_drive_path_end_pos.x < astar_end_node_->GetX() - 0.15 &&
+            std::fabs(first_drive_path_end_pos.y) <
+                config_.headin_limit_y_shrink) {
+          return false;
+        }
       }
     }
   }
+
   return true;
 }
 
-bool HybridAStar::IsRSPathSingleShot(const RSPath* reeds_shepp_to_end) {
+bool HybridAStar::CheckRSPathGear(const RSPath* reeds_shepp_to_end,
+                                  const PathGearRequest gear_request_info) {
   int rs_path_seg_size = reeds_shepp_to_end->size;
   if (rs_path_seg_size < 1) {
     return true;
+  }
+
+  // delete gear switch bigger than 1.
+  if (reeds_shepp_to_end->gear_change_number > 1) {
+    return false;
   }
 
   AstarPathGear gear;
@@ -967,15 +960,25 @@ bool HybridAStar::IsRSPathSingleShot(const RSPath* reeds_shepp_to_end) {
     gear = reeds_shepp_to_end->paths[i].gear;
 
     if (request_.space_type == ParkSpaceType::VERTICAL) {
-      if (request_.rs_request == RSPathRequestType::all_path_forbid_forward &&
+      if (request_.rs_request == RSPathRequestType::ALL_PATH_FORBID_FORWARD &&
           gear == AstarPathGear::DRIVE) {
         // ILOG_INFO << " rs path seg need single shot by reverse gear ";
         return false;
 
       } else if (request_.rs_request ==
-                     RSPathRequestType::all_path_forbid_reverse &&
+                     RSPathRequestType::ALL_PATH_FORBID_REVERSE &&
                  gear == AstarPathGear::REVERSE) {
         // ILOG_INFO << " rs path seg need single shot by drive gear ";
+        return false;
+      }
+
+      if (gear_request_info == PathGearRequest::GEAR_REVERSE_ONLY &&
+          gear == AstarPathGear::DRIVE) {
+        // ILOG_INFO << "gear is not expectation";
+        return false;
+      } else if (gear_request_info == PathGearRequest::GEAR_DRIVE_ONLY &&
+                 gear == AstarPathGear::REVERSE) {
+        // ILOG_INFO << "gear is not expectation";
         return false;
       }
     }
@@ -1813,9 +1816,6 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::OUT_OF_BOUNDARY;
   }
 
-  // todo, check collision
-
-  // maybe search the same point, but new a node?
   new_node->Set(path, XYbounds_, config_, path.path_dist);
 
   // check search bound
@@ -1837,13 +1837,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   // headin shrink limit pose
-  bool position_legal = false;
-  double min_x = std::min(request_.start_.x, request_.real_goal.GetX());
-  position_legal = node_shrink_decider_.IsLegalForPos(
-      new_node->GetX(), new_node->GetY(), min_x - 0.1,
-      config_.headin_limit_y_shrink);
-
-  if (!position_legal) {
+  if (!node_shrink_decider_.IsLegalByXBound(new_node->GetX())) {
 #if PLOT_DELETE_NODE
     delete_queue_path_debug_.emplace_back(
         ad_common::math::Vec2d(new_node->GetX(), new_node->GetY()));
@@ -1969,7 +1963,7 @@ void HybridAStar::CalculateNodeGCost(Node3d* current_node, Node3d* next_node) {
 
 double HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
                                                   NodeHeuristicCost* cost) {
-  RSPathRequestType rs_request = RSPathRequestType::none;
+  RSPathRequestType rs_request = RSPathRequestType::NONE;
   if (!CalcRSPathToGoal(next_node, false, false, rs_request,
                         vehicle_param_.min_turn_radius)) {
     ILOG_INFO << "ShortestRSP failed";
@@ -2773,7 +2767,8 @@ void HybridAStar::GearRerversePathAttempt(
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, target, request_.direction_request);
+  node_shrink_decider_.Process(start, target, request_.direction_request,
+                               request_.real_goal, XYbounds_);
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
       start, target, vehicle_param_.width, request_.space_type,
@@ -3225,7 +3220,8 @@ void HybridAStar::GearDrivePathAttempt(
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, target, request_.direction_request);
+  node_shrink_decider_.Process(start, target, request_.direction_request,
+                               request_.real_goal, XYbounds_);
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
       start, target, vehicle_param_.width, request_.space_type,
@@ -3555,6 +3551,7 @@ bool HybridAStar::AstarSearch(
   // debug
   child_node_debug_.clear();
   queue_path_debug_.clear();
+  delete_queue_path_debug_.clear();
   rs_path_h_cost_debug_.clear();
   rs_path_.Clear();
   result->Clear();
@@ -3678,7 +3675,8 @@ bool HybridAStar::AstarSearch(
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, end, request_.direction_request);
+  node_shrink_decider_.Process(start, end, request_.direction_request,
+                               request_.real_goal, XYbounds_);
 
   check_start_time = IflyTime::Now_ms();
   // ILOG_INFO << "time " << IflyTime::DateString();
@@ -3786,8 +3784,8 @@ bool HybridAStar::AstarSearch(
         break;
       }
 
-      // total gear switch number is 0 or 1, break;
-      if (rs_node_to_goal.GetGearSwitchNum() < 2) {
+      // total gear switch number is 0, break;
+      if (rs_node_to_goal.GetGearSwitchNum() < 1) {
         break;
       }
 
@@ -4485,7 +4483,7 @@ void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
                                           const double lon_min_sampling_length,
                                           const double radius) {
   bool is_connected_to_goal;
-  RSPathRequestType rs_request = RSPathRequestType::none;
+  RSPathRequestType rs_request = RSPathRequestType::NONE;
 
   // sampling for path end
   // sampling start point: move start point forward dist
@@ -5214,7 +5212,7 @@ bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
     end_pose.x -= 0.1;
     rs_path_interface_.GeneShortestRSPath(
         &rs_path_, &is_connected_to_goal, &current_node->GetPose(), &end_pose,
-        vehicle_param_.min_turn_radius, false, false, RSPathRequestType::none);
+        vehicle_param_.min_turn_radius, false, false, RSPathRequestType::NONE);
 
     // check length
     if (rs_path_.total_length < 0.01 || !is_connected_to_goal) {

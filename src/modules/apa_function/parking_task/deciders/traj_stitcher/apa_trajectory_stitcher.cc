@@ -6,20 +6,21 @@
 #include "apa_param_config.h"
 #include "math/vec2d.h"
 #include "pose2d.h"
-#include "src/library/reeds_shepp/rs_path_interpolate.h"
 
 namespace planning {
 
 void ApaTrajectoryStitcher::Process(
     const Pose2D& ego_pose,
     const std::vector<pnc::geometry_lib::PathPoint>& path, const double ego_v,
-    const double front_wheel_angle, trajectory::Trajectory* trajectory) {
+    const double front_wheel_angle) {
   double kappa = std::tan(front_wheel_angle) / apa_param.GetParam().wheel_base;
   Pose2D predict_pose = ComputeTrajPointByPrediction(ego_pose, ego_v, kappa);
 
-  size_t stitch_id = 0;
-  if (QueryNearestPoint(predict_pose, path, &stitch_id)) {
-    GeneTrajPointFromPath(path[stitch_id]);
+  size_t min_dist_id = 0;
+  size_t min_dist_neioghbour_id = 0;
+  if (QueryNearestPoint(predict_pose, path, &min_dist_id,
+                        &min_dist_neioghbour_id)) {
+    EvaluateStitchTraj(predict_pose, path, min_dist_id, min_dist_neioghbour_id);
   } else {
     GeneTrajPointFromVehicleState(ego_pose);
   }
@@ -30,9 +31,10 @@ void ApaTrajectoryStitcher::Process(
 void ApaTrajectoryStitcher::GeneTrajPointFromVehicleState(
     const Pose2D& ego_pose) {
   ClearSticthPoint();
-  stitch_point_.x = ego_pose.x;
-  stitch_point_.y = ego_pose.y;
-  stitch_point_.heading_angle = ego_pose.theta;
+  stitch_point_ = pnc::geometry_lib::PathPoint(
+      Eigen::Vector2d(ego_pose.x, ego_pose.y), ego_pose.theta);
+
+  drived_distance_ = 0.0;
 
   return;
 }
@@ -40,9 +42,7 @@ void ApaTrajectoryStitcher::GeneTrajPointFromVehicleState(
 void ApaTrajectoryStitcher::GeneTrajPointFromPath(
     const pnc::geometry_lib::PathPoint& point) {
   ClearSticthPoint();
-  stitch_point_.x = point.pos.x();
-  stitch_point_.y = point.pos.y();
-  stitch_point_.heading_angle = point.heading;
+  stitch_point_ = point;
 
   return;
 }
@@ -55,10 +55,11 @@ Pose2D ApaTrajectoryStitcher::ComputeTrajPointByPrediction(
   if (std::fabs(ego_v) < 1e-2) {
     predict_pose = ego_pose;
   } else if (std::fabs(kappa) < 1e-4) {
-    PredictByLine(ego_pose, dist, true, &predict_pose);
+    PredictByLine(ego_pose, dist, ego_v > 0.0 ? true : false, &predict_pose);
   } else {
     double radius = 1 / kappa;
-    PredictByCircle(ego_pose, dist, radius, true, &predict_pose);
+    PredictByCircle(ego_pose, dist, radius, ego_v > 0.0 ? true : false,
+                    &predict_pose);
   }
 
   return predict_pose;
@@ -205,21 +206,138 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
 }
 
 void ApaTrajectoryStitcher::ClearSticthPoint() {
-  stitch_point_.s = 0;
-  stitch_point_.l = 0;
-  stitch_point_.x = 0;
-  stitch_point_.y = 0;
-  stitch_point_.heading_angle = 0;
-  stitch_point_.curvature = 0;
-  stitch_point_.dkappa = 0;
-  stitch_point_.ddkappa = 0;
-  stitch_point_.t = 0;
-  stitch_point_.v = 0;
-  stitch_point_.a = 0;
-  stitch_point_.jerk = 0;
-  stitch_point_.frenet_valid = false;
+  stitch_point_.Reset();
+  return;
+}
+
+bool ApaTrajectoryStitcher::QueryNearestPoint(
+    const Pose2D& ego_pose,
+    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    size_t* min_dist_point, size_t* min_dist_point_neighbor) {
+  if (path.size() < 2) {
+    return false;
+  }
+
+  // min dist point
+  double dist_sqr_min = std::numeric_limits<double>::max();
+  size_t index_min = 0;
+  double dist_sqr;
+
+  for (size_t i = 0; i < path.size(); ++i) {
+    dist_sqr = ego_pose.DistanceSquareTo(path[i].pos);
+
+    if (dist_sqr < dist_sqr_min + 1e-3) {
+      dist_sqr_min = dist_sqr;
+      index_min = i;
+    }
+  }
+
+  // check neighbour
+  size_t neighbour_id = 0;
+  if (index_min == 0) {
+    neighbour_id = 1;
+  } else if (index_min + 1 == path.size()) {
+    neighbour_id = index_min - 1;
+  } else {
+    double left_neighbour_dist =
+        ego_pose.DistanceSquareTo(path[index_min - 1].pos);
+    double right_neighbour_dist =
+        ego_pose.DistanceSquareTo(path[index_min + 1].pos);
+    if (left_neighbour_dist < right_neighbour_dist) {
+      neighbour_id = index_min - 1;
+    } else {
+      neighbour_id = index_min + 1;
+    }
+  }
+
+  *min_dist_point = index_min;
+  *min_dist_point_neighbor = neighbour_id;
+
+  return true;
+}
+
+void ApaTrajectoryStitcher::EvaluateStitchTraj(
+    const Pose2D& ego_pose,
+    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    const size_t min_dist_point_id, const size_t min_dist_point_neighbor_id) {
+  ad_common::math::Vec2d predecessor;
+  ad_common::math::Vec2d successor;
+  ad_common::math::Vec2d base_vector;
+  size_t predecessor_point_id;
+  size_t successor_point_id;
+
+  if (min_dist_point_id < min_dist_point_neighbor_id) {
+    predecessor_point_id = min_dist_point_id;
+    successor_point_id = min_dist_point_neighbor_id;
+  } else {
+    predecessor_point_id = min_dist_point_neighbor_id;
+    successor_point_id = min_dist_point_id;
+  }
+
+  predecessor.set_x(path[predecessor_point_id].pos.x());
+  predecessor.set_y(path[predecessor_point_id].pos.y());
+  successor.set_x(path[successor_point_id].pos.x());
+  successor.set_y(path[successor_point_id].pos.y());
+
+  base_vector = successor - predecessor;
+  base_vector.Normalize();
+
+  ad_common::math::Vec2d predecessor_to_ego(ego_pose.x - predecessor.x(),
+                                            ego_pose.y - predecessor.y());
+
+  // evaluate stitch point
+  ad_common::math::Vec2d evaluate_point;
+  int global_path_stitch_start_id;
+  double dot = predecessor_to_ego.InnerProd(base_vector);
+  if (dot < 0.0) {
+    global_path_stitch_start_id = predecessor_point_id;
+  } else if (dot > 1.0) {
+    global_path_stitch_start_id = successor_point_id + 1;
+  } else {
+    global_path_stitch_start_id = successor_point_id;
+  }
+
+  evaluate_point = predecessor + base_vector * dot;
+
+  stitch_point_ = path[min_dist_point_id];
+  stitch_point_.pos[0] = evaluate_point.x();
+  stitch_point_.pos[1] = evaluate_point.y();
+
+  // evaluate stitch traj
+  trajectory_.clear();
+  trajectory_.emplace_back(stitch_point_);
+  for (size_t i = global_path_stitch_start_id; i<path.size(); i++) {
+    trajectory_.emplace_back(path[i]);
+  }
+
+    // get path lengh
+  double accumulated_s = 0.0;
+  auto last_x = trajectory_.front().pos.x();
+  auto last_y = trajectory_.front().pos.y();
+  double x_diff;
+  double y_diff;
+
+  for (size_t i = 0; i < trajectory_.size(); ++i) {
+    x_diff = trajectory_[i].pos[0] - last_x;
+    y_diff = trajectory_[i].pos[1] - last_y;
+    accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
+    trajectory_[i].s = accumulated_s;
+
+    last_x = trajectory_[i].pos[0];
+    last_y = trajectory_[i].pos[1];
+  }
+
+  drived_distance_ = path.back().s - trajectory_.back().s;
 
   return;
+}
+
+const double ApaTrajectoryStitcher::GetStitchTrajLength() const {
+  if (trajectory_.empty()) {
+    return 0.0;
+  }
+
+  return trajectory_.back().s;
 }
 
 }  // namespace planning

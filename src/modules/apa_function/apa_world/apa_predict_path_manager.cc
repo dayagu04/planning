@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "apa_param_config.h"
+#include "debug_info_log.h"
 #include "geometry_math.h"
 #include "local_view.h"
 #include "log_glog.h"
@@ -180,6 +181,22 @@ void ApaPredictPathManager::Update(
                 ? pnc::geometry_lib::SEG_GEAR_DRIVE
                 : pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
+
+  std::vector<double> car_predict_x_vec;
+  std::vector<double> car_predict_y_vec;
+  std::vector<double> car_predict_heading_vec;
+  car_predict_x_vec.reserve(predict_pt_vec_.size());
+  car_predict_y_vec.reserve(predict_pt_vec_.size());
+  car_predict_heading_vec.reserve(predict_pt_vec_.size());
+  for (const auto& pt : predict_pt_vec_) {
+    car_predict_x_vec.emplace_back(pt.pos.x());
+    car_predict_y_vec.emplace_back(pt.pos.y());
+    car_predict_heading_vec.emplace_back(pt.heading);
+  }
+
+  JSON_DEBUG_VECTOR("car_predict_x_vec", car_predict_x_vec, 3)
+  JSON_DEBUG_VECTOR("car_predict_y_vec", car_predict_y_vec, 3)
+  JSON_DEBUG_VECTOR("car_predict_heading_vec", car_predict_heading_vec, 3)
 }
 
 }  // namespace apa_planner

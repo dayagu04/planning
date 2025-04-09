@@ -158,9 +158,9 @@ void StGraphUtils::DetermineCautionYieldDecision(
   }
   const double half_ego_width =
       VehicleConfigurationContext::Instance()->get_vehicle_param().width * 0.5;
-  const double ego_heading = st_graph_input->time_aligned_ego_state().theta();
-  for (const agent::Agent* agent : agents) {
-    if (!agent) {
+  const double ego_heading = st_graph_input->planning_init_point().theta();
+  for (const auto agent : agents) {
+    if (agent == nullptr) {
       continue;
     }
     if (agent->is_cutin()) {

@@ -1901,7 +1901,7 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
     const auto agt = all_current_agents[i];
     if (agt->is_tfl_virtual_obs()) {
       is_virtual_obs_exist = true;
-      virtual_obs = agt;
+      virtual_obs = agt.get();
       break;
     }
   }

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include <unordered_map>
 #include "config/vehicle_param.h"
 #include "define/geometry.h"
 #include "dynamic_world/dynamic_world.h"
@@ -15,7 +16,6 @@
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tasks/task.h"
-#include <unordered_map>
 #include "virtual_lane.h"
 namespace planning {
 
@@ -53,8 +53,15 @@ class LaneBorrowDecider : public Task {
   bool IsSafeForLaneBorrow();
   bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
   bool IsSafeForTurn();
+  bool ChecekIfLaneBorrowToLaneBorrowCrossing();
+  bool CheckIfkLaneBorrowCrossingToNoBorrow();
+  bool CheckIfLaneBorrowCrossingToBackDriving();
+  bool CheckIfLaneBorrowBackOriginToLaneBorrowCrossing();
+  bool CheckLaneBorrowCrossingCondition();
   const Point2D CalTurningCenter(const Point2D& ego_pos, const double& theta,
                                  const double& radius) const;
+  Point2D CartesianRotation(const Point2D& Cartesian_point,
+                            double heading_angle, double ego_x, double ego_y);
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
@@ -90,7 +97,7 @@ class LaneBorrowDecider : public Task {
   int lane_change_state_{0};
   double current_left_lane_width_{1.75};
   double current_right_lane_width_{1.75};
-  std::vector<int> static_blocked_obj_id_vec_;//after decision
+  std::vector<int> static_blocked_obj_id_vec_;  // after decision
   std::vector<int> last_static_blocked_obj_id_vec_;
   std::vector<std::shared_ptr<FrenetObstacle>> static_blocked_obstacles_;
   std::shared_ptr<ReferencePath> current_reference_path_ptr_ = nullptr;

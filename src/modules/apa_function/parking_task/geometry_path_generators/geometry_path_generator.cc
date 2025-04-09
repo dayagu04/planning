@@ -116,7 +116,7 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
     return false;
   }
 
-  if (input_.is_complete_path || ginput_.is_complete_path) {
+  if (input_.is_complete_path) {
     // for simulation
     output_.path_seg_index.first = 0;
     output_.path_seg_index.second = output_.gear_cmd_vec.size() - 1;
@@ -132,7 +132,7 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
     length += output_.path_segment_vec[i].Getlength();
     cur_gear_path_segment_vec.emplace_back(output_.path_segment_vec[i]);
   }
-  double sample_ds = std::max(input_.sample_ds, ginput_.sample_ds);
+  double sample_ds = input_.sample_ds;
   size_t N = std::ceil(length / sample_ds);
   const size_t max_seg_count = 7;
   if (N >= PLANNING_TRAJ_POINTS_MAX_NUM - 26 - max_seg_count) {

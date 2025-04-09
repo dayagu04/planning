@@ -105,29 +105,10 @@ bool TrafficLightDecider::Execute() {
 
     } else if (traffic_status.go_straight == 20 ||
                traffic_status.go_straight == 22) {
-      if (IsSmallFrontIntersection()) {
-        // yellow blink in small intersection, use last frame
-        green_light_timer_ = 0.0;
-        yellow_light_timer_ = 0.0;
-        green_blink_timer_ = 0.0;
-      } else {
-        // in big intersection, regard as yellow light
-        if (dis_to_stopline > 100.0) {
-          can_pass_ = true;
-        } else {
-          if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
-                                std::max(2.0 - yellow_light_timer_, 0.0) >
-                            dis_to_stopline)) {
-            can_pass_ = true;
-          } else {
-            can_pass_ = false;
-          }
-        }
-        green_light_timer_ = 0.0;
-        yellow_light_timer_ += 0.1;
-        green_blink_timer_ = 0.0;
-      }
-      // can_pass_ = true;
+      // yellow blink in intersection, use last frame
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
 
     } else {
       // others, can go

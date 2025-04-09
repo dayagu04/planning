@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+
 #include "apa_obstacle_manager.h"
 #include "geometry_math.h"
 #include "point_cloud_obstacle.h"
@@ -29,10 +30,13 @@ enum class PathCheckRequest {
 // todo: for lower check time, add EDT method to accelerate calculation.
 class PathSafeChecker {
  public:
-  PathSafeChecker() = default;
+  PathSafeChecker(
+      const std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager) {
+    SetObstacle(obs_manager);
+  }
+  ~PathSafeChecker() {}
 
-  void Excute(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-              const Pose2D& ego_pose, const PathCheckRequest requst,
+  void Excute(const Pose2D& ego_pose, const PathCheckRequest requst,
               const double lat_buffer, const double lon_buffer,
               std::vector<pnc::geometry_lib::PathPoint>& path);
 
@@ -48,16 +52,14 @@ class PathSafeChecker {
 
   const size_t GetPathCollisionID() const { return path_collision_idx_; }
 
-  bool CalcEgoCollision(
-      const std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-      const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer);
+  bool CalcEgoCollision(const Pose2D& ego_pose, const double lat_buffer,
+                        const double lon_buffer);
 
   const bool IsPolygonCollision(const Polygon2D* car);
 
   void SetObstacle(
-      std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager) {
+      const std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager) {
     obs_manager_ = obs_manager;
-
     return;
   }
 

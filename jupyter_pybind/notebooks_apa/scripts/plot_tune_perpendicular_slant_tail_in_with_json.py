@@ -208,9 +208,10 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
     self.trigger_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "trigger_plan",min=0, max=1, value=0, step=1)
+    self.use_average_obs_dist_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_average_obs_dist",min=0, max=1, value=0, step=1)
     self.force_mid_process_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_mid_process_plan",min=0, max=2, value=0, step=1)
-    self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "selected_id",min=0, max=20, value=0, step=1)
-    self.substitute_path_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "substitute_path_id",min=0, max=20, value=0, step=1)
+    self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "selected_id",min=0, max=1000, value=0, step=1)
+    self.substitute_path_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "substitute_path_id",min=0, max=80, value=0, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.1, step=0.02)
     self.car_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.30, value=0.0, step=0.01)
     self.data_json_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "data_json_id",min=1, max=80, value=1, step=1)
@@ -226,6 +227,7 @@ class LocalViewSlider:
                                          car_inflation = self.car_inflation_slider,
                                          sample_ds = self.sample_ds_slider,
                                          trigger_plan = self.trigger_plan_slider,
+                                         use_average_obs_dist = self.use_average_obs_dist_slider,
                                          force_mid_process_plan = self.force_mid_process_plan_slider,
                                          data_json_id = self.data_json_id_slider,
                                          selected_id = self.selected_id_slider,
@@ -239,7 +241,7 @@ class LocalViewSlider:
                                        )
 
 ### sliders callback
-def slider_callback(vehicle_type, car_inflation, sample_ds, selected_id, substitute_path_id, trigger_plan, force_mid_process_plan, data_json_id, ego_offset_lon, ego_offset_lat, ego_offset_heading, is_path_optimization, is_cilqr_enable, is_complete_path):
+def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist, selected_id, substitute_path_id, trigger_plan, force_mid_process_plan, data_json_id, ego_offset_lon, ego_offset_lat, ego_offset_heading, is_path_optimization, is_cilqr_enable, is_complete_path):
   kwargs = locals()
 
   data_car_start_pos.data.update({'x': [],'y': [],})
@@ -290,7 +292,7 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, selected_id, substit
     loaded_data = json.load(json_file)
 
   # 更新仿真参数
-  perpendicular_slant_tail_in_with_json_py.UpdateSimuParams(is_path_optimization, is_cilqr_enable, is_complete_path, force_mid_process_plan, sample_ds)
+  perpendicular_slant_tail_in_with_json_py.UpdateSimuParams(is_path_optimization, is_cilqr_enable, is_complete_path, use_average_obs_dist, force_mid_process_plan, sample_ds)
 
   # 读取定位信息
   loc_data = loaded_data["loc_pos"]
@@ -496,13 +498,10 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, selected_id, substit
   })
 
 
-  print("virtual_obs_vec size = ", len(virtual_obs_vec))
   virtual_obs_x_vec, virtual_obs_y_vec = [], []
   for i in range(len(virtual_obs_vec)):
     virtual_obs_x_vec.append(virtual_obs_vec[i][0])
     virtual_obs_y_vec.append(virtual_obs_vec[i][1])
-  print("virtual_obs_x_vec size = ", len(virtual_obs_x_vec))
-  print("virtual_obs_y_vec size = ", len(virtual_obs_y_vec))
   data_virtual_obs_pos.data.update({'x_vec':virtual_obs_x_vec, 'y_vec':virtual_obs_y_vec})
 
   complete_path_x_vec, complete_path_y_vec, complete_path_heading_vec, complete_path_lat_buffer_vec = [], [], [], []

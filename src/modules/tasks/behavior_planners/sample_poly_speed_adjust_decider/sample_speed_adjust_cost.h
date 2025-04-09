@@ -71,4 +71,11 @@ class StopPenaltyCost : public CurveCost {
   StopPenaltyCost() = default;
   void GetCost(const double end_v);
 };
+
+class AccLimitCost : public CurveCost {
+public:
+  AccLimitCost() =default;
+  void GetCost(const double acc_extrema);
+
+};
 }  // namespace planning

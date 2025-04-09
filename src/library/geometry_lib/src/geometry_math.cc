@@ -1046,10 +1046,7 @@ const bool CalExtendedPointByTwoPoints(const Eigen::Vector2d &start_point,
     return false;
   }
 
-  Eigen::Vector2d unit_line = line / distance;
-  Eigen::Vector2d new_line = line + extended_distance * unit_line;
-
-  extended_point = new_line + start_point;
+  extended_point = end_point + line / distance * extended_distance;
 
   return true;
 }
@@ -1442,11 +1439,11 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
   while (s < line.length) {
     pn.pos = line.pA + s * unit_line_vec;
     pn.heading = line.heading;
-    s += ds;
-    pn.s = ds;
+    pn.s = s;
     pn.lat_buffer = lat_buffer;
     pn.kappa = 0.0;
     point_set.emplace_back(pn);
+    s += ds;
   }
   // get last point
   pn.Set(line.pB, NormalizeAngle(line.heading));
@@ -1493,11 +1490,11 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
     pn.pos = pO + v_n;
     heading += dheading;
     pn.heading = NormalizeAngle(heading);
-    s += ds;
-    pn.s = ds;
+    pn.s = s;
     pn.lat_buffer = lat_buffer;
     pn.kappa = sign / arc.circle_info.radius;
     point_set.emplace_back(pn);
+    s += ds;
   }
   // get last point
   pn.Set(arc.pB, NormalizeAngle(arc.headingB));
@@ -2548,10 +2545,10 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
     // pos is on right side of the line
     line_norm_vec << -line_tang_vec.y(), line_tang_vec.x();
   } else {
-    ILOG_INFO << "pos = " << pos.transpose()
-              << "  line.pA = " << line.pA.transpose()
-              << "  line.pB = " << line.pB.transpose()
-              << "  line.heading = " << line.heading * kRad2Deg;
+    // ILOG_INFO << "pos = " << pos.transpose()
+    //           << "  line.pA = " << line.pA.transpose()
+    //           << "  line.pB = " << line.pB.transpose()
+    //           << "  line.heading = " << line.heading * kRad2Deg;
     return LogErr(__func__, 1, 1);
   }
   return true;
@@ -3140,20 +3137,18 @@ const bool IsTwoNumerEqual(const double a, const double b, const double err) {
 }
 
 void GeometryPath::PrintInfo(const bool enable_log) const {
-  ILOG_INFO_IF(enable_log) << "path_count = " << static_cast<int>(path_count)
-                           << "  gear_change_count = "
-                           << static_cast<int>(gear_change_count)
-                           << "  steer_change_count = "
-                           << static_cast<int>(steer_change_count)
-                           << "  total_length = " << total_length
-                           << "  cur_gear_length = " << cur_gear_length
-                           << "  cur_gear = " << GetGearString(cur_gear)
-                           << "  cur_steer = " << GetSteerString(cur_steer)
-                           << "  col_flag = " << collide_flag
-                           << "  dist_to_obs = " << pt_closest2obs.first
-                           << "  pt_closest2obs = "
-                           << pt_closest2obs.second.pos.transpose() << "  "
-                           << pt_closest2obs.second.heading * kRad2Deg;
+  ILOG_INFO_IF(enable_log)
+      << "path_count = " << static_cast<int>(path_count)
+      << "  gear_change_count = " << static_cast<int>(gear_change_count)
+      << "  steer_change_count = " << static_cast<int>(steer_change_count)
+      << "  total_length = " << total_length
+      << "  cur_gear_length = " << cur_gear_length
+      << "  cur_gear = " << GetGearString(cur_gear)
+      << "  cur_steer = " << GetSteerString(cur_steer)
+      << "  col_flag = " << collide_flag
+      << "  obs dist in slot = " << obs_dist_info.in_slot.first
+      << "  obs dist out slot = " << obs_dist_info.out_slot.first
+      << "  average_obs_dist = " << average_obs_dist;
 
   for (size_t i = 0; i < path_segment_vec.size(); i++) {
     ILOG_INFO_IF(enable_log) << "Segment [" << i << "]";
@@ -3188,6 +3183,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 
     for (int i = 0; i < path_count; ++i) {
       if (gear_cmd_vec[i] == cur_gear) {
+        cur_gear_path_segments_vec.emplace_back(path_segment_vec[i]);
         cur_gear_length += path_segment_vec[i].Getlength();
       } else {
         break;
@@ -3214,7 +3210,8 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       if (steer_cmd_vec[i] == SEG_STEER_STRAIGHT &&
           (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
            steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
-        steer_change_count++;
+        steer_change_count += static_cast<uint8_t>(std::round(
+            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
 
       // 左转到右转 或 右转到左转
@@ -3223,7 +3220,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
           (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
            steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
         steer_change_count += static_cast<uint8_t>(std::round(
-            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+            3.0 * 5.5 / path_segment_vec[i + 1].arc_seg.circle_info.radius));
 
         // 如果第一段圆弧路径较短，施加额外惩罚
         std::vector<double> radius_tab{5.5, 5.9, 6.3, 6.7, 7.1, 7.5};
@@ -3242,7 +3239,8 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
            steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
           steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
-        steer_change_count++;
+        steer_change_count += static_cast<uint8_t>(
+            std::round(5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
     }
 
@@ -3251,8 +3249,8 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 }
 
 void GeometryPath::CalcCost() {
-  gear_change_cost = 50.0 * gear_change_count;
-  length_cost = 1.0 * total_length;
+  gear_change_cost = 80.0 * gear_change_count;
+  length_cost = 1.68 * total_length;
   steer_change_cost = 8.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
@@ -3329,7 +3327,12 @@ void PathSegment::PrintInfo(const bool enable_log) const {
                            << "  steer = " << GetSteerString(seg_steer)
                            << "  gear = " << GetGearString(seg_gear)
                            << "  col_flag = " << collision_flag
-                           << "  lat_buffer = " << lat_buffer;
+                           << "  lat_buffer = " << lat_buffer
+                           << "  obs dist in slot = "
+                           << obs_dist_info.in_slot.first
+                           << "  obs dist out slot = "
+                           << obs_dist_info.out_slot.first
+                           << "  average_obs_dist = " << average_obs_dist;
   if (seg_type == SEG_TYPE_LINE) {
     line_seg.PrintInfo(enable_log);
   } else {
@@ -3498,6 +3501,22 @@ const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
     }
   }
   return true;
+}
+
+const PathPoint TransformPoseFromGlobalToLocal(const PathPoint &pose_global,
+                                               const GlobalToLocalTf &g2l_tf) {
+  PathPoint pose_local;
+  pose_local.pos = g2l_tf.GetPos(pose_global.pos);
+  pose_local.heading = g2l_tf.GetHeading(pose_global.heading);
+  return pose_local;
+}
+
+const PathPoint TransformPoseFromLocalToGlobal(const PathPoint &pose_local,
+                                               const LocalToGlobalTf &l2g_tf) {
+  PathPoint pose_global;
+  pose_global.pos = l2g_tf.GetPos(pose_local.pos);
+  pose_global.heading = l2g_tf.GetHeading(pose_local.heading);
+  return pose_global;
 }
 
 }  // namespace geometry_lib

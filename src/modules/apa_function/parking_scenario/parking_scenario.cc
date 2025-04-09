@@ -10,17 +10,24 @@
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_utils.h"
+#include "collision_detection/base_collision_detector.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "dp_speed_common.h"
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
+#include "optimizer_common.h"
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
 #include "planning_plan_c.h"
 #include "pose2d.h"
+#include "sv_dp_optimizer/dp_speed_optimizer.h"
+#include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
+#include "traj_stitcher/apa_trajectory_stitcher.h"
+#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 
 namespace planning {
 namespace apa_planner {
@@ -96,10 +103,11 @@ void ParkingScenario::UpdateStuckTime() {
   // update stuck by uss time  重规划清空
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag()) {
-    frame_.stuck_uss_time += apa_param.GetParam().plan_time;
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag() &&
+      !frame_.stuck_by_dynamic_obs) {
+    frame_.stuck_obs_time += apa_param.GetParam().plan_time;
   } else {
-    frame_.stuck_uss_time = 0.0;
+    frame_.stuck_obs_time = 0.0;
   }
 
   // 重规划不清空
@@ -196,7 +204,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
   if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
       frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
       frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    apa_hmi_.remain_dist = frame_.remain_dist;
+    apa_hmi_.remain_dist = frame_.remain_dist_path;
   }
   return;
 }
@@ -238,13 +246,13 @@ void ParkingScenario::GenPlanningPath() {
       (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
        planning_output_.gear_command.gear_command_value ==
            iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE)) {
-    frame_.remain_dist_uss = 2.68;
+    frame_.remain_dist_obs = 2.68;
     frame_.remain_dist_col_det = 2.68;
   }
 
-  // send uss remain dist to control
+  // send obs remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
-      frame_.remain_dist_uss;
+      frame_.remain_dist_obs;
 
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
@@ -256,17 +264,6 @@ void ParkingScenario::GenPlanningPath() {
       static_cast<double>(
           apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot_type);
 
-  // send remain dist col det to uss
-  // only set a flag let control can use it
-  // retire it, only rely on real time braking
-  // const double flag =
-  //     (apa_world_ptr_->GetSlotManagerPtr()
-  //              ->ego_info_under_slot_.slot.slot_type_ ==
-  //          SlotType::PERPENDICULAR ||
-  //      apa_world_ptr_->GetSlotManagerPtr()
-  //              ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT)
-  //         ? 1.0
-  //         : 0.0;
   planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
   planning_output_.trajectory.trajectory_points[4].distance =
@@ -286,21 +283,9 @@ void ParkingScenario::GenPlanningPath() {
   return;
 }
 
-const bool ParkingScenario::CheckStuckFailed() {
-  return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
-}
-
-void ParkingScenario::UpdateRemainDist(
-    const double uss_safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing) {
-  // 1. calculate remain dist according to plan path
-  frame_.remain_dist = CalRemainDistFromPath();
-
-  // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist, lat_buffer,
-                                                extra_buffer_when_reversing);
-
-  return;
+const bool ParkingScenario::CheckStuckFailed(const double stuck_failed_time) {
+  return frame_.stuck_time >
+         (frame_.stuck_by_dynamic_obs ? 46.8 : stuck_failed_time);
 }
 
 const double ParkingScenario::CalRemainDistFromPath() {
@@ -332,47 +317,70 @@ const double ParkingScenario::CalRemainDistFromPath() {
   return remain_dist;
 }
 
-const double ParkingScenario::CalRemainDistFromUss(
+const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
     const double extra_buffer_when_reversing) {
-  double remain_dist = 5.01;
+  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetUssObsAvoidancePtr();
 
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          ->GetGJKCollisionDetectorPtr();
 
-  uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetMeasureDataManagerPtr(),
-                                   apa_world_ptr_->GetPredictPathManagerPtr(),
-                                   apa_world_ptr_->GetObstacleManagerPtr(),
-                                   lat_buffer);
+  uss_obstacle_avoider_ptr->Update();
 
-  remain_dist =
+  double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  double obs_pt_remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
-      safe_dist;
+  GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
+                                       ApaObsMovementType::STATIC);
+
+  ColResult col_res = gjk_col_det_ptr->Update(
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), lat_buffer,
+      0.0, gjl_col_det_request);
+
+  if (!col_res.col_flag) {
+    col_res.remain_dist_static = 3.68;
+  }
+  double obs_pt_remain_dist_static = col_res.remain_dist_static - safe_dist;
+
+  gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
+
+  col_res = gjk_col_det_ptr->Update(
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), 0.368, 0.0,
+      gjl_col_det_request);
+
+  if (!col_res.col_flag) {
+    col_res.remain_dist_dynamic = 6.68;
+  }
+  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.68;
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    remain_dist -= extra_buffer_when_reversing;
-    obs_pt_remain_dist -= extra_buffer_when_reversing;
+    uss_remain_dist -= extra_buffer_when_reversing;
+    obs_pt_remain_dist_static -= extra_buffer_when_reversing;
+    obs_pt_remain_dist_dynamic -= extra_buffer_when_reversing;
   }
 
-  ILOG_INFO << "origin_uss remain dist = "
-            << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-            << "  uss remain dist = " << remain_dist
-            << "  enable_corner_uss_process = "
-            << apa_param.GetParam().enable_corner_uss_process;
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", lat_buffer)
 
-  ILOG_INFO << "origin_obs_pt remain dist = "
-            << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
-            << "  obs_pt remain dist = " << obs_pt_remain_dist;
-
-  frame_.vel_target = uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target;
+  ILOG_INFO << "  enable_corner_uss_process = "
+            << apa_param.GetParam().enable_corner_uss_process
+            << "  uss remain dist = " << uss_remain_dist
+            << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
+            << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
 
   if (apa_param.GetParam().enable_corner_uss_process) {
-    return remain_dist;
+    frame_.stuck_by_dynamic_obs = false;
+    return uss_remain_dist;
   } else {
-    return obs_pt_remain_dist;
+    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
+      frame_.stuck_by_dynamic_obs = true;
+      return obs_pt_remain_dist_dynamic;
+    } else {
+      frame_.stuck_by_dynamic_obs = false;
+      return obs_pt_remain_dist_static;
+    }
   }
 }
 
@@ -508,51 +516,149 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
-  SpeedDecisions speed_decisions;
+  // task: update traj stitcher
+  ApaTrajectoryStitcher traj_stitcher;
+  traj_stitcher.Process(
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
+      current_path_point_global_vec_,
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle());
 
-  double tracking_path_collision_dist = frame_.remain_dist_uss;
+  double tracking_path_collision_dist = frame_.remain_dist_obs;
   tracking_path_collision_dist =
       std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
 
-  ILOG_INFO << "remain_dist_uss = " << frame_.remain_dist_uss
+  ILOG_INFO << "remain_dist_obs = " << frame_.remain_dist_obs
             << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
 
-  // update stop decision
-  ParkingStopDecider stop_decider = ParkingStopDecider();
-  stop_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(), apa_world_ptr_,
-                       tracking_path_collision_dist,
-                       current_path_point_global_vec_, &speed_decisions);
+  // task: update stop decision
+  ParkingStopDecider stop_decider(
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+      apa_world_ptr_->GetMeasureDataManagerPtr());
 
-  // update speed limit decision
-  ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
-  speed_limit_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(),
-                              current_path_point_global_vec_, &speed_decisions);
+  SpeedDecisions speed_decisions;
+  stop_decider.Process(tracking_path_collision_dist,
+                       traj_stitcher.GetMutableStitchTrajectory(),
+                       &speed_decisions);
 
-  // get ego around speed limit decision
-  const SpeedLimitDecision* min_speed_decision =
-      speed_limit_decider.GetSpeedLimitDecisionBySRange(
-          &speed_decisions, stop_decider.GetEgoPathProjectS(),
-          stop_decider.GetEgoPathProjectS() + 0.6);
+  // task: update speed limit decision
+  ParkSpeedLimitDecider speed_limit_decider;
+  speed_limit_decider.Process(traj_stitcher.GetConstStitchTrajectory(),
+                              &speed_decisions);
 
-  // todo: add uss obs dist
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
-  if (min_speed_decision != nullptr) {
-    double ref_v;
-    ref_v = speed_limit_decider.CalcRefSpeedBySpeedLimitDecision(
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
-        stop_decider.GetEgoPathProjectS(), min_speed_decision);
+  // task: generate dp speed
+  DpSpeedOptimizer dp_speed_optimizer;
+  dp_speed_optimizer.Init();
+  dp_speed_optimizer.Excute(
+      traj_stitcher.GetConstStitchTrajectory(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
+      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()), 0.0,
+      &speed_decisions, &speed_limit_decider.GetSpeedLimitProfile());
 
-    frame_.vel_target = std::min(
-        ref_v, uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
-  } else {
-    frame_.vel_target =
-        std::min(apa_param.GetParam().speed_config.default_cruise_speed,
-                 uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+  // task: generate qp speed
+  PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
+  const SpeedData& dp_speed = dp_speed_optimizer.SpeedProfile();
+  SVPoint init_point = dp_speed_optimizer.GetStartSpeedPoint();
+  qp_speed_optimizer.Execute(
+      init_point, &speed_limit_decider.GetSpeedLimitProfile(), dp_speed);
+
+  // task: generate jlt speed
+  if (dp_speed_optimizer.GetDPState() != SpeedOptimizerState::SUCCESS ||
+      qp_speed_optimizer.GetQPState() != SpeedOptimizerState::SUCCESS) {
+    JerkLimitedTrajOptimizer jlt_optimizer;
+    jlt_optimizer.Execute(init_point, traj_stitcher.GetStitchTrajLength());
   }
 
   return;
 }
+
+const bool ParkingScenario::CheckReplan(const double replan_dist_path,
+                                        const double wait_time_path,
+                                        const double replan_dist_obs,
+                                        const double wait_time_obs,
+                                        const double stuck_replan_time) {
+  frame_.is_replan_by_obs = false;
+  frame_.is_replan_dynamic = false;
+  frame_.replan_reason = NOT_REPLAN;
+
+  if (frame_.is_replan_first) {
+    ILOG_INFO << "first plan";
+    frame_.replan_reason = FIRST_PLAN;
+    return true;
+  }
+
+  if (apa_world_ptr_->GetSimuParam().force_plan) {
+    ILOG_INFO << "force plan";
+    frame_.replan_reason = FORCE_PLAN;
+    return true;
+  }
+
+  if (CheckSegCompleted(replan_dist_path, wait_time_path)) {
+    ILOG_INFO << "replan by current segment completed!";
+    frame_.replan_reason = SEG_COMPLETED_PATH;
+    return true;
+  }
+
+  if (CheckObsStucked(replan_dist_obs, wait_time_obs)) {
+    ILOG_INFO << "replan by uss stucked!";
+    frame_.replan_reason = SEG_COMPLETED_OBS;
+    return true;
+  }
+
+  if (CheckStuckTimeEnough(stuck_replan_time)) {
+    ILOG_INFO << "replan by stuck!";
+    frame_.replan_reason = STUCKED;
+    return true;
+  }
+
+  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
+    ILOG_INFO << "replan by dynamic!";
+    frame_.replan_reason = DYNAMIC;
+    return true;
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
+                                              const double wait_time) {
+  if (frame_.remain_dist_path < replan_dist &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      frame_.current_path_length > 1e-2) {
+    ILOG_INFO << "close to target, need wait a certain time!";
+    if (frame_.stuck_obs_time > wait_time || frame_.stuck_by_dynamic_obs) {
+      ILOG_INFO << "wait a certain time, start plan";
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::CheckObsStucked(const double replan_dist,
+                                            const double wait_time) {
+  if (frame_.remain_dist_obs < replan_dist &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
+    if (frame_.stuck_obs_time > wait_time) {
+      ILOG_INFO << "wait a certain time, start plan";
+      frame_.is_replan_by_obs = true;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::CheckStuckTimeEnough(
+    const double stuck_replan_time) {
+  if (frame_.stuck_obs_time > stuck_replan_time) {
+    return true;
+  }
+  return false;
+}
+
+const bool ParkingScenario::CheckDynamicUpdate() { return false; }
 
 }  // namespace apa_planner
 }  // namespace planning

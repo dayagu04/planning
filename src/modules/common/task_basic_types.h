@@ -43,6 +43,7 @@ enum class BoundType {
   DEFAULT,
   LANE,
   AGENT,
+  REAR_AGENT,
   DYNAMIC_AGENT,
   ADJACENT_AGENT,
   ROAD_BORDER,

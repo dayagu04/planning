@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include "geometry_math.h"
 #include "pose2d.h"
 #include "src/library/reeds_shepp/rs_path_interpolate.h"
@@ -11,6 +12,10 @@ namespace planning {
 // If do path/speed planning in every frame, need a stitcher.
 // If navigation and parking switch in hpp, need trajectory stitcher for
 // navigation trajectory and parking trajectory.
+// Caution:
+// If car is overshoting in path terminal, define a proper stitching rule;
+// If car is not reached the start point of a path, define a proper stitching
+// rule;
 class ApaTrajectoryStitcher {
  public:
   ApaTrajectoryStitcher() = default;
@@ -18,11 +23,24 @@ class ApaTrajectoryStitcher {
   /**
    * [out]: trajectory
    * [in]: front_wheel_angle, left is positive
+   * [in]: ego_v, (-inf, +inf)
    */
   void Process(const Pose2D& ego_pose,
                const std::vector<pnc::geometry_lib::PathPoint>& path,
-               const double ego_v, const double front_wheel_angle,
-               trajectory::Trajectory* trajectory);
+               const double ego_v, const double front_wheel_angle);
+
+  const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchTrajectory()
+      const {
+    return trajectory_;
+  }
+
+  std::vector<pnc::geometry_lib::PathPoint>& GetMutableStitchTrajectory() {
+    return trajectory_;
+  }
+
+  const double DrivedDistance() const { return drived_distance_; }
+
+  const double GetStitchTrajLength() const;
 
  private:
   // If vehicle speed is zero, use vehicle state to generate stitch point.
@@ -61,7 +79,22 @@ class ApaTrajectoryStitcher {
 
   void ClearSticthPoint();
 
+  bool QueryNearestPoint(const Pose2D& ego_pose,
+                         const std::vector<pnc::geometry_lib::PathPoint>& path,
+                         size_t* min_dist_point,
+                         size_t* min_dist_point_neighbor);
+
+  void EvaluateStitchTraj(const Pose2D& ego_pose,
+                          const std::vector<pnc::geometry_lib::PathPoint>& path,
+                          const size_t min_dist_point_id,
+                          const size_t min_dist_point_neighbor_id);
+
  private:
-  TrajectoryPoint stitch_point_;
+  pnc::geometry_lib::PathPoint stitch_point_;
+
+  // todo: update speed data
+  std::vector<pnc::geometry_lib::PathPoint> trajectory_;
+
+  double drived_distance_;
 };
 }  // namespace planning

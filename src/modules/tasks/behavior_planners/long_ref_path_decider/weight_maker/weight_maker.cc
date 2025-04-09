@@ -157,7 +157,7 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     } else if (target_value.target_type() == TargetType::kOvertake) {
       s_weight_[i] = overtake_s_weight;
     } else if (target_value.target_type() == TargetType::kNeighbor ||
-               target_value.target_type() == TargetType::kNeighborYeild ||
+               target_value.target_type() == TargetType::kNeighborYield ||
                target_value.target_type() == TargetType::kNeighborOvertake) {
       s_weight_[i] = neighbor_s_weight;
     }

@@ -37,6 +37,7 @@ message SampleParam {
   optional double weight_leading_safe_v = 10;
   optional double weight_vel_variable = 11;
   optional double weight_gap_avaliable = 12;
+  optional double weight_acc_limit = 13;
 };
 message PolyCurveCostInfo {
   optional double end_point_match_gap_s_cost = 1;

@@ -7,6 +7,7 @@
 #include "geometry_math.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"
+#include "target_pose_decider/target_pose_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -38,7 +39,6 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const bool GenObstacles() override;
   virtual const uint8_t PathPlanOnce() override;
   virtual void Log() const override;
-  virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
   const bool PostProcessPathAccordingRemainDist(const double remain_dist);
@@ -50,8 +50,7 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   const double CalRealTimeBrakeDist();
 
   virtual const bool PostProcessPathAccordingLimiter() override;
-  virtual const bool CheckSegCompleted() override;
-  virtual const bool CheckUssStucked() override;
+
   virtual const bool CheckDynamicUpdate() override;
 
   PerpendicularTailInPathGenerator perpendicular_path_planner_;

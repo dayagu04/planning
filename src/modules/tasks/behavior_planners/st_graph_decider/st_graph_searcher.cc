@@ -68,17 +68,24 @@ MakeTargetLaneFrontRearAgents(framework::Session* session) {
   std::unordered_set<int32_t> target_lane_front_agents;
   std::unordered_set<int32_t> target_lane_rear_agents;
 
-  if (lane_change_state == kLaneChangeExecution) {
-    if (lc_request_direction == LEFT_CHANGE) {
+  if (lc_request_direction == LEFT_CHANGE) {
+    if (lane_change_state == kLaneChangeExecution ||
+        lane_change_state == kLaneChangeComplete) {
+      target_lane_front_node_id = dynamic_world->ego_front_node_id();
+      target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
+    } else {
       target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_left_rear_node_id();
-    } else if (lc_request_direction == RIGHT_CHANGE) {
+    }
+  } else if (lc_request_direction == RIGHT_CHANGE) {
+    if (lane_change_state == kLaneChangeExecution ||
+        lane_change_state == kLaneChangeComplete) {
+      target_lane_front_node_id = dynamic_world->ego_front_node_id();
+      target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
+    } else {
       target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_right_rear_node_id();
     }
-  } else if (lane_change_state == kLaneChangeComplete) {
-    target_lane_front_node_id = dynamic_world->ego_front_node_id();
-    target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
   }
 
   if (target_lane_front_node_id != -1) {

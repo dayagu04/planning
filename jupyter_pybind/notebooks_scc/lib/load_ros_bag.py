@@ -616,7 +616,7 @@ class LoadRosbag:
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                         'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
+                         'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
@@ -653,7 +653,7 @@ class LoadRosbag:
                          'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty','v3_start_stop_status','cipv_relative_s',
                          "agents_headway_id", "agents_headway_value", "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target",'cipv_relative_s_ego_stop',"distance_to_go_condition",
                          "cipv_vel_frenet",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
-                         "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',
+                         "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent', "lane_borrow_agent_id", "lane_borrow_agent_v_limit",
                          "ramp_pass_sts","first_split_direction", "first_merge_direction"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
@@ -670,7 +670,7 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_yield_vec","st_path_final_nodes_cost_overtake_vec","st_path_final_nodes_cost_vel_vec",
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",
-                         'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec']
+                         'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec']
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
@@ -678,6 +678,7 @@ class LoadRosbag:
                          "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
+
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         planning_debug_output = PlanningDebugInfo()
@@ -688,8 +689,6 @@ class LoadRosbag:
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['data'].append(msg)
         self.plan_debug_msg['timestamp'].append(msg.timestamp)
-        if msg.frame_info.scene_type != 'HIGHWAY':
-          scene_type = msg.frame_info.scene_type
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -848,6 +847,12 @@ class LoadRosbag:
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['data'].append(msg)
         self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
+        # if msg.current_state > 13 and msg.current_state < 19:
+        #   scene_type = 'PARKING_APA'
+        if msg.current_state >= 4 and msg.current_state <= 12:
+          scene_type = 'HIGHWAY'
+        elif msg.current_state >= 50 and msg.current_state <= 62:
+          scene_type = 'HPP'
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])

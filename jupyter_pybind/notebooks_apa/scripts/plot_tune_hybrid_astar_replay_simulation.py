@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18049/common_frame/20250222/20250222-20-03-50/data_collection_CHERY_E0Y_18049_ALL_MANUAL_2025-02-22-20-03-50_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250315/20250315-10-53-42/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-03-15-10-53-42_no_camera.bag'
 #bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -48,8 +48,10 @@ end_time = time.time()
 print('load_local_view_figure_parking, ms===== ', (end_time - start_time) * 1000)
 
 # plot speed
-velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
-pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
+plot_speed = True
+if plot_speed:
+  velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
+  pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
 
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -257,12 +259,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   else:
     fus_obj_msg = FusionObjectsInfo()
 
-  # if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
-  #   ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
-  #   data_valid['fus_ground_line_msg_idx'] = True
-
-  #   print('ground line size',ground_line_msg.ground_lines_size)
-  # else:
+  if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
+    ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
+    data_valid['fus_ground_line_msg_idx'] = True
+  else:
     ground_line_msg = GroundLinePerceptionInfo()
 
   if index_map['fus_parking_msg_idx'] < len(bag_loader.fus_parking_msg['data']):
@@ -1114,13 +1114,28 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if (is_reset):
     replay_simulation_hybrid_astar.StopPybind()
 
-  speed_data = replay_simulation_hybrid_astar.GetApaSpeedLimit()
-  update_lon_plan_online_data(speed_data,lon_plan_data)
-  update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
+  if plot_speed:
+    dp_speed_constraints = replay_simulation_hybrid_astar.GetDpSpeedConstraints()
+    qp_speed_constraints = replay_simulation_hybrid_astar.GetQPSpeedConstraints()
+    ref_cruise_speed = replay_simulation_hybrid_astar.GetRefCruiseSpeed()
+    dp_speed_data = replay_simulation_hybrid_astar.GetDPSpeedOptimizationData()
+    qp_speed_data = replay_simulation_hybrid_astar.GetQPSpeedOptimizationData()
+
+    update_lon_plan_online_data(
+        dp_speed_constraints, qp_speed_constraints, ref_cruise_speed, dp_speed_data, qp_speed_data, lon_plan_data)
+
+    # jlt data
+    jlt_speed_data = replay_simulation_hybrid_astar.GetJLTSpeedData()
+    update_jlt_online_data(jlt_speed_data, lon_plan_data)
+
+    update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 
   push_notebook()
 
   print('pybind end')
 
-bkp.show(row(fig1, pans), notebook_handle=True)
+if plot_speed:
+  bkp.show(row(fig1, pans), notebook_handle=True)
+else:
+  bkp.show(row(fig1), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

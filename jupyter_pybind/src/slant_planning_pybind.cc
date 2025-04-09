@@ -12,6 +12,7 @@
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "config_context.h"
 #include "geometry_path_generator.h"
 #include "math_lib.h"
@@ -198,7 +199,7 @@ std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularTailInPathGenerator::Tlane slot_t_lane;
+  planning::apa_planner::Tlane slot_t_lane;
   // judge slot side via slot center and heading
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -426,35 +427,14 @@ std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
                 tf.GetPos(F).y()}) +
           0.0168);
 
-  collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
+  // collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
-  planning::apa_planner::PerpendicularTailInPathGenerator::Input input;
-  input.pt_0 = ego_slot_info.pt_0;
-  input.pt_1 = ego_slot_info.pt_1;
-  input.sin_angle = ego_slot_info.sin_angle;
-  input.origin_pt_0_heading = ego_slot_info.origin_pt_0_heading;
-  Eigen::Vector2d pt_inside = obj_pt_0;
-  if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    pt_inside = obj_pt_1;
-  }
-  slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(pt_inside).x();
-  input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-  input.tlane = slot_t_lane;
-  input.is_complete_path = is_complete_path;
-  input.sample_ds = 0.2;
-  input.ref_arc_steer = frame.current_arc_steer;
-  input.ref_gear = frame.current_gear;
-  input.is_replan_first = frame.is_replan_first;
-  input.is_replan_second = frame.is_replan_second;
-  input.is_replan_dynamic = frame.is_replan_dynamic;
-  input.ego_pose.Set(ego_slot_info.ego_pos_slot,
-                     ego_slot_info.ego_heading_slot);
-
-  pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane.pt_inside);
+  // collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
   bool success = false;
   planning::apa_planner::GeometryPathInput ginput;
-  success = pBase->ItervativeUpdatePb(ginput, collision_detector_ptr);
+  std::shared_ptr<CollisionDetectorInterface> collision_detector_interface_ptr;
+  success = pBase->ItervativeUpdatePb(ginput, collision_detector_interface_ptr);
 
   current_path_point_global_vec_.clear();
 

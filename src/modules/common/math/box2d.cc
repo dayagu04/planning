@@ -60,6 +60,21 @@ Box2d::Box2d(const LineSegment2d &axis, const double width)
   InitCorners();
 }
 
+void Box2d::set_box(const Vec2d& center, const double heading, const double length,
+                    const double width) {
+  center_ = center;
+  length_ = length;
+  width_ = width;
+  half_length_ = length / 2.0;
+  half_width_ = width / 2.0;
+  heading_ = heading;
+  cos_heading_ = cos(heading);
+  sin_heading_ = sin(heading);
+  assert(length_ > -kMathEpsilon);
+  assert(width_ > -kMathEpsilon);
+  InitCorners();
+}
+
 void Box2d::InitCorners() {
   const double dx1 = cos_heading_ * half_length_;
   const double dy1 = sin_heading_ * half_length_;

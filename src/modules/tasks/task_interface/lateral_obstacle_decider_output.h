@@ -21,6 +21,10 @@ struct LateralObstacleHistoryInfo {
   bool front_car = false;
   bool side_car = false;
   bool rear_car = false;
+  bool intersection = false;
+  int intersection_count = 0;
+  double front_expand_len = 0.0;
+  double rear_expand_len = 0.0;
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
@@ -31,6 +35,8 @@ struct LateralObstacleDeciderOutput {
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
   SearchResult search_result = SearchResult::NO_SEARCH;
+  bool in_intersection = false;
+
 
   void Clear() {
     hybrid_ara_result.Clear();

@@ -3,6 +3,7 @@ syntax = "proto2";
 package planning.common;
 
 import "basic_types.proto";
+import "st_graph_searcher.proto";
 
 
 message AstarNode {
@@ -28,5 +29,10 @@ message SVGraphSpeedConstraint {
 }
 
 message ApaSpeedDebug {
-  optional SVGraphSpeedConstraint speed_limit = 1;
+  optional SVGraphSpeedConstraint dp_speed_constraint = 1;
+  optional double ref_cruise_speed = 2;
+  optional SVGraphSpeedConstraint qp_speed_constraint = 3;
+  repeated StPoint2D dp_profile = 4;
+  repeated StPoint2D qp_profile = 5;
+  repeated StPoint2D jlt_profile = 6;
 }

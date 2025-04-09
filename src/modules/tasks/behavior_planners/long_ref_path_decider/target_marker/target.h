@@ -12,7 +12,7 @@ enum class TargetType {
   kOvertake,
   kCruiseSpeed,
   kNeighbor,
-  kNeighborYeild,
+  kNeighborYield,
   kNeighborOvertake,
   kNotSet,
   kFollowCurve,
@@ -100,8 +100,8 @@ class Target {
       return "kOvertake";
     } else if (type == TargetType::kNeighbor) {
       return "kNeighbor";
-    } else if (type == TargetType::kNeighborYeild) {
-      return "kNeighborYeild";
+    } else if (type == TargetType::kNeighborYield) {
+      return "kNeighborYield";
     } else if (type == TargetType::kNeighborOvertake) {
       return "kNeighborOvertake";
     } else {

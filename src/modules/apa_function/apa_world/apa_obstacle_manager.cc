@@ -6,6 +6,7 @@
 
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
+#include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "environmental_model.h"
 #include "local_view.h"
@@ -96,7 +97,19 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
       GeneratePolygonByAABB(&polygon, box);
 
+      const iflyauto::ObjectType obs_type =
+          local_view->fusion_occupancy_objects_info.fusion_object[i]
+              .common_occupancy_info.type;
+
       ApaObstacle apa_obs;
+      if (apa_param.GetParam().enable_use_dynamic_obs) {
+        if (obs_type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+            obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE) {
+          ILOG_INFO << "there are people or dynamic obs";
+          apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
+        }
+      }
+
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
       apa_obs.SetBoxGlobal(box);
@@ -151,12 +164,13 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       const iflyauto::FusionGroundLine& gl =
           local_view->ground_line_perception.groundline[i];
 
-      if (gl.resource_type != iflyauto::RESOURCE_TYPE_REAL_TIME_FUSION) {
+      if (gl.resource_type == iflyauto::RESOURCE_TYPE_MAP) {
         continue;
       }
 
-      const uint8 points_3d_size = std::min(
-          gl.groundline_point_size, static_cast<uint8>(FUSION_GROUNDLINE_MAX_NUM));
+      const uint8 points_3d_size =
+          std::min(gl.groundline_point_size,
+                   static_cast<uint8>(FUSION_GROUNDLINE_POINT_MAX_NUM));
       if (points_3d_size < 1) {
         continue;
       }

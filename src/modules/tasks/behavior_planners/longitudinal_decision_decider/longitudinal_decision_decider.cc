@@ -114,7 +114,7 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
     return;
   }
   const auto &agents = agent_manager->GetAllCurrentAgents();
-  for (const auto *ptr_agent : agents) {
+  for (const auto ptr_agent : agents) {
     if (ptr_agent == nullptr) {
       continue;
     }
@@ -233,7 +233,7 @@ double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
 
   std::vector<int64_t> agents_around_ego;
   agents_around_ego.reserve(agents.size());
-  for (const auto *ptr_agent : agents) {
+  for (const auto ptr_agent : agents) {
     double agent_s_base_ego_lane = 0.0, agent_l_base_ego_lane = 0.0;
     if (!ego_lane_coord->XYToSL(ptr_agent->x(), ptr_agent->y(),
                                 &agent_s_base_ego_lane,
@@ -585,7 +585,7 @@ std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
       double ego_ttc_to_front_agent =
           agent_relative_s_to_ego / vel_difference_to_agent;
       JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent", ego_ttc_to_front_agent)
-      if (ego_ttc_to_front_agent < config_.ignore_agent_ttc_to_ego_thrd &&
+      if (ego_ttc_to_front_agent < config_.ignore_ego_ttc_to_agent_thrd &&
           ego_ttc_to_front_agent > 0.0) {
         ignore_gap_front_agent = false;
       }

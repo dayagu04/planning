@@ -180,7 +180,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularPathGenerator::Tlane slot_t_lane;
+  planning::apa_planner::Tlane slot_t_lane;
 
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -391,214 +391,177 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       obs_local_pts, planning::apa_planner::CollisionDetector::TLANE_OBS);
 
   // assemble input
-  // old slot management
-  bool new_slot_management = true;
-  if (!new_slot_management) {
-    planning::apa_planner::PerpendicularPathGenerator::Input input;
-    input.pt_0 = ego_slot_info.pt_0;
-    input.pt_1 = ego_slot_info.pt_1;
-    input.sin_angle = ego_slot_info.sin_angle;
-    input.origin_pt_0_heading = ego_slot_info.origin_pt_0_heading;
-    input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
-    input.is_complete_path = is_complete_path;
-    input.sample_ds = 0.2;
-    input.ref_arc_steer = frame.current_arc_steer;
-    input.ref_gear = frame.current_gear;
-    input.is_replan_first = frame.is_replan_first;
-    input.is_replan_second = frame.is_replan_second;
-    input.is_replan_dynamic = frame.is_replan_dynamic;
-    input.ego_pose.Set(ego_slot_info.ego_pos_slot,
-                       ego_slot_info.ego_heading_slot);
+  // new slot management
+  planning::apa_planner::GeometryPathInput new_input;
+  planning::apa_planner::EgoInfoUnderSlot slot_input;
 
-    slot_t_lane.pt_inside.x() = ego_slot_info.pt_0.x() + inside_dx;
+  slot_input.slot_type = planning::apa_planner::SlotType::PERPENDICULAR;
+  slot_input.cur_pose.Set(ego_slot_info.ego_pos_slot,
+                          ego_slot_info.ego_heading_slot);
 
-    slot_t_lane.pt_inside.y() = ego_slot_info.pt_0.y() + obs_params[6];
+  slot_input.target_pose.Set(slot_t_lane.pt_terminal_pos,
+                             slot_t_lane.pt_terminal_heading);
 
-    input.tlane = slot_t_lane;
-    pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane.pt_inside);
+  slot_input.g2l_tf = ego_slot_info.g2l_tf;
+  slot_input.l2g_tf = ego_slot_info.l2g_tf;
+  slot_input.pt_inside << ego_slot_info.pt_0.x() + inside_dx,
+      ego_slot_info.pt_0.y() + obs_params[6];
 
-    const Eigen::Vector2d pt_tmp(
-        std::max(slot_t_lane.pt_inside.x(),
-                 slot_t_lane.corner_inside_slot.x() - obs_params[5]),
-        slot_t_lane.pt_inside.y());
+  slot_input.slot.origin_corner_coord_global_.pt_0 = pt_[0];
+  slot_input.slot.origin_corner_coord_global_.pt_1 = pt_[1];
+  slot_input.slot.origin_corner_coord_global_.pt_2 = pt_[2];
+  slot_input.slot.origin_corner_coord_global_.pt_3 = pt_[3];
+  slot_input.slot.origin_corner_coord_global_.CalExtraCoord();
+  slot_input.slot.processed_corner_coord_global_ =
+      slot_input.slot.origin_corner_coord_global_;
 
-    real_pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(pt_tmp);
-    pBase->SetInput(input);
+  if (slot_input.slot_type == planning::apa_planner::SlotType::PERPENDICULAR) {
+    slot_input.slot.sin_angle_ = 1.0;
+    slot_input.slot.angle_ = 90.0;
   } else {
-    // new slot management
-    planning::apa_planner::GeometryPathInput new_input;
-    planning::apa_planner::EgoInfoUnderSlot slot_input;
+    slot_input.slot.angle_ =
+        std::fabs(geometry_lib::GetAngleFromTwoVec(
+            slot_input.slot.origin_corner_coord_global_.pt_23mid_01_mid,
+            slot_input.slot.origin_corner_coord_global_.pt_01_vec)) *
+        kRad2Deg;
 
-    slot_input.slot_type = planning::apa_planner::SlotType::PERPENDICULAR;
-    slot_input.cur_pose.Set(ego_slot_info.ego_pos_slot,
-                            ego_slot_info.ego_heading_slot);
-
-    slot_input.target_pose.Set(slot_t_lane.pt_terminal_pos,
-                               slot_t_lane.pt_terminal_heading);
-
-    slot_input.g2l_tf = ego_slot_info.g2l_tf;
-    slot_input.l2g_tf = ego_slot_info.l2g_tf;
-    slot_input.pt_inside << ego_slot_info.pt_0.x() + inside_dx,
-        ego_slot_info.pt_0.y() + obs_params[6];
-
-    slot_input.slot.origin_corner_coord_global_.pt_0 = pt_[0];
-    slot_input.slot.origin_corner_coord_global_.pt_1 = pt_[1];
-    slot_input.slot.origin_corner_coord_global_.pt_2 = pt_[2];
-    slot_input.slot.origin_corner_coord_global_.pt_3 = pt_[3];
-    slot_input.slot.origin_corner_coord_global_.CalExtraCoord();
-    slot_input.slot.processed_corner_coord_global_ =
-        slot_input.slot.origin_corner_coord_global_;
-
-    if (slot_input.slot_type ==
-        planning::apa_planner::SlotType::PERPENDICULAR) {
-      slot_input.slot.sin_angle_ = 1.0;
-      slot_input.slot.angle_ = 90.0;
-    } else {
-      slot_input.slot.angle_ =
-          std::fabs(geometry_lib::GetAngleFromTwoVec(
-              slot_input.slot.origin_corner_coord_global_.pt_23mid_01_mid,
-              slot_input.slot.origin_corner_coord_global_.pt_01_vec)) *
-          kRad2Deg;
-
-      if (slot_input.slot.angle_ > 90.0) {
-        slot_input.slot.angle_ = 180.0 - slot_input.slot.angle_;
-      }
-
-      slot_input.slot.angle_ =
-          mathlib::DoubleConstrain(slot_input.slot.angle_, 10.0, 80.0);
-
-      slot_input.slot.sin_angle_ = std::sin(slot_input.slot.angle_ * kDeg2Rad);
-      ILOG_INFO << "slant slot, should postprocess corner to perpendicular";
-
-      const Eigen::Vector2d pt_01_vec =
-          slot_input.slot.origin_corner_coord_global_.pt_1 -
-          slot_input.slot.origin_corner_coord_global_.pt_0;
-      const Eigen::Vector2d pt_01_unit_vec = pt_01_vec.normalized();
-
-      const Eigen::Vector2d pt_02_vec =
-          slot_input.slot.origin_corner_coord_global_.pt_2 -
-          slot_input.slot.origin_corner_coord_global_.pt_0;
-      const Eigen::Vector2d pt_02_unit_vec = pt_02_vec.normalized();
-
-      const Eigen::Vector2d pt_13_vec =
-          slot_input.slot.origin_corner_coord_global_.pt_3 -
-          slot_input.slot.origin_corner_coord_global_.pt_1;
-      const Eigen::Vector2d pt_13_unit_vec = pt_13_vec.normalized();
-
-      const double cos_theta = pt_01_unit_vec.dot(pt_02_unit_vec);
-
-      if (cos_theta > 0.0) {
-        // toward right
-        const double dis_0_0dot = pt_01_vec.dot(pt_02_unit_vec);
-        const Eigen::Vector2d pt_0dot =
-            slot_input.slot.origin_corner_coord_global_.pt_0 +
-            dis_0_0dot * pt_02_unit_vec;
-        const double dist_0dot_2 = pt_02_vec.norm() - dis_0_0dot;
-        const Eigen::Vector2d pt_3dot =
-            slot_input.slot.origin_corner_coord_global_.pt_1 +
-            dist_0dot_2 * pt_02_unit_vec;
-        slot_input.slot.processed_corner_coord_global_.pt_0 = pt_0dot;
-        slot_input.slot.processed_corner_coord_global_.pt_3 = pt_3dot;
-      } else {
-        // toward left
-        const Eigen::Vector2d pt_10_vec = -pt_01_vec;
-        const double dist_1_1dot = pt_10_vec.dot(pt_13_unit_vec);
-        const Eigen::Vector2d pt_1dot =
-            slot_input.slot.origin_corner_coord_global_.pt_1 +
-            dist_1_1dot * pt_13_unit_vec;
-        const double dist_1dot_3 = pt_13_vec.norm() - dist_1_1dot;
-        const Eigen::Vector2d pt_2dot =
-            slot_input.slot.origin_corner_coord_global_.pt_0 +
-            dist_1dot_3 * pt_13_unit_vec;
-        slot_input.slot.processed_corner_coord_global_.pt_1 = pt_1dot;
-        slot_input.slot.processed_corner_coord_global_.pt_2 = pt_2dot;
-      }
-
-      slot_input.slot.processed_corner_coord_global_.CalExtraCoord();
+    if (slot_input.slot.angle_ > 90.0) {
+      slot_input.slot.angle_ = 180.0 - slot_input.slot.angle_;
     }
 
-    slot_input.slot.slot_length_ =
-        (slot_input.slot.processed_corner_coord_global_.pt_01_mid -
-         slot_input.slot.processed_corner_coord_global_.pt_23_mid)
-            .norm();
+    slot_input.slot.angle_ =
+        mathlib::DoubleConstrain(slot_input.slot.angle_, 10.0, 80.0);
 
-    slot_input.slot.slot_width_ =
-        (slot_input.slot.processed_corner_coord_global_.pt_1 -
-         slot_input.slot.processed_corner_coord_global_.pt_0)
-            .norm();
+    slot_input.slot.sin_angle_ = std::sin(slot_input.slot.angle_ * kDeg2Rad);
+    ILOG_INFO << "slant slot, should postprocess corner to perpendicular";
 
-    slot_input.slot.origin_corner_coord_local_ =
-        slot_input.slot.origin_corner_coord_global_.GlobalToLocal(
-            slot_input.g2l_tf);
+    const Eigen::Vector2d pt_01_vec =
+        slot_input.slot.origin_corner_coord_global_.pt_1 -
+        slot_input.slot.origin_corner_coord_global_.pt_0;
+    const Eigen::Vector2d pt_01_unit_vec = pt_01_vec.normalized();
 
-    slot_input.slot.processed_corner_coord_local_ =
-        slot_input.slot.processed_corner_coord_global_.GlobalToLocal(
-            slot_input.g2l_tf);
+    const Eigen::Vector2d pt_02_vec =
+        slot_input.slot.origin_corner_coord_global_.pt_2 -
+        slot_input.slot.origin_corner_coord_global_.pt_0;
+    const Eigen::Vector2d pt_02_unit_vec = pt_02_vec.normalized();
 
-    slot_input.slot.origin_corner_coord_local_.pt_0 =
-        slot_input.slot.origin_corner_coord_local_.pt_1;
+    const Eigen::Vector2d pt_13_vec =
+        slot_input.slot.origin_corner_coord_global_.pt_3 -
+        slot_input.slot.origin_corner_coord_global_.pt_1;
+    const Eigen::Vector2d pt_13_unit_vec = pt_13_vec.normalized();
 
-    slot_input.slot.origin_corner_coord_local_.pt_1 =
-        slot_input.slot.origin_corner_coord_local_.pt_0;
-    // no use
-    slot_input.origin_pose_global.heading_vec =
-        slot_input.slot.processed_corner_coord_global_.pt_23mid_01_mid
-            .normalized();
+    const double cos_theta = pt_01_unit_vec.dot(pt_02_unit_vec);
 
-    slot_input.origin_pose_global.heading =
-        std::atan2(slot_input.origin_pose_global.heading_vec.y(),
-                   slot_input.origin_pose_global.heading_vec.x());
+    if (cos_theta > 0.0) {
+      // toward right
+      const double dis_0_0dot = pt_01_vec.dot(pt_02_unit_vec);
+      const Eigen::Vector2d pt_0dot =
+          slot_input.slot.origin_corner_coord_global_.pt_0 +
+          dis_0_0dot * pt_02_unit_vec;
+      const double dist_0dot_2 = pt_02_vec.norm() - dis_0_0dot;
+      const Eigen::Vector2d pt_3dot =
+          slot_input.slot.origin_corner_coord_global_.pt_1 +
+          dist_0dot_2 * pt_02_unit_vec;
+      slot_input.slot.processed_corner_coord_global_.pt_0 = pt_0dot;
+      slot_input.slot.processed_corner_coord_global_.pt_3 = pt_3dot;
+    } else {
+      // toward left
+      const Eigen::Vector2d pt_10_vec = -pt_01_vec;
+      const double dist_1_1dot = pt_10_vec.dot(pt_13_unit_vec);
+      const Eigen::Vector2d pt_1dot =
+          slot_input.slot.origin_corner_coord_global_.pt_1 +
+          dist_1_1dot * pt_13_unit_vec;
+      const double dist_1dot_3 = pt_13_vec.norm() - dist_1_1dot;
+      const Eigen::Vector2d pt_2dot =
+          slot_input.slot.origin_corner_coord_global_.pt_0 +
+          dist_1dot_3 * pt_13_unit_vec;
+      slot_input.slot.processed_corner_coord_global_.pt_1 = pt_1dot;
+      slot_input.slot.processed_corner_coord_global_.pt_2 = pt_2dot;
+    }
 
-    slot_input.origin_pose_global.pos =
-        slot_input.slot.processed_corner_coord_global_.pt_01_mid -
-        slot_input.slot.slot_length_ *
-            slot_input.origin_pose_global.heading_vec;
-
-    slot_input.origin_pose_local.pos =
-        slot_input.g2l_tf.GetPos(slot_input.origin_pose_global.pos);
-
-    slot_input.origin_pose_local.heading =
-        slot_input.g2l_tf.GetHeading(slot_input.origin_pose_global.heading);
-
-    slot_input.origin_pose_local.heading_vec =
-        geometry_lib::GenHeadingVec(slot_input.origin_pose_local.heading);
-    //
-
-    slot_input.slot.limiter_.valid = true;
-
-    slot_input.slot.limiter_.start_pt =
-        Eigen::Vector2d(global_target_pose_.x(), global_target_pose_.y()) -
-        slot_input.slot.processed_corner_coord_global_.pt_01_vec.normalized() *
-            0.5 * slot_input.slot.slot_width_;
-
-    slot_input.slot.limiter_.end_pt =
-        Eigen::Vector2d(global_target_pose_.x(), global_target_pose_.y()) +
-        slot_input.slot.processed_corner_coord_global_.pt_01_vec.normalized() *
-            0.5 * slot_input.slot.slot_width_;
-
-    slot_input.virtual_limiter.first =
-        slot_input.g2l_tf.GetPos(slot_input.slot.limiter_.start_pt);
-
-    slot_input.virtual_limiter.second =
-        slot_input.g2l_tf.GetPos(slot_input.slot.limiter_.end_pt);
-
-    slot_input.terminal_err.Set(
-        slot_input.cur_pose.pos - slot_input.target_pose.pos,
-        geometry_lib::NormalizeAngle(slot_input.cur_pose.heading -
-                                     slot_input.target_pose.heading));
-
-    new_input.ego_info_under_slot = slot_input;
-    new_input.is_complete_path = is_complete_path;
-    new_input.sample_ds = 0.2;
-    new_input.ref_arc_steer = frame.current_arc_steer;
-    new_input.ref_gear = frame.current_gear;
-    new_input.is_replan_first = frame.is_replan_first;
-    new_input.is_replan_second = frame.is_replan_second;
-    new_input.is_replan_dynamic = frame.is_replan_dynamic;
-    new_input.ego_info_under_slot.slot_side =
-        static_cast<pnc::geometry_lib::SlotSide>(slot_t_lane.slot_side);
-    pBase->SetGInput(new_input);
+    slot_input.slot.processed_corner_coord_global_.CalExtraCoord();
   }
+
+  slot_input.slot.slot_length_ =
+      (slot_input.slot.processed_corner_coord_global_.pt_01_mid -
+       slot_input.slot.processed_corner_coord_global_.pt_23_mid)
+          .norm();
+
+  slot_input.slot.slot_width_ =
+      (slot_input.slot.processed_corner_coord_global_.pt_1 -
+       slot_input.slot.processed_corner_coord_global_.pt_0)
+          .norm();
+
+  slot_input.slot.origin_corner_coord_local_ =
+      slot_input.slot.origin_corner_coord_global_.GlobalToLocal(
+          slot_input.g2l_tf);
+
+  slot_input.slot.processed_corner_coord_local_ =
+      slot_input.slot.processed_corner_coord_global_.GlobalToLocal(
+          slot_input.g2l_tf);
+
+  slot_input.slot.origin_corner_coord_local_.pt_0 =
+      slot_input.slot.origin_corner_coord_local_.pt_1;
+
+  slot_input.slot.origin_corner_coord_local_.pt_1 =
+      slot_input.slot.origin_corner_coord_local_.pt_0;
+  // no use
+  slot_input.origin_pose_global.heading_vec =
+      slot_input.slot.processed_corner_coord_global_.pt_23mid_01_mid
+          .normalized();
+
+  slot_input.origin_pose_global.heading =
+      std::atan2(slot_input.origin_pose_global.heading_vec.y(),
+                 slot_input.origin_pose_global.heading_vec.x());
+
+  slot_input.origin_pose_global.pos =
+      slot_input.slot.processed_corner_coord_global_.pt_01_mid -
+      slot_input.slot.slot_length_ * slot_input.origin_pose_global.heading_vec;
+
+  slot_input.origin_pose_local.pos =
+      slot_input.g2l_tf.GetPos(slot_input.origin_pose_global.pos);
+
+  slot_input.origin_pose_local.heading =
+      slot_input.g2l_tf.GetHeading(slot_input.origin_pose_global.heading);
+
+  slot_input.origin_pose_local.heading_vec =
+      geometry_lib::GenHeadingVec(slot_input.origin_pose_local.heading);
+  //
+
+  slot_input.slot.limiter_.valid = true;
+
+  slot_input.slot.limiter_.start_pt =
+      Eigen::Vector2d(global_target_pose_.x(), global_target_pose_.y()) -
+      slot_input.slot.processed_corner_coord_global_.pt_01_vec.normalized() *
+          0.5 * slot_input.slot.slot_width_;
+
+  slot_input.slot.limiter_.end_pt =
+      Eigen::Vector2d(global_target_pose_.x(), global_target_pose_.y()) +
+      slot_input.slot.processed_corner_coord_global_.pt_01_vec.normalized() *
+          0.5 * slot_input.slot.slot_width_;
+
+  slot_input.virtual_limiter.first =
+      slot_input.g2l_tf.GetPos(slot_input.slot.limiter_.start_pt);
+
+  slot_input.virtual_limiter.second =
+      slot_input.g2l_tf.GetPos(slot_input.slot.limiter_.end_pt);
+
+  slot_input.terminal_err.Set(
+      slot_input.cur_pose.pos - slot_input.target_pose.pos,
+      geometry_lib::NormalizeAngle(slot_input.cur_pose.heading -
+                                   slot_input.target_pose.heading));
+
+  new_input.ego_info_under_slot = slot_input;
+  new_input.is_complete_path = is_complete_path;
+  new_input.sample_ds = 0.2;
+  new_input.ref_arc_steer = frame.current_arc_steer;
+  new_input.ref_gear = frame.current_gear;
+  new_input.is_replan_first = frame.is_replan_first;
+  new_input.is_replan_second = frame.is_replan_second;
+  new_input.is_replan_dynamic = frame.is_replan_dynamic;
+  new_input.ego_info_under_slot.slot_side =
+      static_cast<pnc::geometry_lib::SlotSide>(slot_t_lane.slot_side);
+  pBase->SetInput(new_input);
 
   apa_param.SetPram().radius_add = radius_add;
 

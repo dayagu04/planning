@@ -72,6 +72,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_leading_safe_v_;
   double weight_vel_variable_;
   double weight_gap_avaliable_;
+  double weight_acc_limit_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
@@ -309,7 +310,7 @@ class SamplePolySpeedAdjustDecider : public Task {
       const {
     return sample_trajs_;
   }
-  
+
   std::vector<std::vector<SampleQuarticPolynomialCurve>>&
   mutable_sample_trajs() {
     return sample_trajs_;

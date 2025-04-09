@@ -11,6 +11,7 @@
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "target_pose_decider/target_pose_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -20,11 +21,13 @@ static const uint8_t kMaxSlotReleaseCount = 8;
 
 void ApaSlotManager::Update(
     const LocalView* local_view,
-    const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
-    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
+    const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
+    const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
+    const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,
+    const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr) {
   if (local_view == nullptr || state_machine_ptr == nullptr ||
-      measure_data_ptr == nullptr || obstacle_manager_ptr == nullptr) {
+      measure_data_ptr == nullptr || obstacle_manager_ptr == nullptr ||
+      col_det_interface_ptr == nullptr) {
     ILOG_ERROR << "Update ApaSlotManager, local_view_ptr is nullptr";
     return;
   }
@@ -33,6 +36,7 @@ void ApaSlotManager::Update(
   measure_data_ptr_ = measure_data_ptr;
   state_machine_ptr_ = state_machine_ptr;
   obstacle_manager_ptr_ = obstacle_manager_ptr;
+  col_det_interface_ptr_ = col_det_interface_ptr;
 
   slots_map_.clear();
   dist_id_map_.clear();
@@ -82,6 +86,7 @@ void ApaSlotManager::Update(
       ParkingLotCruiseProcess();
       if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) !=
           0) {
+        ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
         ego_info_under_slot_.id =
             local_view->parking_fusion_info.select_slot_id;
         ego_info_under_slot_.slot_type =
@@ -101,6 +106,7 @@ void ApaSlotManager::Update(
   }
 
   ILOG_INFO << "select slot id = " << ego_info_under_slot_.id
+            << ",history_slot_id = " << ego_info_under_slot_.history_slot_id
             << "  type = " << GetSlotTypeString(ego_info_under_slot_.slot_type);
 
   const SlotReleaseState last_geometry_release =
@@ -120,10 +126,14 @@ void ApaSlotManager::Update(
   }
 
   // keep last release state here, and would change later when searching
-  ego_info_under_slot_.slot.release_info_
-      .release_state[GEOMETRY_PLANNING_RELEASE] = last_geometry_release;
-  ego_info_under_slot_.slot.release_info_
-      .release_state[ASTAR_PLANNING_RELEASE] = last_astar_release;
+  if (ego_info_under_slot_.history_slot_id == ego_info_under_slot_.slot.id_) {
+    ego_info_under_slot_.slot.release_info_
+        .release_state[GEOMETRY_PLANNING_RELEASE] = last_geometry_release;
+    ego_info_under_slot_.slot.release_info_
+        .release_state[ASTAR_PLANNING_RELEASE] = last_astar_release;
+  }
+
+  return;
 }
 
 void ApaSlotManager::GenerateReleaseSlotIdVec() {
@@ -209,11 +219,11 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 }
 
 const bool ApaSlotManager::IsEgoCloseToObs() {
-  PathSafeChecker safe_check;
-  Pose2D ego =
+  const Pose2D ego =
       Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
              measure_data_ptr_->GetHeading());
-  return safe_check.CalcEgoCollision(obstacle_manager_ptr_, ego, 0.268, 0.1);
+  return col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
+      ego, 0.268, 0.1);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
@@ -252,6 +262,8 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
     } else {
       slot_release_voter_[slot.id_] = 0;
     }
+  } else if (release_voter_type == SlotReleaseVoterType::HOLD) {
+    // do nothing
   } else {
     slot_release_voter_[slot.id_] = 0;
   }
@@ -271,7 +283,7 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
 
 const SlotReleaseVoterType
 ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
-  const auto& param = apa_param.GetParam();
+  const ApaParameters& param = apa_param.GetParam();
   const Eigen::Vector2d pM01 = slot.processed_corner_coord_global_.pt_01_mid;
   const Eigen::Vector2d pM23 = slot.processed_corner_coord_global_.pt_23_mid;
   const Eigen::Vector2d t =
@@ -279,102 +291,88 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   const Eigen::Vector2d n =
       slot.processed_corner_coord_global_.pt_23mid_01_mid.normalized();
 
-  const double heading = std::atan2(n.y(), n.x());
-
-  const double max_move_dist = slot.slot_width_ * 0.5 - 1.1 + 0.2;
-  std::vector<double> move_slot_dist_vec{0.0};
-  double move_dist = 0.05;
-  while (move_dist < max_move_dist + 0.04) {
-    move_slot_dist_vec.emplace_back(move_dist);
-    move_slot_dist_vec.emplace_back(-move_dist);
-    move_dist += 0.05;
-  }
-
-  const std::vector<double> move_up_dist{0.68, 1.08, 1.48};
   // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
-  // 单侧buffer 0.16米 碰撞直接清0 0.16-0.19 累减 0.20-0.26累加 0.26直接释放
-  std::vector<std::pair<double, SlotReleaseVoterType>> lat_buffer_pair_vec = {
-      {0.26, SlotReleaseVoterType::MAXIMUM},
-      {0.20, SlotReleaseVoterType::ACCUMULATE},
-      {0.16, SlotReleaseVoterType::SUBTRACT}};
+  // 0.26米如果没有碰撞 直接释放
+  // 0.20米如果没有碰撞 累加
+  // 0.17米如果没有碰撞 维持不变
+  // 0.16米如果没有碰撞 累减
+  // 0.16米如果碰撞 直接不释放
+  // const std::vector<std::pair<double, SlotReleaseVoterType>>
+  //     lat_buffer_pair_vec = {{0.26, SlotReleaseVoterType::MAXIMUM},
+  //                            {0.20, SlotReleaseVoterType::ACCUMULATE},
+  //                            {0.17, SlotReleaseVoterType::HOLD},
+  //                            {0.16, SlotReleaseVoterType::SUBTRACT}};
 
-  PathSafeChecker safe_check;
-  const double lon_buffer = 0.1;
-  double move_slot_dist = 0.0;
-  bool is_slot_occupied = true;
-  std::pair<double, SlotReleaseVoterType> lat_buffer_pair;
+  std::vector<double> lat_buffer_vec{0.26, 0.20, 0.17, 0.16};
 
-  for (size_t i = 0; i < lat_buffer_pair_vec.size(); ++i) {
-    lat_buffer_pair = lat_buffer_pair_vec[i];
-    for (const double dist : move_slot_dist_vec) {
-      bool col = false;
-      for (const double up_dist : move_up_dist) {
-        const Eigen::Vector2d origin_target_pos =
-            pM01 - n * (param.wheel_base + param.front_overhanging - up_dist);
-        const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
-        const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
-        if (safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
-                                        lat_buffer_pair.first, lon_buffer)) {
-          col = true;
-          break;
-        }
-      }
-      if (col) {
-        continue;
-      }
-      move_slot_dist = dist;
-      is_slot_occupied = false;
-      break;
-    }
-    if (!is_slot_occupied) {
-      break;
-    }
-  }
+  TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
+  TargetPoseDeciderResult res = tar_pose_decider.CalcTargetPose(
+      slot, lat_buffer_vec, 0.3,
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true);
 
-  if (is_slot_occupied) {
+  if (!res.exist_target_pose) {
     ILOG_INFO << "slot is occupied";
     return SlotReleaseVoterType::CLEAR;
   }
 
-  ILOG_INFO << "move_slot_dist = " << move_slot_dist
-            << "  lat_buffer = " << lat_buffer_pair.first << "  voter type = "
-            << GetSlotReleaseVoterTypeString(lat_buffer_pair.second);
+  ILOG_INFO << "lat_move_slot_dist = " << res.safe_lat_move_dist
+            << "  lon_move_slot_dist = " << res.safe_lon_move_dist
+            << "  lat_buffer = " << res.safe_lat_buffer;
+
+  SlotReleaseVoterType release_voter_type;
+  if (geometry_lib::IsTwoNumerEqual(0.26, res.safe_lat_buffer)) {
+    release_voter_type = SlotReleaseVoterType::MAXIMUM;
+  } else if (geometry_lib::IsTwoNumerEqual(0.20, res.safe_lat_buffer)) {
+    release_voter_type = SlotReleaseVoterType::ACCUMULATE;
+  } else if (geometry_lib::IsTwoNumerEqual(0.17, res.safe_lat_buffer)) {
+    release_voter_type = SlotReleaseVoterType::HOLD;
+  } else if (geometry_lib::IsTwoNumerEqual(0.16, res.safe_lat_buffer)) {
+    release_voter_type = SlotReleaseVoterType::SUBTRACT;
+  }
+
+  ILOG_INFO << "release_voter_type = "
+            << GetSlotReleaseVoterTypeString(release_voter_type);
 
   const double lat_buffer = 0.0368;
 
   Eigen::Vector2d pt_0 = pM01 - t * (param.max_car_width * 0.5 + lat_buffer);
   Eigen::Vector2d pt_1 = pM01 + t * (param.max_car_width * 0.5 + lat_buffer);
 
-  pt_0 = pt_0 + move_slot_dist * t;
-  pt_1 = pt_1 + move_slot_dist * t;
+  pt_0 = pt_0 + res.safe_lat_move_dist * t;
+  pt_1 = pt_1 + res.safe_lat_move_dist * t;
 
-  const double channel_width = param.slot_release_channel_width;
+  double channel_width = param.slot_release_channel_width;
+
+  // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
   Polygon2D polygon;
-  polygon.vertexes[0].x = pt_0.x();
-  polygon.vertexes[0].y = pt_0.y();
 
-  polygon.vertexes[1].x = (pt_0 + channel_width * n).x();
-  polygon.vertexes[1].y = (pt_0 + channel_width * n).y();
+  polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+      pM01 + 2.0 * n, pM01 + slot.slot_width_ * t + 2.0 * n,
+      pM01 + slot.slot_width_ * t - 2.0 * n, pM01 - 2.0 * n});
 
-  polygon.vertexes[2].x = (pt_1 + channel_width * n).x();
-  polygon.vertexes[2].y = (pt_1 + channel_width * n).y();
+  if (!col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+          polygon, GJKColDetRequest(false))) {
+    channel_width = param.easy_slot_release_channel_width;
+  } else {
+    polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+        pM01 + 2.0 * n, pM01 - 2.0 * n, pM01 - slot.slot_width_ * t - 2.0 * n,
+        pM01 - slot.slot_width_ * t + 2.0 * n});
+    if (!col_det_interface_ptr_->GetGJKCollisionDetectorPtr()
+             ->IsPolygonCollision(polygon, GJKColDetRequest(false))) {
+      channel_width = param.easy_slot_release_channel_width;
+    }
+  }
 
-  polygon.vertexes[3].x = pt_1.x();
-  polygon.vertexes[3].y = pt_1.y();
+  polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+      pt_0, pt_0 + channel_width * n, pt_1 + channel_width * n, pt_1});
 
-  polygon.vertex_num = 4;
-  polygon.shape = PolygonShape::box;
-  UpdatePolygonValue(&polygon, NULL, 0, false, POLYGON_MAX_RADIUS);
-
-  polygon.min_tangent_radius = 0.6;
-
-  safe_check.SetObstacle(obstacle_manager_ptr_);
-  if (safe_check.IsPolygonCollision(&polygon)) {
+  if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+          polygon, GJKColDetRequest(false))) {
     ILOG_INFO << "passage is occupied";
     return SlotReleaseVoterType::CLEAR;
   }
 
-  return lat_buffer_pair.second;
+  return release_voter_type;
 }
 
 const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
@@ -404,7 +402,6 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
 
   const std::vector<double> move_slot_dist_vec{-0.5, 0.0, 0.5};
 
-  PathSafeChecker safe_check;
   const double lat_buffer = 0.05;
   const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
@@ -413,8 +410,9 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const Eigen::Vector2d target_pos = target_ego_pos + dist * t;
     const Pose2D target_pose(target_pos.x(), target_pos.y(), slot_heading);
 
-    const bool is_collided = safe_check.CalcEgoCollision(
-        obstacle_manager_ptr_, target_pose, lat_buffer, lon_buffer);
+    const bool is_collided =
+        col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
+            target_pose, lat_buffer, lon_buffer);
 
     ILOG_INFO << "lateral moving dist = " << dist
               << ". target_pos= " << target_pose.GetX() << ", "

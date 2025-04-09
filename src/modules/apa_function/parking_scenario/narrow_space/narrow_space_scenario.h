@@ -40,8 +40,6 @@ class NarrowSpaceScenario : public ParkingScenario {
   }
 
  private:
-  virtual const bool CheckReplan() override;
-
   virtual const bool CheckFinished() override;
 
   const bool CheckVerticalSlotFinished();
@@ -57,13 +55,6 @@ class NarrowSpaceScenario : public ParkingScenario {
   virtual const bool GenObstacles() override;
 
   virtual const uint8_t PathPlanOnce() override;
-
-  const bool CheckStuckFailed() override;
-
-  void UpdateRemainDist(
-      const double uss_safe_dist,
-      const double lat_buffer = apa_param.GetParam().lat_inflation,
-      const double extra_buffer_when_reversing = 0.068) override;
 
   const std::string GetPlanReason(const uint8_t type);
 
@@ -106,10 +97,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool UpdateVerticalSlotInfo();
 
-  const bool CheckSegCompleted();
-
-  const bool CheckUssStucked();
-
   void PathShrinkBySlotLimiter();
 
   void PathExpansionBySlotLimiter();
@@ -136,6 +123,8 @@ class NarrowSpaceScenario : public ParkingScenario {
                                           const double slot_width,
                                           const Pose2D& ego_start);
 
+  const bool NeedBlindZonePlanning(const EgoInfoUnderSlot& ego_info);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
@@ -151,6 +140,11 @@ class NarrowSpaceScenario : public ParkingScenario {
   VirtualWallDecider virtual_wall_decider_;
 
   NarrowScenarioDecider narrow_space_decider_;
+
+  // Allow path planning fail one time.
+  // If fail in history planning, consider blind zone, delete obstacles in blind
+  // zone.
+  int path_planning_fail_num_;
 };
 
 }  // namespace apa_planner

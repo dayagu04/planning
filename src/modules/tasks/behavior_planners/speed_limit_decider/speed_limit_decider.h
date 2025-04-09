@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "ego_planning_config.h"
 #include "speed_limit_decider_output.h"
 #include "tasks/task.h"
@@ -15,6 +16,13 @@ class SpeedLimitDecider : public Task {
 
   bool Execute() override;
 
+  struct SpeedLimitAgent {
+    int32_t id;
+    double min_s;
+    double v_limit;
+    bool is_collison;
+  };
+
  private:
   void CalculateMapSpeedLimit();
 
@@ -27,6 +35,8 @@ class SpeedLimitDecider : public Task {
   void CalculatePerceptVisibSpeedLimit();
 
   void CalculatePOISpeedLimit();
+
+  void CalculateLaneBorrowSpeedLimit();
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};

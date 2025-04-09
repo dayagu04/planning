@@ -4,6 +4,7 @@
 
 struct FollowTargetInfo {
   int32_t enable_far_slow_jlt_count;
+  int32_t enable_stable_jlt_count;
 };
 
 struct TargetMakerInfo {

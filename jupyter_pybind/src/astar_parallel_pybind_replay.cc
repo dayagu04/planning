@@ -619,7 +619,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                           ego_slot_info.slot.GetLength(), start, real_end,
                           slot_type, ego_slot_info.slot_side, ParkingVehDirection::NONE);
 
-    obstacle_generator.GenerateLocalObstacle(
+    obstacle_generator.GenerateLocalObstacleByLocalView(
         hybrid_astar_obs_, &local_view, ego_slot_info.slot.GetLength(),
         ego_slot_info.slot.GetWidth(), slot_base_pose, start, false);
 
@@ -659,7 +659,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     request.space_type = ParkSpaceType::PARALLEL;
     request.direction_request = ParkingVehDirection::TAIL_IN;
-    request.rs_request = RSPathRequestType::none;
+    request.rs_request = RSPathRequestType::NONE;
     request.slot_width = ego_slot_info.slot.GetWidth();
     request.slot_length = ego_slot_info.slot.GetLength();
     request.history_gear = history_gear_request_;

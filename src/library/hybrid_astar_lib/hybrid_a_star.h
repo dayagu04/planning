@@ -227,7 +227,8 @@ class HybridAStar {
 
   bool RsLastSegmentSatisfyRequest(const RSPath* reeds_shepp_to_end);
 
-  bool IsRSPathSingleShot(const RSPath* reeds_shepp_to_end);
+  bool CheckRSPathGear(const RSPath* reeds_shepp_to_end,
+                       const PathGearRequest gear_request_info);
 
   bool IsRSPathSafeByConvexHull(const RSPath* reeds_shepp_path, Node3d* node);
 

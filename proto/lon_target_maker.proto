@@ -14,6 +14,9 @@ message TargetMaker {
   optional CruiseTarget cruise_target = 2;
   optional FollowTarget follow_target = 3;
   optional NeighborTarget neighbor_target = 4;
+  optional OvertakeTarget overtake_target = 5;
+  optional CautionTarget caution_target = 6;
+  optional MaxDecelTarget max_decel_target = 7;
 }
 
 message WeightMaker {
@@ -34,6 +37,18 @@ message FollowTarget {
 
 message NeighborTarget {
   repeated TargetPoint neighbor_target_s_ref = 1;
+}
+
+message OvertakeTarget {
+  repeated TargetPoint overtake_target_s_ref = 1;
+}
+
+message CautionTarget {
+  repeated TargetPoint caution_target_s_ref = 1;
+}
+
+message MaxDecelTarget {
+  repeated TargetPoint max_decel_s_ref = 1;
 }
 
 message WeightMakerReplayInfo {

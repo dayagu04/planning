@@ -10,7 +10,7 @@ constexpr double kEgoReachBoundaryTime = 4.0;
 constexpr std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
 constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
-constexpr std::array<double, 3> xp_for_large_car{6.0, 12.0, 30.0};
+constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
 }  // namespace
 
@@ -42,9 +42,12 @@ double CalcGapObjSafeDistance(const double ego_v,
             (ego_v - obj_v) * calculate_collision_time;
 
   const double gap_front_obj_safety_dist =
-      is_large_car ? interp(ego_v, xp_for_large_car, buffer_for_large_car)
-                   : interp(ego_v, xp, fp);
-  const double buffer_dist = interp(ego_v, xp, buffer);
+      is_large_car ? interp(ego_v, xp, fp_for_large_car)
+                   : interp(ego_v, xp, fp);                
+  const double buffer_dist = 
+      is_large_car ? interp(ego_v, xp, buffer_for_large_car)
+                   : interp(ego_v, xp, buffer);
+
   double dynamic_compensate_distance = 0.0;
   if (is_front_car) {
     dynamic_compensate_distance = rel_dis;

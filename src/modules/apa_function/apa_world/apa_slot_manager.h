@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "apa_obstacle_manager.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "geometry_math.h"
 #include "local_view.h"
 
@@ -48,7 +50,7 @@ struct TLane {
     max_y = std::max({A.y(), B.y(), C.y(), D.y(), E.y(), F.y(), G.y(), H.y()});
   }
 
-  void PrintInfo(const bool enable_print = true) {
+  void PrintInfo(const bool enable_print = true) const {
     ILOG_INFO_IF(enable_print)
         << "A = " << A.transpose() << "  B = " << B.transpose()
         << "  C = " << C.transpose() << "  D = " << D.transpose()
@@ -66,10 +68,13 @@ struct EgoInfoUnderSlot {
   uint32 confidence = 0;
 
   geometry_lib::PathPoint cur_pose;
+  geometry_lib::PathPoint origin_target_pose;
   geometry_lib::PathPoint target_pose;
   geometry_lib::PathPoint terminal_err;
 
   double slot_occupied_ratio = 0.0;
+
+  double slot_occupied_ratio_postprocess = 0.0;
 
   double channel_width = 0.0;
 
@@ -81,8 +86,14 @@ struct EgoInfoUnderSlot {
 
   // 根据障碍物移动车位 对于垂直车位 向左为正
   double move_slot_dist = 0.0;
-  double last_move_slot_dist = 0.0;
-  double replan_move_slot_dist = 0.0;
+
+  // 重规划成功时的移动距离 重规划成功时才更新
+  double lat_move_dist_replan_success = 0.0;
+  double lon_move_dist_replan_success = 0.0;
+
+  // 每次重规划的移动距离 只要重规划就更新
+  double lat_move_dist_every_replan = 0.0;
+  double lon_move_dist_every_replan = 0.0;
 
   Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
 
@@ -94,6 +105,8 @@ struct EgoInfoUnderSlot {
 
   TLane obs_tlane;
 
+  size_t history_slot_id;
+
   void Reset() {
     id = 0;
     slot_type = SlotType::INVALID;
@@ -104,6 +117,7 @@ struct EgoInfoUnderSlot {
 
     confidence = 0;
 
+    slot_occupied_ratio_postprocess = 0.0;
     slot_occupied_ratio = 0.0;
     channel_width = 0.0;
 
@@ -114,8 +128,12 @@ struct EgoInfoUnderSlot {
     l2g_tf.Reset();
 
     move_slot_dist = 0.0;
-    last_move_slot_dist = 0.0;
-    replan_move_slot_dist = 0.0;
+
+    lat_move_dist_replan_success = 0.0;
+    lon_move_dist_replan_success = 0.0;
+
+    lat_move_dist_every_replan = 0.0;
+    lon_move_dist_every_replan = 0.0;
 
     pt_inside.setZero();
 
@@ -124,6 +142,7 @@ struct EgoInfoUnderSlot {
     fix_slot = false;
 
     obs_tlane.Reset();
+    history_slot_id = 0;
   }
 };
 
@@ -132,19 +151,23 @@ enum class SlotReleaseVoterType : uint8_t {
   SUBTRACT,
   CLEAR,
   MAXIMUM,
+  HOLD,
 };
 
-const std::string GetSlotReleaseVoterTypeString(const SlotReleaseVoterType release_voter_type);
+const std::string GetSlotReleaseVoterTypeString(
+    const SlotReleaseVoterType release_voter_type);
 
 class ApaSlotManager final {
  public:
   ApaSlotManager() {}
   ~ApaSlotManager() {}
 
-  void Update(const LocalView* local_view,
-              const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
-              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
+  void Update(
+      const LocalView* local_view,
+      const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
+      const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
+      const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,
+      const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr);
 
   void Reset() {
     ego_info_under_slot_.Reset();
@@ -162,6 +185,14 @@ class ApaSlotManager final {
 
   const bool IsTargetSlotReleaseByRule() const;
 
+  const EgoInfoUnderSlot& GetEgoInfoUnderSlot() const {
+    return ego_info_under_slot_;
+  }
+
+  EgoInfoUnderSlot& GetMutableEgoInfoUnderSlot() {
+    return ego_info_under_slot_;
+  }
+
  public:
   EgoInfoUnderSlot ego_info_under_slot_;
 
@@ -172,9 +203,11 @@ class ApaSlotManager final {
 
   const bool IsSlotCoarseRelease(const ApaSlot& slot);
 
-  const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot);
+  const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(
+      const ApaSlot& slot);
 
-  const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(const ApaSlot& slot);
+  const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
+      const ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;
@@ -186,6 +219,7 @@ class ApaSlotManager final {
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
+  std::shared_ptr<CollisionDetectorInterface> col_det_interface_ptr_;
 };
 }  // namespace apa_planner
 }  // namespace planning

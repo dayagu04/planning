@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "collision_detection/collision_detection.h"
+#include "collision_detection/collision_detector_interface.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
@@ -50,6 +50,28 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     NORMAL,
     SHORTEN,
     COUNT,
+  };
+
+  /// @brief 车辆姿态相对于泊车位的状态枚举
+  enum class PoseTypeRelativeToSlot : uint8_t {
+    OUT_SLOT,     ///< 完全在泊车位外部的状态
+    IN_SLOT,      ///< 完全进入泊车位内部的状态
+    OUT_IN_SLOT,  ///< 横跨泊车位内外的临界状态（部分在内外）
+  };
+
+  enum class ColDetMethod : uint8_t {
+    EDT_GEOMETRY,
+    EDT_GJK,
+    GJK,
+    GEOMETRY,
+    COUNT,
+  };
+
+  enum class GeometryPathType : uint8_t {
+    ONE_ARC,
+    LINE_ARC,
+    TWO_ARC,
+    ALIGNBODY_STURN,
   };
 
   struct PlannerParams {
@@ -151,8 +173,9 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   // for simulation
   const bool ItervativeUpdatePb(
-      const GeometryPathInput &ginput,
-      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
+      const GeometryPathInput &input,
+      const std::shared_ptr<CollisionDetectorInterface>
+          &collision_detector_interface_ptr);
 
   const PlannerParams &GetCalcParams();
 
@@ -160,26 +183,20 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   // member function
   virtual void Preprocess() override;
 
-  const bool IsGeometryPathSafe(pnc::geometry_lib::GeometryPath &geometry_path,
-                                const double lat_inflation,
-                                const double lon_safe_dist);
-
-  const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
-                                    const double lat_inflation,
-                                    const double lon_safe_dist,
-                                    const bool enable_log = true,
-                                    const bool need_cal_obs_dist = false,
-                                    const bool use_edt_col = true);
+  const PathColDetRes TrimPathByObs(
+      geometry_lib::PathSegment &path_seg, const double lat_inflation,
+      const double lon_safe_dist, const bool enable_log = true,
+      const ColDetMethod method = ColDetMethod::EDT_GEOMETRY);
 
   const bool CalTurnAroundPose();
 
   const bool TurnAround();
 
-  const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
-  void CalMonoSafeCircle();
+  const bool MonoPreparePlan(Eigen::Vector2d &tag_point, const double radius);
+  void CalMonoSafeCircle(const double radius);
   const bool CheckMonoIsFeasible();
-  const bool MultiPreparePlan(Eigen::Vector2d &tag_point);
-  bool CalMultiSafeCircle();
+  const bool MultiPreparePlan(Eigen::Vector2d &tag_point, const double radius);
+  bool CalMultiSafeCircle(const double radius);
   // prepare plan end
 
   const bool PreparePathPlan();
@@ -250,12 +267,11 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                             const bool same_gear = false,
                             const bool enable_log = true);
 
-  const bool AlignAndSTurnPathPlan(const geometry_lib::PathPoint &pose,
-                                   const uint8_t ref_gear,
-                                   const double lat_buffer,
-                                   const double lon_buffer,
-                                   geometry_lib::GeometryPath &geometry_path,
-                                   const bool enable_log = true);
+  const bool AlignAndSTurnPathPlan(
+      const geometry_lib::PathPoint &pose, const uint8_t ref_gear,
+      const double lat_buffer, const double lon_buffer,
+      geometry_lib::GeometryPath &geometry_path, const bool same_gear = false,
+      const bool enable_log = true, const bool easy_to_line = false);
 
   const bool DubinsPathPlan(const geometry_lib::PathPoint &pose,
                             const uint8_t ref_gear, const double lat_buffer,
@@ -283,8 +299,11 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                           const double lon_buffer,
                                           const bool enable_log = true);
 
-  const double CalOccupiedRatio(
-      const pnc::geometry_lib::PathPoint &current_pose);
+  const bool CheckStuckedByInside(const geometry_lib::PathPoint &start_pose,
+                                  const geometry_lib::PathPoint &end_pose,
+                                  const bool enable_log = true);
+
+  const double CalOccupiedRatio(const geometry_lib::PathPoint &current_pose);
 
   const bool CheckTwoPoseInCircle(const Eigen::Vector2d &ego_pos0,
                                   const double ego_heading0,
@@ -303,6 +322,20 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       const pnc::geometry_lib::PathPoint &current_pose);
 
   const bool CheckReachTargetPose();
+
+  const PoseTypeRelativeToSlot GetPoseTypeRelativeToSlot(
+      const geometry_lib::PathPoint &pose);
+
+  void CalcObsDistConsiderSlotForPathSeg(geometry_lib::PathSegment &path_seg);
+
+  void CalcObsDistConsiderSlotForGeometryPath(
+      geometry_lib::GeometryPath &geometry_path);
+
+  const bool FindPtCanReverseToSlot(
+      std::vector<geometry_lib::PathSegment> &seg_vec, const uint8_t gear,
+      const uint8_t steer, const double radius, const double max_length,
+      const geometry_lib::PathPoint &pose, const double lat_buffer,
+      const double lon_buffer, const GeometryPathType type);
 
   PlannerParams calc_params_;
 };

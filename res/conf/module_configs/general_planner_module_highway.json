@@ -2,7 +2,7 @@
   "trajectory_time_length": 5.0,
   "planning_dt": 0.2,
   "enable_raw_ego_prediction": false,
-  "planner_type": 1,
+  "planner_type": 2,
   "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
@@ -68,7 +68,8 @@
   "reference_point_velocity": 2.0,
   "approach_distance_threshold_planning": 50,
   "nudge_buffer_road_boundary": 0.6,
-  "nudge_buffer_lane_boundary": 0.4,
+  "nudge_buffer_lane_boundary": 0.15,
+  "nudge_lat_offset_threshold": 0.44,
   "static_nudge_buffer_lane_boundary": 0,
   "velocity_upper_bound": 34.72,
   "velocity_upper_bound_scale_rate": 1.2,
@@ -133,6 +134,7 @@
   "safe_buffer": 0.3,
   "pnp_collision_threshold": 0.1,
   "is_valid_lateral_offset": true,
+  "use_obstacle_prediction_model_in_planning": true,
   "near_car_thr": 0.25,
   "lat_safety_buffer": 1.0,
   "oversize_veh_addition_buffer": 0.0,
@@ -213,6 +215,7 @@
     "extra_lateral_buffer":    [0.4,0.46,0.6,0.632,0.725,0.77],
     "map_bound_weight": [0.4, 0.4, 0.6, 0.1],
     "nudge_extra_buffer_in_intersection": 0.15,
+    "bound_rear_agent_weight":0.25,
     "bound_static_agent_weight":0.4,
     "bound_dynamic_agent_weight":0.4,
     "bound_adjacent_agent_weight":0.4,
@@ -228,7 +231,10 @@
     "extra_hard_buffer2blockobstacle":0.0,
     "extra_buffer_for_lane_width_bp":[2.8, 3.1, 3.4, 3.7, 4.2],
     "extra_lane_width_buffer":[0.2, 0.15, 0.1, 0.05, 0.0],
-    "extra_lane_type_decrease_buffer":0.05
+    "extra_lane_type_decrease_buffer":0.05,
+    "side_obstacle_lat_buffer_limit":0.3,
+    "side_obstacle_relative_position_bp":[0, 1, 2, 3, 4],
+    "side_obstacle_relative_position_decrease_extra_buffer":[0, 0, 0, 0, 0]
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
@@ -442,9 +448,9 @@
     "q_ref_vel_startmode": 0.0,
     "q_acc_startmode": 1.01,
     "q_jerk_startmode": 1.05,
-    "q_soft_pos_bound_startmode": 100.0,
+    "q_soft_pos_bound_startmode": 0.0,
     "q_hard_pos_bound_startmode": 1000.0,
-    "q_sv_bound_startmode": 10.0,
+    "q_sv_bound_startmode": 0.0,
     "q_vel_bound_startmode": 100.0,
     "q_acc_bound_startmode": 1600.0,
     "q_jerk_bound_startmode": 100.0,
@@ -453,21 +459,21 @@
     "q_ref_vel_stopmode": 35.0,
     "q_acc_stopmode": 10.0,
     "q_jerk_stopmode": 30.0,
-    "q_soft_pos_bound_stopmode": 5.0,
+    "q_soft_pos_bound_stopmode": 0.0,
     "q_hard_pos_bound_stopmode": 1000.0,
-    "q_sv_bound_stopmode": 1000.0,
+    "q_sv_bound_stopmode": 0.0,
     "q_vel_bound_stopmode": 400.0,
     "q_acc_bound_stopmode": 400.0,
     "q_jerk_bound_stopmode": 100.0,
     "q_stop_s_stopmode": 2000.0,
     "v_target_stop_thrd": -10.0,
-    "q_ref_pos": 35.0,
+    "q_ref_pos": 8.0,
     "q_ref_vel": 0.0,
-    "q_acc": 20.0,
-    "q_jerk": 60.0,
-    "q_soft_pos_bound": 80.0,
+    "q_acc": 10.0,
+    "q_jerk": 100.0,
+    "q_soft_pos_bound": 0.0,
     "q_hard_pos_bound": 1000.0,
-    "q_sv_bound": 10.0,
+    "q_sv_bound": 0.0,
     "q_vel_bound": 100.0,
     "q_acc_bound": 1600.0,
     "q_acc_bound_v3": 3200.0,
@@ -590,8 +596,8 @@
   "speed_planning": {
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,
-      "ignore_ego_ttc_to_agent_thrd" : 2.5,
-      "lat_distance_close_enough_to_planned_path_thrd": 0.38
+      "ignore_ego_ttc_to_agent_thrd" : 2.8,
+      "lat_distance_close_enough_to_planned_path_thrd": 0.45
     },
 
     "st_graph_searcher" : {
@@ -717,7 +723,8 @@
   "obs_static_vel_thold": 0.2,
   "observe_frames": 15,
   "centric_obs_frames":10,
-  "dense_obstacle_dist":8.0
+  "dense_obstacle_dist":8.0,
+  "extend_obs_distance":30.0
 },
 "sample_poly_speed_adjust": {
   "sample_v_nums": 15,

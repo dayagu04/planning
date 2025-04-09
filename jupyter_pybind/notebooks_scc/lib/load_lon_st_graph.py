@@ -177,6 +177,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'cipv_id_st', 'road_curvature_radius', \
                               'new_cutin_id', 'new_cutin_id_count', \
+                              "new_cutout_id", "new_cutout_id_count", \
+                              "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
                               "agents_headway_id", "agents_headway_value", \
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
@@ -326,7 +328,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     t_cruise_target_vec.append(item.t)
   for item in (plan_debug_info.lon_target_s_ref.cruise_target.cruise_target_s_ref):
     s_cruise_target_vec.append(item.s)
-  
+
   ## neighbor target
   t_neighbor_target_vec = []
   s_neighbor_target_vec = []
@@ -348,6 +350,38 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     t_follow_target_vec.append(item.t)
   for item in (plan_debug_info.lon_target_s_ref.follow_target.follow_target_s_ref):
     s_follow_target_vec.append(item.s)
+
+  ## overtake target
+  t_overtake_target_vec = []
+  s_overtake_target_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.overtake_target.overtake_target_s_ref):
+    t_overtake_target_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.overtake_target.overtake_target_s_ref):
+    s_overtake_target_vec.append(item.s)
+  lon_plan_data['data_target_s_overtake'].data.update({
+    't_overtake_target': t_overtake_target_vec,
+    's_overtake_target': s_overtake_target_vec})
+  ## caution target
+  t_caution_target_vec = []
+  s_caution_target_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.caution_target.caution_target_s_ref):
+    t_caution_target_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.caution_target.caution_target_s_ref):
+    s_caution_target_vec.append(item.s)
+  lon_plan_data['data_target_s_caution'].data.update({
+    't_caution_target': t_caution_target_vec,
+    's_caution_target': s_caution_target_vec})
+
+  ## max decel s curve
+  t_max_decel_vec = []
+  s_max_decel_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
+    t_max_decel_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
+    s_max_decel_vec.append(item.s)
+  lon_plan_data['data_target_s_max_decel'].data.update({
+    't_max_decel': t_max_decel_vec,
+    's_max_decel': s_max_decel_vec})
 
   lon_plan_data['data_target'].data.update({
     't_final_target': t_final_target_vec,
@@ -1045,6 +1079,12 @@ def load_lon_global_figure(bag_loader):
 
   fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = x_range, width=600, height=300)
   f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
+  fig_fsm_state.text(x=x_value, y=24, text=['MANUAL:0'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=22, text=['ERROR:1'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=20, text=['MRC:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=18, text=['DRIVING_PASSIVE(行车抑制):3'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=16, text=['ACC_OVERRIDE:6'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=14, text=['ACC_STANDBY:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=8, text=['SCC_STANDBY:7'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=10, text=['SCC_ACTIVE:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
@@ -1153,10 +1193,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                               'st_path_final_nodes_g_cost' : [],
                                                               'st_path_final_nodes_h_cost' : [],
                                                               })
-  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 
-                                         't_cruise_target':[], 's_cruise_target':[], 
+  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[],
+                                         't_cruise_target':[], 's_cruise_target':[],
                                          't_follow_target':[], 's_follow_target':[]})
   data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
+  data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
+  data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
+  data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -1201,6 +1244,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_st_search_path_final_nodes_cost' : data_st_search_path_final_nodes_cost, \
                    'data_target': data_target, \
                    'data_target_s_neighbor': data_target_s_neighbor, \
+                   'data_target_s_overtake': data_target_s_overtake, \
+                   'data_target_s_caution': data_target_s_caution, \
+                   'data_target_s_max_decel': data_target_s_max_decel, \
                    'data_st_search_text' : data_st_search_text, \
   }
 
@@ -1328,13 +1374,15 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=6, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
+  fig3.line('t_overtake_target', 's_overtake_target', source = data_target_s_overtake, line_width = 3.0, line_color = 'black', line_dash = 'solid', legend_label = 's_overtake_target')
+  fig3.line('t_caution_target', 's_caution_target', source = data_target_s_caution, line_width = 3.0, line_color = 'yellow', line_dash = 'solid', legend_label = 's_caution_target')
   fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
+  fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel')
 
   hover3 = HoverTool(tooltips=[('node_s', '@s_search'),
                                ('node_vel', '@vel_search'),
                                ('node_acc', '@acc_search'),
                                ('node_jerk', '@jerk_search'),])
-                               
   fig3.add_tools(hover3)
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'

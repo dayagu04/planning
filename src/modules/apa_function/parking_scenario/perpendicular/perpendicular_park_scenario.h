@@ -20,14 +20,9 @@ class PerpendicularParkScenario : public ParkingScenario {
   virtual const bool GenTlane() override;
   virtual const bool GenObstacles() override;
   virtual void Log() const override;
-  virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
   virtual const bool PostProcessPathAccordingLimiter();
-  virtual const bool CheckSegCompleted();
-  virtual const bool CheckUssStucked();
-  virtual const bool CheckColDetStucked();
-  virtual const bool CheckDynamicUpdate();
 };
 }  // namespace apa_planner
 }  // namespace planning

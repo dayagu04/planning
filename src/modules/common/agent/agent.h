@@ -57,7 +57,8 @@ struct AgentStInfo {
 
 class Agent {
  public:
-  Agent();
+  Agent() = default;
+  Agent(const Agent& agent);
   Agent(const PredictionObject& prediction_object, bool is_static,
         double start_relative_timestamp);
 
@@ -129,6 +130,9 @@ class Agent {
 
   const bool is_cutin() const;
   void set_is_cutin(const bool is_cutin);
+
+  const bool is_cutout() const;
+  void set_is_cutout(const bool is_cutout);
 
   const bool is_rule_base_cutin() const;
   void set_is_rule_base_cutin(const bool is_rule_base_cutin);
@@ -236,6 +240,8 @@ class Agent {
   // steady cut in flag(count for 3 frames)
   bool is_cutin_ = false;
   double prediction_cutin_score_ = 0.0;
+
+  bool is_cutout_ = false;
 
   bool is_crossing_ = false;
 
