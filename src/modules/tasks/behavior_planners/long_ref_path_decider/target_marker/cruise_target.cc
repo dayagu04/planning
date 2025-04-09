@@ -127,6 +127,7 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::INTERSECTION:
     case SpeedLimitType::NEAR_TFL:
     case SpeedLimitType::LANE_BORROW:
+    case SpeedLimitType::AVOID_AGENT:
       break;
     default:
       break;

@@ -192,6 +192,7 @@
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,
   "general_lateral_decider": {
+    "bound2center_line_distance_thr": 0.1,
     "lateral_ref_traj_type":false,
     "min_v_cruise": 4.0,
     "lc_second_dist_thr": 2.0,
