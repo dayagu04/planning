@@ -12,9 +12,10 @@ namespace apa_planner {
 void ApaTrajectoryStitcher::Process(
     const Pose2D& ego_pose,
     const std::vector<pnc::geometry_lib::PathPoint>& path, const double ego_v,
-    const double front_wheel_angle) {
+    const double front_wheel_angle, const double predict_horizon) {
   double kappa = std::tan(front_wheel_angle) / apa_param.GetParam().wheel_base;
-  Pose2D predict_pose = ComputeTrajPointByPrediction(ego_pose, ego_v, kappa);
+  Pose2D predict_pose =
+      ComputeTrajPointByPrediction(ego_pose, ego_v, kappa, predict_horizon);
 
   size_t min_dist_id = 0;
   size_t min_dist_neioghbour_id = 0;
@@ -48,9 +49,10 @@ void ApaTrajectoryStitcher::GeneTrajPointFromPath(
 }
 
 Pose2D ApaTrajectoryStitcher::ComputeTrajPointByPrediction(
-    const Pose2D& ego_pose, const double ego_v, const double kappa) {
+    const Pose2D& ego_pose, const double ego_v, const double kappa,
+    const double predict_horizon) {
   Pose2D predict_pose;
-  double dist = std::fabs(ego_v * 0.1);
+  double dist = std::fabs(ego_v * predict_horizon);
 
   if (std::fabs(ego_v) < 1e-2) {
     predict_pose = ego_pose;

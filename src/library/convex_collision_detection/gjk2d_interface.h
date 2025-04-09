@@ -13,6 +13,7 @@ enum RaycastCollisionInfo {
   RAYCAST_MAX_COLLISION_TYPE
 };
 
+// https://arxiv.org/abs/2011.09117
 class GJK2DInterface {
  public:
   /**

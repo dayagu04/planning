@@ -6,9 +6,9 @@
 
 namespace planning {
 namespace apa_planner {
+
 // 目前的调用逻辑是：点击车位后，进行预规划，几何规划器失败，才调用Hybrid
 // astar预规划; 根据预规划结果，在正式泊车中选择几何还是A星;
-// 暂时只有车尾入库会调用A star, 其他场景不会调用A star.
 class NarrowScenarioDecider : public ParkingTask {
  public:
   NarrowScenarioDecider() = default;

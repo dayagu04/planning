@@ -2630,8 +2630,8 @@ void HybridAStar::GearRerversePathAttempt(
     EulerDistanceTransform* edt, ParkReferenceLine* ref_line) {
   result->Clear();
 
-  if (request.history_gear == AstarPathGear::REVERSE) {
-    ILOG_INFO << "history gear is reverse";
+  if (request.first_action_request.gear_request == AstarPathGear::DRIVE) {
+    ILOG_INFO << "gear is drive";
     return;
   }
 
@@ -2860,8 +2860,7 @@ void HybridAStar::GearRerversePathAttempt(
                 << ",radius = " << current_node->GetRadius();
 
       break;
-    } else if (SamplingByRSPath(PathGearRequest::GEAR_REVERSE_ONLY,
-                                current_node, &rs_node_to_goal)) {
+    } else if (SamplingByRSPath(current_node, &rs_node_to_goal)) {
       ILOG_INFO << "RS success";
       break;
     }
@@ -3085,8 +3084,8 @@ void HybridAStar::GearDrivePathAttempt(
     return;
   }
 
-  if (request.history_gear == AstarPathGear::DRIVE) {
-    ILOG_INFO << "history gear is drive";
+  if (request.first_action_request.gear_request == AstarPathGear::REVERSE) {
+    ILOG_INFO << "gear is reverse";
     return;
   }
 
@@ -3324,8 +3323,7 @@ void HybridAStar::GearDrivePathAttempt(
                 << ",radius = " << current_node->GetRadius();
 
       break;
-    } else if (SamplingByRSPath(PathGearRequest::GEAR_DRIVE_ONLY, current_node,
-                                &rs_node_to_goal)) {
+    } else if (SamplingByRSPath(current_node, &rs_node_to_goal)) {
       ILOG_INFO << "RS success";
       break;
     }
@@ -3575,7 +3573,6 @@ bool HybridAStar::AstarSearch(
   DebugObstacleString();
 
   request_ = request;
-  DebugAstarRequestString(request_);
 
   // load XYbounds
   XYbounds_ = XYbounds;
@@ -5198,8 +5195,7 @@ const bool HybridAStar::IsFootPrintCollision(const Transform2d& tf) {
   return false;
 }
 
-bool HybridAStar::SamplingByRSPath(const PathGearRequest gear_request,
-                                   Node3d* current_node,
+bool HybridAStar::SamplingByRSPath(Node3d* current_node,
                                    Node3d* rs_node_to_goal) {
   if (current_node->GetY() > 0.8 || current_node->GetY() < -0.8) {
     return false;

@@ -28,7 +28,8 @@ class ApaTrajectoryStitcher {
    */
   void Process(const Pose2D& ego_pose,
                const std::vector<pnc::geometry_lib::PathPoint>& path,
-               const double ego_v, const double front_wheel_angle);
+               const double ego_v, const double front_wheel_angle,
+               const double predict_horizon);
 
   const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchTrajectory()
       const {
@@ -43,6 +44,14 @@ class ApaTrajectoryStitcher {
 
   const double GetStitchTrajLength() const;
 
+  const pnc::geometry_lib::PathPoint& GetStitchPoint() const {
+    return stitch_point_;
+  }
+
+  const pnc::geometry_lib::PathPoint* GetStitchPointPtr() {
+    return &stitch_point_;
+  }
+
  private:
   // If vehicle speed is zero, use vehicle state to generate stitch point.
   void GeneTrajPointFromVehicleState(const Pose2D& ego_pose);
@@ -52,7 +61,8 @@ class ApaTrajectoryStitcher {
   // ego_v: gear drive, v is positive
   // kappa: left is positive.
   Pose2D ComputeTrajPointByPrediction(const Pose2D& pose, const double ego_v,
-                                      const double kappa);
+                                      const double kappa,
+                                      const double predict_horizon);
 
   // move_dist is > 0
   void PredictByLine(const Pose2D& ego, const double move_dist,

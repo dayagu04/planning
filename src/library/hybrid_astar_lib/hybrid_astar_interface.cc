@@ -176,14 +176,19 @@ void HybridAStarInterface::UpdateOutput() {
                                 center_line_pose, vehicle_param_);
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
-  if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
+  DebugAstarRequestString(request_);
+
+  if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING ||
+      request_.path_generate_method ==
+          AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
+      request_.path_generate_method ==
+          AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
     PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
                                  is_ego_overlap_with_slot);
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::TRY_SEARCHING) {
     PathSearchForScenarioTry(target_pose_regulator);
-  } else if (request_.path_generate_method ==
-             AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
+  } else if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
     PathSamplingForScenarioRunning();
   }
 
@@ -817,7 +822,11 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
         lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
 
     // search single shot path.
-    if (advised_lat_buffer_inside > config_.single_shot_path_width_thresh) {
+    if (advised_lat_buffer_inside > config_.single_shot_path_width_thresh ||
+        request_.path_generate_method ==
+            AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
+        request_.path_generate_method ==
+            AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
       if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
         hybrid_astar_->GearDrivePathAttempt(
             map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
@@ -837,13 +846,16 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       }
     }
 
-    // todo: init pointer in init function, do not transport every pointer
-    // address into internal.
-    hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                               obs_, request_, &clear_zone_, &coarse_traj_,
-                               &edt_, &ref_line_);
+    if (request_.path_generate_method ==
+        AstarPathGenerateType::ASTAR_SEARCHING) {
+      // todo: init pointer in init function, do not transport every pointer
+      // address into internal.
+      hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
+                                 obs_, request_, &clear_zone_, &coarse_traj_,
+                                 &edt_, &ref_line_);
 
-    ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
+      ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
+    }
 
     // check time
     if (coarse_traj_.time_ms > config_.max_search_time_ms) {
@@ -921,7 +933,9 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
         lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
 
     if (request_.path_generate_method ==
-        AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
+            AstarPathGenerateType::SPIRAL_SAMPLING ||
+        request_.path_generate_method ==
+            AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
       // parallel
       if (request_.space_type == ParkSpaceType::PARALLEL) {
         hybrid_astar_->SamplingByCubicPolyForParallelSlot(

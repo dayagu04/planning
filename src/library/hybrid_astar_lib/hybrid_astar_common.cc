@@ -59,8 +59,8 @@ std::string PlanReasonDebugString(const PlanningReason reason) {
       return "PATH_COMPLETED";
     case PlanningReason::PATH_STUCKED:
       return "PATH_STUCKED";
-    case PlanningReason::SLOT_CHANGED:
-      return "SLOT_CHANGED";
+    case PlanningReason::SLOT_REFRESHED:
+      return "SLOT_REFRESHED";
     case PlanningReason::SIMULATION_TRIGGER:
       return "SIMULATION_TRIGGER";
     default:

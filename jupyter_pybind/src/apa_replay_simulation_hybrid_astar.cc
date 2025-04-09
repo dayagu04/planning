@@ -480,7 +480,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     std::vector<double> target_managed_slot_x_vec,
                     std::vector<double> target_managed_slot_y_vec,
                     std::vector<double> target_managed_limiter_x_vec,
-                    std::vector<double> target_managed_limiter_y_vec) {
+                    std::vector<double> target_managed_limiter_y_vec,
+                    const int path_plan_method) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -497,6 +498,19 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   sim_param.use_slot_in_bag = false;
 
   apa_interface_ptr->SetSimuParam(sim_param);
+
+  switch (path_plan_method) {
+    case 0:
+      apa_param.SetPram().path_generator_type =
+          ParkPathGenerationType::GEOMETRY_BASED;
+      break;
+    case 1:
+      apa_param.SetPram().path_generator_type =
+          ParkPathGenerationType::SEARCH_BASED;
+      break;
+    default:
+      break;
+  }
 
   iflyauto::FuncStateMachine func_statemachine =
       BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(

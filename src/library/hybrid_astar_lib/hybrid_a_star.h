@@ -160,9 +160,7 @@ class HybridAStar {
                                   Node3d* polynomial_node,
                                   PolynomialPathErrorCode* fail_type);
 
-  // 向后揉库使用
-  bool SamplingByRSPath(const PathGearRequest gear_request,
-                        Node3d* current_node, Node3d* polynomial_node);
+  bool SamplingByRSPath(Node3d* current_node, Node3d* polynomial_node);
 
   // check collision and validity
   bool ValidityCheckByConvex(Node3d* node);
