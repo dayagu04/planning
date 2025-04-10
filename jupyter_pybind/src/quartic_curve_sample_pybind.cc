@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <ctime>
 #include <iostream>
@@ -133,6 +134,10 @@ int ProcessInput(py::bytes& sample_poly_input_bytes) {
       sample_poly_input.sample_param().weight_vel_variable());
   pSamplePolySpeedAdjustDecider->set_weight_gap_avaliable(
       sample_poly_input.sample_param().weight_gap_avaliable());
+  pSamplePolySpeedAdjustDecider->set_weight_acc_limit(
+      sample_poly_input.sample_param().weight_acc_limit());
+  pSamplePolySpeedAdjustDecider->set_weight_stop_penalty(
+      sample_poly_input.sample_param().weight_stop_line());
 
   pSamplePolySpeedAdjustDecider->CalcTargetLaneObjsFlowVel();
   pSamplePolySpeedAdjustDecider->CalcTargetLaneVehDensity();
@@ -229,6 +234,10 @@ std::vector<Eigen::Vector2d> GetMinCostAccJerk() {
   return min_cost_acc_jerk;
 }
 
+std::pair<size_t, size_t> get_min_cost_index() {
+  return pSamplePolySpeedAdjustDecider->min_cost_traj_index();
+}
+
 py::bytes get_print_table_string() {
   planning::common::SamplePrintTableInfo sample_print_table_info;
 
@@ -275,15 +284,6 @@ py::bytes get_print_table_string() {
         ->set_gap_front_id(traj_ptr->end_point_matched_gap_front_id());
     sample_print_table_info.mutable_current_sample_match_gap_id()
         ->set_gap_back_id(traj_ptr->end_point_matched_gap_back_id());
-    sample_print_table_info.mutable_best_poly_cost_info()
-        ->set_end_point_match_gap_s_cost(
-            traj_ptr->end_point_match_gap_cost().match_s_cost());
-    sample_print_table_info.mutable_best_poly_cost_info()
-        ->set_end_point_match_gap_vel_cost(
-            traj_ptr->end_point_match_gap_cost().match_v_cost());
-    sample_print_table_info.mutable_best_poly_cost_info()
-        ->set_end_point_match_gap_center_cost(
-            traj_ptr->end_point_match_gap_cost().match_gap_center_cost());
 
     sample_print_table_info.mutable_best_poly_cost_info()->set_follow_vel_cost(
         traj_ptr->follow_vel_cost().cost());
@@ -291,43 +291,59 @@ py::bytes get_print_table_string() {
         traj_ptr->stop_line_cost().cost());
     sample_print_table_info.mutable_best_poly_cost_info()
         ->set_leading_veh_safe_cost(traj_ptr->leading_veh_safe_cost().cost());
+
     sample_print_table_info.mutable_best_poly_cost_info()
         ->set_vel_variable_cost(traj_ptr->speed_variable_cost().cost());
     sample_print_table_info.mutable_best_poly_cost_info()
         ->set_gap_avaliable_cost(traj_ptr->gap_avaliable_cost().cost());
+    sample_print_table_info.mutable_best_poly_cost_info()->set_acc_limit_cost(
+        traj_ptr->acc_limit_cost().cost());
+    sample_print_table_info.mutable_best_poly_cost_info()->set_stop_line_cost(
+        traj_ptr->stop_line_cost().cost());
+    const auto& anchor_points_match_gap_vec =
+        pSamplePolySpeedAdjustDecider->min_cost_traj_ptr()
+            ->anchor_points_match_gap_cost_vec();
+    double cost_anchor_points_match_gap_s_sum = 0.0;
+    double cost_anchor_points_match_gap_v_sum = 0.0;
+    double cost_anchor_points_match_gap_center_sum = 0.0;
+    for (size_t i = 0; i < anchor_points_match_gap_vec.size(); i++) {
+      cost_anchor_points_match_gap_s_sum +=
+          anchor_points_match_gap_vec[i].match_s_cost();
+      cost_anchor_points_match_gap_v_sum +=
+          anchor_points_match_gap_vec[i].match_v_cost();
+      cost_anchor_points_match_gap_center_sum +=
+          anchor_points_match_gap_vec[i].match_gap_center_cost();
+    }
+    sample_print_table_info.mutable_best_poly_cost_info()
+        ->set_match_gap_cost_s_sum(cost_anchor_points_match_gap_s_sum);
+    sample_print_table_info.mutable_best_poly_cost_info()
+        ->set_match_gap_cost_v_sum(cost_anchor_points_match_gap_v_sum);
+    sample_print_table_info.mutable_best_poly_cost_info()
+        ->set_match_gap_cost_center_sum(
+            cost_anchor_points_match_gap_center_sum);
   }
 
-  // 使用接口函数访问 stitched_last_best_quartic_poly_ptr_
-  if (pSamplePolySpeedAdjustDecider->stitched_last_best_quartic_poly_ptr() !=
-      nullptr) {
-    auto stitched_ptr =
-        pSamplePolySpeedAdjustDecider->stitched_last_best_quartic_poly_ptr();
-    sample_print_table_info.mutable_stitched_sample_match_gap_id()
-        ->set_gap_front_id(stitched_ptr->end_point_matched_gap_front_id());
-    sample_print_table_info.mutable_stitched_sample_match_gap_id()
-        ->set_gap_back_id(stitched_ptr->end_point_matched_gap_back_id());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_end_point_match_gap_s_cost(
-            stitched_ptr->end_point_match_gap_cost().match_s_cost());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_end_point_match_gap_vel_cost(
-            stitched_ptr->end_point_match_gap_cost().match_v_cost());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_end_point_match_gap_center_cost(
-            stitched_ptr->end_point_match_gap_cost().match_gap_center_cost());
-
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_follow_vel_cost(stitched_ptr->follow_vel_cost().cost());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_stop_line_cost(stitched_ptr->stop_line_cost().cost());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_leading_veh_safe_cost(
-            stitched_ptr->leading_veh_safe_cost().cost());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_vel_variable_cost(stitched_ptr->speed_variable_cost().cost());
-    sample_print_table_info.mutable_stitched_poly_cost_info()
-        ->set_gap_avaliable_cost(stitched_ptr->gap_avaliable_cost().cost());
-  }
+  // // 使用接口函数访问 stitched_last_best_quartic_poly_ptr_
+  // if (pSamplePolySpeedAdjustDecider->stitched_last_best_quartic_poly_ptr() !=
+  //     nullptr) {
+  //   auto stitched_ptr =
+  //       pSamplePolySpeedAdjustDecider->stitched_last_best_quartic_poly_ptr();
+  //   sample_print_table_info.mutable_stitched_sample_match_gap_id()
+  //       ->set_gap_front_id(stitched_ptr->end_point_matched_gap_front_id());
+  //   sample_print_table_info.mutable_stitched_sample_match_gap_id()
+  //       ->set_gap_back_id(stitched_ptr->end_point_matched_gap_back_id());
+  //   sample_print_table_info.mutable_stitched_poly_cost_info()
+  //       ->set_follow_vel_cost(stitched_ptr->follow_vel_cost().cost());
+  //   sample_print_table_info.mutable_stitched_poly_cost_info()
+  //       ->set_stop_line_cost(stitched_ptr->stop_line_cost().cost());
+  //   sample_print_table_info.mutable_stitched_poly_cost_info()
+  //       ->set_leading_veh_safe_cost(
+  //           stitched_ptr->leading_veh_safe_cost().cost());
+  //   sample_print_table_info.mutable_stitched_poly_cost_info()
+  //       ->set_vel_variable_cost(stitched_ptr->speed_variable_cost().cost());
+  //   sample_print_table_info.mutable_stitched_poly_cost_info()
+  //       ->set_gap_avaliable_cost(stitched_ptr->gap_avaliable_cost().cost());
+  // }
 
   std::string serialized_print_table_info;
   sample_print_table_info.SerializeToString(&serialized_print_table_info);
@@ -342,5 +358,6 @@ PYBIND11_MODULE(sample_poly_speed_adjust_decider_py, m) {
       .def("GetMinCostTraj", &GetMinCostTraj)
       .def("UpdateParam", UpdateParam)
       .def("GetMinCostAccJerk", GetMinCostAccJerk)
-      .def("get_print_table_string", &get_print_table_string);
+      .def("get_print_table_string", &get_print_table_string)
+      .def("get_min_cost_index", &get_min_cost_index);
 }

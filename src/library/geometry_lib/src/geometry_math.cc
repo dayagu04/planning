@@ -2601,6 +2601,10 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
       -GetCrossFromTwoVec2d(AC, line_tang_vec) /
       GetCrossFromTwoVec2d(pose_norm_vec + line_norm_vec, line_tang_vec);
 
+  if (arc.circle_info.radius < 0.168) {
+    return false;
+  }
+
   // cal arc other info
   arc.circle_info.center = arc.pA + arc.circle_info.radius * pose_norm_vec;
   arc.pB = arc.circle_info.center + arc.circle_info.radius * line_norm_vec;
@@ -3190,12 +3194,28 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       }
     }
 
+    std::vector<PathSegment> drive_seg, reverse_seg;
     for (int i = 0; i < path_count - 1; ++i) {
       if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
         gear_change_count++;
         gear_change_pose.emplace_back(path_segment_vec[i].GetEndPose());
         gear_index_vec.emplace_back(i + 1);
+        if (gear_cmd_vec[i] == SEG_GEAR_DRIVE) {
+          drive_seg.emplace_back(path_segment_vec[i]);
+          drive_seg_vec.emplace_back(drive_seg);
+          drive_seg.clear();
+        } else {
+          reverse_seg.emplace_back(path_segment_vec[i]);
+          reverse_seg_vec.emplace_back(reverse_seg);
+          reverse_seg.clear();
+        }
         continue;
+      } else {
+        if (gear_cmd_vec[i] == SEG_GEAR_DRIVE) {
+          drive_seg.emplace_back(path_segment_vec[i]);
+        } else {
+          reverse_seg.emplace_back(path_segment_vec[i]);
+        }
       }
 
       bool change_gear_path = false;
@@ -3211,7 +3231,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
           (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
            steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
         steer_change_count += static_cast<uint8_t>(std::round(
-            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+            3.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
 
       // 左转到右转 或 右转到左转
@@ -3220,7 +3240,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
           (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
            steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
         steer_change_count += static_cast<uint8_t>(std::round(
-            3.0 * 5.5 / path_segment_vec[i + 1].arc_seg.circle_info.radius));
+            4.0 * 5.5 / path_segment_vec[i + 1].arc_seg.circle_info.radius));
 
         // 如果第一段圆弧路径较短，施加额外惩罚
         std::vector<double> radius_tab{5.5, 5.9, 6.3, 6.7, 7.1, 7.5};
@@ -3239,8 +3259,8 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
       if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
            steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
           steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
-        steer_change_count += static_cast<uint8_t>(
-            std::round(5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
+        steer_change_count += static_cast<uint8_t>(std::round(
+            2.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
     }
 
@@ -3251,7 +3271,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 void GeometryPath::CalcCost() {
   gear_change_cost = 80.0 * gear_change_count;
   length_cost = 1.68 * total_length;
-  steer_change_cost = 8.0 * steer_change_count;
+  steer_change_cost = 10.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
 }
@@ -3449,10 +3469,6 @@ const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
   seg1 = total_seg;
   seg2 = total_seg;
   const double total_length = total_seg.Getlength();
-  LineSegment &line1 = seg1.line_seg;
-  LineSegment &line2 = seg2.line_seg;
-  Arc &arc1 = seg1.arc_seg;
-  Arc &arc2 = seg2.arc_seg;
   if (total_seg.seg_type == SEG_TYPE_LINE) {
     LineSegment &line1 = seg1.line_seg;
     LineSegment &line2 = seg2.line_seg;

@@ -53,7 +53,7 @@ static constexpr auto TOPIC_TRAFFIC_SIGN =
 // apa topics
 static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
 static constexpr auto TOPIC_USS_PERCEPT_INFO =
-    "/iflytek/uss/uss_perception_info";
+    "/iflytek/fusion/uss_perception_info";
 static constexpr auto TOPIC_VISION_PARKING_SLOT =
     "/iflytek/camera_perception/parking_slot_list";
 static constexpr auto TOPIC_CONTROL_DEBUG_INFO = "/iflytek/control/debug_info";
@@ -825,7 +825,7 @@ void PlanningPlayer::PlayOneFrame(
     planning_adapter_->Feed_IflytekFusionUssPerceptionInfo(uss_percept_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
-    //           << " missing /iflytek/uss/uss_perception_info" << std::endl;
+    //           << " missing /iflytek/fusion/uss_perception_info" << std::endl;
   }
 
   if (input_time_list_map_ != input_time_list.map()) {
@@ -1930,7 +1930,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       planning_adapter_->Feed_IflytekFusionUssPerceptionInfo(uss_percept_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/uss/uss_perception_info" << std::endl;
+                << " missing /iflytek/fusion/uss_perception_info" << std::endl;
     }
 
     // for (auto it = msg_cache_[TOPIC_EHR_PARKING_MAP].begin();

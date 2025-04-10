@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ad_common/math/line_segment2d.h"
+#include "line_segmentf32.h"
 #include "pose2d.h"
+#include "vecf32.h"
 
 namespace planning {
 
@@ -11,22 +12,22 @@ class ParkReferenceLine {
 
   void Process(const Pose2D &start, const Pose2D &end);
 
-  const ad_common::math::Vec2d &GetStartPoint() const {
+  const Vec2df32 &GetStartPoint() const {
     return ref_line_.start();
   }
 
-  const ad_common::math::Vec2d &GetEndPoint() const { return ref_line_.end(); }
+  const Vec2df32 &GetEndPoint() const { return ref_line_.end(); }
 
-  const double GetHeading() const { return ref_line_.heading(); }
+  const float GetHeading() const { return ref_line_.heading(); }
 
-  const ad_common::math::Vec2d &UnitDirection() const {
+  const Vec2df32 &UnitDirection() const {
     return ref_line_.unit_direction();
   }
 
-  void GetPointByDist(ad_common::math::Vec2d *point, const double dist);
+  void GetPointByDist(Vec2df32 *point, const float dist);
 
  private:
-  ad_common::math::LineSegment2d ref_line_;
+  LineSegmentf32 ref_line_;
 };
 
 }  // namespace planning

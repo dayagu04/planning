@@ -1,5 +1,6 @@
 #pragma once
 
+#include "collision_detect_types.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 
@@ -29,7 +30,7 @@ class GJK2DInterface {
    * information \param output: is_collision \param output: dist, distance of
    * polygon_p and polgyon_q \param polygon_p \param polygon_q \return int
    */
-  void PolygonDistance(bool *is_collision, double *dist,
+  void PolygonDistance(bool *is_collision, cdl::real *dist,
                        const Polygon2D *polygon_p, const Polygon2D *polygon_q);
   /**
    * \brief Calculate the accurate distance if the distance between
@@ -41,10 +42,10 @@ class GJK2DInterface {
    * \param dist_thresh
    * \return int
    */
-  void PolygonDistanceByThresh(bool *is_collision, double *dist,
+  void PolygonDistanceByThresh(bool *is_collision, cdl::real *dist,
                                const Polygon2D *polygon_p,
                                const Polygon2D *polygon_q,
-                               const double dist_thresh);
+                               const cdl::real dist_thresh);
 
   /**
    * \brief Calculate the boolean collision info;
@@ -57,7 +58,7 @@ class GJK2DInterface {
   void PolygonCollisionByCircleCheck(bool *is_collision,
                                      const Polygon2D *polygon_p,
                                      const Polygon2D *polygon_q,
-                                     const double dist_thresh);
+                                     const cdl::real dist_thresh);
 
   /**
    * \brief gjk2d to calculate the collision and distance information
@@ -71,7 +72,7 @@ class GJK2DInterface {
    * \param polygon_obj2
    * \return int
    */
-  void PolygonDistanceCheck(bool *is_collision, double *dist,
+  void PolygonDistanceCheck(bool *is_collision, cdl::real *dist,
                             Position2D *pos_obj1, Position2D *pos_obj2,
                             const Polygon2D *polygon_obj1,
                             const Polygon2D *polygon_obj2);
@@ -137,7 +138,7 @@ class GJK2DInterface {
    * \param[in] polygonB_end
    * \return int
    */
-  void ShapeCast(bool *is_collision, double *distA, double *distB,
+  void ShapeCast(bool *is_collision, cdl::real *distA, cdl::real *distB,
                  Position2D *collision_pointA, Position2D *collision_pointB,
                  const Polygon2D *polygonA_start, const Polygon2D *polygonA_end,
                  const Polygon2D *polygonB_start,
@@ -180,7 +181,7 @@ class GJK2DInterface {
    * \param[in] dirB               PolygonB moving direction;
    * \return int
    */
-  void ShapeCastByDirection(bool *is_collision, double *distA, double *distB,
+  void ShapeCastByDirection(bool *is_collision, cdl::real *distA, cdl::real *distB,
                             Position2D *collision_pointA,
                             Position2D *collision_pointB,
                             const Polygon2D *polygonA_start,
@@ -211,8 +212,8 @@ class GJK2DInterface {
    * \return 0 if success or 1 if failed;
    */
   void Raycast(RaycastCollisionInfo *info, Position2D *collision_point,
-               double *collision_dist, Position2D *source,
-               Position2D *direction, double max_lambda,
+               cdl::real *collision_dist, Position2D *source,
+               Position2D *direction, cdl::real max_lambda,
                const Polygon2D *polygon, bool get_collision_pt,
                bool get_collision_dist, bool normalized_dir);
 
@@ -222,13 +223,13 @@ class GJK2DInterface {
                                    const Position2D &point);
 
   void PolygonPointCollisionDetect(const Polygon2D *polygon,
-                                   const Eigen::Vector2d &point,
+                                   const Eigen::Vector2f &point,
                                    bool *is_collision);
 
   void PolygonDistanceByThresh(const Polygon2D *polygon,
                                const Position2D &point,
-                               const double dist_thresh, bool *is_collision,
-                               double *dist);
+                               const cdl::real dist_thresh, bool *is_collision,
+                               cdl::real *dist);
 
  private:
   void get_cross_point_for_two_ray(cdl::Vector2r &ret,

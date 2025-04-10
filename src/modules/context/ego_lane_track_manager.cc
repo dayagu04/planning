@@ -59,6 +59,7 @@ constexpr double kEgoPreviewTimeMinThd = 3.0;
 constexpr double kEgoPreviewTimeMaxThd = 5.0;
 constexpr double kExistSplitLateralDisThd = 1.5;
 constexpr double kCenterLineLateralDisThd = 0.8;
+constexpr double kExistSplitEgoRearLateralDisThd = 1.5;
 constexpr double kNearPreviewDistanceThd = 20.0;
 
 constexpr double kAverageKappaCostWeight = 2.5;
@@ -2423,7 +2424,8 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
-    if ((far_average_l - kExistSplitLateralDisThd > near_average_l) ||
+    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
+        near_average_l < kExistSplitEgoRearLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       ego_in_split_region_ = true;
       return;

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -19,35 +20,38 @@
 using planning::planning_data::DynamicAgentNode;
 using planning::planning_data::DynamicWorld;
 namespace {
-constexpr double kNormalSceneWeightMatchGapVel = 1.5;
-constexpr double kNormalSceneWeightMatchGapS = 1.5;
-constexpr double kNormalSceneWeightFollowVel = 2.0;
-constexpr double kNormalSceneWeightStopLine = 25.0;
-constexpr double kNormalSceneWeightLeadingSafeS = 5.5;
+constexpr double kNormalSceneWeightMatchGapVel = 6.5;
+constexpr double kNormalSceneWeightMatchGapS = 4.5;
+constexpr double kNormalSceneWeightFollowVel = 5.0;
+constexpr double kNormalSceneWeightStopLine = 50.0;
+constexpr double kNormalSceneWeightLeadingSafeS = 13.5;
 constexpr double kNormalSceneWeightLeadingSafeV = 0.0;
-constexpr double kNormalSceneWeightVelVariable = 1.4;
-constexpr double kNormalSceneWeightGapAvailable = 1.0;
-constexpr double kNormalSceneWeightAccLimit = 10.0;
+constexpr double kNormalSceneWeightVelVariable = 3.5;
+constexpr double kNormalSceneWeightGapAvailable = 2.5;
+constexpr double kNormalSceneWeightAccLimit = 25.0;
+constexpr double kNormalSceneWeightStopPenalty = 2.5;
 
 constexpr double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
 constexpr double kPurseFlowVelSceneWeightMatchGapS = 0.0;
-constexpr double kPurseFlowVelSceneWeightFollowVel = 2.5;
-constexpr double kPurseFlowVelSceneWeightStopLine = 25.0;
-constexpr double kPurseFlowVelSceneWeightLeadingSafeS = 5.5;
+constexpr double kPurseFlowVelSceneWeightFollowVel = 6.25;
+constexpr double kPurseFlowVelSceneWeightStopLine = 50.0;
+constexpr double kPurseFlowVelSceneWeightLeadingSafeS = 13.5;
 constexpr double kPurseFlowVelSceneWeightLeadingSafeV = 0.0;
-constexpr double kPurseFlowVelSceneWeightVelVariable = 0.8;
-constexpr double kPurseFlowVelSceneWeightGapAvailable = 0.5;
-constexpr double kPurseFlowVelSceneWeightAccLimit = 10.0;
+constexpr double kPurseFlowVelSceneWeightVelVariable = 2.0;
+constexpr double kPurseFlowVelSceneWeightGapAvailable = 1.25;
+constexpr double kPurseFlowVelSceneWeightAccLimit = 25.0;
+constexpr double kPurseFlowVelSceneWeightStopPenalty = 2.5;
 
-constexpr double kDeclerationSceneWeightMatchGapVel = 1.5;
-constexpr double kDeclerationSceneWeightMatchGapS = 1.5;
+constexpr double kDeclerationSceneWeightMatchGapVel = 4.5;
+constexpr double kDeclerationSceneWeightMatchGapS = 2.5;
 constexpr double kDeclerationSceneWeightFollowVel = 0.0;
-constexpr double kDeclerationSceneWeightStopLine = 25.0;
-constexpr double kDeclerationSceneWeightLeadingSafeS = 5.5;
+constexpr double kDeclerationSceneWeightStopLine = 50.0;
+constexpr double kDeclerationSceneWeightLeadingSafeS = 13.5;
 constexpr double kDeclerationSceneWeightLeadingSafeV = 0.0;
-constexpr double kDeclerationSceneWeightVelVariable = 1.4;
-constexpr double kDeclerationSceneWeightGapAvailable = 1.0;
+constexpr double kDeclerationSceneWeightVelVariable = 0.5;
+constexpr double kDeclerationSceneWeightGapAvailable = 2.5;
 constexpr double kDeclerationSceneWeightAccLimit = 0.0;
+constexpr double kDeclerationSceneWeightStopPenalty = 0.0;
 }  // namespace
 namespace planning {
 
@@ -55,10 +59,10 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = SamplePolySpeedAdjustDeciderConfig();
 
-  const double front_edge_to_rear_axle = 4.025;
-  const double rear_edge_to_rear_axle = 0.925;
+  front_edge_to_rear_axle_ = 4.025;
+  rear_edge_to_rear_axle_ = 0.925;
   st_sample_space_base_ =
-      STSampleSpaceBase(front_edge_to_rear_axle, rear_edge_to_rear_axle);
+      STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
   sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
   min_cost_traj_ptr_ = nullptr;
   evaulation_t_ = 5.0;
@@ -70,14 +74,14 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
 
-  const double front_edge_to_rear_axle = VehicleConfigurationContext::Instance()
-                                             ->get_vehicle_param()
-                                             .front_edge_to_rear_axle;
-  const double rear_edge_to_rear_axle = VehicleConfigurationContext::Instance()
-                                            ->get_vehicle_param()
-                                            .rear_edge_to_rear_axle;
+  front_edge_to_rear_axle_ = VehicleConfigurationContext::Instance()
+                                 ->get_vehicle_param()
+                                 .front_edge_to_rear_axle;
+  rear_edge_to_rear_axle_ = VehicleConfigurationContext::Instance()
+                                ->get_vehicle_param()
+                                .rear_edge_to_rear_axle;
   st_sample_space_base_ =
-      STSampleSpaceBase(front_edge_to_rear_axle, rear_edge_to_rear_axle);
+      STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
 
   sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
   min_cost_traj_ptr_ = nullptr;
@@ -162,7 +166,8 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           quartic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-          weight_gap_avaliable_, weight_acc_limit_);
+          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+          front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -174,7 +179,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
 bool SamplePolySpeedAdjustDecider::Evaluate() {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
-  double min_cost = kMaxPenalty;
+  double min_cost = std::numeric_limits<double>::max();
   double leading_veh_s = kMaxPathLength;
   double leading_veh_v = kAgentNoValidVel;
   if (leading_veh_.id != kNoAgentId) {
@@ -194,6 +199,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
         min_cost = sample_traj.cost_sum_;
+        min_cost_traj_index_.first = i;
+        min_cost_traj_index_.second = j;
       }
     }
   }
@@ -349,12 +356,6 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   // init sample space
   st_sample_space_base_.Init(agent_info_, ego_s);
 
-  // sample v upper and lower
-  speed_adjust_range_.first = std::fmin(
-      config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
-  speed_adjust_range_.second = std::fmax(
-      config_.sample_v_lower, ego_v_ - config_.maximum_speed_adjustment);
-
   // calc flow vel
   StitchLastBestPoly();
   min_cost_traj_ptr_ = nullptr;  // clear last ptr;
@@ -365,6 +366,15 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   RunSampleSceneStateMachine();
 
+  // sample v upper and lower
+  speed_adjust_range_.first = std::fmin(
+      config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
+  speed_adjust_range_.second =
+      sample_scene_ == DecelerationPriorityScene &&
+              merge_stop_line_distance_ <= 20.0
+          ? 0.0
+          : std::fmax(config_.sample_v_lower,
+                      ego_v_ - config_.maximum_speed_adjustment);
   return !agent_info_.empty();
 }
 
@@ -386,8 +396,22 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       virtual_lane_mgr->get_distance_to_first_road_split();
   distance_to_ramp_ = route_info_output.dis_to_ramp;
 
-  if (lane_change_source_ == MAP_REQUEST ||
-      lane_change_source_ == MERGE_REQUEST) {
+  if (is_nearing_ramp_ && distance_to_ramp_ < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = distance_to_ramp_;
+    return true;
+  } else if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
+             route_info_output.dis_to_ramp < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = route_info_output.dis_to_ramp;
+    return true;
+  } else if (virtual_lane_mgr->get_current_lane()
+                 ->is_nearing_split_mlc_task() &&
+             route_info_output.distance_to_first_road_split <
+                 kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = route_info_output.distance_to_first_road_split;
+
+    return true;
+  } else if (lane_change_source_ == MAP_REQUEST ||
+             lane_change_source_ == MERGE_REQUEST) {
     if (boundary_merge_point_valid_) {
       const auto& boundary_merge_point =
           session_->planning_context()
@@ -406,9 +430,6 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
         return true;
       }
     }
-  } else if (is_nearing_ramp_) {
-    merge_stop_line_distance_ = distance_to_ramp_;
-    return true;
   }
 
   return false;
@@ -463,7 +484,8 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             resample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
             weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-            weight_gap_avaliable_,weight_acc_limit_);
+            weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+            front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
     planning::speed::STPoint stitched_poly_checked_lower_st_point,
@@ -543,6 +565,7 @@ void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
   weight_vel_variable_ = kNormalSceneWeightVelVariable;
   weight_gap_avaliable_ = kNormalSceneWeightGapAvailable;
   weight_acc_limit_ = kNormalSceneWeightAccLimit;
+  weight_stop_penalty_ = kNormalSceneWeightStopPenalty;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
@@ -555,6 +578,7 @@ void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
   weight_vel_variable_ = kPurseFlowVelSceneWeightVelVariable;
   weight_gap_avaliable_ = kPurseFlowVelSceneWeightGapAvailable;
   weight_acc_limit_ = kPurseFlowVelSceneWeightAccLimit;
+  weight_stop_penalty_ = kPurseFlowVelSceneWeightStopPenalty;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
@@ -567,6 +591,7 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
   weight_vel_variable_ = kDeclerationSceneWeightVelVariable;
   weight_gap_avaliable_ = kDeclerationSceneWeightGapAvailable;
   weight_acc_limit_ = kDeclerationSceneWeightAccLimit;
+  weight_stop_penalty_ = kDeclerationSceneWeightStopPenalty;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
@@ -735,32 +760,6 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
 
     sample_poly_speed_pb_info->mutable_sample_print_table_info()
         ->mutable_best_poly_cost_info()
-        ->set_end_point_match_gap_s_cost(
-            min_cost_traj_ptr_->end_point_match_gap_cost().match_s_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_best_poly_cost_info()
-        ->set_end_point_match_gap_vel_cost(
-            min_cost_traj_ptr_->end_point_match_gap_cost().match_v_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_best_poly_cost_info()
-        ->set_end_point_match_gap_center_cost(
-            min_cost_traj_ptr_->end_point_match_gap_cost()
-                .match_gap_center_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_best_poly_cost_info()
-        ->set_mid_point_match_gap_s_cost(
-            min_cost_traj_ptr_->mid_point_match_gap_cost().match_s_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_best_poly_cost_info()
-        ->set_mid_point_match_gap_vel_cost(
-            min_cost_traj_ptr_->mid_point_match_gap_cost().match_v_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_best_poly_cost_info()
-        ->set_mid_point_match_gap_center_cost(
-            min_cost_traj_ptr_->mid_point_match_gap_cost()
-                .match_gap_center_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_best_poly_cost_info()
         ->set_follow_vel_cost(min_cost_traj_ptr_->follow_vel_cost().cost());
     sample_poly_speed_pb_info->mutable_sample_print_table_info()
         ->mutable_best_poly_cost_info()
@@ -777,81 +776,29 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
         ->mutable_best_poly_cost_info()
         ->set_gap_avaliable_cost(
             min_cost_traj_ptr_->gap_avaliable_cost().cost());
-  }
-
-  if (stitched_last_best_quartic_poly_ptr_ != nullptr) {
-    for (double t = 0; t < kPlanningDuration + 0.21; t += 0.2) {
-      const double s = stitched_last_best_quartic_poly_ptr_->CalcS(t) - ego_s_;
-      sample_poly_speed_pb_info->mutable_stitched_sample_s_vec()->Add(s);
-      sample_poly_speed_pb_info->mutable_stitched_sample_v_vec()->Add(
-          stitched_last_best_quartic_poly_ptr_->CalcV(t));
-      sample_poly_speed_pb_info->mutable_stitched_sample_a_vec()->Add(
-          stitched_last_best_quartic_poly_ptr_->CalcAcc(t));
-      sample_poly_speed_pb_info->mutable_stitched_sample_j_vec()->Add(
-          stitched_last_best_quartic_poly_ptr_->CalcJerk(t));
-      sample_poly_speed_pb_info->mutable_stitched_sample_t_vec()->Add(t);
+    double match_gap_cost_s_sum = 0.0;
+    double match_gap_cost_v_sum = 0.0;
+    double match_gap_cost_center_sum = 0.0;
+    const auto& anchor_points_match_gap_cost_vec =
+        min_cost_traj_ptr_->anchor_points_match_gap_cost_vec();
+    for (size_t i = 0; i < anchor_points_match_gap_cost_vec.size(); i++) {
+      match_gap_cost_s_sum +=
+          anchor_points_match_gap_cost_vec[i].match_s_cost();
+      match_gap_cost_v_sum +=
+          anchor_points_match_gap_cost_vec[i].match_v_cost();
+      match_gap_cost_center_sum +=
+          anchor_points_match_gap_cost_vec[i].match_gap_center_cost();
     }
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_match_gap_cost_s_sum(match_gap_cost_s_sum);
 
     sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_sample_match_gap_id()
-        ->set_gap_front_id(stitched_last_best_quartic_poly_ptr_
-                               ->end_point_matched_gap_front_id());
+        ->mutable_best_poly_cost_info()
+        ->set_match_gap_cost_v_sum(match_gap_cost_v_sum);
     sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_sample_match_gap_id()
-        ->set_gap_back_id(stitched_last_best_quartic_poly_ptr_
-                              ->end_point_matched_gap_back_id());
-
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_end_point_match_gap_s_cost(
-            stitched_last_best_quartic_poly_ptr_->end_point_match_gap_cost()
-                .match_s_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_end_point_match_gap_vel_cost(
-            stitched_last_best_quartic_poly_ptr_->end_point_match_gap_cost()
-                .match_v_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_end_point_match_gap_center_cost(
-            stitched_last_best_quartic_poly_ptr_->end_point_match_gap_cost()
-                .match_gap_center_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_mid_point_match_gap_s_cost(
-            stitched_last_best_quartic_poly_ptr_->mid_point_match_gap_cost()
-                .match_s_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_mid_point_match_gap_vel_cost(
-            stitched_last_best_quartic_poly_ptr_->mid_point_match_gap_cost()
-                .match_v_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_mid_point_match_gap_center_cost(
-            stitched_last_best_quartic_poly_ptr_->mid_point_match_gap_cost()
-                .match_gap_center_cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_follow_vel_cost(
-            stitched_last_best_quartic_poly_ptr_->follow_vel_cost().cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_stop_line_cost(
-            stitched_last_best_quartic_poly_ptr_->stop_line_cost().cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_leading_veh_safe_cost(
-            stitched_last_best_quartic_poly_ptr_->leading_veh_safe_cost()
-                .cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_vel_variable_cost(
-            stitched_last_best_quartic_poly_ptr_->speed_variable_cost().cost());
-    sample_poly_speed_pb_info->mutable_sample_print_table_info()
-        ->mutable_stitched_poly_cost_info()
-        ->set_gap_avaliable_cost(
-            stitched_last_best_quartic_poly_ptr_->gap_avaliable_cost().cost());
+        ->mutable_best_poly_cost_info()
+        ->set_match_gap_cost_center_sum(match_gap_cost_center_sum);
   }
 
   sample_poly_speed_pb_info->mutable_sample_print_table_info()->set_flow_vel(

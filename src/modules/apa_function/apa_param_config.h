@@ -42,6 +42,15 @@ struct AstarParkingConfig {
 
   // If ego is in blind zone, ignore some obstacles.
   bool enable_blind_zone;
+
+  // hybrid a star params
+  float tail_in_slot_virtual_wall_x_offset = 3.0;
+  float tail_in_slot_virtual_wall_y_offset = 0.5;
+  float head_in_slot_virtual_wall_x_offset = 4.0;
+  float head_in_slot_virtual_wall_y_offset = 1.8;
+
+  float vertical_slot_passage_height_bound;
+  float vertical_slot_passage_length_bound;
 };
 
 struct ParkingSpeedConfig {
@@ -257,6 +266,7 @@ struct ApaParameters {
   bool use_fus_occ_obj = true;
   bool use_uss_pt_clound = false;
   bool use_ground_line = true;
+  bool use_object_detect;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
@@ -363,8 +373,8 @@ struct ApaParameters {
   bool parallel_lat_opt_enable = false;
   double min_opt_path_length = 0.7;
   // slot managent params
-  bool release_slot_by_prepare = false;
-  bool lock_parallel_slot = false;
+  bool prohibit_move_slot = false;
+  bool move_slot_with_little_buffer = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
   double slot_release_channel_width = 4.86;
@@ -395,7 +405,7 @@ struct ApaParameters {
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
   double easy_slot_release_channel_width = 7.68;
 
-  double terminal_length = 1.2;
+  double believe_obs_ego_area = 2.68;
   double limiter_length = 0.0;
 
   double slot_occupied_ratio_max_lat_err = 0.9;
@@ -404,17 +414,11 @@ struct ApaParameters {
   // gen output params
   double max_velocity = 0.6;
 
-  // hybrid a star params
-  double tail_in_slot_virtual_wall_x_offset = 3.0;
-  double tail_in_slot_virtual_wall_y_offset = 0.5;
-  double head_in_slot_virtual_wall_x_offset = 4.0;
-  double head_in_slot_virtual_wall_y_offset = 1.8;
-
-  std::vector<double> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
+  std::vector<float> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
                                             2.02, 2.7, 1.8, 0.9,  0.0};
-  std::vector<double> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
+  std::vector<float> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
                                             0.88, 0.0,  0.0,   0.0,   0.0};
-  std::vector<double> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
+  std::vector<float> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
                                             0.18, 0.95, 0.95, 0.95, 0.95};
 
   AstarParkingConfig astar_config;

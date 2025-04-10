@@ -14,25 +14,25 @@ class CubicPathInterface {
 
   void Init();
 
-  std::vector<double> GeneratePolynomialCoefficients(
+  std::vector<float> GeneratePolynomialCoefficients(
       const Pose2D& start_point, const Pose2D& target_point);
 
   void GeneratePolynomialPath(std::vector<AStarPathPoint>& path,
-                              const std::vector<double>& coefficients,
-                              const double step, const Pose2D& start_point,
+                              const std::vector<float>& coefficients,
+                              const float step, const Pose2D& start_point,
                               const Pose2D& target_point);
 
-  std::vector<double> GetThetaVec();
-  std::vector<double> GetCurvatureVec();
+  std::vector<float> GetThetaVec();
+  std::vector<float> GetCurvatureVec();
 
-  const double GetMinCurvatureRadius() const;
+  const float GetMinCurvatureRadius() const;
   const bool ArePosesEqual(const Pose2D& p1, const Pose2D& p2,
-                           double epsilon = 1e-9);
+                           float epsilon = 1e-9);
 
  private:
-  std::vector<double> theta_vec_;
-  std::vector<double> curvature_vec_;
+  std::vector<float> theta_vec_;
+  std::vector<float> curvature_vec_;
   // size_t max_plan_num_ = 25;
-  double max_curvature_;
+  float max_curvature_;
 };
 }  // namespace planning

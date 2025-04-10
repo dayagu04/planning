@@ -81,6 +81,28 @@ class CDL_EXPORT AABB {
     return;
   }
 
+  void MergePointfloat64(const Eigen::Vector2d &p) {
+    // x bound
+    float p0 = static_cast<float>(p[0]);
+    float p1 = static_cast<float>(p[1]);
+    if (p0 < min_[0]) {
+      min_[0] = p0;
+    }
+    if (p0 > max_[0]) {
+      max_[0] = p0;
+    }
+
+    // y bound
+    if (p1 < min_[1]) {
+      min_[1] = p1;
+    }
+    if (p1 > max_[1]) {
+      max_[1] = p1;
+    }
+
+    return;
+  }
+
   /** Merge the AABB and a point */
   AABB &operator+=(const Vector2r &p);
 

@@ -33,6 +33,7 @@
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -95,7 +96,7 @@ Eigen::Vector3d astar_end_pose_;
 Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
 EigenPointSet2d virtual_wall_points_;
-std::vector<EigenPath2d> real_time_node_list_;
+std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 // 所有启发项的rs path，record in here
 std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
@@ -107,7 +108,7 @@ EigenPointSet2d deletenode_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
 // all search node, not only include: open + close, and include deleted node.
-std::vector<Eigen::Vector3d> all_searched_node_;
+std::vector<Eigen::Vector4d> all_searched_node_;
 AstarPathGear history_gear_request_;
 // local coordinate system
 std::vector<Eigen::Vector3d> footprint_circle_model_normal_gear_;
@@ -247,14 +248,14 @@ int GetPathFromHybridAstar() {
                                      real_time_node_list_[i][j].y(), 0));
 
       real_time_node_list_[i][j] =
-          Eigen::Vector2d(global_position.x, global_position.y);
+          Eigen::Vector2f(global_position.x, global_position.y);
     }
   }
 
   ILOG_INFO << "pybind node size " << real_time_node_list_.size();
 
   static_rs_path_list_.clear();
-  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
+  std::vector<std::vector<Vec2df32>> path_list;
   thread_solver_->GetRSPathHeuristicInThread(path_list);
 
   for (i = 0; i < path_list.size(); i++) {
@@ -271,7 +272,7 @@ int GetPathFromHybridAstar() {
     static_rs_path_list_.emplace_back(path);
   }
 
-  std::vector<ad_common::math::Vec2d> rs_path;
+  std::vector<Vec2df32> rs_path;
   thread_solver_->GetRSPathLinkInThread(rs_path);
   std::vector<Eigen::Vector2d> tmp_path;
   for (size_t j = 0; j < rs_path.size(); j++) {
@@ -294,7 +295,7 @@ int GetPathFromHybridAstar() {
   static_ref_line_.clear();
 
   // start
-  ad_common::math::Vec2d point;
+  Vec2df32 point;
   ref_line.GetPointByDist(&point, -5.0);
   local_position.x = point.x();
   local_position.y = point.y();
@@ -318,7 +319,7 @@ int GetPathFromHybridAstar() {
 
   // 为了调试搜索过程，plot it
   search_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &search_path =
+  const std::vector<Vec2df32> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   for (i = 0; i < search_path.size(); i++) {
@@ -331,7 +332,7 @@ int GetPathFromHybridAstar() {
   }
 
   deletenode_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &delnode_path =
+  const std::vector<Vec2df32> &delnode_path =
       hybrid_astar_interface_->GetDelNodeQueueNode();
 
   for (i = 0; i < delnode_path.size(); i++) {
@@ -353,15 +354,17 @@ int GetPathFromHybridAstar() {
 
   all_searched_node_.clear();
   double is_safe = 0;
+  double is_gear_switch_node = 0;
   for (i = 0; i < all_search_node.size(); i++) {
     local_position.x = all_search_node[i].pos.x;
     local_position.y = all_search_node[i].pos.y;
     tf.ULFLocalPoseToGlobal(&global_position, local_position);
 
     is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+    is_gear_switch_node = all_search_node[i].gear_switch_point ? 1.0 : 0.0;
 
-    all_searched_node_.emplace_back(
-        Eigen::Vector3d(global_position.x, global_position.y, is_safe));
+    all_searched_node_.emplace_back(Eigen::Vector4d(
+        global_position.x, global_position.y, is_safe, is_gear_switch_node));
   }
 
   AstarRequest request = thread_solver_->GetAstarRequest();
@@ -847,7 +850,7 @@ const bool SetSlotInfo() {
   return true;
 }
 
-const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
+const std::vector<std::vector<Eigen::Vector2f>> &GetAstarAllNodes() {
   return real_time_node_list_;
 }
 
@@ -877,7 +880,7 @@ const std::vector<Eigen::Vector2d> &GetDelNodeSequencePath() {
 
 const Eigen::Vector3d GetCoordinateSystem() { return coordinate_system_; }
 
-const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+const std::vector<Eigen::Vector4d> &GetAllSearchNode() {
   return all_searched_node_;
 }
 

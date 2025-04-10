@@ -94,7 +94,7 @@ void ParallelPathGenerator::Preprocess() {
 
   calc_params_.slot_side_sgn =
       (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) ? -1.0
-                                                                     : 1.0;
+                                                                    : 1.0;
 
   const double target_heading = 0.0;
   calc_params_.target_pose.Set(input_.tlane.pt_terminal_pos, target_heading);
@@ -457,8 +457,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
   const auto path_end_pose = path_seg_vec.back().GetEndPose();
 
   if (IsDoubleEqual(path_end_pose.heading, calc_params_.target_pose.heading) &&
-      !IsDoubleEqual(path_end_pose.pos.x(),
-                     input_.tlane.pt_terminal_pos.x())) {
+      !IsDoubleEqual(path_end_pose.pos.x(), input_.tlane.pt_terminal_pos.x())) {
     const Eigen::Vector2d fixed_target_pos(input_.tlane.pt_terminal_pos.x(),
                                            path_end_pose.pos.y());
 
@@ -761,8 +760,7 @@ const bool ParallelPathGenerator::BackwardNormalPlan() {
     return true;
   }
 
-  if (PlanFromTargetToLine(path_seg_vec,
-                           input_.ego_info_under_slot.cur_pose)) {
+  if (PlanFromTargetToLine(path_seg_vec, input_.ego_info_under_slot.cur_pose)) {
     AddPathSegToOutPut(path_seg_vec);
     ILOG_INFO << "ego_pose PlanFromTargetToLine success!";
     return true;
@@ -1170,8 +1168,7 @@ const std::vector<double> ParallelPathGenerator::GetMinDistOfEgoToObs() {
 const bool ParallelPathGenerator::GenAlignedPreparingLine(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec,
     const pnc::geometry_lib::PathPoint& ego_pose) {
-  if (std::fabs(input_.ego_info_under_slot.cur_pose.heading) * kRad2Deg <
-      1.0) {
+  if (std::fabs(input_.ego_info_under_slot.cur_pose.heading) * kRad2Deg < 1.0) {
     if (input_.ego_info_under_slot.cur_pose.pos.x() >
             input_.tlane.slot_length ||
         std::fabs(input_.ego_info_under_slot.cur_pose.pos.y() -
@@ -1476,6 +1473,15 @@ const bool ParallelPathGenerator::DubinsPlan(
       if (!dubins_planner_.Solve(j, i)) {
         continue;
       }
+      const auto dubins_output_ptr = dubins_planner_.GetOutputPtr();
+
+      const double max_heading_mag_deg =
+          kRad2Deg * std::max(std::fabs(dubins_output_ptr->arc_AB.headingB),
+                              std::fabs(dubins_output_ptr->arc_CD.headingA));
+      if (max_heading_mag_deg > 45.0) {
+        continue;
+      }
+
       if (IsDubinsCollided(buffer)) {
         continue;
       }
@@ -2153,10 +2159,10 @@ const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
 
       GeometryPath geo_path;
       AssempleGeometryPath(geo_path, path_seg_vec);
-      if (geo_path.first_path_length < 0.2) {
-        // ILOG_INFO <<"first path length is too short!");
-        continue;
-      }
+      // if (geo_path.first_path_length < 0.2) {
+      //   // ILOG_INFO <<"first path length is too short!");
+      //   continue;
+      // }
       // ILOG_INFO <<"geo_path gear change cnt = " <<
       // geo_path.gear_change_count);
       total_path_vec.emplace_back(geo_path);
@@ -4259,16 +4265,17 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
-  ILOG_INFO << "remain_car_dist = " << remain_car_dist;
-  ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
-  ILOG_INFO << "buffer = " << buffer;
+  // ILOG_INFO << "remain_car_dist = " << remain_car_dist;
+  // ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
+  // ILOG_INFO << "buffer = " << buffer;
 
-  ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
-  ILOG_INFO << "col_pt_obs in slot = " << col_res.col_pt_obs_global.transpose();
+  // ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
+  // ILOG_INFO << "col_pt_obs in slot = " <<
+  // col_res.col_pt_obs_global.transpose();
 
   if (safe_remain_dist < 0.0) {
-    ILOG_INFO << "the distance between obstacle and ego is smaller than "
-                 "min_safe_distance, collided! ";
+    // ILOG_INFO << "the distance between obstacle and ego is smaller than "
+    //              "min_safe_distance, collided! ";
 
     return PATH_COL_INVALID;
   }

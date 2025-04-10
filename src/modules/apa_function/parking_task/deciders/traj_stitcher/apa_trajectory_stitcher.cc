@@ -165,7 +165,8 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr = pose.DistanceSquareTo(path[i].pos);
+    dist_sqr =
+        pose.DistanceSquareTo(Eigen::Vector2f(path[i].pos[0], path[i].pos[1]));
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
@@ -224,7 +225,8 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr = ego_pose.DistanceSquareTo(path[i].pos);
+    dist_sqr = ego_pose.DistanceSquareTo(
+        Eigen::Vector2f(path[i].pos[0], path[i].pos[1]));
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
@@ -239,10 +241,10 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   } else if (index_min + 1 == path.size()) {
     neighbour_id = index_min - 1;
   } else {
-    double left_neighbour_dist =
-        ego_pose.DistanceSquareTo(path[index_min - 1].pos);
-    double right_neighbour_dist =
-        ego_pose.DistanceSquareTo(path[index_min + 1].pos);
+    double left_neighbour_dist = ego_pose.DistanceSquareTo(Eigen::Vector2f(
+        path[index_min - 1].pos[0], path[index_min - 1].pos[1]));
+    double right_neighbour_dist = ego_pose.DistanceSquareTo(Eigen::Vector2f(
+        path[index_min + 1].pos[0], path[index_min + 1].pos[1]));
     if (left_neighbour_dist < right_neighbour_dist) {
       neighbour_id = index_min - 1;
     } else {

@@ -16,6 +16,7 @@
 #include "debug_info_log.h"
 #include "dp_speed_common.h"
 #include "geometry_math.h"
+#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
 #include "optimizer_common.h"
@@ -24,10 +25,9 @@
 #include "parking_task/parking_task.h"
 #include "planning_plan_c.h"
 #include "pose2d.h"
-#include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
+#include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "traj_stitcher/apa_trajectory_stitcher.h"
-#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 
 namespace planning {
 namespace apa_planner {
@@ -288,6 +288,23 @@ const bool ParkingScenario::CheckStuckFailed(const double stuck_failed_time) {
          (frame_.stuck_by_dynamic_obs ? 46.8 : stuck_failed_time);
 }
 
+const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
+    const double lat_expand, const double lon_expand,
+    const double heading_err) {
+  const geometry_lib::PathPoint& ego_pose =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.cur_pose;
+
+  const ApaSlot& slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot;
+
+  if ((slot.IsPointInExpandSlot(ego_pose.pos, true, lat_expand, lon_expand) &&
+       std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
+    return true;
+  }
+
+  return false;
+}
+
 const double ParkingScenario::CalRemainDistFromPath() {
   double remain_dist = 5.01;
 
@@ -319,7 +336,8 @@ const double ParkingScenario::CalRemainDistFromPath() {
 
 const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing) {
+    const double extra_buffer_when_reversing, const double dynamic_lat_buffer,
+    const bool is_parallel_condition) {
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetUssObsAvoidancePtr();
@@ -348,8 +366,8 @@ const double ParkingScenario::CalRemainDistFromObs(
   gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
 
   col_res = gjk_col_det_ptr->Update(
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), 0.368, 0.0,
-      gjl_col_det_request);
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
+      dynamic_lat_buffer, 0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = 6.68;
@@ -374,10 +392,17 @@ const double ParkingScenario::CalRemainDistFromObs(
     frame_.stuck_by_dynamic_obs = false;
     return uss_remain_dist;
   } else {
-    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
-      frame_.stuck_by_dynamic_obs = true;
-      return obs_pt_remain_dist_dynamic;
+    if (!is_parallel_condition) {
+      ILOG_INFO << "perpendicular or tilt condition!";
+      if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
+        frame_.stuck_by_dynamic_obs = true;
+        return obs_pt_remain_dist_dynamic;
+      } else {
+        frame_.stuck_by_dynamic_obs = false;
+        return obs_pt_remain_dist_static;
+      }
     } else {
+      ILOG_INFO << "parallel condition! Currently don't need dynamic check!";
       frame_.stuck_by_dynamic_obs = false;
       return obs_pt_remain_dist_static;
     }
@@ -427,7 +452,7 @@ const bool ParkingScenario::PostProcessPath() {
     return false;
   }
 
-  // hack: insert line of 0.1m compensating control error to reduce gear change
+  // hack: insert line of 0.2m compensating control error to reduce gear change
   // num
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
@@ -438,11 +463,13 @@ const bool ParkingScenario::PostProcessPath() {
     const Eigen::Vector2d end_point(x_vec[x_vec_size - 1],
                                     y_vec[x_vec_size - 1]);
 
-    const Eigen::Vector2d heading_norm = (end_point - start_point).normalized();
-    pnc::geometry_lib::PathPoint extend_point;
+    geometry_lib::PathPoint extend_point(end_point,
+                                         heading_vec[x_vec_size - 1]);
+
     const double extend_length = 0.2;
-    extend_point.pos = end_point + extend_length * heading_norm;
-    extend_point.heading = heading_vec.back();
+    geometry_lib::CalExtendedPointByTwoPoints(start_point, end_point,
+                                              extend_point.pos, 0.2);
+
     s += extend_length;
     x_vec.emplace_back(extend_point.pos.x());
     y_vec.emplace_back(extend_point.pos.y());

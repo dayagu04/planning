@@ -18,14 +18,17 @@ namespace planning {
 namespace apa_planner {
 
 struct TLane {
-  Eigen::Vector2d A;
-  Eigen::Vector2d B;
-  Eigen::Vector2d C;
-  Eigen::Vector2d D;
-  Eigen::Vector2d E;
-  Eigen::Vector2d F;
-  Eigen::Vector2d G;
-  Eigen::Vector2d H;
+  Eigen::Vector2d A = Eigen::Vector2d::Zero();
+  Eigen::Vector2d B = Eigen::Vector2d::Zero();
+  Eigen::Vector2d C = Eigen::Vector2d::Zero();
+  Eigen::Vector2d D = Eigen::Vector2d::Zero();
+  Eigen::Vector2d E = Eigen::Vector2d::Zero();
+  Eigen::Vector2d F = Eigen::Vector2d::Zero();
+  Eigen::Vector2d G = Eigen::Vector2d::Zero();
+  Eigen::Vector2d H = Eigen::Vector2d::Zero();
+
+  double channel_width = 0.0;
+  double channel_length = 0.0;
 
   double min_x = 0.0;
   double min_y = 0.0;
@@ -41,6 +44,14 @@ struct TLane {
     F.setZero();
     G.setZero();
     H.setZero();
+
+    channel_width = 0.0;
+    channel_length = 0.0;
+
+    min_x = 0.0;
+    min_y = 0.0;
+    max_x = 0.0;
+    max_y = 0.0;
   }
 
   void CalcBound() {
@@ -95,6 +106,9 @@ struct EgoInfoUnderSlot {
   double lat_move_dist_every_replan = 0.0;
   double lon_move_dist_every_replan = 0.0;
 
+  // 存在目标终点的安全buffer
+  double safe_lat_buffer = 0.15;
+
   Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
 
   ApaSlot slot;
@@ -134,6 +148,8 @@ struct EgoInfoUnderSlot {
 
     lat_move_dist_every_replan = 0.0;
     lon_move_dist_every_replan = 0.0;
+
+    safe_lat_buffer = 0.15;
 
     pt_inside.setZero();
 

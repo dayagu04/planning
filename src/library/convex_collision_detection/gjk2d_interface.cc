@@ -1,5 +1,6 @@
 #include "gjk2d_interface.h"
 
+#include "collision_detect_types.h"
 #include "log_glog.h"
 #include "pose2d.h"
 
@@ -30,7 +31,7 @@ void GJK2DInterface::PolygonCollision(bool *is_collision,
   return;
 }
 
-void GJK2DInterface::PolygonDistance(bool *is_collision, double *dist,
+void GJK2DInterface::PolygonDistance(bool *is_collision, cdl::real *dist,
                                      const Polygon2D *polygon_p,
                                      const Polygon2D *polygon_q) {
   int32_t i;
@@ -57,11 +58,12 @@ void GJK2DInterface::PolygonDistance(bool *is_collision, double *dist,
   return;
 }
 
-void GJK2DInterface::PolygonDistanceByThresh(bool *is_collision, double *dist,
+void GJK2DInterface::PolygonDistanceByThresh(bool *is_collision,
+                                             cdl::real *dist,
                                              const Polygon2D *polygon_p,
                                              const Polygon2D *polygon_q,
-                                             const double dist_thresh) {
-  double point_dist, circle_dist;
+                                             const cdl::real dist_thresh) {
+  cdl::real point_dist, circle_dist;
 
   point_dist = CalcPointDist(&polygon_p->center_pt, &polygon_q->center_pt);
   circle_dist = point_dist - (polygon_p->radius + polygon_q->radius);
@@ -77,9 +79,10 @@ void GJK2DInterface::PolygonDistanceByThresh(bool *is_collision, double *dist,
 
 void GJK2DInterface::PolygonDistanceByThresh(const Polygon2D *polygon,
                                              const Position2D &point,
-                                             const double dist_thresh,
-                                             bool *is_collision, double *dist) {
-  double d, delta_d;
+                                             const cdl::real dist_thresh,
+                                             bool *is_collision,
+                                             cdl::real *dist) {
+  cdl::real d, delta_d;
 
   d = CalcPointDist(&polygon->center_pt, &point);
   delta_d = d - polygon->radius;
@@ -118,11 +121,10 @@ void GJK2DInterface::PolygonDistanceByThresh(const Polygon2D *polygon,
   return;
 }
 
-void GJK2DInterface::PolygonCollisionByCircleCheck(bool *is_collision,
-                                                   const Polygon2D *polygon_p,
-                                                   const Polygon2D *polygon_q,
-                                                   const double dist_thresh) {
-  double d, delta_d;
+void GJK2DInterface::PolygonCollisionByCircleCheck(
+    bool *is_collision, const Polygon2D *polygon_p, const Polygon2D *polygon_q,
+    const cdl::real dist_thresh) {
+  cdl::real d, delta_d;
 
   d = CalcPointDist(&polygon_p->center_pt, &polygon_q->center_pt);
   delta_d = d - (polygon_p->radius + polygon_q->radius);
@@ -138,7 +140,7 @@ void GJK2DInterface::PolygonCollisionByCircleCheck(bool *is_collision,
 void GJK2DInterface::PolygonPointCollisionDetect(bool *is_collision,
                                                  const Polygon2D *polygon,
                                                  const Position2D &point) {
-  double d, delta_d;
+  cdl::real d, delta_d;
 
   d = CalcPointDist(&polygon->center_pt, &point);
   delta_d = d - polygon->radius;
@@ -171,7 +173,7 @@ void GJK2DInterface::PolygonPointCollisionDetect(bool *is_collision,
   return;
 }
 
-void GJK2DInterface::PolygonDistanceCheck(bool *is_collision, double *dist,
+void GJK2DInterface::PolygonDistanceCheck(bool *is_collision, cdl::real *dist,
                                           Position2D *pos_obj1,
                                           Position2D *pos_obj2,
                                           const Polygon2D *polygon_obj1,
@@ -198,7 +200,7 @@ void GJK2DInterface::PolygonDistanceCheck(bool *is_collision, double *dist,
   } else {
     *is_collision = false;
   }
-  *dist = (double)(gjk2d_result.distance);
+  *dist = (cdl::real)(gjk2d_result.distance);
   pos_obj1->x = gjk2d_result.p(0);
   pos_obj1->y = gjk2d_result.p(1);
   pos_obj2->x = gjk2d_result.q(0);
@@ -298,8 +300,8 @@ void GJK2DInterface::get_cross_point_for_two_ray(cdl::Vector2r &ret,
 
 #define SHAPECAST_PARALLEL_ERR (0.1)
 #define SHAPECAST_PARALLEL_EXPLORE_DIST (20.0)
-void GJK2DInterface::ShapeCast(bool *is_collision, double *distA, double *distB,
-                               Position2D *collision_pointA,
+void GJK2DInterface::ShapeCast(bool *is_collision, cdl::real *distA,
+                               cdl::real *distB, Position2D *collision_pointA,
                                Position2D *collision_pointB,
                                const Polygon2D *polygonA_start,
                                const Polygon2D *polygonA_end,
@@ -307,7 +309,7 @@ void GJK2DInterface::ShapeCast(bool *is_collision, double *distA, double *distB,
                                const Polygon2D *polygonB_end) {
   int32_t i;
   cdl::ShapeCastRequest request;
-  double cross_value, dot_value0, dot_value1;
+  cdl::real cross_value, dot_value0, dot_value1;
   cdl::Vector2r cross_pt, centerA, centerB;
   Position2D dirA, dirB;
   bool intersected;
@@ -391,7 +393,7 @@ void GJK2DInterface::ShapeCast(bool *is_collision, double *distA, double *distB,
 }
 
 void GJK2DInterface::ShapeCastByDirection(
-    bool *is_collision, double *distA, double *distB,
+    bool *is_collision, cdl::real *distA, cdl::real *distB,
     Position2D *collision_pointA, Position2D *collision_pointB,
     const Polygon2D *polygonA_start, const Position2D *dirA,
     const Polygon2D *polygonB_start, const Position2D *dirB) {
@@ -401,7 +403,7 @@ void GJK2DInterface::ShapeCastByDirection(
   cdl::GJK2D gjk_solver;
   cdl::ShapeCastResult result_tmp;
   cdl::ShapeCastResult *result = &result_tmp;
-  double cross_value, dot_value0, dot_value1;
+  cdl::real cross_value, dot_value0, dot_value1;
   cdl::Vector2r cross_pt;
 
   request->proxyA.size = polygonA_start->vertex_num;
@@ -462,8 +464,8 @@ void GJK2DInterface::ShapeCastByDirection(
 
 void GJK2DInterface::Raycast(RaycastCollisionInfo *info,
                              Position2D *collision_point,
-                             double *collision_dist, Position2D *source,
-                             Position2D *direction, double max_lambda,
+                             cdl::real *collision_dist, Position2D *source,
+                             Position2D *direction, cdl::real max_lambda,
                              const Polygon2D *polygon, bool get_collision_pt,
                              bool get_collision_dist, bool normalized_dir) {
   int32_t i;
@@ -515,9 +517,9 @@ void GJK2DInterface::Raycast(RaycastCollisionInfo *info,
 }
 
 void GJK2DInterface::PolygonPointCollisionDetect(const Polygon2D *polygon,
-                                                 const Eigen::Vector2d &point,
+                                                 const Eigen::Vector2f &point,
                                                  bool *is_collision) {
-  double d, delta_d;
+  cdl::real d, delta_d;
   d = polygon->center_pt.DistanceTo(point);
   delta_d = d - polygon->radius;
 

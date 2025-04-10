@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_space_base.h"
 #include "sample_speed_adjust_cost.h"
@@ -39,15 +41,15 @@ class SamplePolyCurve {
 class SampleQuarticPolynomialCurve : public SamplePolyCurve {
  public:
   SampleQuarticPolynomialCurve() = default;
-  SampleQuarticPolynomialCurve(QuarticPolynomial& poly, double arrived_t,
-                               double mid_t, const double weight_match_gap_vel,
-                               const double weight_match_gap_s,
-                               const double weight_follow_vel,
-                               const double weight_stop_line,
-                               const double weight_leading_veh_safe_s,
-                               const double weight_speed_variable,
-                               const double weight_gap_avaliable,
-                               const double weight_acc_limit);
+  SampleQuarticPolynomialCurve(
+      QuarticPolynomial& poly, double arrived_t, double mid_t,
+      const double weight_match_gap_vel, const double weight_match_gap_s,
+      const double weight_follow_vel, const double weight_stop_line,
+      const double weight_leading_veh_safe_s,
+      const double weight_speed_variable, const double weight_gap_avaliable,
+      const double weight_acc_limit, const double weight_stop_penalty,
+      const double front_edge_to_rear_axle,
+      const double back_edge_to_rear_axle);
 
   double CalcS(const double t) const override;
   double CalcV(const double t) const override;
@@ -68,12 +70,6 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   int32_t end_point_matched_gap_back_id() const {
     return end_point_matched_gap_back_id_;
   };
-  int32_t mid_point_match_gap_front_id() const {
-    return mid_point_match_gap_front_id_;
-  };
-  int32_t mid_point_match_gap_back_id() const {
-    return mid_point_match_gap_back_id_;
-  };
 
   void set_end_point_matched_gap_front_id(
       const int32_t end_point_matched_gap_front_id) {
@@ -83,24 +79,6 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   void set_end_point_matched_gap_back_id(
       const int32_t end_point_matched_gap_back_id) {
     end_point_matched_gap_back_id_ = end_point_matched_gap_back_id;
-  };
-
-  void set_mid_point_match_gap_front_id(
-      const int32_t mid_point_match_gap_front_id) {
-    mid_point_match_gap_front_id_ = mid_point_match_gap_front_id;
-  };
-
-  void set_mid_point_match_gap_back_id(
-      const int32_t mid_point_match_gap_back_id) {
-    mid_point_match_gap_back_id_ = mid_point_match_gap_back_id;
-  };
-
-  const MatchGapCost& end_point_match_gap_cost() const {
-    return end_point_match_gap_cost_;
-  };
-
-  const MatchGapCost& mid_point_match_gap_cost() const {
-    return mid_point_match_gap_cost_;
   };
 
   const FollowVelCost& follow_vel_cost() const { return follow_vel_cost_; };
@@ -123,10 +101,14 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
     return stop_penalty_cost_;
   };
 
+  const std::vector<MatchGapCost>& anchor_points_match_gap_cost_vec() const {
+    return anchor_points_match_gap_cost_vec_;
+  };
+
+  const AccLimitCost& acc_limit_cost() const { return acc_limit_cost_; }
+
  private:
   QuarticPolynomial poly_;
-  MatchGapCost end_point_match_gap_cost_;
-  MatchGapCost mid_point_match_gap_cost_;
   FollowVelCost follow_vel_cost_;
   StopLineCost stop_line_cost_;
   LeadingVehSafeCost leading_veh_safe_cost_;
@@ -137,8 +119,9 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
 
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;
-  int32_t mid_point_match_gap_front_id_ = kNoAgentId;
-  int32_t mid_point_match_gap_back_id_ = kNoAgentId;
+
+  // std::vector<double> anchor_points_checked_t_vec_;
+  std::vector<MatchGapCost> anchor_points_match_gap_cost_vec_;
 };
 
 }  // namespace planning

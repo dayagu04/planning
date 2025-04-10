@@ -4,6 +4,7 @@
 
 #include "obstacle.h"
 #include "planning_context.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -38,12 +39,12 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
       session_->planning_context().motion_planner_output();
   double final_t = 5.0;
   double tmp_t = 0.0;
-  double front_x = 0.0;
-  double back_x = 0.0;
-  double left_y = 0.0;
-  double right_y = 0.0;
-  double last_end_x = 0.0;
-  double last_end_y = 0.0;
+  float front_x = 0.0;
+  float back_x = 0.0;
+  float left_y = 0.0;
+  float right_y = 0.0;
+  float last_end_x = 0.0;
+  float last_end_y = 0.0;
   for (size_t i = 0; i < motion_planner_output.s_lat_vec.size(); ++i) {
     tmp_t = std::fmin(0.1 + i * 0.2, final_t);
     double last_lat_path_x = motion_planner_output.lateral_x_t_spline(tmp_t);

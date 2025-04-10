@@ -38,7 +38,7 @@ const bool IsResponseNice(const AstarRequest& request,
   // }
 
   // check start
-  // double dist = CalcPointDist(&request.start_, &response.request.start_);
+  // float dist = CalcPointDist(&request.start_, &response.request.start_);
 
   // if (dist > 0.1)
   // {

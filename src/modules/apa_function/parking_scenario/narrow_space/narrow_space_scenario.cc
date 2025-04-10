@@ -331,13 +331,13 @@ void NarrowSpaceScenario::Log() const {
   slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
 
   pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
   pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
 
   for (const Eigen::Vector2d& pt : pt_vec) {
     slot_corner_X.emplace_back(pt.x());
@@ -489,15 +489,15 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   // start
   Pose2D start;
-  start.x = ego_info.cur_pose.pos[0];
-  start.y = ego_info.cur_pose.pos[1];
-  start.theta = ego_info.cur_pose.heading;
+  start.x = static_cast<float>(ego_info.cur_pose.pos[0]);
+  start.y = static_cast<float>(ego_info.cur_pose.pos[1]);
+  start.theta = static_cast<float>(ego_info.cur_pose.heading);
 
   // real target pose in slot
   Pose2D real_end;
-  real_end.x = ego_info.target_pose.pos[0];
-  real_end.y = ego_info.target_pose.pos[1];
-  real_end.theta = ego_info.target_pose.heading;
+  real_end.x = static_cast<float>(ego_info.target_pose.pos[0]);
+  real_end.y = static_cast<float>(ego_info.target_pose.pos[1]);
+  real_end.theta = static_cast<float>(ego_info.target_pose.heading);
 
   // astar end, maybe different with real end.
   Pose2D end = real_end;
@@ -529,12 +529,13 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     }
     slot_type = ParkSpaceType::VERTICAL;
   }
-  end.x = real_end.x + end_straight_len;
+  end.x = real_end.x + static_cast<float>(end_straight_len);
 
   double astar_start_time = IflyTime::Now_ms();
-  Pose2D slot_base_pose = Pose2D(ego_info.origin_pose_global.pos.x(),
-                                 ego_info.origin_pose_global.pos.y(),
-                                 ego_info.origin_pose_global.heading);
+  Pose2D slot_base_pose =
+      Pose2D(static_cast<float>(ego_info.origin_pose_global.pos.x()),
+             static_cast<float>(ego_info.origin_pose_global.pos.y()),
+             static_cast<float>(ego_info.origin_pose_global.heading));
 
   ParkObstacleList obs;
 
@@ -543,30 +544,41 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
     virtual_wall_decider_.Init(start);
   }
-  virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot.slot_width_,
-                                ego_info.slot.slot_length_, start, real_end,
-                                slot_type, ego_info.slot_side, parking_in_type);
+  virtual_wall_decider_.Process(
+      obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
+      static_cast<float>(ego_info.slot.slot_length_), start, real_end,
+      slot_type, ego_info.slot_side, parking_in_type);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
 
   PointCloudObstacleTransform obstacle_generator;
+  cdl::AABB slot_box;
   if (NeedBlindZonePlanning(ego_info)) {
     const SlotCoord slot_info = ego_info.slot.GetProcessedCornerCoordLocal();
-    cdl::AABB box;
-    double y_buffer = 0.01;
-    box.min_ = cdl::Vector2r(
-        slot_info.pt_23_mid.x() - 0.01,
-        std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) - y_buffer);
-    box.max_ = cdl::Vector2r(
-        slot_info.pt_01_mid.x() + 4.0,
-        std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) + y_buffer);
+    double y_buffer;
+    if (path_planning_fail_num_ == 1) {
+      y_buffer = 0.01;
+    } else if (path_planning_fail_num_ == 2) {
+      // obstacles invade slot too much, delete bigger range obstacle around
+      // slot.
+      y_buffer = 0.1;
+    }
+
+    slot_box.min_ = cdl::Vector2r(
+        slot_info.pt_23_mid.x() - 0.01f,
+        static_cast<float>(std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) -
+                           y_buffer));
+    slot_box.max_ = cdl::Vector2r(
+        slot_info.pt_01_mid.x() + 4.0f,
+        static_cast<float>(std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) +
+                           y_buffer));
 
     obstacle_generator.GenerateLocalObstacle(
-        apa_world_ptr_->GetObstacleManagerPtr(), obs, box);
+        apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, true);
   } else {
     obstacle_generator.GenerateLocalObstacle(
-        apa_world_ptr_->GetObstacleManagerPtr(), obs);
+        apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, false);
   }
 
   double search_start_time = IflyTime::Now_ms();
@@ -754,13 +766,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
-      if (path_planning_fail_num_ == 0) {
+      path_planning_fail_num_ +=1;
+      if (path_planning_fail_num_ == 1 || path_planning_fail_num_ == 2) {
         res = PathPlannerResult::WAIT_PATH;
       } else {
         res = PathPlannerResult::PLAN_FAILED;
       }
-
-      path_planning_fail_num_ +=1;
 
       // publish fallback path
       GenerateFallBackPath();
@@ -982,8 +993,8 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ego_info_under_slot.origin_pose_global.heading_vec =
-      ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
-          .normalized();
+      ego_info_under_slot.slot.processed_corner_coord_global_
+          .pt_23mid_01mid_unit_vec;
 
   ego_info_under_slot.origin_pose_global.heading =
       std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
@@ -1747,11 +1758,12 @@ void NarrowSpaceScenario::ScenarioTry() {
     SlotReleaseState astar_release_state =
         ego_info_under_slot.slot.release_info_
             .release_state[ASTAR_PLANNING_RELEASE];
-    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，使用上一帧的结果填充.
-    if (astar_release_state == SlotReleaseState::RELEASE) {
+    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，不改变上一帧结果;
+    // 如果上一帧结果未知，使用计算中状态填充;
+    if (astar_release_state == SlotReleaseState::UNKOWN) {
       ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
+          SlotReleaseState::COMPUTING;
     }
   }
 
@@ -1808,15 +1820,19 @@ const bool NarrowSpaceScenario::IsVehicleOverlapWithSlotLine(
 
 const bool NarrowSpaceScenario::NeedBlindZonePlanning(
     const EgoInfoUnderSlot& ego_info) {
-  if (!apa_param.GetParam().astar_config.enable_blind_zone ||
-      path_planning_fail_num_ != 1) {
+  if (!apa_param.GetParam().astar_config.enable_blind_zone) {
+    return false;
+  }
+
+  if (path_planning_fail_num_ <= 0 || path_planning_fail_num_ >= 3) {
     return false;
   }
 
   double position_y_error = std::fabs(ego_info.cur_pose.pos[1]);
   double position_x_error = std::fabs(ego_info.cur_pose.pos[0]);
   if (position_y_error < ego_info.slot.slot_width_ / 2 &&
-      position_x_error < ego_info.slot.slot_length_) {
+      (position_x_error > 0.0 &&
+       position_x_error < ego_info.slot.slot_length_ + 1.0)) {
     return false;
   }
 

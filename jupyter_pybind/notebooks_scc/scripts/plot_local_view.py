@@ -7,13 +7,15 @@ sys.path.append('../../../')
 # sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
+from bokeh.resources import INLINE
+
 # bag path and frame dt
-bag_path = "/share/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240612/20240612-16-55-01/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-12-16-55-01_no_camera.bag.1718343840.close-loop.plan"
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_20260/common_frame/20250325/20250325-08-42-37/data_collection_CHERY_E0Y_20260_ALL_MANUAL_2025-03-25-08-42-37_no_camera.bag"
 
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()

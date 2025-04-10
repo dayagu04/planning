@@ -15,9 +15,9 @@ enum PathWinReason {
 };
 
 struct PolynomialPathCost {
-  double offset_to_center;
-  double accumulated_s;
-  double tail_heading;
+  float offset_to_center;
+  float accumulated_s;
+  float tail_heading;
 
   size_t point_size;
 

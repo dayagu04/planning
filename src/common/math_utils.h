@@ -37,16 +37,17 @@ namespace planning {
 #define ifly_fmod(x, y) std::fmod(x, y)
 
 #define ifly_float64_epsilon (1e-9)
+#define ifly_float32_epsilon (1e-9)
 
-inline double ifly_rad2deg(double u) { return 57.295779513082323 * u; }
+inline float ifly_rad2deg(float u) { return 57.295779513082323 * u; }
 
-inline double ifly_deg2rad(double u) { return 0.017453292519943 * u; }
+inline float ifly_deg2rad(float u) { return 0.017453292519943 * u; }
 
-inline double ifly_cvt_kmh_to_ms(double vel) { return vel * 3.6; }
+inline float ifly_cvt_kmh_to_ms(float vel) { return vel * 3.6; }
 
-inline double ifly_cvt_ms_to_kmh(double vel) { return vel * 3.6; }
+inline float ifly_cvt_ms_to_kmh(float vel) { return vel * 3.6; }
 
-#define ifly_fequal(x, y) (ifly_fabs((x) - (y)) < ifly_float64_epsilon)
+#define ifly_fequal(x, y) (ifly_fabs((x) - (y)) < ifly_float32_epsilon)
 #define ifly_fgreater(x, y) (((x) > (y)) && !ifly_fequal(x, y))
 #define ifly_fless(x, y) (((x) < (y)) && !ifly_fequal(x, y))
 

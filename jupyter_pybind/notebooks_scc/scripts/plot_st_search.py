@@ -14,7 +14,7 @@ from ipywidgets import Layout
 from typing import List
 from python_proto import common_pb2
 from jupyter_pybind import st_search_py
-
+from bokeh.resources import INLINE
 
 # bag path and frame dt
 # bag_path="/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240525/20240525-15-31-31/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-25-15-31-31.bag"
@@ -23,7 +23,7 @@ bag_path = "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240520/202405
 frame_dt = 0.1  # sec
 
 display(HTML("<style>.container {width:95% !important;  } </style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 
 class STPoint:

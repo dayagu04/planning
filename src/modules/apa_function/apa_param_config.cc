@@ -460,6 +460,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "use_uss_pt_clound");
 
   JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
+  JSON_READ_VALUE(apa_param.SetPram().use_object_detect, bool,
+                  "use_object_detect");
 
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
@@ -753,11 +755,11 @@ void SyncParkingParameters(const bool is_simulation) {
             << static_cast<int>(apa_param.GetParam().path_generator_type);
 
   // slot managent params
-  JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
-                  "release_slot_by_prepare");
+  JSON_READ_VALUE(apa_param.SetPram().prohibit_move_slot, bool,
+                  "prohibit_move_slot");
 
-  JSON_READ_VALUE(apa_param.SetPram().lock_parallel_slot, bool,
-                  "lock_parallel_slot");
+  JSON_READ_VALUE(apa_param.SetPram().move_slot_with_little_buffer, bool,
+                  "move_slot_with_little_buffer");
 
   JSON_READ_VALUE(apa_param.SetPram().max_slot_window_size, int,
                   "max_slot_window_size");
@@ -840,8 +842,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().easy_slot_release_channel_width, double,
                   "easy_slot_release_channel_width");
 
-  JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
-                  "terminal_length");
+  JSON_READ_VALUE(apa_param.SetPram().believe_obs_ego_area, double,
+                  "believe_obs_ego_area");
 
   JSON_READ_VALUE(apa_param.SetPram().limiter_length, double, "limiter_length");
 
@@ -854,11 +856,11 @@ void SyncParkingParameters(const bool is_simulation) {
   // gen output params
   JSON_READ_VALUE(apa_param.SetPram().max_velocity, double, "max_velocity");
 
-  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_x, std::vector<double>,
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_x, std::vector<float>,
                   "footprint_circle_x");
-  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_y, std::vector<double>,
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_y, std::vector<float>,
                   "footprint_circle_y");
-  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<double>,
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<float>,
                   "footprint_circle_r");
 
   JSON_READ_VALUE(
@@ -902,6 +904,12 @@ void SyncParkingParameters(const bool is_simulation) {
       "adjust_ego_y_thresh_outside_slot");
   JSON_READ_VALUE(apa_param.SetPram().astar_config.enable_blind_zone, bool,
                   "enable_blind_zone");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_passage_height_bound,
+      float, "vertical_slot_passage_height_bound");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_passage_length_bound,
+      float, "vertical_slot_passage_length_bound");
 
   JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");
@@ -913,17 +921,21 @@ void SyncParkingParameters(const bool is_simulation) {
                   double, "obs_dist_for_speed_limit");
 
   // hybrid a star params
-  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_x_offset,
-                  double, "tail_in_slot_virtual_wall_x_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.tail_in_slot_virtual_wall_x_offset,
+      float, "tail_in_slot_virtual_wall_x_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().tail_in_slot_virtual_wall_y_offset,
-                  double, "tail_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.tail_in_slot_virtual_wall_y_offset,
+      float, "tail_in_slot_virtual_wall_y_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_x_offset,
-                  double, "head_in_slot_virtual_wall_x_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.head_in_slot_virtual_wall_x_offset,
+      float, "head_in_slot_virtual_wall_x_offset");
 
-  JSON_READ_VALUE(apa_param.SetPram().head_in_slot_virtual_wall_y_offset,
-                  double, "head_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.head_in_slot_virtual_wall_y_offset,
+      float, "head_in_slot_virtual_wall_y_offset");
   return;
 }
 

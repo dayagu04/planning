@@ -713,7 +713,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
-    if ((far_average_l - kExistSplitLateralDisThd > near_average_l) ||
+    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) && 
+        near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
       return;
@@ -762,7 +763,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
-    if ((far_average_l - kExistSplitLateralDisThd > near_average_l) ||
+    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) && 
+        near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
       return;

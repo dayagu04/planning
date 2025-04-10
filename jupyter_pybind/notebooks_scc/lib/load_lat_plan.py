@@ -572,7 +572,7 @@ def load_select_obstacle_polygon(fig1):
   data_select_obstacle_polygon = ColumnDataSource(data = {'polygon_y': [],
                                                           'polygon_x': [],
                                                           'polygon_id': []})
-  fig_select_obs_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_select_obstacle_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4)
+  fig_select_obs_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_select_obstacle_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "yellow", line_width = 3, line_alpha = 0.4)
   hover_select_obs_polygon = HoverTool(renderers=[fig_select_obs_polygon], tooltips=[('id', '@polygon_id')])
   fig1.add_tools(hover_select_obs_polygon)
   return data_select_obstacle_polygon

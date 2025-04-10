@@ -1,4 +1,5 @@
 #include "apa_obstacle_manager.h"
+#include <bits/stdint-intn.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -11,6 +12,8 @@
 #include "environmental_model.h"
 #include "local_view.h"
 #include "log_glog.h"
+#include "polygon_base.h"
+#include "pose2d.h"
 
 namespace planning {
 namespace apa_planner {
@@ -104,7 +107,9 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       ApaObstacle apa_obs;
       if (apa_param.GetParam().enable_use_dynamic_obs) {
         if (obs_type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
-            obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE) {
+            obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE ||
+            obs_type == iflyauto::OBJECT_TYPE_OCC_PEOPLE ||
+            obs_type == iflyauto::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) {
           ILOG_INFO << "there are people or dynamic obs";
           apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
         }
@@ -118,37 +123,53 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
     }
-  } else {
+  }
+
+  if (apa_param.GetParam().use_object_detect) {
     const uint8 fusion_obs_size =
         std::min(local_view->fusion_objects_info.fusion_object_size,
                  static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
-      const iflyauto::FusionObjectsAdditional& fusion_object =
-          local_view->fusion_objects_info.fusion_object[i].additional_info;
-      const uint8 polygon_points_size = std::min(
-          fusion_object.polygon_points_size,
-          static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_MAX_NUM));
-      if (polygon_points_size < 1) {
+      const iflyauto::Obstacle& obs =
+          local_view->fusion_objects_info.fusion_object[i].common_info;
+
+      if (!IsConsideredODType(obs.type)) {
         continue;
       }
-      std::vector<Eigen::Vector2d> fusion_pt_clout_2d;
-      fusion_pt_clout_2d.reserve(polygon_points_size);
-      Polygon2D polygon;
-      cdl::AABB box = cdl::AABB();
-      for (uint8 j = 0; j < polygon_points_size; ++j) {
-        const Eigen::Vector2d fusion_pt(fusion_object.polygon_points[j].x,
-                                        fusion_object.polygon_points[j].y);
-        box.MergePoint(cdl::Vector2r(fusion_pt.x(), fusion_pt.y()));
-        fusion_pt_clout_2d.emplace_back(std::move(fusion_pt));
+
+      Pose2D center_pose(obs.center_position.x, obs.center_position.y,
+                  obs.heading_angle);
+
+      std::vector<Eigen::Vector2f> local_box;
+      GenerateBoundingBox(obs.shape.length, obs.shape.width,
+                          Eigen::Vector2f(0.0f, 0.0f), local_box);
+
+      std::vector<Eigen::Vector2f> global_box;
+      LocalPolygonToGlobal(local_box, center_pose, global_box);
+
+      std::vector<Eigen::Vector2d> box_points;
+      for (uint8 j = 0; j < global_box.size(); ++j) {
+        const Eigen::Vector2d fusion_pt(global_box[j].x(), global_box[j].y());
+        box_points.emplace_back(std::move(fusion_pt));
       }
 
-      GeneratePolygonByAABB(&polygon, box);
-
       ApaObstacle apa_obs;
-      apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
-      apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
-      apa_obs.SetBoxGlobal(box);
+      apa_obs.SetPtClout2dGlobal(box_points);
+      apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
+
+      Polygon2D polygon;
+      GeneratePolygonByPoints(global_box, &polygon);
       apa_obs.SetPolygonGlobal(polygon);
+
+      cdl::AABB box = cdl::AABB();
+      GetBoundingBoxByPolygon(&box, &polygon);
+      apa_obs.SetBoxGlobal(box);
+
+      if (apa_param.GetParam().enable_use_dynamic_obs &&
+          IsDynamicObjectType(obs.type)) {
+        apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
+      }
+
       apa_obs.SetId(obs_id_generate_);
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
@@ -269,6 +290,32 @@ void ApaObstacleManager::TransformCoordFromGlobalToLocal(
       pair.second.TransformCoordFromGlobalToLocal(g2l_tf);
     }
   }
+}
+
+const bool ApaObstacleManager::IsConsideredODType(
+    const iflyauto::ObjectType type) {
+  if (type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+      type == iflyauto::OBJECT_TYPE_ANIMAL ||
+      type == iflyauto::OBJECT_TYPE_CYCLE_RIDING ||
+      type == iflyauto::OBJECT_TYPE_MOTORCYCLE_RIDING ||
+      type == iflyauto::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ApaObstacleManager::IsDynamicObjectType(
+    const iflyauto::ObjectType type) {
+  if (type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
+      type == iflyauto::OBJECT_TYPE_ANIMAL ||
+      type == iflyauto::OBJECT_TYPE_CYCLE_RIDING ||
+      type == iflyauto::OBJECT_TYPE_MOTORCYCLE_RIDING ||
+      type == iflyauto::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace apa_planner

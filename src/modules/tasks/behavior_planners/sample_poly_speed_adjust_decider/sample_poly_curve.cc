@@ -1,9 +1,12 @@
 #include "sample_poly_curve.h"
 
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
+#include "behavior_planners/sample_poly_speed_adjust_decider/sample_speed_adjust_cost.h"
 #include "st_graph/st_point.h"
 #include "task_interface/lane_change_utils.h"
 namespace planning {
@@ -13,7 +16,9 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_match_gap_vel, const double weight_match_gap_s,
     const double weight_follow_vel, const double weight_stop_line,
     const double weight_leading_veh_safe_s, const double weight_speed_variable,
-    const double weight_gap_avaliable, const double weight_acc_limit) {
+    const double weight_gap_avaliable, const double weight_acc_limit,
+    const double weight_stop_penalty, const double front_edge_to_rear_axle,
+    const double back_edge_to_rear_axle) {
   poly_ = poly;
   arrived_t_ = arrived_t;
   arrived_v_ = poly_.CalculateFirstDerivative(poly_.T());
@@ -28,18 +33,28 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
                                  : poly_.CalculatePoint(mid_t);
   mid_t_ = mid_t;
 
-  end_point_match_gap_cost_.SetWeightMatchVel(weight_match_gap_vel);
-  end_point_match_gap_cost_.SetWeightMatchS(weight_match_gap_s);
-
-  mid_point_match_gap_cost_.SetWeightMatchVel(weight_match_gap_vel);
-  mid_point_match_gap_cost_.SetWeightMatchS(weight_match_gap_s);
-
   follow_vel_cost_.SetWeight(weight_follow_vel);
   stop_line_cost_.SetWeight(weight_stop_line);
   leading_veh_safe_cost_.SetWeight(weight_leading_veh_safe_s);
+  leading_veh_safe_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
   speed_variable_cost_.SetWeight(weight_speed_variable);
   gap_avaliable_cost_.SetWeight(weight_gap_avaliable);
   acc_limit_cost_.SetWeight(weight_acc_limit);
+  stop_penalty_cost_.SetWeight(weight_stop_penalty);
+
+  std::vector<double> anchor_point_t_vec = {1.0, 2.0, 3.0, 4.0, 5.0};
+  anchor_points_match_gap_cost_vec_.reserve(anchor_point_t_vec.size());
+
+  for (size_t i = 0; i < anchor_point_t_vec.size(); i++) {
+    MatchGapCost anchor_point_match_gap_cost;
+    anchor_point_match_gap_cost.SetWeightMatchVel(weight_match_gap_vel);
+    anchor_point_match_gap_cost.SetWeightMatchS(weight_match_gap_s);
+    anchor_point_match_gap_cost.SetRearAxleToBumpDis(front_edge_to_rear_axle,
+                                                     back_edge_to_rear_axle);
+    anchor_point_match_gap_cost.SetAnchorT(anchor_point_t_vec[i]);
+    anchor_points_match_gap_cost_vec_.emplace_back(
+        std::move(anchor_point_match_gap_cost));
+  }
 };
 
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
@@ -73,46 +88,50 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const double ego_a, const double suggested_v, const double stop_line_s,
     const double leading_veh_s, const double leading_veh_v,
     int32_t leading_veh_id) {
+  // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
+  for (size_t i = 0; i < anchor_points_match_gap_cost_vec_.size(); i++) {
+    STPoint anchor_matched_upper_st_point;
+    STPoint anchor_matched_lower_st_point;
+    const double& anchor_arrived_t =
+        anchor_points_match_gap_cost_vec_[i].anchor_t();
+    const double& anchor_arrived_v =
+        anchor_arrived_t - poly_.T() > 0
+            ? poly_.CalculateFirstDerivative(poly_.T())
+            : poly_.CalculateFirstDerivative(anchor_arrived_t);
+    double anchor_arrived_s =
+        anchor_arrived_t - poly_.T() > 0
+            ? poly_.CalculatePoint(poly_.T()) +
+                  anchor_arrived_v * (anchor_arrived_t - poly_.T())
+            : poly_.CalculatePoint(anchor_arrived_t);
 
-  sample_space_base.GetBorderByAvailable(arrived_s_, arrived_t_,
-                                         &end_point_lower_st_point,
-                                         &end_point_upper_st_point);
-  end_point_matched_gap_front_id_ = end_point_upper_st_point.agent_id();
-  end_point_matched_gap_back_id_ = end_point_lower_st_point.agent_id();
+    sample_space_base.GetBorderByAvailable(anchor_arrived_s, anchor_arrived_t,
+                                           &anchor_matched_lower_st_point,
+                                           &anchor_matched_upper_st_point);
+    const double safe_distance_to_gap_front_obj =
+        planning::CalcGapObjSafeDistance(
+            ego_v, anchor_matched_upper_st_point.velocity(), 0.0, false, true);
+    const double safe_distance_to_gap_back_obj =
+        planning::CalcGapObjSafeDistance(
+            ego_v, anchor_matched_upper_st_point.velocity(), 0.0, false, true);
 
-  const double mid_point_reliable_safe_distance_to_gap_front_obj =
-      planning::CalcGapObjSafeDistance(
-          ego_v, end_point_upper_st_point.velocity(), 0.0, false, true);
-  const double mid_point_reliable_safe_distance_to_gap_back_obj =
-      planning::CalcGapObjSafeDistance(
-          ego_v, end_point_lower_st_point.velocity(), 0.0, false, false);
-  end_point_match_gap_cost_.GetCost(
-      end_point_upper_st_point, end_point_lower_st_point, arrived_s_,
-      arrived_t_, arrived_v_, mid_point_reliable_safe_distance_to_gap_front_obj,
-      mid_point_reliable_safe_distance_to_gap_back_obj);
+    anchor_points_match_gap_cost_vec_[i].GetCost(
+        anchor_matched_upper_st_point, anchor_matched_lower_st_point,
+        anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
+        safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v);
 
-  STPoint mid_point_lower_st_point;
-  STPoint mid_point_upper_st_point;
-  sample_space_base.GetBorderByAvailable(
-      mid_s_, mid_t_, &mid_point_lower_st_point, &mid_point_upper_st_point);
-  mid_point_match_gap_front_id_ = mid_point_upper_st_point.agent_id();
-  mid_point_match_gap_back_id_ = mid_point_lower_st_point.agent_id();
-  const double end_point_reliable_safe_distance_to_gap_front_obj =
-      planning::CalcGapObjSafeDistance(
-          ego_v, mid_point_upper_st_point.velocity(), 0.0, false, true);
-  const double end_point_reliable_safe_distance_to_gap_back_obj =
-      planning::CalcGapObjSafeDistance(
-          ego_v, mid_point_lower_st_point.velocity(), 0.0, false, false);
-  mid_point_match_gap_cost_.GetCost(
-      mid_point_upper_st_point, mid_point_lower_st_point, mid_s_, mid_t_,
-      mid_v_, end_point_reliable_safe_distance_to_gap_front_obj,
-      end_point_reliable_safe_distance_to_gap_back_obj);
+    if (i == anchor_points_match_gap_cost_vec_.size() - 1) {
+      end_point_lower_st_point = anchor_matched_lower_st_point;
+      end_point_upper_st_point = anchor_matched_upper_st_point;
+    }
+    cost_sum_ += anchor_points_match_gap_cost_vec_[i].cost();
+  }
+  // // poly curve cost
 
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0));
+  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_);
 
   if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_, leading_veh_s,
@@ -142,11 +161,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
-  
-  cost_sum_ = mid_point_match_gap_cost_.cost() +
-              end_point_match_gap_cost_.cost() + follow_vel_cost_.cost() +
-              stop_line_cost_.cost() + leading_veh_safe_cost_.cost() +
-              speed_variable_cost_.cost() + gap_avaliable_cost_.cost() +
-              stop_penalty_cost_.cost() + acc_limit_cost_.cost();
+  cost_sum_ += follow_vel_cost_.cost() + stop_line_cost_.cost() +
+               leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
+               gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
+               acc_limit_cost_.cost();
 }
 }  // namespace planning

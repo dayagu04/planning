@@ -58,6 +58,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   max_search_time_ms = 5000;
   max_search_time_ms_for_no_gear_switch = 100;
+  adjust_dist_inside_slot = 2.5;
 
   // update safe buffer
   // todo: use more safe buffer in release version.
@@ -65,11 +66,13 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.4);
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.2);
   safe_buffer.lat_safe_buffer_outside.emplace_back(0.1);
+  safe_buffer.circle_path_extra_buffer_outside = 0.10;
 
   safe_buffer.lat_safe_buffer_inside.reserve(3);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.2);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.15);
   safe_buffer.lat_safe_buffer_inside.emplace_back(0.08);
+  safe_buffer.circle_path_extra_buffer_inside = 0.0;
 
   safe_buffer.lon_safe_buffer.reserve(3);
   safe_buffer.lon_safe_buffer.emplace_back(0.4);
@@ -81,6 +84,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.scenario_try_lat_buffer_outside = 0.3;
   safe_buffer.scenario_try_lat_buffer_inside = 0.15;
   safe_buffer.scenario_try_lon_buffer = 0.4;
+
+  turn_radius_buffer = 0.01;
 
   return;
 }

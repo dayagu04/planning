@@ -604,7 +604,7 @@
       "enable_only_s_t_hash": true,
       "upper_collision_dist": 1.0,
       "lower_collision_dist": 5.0,
-      "max_accel_limit": 5.0,
+      "max_accel_limit": 2.5,
       "min_accel_limit": -6.0,
       "max_jerk_limit": 10.0,
       "min_jerk_limit": -10.0,
@@ -613,7 +613,7 @@
       "t_step" : 0.5,
       "vel_step" : 0.4,
       "radical_search_style" : {
-        "max_accel_limit_radical_style": 5.0,
+        "max_accel_limit_radical_style": 2.5,
         "min_accel_limit_radical_style": -9.0,
         "max_jerk_limit_radical_style": 10.0,
         "min_jerk_limit_radical_style": -10.0,
@@ -621,6 +621,11 @@
         "s_step_radical_style" : 0.5,
         "t_step_radical_style" : 0.5,
         "vel_step_radical_style" : 0.4
+      },
+      "distance_ego_rear_edge_to_lower_bound_when_overtake": 5.0,
+      "cost_ego_overtake_has_collision_with_lower_bound": 10.0,
+      "search_weight" : {
+        "weight_accel_sign_overtake" : 5.0
       }
     },
 
@@ -655,21 +660,6 @@
         "jerk_negative_speed_lower": 1.0,
         "jerk_negative_upper": -1.0,
         "jerk_negative_speed_upper": 25.0
-      },
-      "neighbor_target": {
-        "neighbor_target_min_jerk": -1.5,
-        "neighbor_target_max_jerk": 2.0,
-        "neighbor_target_min_acc": -1.5,
-        "neighbor_target_max_acc_lower": 0.8,
-        "neighbor_target_max_acc_upper": 2.0,
-        "neighbor_target_vel_lower_bound": 5.0,
-        "neighbor_target_vel_upper_bound": 15.0,
-        "neighbor_target_vel_buffer": 5.0,
-        "neighbor_target_p_precision": 0.3,
-        "neighbor_target_kEpsilon": 1e-10,
-        "neighbor_target_neighbor_yield_distance": 10.0,
-        "neighbor_target_neighbor_overtake_distance": 10.0,
-        "neighbor_target_neighbor_limit_velocity": 5.0
       },
       "kappa_kinematic_param": {
         "acc_positive_upper": 1.35,
@@ -715,6 +705,21 @@
           23.0, 20.0, 15.0, 10.0,
           7.0]
       }
+    },
+    "neighbor_target": {
+        "neighbor_target_min_jerk": -1.5,
+        "neighbor_target_max_jerk": 2.0,
+        "neighbor_target_min_acc": -1.5,
+        "neighbor_target_max_acc_lower": 0.8,
+        "neighbor_target_max_acc_upper": 2.0,
+        "neighbor_target_vel_lower_bound": 5.0,
+        "neighbor_target_vel_upper_bound": 15.0,
+        "neighbor_target_vel_buffer": 5.0,
+        "neighbor_target_p_precision": 0.3,
+        "neighbor_target_kEpsilon": 1e-10,
+        "neighbor_target_neighbor_yield_distance": 10.0,
+        "neighbor_target_neighbor_overtake_distance": 10.0,
+        "neighbor_target_neighbor_limit_velocity": 5.0
     }
 },
 

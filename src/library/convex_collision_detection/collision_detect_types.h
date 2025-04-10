@@ -8,7 +8,7 @@
 
 #include "collision_detect_macro.h"
 
-#define CDL_USE_DOUBLE_PRECISION (1)
+#define CDL_USE_DOUBLE_PRECISION (0)
 
 #define ESP_REL_FLOAT64 (1.0e-5)
 #define ESP_REL_FLOAT32 (1.0e-3)

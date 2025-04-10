@@ -153,7 +153,7 @@ enum class PolynomialPathErrorCode {
 struct ParkFirstActionRequest {
   bool has_request;
   AstarPathGear gear_request;
-  double dist_request;
+  float dist_request;
 
   AstarPathSteer steer_request;
 
@@ -167,32 +167,32 @@ struct ParkFirstActionRequest {
 };
 
 struct MapBound {
-  double x_min;
-  double x_max;
-  double y_min;
-  double y_max;
+  float x_min;
+  float x_max;
+  float y_min;
+  float y_max;
 
   MapBound() = default;
-  MapBound(const double x_min_, const double x_max_, const double y_min_,
-           const double y_max_)
+  MapBound(const float x_min_, const float x_max_, const float y_min_,
+           const float y_max_)
       : x_min(x_min_), x_max(x_max_), y_min(y_min_), y_max(y_max_) {}
 };
 
 struct AStarPathPoint {
-  double x;
-  double y;
-  double phi;
+  float x;
+  float y;
+  float phi;
 
   AstarPathGear gear;
-  double accumulated_s;
+  float accumulated_s;
   AstarPathType type;
   // left turn is postive
-  double kappa;
+  float kappa;
 
   AStarPathPoint() = default;
-  AStarPathPoint(const double x_, const double y_, const double phi_,
-                 const AstarPathGear gear_, const double s,
-                 const AstarPathType type_, const double kappa_)
+  AStarPathPoint(const float x_, const float y_, const float phi_,
+                 const AstarPathGear gear_, const float s,
+                 const AstarPathType type_, const float kappa_)
       : x(x_),
         y(y_),
         phi(phi_),
@@ -203,11 +203,11 @@ struct AStarPathPoint {
 };
 
 struct AStarSTPoint {
-  double v;
-  double acc;
-  double jerk;
-  double t;
-  double s;
+  float v;
+  float acc;
+  float jerk;
+  float t;
+  float s;
 };
 
 struct HybridAStarTrajPoint {
@@ -217,15 +217,15 @@ struct HybridAStarTrajPoint {
 
 // need refact this data
 struct HybridAStarResult {
-  std::vector<double> x;
-  std::vector<double> y;
-  std::vector<double> phi;
+  std::vector<float> x;
+  std::vector<float> y;
+  std::vector<float> phi;
   std::vector<AstarPathGear> gear;
   std::vector<AstarPathType> type;
 
-  std::vector<double> accumulated_s;
+  std::vector<float> accumulated_s;
   // left turn is is positive
-  std::vector<double> kappa;
+  std::vector<float> kappa;
 
   int gear_change_num;
 
@@ -254,10 +254,10 @@ struct HybridAStarResult {
 
 struct QueuePoint {
   size_t node_id;
-  double f_cost;
+  float f_cost;
 
   QueuePoint() = default;
-  QueuePoint(const size_t id, const double f) : node_id(id), f_cost(f) {}
+  QueuePoint(const size_t id, const float f) : node_id(id), f_cost(f) {}
 };
 
 struct QueueCompare {
@@ -269,20 +269,32 @@ struct QueueCompare {
 #define astar_max_angle_number (16)
 struct AstarSamplingAngle {
   size_t size;
-  double angles[astar_max_angle_number];
+  float angles[astar_max_angle_number];
   // left turn is positive
-  double radius[astar_max_angle_number];
+  float radius[astar_max_angle_number];
 };
 
 struct DebugAstarSearchPoint {
   Position2D pos;
   bool safe;
+  // If this point is first path end point, and is a geat switch point without
+  // collision, true.
+  bool gear_switch_point;
 
   DebugAstarSearchPoint() = default;
 
-  DebugAstarSearchPoint(const double x, const double y, const bool is_safe) {
+  DebugAstarSearchPoint(const float x, const float y, const bool is_safe) {
     pos.x = x;
     pos.y = y;
+    safe = is_safe;
+    gear_switch_point = false;
+  }
+
+  DebugAstarSearchPoint(const float x, const float y,
+                        const bool is_gear_switch_point, const bool is_safe) {
+    pos.x = x;
+    pos.y = y;
+    gear_switch_point = is_gear_switch_point;
     safe = is_safe;
   }
 };
@@ -292,8 +304,8 @@ enum class SlotRelativePosition { NONE, RIGHT, LEFT, MAX_NUMBER };
 enum class VehRelativePosition { NONE, RIGHT, LEFT, MIDDLE, MAX_NUMBER };
 
 struct Boundary2D {
-  double min;
-  double max;
+  float min;
+  float max;
 };
 
 std::string PathGearDebugString(const AstarPathGear gear);

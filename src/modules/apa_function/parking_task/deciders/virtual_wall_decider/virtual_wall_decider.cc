@@ -17,8 +17,8 @@ namespace planning {
 void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
-  double veh_x_buffer = 0.3;
-  double veh_y_buffer = 0.4;
+  float veh_x_buffer = 0.3;
+  float veh_y_buffer = 0.4;
 
   GenerateUpLeftFrameBox(
       &ego_local_polygon, -config.rear_overhanging - veh_x_buffer,
@@ -44,8 +44,8 @@ const bool VirtualWallDecider::IsVirtualWallPointCollision(
 }
 
 void VirtualWallDecider::Process(std::vector<Position2D>& points,
-                                 const double slot_width,
-                                 const double slot_length,
+                                 const float slot_width,
+                                 const float slot_length,
                                  const Pose2D& ego_pose, const Pose2D& end,
                                  const ParkSpaceType slot_type,
                                  const pnc::geometry_lib::SlotSide slot_side,
@@ -62,18 +62,18 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
 
   if (slot_type == ParkSpaceType::VERTICAL ||
       slot_type == ParkSpaceType::SLANTING) {
-    double virtual_wall_x_offset =
-        apa_param.GetParam().tail_in_slot_virtual_wall_x_offset;
+    float virtual_wall_x_offset =
+        apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
 
-    double virtual_wall_y_offset =
-        apa_param.GetParam().tail_in_slot_virtual_wall_y_offset;
+    float virtual_wall_y_offset =
+        apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;
 
     if (parking_in_type == ParkingVehDirection::HEAD_IN) {
       virtual_wall_x_offset =
-          apa_param.GetParam().head_in_slot_virtual_wall_x_offset;
+          apa_param.GetParam().astar_config.head_in_slot_virtual_wall_x_offset;
 
       virtual_wall_y_offset =
-          apa_param.GetParam().head_in_slot_virtual_wall_y_offset;
+          apa_param.GetParam().astar_config.head_in_slot_virtual_wall_y_offset;
     }
 
     CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,
@@ -101,10 +101,10 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
                                              std::vector<Position2D>* points) {
   const Eigen::Vector2d line = end - start;
   const Eigen::Vector2d unit_line_vec = line.normalized();
-  double len = line.norm();
+  float len = line.norm();
 
-  double s = 0.0;
-  double ds = 0.4;
+  float s = 0.0;
+  float ds = 0.4;
 
   Eigen::Vector2d point;
   while (s < len) {
@@ -142,16 +142,16 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
 }
 
 void VirtualWallDecider::CalcVerticalVirtualWall(
-    std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
-    const double virtual_wall_x_offset, const double virtual_wall_y_offset) {
+    std::vector<Position2D>& points, const float slot_width,
+    const float slot_length, const Pose2D& ego_pose, const Pose2D& end,
+    const float virtual_wall_x_offset, const float virtual_wall_y_offset) {
   // slot virtual wall
   VirtualWallBoundary slot_boundary;
 
   slot_boundary.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
   slot_boundary.x_upper = slot_length - virtual_wall_x_offset;
   slot_boundary.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
-  double lower_bound_x = -1.0;
+  float lower_bound_x = -1.0;
   slot_boundary.x_lower = lower_bound_x;
 
   // passage virtual wall
@@ -159,11 +159,13 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   VirtualWallBoundary tmp_passage_boundary;
   tmp_passage_boundary.x_lower = slot_length - virtual_wall_x_offset;
   // passage up bound
-  double passage_height = 8.0;
-  double passage_up_bound_x = slot_length + passage_height;
+  float passage_height =
+      apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
+  float passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
   // passage left/right bound
-  const double passage_half_length = 9.0;
+  const float passage_half_length =
+      apa_param.GetParam().astar_config.vertical_slot_passage_length_bound / 2;
   tmp_passage_boundary.y_lower = -passage_half_length;
   tmp_passage_boundary.y_upper = passage_half_length;
   tmp_passage_boundary.Combine(veh_boundary_);
@@ -249,12 +251,12 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
 #define PARALLEL_SLOT_X_OFFSET (7.0)
 #define PARALLEL_SLOT_Y_OFFSET (1.0)
 void VirtualWallDecider::RightSideParallelVirtualWall(
-    std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    std::vector<Position2D>& points, const float slot_width,
+    const float slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // width is the slot upper edge to a virtual wall
-  const double passage_width = 8;
-  const double passage_top_buffer = 8.0;
-  const double passage_bottom_buffer = 8.0;
+  const float passage_width = 8;
+  const float passage_top_buffer = 8.0;
+  const float passage_bottom_buffer = 8.0;
 
   // slot right wall
   Eigen::Vector2d right_wall_upper =
@@ -280,8 +282,8 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 
   // ego aabb
   cdl::AABB veh_aabb;
-  double veh_x_buffer = 5.0;
-  double veh_y_buffer = 4.0;
+  float veh_x_buffer = 5.0;
+  float veh_y_buffer = 4.0;
 
   veh_aabb.max_[0] = ego_pose.x + slot_length + veh_x_buffer;
   veh_aabb.max_[1] = ego_pose.y + slot_width / 2 +
@@ -371,11 +373,11 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 }
 
 void VirtualWallDecider::LeftSideParallelVirtualWall(
-    std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    std::vector<Position2D>& points, const float slot_width,
+    const float slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // width is the slot upper edge to a virtual wall
-  const double passage_width = 8;
-  const double passage_length_buffer = 15;
+  const float passage_width = 8;
+  const float passage_length_buffer = 15;
 
   // slot left wall
   Eigen::Vector2d slot_left_wall_upper =
@@ -401,8 +403,8 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
 
   // ego aabb
   cdl::AABB veh_aabb;
-  double veh_x_buffer = 5.0;
-  double veh_y_buffer = 4.0;
+  float veh_x_buffer = 5.0;
+  float veh_y_buffer = 4.0;
 
   veh_aabb.max_[0] = ego_pose.x + slot_length + veh_x_buffer;
   veh_aabb.max_[1] = ego_pose.y + slot_width / 2 +
@@ -431,7 +433,7 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
       std::min(passage_up_bound_right[1], veh_aabb.min_[1]);
 
   // passage bottom bound
-  double passage_bottom_buffer = 6.0;
+  float passage_bottom_buffer = 6.0;
   Eigen::Vector2d passage_bottom_bound_left =
       Eigen::Vector2d(-slot_length - passage_bottom_buffer, slot_width / 2.0);
   Eigen::Vector2d passage_bottom_bound_right = Eigen::Vector2d(
@@ -499,16 +501,16 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
 
 void VirtualWallDecider::Init(const Pose2D& ego_pose) {
   passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
-  GetUpLeftCoordinatePolygonByParam(&blind_local_box_, 15, 15, 15);
+  GetUpLeftCoordinatePolygonByParam(&blind_local_box_, 20.0f, 20.0f, 20.0f);
 
   return;
 }
 
 void VirtualWallDecider::GetVehicleBound() {
-  double veh_upper_x = start_.x;
-  double veh_lower_x = start_.x;
-  double veh_left_y = start_.y;
-  double veh_right_y = start_.y;
+  float veh_upper_x = start_.x;
+  float veh_lower_x = start_.x;
+  float veh_left_y = start_.y;
+  float veh_right_y = start_.y;
   for (int i = 0; i < ego_polygon_in_slot_.vertex_num; i++) {
     veh_upper_x = std::max(veh_upper_x, ego_polygon_in_slot_.vertexes[i].x);
     veh_lower_x = std::min(veh_lower_x, ego_polygon_in_slot_.vertexes[i].x);
@@ -517,7 +519,7 @@ void VirtualWallDecider::GetVehicleBound() {
     veh_right_y = std::min(veh_right_y, ego_polygon_in_slot_.vertexes[i].y);
   }
 
-  double veh_buffer = 0.5;
+  float veh_buffer = 0.5;
   veh_boundary_.x_upper = veh_upper_x + veh_buffer;
   veh_boundary_.x_lower = veh_lower_x - veh_buffer;
   veh_boundary_.y_upper = veh_left_y + veh_buffer;

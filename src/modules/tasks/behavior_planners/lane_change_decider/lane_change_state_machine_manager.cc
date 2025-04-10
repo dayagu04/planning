@@ -1868,18 +1868,35 @@ void LaneChangeStateMachineManager::UpdateHMIInfo() {
     } else {
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-      // for turn signal road to ramp
-      const auto dir_turn_signal_road_to_ramp =
-          lane_change_decider_output.dir_turn_signal_road_to_ramp;
-      if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
-        ad_info.lane_change_status =
-            iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
-        ad_info.lane_change_direction =
-            iflyauto::LaneChangeDirection::LC_DIR_LEFT;
-      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
-        ad_info.lane_change_direction =
-            iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+
+      if (session_->is_hpp_scene()) {
+        // for HPP turn signal road to ramp
+        const auto hpp_turn_signal =
+            lane_change_decider_output.hpp_turn_signal;
+        if (hpp_turn_signal == NO_CHANGE) {
+          ad_info.lane_change_status =
+              iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+        } else if (hpp_turn_signal == LEFT_CHANGE) {
+          ad_info.lane_change_direction =
+              iflyauto::LaneChangeDirection::LC_DIR_LEFT;
+        } else if (hpp_turn_signal == RIGHT_CHANGE) {
+          ad_info.lane_change_direction =
+              iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+        }
+      } else {
+        // for NOA turn signal road to ramp
+        const auto dir_turn_signal_road_to_ramp =
+            lane_change_decider_output.dir_turn_signal_road_to_ramp;
+        if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
+          ad_info.lane_change_status =
+              iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+        } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
+          ad_info.lane_change_direction =
+              iflyauto::LaneChangeDirection::LC_DIR_LEFT;
+        } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
+          ad_info.lane_change_direction =
+              iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+        }
       }
     }
   } else if (curr_state == kLaneChangePropose) {

@@ -9,14 +9,14 @@
 namespace planning {
 
 void OccupancyGridMap::Process(const Pose2D &ogm_pose,
-                               const double _ogm_resolution) {
+                               const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   return;
 }
 
 void OccupancyGridMap::Process(const OccupancyGridBound &bound,
-                               const double _ogm_resolution) {
+                               const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(bound, _ogm_resolution);
   return;
 }
@@ -89,13 +89,12 @@ void OccupancyGridMap::AddLineSegment(const T &start, const T &end) {
   Pose2D local;
   OgmIndex index;
 
-  ad_common::math::Vec2d dir(end.x - start.x, end.y - start.y);
-  double len = dir.Length();
+  Eigen::Vector2f dir(end.x - start.x, end.y - start.y);
+  float len = dir.norm();
+  dir.normalize();
 
-  dir.Normalize();
-
-  double s = 0.0;
-  double ds = 0.2;
+  float s = 0.0;
+  float ds = 0.2;
 
   Position2D point;
   while (s < len) {

@@ -22,14 +22,14 @@ namespace planning {
 // todo
 
 void EulerDistanceTransform::Process(const Pose2D &ogm_pose,
-                                     const double _ogm_resolution) {
+                                     const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   return;
 }
 
 void EulerDistanceTransform::Process(const OccupancyGridBound &bound,
-                                     const double _ogm_resolution) {
+                                     const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(bound, _ogm_resolution);
 
   return;
@@ -37,7 +37,7 @@ void EulerDistanceTransform::Process(const OccupancyGridBound &bound,
 
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
                                     const Pose2D &ogm_pose,
-                                    const double _ogm_resolution) {
+                                    const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   cv::Mat map_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1, cv::Scalar(200));
@@ -68,7 +68,7 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
 
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
                                     const OccupancyGridBound &bound,
-                                    const double _ogm_resolution) {
+                                    const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(bound, _ogm_resolution);
 
   const int max_bound_x =
@@ -426,7 +426,7 @@ const bool EulerDistanceTransform::IsCollisionForPath(
 
 void EulerDistanceTransform::UpdateSafeBuffer(
     const float car_body_lat_safe_buffer, const float lon_safe_buffer,
-    const float mirror_buffer, const double big_circle_safe_buffer) {
+    const float mirror_buffer, const float big_circle_safe_buffer) {
   if (std::fabs(latetal_safe_buffer_ - car_body_lat_safe_buffer) < 0.001 &&
       std::fabs(lon_safe_buffer_ - lon_safe_buffer) < 0.001 &&
       std::fabs(mirror_safe_buffer_ - mirror_buffer) < 0.001 &&

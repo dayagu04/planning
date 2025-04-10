@@ -6,7 +6,7 @@
 
 namespace planning {
 
-// for now, only for single shot parking scenario, can reuse path.
+// todo: how to reuse path.
 class PathReuseDecider : public AstarDecider {
  public:
   PathReuseDecider() = default;
@@ -14,8 +14,7 @@ class PathReuseDecider : public AstarDecider {
   void Process(const Pose2D& start, const Pose2D& end) override;
 
   void Process(HybridAStarResult* path, const HybridAStarResult* history_path,
-               const Pose2D& current_slot_pose,
-               const HistoryPathDriveInfo* next_shot_info);
+               const Pose2D& current_slot_pose);
 
   const bool IsReusePath();
 

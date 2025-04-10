@@ -18,8 +18,8 @@ namespace planning {
 struct PoseRegulateCandidate {
   Pose2D pose;
   // 位姿对应的车辆真实外壳到障碍物的距离.
-  double dist_to_obs;
-  double lat_offset;
+  float dist_to_obs;
+  float lat_offset;
 };
 
 // 目标pose调节器.
@@ -39,10 +39,10 @@ class TargetPoseRegulator : public AstarDecider {
   void Clear();
 
   // Get most safe target pose
-  const std::pair<Pose2D, double> GetCandidatePose(
-      const double lat_buffer) const;
+  const std::pair<Pose2D, float> GetCandidatePose(
+      const float lat_buffer) const;
 
-  const double GetEgoObsDist() const { return ego_dist_to_obs_; }
+  const float GetEgoObsDist() const { return ego_dist_to_obs_; }
 
  private:
   const bool IsParkingIn(const AstarRequest *request);
@@ -68,33 +68,34 @@ class TargetPoseRegulator : public AstarDecider {
 
   bool IsDefaultPoseSafeEnough();
 
-  const bool IsCandidatePoseSafe(const double lat_buffer) const;
+  const bool IsCandidatePoseSafe(const float lat_buffer) const;
 
-  const std::pair<Pose2D, double> GetCandidatePoseForHeadIn(
-      const double lat_buffer) const;
+  const std::pair<Pose2D, float> GetCandidatePoseForHeadIn(
+      const float lat_buffer) const;
 
   // 0: none,
   // -1: left;
   // 1: right
   const int GenerateOffsetPreference() const;
 
-  const PoseRegulateCandidate *GetCandidatePoseByOffset(const double lat_buffer,
+  const PoseRegulateCandidate *GetCandidatePoseByOffset(const float lat_buffer,
                                                         const int offset) const;
 
-  const std::pair<Pose2D, double> GetCandidatePoseForTailIn(
-      const double lat_buffer) const;
+  const std::pair<Pose2D, float> GetCandidatePoseForTailIn(
+      const float lat_buffer) const;
 
  private:
+  // decide by end straight distance
   Pose2D center_line_target_;
   std::vector<PoseRegulateCandidate> candidate_info_;
   const AstarRequest *request_;
 
-  double x_check_upper_;
-  double x_check_lower_;
-  double x_step_;
+  float x_check_upper_;
+  float x_check_lower_;
+  float x_step_;
   int x_sample_num_;
 
-  double ego_dist_to_obs_;
+  float ego_dist_to_obs_;
 };
 
 }  // namespace planning

@@ -974,7 +974,7 @@ class LoadRosbag:
     # Todo(bsniu): plot uss
     # try:
     #   uss_perception_msg_dict = {}
-    #   for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/fusion/uss_perception_info"):
     #     uss_perception_msg_dict[msg.msg_header.stamp / 1e6] = msg
     #   uss_perception_msg_dict = {key: val for key, val in sorted(uss_perception_msg_dict.items(), key = lambda ele: ele[0])}
     #   for t, msg in uss_perception_msg_dict.items():
@@ -989,7 +989,7 @@ class LoadRosbag:
     #     self.uss_perception_msg['enable'] = False
     # except Exception as e:
     #   self.uss_perception_msg['enable'] = False
-    #   print('missing /iflytek/uss/uss_perception_info topic !!!')
+    #   print('missing /iflytek/fusion/uss_perception_info topic !!!')
 
     # # load uss_wave_msg
     # try:
