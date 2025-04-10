@@ -1335,7 +1335,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
             kAverageKappaCostWeight * average_kappa_cost + lateral_dis_cost * kEgoLateralDistanceCostWeight;
         if (!std::isinf(clane_min_cost_total) &&
-            (total_cost - clane_min_cost_total < kUseVirtualLaneProcessSplitCostThd)) {
+            (std::fabs(total_cost - clane_min_cost_total) < kUseVirtualLaneProcessSplitCostThd)) {
           enable_use_virtual_lane_process_split = true;
         }
         if (total_cost < clane_min_cost_total) {
@@ -1350,20 +1350,31 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
     }
   }
   // 转向cost较为接近时采用虚拟车道属性
+  bool use_min_steering_result = true;
   if (enable_use_virtual_lane_process_split) {
-    bool lane_exist_virtual = true;
-    for (size_t i = 0; i < order_ids.size(); i++) {
-      if (relative_id_lanes.size() > order_ids[i]) {
-        std::shared_ptr<VirtualLane> relative_id_lane =
-            relative_id_lanes[order_ids[i]];
-        MakesureVirtualLaneIsVirtual(relative_id_lane, lane_exist_virtual);
-        if (!lane_exist_virtual) {
-          origin_order_id = relative_id_lane->get_order_id();
-          relative_id_lane->set_relative_id(0);
-          last_zero_relative_id_order_id_index_ = i;
-          last_track_ego_lane_ = relative_id_lane;
-          is_exist_split_on_intersection_ = true;
-          break;
+    bool origin_lane_exist_virtual = true;
+    std::shared_ptr<VirtualLane> origin_orider_id_lane =
+    relative_id_lanes[origin_order_id];
+    MakesureVirtualLaneIsVirtual(origin_orider_id_lane, origin_lane_exist_virtual);
+    if (origin_lane_exist_virtual) {
+      use_min_steering_result = false;
+    }
+    if (!use_min_steering_result) {
+      bool lane_exist_virtual = true;
+      for (size_t i = 0; i < order_ids.size(); i++) {
+        if (relative_id_lanes.size() > order_ids[i]) {
+          std::shared_ptr<VirtualLane> relative_id_lane =
+              relative_id_lanes[order_ids[i]];
+          MakesureVirtualLaneIsVirtual(relative_id_lane, lane_exist_virtual);
+          if (!lane_exist_virtual) {
+            break;
+            origin_order_id = relative_id_lane->get_order_id();
+            relative_id_lane->set_relative_id(0);
+            last_zero_relative_id_order_id_index_ = i;
+            last_track_ego_lane_ = relative_id_lane;
+            is_exist_split_on_intersection_ = true;
+            break;
+          }
         }
       }
     }
