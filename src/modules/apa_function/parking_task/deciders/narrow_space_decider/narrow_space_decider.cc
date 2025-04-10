@@ -4,7 +4,7 @@
 #include "parking_scenario.h"
 
 namespace planning {
-
+namespace apa_planner {
 void NarrowScenarioDecider::Process(const apa_planner::SlotType slot_type) {
   switch (slot_type) {
     case apa_planner::SlotType::PERPENDICULAR:
@@ -48,7 +48,7 @@ void NarrowScenarioDecider::UpdateNarrowScenario(
   return;
 }
 
-void NarrowScenarioDecider::Clear() {
+void NarrowScenarioDecider::Reset() {
   slot_type_ = ParkSpaceType::NONE;
   astar_search_state_ = AstarSearchState::NONE;
 
@@ -75,5 +75,5 @@ void NarrowScenarioDecider::SetAstarState(const AstarSearchState state) {
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

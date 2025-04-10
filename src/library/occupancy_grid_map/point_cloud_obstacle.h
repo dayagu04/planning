@@ -6,7 +6,8 @@
 #include "src/library/convex_collision_detection/aabb2d.h"
 #include "src/library/convex_collision_detection/polygon_base.h"
 #include "pose2d.h"
-#include "src/modules/apa_function/apa_world/apa_obstacle_manager.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "src/modules/apa_function/apa_common/apa_obstacle_manager.h"
 #include "transform2d.h"
 #include "gjk2d_interface.h"
 

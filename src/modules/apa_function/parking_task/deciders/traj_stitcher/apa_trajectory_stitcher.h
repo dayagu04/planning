@@ -1,13 +1,14 @@
 #pragma once
 
 #include <cstddef>
+
 #include "geometry_math.h"
 #include "pose2d.h"
 #include "src/library/reeds_shepp/rs_path_interpolate.h"
 #include "trajectory/trajectory.h"
 
 namespace planning {
-
+namespace apa_planner {
 // add trajectory stitcher.
 // If do path/speed planning in every frame, need a stitcher.
 // If navigation and parking switch in hpp, need trajectory stitcher for
@@ -97,4 +98,5 @@ class ApaTrajectoryStitcher {
 
   double drived_distance_;
 };
+}  // namespace apa_planner
 }  // namespace planning

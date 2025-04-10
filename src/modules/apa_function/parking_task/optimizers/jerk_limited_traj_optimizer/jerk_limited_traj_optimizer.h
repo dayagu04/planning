@@ -1,13 +1,13 @@
 #pragma once
-#include "parking_task.h"
-#include "src/modules/common/speed/speed_data.h"
 #include "dp_speed_common.h"
 #include "jerk_limited_trajectory.h"
 #include "jerk_limited_trajectory_define.h"
 #include "optimizer_common.h"
+#include "parking_task.h"
+#include "src/modules/common/speed/speed_data.h"
 
 namespace planning {
-
+namespace apa_planner {
 // ref:Jerk-limited Real-time Trajectory Generation
 // with Arbitrary Target States.
 class JerkLimitedTrajOptimizer : public ParkingTask {
@@ -50,4 +50,5 @@ class JerkLimitedTrajOptimizer : public ParkingTask {
 
   double delta_time_;
 };
+}  // namespace apa_planner
 }  // namespace planning

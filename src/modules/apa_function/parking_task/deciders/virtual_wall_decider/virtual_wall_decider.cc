@@ -13,7 +13,7 @@
 #include "utils_math.h"
 
 namespace planning {
-
+namespace apa_planner {
 void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
@@ -527,5 +527,5 @@ void VirtualWallDecider::GetVehicleBound() {
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

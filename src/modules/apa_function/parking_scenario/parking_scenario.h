@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "apa_context.h"
 #include "apa_param_config.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
@@ -23,36 +24,6 @@
 
 namespace planning {
 namespace apa_planner {
-
-enum class ParkingScenarioStatus {
-  STATUS_UNKNOWN = 0,
-  // 表示点击泊车，这个场景正在运行
-  STATUS_RUNNING = 1,
-  STATUS_DONE = 2,
-  // 表示点击车位，尝试计算这个场景
-  STATUS_TRY = 3,
-  STATUS_FAIL = 4,
-};
-
-enum PathPlannerResult {
-  PLAN_FAILED,  // path plan failed
-  PLAN_HOLD,    // follow last
-  PLAN_UPDATE,
-  WAIT_PATH,
-};
-
-enum class ProcessObsMethod : uint8_t {
-  DO_NOTHING,
-  MOVE_OBS_OUT_SLOT,
-  MOVE_OBS_OUT_CAR_SAFE_POS,
-  COUNT,
-};
-
-void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
-
-const std::string GetApaScenarioStatusString(
-    const ParkingScenarioStatus scenario_status);
-
 // 1.
 // 对于泊车而言，不同的行为对应不同的场景，包括垂直泊入场景、垂直泊出场景,等等.
 // 2. 每一个场景, 都有不同的计算任务.
@@ -232,17 +203,11 @@ class ParkingScenario {
       process_obs_method = ProcessObsMethod::DO_NOTHING;
 
       dynamic_plan_path_superior = false;
-
-      last_channel_width = 0.0;
-      last_channel_length = 0.0;
     }
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
 
     bool can_first_plan_again = true;
-
-    double last_channel_width = 0.0;
-    double last_channel_length = 0.0;
 
     bool is_left_empty = false;
     bool is_right_empty = false;

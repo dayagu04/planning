@@ -17,7 +17,7 @@
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "apa_slot_manager.h"
-#include "apa_world/apa_world.h"
+#include "apa_world.h"
 #include "camera_perception_groundline_c.h"
 #include "config_context.h"
 #include "control_command_c.h"

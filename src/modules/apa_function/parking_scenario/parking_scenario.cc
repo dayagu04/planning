@@ -31,35 +31,6 @@
 
 namespace planning {
 namespace apa_planner {
-
-void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status) {
-  ILOG_INFO << "scenario_status = "
-            << GetApaScenarioStatusString(scenario_status);
-}
-
-const std::string GetApaScenarioStatusString(
-    const ParkingScenarioStatus scenario_status) {
-  std::string status;
-  switch (scenario_status) {
-    case ParkingScenarioStatus::STATUS_TRY:
-      status = "STATUS_TRY";
-      break;
-    case ParkingScenarioStatus::STATUS_RUNNING:
-      status = "STATUS_RUNNING";
-      break;
-    case ParkingScenarioStatus::STATUS_DONE:
-      status = "STATUS_DONE";
-      break;
-    case ParkingScenarioStatus::STATUS_FAIL:
-      status = "STATUS_FAIL";
-      break;
-    default:
-      status = "STATUS_UNKNOWN";
-      break;
-  }
-  return status;
-}
-
 ParkingScenario::ParkingScenario() {}
 
 ParkingScenario::ParkingScenario(

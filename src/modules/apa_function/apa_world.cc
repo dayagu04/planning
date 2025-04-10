@@ -17,6 +17,7 @@
 #include "general_planning_context.h"
 #include "geometry_math.h"
 #include "log_glog.h"
+#include "parking_task_interface.h"
 #include "slot_management_info.pb.h"
 
 namespace planning {
@@ -30,9 +31,14 @@ void ApaWorld::Init() {
   retired_slot_manager_ptr_ = std::make_shared<SlotManager>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
   lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
+
   collision_detector_interface_ptr_ =
       std::make_shared<CollisionDetectorInterface>(
           obstacle_manager_ptr_, measure_data_ptr_, predict_path_ptr_);
+
+  parking_task_interface_ptr_ = std::make_shared<ParkingTaskInterface>(
+      obstacle_manager_ptr_, collision_detector_interface_ptr_,
+      measure_data_ptr_);
 }
 
 void ApaWorld::Reset() {
@@ -45,6 +51,7 @@ void ApaWorld::Reset() {
   collision_detector_ptr_->Reset();
   lateral_path_optimizer_ptr_->Reset();
   collision_detector_interface_ptr_->Reset();
+  parking_task_interface_ptr_->Reset();
   local_view_ptr_ = nullptr;
 }
 

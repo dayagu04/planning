@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "apa_world/apa_world.h"
+#include "apa_world.h"
 #include "parallel_out_path_generator.h"
 #include "parking_scenario.h"
 

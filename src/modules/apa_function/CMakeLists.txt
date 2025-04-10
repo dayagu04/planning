@@ -7,7 +7,8 @@ file(GLOB_RECURSE SRC_FILES
 
 set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}
-  ${CMAKE_CURRENT_LIST_DIR}/apa_world
+  ${CMAKE_CURRENT_LIST_DIR}/apa_common
+  ${CMAKE_CURRENT_LIST_DIR}/collision_detection
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/parallel
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular

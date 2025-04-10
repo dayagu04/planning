@@ -10,7 +10,7 @@
 #include "speed/apa_speed_decision.h"
 
 namespace planning {
-
+namespace apa_planner {
 #define DECIDER_DEBUG (0)
 
 ParkSpeedLimitDecider::ParkSpeedLimitDecider() {}
@@ -134,8 +134,8 @@ void ParkSpeedLimitDecider::PublishDebugInfo() {
 #if DECIDER_DEBUG
 
     ILOG_INFO << "i = " << i << ",s = " << points[i].first
-              << ",v up = " << points[i].second
-              << ",jerk upper = " << dp_speed_constraint_debug->jerk_upper_bound(i);
+              << ",v up = " << points[i].second << ",jerk upper = "
+              << dp_speed_constraint_debug->jerk_upper_bound(i);
 #endif
   }
 
@@ -240,5 +240,5 @@ const double ParkSpeedLimitDecider::CalcRefSpeedBySpeedLimitDecision(
 
   return ref_v;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

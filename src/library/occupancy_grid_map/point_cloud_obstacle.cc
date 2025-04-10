@@ -3,7 +3,7 @@
 
 #include "aabb2d.h"
 #include "log_glog.h"
-#include "modules/apa_function/apa_world/apa_obstacle.h"
+#include "modules/apa_function/apa_common/apa_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "src/modules/apa_function/apa_param_config.h"

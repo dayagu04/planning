@@ -19,6 +19,7 @@
 #include "common.pb.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
+#include "parking_task_interface.h"
 #include "slot_management_info.pb.h"
 #include "slot_manager.h"
 #include "spline.h"
@@ -84,6 +85,11 @@ class ApaWorld {
     return collision_detector_interface_ptr_;
   }
 
+  const std::shared_ptr<ParkingTaskInterface>& GetParkingTaskInterfacePtr()
+      const {
+    return parking_task_interface_ptr_;
+  }
+
   std::shared_ptr<LateralPathOptimizer> GetLateralPathOptimizerPtr() {
     return lateral_path_optimizer_ptr_;
   }
@@ -126,6 +132,7 @@ class ApaWorld {
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
   std::shared_ptr<CollisionDetectorInterface> collision_detector_interface_ptr_;
+  std::shared_ptr<ParkingTaskInterface> parking_task_interface_ptr_;
 
   SimulationParam simu_param_;
   const LocalView* local_view_ptr_ = nullptr;

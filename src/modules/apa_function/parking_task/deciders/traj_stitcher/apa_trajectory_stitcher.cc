@@ -8,7 +8,7 @@
 #include "pose2d.h"
 
 namespace planning {
-
+namespace apa_planner {
 void ApaTrajectoryStitcher::Process(
     const Pose2D& ego_pose,
     const std::vector<pnc::geometry_lib::PathPoint>& path, const double ego_v,
@@ -308,11 +308,11 @@ void ApaTrajectoryStitcher::EvaluateStitchTraj(
   // evaluate stitch traj
   trajectory_.clear();
   trajectory_.emplace_back(stitch_point_);
-  for (size_t i = global_path_stitch_start_id; i<path.size(); i++) {
+  for (size_t i = global_path_stitch_start_id; i < path.size(); i++) {
     trajectory_.emplace_back(path[i]);
   }
 
-    // get path lengh
+  // get path lengh
   double accumulated_s = 0.0;
   auto last_x = trajectory_.front().pos.x();
   auto last_y = trajectory_.front().pos.y();
@@ -341,5 +341,5 @@ const double ApaTrajectoryStitcher::GetStitchTrajLength() const {
 
   return trajectory_.back().s;
 }
-
+}  // namespace apa_planner
 }  // namespace planning
