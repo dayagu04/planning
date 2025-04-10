@@ -276,8 +276,13 @@ bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
   //     propose_time_threshold;
 
   bool is_target_lane_merge_to_origin_lane = IsNeedCancelLCTargetLaneMergeToOriginLane();
+  bool is_no_care_mrege = 
+    transition_info_.lane_change_type == INT_REQUEST ||
+    transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
+    transition_info_.lane_change_type == CONE_REQUEST;
 
-  if (is_no_lc_request || propose_time_out || is_target_lane_merge_to_origin_lane) {
+  if (is_no_lc_request || propose_time_out || 
+      (is_target_lane_merge_to_origin_lane && !is_no_care_mrege)) {
     return true;
   }
   return false;
@@ -365,7 +370,12 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
 
   bool is_target_lane_merge_to_origin_lane =
       IsNeedCancelLCTargetLaneMergeToOriginLane();
-  if (is_target_lane_merge_to_origin_lane) {
+  bool is_no_care_mrege = 
+      transition_info_.lane_change_type == INT_REQUEST ||
+      transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
+      transition_info_.lane_change_type == CONE_REQUEST;
+  if (is_target_lane_merge_to_origin_lane &&
+      !is_no_care_mrege) {
     return true;
   }
 
