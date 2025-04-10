@@ -35,6 +35,8 @@ class FollowTarget : public Target {
 
   void GenerateFollowTarget();
 
+  void GenerateRadsFollowTarget();
+
   void MakeMinFollowDistance();
 
   // generate stable curve

@@ -24,8 +24,8 @@ namespace planning {
 
 #define LANE_BOUNDARY_POINT_SET_NUM 20
 
-using Map::CurrentRouting;
 using ad_common::hdmap::LaneGroupConstPtr;
+using Map::CurrentRouting;
 
 enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,
@@ -123,6 +123,8 @@ class VirtualLaneManager {
   std::vector<double> construct_reference_line_scc(void);
   bool update(const iflyauto::RoadInfo &roads);
 
+  bool update(const iflyauto::FuncStateMachine &func_state_machine_msg);
+
   bool CheckLaneValid(const iflyauto::RoadInfo &roads);
 
   void reset();
@@ -199,6 +201,12 @@ class VirtualLaneManager {
   void construct_reference_line_msg(
       const std::vector<double> &current_lane_virtual_poly,
       iflyauto::ReferenceLineMsg &current_lane_virtual);
+  void construct_reference_line_msg(
+      const iflyauto::FuncStateMachine &func_state_machine_msg,
+      iflyauto::ReferenceLineMsg *const current_lane_virtual);
+  void ExtendReferenceLineForRads(
+      const iflyauto::FuncStateMachine &func_state_machine_msg,
+      iflyauto::ReferenceLineMsg *const current_lane_virtual);
   double GetEgoDistanceToStopline() { return distance_to_stopline_; };
   double GetEgoDistanceToCrosswalk() { return distance_to_crosswalk_; };
   const planning::common::IntersectionState GetIntersectionState() {
@@ -265,13 +273,17 @@ class VirtualLaneManager {
   std::vector<int> order_ids_of_same_zero_relative_id_;
   // bool is_within_hdmap_ = false;
 
-  //到停止线的距离，可以为负，表示停止线在车后
+  // 到停止线的距离，可以为负，表示停止线在车后
   double distance_to_stopline_ = NL_NMAX;
   double distance_to_crosswalk_ = NL_NMAX;
   std::deque<double> stopline_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   std::deque<double> crosswalk_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   planning::common::IntersectionState Intersection_state_ =
       planning::common::NO_INTERSECTION;
+
+  // rads relevance
+  iflyauto::FunctionalState last_fsm_state_ =
+      iflyauto::FunctionalState::FunctionalState_RADS_ABORT;
 };
 }  // namespace planning
 #endif

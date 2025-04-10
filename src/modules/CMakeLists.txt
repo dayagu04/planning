@@ -24,6 +24,7 @@ add_subdirectory(tasks EXCLUDE_FROM_ALL)
 add_subdirectory(hpp_function EXCLUDE_FROM_ALL)
 add_subdirectory(scc_function EXCLUDE_FROM_ALL)
 add_subdirectory(noa_function EXCLUDE_FROM_ALL)
+add_subdirectory(rads_function EXCLUDE_FROM_ALL)
 
 file(GLOB SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
@@ -37,6 +38,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_noa_function
   modules_scc_function
   modules_hpp_function
+  modules_rads_function
   planning_proto
 )
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

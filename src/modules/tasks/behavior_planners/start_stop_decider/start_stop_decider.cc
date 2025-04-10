@@ -1,5 +1,6 @@
 #include "start_stop_decider.h"
 
+#include "agent/agent.h"
 #include "basic_types.pb.h"
 #include "behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "ego_planning_config.h"
@@ -22,9 +23,28 @@ bool StartStopDecider::Execute() {
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+  Reset();
   UpdateInput();
   start_stop_status_manager_.Update();
   StopSpeedDecisionProcess();
+  // judge whether rads scene is completed or not
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  const auto& cipv =
+      agent_manager->GetAgent(start_stop_status_manager_.cipv_id());
+
+  const auto cipv_is_destination_target =
+      cipv && cipv->type() == agent::AgentType::VIRTUAL &&
+      cipv->agent_id() ==
+          agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
+  if (session_->get_scene_type() == common::SceneType::RADS &&
+      start_stop_status_manager_.ego_start_stop_info().state() ==
+          common::StartStopInfo::STOP &&
+      cipv_is_destination_target &&
+      start_stop_status_manager_.cipv_relative_s() <
+          config_.stop_destination_to_ego_distance) {
+    rads_scene_is_completed_ = true;
+  }
   SaveToSession();
   return true;
 }
@@ -68,6 +88,9 @@ void StartStopDecider::UpdateInput() {
   const auto& cur_start_stop_result =
       session_->planning_context().start_stop_result();
   ego_start_stop_info.CopyFrom(cur_start_stop_result);
+  // is ego reverse
+  start_stop_status_manager_.mutable_is_ego_reverse() =
+      session_->is_rads_scene();
 }
 
 void StartStopDecider::StopSpeedDecisionProcess() {
@@ -82,6 +105,8 @@ void StartStopDecider::StopSpeedDecisionProcess() {
   }
 }
 
+void StartStopDecider::Reset() { rads_scene_is_completed_ = false; }
+
 void StartStopDecider::SaveToSession() {
   auto& start_stop_decider_output =
       session_->mutable_planning_context()->mutable_start_stop_decider_output();
@@ -89,6 +114,13 @@ void StartStopDecider::SaveToSession() {
       start_stop_status_manager_.ego_start_stop_info();
   start_stop_decider_output.mutable_stop_speed_decision_info() =
       stop_speed_decision_info_;
+  start_stop_decider_output.mutable_rads_scene_is_completed() =
+      rads_scene_is_completed_;
+  if (session_->get_scene_type() == common::SceneType::RADS) {
+    auto& mutable_planning_completed =
+        session_->mutable_planning_context()->mutable_planning_completed();
+    mutable_planning_completed = rads_scene_is_completed_;
+  }
 
   auto& start_stop_state_result =
       session_->mutable_planning_context()->mutable_start_stop_result();

@@ -36,6 +36,10 @@ class StartStopStatusManager {
     return current_intersection_state_ego_;
   }
 
+  bool& mutable_is_ego_reverse() { return is_ego_reverse_; }
+
+  const bool is_ego_reverse() const { return is_ego_reverse_; }
+
   bool& mutable_dbw_status() { return dbw_status_; }
 
   const bool dbw_status() const { return dbw_status_; }
@@ -84,5 +88,6 @@ class StartStopStatusManager {
   double cipv_vel_frenet_ = 0.0;
   double cipv_relative_s_ = 0.0;
   int32_t cipv_id_ = -1;
+  bool is_ego_reverse_ = false;
 };
 }  // namespace planning

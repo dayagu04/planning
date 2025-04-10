@@ -141,8 +141,8 @@ class EnvironmentalModel {
     virtual_lane_manager_ = virtual_lane_manager;
   }
 
-  const std::shared_ptr<TrafficLightDecisionManager>
-      &get_traffic_light_decision_manager() const {
+  const std::shared_ptr<TrafficLightDecisionManager> &
+  get_traffic_light_decision_manager() const {
     return traffic_light_decision_manager_;
   }
   void set_traffic_light_decision_manager(
@@ -255,6 +255,8 @@ class EnvironmentalModel {
       return parking_config_builder_ptr_;
     } else if (scene_type == common::SceneType::HPP) {
       return hpp_config_builder_ptr_;
+    } else if (scene_type == common::SceneType::RADS) {
+      return rads_config_builder_ptr_;
     } else {
       return highway_config_builder_ptr_;
     }
@@ -285,6 +287,15 @@ class EnvironmentalModel {
   void set_hpp_config_builder(
       EgoPlanningConfigBuilder *hpp_config_builder_ptr) {
     hpp_config_builder_ptr_ = hpp_config_builder_ptr;
+  }
+
+  const EgoPlanningConfigBuilder *rads_config_builder() const {
+    return rads_config_builder_ptr_;
+  }
+
+  void set_rads_config_builder(
+      EgoPlanningConfigBuilder *rads_config_builder_ptr) {
+    rads_config_builder_ptr_ = rads_config_builder_ptr;
   }
 
   void feed_local_view(const LocalView *local_view) {
@@ -338,6 +349,7 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *parking_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *hpp_config_builder_ptr_ = nullptr;
+  EgoPlanningConfigBuilder *rads_config_builder_ptr_ = nullptr;
   common::DrivingFunctionInfo function_info_;
 };
 

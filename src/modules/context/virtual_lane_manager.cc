@@ -14,6 +14,7 @@
 #include "Eigen/src/Core/Matrix.h"
 #include "ad_common/hdmap/hdmap.h"
 #include "common_c.h"
+#include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
@@ -29,8 +30,10 @@
 #include "log.h"
 // #include "log_glog.h"
 #include "math/box2d.h"
+#include "math/math_utils.h"
 #include "math/vec2d.h"
 #include "planning_context.h"
+#include "pose2d.h"
 #include "reference_path_manager.h"
 #include "stop_line.h"
 #include "task_basic_types.h"
@@ -40,11 +43,11 @@
 #include "virtual_lane.h"
 namespace planning {
 
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 namespace {
@@ -120,6 +123,233 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
   virtual_poly[2] = curv / 2.0;
 
   return virtual_poly;  // 依次为常数项、一次项、二次项、三次项
+}
+
+// for rads only
+void VirtualLaneManager::construct_reference_line_msg(
+    const iflyauto::FuncStateMachine& func_state_machine_msg,
+    iflyauto::ReferenceLineMsg* const current_lane_virtual) {
+  const auto& rads_map = func_state_machine_msg.rads_map;
+  // lane id
+  current_lane_virtual->order_id = 0;
+  current_lane_virtual->relative_id = 0;
+
+  // lane type
+  current_lane_virtual->lane_types_size = 1;
+  (current_lane_virtual->lane_types[0]).type = iflyauto::LANETYPE_VIRTUAL;
+  (current_lane_virtual->lane_types[0]).begin = 0.0;
+  (current_lane_virtual->lane_types[0]).end = rads_map.length;
+
+  // lane mark
+  current_lane_virtual->lane_marks_size = 0;
+  (current_lane_virtual->lane_marks[0]).begin = -1.0;
+  (current_lane_virtual->lane_marks[0]).end = -1.0;
+  (current_lane_virtual->lane_marks[0]).lane_mark =
+      iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
+
+  // lane source
+  current_lane_virtual->lane_sources_size = 1;
+  (current_lane_virtual->lane_sources[0]).source =
+      iflyauto::LaneSource_SOURCE_PARKING_MAP;
+
+  // ***lane reference line update***
+  // in case of ego init point is not in the scope of rads_map ref line
+  auto scene_type = session_->get_scene_type();
+  const auto cur_fsm_state = session_->environmental_model()
+                                 .get_local_view()
+                                 .function_state_machine_info.current_state;
+  if (last_fsm_state_ == iflyauto::FunctionalState_RADS_PRE_ACTIVE &&
+      cur_fsm_state == iflyauto::FunctionalState_RADS_TRACING) {
+    ExtendReferenceLineForRads(func_state_machine_msg, current_lane_virtual);
+  }
+
+  const size_t points_size_rads_map = rads_map.points_size;
+  const size_t points_size_refline_default = FUSION_ROAD_REFLINE_POINT_MAX_NUM;
+  const size_t points_size =
+      std::min(points_size_rads_map, points_size_refline_default);
+  // NOTE: points_rads_map start from the first point which is memorized in
+  for (size_t i = 1, j = points_size_rads_map - 1; i < points_size && j >= 0;
+       ++i, --j) {
+    auto& current_lane_virtual_refline_point =
+        (current_lane_virtual->lane_reference_line)
+            .virtual_lane_refline_points[i];
+    auto& current_lane_virtual_local_point =
+        (current_lane_virtual->lane_reference_line)
+            .virtual_lane_refline_points[i]
+            .local_point;
+    auto& current_lane_virtual_enu_point =
+        (current_lane_virtual->lane_reference_line)
+            .virtual_lane_refline_points[i]
+            .enu_point;
+    auto& current_lane_virtual_car_point =
+        (current_lane_virtual->lane_reference_line)
+            .virtual_lane_refline_points[i]
+            .car_point;
+
+    const auto& rads_map_points_boot = (rads_map.points[j]).boot;
+    const auto& rads_map_points_enu = (rads_map.points[j]).enu;
+    const auto& rads_map_points_llh = (rads_map.points[j]).llh;
+    // boot point update
+    current_lane_virtual_local_point.x = rads_map_points_boot.x;
+    current_lane_virtual_local_point.y = rads_map_points_boot.y;
+    current_lane_virtual_local_point.z = rads_map_points_boot.z;
+    // enu point update
+    current_lane_virtual_enu_point.x = rads_map_points_enu.x;
+    current_lane_virtual_enu_point.y = rads_map_points_enu.y;
+    current_lane_virtual_enu_point.z = rads_map_points_enu.z;
+    // TODO: llh point update (no interface now)
+
+    current_lane_virtual_refline_point.curvature =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.car_heading = PI;
+    current_lane_virtual_refline_point.enu_heading = PI;
+    current_lane_virtual_refline_point.local_heading = PI;
+    current_lane_virtual_refline_point.distance_to_left_road_border =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.distance_to_right_road_border =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.distance_to_left_lane_border =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.distance_to_right_lane_border =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.lane_width =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.speed_limit_min =
+        std::numeric_limits<float32>::lowest();
+    current_lane_virtual_refline_point.speed_limit_max =
+        std::numeric_limits<float32>::max();
+    current_lane_virtual_refline_point.left_road_border_type =
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    current_lane_virtual_refline_point.right_road_border_type =
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    current_lane_virtual_refline_point.left_lane_border_type =
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    current_lane_virtual_refline_point.right_lane_border_type =
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    current_lane_virtual_refline_point.is_in_intersection =
+        false;  // no update in this function
+    current_lane_virtual_refline_point.lane_type = iflyauto::LANETYPE_VIRTUAL;
+
+    const auto pre_refline_point_s = (current_lane_virtual->lane_reference_line)
+                                         .virtual_lane_refline_points[i - 1]
+                                         .s;
+    const auto pre_refline_point_local_x =
+        (current_lane_virtual->lane_reference_line)
+            .virtual_lane_refline_points[i - 1]
+            .local_point.x;
+    const auto pre_refline_point_local_y =
+        (current_lane_virtual->lane_reference_line)
+            .virtual_lane_refline_points[i - 1]
+            .local_point.y;
+    current_lane_virtual_refline_point.s =
+        pre_refline_point_s +
+        planning_math::fast_hypot(
+            current_lane_virtual_refline_point.local_point.x -
+                pre_refline_point_local_x,
+            current_lane_virtual_refline_point.local_point.y -
+                pre_refline_point_local_y);
+
+    current_lane_virtual_refline_point.confidence = 1.0;
+    (current_lane_virtual->lane_reference_line)
+        .virtual_lane_refline_points_size = i + 1;
+  }
+
+  // lane merge split point, random value
+  current_lane_virtual->lane_merge_split_point =
+      iflyauto::LaneMergeSplitPoint();
+
+  // left lane boundary, random value
+  current_lane_virtual->left_lane_boundary = iflyauto::LaneBoundary();
+
+  // right lane boundary, random value
+  current_lane_virtual->right_lane_boundary = iflyauto::LaneBoundary();
+
+  // stop line, random value
+  current_lane_virtual->stop_line = iflyauto::LaneBoundary();
+}
+
+void VirtualLaneManager::ExtendReferenceLineForRads(
+    const iflyauto::FuncStateMachine& func_state_machine_msg,
+    iflyauto::ReferenceLineMsg* const current_lane_virtual) {
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& ego_pose = ego_state_manager->ego_pose();
+  const double ego_heading_angle = ego_state_manager->heading_angle();
+  const double extended_length = 1.5;
+  Pose2D extended_point(
+      ego_pose.GetX() + extended_length * cos(ego_heading_angle),
+      ego_pose.GetY() + extended_length * sin(ego_heading_angle),
+      ego_heading_angle);
+  auto& current_lane_first_point =
+      current_lane_virtual->lane_reference_line.virtual_lane_refline_points[0];
+
+  const auto& rads_map = func_state_machine_msg.rads_map;
+
+  auto& current_lane_virtual_refline_point =
+      (current_lane_virtual->lane_reference_line)
+          .virtual_lane_refline_points[0];
+  auto& current_lane_virtual_local_point =
+      (current_lane_virtual->lane_reference_line)
+          .virtual_lane_refline_points[0]
+          .local_point;
+  auto& current_lane_virtual_enu_point =
+      (current_lane_virtual->lane_reference_line)
+          .virtual_lane_refline_points[0]
+          .enu_point;
+  auto& current_lane_virtual_car_point =
+      (current_lane_virtual->lane_reference_line)
+          .virtual_lane_refline_points[0]
+          .car_point;
+
+  const auto& rads_map_points_boot = (rads_map.points[0]).boot;
+  const auto& rads_map_points_enu = (rads_map.points[0]).enu;
+  const auto& rads_map_points_llh = (rads_map.points[0]).llh;
+  // boot(local) point
+  current_lane_virtual_local_point.x = extended_point.GetX();
+  current_lane_virtual_local_point.y = extended_point.GetY();
+  current_lane_virtual_local_point.z = rads_map_points_boot.z;
+
+  // enu point no update
+
+  // TODO: llh point update (no interface now)
+
+  current_lane_virtual_refline_point.curvature =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.car_heading = PI;
+  current_lane_virtual_refline_point.enu_heading = PI;
+  current_lane_virtual_refline_point.local_heading = PI;
+  current_lane_virtual_refline_point.distance_to_left_road_border =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.distance_to_right_road_border =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.distance_to_left_lane_border =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.distance_to_right_lane_border =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.lane_width =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.speed_limit_min =
+      std::numeric_limits<float32>::lowest();
+  current_lane_virtual_refline_point.speed_limit_max =
+      std::numeric_limits<float32>::max();
+  current_lane_virtual_refline_point.left_road_border_type =
+      iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+  current_lane_virtual_refline_point.right_road_border_type =
+      iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+  current_lane_virtual_refline_point.left_lane_border_type =
+      iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+  current_lane_virtual_refline_point.right_lane_border_type =
+      iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+  current_lane_virtual_refline_point.is_in_intersection =
+      false;  // no update in this function
+  current_lane_virtual_refline_point.lane_type = iflyauto::LANETYPE_VIRTUAL;
+
+  current_lane_virtual_refline_point.s = 0.0;
+
+  current_lane_virtual_refline_point.confidence = 1.0;
+
+  (current_lane_virtual->lane_reference_line).virtual_lane_refline_points_size =
+      1;
 }
 
 void VirtualLaneManager::construct_reference_line_msg(
@@ -421,6 +651,220 @@ void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
   debug_info_pb->add_generated_refline_info()->CopyFrom(refline_to_debug);
 }
 
+// for rads only
+bool VirtualLaneManager::update(
+    const iflyauto::FuncStateMachine& func_state_machine_msg) {
+  LOG_DEBUG("update VirtualLaneManager for rads\n");
+  current_lane_ = nullptr;
+  left_lane_ = nullptr;
+  right_lane_ = nullptr;
+  relative_id_lanes_.clear();
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_generated_refline_info()
+      ->Clear();
+
+  iflyauto::RoadInfo roads_virtual;
+  construct_reference_line_msg(func_state_machine_msg,
+                               &(roads_virtual.reference_line_msg[0]));
+
+  // set roads_virtual
+  roads_virtual.msg_header = func_state_machine_msg.msg_header;
+  // TBD:isp_timestamp
+  roads_virtual.isp_timestamp = func_state_machine_msg.msg_header.stamp;
+  roads_virtual.reference_line_msg_size = 1;
+  const auto raw_reference_line_points_size =
+      roads_virtual.reference_line_msg[0]
+          .lane_reference_line.virtual_lane_refline_points_size;
+  roads_virtual.local_point_valid = raw_reference_line_points_size > 1;
+  JSON_DEBUG_VALUE("raw_virtual_lane_pnts_size", raw_reference_line_points_size)
+  JSON_DEBUG_VALUE(
+      "raw_virtual_lane_s",
+      roads_virtual.reference_line_msg[0]
+          .lane_reference_line
+          .virtual_lane_refline_points[raw_reference_line_points_size - 1]
+          .s)
+  iflyauto::RoadInfo* roads_ptr = &roads_virtual;
+  if (!roads_virtual.local_point_valid) {
+    LOG_DEBUG("no rads refline points \n");
+    return false;
+  }
+  /*********** belowing follows pipline already exists **********/
+  // 2.根据地图信息，计算需要的超视距信息
+  const auto& route_info = session_->environmental_model().get_route_info();
+  route_info_output_ = route_info->get_route_info_output();
+  // CalculateDistanceToRampSplitMergeWithSdMap(session_);
+
+  // if (session_->is_hpp_scene() && GetCurrentNearestLane(*session_)) {
+  // CalculateHPPInfo(session_);
+  // CalculateDistanceToTargetSlot(session_);
+  // CalculateDistanceToNextSpeedBump(session_);
+  // }
+
+  // 3.根据计算的超视距信息，更新需要的lane信息
+  relative_id_lanes_ = UpdateLanes(roads_ptr);
+
+#ifdef X86
+  int zero_order_count = 0;
+  for (const auto& lane : relative_id_lanes_) {
+    if (lane->get_order_id() == 0) {
+      zero_order_count += 1;
+    }
+  }
+  if (zero_order_count > 1) {
+    auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
+                                   std::shared_ptr<VirtualLane> lane2) {
+      return lane1->get_relative_id() < lane2->get_relative_id();
+    };
+    std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
+              compare_relative_id);
+    int count = 0;
+    for (auto& lane : relative_id_lanes_) {
+      lane->set_order_id(count);
+      count++;
+    }
+  }
+#endif
+
+  // 获取track_ego_lane的依赖
+  ego_lane_track_manager_.Update(route_info_output_);
+
+  // 4.构建车道kd_path/计算自车相对于各车道的横向距离
+  ego_lane_track_manager_.CalculateVirtualLaneAttributes(relative_id_lanes_);
+
+  // 5.track自车道
+  order_ids_of_same_zero_relative_id_.clear();
+  // 判断自车是否处于车道数一分二场景
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_relative_id() == 0) {
+      order_ids_of_same_zero_relative_id_.emplace_back(
+          relative_id_lane->get_order_id());
+    }
+  }
+  const auto& location_valid = session_->environmental_model().location_valid();
+  auto time_start = IflyTime::Now_ms();
+  if (location_valid) {
+    ego_lane_track_manager_.TrackEgoLane(relative_id_lanes_,
+                                         order_ids_of_same_zero_relative_id_,
+                                         virtual_id_mapped_lane_);
+    const bool select_ego_lane_without_plan =
+        ego_lane_track_manager_.is_select_ego_lane_without_plan();
+    LOG_DEBUG("select_ego_lane_without_plan: %d \n",
+              select_ego_lane_without_plan);
+    JSON_DEBUG_VALUE("select_ego_lane_without_plan",
+                     select_ego_lane_without_plan);
+
+    const bool select_ego_lane_with_plan =
+        ego_lane_track_manager_.is_select_ego_lane_with_plan();
+    LOG_DEBUG("select_ego_lane_with_plan: %d \n", select_ego_lane_with_plan);
+    JSON_DEBUG_VALUE("select_ego_lane_with_plan", select_ego_lane_with_plan);
+  }
+  auto time_end = IflyTime::Now_ms();
+  LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
+
+  ego_lane_track_manager_.SetLastZeroRelativeIdNums(
+      origin_relative_id_zero_nums_);
+  JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
+                   origin_relative_id_zero_nums_);
+
+  // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
+  UpdateAllVirtualLaneInfo();
+  if (current_lane_ == nullptr) {
+    LOG_ERROR("!!!current_lane is empty!!!");
+    ego_lane_track_manager_.Reset();
+    return false;
+  }
+
+  // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
+  ego_lane_track_manager_.UpdateLaneVirtualId(
+      relative_id_lanes_, virtual_id_mapped_lane_, &last_fix_lane_virtual_id_);
+
+  // 对下游输出是否处于主路下匝道、匝道选分叉场景
+  set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
+  LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
+  JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
+
+  set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
+  LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
+  JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
+
+  set_is_exist_split_on_expressway(
+      ego_lane_track_manager_.is_exist_split_on_expressway());
+  LOG_DEBUG("is_exist_split_on_expressway_: %d \n",
+            is_exist_split_on_expressway_);
+  JSON_DEBUG_VALUE("is_exist_split_on_expressway",
+                   is_exist_split_on_expressway_);
+
+  set_is_exist_intersection_split(
+      ego_lane_track_manager_.is_exist_intersection_split());
+  LOG_DEBUG("is_exist_intersection_split: %d \n", is_exist_intersection_split_);
+  JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
+
+  const bool is_in_ramp_select_split_situation =
+      ego_lane_track_manager_.is_in_ramp_select_split_situation();
+  LOG_DEBUG("is_in_ramp_select_split_situation: %d \n",
+            is_in_ramp_select_split_situation);
+  JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
+                   is_in_ramp_select_split_situation);
+
+  const bool is_on_road_select_ramp_situation =
+      ego_lane_track_manager_.is_on_road_select_ramp_situation();
+  LOG_DEBUG("is_on_road_select_ramp_situation: %d \n",
+            is_on_road_select_ramp_situation);
+  JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
+                   is_on_road_select_ramp_situation);
+
+  // 9.生成导航变道的任务
+  const double cancel_mlc_dis_threshold_to_route_end = 400;
+  if (route_info_output_.is_ego_on_expressway) {
+    const bool is_inhibitory_noa_task =
+        (route_info_output_.is_exist_toll_station &&
+         route_info_output_.distance_to_toll_station <
+             cancel_mlc_dis_threshold_to_route_end) ||
+        route_info_output_.distance_to_route_end <
+            cancel_mlc_dis_threshold_to_route_end;
+    if (!is_inhibitory_noa_task) {
+      route_info->UpdateMLCInfoDecider(relative_id_lanes_);
+      for (const auto& relative_id_lane : relative_id_lanes_) {
+        relative_id_lane->update_lane_tasks(
+            route_info->get_route_info_output());
+      }
+    }
+  }
+
+  // 9.计算自车到停止线的距离
+  UpdateEgoDistanceToStopline();
+
+  // 10.计算自车到斑马线距离
+  UpdateEgoDistanceToCrosswalk(roads_ptr);
+
+  // 11.更新路口状态
+  UpdateIntersectionState();
+
+  LOG_DEBUG("input lane:");
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto environment_model_debug_info =
+      planning_debug_data->mutable_environment_model_info();
+  environment_model_debug_info->set_currrent_lane_vitual_id(
+      current_lane_virtual_id_);
+  LOG_DEBUG("current lane virtual id:%d\n", current_lane_virtual_id_);
+  for (const auto& lane : relative_id_lanes_) {
+    LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(),
+              lane->get_virtual_id());
+  }
+  last_fsm_state_ = session_->environmental_model()
+                        .get_local_view()
+                        .function_state_machine_info.current_state;
+  LOG_DEBUG("\n");
+  JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
+  JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
+  JSON_DEBUG_VALUE("current_lane_relative_id",
+                   current_lane_->get_relative_id());
+
+  return true;
+}
+
 bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
   current_lane_ = nullptr;
@@ -557,7 +1001,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   ego_lane_track_manager_.SetLastZeroRelativeIdNums(
       origin_relative_id_zero_nums_);
   JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
-                    origin_relative_id_zero_nums_);
+                   origin_relative_id_zero_nums_);
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
@@ -625,7 +1069,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       }
     }
   }
-  //更新route的可视化信息
+  // 更新route的可视化信息
   route_info->UpdateVisionInfo();
 
   // 9.计算自车到停止线的距离
@@ -649,6 +1093,9 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(),
               lane->get_virtual_id());
   }
+  last_fsm_state_ = session_->environmental_model()
+                        .get_local_view()
+                        .function_state_machine_info.current_state;
   LOG_DEBUG("\n");
   JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
   JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
@@ -1112,7 +1559,7 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
 }
 
 bool VirtualLaneManager::UpdateIntersectionState() {
-  if (session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene()) {
     Intersection_state_ = planning::common::NO_INTERSECTION;
     return true;
   }

@@ -14,6 +14,7 @@
 #include "noa_function/noa_function.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
+#include "rads_function/rads_function.h"
 #include "scc_function/scc_function.h"
 #include "session.h"
 namespace planning {
@@ -91,6 +92,7 @@ class PlanningScheduler {
   void ClearParkingInfo(iflyauto::PlanningOutput *planning_output);
   bool IsUndefinedScene(const iflyauto::FunctionalState &current_state);
   bool IsValidHppState(const iflyauto::FunctionalState &current_state);
+  bool IsValidRadsState(const iflyauto::FunctionalState &current_state);
 
   void InitSccFunction();
 
@@ -144,6 +146,7 @@ class PlanningScheduler {
   std::unique_ptr<BaseFunction> noa_function_ = nullptr;
   std::unique_ptr<BaseFunction> scc_function_ = nullptr;
   std::unique_ptr<BaseFunction> apa_function_ = nullptr;
+  std::unique_ptr<BaseFunction> rads_function_;
 
   planner::EnvironmentalModelManager environmental_model_manager_;
 

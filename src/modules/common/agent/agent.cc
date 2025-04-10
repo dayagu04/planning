@@ -1,5 +1,7 @@
 #include "agent.h"
+
 #include <cstddef>
+
 #include "common.h"
 #include "config/basic_type.h"
 #include "log.h"
@@ -216,7 +218,9 @@ void Agent::set_prediction_cutin_score(const double prediction_cutin_score) {
 }
 
 const bool Agent::is_crossing() const { return is_crossing_; }
-void Agent::set_is_crossing(const bool is_crossing) { is_crossing_ = is_crossing; }
+void Agent::set_is_crossing(const bool is_crossing) {
+  is_crossing_ = is_crossing;
+}
 
 const double Agent::timestamp_s() const { return timestamp_s_; }
 void Agent::set_timestamp_s(const double timestamp_s) {
@@ -311,6 +315,15 @@ const bool Agent::is_tfl_virtual_obs() const { return is_tfl_virtual_obs_; }
 
 void Agent::set_is_tfl_virtual_obs(bool is_tfl_virtual_obs) {
   is_tfl_virtual_obs_ = is_tfl_virtual_obs;
+}
+
+const bool Agent::is_stop_destination_virtual_obs() const {
+  return is_stop_destination_virtual_obs_;
+}
+
+void Agent::set_is_stop_destination_virtual_obs(
+    const bool is_stop_destination_virtual_obs) {
+  is_stop_destination_virtual_obs_ = is_stop_destination_virtual_obs;
 }
 
 const double Agent::d_rel() const { return d_rel_; }

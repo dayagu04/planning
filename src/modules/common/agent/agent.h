@@ -12,7 +12,7 @@
 namespace planning {
 namespace agent {
 
-//与iflyauto::ObjectType对齐
+// 与iflyauto::ObjectType对齐
 enum class AgentType {
   UNKNOWN = 0,                // 未知障碍物
   UNKNOWN_MOVABLE = 1,        // 未知可移动障碍物
@@ -53,6 +53,18 @@ struct AgentStInfo {
   int32_t st_graph_count_ = 0;
   double lateral_buffer_ = 0.0;
   double min_t_ = -1.0;
+};
+
+struct AgentDefaultInfo {
+  /***common id info***/
+  const static int32_t kNoAgentId = -1;
+  // Note: agent virtual id = xxId_Base + num(which maybe a relative agent id)
+  // RADS virtual agent id base
+  const static int32_t kRadsVirtualAgentId_Base = 200000;
+
+  /***specific id which is defined by user***/
+  const static int32_t kRadsStopDestinationVirtualAgentId =
+      kRadsVirtualAgentId_Base + 1;
 };
 
 class Agent {
@@ -193,6 +205,10 @@ class Agent {
   const bool is_tfl_virtual_obs() const;
   void set_is_tfl_virtual_obs(bool is_tfl_virtual_obs);
 
+  const bool is_stop_destination_virtual_obs() const;
+  void set_is_stop_destination_virtual_obs(
+      bool is_stop_destination_virtual_obs);
+
   const double d_path() const;
   void set_d_path(double d_path);
 
@@ -272,6 +288,7 @@ class Agent {
   bool is_cut_out_for_lane_change_ = false;
 
   bool is_tfl_virtual_obs_ = false;
+  bool is_stop_destination_virtual_obs_ = false;
   unsigned int fusion_source_;
 };
 

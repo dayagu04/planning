@@ -551,6 +551,10 @@ const planning_math::Box2d& StGraphInput::planning_init_point_box() const {
   return planning_init_point_box_;
 }
 
+const bool StGraphInput::is_rads_scene() const {
+  return session_->is_rads_scene();
+}
+
 void StGraphInput::MakeBuffer(const bool is_lane_keeping,
                               const STGraphConfig& config) {
   const double lane_keeping_lower_lateral_buffer_m =
@@ -707,6 +711,14 @@ void StGraphInput::MakePlanningInitPointBox() {
   target_center.set_y(planning_init_point_.y() +
                       std::sin(planning_init_point_.theta()) *
                           back_axle_to_center);
+  if (session_->is_rads_scene()) {
+    target_center.set_x(planning_init_point_.x() +
+                        std::cos(-planning_init_point_.theta()) *
+                            back_axle_to_center);
+    target_center.set_y(planning_init_point_.y() +
+                        std::sin(-planning_init_point_.theta()) *
+                            back_axle_to_center);
+  }
   planning_init_point_box_ = Box2d(target_center, planning_init_point_.theta(),
                                    vehicle_length, vehicle_width);
 }
@@ -732,15 +744,22 @@ void StGraphInput::MakePathBorderQuerier(
     auto point = planned_path->GetPathPointByS(desired_s);
     Vec2d center = point + Vec2d::CreateUnitVec2d(point.theta()) *
                                back_axle_to_center_dist;
+    double start_s = desired_s - back_edge_to_center;
+    double end_s = desired_s + front_edge_to_center;
+    if (session_->is_rads_scene()) {
+      center = point + Vec2d::CreateUnitVec2d(-point.theta()) *
+                           back_axle_to_center_dist;
+      start_s = desired_s - front_edge_to_center;
+      end_s = desired_s + back_edge_to_center;
+    }
     Box2d ego_box(center, point.theta(), vehicle_length, vehicle_width);
     auto corners = ego_box.GetAllCorners();
 
     LineSegment2d left_segment(corners[2], corners[1]);
     LineSegment2d right_segment(corners[3], corners[0]);
 
-    PathBorderSegment path_border_segment(
-        i, desired_s, desired_s - back_edge_to_center,
-        desired_s + front_edge_to_center, left_segment, right_segment);
+    PathBorderSegment path_border_segment(i, desired_s, start_s, end_s,
+                                          left_segment, right_segment);
     path_border_segments.emplace_back(path_border_segment);
   }
   path_border_querier_ =

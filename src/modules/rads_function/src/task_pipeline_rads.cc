@@ -1,4 +1,4 @@
-#include "longtime_task_pipeline_v3.h"
+#include "task_pipeline_rads.h"
 #include <memory>
 
 #include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
@@ -7,15 +7,15 @@
 
 namespace planning {
 
-LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
+TaskPipelineRADS::TaskPipelineRADS(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
-  sample_poly_speed_adjust_decider_ =
-      std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
+  speed_adjust_decider_ =
+      std::make_unique<SpeedAdjustDecider>(config_builder, session);
   lateral_obstacle_decider_ =
       std::make_unique<LateralObstacleDecider>(config_builder, session);
   lane_borrow_decider_ =
@@ -71,7 +71,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
 }
 
-bool LongTimeTaskPipelineV3::Run() {
+bool TaskPipelineRADS::Run() {
   bool ok = traffic_light_decider_->Execute();
   if (!ok) {
     AddErrorInfo(traffic_light_decider_->Name());
@@ -90,9 +90,9 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  ok = sample_poly_speed_adjust_decider_->Execute();
+  ok = speed_adjust_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
+    AddErrorInfo(speed_adjust_decider_->Name());
     return false;
   }
 

@@ -87,6 +87,11 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_hpp_config_builder(
       hpp_config_builder);
 
+  auto rads_config_builder =
+      load_config_builder("general_planner_module_rads.json");
+  session_->mutable_environmental_model()->set_rads_config_builder(
+      rads_config_builder);
+
   planning::common::SceneType scene_type = session_->get_scene_type();
   auto config_builder =
       session_->environmental_model().config_builder(scene_type);
@@ -159,8 +164,7 @@ void EnvironmentalModelManager::InitContext() {
 
   edt_manager_ptr_ =
       std::make_shared<planning::EdtManager>(config_builder, session_);
-  session_->mutable_environmental_model()->set_edt_manager(
-      edt_manager_ptr_);
+  session_->mutable_environmental_model()->set_edt_manager(edt_manager_ptr_);
 }
 
 void EnvironmentalModelManager::SetConfig(
@@ -209,8 +213,8 @@ bool EnvironmentalModelManager::Run() {
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
   if (session_->is_hpp_scene()) {
     localization_valid =
-      local_view.localization.status.status_info.mode ==
-      iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
+        local_view.localization.status.status_info.mode ==
+        iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
   }
   bool fusion_localization_valid =
       local_view.road_info.local_point_valid &&
@@ -249,7 +253,10 @@ bool EnvironmentalModelManager::Run() {
       (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
       (fsm_state <=
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
-  bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise;
+  bool rads_mode = fsm_state == iflyauto::FunctionalState_RADS_TRACING ||
+                   fsm_state == iflyauto::FunctionalState_RADS_SUSPEND;
+  bool dbw_status =
+      acc_mode || scc_mode || noa_mode || hpp_mode_cruise || rads_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
 
@@ -257,12 +264,15 @@ bool EnvironmentalModelManager::Run() {
       common::DrivingFunctionInfo::ACTIVATE;
   if (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE ||
       fsm_state == iflyauto::FunctionalState_SCC_ACTIVATE ||
-      fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) {
+      fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE ||
+      fsm_state == iflyauto::FunctionalState_RADS_TRACING) {
     function_state = common::DrivingFunctionInfo::ACTIVATE;
   } else if (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
              fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
              fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) {
     function_state = common::DrivingFunctionInfo::OVERRIDE;
+  } else if (fsm_state == iflyauto::FunctionalState_RADS_SUSPEND) {
+    function_state = common::DrivingFunctionInfo::SUSPEND;
   }
 
   if (scc_mode) {
@@ -276,6 +286,9 @@ bool EnvironmentalModelManager::Run() {
                                            function_state);
   } else if (hpp_mode) {
     environmental_model->set_function_info(common::DrivingFunctionInfo::HPP,
+                                           function_state);
+  } else if (rads_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::RADS,
                                            function_state);
   } else {
     LOG_NOTICE("function mode error\n");
@@ -308,12 +321,20 @@ bool EnvironmentalModelManager::Run() {
   // Step 4) update virtual_lane
   time_start = IflyTime::Now_ms();
   last_feed_time_[FEED_MAP_INFO] = local_view.static_map_info_recv_time;
-  if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
-    LOG_ERROR("virtual_lane_manager update failed\n");
+  if (rads_mode && !virtual_lane_manager_ptr_->update(
+                       local_view.function_state_machine_info)) {
+    LOG_ERROR("virtual_lane_manager update failed for rads\n");
     return false;
-  } else {
-    // 后面需要判断是否为地图
-    last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
+  }
+
+  if (!rads_mode) {
+    if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
+      LOG_ERROR("virtual_lane_manager update failed\n");
+      return false;
+    } else {
+      // 后面需要判断是否为地图
+      last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
+    }
   }
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
@@ -1231,7 +1252,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   // The agent is slow when it's speed < 10km/h (person's speed)
   object_is_slow = prediction_object.speed < 2.78 ? true : false;
   // For no prediction schemes, use heading angle when obstacles are slow
-  if (object_is_slow && (!session_->is_hpp_scene() || !prediction_object.is_VRU)) {
+  if (object_is_slow &&
+      (!session_->is_hpp_scene() || !prediction_object.is_VRU)) {
     prediction_object.relative_theta =
         fusion_object.common_info.heading_angle - ego_state->heading_angle();
     prediction_object.theta = fusion_object.common_info.heading_angle;

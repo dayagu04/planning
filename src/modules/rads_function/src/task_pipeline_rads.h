@@ -29,7 +29,7 @@
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
-#include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
+#include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
@@ -40,16 +40,15 @@
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 
-
 namespace planning {
 
-class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
+class TaskPipelineRADS : public BaseTaskPipeline {
  public:
-  explicit LongTimeTaskPipelineV3(
+  explicit TaskPipelineRADS(
       const EgoPlanningConfigBuilder *config_builder,
       framework::Session *session);
 
-  virtual ~LongTimeTaskPipelineV3() = default;
+  virtual ~TaskPipelineRADS() = default;
 
   bool Run() override;
 
@@ -61,9 +60,8 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
+  std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
   std::unique_ptr<LaneBorrowDecider> lane_borrow_decider_;
-  std::unique_ptr<SamplePolySpeedAdjustDecider> sample_poly_speed_adjust_decider_;
-
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<ExpandStBoundariesDecider> expand_st_boundaries_decider_;

@@ -647,7 +647,7 @@ bool StGraphUtils::CheckCandicateAgentForClosePass(
     const std::shared_ptr<planning_math::KDPath>& planned_path,
     const std::shared_ptr<VirtualLane>& ego_lane,
     const std::shared_ptr<VirtualLane>& agent_lane, const agent::Agent& agent,
-    const StBoundaryType& type) {
+    const StBoundaryType& type, const bool is_rads_scene) {
   constexpr double kTimeThd = 5.0;
   if (type != StBoundaryType::NORMAL || !is_lane_keeping) {
     return false;
@@ -664,8 +664,12 @@ bool StGraphUtils::CheckCandicateAgentForClosePass(
   const auto& veh_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_center = veh_param.front_edge_to_rear_axle;
+  const double rear_edge_to_center = veh_param.rear_edge_to_rear_axle;
   const double agent_front_s = agent_s + agent.box().half_length();
-  const double ego_front_s = ego_s + front_edge_to_center;
+  double ego_front_s = ego_s + front_edge_to_center;
+  if (is_rads_scene) {
+    ego_front_s = ego_s + rear_edge_to_center;
+  }
   const bool is_virtual = agent.type() == agent::AgentType::VIRTUAL;
   const bool is_in_front_of_ego = agent_front_s > ego_front_s;
   const bool is_agent_in_lon_range = agent_s < (ego_s + ego_v * kTimeThd);
@@ -756,7 +760,7 @@ bool StGraphUtils::CalculateSRange(
     const std::vector<double>& agent_sl_boundary,
     std::vector<std::pair<int32_t, planning_math::Vec2d>>& considered_corners,
     const planning_math::Box2d& planning_init_point_box, double* const lower_s,
-    double* const upper_s) {
+    double* const upper_s, const bool is_rads_scene) {
   // const auto& obs_corners = obs_box.GetAllCorners();
   // max_s min_s max_l min_l
   const double max_s = agent_sl_boundary[0];
@@ -767,12 +771,20 @@ bool StGraphUtils::CalculateSRange(
       VehicleConfigurationContext::Instance()->get_vehicle_param().width;
   const double left_border_position = vehicle_width * 0.5;
   const double right_border_position = -left_border_position;
-  const double front_edge_to_center = VehicleConfigurationContext::Instance()
+  double front_edge_to_center = VehicleConfigurationContext::Instance()
                                           ->get_vehicle_param()
                                           .front_edge_to_rear_axle;
-  const double back_edge_to_center = VehicleConfigurationContext::Instance()
+  double back_edge_to_center = VehicleConfigurationContext::Instance()
                                          ->get_vehicle_param()
                                          .rear_edge_to_rear_axle;
+  if (is_rads_scene) {
+    front_edge_to_center = VehicleConfigurationContext::Instance()
+                               ->get_vehicle_param()
+                               .rear_edge_to_rear_axle;
+    back_edge_to_center = VehicleConfigurationContext::Instance()
+                              ->get_vehicle_param()
+                              .front_edge_to_rear_axle;
+  }
 
   if (type == StBoundaryType::NEIGHBOR) {
     *lower_s = min_s - front_edge_to_center;
@@ -980,7 +992,8 @@ bool StGraphUtils::CheckAdjustLateralBufferByT(
     const std::shared_ptr<VirtualLaneManager>& virtual_lane_manager,
     const std::shared_ptr<VirtualLane>& ego_lane,
     const std::shared_ptr<VirtualLane>& agent_lane, const agent::Agent& agent,
-    const bool is_parallel_to_ego_lane, const bool is_lane_keeping) {
+    const bool is_parallel_to_ego_lane, const bool is_lane_keeping,
+    const bool is_rads_scene) {
   bool need_ajust_buffer_by_t = false;
   if (agent_lane->get_virtual_id() == ego_lane->get_virtual_id()) {
     return need_ajust_buffer_by_t;
@@ -1013,10 +1026,16 @@ bool StGraphUtils::CheckAdjustLateralBufferByT(
       std::fmin(kMaxConsiderRangeM * 0.5, half_consider_range);
   half_consider_range =
       std::fmax(kMinConsiderRangeM * 0.5, half_consider_range);
-  const double ego_front_consider_s =
+  double ego_front_consider_s =
       ego_s + vehicle_param.front_edge_to_rear_axle + half_consider_range;
-  const double ego_back_consider_s =
+  double ego_back_consider_s =
       ego_s - vehicle_param.rear_edge_to_rear_axle - half_consider_range;
+  if (is_rads_scene) {
+    ego_front_consider_s =
+        ego_s + vehicle_param.rear_edge_to_rear_axle + half_consider_range;
+    ego_back_consider_s =
+        ego_s - vehicle_param.front_edge_to_rear_axle - half_consider_range;
+  }
   double agent_s = 0.0;
   double agent_l = 0.0;
   ego_lane_coord->XYToSL(agent.x(), agent.y(), &agent_s, &agent_l);

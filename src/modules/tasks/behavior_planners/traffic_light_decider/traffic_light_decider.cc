@@ -1,4 +1,5 @@
 #include "traffic_light_decider.h"
+#include "agent/agent_decision.h"
 #include "agent/agent_manager.h"
 #include "environmental_model.h"
 #include "lateral_obstacle.h"

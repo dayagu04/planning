@@ -180,6 +180,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       else:
         print('match loc fail')
 
+    soc_state_msg_tmp = find(bag_loader.soc_state_msg, soc_state_timestamp)
+    if soc_state_msg_tmp != None:
+      soc_state_msg = soc_state_msg_tmp
+    else:
+      print("match soc_state fail")
+
   local_view_data['data_msg']['plan_msg'] = plan_msg
   local_view_data['data_msg']['plan_debug_msg'] = plan_debug_msg
   local_view_data['data_msg']['planning_hmi_msg'] = planning_hmi_msg
@@ -324,6 +330,28 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'text_yn': [0],
       })
 
+  if bag_loader.soc_state_msg['enable'] == True:
+    soc_state = soc_state_msg.current_state
+    print("FunctionalState: ", soc_state)
+    rads_traj_x, rads_traj_y = [], []
+    try:
+      rads_map = soc_state_msg.rads_map
+      points = rads_map.points
+      if g_is_display_enu:
+        for point in points:
+          rads_traj_x.append(point.boot.x)
+          rads_traj_y.append(point.boot.y)
+      else:
+        for point in points:
+          rads_traj_x_local, rads_traj_y_local = coord_tf.global_to_local(point.boot.x, point.boot.y)
+          rads_traj_x.append(rads_traj_x_local)
+          rads_traj_y.append(rads_traj_y_local)
+    except:
+      print("no RADS traj info!")
+    local_view_data['data_rads_traj'].data.update({
+      'traj_y': rads_traj_y,
+      'traj_x': rads_traj_x,
+    })
   if bag_loader.plan_msg['enable'] == True and  plan_msg != None:
     if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
       is_enu_to_car = False
@@ -1012,6 +1040,69 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
       break
 
+  # only plot stop_destination_virtual_obj in cartesian coordinate        
+  local_view_data['data_stop_destination_virtual_obj'].data.update({
+    'agent_vertices_y': [],
+    'agent_vertices_x': [],
+    'agent_center_y' : [],
+    'agent_center_x' : [],
+    'agent_id' : [],
+  })
+  stop_destination_virtual_agent_pos_x = plan_debug_json_msg['stop_destination_virtual_agent_pos_x']
+  stop_destination_virtual_agent_pos_y = plan_debug_json_msg['stop_destination_virtual_agent_pos_y']
+  stop_destination_virtual_agent_theta = plan_debug_json_msg['stop_destination_virtual_agent_theta']
+  stop_destination_virtual_agent_id = plan_debug_json_msg['stop_destination_virtual_agent_id']
+  stop_destination_virtual_agent_width = plan_debug_json_msg['stop_destination_virtual_agent_width']
+  stop_destination_virtual_agent_length = plan_debug_json_msg['stop_destination_virtual_agent_length']
+  cos_heading_stop_destination_virtual_agent = math.cos(stop_destination_virtual_agent_theta)
+  sin_heading_stop_destination_virtual_agent = math.sin(stop_destination_virtual_agent_theta)
+  dx1_tmp = cos_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_length / 2
+  dy1_tmp = sin_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_length / 2
+  dx2_tmp = sin_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_width / 2
+  dy2_tmp = -cos_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_width / 2
+  obs_x_tmp = [
+    stop_destination_virtual_agent_pos_x + dx1_tmp + dx2_tmp,
+    stop_destination_virtual_agent_pos_x + dx1_tmp - dx2_tmp,\
+    stop_destination_virtual_agent_pos_x - dx1_tmp - dx2_tmp,\
+    stop_destination_virtual_agent_pos_x - dx1_tmp + dx2_tmp,\
+    stop_destination_virtual_agent_pos_x + dx1_tmp + dx2_tmp
+  ]
+  obs_y_tmp = [
+    stop_destination_virtual_agent_pos_y + dy1_tmp + dy2_tmp,
+    stop_destination_virtual_agent_pos_y + dy1_tmp - dy2_tmp,\
+    stop_destination_virtual_agent_pos_y - dy1_tmp - dy2_tmp,\
+    stop_destination_virtual_agent_pos_y - dy1_tmp + dy2_tmp,\
+    stop_destination_virtual_agent_pos_y + dy1_tmp + dy2_tmp
+  ]
+  stop_destination_virtual_agent_info = {
+    'agent_vertices_y': [],
+    'agent_vertices_x': [],
+    'agent_center_y' : [],
+    'agent_center_x' : [],
+    'agent_id' : [],
+  }
+  if loc_msg != None: # 长时轨迹
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+    stop_destination_virtual_agent_x_rel, stop_destination_virtual_agent_y_rel = coord_tf.global_to_local(obs_x_tmp, obs_y_tmp)
+    stop_destination_virtual_agent_pos_x_rel, stop_destination_virtual_agent_pos_y_rel = \
+    coord_tf.global_to_local([stop_destination_virtual_agent_pos_x], [stop_destination_virtual_agent_pos_y])
+
+    stop_destination_virtual_agent_info['agent_vertices_y'].append(stop_destination_virtual_agent_y_rel)
+    stop_destination_virtual_agent_info['agent_vertices_x'].append(stop_destination_virtual_agent_x_rel)
+    stop_destination_virtual_agent_info['agent_center_y'].append(stop_destination_virtual_agent_pos_y_rel)
+    stop_destination_virtual_agent_info['agent_center_x'].append(stop_destination_virtual_agent_pos_x_rel)
+    stop_destination_virtual_agent_info['agent_id'].append(stop_destination_virtual_agent_id)
+
+    local_view_data['data_stop_destination_virtual_obj'].data.update({
+      'agent_vertices_y': stop_destination_virtual_agent_info['agent_vertices_y'],
+      'agent_vertices_x': stop_destination_virtual_agent_info['agent_vertices_x'],
+      'agent_center_y' : stop_destination_virtual_agent_info['agent_center_y'],
+      'agent_center_x' : stop_destination_virtual_agent_info['agent_center_x'],
+      'agent_id' : stop_destination_virtual_agent_info['agent_id'],
+    })
   # load mobileye_obj
   if bag_loader.mobileye_objects_msg['enable'] == True:
 
@@ -1699,6 +1790,13 @@ def load_local_view_figure():
                                               'merge_point_y':[]})
   data_lon_collision_object_position = ColumnDataSource(data = {'lon_collision_object_position_x':[],
                                                                 'lon_collision_object_position_y':[]})
+  data_stop_destination_virtual_obj = ColumnDataSource(data = {
+    'agent_vertices_y': [],
+    'agent_vertices_x': [],
+    'agent_center_y': [],
+    'agent_center_x': [],
+    'agent_id': []
+  })
   macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
                                               'macroeconomic_decider_merge_point_y':[]})
   boundary_line_merge_point = ColumnDataSource(data = {'boundary_line_merge_point_x':[],
@@ -1854,6 +1952,9 @@ def load_local_view_figure():
                                           'polygon_y':[], 'polygon_x':[],
                                           'pos_y':[], 'pos_x':[],
                                           'obs_id':[], 'obs_label':[]})
+  data_stop_destination_virtual_obj = ColumnDataSource(data = {'agent_vertices_y':[], 'agent_vertices_x':[],
+                                                               'agent_center_y':[], 'agent_center_x':[],
+                                                               'agent_id':[]})
   data_me_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
@@ -2025,6 +2126,8 @@ def load_local_view_figure():
                                              'pos_y':[],
                                              'pos_x':[],
                                              'speed_bump_label':[]})
+  data_rads_traj = ColumnDataSource(data = {'traj_y':[],
+                                            'traj_x':[]})
 
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -2156,6 +2259,7 @@ def load_local_view_figure():
                      'data_fus_occ_obj' : data_fus_occ_obj, \
                      'data_fus_obj':data_fus_obj, \
                      'data_obj_polygon':data_obj_polygon, \
+                     'data_stop_destination_virtual_obj':data_stop_destination_virtual_obj,\
                      'data_me_obj':data_me_obj, \
                      'data_rdg_obj':data_rdg_obj, \
                      'data_rdg_general_obj': data_rdg_general_obj, \
@@ -2232,7 +2336,8 @@ def load_local_view_figure():
                      'zebra_crossing_line_8':zebra_crossing_line_8,\
                      'zebra_crossing_line_9':zebra_crossing_line_9,\
                      'zebra_crossing_line_10':zebra_crossing_line_10,\
-                     'zebra_crossing_line_11':zebra_crossing_line_11,
+                     'zebra_crossing_line_11':zebra_crossing_line_11,\
+                     'data_rads_traj':data_rads_traj,
                      }
   if is_vis_map:
     for i in range(len(ehr_data_lanes)):
@@ -2423,6 +2528,7 @@ def load_local_view_figure():
   fig1.line('origin_lane_y', 'origin_lane_x', source = data_origin_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'origin_lane')
   fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info')
+  fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
 
   fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info',visible = False)
@@ -2435,6 +2541,8 @@ def load_local_view_figure():
     fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "maroon", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="maroon", text_align="center", text_font_size="10pt", legend_label = 'me_info',visible = False)
 
+  fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path', visible = False)
+  fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path', visible=False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
