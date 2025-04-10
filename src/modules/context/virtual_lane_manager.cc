@@ -607,8 +607,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
                    is_on_road_select_ramp_situation);
 
   // 9.生成导航变道的任务
+  const auto& function_info = session_->environmental_model().function_info();
   const double cancel_mlc_dis_threshold_to_route_end = 400;
-  if (route_info_output_.is_ego_on_expressway) {
+  if (route_info_output_.is_ego_on_expressway &&
+      function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     const bool is_inhibitory_noa_task =
         (route_info_output_.is_exist_toll_station &&
          route_info_output_.distance_to_toll_station <
