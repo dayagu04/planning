@@ -575,7 +575,7 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
     lat_offset -= lat_offset_decrease_buffer;
   } else {
     if (avoid_obstacle.is_passive) {
-      base_distance = 1.0;
+      base_distance -= 0.1;
     }
 
     if (lateral_offset_decider::IsCone(avoid_obstacle)) {
