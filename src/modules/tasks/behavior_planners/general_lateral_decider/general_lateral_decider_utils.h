@@ -13,10 +13,13 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 GeneralLateralDeciderConfig &config);
 
 double CalDesireLonDistance(double ego_vel, double agent_vel);
+double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
+                                   bool use_obstacle_prediction_model_in_planning);
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,
-                                      bool is_update_hard_bound);
+                                      bool is_update_hard_bound,
+                                      GeneralLateralDeciderConfig &config);
 double GetBoundWeight(
     BoundType type,
     const std::unordered_map<BoundType, double> &map_bound_weight);

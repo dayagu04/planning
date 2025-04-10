@@ -129,9 +129,11 @@ class LaneChangeStateMachineManager {
   void MakeFixLane();
   void UpdateStateMachine();
   void GenerateStateMachineOutput();
-  void CalculateSideGapFeasible(LaneChangeStageInfo* const lc_state_info);
+  bool CalculateSideGapFeasible(
+      const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontGapFeasible(LaneChangeStageInfo* const lc_state_info);
-  void CalculateSideAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
+  bool CalculateSideAreaIsSafetyExecution(
+      const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
                const double& threshold);
@@ -153,12 +155,38 @@ class LaneChangeStateMachineManager {
   void IsEgoOnSideLane();
   bool IsLCFeasibleForTrafficCone(
       const planning_data::DynamicAgentNode* traffic_cone) const;
-  const std::vector<double> GetObjsDebugInfo(const double obj_v, const double obj_a, const double obj_t,
-      const double obj_s) const;
+  bool IsLCFeasibleForTrafficConeInTargetLane(
+      const planning_data::DynamicAgentNode* traffic_cone,
+      const int fix_lane_virtual_id) const;
+  const std::vector<double> GetObjsDebugInfo(const double obj_v,
+                                             const double obj_a,
+                                             const double obj_t,
+                                             const double obj_s) const;
 
   bool IsLatOffsetValid() const;
   bool IsDashLineCurBoundary(const RequestType lc_direction) const;
 
+  void CalculateLCGapFeasibleWithPredictionInfo(
+      LaneChangeStageInfo* const lc_state_info,
+      const planning_data::DynamicAgentNode* agent_node,
+      const bool is_front_car, const bool is_ego_lane_car);
+  TrajectoryPoints CalculateAgentPredictionTrajs(
+      const planning_data::DynamicAgentNode* agent_node,
+      const bool is_front_agent, const bool is_ego_lane_agent,
+      const planning_data::DynamicAgentNode** after_filter_agent);
+  TrajectoryPoints CalculateEgoFutureTrajs() const;
+  bool CheckIfSafetyForPredictionTrajs(
+      const TrajectoryPoints& agent_traj,
+      const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
+      const bool is_front_agent);
+  bool IsFilterAgent(
+      const planning_data::DynamicAgentNode* agent_node,
+      const std::shared_ptr<planning_math::KDPath> target_lane_coor,
+      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent);
+  void StoreObjDebugPredictionInfo(
+      const planning_data::DynamicAgentNode* agent_node,
+      const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
+      const bool is_ego_lane_agent);
 
  private:
   ScenarioStateMachineConfig config_;
@@ -195,5 +223,8 @@ class LaneChangeStateMachineManager {
   std::vector<double> lc_rear_objs_vec_{};
   std::vector<double> lc_egos_vec_{};
   std::vector<double> lc_time_vec_{};
+  std::vector<double> lc_front_obj_need_dis_vec_{};
+  std::vector<double> lc_rear_obj_need_dis_vec_{};
+  TrajectoryPoints ego_trajs_future_;
 };
 }  // namespace planning

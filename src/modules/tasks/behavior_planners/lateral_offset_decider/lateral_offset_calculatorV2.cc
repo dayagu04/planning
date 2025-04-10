@@ -154,10 +154,8 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   const double road_avoid_threshold =
       lane_width_ * 0.5 - config_.nudge_buffer_road_boundary - ego_width * 0.5;
   const double lane_avoid_threshold =
-      lane_width_ * 0.5 - config_.nudge_buffer_lane_boundary - ego_width * 0.5;
-  const double static_lane_avoid_threshold =
-      lane_width_ * 0.5 - config_.static_nudge_buffer_lane_boundary -
-      ego_width * 0.5;
+      std::min(lane_width_ * 0.5 - config_.nudge_buffer_lane_boundary - ego_width * 0.5,
+               config_.nudge_lat_offset_threshold);
   int right_lane_virtual_id = flane_->get_virtual_id() + 1;
   int left_lane_virtual_id = flane_->get_virtual_id() - 1;
   int fix_lane_virtual_id = flane_->get_virtual_id();
@@ -178,9 +176,6 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
   }
-
-  avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-  avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
 
   auto last_fix_lane_virtual_id = session_->environmental_model()
                                       .get_virtual_lane_manager()
@@ -206,10 +201,6 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
       std::max(avoid_info_.normal_left_avoid_threshold, 0.0);
   avoid_info_.normal_right_avoid_threshold =
       std::max(avoid_info_.normal_right_avoid_threshold, 0.0);
-  avoid_info_.static_left_avoid_threshold =
-      std::max(avoid_info_.static_left_avoid_threshold, 0.0);
-  avoid_info_.static_right_avoid_threshold =
-      std::max(avoid_info_.static_right_avoid_threshold, 0.0);
 }
 
 void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
@@ -577,6 +568,9 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
   if (config_.nudge_value_way) {
     lat_offset = coeff * (lane_width_ - half_ego_width - nearest_l_to_ref) +
                  lat_compensate;
+    if (config_.use_obstacle_prediction_model_in_planning) {
+      lat_offset -= 0.1;
+    }
   } else {
     if (avoid_obstacle.is_passive) {
       base_distance = 1.0;
@@ -589,6 +583,12 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
     } else if (lateral_offset_decider::IsCone(avoid_obstacle)) {
       base_distance = 0.7;
     }
+
+    if (config_.use_obstacle_prediction_model_in_planning &&
+        !lateral_offset_decider::IsCone(avoid_obstacle)) {
+      base_distance -= 0.1;
+    }
+
     const double pred_ts =
         clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
                  std::max(-avoid_obstacle.vs_lon_relative, 1e-6),
@@ -657,20 +657,10 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetCenterWay(
 double LateralOffsetCalculatorV2::LimitLateralOffset(
     const AvoidObstacleInfo &avoid_obstacle, double lateral_offset,
     const AvoidWay &avoid_way) {
-  bool is_static_avoid_scene = session_->environmental_model()
-                                   .get_lateral_obstacle()
-                                   ->is_static_avoid_scene();
-  if (is_static_avoid_scene) {
-    lateral_offset =
-        avoid_way == AvoidWay::Left
-            ? std::min(lateral_offset, avoid_info_.static_right_avoid_threshold)
-            : std::min(lateral_offset, avoid_info_.static_left_avoid_threshold);
-  } else {
-    lateral_offset =
-        avoid_way == AvoidWay::Left
-            ? std::min(lateral_offset, avoid_info_.normal_right_avoid_threshold)
-            : std::min(lateral_offset, avoid_info_.normal_left_avoid_threshold);
-  }
+  lateral_offset =
+      avoid_way == AvoidWay::Left
+          ? std::min(lateral_offset, avoid_info_.normal_right_avoid_threshold)
+          : std::min(lateral_offset, avoid_info_.normal_left_avoid_threshold);
 
   if (avoid_info_.allow_front_max_opposite_offset <
       avoid_info_.allow_side_max_opposite_offset) {
@@ -1240,9 +1230,10 @@ void LateralOffsetCalculatorV2::CalLaneWidth() {
     double preview_s = 20 + ego_frenet_state_.s();
     double start_s = 5 + ego_frenet_state_.s();
     double interval_s = 5;
-    int point_num = (int)((preview_s - start_s) / interval_s) + 1;
+    int point_num = 0;
     for (double s = start_s; s <= preview_s; s += interval_s) {
       width += flane_->width_by_s(s);
+      point_num += 1;
     }
     width /= point_num;
     static planning_math::MeanFilter width_filter(10);

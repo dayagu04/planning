@@ -3,6 +3,7 @@ sys.path.append("..")
 sys.path.append("../lib/")
 import inspect
 # from lib.load_cyberbag import *
+from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_lc_st_graph import *
 sys.path.append('../..')
@@ -11,7 +12,9 @@ from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 from bokeh.resources import INLINE
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20250121/20250121-16-02-11/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2025-01-21-16-02-11_no_camera.bag.1737510697.open-loop.noa.plan"
+# bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
+# bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-11-00-32/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-11-00-32_no_camera.bag.1741754618.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

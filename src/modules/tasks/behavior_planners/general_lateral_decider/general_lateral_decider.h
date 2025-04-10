@@ -21,6 +21,8 @@
 #include "virtual_lane_manager.h"
 namespace planning {
 
+using namespace planning_math;
+
 class GeneralLateralDecider : public Task {
  public:
   explicit GeneralLateralDecider(const EgoPlanningConfigBuilder *config_builder,
@@ -73,7 +75,9 @@ class GeneralLateralDecider : public Task {
       ObstacleDecision &obstacle_decision);
   double CalculateExtraDecreaseBuffer(
       const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
-  double CalculateExtraLaneTypeDecreaseBuffer(bool is_nudge_left);
+  double CalculateExtraLaneTypeDecreaseBuffer(bool is_nudge_left,
+                                              const double start_s,
+                                              const double end_s);
   void CalculateExtraLaneWidthDecreaseBuffer();
 
   bool CheckObstacleNudgeDecision(
@@ -157,7 +161,7 @@ class GeneralLateralDecider : public Task {
   bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsRearObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
-  bool IsBlockObstacleInLaneBorrow(
+  bool IsBlockedObstacleInLaneBorrow(
       const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFilterForStaticObstacle(
       const std::shared_ptr<FrenetObstacle> obstacle);
@@ -165,6 +169,15 @@ class GeneralLateralDecider : public Task {
       const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsAgentPredLonOverlapWithPlanPath(
       const std::shared_ptr<FrenetObstacle> obstacle);
+  double CalculateSideObstacleExtraDecreaseBufferInIntersection(
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      bool is_nudge_left, bool in_intersection);
+  double AdjustBufferForSideObstacleInIntersection(
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    double overlap_min_y, double overlap_max_y,
+    double lat_buf_dis, bool is_nudge_left,
+    double rear_lon_buf_dis, double front_lon_buf_dis,
+    LatObstacleDecisionType lat_decision, int index);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -174,6 +187,7 @@ class GeneralLateralDecider : public Task {
   TrajectoryPoints ref_traj_points_;
   TrajectoryPoints plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
+  std::unordered_map<uint32_t, LatObstacleDecisionType> last_lat_obstacle_decision_;
 
   ReferencePathPoints ref_path_points_;
   ObstacleDecisions static_obstacle_decisions_;
@@ -187,7 +201,10 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<ReferencePath> reference_path_ptr_;
   double cruise_vel_ = 0.0;
   double extra_lane_width_decrease_buffer_ = 0.0;
+  double overlap_start_s_ = 0.0;
+  double overlap_end_s_ = 0.0;
   bool is_lane_change_scene_ = false;
+  bool is_blocked_obstacle_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;

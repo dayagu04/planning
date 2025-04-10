@@ -17,6 +17,9 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   } else if (IsTruck(type)) {
     base_dis = 0.8;
   }
+  if (config.use_obstacle_prediction_model_in_planning) {
+    base_dis -= 0.1;
+  }
   if (in_intersection) {
     base_dis += config.nudge_extra_buffer_in_intersection;
   }
@@ -28,10 +31,20 @@ double CalDesireLonDistance(double ego_vel, double agent_vel) {
   return 3.0 + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
 
+double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
+                            bool use_obstacle_prediction_model_in_planning) {
+  if (use_obstacle_prediction_model_in_planning) {
+    return std::fmax(0., 1.0 - (std::fmax((agent_vel - ego_vel - 1), 0)));
+  } else {
+    return 1.0;
+  }
+}
+
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,
-                                      bool is_update_hard_bound) {
+                                      bool is_update_hard_bound,
+                                      GeneralLateralDeciderConfig &config) {
   const double kStaticVRUMaxExtraLateralBuffer = 0.65;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.45;
@@ -48,6 +61,11 @@ double CalDesireStaticLateralDistance(const double base_distance,
     max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
   } else {
     max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
+  }
+
+  if (config.use_obstacle_prediction_model_in_planning &&
+      !IsCone(type)) {
+    max_extra_lateral_buffer -= 0.1;
   }
 
   double min_extra_lateral_buffer =
@@ -91,6 +109,8 @@ int GetBoundTypePriority(BoundType type) {
     case BoundType::ADJACENT_AGENT:
       return 3;
     case BoundType::ROAD_BORDER:
+      return 3;
+    case BoundType::REAR_AGENT:
       return 3;
     //  the same level
     // case BoundType::PURNE_VEHICLE_WIDTH:
