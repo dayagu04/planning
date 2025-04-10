@@ -880,37 +880,78 @@ double VirtualLaneManager::get_distance_to_first_road_split() const {
 bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
   const auto& stop_line = current_lane_->get_stop_line();
   double ego_to_stopline_dis = NL_NMAX;
+  const auto& location_valid = session_->environmental_model().location_valid();
   if (stop_line.type == iflyauto::LANE_LINE_TYPE_STOPLINE) {
-    std::vector<iflyauto::Point2f> stop_line_points_vec;
-    stop_line_points_vec.resize(stop_line.car_points_size);
-    for (int i = 0; i < stop_line.car_points_size; i++) {
-      stop_line_points_vec[i] = stop_line.car_points[i];
-    }
-    auto compare_y = [&](iflyauto::Point2f p1, iflyauto::Point2f p2) {
-      return p1.y < p2.y;
-    };
-    std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(),
-              compare_y);
-    int idx = -1;
-    for (int i = 0; i < stop_line_points_vec.size() - 1; i++) {
-      if (stop_line_points_vec[i].y < 0.0 &&
-          stop_line_points_vec[i + 1].y > 0.0) {
-        idx = i;
-        break;
-      }
-    }
+    if (location_valid) {
+      const auto& ego_state =
+        session_->environmental_model().get_ego_state_manager();
+      Point2D ego_cart(ego_state->ego_pose().x, ego_state->ego_pose().y);
 
-    if (idx != -1) {
-      planning::planning_math::Vec2d p_left(stop_line_points_vec[idx].x,
-                                            stop_line_points_vec[idx].y);
-      planning::planning_math::Vec2d p_right(stop_line_points_vec[idx + 1].x,
-                                             stop_line_points_vec[idx + 1].y);
-      planning::planning_math::LineSegment2d line_seg(p_left, p_right);
-      int id = 0;
-      planning::StopLine lane_stop_line = planning::StopLine(id, line_seg);
-      double raw_dis =
-          lane_stop_line.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
-      ego_to_stopline_dis = -1.0 * raw_dis;
+      const auto frenet_coord = current_lane_->get_lane_frenet_coord();
+      if (frenet_coord != nullptr) {
+        std::vector<Point2D> stop_line_points_vec;
+        stop_line_points_vec.resize(stop_line.enu_points_size);
+        for (int i = 0; i < stop_line.enu_points_size; i++) {
+          Point2D stop_line_pt;
+          stop_line_pt.x = stop_line.enu_points[i].x;
+          stop_line_pt.y = stop_line.enu_points[i].y;
+          if (!frenet_coord->XYToSL(stop_line_pt, stop_line_points_vec[i])) {
+            stop_line_points_vec[i].x = NL_NMAX;
+            stop_line_points_vec[i].y = NL_NMAX;
+          }
+        }
+        auto compare_y = [&](Point2D p1, Point2D p2) { return p1.y < p2.y; };
+        std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(), compare_y);
+        int idx = -1;
+        for (int i = 0; i < stop_line_points_vec.size() - 1; i++) {
+          if (stop_line_points_vec[i].y < 0.0 &&
+              stop_line_points_vec[i + 1].y > 0.0 && stop_line_points_vec[i + 1].y < 100.0) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx != -1) {
+          double ego_s = 0.0;
+          double ego_l = 0.0;
+          if (frenet_coord->XYToSL(ego_cart.x, ego_cart.y, &ego_s, &ego_l)) {
+            ego_to_stopline_dis = (stop_line_points_vec[idx].x + stop_line_points_vec[idx + 1].x) / 2.0 - ego_s;
+          }
+        }
+
+      }
+    } else {
+      std::vector<iflyauto::Point2f> stop_line_points_vec;
+      stop_line_points_vec.resize(stop_line.car_points_size);
+      for (int i = 0; i < stop_line.car_points_size; i++) {
+        stop_line_points_vec[i] = stop_line.car_points[i];
+      }
+      auto compare_y = [&](iflyauto::Point2f p1, iflyauto::Point2f p2) {
+        return p1.y < p2.y;
+      };
+      std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(),
+                compare_y);
+      int idx = -1;
+      for (int i = 0; i < stop_line_points_vec.size() - 1; i++) {
+        if (stop_line_points_vec[i].y < 0.0 &&
+            stop_line_points_vec[i + 1].y > 0.0) {
+          idx = i;
+          break;
+        }
+      }
+
+      if (idx != -1) {
+        planning::planning_math::Vec2d p_left(stop_line_points_vec[idx].x,
+                                              stop_line_points_vec[idx].y);
+        planning::planning_math::Vec2d p_right(stop_line_points_vec[idx + 1].x,
+                                              stop_line_points_vec[idx + 1].y);
+        planning::planning_math::LineSegment2d line_seg(p_left, p_right);
+        int id = 0;
+        planning::StopLine lane_stop_line = planning::StopLine(id, line_seg);
+        double raw_dis =
+            lane_stop_line.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
+        ego_to_stopline_dis = -1.0 * raw_dis;
+      }
+
     }
   }
   stopline_window_.pop_front();
@@ -930,6 +971,8 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
 bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
     const iflyauto::RoadInfo* roads_ptr) {
   double ego_to_crosswalk_dis = NL_NMAX;
+  const auto& location_valid = session_->environmental_model().location_valid();
+  std::vector<std::pair<int, double>> cw_idx_dis_vec;
   std::vector<std::vector<iflyauto::Point2f>> cross_walk_pts_vec;
   for (int i = 0; i < roads_ptr->lane_ground_markings_size; i++) {
     const auto& cross_walk = roads_ptr->lane_ground_markings[i];
@@ -937,41 +980,111 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
             iflyauto::LaneDrivableDirection_DIRECTION_CROSS_LINE &&
         std::abs(cross_walk.orientation_angle) < 0.5) {
       std::vector<iflyauto::Point2f> cw_pts;
-      cw_pts.resize(cross_walk.ground_marking_points_set_size);
-      for (int idx = 0; idx < cross_walk.ground_marking_points_set_size;
-           idx++) {
-        cw_pts[idx] = cross_walk.ground_marking_points_set[idx];
+      if (location_valid) {
+        cw_pts.resize(cross_walk.local_ground_marking_points_set_size);
+        for (int idx = 0; idx < cross_walk.local_ground_marking_points_set_size;
+            idx++) {
+          cw_pts[idx] = cross_walk.local_ground_marking_points_set[idx];
+        }
+      } else {
+        cw_pts.resize(cross_walk.ground_marking_points_set_size);
+        for (int idx = 0; idx < cross_walk.ground_marking_points_set_size;
+            idx++) {
+          cw_pts[idx] = cross_walk.ground_marking_points_set[idx];
+        }
       }
       cross_walk_pts_vec.push_back(cw_pts);
     }
   }
-  auto compare_y = [&](iflyauto::Point2f p1, iflyauto::Point2f p2) {
-    return p1.y < p2.y;
-  };
-  std::vector<std::pair<int, double>> cw_idx_dis_vec;
-  for (int j = 0; j < cross_walk_pts_vec.size(); j++) {
-    auto& cw_pt_vec = cross_walk_pts_vec[j];
-    std::sort(cw_pt_vec.begin(), cw_pt_vec.end(), compare_y);
-    int idx = -1;
-    for (int i = 0; i < cw_pt_vec.size() - 1; i++) {
-      if (cw_pt_vec[i].y < 0.0 && cw_pt_vec[i + 1].y > 0.0) {
-        idx = i;
-        break;
+
+  if (location_valid) {
+    const auto& ego_state =
+        session_->environmental_model().get_ego_state_manager();
+    Point2D ego_cart(ego_state->ego_pose().x, ego_state->ego_pose().y);
+    const auto frenet_coord = current_lane_->get_lane_frenet_coord();
+    if (frenet_coord != nullptr) {
+      for (int j = 0; j < cross_walk_pts_vec.size(); j++) {
+        auto& cw_pt_vec = cross_walk_pts_vec[j];
+        std::vector<Point2D> cw_frenet_pt_vec;
+        cw_frenet_pt_vec.resize(cw_pt_vec.size());
+        for (int i = 0; i < cw_pt_vec.size(); i++) {
+          Point2D cw_pt;
+          cw_pt.x = cw_pt_vec[i].x;
+          cw_pt.y = cw_pt_vec[i].y;
+          if (!frenet_coord->XYToSL(cw_pt, cw_frenet_pt_vec[i])) {
+            cw_frenet_pt_vec[i].x = NL_NMAX;
+            cw_frenet_pt_vec[i].y = NL_NMAX;
+          }
+        }
+        auto compare_y = [&](Point2D p1, Point2D p2) { return p1.y < p2.y; };
+        std::sort(cw_frenet_pt_vec.begin(), cw_frenet_pt_vec.end(), compare_y);
+        int idx = -1;
+        for (int i = 0; i < cw_frenet_pt_vec.size() - 1; i++) {
+          if (cw_frenet_pt_vec[i].y < 0.0 && cw_frenet_pt_vec[i + 1].y > 0.0
+              && cw_frenet_pt_vec[i + 1].y < 100.0) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx != -1) {
+          double neg_l_min_s = NL_NMAX;
+          for (int i = 0; i <= idx; i++) {
+            if (cw_frenet_pt_vec[i].x < neg_l_min_s) {
+              neg_l_min_s = cw_frenet_pt_vec[i].x;
+            }
+          }
+          double pos_l_min_s = NL_NMAX;
+          for (int i = idx + 1; i < cw_frenet_pt_vec.size(); i++) {
+            if (cw_frenet_pt_vec[i].x < pos_l_min_s) {
+              pos_l_min_s = cw_frenet_pt_vec[i].x;
+            }
+          }
+          double ego_s = 0.0;
+          double ego_l = 0.0;
+          if (frenet_coord->XYToSL(ego_cart.x, ego_cart.y, &ego_s, &ego_l)) {
+            double ego_cw_dis = (neg_l_min_s + pos_l_min_s) * 0.5 - ego_s;
+            cw_idx_dis_vec.push_back(std::make_pair(j, ego_cw_dis));
+          }
+        } else {
+          continue;
+        }
+
       }
     }
-    if (idx != -1) {
-      // double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx + 1].x);
-      double pt_x = (cw_pt_vec[idx].x + cw_pt_vec[idx + 1].x) / 2.0;
-      planning::planning_math::Vec2d p_left(pt_x, cw_pt_vec[idx].y);
-      planning::planning_math::Vec2d p_right(pt_x, cw_pt_vec[idx + 1].y);
-      planning::planning_math::LineSegment2d line_seg(p_left, p_right);
-      double raw_dis =
-          line_seg.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
-      cw_idx_dis_vec.push_back(std::make_pair(j, -1.0 * raw_dis));
-    } else {
-      continue;
+  } else {
+    auto compare_y = [&](iflyauto::Point2f p1, iflyauto::Point2f p2) {
+      return p1.y < p2.y;
+    };
+    for (int j = 0; j < cross_walk_pts_vec.size(); j++) {
+      auto& cw_pt_vec = cross_walk_pts_vec[j];
+      std::sort(cw_pt_vec.begin(), cw_pt_vec.end(), compare_y);
+      int idx = -1;
+      for (int i = 0; i < cw_pt_vec.size() - 1; i++) {
+        if (cw_pt_vec[i].y < 0.0 && cw_pt_vec[i + 1].y > 0.0) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx != -1) {
+        double neg_l_min_s = NL_NMAX;
+        for (int i = 0; i <= idx; i++) {
+          if (cw_pt_vec[i].x < neg_l_min_s) {
+            neg_l_min_s = cw_pt_vec[i].x;
+          }
+        }
+        double pos_l_min_s = NL_NMAX;
+        for (int i = idx + 1; i < cw_pt_vec.size(); i++) {
+          if (cw_pt_vec[i].x < pos_l_min_s) {
+            pos_l_min_s = cw_pt_vec[i].x;
+          }
+        }
+        cw_idx_dis_vec.push_back(std::make_pair(j, 0.5 * (neg_l_min_s + pos_l_min_s)));
+      } else {
+        continue;
+      }
     }
   }
+
   // more than one, select the min dis crosswalk
   if (cw_idx_dis_vec.size() > 0) {
     int min_dis = NL_NMAX;

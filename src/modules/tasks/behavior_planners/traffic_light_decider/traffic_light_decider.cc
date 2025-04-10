@@ -105,10 +105,11 @@ bool TrafficLightDecider::Execute() {
 
     } else if (traffic_status.go_straight == 20 ||
                traffic_status.go_straight == 22) {
-      // yellow blink in intersection, use last frame
+      // yellow blink in intersection, can pass
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
+      can_pass_ = true;
 
     } else {
       // others, can go
@@ -132,6 +133,12 @@ bool TrafficLightDecider::Execute() {
       green_blink_timer_ = 0.0;
       can_pass_ = true;
 
+    } else if (traffic_status.go_straight == 20 || traffic_status.go_straight == 22) {
+      //wrong yellow light brake in intersection then yellow blink, can pass
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = true;
     } else {
       can_pass_ = false;
     }
@@ -182,7 +189,23 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   double dis_to_crosswalk = session_->environmental_model()
                                 .get_virtual_lane_manager()
                                 ->GetEgoDistanceToCrosswalk();
-  auto &car2enu =
+
+  const auto &reference_path_ptr = session_->planning_context()
+                                .lane_change_decider_output()
+                                .coarse_planning_info.reference_path;
+  const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  double ego_start_s = frenet_ego_state.s();
+  double virtual_obs_dis = std::min(dis_to_stopline + 4.0, dis_to_crosswalk + 2.0);
+  ReferencePathPoint refpath_pt;
+  if (reference_path_ptr->get_reference_point_by_lon(
+    ego_start_s + virtual_obs_dis, refpath_pt)) {
+    virtual_agent.set_x(refpath_pt.path_point.x());  //几何中心
+    virtual_agent.set_y(refpath_pt.path_point.y());
+  } else {
+    return false;
+  }
+
+  /* auto &car2enu =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
   Eigen::Vector3d car_point, enu_point;
   car_point.x() = std::min(dis_to_stopline + 4.0, dis_to_crosswalk + 2.0);
@@ -190,7 +213,7 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   car_point.z() = 0.0;
   enu_point = car2enu * car_point;
   virtual_agent.set_x(enu_point.x());  //几何中心
-  virtual_agent.set_y(enu_point.y());
+  virtual_agent.set_y(enu_point.y()); */
   virtual_agent.set_length(5.0);
   virtual_agent.set_width(2.0);
   virtual_agent.set_fusion_source(1);

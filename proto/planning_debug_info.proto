@@ -122,4 +122,5 @@ message PlanningDebugInfo {
   optional ApaSpeedDebug apa_speed_debug = 35;
   optional WeightMaker weight_maker = 36;
   optional HybridARAInfo hybrid_ara_info = 37;
+  repeated DoublePair dis_curv_list = 38;
 }

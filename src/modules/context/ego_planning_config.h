@@ -2334,7 +2334,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double delta_time = 0.2;
   double preview_x = 80.0;
   double t_curv = 2.0;
-  double dis_curv = 30.0;
+  double dis_curv = 80.0;
   double pre_accelerate_distance_for_merge = 80.0;
   double straight_ramp_v_limit = 22.22;
   double v_limit_ramp = 16.67;
