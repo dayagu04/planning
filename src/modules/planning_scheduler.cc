@@ -706,7 +706,7 @@ void PlanningScheduler::ClearParkingInfo(
 bool PlanningScheduler::IsUndefinedScene(
     const iflyauto::FunctionalState &current_state) {
   return current_state == iflyauto::FunctionalState_MANUAL ||
-         current_state == iflyauto::FunctionalState_ERROR ||
+         current_state == iflyauto::FunctionalState_SYSTEM_ERROR ||
          current_state == iflyauto::FunctionalState_MRC;
 }
 
