@@ -3364,7 +3364,11 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
     }
 
     geometry_lib::PathSegment arc_seg(steer, gear, arc);
-    if (TrimPathByObs(arc_seg, lat_buffer, lon_buffer, enable_log) !=
+    double lon_safe_buffer = lon_buffer;
+    if (same_gear) {
+      lon_safe_buffer = 0.0;
+    }
+    if (TrimPathByObs(arc_seg, lat_buffer, lon_safe_buffer, enable_log) !=
         PathColDetRes::NORMAL) {
       ILOG_INFO_IF(enable_log) << "align body path col, quit";
       return false;
@@ -3499,7 +3503,7 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
       geometry_lib::PathSegment arc_seg2(steer2, gear2, arc_s_2);
 
       success = success &&
-                (TrimPathByObs(arc_seg1, lat_buffer, lon_buffer, enable_log) ==
+                (TrimPathByObs(arc_seg1, lat_buffer, 0.0, enable_log) ==
                  PathColDetRes::NORMAL) &&
                 (TrimPathByObs(arc_seg2, lat_buffer, lon_buffer, enable_log) ==
                  PathColDetRes::NORMAL);
@@ -3534,7 +3538,11 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
   if (success) {
     ILOG_INFO_IF(enable_log) << "AlignAndSTurnPathPlan has path";
     if (calc_params_.optimize_plan && calc_params_.cur_gear_path_flag && iter &&
-        ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
+        ref_gear == geometry_lib::SEG_GEAR_DRIVE &&
+        geometry_path.end_pose.pos.x() >
+            input_.ego_info_under_slot.slot.processed_corner_coord_local_
+                    .pt_01_mid.x() -
+                0.168) {
       std::vector<geometry_lib::PathSegment> seg_vec =
           geometry_path.path_segment_vec;
       geometry_lib::PathSegment seg = seg_vec.back();
@@ -3893,10 +3901,21 @@ const bool PerpendicularTailInPathGenerator::InsertLineInGeometryPath(
   line.heading_vec = geometry_lib::GenHeadingVec(line.heading);
   double suitable_path_length = apa_param.GetParam().min_one_step_path_length;
 
-  if (CalOccupiedRatio(geometry_path.end_pose) > 0.8 &&
-      ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
-    suitable_path_length *= 2.0;
+  if (ref_gear == geometry_lib::SEG_GEAR_DRIVE &&
+      std::fabs(geometry_path.end_pose.heading * kRad2Deg) < 2.0) {
+    suitable_path_length =
+        std::max(suitable_path_length,
+                 input_.ego_info_under_slot.slot.processed_corner_coord_local_
+                         .pt_01_mid.x() -
+                     1.268 - geometry_path.end_pose.pos.x());
   }
+
+  // if (CalOccupiedRatio(geometry_path.end_pose) > 0.8 &&
+  //     ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
+  //   suitable_path_length *= 2.0;
+  // }
+
+  ILOG_INFO << "suitable_path_length = " << suitable_path_length;
   line.length = std::max(insert_length,
                          suitable_path_length - geometry_path.total_length);
   const int sign = (ref_gear == geometry_lib::SEG_GEAR_DRIVE) ? 1.0 : -1.0;
