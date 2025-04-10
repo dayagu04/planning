@@ -3105,6 +3105,14 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   const auto &obs_type = obstacle->type();
   const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+  const auto lat_obs_decision_iter =
+      lat_obstacle_decision.find(obstacle->id());
+  if (lat_obs_decision_iter == lat_obstacle_decision.end()){
+    return false;
+  }
 
   is_blocked_obstacle_ = IsBlockedObstacleInLaneBorrow(obstacle);
   if (is_blocked_obstacle_) {
@@ -3148,7 +3156,15 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   const auto &obs_type = obstacle->type();
   const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
-
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+  const auto lat_obs_decision_iter =
+      lat_obstacle_decision.find(obstacle->id());
+  if (lat_obs_decision_iter == lat_obstacle_decision.end()){
+    return false;
+  }
+  
   is_blocked_obstacle_ = IsBlockedObstacleInLaneBorrow(obstacle);
   if (is_blocked_obstacle_) {
     return true;
