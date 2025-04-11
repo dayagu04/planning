@@ -15,7 +15,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   framework
   advanced_ctrl_lib
   osqp
-  iflyauto_log
 )
 
 if(PP_ENABLE OR PYBIND_TOOL_ENABLE)
