@@ -20,11 +20,7 @@ class RSExpansionDecider : public AstarDecider {
 
   void Process(const Pose2D &start, const Pose2D &end) override;
 
-  const float GetEndPointMaxDepth();
-
   const Pose2D &GetRSEndPose();
-
-  const bool IsSameEndPointForRsWithAstar();
 
   bool IsNeedRsExpansion(const Node3d *node, const AstarRequest *request) const;
 
@@ -44,9 +40,6 @@ class RSExpansionDecider : public AstarDecider {
   const bool NeedRsLinkByRequestDist(
     const Node3d *node, const AstarRequest *request) const;
 
-  bool same_point_for_rs_with_astar_;
-
-  float rs_end_max_depth_;
   Pose2D rs_end_pose_;
 };
 

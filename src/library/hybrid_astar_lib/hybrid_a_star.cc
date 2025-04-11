@@ -685,12 +685,6 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   rs_interpolate_time_ms_ += rs_end_time - rs_start_time;
 #endif
 
-#if PLOT_RS_EXNTEND_TO_END
-  if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
-    rs_path_h_cost_debug_.emplace_back(rs_path_);
-  }
-#endif
-
   NodePath path;
   path.path_dist = std::fabs(rs_path_.total_length);
   path.point_size = 1;
@@ -734,6 +728,14 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   rs_node_to_goal->SetGCost(current_node->GetGCost() + gcost);
   rs_node_to_goal->SetHeuCost(0.0);
   rs_node_to_goal->SetFCost();
+
+#if PLOT_RS_EXNTEND_TO_END
+  if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM &&
+      current_node->GetGearSwitchNum() <= 1 &&
+      current_node->GetGearType() == AstarPathGear::DRIVE) {
+    rs_path_h_cost_debug_.emplace_back(rs_path_);
+  }
+#endif
 
   // DebugRSPath(&rs_path_);
 
@@ -1981,45 +1983,43 @@ float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
   float dist_cost = path_dist * config_.traj_forward_penalty;
   cost->rs_path_dist = dist_cost;
 
-  float gear_cost = 0.0;
-  float steer_change_cost = 0.0;
+  // float gear_cost = 0.0;
+  // float steer_change_cost = 0.0;
 
-  for (int i = 0; i < rs_path_.size - 1; i++) {
-    // gear cost
-    if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
-      gear_cost += config_.gear_switch_penalty_heu;
-    }
+  // for (int i = 0; i < rs_path_.size - 1; i++) {
+  //   // gear cost
+  //   if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
+  //     gear_cost += config_.gear_switch_penalty_heu;
+  //   }
 
-    // steer change cost
-    if (rs_path_.paths[i].steer != rs_path_.paths[i + 1].steer) {
-      if (rs_path_.paths[i].steer == RS_STRAIGHT ||
-          rs_path_.paths[i + 1].steer == RS_STRAIGHT) {
-        steer_change_cost +=
-            config_.traj_steer_change_penalty * max_steer_angle_;
-      } else {
-        steer_change_cost +=
-            config_.traj_steer_change_penalty * max_steer_angle_ * 2;
-      }
-    }
-  }
+  //   // steer change cost
+  //   if (rs_path_.paths[i].steer != rs_path_.paths[i + 1].steer) {
+  //     if (rs_path_.paths[i].steer == RS_STRAIGHT ||
+  //         rs_path_.paths[i + 1].steer == RS_STRAIGHT) {
+  //       steer_change_cost +=
+  //           config_.traj_steer_change_penalty * max_steer_angle_;
+  //     } else {
+  //       steer_change_cost +=
+  //           config_.traj_steer_change_penalty * max_steer_angle_ * 2;
+  //     }
+  //   }
+  // }
 
-  // gear cost
-  if (next_node->GetGearType() != rs_path_.paths[0].gear) {
-    gear_cost += config_.gear_switch_penalty_heu;
-  }
+  // // gear cost
+  // if (next_node->GetGearType() != rs_path_.paths[0].gear) {
+  //   gear_cost += config_.gear_switch_penalty_heu;
+  // }
 
-  // steer cost
-  if (next_node->GetSteer() > 0.0 && rs_path_.paths[0].steer != RS_LEFT) {
-    steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
-  } else if (next_node->GetSteer() < 0.0 &&
-             rs_path_.paths[0].steer != RS_RIGHT) {
-    steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
-  }
+  // // steer cost
+  // if (next_node->GetSteer() > 0.0 && rs_path_.paths[0].steer != RS_LEFT) {
+  //   steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+  // } else if (next_node->GetSteer() < 0.0 &&
+  //            rs_path_.paths[0].steer != RS_RIGHT) {
+  //   steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+  // }
 
-  cost->rs_path_gear = gear_cost;
-  cost->rs_path_steer = steer_change_cost;
-
-  float collision_cost = 0.0;
+  // cost->rs_path_gear = gear_cost;
+  // cost->rs_path_steer = steer_change_cost;
 
 #if PLOT_RS_COST_PATH
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
@@ -2030,11 +2030,11 @@ float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
   }
 #endif
 
-  return dist_cost + gear_cost + steer_change_cost + collision_cost;
+  return dist_cost;
 }
 
 float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
-                                          Node3d* next_node) {
+                                         Node3d* next_node) {
   // evaluate cost on the trajectory and add current cost
   float piecewise_cost = 0.0;
   float path_dist = 0.0;
@@ -2101,8 +2101,8 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
 }
 
 float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
-                                            Node3d* rs_node,
-                                            const RSPath* rs_path) {
+                                           Node3d* rs_node,
+                                           const RSPath* rs_path) {
   rs_node->SetGearSwitchNum(current_node->GetGearSwitchNum());
   // evaluate cost on the trajectory and add current cost
   float piecewise_cost = 0.0;
@@ -2371,11 +2371,6 @@ const bool HybridAStar::BackwardPassByRSPath(HybridAStarResult* result,
 
       last_gear_type = cur_gear_type;
     }
-  }
-
-  // link rs end to astar end
-  if (!rs_expansion_decider_.IsSameEndPointForRsWithAstar()) {
-    LinkRsToAstarEndPoint(result, astar_end_node_->GetPose());
   }
 
   size_t pt_size = result->x.size();
@@ -3782,10 +3777,10 @@ bool HybridAStar::AstarSearch(
 
 #if PLOT_CHILD_NODE
       // if node is gear switch point, plot it also.
-      if (current_node->GearSwitchNode() != nullptr) {
+      if (rs_node_to_goal.GearSwitchNode() != nullptr) {
         child_node_debug_.emplace_back(DebugAstarSearchPoint(
-            current_node->GearSwitchNode()->GetX(),
-            current_node->GearSwitchNode()->GetY(), true, true));
+            rs_node_to_goal.GearSwitchNode()->GetX(),
+            rs_node_to_goal.GearSwitchNode()->GetY(), true, true));
       }
 #endif
 

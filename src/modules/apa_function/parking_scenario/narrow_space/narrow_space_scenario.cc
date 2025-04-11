@@ -447,11 +447,6 @@ void NarrowSpaceScenario::Log() const {
     JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0);
   }
 
-  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3);
-  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3);
-  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3);
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3);
-
   return;
 }
 
@@ -819,6 +814,11 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     return 0;
   }
 
+  std::vector<double> path_x;
+  std::vector<double> path_y;
+  std::vector<double> path_theta;
+  std::vector<double> path_lat_buffer;
+
   size_t i;
   Pose2D local_position;
   Pose2D global_position;
@@ -847,7 +847,17 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     } else {
       point->set_l(1.0);
     }
+
+    path_x.emplace_back(global_position.x);
+    path_y.emplace_back(global_position.y);
+    path_theta.emplace_back(global_position.theta);
+    path_lat_buffer.emplace_back(0.0);
   }
+
+  JSON_DEBUG_VECTOR("plan_traj_x", path_x, 3);
+  JSON_DEBUG_VECTOR("plan_traj_y", path_y, 3);
+  JSON_DEBUG_VECTOR("plan_traj_heading", path_theta, 3);
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", path_lat_buffer, 3);
 
   // do not publish it.
   if (0) {
