@@ -1568,21 +1568,25 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
-  const pnc::geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  const geometry_lib::PathPoint front_tar_pose_bef =
+      GetCarFrontPoseFromCarPose(tar_pose_bef);
 
   // 计算当前的真实车位终点位置
   geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
   tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
   tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
+  const geometry_lib::PathPoint front_tar_pose_now =
+      GetCarFrontPoseFromCarPose(tar_pose_now);
 
   const auto& param = apa_param.GetParam();
 
   std::vector<double> fail_count_tab{3.0, 4.0, 5.0, 6.0, 7.0};
   const double dlat =
-      (param.should_stop_lat_err - (param.finish_lat_err_strict + 1e-3)) /
+      (param.should_stop_lat_err - (param.finish_lat_err_strict - 1e-3)) /
       (fail_count_tab.size() - 1);
   const double dheading =
-      (param.should_stop_heading_err - (param.finish_heading_err + 1e-3)) /
+      (param.should_stop_heading_err - (param.finish_heading_err - 1e-3)) /
       (fail_count_tab.size() - 1);
   std::vector<double> lat_err_tab{};
   std::vector<double> heading_err_tab{};
@@ -1601,9 +1605,12 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
       mathlib::Interp1(fail_count_tab, heading_err_tab,
                        static_cast<double>(frame_.dynamic_replan_fail_count));
 
-  const double lat_err = tar_pose_now.pos.y() - tar_pose_bef.pos.y();
+  const double lat_err = std::max(
+      std::fabs(tar_pose_now.pos.y() - tar_pose_bef.pos.y()),
+      std::fabs(front_tar_pose_now.pos.y() - front_tar_pose_bef.pos.y()));
+
   const double heading_err =
-      (tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
+      std::fabs(tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
 
   ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
             << "  lat_err_threshold = " << lat_err_threshold
@@ -1818,21 +1825,23 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
 
   // 如果之前路径误差越小 那么对现在路径的最后一段直线长度要求就越高
   double line_length = 0.0;
-  for (int i = geometry_path_now.path_segment_vec.size() - 1; i >= 0; ++i) {
+  for (int i = geometry_path_now.path_segment_vec.size() - 1; i >= 0; i--) {
     const auto& seg = geometry_path_now.path_segment_vec[i];
-    if (seg.seg_type == geometry_lib::SEG_TYPE_LINE &&
+    if (seg.seg_steer == geometry_lib::SEG_TYPE_LINE &&
         seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
       line_length += geometry_path_now.path_segment_vec[i].Getlength();
     } else {
       break;
     }
   }
-  const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.11};
-  const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.4};
+  const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.10};
+  const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.368};
   const double min_line_length = mathlib::Interp1(
       lat_err_tab, line_length_tab,
       std::max(std::fabs(lat_err_bef), std::fabs(front_lat_err_bef)));
 
+  ILOG_INFO << "now line length = " << line_length
+            << "  min line length = " << min_line_length;
   if (line_length < min_line_length) {
     ILOG_INFO << "the last line length is small";
     return false;
