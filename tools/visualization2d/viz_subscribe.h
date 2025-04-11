@@ -65,7 +65,7 @@ struct VizSubscribe {
 
   FuncStateMachine::FuncStateMachine function_state_machine_info;
 
-  UssWaveInfo::UssWaveInfo uss_wave_info;
+  iflyauto::UssPdcIccSendDataType uss_wave_info;
 
   UssPerceptInfo::UssPerceptInfo uss_percept_info;
 

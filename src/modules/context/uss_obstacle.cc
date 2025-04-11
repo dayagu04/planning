@@ -48,8 +48,8 @@ static const std::vector<double> uss_normal_angle_deg_vec = {
 
 static const double uss_scan_angle_deg = 60.0;
 
-static const std::vector<size_t> wdis_index_front = {0, 9, 6, 3, 1, 11};
-static const std::vector<size_t> wdis_index_back = {0, 1, 3, 6, 9, 11};
+static const std::vector<size_t> wdis_index_front = {0, 1, 2, 3, 4, 5};
+static const std::vector<size_t> wdis_index_back = {6, 7, 8, 9, 10, 11};
 
 namespace planning {
 void UssObstacle::InitVertexData() {
@@ -237,7 +237,7 @@ bool UssObstacle::Preprocess() {
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_vertex_x_vec.size());
   const auto &upa_dis_info_buf =
-      local_view_ptr_->uss_wave_info.upa_dis_info_buf;
+      local_view_ptr_->uss_wave_info.sonar_distance_data;
 
   // WB: c结构体缺少size判断
   // if (upa_dis_info_buf.size() < 2) {
@@ -247,13 +247,13 @@ bool UssObstacle::Preprocess() {
   // front uss
   for (size_t i = 0; i < wdis_index_front.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[0].wdis[wdis_index_front[i]].wdis_value[0]);
+        upa_dis_info_buf[wdis_index_front[i]].pas_sonarx_distance);
   }
 
   // back uss
   for (size_t i = 0; i < wdis_index_back.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[1].wdis[wdis_index_back[i]].wdis_value[0]);
+        upa_dis_info_buf[wdis_index_back[i]].pas_sonarx_distance);
   }
 
   return true;

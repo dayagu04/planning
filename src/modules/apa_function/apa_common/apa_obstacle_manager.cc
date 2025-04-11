@@ -48,10 +48,11 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     }
   } else {
     // load uss dist from uss wave, m id f
-    const auto& upa_dis_info_buf = local_view->uss_wave_info.upa_dis_info_buf;
+    const auto& upa_dis_info_buf =
+        local_view->uss_wave_info.sonar_distance_data;
 
-    const std::vector<int> front_wids_idx_vec = {0, 9, 6, 3, 1, 11};
-    const std::vector<int> rear_wids_idx_vec = {0, 1, 3, 6, 9, 11};
+    const std::vector<int> front_wids_idx_vec = {0, 1, 2, 3, 4, 5};
+    const std::vector<int> rear_wids_idx_vec = {6, 7, 8, 9, 10, 11};
 
     const std::vector<std::vector<int>> wids_idx_vec = {front_wids_idx_vec,
                                                         rear_wids_idx_vec};
@@ -59,7 +60,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       for (size_t j = 0; j < wids_idx_vec[i].size(); j++) {
         const auto idx = wids_idx_vec[i][j];
         uss_dis_vec_.emplace_back(std::max(
-            min_uss_dist, 1.0 * upa_dis_info_buf[i].wdis[idx].wdis_value[0]));
+            min_uss_dist, 1.0 * upa_dis_info_buf[idx].pas_sonarx_distance));
       }
     }
   }

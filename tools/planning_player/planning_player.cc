@@ -482,7 +482,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
   if (scene_type_ == "apa") {
     for (const auto& msg : view) {
       if (msg.getTopic() == TOPIC_USS_WAVE_INFO) {
-        cache_with_ros_msg_and_header_time<struct_msgs::UssWaveInfo>(msg);
+        cache_with_ros_msg_and_header_time<struct_msgs::UssPdcIccSendDataType>(
+            msg);
       } else if (msg.getTopic() == TOPIC_USS_PERCEPT_INFO) {
         cache_with_ros_msg_and_header_time<struct_msgs::UssPerceptInfo>(msg);
       } else if (msg.getTopic() == TOPIC_VISION_PARKING_SLOT) {
@@ -588,8 +589,8 @@ void PlanningPlayer::StoreRosBag() {
         write_ros_msg<struct_msgs::CameraPerceptionTsrInfo::Ptr>(
             it_msg.second, TOPIC_TRAFFIC_SIGN, bag);
       } else if (it_msg.first == TOPIC_USS_WAVE_INFO) {
-        write_ros_msg<struct_msgs::UssWaveInfo::Ptr>(it_msg.second,
-                                                     TOPIC_USS_WAVE_INFO, bag);
+        write_ros_msg<struct_msgs::UssPdcIccSendDataType::Ptr>(
+            it_msg.second, TOPIC_USS_WAVE_INFO, bag);
       } else if (it_msg.first == TOPIC_USS_PERCEPT_INFO) {
         write_ros_msg<struct_msgs::UssPerceptInfo::Ptr>(
             it_msg.second, TOPIC_USS_PERCEPT_INFO, bag);
@@ -809,10 +810,10 @@ void PlanningPlayer::PlayOneFrame(
   }
 
   auto uss_wave_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs::UssWaveInfo>(
+      find_ros_msg_with_header_time<struct_msgs::UssPdcIccSendDataType>(
           TOPIC_USS_WAVE_INFO, input_time_list.uss_wave());
   if (uss_wave_ros_msg) {
-    iflyauto::UssWaveInfo uss_wave_msg{};
+    iflyauto::UssPdcIccSendDataType uss_wave_msg{};
     convert(uss_wave_msg, *uss_wave_ros_msg, ConvertTypeInfo::TO_STRUCT);
     planning_adapter_->Feed_IflytekUssUsswaveInfo(uss_wave_msg);
   } else {
@@ -1923,11 +1924,10 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     }
 
     // apa module
-    auto uss_wave_ros_msg =
-        find_ros_msg_with_header_time_upper_bound<struct_msgs::UssWaveInfo>(
-            TOPIC_USS_WAVE_INFO, start_time);
+    auto uss_wave_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs::UssPdcIccSendDataType>(TOPIC_USS_WAVE_INFO, start_time);
     if (uss_wave_ros_msg) {
-      iflyauto::UssWaveInfo uss_wave_msg{};
+      iflyauto::UssPdcIccSendDataType uss_wave_msg{};
       convert(uss_wave_msg, *uss_wave_ros_msg, ConvertTypeInfo::TO_STRUCT);
       planning_adapter_->Feed_IflytekUssUsswaveInfo(uss_wave_msg);
     } else {

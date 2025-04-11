@@ -51,6 +51,7 @@
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "struct_msgs_legacy_v2_4_6/LocalizationEstimate.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 
 // struct schema
 #include "interface/type_convert/struct_convert/camera_perception_parking_slot_c.h"

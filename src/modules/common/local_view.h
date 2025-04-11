@@ -62,7 +62,7 @@ struct LocalView {
   iflyauto::FuncStateMachine function_state_machine_info;
   double function_state_machine_info_recv_time = 0.0;
 
-  iflyauto::UssWaveInfo uss_wave_info;
+  iflyauto::UssPdcIccSendDataType uss_wave_info;
   double uss_wave_info_recv_time = 0.0;
 
   iflyauto::UssPerceptInfo uss_percept_info;
