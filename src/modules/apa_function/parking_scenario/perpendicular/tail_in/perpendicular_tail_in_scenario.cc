@@ -1733,6 +1733,15 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
           ->GetOutput()
           .path_segment_vec);
 
+  if (geometry_path_now.path_segment_vec.size() < 1) {
+    return false;
+  }
+
+  if (geometry_path_now.path_segment_vec.back().seg_type !=
+      geometry_lib::SEG_TYPE_LINE) {
+    return false;
+  }
+
   if (geometry_path_now.gear_change_count > 0) {
     ILOG_INFO << "now path gear change count bigger than 0";
     return false;
@@ -1807,11 +1816,34 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     return false;
   }
 
+  // 如果之前路径误差越小 那么对现在路径的最后一段直线长度要求就越高
+  double line_length = 0.0;
+  for (int i = geometry_path_now.path_segment_vec.size() - 1; i >= 0; ++i) {
+    const auto& seg = geometry_path_now.path_segment_vec[i];
+    if (seg.seg_type == geometry_lib::SEG_TYPE_LINE &&
+        seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
+      line_length += geometry_path_now.path_segment_vec[i].Getlength();
+    } else {
+      break;
+    }
+  }
+  const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.11};
+  const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.4};
+  const double min_line_length = mathlib::Interp1(
+      lat_err_tab, line_length_tab,
+      std::max(std::fabs(lat_err_bef), std::fabs(front_lat_err_bef)));
+
+  if (line_length < min_line_length) {
+    ILOG_INFO << "the last line length is small";
+    return false;
+  }
+
   if (std::fabs(lat_err_bef) > std::fabs(lat_err_now) ||
-      std::fabs(front_lat_err_bef) > std::fabs(front_lat_err_now) ||
-      std::fabs(heading_err_bef) > std::fabs(heading_err_now)) {
+      std::fabs(front_lat_err_bef) > std::fabs(front_lat_err_now)) {
     return true;
   }
+
+  return false;
 
   // 如果现在路径当前转向与当前转角方向相同
   const double steer_angle =

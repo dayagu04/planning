@@ -3170,7 +3170,8 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
               FindPtCanReverseToSlot(
                   path_seg_vec, arc1_gear, geometry_lib::SEG_STEER_STRAIGHT,
                   68.0, 0.468, 2.26, arc1_seg.GetEndPose(), lat_buffer,
-                  lon_buffer, GeometryPathType::TWO_ARC, 0.268)) {
+                  lon_buffer, GeometryPathType::TWO_ARC, 0.268, true, false,
+                  true)) {
             ILOG_INFO_IF(enable_log)
                 << "same gear, radius is small, arc2 shorten, then insert "
                    "line after arc1, and use two reverse arc to target line";
@@ -4242,8 +4243,25 @@ const bool PerpendicularTailInPathGenerator::FindPtCanReverseToSlot(
              (!should_all_path_safe || geometry_path.all_path_safe));
       }
 
-      if (success && !CheckStuckedByInside(geometry_path.start_pose,
-                                           geometry_path.end_pose, false)) {
+      if (success) {
+        if (CheckStuckedByInside(geometry_path.start_pose,
+                                 geometry_path.end_pose, false)) {
+          auto& arc_seg = geometry_path.path_segment_vec.back();
+          CalcObsDistConsiderSlotForPathSeg(arc_seg);
+          const double stuck_y =
+              arc_seg.obs_dist_info.integrated.second.pos.y();
+          if (arc_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
+            if ((arc_seg.seg_steer == geometry_lib::SEG_STEER_LEFT &&
+                 stuck_y > 0.468) ||
+                (arc_seg.seg_steer == geometry_lib::SEG_STEER_RIGHT &&
+                 stuck_y < -0.468)) {
+              success = false;
+            }
+          }
+        }
+      }
+
+      if (success) {
         seg_vec.emplace_back(seg);
         if (geometry_path.cur_gear == gear) {
           for (size_t i = 0; i < geometry_path.path_count; ++i) {
