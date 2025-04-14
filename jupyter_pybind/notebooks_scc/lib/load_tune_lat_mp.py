@@ -659,7 +659,8 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
           lat_plan_data['data_center_line_curvature'].data.update({
           'center_line_s' :  center_line_list[i]['line_s_vec'],
           'center_line_curvature' :  center_line_list[i]['curvature_vec'],
-          'center_line_d_poly_curvature' :  center_line_list[i]['d_poly_curvature_vec']
+          'center_line_d_poly_curvature' :  center_line_list[i]['d_poly_curvature_vec'],
+          'center_line_confidence' :  [confidence * 1000.0 for confidence in center_line_list[i]['confidence_vec']],
         })
 
   try:
@@ -803,7 +804,10 @@ def load_lat_plan_figure(fig1):
   data_center_line_18 = ColumnDataSource(data = {'center_line_18_y':[], 'center_line_18_x':[]})
   data_center_line_19 = ColumnDataSource(data = {'center_line_19_y':[], 'center_line_19_x':[]})
 
-  data_center_line_curvature = ColumnDataSource(data = {'center_line_s':[], 'center_line_curvature':[], 'center_line_d_poly_curvature':[]})
+  data_center_line_curvature = ColumnDataSource(data = {'center_line_s':[],
+                                                        'center_line_curvature':[],
+                                                        'center_line_d_poly_curvature':[],
+                                                        'center_line_confidence':[], })
 
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
                                           'raw_refline_y':[],

@@ -114,6 +114,7 @@ f10_1 = fig10.line('center_line_s', 'center_line_curvature', source = lat_plan_d
 fig10.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'road radius')
 refline_kappa_radius = ColumnDataSource(data = {'refline_s':[], 'refline_curvature':[]})
 f10_2 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
+fig10.line('center_line_s', 'center_line_confidence', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'road confidence')
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
 hover10_1 = HoverTool(renderers=[f10_1], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
@@ -240,10 +241,12 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
   print("right_turn_light_state_available: ",vs_msg.right_turn_light_state_available)
   print("right_turn_light_state: ",vs_msg.right_turn_light_state)
   print("current_state:", lat_behavior_common.current_state)
-  if lat_behavior_common.current_state in [0, 1, 2, 15, 16, 17, 30, 31, 32, 45, 46, 47]:
-    print("Cruising")
-  else:
+  if lat_behavior_common.current_state in [1, 2, 3]:
     print("Lane Change")
+  elif lat_behavior_common.current_state == 4:
+    print("Lane Change Back")
+  else:
+    print("Cruising")
 
   try:
     refline_kappa_radius.data.update({

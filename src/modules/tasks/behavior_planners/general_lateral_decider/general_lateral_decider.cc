@@ -558,6 +558,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
+    // s = std::max(s, 1.0);
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     double s_ref = planning_init_point.frenet_state.s;
     const double max_ref_length = std::max(

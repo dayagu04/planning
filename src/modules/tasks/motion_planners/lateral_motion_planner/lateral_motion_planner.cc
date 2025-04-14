@@ -346,25 +346,20 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetInitL(planning_init_point.frenet_state.r);
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double steer_ratio = vehicle_param.steer_ratio;
-  double max_steer_angle = vehicle_param.max_steer_angle * 57.3;  // deg
-  double max_steer_angle_rate = vehicle_param.max_steer_angle_rate * 57.3;  // deg
-  std::vector<double> xp_vel{4.167, 8.333, 25.0, 30.0};
-  std::vector<double> fp_max_steer_angle{max_steer_angle, 360.0, 240.0, 120.0};
-  std::vector<double> fp_max_steer_angle_rate{max_steer_angle_rate, 200.0, 120.0, 60.0};
-  double steer_angle =
-      planning::interp(std::fabs(ego_v), xp_vel, fp_max_steer_angle);
-  double steer_angle_rate =
-      planning::interp(std::fabs(ego_v), xp_vel, fp_max_steer_angle_rate);
-  double max_wheel_angle =
-      steer_angle / steer_ratio / 57.3;
-  double max_wheel_angle_rate =
-      steer_angle_rate / steer_ratio / 57.3;
   const double kv2 =
       config_.curv_factor *
       std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
-  planning_weight_ptr_->SetMaxAcc(std::max(max_wheel_angle * kv2, 0.186));
-  planning_weight_ptr_->SetMaxJerk(std::min(std::max(max_wheel_angle_rate * kv2, 0.159), 1.0));
+  double steer_ratio = vehicle_param.steer_ratio;
+  double max_steer_angle = vehicle_param.max_steer_angle * 57.3;  // deg
+  double max_steer_angle_rate = vehicle_param.max_steer_angle_rate * 57.3;  // deg
+  double max_wheel_angle =
+      max_steer_angle / steer_ratio / 57.3;
+  double max_wheel_angle_rate =
+      max_steer_angle_rate / steer_ratio / 57.3;
+  double max_acc = std::min(max_wheel_angle * kv2, 5.0);
+  double max_jerk = std::min(max_wheel_angle_rate * kv2, 3.0);
+  planning_weight_ptr_->SetMaxAcc(max_acc);
+  planning_weight_ptr_->SetMaxJerk(max_jerk);
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);

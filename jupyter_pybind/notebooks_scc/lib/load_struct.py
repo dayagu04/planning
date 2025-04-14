@@ -718,7 +718,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
-                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[]}
+                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
@@ -738,6 +738,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       line_curvature = []
       d_poly_line_curvature = []
       line_s = []
+      line_confidence = []
       if g_is_display_enu:
         line_x = [virtual_lane_refline_points[j].local_point.x for j in range(virtual_lane_refline_points_size)]
         line_y = [virtual_lane_refline_points[j].local_point.y for j in range(virtual_lane_refline_points_size)]
@@ -764,6 +765,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
           line_y = [virtual_lane_refline_points[j].car_point.y for j in range(virtual_lane_refline_points_size)]
 
       line_s = [virtual_lane_refline_points[j].s for j in range(virtual_lane_refline_points_size)]
+      line_confidence = [virtual_lane_refline_points[j].confidence for j in range(virtual_lane_refline_points_size)]
       line_curvature = [max(min(1.0 / (virtual_lane_refline_points[j].curvature + 1e-6), 10000.0), -10000.0) for j in range(virtual_lane_refline_points_size)]
       try:
         d_poly_line_curvature = [max(min(1.0 / ((math.fabs(2 * d_poly[3] * (virtual_lane_refline_points[j].s - 50.0) + d_poly[2]) / math.pow(math.pow(2 * d_poly[3] * (virtual_lane_refline_points[j].s - 50.0) + d_poly[2], 2) + 1,1.5)) + 1e-6), 10000.0), -10000.0) for j in range(virtual_lane_refline_points_size)]
@@ -775,6 +777,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['relative_id'] = lane.relative_id
       lane_info['type'] = 0
       lane_info['line_s_vec'] = line_s
+      lane_info['confidence_vec'] = line_confidence
       lane_info['curvature_vec'] = line_curvature
       lane_info['d_poly_curvature_vec'] = d_poly_line_curvature
 
