@@ -130,9 +130,11 @@ class LaneChangeStateMachineManager {
   void MakeFixLane();
   void UpdateStateMachine();
   void GenerateStateMachineOutput();
-  bool CalculateSideGapFeasible(const planning_data::DynamicAgentNode*const agent);
+  bool CalculateSideGapFeasible(
+      const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontGapFeasible(LaneChangeStageInfo* const lc_state_info);
-  bool CalculateSideAreaIsSafetyExecution(const planning_data::DynamicAgentNode*const agent);
+  bool CalculateSideAreaIsSafetyExecution(
+      const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
                const double& threshold);
@@ -181,17 +183,19 @@ class LaneChangeStateMachineManager {
       const TrajectoryPoints& agent_traj,
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
       const bool is_front_agent);
-  bool IsFilterAgent(const planning_data::DynamicAgentNode* agent_node,
-                     const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-                     TrajectoryPoints* agent_prediction_trajs,
-                         const bool is_ego_lane_agent);
-  void StoreObjDebugPredictionInfo(const planning_data::DynamicAgentNode* agent_node,
-                         const TrajectoryPoints* agent_prediction_trajs,
-                         const bool is_front_agent,
-                         const bool is_ego_lane_agent);
-  SecondOrderTimeOptimalTrajectory GenerateEgoMaxDecelerationCurve(const double ego_v, const double target_v);
+  bool IsFilterAgent(
+      const planning_data::DynamicAgentNode* agent_node,
+      const std::shared_ptr<planning_math::KDPath> target_lane_coor,
+      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent);
+  void StoreObjDebugPredictionInfo(
+      const planning_data::DynamicAgentNode* agent_node,
+      const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
+      const bool is_ego_lane_agent);
+  SecondOrderTimeOptimalTrajectory GenerateEgoMaxDecelerationCurve(
+      const double ego_v, const double target_v);
   double CalculateLCSafetyCheckTime() const;
-  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(const std::array<double, 3> init_lon_state) const;
+  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
+      const std::array<double, 3> init_lon_state) const;
 
   bool IsTargetLaneMergeToOriginLane() const;
 
@@ -239,7 +243,7 @@ class LaneChangeStateMachineManager {
   std::vector<double> front_obj_future_v_{};
   std::vector<double> rear_obj_future_v_{};
   std::vector<double> ego_future_v_{};
-  
+
   TrajectoryPoints ego_trajs_future_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
