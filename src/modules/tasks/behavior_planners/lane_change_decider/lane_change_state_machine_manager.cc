@@ -2279,6 +2279,7 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
           session_->environmental_model().get_ego_state_manager();
 
       const double ego_current_v = ego_trajs_future_[0].v;
+      const double ego_finally_v = ego_trajs_future_.back().v;
 
       // 车辆参数
       const auto &vehicle_param =
@@ -2293,26 +2294,31 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       const double last_point_rel_dis =
           agent_prediction_trajs[last_point_index].s -
           ego_trajs_future_[last_point_index].s - two_car_length;
-      const double safety_dis_threshold = std::max(0.1 * ego_current_v, 1.0);
+      const double safety_dis_threshold = std::max(0.1 * ego_finally_v, 1.0);
 
       // 前方障碍物车辆的未来车速比自车小，且在安全距离之内的，那么需要考虑纵向在减速至目标车速过程中，与障碍物是否在安全距离之外
-      if (is_front_agent && agent_future_v < ego_current_v &&
+      if (is_front_agent && agent_future_v < ego_finally_v &&
           last_point_rel_dis < safety_dis_threshold) {
         const double tager_v = agent_future_v;
+        
+        int itear_num = ego_trajs_future_.size();
+        
+        // 要考虑自车的执行器0.5s的响应时间，因此假设在0.5s后，自车才开始以最大减速度减速
+        for (int i = 0; i < itear_num; i++) {
+          if (ego_trajs_future_[i].t > 0.5) {
+            solid_index = i;
+            break;
+          } 
+        }
+
+        const double ego_virtual_v = ego_trajs_future_[solid_index].v;
 
         const auto ego_max_deceleration_curve =
-            GenerateEgoMaxDecelerationCurve(ego_current_v, tager_v);
-
-        int itear_num = ego_trajs_future_.size();
+            GenerateEgoMaxDecelerationCurve(ego_virtual_v, tager_v);
 
         bool is_reach_target_v = false;
         int index_reach_target_v = 0;
-        for (int i = 0; i < itear_num; i++) {
-          // 要考虑自车的执行器0.5s的响应时间，因此假设在0.5s后，自车才开始以最大减速度减速
-          if (ego_trajs_future_[i].t < 0.5) {
-            solid_index = i;
-            continue;
-          }
+        for (int i = solid_index; i < itear_num; i++) {
           const double t =
               ego_trajs_future_[i].t - ego_trajs_future_[solid_index].t;
           const double solid_s = ego_trajs_future_[solid_index].s;
@@ -2473,12 +2479,13 @@ TrajectoryPoints LaneChangeStateMachineManager::CalculateEgoFutureTrajs()
       target_reference_path->get_frenet_ego_state();
   const double ego_s = target_frenet_ego_state.s();
   const double ego_v = target_frenet_ego_state.velocity();
+  const double ego_a = target_frenet_ego_state.acc();
 
   const auto &planning_init_point =
       target_frenet_ego_state.planning_init_point();
 
-  std::array<double, 3> init_lon_state = {0, planning_init_point.v,
-                                          planning_init_point.a};
+  std::array<double, 3> init_lon_state = {0, ego_v,
+                                          ego_a};
 
   auto virtual_acc_curve = MakeVirtualZeroAccCurve(init_lon_state);
   // 因为现在预测是以0.2s的时间间隔发的预测轨迹点
