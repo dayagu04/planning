@@ -44,23 +44,23 @@ bool PlanningAdapter::Init() {
 
   std::string log_file = engine_config.log_conf.log_file;
   // Nanolog
-  bst::LogLevel log_level;
+  iflyauto::LogLevel log_level;
   if (engine_config.log_conf.log_level == "FETAL") {
-    log_level = bst::FETAL;
+    log_level = iflyauto::FETAL;
   } else if (engine_config.log_conf.log_level == "ERROR") {
-    log_level = bst::ERROR;
+    log_level = iflyauto::ERROR;
   } else if (engine_config.log_conf.log_level == "WARNING") {
-    log_level = bst::WARNING;
+    log_level = iflyauto::WARNING;
   } else if (engine_config.log_conf.log_level == "NOTICE") {
-    log_level = bst::NOTICE;
+    log_level = iflyauto::NOTICE;
   } else if (engine_config.log_conf.log_level == "DEBUG") {
-    log_level = bst::DEBUG;
+    log_level = iflyauto::DEBUG;
   } else {
-    log_level = bst::ERROR;
+    log_level = iflyauto::ERROR;
   }
 
   std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
-  bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
+  iflyauto::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                     log_level);
   LOG_DEBUG("The planning component init!!! \n");
 

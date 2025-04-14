@@ -22,6 +22,16 @@ file(GLOB_RECURSE SRC_FILES
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PLATFORM STREQUAL "X86")
+  add_definitions(-DENABLE_IFLYTEK_LOG)
+  target_link_libraries(${PROJECT_NAME} PUBLIC
+    iflyauto_log
+  )
+  message("ENABLE_IFLYTEK_LOG")
+else()
+  message("UNENABLE_IFLYTEK_LOG")
+endif()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
   Eigen3::Eigen
   gflags

@@ -4,14 +4,14 @@
 
 #include "iostream"
 
-#ifdef BSZ
-#include "Nanolog/NanoLogCpp17.h"
+#ifdef ENABLE_IFLYTEK_LOG
+#include "iflyauto_log.h"
 #endif
 
 #define CONCAT2(x) "%s " x
 #define CONCAT(x) CONCAT2(x)
 
-namespace bst {
+namespace iflyauto {
 enum LogLevel {
   LOGLEVEL_START = 0,
   FETAL,
@@ -22,7 +22,7 @@ enum LogLevel {
   LOGLEVEL_END
 };
 
-#ifdef BSZ
+#ifdef ENABLE_IFLYTEK_LOG
 class Log {
  public:
   static Log& getInstance() {
@@ -100,11 +100,34 @@ class Log {
 #define LOG_BST LOG_BST_DEBUG
 #endif
 
-#define LOG_DEBUG(format, ...) LOG_BST(LogLevels::DEBUG, format, ##__VA_ARGS__)
-#define LOG_NOTICE(format, ...) \
-  LOG_BST(LogLevels::NOTICE, format, ##__VA_ARGS__)
-#define LOG_WARNING(format, ...) \
-  LOG_BST(LogLevels::WARNING, format, ##__VA_ARGS__)
-#define LOG_ERROR(format, ...) LOG_BST(LogLevels::ERROR, format, ##__VA_ARGS__)
+#ifdef ENABLE_IFLYTEK_LOG
+#define LOG_DEBUG(format, ...) FLOGD(format, ##__VA_ARGS__)
+#define LOG_NOTICE(format, ...) FLOGI(format, ##__VA_ARGS__)
+#define LOG_WARNING(format, ...) FLOGW(format, ##__VA_ARGS__)
+#define LOG_ERROR(format, ...) FLOGE(format, ##__VA_ARGS__)
+#define LOG_FATAL(format, ...) FLOGF(format, ##__VA_ARGS__)
 
-}  // namespace bst
+#else
+#define LOG_DEBUG(format, ...)              \
+  do {                                       \
+    printf(format, ##__VA_ARGS__);           \
+  } while (0)
+#define LOG_NOTICE(format, ...)               \
+  do {                                        \
+    printf(format, ##__VA_ARGS__);            \
+  } while (0)
+#define LOG_WARNING(format, ...)              \
+  do {                                        \
+    printf(format, ##__VA_ARGS__);            \
+  } while (0)
+#define LOG_ERROR(format, ...)                \
+  do {                                        \
+    printf(format, ##__VA_ARGS__);            \
+  } while (0)
+#define LOG_FATAL(format, ...)                \
+  do {                                        \
+    printf(format, ##__VA_ARGS__);            \
+  } while (0)
+#endif
+
+}  // namespace iflyauto
