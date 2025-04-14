@@ -104,7 +104,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
       else:
         localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
-    # prediction_timestamp = input_topic_timestamp.prediction
+    prediction_timestamp = input_topic_timestamp.prediction
     # vehicle_service_timestamp = input_topic_timestamp.vehicle_service
     # control_output_timestamp = input_topic_timestamp.control_output
 
@@ -174,11 +174,18 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           print('find rdg_lane_lines_msg success')
         else :
           print('find rdg_lane_lines_msg fail')
+
       loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
       if loc_msg_tmp != None:
         loc_msg = loc_msg_tmp
       else:
         print('match loc fail')
+      
+      prediction_msg_tmp = find(bag_loader.prediction_msg, prediction_timestamp)
+      if prediction_msg_tmp != None:
+        prediction_msg = prediction_msg_tmp
+      else:
+        print("match prediction_msg fail")
 
   local_view_data['data_msg']['plan_msg'] = plan_msg
   local_view_data['data_msg']['plan_debug_msg'] = plan_debug_msg
