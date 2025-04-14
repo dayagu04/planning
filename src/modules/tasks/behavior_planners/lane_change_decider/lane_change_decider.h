@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "lane_change_request_manager.h"
@@ -46,6 +47,7 @@ class LaneChangeDecider : public Task {
   std::shared_ptr<LaneChangeStateMachineManager> lc_sm_mgr_;
   int scenario_ = SCENARIO_CRUISE;
   RequestSource last_frame_lc_req_source_ = NO_REQUEST;
+  RequestType last_frame_lc_req_dir_ = NO_CHANGE;
 };
 
 }  // namespace planning

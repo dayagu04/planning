@@ -75,14 +75,29 @@ bool LaneChangeDecider::Execute() {
         }
       }
       const auto cur_frame_lc_req_source = lc_req_mgr_->request_source();
+      const auto cur_frame_lc_req_dir = lc_req_mgr_->request();
       //如果正在进行其他类型变道过程中，有交互式变道，优先响应交互式变道。
       if (last_frame_lc_req_source_ != NO_REQUEST &&
           last_frame_lc_req_source_ != INT_REQUEST &&
           cur_frame_lc_req_source == INT_REQUEST) {
         lc_sm_mgr_->ResetStateMachine();
       }
+
+      // 如果在进行同一变道类型过程中，变道方向发生改变，那么响应改变后的方向。
+      bool is_exist_same_lc_req =
+          last_frame_lc_req_source_ != NO_REQUEST &&
+          cur_frame_lc_req_source == last_frame_lc_req_source_;
+      bool is_different_dir = last_frame_lc_req_dir_ != NO_CHANGE &&
+                              cur_frame_lc_req_dir != NO_CHANGE &&
+                              cur_frame_lc_req_dir != last_frame_lc_req_dir_;
+
+      if (is_exist_same_lc_req && is_different_dir) {
+        lc_sm_mgr_->ResetStateMachine();
+      }
+
       lc_sm_mgr_->Update();
       last_frame_lc_req_source_ = lc_req_mgr_->request_source();
+      last_frame_lc_req_dir_ = lc_req_mgr_->request();
     } else {
       return false;
     }
