@@ -234,6 +234,7 @@ class ParkingScenario {
     double path_extended_dist = 1.0;
     double vel_target = 1.168;
     double stuck_time = 0.0;
+    // stuck by static obs
     double stuck_obs_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;

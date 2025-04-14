@@ -9,13 +9,10 @@
 
 namespace planning {
 
-#define rs_end_point_buffer (0.2)
-
 void RSExpansionDecider::Process(
     const float min_radius, const float slot_width, const float slot_length,
     const Pose2D &ego_pose, const Pose2D &astar_end, const float veh_width,
     const ParkSpaceType slot_type, const ParkingVehDirection park_dir) {
-  same_point_for_rs_with_astar_ = true;
   rs_end_pose_ = astar_end;
   AstarDecider::Process(ego_pose, astar_end);
 
@@ -27,47 +24,10 @@ void RSExpansionDecider::Process(
     return;
   }
 
-  float half_width = slot_width / 2.0;
-
-  // check width
-  if (min_radius <= half_width) {
-    return;
-  }
-
-  // check ego position
-  if (ego_pose.y > -half_width && ego_pose.y < half_width) {
-    return;
-  }
-
-  float dist_to_left_bord = min_radius - half_width;
-  rs_end_max_depth_ = std::sqrt(min_radius * min_radius -
-                                dist_to_left_bord * dist_to_left_bord);
-
-  rs_end_max_depth_ -= rs_end_point_buffer;
-
-  float depth = slot_length - astar_end.x;
-  if (depth > rs_end_max_depth_) {
-    rs_end_pose_.x = slot_length - rs_end_max_depth_;
-
-    same_point_for_rs_with_astar_ = false;
-  }
-
-  ILOG_INFO << "rs same point with astar: " << same_point_for_rs_with_astar_
-            << " slot_length " << slot_length << " astar_end " << astar_end.x
-            << " rs_end_max_depth_ " << rs_end_max_depth_ << " depth " << depth;
-
   return;
 }
 
-const float RSExpansionDecider::GetEndPointMaxDepth() {
-  return rs_end_max_depth_;
-}
-
 const Pose2D &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
-
-const bool RSExpansionDecider::IsSameEndPointForRsWithAstar() {
-  return same_point_for_rs_with_astar_;
-}
 
 bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
                                            const AstarRequest *request) const {
@@ -121,31 +81,11 @@ void RSExpansionDecider::UpdateRSPathRequest(AstarRequest *request) {
 const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForTailIn(
     const Node3d *node) const {
   // use heuristic rule to do rs path expansion
-  // use node heading and steering to check.
+  // use node heading to check.
   // if heading > 150 degree, shrink some rs expansion.
   float heading = node->GetPhi();
   if (std::fabs(heading) > ifly_deg2rad(150.0)) {
     return false;
-  }
-
-  // check node steering angle
-  float check_heading_buffer = M_PI_2;
-  if (node->GetGearType() == AstarPathGear::DRIVE) {
-    // need turn right
-    if (heading > check_heading_buffer && node->GetSteer() > 0.0) {
-      return false;
-    } else if (heading < -check_heading_buffer && node->GetSteer() < 0.0) {
-      // need turn left
-      return false;
-    }
-  } else if (node->GetGearType() == AstarPathGear::REVERSE) {
-    // need turn left
-    if (heading > check_heading_buffer && node->GetSteer() < 0.0) {
-      return false;
-    } else if (heading < -check_heading_buffer && node->GetSteer() > 0.0) {
-      // need turn right
-      return false;
-    }
   }
 
   return true;
@@ -172,7 +112,7 @@ const bool RSExpansionDecider::NeedRsLinkByRequestDist(
 const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForHeadIn(
     const Node3d *node) const {
   // use heuristic rule to do rs path expansion
-  // use node heading and steering to check.
+  // use node heading to check.
   // if heading < 30 degree, shrink some rs expansion.
   float heading = node->GetPhi();
   if (std::fabs(heading) < ifly_deg2rad(30.0)) {

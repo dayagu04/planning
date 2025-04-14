@@ -520,7 +520,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
       current_path_point_global_vec_,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle());
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(), 0.1);
 
   double tracking_path_collision_dist = frame_.remain_dist_obs;
   tracking_path_collision_dist =

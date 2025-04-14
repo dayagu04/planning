@@ -35,13 +35,15 @@ enum class AstarSearchState {
 // polynomial curve, cubic spiral.
 enum class AstarPathGenerateType {
   NONE,
-  REEDS_SHEPP_SAMPLING,
   ASTAR_SEARCHING,
   GEAR_REVERSE_SEARCHING,
   GEAR_DRIVE_SEARCHING,
+  // sampling method will retired, it just used to adjust ego pose in slot.
+  // It is better to use search-based method.
   SPIRAL_SAMPLING,
   CUBIC_POLYNOMIAL_SAMPLING,
   QUNTIC_POLYNOMIAL_SAMPLING,
+  REEDS_SHEPP_SAMPLING,
   // 点击车位之后，尝试搜索
   TRY_SEARCHING,
   MAX_NUMBER,
@@ -97,7 +99,7 @@ enum class PlanningReason {
   NONE,
   PATH_COMPLETED,
   PATH_STUCKED,
-  SLOT_CHANGED,
+  SLOT_REFRESHED,
   FIRST_PLAN,
   ADJUST_SELF_CAR_POSE,
   SIMULATION_TRIGGER,
@@ -277,7 +279,7 @@ struct AstarSamplingAngle {
 struct DebugAstarSearchPoint {
   Position2D pos;
   bool safe;
-  // If this point is first path end point, and is a geat switch point without
+  // If this point is first path end point, and is a gear switch point without
   // collision, true.
   bool gear_switch_point;
 
