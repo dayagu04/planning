@@ -339,8 +339,9 @@ GapSelectorStatus GapSelectorDecider::Update() {
   double lat_ref_offset = interp(ego_v, xp_ego_v, config_.lat_ref_offset);
   if (coarse_planning_info.target_state == kLaneChangeCancel) {
     lat_ref_offset -= 0.05;
+    lat_ref_offset = std::max(lat_ref_offset, 0.0);
   }
-  if (ego_frenet_pose.y < std::fabs(lat_ref_offset)) {
+  if (std::fabs(ego_frenet_pose.y) < lat_ref_offset) {
     avoid_lat_offset += 0.;
   } else if (ego_frenet_pose.y >= 1e-6) {
     avoid_lat_offset += lat_ref_offset;
