@@ -702,7 +702,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
     if (apa_param.GetParam().force_use_little_buffer_move_slot ||
         prohibit_move_slot || move_slot_with_little_buffer) {
       ILOG_INFO << "force use little lat safe buffer";
-      lat_buffer_vec = std::vector<double>{min_lat_buffer};
+      lat_buffer_vec = std::vector<double>{min_lat_buffer + step};
     }
 
     TargetPoseDeciderResult res =
@@ -1847,8 +1847,22 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     return false;
   }
 
-  if (std::fabs(lat_err_bef) > std::fabs(lat_err_now) ||
-      std::fabs(front_lat_err_bef) > std::fabs(front_lat_err_now)) {
+  const double allow_err = 0.04;
+  const double front_allow_err = 0.06;
+
+  if (std::fabs(lat_err_bef) < std::fabs(lat_err_now) + allow_err &&
+      std::fabs(front_lat_err_bef) <
+          std::fabs(front_lat_err_now) + front_allow_err) {
+    if (geometry_path_now.IsHasSTurnPath()) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  if (std::fabs(lat_err_bef) > std::fabs(lat_err_now) + allow_err ||
+      std::fabs(front_lat_err_bef) >
+          std::fabs(front_lat_err_now) + front_allow_err) {
     return true;
   }
 
@@ -1869,11 +1883,6 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
       mathlib::IsInBound(steer_angle, -straight_angle, straight_angle) &&
       geometry_path_now.cur_steer == geometry_lib::SEG_STEER_STRAIGHT;
   if (steer_case_1 || steer_case_2 || steer_case_3) {
-    return true;
-  }
-
-  // 如果现在的路径没有S弯 不甩头
-  if (!geometry_path_now.IsHasSTurnPath()) {
     return true;
   }
 

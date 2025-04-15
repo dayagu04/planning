@@ -352,7 +352,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = 6.68;
   }
-  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.68;
+  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.168;
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     uss_remain_dist -= extra_buffer_when_reversing;
