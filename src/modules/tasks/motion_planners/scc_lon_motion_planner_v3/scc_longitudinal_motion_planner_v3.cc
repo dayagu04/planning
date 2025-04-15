@@ -251,8 +251,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   } else if (config_.enable_speed_adjust && lane_change_info.s_search_status) {
     planning_input_.set_q_ref_pos(config_.q_ref_pos_speed_adjust);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
-    planning_input_.set_q_acc(config_.q_acc);
-    planning_input_.set_q_jerk(config_.q_jerk);
+    planning_input_.set_q_acc(config_.q_acc_speed_adjust);
+    planning_input_.set_q_jerk(config_.q_jerk_speed_adjust);
     planning_input_.set_q_stop_s(config_.q_stop_s);
 
     // planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);

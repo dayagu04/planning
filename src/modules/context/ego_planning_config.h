@@ -2436,6 +2436,10 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_ref_pos_speed_adjust");
     ReadItem<bool>(json, enable_speed_adjust, "speed_adjust",
                    "enable_speed_adjust");
+    ReadItem<double>(json, q_acc_speed_adjust, "long_motion_ilqr",
+                     "q_acc_speed_adjust");
+    ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
+                     "q_jerk_speed_adjust");
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -2482,6 +2486,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
 
   bool enable_speed_adjust = true;
   double q_ref_pos_speed_adjust = 10.0;
+  double q_acc_speed_adjust = 10.0;
+  double q_jerk_speed_adjust = 5.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
