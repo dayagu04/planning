@@ -62,7 +62,6 @@ std::vector<Eigen::Vector2d> corrected_park_space_points_;
 Eigen::Vector2d right_obs_start_;
 
 std::vector<Eigen::Vector2d> obs_global_points_;
-ParkObstacleList hybrid_astar_obs_;
 std::vector<Eigen::Vector4d> obs_line_list_;
 
 std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
@@ -535,6 +534,8 @@ int GenerateObstacleByJupyter(
   obs_global_points_.clear();
 
   //
+  ParkObstacleList &hybrid_astar_obs_ =
+      hybrid_astar_interface_->GetMutableObstacleList();
   hybrid_astar_obs_.Clear();
 
   for (const auto &line : line_vec) {
@@ -586,14 +587,13 @@ int GenerateObstacleByJupyter(
 
 // enum class AstarPathGenerateType {
 //   NONE,
-//   REEDS_SHEPP_SAMPLING,
 //   ASTAR_SEARCHING,
 //   GEAR_REVERSE_SEARCHING,
 //   GEAR_DRIVE_SEARCHING,
 //   SPIRAL_SAMPLING,
 //   CUBIC_POLYNOMIAL_SAMPLING,
 //   QUNTIC_POLYNOMIAL_SAMPLING,
-//   // 点击车位之后，尝试搜索
+//   REEDS_SHEPP_SAMPLING,
 //   TRY_SEARCHING,
 //   MAX_NUMBER,
 // };
@@ -792,7 +792,6 @@ std::vector<Eigen::Vector3d> Update(
       ego_slot_info.cur_pose.heading;
 
   // end
-
   Eigen::Vector3d end;
   end[0] = ego_slot_info.target_pose.pos[0];
   if (parking_dir == 1) {
@@ -815,15 +814,15 @@ std::vector<Eigen::Vector3d> Update(
     request.first_action_request.has_request = false;
 
     switch (plan_method) {
-      case 2:
+      case 1:
         request.path_generate_method =
             planning::AstarPathGenerateType::ASTAR_SEARCHING;
         break;
-      case 3:
+      case 2:
         request.path_generate_method =
             planning::AstarPathGenerateType::GEAR_REVERSE_SEARCHING;
         break;
-      case 4:
+      case 3:
         request.path_generate_method =
             planning::AstarPathGenerateType::GEAR_DRIVE_SEARCHING;
         break;
@@ -864,8 +863,7 @@ std::vector<Eigen::Vector3d> Update(
     request.history_gear = AstarPathGear::NONE;
     request.swap_start_goal = false;
 
-    hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
-                                          request);
+    hybrid_astar_interface_->GeneratePath(start, end, request);
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
     // hybrid_astar_interface_->UpdateEDTByObs(hybrid_astar_obs_);

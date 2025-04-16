@@ -23,10 +23,7 @@ namespace planning {
 #define DEBUG_NODE_COST (0)
 
 GridSearch::GridSearch(const PlannerOpenSpaceConfig& open_space_conf) {
-  heuristic_grid_resolution_ = open_space_conf.heuristic_grid_resolution;
-  inv_xy_resolution_ = 1.0 / heuristic_grid_resolution_;
-  xy_grid_resolution_half_ = heuristic_grid_resolution_ / 2.0;
-  safe_width_ = open_space_conf.heuristic_safe_dist;
+  Init(open_space_conf);
 }
 
 float GridSearch::EuclidDistance(const float x1, const float y1,
@@ -193,8 +190,7 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
 
 bool GridSearch::GenerateDpMap(const float ex, const float ey,
                                const MapBound& XYbounds,
-                               const ParkObstacleList* obstacles,
-                               const float veh_half_width_with_safe_dist) {
+                               const ParkObstacleList* obstacles) {
 // init
 #if DEBUG_NODE_COST
   double start_timestamp = IflyTime::Now_ms();
@@ -202,7 +198,6 @@ bool GridSearch::GenerateDpMap(const float ex, const float ey,
 
   // XYbounds with xmin, xmax, ymin, ymax
   XYbounds_ = XYbounds;
-  veh_half_width_with_safe_dist_ = veh_half_width_with_safe_dist;
   max_grid_y_ =
       std::round((XYbounds_.y_max - XYbounds_.y_min) * inv_xy_resolution_);
   max_grid_x_ =
@@ -450,7 +445,14 @@ const bool GridSearch::IsPointInMapBound(const float x, const float y) {
   return true;
 }
 
-void GridSearch::Init() { return; }
+void GridSearch::Init(const PlannerOpenSpaceConfig& open_space_conf) {
+  heuristic_grid_resolution_ = open_space_conf.heuristic_grid_resolution;
+  inv_xy_resolution_ = 1.0 / heuristic_grid_resolution_;
+  xy_grid_resolution_half_ = heuristic_grid_resolution_ / 2.0;
+  safe_width_ = open_space_conf.heuristic_safe_dist;
+
+  return;
+}
 
 void GridSearch::ProjectObstacleToNodeMap() {
   Node2d* node = nullptr;

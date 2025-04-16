@@ -310,6 +310,21 @@ struct Boundary2D {
   float max;
 };
 
+struct PolynomialPathCost {
+  float offset_to_center;
+  float accumulated_s;
+  float tail_heading;
+
+  size_t point_size;
+
+  void Clear() {
+    offset_to_center = 100.0;
+    tail_heading = 100.0;
+    point_size = 0;
+    return;
+  }
+};
+
 std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
@@ -317,5 +332,12 @@ std::string GetPathSteerDebugString(const AstarPathSteer type);
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
 
 std::string PlanReasonDebugString(const PlanningReason reason);
+
+void DebugPolynomialPath(const std::vector<AStarPathPoint>& poly_path);
+
+// for debug
+void DebugPathString(const HybridAStarResult* result);
+
+std::string GetNodeCurveDebugString(const AstarPathType type);
 
 }  // namespace planning
