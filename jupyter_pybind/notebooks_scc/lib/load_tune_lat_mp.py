@@ -655,7 +655,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
         })
-        if center_line_list[i]['relative_id'] == 0:
+        if center_line_list[i]['relative_id'][0] == 0:
           lat_plan_data['data_center_line_curvature'].data.update({
           'center_line_s' :  center_line_list[i]['line_s_vec'],
           'center_line_curvature' :  center_line_list[i]['curvature_vec'],

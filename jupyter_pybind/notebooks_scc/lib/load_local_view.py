@@ -476,6 +476,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         data_center_line.data.update({
           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+          'center_line_{}_s'.format(i): center_line_list[i]['line_s_vec'],
+          'center_line_{}_k'.format(i): center_line_list[i]['curvature_vec'],
+          'center_line_{}_confidence'.format(i): center_line_list[i]['confidence_vec'],
+          'center_line_{}_id'.format(i): center_line_list[i]['relative_id'],
         })
         lane_mark_data = data_lane_mark_dict[i]
         # lane_mark_loc_x = []
@@ -493,9 +497,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'lane_mark_loc_x_{}'.format(i): center_line_list[i]['lane_mark_loc_x'],
           'lane_mark_loc_y_{}'.format(i): center_line_list[i]['lane_mark_loc_y'],
         })
-
-
-
 
     # 加载topo车道线和中心线
     if bag_loader.lane_topo_msg['enable'] == True:
@@ -1914,16 +1915,16 @@ def load_local_view_figure():
     data_sdmap_inlink = ColumnDataSource(data = {'data_sdmap_inlink_y':[], 'data_sdmap_inlink_x':[]})
     data_sdmap_outlink = ColumnDataSource(data = {'data_sdmap_outlink_y':[], 'data_sdmap_outlink_x':[]})
 
-  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
-  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
-  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
-  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
-  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
-  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[]})
-  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[]})
-  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[]})
-  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[]})
-  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[]})
+  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[], 'center_line_0_id':[], 'center_line_0_s':[], 'center_line_0_k':[], 'center_line_0_confidence':[]})
+  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[], 'center_line_1_id':[], 'center_line_1_s':[], 'center_line_1_k':[], 'center_line_1_confidence':[]})
+  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[], 'center_line_2_id':[], 'center_line_2_s':[], 'center_line_2_k':[], 'center_line_2_confidence':[]})
+  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[], 'center_line_3_id':[], 'center_line_3_s':[], 'center_line_3_k':[], 'center_line_3_confidence':[]})
+  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[], 'center_line_4_id':[], 'center_line_4_s':[], 'center_line_4_k':[], 'center_line_4_confidence':[]})
+  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[], 'center_line_5_id':[], 'center_line_5_s':[], 'center_line_5_k':[], 'center_line_5_confidence':[]})
+  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[], 'center_line_6_id':[], 'center_line_6_s':[], 'center_line_6_k':[], 'center_line_6_confidence':[]})
+  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[], 'center_line_7_id':[], 'center_line_7_s':[], 'center_line_7_k':[], 'center_line_7_confidence':[]})
+  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[], 'center_line_8_id':[], 'center_line_8_s':[], 'center_line_8_k':[], 'center_line_8_confidence':[]})
+  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[], 'center_line_9_id':[], 'center_line_9_s':[], 'center_line_9_k':[], 'center_line_9_confidence':[]})
 
   data_center_line_topo_0 = ColumnDataSource(data = {'center_line_topo_0_y':[], 'center_line_topo_0_x':[]})
   data_center_line_topo_1 = ColumnDataSource(data = {'center_line_topo_1_y':[], 'center_line_topo_1_x':[]})

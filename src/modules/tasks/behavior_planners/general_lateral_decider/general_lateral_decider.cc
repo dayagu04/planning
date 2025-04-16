@@ -651,6 +651,7 @@ void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
 bool GeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
   ref_path_points_.reserve(traj_points.size());
+  min_road_radius_ = 10.0;
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
@@ -658,6 +659,9 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
       // add logs
       LOG_ERROR("Get reference point by lon failed!");
     }
+    double road_radius =
+        1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
+    min_road_radius_ = std::max(std::min(road_radius - 0.1, min_road_radius_), 2.0);
     ref_path_points_.emplace_back(refpath_pt);
   }
 
@@ -787,11 +791,20 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
 
   const double kDefaultDistanceToRoad = 10.0;
+  min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound soft_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    Bound hard_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    Bound soft_bound_road{-min_road_radius_, min_road_radius_};
+    Bound hard_bound_road{-min_road_radius_, min_road_radius_};
+    // if (ref_path_points_[i].path_point.kappa() > 0.0) {
+    //   soft_bound_road.upper = min_road_radius;
+    //   hard_bound_road.upper = min_road_radius;
+    // } else {
+    //   soft_bound_road.lower = -min_road_radius;
+    //   hard_bound_road.lower = -min_road_radius;
+    // }
+
     MapObstaclePositionDecision map_obstacle_decision;
 
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;

@@ -34,6 +34,7 @@ fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_p
 fig1.height = 1500
 
 load_measure_distance_tool(fig1)
+fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 if plot_turning_circle:
@@ -148,8 +149,8 @@ def get_vs_msg_idx(bag_loader, bag_time):
     vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
   return vs_msg_idx
 
-fig8 = bkp.figure(x_axis_label='time', y_axis_label='steer deg', width=600, height=160)
-fig11 = bkp.figure(x_axis_label='time', y_axis_label='steer dot deg', width=600, height=160)
+fig10 = bkp.figure(x_axis_label='time', y_axis_label='steer deg', width=800, height=160)
+fig11 = bkp.figure(x_axis_label='time', y_axis_label='steer dot deg', width=800, height=160)
 data_steer = ColumnDataSource(data ={
   'time': [],
   'plan_steer_deg':[],
@@ -192,20 +193,20 @@ data_steer.data.update({
   'ego_steer_deg': ego_steer_deg,
   'ego_steer_dot_deg': ego_steer_dot_deg,
 })
-f8 = fig8.line('time', 'plan_steer_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_deg')
-fig8.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_deg')
+f8 = fig10.line('time', 'plan_steer_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_deg')
+fig10.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_deg')
 f11 = fig11.line('time', 'plan_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_dot_deg')
 fig11.line('time', 'ego_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_dot_deg')
 
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
 hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
 
-fig8.add_tools(hover8)
+fig10.add_tools(hover8)
 fig11.add_tools(hover11)
 
-fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
+fig10.toolbar.active_scroll = fig10.select_one(WheelZoomTool)
 fig11.toolbar.active_scroll = fig11.select_one(WheelZoomTool)
-fig8.legend.click_policy = 'hide'
+fig10.legend.click_policy = 'hide'
 fig11.legend.click_policy = 'hide'
 
 ### sliders config
@@ -226,6 +227,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
+  update_center_line_info(data_center_line_info, local_view_data)
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if plot_turning_circle:
     update_turning_circle(data_turning_circle, local_view_data)
@@ -240,9 +242,9 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
     data_open_loop_steering_command_table = update_open_loop_steering_command(open_loop_steering_command)
   push_notebook()
 
-pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, row(fig8, fig11))), title="CurveFigure")
+pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_12)), title="CurveFigure")
 pan2 = Panel(child=row(column(fig_lat_offset, row(data_behavior_table_1, column(data_hmi_hpp_info_table, data_open_loop_steering_command_table)))), title="TableInfo")
-pan3 = Panel(child=row(column(fig7)), title="!figure")
+pan3 = Panel(child=row(column(fig7)), title="!Figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3 ])
 if global_fig_plot:
   bkp.show(row(fig1, pans), notebook_handle=True)

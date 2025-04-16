@@ -774,8 +774,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
-      lane_info['relative_id'] = lane.relative_id
-      lane_info['type'] = 0
+      lane_info['relative_id'] = [lane.relative_id for j in range(virtual_lane_refline_points_size)]
+      lane_info['type'] = [0]
       lane_info['line_s_vec'] = line_s
       lane_info['confidence_vec'] = line_confidence
       lane_info['curvature_vec'] = line_curvature
@@ -826,13 +826,14 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_mark_point_y = []
       lane_mark_loc_x = []
       lane_mark_loc_y = []
-      lane_info['line_x_vec'] = default_line_x
-      lane_info['line_y_vec'] = default_line_y
-      lane_info['relative_id'] = 1000
-      lane_info['type'] = 0
-      lane_info['line_s_vec'] = 0
-      lane_info['curvature_vec'] = 0
-      lane_info['d_poly_curvature_vec'] = 0
+      lane_info['line_x_vec'] = [0]
+      lane_info['line_y_vec'] = [0]
+      lane_info['relative_id'] = [1000]
+      lane_info['type'] = [0]
+      lane_info['line_s_vec'] = [0]
+      lane_info['curvature_vec'] = [0]
+      lane_info['d_poly_curvature_vec'] = [0]
+      lane_info['confidence_vec'] = [0]
       lane_info['lane_mark_vec'] = []
 
     lane_info['lane_mark_point_x'] = lane_mark_point_x
