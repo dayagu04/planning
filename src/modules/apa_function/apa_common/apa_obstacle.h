@@ -46,6 +46,24 @@ enum class ApaObsAttributeType : uint8_t {
   COUNT,
 };
 
+enum class ApaObsScemanticType : uint8_t {
+  UNKNOWN,
+  WALL,
+  COLUMN,
+  FENCE,
+  STEP,
+  CURB,
+  SPECIAL,
+  CAR,
+  CYCLIST,
+  PEOPLE,
+  BARRIER,
+  BARREL,
+  LIMITER,
+  SPECIFICATIONER,
+  COUNT,
+};
+
 // 障碍物运动类型：
 enum class ApaObsMovementType : uint8_t {
   STATIC,
@@ -83,6 +101,10 @@ class ApaObstacle final {
 
   void SetObsAttributeType(const ApaObsAttributeType type) {
     obs_attribute_type_ = type;
+  }
+
+  void SetObsScemanticType(const ApaObsScemanticType type) {
+    obs_scemantic_type_ = type;
   }
 
   void SetObsHeightType(const ApaObsHeightType type) {
@@ -136,6 +158,10 @@ class ApaObstacle final {
     return obs_attribute_type_;
   }
 
+  const ApaObsScemanticType GetObsScemanticType() const {
+    return obs_scemantic_type_;
+  }
+
   const ApaObsMovementType GetObsMovementType() const {
     return obs_movement_type_;
   }
@@ -155,6 +181,7 @@ class ApaObstacle final {
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
   ApaObsAttributeType obs_attribute_type_{ApaObsAttributeType::UNKNOWN};
+  ApaObsScemanticType obs_scemantic_type_{ApaObsScemanticType::UNKNOWN};
   ApaObsMovementType obs_movement_type_{ApaObsMovementType::STATIC};
 
   double obs_vel_{0.};

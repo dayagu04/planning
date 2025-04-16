@@ -197,7 +197,6 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
       pt_01_mid - param.virtual_obs_x_pos * pt_23mid_01_mid_unit_vec -
       (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
 
-  virtual_tlane_.Reset();
   virtual_tlane_.B = virtual_left_obs;
   virtual_tlane_.E = virtual_right_obs;
 

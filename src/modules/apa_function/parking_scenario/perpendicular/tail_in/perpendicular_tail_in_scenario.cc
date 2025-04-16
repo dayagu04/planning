@@ -254,6 +254,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
         SetParkingStatus(PARKING_FAILED);
         ILOG_INFO << "postprocess path failed!";
       }
+      frame_.can_correct_path_for_limiter = true;
       break;
     }
 
@@ -449,7 +450,8 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
     ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter;
 
-    if (dist_ego_limiter < param.car_to_limiter_dis) {
+    if (dist_ego_limiter < param.car_to_limiter_dis &&
+        frame_.can_correct_path_for_limiter) {
       ILOG_INFO << "should correct path according limiter";
       ego_info_under_slot.fix_slot = true;
       PostProcessPathAccordingLimiter();
@@ -649,6 +651,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
   if (apa_param.GetParam().move_slot_with_little_buffer &&
       !CheckEgoPoseInBelieveObsArea(
           0.2, apa_param.GetParam().believe_obs_ego_area, 60)) {
+    ILOG_INFO << "move_slot_with_little_buffer";
     move_slot_with_little_buffer = true;
   }
 
@@ -672,7 +675,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
             << "  can not move slot = " << prohibit_move_slot
-            << "  update_slot_move_dist = " << update_slot_move_dist;
+            << "  update_slot_move_dist = " << update_slot_move_dist
+            << "  process_obs_method = "
+            << static_cast<int>(frame_.process_obs_method);
 
   if (update_slot_move_dist) {
     // 重规划时根据障碍物计算终点位置
@@ -694,8 +699,10 @@ const bool PerpendicularTailInScenario::GenTlane() {
          lat_buffer -= step) {
       lat_buffer_vec.emplace_back(lat_buffer);
     }
-    if (prohibit_move_slot || move_slot_with_little_buffer) {
-      lat_buffer_vec = std::vector<double>{min_lat_buffer};
+    if (apa_param.GetParam().force_use_little_buffer_move_slot ||
+        prohibit_move_slot || move_slot_with_little_buffer) {
+      ILOG_INFO << "force use little lat safe buffer";
+      lat_buffer_vec = std::vector<double>{min_lat_buffer + step};
     }
 
     TargetPoseDeciderResult res =
@@ -772,6 +779,77 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   input.is_replan_dynamic = frame_.is_replan_dynamic;
   input.is_searching_stage =
       apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
+
+  // 如果动态规划 从轨迹上往后取dt的点当做投影点
+  std::vector<geometry_lib::PathPoint> split_point_global_vec;
+  split_point_global_vec.clear();
+  while (frame_.is_replan_dynamic) {
+    const double dt = 0.4;
+    const double s =
+        std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) * dt;
+    if (s > frame_.remain_dist_path || s > frame_.remain_dist_obs) {
+      return PathPlannerResult::PLAN_FAILED;
+    }
+
+    const size_t pt_number = current_path_point_global_vec_.size();
+
+    if (pt_number < 2) {
+      break;
+    }
+
+    const double ds = current_path_point_global_vec_[pt_number - 1].s -
+                      current_path_point_global_vec_[pt_number - 2].s;
+
+    if (s < ds * 2) {
+      break;
+    }
+
+    const double ego_s_proj =
+        frame_.current_path_length - frame_.remain_dist_path;
+    const double fur_s_proj = ego_s_proj + s;
+    geometry_lib::PathPoint ego_proj_pt, fur_proj_pt;
+    double ego_dist = std::numeric_limits<double>::infinity();
+    double fur_dist = std::numeric_limits<double>::infinity();
+    size_t ego_proj_index = 0, fur_proj_index = 0;
+    for (size_t i = 0; i < current_path_point_global_vec_.size(); ++i) {
+      const auto& pt = current_path_point_global_vec_[i];
+      if (std::fabs(ego_s_proj - pt.s) < ego_dist) {
+        ego_dist = std::fabs(ego_s_proj - pt.s);
+        ego_proj_pt = pt;
+        ego_proj_index = i;
+      }
+      if (std::fabs(fur_s_proj - pt.s) < fur_dist) {
+        fur_dist = std::fabs(fur_s_proj - pt.s);
+        fur_proj_pt = pt;
+        fur_proj_index = i;
+      }
+    }
+
+    const double dist_err =
+        (ego_info_under_slot.l2g_tf.GetPos(ego_info_under_slot.cur_pose.pos) -
+         ego_proj_pt.pos)
+            .norm();
+
+    if (dist_err > 0.068) {
+      ILOG_INFO << "control err is big, directly use ego pose to dynamic plan";
+      break;
+    }
+
+    input.ego_info_under_slot.cur_pose.pos =
+        ego_info_under_slot.g2l_tf.GetPos(fur_proj_pt.pos);
+    input.ego_info_under_slot.cur_pose.heading =
+        ego_info_under_slot.g2l_tf.GetHeading(fur_proj_pt.heading);
+
+    // 存储当前位置点到投影点之前的所有点
+    split_point_global_vec.reserve(fur_proj_index - ego_proj_index + 1);
+    for (size_t i = ego_proj_index; i < fur_proj_index; ++i) {
+      split_point_global_vec.emplace_back(current_path_point_global_vec_[i]);
+    }
+
+    ILOG_INFO << "dynamic plan use fur froj pt, s = " << s;
+    fur_proj_pt.PrintInfo();
+    break;
+  }
 
   input.force_mid_process_plan =
       apa_world_ptr_->GetSimuParam().force_mid_process_plan;
@@ -935,11 +1013,12 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
   current_path_point_global_vec_.clear();
   current_path_point_global_vec_.reserve(planner_output.path_point_vec.size() +
-                                         18);
+                                         split_point_global_vec.size() + 18);
 
   complete_path_point_global_vec_.clear();
   complete_path_point_global_vec_.reserve(
-      planner_output.all_gear_path_point_vec.size() + 18);
+      planner_output.all_gear_path_point_vec.size() +
+      split_point_global_vec.size() + 18);
 
   std::vector<pnc::geometry_lib::PathPoint> path_pt_vec;
   if (LateralPathOptimize(path_pt_vec)) {
@@ -947,6 +1026,11 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   } else {
     path_pt_vec = planner_output.path_point_vec;
     JSON_DEBUG_VALUE("is_path_lateral_optimized", false);
+  }
+
+  for (const auto& pt : split_point_global_vec) {
+    current_path_point_global_vec_.emplace_back(pt);
+    complete_path_point_global_vec_.emplace_back(pt);
   }
 
   geometry_lib::PathPoint global_point;
@@ -1016,31 +1100,38 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
-  const geometry_lib::PathPoint& terminal_err_pose =
-      ego_info_under_slot.terminal_err;
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+  const geometry_lib::PathPoint front_pose =
+      GetCarFrontPoseFromCarPose(cur_pose);
+  const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
 
-  const bool lon_condition = terminal_err_pose.pos.x() < param.finish_lon_err;
+  const double lon_err = cur_pose.pos.x() - target_pose.pos.x();
+  const double lat_err1 = cur_pose.pos.y() - target_pose.pos.y();
+  const double lat_err2 = front_pose.pos.y() - target_pose.pos.y();
+  const double heading_err =
+      (cur_pose.heading - target_pose.heading) * kRad2Deg;
 
-  const double y1 = terminal_err_pose.pos.y();
-  const double y2 =
-      (terminal_err_pose.pos + (param.wheel_base + param.front_overhanging) *
-                                   ego_info_under_slot.cur_pose.heading_vec)
-          .y();
+  JSON_DEBUG_VALUE("terminal_error_x", lon_err)
+  JSON_DEBUG_VALUE("terminal_error_y", lat_err1)
+  JSON_DEBUG_VALUE("terminal_error_y_front", lat_err2)
+  JSON_DEBUG_VALUE("terminal_error_heading", heading_err)
+  ILOG_INFO << "terminal_error_x = " << lon_err
+            << "  terminal_error_y = " << lat_err1
+            << "  lat_err2 = " << lat_err2 << "  heading_err = " << heading_err;
 
-  JSON_DEBUG_VALUE("terminal_error_y_front", y2)
-  ILOG_INFO << "terminal_error_y_front = " << y2;
+  const bool lon_condition = lon_err < param.finish_lon_err;
 
-  const bool lat_condition_1 = std::fabs(y1) <= param.finish_lat_err;
+  const bool lat_condition_1 = std::fabs(lat_err1) <= param.finish_lat_err;
 
-  const bool lat_condition_2 = std::fabs(y1) <= param.finish_lat_err_strict &&
-                               std::fabs(y2) <= param.finish_lat_err_strict;
+  const bool lat_condition_2 =
+      std::fabs(lat_err1) <= param.finish_lat_err_strict &&
+      std::fabs(lat_err2) <= param.finish_lat_err_strict;
 
-  const bool heading_condition_1 = std::fabs(terminal_err_pose.heading) <=
-                                   param.finish_heading_err * kDeg2Rad;
+  const bool heading_condition_1 =
+      std::fabs(heading_err) <= param.finish_heading_err;
 
   const bool heading_condition_2 =
-      std::fabs(terminal_err_pose.heading) <=
-      (param.finish_heading_err + 1.988) * kDeg2Rad;
+      std::fabs(heading_err) <= (param.finish_heading_err + 1.988);
 
   const bool lat_condition = (lat_condition_1 && heading_condition_1) &&
                              (lat_condition_2 && heading_condition_2);
@@ -1064,7 +1155,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_uss_condition =
       frame_.remain_dist_obs < param.max_replan_remain_dist;
 
-  GJKColDetRequest gjl_col_det_request(true, true);
+  GJKColDetRequest gjl_col_det_request(true, false);
 
   bool end_pos_has_obs_condition =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
@@ -1075,9 +1166,11 @@ const bool PerpendicularTailInScenario::CheckFinished() {
               0.0, 0.0, gjl_col_det_request)
           .col_flag;
 
+  ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
+
   if (!end_pos_has_obs_condition) {
     const geometry_lib::PathPoint uss_pose{
-        ego_info_under_slot.target_pose.pos - 0.368 * Eigen::Vector2d(1.0, 0.0),
+        ego_info_under_slot.target_pose.pos - 0.168 * Eigen::Vector2d(1.0, 0.0),
         ego_info_under_slot.target_pose.heading};
 
     end_pos_has_obs_condition =
@@ -1086,6 +1179,8 @@ const bool PerpendicularTailInScenario::CheckFinished() {
             ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
                      gjl_col_det_request)
             .col_flag;
+
+    ILOG_INFO << "after_pos_has_obs_condition = " << end_pos_has_obs_condition;
   }
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
@@ -1102,8 +1197,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
       frame_.remain_dist_col_det < param.max_replan_remain_dist;
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_dist_col_det_condition &&
-                   (terminal_err_pose.pos.x() < 0.568);
+                   remain_dist_col_det_condition && (lon_err < 0.568);
 
   return parking_finish;
 }
@@ -1318,7 +1412,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const bool case_1 = frame_.is_last_path;
   const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.368;
   const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 6.8;
-  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.07;
+  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.076;
   const bool case_5 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
 
   if (case_1 && case_2 && case_3 && case_4 && case_5) {
@@ -1431,6 +1525,15 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     lat_buffer = std::max(0.146, lat_buffer);
   }
 
+  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) < 0.4 &&
+      ego_info_under_slot.slot_occupied_ratio > 0.728 &&
+      std::fabs(
+          apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
+          kRad2Deg) < 216.0) {
+    lat_buffer = std::min(0.07, lat_buffer);
+  }
+
   return CalRemainDistFromObs(lon_buffer, lat_buffer);
 }
 
@@ -1465,21 +1568,25 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.g2l_tf);
-  const pnc::geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  const geometry_lib::PathPoint front_tar_pose_bef =
+      GetCarFrontPoseFromCarPose(tar_pose_bef);
 
   // 计算当前的真实车位终点位置
   geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
   tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
   tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
+  const geometry_lib::PathPoint front_tar_pose_now =
+      GetCarFrontPoseFromCarPose(tar_pose_now);
 
   const auto& param = apa_param.GetParam();
 
   std::vector<double> fail_count_tab{3.0, 4.0, 5.0, 6.0, 7.0};
   const double dlat =
-      (param.should_stop_lat_err - (param.finish_lat_err_strict + 1e-3)) /
+      (param.should_stop_lat_err - (param.finish_lat_err_strict - 1e-3)) /
       (fail_count_tab.size() - 1);
   const double dheading =
-      (param.should_stop_heading_err - (param.finish_heading_err + 1e-3)) /
+      (param.should_stop_heading_err - (param.finish_heading_err - 1e-3)) /
       (fail_count_tab.size() - 1);
   std::vector<double> lat_err_tab{};
   std::vector<double> heading_err_tab{};
@@ -1498,9 +1605,12 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
       mathlib::Interp1(fail_count_tab, heading_err_tab,
                        static_cast<double>(frame_.dynamic_replan_fail_count));
 
-  const double lat_err = tar_pose_now.pos.y() - tar_pose_bef.pos.y();
+  const double lat_err = std::max(
+      std::fabs(tar_pose_now.pos.y() - tar_pose_bef.pos.y()),
+      std::fabs(front_tar_pose_now.pos.y() - front_tar_pose_bef.pos.y()));
+
   const double heading_err =
-      (tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
+      std::fabs(tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
 
   ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
             << "  lat_err_threshold = " << lat_err_threshold
@@ -1513,6 +1623,7 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   }
 
   frame_.ego_stop_when_slot_jumps_much = true;
+  frame_.can_correct_path_for_limiter = false;
 
   ILOG_INFO << "the slot jumps too much, ego should stop, trim path, and then "
                "plan reverse path";
@@ -1615,6 +1726,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingRemainDist(
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
+  const ApaParameters& param = apa_param.GetParam();
   // 拿到之前的路径 并转换到如今的车位坐标系下
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
@@ -1628,11 +1740,14 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
           ->GetOutput()
           .path_segment_vec);
 
-  // 拿到之前的规划终点
-  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  if (geometry_path_now.path_segment_vec.size() < 1) {
+    return false;
+  }
 
-  // 拿到现在的规划终点
-  const geometry_lib::PathPoint tar_pose_now = geometry_path_now.end_pose;
+  if (geometry_path_now.path_segment_vec.back().seg_type !=
+      geometry_lib::SEG_TYPE_LINE) {
+    return false;
+  }
 
   if (geometry_path_now.gear_change_count > 0) {
     ILOG_INFO << "now path gear change count bigger than 0";
@@ -1643,33 +1758,115 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     return true;
   }
 
+  // 拿到之前的规划终点
+  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  const geometry_lib::PathPoint front_pose_bef =
+      GetCarFrontPoseFromCarPose(tar_pose_bef);
+
+  // 拿到现在的规划终点
+  const geometry_lib::PathPoint tar_pose_now = geometry_path_now.end_pose;
+  const geometry_lib::PathPoint front_pose_now =
+      GetCarFrontPoseFromCarPose(tar_pose_now);
+
   // 拿到实际终点
   const geometry_lib::PathPoint tar_pose_real = ego_info_under_slot.target_pose;
+  const geometry_lib::PathPoint front_pose_real =
+      GetCarFrontPoseFromCarPose(tar_pose_real);
 
-  // 原来的规划轨迹没有到终点
-  if (geometry_path_bef.end_pose.pos.x() >
-          tar_pose_real.pos.x() + apa_param.GetParam().car_to_limiter_dis -
-              0.068 &&
-      geometry_lib::IsTwoNumerEqual(geometry_path_now.end_pose.pos.x(),
-                                    tar_pose_real.pos.x())) {
+  // 计算之前规划终点与当前实际终点的横纵航向误差
+  const double lat_err_bef = (tar_pose_bef.pos - tar_pose_real.pos).y();
+  const double front_lat_err_bef = (front_pose_bef.pos - tar_pose_real.pos).y();
+  const double lon_err_bef = (tar_pose_bef.pos - tar_pose_real.pos).x();
+  const double heading_err_bef =
+      (tar_pose_bef.heading - tar_pose_real.heading) * kRad2Deg;
+
+  // 计算现在规划终点与当前实际终点的横纵航向误差
+  const double lat_err_now = (tar_pose_now.pos - tar_pose_real.pos).y();
+  const double front_lat_err_now = (front_pose_now.pos - tar_pose_real.pos).y();
+  const double lon_err_now = (tar_pose_now.pos - tar_pose_real.pos).x();
+  const double heading_err_now =
+      (tar_pose_now.heading - tar_pose_real.heading) * kRad2Deg;
+
+  ILOG_INFO << "lat_err_bef = " << lat_err_bef
+            << "  front_lat_err_bef = " << front_lat_err_bef
+            << "  lon_err_bef = " << lon_err_bef
+            << "  heading_err_bef = " << heading_err_bef
+            << "  lat_err_now = " << lat_err_now
+            << "  front_lat_err_now = " << front_lat_err_now
+            << "  lon_err_now = " << lon_err_now
+            << "  heading_err_now = " << heading_err_now;
+
+  if (lon_err_bef > param.car_to_limiter_dis - 0.068 &&
+      geometry_lib::IsTwoNumerEqual(lon_err_now, 0.0)) {
     return true;
   }
 
-  // 如果之前的规划终点相对现在的规划终点更靠近实际终点
-  if (std::fabs((tar_pose_bef.pos - tar_pose_real.pos).y()) <
-      std::fabs((tar_pose_now.pos - tar_pose_real.pos).y())) {
-    ILOG_INFO << "bef path is more close to actual target pose than now path";
+  bool bef_path_meet_finish = true;
+  if (std::fabs(lat_err_bef) > param.finish_lat_err ||
+      std::fabs(front_lat_err_bef) > param.finish_lat_err ||
+      std::fabs(heading_err_bef) > param.finish_heading_err) {
+    bef_path_meet_finish = false;
+  }
+
+  bool now_path_meet_finish = true;
+  if (std::fabs(lat_err_now) > param.finish_lat_err ||
+      std::fabs(front_lat_err_now) > param.finish_lat_err ||
+      std::fabs(heading_err_now) > param.finish_heading_err) {
+    now_path_meet_finish = false;
+  }
+
+  if (!bef_path_meet_finish && now_path_meet_finish) {
+    return true;
+  }
+
+  if (bef_path_meet_finish && !now_path_meet_finish) {
     return false;
   }
 
-  // 如果之前的规划终点和现在的规划终点很接近 且满足finish条件
-  if (std::fabs((tar_pose_bef.pos - tar_pose_now.pos).y()) < 0.05 &&
-      std::fabs((tar_pose_now.pos - tar_pose_real.pos).y()) <
-          apa_param.GetParam().finish_lat_err * 0.6) {
-    ILOG_INFO << "bef path is close to now path, and bef path meet finish "
-                 "condition";
+  // 如果之前路径误差越小 那么对现在路径的最后一段直线长度要求就越高
+  double line_length = 0.0;
+  for (int i = geometry_path_now.path_segment_vec.size() - 1; i >= 0; i--) {
+    const auto& seg = geometry_path_now.path_segment_vec[i];
+    if (seg.seg_steer == geometry_lib::SEG_TYPE_LINE &&
+        seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
+      line_length += geometry_path_now.path_segment_vec[i].Getlength();
+    } else {
+      break;
+    }
+  }
+  const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.10};
+  const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.368};
+  const double min_line_length = mathlib::Interp1(
+      lat_err_tab, line_length_tab,
+      std::max(std::fabs(lat_err_bef), std::fabs(front_lat_err_bef)));
+
+  ILOG_INFO << "now line length = " << line_length
+            << "  min line length = " << min_line_length;
+  if (line_length < min_line_length) {
+    ILOG_INFO << "the last line length is small";
     return false;
   }
+
+  const double allow_err = 0.04;
+  const double front_allow_err = 0.06;
+
+  if (std::fabs(lat_err_bef) < std::fabs(lat_err_now) + allow_err &&
+      std::fabs(front_lat_err_bef) <
+          std::fabs(front_lat_err_now) + front_allow_err) {
+    if (geometry_path_now.IsHasSTurnPath()) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  if (std::fabs(lat_err_bef) > std::fabs(lat_err_now) + allow_err ||
+      std::fabs(front_lat_err_bef) >
+          std::fabs(front_lat_err_now) + front_allow_err) {
+    return true;
+  }
+
+  return false;
 
   // 如果现在路径当前转向与当前转角方向相同
   const double steer_angle =
@@ -1686,37 +1883,6 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
       mathlib::IsInBound(steer_angle, -straight_angle, straight_angle) &&
       geometry_path_now.cur_steer == geometry_lib::SEG_STEER_STRAIGHT;
   if (steer_case_1 || steer_case_2 || steer_case_3) {
-    return true;
-  }
-
-  // 如果现在的路径没有S弯 不甩头
-  if (!geometry_path_now.IsHasSTurnPath()) {
-    return true;
-  }
-
-  // 如果有S弯甩头 比较一下 如果之前的规划终点相对于实际终点误差较大
-  // 影响finish 当前的规划终点相对于实际终点误差较小 更容易finish
-  // 但是也得考虑前后路径横向是否偏差过大 即控制是否相对容易跟踪
-  const bool err_case1 = std::fabs((tar_pose_bef.pos - tar_pose_real.pos).y()) >
-                             apa_param.GetParam().finish_lat_err * 0.5 ||
-                         std::fabs(geometry_lib::AngleSubtraction(
-                             tar_pose_bef.heading, tar_pose_real.heading)) *
-                                 kRad2Deg >
-                             apa_param.GetParam().finish_heading_err * 0.5;
-  const bool err_case2 = std::fabs((tar_pose_now.pos - tar_pose_real.pos).y()) <
-                             apa_param.GetParam().finish_lat_err * 0.5 ||
-                         std::fabs(geometry_lib::AngleSubtraction(
-                             tar_pose_now.heading, tar_pose_real.heading)) *
-                                 kRad2Deg <
-                             apa_param.GetParam().finish_heading_err * 0.5;
-  const double y_err = std::fabs((tar_pose_bef.pos - tar_pose_now.pos).y());
-  const std::vector<double> occupied_ratio_tab{0.0, 0.2, 0.4, 0.6, 0.8};
-  const std::vector<double> y_err_ratio_tab{0.368, 0.268, 0.168, 0.078, 0.0368};
-  const bool err_case3 =
-      y_err < mathlib::Interp1(occupied_ratio_tab, y_err_ratio_tab,
-                               ego_info_under_slot.slot_occupied_ratio);
-
-  if (err_case1 && err_case2 && err_case3) {
     return true;
   }
 
@@ -2034,7 +2200,7 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
   const bool car_pos_case =
       ego_info_under_slot.cur_pose.pos.x() <
       (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
-       1.68);
+       2.68);
 
   const bool occupied_ratio_case = (ego_info_under_slot.slot_occupied_ratio <
                                     param.pose_slot_occupied_ratio_3);
@@ -2156,11 +2322,6 @@ void PerpendicularTailInScenario::Log() const {
 
   JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2)
   JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
-
-  JSON_DEBUG_VALUE("terminal_error_x", ego_info_under_slot.terminal_err.pos.x())
-  JSON_DEBUG_VALUE("terminal_error_y", ego_info_under_slot.terminal_err.pos.y())
-  JSON_DEBUG_VALUE("terminal_error_heading",
-                   ego_info_under_slot.terminal_err.heading)
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)

@@ -276,6 +276,15 @@ const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
   return false;
 }
 
+const geometry_lib::PathPoint ParkingScenario::GetCarFrontPoseFromCarPose(
+    const geometry_lib::PathPoint& pose) {
+  geometry_lib::PathPoint front_pose = pose;
+  front_pose.pos = pose.pos + (apa_param.GetParam().front_overhanging +
+                               apa_param.GetParam().wheel_base) *
+                                  geometry_lib::GenHeadingVec(pose.heading);
+  return front_pose;
+}
+
 const double ParkingScenario::CalRemainDistFromPath() {
   double remain_dist = 5.01;
 
@@ -343,7 +352,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = 6.68;
   }
-  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.68;
+  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.168;
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     uss_remain_dist -= extra_buffer_when_reversing;

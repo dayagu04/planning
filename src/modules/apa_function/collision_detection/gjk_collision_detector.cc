@@ -212,10 +212,28 @@ const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
   GenCarPolygon();
   TransformPolygonFootPrintLocalToGlobal(pose);
   bool col_flag = false;
+  gjk_interface_.PolygonPointCollisionDetect(&polygon_foot_print_global_.body,
+                                             Eigen::Vector2f(obs.x(), obs.y()),
+                                             &col_flag);
+  if (col_flag) {
+    return true;
+  }
+
   gjk_interface_.PolygonPointCollisionDetect(
-      &polygon_foot_print_global_.max_polygon,
+      &polygon_foot_print_global_.mirror_left,
       Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
-  return col_flag;
+  if (col_flag) {
+    return true;
+  }
+
+  gjk_interface_.PolygonPointCollisionDetect(
+      &polygon_foot_print_global_.mirror_right,
+      Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
+  if (col_flag) {
+    return true;
+  }
+
+  return false;
 }
 
 void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(

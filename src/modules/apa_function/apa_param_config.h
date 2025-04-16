@@ -261,9 +261,10 @@ struct ApaParameters {
   double col_obs_safe_dist_normal = 0.36;
   double car_lat_inflation_dynamic_col = 0.05;
   double car_lat_inflation_normal = 0.0986;
-  bool tmp_no_consider_obs_dy = true;
+  bool force_use_little_buffer_move_slot = true;
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
+  bool use_fus_occ_column = true;
   bool use_uss_pt_clound = false;
   bool use_ground_line = true;
   bool use_object_detect;

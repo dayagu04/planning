@@ -448,13 +448,15 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_normal, double,
                   "car_lat_inflation_normal");
 
-  JSON_READ_VALUE(apa_param.SetPram().tmp_no_consider_obs_dy, bool,
-                  "tmp_no_consider_obs_dy");
+  JSON_READ_VALUE(apa_param.SetPram().force_use_little_buffer_move_slot, bool,
+                  "force_use_little_buffer_move_slot");
 
   JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
                   "believe_in_fus_obs");
 
   JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
+
+  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_column, bool, "use_fus_occ_column");
 
   JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
                   "use_uss_pt_clound");
