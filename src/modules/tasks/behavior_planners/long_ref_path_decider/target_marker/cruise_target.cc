@@ -33,6 +33,10 @@ constexpr double kSideMostKappaThreshold = 0.0025;
 constexpr double kMinCheckLength = 30.0;
 constexpr double kMaxCheckTime = 3.0;
 constexpr double kKphToMps = 1.0 / 3.6;
+constexpr double kLowSpeedFollowCIPVTrajLength = 4.2 * 5.0;
+constexpr double kLowSpeedFollowCIPVDis = 25.0;
+constexpr double kLowSpeedFollowJerkPosBound = 1.0;
+constexpr double kLowSpeedFollowAccPosBound = 0.5;
 }  // namespace
 
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
@@ -86,6 +90,15 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
   //   // DeterminRoundaboutAccLowerBound();
   // }
   speed_limit_ref = std::fmin(speed_limit_normal, speed_limit_ref);
+  //if low speed follow and creep
+  if (IsLowSpeedFollowCreep()) {
+    if (speed_limit_kinematics_bound_table_.count(speed_limit_type_ref) > 0) {
+      auto& kinematic_bound =
+        speed_limit_kinematics_bound_table_[speed_limit_type_ref];
+      kinematic_bound.acc_positive_mps2 = kLowSpeedFollowAccPosBound;
+      kinematic_bound.jerk_positive_mps3 = kLowSpeedFollowJerkPosBound;
+    }
+  }
   auto acceleration_trajectory1d =
       MakeTarget(speed_limit_ref, speed_limit_type_ref);
   size_t count = 0;
@@ -173,6 +186,70 @@ bool CruiseTarget::MakeSpeedLimitKinematicTable(
     speed_limit_kinematics_bound_table_[type] = kinematic_bound;
   }
   return true;
+}
+
+bool CruiseTarget::IsLowSpeedFollowCreep() {
+  const auto& cipv_decider_output =
+      session_->planning_context().cipv_decider_output();
+
+  auto cipv_agent_id = cipv_decider_output.cipv_id();
+  double cipv_relative_s = cipv_decider_output.relative_s();
+  auto* agent =
+            session_->environmental_model().get_agent_manager()->GetAgent(
+              cipv_agent_id);
+  if (agent == nullptr) {
+    return false;
+  }
+  if (agent->trajectories().empty()) {
+    return false;
+  }
+  if (agent->trajectories()[0].x_vec_.empty() ||
+      agent->trajectories()[0].y_vec_.empty()) {
+    return false;
+  }
+
+  const auto& ego_lane =
+      session_->environmental_model().get_virtual_lane_manager()->get_current_lane();
+
+  if (ego_lane == nullptr) {
+    return false;
+  }
+  // get reference path from ego lane
+  const auto& ego_reference_path = ego_lane->get_reference_path();
+  if (ego_reference_path == nullptr) {
+    return false;
+  }
+  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return false;
+  }
+
+  double first_traj_pt_s, first_traj_pt_l;
+  double last_traj_pt_s, last_traj_pt_l;
+  int traj_x_size = agent->trajectories()[0].x_vec_.size();
+  int traj_y_size = agent->trajectories()[0].y_vec_.size();
+  if (traj_x_size != traj_y_size) {
+    return false;
+  }
+  if (!ego_lane_coord->XYToSL(agent->trajectories()[0].x_vec_[0],
+                              agent->trajectories()[0].y_vec_[0],
+                              &first_traj_pt_s,
+                              &first_traj_pt_l)) {
+    return false;
+  }
+  if (!ego_lane_coord->XYToSL(agent->trajectories()[0].x_vec_[traj_x_size - 1],
+                              agent->trajectories()[0].y_vec_[traj_y_size - 1],
+                              &last_traj_pt_s,
+                              &last_traj_pt_l)) {
+    return false;
+  }
+
+  if (last_traj_pt_s - first_traj_pt_s < kLowSpeedFollowCIPVTrajLength &&
+      cipv_relative_s < kLowSpeedFollowCIPVDis) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 std::unique_ptr<PiecewiseJerkAccelerationTrajectory1d> CruiseTarget::MakeTarget(

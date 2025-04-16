@@ -72,6 +72,8 @@ class CruiseTarget : public Target {
 
   void AddCruiseTargetDataToProto();
 
+  bool IsLowSpeedFollowCreep();
+
  private:
   std::map<SpeedLimitType, KinematicsBound> speed_limit_kinematics_bound_table_;
   planning::common::CruiseTarget cruise_target_pb_;
