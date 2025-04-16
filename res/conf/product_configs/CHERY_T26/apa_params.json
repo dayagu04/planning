@@ -186,6 +186,7 @@
   "force_use_little_buffer_move_slot": true,
   "believe_in_fus_obs":false,
   "use_fus_occ_obj": true,
+  "use_fus_occ_column": true,
   "use_uss_pt_clound": false,
   "use_ground_line": true,
   "use_object_detect": true,

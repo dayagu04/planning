@@ -264,6 +264,7 @@ struct ApaParameters {
   bool force_use_little_buffer_move_slot = true;
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
+  bool use_fus_occ_column = true;
   bool use_uss_pt_clound = false;
   bool use_ground_line = true;
   bool use_object_detect;

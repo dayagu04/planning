@@ -71,9 +71,12 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
                  static_cast<uint8>(FUSION_OCCUPANCY_OBJECTS_MAX_NUM));
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
       // [hack]: need to retire in published version.
-      if (local_view->fusion_occupancy_objects_info.fusion_object[i]
-              .common_occupancy_info.type == iflyauto::OBJECT_TYPE_OCC_COLUMN) {
-        continue;
+      if (!apa_param.GetParam().use_fus_occ_column) {
+        if (local_view->fusion_occupancy_objects_info.fusion_object[i]
+                .common_occupancy_info.type ==
+            iflyauto::OBJECT_TYPE_OCC_COLUMN) {
+          continue;
+        }
       }
 
       const iflyauto::FusionOccupancyAdditional& fusion_occupancy_object =
@@ -113,6 +116,12 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
           ILOG_INFO << "there are people or dynamic obs";
           apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
         }
+      }
+
+      if (obs_type == iflyauto::OBJECT_TYPE_OCC_COLUMN) {
+        apa_obs.SetObsScemanticType(ApaObsScemanticType::COLUMN);
+      } else if (obs_type == iflyauto::OBJECT_TYPE_OCC_WALL) {
+        apa_obs.SetObsScemanticType(ApaObsScemanticType::WALL);
       }
 
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
@@ -207,14 +216,21 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
       GeneratePolygonByAABB(&polygon, box);
 
-    ApaObstacle apa_obs;
-    apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
-    apa_obs.SetObsAttributeType(ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
-    apa_obs.SetBoxGlobal(box);
-    apa_obs.SetPolygonGlobal(polygon);
-    apa_obs.SetId(obs_id_generate_);
-    obstacles_[obs_id_generate_] = apa_obs;
-    obs_id_generate_++;
+      ApaObstacle apa_obs;
+
+      if (gl.type == iflyauto::GROUND_LINE_TYPE_COLUMN) {
+        apa_obs.SetObsScemanticType(ApaObsScemanticType::COLUMN);
+      } else if (gl.type == iflyauto::GROUND_LINE_TYPE_WALL) {
+        apa_obs.SetObsScemanticType(ApaObsScemanticType::WALL);
+      }
+
+      apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
+      apa_obs.SetObsAttributeType(ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
+      apa_obs.SetBoxGlobal(box);
+      apa_obs.SetPolygonGlobal(polygon);
+      apa_obs.SetId(obs_id_generate_);
+      obstacles_[obs_id_generate_] = apa_obs;
+      obs_id_generate_++;
     }
   }
 
@@ -224,9 +240,9 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     for (uint8 i = 0; i < uss_obs_size; ++i) {
       const iflyauto::ApaSlotOutlineCoordinateDataType& obj_info =
           local_view->uss_percept_info.out_line_dataori[i];
-      const uint32 pt_cloud_size = std::min(
-          obj_info.obj_pt_cnt,
-                 static_cast<uint32>(USS_PERCEPTION_APA_SLOT_OBJ_MAX_NUM));
+      const uint32 pt_cloud_size =
+          std::min(obj_info.obj_pt_cnt,
+                   static_cast<uint32>(USS_PERCEPTION_APA_SLOT_OBJ_MAX_NUM));
       if (pt_cloud_size < 1) {
         continue;
       }
