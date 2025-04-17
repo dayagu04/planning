@@ -93,7 +93,7 @@ struct RSPath {
     return std::fabs(len);
   }
 
-  void DebugRSPath() {
+  void DebugRSPath() const {
     ILOG_INFO << "rs seg size " << size << " total len " << total_length;
 
     for (int i = 0; i < size; i++) {

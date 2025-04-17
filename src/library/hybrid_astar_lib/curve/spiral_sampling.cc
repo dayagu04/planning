@@ -132,11 +132,11 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
   cubic_spiral_path.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
   for (size_t k = 0; k < max_sampling_num; k++) {
+    sampling_end.x += 0.1;
     cubic_spiral_path.clear();
 
     if (!GetCubicSpiralPath(cubic_spiral_path, start, sampling_end,
                             spiral_gear)) {
-      sampling_end.x += 0.1;
       continue;
     }
 
@@ -152,7 +152,6 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     float end_point_error_x = last_state.x - sampling_end.x;
     float end_point_error_y = last_state.y - sampling_end.y;
     float end_point_error_theta = last_state.phi - sampling_end.theta;
-    sampling_end.x += 0.1;
 
     if (std::fabs(end_point_error_x) >= 1e-2 ||
         std::fabs(end_point_error_y) >= 1e-2) {

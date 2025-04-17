@@ -1,6 +1,7 @@
 #include "rs_sampling.h"
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 
 namespace planning {
 
@@ -338,11 +339,10 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
                                          min_radius_);
 
     // check safe
-    if (!collision_detect_->IsRSPathSafeByEDT(&rs_path_, rs_node_to_goal)) {
-      continue;
+    if (collision_detect_->IsRSPathSafeByEDT(&rs_path_, rs_node_to_goal)) {
+      valid_path = true;
+      break;
     }
-
-    valid_path = true;
   }
 
   if (!valid_path) {

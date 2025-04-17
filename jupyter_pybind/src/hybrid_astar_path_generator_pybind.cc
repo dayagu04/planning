@@ -533,7 +533,6 @@ int GenerateObstacleByJupyter(
   std::vector<Eigen::Vector2d> obs_sampling_points;
   obs_global_points_.clear();
 
-  //
   ParkObstacleList &hybrid_astar_obs_ =
       hybrid_astar_interface_->GetMutableObstacleList();
   hybrid_astar_obs_.Clear();
@@ -821,10 +820,12 @@ std::vector<Eigen::Vector3d> Update(
       case 2:
         request.path_generate_method =
             planning::AstarPathGenerateType::GEAR_REVERSE_SEARCHING;
+        request.first_action_request.gear_request = AstarPathGear::REVERSE;
         break;
       case 3:
         request.path_generate_method =
             planning::AstarPathGenerateType::GEAR_DRIVE_SEARCHING;
+        request.first_action_request.gear_request = AstarPathGear::DRIVE;
         break;
       case 8:
         request.path_generate_method =

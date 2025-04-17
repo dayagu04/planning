@@ -94,6 +94,7 @@ class HybridAStar {
   void CopyFallbackPath(HybridAStarResult* path);
 
   // If search success, return a path linked wtih goal point;
+  // todo: unify this API with AstarSearch().
   void OneShotPathAttempt(const MapBound& XYbounds, const Pose2D& start,
                           const Pose2D& target, HybridAStarResult* result);
 

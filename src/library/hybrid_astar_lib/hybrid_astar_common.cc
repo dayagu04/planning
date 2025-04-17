@@ -117,7 +117,7 @@ void DebugPathString(const HybridAStarResult* result) {
     ILOG_INFO << "i = " << i << " x, y, theta, gear:  " << result->x[i] << ", "
               << result->y[i] << ", " << result->phi[i] * 57.4 << ", "
               << PathGearDebugString(result->gear[i])
-              << ",path type = " << static_cast<int>(result->type[i])
+              << ",path type = " << GetNodeCurveDebugString(result->type[i])
               << ", s = " << result->accumulated_s[i];
   }
 

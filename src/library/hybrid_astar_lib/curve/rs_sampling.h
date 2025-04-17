@@ -27,6 +27,8 @@ class RSSampling : public CurveSampling {
 
   bool SamplingByRSPath(Node3d* current_node, Node3d* polynomial_node);
 
+  const RSPath& GetConstRsPath() const { return rs_path_; }
+
  private:
   void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2D& start,
                                const Pose2D& end,

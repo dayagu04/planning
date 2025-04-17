@@ -214,6 +214,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     return;
   }
   request_ = request;
+  DebugAstarRequestString(request_);
   hybrid_astar_->SetRequest(request_);
 
   // range
@@ -762,6 +763,10 @@ const Pose2D& HybridAStarInterface::GetGoalPoint() {
 }
 
 FootPrintCircleModel* HybridAStarInterface::GetSlotOutsideCircleFootPrint() {
+  if (hybrid_astar_ == nullptr) {
+    return nullptr;
+  }
+
   return hybrid_astar_->GetSlotOutsideCircleFootPrint();
 }
 

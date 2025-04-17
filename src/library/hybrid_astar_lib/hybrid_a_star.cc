@@ -995,8 +995,6 @@ const bool HybridAStar::BackwardPassByNode(
   // debug all nodes
   std::vector<Node3d*> node_list;
 
-  ILOG_INFO << "get result start backward pass by rs";
-
   // backward pass
   while (child_node->GetPreNode() != nullptr) {
     parent_node = child_node->GetPreNode();
@@ -1037,8 +1035,9 @@ const bool HybridAStar::BackwardPassByNode(
   }
 
   // get rs path
-  AstarPathType path_type = child_node->GetPathType();
+  AstarPathType path_type = AstarPathType::NONE;
   if (child_node != nullptr && child_node->IsRsPath() && rs_path != nullptr) {
+    path_type = child_node->GetPathType();
     for (int seg_id = 0; seg_id < rs_path->size; seg_id++) {
       const RSPathSegment* segment = &rs_path->paths[seg_id];
 
@@ -1067,15 +1066,16 @@ const bool HybridAStar::BackwardPassByNode(
 
       last_gear_type = cur_gear_type;
     }
-  }
 
+    ILOG_INFO << "get result start backward pass by rs";
+  }
   // get path
-  if (child_node != nullptr && child_node->IsQunticPolynomialPath()) {
+  else if (child_node != nullptr && child_node->IsQunticPolynomialPath()) {
     if (poly_path.size() < 1) {
       return false;
     }
 
-    AstarPathType path_type = child_node->GetPathType();
+    path_type = child_node->GetPathType();
 
     for (size_t k = 0; k < poly_path.size(); k++) {
       result->x.emplace_back(poly_path[k].x);
@@ -1085,17 +1085,18 @@ const bool HybridAStar::BackwardPassByNode(
       result->gear.emplace_back(poly_path[k].gear);
       result->kappa.emplace_back(poly_path[k].kappa);
     }
+
+    ILOG_INFO << "get result start backward pass by polynomial";
   }
 
   ReversePathBySwapStartGoal(result);
 
   // get path lengh
   UpdatePathS(result);
-  ILOG_INFO << "get result finish, path point size " << result->x.size();
-
   result->fail_type = AstarFailType::SUCCESS;
 
   // DebugPathString(result);
+  ILOG_INFO << "get result finish, path point size " << result->x.size();
 
 #if DEBUG_SEARCH_RESULT
   DebugNodeList(node_list);
@@ -1341,6 +1342,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
       break;
     } else if (rs_sampling_->SamplingByRSPath(current_node, &rs_node_to_goal)) {
+      rs_path_ = rs_sampling_->GetConstRsPath();
       ILOG_INFO << "RS success";
       break;
     }
@@ -1531,11 +1533,9 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   if (polynomial_node.IsNodeValid()) {
     BackwardPassByNode(result, &polynomial_node, nullptr, poly_path);
   } else if (rs_node_to_goal.IsNodeValid()) {
-    BackwardPassByNode(result, &rs_node_to_goal, &rs_path_,
-                       std::vector<AStarPathPoint>());
+    BackwardPassByNode(result, &rs_node_to_goal, &rs_path_, poly_path);
   } else if (BestNodeIsNice(best_node)) {
-    BackwardPassByNode(result, best_node, nullptr,
-                       std::vector<AStarPathPoint>());
+    BackwardPassByNode(result, best_node, nullptr, poly_path);
   } else {
     result->fail_type = AstarFailType::SEARCH_TOO_MUCH_NODE;
   }
@@ -1727,6 +1727,8 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
   Node3d best_rs_node;
   best_rs_node.ClearPath();
   best_rs_node.SetFCost(1000000.0);
+
+  std::vector<AStarPathPoint> poly_path;
 
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
@@ -1992,8 +1994,7 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
 
   // todo, use all astar node, maybe no need use rs path.
   if (best_rs_node.IsNodeValid()) {
-    BackwardPassByNode(result, &best_rs_node, &best_rs_path,
-                       std::vector<AStarPathPoint>());
+    BackwardPassByNode(result, &best_rs_node, &best_rs_path, poly_path);
   } else {
     result->fail_type = AstarFailType::SEARCH_TOO_MUCH_NODE;
   }
@@ -2442,6 +2443,10 @@ void HybridAStar::CopyNodePath(const Node3d* node,
 }
 
 FootPrintCircleModel* HybridAStar::GetSlotOutsideCircleFootPrint() {
+  if (collision_detect_ == nullptr) {
+    return nullptr;
+  }
+
   return collision_detect_->GetSlotOutsideCircleFootPrint();
 }
 

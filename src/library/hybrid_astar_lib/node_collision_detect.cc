@@ -263,11 +263,6 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     // check bound
     if (IsPointBeyondBound(path.points[i].x, path.points[i].y)) {
       node->SetCollisionType(NodeCollisionType::MAP_BOUND);
-      // node->SetCollisionID(i);
-
-      // ILOG_INFO << "x " << path.points[i].x << " y " << path.points[i].y
-      //           << " i " << i;
-
       return false;
     }
 
@@ -537,7 +532,6 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
     tf.SetBasePose(global_pose);
 
     veh_local_polygon = GetVehPolygon(path[i].gear);
-
     // ILOG_INFO << "gear " << PathGearDebugString(segment->gear);
 
     RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon, &global_pose,

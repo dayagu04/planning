@@ -25,6 +25,7 @@ class CurveSampling {
 
   void SetSearchGoal(const Pose2D& search_goal) {
     search_goal_ = search_goal;
+    search_goal_.DebugString();
     return;
   }
 
