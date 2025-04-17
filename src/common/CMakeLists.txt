@@ -27,9 +27,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PLATFORM STREQUAL "X86")
   target_link_libraries(${PROJECT_NAME} PUBLIC
     iflyauto_log
   )
-  message("ENABLE_IFLYTEK_LOG")
+  message("ENABLE_IFLYTEK_LOG_SRC_COMMON_CMAKE")
 else()
-  message("UNENABLE_IFLYTEK_LOG")
+  message("UNENABLE_IFLYTEK_LOG_SRC_COMMON_CMAKE")
 endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
