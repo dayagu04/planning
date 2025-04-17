@@ -730,7 +730,7 @@
   "observe_frames": 15,
   "centric_obs_frames":10,
   "dense_obstacle_dist":8.0,
-  "extend_obs_distance":30.0
+  "extend_obs_distance":10.0
 },
 "sample_poly_speed_adjust": {
   "sample_v_nums": 15,
