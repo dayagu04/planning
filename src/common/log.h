@@ -30,14 +30,14 @@ class Log {
     return instance;
   };
   void setConfig(const char* modulename, const char* filename,
-                 LogLevel loglevel);
+                 LogLevel loglevel) {};
   inline const char* getModuleName() { return m_moduleName.c_str(); }
   void sync();
 
-  ~Log();
+  ~Log() {};
 
  private:
-  Log();
+  Log() {};
 
  private:
   std::string m_moduleName;

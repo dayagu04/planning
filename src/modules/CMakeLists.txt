@@ -31,6 +31,7 @@ file(GLOB SRC_FILES
 )
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
+  common
   framework
   modules_context
   modules_apa_function
