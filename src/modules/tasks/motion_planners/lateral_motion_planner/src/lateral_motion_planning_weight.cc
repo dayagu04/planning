@@ -608,7 +608,11 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
       MakeLaneChangeDynamicWeight(planning_input);
     }
   } else if (lateral_motion_scene_ == SPLIT) {
-    weight_.remotely_index = 17;
+    if (ego_vel_ <= config_.lane_change_high_vel) {
+      weight_.remotely_index = 20;
+    } else {
+      weight_.remotely_index = 17;
+    }
     if (!is_divide_lane_into_two) {
       MakeSplitDynamicWeight(planning_input);
     } else {

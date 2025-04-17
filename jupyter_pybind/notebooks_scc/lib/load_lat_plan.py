@@ -739,17 +739,30 @@ def load_center_line_info():
     'line_s': [],
     'line_confidence': [],
   })
+  data_default_line_info = ColumnDataSource(data ={
+    'line_s': [0, 250],
+    'line_confidence': [0.5, 0.5],
+  })
 
   data_fig = {
     'current_line': data_current_line_info,
     'left_line': data_left_line_info,
     'right_line': data_right_line_info,
+    'default_line': data_default_line_info,
   }
 
   fig = bkp.figure(x_axis_label='line_s', y_axis_label='confidence', width=800, height=160)
-  fig.line('line_s', 'line_confidence', source = data_fig['current_line'], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'current confidence')
-  fig.line('line_s', 'line_confidence', source = data_fig['left_line'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'left confidence')
-  fig.line('line_s', 'line_confidence', source = data_fig['right_line'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right confidence')
+  c_fig = fig.line('line_s', 'line_confidence', source = data_fig['current_line'], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'current line')
+  l_fig = fig.line('line_s', 'line_confidence', source = data_fig['left_line'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'left line')
+  r_fig = fig.line('line_s', 'line_confidence', source = data_fig['right_line'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right line')
+  fig.line('line_s', 'line_confidence', source = data_fig['default_line'], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'threshold')
+
+  hover1 = HoverTool(renderers=[c_fig], tooltips=[('s', '@line_s'), ('confidence', '@line_confidence')], mode='vline')
+  hover2 = HoverTool(renderers=[l_fig], tooltips=[('s', '@line_s'), ('confidence', '@line_confidence')], mode='vline')
+  hover3 = HoverTool(renderers=[r_fig], tooltips=[('s', '@line_s'), ('confidence', '@line_confidence')], mode='vline')
+  fig.add_tools(hover1)
+  fig.add_tools(hover2)
+  fig.add_tools(hover3)
 
   fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
   fig.legend.click_policy = 'hide'

@@ -338,7 +338,7 @@
     "curv_factor": 0.33,
     "delta_t": 0.2,
     "min_v_cruise": 0.2,
-    "min_ego_vel": 1.0,
+    "min_ego_vel": 1.5,
     "acc_bound": 3.0,
     "jerk_bound": 0.25,
     "map_jerk_bound": [0.55, 0.5, 0.4, 0.25],

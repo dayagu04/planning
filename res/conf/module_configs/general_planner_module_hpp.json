@@ -193,7 +193,7 @@
   "column_l_buffer_for_decision": 0.7,
   "enable_hybrid_ara":true,
   "hybrid_ara_s_range":20,
-  "enable_ara_ref":true,
+  "enable_ara_ref":false,
   "hpp_min_search_range":20,
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,

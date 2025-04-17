@@ -2,15 +2,17 @@ import sys, os
 # import matplotlib.pyplot as plt
 from bokeh.plotting import figure, show
 from bokeh.models import ColumnDataSource, LabelSet
+from bokeh.resources import INLINE
 sys.path.append("..")
 sys.path.append("../lib/")
 from lib.load_local_view import *
 from lib.load_lat_plan import *
+from lib.load_ros_bag import LoadRosbag
 
 sys.path.append('../..')
 sys.path.append('../../../')
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240625/20240625-16-03-07/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-25-16-03-07_no_camera.bag"
 
 bag_loader = LoadRosbag(bag_path)

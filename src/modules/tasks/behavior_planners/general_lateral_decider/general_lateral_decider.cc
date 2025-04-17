@@ -526,18 +526,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // generate traj_points based on kMaxAcc or kMinAcc
     double kMaxAcc = 0.8;
     const double kMinAcc = -5.5;
-    // double cruise_v = session_->planning_context().v_ref_cruise();
     double cruise_v = std::max(config_.min_v_cruise,
                                session_->planning_context().v_ref_cruise());
-    if (cruise_v < 8.333) {
-      kMaxAcc = 0.3;
-    }
+    double ego_v = planning_init_point.v;
+    // if (cruise_v < 4.167) {  // low speed cruise
+    //   kMaxAcc = 0.4;
+    // }
     if (is_LC_CHANGE || is_LC_BACK) {
+      ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 1e-6;
     }
-    double ego_v = planning_init_point.v;
     if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
+      ego_v = std::max(ego_v, config_.min_v_cruise);
+      kMaxAcc = 0.2;
     }
     double s = 0.0;
     double span_t = config_.delta_t * config_.num_step;

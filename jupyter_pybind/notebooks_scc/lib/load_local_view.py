@@ -683,6 +683,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = loc_msg.position.position_boot.y
     cur_yaw = loc_msg.orientation.euler_boot.yaw
     try:
+      version = plan_debug_msg.frame_info.version
+      print(version)
       scene_type = plan_debug_msg.frame_info.scene_type
       print("scene_type: ", scene_type)
       planning_succ = plan_debug_msg.frame_info.planning_succ
