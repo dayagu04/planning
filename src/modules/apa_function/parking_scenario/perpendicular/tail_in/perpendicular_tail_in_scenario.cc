@@ -1114,7 +1114,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   JSON_DEBUG_VALUE("terminal_error_x", lon_err)
   JSON_DEBUG_VALUE("terminal_error_y", lat_err1)
   JSON_DEBUG_VALUE("terminal_error_y_front", lat_err2)
-  JSON_DEBUG_VALUE("terminal_error_heading", heading_err)
+  JSON_DEBUG_VALUE("terminal_error_heading", heading_err * kDeg2Rad)
   ILOG_INFO << "terminal_error_x = " << lon_err
             << "  terminal_error_y = " << lat_err1
             << "  lat_err2 = " << lat_err2 << "  heading_err = " << heading_err;
@@ -1410,7 +1410,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   // 如果当前车位姿已经几乎摆正，但是自车横向误差依然较大，可以增大横向buffer保证安全
   const bool case_1 = frame_.is_last_path;
-  const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.368;
+  const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.308;
   const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 6.8;
   const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.076;
   const bool case_5 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
