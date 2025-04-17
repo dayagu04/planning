@@ -1186,49 +1186,158 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   if (!is_in_lane_borrow_status && !in_intersection) {
     for (size_t i = 0; i < ref_traj_points_.size(); i++) {
       Bound soft_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-      soft_bound_lane.upper =
+      bool is_valid_left_lane_border_type = true;
+      bool is_valid_right_lane_border_type = true;
+      if (ref_path_points_[i].left_lane_border_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_UNKNOWN ||
+          ref_path_points_[i].left_lane_border_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
+        is_valid_left_lane_border_type = false;
+      }
+      if (ref_path_points_[i].right_lane_border_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_UNKNOWN ||
+          ref_path_points_[i].right_lane_border_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL) {
+       is_valid_right_lane_border_type = false;
+      }
+
+      if (is_valid_left_lane_border_type) {
+        soft_bound_lane.upper =
           std::fmin(ref_path_points_[i].distance_to_left_lane_border -
                         half_ego_width - config_.soft_buffer2lane,
                     soft_bound_lane.upper);
-      soft_bound_lane.lower =
+      }
+
+      if (is_valid_right_lane_border_type) {
+        soft_bound_lane.lower =
           std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
                         half_ego_width + config_.soft_buffer2lane,
                     soft_bound_lane.lower);
-      const auto &ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
-      if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
-        if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
+      }
+
+      const double ego_init_l = ego_frenet_state_.planning_init_point().frenet_state.r;
+      if (ego_init_l < soft_bound_lane.lower) {
           soft_bounds_[i].emplace_back(
-              WeightedBound{ego_init_sl_info.min_l + half_ego_width,
+              WeightedBound{ego_init_l,
                             kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
                             BoundInfo{-100, BoundType::EGO_POSITION}});
-          soft_bounds_[i].emplace_back(WeightedBound{
-              -kDefaultDistanceToRoad, soft_bound_lane.upper,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
-        } else {
-          soft_bounds_[i].emplace_back(WeightedBound{
-              soft_bound_lane.lower, soft_bound_lane.upper,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
-        }
-      } else if (is_lane_change &&
-                lc_request_direction == RequestType::RIGHT_CHANGE) {
-        if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
-          soft_bounds_[i].emplace_back(WeightedBound{
-              -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
-              config_.kPhysicalBoundWeight,
-              BoundInfo{-100, BoundType::EGO_POSITION}});
-          soft_bounds_[i].emplace_back(WeightedBound{
-              soft_bound_lane.lower, kDefaultDistanceToRoad,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
-        } else {
-          soft_bounds_[i].emplace_back(WeightedBound{
-              soft_bound_lane.lower, soft_bound_lane.upper,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
-        }
       } else {
         soft_bounds_[i].emplace_back(WeightedBound{
-            soft_bound_lane.lower, soft_bound_lane.upper,
+            soft_bound_lane.lower, kDefaultDistanceToRoad,
             config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
       }
+
+      if (ego_init_l > soft_bound_lane.upper) {
+        soft_bounds_[i].emplace_back(WeightedBound{
+            -kDefaultDistanceToRoad, ego_init_l,
+            config_.kPhysicalBoundWeight,
+            BoundInfo{-100, BoundType::EGO_POSITION}});
+      } else {
+        soft_bounds_[i].emplace_back(WeightedBound{
+            -kDefaultDistanceToRoad, soft_bound_lane.upper,
+            config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      }
+      // const auto &ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
+      // if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
+      //     soft_bounds_[i].emplace_back(
+      //         WeightedBound{ego_init_sl_info.min_l + half_ego_width,
+      //                       kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+      //                       BoundInfo{-100, BoundType::EGO_POSITION}});
+      // } else {
+      //   soft_bounds_[i].emplace_back(WeightedBound{
+      //       soft_bound_lane.lower, kDefaultDistanceToRoad,
+      //       config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      // }
+
+      // if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
+      //   soft_bounds_[i].emplace_back(WeightedBound{
+      //       -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
+      //       config_.kPhysicalBoundWeight,
+      //       BoundInfo{-100, BoundType::EGO_POSITION}});
+      // } else {
+      //   soft_bounds_[i].emplace_back(WeightedBound{
+      //       -kDefaultDistanceToRoad, soft_bound_lane.upper,
+      //       config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      // }
+
+
+      // if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
+      //   if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
+      //     soft_bounds_[i].emplace_back(
+      //         WeightedBound{ego_init_sl_info.min_l + half_ego_width,
+      //                       kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+      //                       BoundInfo{-100, BoundType::EGO_POSITION}});
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         -kDefaultDistanceToRoad, soft_bound_lane.upper,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   } else {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         soft_bound_lane.lower, soft_bound_lane.upper,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   }
+
+
+      //   // start
+      //   if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
+      //     soft_bounds_[i].emplace_back(
+      //         WeightedBound{ego_init_sl_info.min_l + half_ego_width,
+      //                       kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+      //                       BoundInfo{-100, BoundType::EGO_POSITION}});
+      //   } else {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         soft_bound_lane.lower, kDefaultDistanceToRoad,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   }
+
+      //   if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
+      //         config_.kPhysicalBoundWeight,
+      //         BoundInfo{-100, BoundType::EGO_POSITION}});
+      //   } else {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         -kDefaultDistanceToRoad, soft_bound_lane.upper,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   }
+      // } else if (is_lane_change &&
+      //           lc_request_direction == RequestType::RIGHT_CHANGE) {
+      //   // start
+      //   if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
+      //     soft_bounds_[i].emplace_back(
+      //         WeightedBound{ego_init_sl_info.min_l + half_ego_width,
+      //                       kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+      //                       BoundInfo{-100, BoundType::EGO_POSITION}});
+      //   } else {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         soft_bound_lane.lower, kDefaultDistanceToRoad,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   }
+
+      //   if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
+      //         config_.kPhysicalBoundWeight,
+      //         BoundInfo{-100, BoundType::EGO_POSITION}});
+      //   } else {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         -kDefaultDistanceToRoad, soft_bound_lane.upper,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   }
+
+      //   if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
+      //         config_.kPhysicalBoundWeight,
+      //         BoundInfo{-100, BoundType::EGO_POSITION}});
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         soft_bound_lane.lower, kDefaultDistanceToRoad,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   } else {
+      //     soft_bounds_[i].emplace_back(WeightedBound{
+      //         soft_bound_lane.lower, soft_bound_lane.upper,
+      //         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      //   }
+      // } else {
+      //   soft_bounds_[i].emplace_back(WeightedBound{
+      //       soft_bound_lane.lower, soft_bound_lane.upper,
+      //       config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
+      // }
     }
   }
 }
