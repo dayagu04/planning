@@ -4,15 +4,15 @@
 
 namespace planning {
 namespace {
-constexpr double IsoAccLimitUpper = -3.0;
-constexpr double IsoAccLimitLower = -4.0;
+constexpr double IsoAccLimitUpper = -2.0;
+constexpr double IsoAccLimitLower = -3.0;
 constexpr double IsoAccLimitSpeedUpper = 20.0;
-constexpr double IsoAccLimitSpeedLower = 5.0;
+constexpr double IsoAccLimitSpeedLower = 3.0;
 
-constexpr double IsoJerkLimitUpper = -3.5;
-constexpr double IsoJerkLimitLower = -5.0;
+constexpr double IsoJerkLimitUpper = -2.0;
+constexpr double IsoJerkLimitLower = -3.0;
 constexpr double IsoJerkLimitSpeedUpper = 20.0;
-constexpr double IsoJerkLimitSpeedLower = 5.0;
+constexpr double IsoJerkLimitSpeedLower = 3.0;
 
 constexpr double kFollowBuffer = 0.2;
 constexpr double kOvertakeBuffer = 2.0;
@@ -365,8 +365,7 @@ SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve()
   constexpr double kSlowAccLowerBound = -3.0;
   state_limit.a_max = acc_upper_bound_with_speed_;
   state_limit.a_min = acc_lower_bound;
-  state_limit.j_max =
-      speed_planning_config_.speed_planning_bound.jerk_upper_bound;
+  state_limit.j_max = 3.0;
   state_limit.j_min = jerk_lower_bound;
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
