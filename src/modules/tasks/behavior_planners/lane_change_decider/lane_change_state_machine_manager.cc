@@ -2280,11 +2280,19 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
 
       const double ego_current_v = ego_trajs_future_[0].v;
 
+      // 车辆参数
+      const auto &vehicle_param =
+          VehicleConfigurationContext::Instance()->get_vehicle_param();
+      const double kEgoFrontEdgeToRearAxleDistance =
+          vehicle_param.front_edge_to_rear_axle;
+      double two_car_length = kEgoFrontEdgeToRearAxleDistance +
+                              after_filter_agent->node_length() * 0.5;
+
       const int last_point_index =
           std::min(agent_prediction_trajs.size(), ego_trajs_future_.size()) - 1;
       const double last_point_rel_dis =
           agent_prediction_trajs[last_point_index].s -
-          ego_trajs_future_[last_point_index].s - 5.0;
+          ego_trajs_future_[last_point_index].s - two_car_length;
       const double safety_dis_threshold = std::max(0.1 * ego_current_v, 1.0);
 
       // 前方障碍物车辆的未来车速比自车小，且在安全距离之内的，那么需要考虑纵向在减速至目标车速过程中，与障碍物是否在安全距离之外
