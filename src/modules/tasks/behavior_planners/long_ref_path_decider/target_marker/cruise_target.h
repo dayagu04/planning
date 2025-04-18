@@ -72,9 +72,12 @@ class CruiseTarget : public Target {
 
   void AddCruiseTargetDataToProto();
 
-  bool IsLowSpeedFollowCreep();
+  bool CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk);
 
  private:
+  const std::vector<double> _LOW_SPEED_FOLLOW_ACC_BP{5.0, 21.0, 35.0};
+  const std::vector<double> _LOW_SPEED_FOLLOW_ACC_V{0.25, 0.50, 1.20};
+
   std::map<SpeedLimitType, KinematicsBound> speed_limit_kinematics_bound_table_;
   planning::common::CruiseTarget cruise_target_pb_;
 };

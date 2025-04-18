@@ -33,10 +33,11 @@ constexpr double kSideMostKappaThreshold = 0.0025;
 constexpr double kMinCheckLength = 30.0;
 constexpr double kMaxCheckTime = 3.0;
 constexpr double kKphToMps = 1.0 / 3.6;
-constexpr double kLowSpeedFollowCIPVTrajLength = 4.2 * 5.0;
+constexpr double kLowSpeedFollowCIPVTrajLength = 35.0;
 constexpr double kLowSpeedFollowCIPVDis = 25.0;
-constexpr double kLowSpeedFollowJerkPosBound = 1.0;
-constexpr double kLowSpeedFollowAccPosBound = 0.5;
+constexpr double kLowSpeedFollowTrajLengthThres = 10.0;
+constexpr double kLowSpeedFollowJerkPosBoundHigh = 1.0;
+constexpr double kLowSpeedFollowJerkPosBoundLow = 0.5;
 }  // namespace
 
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
@@ -91,12 +92,14 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
   // }
   speed_limit_ref = std::fmin(speed_limit_normal, speed_limit_ref);
   //if low speed follow and creep
-  if (IsLowSpeedFollowCreep()) {
+  double low_speed_follow_a = 0.0;
+  double low_speed_follow_j = 0.0;
+  if (CalcLowSpeedFollowAccAndJerk(&low_speed_follow_a, &low_speed_follow_j)) {
     if (speed_limit_kinematics_bound_table_.count(speed_limit_type_ref) > 0) {
       auto& kinematic_bound =
         speed_limit_kinematics_bound_table_[speed_limit_type_ref];
-      kinematic_bound.acc_positive_mps2 = kLowSpeedFollowAccPosBound;
-      kinematic_bound.jerk_positive_mps3 = kLowSpeedFollowJerkPosBound;
+      kinematic_bound.acc_positive_mps2 = low_speed_follow_a;
+      kinematic_bound.jerk_positive_mps3 = low_speed_follow_j;
     }
   }
   auto acceleration_trajectory1d =
@@ -188,7 +191,7 @@ bool CruiseTarget::MakeSpeedLimitKinematicTable(
   return true;
 }
 
-bool CruiseTarget::IsLowSpeedFollowCreep() {
+bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
   const auto& cipv_decider_output =
       session_->planning_context().cipv_decider_output();
 
@@ -243,9 +246,12 @@ bool CruiseTarget::IsLowSpeedFollowCreep() {
                               &last_traj_pt_l)) {
     return false;
   }
-
-  if (last_traj_pt_s - first_traj_pt_s < kLowSpeedFollowCIPVTrajLength &&
+  double cipv_traj_length = last_traj_pt_s - first_traj_pt_s;
+  if (cipv_traj_length < kLowSpeedFollowCIPVTrajLength &&
       cipv_relative_s < kLowSpeedFollowCIPVDis) {
+    *acc = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_ACC_BP, _LOW_SPEED_FOLLOW_ACC_V);
+    *jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
+            kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
     return true;
   } else {
     return false;
