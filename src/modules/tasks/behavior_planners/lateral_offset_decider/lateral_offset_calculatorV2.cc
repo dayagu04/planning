@@ -401,7 +401,10 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
       // TODO(clren)
       // keep
       avoid_info_.avoid_way = AvoidWay::Center;
-      lateral_offset = ego_frenet_state_.l();
+      lateral_offset =
+          ego_frenet_state_.l() < 0
+              ? std::max(ego_frenet_state_.l(), - avoid_info_.normal_right_avoid_threshold)
+              : std::min(ego_frenet_state_.l(), avoid_info_.normal_left_avoid_threshold);
       avoid_info_.is_use_ego_position = true;
     }
   } else {
