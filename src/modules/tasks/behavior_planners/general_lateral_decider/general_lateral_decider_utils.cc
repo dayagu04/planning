@@ -23,8 +23,10 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   if (in_intersection) {
     base_dis += config.nudge_extra_buffer_in_intersection;
   }
-
-  return std::fmax(base_dis + 0.015 * ego_vel, 0.);
+  double extra_pred_ts_decrease_buffer = interp(pred_ts, config.obstacle_pred_ts_bp,
+                               config.obstacle_pred_decrease_buffer);
+  // return std::fmax(base_dis + 0.015 * ego_vel, 0.);
+  return std::fmax(base_dis + 0.015 * ego_vel - extra_pred_ts_decrease_buffer, 0.);
 }
 
 double CalDesireLonDistance(double ego_vel, double agent_vel) {

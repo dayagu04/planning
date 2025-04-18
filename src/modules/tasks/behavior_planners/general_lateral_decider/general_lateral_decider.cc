@@ -1827,23 +1827,16 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     is_obstacle_sl_polygon_target_vaild = obstacle->get_polygon_at_time(config_.care_predict_object_t_threshold, reference_path_ptr_,
                                                 obstacle_sl_polygon_target);
   }
-  double s_center_target = 0;
-  if (is_obstacle_sl_polygon_target_vaild) {
-    auto points = obstacle_sl_polygon_target.points();
-    double s = 0;
-    for (size_t i = 0; i <points.size(); i++) {
-      s += points[i].x();
-    }
-    s_center_target = s / points.size();
-  }
-
+  last_overlap_min_y = -1000;
+  last_overlap_max_y = 1000;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
     if (t > config_.care_dynamic_object_t_threshold) {
       continue;
     }
-
+    double pred_ts = t;
+    const double planning_t = i * config_.delta_t;
     const double ego_s = traj_point.s;
     const double ego_l = traj_point.l;
 
@@ -1860,35 +1853,27 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
     if (config_.use_obstacle_prediction_model_in_planning) {
-      if (i * config_.delta_t <= config_.care_predict_object_t_threshold) {
-        ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
-                                                    obstacle_sl_polygon);
+      Polygon2d obstacle_sl_polygon_t;
+      ok = obstacle->get_polygon_at_time(planning_t, reference_path_ptr_,
+                                                  obstacle_sl_polygon_t);
+      if (planning_t <= config_.care_predict_object_t_threshold ||
+          !is_obstacle_sl_polygon_target_vaild) {
+        obstacle_sl_polygon = obstacle_sl_polygon_t;
       } else {
-        if (is_obstacle_sl_polygon_target_vaild) {
-          Polygon2d obstacle_sl_polygon_t;
-          ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
-                                                      obstacle_sl_polygon_t);
-          if (ok) {
-            auto points = obstacle_sl_polygon_t.points();
-            double s = 0;
-            for (size_t i = 0; i <points.size(); i++) {
-              s += points[i].x();
-            }
-            double s_center_t = s / points.size();
-            Polygon2d obstacle_sl_polygon_target_tmp = obstacle_sl_polygon_target;
-            obstacle_sl_polygon_target_tmp.RotateAndTranslate(
-              Vec2d(0, 0), 0, 1,
-              Vec2d(s_center_t - s_center_target, 0));
-            obstacle_sl_polygon = obstacle_sl_polygon_target_tmp;
-          }
-        } else {
-          ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
-                                                      obstacle_sl_polygon);
+        if (ok) {
+          double s_center_target = obstacle_sl_polygon_target.center_point().x();
+          double s_center_t = obstacle_sl_polygon_t.center_point().x();
+          Polygon2d obstacle_sl_polygon_target_tmp = obstacle_sl_polygon_target;
+          obstacle_sl_polygon_target_tmp.RotateAndTranslate(
+            Vec2d(0, 0), 0, 1,
+            Vec2d(s_center_t - s_center_target, 0));
+          obstacle_sl_polygon = obstacle_sl_polygon_target_tmp;
+          pred_ts = config_.care_predict_object_t_threshold;
         }
       }
     } else {
-      ok = obstacle->get_polygon_at_time_tmp(
-          i * config_.delta_t, reference_path_ptr_, obstacle_sl_polygon);
+      ok = obstacle->get_polygon_at_time_tmp(planning_t, reference_path_ptr_,
+                                                  obstacle_sl_polygon);
     }
     if (!ok) {
       // TBD add log
@@ -1908,26 +1893,38 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     } else {
       continue;
     }
-
     if (is_nudge_left) {
       overlap_min_y = std::max(overlap_min_y, limit_overlap_min_y);
+      if (overlap_min_y - last_overlap_min_y > -0.01) {
+        pred_ts = 0;
+      }
     } else {
       overlap_max_y = std::min(overlap_max_y, limit_overlap_max_y);
+      if (overlap_max_y - last_overlap_max_y < 0.01) {
+        pred_ts = 0;
+      }
     }
 
     double lat_buf_dis =
         general_lateral_decider_utils::CalDesireLateralDistance(
-            ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
+            ego_cart_state_manager_->ego_v(), pred_ts, 0, obstacle->type(),
             is_nudge_left, in_intersection, config_);
 
     if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
       lat_buf_dis += config_.extra_hard_buffer2blockobstacle;
     }
-
     if (!is_in_lane_borrow_status) {
       lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                   extra_lane_type_decrease_buffer,
                               0.);
+    }
+    double extra_pred_ts_decrease_buffer = interp(pred_ts, config_.obstacle_pred_ts_bp,
+                                config_.obstacle_pred_decrease_buffer);
+
+    if (is_nudge_left) {
+      last_overlap_min_y = overlap_min_y + extra_pred_ts_decrease_buffer;
+    } else {
+      last_overlap_max_y = overlap_max_y - extra_pred_ts_decrease_buffer;
     }
 
     // todo: high speed vehicle

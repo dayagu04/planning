@@ -971,6 +971,14 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                           std::vector<std::string>{"general_lateral_decider",
                                                    "extra_lateral_buffer"},
                           extra_lateral_buffer);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "obstacle_pred_ts_bp"},
+                          obstacle_pred_ts_bp);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "obstacle_pred_decrease_buffer"},
+                          obstacle_pred_decrease_buffer);
 
     ReadItem<double>(json, nudge_extra_buffer_in_intersection,
                      "general_lateral_decider",
@@ -1101,6 +1109,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> lateral_road_boader_v_bp{10, 40, 60, 100, 130};
   std::vector<double> extra_lateral_buffer{0.0, 0.0, 0.0, 0.0, 0.0};
 
+  std::vector<double> obstacle_pred_ts_bp{0, 1, 2, 3, 4, 5};
+  std::vector<double> obstacle_pred_decrease_buffer{0, 0.05, 0.1, 0.15, 0.2, 0.25};
   std::unordered_map<BoundType, double> map_bound_weight{
       {BoundType::AGENT, 0.1},
       {BoundType::DYNAMIC_AGENT, 0.1},

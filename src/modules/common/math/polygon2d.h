@@ -77,6 +77,12 @@ class Polygon2d {
   double area() const { return area_; }
 
   /**
+   * @brief Get the center point of the polygon.
+   * @return The center_point_ of the polygon.
+   */
+  Vec2d center_point() const { return center_point_; }
+
+  /**
    * @brief Compute the distance from a point to the boundary of the polygon.
    *        This distance is equal to the minimal distance from the point
    *        to the edges of the polygon.
@@ -326,6 +332,7 @@ class Polygon2d {
   double max_x_ = 0.0;
   double min_y_ = 0.0;
   double max_y_ = 0.0;
+  Vec2d center_point_ = Vec2d(0, 0);
 };
 
 }  // namespace planning_math

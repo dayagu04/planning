@@ -209,6 +209,8 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
   double min_road_radius_ = 10000.0;
+  double last_overlap_min_y = 0.0;
+  double last_overlap_max_y = 0.0;
   double cruise_vel_ = 0.0;
   double extra_lane_width_decrease_buffer_ = 0.0;
   double overlap_start_s_ = 0.0;
