@@ -634,8 +634,8 @@ class LoadRosbag:
                          "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                          "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
-                         "front_node_id", "rear_node_id","prohibit_acc_", \
-                         "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
+                         "front_node_id", "rear_node_id","prohibit_acc_", "lane_borrow_agent_id", "lane_borrow_agent_v_limit", 'ego_ttc_to_front_invade_agent', \
+                         "ego_left_node", "ego_left_front_node", "ego_left_rear_node", "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", \
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", \
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
@@ -653,7 +653,7 @@ class LoadRosbag:
                          'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty','v3_start_stop_status','cipv_relative_s',
                          "agents_headway_id", "agents_headway_value", "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target",'cipv_relative_s_ego_stop',"distance_to_go_condition",
                          "cipv_vel_frenet",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
-                         "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent', "lane_borrow_agent_id", "lane_borrow_agent_v_limit",
+                         "lon_decision_to_invade",'invade_neighbor_front_agent_id',
                          "ramp_pass_sts","first_split_direction", "first_merge_direction"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",

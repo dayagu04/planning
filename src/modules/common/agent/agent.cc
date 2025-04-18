@@ -34,6 +34,8 @@ Agent::Agent(const Agent& agent)
     timestamp_s_ = agent.timestamp_s();
 
     is_vru_ = agent.is_vru();
+    is_tfl_virtual_obs_ = agent.is_tfl_virtual_obs();
+    time_range_ = agent.time_range();
 
     // 当前默认trajectories_中只存一条轨迹
     trajectories_.clear();

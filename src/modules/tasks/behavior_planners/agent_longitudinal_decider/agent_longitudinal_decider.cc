@@ -629,6 +629,8 @@ bool AgentLongitudinalDecider::CheckCutOutAgent(const agent::Agent& agent) {
   const bool is_in_lane_change = (lane_change_status == kLaneChangeExecution ||
                                   lane_change_status == kLaneChangeComplete);
 
+  const bool is_vru = agent.is_vru();
+
   const auto& current_lane = virtual_lane_manager_->get_current_lane();
   if (current_lane == nullptr) {
     return false;
@@ -688,7 +690,7 @@ bool AgentLongitudinalDecider::CheckCutOutAgent(const agent::Agent& agent) {
                                   &relative_point_l_in_lane)) {
     return false;
   }
-  constexpr double kLateralDiff = 3.0;
+  const double kLateralDiff = is_vru ? agent.width() : 3.0;
   constexpr double kLongitudinalDiff = 20.0;
   const bool lateral_diff_meet =
       std::fabs(agent_l_in_lane - end_point_l_in_lane) > kLateralDiff;

@@ -12,9 +12,11 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.6;
+constexpr double lane_change_decrease_time_gap = 0.8;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double first_appear_time_gap = 1.0;
+constexpr double kHighSpeedDiffThd = 2.78;
+constexpr double kTflVirtualAgentHW = 1.5;
 }  // namespace
 
 AgentHeadwayDecider::AgentHeadwayDecider(
@@ -114,13 +116,17 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     auto iter = agents_headway_map_.find(st_agent_id);
     const double init_headway_by_ego =
         CalcAgentInitHeadway(ego_state_manager, agent);
+    const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
+    if (is_tfl_virtual_agent) {
+      gear_headway = kTflVirtualAgentHW;
+    }
     const double agent_init_headway =
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
 
     const double v_ego = ego_state_manager->ego_v();
     const double v_relative = agent->speed() - v_ego;
-    if (v_relative > 2.78) {
-      headway_step = 0.05;
+    if (v_relative > kHighSpeedDiffThd) {
+      headway_step = 0.5 * headway_step;
     }
 
     // first appear

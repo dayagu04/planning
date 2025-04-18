@@ -515,7 +515,8 @@ void STGraph::MakeStPointsTable() {
     const auto& upper_points = st_boundary->upper_points();
     for (int i = 0; i < lower_points.size(); ++i) {
       if (lower_points[i].valid() && upper_points[i].valid()) {
-        int index = (lower_points[i].t() - time_range.first) / kTimeResolution;
+        int index = std::round((lower_points[i].t() - time_range.first) /
+                               kTimeResolution);
         st_points_table_[index].emplace_back(lower_points[i], upper_points[i]);
       }
     }
