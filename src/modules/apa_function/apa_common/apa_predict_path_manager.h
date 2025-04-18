@@ -20,6 +20,8 @@ class ApaPredictPathManager final {
   void Reset() {
     predict_pt_vec_.clear();
     gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID;
+    lat_err_ = 0.0;
+    phi_err_ = 0.0;
   }
 
   const std::vector<pnc::geometry_lib::PathPoint>& GetPredictPath() const {
@@ -28,10 +30,15 @@ class ApaPredictPathManager final {
 
   const pnc::geometry_lib::PathSegGear GetPathGear() const { return gear_; }
 
+  const double GetLatErr() const { return lat_err_; }
+  const double GetPhiErr() const { return phi_err_; }
+
  private:
   std::vector<pnc::geometry_lib::PathPoint> predict_pt_vec_;
   pnc::geometry_lib::PathSegGear gear_{
       pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID};
+  double lat_err_{0.0};
+  double phi_err_{0.0};
 };
 }  // namespace apa_planner
 }  // namespace planning

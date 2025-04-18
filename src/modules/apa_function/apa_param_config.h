@@ -273,7 +273,7 @@ struct ApaParameters {
   double obs_safe_dx = 0.1;
   double obs2slot_max_dist = 4.68;
   double slot_max_jump_dist = 0.068;
-  double line_arc_obs_slot_occupied_ratio = 0.168;
+  double dynamic_plan_proj_dt = 0.8;
   double line_arc_obs_channel_width = 8.886;
   double line_arc_obs_channel_length = 5.086;
   bool dynamic_col_det_enable = false;

@@ -494,8 +494,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().slot_max_jump_dist, double,
                   "slot_max_jump_dist");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_slot_occupied_ratio, double,
-                  "line_arc_obs_slot_occupied_ratio");
+  JSON_READ_VALUE(apa_param.SetPram().dynamic_plan_proj_dt, double,
+                  "dynamic_plan_proj_dt");
 
   JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_width, double,
                   "line_arc_obs_channel_width");

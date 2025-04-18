@@ -784,7 +784,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   std::vector<geometry_lib::PathPoint> split_point_global_vec;
   split_point_global_vec.clear();
   while (frame_.is_replan_dynamic) {
-    const double dt = 0.4;
+    const double dt = apa_param.GetParam().dynamic_plan_proj_dt;
     const double s =
         std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) * dt;
     if (s > frame_.remain_dist_path || s > frame_.remain_dist_obs) {

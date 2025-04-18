@@ -47,6 +47,9 @@ void ApaPredictPathManager::Update(
   double path_length = 0.0;
   double proj_s = 0.0;
   int i = 0;
+  const double ego_x = measure_data_ptr->GetPos().x();
+  const double ego_y = measure_data_ptr->GetPos().y();
+  const double ego_phi = measure_data_ptr->GetHeading();
   for (i = 0; i < std::min(planning_output->trajectory.trajectory_points_size,
                            static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
        ++i) {
@@ -62,8 +65,7 @@ void ApaPredictPathManager::Update(
     }
 
     const double dist =
-        std::hypot(planning_pt.x - measure_data_ptr->GetPos().x(),
-                   planning_pt.y - measure_data_ptr->GetPos().y());
+        std::hypot(planning_pt.x - ego_x, planning_pt.y - ego_y);
     if (dist < min_dist) {
       min_index = i;
       min_dist = dist;
@@ -76,6 +78,22 @@ void ApaPredictPathManager::Update(
   }
 
   bool control_err_big = false;
+
+  const double match_pt_x =
+      planning_output->trajectory.trajectory_points[min_index].x;
+  const double match_pt_y =
+      planning_output->trajectory.trajectory_points[min_index].y;
+  const double match_pt_phi =
+      planning_output->trajectory.trajectory_points[min_index].heading_yaw;
+
+  phi_err_ = pnc::geometry_lib::NormalizeAngle(ego_phi - match_pt_phi);
+
+  lat_err_ = Eigen::Vector2d(ego_x - match_pt_x, ego_y - match_pt_y)
+                .dot(Eigen::Vector2d(-std::sin(match_pt_phi),
+                                     std::cos(match_pt_phi)));
+
+  ILOG_INFO << "lat_err: " << lat_err_ << ", phi_err: " << phi_err_ * kRad2Deg;
+
   if (std::hypot(
           measure_data_ptr->GetPos().x() -
               planning_output->trajectory.trajectory_points[min_index].x,

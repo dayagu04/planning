@@ -194,7 +194,7 @@
   "obs_safe_dx": 0.0668,
   "obs2slot_max_dist": 10.08,
   "slot_max_jump_dist": 0.068,
-  "line_arc_obs_slot_occupied_ratio": 0.168,
+  "dynamic_plan_proj_dt": 0.8,
   "line_arc_obs_channel_width": 4.88,
   "line_arc_obs_channel_length": 5.086,
   "dynamic_col_det_enable": true,
