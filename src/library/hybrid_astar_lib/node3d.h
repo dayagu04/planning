@@ -12,8 +12,8 @@
 #include "ad_common/math/box2d.h"
 
 #include "./../../modules/common/config/vehicle_param.h"
-#include "g_cost.h"
-#include "h_cost.h"
+#include "cost/g_cost.h"
+#include "cost/h_cost.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
 #include "log_glog.h"
@@ -187,7 +187,7 @@ class Node3d {
 
   void SetPathType(const AstarPathType type) { path_type_ = type; }
 
-  bool IsPathGearChange(const AstarPathGear type);
+  bool IsPathGearChange(const AstarPathGear type) const;
 
   const bool IsForward() const { return gear_type_ == AstarPathGear::DRIVE; }
 

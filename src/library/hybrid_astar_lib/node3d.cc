@@ -232,7 +232,7 @@ void Node3d::DebugCost() const {
   return;
 }
 
-bool Node3d::IsPathGearChange(const AstarPathGear type) {
+bool Node3d::IsPathGearChange(const AstarPathGear type) const {
   if (gear_type_ == AstarPathGear::DRIVE && type == AstarPathGear::REVERSE) {
     return true;
   }

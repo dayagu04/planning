@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include "./../convex_collision_detection/gjk2d_interface.h"
-#include "./../occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "ad_common/math/line_segment2d.h"
 #include "hybrid_astar_config.h"
 #include "log_glog.h"
@@ -57,17 +57,17 @@ struct NodeLayer {
 
 class GridSearch {
  public:
-  explicit GridSearch(const PlannerOpenSpaceConfig& open_space_conf);
+  GridSearch() = default;
+  GridSearch(const PlannerOpenSpaceConfig& open_space_conf);
 
   ~GridSearch() = default;
 
   bool GenerateDpMap(const float ex, const float ey, const MapBound& XYbounds,
-                     const ParkObstacleList* obstacles,
-                     const float veh_half_width_with_safe_dist);
+                     const ParkObstacleList* obstacles);
 
   float CheckDpMap(const float sx, const float sy);
 
-  void Init();
+  void Init(const PlannerOpenSpaceConfig& open_space_conf);
 
  private:
   float EuclidDistance(const float x1, const float y1, const float x2,
@@ -106,7 +106,6 @@ class GridSearch {
   float inv_xy_resolution_ = 0.0;
   float xy_grid_resolution_half_ = 0.0;
   float safe_width_ = 0.0;
-  float veh_half_width_with_safe_dist_ = 0.0;
 
   MapBound XYbounds_;
 

@@ -71,7 +71,7 @@ struct RSPath {
     if (seg->size < 1) {
       return;
     }
-    *point = seg->points[0];
+    *point = seg->points[seg->size - 1];
 
     return;
   }
@@ -91,6 +91,28 @@ struct RSPath {
     }
 
     return std::fabs(len);
+  }
+
+  void DebugRSPath() const {
+    ILOG_INFO << "rs seg size " << size << " total len " << total_length;
+
+    for (int i = 0; i < size; i++) {
+      ILOG_INFO << "rs seg len " << paths[i].length << " steer "
+                << static_cast<int>(paths[i].steer)
+                << ", steering wheel: " << paths[i].kappa
+                << ",rs seg size= " << paths[i].size;
+    }
+
+    for (size_t i = 0; i < size; i++) {
+      const RSPathSegment *seg = &paths[i];
+      for (size_t j = 0; j < seg->size; j++) {
+        ILOG_INFO << "rs point, id " << j << "x " << seg->points[j].x << " y "
+                  << seg->points[j].y << " len" << seg->length << " ,kappa "
+                  << seg->kappa;
+      }
+    }
+
+    return;
   }
 };
 

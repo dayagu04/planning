@@ -30,7 +30,6 @@ class HybridAStarInterface {
 
   // for now, use slot coordinate. you can call this API in one thread.
   void GeneratePath(const Eigen::Vector3d& start, const Eigen::Vector3d& end,
-                    const ParkObstacleList& obs_list,
                     const AstarRequest& request);
 
   const AstarSearchState GetFullLengthPath(HybridAStarResult* result);
@@ -77,7 +76,6 @@ class HybridAStarInterface {
 
   EulerDistanceTransform* GetMutableEDT() { return &edt_; }
 
- public:
   // for debug
   void GetRSPathHeuristic(
       std::vector<std::vector<Vec2df32>>& path_list);
@@ -156,6 +154,7 @@ class HybridAStarInterface {
   MapBound map_bounds_;
 
   std::shared_ptr<HybridAStar> hybrid_astar_;
+  GridSearch dp_heuristic_generator_;
   // path = astar node path + rs path.
   HybridAStarResult coarse_traj_;
 

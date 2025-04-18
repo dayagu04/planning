@@ -54,11 +54,6 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
   vehicle_param_.max_steer_angle =
       std::fabs(front_wheel * vehicle_param_.steer_ratio);
 
-  hybrid_astar_ = std::make_shared<HybridAStar>(config_, vehicle_param_);
-  if (hybrid_astar_ != nullptr) {
-    hybrid_astar_->Init();
-  }
-
   search_state_ = AstarSearchState::NONE;
 
   ogm_.Init();
@@ -69,13 +64,19 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
         static_cast<float>(config_.safe_buffer.lat_safe_buffer_outside[0]));
   }
 
+  dp_heuristic_generator_.Init(config_);
+  hybrid_astar_ = std::make_shared<HybridAStar>(config_, vehicle_param_, &obs_,
+                                                &edt_, &clear_zone_, &ref_line_,
+                                                &dp_heuristic_generator_);
+  hybrid_astar_->Init();
+
   ILOG_INFO << "astar interface success";
 
   return 0;
 }
 
 void HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
-                                      const AstarRequest& request) {
+                                       const AstarRequest& request) {
   request_ = request;
 
   // start state
@@ -137,8 +138,10 @@ void HybridAStarInterface::UpdateOutput() {
   // update clear zone. This zone not contain any obstacle.
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
 
+  dp_heuristic_generator_.GenerateDpMap(
+      request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
+
   hybrid_astar_->Clear();
-  hybrid_astar_->UpdateConfig(request_);
 
   // vertical parking center ref line
   if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
@@ -177,6 +180,7 @@ void HybridAStarInterface::UpdateOutput() {
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
   DebugAstarRequestString(request_);
+  hybrid_astar_->SetRequest(request_);
 
   if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING ||
       request_.path_generate_method ==
@@ -204,14 +208,14 @@ void HybridAStarInterface::UpdateOutput() {
 
 void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                                         const Eigen::Vector3d& end,
-                                        const ParkObstacleList& obs_list,
                                         const AstarRequest& request) {
   if (search_state_ == AstarSearchState::SEARCHING) {
     ILOG_INFO << "path searching, please wait";
     return;
   }
   request_ = request;
-  hybrid_astar_->UpdateConfig(request);
+  DebugAstarRequestString(request_);
+  hybrid_astar_->SetRequest(request_);
 
   // range
   UpdateSearchBoundary();
@@ -239,8 +243,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   PathClear(&coarse_traj_);
   search_state_ = AstarSearchState::SEARCHING;
 
-  UpdateEDTByObs(obs_list);
-  clear_zone_.GenerateBoundingBox(request_.start_, &obs_list);
+  UpdateEDT();
+  clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
   // vertical parking center ref line
   if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
     ref_line_.Process(request_.real_goal,
@@ -251,6 +255,9 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                       Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
                              request_.real_goal.theta));
   }
+
+  dp_heuristic_generator_.GenerateDpMap(
+      request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
 
   TargetPoseRegulator target_pose_regulator;
   Pose2D center_line_pose;
@@ -287,20 +294,13 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                               obs_list, request, &clear_zone_, &coarse_traj_,
-                               &edt_, &ref_line_);
+                               &coarse_traj_);
   } else if (request.path_generate_method ==
-             AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
-    hybrid_astar_->GearRerversePathAttempt(
-        map_bounds_, obs_list, request, &clear_zone_, GetStartPoint(),
-        GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
-
-  } else if (request.path_generate_method ==
-             AstarPathGenerateType::GEAR_DRIVE_SEARCHING) {
-    hybrid_astar_->GearDrivePathAttempt(
-        map_bounds_, obs_list, request, &clear_zone_, GetStartPoint(),
-        GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
-
+                 AstarPathGenerateType::GEAR_REVERSE_SEARCHING ||
+             request.path_generate_method ==
+                 AstarPathGenerateType::GEAR_DRIVE_SEARCHING) {
+    hybrid_astar_->OneShotPathAttempt(map_bounds_, GetStartPoint(),
+                                      GetGoalPoint(), &coarse_traj_);
   } else {
     Pose2D start_pose;
     Pose2D end_pose;
@@ -324,9 +324,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
       lon_min_sampling_dist = 0.4;
     }
 
-    hybrid_astar_->PlanByRSPathSampling(
-        &coarse_traj_, start_pose, end_pose, lon_min_sampling_dist, map_bounds_,
-        obs_list, request, &edt_, &clear_zone_, &ref_line_);
+    hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, start_pose, end_pose,
+                                        lon_min_sampling_dist);
   }
 
   search_state_ = AstarSearchState::SUCCESS;
@@ -764,6 +763,10 @@ const Pose2D& HybridAStarInterface::GetGoalPoint() {
 }
 
 FootPrintCircleModel* HybridAStarInterface::GetSlotOutsideCircleFootPrint() {
+  if (hybrid_astar_ == nullptr) {
+    return nullptr;
+  }
+
   return hybrid_astar_->GetSlotOutsideCircleFootPrint();
 }
 
@@ -827,15 +830,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
             AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
         request_.path_generate_method ==
             AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
-      if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-        hybrid_astar_->GearDrivePathAttempt(
-            map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
-            GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
-      } else {
-        hybrid_astar_->GearRerversePathAttempt(
-            map_bounds_, obs_, request_, &clear_zone_, GetStartPoint(),
-            GetGoalPoint(), &coarse_traj_, &edt_, &ref_line_);
-      }
+      hybrid_astar_->OneShotPathAttempt(map_bounds_, GetStartPoint(),
+                                        GetGoalPoint(), &coarse_traj_);
 
       // check path
       if (coarse_traj_.x.size() > 2) {
@@ -851,8 +847,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                                 obs_, request_, &clear_zone_, &coarse_traj_,
-                                 &edt_, &ref_line_);
+                                 &coarse_traj_);
 
       ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
     }
@@ -895,9 +890,8 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   }
 
   target_regulator_goal_ = target_regulator_result.first;
-  hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_, obs_,
-                             request_, &clear_zone_, &coarse_traj_, &edt_,
-                             &ref_line_);
+  hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
+                             &coarse_traj_);
 
   return;
 }
@@ -939,27 +933,21 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
       // parallel
       if (request_.space_type == ParkSpaceType::PARALLEL) {
         hybrid_astar_->SamplingByCubicPolyForParallelSlot(
-            &path, GetStartPoint(), GetGoalPoint(),
-            lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-            &clear_zone_, &ref_line_);
+            &path, GetStartPoint(), GetGoalPoint(), lon_min_sampling_length);
       } else {
         if (hybrid_astar_->SamplingByCubicSpiralForVerticalSlot(
                 &path, GetStartPoint(), GetGoalPoint(),
-                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-                &clear_zone_, &ref_line_)) {
+                lon_min_sampling_length)) {
         } else {
           hybrid_astar_->PlanByRSPathSampling(
-              &path, GetStartPoint(), GetGoalPoint(),
-              lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-              &clear_zone_, &ref_line_);
+              &path, GetStartPoint(), GetGoalPoint(), lon_min_sampling_length);
         }
       }
 
     } else {
-      hybrid_astar_->PlanByRSPathSampling(
-          &path, GetStartPoint(), GetGoalPoint(),
-          lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-          &clear_zone_, &ref_line_);
+      hybrid_astar_->PlanByRSPathSampling(&path, GetStartPoint(),
+                                          GetGoalPoint(),
+                                          lon_min_sampling_length);
     }
 
     // check time

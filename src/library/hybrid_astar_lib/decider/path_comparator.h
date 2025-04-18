@@ -14,21 +14,6 @@ enum PathWinReason {
   KAPPA,
 };
 
-struct PolynomialPathCost {
-  float offset_to_center;
-  float accumulated_s;
-  float tail_heading;
-
-  size_t point_size;
-
-  void Clear() {
-    offset_to_center = 100.0;
-    tail_heading = 100.0;
-    point_size = 0;
-    return;
-  }
-};
-
 // 路径比较器.
 // 同样长度的path: 换档次数少的path更好;
 // 同样档位数量的path: 车头接近中心线heading更好;

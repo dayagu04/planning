@@ -16,19 +16,12 @@ enum class CollisionDetectionMethod {
   AABB,
 };
 
-enum class PathGearRequest {
-  NONE = 0,
-  GEAR_REVERSE_ONLY,
-  GEAR_DRIVE_ONLY,
-  MAX_NUMBER
-};
-
 // request-response mode.
 struct AstarRequest {
   double timestamp_ms;
   AstarPathGenerateType path_generate_method;
 
-  // when ouput a path, the first action include: gear, drive distance et al.
+  // when ouput a path, the first action include: gear, drive distance at al.
   ParkFirstActionRequest first_action_request;
   AstarPathGear history_gear;
 

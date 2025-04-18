@@ -61,7 +61,6 @@ std::vector<Eigen::Vector2d> corrected_park_space_points_;
 Eigen::Vector2d right_wall1_upper_;
 
 std::vector<Eigen::Vector2d> obs_global_points_;
-ParkObstacleList hybrid_astar_obs_;
 std::vector<Eigen::Vector4d> obs_line_list_;
 
 std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
@@ -499,6 +498,8 @@ int GenerateObstacleByJupyter(
   obs_global_points_.clear();
 
   //
+  ParkObstacleList &hybrid_astar_obs_ =
+      hybrid_astar_interface_->GetMutableObstacleList();
   hybrid_astar_obs_.Clear();
 
   for (const auto &line : line_vec) {
@@ -725,8 +726,7 @@ std::vector<Eigen::Vector3d> Update(
     request.history_gear = AstarPathGear::DRIVE;
     request.swap_start_goal = swap_start_goal;
 
-    hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
-                                          request);
+    hybrid_astar_interface_->GeneratePath(start, end, request);
 
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 

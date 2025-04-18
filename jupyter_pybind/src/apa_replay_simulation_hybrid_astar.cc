@@ -150,6 +150,10 @@ void UpdateFootprintCircle(const AstarPathGear gear,
 
   FootPrintCircleModel *model =
       hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
+  if (model == nullptr) {
+    return;
+  }
+
   const FootPrintCircleList circle_footprint =
       model->GetLocalFootPrintCircleByGear(gear);
 

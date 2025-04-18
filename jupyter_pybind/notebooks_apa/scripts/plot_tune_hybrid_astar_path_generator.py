@@ -174,7 +174,7 @@ class LocalViewSlider:
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=2.2, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=286.0, step=1)
 
-    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=5, step=1)
+    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=1, step=1)
     self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
 
@@ -188,7 +188,7 @@ class LocalViewSlider:
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
-    self.plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='75%'), description= "plan_method",min=0, max=10, value=4, step=1)
+    self.plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='75%'), description= "plan_method",min=0, max=10, value=2, step=1)
 
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
