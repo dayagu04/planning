@@ -677,6 +677,7 @@ bool VirtualLaneManager::update(
       roads_virtual.reference_line_msg[0]
           .lane_reference_line.virtual_lane_refline_points_size;
   roads_virtual.local_point_valid = raw_reference_line_points_size > 1;
+  roads_virtual.lane_ground_markings_size = 0;
   JSON_DEBUG_VALUE("raw_virtual_lane_pnts_size", raw_reference_line_points_size)
   JSON_DEBUG_VALUE(
       "raw_virtual_lane_s",
