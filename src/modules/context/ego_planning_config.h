@@ -884,7 +884,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, care_static_object_t_threshold,
                      "general_lateral_decider",
                      "care_static_object_t_threshold");
-
+    ReadItem<double>(json, care_predict_object_t_threshold,
+                     "general_lateral_decider",
+                     "care_predict_object_t_threshold");
     ReadItem<double>(json, soft_min_distance_road2center,
                      "general_lateral_decider",
                      "soft_min_distance_road2center");
@@ -1073,6 +1075,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lane_change_duration = 6.6;
   double care_dynamic_object_t_threshold = 3.5;
   double care_static_object_t_threshold = 4.5;
+  double care_predict_object_t_threshold = 2.5;
   double care_area_s_len = 5.0;
   double max_ref_curvature = 0.5;
   bool lateral_ref_traj_type = false;

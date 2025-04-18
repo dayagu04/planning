@@ -1821,6 +1821,22 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   double extra_lane_type_decrease_buffer = CalculateExtraLaneTypeDecreaseBuffer(
       is_nudge_left, overlap_start_s_, overlap_end_s_);
 
+  Polygon2d obstacle_sl_polygon_target;
+  bool is_obstacle_sl_polygon_target_vaild = false;
+  if (config_.use_obstacle_prediction_model_in_planning) {
+    is_obstacle_sl_polygon_target_vaild = obstacle->get_polygon_at_time(config_.care_predict_object_t_threshold, reference_path_ptr_,
+                                                obstacle_sl_polygon_target);
+  }
+  double s_center_target = 0;
+  if (is_obstacle_sl_polygon_target_vaild) {
+    auto points = obstacle_sl_polygon_target.points();
+    double s = 0;
+    for (size_t i = 0; i <points.size(); i++) {
+      s += points[i].x();
+    }
+    s_center_target = s / points.size();
+  }
+
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -1844,8 +1860,32 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
     if (config_.use_obstacle_prediction_model_in_planning) {
-      ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
-                                                  obstacle_sl_polygon);
+      if (i * config_.delta_t <= config_.care_predict_object_t_threshold) {
+        ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
+                                                    obstacle_sl_polygon);
+      } else {
+        if (is_obstacle_sl_polygon_target_vaild) {
+          Polygon2d obstacle_sl_polygon_t;
+          ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
+                                                      obstacle_sl_polygon_t);
+          if (ok) {
+            auto points = obstacle_sl_polygon_t.points();
+            double s = 0;
+            for (size_t i = 0; i <points.size(); i++) {
+              s += points[i].x();
+            }
+            double s_center_t = s / points.size();
+            Polygon2d obstacle_sl_polygon_target_tmp = obstacle_sl_polygon_target;
+            obstacle_sl_polygon_target_tmp.RotateAndTranslate(
+              Vec2d(0, 0), 0, 1,
+              Vec2d(s_center_t - s_center_target, 0));
+            obstacle_sl_polygon = obstacle_sl_polygon_target_tmp;
+          }
+        } else {
+          ok = obstacle->get_polygon_at_time(i * config_.delta_t, reference_path_ptr_,
+                                                      obstacle_sl_polygon);
+        }
+      }
     } else {
       ok = obstacle->get_polygon_at_time_tmp(
           i * config_.delta_t, reference_path_ptr_, obstacle_sl_polygon);
