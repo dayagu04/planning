@@ -2829,19 +2829,25 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
 
   const double standard_half_lane_width = kStandardLaneWidth / 2.0;
 
-  reach_line_time =
-      (ego_dis_to_line / standard_half_lane_width) * kEgoReachBoundaryTime;
+
   //由于在propose阶段考虑的是未来4s的安全性
   //在execution过程中，其实有双方的交互博弈，所以这里安全性判断的时间可以比4s短一些
   const double lc_gap_valid_check_time_execution = kEgoReachBoundaryTime - 1;
 
-  const double lc_gap_valid_check_time =
-      transition_info_.lane_change_status == kLaneChangeExecution
+  double base_time =
+      (transition_info_.lane_change_status == kLaneChangeExecution ||
+      transition_info_.lane_change_status == kLaneChangeHold)
           ? lc_gap_valid_check_time_execution
           : kEgoReachBoundaryTime;
 
-  reach_line_time = std::min(reach_line_time, lc_gap_valid_check_time);
+  reach_line_time =
+      (ego_dis_to_line / standard_half_lane_width) * base_time;
+  // 注：自车在接近车道线的时候ego_dis_to_line的值很小，后轴中心越过车道线时ego_dis_to_line为负的，
+  // 因此，需要保证自车在每个时刻对未来至少要判断一定时间是安全的才合理，
+  // 考虑到驾驶员的反应时间约为0.2s和自车执行器的响应时间0.7s，目前该值取1.5s。
 
+  reach_line_time = std::max(reach_line_time, 1.5);
+  
   return reach_line_time;
 }
 
