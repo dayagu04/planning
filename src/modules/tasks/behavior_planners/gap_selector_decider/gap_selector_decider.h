@@ -250,8 +250,14 @@ class GapSelectorDecider : public Task {
   double lc_back_timer_{0.};
   double lc_back_vel_{0.};
 
+  double lh_total_time_{3.5};
+  double lh_timer_{0.};
+  double lh_vel_{0.};
+
   std::vector<double> _LB_T_;
   std::vector<double> _LB_HEADING_ERROR_;
+  std::vector<double> _LH_T_;
+  std::vector<double> _LH_HEADING_ERROR_;
 };
 
 }  // namespace planning

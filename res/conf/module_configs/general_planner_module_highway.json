@@ -570,6 +570,11 @@
     "lb_heading_error_max": 4.5,
     "lb_t_max": 4.0,
     "lb_t_min": 3.5,
+    "lh_heading_error_min": 4.5,
+    "lh_heading_error_max": 0.5,
+    "lh_t_min": 1.5,
+    "lh_t_max": 4.5,
+    "default_lh_time": 3.0,
     "use_gs": true,
     "lat_ref_offset": [0.1, 0.15, 0.2, 0.3],
     "min_ego_v_cruise": 2.0
