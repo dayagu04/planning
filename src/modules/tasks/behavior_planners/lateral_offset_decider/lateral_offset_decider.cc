@@ -30,9 +30,10 @@ bool LateralOffsetDecider::Execute() {
   auto current_fix_lane_id = session_->planning_context()
                                  .lane_change_decider_output()
                                  .fix_lane_virtual_id;
-  if (last_fix_lane_id != current_fix_lane_id) {
+  const bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
+  if (last_fix_lane_id != current_fix_lane_id || !dbw_status) {
     avoid_obstacle_maintainer5v_.Reset();
-    lateral_offset_calculatorv2_.ResetOffsetHysteresisMaps(); // 变道的时候，HysteresisType 四个Map都清空
+    lateral_offset_calculatorv2_.ResetOffsetHysteresisMaps(); // 变道和非自动的时候，HysteresisType 四个Map都清空
     Reset();
   }
 
