@@ -491,17 +491,17 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().parallel_ego_front_corner_to_obs_in_buffer, double,
       "parallel_ego_front_corner_to_obs_in_buffer");
 
-  JSON_READ_VALUE(apa_param.SetPram().slot_max_jump_dist, double,
-                  "slot_max_jump_dist");
+  JSON_READ_VALUE(apa_param.SetPram().min_dynamic_plan_proj_dt, double,
+                  "min_dynamic_plan_proj_dt");
 
-  JSON_READ_VALUE(apa_param.SetPram().dynamic_plan_proj_dt, double,
-                  "dynamic_plan_proj_dt");
+  JSON_READ_VALUE(apa_param.SetPram().max_dynamic_plan_proj_dt, double,
+                  "max_dynamic_plan_proj_dt");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_width, double,
-                  "line_arc_obs_channel_width");
+  JSON_READ_VALUE(apa_param.SetPram().max_lat_err, double,
+                  "max_lat_err");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_length, double,
-                  "line_arc_obs_channel_length");
+  JSON_READ_VALUE(apa_param.SetPram().max_phi_err, double,
+                  "max_phi_err");
 
   JSON_READ_VALUE(apa_param.SetPram().dynamic_col_det_enable, bool,
                   "dynamic_col_det_enable");

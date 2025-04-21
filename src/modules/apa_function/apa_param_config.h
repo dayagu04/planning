@@ -272,10 +272,10 @@ struct ApaParameters {
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
   double obs2slot_max_dist = 4.68;
-  double slot_max_jump_dist = 0.068;
-  double dynamic_plan_proj_dt = 0.8;
-  double line_arc_obs_channel_width = 8.886;
-  double line_arc_obs_channel_length = 5.086;
+  double min_dynamic_plan_proj_dt = 0.2;
+  double max_dynamic_plan_proj_dt = 0.8;
+  double max_lat_err = 0.068;
+  double max_phi_err = 2.68;
   bool dynamic_col_det_enable = false;
   double car_lat_inflation_strict = 0.1;
   double max_obs_lat_invasion_slot_dist = -0.026;
