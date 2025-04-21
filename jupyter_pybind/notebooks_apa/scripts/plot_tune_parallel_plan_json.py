@@ -234,10 +234,10 @@ class LocalViewSlider:
     # obs
     self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=0.79, step=0.01)
     self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb offset ",min=-1.0, max=1.0, value=0.3, step=0.01)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=4.72, step=0.01)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=3.3, step=0.01)
 
-    self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=0.88, step=0.01)
-    self.front_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs heading",min=-180.0, max=180.0, value=9.0, step=0.1)
+    self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=0.19, step=0.01)
+    self.front_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
 
     self.rear_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs y",min=-2.0, max=4.0, value=0.0, step=0.01)
     self.rear_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
@@ -272,8 +272,6 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
                     front_car_y_offset, front_car_heading, rear_car_y_offset, rear_car_heading,
                     ds):
   kwargs = locals()
-
-  print("before construct_scenario")
 
   front_car_heading_rad = front_car_heading * kDeg2Rad
   rear_car_heading_rad = rear_car_heading * kDeg2Rad
@@ -385,8 +383,6 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
     path_y_vec = parallel_planning_py.GetPathEle(1)
     path_theta_vec = parallel_planning_py.GetPathEle(2)
 
-    print("last pt x ", path_x_vec[-1])
-    print("last pt y ", path_y_vec[-1])
     target_pos_x = path_x_vec[-1]
     target_pos_y = path_y_vec[-1]
     data_target_pos.data.update({
@@ -489,7 +485,6 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       parallel_planning_py.SampleAllDebugPaths()
       x_debug_paths = parallel_planning_py.GetDebugPathsX()
       y_debug_paths = parallel_planning_py.GetDebugPathsY()
-      print("x_debug_paths size = ", len(x_debug_paths))
 
       x_vec = [list(x_path) for x_path in x_debug_paths]
       y_vec = [list(y_path) for y_path in y_debug_paths]
@@ -622,10 +617,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       obs_car_polygon_y_vec.append(list(tmp_y))
 
   rear_obs_car_matrix = json_data["rear_obs_car_matrix"]
-  print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
+  # print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
 
   if len(rear_obs_car_matrix) > 0:
-    print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
+    # print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
     points = np.column_stack((rear_obs_car_matrix[0], rear_obs_car_matrix[1]))
     hull = ConvexHull(points)
     polygon = Polygon(points[hull.vertices])
@@ -635,10 +630,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       obs_car_polygon_y_vec.append(list(tmp_y))
 
   front_obs_car_matrix = json_data["front_obs_car_matrix"]
-  print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
+  # print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
 
   if len(front_obs_car_matrix) > 0:
-    print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
+    # print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
     points = np.column_stack((front_obs_car_matrix[0], front_obs_car_matrix[1]))
     hull = ConvexHull(points)
     polygon = Polygon(points[hull.vertices])
