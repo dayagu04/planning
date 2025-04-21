@@ -21,7 +21,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20250418/20250418-18-27-03/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2025-04-18-18-27-04_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20250417/20250417-15-24-12/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2025-04-17-15-25-12_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -143,7 +143,7 @@ class LocalViewSlider:
     self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.plan_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "plan_type",min=0, max=1, value=0, step=1)
-    self.use_slot_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_slot_in_bag",min=0, max=1, value=1, step=1)
+    self.pybind_state_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "pybind_state",min=0, max=50, value=0, step=1)
     self.use_obs_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_obs_in_bag",min=0, max=1, value=1, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=1000, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
@@ -171,7 +171,7 @@ class LocalViewSlider:
                         vehicle_type = self.vehicle_type_slider,
                         sim_to_target = self.sim_to_target_slider,
                         plan_type = self.plan_type_slider,
-                        use_slot_in_bag = self.use_slot_in_bag_slider,
+                        pybind_state = self.pybind_state_slider,
                         use_obs_in_bag = self.use_obs_in_bag_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
@@ -194,7 +194,7 @@ class LocalViewSlider:
                         q_u_bound=self.q_u_bound,)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif, q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound):
+def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_state, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif, q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -377,7 +377,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
                                     plan_type,
                                     select_id, force_plan, is_path_optimization,
                                     is_cilqr_enable, is_reset, is_complete_path,
-                                    sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,
+                                    sim_to_target, pybind_state, use_obs_in_bag, sample_ds,
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
                                     obs_x_vec, obs_y_vec, lat_path_optimizier_params)

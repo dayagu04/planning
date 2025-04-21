@@ -1453,8 +1453,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const double heading_err =
       std::fabs(real_target_pose.heading - tar_pose_bef.heading) * kRad2Deg;
 
-  ILOG_INFO << "lat_dist = " << lat_dist;
-
   // 如果相差较大， 说明车位跳动较大，需要增大刹停buffer
   const bool case2_1 = (lat_dist > 0.08 || heading_err > 1.48);
   const bool case2_2 = ego_info_under_slot.slot_occupied_ratio > 1e-3;
@@ -1463,6 +1461,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   if (case2_1 && case2_2 && case2_3) {
     lat_buffer = std::max(0.146, lat_buffer);
   }
+
+  ILOG_INFO << "lat_buffer = " << lat_buffer << "  lat_dist = " << lat_dist
+            << "  heading_err = " << heading_err << "  case2_1 = " << case2_1
+            << "  case2_2 = " << case2_2 << "  case2_3 = " << case2_3;
 
   // 库外在空间足够的情况下尽量使用较大的安全buffer
   const double slot_x =
@@ -1479,6 +1481,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       } else {
         lat_buffer = std::max(0.146, lat_buffer);
       }
+      ILOG_INFO << "out slot use big lat buffer = " << lat_buffer;
     }
   }
 
@@ -1505,7 +1508,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             ->Update(current_path_point_global_vec_,
                      current_path_point_global_vec_.front().lat_buffer, 0.0,
                      GJKColDetRequest(false));
-    if (res.col_flag) {
+    if (res.col_flag && res.remain_dist > frame_.current_path_length -
+                                              frame_.remain_dist_path) {
       ILOG_INFO << "current plan path has collision, it indicate the obs has "
                    "changed, and should increase realtime brake "
                    "lat buffer";
@@ -1530,6 +1534,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   if (case3_1 && case3_2 && (case3_3 || case3_4)) {
     lat_buffer = std::max(0.146, lat_buffer);
   }
+
+  ILOG_INFO << "lat_buffer = " << lat_buffer << "  case3_1 = " << case3_1
+            << "  case3_2 = " << case3_2 << "  case3_3 = " << case3_3
+            << "  case3_4 = " << case3_4;
 
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
       std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) < 0.4 &&
