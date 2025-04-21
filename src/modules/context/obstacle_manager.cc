@@ -346,9 +346,7 @@ void ObstacleManager::UpdateOccObstacle() {
           (occupancy_objects[i].common_occupancy_info.type ==
               iflyauto::OBJECT_TYPE_OCC_WALL ||
            occupancy_objects[i].common_occupancy_info.type ==
-              iflyauto::OBJECT_TYPE_OCC_EMPTY||
-           occupancy_objects[i].common_occupancy_info.type ==
-              iflyauto::OBJECT_TYPE_UNKNOWN)) {
+              iflyauto::OBJECT_TYPE_OCC_EMPTY)) {
         ProcessOccupancyWall(occupancy_objects[i], polygon_points,
                              polygon_points_size, frenet_coord,
                              ego_point, index_offset);
@@ -429,45 +427,61 @@ void ObstacleManager::split_points(
     const iflyauto::Point2f *points, const double polygon_points_size,
     const std::shared_ptr<planning_math::KDPath> &frenet_coord,
     vector<vector<planning_math::Vec2d>> &result) {
+  constexpr double LATTHRESHOLD = 1;
+  constexpr double LONTHRESHOLD = 1;
+  constexpr double MINSPLITLONTHRESHOLD = 3;
   constexpr double THRESHOLD = 2;
-  constexpr double MAXDISTANCETHRESHOLD = 2;
+  constexpr double MAXDISTANCETHRESHOLD = 4;
   vector<planning_math::Vec2d> current_segment;
-  double sum_distance = 0;
+  vector<planning_math::Vec2d> other_segment;
   if (frenet_coord != nullptr) {
-    std::vector<std::pair<double, planning_math::Vec2d>> points_vec;
+    std::vector<std::pair<std::pair<double, double>, planning_math::Vec2d>> points_vec;
     points_vec.reserve(polygon_points_size);
     for (size_t i = 0; i < polygon_points_size; ++i) {
       double point_s, point_l;
       if(frenet_coord->XYToSL(points[i].x, points[i].y, &point_s, &point_l)) {
+        std::pair<double, double> point_sl(point_s, point_l);
         points_vec.emplace_back(
-            std::pair<double, planning_math::Vec2d>(
-                point_s, planning_math::Vec2d(points[i].x, points[i].y)));
+            std::pair<std::pair<double, double>, planning_math::Vec2d>(
+                point_sl, planning_math::Vec2d(points[i].x, points[i].y)));
       }
     }
-    auto compare_s = [&](std::pair<double, planning_math::Vec2d> p1,
-                                   std::pair<double, planning_math::Vec2d> p2) {
-      return p1.first < p2.first;
+    auto compare_s = [&](std::pair<std::pair<double, double>, planning_math::Vec2d> p1,
+                                   std::pair<std::pair<double, double>, planning_math::Vec2d> p2) {
+      return p1.first.first < p2.first.first;
     };
     std::sort(points_vec.begin(), points_vec.end(),
               compare_s);
+    size_t init_index = 0;
+    double max_diff_s = 0;
+    double max_diff_l = 0;
     current_segment.push_back(points_vec.front().second);
     for (size_t i = 1; i < points_vec.size(); ++i) {
-      double ds = points_vec[i].first - points_vec[i - 1].first;
-      sum_distance += ds;
-      if (ds > THRESHOLD || sum_distance > MAXDISTANCETHRESHOLD) {
-        // 当前点与前一个点相差超过阈值，开启新分割
-        sum_distance = 0;
-        result.push_back(current_segment);
-        current_segment.clear();
+      double ds = points_vec[i].first.first - points_vec[i - 1].first.first;
+      double dl = fabs(points_vec[i].first.second - points_vec[i - 1].first.second);
+      max_diff_s = std::max(fabs(points_vec[i].first.first - points_vec[init_index].first.first), max_diff_s);
+      max_diff_l = std::max(fabs(points_vec[i].first.second - points_vec[init_index].first.second), max_diff_l);
+      if (points_vec.back().first.first - points_vec.front().first.first > MINSPLITLONTHRESHOLD) {
+        if (ds > LONTHRESHOLD ||
+            (max_diff_l > LATTHRESHOLD && max_diff_s > LONTHRESHOLD)) {
+          // 当前点与前一个点相差超过阈值，开启新分割
+          init_index = i;
+          max_diff_s = 0;
+          max_diff_l = 0;
+          result.push_back(current_segment);
+          current_segment.clear();
+        }
       }
       current_segment.push_back(points_vec[i].second);
     }
   } else {
+    double sum_distance = 0;
     current_segment.push_back(planning_math::Vec2d(points[0].x, points[0].y));
     for (size_t i = 1; i < polygon_points_size; ++i) {
       double dx = fabs(points[i].x - points[i - 1].x);
       double dy = fabs(points[i].y - points[i - 1].y);
-      sum_distance += std::hypot(dx, dy);
+      double ds = std::hypot(dx, dy);
+      sum_distance += ds;
       if (dx > THRESHOLD || dy > THRESHOLD || sum_distance > MAXDISTANCETHRESHOLD) {
         // 当前点与前一个点相差超过阈值，开启新分割
         sum_distance = 0;
@@ -478,8 +492,11 @@ void ObstacleManager::split_points(
     }
   }
 
-  if (!current_segment.empty()) {
+  if (!current_segment.empty() && current_segment.size() > 2) {
     result.push_back(current_segment);
+  }
+  if (!other_segment.empty() && other_segment.size() > 2) {
+    result.push_back(other_segment);
   }
 }
 
