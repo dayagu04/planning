@@ -51,8 +51,6 @@ class Obstacle {
   explicit Obstacle(int id,
                     const iflyauto::FusionGroundLine &groundline_cluster);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
-                    const iflyauto::FusionOccupancyObject &occupancy_objects);
-  explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
                     iflyauto::ObjectType type);
   const std::vector<planning_math::Vec2d> &perception_points() const {
     return perception_points_;
