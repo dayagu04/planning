@@ -171,13 +171,6 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
     return true;
   }
 
-  parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   (ego_info.terminal_err.pos.x() < 0.568);
-
-  if (parking_finish) {
-    return true;
-  }
-
   // 车辆不压线，车头基本摆正，就认定完成泊车
   if (static_condition && remain_s_condition && lon_condition &&
       heading_condition_2) {
@@ -567,24 +560,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   PointCloudObstacleTransform obstacle_generator;
   cdl::AABB slot_box;
   if (NeedBlindZonePlanning(ego_info)) {
-    const SlotCoord slot_info = ego_info.slot.GetProcessedCornerCoordLocal();
-    double y_buffer;
-    if (path_planning_fail_num_ == 1) {
-      y_buffer = 0.01;
-    } else if (path_planning_fail_num_ == 2) {
-      // obstacles invade slot too much, delete bigger range obstacle around
-      // slot.
-      y_buffer = 0.1;
-    }
-
-    slot_box.min_ = cdl::Vector2r(
-        slot_info.pt_23_mid.x() - 0.01f,
-        static_cast<float>(std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) -
-                           y_buffer));
-    slot_box.max_ = cdl::Vector2r(
-        slot_info.pt_01_mid.x() + 4.0f,
-        static_cast<float>(std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) +
-                           y_buffer));
+    slot_box = GenerateBlindZoneSlotBox(ego_info);
 
     obstacle_generator.GenerateLocalObstacle(
         apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, true);
@@ -695,7 +671,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         local_path.emplace_back(point);
       }
 
-      // todo:
       if ((fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
            fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) &&
           frame_.is_replan_first) {
@@ -740,7 +715,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
-      path_planning_fail_num_ +=1;
+      path_planning_fail_num_ += 1;
       if (path_planning_fail_num_ == 1 || path_planning_fail_num_ == 2) {
         res = PathPlannerResult::WAIT_PATH;
       } else if (response.request.plan_reason ==
@@ -1212,9 +1187,11 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   }
 
   // car pose has big distance with limiter, return
+  // If car pose is nearby of limiter (0.4 meter), do not shrink path to prevent
+  // car speed change too much.
   double x_diff = std::fabs(ego_info.terminal_err.pos.x());
   double y_diff = std::fabs(ego_info.terminal_err.pos.y());
-  if (x_diff > 2.0 || y_diff > 2.0) {
+  if (x_diff > 2.0 || y_diff > 2.0 || x_diff < 0.4) {
     return;
   }
 
@@ -1223,7 +1200,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
   for (size_t i = 0; i < path_size; i++) {
     Eigen::Vector2d& point_global = current_path_point_global_vec_.back().pos;
     point_local = ego_info.g2l_tf.GetPos(point_global);
-    if (point_local[0] >= limiter_x + 0.1) {
+    if (point_local[0] >= limiter_x + 1e-2) {
       break;
     }
 
@@ -1281,6 +1258,13 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   }
 
   double dist_to_goal = x_diff;
+
+  // If ego is around limiter（0.5 meter）, do not extend path to prevent car
+  // speed change too much.
+  if (dist_to_goal < 0.5) {
+    return;
+  }
+
   size_t path_point_size = current_path_point_global_vec_.size();
 
   Eigen::Vector2d the_last_but_one =
@@ -1960,11 +1944,46 @@ void NarrowSpaceScenario::FillGearRequest(const bool is_scenario_try,
         cur_request.path_generate_method ==
             planning::AstarPathGenerateType::TRY_SEARCHING) {
       cur_request.swap_start_goal = true;
-      ClearFirstActionReqeust(&cur_request);
     }
+  }
+  if (apa_world_ptr_->GetSimuParam().enable_debug_swap_start_goal) {
+    cur_request.swap_start_goal =
+        apa_world_ptr_->GetSimuParam().swap_start_goal;
+  }
+
+  if (cur_request.swap_start_goal) {
+    ClearFirstActionReqeust(&cur_request);
   }
 
   return;
+}
+
+const cdl::AABB NarrowSpaceScenario::GenerateBlindZoneSlotBox(
+    const EgoInfoUnderSlot& ego_info) const {
+  const SlotCoord slot_info = ego_info.slot.GetProcessedCornerCoordLocal();
+  double y_buffer = 0.0;
+  double y_bound = 0.0;
+  if (path_planning_fail_num_ == 1) {
+    y_buffer = 0.08;
+  } else if (path_planning_fail_num_ == 2) {
+    // obstacles invade slot too much, delete bigger range obstacle around
+    // slot.
+    y_buffer = 0.1;
+  }
+
+  y_bound = std::min(slot_info.pt_0.y(), slot_info.pt_2.y());
+  y_bound = std::min(y_bound, -apa_param.GetParam().max_car_width / 2);
+
+  cdl::AABB slot_box;
+  slot_box.min_ = cdl::Vector2r(slot_info.pt_23_mid.x() - 0.01f,
+                                static_cast<float>(y_bound - y_buffer));
+
+  y_bound = std::max(slot_info.pt_1.y(), slot_info.pt_3.y());
+  y_bound = std::max(y_bound, apa_param.GetParam().max_car_width / 2);
+  slot_box.max_ = cdl::Vector2r(slot_info.pt_01_mid.x() + 4.0f,
+                                static_cast<float>(y_bound + y_buffer));
+
+  return slot_box;
 }
 
 }  // namespace apa_planner

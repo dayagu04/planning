@@ -35,9 +35,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   // traj_steer_change_penalty = 4.0;
   traj_steer_change_penalty = 0.0;
 
-  expect_gear_penalty = 50.0;
+  expect_gear_penalty = 7.0;
   expect_dist_penalty = 7.0;
-  gear_switch_penalty_heu = 10.0;
 
   enable_euler_cost_for_vertical_park = true;
   enable_dp_cost_for_vertical_park = true;

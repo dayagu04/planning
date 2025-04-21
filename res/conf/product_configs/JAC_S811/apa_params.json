@@ -347,7 +347,7 @@
   "astar_parallel_finish_heading_err" : 2.5,
   "adjust_ego_y_thresh_outside_slot": 0.2,
   "enable_blind_zone" : true,
-  "vertical_slot_passage_height_bound" : 12.0,
+  "vertical_slot_passage_height_bound" : 10.0,
   "vertical_slot_passage_length_bound" : 18.0,
 
   "enable_apa_speed_plan" : false,

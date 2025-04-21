@@ -166,7 +166,9 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
         rs_path_.emplace_back(
             Eigen::Vector3d(global_position[0], global_position[1], heading));
       }
-      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL) {
+      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::CUBIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::SPIRAL) {
         polynomial_path_.emplace_back(
             Eigen::Vector3d(global_position[0], global_position[1], heading));
       }
@@ -601,7 +603,7 @@ std::vector<Eigen::Vector3d> Update(
     std::vector<Eigen::Vector2d> global_park_space_points,
     const int plan_method,
     std::vector<double> obs_params, const bool trigger_plan,
-    const int parking_dir) {
+    const int parking_dir, const bool swap_start_goal) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   EgoInfoUnderSlot ego_slot_info;
@@ -862,7 +864,7 @@ std::vector<Eigen::Vector3d> Update(
     }
     request.rs_request = RSPathRequestType::NONE;
     request.history_gear = AstarPathGear::NONE;
-    request.swap_start_goal = false;
+    request.swap_start_goal = swap_start_goal;
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);

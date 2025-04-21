@@ -39,7 +39,6 @@ namespace planning {
 #define DEBUG_NODE_GEAR_SWITCH_NUMBER (0)
 
 #define LOG_TIME_PROFILE (0)
-#define DEBUG_GJK (0)
 
 #define DEBUG_ONE_SHOT_PATH (0)
 #define DEBUG_ONE_SHOT_PATH_MAX_NODE (10000)
@@ -1276,13 +1275,13 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   bool is_safe = false;
   float child_node_dist;
   float father_node_dist;
-  NodeShrinkType node_shrink_type;
   std::vector<AStarPathPoint> poly_path;
   Node3d polynomial_node;
   PolynomialPathErrorCode poly_path_fail_type;
   polynomial_node.Clear();
 
   PathComparator path_comparator;
+  path_comparator.SetHeuristicPose(request_);
 
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
@@ -1350,7 +1349,6 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     explored_rs_path_num++;
 
     for (size_t i = 0; i < next_node_num_; ++i) {
-      node_shrink_type =
           NextNodeGenerator(&new_node, current_node, i, full_path_gear_request);
       explored_node_num++;
 
@@ -1696,6 +1694,7 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
       request_.direction_request);
 
   PathComparator path_comparator;
+  path_comparator.SetHeuristicPose(request_);
 
   // load open set, pq
   start_node_->SetMultiMapIter(
@@ -2491,7 +2490,7 @@ const bool HybridAStar::IsNeedGearDriveSearch(const Pose2D& start) {
     return false;
   }
 
-  if (start.GetY() < -3.8 || start.GetY() > 3.8) {
+  if (start.GetY() < -5.0 || start.GetY() > 5.0) {
     ILOG_INFO << "start.GetY() =" << start.GetY();
     return false;
   }

@@ -49,6 +49,7 @@ struct AstarParkingConfig {
   float head_in_slot_virtual_wall_x_offset = 4.0;
   float head_in_slot_virtual_wall_y_offset = 1.8;
 
+  // perception range is 6 * 6, need set the virtual wall small.
   float vertical_slot_passage_height_bound;
   float vertical_slot_passage_length_bound;
 };

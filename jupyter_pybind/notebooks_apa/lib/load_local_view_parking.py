@@ -157,9 +157,6 @@ class LoadCyberbag:
 
     self.parking_flag = parking_flag
 
-    # ehr static map msg
-    self.ehr_parking_map_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
-
     self.max_time = 0
 
     # time offset

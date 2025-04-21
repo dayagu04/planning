@@ -125,6 +125,9 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool NeedBlindZonePlanning(const EgoInfoUnderSlot& ego_info);
 
+  const cdl::AABB GenerateBlindZoneSlotBox(
+      const EgoInfoUnderSlot& ego_info) const;
+
   // check path replan by slot pose change
   const bool CheckDynamicUpdate() override;
 

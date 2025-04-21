@@ -2,6 +2,7 @@
 #include <cmath>
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "math_utils.h"
 #include "src/library/hybrid_astar_lib/decider/path_comparator.h"
 
@@ -25,7 +26,7 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
     return false;
   }
 
-  float x_diff = current_node->GetX() - search_goal_.GetX();
+  float x_diff = current_node->GetX() - request_->real_goal.GetX();
   if (x_diff < 0.2) {
     *fail_type = PolynomialPathErrorCode::OUT_OF_X_BOUNDARY;
     return false;
@@ -57,12 +58,20 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
   for (int i = 0; i < sampline_numer; i++) {
     path.clear();
 
+    // check two point position, to delete singular solution.
+    if (current_node->GetPose().x < end_pose.x + 0.5) {
+      continue;
+    }
+
     GetQunticPolynomialPath(path, current_node->GetPose(),
                             current_node->GetRadius(), end_pose);
 
+    if (path.size() < 2) {
+      continue;
+    }
+
     // set node by rs path
-    if (path.size() > 1 &&
-        collision_detect_->IsPolynomialPathSafeByEDT(path, polynomial_node)) {
+    if (collision_detect_->IsPolynomialPathSafeByEDT(path, polynomial_node)) {
       valid_path = true;
       break;
     }
@@ -301,6 +310,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
   // sampling for path end
   Pose2D sampling_end;
   PathComparator path_comparator;
+  path_comparator.SetHeuristicPose(*request_);
 
   sampling_end.x = x_sample_bound.min - x_sampling_step;
   for (size_t j = 0; j < x_max_sampling_num; j++) {

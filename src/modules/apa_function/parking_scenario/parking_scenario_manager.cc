@@ -105,7 +105,8 @@ void ParkingScenarioManager::Excute() {
     }
   } else if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
+        ego_info_under_slot.slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
     }
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||

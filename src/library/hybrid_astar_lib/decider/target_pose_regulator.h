@@ -70,19 +70,10 @@ class TargetPoseRegulator : public AstarDecider {
 
   const bool IsCandidatePoseSafe(const float lat_buffer) const;
 
-  const std::pair<Pose2D, float> GetCandidatePoseForHeadIn(
-      const float lat_buffer) const;
-
   // 0: none,
   // -1: left;
   // 1: right
   const int GenerateOffsetPreference() const;
-
-  const PoseRegulateCandidate *GetCandidatePoseByOffset(const float lat_buffer,
-                                                        const int offset) const;
-
-  const std::pair<Pose2D, float> GetCandidatePoseForTailIn(
-      const float lat_buffer) const;
 
  private:
   // decide by end straight distance
@@ -94,6 +85,9 @@ class TargetPoseRegulator : public AstarDecider {
   float x_check_lower_;
   float x_step_;
   int x_sample_num_;
+
+  // max dist to cross over slot inside line
+  float max_cross_over_line_dist_;
 
   float ego_dist_to_obs_;
 };

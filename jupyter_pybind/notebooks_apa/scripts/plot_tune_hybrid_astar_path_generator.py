@@ -174,24 +174,25 @@ class LocalViewSlider:
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=2.2, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=286.0, step=1)
 
-    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=1, step=1)
+    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=5, step=1)
     self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
 
-    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.6, step=0.05)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.0, step=0.05)
     self.left_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_virtual_wall_x",min=-30.0, max=20.0, value=-12.6, step=0.05)
     self.right_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_virtual_wall_x",min=0.0, max=20.0, value=15, step=0.01)
-    self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.6, step=0.05)
-    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.6, step=0.5)
-    self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.6, step=0.05)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=20, value=8.8, step=0.1)
+    self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
+    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.0, step=0.5)
+    self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.1, step=0.05)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=20, value=6.1, step=0.1)
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
-    self.plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='75%'), description= "plan_method",min=0, max=10, value=2, step=1)
+    self.plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='75%'), description= "plan_method",min=0, max=10, value=1, step=1)
 
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
+    self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback, ego_x=self.ego_x_slider,
                         ego_y=self.ego_y_slider,
@@ -211,11 +212,12 @@ class LocalViewSlider:
                         channel_width=self.channel_width_slider,
                         right_virtual_wall_x=self.right_virtual_wall_x_slider,
                         left_virtual_wall_x=self.left_virtual_wall_x_slider,
+                        swap_start_goal=self.swap_start_goal,
                         )
 
 ## sliders callback
 def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_dir, trigger_plan, slot_phi, slot_width, slot_length, plan_method, right_obj_dx,
-                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x):
+                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x,swap_start_goal):
   kwargs = locals()
 
   # vehicle_type = 'CHERY_T26'
@@ -294,7 +296,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_d
                 channel_width, right_virtual_wall_x, left_virtual_wall_x]
 
   current_path_point_global_vec_ = hybrid_astar_py.Update(
-      ego_pose, slot_pt, plan_method, obs_params, trigger_plan, parking_dir)
+      ego_pose, slot_pt, plan_method, obs_params, trigger_plan, parking_dir, swap_start_goal)
 
   # rs
   data_rs_path.data.update({

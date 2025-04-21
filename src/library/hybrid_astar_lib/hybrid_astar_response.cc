@@ -34,6 +34,14 @@ const bool IsResponseNice(const AstarRequest& request,
     return false;
   }
 
+  if (response.request.path_generate_method ==
+      AstarPathGenerateType::TRY_SEARCHING) {
+    if (request.path_generate_method != AstarPathGenerateType::TRY_SEARCHING) {
+      ILOG_INFO << "plan method is change";
+      return false;
+    }
+  }
+
   return true;
 }
 

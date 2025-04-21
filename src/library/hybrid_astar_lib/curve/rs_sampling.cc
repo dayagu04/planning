@@ -117,7 +117,7 @@ void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
     sampling_end.x += sampling_step;
     rs_path_interface_.GeneShortestRSPath(
         &rs_path_, &is_connected_to_goal, &start, &sampling_end,
-        sampling_radius, true, true, rs_request);
+        sampling_radius, true, false, rs_request);
 
     if (rs_path_.total_length < 0.01 || !is_connected_to_goal) {
       ILOG_INFO << "rs path fail";
@@ -274,7 +274,7 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
     return false;
   }
 
-  float x_diff = current_node->GetX() - search_goal_.GetX();
+  float x_diff = current_node->GetX() - request_->real_goal.GetX();
   if (x_diff < 0.2) {
     return false;
   }
@@ -321,16 +321,8 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
     }
 
     // check gear
-    bool has_different_gear = false;
-    for (int j = 0; j < rs_path_.size; j++) {
-      if (rs_path_.paths[j].gear !=
-          request_->first_action_request.gear_request) {
-        // ILOG_INFO << " rs path seg need single shot by drive gear ";
-        has_different_gear = true;
-        break;
-      }
-    }
-    if (has_different_gear) {
+    if (!IsExpectedGearForRsPath(rs_path_)) {
+
       continue;
     }
 
