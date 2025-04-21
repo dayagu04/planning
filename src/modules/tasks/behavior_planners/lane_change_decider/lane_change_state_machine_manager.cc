@@ -326,8 +326,14 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
   const auto target_lane =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
   if (target_lane != nullptr) {
+    double l_front_left =
+        target_reference_path->get_frenet_ego_state().corners().l_front_left;
+    double l_front_right =
+        target_reference_path->get_frenet_ego_state().corners().l_front_right;
     const double width_by_target = target_lane->width();
-    if (std::abs(ego_l_target) < std::abs(width_by_target) / 2) {
+    if (std::abs(ego_l_target) < std::abs(width_by_target) / 2 &&
+        std::abs(l_front_left) < std::abs(width_by_target) / 2 &&
+        std::abs(l_front_right) < std::abs(width_by_target) / 2) {
       return true;
     }
   }
