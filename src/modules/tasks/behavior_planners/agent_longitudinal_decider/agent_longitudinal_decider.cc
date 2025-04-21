@@ -31,6 +31,7 @@ constexpr double kKphToMps = 0.2778;
 constexpr double kMpsToKph = 3.6;
 constexpr double kLaneWidth = 3.75;
 constexpr double kLargeAgentLengthM = 8.0;
+constexpr double kLargeSpeedDiff = 3.0;
 
 // Param for cut-in check
 constexpr double kFtpCutInDeactivationSpeedMps = 100.0 * kKphToMps;
@@ -1146,11 +1147,15 @@ bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
   // 5.agent and ego lane is parallel  --->consider
   // 6.agent must be rear
   bool is_neighbor = false;
-  bool is_fast_agent = ptr_agent->speed() * kMpsToKph > kAgentLowerSpeedKph;
+  double neighbor_speed_diff = ptr_agent->speed() - init_point.v;
+  bool is_fast_agent = ptr_agent->speed() * kMpsToKph > kAgentLowerSpeedKph &&
+                       neighbor_speed_diff > kLargeSpeedDiff;
+  bool has_no_overlap_with_ego = nearest_distance_from_ego > kLateralSafeBuffer;
   if (ptr_obj_lane != nullptr) {
     is_neighbor = (std::abs(ptr_obj_lane->get_virtual_id() -
                             ego_lane->get_virtual_id()) == 1) &&
-                  (nearest_l < std::fabs(half_ego_lane_width));
+                  (nearest_l < std::fabs(half_ego_lane_width)) &&
+                  has_no_overlap_with_ego;
   }
   // const bool is_parallel =
   // IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
