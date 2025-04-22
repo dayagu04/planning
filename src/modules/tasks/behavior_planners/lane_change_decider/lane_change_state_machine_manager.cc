@@ -33,6 +33,7 @@ constexpr double kEps = 1e-6;
 constexpr double kEgoReachBoundaryTime = 4.0;
 constexpr double kStandardLaneWidth = 3.7;
 constexpr double kLargeAgentLengthM = 8.0;
+constexpr double kPreTriggleHighPriorityMLCTime = 10.0;
 constexpr std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
 constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
@@ -480,7 +481,7 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
   double dist_threshold = interp(v_ego, xp_v_ego, config_.lc_finished_dist_thr);
 
-  // 大曲率阈值增大一点
+  // 1、大曲率阈值增大一点
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &flane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
@@ -506,11 +507,12 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
     dist_threshold = 0.3;
   }
 
+  // 2、匝道汇主路打灯时，关灯阈值可以增大一点
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
-    // 匝道汇主路打灯时，关灯阈值可以增大一点
     dist_threshold = 0.3;
   }
-  // 考虑向避让的情况
+  
+  // 3、考虑向避让的情况
   const double lateral_offset = session_->planning_context()
                                     .lateral_offset_decider_output()
                                     .lateral_offset;
@@ -520,8 +522,6 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
   double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 
-  // std::shared_ptr<ReferencePathManager> reference_path_mgr =
-  //     session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &current_reference_path =
       reference_path_mgr->get_reference_path_by_lane(clane_virtual_id);
   const auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
@@ -1754,10 +1754,27 @@ bool LaneChangeStateMachineManager::IsLatOffsetValid() const {
   const auto &cur_path = session_->environmental_model()
                              .get_reference_path_manager()
                              ->get_reference_path_by_current_lane();
-  const double ego_l = cur_path->get_frenet_ego_state().l();
+  const auto& frenet_ego_state =  cur_path->get_frenet_ego_state();
+  const double ego_l = frenet_ego_state.l();
   const double lat_offset_threshold = 0.5;
   const double lat_offset = std::abs(ego_l);
-  if (lat_offset < lat_offset_threshold) {
+
+  // 考虑自车是否在距离匝道较近的ramp变道
+  const double triggle_dis = frenet_ego_state.velocity() * kPreTriggleHighPriorityMLCTime;
+
+  const auto &virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto &cur_lane = virtual_lane_mgr->get_current_lane();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info();
+
+  bool is_high_priority_complete_mlc =
+      cur_lane->is_nearing_ramp_mlc_task() &&
+      route_info_output->get_route_info_output().dis_to_ramp <
+          triggle_dis;
+
+  if (lat_offset < lat_offset_threshold ||
+      is_high_priority_complete_mlc) {
     return true;
   }
   return false;
