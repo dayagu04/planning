@@ -253,44 +253,22 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 
   // calc slot side once at first
   if (frame_.is_replan_first) {
-    const double cross_ego_to_slot_center =
-        pnc::geometry_lib::GetCrossFromTwoVec2d(
-            measures_ptr->GetHeadingVec(),
-            ego_info_under_slot.slot.origin_corner_coord_global_.pt_center -
-                measures_ptr->GetPos());
-
-    ILOG_INFO << "measures_ptr->GetPos() = "
-              << measures_ptr->GetPos().transpose();
+    const auto v_23mid_to_01 =
+        ego_info_under_slot.slot.origin_corner_coord_global_.pt_23mid_01mid_vec
+            .normalized();
 
     const double cross_ego_to_slot_heading =
-        pnc::geometry_lib::GetCrossFromTwoVec2d(
-            measures_ptr->GetHeadingVec(),
-            ego_info_under_slot.slot.origin_corner_coord_global_
-                .pt_23mid_01mid_vec);
-    ILOG_INFO << "ego_info_under_slot.slot.processed_corner_coord_global_.pt_"
-                 "23mid_01_mid = "
-              << ego_info_under_slot.slot.origin_corner_coord_global_
-                     .pt_23mid_01mid_vec.transpose();
+        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
+                                                v_23mid_to_01);
+    ILOG_INFO << "v_23mid_to_01 " << v_23mid_to_01.transpose();
 
-    ILOG_INFO
-        << "ego_info_under_slot.slot.origin_corner_coord_global_.pt_center = "
-        << ego_info_under_slot.slot.origin_corner_coord_global_.pt_center
-               .transpose();
-
-    ILOG_INFO << "measures_ptr->GetHeadingVec() = "
-              << measures_ptr->GetHeadingVec().transpose();
-
-    ILOG_INFO << "cross_ego_to_slot_center = " << cross_ego_to_slot_center;
-    ILOG_INFO << "cross_ego_to_slot_heading = " << cross_ego_to_slot_heading;
-    // 这个初始参考挡位对迭代式路径规划已经没有什么意义
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
+    if (cross_ego_to_slot_heading > 1e-3) {
       t_lane_.slot_side_sgn = 1.0;
       t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
       ego_info_under_slot.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
 
-    } else if (cross_ego_to_slot_heading < 0.0 &&
-               cross_ego_to_slot_center > 0.0) {
+    } else if (cross_ego_to_slot_heading < -1e-3) {
       t_lane_.slot_side_sgn = -1.0;
       t_lane_.slot_side = geometry_lib::SLOT_SIDE_LEFT;
       ego_info_under_slot.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
@@ -767,7 +745,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
 
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
-                                  t_lane_.slot_length + 3.5)) {
+                                  t_lane_.slot_length + 5.0)) {
         if (t_lane_.slot_side_sgn > 0.0) {
           t_lane_.channel_y =
               std::min(obstacle_point_slot.y(), t_lane_.channel_y);
