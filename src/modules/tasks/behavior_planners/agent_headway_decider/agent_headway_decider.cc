@@ -17,7 +17,7 @@ namespace {
 constexpr double user_time_gap = 1.5;
 constexpr double lane_change_decrease_time_gap = 0.8;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
-constexpr double first_appear_time_gap = 1.0;
+constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = 2.78;
 constexpr double kTflVirtualAgentHW = 1.5;
 }  // namespace
@@ -121,8 +121,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double init_headway_by_ego =
         CalcAgentInitHeadway(ego_state_manager, agent);
     const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
+    double first_appear_time_gap = k_first_appear_time_gap;
     if (is_tfl_virtual_agent) {
       gear_headway = kTflVirtualAgentHW;
+      first_appear_time_gap = 0.5;
     }
     const double agent_init_headway =
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
