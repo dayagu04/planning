@@ -2924,6 +2924,8 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
     ReadItem(json, cost_ego_overtake_has_collision_with_lower_bound,
              "speed_planning", "st_graph_searcher",
              "cost_ego_overtake_has_collision_with_lower_bound");
+    ReadItem(json, cutin_time_st_graph_threshold, "speed_planning",
+              "st_graph_searcher", "cutin_time_st_graph_threshold");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -2987,6 +2989,7 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
 
   double distance_ego_rear_edge_to_lower_bound_when_overtake = 5.0;
   double cost_ego_overtake_has_collision_with_lower_bound = 1.0;
+  double cutin_time_st_graph_threshold = 5.5;
 };
 
 struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {

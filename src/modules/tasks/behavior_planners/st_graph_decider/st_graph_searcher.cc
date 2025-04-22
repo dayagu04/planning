@@ -928,7 +928,8 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
   }
 
   // TODO: need consider lane change hold status in the future
-  if ((cur_lane_change_state !=
+  if (node.t() <= config_.cutin_time_st_graph_threshold &&
+      (cur_lane_change_state !=
            StateMachineLaneChangeStatus::kLaneChangeComplete &&
        cur_lane_change_state !=
            StateMachineLaneChangeStatus::kLaneChangeExecution) &&

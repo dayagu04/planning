@@ -626,7 +626,8 @@
       "cost_ego_overtake_has_collision_with_lower_bound": 10.0,
       "search_weight" : {
         "weight_accel_sign_overtake" : 5.0
-      }
+      },
+      "cutin_time_st_graph_threshold" : 3.0
     },
 
     "start_stop_decider" : {
