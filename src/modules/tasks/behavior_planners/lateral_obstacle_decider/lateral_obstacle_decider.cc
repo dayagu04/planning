@@ -299,7 +299,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double l = frenet_obstacle.frenet_l();
   double v_s = frenet_obstacle.frenet_velocity_s();
   double v_l = frenet_obstacle.frenet_velocity_l();
-  double v_lat = frenet_obstacle.frenet_velocity_lateral();
+  double v_lat = frenet_obstacle.frenet_velocity_lateral(); // 根据历史差分
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
   double d_min_cpath = frenet_obstacle.d_min_cpath();
@@ -578,7 +578,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
     // }
 
     // for cut in and cut out
-    if (!in_lon_near_area && (v_lat > 0.3 || v_lat < -0.3)) {
+    if (v_lat > 0.3 || v_lat < -0.3) {
       history.ncar_count = std::max(
           history.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
     }
