@@ -656,8 +656,6 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (target_lane_front_node_) {
-    lc_state_info.lc_gap_info.front_node_id =
-        target_lane_front_node_->node_id();
     if (target_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
       const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
       if (!IsLCFeasibleForTrafficConeInTargetLane(target_lane_front_node_,
@@ -681,7 +679,6 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (target_lane_rear_node_) {
-    lc_state_info.lc_gap_info.rear_node_id = target_lane_rear_node_->node_id();
     CalculateLCGapFeasibleWithPredictionInfo(
         &lc_state_info, target_lane_rear_node_, false, false);
     if (!lc_state_info.gap_insertable) {
@@ -690,7 +687,6 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (ego_lane_front_node_) {
-    lc_state_info.lc_gap_info.front_node_id = ego_lane_front_node_->node_id();
     if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
       if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
         lc_invalid_track_.set_value(
@@ -772,8 +768,6 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
 
   if (target_lane_front_node_) {
-    lc_state_info.lc_gap_info.front_node_id =
-        target_lane_front_node_->node_id();
     CalculateLCGapFeasibleWithPredictionInfo(
         &lc_state_info, target_lane_front_node_, true, false);
     if (lc_state_info.lc_should_back) {
@@ -782,7 +776,6 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
 
   if (target_lane_rear_node_) {
-    lc_state_info.lc_gap_info.rear_node_id = target_lane_rear_node_->node_id();
     CalculateLCGapFeasibleWithPredictionInfo(
         &lc_state_info, target_lane_rear_node_, false, false);
     if (lc_state_info.lc_should_back) {
@@ -2294,6 +2287,12 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
     after_filter_agent = agent_node;
   }
 
+  if (is_front_agent) {
+    lc_state_info->lc_gap_info.front_node_id = after_filter_agent->node_id();
+  } else {
+    lc_state_info->lc_gap_info.rear_node_id = after_filter_agent->node_id();
+  }
+
   bool lc_safety = true;
   if (after_filter_agent->type() == agent::AgentType::TRAFFIC_CONE) {
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
@@ -3102,6 +3101,7 @@ LaneChangeStateMachineManager::GenerateLatMaxDecelerationCurve(
   JSON_DEBUG_VECTOR("lat_path_y", y_vec, 2);
 
   return lat_max_deceleration_curve;
+}
 
 bool LaneChangeStateMachineManager::IsHighPriorityCompleteMLC() const {
   // 考虑自车是否在距离匝道较近的ramp变道
