@@ -158,7 +158,7 @@ bool LateralObstacleDecider::Execute() {
     // determine is_avd_car
     std::vector<double> avd_car_id;
     std::vector<double> emergency_avoid;
-  for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
+    for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
@@ -215,9 +215,6 @@ bool LateralObstacleDecider::Execute() {
           *frenet_obs, lane_width, rightest_lane, farthest_distance,
           left_borrow_, right_borrow_);
       history.last_recv_time = obs->timestamp();
-      if (history.is_avd_car) {
-        avd_car_id.emplace_back(obs->id());
-      }
     }
 
     // write decider output info
@@ -229,25 +226,13 @@ bool LateralObstacleDecider::Execute() {
           lateral_obstacle_history_info_[obs->id()];
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
-          !frenet_obs->b_frenet_valid()) {
-        continue;
-      }
-      LateralObstacleDecision(*frenet_obs, lane_width);
-    }
-
-    // hold lat_offset when there is a risk of collision
-    for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
-      const Obstacle *obs = frenet_obs->obstacle();
-      LateralObstacleHistoryInfo &history =
-          lateral_obstacle_history_info_[obs->id()];
-      // ignore obj without camera source
-      if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
           !frenet_obs->b_frenet_valid() ||
           frenet_obs->b_frenet_polygon_sequence_invalid()) {
         continue;
       }
+      LateralObstacleDecision(*frenet_obs, lane_width);
 
-      if (history.last_is_avd_car) {
+      if (history.last_is_avd_car && !history.is_avd_car) {
         HoldLatOffset(*frenet_obs);
       }
 
@@ -260,7 +245,7 @@ bool LateralObstacleDecider::Execute() {
         emergency_avoid.emplace_back(obs->id());
       }
     }
-    
+
     JSON_DEBUG_VECTOR("emergency_avoid", emergency_avoid, 0);
     JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
     JSON_DEBUG_VALUE("can_left_borrow", left_borrow_);
@@ -277,8 +262,7 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
   bool emergency_avoid =
-      (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE &&
-       !history.rear_car && v_s_rel < 0 &&
+      (!history.rear_car && v_s_rel < 0 &&
        ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_lower) ||
         ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_upper &&
           d_s_rel < config_.emegency_cutin_front_area))));

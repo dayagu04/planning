@@ -939,7 +939,10 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
             .get_reference_path_manager()
             ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
     const auto &obstacles_map = fix_ref->get_obstacles_map();
-
+    const auto &lateral_obstacle_history_info =
+        session->planning_context()
+            .lateral_obstacle_decider_output()
+            .lateral_obstacle_history_info;
     if (obstacles_map.find(avd_obstacles.track_id) != obstacles_map.end()) {
       const auto frenet_obstacle = obstacles_map.at(avd_obstacles.track_id);
       double obs_relative_heading =
@@ -955,6 +958,18 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
 
       // 后续联合考虑纵向距离与v_l
       if (fabs(frenet_obstacle->frenet_velocity_l()) >= 0.3) {
+        avd_obstacles.min_l_to_ref = avd_obstacle_past.min_l_to_ref;
+        avd_obstacles.max_l_to_ref = avd_obstacle_past.max_l_to_ref;
+      }
+
+      // hold lat_offset，不更新横向位置
+      bool emergency_avoid = false;
+      auto lateral_obstacle_iter =
+          lateral_obstacle_history_info.find(avd_obstacles.track_id);
+      if (lateral_obstacle_iter != lateral_obstacle_history_info.end()) {
+        emergency_avoid = lateral_obstacle_iter->second.emergency_avoid;
+      }
+      if (emergency_avoid) {
         avd_obstacles.min_l_to_ref = avd_obstacle_past.min_l_to_ref;
         avd_obstacles.max_l_to_ref = avd_obstacle_past.max_l_to_ref;
       }
