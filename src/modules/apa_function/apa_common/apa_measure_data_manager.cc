@@ -97,6 +97,9 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
 
   acceleration_ = localization_info.acceleration.acceleration_body.ax;
 
+  // todo: need to get signal from vehicle service
+  fold_mirror_flag_ = apa_param.GetParam().force_fold_mirror;
+
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
   ILOG_INFO << "pos = " << pos_.transpose()
             << "  heading = " << heading_ * kRad2Deg << "  vel = " << vel_
@@ -109,7 +112,9 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
             << car_static_timer_by_vel_strict_ << " s";
   ILOG_INFO << "car_static_timer_by_vel_normal_ = "
             << car_static_timer_by_vel_normal_ << " s";
-  ILOG_INFO << "static_flag = " << static_flag_;
+  ILOG_INFO << "static_flag = " << static_flag_
+            << "  fold_mirror_flag = " << fold_mirror_flag_
+            << "  brake_flag = " << brake_flag_;
 
   JSON_DEBUG_VALUE("local_move_dist", local_move_dist)
   JSON_DEBUG_VALUE("car_static_timer_by_pos_strict",
@@ -121,6 +126,7 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
   JSON_DEBUG_VALUE("car_static_timer_by_vel_normal",
                    car_static_timer_by_vel_normal_)
   JSON_DEBUG_VALUE("static_flag", static_flag_)
+  JSON_DEBUG_VALUE("fold_mirror_flag", fold_mirror_flag_)
 }
 
 }  // namespace apa_planner

@@ -7,15 +7,27 @@
 namespace planning {
 namespace apa_planner {
 
-void BaseCollisionDetector::Init() {
+void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   const ApaParameters& param = apa_param.GetParam();
   Eigen::Vector2d vertex;
 
+  double max_car_width;
+  std::vector<double> car_vertex_x_vec, car_vertex_y_vec;
+  if (fold_mirror_flag) {
+    max_car_width = param.fold_mirror_max_car_width;
+    car_vertex_x_vec = param.fold_mirror_car_vertex_x_vec;
+    car_vertex_y_vec = param.fold_mirror_car_vertex_y_vec;
+  } else {
+    max_car_width = param.max_car_width;
+    car_vertex_x_vec = param.car_vertex_x_vec;
+    car_vertex_y_vec = param.car_vertex_y_vec;
+  }
+
   // 包含左右后视镜的多边形
   car_with_mirror_polygon_vertex_.clear();
-  car_with_mirror_polygon_vertex_.reserve(param.car_vertex_x_vec.size());
-  for (size_t i = 0; i < param.car_vertex_x_vec.size(); ++i) {
-    vertex << param.car_vertex_x_vec[i], param.car_vertex_y_vec[i];
+  car_with_mirror_polygon_vertex_.reserve(car_vertex_x_vec.size());
+  for (size_t i = 0; i < car_vertex_x_vec.size(); ++i) {
+    vertex << car_vertex_x_vec[i], car_vertex_y_vec[i];
     car_with_mirror_polygon_vertex_.emplace_back(vertex);
   }
   // 参数里默认为顺时针 这里转化为逆时针 方便后面形成polygon gjk检测
@@ -65,15 +77,15 @@ void BaseCollisionDetector::Init() {
   car_with_mirror_rectangle_vertex_.clear();
   car_with_mirror_rectangle_vertex_.resize(4);
   car_with_mirror_rectangle_vertex_[0] << -param.rear_overhanging,
-      0.5 * param.max_car_width;
+      0.5 * max_car_width;
   car_with_mirror_rectangle_vertex_[1] << -param.rear_overhanging,
-      -0.5 * param.max_car_width;
+      -0.5 * max_car_width;
   car_with_mirror_rectangle_vertex_[2]
       << param.wheel_base + param.front_overhanging,
-      -0.5 * param.max_car_width;
+      -0.5 * max_car_width;
   car_with_mirror_rectangle_vertex_[3]
       << param.wheel_base + param.front_overhanging,
-      0.5 * param.max_car_width;
+      0.5 * max_car_width;
 
   // 后视镜到前悬矩形
   mirror_to_front_overhanging_rectangle_vertex_expand_front_.clear();
@@ -84,10 +96,10 @@ void BaseCollisionDetector::Init() {
       right_mirror_rectangle_vertex_[1];
   mirror_to_front_overhanging_rectangle_vertex_expand_front_[2]
       << param.wheel_base + param.front_overhanging,
-      -0.5 * param.max_car_width;
+      -0.5 * max_car_width;
   mirror_to_front_overhanging_rectangle_vertex_expand_front_[3]
       << param.wheel_base + param.front_overhanging,
-      0.5 * param.max_car_width;
+      0.5 * max_car_width;
 
   // 后视镜到后悬多边形
   mirror_to_rear_overhanging_polygon_vertex_.clear();
@@ -103,22 +115,82 @@ void BaseCollisionDetector::Init() {
   mirror_to_rear_overhanging_polygon_vertex_.emplace_back(
       right_mirror_rectangle_vertex_[0]);
 
-  // mirror_to_rear_overhanging_rectangle_vertex_[0] =
-  //     left_mirror_rectangle_vertex_[3];
-  // mirror_to_rear_overhanging_rectangle_vertex_[1] << -param.rear_overhanging,
-  //     0.5 * param.max_car_width;
-  // mirror_to_rear_overhanging_rectangle_vertex_[2] << -param.rear_overhanging,
-  //     -0.5 * param.max_car_width;
-  // mirror_to_rear_overhanging_rectangle_vertex_[3] =
-  //     right_mirror_rectangle_vertex_[0];
+  car_with_mirror_circles_list_.Reset();
+  car_with_mirror_circles_list_.height_type = ApaObsHeightType::HIGH;
+  std::vector<float> circle_x, circle_y, circle_r;
+  if (fold_mirror_flag) {
+    circle_x = param.fold_mirror_footprint_circle_x;
+    circle_y = param.fold_mirror_footprint_circle_y;
+    circle_r = param.fold_mirror_footprint_circle_r;
+  } else {
+    circle_x = param.footprint_circle_x;
+    circle_y = param.footprint_circle_y;
+    circle_r = param.footprint_circle_r;
+  }
+  car_with_mirror_circles_list_.max_circle.center_local << circle_x[0],
+      circle_y[0];
+  car_with_mirror_circles_list_.max_circle.radius = circle_r[0];
+  CarFootPrintCircle* circles = car_with_mirror_circles_list_.circles;
+  for (size_t i = 1; i < circle_x.size(); ++i) {
+    if (car_with_mirror_circles_list_.count >= MAX_CAR_FOOTPRINT_CIRCLE_NUM) {
+      break;
+    }
+    circles[car_with_mirror_circles_list_.count].center_local << circle_x[i],
+        circle_y[i];
+    circles[car_with_mirror_circles_list_.count].radius = circle_r[i];
+    car_with_mirror_circles_list_.count++;
+  }
+
+  car_without_mirror_circles_list_.Reset();
+  // todo: use right circle and height type
+  car_without_mirror_circles_list_.height_type = ApaObsHeightType::HIGH;
+  circle_x = param.fold_mirror_footprint_circle_x;
+  circle_y = param.fold_mirror_footprint_circle_y;
+  circle_r = param.fold_mirror_footprint_circle_r;
+  car_without_mirror_circles_list_.max_circle.center_local << circle_x[0],
+      circle_y[0];
+  car_without_mirror_circles_list_.max_circle.radius = circle_r[0];
+  circles = car_without_mirror_circles_list_.circles;
+  for (size_t i = 1; i < circle_x.size(); ++i) {
+    if (car_without_mirror_circles_list_.count >=
+        MAX_CAR_FOOTPRINT_CIRCLE_NUM) {
+      break;
+    }
+    circles[car_without_mirror_circles_list_.count].center_local << circle_x[i],
+        circle_y[i];
+    circles[car_without_mirror_circles_list_.count].radius = circle_r[i];
+    car_without_mirror_circles_list_.count++;
+  }
+
+  car_chassis_circles_list_.Reset();
+  // todo: use right circle and height type
+  car_chassis_circles_list_.height_type = ApaObsHeightType::HIGH;
+  circle_x = param.fold_mirror_footprint_circle_x;
+  circle_y = param.fold_mirror_footprint_circle_y;
+  circle_r = param.fold_mirror_footprint_circle_r;
+  car_chassis_circles_list_.max_circle.center_local << circle_x[0], circle_y[0];
+  car_chassis_circles_list_.max_circle.radius = circle_r[0];
+  circles = car_chassis_circles_list_.circles;
+  for (size_t i = 1; i < circle_x.size(); ++i) {
+    if (car_chassis_circles_list_.count >= MAX_CAR_FOOTPRINT_CIRCLE_NUM) {
+      break;
+    }
+    circles[car_chassis_circles_list_.count].center_local << circle_x[i],
+        circle_y[i];
+    circles[car_chassis_circles_list_.count].radius = circle_r[i];
+    car_chassis_circles_list_.count++;
+  }
+
+  need_update_buffer_ = true;
 }
 
 void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
                                              const double lon_buffer) {
   lon_buffer_ = lon_buffer;
-  if (mathlib::IsDoubleEqual(lat_buffer, lat_buffer_)) {
+  if (!need_update_buffer_ && mathlib::IsDoubleEqual(lat_buffer, lat_buffer_)) {
     return;
   }
+  need_update_buffer_ = false;
   lat_buffer_ = lat_buffer;
   Eigen::Vector2d vertex;
 
@@ -180,8 +252,10 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
   }
 
   // 后视镜到前悬矩形
-  mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_.clear();
-  mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_.reserve(4);
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
+      .clear();
+  mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
+      .reserve(4);
   for (const Eigen::Vector2d& pt :
        mirror_to_front_overhanging_rectangle_vertex_expand_front_) {
     vertex.x() = pt.x();
