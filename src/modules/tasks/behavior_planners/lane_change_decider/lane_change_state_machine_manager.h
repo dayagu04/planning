@@ -209,6 +209,7 @@ class LaneChangeStateMachineManager {
 
   bool IsCancelToHold();
   double CalculateLCHoldStateLatOffset() const;
+  bool IsHighPriorityCompleteMLC() const;
 
  private:
   ScenarioStateMachineConfig config_;
@@ -235,6 +236,7 @@ class LaneChangeStateMachineManager {
   int propose_state_frame_nums_ = 0;
   int execution_state_frame_nums_ = 0;
   int hold_state_frame_nums_ = 0;
+  int complete_state_frame_nums_ = 0;
   double lat_close_boundary_offset_ = 0;
   double lc_hold_state_lat_offset_ = 0;
   const planning_data::DynamicAgentNode* target_lane_front_node_ = nullptr;

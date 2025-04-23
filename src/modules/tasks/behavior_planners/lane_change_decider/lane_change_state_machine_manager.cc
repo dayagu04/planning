@@ -19,6 +19,7 @@
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "planning_context.h"
+#include "session.h"
 #include "spline_projection.h"
 #include "task_interface/lane_change_utils.h"
 #include "trajectory1d/constant_jerk_trajectory1d.h"
@@ -168,7 +169,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
-        
+
         bool is_hold_to_complete =
             CheckIfLaneChangeComplete(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
@@ -199,8 +200,12 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangeComplete: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangeComplete) {
+        complete_state_frame_nums_ ++;
+
         bool is_complete_to_lane_keeping = CheckIfCompleteToLaneKeeping();
+
         bool is_complete_to_cancel = CheckIfCompleteToCancel();
+
         if (is_complete_to_lane_keeping) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
@@ -210,6 +215,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
           lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
+          complete_state_frame_nums_ = 0;
         }
       }
       break;
@@ -240,11 +246,14 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     RequestSource *const lane_change_type) const {
   *lane_change_direction = lc_req_mgr_->request();
   *lane_change_type = lc_req_mgr_->request_source();
+
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
     const bool is_dashed_line = IsDashLineCurBoundary(*lane_change_direction);
+
     bool is_ego_in_perfect_pose = IsLatOffsetValid() && is_dashed_line;
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
+
     if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
     } else if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
@@ -458,18 +467,30 @@ bool LaneChangeStateMachineManager::CheckIfHoldToExecution(
 
 bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
   const bool perfect_in_lane = CheckIfInPerfectLaneKeeping();
+
+  bool is_high_priority_complete_mlc = IsHighPriorityCompleteMLC();
+
+  // 防止自车因为横向不居中等情况，导致一直卡在complete状态。所以在complete状态下超过8s后，结束当前状态
+  bool is_time_out = complete_state_frame_nums_ > 80;
+
   if (target_lane_front_node_) {
     lane_change_stage_info_.lc_gap_info.front_node_id =
         target_lane_front_node_->node_id();
   }
+
   if (target_lane_rear_node_) {
     lane_change_stage_info_.lc_gap_info.rear_node_id =
         target_lane_rear_node_->node_id();
   }
-  if (perfect_in_lane) {
+
+  if (perfect_in_lane ||
+      is_high_priority_complete_mlc ||
+      is_time_out) {
     std::cout << "perfect_in_lane!!!" << std::endl;
   }
+
   return perfect_in_lane;
+
 }
 
 bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
@@ -511,7 +532,7 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
     dist_threshold = 0.3;
   }
-  
+
   // 3、考虑向避让的情况
   const double lateral_offset = session_->planning_context()
                                     .lateral_offset_decider_output()
@@ -1184,6 +1205,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   propose_state_frame_nums_ = 0;
   execution_state_frame_nums_ = 0;
   hold_state_frame_nums_ = 0;
+  complete_state_frame_nums_ = 0;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
@@ -1759,19 +1781,7 @@ bool LaneChangeStateMachineManager::IsLatOffsetValid() const {
   const double lat_offset_threshold = 0.5;
   const double lat_offset = std::abs(ego_l);
 
-  // 考虑自车是否在距离匝道较近的ramp变道
-  const double triggle_dis = frenet_ego_state.velocity() * kPreTriggleHighPriorityMLCTime;
-
-  const auto &virtual_lane_mgr =
-      session_->environmental_model().get_virtual_lane_manager();
-  const auto &cur_lane = virtual_lane_mgr->get_current_lane();
-  const auto &route_info_output =
-      session_->environmental_model().get_route_info();
-
-  bool is_high_priority_complete_mlc =
-      cur_lane->is_nearing_ramp_mlc_task() &&
-      route_info_output->get_route_info_output().dis_to_ramp <
-          triggle_dis;
+  bool is_high_priority_complete_mlc = IsHighPriorityCompleteMLC();
 
   if (lat_offset < lat_offset_threshold ||
       is_high_priority_complete_mlc) {
@@ -2326,15 +2336,15 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       if (is_front_agent && agent_future_v < ego_finally_v &&
           last_point_rel_dis < safety_dis_threshold) {
         const double tager_v = agent_future_v;
-        
+
         int itear_num = ego_trajs_future_.size();
-        
+
         // 要考虑自车的执行器0.5s的响应时间，因此假设在0.5s后，自车才开始以最大减速度减速
         for (int i = 0; i < itear_num; i++) {
           if (ego_trajs_future_[i].t > 0.5) {
             solid_index = i;
             break;
-          } 
+          }
         }
 
         const double ego_virtual_v = ego_trajs_future_[solid_index].v;
@@ -2864,7 +2874,7 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
   // 考虑到驾驶员的反应时间约为0.2s和自车执行器的响应时间0.7s，目前该值取1.5s。
 
   reach_line_time = std::max(reach_line_time, 1.5);
-  
+
   return reach_line_time;
 }
 
@@ -3092,5 +3102,27 @@ LaneChangeStateMachineManager::GenerateLatMaxDecelerationCurve(
   JSON_DEBUG_VECTOR("lat_path_y", y_vec, 2);
 
   return lat_max_deceleration_curve;
+
+bool LaneChangeStateMachineManager::IsHighPriorityCompleteMLC() const {
+  // 考虑自车是否在距离匝道较近的ramp变道
+  const auto &ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+
+  const double triggle_dis =
+      ego_state_manager->ego_v() * kPreTriggleHighPriorityMLCTime;
+
+  const auto &cur_lane = virtual_lane_manager->get_current_lane();
+
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info();
+
+  bool is_high_priority_complete_mlc =
+      cur_lane->is_nearing_ramp_mlc_task() &&
+      route_info_output->get_route_info_output().dis_to_ramp <
+          triggle_dis;
+
+  return is_high_priority_complete_mlc;
 }
 }  // namespace planning
