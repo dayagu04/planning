@@ -22,6 +22,9 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   } else if (IsTruck(obstacle)) {
     base_dis = 0.7;
   }
+  if (obstacle->obstacle()->is_reverse()) {
+    base_dis += config.nudge_extra_buffer_reverse_obstacle;
+  }
   if (in_intersection) {
     base_dis += config.nudge_extra_buffer_in_intersection;
   }

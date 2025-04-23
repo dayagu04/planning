@@ -224,6 +224,7 @@
     "lateral_nudge_buffer":    [0.04, 0.07, 0.11, 0.23, 0.31, 0.44],
     "map_bound_weight": [0.4, 0.4, 0.6, 0.1],
     "nudge_extra_buffer_in_intersection": 0.15,
+    "nudge_extra_buffer_reverse_obstacle": 0.15,
     "bound_rear_agent_weight":0.25,
     "nudge_extra_decrease_buffer_in_lane_change_scene": 0.2,
     "bound_static_agent_weight":0.4,

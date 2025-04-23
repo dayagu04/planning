@@ -47,7 +47,8 @@ class LateralObstacleDecider : public Task {
   bool CheckSideObstacle(
         const std::shared_ptr<ReferencePath> &reference_path_ptr,
         FrenetObstacle &frenet_obstacle);
-
+  void CheckObstaclesIsReverse();
+  
  private:
   planning::framework::Session *session_;
   LateralObstacleDeciderConfig config_;

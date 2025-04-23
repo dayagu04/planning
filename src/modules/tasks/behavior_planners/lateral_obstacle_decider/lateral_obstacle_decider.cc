@@ -14,6 +14,7 @@
 #include "planning_context.h"
 #include "edt_manager.h"
 #include "task_interface/lateral_obstacle_decider_output.h"
+#include "obstacle_manager.h"
 
 namespace planning {
 
@@ -111,6 +112,7 @@ bool LateralObstacleDecider::Execute() {
     Log(reference_path_ptr);
 
   } else {
+    CheckObstaclesIsReverse();
     // lane_width
     const auto &coarse_planning_info = session_->planning_context()
                                            .lane_change_decider_output()
@@ -1159,7 +1161,21 @@ void LateralObstacleDecider::UpdateLatDecisionWithARAStar(
     }
   }
 }
-
+void LateralObstacleDecider::CheckObstaclesIsReverse() {
+  const auto& reference_path_ptr = session_->planning_context().
+                      lane_change_decider_output().coarse_planning_info.reference_path;
+  auto obstacle_manager = session_->mutable_environmental_model()->mutable_obstacle_manager();
+  const double kMaxHeadingDiff = 2.3;
+  auto frenet_obstacles = reference_path_ptr->get_obstacles();
+  for (auto &frenet_obstacle : frenet_obstacles) {
+    bool is_reverse = std::fabs(frenet_obstacle->obstacle()->velocity_angle() -
+      reference_path_ptr->get_frenet_coord()->GetPathPointByS(frenet_obstacle->frenet_s()).theta()) > kMaxHeadingDiff;
+    auto obstacle = obstacle_manager->find_obstacle(frenet_obstacle->id());
+    if (obstacle != nullptr) {
+      obstacle->set_is_reverse(is_reverse);
+    }
+  }
+}
 void LateralObstacleDecider::Log(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
