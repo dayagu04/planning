@@ -198,6 +198,12 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
         continue;
       }
 
+      if (!apa_param.GetParam().use_ground_line_wall_column &&
+          (gl.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
+           gl.type == iflyauto::GROUND_LINE_TYPE_WALL)) {
+        continue;
+      }
+
       const uint8 points_3d_size =
           std::min(gl.groundline_point_size,
                    static_cast<uint8>(FUSION_GROUNDLINE_POINT_MAX_NUM));
