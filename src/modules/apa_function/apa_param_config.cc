@@ -125,6 +125,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
                   "in_slot_car_adjust_max_count");
   // car params
+  JSON_READ_VALUE(apa_param.SetPram().force_fold_mirror, bool,
+                  "force_fold_mirror");
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
 
@@ -135,6 +137,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().car_width, double, "car_width");
   JSON_READ_VALUE(apa_param.SetPram().car_length, double, "car_length");
   JSON_READ_VALUE(apa_param.SetPram().max_car_width, double, "max_car_width");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_max_car_width, double,
+                  "fold_mirror_max_car_width");
   JSON_READ_VALUE(apa_param.SetPram().lon_dist_mirror_to_rear_axle, double,
                   "lon_dist_mirror_to_rear_axle");
 
@@ -149,6 +153,11 @@ void SyncParkingParameters(const bool is_simulation) {
                   "car_vertex_x_vec");
   JSON_READ_VALUE(apa_param.SetPram().car_vertex_y_vec, std::vector<double>,
                   "car_vertex_y_vec");
+
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_car_vertex_x_vec,
+                  std::vector<double>, "fold_mirror_car_vertex_x_vec");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_car_vertex_y_vec,
+                  std::vector<double>, "fold_mirror_car_vertex_y_vec");
 
   // slot params
   JSON_READ_VALUE(apa_param.SetPram().normal_slot_length, double,
@@ -462,6 +471,10 @@ void SyncParkingParameters(const bool is_simulation) {
                   "use_uss_pt_clound");
 
   JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
+
+  JSON_READ_VALUE(apa_param.SetPram().use_ground_line_wall_column, bool,
+                  "use_ground_line_wall_column");
+
   JSON_READ_VALUE(apa_param.SetPram().use_object_detect, bool,
                   "use_object_detect");
 
@@ -491,17 +504,15 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().parallel_ego_front_corner_to_obs_in_buffer, double,
       "parallel_ego_front_corner_to_obs_in_buffer");
 
-  JSON_READ_VALUE(apa_param.SetPram().slot_max_jump_dist, double,
-                  "slot_max_jump_dist");
+  JSON_READ_VALUE(apa_param.SetPram().min_dynamic_plan_proj_dt, double,
+                  "min_dynamic_plan_proj_dt");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_slot_occupied_ratio, double,
-                  "line_arc_obs_slot_occupied_ratio");
+  JSON_READ_VALUE(apa_param.SetPram().max_dynamic_plan_proj_dt, double,
+                  "max_dynamic_plan_proj_dt");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_width, double,
-                  "line_arc_obs_channel_width");
+  JSON_READ_VALUE(apa_param.SetPram().max_lat_err, double, "max_lat_err");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_length, double,
-                  "line_arc_obs_channel_length");
+  JSON_READ_VALUE(apa_param.SetPram().max_phi_err, double, "max_phi_err");
 
   JSON_READ_VALUE(apa_param.SetPram().dynamic_col_det_enable, bool,
                   "dynamic_col_det_enable");
@@ -864,6 +875,13 @@ void SyncParkingParameters(const bool is_simulation) {
                   "footprint_circle_y");
   JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<float>,
                   "footprint_circle_r");
+
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_footprint_circle_x,
+                  std::vector<float>, "fold_mirror_footprint_circle_x");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_footprint_circle_y,
+                  std::vector<float>, "fold_mirror_footprint_circle_y");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_footprint_circle_r,
+                  std::vector<float>, "fold_mirror_footprint_circle_r");
 
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.perpendicular_slot_auto_switch_to_astar,

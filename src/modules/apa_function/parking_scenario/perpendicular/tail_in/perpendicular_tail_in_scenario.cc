@@ -766,6 +766,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
 const bool PerpendicularTailInScenario::GenObstacles() { return true; }
 
 const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
+  const ApaParameters& param = apa_param.GetParam();
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
   GeometryPathInput input;
@@ -784,10 +785,37 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   std::vector<geometry_lib::PathPoint> split_point_global_vec;
   split_point_global_vec.clear();
   while (frame_.is_replan_dynamic) {
-    const double dt = 0.4;
+    ILOG_INFO << "decide ego pose or proj pt for dynamic path plan";
+    if (apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
+      ILOG_INFO << "control err is big, directly use ego pose to dynamic plan";
+      break;
+    }
+
+    const double remain_dist =
+        std::min(frame_.remain_dist_path, frame_.remain_dist_obs);
+
+    // 根据剩余距离选择一个dt,
+    // 剩余距离越长，可以选择更大的dt来给控制更大的反映时间
+    std::vector<double> dist_vec{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    const double delta_t =
+        (param.max_dynamic_plan_proj_dt - param.min_dynamic_plan_proj_dt) /
+        (dist_vec.size() - 1);
+    std::vector<double> dt_vec{};
+    dt_vec.resize(dist_vec.size());
+    for (size_t i = 0; i < dist_vec.size(); ++i) {
+      dt_vec[i] = param.min_dynamic_plan_proj_dt + delta_t * i;
+    }
+    const double dt = mathlib::Interp1(dist_vec, dt_vec, remain_dist);
     const double s =
         std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) * dt;
-    if (s > frame_.remain_dist_path || s > frame_.remain_dist_obs) {
+
+    ILOG_INFO << "s = " << s << "  dt = " << dt << "  delta_t = " << delta_t
+              << "  remain_dist = " << remain_dist;
+
+    JSON_DEBUG_VALUE("dynamic_plan_predict_dt", dt)
+    JSON_DEBUG_VALUE("dynamic_plan_predict_ds", s)
+
+    if (s > remain_dist - 0.68) {
       return PathPlannerResult::PLAN_FAILED;
     }
 
@@ -825,16 +853,6 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       }
     }
 
-    const double dist_err =
-        (ego_info_under_slot.l2g_tf.GetPos(ego_info_under_slot.cur_pose.pos) -
-         ego_proj_pt.pos)
-            .norm();
-
-    if (dist_err > 0.068) {
-      ILOG_INFO << "control err is big, directly use ego pose to dynamic plan";
-      break;
-    }
-
     input.ego_info_under_slot.cur_pose.pos =
         ego_info_under_slot.g2l_tf.GetPos(fur_proj_pt.pos);
     input.ego_info_under_slot.cur_pose.heading =
@@ -846,7 +864,6 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       split_point_global_vec.emplace_back(current_path_point_global_vec_[i]);
     }
 
-    ILOG_INFO << "dynamic plan use fur froj pt, s = " << s;
     fur_proj_pt.PrintInfo();
     break;
   }
@@ -1436,8 +1453,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const double heading_err =
       std::fabs(real_target_pose.heading - tar_pose_bef.heading) * kRad2Deg;
 
-  ILOG_INFO << "lat_dist = " << lat_dist;
-
   // 如果相差较大， 说明车位跳动较大，需要增大刹停buffer
   const bool case2_1 = (lat_dist > 0.08 || heading_err > 1.48);
   const bool case2_2 = ego_info_under_slot.slot_occupied_ratio > 1e-3;
@@ -1446,6 +1461,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   if (case2_1 && case2_2 && case2_3) {
     lat_buffer = std::max(0.146, lat_buffer);
   }
+
+  ILOG_INFO << "lat_buffer = " << lat_buffer << "  lat_dist = " << lat_dist
+            << "  heading_err = " << heading_err << "  case2_1 = " << case2_1
+            << "  case2_2 = " << case2_2 << "  case2_3 = " << case2_3;
 
   // 库外在空间足够的情况下尽量使用较大的安全buffer
   const double slot_x =
@@ -1462,30 +1481,20 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       } else {
         lat_buffer = std::max(0.146, lat_buffer);
       }
+      ILOG_INFO << "out slot use big lat buffer = " << lat_buffer;
     }
   }
 
   // 如果当前控制误差过大 增大横向buffer
   double s_proj = 0.0;
-  if (frame_.spline_success &&
-      geometry_lib::CalProjFromSplineByBisection(
-          0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
-          apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(),
-          frame_.x_s_spline, frame_.y_s_spline)) {
-    const Eigen::Vector2d proj_pt(frame_.x_s_spline(s_proj),
-                                  frame_.y_s_spline(s_proj));
-    const Eigen::Vector2d cur_pt =
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos();
-    const double dist = (proj_pt - cur_pt).norm();
-    if (dist > 0.068) {
-      ILOG_INFO << "control err is relatively big, should increase realtime "
-                   "brake lat buffer";
-      if (ego_info_under_slot.slot_occupied_ratio > 0.0 &&
-          std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 1.68) {
-        lat_buffer = std::max(0.0968, lat_buffer);
-      } else {
-        lat_buffer = std::max(0.20, lat_buffer);
-      }
+  if (apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
+    ILOG_INFO << "control err is relatively big, should increase realtime "
+                 "brake lat buffer";
+    if (ego_info_under_slot.slot_occupied_ratio > 0.0 &&
+        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 1.68) {
+      lat_buffer = std::max(0.0968, lat_buffer);
+    } else {
+      lat_buffer = std::max(0.20, lat_buffer);
     }
   }
 
@@ -1499,7 +1508,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             ->Update(current_path_point_global_vec_,
                      current_path_point_global_vec_.front().lat_buffer, 0.0,
                      GJKColDetRequest(false));
-    if (res.col_flag) {
+    if (res.col_flag && res.remain_dist > frame_.current_path_length -
+                                              frame_.remain_dist_path) {
       ILOG_INFO << "current plan path has collision, it indicate the obs has "
                    "changed, and should increase realtime brake "
                    "lat buffer";
@@ -1524,6 +1534,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   if (case3_1 && case3_2 && (case3_3 || case3_4)) {
     lat_buffer = std::max(0.146, lat_buffer);
   }
+
+  ILOG_INFO << "lat_buffer = " << lat_buffer << "  case3_1 = " << case3_1
+            << "  case3_2 = " << case3_2 << "  case3_3 = " << case3_3
+            << "  case3_4 = " << case3_4;
 
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
       std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) < 0.4 &&

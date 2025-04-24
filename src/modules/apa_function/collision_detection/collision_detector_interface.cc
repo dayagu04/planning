@@ -31,14 +31,19 @@ CollisionDetectorInterface::CollisionDetectorInterface(
 
   path_safe_check_ptr_ = std::make_shared<PathSafeChecker>(obs_manager_ptr);
 
-  Init();
+  Init(fold_mirror_flag_);
 }
 
-void CollisionDetectorInterface::Init() {
-  geometry_collision_detector_ptr_->Init();
-  gjk_collision_detector_ptr_->Init();
-  edt_collision_detector_ptr_->Init();
+void CollisionDetectorInterface::Init(const bool fold_mirror_flag) {
+  if (init_flag_ && fold_mirror_flag == fold_mirror_flag_) {
+    return;
+  }
+  fold_mirror_flag_ = fold_mirror_flag;
+  geometry_collision_detector_ptr_->Init(fold_mirror_flag_);
+  gjk_collision_detector_ptr_->Init(fold_mirror_flag_);
+  edt_collision_detector_ptr_->Init(fold_mirror_flag_);
   uss_obstacle_avoider_ptr_->Init();
+  init_flag_ = true;
 }
 
 void CollisionDetectorInterface::Reset() {
@@ -46,6 +51,8 @@ void CollisionDetectorInterface::Reset() {
   gjk_collision_detector_ptr_->Reset();
   edt_collision_detector_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
+  init_flag_ = false;
+  fold_mirror_flag_ = false;
 }
 
 }  // namespace apa_planner

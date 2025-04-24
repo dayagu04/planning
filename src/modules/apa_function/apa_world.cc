@@ -71,6 +71,9 @@ const bool ApaWorld::Update() {
 
   obstacle_manager_ptr_->Update(local_view_ptr_);
 
+  collision_detector_interface_ptr_->Init(
+      measure_data_ptr_->GetFoldMirrorFlag());
+
   slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,
                             measure_data_ptr_, obstacle_manager_ptr_,
                             collision_detector_interface_ptr_);

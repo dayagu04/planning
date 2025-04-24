@@ -116,6 +116,7 @@ struct ApaParameters {
   double plan_time = 0.1;
 
   // car params
+  bool force_fold_mirror = false;
   double front_overhanging = 0.924;
   // back edge to rear axis
   double rear_overhanging = 0.94;
@@ -123,6 +124,7 @@ struct ApaParameters {
   double car_width = 1.89;
   double car_length = 4.88;
   double max_car_width = 0.2;
+  double fold_mirror_max_car_width = 0.2;
   double lon_dist_mirror_to_rear_axle = 1.844;
   double lat_dist_mirror_to_center = 1.135;
   double steer_ratio = 16.5;
@@ -132,6 +134,13 @@ struct ApaParameters {
       3.518,  3.718,  3.718,  3.518,  2.092, 2.092, 1.906, 1.906,
       -0.885, -1.085, -1.085, -0.885, 1.906, 1.906, 2.092, 2.092};
   std::vector<double> car_vertex_y_vec = {
+      0.9595,  0.7595,  -0.7595, -0.9595, -0.9595, -1.1095, -1.1095, -0.9595,
+      -0.9595, -0.7595, 0.7595,  0.9595,  0.9595,  1.1095,  1.1095,  0.9595};
+
+  std::vector<double> fold_mirror_car_vertex_x_vec = {
+      3.518,  3.718,  3.718,  3.518,  2.092, 2.092, 1.906, 1.906,
+      -0.885, -1.085, -1.085, -0.885, 1.906, 1.906, 2.092, 2.092};
+  std::vector<double> fold_mirror_car_vertex_y_vec = {
       0.9595,  0.7595,  -0.7595, -0.9595, -0.9595, -1.1095, -1.1095, -0.9595,
       -0.9595, -0.7595, 0.7595,  0.9595,  0.9595,  1.1095,  1.1095,  0.9595};
 
@@ -267,15 +276,16 @@ struct ApaParameters {
   bool use_fus_occ_column = true;
   bool use_uss_pt_clound = false;
   bool use_ground_line = true;
-  bool use_object_detect;
+  bool use_ground_line_wall_column = true;
+  bool use_object_detect = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
   double obs2slot_max_dist = 4.68;
-  double slot_max_jump_dist = 0.068;
-  double line_arc_obs_slot_occupied_ratio = 0.168;
-  double line_arc_obs_channel_width = 8.886;
-  double line_arc_obs_channel_length = 5.086;
+  double min_dynamic_plan_proj_dt = 0.2;
+  double max_dynamic_plan_proj_dt = 0.8;
+  double max_lat_err = 0.068;
+  double max_phi_err = 2.68;
   bool dynamic_col_det_enable = false;
   double car_lat_inflation_strict = 0.1;
   double max_obs_lat_invasion_slot_dist = -0.026;
@@ -416,11 +426,18 @@ struct ApaParameters {
   double max_velocity = 0.6;
 
   std::vector<float> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
-                                            2.02, 2.7, 1.8, 0.9,  0.0};
+                                           2.02, 2.7, 1.8, 0.9,  0.0};
   std::vector<float> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
-                                            0.88, 0.0,  0.0,   0.0,   0.0};
+                                           0.88, 0.0,  0.0,   0.0,   0.0};
   std::vector<float> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
-                                            0.18, 0.95, 0.95, 0.95, 0.95};
+                                           0.18, 0.95, 0.95, 0.95, 0.95};
+
+  std::vector<float> fold_mirror_footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
+                                           2.02, 2.7, 1.8, 0.9,  0.0};
+  std::vector<float> fold_mirror_footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
+                                           0.88, 0.0,  0.0,   0.0,   0.0};
+  std::vector<float> fold_mirror_footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
+                                           0.18, 0.95, 0.95, 0.95, 0.95};
 
   AstarParkingConfig astar_config;
   ParkingSpeedConfig speed_config;

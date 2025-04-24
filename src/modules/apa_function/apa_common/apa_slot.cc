@@ -157,7 +157,12 @@ void ApaSlot::PostProcessSlotPoint() {
     angle_ = 180.0 - angle_;
   }
 
-  angle_ = mathlib::DoubleConstrain(angle_, 10.0, 80.0);
+  if (angle_ > 83.0) {
+    slot_type_ = SlotType::PERPENDICULAR;
+    return;
+  }
+
+  angle_ = mathlib::DoubleConstrain(angle_, 10.0, 83.0);
 
   sin_angle_ = std::sin(angle_ * kDeg2Rad);
 

@@ -339,7 +339,7 @@ const double ParkingScenario::CalRemainDistFromObs(
       0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
-    col_res.remain_dist_static = 3.68;
+    col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
   }
   double obs_pt_remain_dist_static = col_res.remain_dist_static - safe_dist;
 
@@ -350,7 +350,7 @@ const double ParkingScenario::CalRemainDistFromObs(
       dynamic_lat_buffer, 0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
-    col_res.remain_dist_dynamic = 6.68;
+    col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
   }
   double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.168;
 

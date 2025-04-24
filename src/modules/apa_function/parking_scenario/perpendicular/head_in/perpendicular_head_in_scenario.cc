@@ -1020,7 +1020,7 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
   const auto& planner_output = perpendicular_path_planner_.GetOutput();
   current_plan_path_vec_.clear();
   current_plan_path_vec_.reserve(5);
-  if (apa_param.GetParam().dynamic_col_det_enable) {
+  if (false) {
     for (size_t i = planner_output.path_seg_index.first;
          i <= planner_output.path_seg_index.second; ++i) {
       const auto& path_seg_local = planner_output.path_segment_vec[i];
@@ -1832,7 +1832,7 @@ void PerpendicularHeadInScenario::Log() const {
 void PerpendicularHeadInScenario::RealTimeDynamicColDet(
     const EgoInfoUnderSlot& ego_slot_info) {
   const ApaParameters& apa_param_ = apa_param.GetParam();
-  if (apa_param_.dynamic_col_det_enable && !current_plan_path_vec_.empty()) {
+  if (false && !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
 
     // when dynamic col det, use small car lat inflation, try to avoid getting
