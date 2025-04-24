@@ -162,7 +162,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
         continue;
       }
       if (front_vehicle_iter->second.type ==
-          Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+          iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
         if (front_vehicle_iter->second.d_rel < -ego_rear_edge ||
             front_vehicle_iter->second.d_rel >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
