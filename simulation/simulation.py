@@ -117,19 +117,19 @@ end_time = time.time()
 print(f"Run PP 耗时：{end_time - start_time}秒")
 
 # 运行checker
-start_time = time.time()
-command = f"cd /root/common_tools/ && git fetch && git checkout -b {task_id}_{scene_lib_id}_{case_id} origin/{common_tools_branch}"
-try:
-    result = subprocess.run(command, shell=True, text=True, check=True)
-except Exception as e:
-    print(f"Pulling common_tools error: {e}")
-    sys.exit(1)
-if (result.returncode != 0):
-    print(f"Pulling common_tools error")
-    sys.exit(1)
-print("Pulling common_tools successfully !")
-end_time = time.time()
-print(f"Pulling common_tools 耗时：{end_time - start_time}秒")
+# start_time = time.time()
+# command = f"cd /root/common_tools/ && git fetch && git checkout -b {task_id}_{scene_lib_id}_{case_id} origin/{common_tools_branch}"
+# try:
+#     result = subprocess.run(command, shell=True, text=True, check=True)
+# except Exception as e:
+#     print(f"Pulling common_tools error: {e}")
+#     sys.exit(1)
+# if (result.returncode != 0):
+#     print(f"Pulling common_tools error")
+#     sys.exit(1)
+# print("Pulling common_tools successfully !")
+# end_time = time.time()
+# print(f"Pulling common_tools 耗时：{end_time - start_time}秒")
 
 with open(result_path, 'r', encoding='utf-8') as file:
     result_data = json.load(file)
