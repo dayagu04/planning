@@ -11,6 +11,7 @@
 #include "lane_change_lane_manager.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
+#include "interface/src/c/common_c.h"
 
 namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等
