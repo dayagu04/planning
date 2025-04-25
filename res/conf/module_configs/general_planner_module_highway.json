@@ -140,6 +140,7 @@
   "oversize_veh_addition_buffer": 0.0,
   "traffic_cone_thr": 0.2,
   "static_obs_buffer": 0.6,
+  "extra_avoid_front_buffer": 0.1,
   "near_car_hysteresis": 1.6,
   "in_range_v": 1.0,
   "in_range_v_hysteresis": 1.5,
