@@ -407,20 +407,24 @@ bool ObstacleManager::FilterObstacleByDistance(
     const Obstacle &obstacle,
     const std::shared_ptr<planning_math::KDPath> &frenet_coord,
     const Point2D &ego_point) {
+  const double kMaxFrontDistance = 8;
+  const double kMinPolygonArea = 0.5;
+  const double kMinLength = 0.7;
+  const double kMinWidth = 0.7;
   int in_range_count = 0;
   for (const auto &point : obstacle.perception_polygon().points()) {
     Point2D sl_point;
     if (!frenet_coord->XYToSL({point.x(), point.y()}, sl_point) ||
         std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
-        sl_point.x > ego_point.x + 8) {
+        sl_point.x > ego_point.x + kMaxFrontDistance) {
       ++in_range_count;
     }
   }
 
   return !(in_range_count == obstacle.perception_polygon().points().size() ||
-           (in_range_count > 0 && obstacle.perception_polygon().area() < 0.5 &&
-            obstacle.perception_bounding_box().length() < 0.7 &&
-            obstacle.perception_bounding_box().width() < 0.7));
+           (in_range_count > 0 && obstacle.perception_polygon().area() < kMinPolygonArea &&
+            obstacle.perception_bounding_box().length() < kMinLength &&
+            obstacle.perception_bounding_box().width() < kMinWidth));
 }
 
 void ObstacleManager::split_points(
@@ -501,6 +505,9 @@ void ObstacleManager::split_points(
 }
 
 void ObstacleManager::UpdateGroundLineObstacle() {
+  const double kMinFrontDistance = 6;
+  const double kMinFrontDistanceForMap = 7;
+  const double kMaxSideDistance = 5;
   int index_offset = 900000;
   const auto &local_view = session_->environmental_model().get_local_view();
   if (local_view.ground_line_perception.groundline_size > 0) {
@@ -589,8 +596,8 @@ void ObstacleManager::UpdateGroundLineObstacle() {
                   sl_point) ||
               std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
               groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
-              sl_point.x < ego_point.x + 6 ||
-              ((sl_point.x < ego_point.x + 7) &&
+              sl_point.x < ego_point.x + kMinFrontDistance ||
+              ((sl_point.x < ego_point.x + kMinFrontDistanceForMap) &&
                 groundline.resource_type ==
                     iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
             in_range = false;
@@ -604,7 +611,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         }
         if (!in_range) {
           continue;
-        } else if (is_lat_valid && min_dist_to_ref > 5) {
+        } else if (is_lat_valid && min_dist_to_ref > kMaxSideDistance) {
           continue;
         }
         if (points.size() >= 3) {
@@ -624,6 +631,9 @@ bool ObstacleManager::FilterGroundLineByDistance(
     const Point2D &ego_point,
     const iflyauto::GroundLineType type,
     const iflyauto::StaticFusionResourceType resource_type) {
+  const double kMinFrontDistance = 6;
+  const double kMinFrontDistanceForMap = 7;
+  const double kMaxSideDistance = 5;
   bool in_range = true;
   bool is_lat_valid = false;
   double min_dist_to_ref = NL_NMAX;
@@ -634,8 +644,8 @@ bool ObstacleManager::FilterGroundLineByDistance(
             sl_point) ||
         std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
         type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
-        sl_point.x < ego_point.x + 6 ||
-        ((sl_point.x < ego_point.x + 7) &&
+        sl_point.x < ego_point.x + kMinFrontDistance ||
+        ((sl_point.x < ego_point.x + kMinFrontDistanceForMap) &&
           resource_type ==
               iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
       in_range = false;
@@ -645,12 +655,15 @@ bool ObstacleManager::FilterGroundLineByDistance(
       is_lat_valid = true;
     }
   }
-  return ((!in_range) || (is_lat_valid && min_dist_to_ref > 5));
+  return ((!in_range) || (is_lat_valid && min_dist_to_ref > kMaxSideDistance));
 }
 
 void ObstacleManager::UpdateMapStaticObstacle() {
   // todo select
   // ehr column box
+  const double kMinFrontDistance = 11;
+  const double kMaxFrontDistance = 50;
+  const double kMaxSideDistance = 5;
   const auto &local_view = session_->environmental_model().get_local_view();
   const size_t polygon_obstacles_size = local_view.static_map_info.parking_assist_info().polygon_obstacles_size();
   bool has_target_lane = session_->planning_context()
@@ -695,8 +708,8 @@ void ObstacleManager::UpdateMapStaticObstacle() {
                       Point2D(shape.x(), shape.y()),
                       sl_point) ||
                   std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
-                  sl_point.x < ego_point.x + 11 ||
-                  sl_point.x > ego_point.x + 50) {
+                  sl_point.x < ego_point.x + kMinFrontDistance ||
+                  sl_point.x > ego_point.x + kMaxFrontDistance) {
                 in_range = false;
                 break;
               } else {
@@ -710,7 +723,7 @@ void ObstacleManager::UpdateMapStaticObstacle() {
       }
       if (!in_range) {
         continue;
-      } else if (is_lat_valid && min_dist_to_ref > 5) {
+      } else if (is_lat_valid && min_dist_to_ref > kMaxSideDistance) {
         continue;
       }
       if (column_box.size() >= 3) {
