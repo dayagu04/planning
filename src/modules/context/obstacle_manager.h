@@ -113,6 +113,35 @@ class ObstacleManager {
   bool IsOnBend(const std::shared_ptr<ReferencePath> &reference_path,
                 double ego_s);
 
+  void split_points(const iflyauto::Point2f *points,
+                    const double polygon_points_size,
+                    const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+                    vector<vector<planning_math::Vec2d>> &result);
+
+  void ProcessOccupancyWall(
+      const iflyauto::FusionOccupancyObject &object,
+      const iflyauto::Point2f *polygon_points, size_t polygon_size,
+      const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+      const Point2D &ego_point, int &index_offset);
+
+  void ProcessOccupancyObject(
+      const iflyauto::FusionOccupancyObject &object,
+      const iflyauto::Point2f *polygon_points, size_t polygon_size,
+      const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+      const Point2D &ego_point);
+
+  bool FilterObstacleByDistance(
+      const Obstacle &obstacle,
+      const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+      const Point2D &ego_point);
+
+  bool FilterGroundLineByDistance(
+      const std::vector<planning_math::Vec2d> &points,
+      const std::shared_ptr<planning_math::KDPath> &frenet_coord,
+      const Point2D &ego_point,
+      const iflyauto::GroundLineType type,
+      const iflyauto::StaticFusionResourceType resource_type);
+
  private:
   void clear();
   // bool is_potential_current_leadone_leadtwo_to_ego(const

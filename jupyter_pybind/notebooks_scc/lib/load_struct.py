@@ -2234,6 +2234,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
     if g_is_display_enu:
       for j in range(groundline_size):
         groundline = ground_lines[j]
+        id = groundline.id
         type = groundline.type
         resource_type = groundline.resource_type
         single_groundline_x_vec = []
@@ -2250,7 +2251,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
         polygon_y = []
         lat_decision = "None"
         is_static = ""
-        ground_line_id = ground_line_id + 1
+        ground_line_id = id + 5000000
         groundline_id_vec.append(ground_line_id)
         try:
           obs_polygon = []
@@ -2287,6 +2288,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
         coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
         for j in range(groundline_size):
           groundline = ground_lines[j]
+          id = groundline.id
           type = groundline.type
           resource_type = groundline.resource_type
           single_groundline_x_vec = []
@@ -2304,7 +2306,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
           polygon_y = []
           lat_decision = "None"
           is_static = ""
-          ground_line_id = ground_line_id + 1
+          ground_line_id = id + 5000000
           groundline_id_vec.append(ground_line_id)
           try:
             obs_polygon = []

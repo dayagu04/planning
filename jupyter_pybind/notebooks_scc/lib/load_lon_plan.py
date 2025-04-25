@@ -651,6 +651,7 @@ def load_lon_global_figure(bag_loader):
   ParkingSwitchDeciderTime_vec = []
   ARAStarTime_vec = []
   HppLonCollisionCheckTimeCost_vec = []
+  GeneralLateralDeciderCostTime_vec = []
 
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_dis'], 2))
@@ -670,6 +671,7 @@ def load_lon_global_figure(bag_loader):
     LaneChangeDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LaneChangeDeciderTime'], 2))
     LateralObstacleDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralObstacleDeciderTime'], 2))
     HppGeneralLateralDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['HppGeneralLateralDeciderTime'], 2))
+    GeneralLateralDeciderCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralLateralDeciderCostTime'], 2))
     LateralMotionPlannerTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralMotionPlannerTime'], 2))
     GeneralLongitudinalDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralLongitudinalDeciderTime'], 2))
     LongitudinalMotionPlannerTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LongitudinalMotionPlannerTime'], 2))
@@ -695,6 +697,7 @@ def load_lon_global_figure(bag_loader):
   # cost_time_fig.line(t_plan_vec, LaneChangeDeciderTime_vec, line_width=1, legend_label='LaneChangeDeciderTime_vec', color="black")
   cost_time_fig.line(t_plan_vec, LateralObstacleDeciderTime_vec, line_width=1, legend_label='LateralObstacleDeciderTime_vec', color="brown")
   cost_time_fig.line(t_plan_vec, HppGeneralLateralDeciderTime_vec, line_width=1, legend_label='HppGeneralLateralDeciderTime_vec', color="pink")
+  cost_time_fig.line(t_plan_vec, GeneralLateralDeciderCostTime_vec, line_width=1, legend_label='GeneralLateralDeciderCostTime_vec', color="maroon")
   # cost_time_fig.line(t_plan_vec, LateralMotionPlannerTime_vec, line_width=1, legend_label='LateralMotionPlannerTime_vec', color="gray")
   # cost_time_fig.line(t_plan_vec, GeneralLongitudinalDeciderTime_vec, line_width=1, legend_label='GeneralLongitudinalDeciderTime_vec', color="maroon")
   # cost_time_fig.line(t_plan_vec, LongitudinalMotionPlannerTime_vec, line_width=1, legend_label='LongitudinalMotionPlannerTime_vec', color="navy")
