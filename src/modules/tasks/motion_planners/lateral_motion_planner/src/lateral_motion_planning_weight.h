@@ -26,20 +26,19 @@ struct PathWeight {  // temp
   bool complete_follow = false;
   double dt = 0.2;
   double total_t = 5.0;
-  double acc_soft_bound = 2.0;
-  double acc_hard_bound = 3.0;
-  double jerk_soft_bound = 0.4;
-  double jerk_hard_bound = 0.8;
+  std::vector<double> expected_acc;
+  std::vector<double> acc_upper_bound;
+  std::vector<double> acc_lower_bound;
+  std::vector<double> jerk_upper_bound;
+  std::vector<double> jerk_lower_bound;
   std::vector<double> q_ref_x;
   std::vector<double> q_ref_y;
   std::vector<double> q_ref_theta;
   std::vector<double> q_continuity;
   std::vector<double> q_acc;
   std::vector<double> q_jerk;
-  std::vector<double> q_acc_soft_bound;
-  std::vector<double> q_acc_hard_bound;
-  std::vector<double> q_jerk_soft_bound;
-  std::vector<double> q_jerk_hard_bound;
+  std::vector<double> q_acc_bound;
+  std::vector<double> q_jerk_bound;
   std::vector<double> q_pos_soft_bound;
   std::vector<double> q_pos_hard_bound;
   std::unordered_map<size_t, double> time2soft_ratio = {
@@ -56,19 +55,41 @@ struct PathWeight {  // temp
     {3, 2.0},
     {4, 0.6}
   };
+
   void Init() {
+    expected_acc.resize(point_num, 0.0);
+    acc_upper_bound.resize(point_num, 3.0);
+    acc_lower_bound.resize(point_num, 3.0);
+    jerk_upper_bound.resize(point_num, 0.3);
+    jerk_lower_bound.resize(point_num, 0.3);
     q_ref_x.resize(point_num, 0);
     q_ref_y.resize(point_num, 0);
     q_ref_theta.resize(point_num, 0);
     q_continuity.resize(point_num, 0);
     q_acc.resize(point_num, 0);
     q_jerk.resize(point_num, 0);
-    q_acc_soft_bound.resize(point_num, 0);
-    q_acc_hard_bound.resize(point_num, 0);
-    q_jerk_soft_bound.resize(point_num, 0);
-    q_jerk_hard_bound.resize(point_num, 0);
+    q_acc_bound.resize(point_num, 0);
+    q_jerk_bound.resize(point_num, 0);
     q_pos_soft_bound.resize(point_num, 0);
     q_pos_hard_bound.resize(point_num, 0);
+  }
+
+  void Clear() {
+    expected_acc.clear();
+    acc_upper_bound.clear();
+    acc_lower_bound.clear();
+    jerk_upper_bound.clear();
+    jerk_lower_bound.clear();
+    q_ref_x.clear();
+    q_ref_y.clear();
+    q_ref_theta.clear();
+    q_continuity.clear();
+    q_acc.clear();
+    q_jerk.clear();
+    q_acc_bound.clear();
+    q_jerk_bound.clear();
+    q_pos_soft_bound.clear();
+    q_pos_hard_bound.clear();
   }
 };
 
@@ -91,6 +112,15 @@ class LateralMotionPlanningWeight {
       const std::vector<std::pair<double, double>> &hard_bounds,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &soft_bounds_info,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &hard_bounds_info);
+
+  void CalculateExpectedLatAccAndSteerAngle(
+      double init_s, double ref_vel, double wheel_base, double steer_ratio,
+      const std::shared_ptr<planning::ReferencePath> &reference_path,
+      std::vector<double>& expected_steer_vec);
+
+  void CalculateJerkBoundByLastJerk(
+      const planning::common::LateralPlanningOutput &last_planning_output,
+      planning::common::LateralPlanningInput &planning_input);
 
   void SetLateralMotionWeight(
       const LateralMotionSceneEnum scene,
@@ -129,9 +159,9 @@ class LateralMotionPlanningWeight {
   }
 
   void SetMotionPlanConcernedEndIndex(
-      bool origin_complete_follow, bool is_divide_lane_into_two, double ego_s,
-      planning::common::LateralPlanningInput &planning_input,
-      const std::shared_ptr<planning::planning_math::KDPath> &frenet_coord);
+      const bool origin_complete_follow, const bool is_divide_lane_into_two,
+      const std::shared_ptr<planning::ReferencePath> &reference_path,
+      planning::common::LateralPlanningInput &planning_input);
 
   double GetInitDisToRef() const { return init_dis_to_ref_; }
 
@@ -186,12 +216,17 @@ class LateralMotionPlanningWeight {
   double end_ratio_for_qjerk_;
   double max_acc_;
   double max_jerk_;
+  double expected_average_acc_;
+  double expected_max_acc_;
+  double expected_min_acc_;
+  double min_curvature_radius_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
   bool is_emergence_;
   bool is_search_success_;
   std::vector<double> q_soft_bound_vec_;
   std::vector<double> q_hard_bound_vec_;
+  std::vector<double> curvature_radius_vec_;
 };
 
 }  // namespace lateral_planning

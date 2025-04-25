@@ -398,74 +398,88 @@ void GeneralLateralDecider::UnitTest() {
 }
 
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
-    const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
-  const auto &route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
-  if (session_->environmental_model()
-          .get_virtual_lane_manager()
+    const double ego_v, const CoarsePlanningInfo& coars_planning_info, double &cruise_v) {
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager
           ->get_is_exist_ramp_on_road() ||
-      session_->environmental_model()
-          .get_virtual_lane_manager()
+      virtual_lane_manager
           ->get_is_exist_split_on_ramp() ||
-      (session_->environmental_model()
-              .get_virtual_lane_manager()
-              ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-       session_->environmental_model()
-              .get_virtual_lane_manager()
-              ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
+      virtual_lane_manager
+          ->get_is_exist_intersection_split()) {
+      // (virtual_lane_manager
+      //         ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+      //  virtual_lane_manager
+      //         ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
     return false;
   }
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
     cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
   }
-  const double preview_length = 20.0;
+  const auto& reference_path = coars_planning_info.reference_path;
+  const double init_s =
+      reference_path->get_frenet_ego_state().planning_init_point().frenet_state.s;
+  const auto& cart_ref_info =
+      coars_planning_info.cart_ref_info;
+  const double preview_length = 15.0;
   const double preview_step = 1.0;
-  // double sum_close_kappa = 0.0;
   double sum_far_kappa = 0.0;
-  double preview_x = 3.0 * ego_v - 10.0;
-  std::vector<double> d_polys;
-  d_polys.resize(d_poly.size());
-  std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
-  for (double preview_distance = 0.0; preview_distance < preview_length;
-       preview_distance += preview_step) {
-    // sum_close_kappa +=
-    //     std::fabs(2 * d_polys[0] * preview_distance + d_polys[1]) /
-    //     std::pow(
-    //         std::pow(2 * d_polys[0] * preview_distance + d_polys[1], 2) + 1,
-    //         1.5);
-    sum_far_kappa +=
-        std::fabs(2 * d_polys[0] * (preview_distance + preview_x) +
-                  d_polys[1]) /
-        std::pow(std::pow(2 * d_polys[0] * (preview_distance + preview_x) +
-                              d_polys[1],
-                          2) +
-                     1,
-                 1.5);
+  double preview_s = std::max(3.0 * ego_v - 5.0, 15.0);
+  if (cart_ref_info.k_s_spline.get_x().size() > 0) {
+    for (double preview_distance = 0.0; preview_distance < preview_length;
+        preview_distance += preview_step) {
+      sum_far_kappa +=
+          std::fabs(cart_ref_info.k_s_spline(init_s + preview_s + preview_distance));
+    }
+  } else {
+    for (double preview_distance = 0.0; preview_distance < preview_length;
+        preview_distance += preview_step) {
+      ReferencePathPoint ref_ponit;
+      reference_path->get_reference_point_by_lon(init_s + preview_s + preview_distance,
+                                                 ref_ponit);
+      sum_far_kappa += std::fabs(ref_ponit.path_point.kappa());
+    }
   }
-
   if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-    // double aver_close_kappa = sum_close_kappa / std::max((preview_length /
-    // preview_step), 1.0);
     double aver_far_kappa =
         sum_far_kappa / std::max((preview_length / preview_step), 1.0);
-    // double close_kappa_radius = 1.0 / std::max(aver_close_kappa, 0.0001);
     double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
-    // JSON_DEBUG_VALUE("close_kappa_radius", close_kappa_radius);
     JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
-    // if ((close_kappa_radius < 750.0) || (far_kappa_radius < 750.0)) {
-    //   double road_radius = close_kappa_radius < far_kappa_radius
-    //                           ? close_kappa_radius
-    //                           : far_kappa_radius;
     if (far_kappa_radius < 750.0) {
-      double road_radius = far_kappa_radius;
-      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
-      std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
-      double acc_max = interp(road_radius, xp_radius, fp_acc);
-      cruise_v = std::min(
-          std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
       return true;
     }
   }
+  // std::vector<double> d_polys;
+  // d_polys.resize(d_poly.size());
+  // std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
+  // for (double preview_distance = 0.0; preview_distance < preview_length;
+  //      preview_distance += preview_step) {
+  //   sum_far_kappa +=
+  //       std::fabs(2 * d_polys[0] * (preview_distance + preview_x) +
+  //                 d_polys[1]) /
+  //       std::pow(std::pow(2 * d_polys[0] * (preview_distance + preview_x) +
+  //                             d_polys[1],
+  //                         2) +
+  //                    1,
+  //                1.5);
+  // }
+  // if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
+  //   double aver_far_kappa =
+  //       sum_far_kappa / std::max((preview_length / preview_step), 1.0);
+  //   double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
+  //   JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
+  //   if (far_kappa_radius < 750.0) {
+  //     double road_radius = far_kappa_radius;
+  //     std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
+  //     std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
+  //     double acc_max = interp(road_radius, xp_radius, fp_acc);
+  //     cruise_v = std::min(
+  //         std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
+  //     return true;
+  //   }
+  // }
   return false;
 }
 
@@ -536,7 +550,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 1e-6;
     }
-    if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
+    if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
       ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 0.2;
@@ -654,6 +668,10 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
   ref_path_points_.reserve(traj_points.size());
   min_road_radius_ = 10.0;
+  const auto &coarse_planning_info =
+      session_->planning_context()
+              .lane_change_decider_output()
+              .coarse_planning_info;
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
@@ -661,9 +679,14 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
       // add logs
       LOG_ERROR("Get reference point by lon failed!");
     }
-    double road_radius =
+    double road_radius1 =
         1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
-    min_road_radius_ = std::max(std::min(road_radius - 0.1, min_road_radius_), 2.0);
+    double road_radius2 = 10.0;
+    if (coarse_planning_info.cart_ref_info.k_s_spline.get_x().size() > 0) {
+      road_radius2 =
+          1 / std::max(std::fabs(coarse_planning_info.cart_ref_info.k_s_spline(traj_point.s)), 1e-6);
+    }
+    min_road_radius_ = std::max(std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_), 5.0);
     ref_path_points_.emplace_back(refpath_pt);
   }
 

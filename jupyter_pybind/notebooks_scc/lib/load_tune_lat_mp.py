@@ -491,13 +491,17 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     last_theta_deg_vec = []
     steer_deg_vec = []
     steer_dot_deg_vec = []
-
+    expected_steer_deg_vec = []
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
       last_theta_deg_vec.append(lat_motion_plan_input.last_theta_vec[i] * 57.3)
       steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 13.0)
       steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 13.0)
+      expected_steer_deg_vec.append(0.0)
+
+    if len(planning_json['expected_steer_vec']) > 0 :
+      expected_steer_deg_vec = planning_json['expected_steer_vec']
 
     next_ref_theta_deg_vec = []
     try:
@@ -529,6 +533,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'steer_dot_deg_vec': steer_dot_deg_vec,
       'acc_vec': acc_vec,
       'jerk_vec': jerk_vec,
+      'expected_steer_deg_vec': expected_steer_deg_vec,
     })
 
     # assembled_delta = []
@@ -878,6 +883,7 @@ def load_lat_plan_figure(fig1):
                                                          'steer_deg_lower_bound': [],
                                                          'steer_dot_deg_upper_bound': [],
                                                          'steer_dot_deg_lower_bound': [],
+                                                         'expected_steer_deg_vec': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -1085,6 +1091,7 @@ def load_lat_plan_figure(fig1):
   fig5.line('time_vec', 'steer_deg_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer deg corridor')
   fig5.triangle ('time_vec', 'steer_deg_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer deg corridor')
   fig5.inverted_triangle ('time_vec', 'steer_deg_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer deg corridor')
+  fig5.line('time_vec', 'expected_steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'expected steer deg')
 
   f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin steer dot deg')
   fig6.line('time_vec', 'steer_dot_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned steer dot deg')
@@ -1104,7 +1111,7 @@ def load_lat_plan_figure(fig1):
   hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t'), ('next_ref_theta', '@next_ref_theta_deg_vec'), ('last_traj_theta', '@last_theta_deg_vec')], mode='vline')
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t'), ('|acc bound|', '@acc_upper_bound')], mode='vline')
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
-  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound')], mode='vline')
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound'), ('expected steer', '@expected_steer_deg_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t'), ('|steer dot deg bound|', '@steer_dot_deg_upper_bound')], mode='vline')
 
   fig1.add_tools(hover1_1)

@@ -357,9 +357,19 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_wheel_angle_rate =
       max_steer_angle_rate / steer_ratio / 57.3;
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
-  double max_jerk = std::min(max_wheel_angle_rate * kv2, 3.0);
+  std::vector<double> xp_v{config_.min_ego_vel, 4.167, 8.333, 15.0, 25.0};
+  std::vector<double> fp_max_jerk{1.0, 2.0, 2.0, 1.5, 1.0};
+  double max_jerk = planning::interp(ego_v, xp_v, fp_max_jerk);
+  max_jerk = std::min(max_wheel_angle_rate * kv2, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
+  std::vector<double> expected_steer_vec;
+  expected_steer_vec.resize(26, 0.0);
+  planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
+      planning_init_point.frenet_state.s, ref_vel,
+      vehicle_param.wheel_base, steer_ratio, reference_path_ptr,
+      expected_steer_vec);
+  JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec, 2)
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
@@ -384,39 +394,8 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetIsSearchSuccess(false);
   }
 
-  // NOA split
-  const bool is_exist_ramp_on_road = session_->environmental_model()
-                                         .get_virtual_lane_manager()
-                                         ->get_is_exist_ramp_on_road();
-  const bool is_exist_split_on_ramp = session_->environmental_model()
-                                          .get_virtual_lane_manager()
-                                          ->get_is_exist_split_on_ramp();
-  // LCC split
-  const bool is_exist_intersection_split = session_->environmental_model()
-                                               .get_virtual_lane_manager()
-                                               ->get_is_exist_intersection_split();
   // split
-  bool split_scene = false;
-  if (is_exist_ramp_on_road || is_exist_split_on_ramp || is_exist_intersection_split) {
-    split_scene = true;
-    // complete_follow = true;
-    enter_split_time_ = 1.0;
-  } else if (enter_split_time_ > 1e-6) {
-    enter_split_time_ += 0.1;
-    split_scene = true;
-    // complete_follow = true;
-  }
-  if (enter_split_time_ > config_.enter_ramp_on_road_time + 1.0) {
-    split_scene = false;
-    enter_split_time_ = 0.0;
-  }
-
-  if (is_exist_split_on_ramp) {
-    is_divide_lane_into_two_ = true;
-  }
-  if (is_divide_lane_into_two_ && split_scene == false) {
-    is_divide_lane_into_two_ = false;
-  }
+  bool split_scene = IsLocatedInSplitArea();
 
   // intersection
   auto intersection_state = session_->environmental_model()
@@ -486,13 +465,13 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
-
+  // handle big shaking for steer
+  planning_weight_ptr_->CalculateJerkBoundByLastJerk(
+      planning_problem_ptr_->GetOutput(), planning_input_);
   // set motion_plan_concerned_end_index
-  const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(
-      complete_follow, is_divide_lane_into_two_, ego_s,
-      planning_input_,
-      reference_path_ptr->get_frenet_coord());
+      complete_follow, is_divide_lane_into_two_,
+      reference_path_ptr, planning_input_);
   // [hack](bsniu):
   if (session_->environmental_model().function_info().function_mode() ==
       common::DrivingFunctionInfo_DrivingFunctionMode::
@@ -605,7 +584,7 @@ bool LateralMotionPlanner::Update() {
   d_curv_vec[0] = d_curv_vec[1];
   t_vec[0] = -0.2;
 
-  const double concerned_index = planning_input_.motion_plan_concerned_index();
+  const double concerned_index = 20;  // planning_input_.motion_plan_concerned_index();
   double concerned_dis_to_ref = std::hypot(
       x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
       y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
@@ -756,6 +735,70 @@ LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
     return nullptr;
   }
   return std::make_shared<planning_math::KDPath>(std::move(lat_path_points));
+}
+
+bool LateralMotionPlanner::IsLocatedInSplitArea() {
+  const auto &virtual_lane_manager =
+    session_->environmental_model().get_virtual_lane_manager();
+  // NOA split
+  const bool is_exist_ramp_on_road =
+      virtual_lane_manager->get_is_exist_ramp_on_road();
+  const bool is_exist_split_on_ramp =
+      virtual_lane_manager->get_is_exist_split_on_ramp();
+  // LCC split
+  const bool is_exist_intersection_split =
+      virtual_lane_manager->get_is_exist_intersection_split();
+  // split
+  bool is_arrived_split_point = false;
+  if (is_exist_ramp_on_road || is_exist_split_on_ramp || is_exist_intersection_split) {
+    const auto& current_lane = virtual_lane_manager->get_current_lane();
+    if (current_lane != nullptr) {
+      double end_s = planning_input_.ref_vel() * 5.0;
+      ReferencePathPoint end_point;
+      if (current_lane->get_reference_path()
+                      ->get_reference_point_by_lon(end_s, end_point)) {
+        Point2D end_cart(end_point.path_point.x(), end_point.path_point.y());
+        Point2D end_frenet;
+        const auto& left_lane = virtual_lane_manager->get_left_lane();
+        if (left_lane != nullptr) {
+          const auto& left_frenet_coord =
+              left_lane->get_reference_path()->get_frenet_coord();
+          if (left_frenet_coord->XYToSL(end_cart, end_frenet)) {
+            if (end_frenet.y <= 0.1) {
+              return is_arrived_split_point;
+            }
+          }
+        }
+        const auto& right_lane = virtual_lane_manager->get_right_lane();
+        if (right_lane != nullptr) {
+          const auto& right_frenet_coord =
+              right_lane->get_reference_path()->get_frenet_coord();
+          if (right_frenet_coord->XYToSL(end_cart, end_frenet)) {
+            if (end_frenet.y <= 0.1) {
+              return is_arrived_split_point;
+            }
+          }
+        }
+      }
+    }
+    is_arrived_split_point = true;
+    enter_split_time_ = 1.0;
+  } else if (enter_split_time_ > 0.9) {
+    enter_split_time_ += 0.1;
+    is_arrived_split_point = true;
+  }
+  if (enter_split_time_ > config_.enter_ramp_on_road_time + 1.0) {
+    is_arrived_split_point = false;
+    enter_split_time_ = 0.0;
+  }
+
+  if (is_exist_split_on_ramp) {
+    is_divide_lane_into_two_ = true;
+  }
+  if (is_divide_lane_into_two_ && is_arrived_split_point == false) {
+    is_divide_lane_into_two_ = false;
+  }
+  return is_arrived_split_point;
 }
 
 void LateralMotionPlanner::SaveDebugInfo() {

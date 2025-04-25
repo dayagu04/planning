@@ -25,6 +25,7 @@
 #include "src/lateral_motion_planning_weight.h"
 #include "task_basic_types.h"
 #include "tasks/task.h"
+
 namespace planning {
 
 class LateralMotionPlanner : public Task {
@@ -33,21 +34,27 @@ class LateralMotionPlanner : public Task {
                        framework::Session* session);
 
   void Init();
+
   bool Execute() override;
 
  private:
   bool AssembleInput();
+
   bool Update();
+
   void SaveDebugInfo();
+
   std::shared_ptr<planning_math::KDPath> ConstructLateralKDPath(
       const std::vector<double>& x_vec, const std::vector<double>& y_vec);
 
-  LateralMotionPlannerConfig config_;
+  bool IsLocatedInSplitArea();
+
+ private:
   std::string name_;
+  LateralMotionPlannerConfig config_;
+  planning::common::LateralPlanningInput planning_input_;
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningProblem>
       planning_problem_ptr_;
-  planning::common::LateralPlanningInput planning_input_;
-
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
       planning_weight_ptr_;
 

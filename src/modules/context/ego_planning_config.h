@@ -1373,10 +1373,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "q_continuity_search");
     ReadItem<double>(json, q_acc, "lat_motion_ilqr", "q_acc");
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
-    ReadItem<double>(json, q_acc_soft_bound, "lat_motion_ilqr", "q_acc_soft_bound");
-    ReadItem<double>(json, q_acc_hard_bound, "lat_motion_ilqr", "q_acc_hard_bound");
-    ReadItem<double>(json, q_jerk_soft_bound, "lat_motion_ilqr", "q_jerk_soft_bound");
-    ReadItem<double>(json, q_jerk_hard_bound, "lat_motion_ilqr", "q_jerk_hard_bound");
+    ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
+    ReadItem<double>(json, q_jerk_bound, "lat_motion_ilqr", "q_jerk_bound");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qsoft_bound"},
         map_qsoft_bound, map_qsoft_bound);
@@ -1504,8 +1502,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "motion_plan_concerned_start_index");
     ReadItem<size_t>(json, motion_plan_concerned_end_index, "lat_motion_ilqr",
                      "motion_plan_concerned_end_index");
-    ReadItem<double>(json, valid_perception_range, "lat_motion_ilqr",
-                     "valid_perception_range");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "valid_perception_range"}, valid_perception_range);
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"},
         map_qxy, map_qxy);
@@ -1553,8 +1551,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "q_jerk_ramp_close");
     ReadItem<double>(json, q_jerk_ramp_mid, "lat_motion_ilqr",
                      "q_jerk_ramp_mid");
-    ReadItem<double>(json, valid_perception_range_on_ramp, "lat_motion_ilqr",
-                     "valid_perception_range_on_ramp");
     ReadItem<double>(json, big_theta_thr, "lat_motion_ilqr", "big_theta_thr");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_for_big_theta"},
@@ -1571,14 +1567,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   double acc_bound = 1.5;
   double jerk_bound = 1.0;
-  std::vector<double> map_jerk_bound{0.6, 0.5, 0.4, 0.25};
+  std::vector<double> map_jerk_bound{0.4, 0.35, 0.3, 0.25};
   double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
-  double q_acc_soft_bound = 200.0;
-  double q_acc_hard_bound = 20000.0;
-  double q_jerk_soft_bound = 5000.0;
-  double q_jerk_hard_bound = 500000.0;
+  double q_acc_bound = 20000.0;
+  double q_jerk_bound = 500000.0;
 
   std::vector<double> map_qsoft_bound{500, 1500.0, 3000.0, 4000.0, 5000.0};
   std::vector<double> map_qhard_bound{1000, 3000.0, 5000.0, 6000.0, 7000.0};
@@ -1665,7 +1659,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_ramp = 0.02;
   double q_jerk_ramp_close = 45.0;
   double q_jerk_ramp_mid = 10.0;
-  double valid_perception_range_on_ramp = 30.0;
 
   double road_curvature_radius = 750.0;
   size_t curvature_change_index = 15;
@@ -1674,7 +1667,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double curvature_preview_step = 1.0;
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
-  double valid_perception_range = 60.0;
+  std::vector<double> valid_perception_range{15.0, 30.0, 50.0, 70.0, 90.0};
   std::vector<double> map_qxy{80.0, 80.0, 400.0, 500.0};
   std::vector<double> map_qtheta{3000.0, 5000.0, 7000.0, 10000.0};
   std::vector<double> map_qjerk1{45.0, 10.0, 100.0, 300.0, 600.0};
