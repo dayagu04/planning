@@ -794,9 +794,9 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
-    use_obstacle_prediction_model_in_planning = read_json_key<bool>(
-        json, "use_obstacle_prediction_model_in_planning",
-        use_obstacle_prediction_model_in_planning);
+    use_obstacle_prediction_model_in_planning =
+        read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
+                            use_obstacle_prediction_model_in_planning);
     base_nudge_distance =
         read_json_key<double>(json, "base_nudge_distance", base_nudge_distance);
     nudge_buffer_road_boundary =
@@ -909,9 +909,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "lc_second_dist_thr"},
         lc_second_dist_thr);
-    use_obstacle_prediction_model_in_planning = read_json_key<bool>(
-        json, "use_obstacle_prediction_model_in_planning",
-        use_obstacle_prediction_model_in_planning);
+    use_obstacle_prediction_model_in_planning =
+        read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
+                            use_obstacle_prediction_model_in_planning);
 
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
@@ -973,14 +973,16 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                                  "relative_position_decrease_extra_buffer"},
         _relative_positon_decrease_extra_buffer);
 
-    read_json_vec<double>(json,
-                          std::vector<std::string>{"general_lateral_decider",
-                                                   "side_obstacle_relative_position_bp"},
-                          _side_obstacle_relative_position_bp);
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
-                                 "side_obstacle_relative_position_decrease_extra_buffer"},
+                                 "side_obstacle_relative_position_bp"},
+        _side_obstacle_relative_position_bp);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{
+            "general_lateral_decider",
+            "side_obstacle_relative_position_decrease_extra_buffer"},
         _side_obstacle_relative_position_decrease_extra_buffer);
 
     read_json_vec<double>(
@@ -1081,8 +1083,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> _relative_v_decrease_extra_buffer = {0,   0.02, 0.05,
                                                            0.1, 0.15, 0.23};
   std::vector<double> _side_obstacle_relative_position_bp = {1, 2, 3, 4, 5};
-  std::vector<double> _side_obstacle_relative_position_decrease_extra_buffer = {0.1, 0.2,
-                                                                                0.3, 0.4, 0.5};
+  std::vector<double> _side_obstacle_relative_position_decrease_extra_buffer = {
+      0.1, 0.2, 0.3, 0.4, 0.5};
   double extra_lane_type_decrease_buffer = 0.05;
   double truck_decrease_extra_buffer = 0.05;
   double care_exceed_distance_with_blocked_obstacle = 2.0;
@@ -2957,7 +2959,7 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
              "speed_planning", "st_graph_searcher",
              "cost_ego_overtake_has_collision_with_lower_bound");
     ReadItem(json, cutin_time_st_graph_threshold, "speed_planning",
-              "st_graph_searcher", "cutin_time_st_graph_threshold");
+             "st_graph_searcher", "cutin_time_st_graph_threshold");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -3057,12 +3059,39 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    ReadVector(json, ego_vel_table, "speed_planning", "agent_headway_decider",
+               "ego_vel_table");
+    ReadVector(json, ego_normal_thw_table_level_1,
+               "speed_planning", "agent_headway_decider",
+               "ego_normal_thw_table_level_1");
+    ReadVector(json, ego_normal_thw_table_level_2,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_2");
+    ReadVector(json, ego_normal_thw_table_level_3,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_3");
+    ReadVector(json, ego_normal_thw_table_level_4,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_4");
+    ReadVector(json, ego_normal_thw_table_level_5,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_5");
   }
   double plan_time = 5.0;
   double dt = 0.2;
   double cutin_headway_threshold = 1.0;
   double smallest_headway_threshold = 1.2;
   double headway_step = 0.1;
+  std::vector<double> ego_vel_table = {0.0, 3.33, 16.67, 26.67, 36.67};
+  std::vector<double> ego_normal_thw_table_level_1 = {1.05, 1.14, 1.25, 1.5,
+                                                      2.0};
+  std::vector<double> ego_normal_thw_table_level_2 = {1.1, 1.16, 1.35, 2.1,
+                                                      2.2};
+  std::vector<double> ego_normal_thw_table_level_3 = {1.15, 1.18, 1.5, 2.2,
+                                                      2.4};
+  std::vector<double> ego_normal_thw_table_level_4 = {1.2, 1.4, 1.65, 2.3, 2.5};
+  std::vector<double> ego_normal_thw_table_level_5 = {1.2, 1.5, 1.75, 2.4,
+                                                      2.55};
   std::vector<std::pair<int32_t, double>> normal_headway_table = {
       {0, 1.1}, {1, 1.3}, {2, 1.5}, {3, 2.1}, {4, 2.8}};
   std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
