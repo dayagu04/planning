@@ -1284,8 +1284,12 @@ const double ParallelParkInScenario::CalcSlotOccupiedRatio(
 }
 
 void ParallelParkInScenario::Log() const {
+  const auto& obs_map =
+      apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
+
   const auto& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+
   const auto& l2g_tf = ego_info_under_slot.l2g_tf;
 
   const auto p0_g = l2g_tf.GetPos(t_lane_.obs_pt_outside);
@@ -1293,16 +1297,37 @@ void ParallelParkInScenario::Log() const {
   ILOG_INFO << "obs p out = " << p0_g.transpose();
   ILOG_INFO << "obs p in = " << p1_g.transpose();
 
-  std::vector<double> obstaclesX;
-  std::vector<double> obstaclesY;
-  for (const auto& obs_pair :
-       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap()) {
-    for (const auto& obstacle : obs_pair.second) {
-      const auto tmp_obstacle = l2g_tf.GetPos(obstacle);
-      obstaclesX.emplace_back(tmp_obstacle.x());
-      obstaclesY.emplace_back(tmp_obstacle.y());
+  int obs_size = 0;
+  for (const auto& obs_pair : obs_map) {
+    if (obs_pair.first != CollisionDetector::VIRTUAL_OBS) {
+      obs_size += obs_pair.second.size();
     }
   }
+  ILOG_INFO << "obs_size = " << obs_size;
+  const int count_unit = std::ceil(obs_size / 500.0);
+  const size_t simplify_obs_num = std::ceil(obs_size / count_unit);
+
+  size_t idx = 0;
+  std::vector<double> obstaclesX;
+  std::vector<double> obstaclesY;
+  obstaclesX.reserve(simplify_obs_num);
+  obstaclesY.reserve(simplify_obs_num);
+
+  for (const auto& obs_pair : obs_map) {
+    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+      continue;
+    }
+
+    for (const auto& obs : obs_pair.second) {
+      if (idx % count_unit == 0) {
+        const auto obs_g = l2g_tf.GetPos(obs);
+        obstaclesX.emplace_back(obs_g.x());
+        obstaclesY.emplace_back(obs_g.y());
+      }
+      idx++;
+    }
+  }
+  ILOG_INFO << "obstaclesX simp size = " << obstaclesX.size();
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
@@ -1312,12 +1337,11 @@ void ParallelParkInScenario::Log() const {
   JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
 
   const auto& pts = ego_info_under_slot.slot.origin_corner_coord_global_;
-  const std::vector<double> slot_corner_X = {pts.pt_0.x(), pts.pt_1.x(),
-                                             pts.pt_2.x(), pts.pt_3.x()};
+  std::vector<double> slot_corner_X = {pts.pt_0.x(), pts.pt_1.x(), pts.pt_2.x(),
+                                       pts.pt_3.x()};
 
-  const std::vector<double> slot_corner_Y = {pts.pt_0.y(), pts.pt_1.y(),
-                                             pts.pt_2.y(), pts.pt_3.y()};
-
+  std::vector<double> slot_corner_Y = {pts.pt_0.y(), pts.pt_1.y(), pts.pt_2.y(),
+                                       pts.pt_3.y()};
   JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 2)
   JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 2)
 
