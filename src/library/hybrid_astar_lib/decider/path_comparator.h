@@ -16,12 +16,14 @@ enum PathWinReason {
 
 // 路径比较器.
 // 同样长度的path: 换档次数少的path更好;
-// 同样档位数量的path: 车头接近中心线heading更好;
+// 同样档位数量的path: pose接近中心线heading更好，且启发点投影越近越好.
 // todo: S弯更少的path，更好.
 // todo: 障碍物距离更大的path，更好;
 class PathComparator : public AstarDecider {
  public:
   PathComparator() = default;
+
+  void SetHeuristicPose(const AstarRequest &request);
 
   // 比较node_challenger是不是更好
   bool Compare(const AstarRequest *request, const Node3d *best_node,
@@ -37,15 +39,31 @@ class PathComparator : public AstarDecider {
                          const Node3d *node_challenger);
 
  private:
-  bool CheckVerticalSlotTailIn(const AstarRequest *request,
-                               const Node3d *best_node,
+  bool CheckVerticalSlotTailIn(const Node3d *best_node,
                                const Node3d *node_challenger);
 
-  bool CheckVerticalSlotHeadIn(const AstarRequest *request,
-                               const Node3d *best_node,
+  bool CheckVerticalSlotHeadIn(const Node3d *best_node,
                                const Node3d *node_challenger);
+
+  const float GetHeuristicPointDistance(const Node3d *node);
+
+  const bool CheckHeuristicPointIsNice(const Node3d *best_node,
+                                       const Node3d *node_challenger);
 
   PathWinReason win_reason_;
+
+  /**
+   *             .    o    .
+   *             .         .
+   *             .         .
+   *             .         .
+   *             .         .
+   *             .         .
+   *             ...........
+   *
+   * this pose is an heuristic pose in slot such as o point.
+   */
+  Pose2D heuristic_pose_;
 };
 
 }  // namespace planning

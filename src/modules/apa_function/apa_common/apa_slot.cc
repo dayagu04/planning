@@ -351,6 +351,9 @@ const std::string GetSlotReleaseStateString(const SlotReleaseState state) {
     case SlotReleaseState::NOT_RELEASE:
       str = "not_release";
       break;
+    case SlotReleaseState::COMPUTING:
+      str = "computing";
+      break;
     default:
       break;
   }

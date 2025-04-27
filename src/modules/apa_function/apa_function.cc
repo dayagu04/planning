@@ -43,6 +43,10 @@ bool ApaFunction::Plan() {
   session_->mutable_planning_context()
       ->mutable_planning_hmi_info()
       ->apa_info.remain_dist = apa_plan_interface_->GetAPAHmi().remain_dist;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.prepare_plan_state =
+      apa_plan_interface_->GetAPAHmi().prepare_plan_state;
   return true;
 }
 

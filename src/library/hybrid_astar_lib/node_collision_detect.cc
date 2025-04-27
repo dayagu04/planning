@@ -228,10 +228,6 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     return false;
   }
 
-  if (obstacles_->IsEmpty()) {
-    return true;
-  }
-
   node->SetDistToObs(0.0f);
   const NodePath& path = node->GetNodePath();
 
@@ -420,10 +416,6 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
     return true;
   }
 
-  if (obstacles_->IsEmpty()) {
-    return true;
-  }
-
   size_t point_size;
 
   // The first {x, y, phi} is collision free unless they are start and end
@@ -496,10 +488,6 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
 const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
     const std::vector<AStarPathPoint>& path, Node3d* node) {
   if (path.size() <= 0) {
-    return true;
-  }
-
-  if (obstacles_->IsEmpty()) {
     return true;
   }
 

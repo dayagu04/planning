@@ -209,6 +209,8 @@ class ApaSlotManager final {
     return ego_info_under_slot_;
   }
 
+  const SlotReleaseState GetSlotReleaseState() const;
+
  public:
   EgoInfoUnderSlot ego_info_under_slot_;
 

@@ -101,6 +101,7 @@ std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
 EigenPath2d static_ref_line_;
+std::vector<Eigen::Vector3d> polynomial_path_;
 
 // bit 4 is flag
 EigenPointSet2d search_sequence_path_;
@@ -136,6 +137,8 @@ int Init() {
   hybrid_astar_interface_ = thread_solver_->GetHybridAStarInterface();
   ILOG_INFO << "replay init success";
 
+  global_astar_path_.clear();
+
   return 0;
 }
 
@@ -147,6 +150,9 @@ int StopPybind() {
 void UpdateFootprintCircle(const AstarPathGear gear,
                            std::vector<Eigen::Vector3d> &footprint_circle) {
   footprint_circle.clear();
+  if (hybrid_astar_interface_ == nullptr) {
+    return;
+  }
 
   FootPrintCircleModel *model =
       hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
@@ -160,7 +166,8 @@ void UpdateFootprintCircle(const AstarPathGear gear,
   const FootPrintCircle *circle = &circle_footprint.max_circle;
   footprint_circle.push_back(
       Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
-  for (int i = 0; i < circle_footprint.size; i++) {
+  for (int i = 0; i < std::min(FOOTPRINT_CIRCLE_NUM, circle_footprint.size);
+       i++) {
     circle = &circle_footprint.circles[i];
 
     footprint_circle.push_back(
@@ -184,11 +191,10 @@ void UpdateFootprintCircleList() {
 }
 
 int GetPathFromHybridAstar() {
-  //
-  global_astar_path_.clear();
   global_path_s_.clear();
   bool success = false;
   static_rs_path_.clear();
+  polynomial_path_.clear();
 
   HybridAStarResult result;
 
@@ -203,7 +209,8 @@ int GetPathFromHybridAstar() {
   Pose2D local_position;
   Pose2D global_position;
 
-  if (result.x.size() > 0) {
+  if (result.x.size() > 1) {
+    global_astar_path_.clear();
     for (i = 0; i < result.x.size(); i++) {
       local_position.x = result.x[i];
       local_position.y = result.y[i];
@@ -217,7 +224,14 @@ int GetPathFromHybridAstar() {
       global_path_s_.emplace_back(result.accumulated_s[i]);
 
       if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
-        static_rs_path_.push_back(Eigen::Vector3d(
+        static_rs_path_.emplace_back(Eigen::Vector3d(
+            global_position.x, global_position.y, global_position.theta));
+      }
+
+      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::CUBIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::SPIRAL) {
+        polynomial_path_.emplace_back(Eigen::Vector3d(
             global_position.x, global_position.y, global_position.theta));
       }
     }
@@ -334,6 +348,7 @@ int GetPathFromHybridAstar() {
     search_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position.x, global_position.y));
   }
+  ILOG_INFO << "search_path size = " << search_path.size();
 
   deletenode_sequence_path_.clear();
   const std::vector<Vec2df32> &delnode_path =
@@ -347,6 +362,7 @@ int GetPathFromHybridAstar() {
     deletenode_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position.x, global_position.y));
   }
+  ILOG_INFO << "delnode_path size = " << delnode_path.size();
 
   // 基坐标位置
   coordinate_system_[0] = ego_slot_info_.origin_pose_global.pos[0];
@@ -370,8 +386,9 @@ int GetPathFromHybridAstar() {
     all_searched_node_.emplace_back(Eigen::Vector4d(
         global_position.x, global_position.y, is_safe, is_gear_switch_node));
   }
+  ILOG_INFO << "all_searched_node_ size = " << all_searched_node_.size();
 
-  AstarRequest request = thread_solver_->GetAstarRequest();
+  AstarRequest request = hybrid_astar_interface_->GetConstRequest();
   history_gear_request_ = request.first_action_request.gear_request;
 
   UpdateFootprintCircleList();
@@ -485,7 +502,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     std::vector<double> target_managed_slot_y_vec,
                     std::vector<double> target_managed_limiter_x_vec,
                     std::vector<double> target_managed_limiter_y_vec,
-                    const int path_plan_method) {
+                    const int path_plan_method,
+                    const int swap_start_goal) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -500,6 +518,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   sim_param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
   sim_param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
   sim_param.use_slot_in_bag = false;
+  sim_param.enable_debug_swap_start_goal = swap_start_goal > 0 ? true : false;
+  sim_param.swap_start_goal = swap_start_goal == 1 ? true : false;
 
   apa_interface_ptr->SetSimuParam(sim_param);
 
@@ -630,7 +650,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                        std::vector<double> target_managed_slot_y_vec,
                        std::vector<double> target_managed_limiter_x_vec,
                        std::vector<double> target_managed_limiter_y_vec,
-                       std::vector<double> &end_pose, const double time) {
+                       std::vector<double> &end_pose, const double time,
+                       const int swap_start_goal) {
   SimulationParam sim_param;
   sim_param.force_plan = force_plan;
   sim_param.is_path_optimization = is_path_optimization;
@@ -640,6 +661,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   sim_param.target_managed_slot_y_vec = target_managed_slot_y_vec;
   sim_param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
   sim_param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
+  sim_param.enable_debug_swap_start_goal = swap_start_goal > 0 ? true : false;
+  sim_param.swap_start_goal = swap_start_goal == 1 ? true : false;
 
   apa_interface_ptr->SetSimuParam(sim_param);
 
@@ -738,6 +761,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.base_pose_ = base_pose_;
     request.space_type = ParkSpaceType::VERTICAL;
     request.swap_start_goal = false;
+    request.slot_id = hybrid_astar_interface_->GetConstRequest().slot_id;
 
     if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
             ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
@@ -1117,6 +1141,10 @@ std::vector<Eigen::VectorXd> GetJLTSpeedData() {
   return speed_profile;
 }
 
+const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
+  return polynomial_path_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -1151,5 +1179,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetFootPrintModel", &GetFootPrintModel)
+      .def("GetPolynomialPath", &GetPolynomialPath)
       .def("GetDynamicState", &GetDynamicState);
 }

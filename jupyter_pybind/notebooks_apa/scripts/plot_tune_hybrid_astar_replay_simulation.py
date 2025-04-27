@@ -152,7 +152,9 @@ data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_delete_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_gear_switch_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
-
+data_polynomial_path = ColumnDataSource(data = {'plan_path_x':[],
+                                              'plan_path_y':[],
+                                              'plan_path_heading':[],})
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path')
@@ -177,6 +179,8 @@ fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='blac
 fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 fig1.circle('y_vec', 'x_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
+fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
+
 
 ### sliders config
 class LocalViewSlider:
@@ -198,6 +202,7 @@ class LocalViewSlider:
     self.use_state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="use_state_machine", min=0, max=1, value=0, step=1)
     self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
     self.path_plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="path_plan_method", min=0, max=10, value=1, step=1)
+    self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=2, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -217,13 +222,13 @@ class LocalViewSlider:
                         use_state_machine=self.use_state_machine,
                         state_machine=self.state_machine,
                         path_plan_method=self.path_plan_method,
-                        )
+                        swap_start_goal=self.swap_start_goal)
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
                     lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine,
-                    path_plan_method):
+                    path_plan_method,swap_start_goal):
 
   time0 = time.time()
 
@@ -541,7 +546,8 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         target_managed_slot_y_vec,
         target_managed_limiter_x_vec,
         target_managed_limiter_y_vec,
-        path_plan_method)
+        path_plan_method,
+        swap_start_goal)
 
     print('end')
   elif force_plan:
@@ -626,7 +632,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
           is_cilqr_enable, is_reset, target_managed_slot_x_vec,
           target_managed_slot_y_vec,
           target_managed_limiter_x_vec,
-          target_managed_limiter_y_vec, end_pose,time_to_start_time)
+          target_managed_limiter_y_vec, end_pose,time_to_start_time,swap_start_goal)
 
       if update_path:
         astar_path_start_time = bag_time
@@ -1124,6 +1130,23 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_gear_switch_node.data.update({
     'x_vec': gear_switch_node_x,
     'y_vec': gear_switch_node_y
+  })
+
+  # plot polynomial
+  polynomial_path = replay_simulation_hybrid_astar.GetPolynomialPath()
+  plan_path_x = []
+  plan_path_y = []
+  plan_path_heading = []
+
+  for i in range(len(polynomial_path)):
+     plan_path_x.append(polynomial_path[i][0])
+     plan_path_y.append(polynomial_path[i][1])
+     plan_path_heading.append(polynomial_path[i][2])
+
+  data_polynomial_path.data.update({
+    'plan_path_x': plan_path_x,
+    'plan_path_y': plan_path_y,
+    'plan_path_heading': plan_path_heading,
   })
 
   if (is_reset):

@@ -6,6 +6,7 @@
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
+#include "vecf32.h"
 
 namespace planning {
 
@@ -48,11 +49,11 @@ bool PathComparator::Compare(const AstarRequest *request,
   // 换档次数一致，继续比较
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-      if (CheckVerticalSlotTailIn(request, best_node, node_challenger)) {
+      if (CheckVerticalSlotTailIn(best_node, node_challenger)) {
         return true;
       }
     } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
-      if (CheckVerticalSlotHeadIn(request, best_node, node_challenger)) {
+      if (CheckVerticalSlotHeadIn(best_node, node_challenger)) {
         return true;
       }
     }
@@ -61,8 +62,7 @@ bool PathComparator::Compare(const AstarRequest *request,
   return false;
 }
 
-bool PathComparator::CheckVerticalSlotTailIn(const AstarRequest *request,
-                                             const Node3d *best_node,
+bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
                                              const Node3d *node_challenger) {
   // 为了耗时考虑，暂时只会比较第一个换挡点的cost.
   // 相同换档点，不需要比较
@@ -106,12 +106,17 @@ bool PathComparator::CheckVerticalSlotTailIn(const AstarRequest *request,
   }
 
   // check heading
-  if (heading_error_challenger < heading_error_best &&
-      node_challenger->GetGCost() < best_node->GetGCost() + 4.0) {
-    return true;
+  if (heading_error_challenger > heading_error_best ||
+      node_challenger->GetGCost() > best_node->GetGCost() + 4.0) {
+    return false;
   }
 
-  return false;
+  // check heuristic point projection.
+  if (!CheckHeuristicPointIsNice(best_node, node_challenger)) {
+    return false;
+  }
+
+  return true;
 }
 
 const bool PathComparator::PolynomialPathBetter(
@@ -135,9 +140,7 @@ const bool PathComparator::PolynomialPathBetter(
   return false;
 }
 
-
-bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
-                                             const Node3d *best_node,
+bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
                                              const Node3d *node_challenger) {
   // 为了耗时考虑，暂时只会比较第一个换挡点的cost.
   // 相同换档点，不需要比较
@@ -157,7 +160,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
     gear_switch_pose_best = best_node->GetPose();
   }
   float heading_error_best = ad_common::math::NormalizeAngle(
-      gear_switch_pose_best.theta - request->real_goal.theta);
+      gear_switch_pose_best.theta - heuristic_pose_.theta);
   heading_error_best = std::fabs(heading_error_best);
 
   // challenger pose
@@ -169,7 +172,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
   }
 
   float heading_error_challenger = ad_common::math::NormalizeAngle(
-      gear_switch_pose_challenger.theta - request->real_goal.theta);
+      gear_switch_pose_challenger.theta - heuristic_pose_.theta);
   heading_error_challenger = std::fabs(heading_error_challenger);
 
 #if DEBUG_DECIDER
@@ -186,12 +189,17 @@ bool PathComparator::CheckVerticalSlotHeadIn(const AstarRequest *request,
   }
 
   // check heading
-  if (heading_error_challenger < heading_error_best &&
-      node_challenger->GetGCost() < best_node->GetGCost() + 6.0) {
-    return true;
+  if (heading_error_challenger > heading_error_best ||
+      node_challenger->GetGCost() > best_node->GetGCost() + 4.0) {
+    return false;
   }
 
-  return false;
+  // check heuristic point projection.
+  if (!CheckHeuristicPointIsNice(best_node, node_challenger)) {
+    return false;
+  }
+
+  return true;
 }
 
 const bool PathComparator::NodeCompare(const Pose2D &goal,
@@ -223,6 +231,59 @@ const bool PathComparator::NodeCompare(const Pose2D &goal,
   }
 
   return false;
+}
+
+void PathComparator::SetHeuristicPose(const AstarRequest &request) {
+  heuristic_pose_.x = request.slot_length;
+  heuristic_pose_.y = 0.0;
+  heuristic_pose_.theta = request.real_goal.theta;
+
+  return;
+}
+
+const float PathComparator::GetHeuristicPointDistance(const Node3d *node) {
+  const NodePath &path = node->GetNodePath();
+
+  // point size is small, no need compare
+  if (path.point_size < 2) {
+    return 1000.0;
+  }
+
+  Vec2df32 line_base;
+  line_base.set_x(path.points[path.point_size - 1].x -
+                  path.points[path.point_size - 2].x);
+  line_base.set_y(path.points[path.point_size - 1].y -
+                  path.points[path.point_size - 2].y);
+
+  if (line_base.LengthSquare() < 0.01) {
+    return 1000.0;
+  }
+
+  line_base.Normalize();
+
+  Vec2df32 line_project;
+  line_project.set_x(path.points[path.point_size - 1].x -
+             heuristic_pose_.x);
+  line_project.set_y(path.points[path.point_size - 1].y -
+                     heuristic_pose_.y);
+
+  return std::fabs(line_base.CrossProd(line_project));
+}
+
+const bool PathComparator::CheckHeuristicPointIsNice(
+    const Node3d *best_node, const Node3d *node_challenger) {
+  // check heuristic point projection.
+  const float challenger_dist = GetHeuristicPointDistance(node_challenger);
+  if (challenger_dist > 100.0) {
+    return false;
+  }
+
+  const float best_dist = GetHeuristicPointDistance(best_node);
+  if (challenger_dist > best_dist) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace planning

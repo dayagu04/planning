@@ -17,37 +17,37 @@ class RSPathInterface {
    * info, shut down interpolation action. interpolation action will occupy too
    * much time.
    */
-  int GeneShortestRSPath(RSPath *rs_path, bool *is_connected_to_goal,
-                         const Pose2D *start, const Pose2D *end,
-                         const float min_radius, const bool need_interpolate,
-                         const bool need_anchor_point,
-                         const RSPathRequestType request_type,
-                         const float rs_path_sample_dist = 0.1);
+  void GeneShortestRSPath(RSPath *rs_path, bool *is_connected_to_goal,
+                          const Pose2D *start, const Pose2D *end,
+                          const float min_radius, const bool need_interpolate,
+                          const bool need_anchor_point,
+                          const RSPathRequestType request_type,
+                          const float rs_path_sample_dist = 0.1);
 
-  int RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
-                        const float min_radius);
+  void RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
+                         const float min_radius);
 
   // just test scs path
-  int GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
-                  const Pose2D *start, const Pose2D *end,
-                  const float min_radius,
-                  const RSPathRequestType request_type);
+  void GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
+                   const Pose2D *start, const Pose2D *end,
+                   const float min_radius,
+                   const RSPathRequestType request_type);
 
+  const RSAnchorPoints &GetAnchorPoint() { return rs_anchor_points_; }
+
+ private:
   void SetAnchorPoint(RSAnchorPoints &rs_path_anchor_pts) {
-    rs_anchor_points = rs_path_anchor_pts;
+    rs_anchor_points_ = rs_path_anchor_pts;
   }
 
-  const RSAnchorPoints &GetAnchorPoint() { return rs_anchor_points; }
+  void UpdateRSPathByAnchorPoint(RSPath *rs_path, const float min_radius);
 
  private:
   // RSPath rs_path_;
 
-  // rs path generator
-  // RSPathGenerator rs_generator_;
-
   // rs path interpolator
   RSPathInterpolator rs_interpolate_;
-  RSAnchorPoints rs_anchor_points;
+  RSAnchorPoints rs_anchor_points_;
 };
 
 }  // namespace planning
