@@ -258,7 +258,8 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
             << " ,is_replan = " << is_replan;
 
   // check replan
-  if (is_replan || update_thread_path) {
+  if (is_replan || update_thread_path ||
+      apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "plan reason = " << GetPlanReason(frame_.replan_reason)
               << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
               << ",thread update = " << update_thread_path
@@ -681,7 +682,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
       // check path is single shot to goal.
       if (response.result.gear_change_num > 0 ||
-          IsEgoPoseAdjustPlanning(response.request.path_generate_method)) {
+          IsSamplingBasedPlanning(response.request.path_generate_method)) {
         is_path_connected_to_goal_ = false;
       } else {
         is_path_connected_to_goal_ = true;
@@ -1330,28 +1331,14 @@ const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
     return false;
   }
 
+  // TODO: this api will retire.
+  // SOP should use search-based method to link real goal, not sampling-based
+  // method to link a virtual goal.
   double ego_lat_offset = std::fabs(ego_pose.y);
   bool need_adjust_plan = false;
   const ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
-  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    if (current_gear_ != AstarPathGear::DRIVE) {
-      return false;
-    }
-    EgoInfoUnderSlot& ego_info =
-        apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-    if (ego_pose.x <= slot_len) {
-      if (ego_lat_offset < 1.0 &&
-          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(15.0)) {
-        need_adjust_plan = true;
-      }
-    } else {
-      if (ego_lat_offset < 1.0 &&
-          std::fabs(ego_info.terminal_err.heading) < ifly_deg2rad(20.0)) {
-        need_adjust_plan = true;
-      }
-    }
-  } else if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     if (current_gear_ != AstarPathGear::REVERSE) {
       return false;
     }

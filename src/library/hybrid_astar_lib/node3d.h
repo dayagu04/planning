@@ -317,8 +317,8 @@ class Node3d {
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;
 
-  // gear numer is 1: gear_switch_num_ = 0;
-  // gear numer is 2: gear_switch_num_ = 1;
+  // gear numer is 0: only one gear path;
+  // gear numer is 1: two different gear path;
   int gear_switch_num_;
 
   // is positive

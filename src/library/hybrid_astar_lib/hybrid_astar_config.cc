@@ -48,7 +48,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   rs_path_seg_advised_dist = 0.35;
   tie_breaker_ = 1e-5;
 
-  single_shot_path_width_thresh = 0.14;
+  single_shot_path_width_thresh = 0.10;
   perpendicular_slot_node_step = 0.4;
   parallel_slot_node_step = 0.3;
 

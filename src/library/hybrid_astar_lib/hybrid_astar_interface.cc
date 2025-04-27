@@ -156,11 +156,9 @@ void HybridAStarInterface::UpdateOutput() {
 
   // update future path decider
   FuturePathDecider future_path_decider;
-  future_path_decider.Process(
-      &coarse_traj_, request_.plan_reason, request_.start_, &edt_, &ref_line_,
-      vehicle_param_.min_turn_radius, request_.swap_start_goal,
-      request_.path_generate_method, config_.node_step,
-      &request_.first_action_request);
+  future_path_decider.Process(&coarse_traj_, &ref_line_,
+                              vehicle_param_.min_turn_radius, config_.node_step,
+                              &edt_, request_);
 
   RSExpansionDecider::UpdateRSPathRequest(&request_);
 
@@ -169,7 +167,7 @@ void HybridAStarInterface::UpdateOutput() {
   TargetPoseRegulator target_pose_regulator;
   Pose2D center_line_pose;
   // 揉库时，使用车位内pose判断车位内目标点障碍物距离.
-  if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
+  if (IsSamplingBasedPlanning(request_.path_generate_method)) {
     center_line_pose = request_.real_goal;
   } else {
     // 正常规划时，使用搜索目标点判断车位内目标点障碍物距离
@@ -182,17 +180,13 @@ void HybridAStarInterface::UpdateOutput() {
   DebugAstarRequestString(request_);
   hybrid_astar_->SetRequest(request_);
 
-  if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING ||
-      request_.path_generate_method ==
-          AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
-      request_.path_generate_method ==
-          AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
+  if (IsSearchBasedPlanning(request_.path_generate_method)) {
     PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
                                  is_ego_overlap_with_slot);
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::TRY_SEARCHING) {
     PathSearchForScenarioTry(target_pose_regulator);
-  } else if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
+  } else if (IsSamplingBasedPlanning(request_.path_generate_method)) {
     PathSamplingForScenarioRunning();
   }
 
@@ -215,7 +209,6 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   }
   request_ = request;
   DebugAstarRequestString(request_);
-  hybrid_astar_->SetRequest(request_);
 
   // range
   UpdateSearchBoundary();
@@ -256,18 +249,25 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                              request_.real_goal.theta));
   }
 
+  // update future path decider
+  FuturePathDecider future_path_decider;
+  future_path_decider.Process(&coarse_traj_, &ref_line_,
+                              vehicle_param_.min_turn_radius, config_.node_step,
+                              &edt_, request_);
+
   dp_heuristic_generator_.GenerateDpMap(
       request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
 
   TargetPoseRegulator target_pose_regulator;
   Pose2D center_line_pose;
-  if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
+  if (IsSamplingBasedPlanning(request_.path_generate_method)) {
     center_line_pose = request_.real_goal;
   } else {
     center_line_pose = goal_state_;
   }
   target_pose_regulator.Process(&edt_, &request_, request_.start_,
                                 center_line_pose, vehicle_param_);
+  hybrid_astar_->SetRequest(request_);
 
   float lat_buffer = 0.1;
   float lon_buffer = 0.2;
@@ -280,6 +280,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     lon_buffer = 0.4;
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer, lon_buffer);
   }
+
+  DebugAstarRequestString(request_);
 
   std::pair<Pose2D, float> target_regulator_result;
   target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);

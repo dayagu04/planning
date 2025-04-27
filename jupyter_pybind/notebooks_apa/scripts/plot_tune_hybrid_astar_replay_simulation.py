@@ -527,7 +527,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
   # if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and data_valid['wave_msg_idx'] and data_valid['uss_percept_msg_idx'] and fus_parking_msg.select_slot_id > 0:
   # if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and data_valid['wave_msg_idx'] and data_valid['uss_percept_msg_idx']:
-  if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and force_plan==0:
+  if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx']:
 
     print('plan once')
     res = replay_simulation_hybrid_astar.PlanOnce(
@@ -550,93 +550,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         swap_start_goal)
 
     print('end')
-  elif force_plan:
-      print('plan once by force')
-
-      replay_simulation_hybrid_astar.SetLocalization(loc_msg_bytes)
-      replay_simulation_hybrid_astar.SetSlotInfo()
-
-      if data_valid['fus_objects_msg_idx']:
-        replay_simulation_hybrid_astar.SetFusionObject(fus_obj_msg_bytes)
-
-      if data_valid['fus_ground_line_msg_idx']:
-        replay_simulation_hybrid_astar.SetGroundLine(ground_line_perception_msg_bytes)
-
-      localization_index_map = bag_loader.get_localization_msg_index(max_time)
-      end_loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][localization_index_map])
-
-      end_x = end_loc_msg.position.position_boot.x - 1.1 * math.cos(end_loc_msg.orientation.euler_boot.yaw)
-      end_y = end_loc_msg.position.position_boot.y - 1.1 * math.sin(end_loc_msg.orientation.euler_boot.yaw)
-      end_theta = end_loc_msg.orientation.euler_boot.yaw
-
-      target_managed_slot_x_vec =[]
-      target_managed_slot_y_vec = []
-
-      # 0
-      local_x = 5
-      local_y = -1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-
-      #1
-      local_x = 5
-      local_y = 1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-      #2
-      local_x = -1.1
-      local_y = -1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-      #3
-      local_x = -1.1
-      local_y = 1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-
-      # limit
-
-      target_managed_limiter_x_vec = [0,0]
-      target_managed_limiter_y_vec = [1.1,-1.1]
-
-
-      print('TriggerPlan')
-
-      end_pose = [end_x, end_y, end_theta]
-
-      time_to_start_time = 0
-      global astar_path_start_time
-      if astar_path_start_time >= 0.0:
-        time_to_start_time = bag_time - astar_path_start_time
-
-      print('time ', time_to_start_time)
-
-      update_path = replay_simulation_hybrid_astar.TriggerPlan(
-          force_plan, is_path_optimization,
-          is_cilqr_enable, is_reset, target_managed_slot_x_vec,
-          target_managed_slot_y_vec,
-          target_managed_limiter_x_vec,
-          target_managed_limiter_y_vec, end_pose,time_to_start_time,swap_start_goal)
-
-      if update_path:
-        astar_path_start_time = bag_time
-
   else:
     print('no plan call')
 

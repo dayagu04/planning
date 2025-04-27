@@ -1,5 +1,6 @@
 #include "hybrid_astar_request.h"
 
+#include "ad_common/math/math_utils.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "node3d.h"
@@ -36,11 +37,43 @@ void ClearFirstActionReqeust(AstarRequest *request) {
   return;
 }
 
-const bool IsEgoPoseAdjustPlanning(const AstarPathGenerateType type) {
+const bool IsSamplingBasedPlanning(const AstarPathGenerateType type) {
   if (type == AstarPathGenerateType::REEDS_SHEPP_SAMPLING ||
       type == AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
       type == AstarPathGenerateType::SPIRAL_SAMPLING ||
       type == AstarPathGenerateType::QUNTIC_POLYNOMIAL_SAMPLING) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsSearchBasedPlanning(const AstarPathGenerateType type) {
+  if (type == AstarPathGenerateType::ASTAR_SEARCHING ||
+      type == AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
+      type == AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsNeedZigZagPathToAdjustPose(const AstarRequest &request) {
+  if (request.direction_request == ParkingVehDirection::TAIL_IN) {
+    if (request.first_action_request.gear_request != AstarPathGear::DRIVE) {
+      return false;
+    }
+  }
+  if (request.direction_request == ParkingVehDirection::HEAD_IN) {
+    if (request.first_action_request.gear_request != AstarPathGear::REVERSE) {
+      return false;
+    }
+  }
+
+  float theta_error = request.start_.theta - request.real_goal.theta;
+  theta_error = ad_common::math::NormalizeAngle(theta_error);
+  if (std::fabs(request.start_.y) < 2.0 &&
+      std::fabs(theta_error) < ifly_deg2rad(10.0)) {
     return true;
   }
 
