@@ -118,12 +118,26 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
         }
       }
 
-      if (obs_type == iflyauto::OBJECT_TYPE_OCC_COLUMN) {
-        apa_obs.SetObsScemanticType(ApaObsScemanticType::COLUMN);
-      } else if (obs_type == iflyauto::OBJECT_TYPE_OCC_WALL) {
-        apa_obs.SetObsScemanticType(ApaObsScemanticType::WALL);
+      ApaObsScemanticType scemantic_type = ApaObsScemanticType::UNKNOWN;
+      switch (obs_type) {
+        case iflyauto::OBJECT_TYPE_OCC_COLUMN:
+          scemantic_type = ApaObsScemanticType::COLUMN;
+          break;
+        case iflyauto::OBJECT_TYPE_OCC_WALL:
+          scemantic_type = ApaObsScemanticType::WALL;
+          break;
+        case iflyauto::OBJECT_TYPE_OCC_CAR:
+          scemantic_type = ApaObsScemanticType::CAR;
+          break;
+        case iflyauto::OBJECT_TYPE_OCC_GROUDING_WIRE:
+          scemantic_type = ApaObsScemanticType::CURB;
+          break;
+        default:
+          scemantic_type = ApaObsScemanticType::UNKNOWN;
+          break;
       }
 
+      apa_obs.SetObsScemanticType(scemantic_type);
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
       apa_obs.SetBoxGlobal(box);
@@ -223,13 +237,32 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       GeneratePolygonByAABB(&polygon, box);
 
       ApaObstacle apa_obs;
-
-      if (gl.type == iflyauto::GROUND_LINE_TYPE_COLUMN) {
-        apa_obs.SetObsScemanticType(ApaObsScemanticType::COLUMN);
-      } else if (gl.type == iflyauto::GROUND_LINE_TYPE_WALL) {
-        apa_obs.SetObsScemanticType(ApaObsScemanticType::WALL);
+      ApaObsScemanticType scemantic_type = ApaObsScemanticType::UNKNOWN;
+      switch (gl.type) {
+        case iflyauto::GROUND_LINE_TYPE_COLUMN:
+          scemantic_type = ApaObsScemanticType::COLUMN;
+          break;
+        case iflyauto::GROUND_LINE_TYPE_WALL:
+          scemantic_type = ApaObsScemanticType::WALL;
+          break;
+        case iflyauto::GROUND_LINE_TYPE_FENCE:
+          scemantic_type = ApaObsScemanticType::FENCE;
+          break;
+        case iflyauto::GROUND_LINE_TYPE_STEP:
+          scemantic_type = ApaObsScemanticType::STEP;
+          break;
+        case iflyauto::GROUND_LINE_TYPE_CURB:
+          scemantic_type = ApaObsScemanticType::CURB;
+          break;
+        case iflyauto::GROUND_LINE_TYPE_SPECIAL:
+          scemantic_type = ApaObsScemanticType::SPECIAL;
+          break;
+        default:
+          scemantic_type = ApaObsScemanticType::UNKNOWN;
+          break;
       }
 
+      apa_obs.SetObsScemanticType(scemantic_type);
       apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
       apa_obs.SetBoxGlobal(box);
