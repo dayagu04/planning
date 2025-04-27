@@ -483,5 +483,36 @@ const bool ApaSlotManager::IsTargetSlotReleaseByRule() const {
   return false;
 }
 
+const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::RULE_BASED_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return SlotReleaseState::NOT_RELEASE;
+  }
+
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] ==
+      SlotReleaseState::RELEASE) {
+    return SlotReleaseState::RELEASE;
+  }
+
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+      SlotReleaseState::RELEASE) {
+    return SlotReleaseState::RELEASE;
+  }
+  else if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return SlotReleaseState::NOT_RELEASE;
+  } else if (ego_info_under_slot_.slot.release_info_
+                 .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+             SlotReleaseState::COMPUTING) {
+    return SlotReleaseState::COMPUTING;
+  }
+
+  return SlotReleaseState::UNKOWN;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

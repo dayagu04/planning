@@ -15,7 +15,7 @@ class ParkingScenarioManager final {
  public:
   bool Init(const std::shared_ptr<ApaWorld>& apa_world);
 
-  void Excute();
+  void UpdateScenarioType();
 
   void Process();
 
@@ -47,6 +47,8 @@ class ParkingScenarioManager final {
   std::shared_ptr<ParkingScenario> MutableScenarioPtr() {
     return current_scenario_;
   }
+
+  void GenerateHmiSlotReleaseState();
 
  private:
   // if user select a slot id, autonomous system will call this to try plan.
