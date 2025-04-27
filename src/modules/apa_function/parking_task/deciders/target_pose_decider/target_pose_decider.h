@@ -8,6 +8,27 @@ namespace planning {
 namespace apa_planner {
 using namespace pnc;
 
+struct TargetPoseDeciderRequest {
+  std::vector<double> lat_buffer_vec;
+  double lon_buffer;
+  ParkingScenarioType scenario_type;
+  bool consider_obs = true;
+  bool base_on_slot = false;
+
+  TargetPoseDeciderRequest() {}
+  TargetPoseDeciderRequest(const std::vector<double>& _lat_buffer_vec,
+                           const double _lon_buffer,
+                           const ParkingScenarioType _scenario_type,
+                           const bool _consider_obs = true,
+                           const bool _base_on_slot = false)
+      : lat_buffer_vec(_lat_buffer_vec),
+        lon_buffer(_lon_buffer),
+        scenario_type(_scenario_type),
+        consider_obs(_consider_obs),
+        base_on_slot(_base_on_slot) {}
+  ~TargetPoseDeciderRequest() {}
+};
+
 struct TargetPoseDeciderResult {
   bool exist_target_pose = false;
   geometry_lib::PathPoint target_pose_local;
@@ -36,9 +57,7 @@ class TargetPoseDecider final : public ParkingTask {
   ~TargetPoseDecider() {}
 
   const TargetPoseDeciderResult CalcTargetPose(
-      const ApaSlot& slot, const std::vector<double>& lat_buffer_vec,
-      const double lon_buffer, const ParkingScenarioType request,
-      const bool consider_obs, const bool base_on_slot = false);
+      const ApaSlot& slot, const TargetPoseDeciderRequest& request);
 
   const TargetPoseDeciderResult CalcTargetPoseForPerpendicularTailIn();
 

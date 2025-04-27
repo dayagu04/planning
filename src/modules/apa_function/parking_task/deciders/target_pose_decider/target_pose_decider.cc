@@ -13,19 +13,19 @@
 namespace planning {
 namespace apa_planner {
 const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
-    const ApaSlot& slot, const std::vector<double>& lat_buffer_vec,
-    const double lon_buffer, const ParkingScenarioType request,
-    const bool consider_obs, const bool base_on_slot) {
+    const ApaSlot& slot, const TargetPoseDeciderRequest& request) {
   result_.Reset();
   slot_ = slot;
-  lat_buffer_vec_ = lat_buffer_vec;
-  lon_buffer_ = lon_buffer;
-  consider_obs_ = consider_obs;
-  base_on_slot_ = base_on_slot;
+  lat_buffer_vec_ = request.lat_buffer_vec;
+  lon_buffer_ = request.lon_buffer;
+  consider_obs_ = request.consider_obs;
+  base_on_slot_ = request.base_on_slot;
 
-  if (request == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+  if (request.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     return CalcTargetPoseForPerpendicularTailIn();
-  } else if (request == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+  } else if (request.scenario_type ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     return CalcTargetPoseForPerpendicularHeadIn();
   } else {
     return result_;
@@ -38,22 +38,8 @@ const TargetPoseDeciderResult
 TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   ILOG_INFO << "CalcTargetPoseForPerpendicularTailIn";
   const ApaParameters& param = apa_param.GetParam();
-  // 根据车位建立车位坐标系，方便计算终点与逻辑判断
-  const Eigen::Vector2d heading_vec =
-      slot_.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
-
-  const double origin_heading = std::atan2(heading_vec.y(), heading_vec.x());
-
-  const Eigen::Vector2d origin_pos =
-      slot_.processed_corner_coord_global_.pt_01_mid -
-      slot_.slot_length_ * heading_vec;
-
-  geometry_lib::GlobalToLocalTf g2l_tf =
-      geometry_lib::GlobalToLocalTf(origin_pos, origin_heading);
-
-  geometry_lib::LocalToGlobalTf l2g_tf =
-      geometry_lib::LocalToGlobalTf(origin_pos, origin_heading);
-
+  const geometry_lib::GlobalToLocalTf g2l_tf = slot_.g2l_tf_;
+  const geometry_lib::LocalToGlobalTf l2g_tf = slot_.l2g_tf_;
   slot_.TransformCoordFromGlobalToLocal(g2l_tf);
 
   double virtual_tar_x = 0.0;

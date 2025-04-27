@@ -105,6 +105,18 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   } else {
     limiter_.valid = false;
   }
+
+  if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
+    const Eigen::Vector2d heading_vec =
+        processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
+
+    const double origin_heading = std::atan2(heading_vec.y(), heading_vec.x());
+    const Eigen::Vector2d origin_pos =
+        processed_corner_coord_global_.pt_01_mid - slot_length_ * heading_vec;
+
+    g2l_tf_ = geometry_lib::GlobalToLocalTf(origin_pos, origin_heading);
+    l2g_tf_ = geometry_lib::LocalToGlobalTf(origin_pos, origin_heading);
+  }
 }
 
 void ApaSlot::TransformCoordFromGlobalToLocal(
