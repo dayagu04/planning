@@ -92,6 +92,7 @@ class GapSelectorDecider : public Task {
   void GenerateLHTrajectory(
       const SecondOrderTimeOptimalTrajectory &lane_hold_time_speed_profile,
       TrajectoryPoints &traj_points);
+  void GenerateLHTrajectory(TrajectoryPoints &traj_points, const double lat_offset);
   void GenerateLBTrajectory(TrajectoryPoints &traj_points);
 
   void ConstructTimeOptimal(

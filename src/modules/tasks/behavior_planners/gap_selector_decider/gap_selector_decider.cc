@@ -314,9 +314,17 @@ GapSelectorStatus GapSelectorDecider::Update() {
   // lat avoid scene
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  double avoid_lat_offset = lateral_offset_decider_output.is_valid
-                                ? lateral_offset_decider_output.lateral_offset
-                                : 0.0;
+
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+
+  bool is_lc_hold = coarse_planning_info.target_state == kLaneChangeHold;
+
+  double avoid_lat_offset =
+      is_lc_hold ? lane_change_decider_output.lc_hold_state_lat_offset
+      : lateral_offset_decider_output.is_valid
+          ? lateral_offset_decider_output.lateral_offset
+          : 0.0;
   const auto &ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
   Point2D ego_cart_pose{ego_state_mgr->ego_carte().x,
@@ -431,9 +439,14 @@ GapSelectorStatus GapSelectorDecider::Update() {
   } else if (is_lh_scene) {
     double lc_end_s, remain_lh_time = lh_total_time_ - lh_timer_;
     gap_selector_decider_output.gap_selector_trustworthy = true;
-    RefineLCTime(&lc_end_s, &remain_lh_time, avoid_lat_offset);
-    FixedTimeQuinticPathPlan(ego_frenet_pose.y, lc_end_s, remain_lh_time,
-                             traj_points);
+    if (remain_lh_time < 1.0) {
+      GenerateLHTrajectory(traj_points, avoid_lat_offset);
+
+    } else {
+      RefineLCTime(&lc_end_s, &remain_lh_time, avoid_lat_offset);
+      FixedTimeQuinticPathPlan(ego_frenet_pose.y, lc_end_s, remain_lh_time,
+                              traj_points);
+    }
   } else if (is_lc_back_scene) {
     double lb_end_s{0.0}, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
@@ -2404,6 +2417,41 @@ void GapSelectorDecider::GenerateLHTrajectory(
   //   traj_point.t = i * delta_t;
   // }
   // return;
+}
+
+void GapSelectorDecider::GenerateLHTrajectory(
+    TrajectoryPoints &traj_points, const double lat_offset) {
+
+  const auto &cur_ref_path = session_->environmental_model()
+                                 .get_reference_path_manager()
+                                 ->get_reference_path_by_current_lane();
+
+  if (cur_ref_path == nullptr) {
+    return;
+  }
+
+  const auto &cur_ref_path_coor = cur_ref_path->get_frenet_coord();
+
+  if (cur_ref_path_coor == nullptr) {
+    return;
+  }
+
+  for (auto i = 0; i < traj_points.size(); i++) {
+    auto &traj_point = traj_points[i];
+    Point2D tmp_frenet_point{
+        traj_point.s,
+        lat_offset};
+    Point2D tmp_cart_point;
+
+    if (cur_ref_path_coor->SLToXY(tmp_frenet_point, tmp_cart_point)) {
+      LOG_ERROR("Restore Traj Result!");
+      traj_point.s = tmp_frenet_point.x;
+      traj_point.l = tmp_frenet_point.y;
+      traj_point.x = tmp_cart_point.x;
+      traj_point.y = tmp_cart_point.y;
+    }
+  }
+  return;
 }
 
 void GapSelectorDecider::GenerateLinearRefTrajectory(
