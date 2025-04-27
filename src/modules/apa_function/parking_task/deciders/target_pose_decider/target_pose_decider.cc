@@ -38,22 +38,8 @@ const TargetPoseDeciderResult
 TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   ILOG_INFO << "CalcTargetPoseForPerpendicularTailIn";
   const ApaParameters& param = apa_param.GetParam();
-  // 根据车位建立车位坐标系，方便计算终点与逻辑判断
-  const Eigen::Vector2d heading_vec =
-      slot_.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
-
-  const double origin_heading = std::atan2(heading_vec.y(), heading_vec.x());
-
-  const Eigen::Vector2d origin_pos =
-      slot_.processed_corner_coord_global_.pt_01_mid -
-      slot_.slot_length_ * heading_vec;
-
-  geometry_lib::GlobalToLocalTf g2l_tf =
-      geometry_lib::GlobalToLocalTf(origin_pos, origin_heading);
-
-  geometry_lib::LocalToGlobalTf l2g_tf =
-      geometry_lib::LocalToGlobalTf(origin_pos, origin_heading);
-
+  const geometry_lib::GlobalToLocalTf g2l_tf = slot_.g2l_tf_;
+  const geometry_lib::LocalToGlobalTf l2g_tf = slot_.l2g_tf_;
   slot_.TransformCoordFromGlobalToLocal(g2l_tf);
 
   double virtual_tar_x = 0.0;

@@ -96,7 +96,10 @@ def rectangle_corners(cx, cy, length, width, heading, is_rad=False):
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
-    self.bag = rosbag.Bag(path,'r',rosbag.Compression.NONE, 768 * 1024,True, None, True)
+    start_time = time.time()
+    self.bag = rosbag.Bag(path,'r',rosbag.Compression.BZ2, 768 * 1024,True, None, True)
+    end_time = time.time()
+    print("load bag time: ", end_time - start_time, " s")
     # loclization msg
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
