@@ -610,8 +610,8 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 
   double lb_heading_error_min = 4.5;
   double lb_heading_error_max = 0.5;
-  double lh_heading_error_min = 4.5;
-  double lh_heading_error_max = 0.5;
+  double lh_heading_error_min = 0.5;
+  double lh_heading_error_max = 4.5;
   bool use_gs = true;
   std::vector<double> lat_ref_offset{0.0, 0.1, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;
