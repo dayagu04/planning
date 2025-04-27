@@ -487,10 +487,10 @@ bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
       is_high_priority_complete_mlc ||
       is_time_out) {
     std::cout << "perfect_in_lane!!!" << std::endl;
+    return true;
   }
 
-  return perfect_in_lane;
-
+  return false;
 }
 
 bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
