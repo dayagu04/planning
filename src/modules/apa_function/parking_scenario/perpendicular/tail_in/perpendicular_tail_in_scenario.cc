@@ -395,9 +395,12 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   TargetPoseDecider target_pose_decider(
       apa_world_ptr_->GetCollisionDetectorInterfacePtr());
 
+  TargetPoseDeciderRequest tar_pose_decider_request(
+      std::vector<double>{0.15}, 0.3,
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false, false);
+
   TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
-      ego_info_under_slot.slot, std::vector<double>{0.15}, 0.3,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false);
+      ego_info_under_slot.slot, tar_pose_decider_request);
 
   ego_info_under_slot.origin_target_pose = res.target_pose_local;
 
@@ -705,13 +708,15 @@ const bool PerpendicularTailInScenario::GenTlane() {
       lat_buffer_vec = std::vector<double>{min_lat_buffer + step};
     }
 
+    TargetPoseDeciderRequest tar_pose_decider_request(
+        lat_buffer_vec, 0.3,
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true);
+
     TargetPoseDeciderResult res =
         apa_world_ptr_->GetParkingTaskInterfacePtr()
             ->GetTargetPoseDeciderPtr()
-            ->CalcTargetPose(
-                ego_info_under_slot.slot, lat_buffer_vec, 0.3,
-                ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true,
-                true);
+            ->CalcTargetPose(ego_info_under_slot.slot,
+                             tar_pose_decider_request);
 
     if (!res.exist_target_pose) {
       ILOG_ERROR << "can not find target pose";

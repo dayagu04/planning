@@ -13,19 +13,19 @@
 namespace planning {
 namespace apa_planner {
 const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
-    const ApaSlot& slot, const std::vector<double>& lat_buffer_vec,
-    const double lon_buffer, const ParkingScenarioType request,
-    const bool consider_obs, const bool base_on_slot) {
+    const ApaSlot& slot, const TargetPoseDeciderRequest& request) {
   result_.Reset();
   slot_ = slot;
-  lat_buffer_vec_ = lat_buffer_vec;
-  lon_buffer_ = lon_buffer;
-  consider_obs_ = consider_obs;
-  base_on_slot_ = base_on_slot;
+  lat_buffer_vec_ = request.lat_buffer_vec;
+  lon_buffer_ = request.lon_buffer;
+  consider_obs_ = request.consider_obs;
+  base_on_slot_ = request.base_on_slot;
 
-  if (request == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+  if (request.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     return CalcTargetPoseForPerpendicularTailIn();
-  } else if (request == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+  } else if (request.scenario_type ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     return CalcTargetPoseForPerpendicularHeadIn();
   } else {
     return result_;

@@ -315,9 +315,12 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   std::vector<double> lat_buffer_vec{0.23, 0.17, 0.14, 0.13};
 
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
-  TargetPoseDeciderResult res = tar_pose_decider.CalcTargetPose(
-      slot, lat_buffer_vec, 0.3,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true);
+  TargetPoseDeciderRequest tar_pose_decider_request(
+      lat_buffer_vec, 0.3, ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
+      true, false);
+
+  TargetPoseDeciderResult res =
+      tar_pose_decider.CalcTargetPose(slot, tar_pose_decider_request);
 
   if (!res.exist_target_pose) {
     ILOG_INFO << "slot is occupied";
