@@ -187,6 +187,12 @@ class GeneralLateralDecider : public Task {
     bool is_nudge_left, double overlap_min_y, double overlap_max_y,
     bool is_side_obstacle, double extra_lane_type_decrease_buffer,
     bool is_update_hard_bound, double ego_width, double lane_width);
+  double CalDynamicNudgeLatBufDis(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    double limit_overlap_min_y, double limit_overlap_max_y,
+    double pred_ts, double extra_lane_type_decrease_buffer,
+    double &overlap_min_y_new, double &overlap_max_y_new);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -209,8 +215,8 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
   double min_road_radius_ = 10000.0;
-  double last_overlap_min_y = 0.0;
-  double last_overlap_max_y = 0.0;
+  double last_overlap_min_y_ = 0.0;
+  double last_overlap_max_y_ = 0.0;
   double cruise_vel_ = 0.0;
   double extra_lane_width_decrease_buffer_ = 0.0;
   double overlap_start_s_ = 0.0;
