@@ -207,7 +207,8 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
-  if (last_static_blocked_obj_id_vec_[0] == static_blocked_obj_id_vec_[0]) {
+  if (!last_static_blocked_obj_id_vec_.empty() &&
+      last_static_blocked_obj_id_vec_[0] == static_blocked_obj_id_vec_[0]) {
     return false;
   }
 
@@ -584,22 +585,15 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   // # Accumulate lane segment lengths.
   // Record current segment type and break loop when exceeding vehicle
   // wheelbase.
-  for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-    lane_line_length += left_lane_boundarys.type_segments[i].length;
-    if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
-      left_lane_boundary_type = left_lane_boundarys.type_segments[i].type;
+  const auto& lane_points = current_lane_ptr_->lane_points();
+  for (int i = 0; i < lane_points.size(); i++) {
+    lane_line_length = lane_points[i].s;
+    if (lane_line_length > ego_frenet_boundary_.s_end) {
+      left_lane_boundary_type = lane_points[i].left_lane_border_type;
+      right_lane_boundary_type = lane_points[i].right_lane_border_type;
       break;
     }
   }
-  lane_line_length = 0.0;
-  for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-    lane_line_length += right_lane_boundarys.type_segments[i].length;
-    if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
-      right_lane_boundary_type = right_lane_boundarys.type_segments[i].type;
-      break;
-    }
-  }
-
   // If the lane marking is not left dashed/right solid or double dashed, return
   // False.
   if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
@@ -837,7 +831,7 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
         (obs_v > ego_speed_ + kObsSpeedBuffer)) {
       continue;
     }
-    //?
+
     if (frenet_obstacle_sl.s_end > ego_frenet_boundary_.s_start) {
       return false;
     }
