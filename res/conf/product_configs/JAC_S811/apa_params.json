@@ -237,7 +237,7 @@
 
   "comment_14": "slot update params when replan",
   "uss_slot_occupied_ratio": 0.25,
-  "path_heading_slot": 55.5,
+  "max_front_exceed_line_dx": 1.68,
   "path_pos_err": 6.6,
   "last_update_slot_occupied_ratio": 0.836,
 

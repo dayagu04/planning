@@ -321,7 +321,7 @@ struct ApaParameters {
 
   // slot update params when replan
   double uss_slot_occupied_ratio = 0.25;
-  double path_heading_slot = 55.5;
+  double max_front_exceed_line_dx = 1.68;
   double path_pos_err = 6.6;
   double last_update_slot_occupied_ratio = 0.836;
 
