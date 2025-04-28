@@ -1236,6 +1236,9 @@ void PlanningPlayer::RunCloseLoop(
 
 void PlanningPlayer::PerpareTrajectory(
     const struct_msgs::PlanningOutput& plan_msg) {
+  if (plan_msg.planning_request.take_over_req_level > iflyauto::REQUEST_LEVEL_NO_REQ) {
+    return;
+  }
   const auto& trajectory = plan_msg.trajectory;
   auto traj_size = trajectory.trajectory_points_size;
   std::vector<double> x_vec(traj_size);
