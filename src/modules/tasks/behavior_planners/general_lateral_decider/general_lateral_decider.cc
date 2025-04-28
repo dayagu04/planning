@@ -703,7 +703,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
       road_radius2 =
           1 / std::max(std::fabs(coarse_planning_info.cart_ref_info.k_s_spline(traj_point.s)), 1e-6);
     }
-    min_road_radius_ = std::max(std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_), 5.0);
+    min_road_radius_ = std::max(std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_), 0.2);
     ref_path_points_.emplace_back(refpath_pt);
   }
 
