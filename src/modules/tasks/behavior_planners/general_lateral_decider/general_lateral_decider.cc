@@ -447,9 +447,19 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
         sum_far_kappa / std::max((preview_length / preview_step), 1.0);
     double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
     JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
-    if (far_kappa_radius < 750.0) {
-      return true;
+    if (virtual_lane_manager
+            ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+        virtual_lane_manager
+            ->GetIntersectionState() <= common::OFF_INTERSECTION) {
+      if (far_kappa_radius <= 50.0) {
+        return true;
+      }
+    } else {
+      if (far_kappa_radius < 750.0) {
+        return true;
+      }
     }
+
   }
   // std::vector<double> d_polys;
   // d_polys.resize(d_poly.size());
