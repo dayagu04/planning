@@ -122,6 +122,10 @@ class LateralMotionPlanningWeight {
       const planning::common::LateralPlanningOutput &last_planning_output,
       planning::common::LateralPlanningInput &planning_input);
 
+  void CalculateLastPathDistToRef(
+      const std::shared_ptr<planning::ReferencePath> &reference_path,
+      planning::common::LateralPlanningInput &planning_input);
+
   void SetLateralMotionWeight(
       const LateralMotionSceneEnum scene,
       planning::common::LateralPlanningInput &planning_input);
@@ -230,6 +234,7 @@ class LateralMotionPlanningWeight {
   double expected_min_acc_;
   double min_curvature_radius_;
   double min_q_jerk_;
+  double last_path_max_dist2ref_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
   bool is_emergence_;

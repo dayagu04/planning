@@ -225,7 +225,7 @@ bool LateralMotionPlanner::AssembleInput() {
   auto last_s_vec = motion_planner_output.s_lat_vec;
   double last_path_length = last_s_vec.size() > 0 ? last_s_vec.back() : 0.0;
   bool is_ref_consistent = (ref_vel * final_t - last_path_length) <= 2.0;
-  if ((motion_planner_output.lat_init_flag == true) && is_ref_consistent) {
+  if (motion_planner_output.lat_init_flag == true) {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
       planning_input_.mutable_last_x_vec()->Set(
@@ -344,6 +344,7 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
   planning_weight_ptr_->SetInitL(planning_init_point.frenet_state.r);
+  planning_weight_ptr_->CalculateLastPathDistToRef(reference_path_ptr, planning_input_);
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kv2 =
@@ -384,7 +385,12 @@ bool LateralMotionPlanner::AssembleInput() {
     //                                ->mutable_lateral_obstacle_decider_output()
     //                                .search_success;
     const bool &search_success = general_lateral_decider_output.enable_ara_ref;
-    planning_weight_ptr_->SetIsSearchSuccess(search_success);
+    if (is_ref_consistent) {
+      planning_weight_ptr_->SetIsSearchSuccess(search_success);
+    } else {
+      planning_weight_ptr_->SetIsSearchSuccess(false);
+    }
+
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_KEEP, planning_input_);
     planning_input_.set_complete_follow(complete_follow);
