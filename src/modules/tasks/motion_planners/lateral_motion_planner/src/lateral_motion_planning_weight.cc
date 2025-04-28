@@ -788,8 +788,11 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     weight_.remotely_index = std::max(min_remotely_index, weight_.remotely_index);
   }
 
-  if (lateral_motion_scene_ == RAMP &&
-      is_in_intersection_) {
+  if ((lateral_motion_scene_ == RAMP &&
+       is_in_intersection_) ||
+      (curvature_radius_vec_[1] * curvature_radius_vec_[2] < 1e-6) ||
+      (curvature_radius_vec_[1] * curvature_radius_vec_[3] < 1e-6) ||
+      (curvature_radius_vec_[1] * curvature_radius_vec_[4] < 1e-6)) {
     weight_.remotely_index = 20;
   }
 
