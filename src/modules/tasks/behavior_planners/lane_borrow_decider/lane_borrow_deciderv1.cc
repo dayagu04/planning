@@ -207,7 +207,7 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
-  if (!last_static_blocked_obj_id_vec_.empty() &&
+  if (!last_static_blocked_obj_id_vec_.empty() && !static_blocked_obj_id_vec_.empty() &&
       last_static_blocked_obj_id_vec_[0] == static_blocked_obj_id_vec_[0]) {
     return false;
   }
