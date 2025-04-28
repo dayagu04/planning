@@ -281,6 +281,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_slot, double,
                   "safe_uss_remain_dist_in_slot");
 
+  JSON_READ_VALUE(apa_param.SetPram().limited_safe_uss_remain_dist, double,
+                  "limited_safe_uss_remain_dist");
+
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_parallel_slot,
                   double, "safe_uss_remain_dist_in_parallel_slot");
 
@@ -465,7 +468,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
 
-  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_column, bool, "use_fus_occ_column");
+  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_column, bool,
+                  "use_fus_occ_column");
 
   JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
                   "use_uss_pt_clound");
