@@ -458,7 +458,7 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double static_obs_buffer = 0.5;
   int centric_obs_frames = 10;
   double dense_obstacle_dist = 8.0;
-  double extend_obs_distance = 30.0;
+  double extend_obs_distance = 10.0;
 };
 
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {

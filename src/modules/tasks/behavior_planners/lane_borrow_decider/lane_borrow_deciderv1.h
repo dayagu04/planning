@@ -105,6 +105,7 @@ class LaneBorrowDecider : public Task {
   std::shared_ptr<VirtualLane> left_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
   LaneBorrowDeciderConfig config_;
+  bool if_left_turn_center_{false};
 };
 
 }  // namespace planning
