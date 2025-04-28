@@ -1412,9 +1412,26 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                           ? param.safe_uss_remain_dist_out_slot
                           : param.safe_uss_remain_dist_in_slot;
 
-  // 在当前路径较短的情况下尽量使用小的纵向安全buffer，避免揉库空间不够
-  if (frame_.current_path_length < 0.6) {
-    lon_buffer *= 0.5;
+  geometry_lib::GeometryPath geometry_path_brake(all_plan_path_vec_);
+  if (geometry_path_brake.gear_change_count > 0 &&
+      geometry_path_brake.gear_index_vec.size() > 0) {
+    const size_t start_index = geometry_path_brake.gear_index_vec[0];
+    size_t end_index = geometry_path_brake.path_count - 1;
+    if (geometry_path_brake.gear_index_vec.size() > 1) {
+      end_index = geometry_path_brake.gear_index_vec[1] - 1;
+    }
+    std::vector<geometry_lib::PathSegment> seg_vec;
+    seg_vec.reserve(end_index - start_index + 1);
+    for (size_t i = start_index; i <= end_index; ++i) {
+      seg_vec.emplace_back(geometry_path_brake.path_segment_vec[i]);
+    }
+    geometry_path_brake.SetPath(seg_vec);
+    if (geometry_path_brake.collide_flag &&
+        geometry_path_brake.total_length < 0.76) {
+      lon_buffer = param.limited_safe_uss_remain_dist;
+      ILOG_INFO << "next path is col and length is short, so this path need be "
+                   "more limited";
+    }
   }
 
   double lat_buffer = param.lat_inflation;

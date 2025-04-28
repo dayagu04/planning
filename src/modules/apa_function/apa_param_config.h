@@ -196,6 +196,7 @@ struct ApaParameters {
   double detection_distance = 2.5;
   double lat_inflation = 0.1;
   double safe_uss_remain_dist_in_slot = 0.35;
+  double limited_safe_uss_remain_dist = 0.2;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;
   double safe_uss_remain_dist_out_slot = 0.55;
   double uss_stuck_replan_wait_time = 2.0;
@@ -433,12 +434,12 @@ struct ApaParameters {
   std::vector<float> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
                                            0.18, 0.95, 0.95, 0.95, 0.95};
 
-  std::vector<float> fold_mirror_footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
-                                           2.02, 2.7, 1.8, 0.9,  0.0};
-  std::vector<float> fold_mirror_footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
-                                           0.88, 0.0,  0.0,   0.0,   0.0};
-  std::vector<float> fold_mirror_footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
-                                           0.18, 0.95, 0.95, 0.95, 0.95};
+  std::vector<float> fold_mirror_footprint_circle_x = {
+      1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0};
+  std::vector<float> fold_mirror_footprint_circle_y = {
+      0.0, 0.55, -0.55, -0.88, -0.5, 0.5, 0.88, 0.0, 0.0, 0.0, 0.0};
+  std::vector<float> fold_mirror_footprint_circle_r = {
+      2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95};
 
   AstarParkingConfig astar_config;
   ParkingSpeedConfig speed_config;
