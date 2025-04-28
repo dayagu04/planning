@@ -426,7 +426,7 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
   const double preview_length = 15.0;
   const double preview_step = 1.0;
   double sum_far_kappa = 0.0;
-  double preview_s = std::max(3.0 * ego_v - 5.0, 15.0);
+  double preview_s = std::max(3.0 * ego_v - 5.0, 20.0);
   if (cart_ref_info.k_s_spline.get_x().size() > 0) {
     for (double preview_distance = 0.0; preview_distance < preview_length;
         preview_distance += preview_step) {
@@ -574,7 +574,14 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
-    // s = std::max(s, 1.0);
+    const auto &motion_planner_output =
+        session_->planning_context().motion_planner_output();
+    if (motion_planner_output.lat_enable_flag &&
+        motion_planner_output.lat_init_flag) {
+      double last_ref_length =
+          motion_planner_output.s_lat_vec.back() - motion_planner_output.s_lat_vec[1];
+      s = std::min(s, last_ref_length + 1.0);
+    }
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     double s_ref = planning_init_point.frenet_state.s;
     const double max_ref_length = std::max(

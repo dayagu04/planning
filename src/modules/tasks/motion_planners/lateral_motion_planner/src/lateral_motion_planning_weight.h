@@ -42,18 +42,18 @@ struct PathWeight {  // temp
   std::vector<double> q_pos_soft_bound;
   std::vector<double> q_pos_hard_bound;
   std::unordered_map<size_t, double> time2soft_ratio = {
-    {0, 5.0},
-    {1, 3.5},
-    {2, 2.0},
-    {3, 1.0},
+    {0, 2.5},
+    {1, 1.5},
+    {2, 1.2},
+    {3, 0.8},
     {4, 0.3}
   };
   std::unordered_map<size_t, double> time2hard_ratio = {
-    {0, 10.0},
-    {1, 8.0},
-    {2, 5.0},
-    {3, 2.0},
-    {4, 0.6}
+    {0, 3.0},
+    {1, 2.0},
+    {2, 1.5},
+    {3, 1.0},
+    {4, 0.5}
   };
 
   void Init() {
@@ -187,10 +187,19 @@ class LateralMotionPlanningWeight {
   void SetAccJerkBoundAndWeight(
       planning::common::LateralPlanningInput &planning_input);
 
+  void SetMinJerkWeightByVel(
+      planning::common::LateralPlanningInput &planning_input);
+
   void MakeDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
+  void MakeRampDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
   void MakeLaneChangeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void MakeLaneChangeBackDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeSplitDynamicWeight(
@@ -220,6 +229,7 @@ class LateralMotionPlanningWeight {
   double expected_max_acc_;
   double expected_min_acc_;
   double min_curvature_radius_;
+  double min_q_jerk_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
   bool is_emergence_;

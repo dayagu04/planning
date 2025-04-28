@@ -163,7 +163,7 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_CONTINUITY_THETA] =
         planning_input.q_ref_theta() * planning_input.q_continuity();
 
-    cost_config_vec.at(i)[W_ACC] = path_weights.q_acc[i];
+    cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();  // path_weights.q_acc[i];
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
 
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();

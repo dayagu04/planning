@@ -1574,8 +1574,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 20000.0;
   double q_jerk_bound = 500000.0;
 
-  std::vector<double> map_qsoft_bound{500, 1500.0, 3000.0, 4000.0, 5000.0};
-  std::vector<double> map_qhard_bound{1000, 3000.0, 5000.0, 6000.0, 7000.0};
+  std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
+  std::vector<double> map_qhard_bound{500, 1000, 3000.0, 5000.0, 6000.0, 7000.0};
   double emergence_avoid_factor = 2.0;
   double intersection_avoid_factor = 2.0;
 
