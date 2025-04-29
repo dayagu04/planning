@@ -23,6 +23,7 @@ constexpr double kCautionYieldMaxWidth = 0.7;
 constexpr double kCautionYieldMinWidth = 0.3;
 constexpr double kCautioYieldSlowSpeedThreshold = 25.0;
 constexpr double kCautionYieldHeadingThres = 0.785;
+constexpr double kCautionYieldLowBoundThres = 0.1;
 constexpr double kCutInHeadingthres = 4.0 / 180.0 * 3.14;
 constexpr double kLowSpeedIgnreAgentSpeedThrMps = 0.8;
 constexpr double kStaticAgentSpeedThrMps = 0.5;
@@ -225,6 +226,16 @@ void StGraphUtils::DetermineCautionYieldDecision(
         continue;
       }
       auto& ptr_st_boundary = boundary_id_st_boundaries_map.at(st_boundary_id);
+      bool is_lower_than_low_bound = false;
+      for (int idx = 0; idx < ptr_st_boundary->lower_points().size(); idx++) {
+        if (ptr_st_boundary->lower_points()[idx].s() < kCautionYieldLowBoundThres) {
+          is_lower_than_low_bound = true;
+          break;
+        }
+      }
+      if (is_lower_than_low_bound) {
+        continue;
+      }
       ptr_st_boundary->set_decision_type(
           STBoundary::DecisionType::CAUTION_YIELD);
       caution_yield_agent_ids.emplace_back(agent_id);
