@@ -229,6 +229,7 @@ class LateralMotionPlanningWeight {
   double end_ratio_for_qjerk_;
   double max_acc_;
   double max_jerk_;
+  double last_expected_average_acc_;
   double expected_average_acc_;
   double expected_max_acc_;
   double expected_min_acc_;

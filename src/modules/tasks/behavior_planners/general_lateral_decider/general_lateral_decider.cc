@@ -590,7 +590,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         motion_planner_output.lat_init_flag) {
       double last_ref_length =
           motion_planner_output.s_lat_vec.back() - motion_planner_output.s_lat_vec[1];
-      s = std::min(s, last_ref_length + 1.0);
+      s = std::min(s, last_ref_length + 0.5);
     }
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     double s_ref = planning_init_point.frenet_state.s;

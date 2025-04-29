@@ -200,7 +200,7 @@
     "dynamic_lc_ref_buffer": [0.0, 0.1, 0.2, 0.35],
     "dynamic_lc_finished_ref_buffer": [0.0, 0.1, 0.15, 0.25],
     "not_use_gap_flag": true,
-    "ramp_limit_v": 19.44,
+    "ramp_limit_v": 3.75,
     "ramp_limit_v_valid": true,
     "care_lon_area_road_border": 80,
     "hard_buffer2static_agent": 0.35,
