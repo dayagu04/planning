@@ -928,6 +928,9 @@ void PlanningPlayer::PlayOneFrame(
       }
     }
     uint8_t functional_state = func_state_machine_ros_msg.current_state;
+    if (is_close_loop) {
+      functional_state = iflyauto::FunctionalState_MANUAL;
+    }
     if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
       if (scene_type_ == "acc") {
         functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
