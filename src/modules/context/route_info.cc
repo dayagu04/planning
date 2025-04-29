@@ -768,7 +768,7 @@ void RouteInfo::UpdateMLCInfoDecider(
       std::min(route_info_output_.distance_to_first_road_split,
                route_info_output_.dis_to_ramp);
   std::array<double, 2> xp{50, 150};
-  std::array<double, 2> fp{0, 100};
+  std::array<double, 2> fp{0, 60};
   const double split_region_dis_threshold =
       interp(dis_to_next_split_point, xp, fp);
   if (route_info_output_.accumulate_dis_ego_to_last_split_point <
