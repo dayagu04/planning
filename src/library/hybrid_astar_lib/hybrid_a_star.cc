@@ -113,12 +113,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   const float rs_radius = vehicle_param_.min_turn_radius + 0.2;
 
   RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
-  bool need_anchor_point = false;
-  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    need_anchor_point = true;
-  }
-  if (!CalcRSPathToGoal(current_node, false, need_anchor_point, rs_request,
-                        rs_radius)) {
+  if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius)) {
     ILOG_INFO << " generate rs fail";
 
     return false;

@@ -28,8 +28,11 @@ class GJK2DInterface {
 
   /**
    * \brief Directly use gjk2d to calculate the collision and distance
-   * information \param output: is_collision \param output: dist, distance of
-   * polygon_p and polgyon_q \param polygon_p \param polygon_q \return int
+   * information
+   * \param output: is_collision
+   * \param output: dist, distance of polygon_p and polgyon_q
+   * \param polygon_p
+   * \param polygon_q
    */
   void PolygonDistance(bool *is_collision, cdl::real *dist,
                        const Polygon2D *polygon_p, const Polygon2D *polygon_q);
@@ -86,7 +89,8 @@ class GJK2DInterface {
    *                          direction for time performance, but if you have
    *                          requirement about the hit distance, then you need
    * to normalize the direction (And if you have this requirement, please
-   * contact me!) \param[in] max_lambda    Max distance that the ray can explore
+   * contact me!)
+   * \param[in] max_lambda    Max distance that the ray can explore
    * \param[in] polygon_veh   The target that ray will hit (or not hit)
    * \param[out] is_collision If the ray hits target along direction
    *                          within max_lambda range or not
@@ -177,8 +181,9 @@ class GJK2DInterface {
    * \param[out] collision_pointB
    * \param[in] polygonA_start     Poly A start position, you just only fill
    *                               vertex data, no need to fill axises,
-   * center_pt, radius, and type data in polygon_t; \param[in] dirA PolygonA
-   * moving direction; \param[in] polygonB_start     Poly B start position;
+   * center_pt, radius, and type data in polygon_t;
+   * \param[in] dirA PolygonA  moving direction;
+   * \param[in] polygonB_start     Poly B start position;
    * \param[in] dirB               PolygonB moving direction;
    * \return int
    */
@@ -207,9 +212,7 @@ class GJK2DInterface {
    * \param[in] get_collide_dist  Whether to get collision dist
    * \param[in] normalized_dir    Whether give one normalized direction.
    *                              You can give this API normalized dir or not.
-   IF
-   *                              you don't kown about you dir, you can set
-   *                              normalized_dir FALSE.
+   * If you don't kown about you dir, you can set  normalized_dir FALSE.
    * \return 0 if success or 1 if failed;
    */
   void Raycast(RaycastCollisionInfo *info, Position2D *collision_point,

@@ -45,10 +45,13 @@ class PathComparator : public AstarDecider {
   bool CheckVerticalSlotHeadIn(const Node3d *best_node,
                                const Node3d *node_challenger);
 
-  const float GetHeuristicPointDistance(const Node3d *node);
+  const float GetHeuristicPointDistance(const Pose2D &node);
 
-  const bool CheckHeuristicPointIsNice(const Node3d *best_node,
-                                       const Node3d *node_challenger);
+  const bool CheckHeuristicPointIsNice(const Pose2D &best_node,
+                                       const Pose2D &node_challenger);
+
+  const bool CheckDistanceRequest(const float &best_node_s,
+                                  const float &node_challenger_s);
 
   PathWinReason win_reason_;
 
@@ -64,6 +67,8 @@ class PathComparator : public AstarDecider {
    * this pose is an heuristic pose in slot such as o point.
    */
   Pose2D heuristic_pose_;
+
+  const AstarRequest *request_;
 };
 
 }  // namespace planning

@@ -22,9 +22,11 @@ bool PathComparator::Compare(const AstarRequest *request,
                              const Node3d *best_node,
                              const Node3d *node_challenger) {
 #if DEBUG_DECIDER
-  ILOG_INFO << "=========compare==========";
-  best_node->DebugString();
-  node_challenger->DebugString();
+  if (best_node->GetGearSwitchNum() <= 1) {
+    ILOG_INFO << "=========compare==========";
+    best_node->DebugString();
+    node_challenger->DebugString();
+  }
 #endif
 
   // cost超出太多
@@ -46,6 +48,7 @@ bool PathComparator::Compare(const AstarRequest *request,
     return false;
   }
 
+  request_ = request;
   // 换档次数一致，继续比较
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
@@ -89,12 +92,13 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
     gear_switch_pose_challenger = node_challenger->GetPose();
   }
 
-  float heading_error_challenger =
-      std::fabs(gear_switch_pose_challenger.theta);
+  float heading_error_challenger = std::fabs(gear_switch_pose_challenger.theta);
 
 #if DEBUG_DECIDER
-  ILOG_INFO << "head 1 = " << heading_error_best * 57.4
-            << ", head 2 = " << heading_error_challenger * 57.4;
+  if (best_node->GetGearSwitchNum() <= 1) {
+    ILOG_INFO << "head 1 = " << heading_error_best * 57.4
+              << ", head 2 = " << heading_error_challenger * 57.4;
+  }
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
@@ -112,7 +116,8 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
   }
 
   // check heuristic point projection.
-  if (!CheckHeuristicPointIsNice(best_node, node_challenger)) {
+  if (!CheckHeuristicPointIsNice(gear_switch_pose_best,
+                                 gear_switch_pose_challenger)) {
     return false;
   }
 
@@ -154,10 +159,13 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
 
   // best node pose
   Pose2D gear_switch_pose_best;
+  float best_s;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
+    best_s = best_node->GearSwitchNode()->GetDistToStart();
   } else {
     gear_switch_pose_best = best_node->GetPose();
+    best_s = best_node->GetDistToStart();
   }
   float heading_error_best = ad_common::math::NormalizeAngle(
       gear_switch_pose_best.theta - heuristic_pose_.theta);
@@ -165,10 +173,13 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
 
   // challenger pose
   Pose2D gear_switch_pose_challenger;
+  float challenger_s;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
+    challenger_s = node_challenger->GearSwitchNode()->GetDistToStart();
   } else {
     gear_switch_pose_challenger = node_challenger->GetPose();
+    challenger_s = node_challenger->GetDistToStart();
   }
 
   float heading_error_challenger = ad_common::math::NormalizeAngle(
@@ -176,8 +187,13 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   heading_error_challenger = std::fabs(heading_error_challenger);
 
 #if DEBUG_DECIDER
-  ILOG_INFO << "head 1 = " << heading_error_best * 57.4
-            << ", head 2 = " << heading_error_challenger * 57.4;
+  if (best_node->GetGearSwitchNum() <= 1) {
+    ILOG_INFO << "best node heading = " << gear_switch_pose_best.theta * 57.4
+              << ", y = " << gear_switch_pose_challenger.y
+              << ", s = " << challenger_s << ", challenger heading = "
+              << gear_switch_pose_challenger.theta * 57.4
+              << ", y = " << gear_switch_pose_best.y << ", s = " << best_s;
+  }
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
@@ -185,19 +201,24 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   float x_lower = 4.0;
   if (gear_switch_pose_challenger.x < x_lower ||
       gear_switch_pose_challenger.x > x_upper) {
+    // ILOG_INFO << "boundary is big";
     return false;
   }
 
   // check heading
   if (heading_error_challenger > heading_error_best ||
       node_challenger->GetGCost() > best_node->GetGCost() + 4.0) {
+    // ILOG_INFO << "g cost is big";
     return false;
   }
 
   // check heuristic point projection.
-  if (!CheckHeuristicPointIsNice(best_node, node_challenger)) {
+  if (!CheckHeuristicPointIsNice(gear_switch_pose_best,
+                                 gear_switch_pose_challenger)) {
     return false;
   }
+
+  // ILOG_INFO << "found better";
 
   return true;
 }
@@ -241,37 +262,18 @@ void PathComparator::SetHeuristicPose(const AstarRequest &request) {
   return;
 }
 
-const float PathComparator::GetHeuristicPointDistance(const Node3d *node) {
-  const NodePath &path = node->GetNodePath();
-
-  // point size is small, no need compare
-  if (path.point_size < 2) {
-    return 1000.0;
-  }
-
-  Vec2df32 line_base;
-  line_base.set_x(path.points[path.point_size - 1].x -
-                  path.points[path.point_size - 2].x);
-  line_base.set_y(path.points[path.point_size - 1].y -
-                  path.points[path.point_size - 2].y);
-
-  if (line_base.LengthSquare() < 0.01) {
-    return 1000.0;
-  }
-
-  line_base.Normalize();
+const float PathComparator::GetHeuristicPointDistance(const Pose2D &node) {
+  Vec2df32 line_base = Vec2df32::CreateUnitVec2df32(node.theta);
 
   Vec2df32 line_project;
-  line_project.set_x(path.points[path.point_size - 1].x -
-             heuristic_pose_.x);
-  line_project.set_y(path.points[path.point_size - 1].y -
-                     heuristic_pose_.y);
+  line_project.set_x(heuristic_pose_.x - node.x);
+  line_project.set_y(heuristic_pose_.y - node.y);
 
   return std::fabs(line_base.CrossProd(line_project));
 }
 
 const bool PathComparator::CheckHeuristicPointIsNice(
-    const Node3d *best_node, const Node3d *node_challenger) {
+    const Pose2D &best_node, const Pose2D &node_challenger) {
   // check heuristic point projection.
   const float challenger_dist = GetHeuristicPointDistance(node_challenger);
   if (challenger_dist > 100.0) {
@@ -279,11 +281,31 @@ const bool PathComparator::CheckHeuristicPointIsNice(
   }
 
   const float best_dist = GetHeuristicPointDistance(best_node);
-  if (challenger_dist > best_dist) {
+  if (challenger_dist > best_dist - 0.04) {
+#if DEBUG_DECIDER
+    ILOG_INFO << "challenger dist = " << challenger_dist
+              << ", best dist = " << best_dist;
+#endif
     return false;
   }
 
   return true;
+}
+
+const bool PathComparator::CheckDistanceRequest(
+    const float &best_node_s, const float &node_challenger_s) {
+  if (node_challenger_s > request_->first_action_request.dist_request &&
+      best_node_s < request_->first_action_request.dist_request) {
+    return true;
+  }
+
+  if (node_challenger_s < request_->first_action_request.dist_request &&
+      best_node_s < request_->first_action_request.dist_request &&
+      node_challenger_s > best_node_s) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace planning

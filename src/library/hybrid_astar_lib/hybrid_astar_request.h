@@ -56,6 +56,10 @@ void DebugAstarRequestString(const AstarRequest &request);
 
 void ClearFirstActionReqeust(AstarRequest *request);
 
-const bool IsEgoPoseAdjustPlanning(const AstarPathGenerateType type);
+const bool IsSamplingBasedPlanning(const AstarPathGenerateType type);
+
+const bool IsSearchBasedPlanning(const AstarPathGenerateType type);
+
+const bool IsNeedZigZagPathToAdjustPose(const AstarRequest &request);
 
 }  // namespace planning
