@@ -856,7 +856,8 @@ void HybridARAStar::CalculateSearchBounds(
 bool HybridARAStar::SetStartAndEndPose(
     const PlanningInitPoint& planning_init_point,
     const std::shared_ptr<KDPath>& fix_lane,
-    const vector<TrajectoryPoint>& plan_history_traj, const double target_v) {
+    const std::vector<TrajectoryPoint>& plan_history_traj,
+    const double target_v) {
   // double ego_s = 0.0;
   // double ego_l = 0.0;
   // if (!fix_lane->XYToSL(planning_init_point.x, planning_init_point.y, &ego_s,

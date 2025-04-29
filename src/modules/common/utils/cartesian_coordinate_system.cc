@@ -30,15 +30,17 @@ double Norm(const Segment2D& s1) {
   return sqrt(xx1 * xx1 + yy1 * yy1);
 }
 
-double PointsSquareDistance(const Point2D& p1, const Point2D& p2) {
+double PointsSquareDistance(const planning::Point2D& p1,
+                            const planning::Point2D& p2) {
   return pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
 }
 
 CartesianCoordinateSystem::CartesianCoordinateSystem(planning::Pose2D origin)
     : m_origin(origin) {}
 
-Point2D CartesianCoordinateSystem::CartCoord2CurCartCoord(
-    const planning::Pose2D& prev_origin, const Point2D& prev_rel_coord) {
+planning::Point2D CartesianCoordinateSystem::CartCoord2CurCartCoord(
+    const planning::Pose2D& prev_origin,
+    const planning::Point2D& prev_rel_coord) {
   // Need further validation
   double dis_to_prev_origin =
       sqrt(pow(prev_rel_coord.x, 2) + pow(prev_rel_coord.y, 2));
@@ -54,7 +56,7 @@ Point2D CartesianCoordinateSystem::CartCoord2CurCartCoord(
   double dis_to_cur_origin =
       sqrt(pow(yabs - m_origin.y, 2) + pow(xabs - m_origin.x, 2));
 
-  Point2D cur_rel_coord;
+  planning::Point2D cur_rel_coord;
   cur_rel_coord.x = dis_to_cur_origin * cos(cur_vector_angle);
   cur_rel_coord.y = dis_to_cur_origin * sin(cur_vector_angle);
   return cur_rel_coord;
@@ -91,8 +93,9 @@ planning::Pose2D CartesianCoordinateSystem::CartPose2CurCartPose(
   return cur_rel_pose;
 }
 
-Point2D CartesianCoordinateSystem::CurCartCoord2CartCoord(
-    const planning::Pose2D& future_origin, const Point2D& cur_rel_coord) {
+planning::Point2D CartesianCoordinateSystem::CurCartCoord2CartCoord(
+    const planning::Pose2D& future_origin,
+    const planning::Point2D& cur_rel_coord) {
   // Need further validation
   double dis_to_cur_origin =
       sqrt(pow(cur_rel_coord.x, 2) + pow(cur_rel_coord.y, 2));
@@ -109,7 +112,7 @@ Point2D CartesianCoordinateSystem::CurCartCoord2CartCoord(
   double dis_to_future_origin =
       sqrt(pow(yabs - future_origin.y, 2) + pow(xabs - future_origin.x, 2));
 
-  Point2D future_rel_coord;
+  planning::Point2D future_rel_coord;
   future_rel_coord.x = dis_to_future_origin * cos(future_vector_angle);
   future_rel_coord.y = dis_to_future_origin * sin(future_vector_angle);
   return future_rel_coord;

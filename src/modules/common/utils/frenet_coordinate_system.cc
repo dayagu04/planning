@@ -24,7 +24,7 @@ FrenetCoordinateSystem::FrenetCoordinateSystem(
     : m_fcs_params(fcs_params), m_length(length), m_x_s(x_s), m_y_s(y_s) {
   // If the curvature profile is not given, then compute the curvature profile
   double tmp_s = 0;
-  vector<double> vec_s, vec_k;
+  std::vector<double> vec_s, vec_k;
   while (tmp_s <= length) {
     double dx = x_s.deriv(1, tmp_s);
     double dy = y_s.deriv(1, tmp_s);
@@ -53,10 +53,10 @@ FrenetCoordinateSystem::FrenetCoordinateSystem(
       m_k_s(k_s) {}
 
 FrenetCoordinateSystem::FrenetCoordinateSystem(
-    const vector<Point2D>& vec_pts,
+    const std::vector<planning::Point2D>& vec_pts,
     const FrenetCoordinateSystemParameters& fcs_params)
     : m_fcs_params(fcs_params) {
-  vector<double> vec_x, vec_y;
+  std::vector<double> vec_x, vec_y;
   for (auto& pt : vec_pts) {
     vec_x.push_back(pt.x);
     vec_y.push_back(pt.y);
@@ -64,14 +64,14 @@ FrenetCoordinateSystem::FrenetCoordinateSystem(
   ConstructFrenetCoordinateSystem(vec_x, vec_y);
 }
 FrenetCoordinateSystem::FrenetCoordinateSystem(
-    const vector<double>& vec_x, const vector<double>& vec_y,
+    const std::vector<double>& vec_x, const std::vector<double>& vec_y,
     const FrenetCoordinateSystemParameters& fcs_params)
     : m_fcs_params(fcs_params) {
   ConstructFrenetCoordinateSystem(vec_x, vec_y);
   //    int i=0;
 }
 FrenetCoordinateSystem::FrenetCoordinateSystem(
-    const vector<double>& vec_x, const vector<double>& vec_y,
+    const std::vector<double>& vec_x, const std::vector<double>& vec_y,
     const FrenetCoordinateSystemParameters& fcs_params, double s_start,
     double s_end)
     : m_fcs_params(fcs_params) {
@@ -79,11 +79,11 @@ FrenetCoordinateSystem::FrenetCoordinateSystem(
 }
 
 void FrenetCoordinateSystem::ConstructFrenetCoordinateSystem(
-    const vector<double>& vec_x, const vector<double>& vec_y,
+    const std::vector<double>& vec_x, const std::vector<double>& vec_y,
     double s_polyfit_start, double s_polyfit_end) {
   assert(vec_x.size() == vec_y.size());
-  vector<double> vec_s(vec_x.size());
-  vector<std::pair<double, double>> vec_c;
+  std::vector<double> vec_s(vec_x.size());
+  std::vector<std::pair<double, double>> vec_c;
   vec_s[0] = 0.0;
   for (int i = 1; i < (int)vec_x.size(); i++) {
     vec_s[i] = (vec_s[i - 1] + sqrt(pow(vec_x[i] - vec_x[i - 1], 2) +
@@ -93,7 +93,7 @@ void FrenetCoordinateSystem::ConstructFrenetCoordinateSystem(
   m_y_s.set_points(vec_s, vec_y);
   m_length = vec_s.back();
 
-  vector<double> vec_k(vec_s.size());
+  std::vector<double> vec_k(vec_s.size());
   assert(s_polyfit_start < s_polyfit_end);
   s_polyfit_start = std::max(0.0, s_polyfit_start);
   double s_end = std::min(m_length, s_polyfit_end);
@@ -121,22 +121,22 @@ void FrenetCoordinateSystem::ConstructFrenetCoordinateSystem(
 
 // Squared distance to a point on the curve (represented by the offset s)
 double FrenetCoordinateSystem::SquaredDistanceToOffSetOnCurve(
-    double s, const Point2D& cart0) const {
-  Point2D cur_point = {m_x_s(s), m_y_s(s)};
-  Point2D cart = cart0;
+    double s, const planning::Point2D& cart0) const {
+  planning::Point2D cur_point = {m_x_s(s), m_y_s(s)};
+  planning::Point2D cart = cart0;
   return PointsSquareDistance(cart, cur_point);
 }
 
 // Gradient of the previous function
 double FrenetCoordinateSystem::GradientSquaredDistanceToOffSetOnCurve(
-    double s, const Point2D& cart0) const {
+    double s, const planning::Point2D& cart0) const {
   return 2.0 * m_x_s.deriv(1, s) * (m_x_s(s) - cart0.x) +
          2.0 * m_y_s.deriv(1, s) * (m_y_s(s) - cart0.y);
 }
 
 // Hessian of the distance function
 double FrenetCoordinateSystem::HessianSquaredDistanceToPointOnCurve(
-    double s, const Point2D& cart0) const {
+    double s, const planning::Point2D& cart0) const {
   return 2.0 * m_x_s.deriv(2, s) * (m_x_s(s) - cart0.x) +
          2.0 * m_y_s.deriv(2, s) * (m_y_s(s) - cart0.y) +
          2.0 * pow(m_x_s.deriv(1, s), 2) + 2.0 * pow(m_y_s.deriv(1, s), 2);
@@ -144,7 +144,7 @@ double FrenetCoordinateSystem::HessianSquaredDistanceToPointOnCurve(
 
 // Find the offset that has the minimal distance to the given point
 double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
-    const Point2D& cart0, double yaw, bool has_yaw, bool has_heuristics,
+    const planning::Point2D& cart0, double yaw, bool has_yaw, bool has_heuristics,
     double s_begin, double s_end) const {
   double squared_distance = std::numeric_limits<double>::infinity();
   double shortest_s = 0.0;
@@ -206,8 +206,8 @@ double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
 
 // Cartesian coordinate to frenet coordinate
 TRANSFORM_STATUS FrenetCoordinateSystem::CartCoord2FrenetCoord(
-    const Point2D& cart, Point2D& frenet, bool has_heuristics, double s_begin,
-    double s_end) const {
+    const planning::Point2D& cart, planning::Point2D& frenet,
+    bool has_heuristics, double s_begin, double s_end) const {
   double min_point_s;
   if (has_heuristics) {
     min_point_s = FindMinDistanceOffsetOnCurve(cart, 0.0, false, has_heuristics,
@@ -217,7 +217,7 @@ TRANSFORM_STATUS FrenetCoordinateSystem::CartCoord2FrenetCoord(
   }
   double distance =
       std::sqrt(SquaredDistanceToOffSetOnCurve(min_point_s, cart));
-  Point2D nearest_point = {m_x_s(min_point_s), m_y_s(min_point_s)};
+  planning::Point2D nearest_point = {m_x_s(min_point_s), m_y_s(min_point_s)};
   Segment2D roadHeading = {
       nearest_point,
       {nearest_point.x + m_fcs_params.step_s * m_x_s.deriv(1, min_point_s),
@@ -276,11 +276,12 @@ m_y_s.deriv(1, min_point_s)
 
 // Cartesian coordinate to frenet coordinate, with yaw information
 TRANSFORM_STATUS FrenetCoordinateSystem::CartCoord2FrenetCoord(
-    const Point2D& cart, Point2D& frenet, double yaw) const {
+    const planning::Point2D& cart, planning::Point2D& frenet,
+    double yaw) const {
   // double min_point_s = FindMinDistanceOffsetOnCurve(cart, yaw, true);
   double min_point_s = FindMinDistanceOffsetOnCurve(cart, yaw, false);  // hack
   double distance = sqrt(SquaredDistanceToOffSetOnCurve(min_point_s, cart));
-  Point2D nearest_point = {m_x_s(min_point_s), m_y_s(min_point_s)};
+  planning::Point2D nearest_point = {m_x_s(min_point_s), m_y_s(min_point_s)};
   Segment2D roadHeading = {
       nearest_point,
       {nearest_point.x + m_fcs_params.step_s * m_x_s.deriv(1, min_point_s),
@@ -308,9 +309,9 @@ TRANSFORM_STATUS FrenetCoordinateSystem::CartCoord2FrenetCoord(
 
 // Frenet coordinate to cartesian coordinate
 TRANSFORM_STATUS FrenetCoordinateSystem::FrenetCoord2CartCoord(
-    const Point2D& frenet, Point2D& cart) const {
+    const planning::Point2D& frenet, planning::Point2D& cart) const {
   if (frenet.x < 0 || frenet.x > m_length) return TRANSFORM_FAILED;
-  Point2D ref_point;
+  planning::Point2D ref_point;
   ref_point = {m_x_s(frenet.x), m_y_s(frenet.x)};
   // int index = FindClosestIndex(frenet0.x, 0, m_vec_s.size(), m_vec_s);
   // ref_point = { m_vec_x[index],m_vec_y[index] };
@@ -326,10 +327,10 @@ TRANSFORM_STATUS FrenetCoordinateSystem::FrenetCoord2CartCoord(
 // Cartesian state to coupled frenet state
 TRANSFORM_STATUS FrenetCoordinateSystem::CartState2FrenetState(
     const CartesianState& cart_state, FrenetState& frenet_state) const {
-  Point2D cart_coord;
+  planning::Point2D cart_coord;
   cart_coord.x = cart_state.x;
   cart_coord.y = cart_state.y;
-  Point2D frenet_coord;
+  planning::Point2D frenet_coord;
   TRANSFORM_STATUS stat =
       CartCoord2FrenetCoord(cart_coord, frenet_coord, cart_state.yaw);
   if (stat == TRANSFORM_FAILED) {
@@ -373,10 +374,10 @@ TRANSFORM_STATUS FrenetCoordinateSystem::CartState2FrenetState(
 // Coupled frenet state to cartesian state
 TRANSFORM_STATUS FrenetCoordinateSystem::FrenetState2CartState(
     const FrenetState& frenet_state, CartesianState& cart_state) const {
-  Point2D frenet_coord;
+  planning::Point2D frenet_coord;
   frenet_coord.x = frenet_state.s;
   frenet_coord.y = frenet_state.r;
-  Point2D cart_coord;
+  planning::Point2D cart_coord;
   TRANSFORM_STATUS stat = FrenetCoord2CartCoord(frenet_coord, cart_coord);
   if (stat == TRANSFORM_FAILED) return TRANSFORM_FAILED;
   // Cartesian position
@@ -412,8 +413,8 @@ TRANSFORM_STATUS FrenetCoordinateSystem::FrenetState2CartState(
 //--- array: value, pair.first to pair.second                   ---//
 //--- n: the number of coefficients                             ---//
 //-----------------------------------------------------------------//
-vector<double> FrenetCoordinateSystem::polyfit(
-    vector<std::pair<double, double>>& array, int n) {
+std::vector<double> FrenetCoordinateSystem::polyfit(
+    std::vector<std::pair<double, double>>& array, int n) {
   int num = array.size();
   double a[num * n];
   double b[num];
@@ -455,7 +456,7 @@ vector<double> FrenetCoordinateSystem::polyfit(
     B(i, 0) = b[i];
   }
   X = A.fullPivLu().solve(B);
-  vector<double> res;
+  std::vector<double> res;
   for (int i = 0; i < n; i++) {
     res.push_back(X(i, 0));
   }

@@ -1104,8 +1104,8 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
   //       ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
   // }
 
-  std::array<vector<std::pair<int, Polygon2d>>, 2> groundline_polygons;
-  std::array<vector<std::pair<int, Polygon2d>>, 2> parking_space_polygons;
+  std::array<std::vector<std::pair<int, Polygon2d>>, 2> groundline_polygons;
+  std::array<std::vector<std::pair<int, Polygon2d>>, 2> parking_space_polygons;
 
   ConstructStaticObstacleTotalPolygons(groundline_polygons, parking_space_polygons);
 
@@ -2973,8 +2973,9 @@ bool HppGeneralLateralDecider::IsFilterForDynamicObstacle(
 }
 
 void HppGeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
-    std::array<vector<std::pair<int, Polygon2d>>, 2> &groundline_polygons,
-    std::array<vector<std::pair<int, Polygon2d>>, 2> &parking_space_polygons) {
+    std::array<std::vector<std::pair<int, Polygon2d>>, 2> &groundline_polygons,
+    std::array<std::vector<std::pair<int, Polygon2d>>, 2>
+        &parking_space_polygons) {
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;

@@ -9,7 +9,6 @@
 #include "cartesian_coordinate_system.h"
 #include "utils/spline.h"
 using planning::planning_math::spline;
-using std::vector;
 
 enum TRANSFORM_STATUS { TRANSFORM_SUCCESS = 0, TRANSFORM_FAILED };
 
@@ -71,25 +70,26 @@ class FrenetCoordinateSystem {
   //! curvature of the curve as a function of the arc length
   spline m_k_s;
   //! curvature parameters to fit the curve
-  vector<double> curvature_fit_parameters;
+  std::vector<double> curvature_fit_parameters;
   //! Squared distance to a point on the curve (represented by the arclength s
   //! along the path )
-  double SquaredDistanceToOffSetOnCurve(double s, const Point2D& cart0) const;
+  double SquaredDistanceToOffSetOnCurve(double s,
+                                        const planning::Point2D& cart0) const;
   //! Gradient of the SquaredDistanceToOffSetOnCurve function
-  double GradientSquaredDistanceToOffSetOnCurve(double s,
-                                                const Point2D& cart0) const;
+  double GradientSquaredDistanceToOffSetOnCurve(
+      double s, const planning::Point2D& cart0) const;
   //! Hessian of the SquaredDistanceToOffSetOnCurve function
-  double HessianSquaredDistanceToPointOnCurve(double s,
-                                              const Point2D& cart0) const;
+  double HessianSquaredDistanceToPointOnCurve(
+      double s, const planning::Point2D& cart0) const;
   //! Find the offset that has the minimal distance to the given point
-  double FindMinDistanceOffsetOnCurve(const Point2D& cart0, double yaw = 0.0,
-                                      bool has_yaw = false,
+  double FindMinDistanceOffsetOnCurve(const planning::Point2D& cart0,
+                                      double yaw = 0.0, bool has_yaw = false,
                                       bool has_heuristics = false,
                                       double s_begin = 0.0,
                                       double s_end = 120.0) const;
 
   void ConstructFrenetCoordinateSystem(
-      const vector<double>& vec_x, const vector<double>& vec_y,
+      const std::vector<double>& vec_x, const std::vector<double>& vec_y,
       double s_polyfit_start = 0.0,
       double s_polyfit_end = std::numeric_limits<double>::max());
 
@@ -100,11 +100,11 @@ class FrenetCoordinateSystem {
   ~FrenetCoordinateSystem() {}
   //! Constructor with vector of x and y
   explicit FrenetCoordinateSystem(
-      const vector<double>& vec_x, const vector<double>& vec_y,
+      const std::vector<double>& vec_x, const std::vector<double>& vec_y,
       const FrenetCoordinateSystemParameters& fcs_params);
   //! Constructor with vector of points
   explicit FrenetCoordinateSystem(
-      const vector<Point2D>& vec_pts,
+      const std::vector<planning::Point2D>& vec_pts,
       const FrenetCoordinateSystemParameters& fcs_params);
   //! Constructor without default curvature
   explicit FrenetCoordinateSystem(
@@ -116,25 +116,27 @@ class FrenetCoordinateSystem {
       const FrenetCoordinateSystemParameters& fcs_params);
 
   explicit FrenetCoordinateSystem(
-      const vector<double>& vec_x, const vector<double>& vec_y,
+      const std::vector<double>& vec_x, const std::vector<double>& vec_y,
       const FrenetCoordinateSystemParameters& fcs_params, double s_start,
       double s_end);
 
   double GetLength() const { return m_length; }
   //! Cartesian coordinate to frenet coordinate
-  TRANSFORM_STATUS CartCoord2FrenetCoord(const Point2D& cart, Point2D& frenet,
+  TRANSFORM_STATUS CartCoord2FrenetCoord(const planning::Point2D& cart,
+                                         planning::Point2D& frenet,
                                          bool has_heuristics = false,
                                          double s_begin = 0.0,
                                          double s_end = 120.0) const;
   //! Cartesian coordinate to frenet coordinate
   //! with yaw information to better determine the actual frenet coordinate
-  TRANSFORM_STATUS CartCoord2FrenetCoord(const Point2D& cart, Point2D& frenet,
+  TRANSFORM_STATUS CartCoord2FrenetCoord(const planning::Point2D& cart,
+                                         planning::Point2D& frenet,
                                          double yaw) const;
   // std::vector<double> CartCoord2FrenetCoord1(
   //     const Point2D& cart, Point2D& frenet) const;
   //! Frenet coordinate to cartesian coordinate
-  TRANSFORM_STATUS FrenetCoord2CartCoord(const Point2D& frenet,
-                                         Point2D& cart) const;
+  TRANSFORM_STATUS FrenetCoord2CartCoord(const planning::Point2D& frenet,
+                                         planning::Point2D& cart) const;
   //! Cartesian state to frenet state
   TRANSFORM_STATUS CartState2FrenetState(const CartesianState& cart_state,
                                          FrenetState& frenet_state) const;
@@ -171,14 +173,15 @@ class FrenetCoordinateSystem {
     return m_k_s.deriv(1, s);
   }
   //! Get the point on the ref curve using arc length
-  Point2D GetRefCurvePoint(double s) const {
+  planning::Point2D GetRefCurvePoint(double s) const {
     assert(s <= m_length && s >= 0);
     return {m_x_s(s), m_y_s(s)};
   }
 
   double GetSlength() const { return m_length; }
 
-  std::vector<double> polyfit(vector<std::pair<double, double>>& array, int n);
+  std::vector<double> polyfit(std::vector<std::pair<double, double>>& array,
+                              int n);
 
   const std::vector<double>& GetCurveParameters() const {
     return curvature_fit_parameters;

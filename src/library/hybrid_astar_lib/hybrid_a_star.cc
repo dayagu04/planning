@@ -1244,6 +1244,8 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       start, target, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
+  SetSamplingTarget(target);
+
   // load open set, pq
   start_node_->SetMultiMapIter(
       open_pq_.insert(std::make_pair(0.0, start_node_)));
@@ -1687,6 +1689,8 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
       start, end, vehicle_param_.width, request_.space_type,
       request_.direction_request);
+
+  SetSamplingTarget(end);
 
   PathComparator path_comparator;
   path_comparator.SetHeuristicPose(request_);
@@ -2345,9 +2349,7 @@ void HybridAStar::SetRequest(const AstarRequest& request) {
     config_.node_step = config_.perpendicular_slot_node_step;
   }
 
-  polynomial_sampling_->SetSearchGoal(request.goal_);
-  spiral_sampling_->SetSearchGoal(request.goal_);
-  rs_sampling_->SetSearchGoal(request.goal_);
+  SetSamplingTarget(request.goal_);
 
   return;
 }
@@ -2528,6 +2530,14 @@ void HybridAStar::DebugNodeList(const std::vector<Node3d*>& node_list) {
               << ", length: "
               << node_path_dist_resolution_ * node_list[i]->GetStepSize();
   }
+
+  return;
+}
+
+void HybridAStar::SetSamplingTarget(const Pose2D& pose) {
+  polynomial_sampling_->SetSearchGoal(pose);
+  spiral_sampling_->SetSearchGoal(pose);
+  rs_sampling_->SetSearchGoal(pose);
 
   return;
 }
