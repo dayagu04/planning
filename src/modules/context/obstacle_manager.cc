@@ -430,14 +430,14 @@ bool ObstacleManager::FilterObstacleByDistance(
 void ObstacleManager::split_points(
     const iflyauto::Point2f *points, const double polygon_points_size,
     const std::shared_ptr<planning_math::KDPath> &frenet_coord,
-    vector<vector<planning_math::Vec2d>> &result) {
+    std::vector<std::vector<planning_math::Vec2d>> &result) {
   constexpr double LATTHRESHOLD = 1;
   constexpr double LONTHRESHOLD = 1;
   constexpr double MINSPLITLONTHRESHOLD = 3;
   constexpr double THRESHOLD = 2;
   constexpr double MAXDISTANCETHRESHOLD = 4;
-  vector<planning_math::Vec2d> current_segment;
-  vector<planning_math::Vec2d> other_segment;
+  std::vector<planning_math::Vec2d> current_segment;
+  std::vector<planning_math::Vec2d> other_segment;
   if (frenet_coord != nullptr) {
     std::vector<std::pair<std::pair<double, double>, planning_math::Vec2d>> points_vec;
     points_vec.reserve(polygon_points_size);

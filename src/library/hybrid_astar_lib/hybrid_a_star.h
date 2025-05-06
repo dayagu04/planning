@@ -254,6 +254,8 @@ class HybridAStar {
 
   void DebugNodeList(const std::vector<Node3d*>& node_list);
 
+  void SetSamplingTarget(const Pose2D& pose);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;

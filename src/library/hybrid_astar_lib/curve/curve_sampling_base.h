@@ -47,6 +47,7 @@ class CurveSampling {
   float min_radius_;
   std::shared_ptr<NodeCollisionDetect> collision_detect_;
 
+  // target pose for astar search.
   Pose2D search_goal_;
 };
 

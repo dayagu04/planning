@@ -116,7 +116,7 @@ class ObstacleManager {
   void split_points(const iflyauto::Point2f *points,
                     const double polygon_points_size,
                     const std::shared_ptr<planning_math::KDPath> &frenet_coord,
-                    vector<vector<planning_math::Vec2d>> &result);
+                    std::vector<std::vector<planning_math::Vec2d>> &result);
 
   void ProcessOccupancyWall(
       const iflyauto::FusionOccupancyObject &object,

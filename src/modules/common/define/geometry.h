@@ -1,6 +1,11 @@
 #ifndef __UTILS__GEOMETRY_H__
 #define __UTILS__GEOMETRY_H__
 
+#include "src/modules/common/common.h"
+#include "src/common/quaternion.h"
+
+namespace planning {
+
 struct Point2D {
   double x = 0.0;
   double y = 0.0;
@@ -9,29 +14,11 @@ struct Point2D {
   Point2D(double xx, double yy) : x(xx), y(yy) {}
 };
 
-struct Point3D {
-  double x = 0.0;
-  double y = 0.0;
-  double z = 0.0;
-
-  Point3D() = default;
-  Point3D(double xx, double yy, double zz) : x(xx), y(yy), z(zz) {}
+// TODO: this name need to retire. Too much same name for pose or point.
+struct QuaternionPose {
+  Point3d position{};
+  planning_math::IflyQuaternion orientation{};
 };
-
-struct Quaternion {
-  double x = 0.0;
-  double y = 0.0;
-  double z = 0.0;
-  double w = 0.0;
-
-  Quaternion() = default;
-  Quaternion(double xx, double yy, double zz, double ww)
-      : x(xx), y(yy), z(zz), w(ww) {}
-};
-
-struct Pose {
-  Point3D position{};
-  Quaternion orientation{};
-};
+}  // namespace planning
 
 #endif

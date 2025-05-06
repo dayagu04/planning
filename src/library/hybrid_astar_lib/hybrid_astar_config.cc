@@ -52,9 +52,6 @@ void PlannerOpenSpaceConfig::InitConfig() {
   perpendicular_slot_node_step = 0.4;
   parallel_slot_node_step = 0.3;
 
-  // headin node shrink condition
-  headin_limit_y_shrink = 1.2;
-
   max_search_time_ms = 5000;
   max_search_time_ms_for_no_gear_switch = 100;
   adjust_dist_inside_slot = 2.5;

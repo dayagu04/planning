@@ -41,7 +41,7 @@ class HybridARAStar {
       const std::vector<planning_math::LineSegment2d>& virtual_lineseg_vec);
   bool SetStartAndEndPose(const PlanningInitPoint& planning_init_point,
                           const std::shared_ptr<KDPath>& target_lane,
-                          const vector<TrajectoryPoint>& plan_history_traj,
+                          const std::vector<TrajectoryPoint>& plan_history_traj,
                           const double target_v);
   bool ValidityCheck(const std::shared_ptr<Node3D> node);
   planning::planning_math::Box2d GetBoundingBox(const double x, const double y,

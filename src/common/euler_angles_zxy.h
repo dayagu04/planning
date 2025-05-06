@@ -11,7 +11,7 @@
 
 #include "Eigen/Geometry"
 
-#include "math_utils.h"
+#include "ad_common/math/math_utils.h"
 
 /**
  * @namespace apollo::common::math
@@ -78,12 +78,15 @@ class EulerAnglesZXY {
    * @param qz Quaternion z-coordinate
    */
   EulerAnglesZXY(T qw, T qx, T qy, T qz)
-      : roll_(std::atan2(static_cast<T>(2.0) * (qw * qy - qx * qz),
-                         static_cast<T>(2.0) * (Square<T>(qw) + Square<T>(qz)) -
-                             static_cast<T>(1.0))),
+      : roll_(
+            std::atan2(static_cast<T>(2.0) * (qw * qy - qx * qz),
+                       static_cast<T>(2.0) * (ad_common::math::Square<T>(qw) +
+                                              ad_common::math::Square<T>(qz)) -
+                           static_cast<T>(1.0))),
         pitch_(std::asin(static_cast<T>(2.0) * (qw * qx + qy * qz))),
         yaw_(std::atan2(static_cast<T>(2.0) * (qw * qz - qx * qy),
-                        static_cast<T>(2.0) * (Square<T>(qw) + Square<T>(qy)) -
+                        static_cast<T>(2.0) * (ad_common::math::Square<T>(qw) +
+                                               ad_common::math::Square<T>(qy)) -
                             static_cast<T>(1.0))) {}
 
   /**

@@ -10,7 +10,7 @@ struct EgoLaneRoadRightDeciderOutput {
   bool is_merge_region = false;
   bool is_split_region = false;
   int merge_lane_virtual_id;
-  Point2D boundary_merge_point;
+  planning::Point2D boundary_merge_point;
   bool cur_lane_is_continue = true;
   bool boundary_merge_point_valid = false;
 };

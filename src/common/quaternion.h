@@ -3,11 +3,9 @@
 #include <cmath>
 
 #include "Eigen/Dense"
-// #include "Eigen/Geometry"
 
 #include "euler_angles_zxy.h"
-#include "localization.pb.h"
-#include "math_utils.h"
+#include "ad_common/math/math_utils.h"
 
 /**
  * @namespace apollo::common::math
@@ -15,6 +13,18 @@
  */
 namespace planning {
 namespace planning_math {
+
+struct IflyQuaternion {
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
+  double w = 0.0;
+
+  IflyQuaternion() = default;
+  IflyQuaternion(double xx, double yy, double zz, double ww)
+      : x(xx), y(yy), z(zz), w(ww) {}
+};
+
 /*
  * @brief Returns heading (in radians) in [-PI, PI), with 0 being East.
  * Note that x/y/z is East/North/Up.
@@ -31,7 +41,7 @@ inline double QuaternionToHeading(const double qw, const double qx,
   EulerAnglesZXYd euler_angles(qw, qx, qy, qz);
   // euler_angles.yaw() is zero when the car is pointing North, but
   // the heading is zero when the car is pointing East.
-  return NormalizeAngle(euler_angles.yaw() + M_PI_2);
+  return ad_common::math::NormalizeAngle(euler_angles.yaw());
 }
 
 /*
@@ -73,19 +83,17 @@ inline Eigen::Quaternion<T> HeadingToQuaternion(T heading) {
  *
  * @return Rotated vector
  */
-inline Eigen::Vector3d QuaternionRotate(
-    const LocalizationOutput::Quaternion &orientation,
-    const Eigen::Vector3d &original) {
-  Eigen::Quaternion<double> quaternion(orientation.qw(), orientation.qx(),
-                                       orientation.qy(), orientation.qz());
+inline Eigen::Vector3d QuaternionRotate(const IflyQuaternion &orientation,
+                                        const Eigen::Vector3d &original) {
+  Eigen::Quaternion<double> quaternion(orientation.w, orientation.x,
+                                       orientation.y, orientation.z);
   return static_cast<Eigen::Vector3d>(quaternion.toRotationMatrix() * original);
 }
 
 inline Eigen::Vector3d InverseQuaternionRotate(
-    const LocalizationOutput::Quaternion &orientation,
-    const Eigen::Vector3d &rotated) {
-  Eigen::Quaternion<double> quaternion(orientation.qw(), orientation.qx(),
-                                       orientation.qy(), orientation.qz());
+    const IflyQuaternion &orientation, const Eigen::Vector3d &rotated) {
+  Eigen::Quaternion<double> quaternion(orientation.w, orientation.x,
+                                       orientation.y, orientation.z);
   return static_cast<Eigen::Vector3d>(quaternion.toRotationMatrix().inverse() *
                                       rotated);
 }

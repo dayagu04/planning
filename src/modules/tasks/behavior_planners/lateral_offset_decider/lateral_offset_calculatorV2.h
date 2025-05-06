@@ -73,10 +73,10 @@ class LateralOffsetCalculatorV2 {
   void PreacquireMaxOppositeOffsetIds();
   void PreacquisitionLeftMaxOppositeOffsetIds();
   void CalcFrontMaxOppositeOffset(
-      const vector<int>& front_ids, bool is_left,
+      const std::vector<int>& front_ids, bool is_left,
       const AvoidObstacleInfo& avoid_obstacle,
       std::map<std::pair<int, int>, HysteresisDecision>& hysteresis_map);
-  void CalcSideMaxOppositeOffset(const vector<int>& obstacle_ids,
+  void CalcSideMaxOppositeOffset(const std::vector<int>& obstacle_ids,
                                  const AvoidObstacleInfo& avoid_obstacle,
                                  bool is_left);
   double LimitLateralOffset(const AvoidObstacleInfo& avoid_obstacle,
@@ -115,10 +115,10 @@ class LateralOffsetCalculatorV2 {
   AvoidInfo avoid_info_;
   AvoidInfo last_avoid_info_;
   int avoid_id_ = -1;
-  vector<int> front_left_max_opposite_offset_ids_;
-  vector<int> front_right_max_opposite_offset_ids_;
-  vector<int> side_left_max_opposite_offset_ids_;
-  vector<int> side_right_max_opposite_offset_ids_;
+  std::vector<int> front_left_max_opposite_offset_ids_;
+  std::vector<int> front_right_max_opposite_offset_ids_;
+  std::vector<int> side_left_max_opposite_offset_ids_;
+  std::vector<int> side_right_max_opposite_offset_ids_;
 };
 
 }  // namespace planning
