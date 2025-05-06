@@ -243,10 +243,10 @@ struct ApaParameters {
   double occupied_pt_inside_dy = 0.0;
   bool enable_use_dynamic_obs = true;
   double safe_threshold = 0.2;
-  double virtual_obs_y_pos = 2.5;
-  double virtual_obs_x_pos = 2.68;
-  double obs_consider_long_threshold = 6.68;
-  double obs_consider_lat_threshold = 2.5;
+  double virtual_obs_left_y_pos = 2.5;
+  double virtual_obs_left_x_pos = 2.68;
+  double virtual_obs_right_y_pos = 6.68;
+  double virtual_obs_right_x_pos = 2.5;
   double max_pt_inside_drop_dx_mono = 1.68;
   double max_pt_inside_drop_dx_multi = 0.368;
   // parallel t lane params
