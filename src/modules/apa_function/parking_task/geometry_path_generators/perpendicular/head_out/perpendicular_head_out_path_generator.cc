@@ -95,16 +95,17 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
   std::vector<double> x_offset_vec;
   const double slant_angle_rad =
       (input_.ego_info_under_slot.slot.angle_) * kDeg2Rad;
-  const double cos_slant_angle = cos(slant_angle_rad);
+  const double sin_slant_angle = sin(slant_angle_rad);
   double x_min = 2.8;
   double x_max = 4.8;
   const double max_plan_num = 30;
 
   ILOG_INFO << "current slot angle (deg) : "
             << input_.ego_info_under_slot.slot.angle_;
-  if (input_.ego_info_under_slot.slot.angle_ != 90) {
-    x_min = 4.0 / cos_slant_angle;
-    x_max = 5.0 / cos_slant_angle;
+  if (input_.ego_info_under_slot.slot.angle_ != 90.0 &&
+      sin_slant_angle != 0.0) {
+    x_min = 4.0 / sin_slant_angle;
+    x_max = 5.0 / sin_slant_angle;
   }
 
   double x_offset = 0.0;
@@ -1041,6 +1042,11 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
             input_.ego_info_under_slot.pt_inside.x() + 1e-2 &&
         path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE;
     if (inside_stuck_1 || inside_stuck_2) {
+      return PathColDetRes::INSIDE_STUCK;
+    }
+
+    if (col_res.col_pt_ego_local.transpose().x() < 3.6 &&
+        input_.is_replan_first) {
       return PathColDetRes::INSIDE_STUCK;
     }
 
