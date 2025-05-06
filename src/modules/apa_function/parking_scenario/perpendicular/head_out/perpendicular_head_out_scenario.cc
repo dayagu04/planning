@@ -381,15 +381,15 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
 
   const Eigen::Vector2d virtual_left_obs =
       pt_01_mid -
-      param.virtual_obs_x_pos *
+      param.virtual_obs_left_x_pos *
           ego_info_under_slot.origin_pose_local.heading_vec +
-      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+      (half_origin_slot_width + param.virtual_obs_left_y_pos) * pt_01_unit_vec;
 
   const Eigen::Vector2d virtual_right_obs =
       pt_01_mid -
-      param.virtual_obs_x_pos *
+      param.virtual_obs_right_x_pos *
           ego_info_under_slot.origin_pose_local.heading_vec -
-      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+      (half_origin_slot_width + param.virtual_obs_right_y_pos) * pt_01_unit_vec;
 
   left_pq_for_y.emplace(virtual_left_obs);
   left_pq_for_x.emplace(virtual_left_obs);
@@ -536,7 +536,9 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
   }
 
   const double area_length = 12.0 / ego_info_under_slot.slot.sin_angle_;
-  const double area_width = channel_width + param.virtual_obs_x_pos;
+  const double area_width =
+      channel_width +
+      std::max(param.virtual_obs_left_x_pos, param.virtual_obs_right_x_pos);
 
   obs_tlane.A = obs_tlane.B + pt_01_unit_vec * area_length;
   obs_tlane.H = obs_tlane.A +
@@ -547,13 +549,13 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
        ego_info_under_slot.slot.origin_corner_coord_local_.pt_2)
           .norm();
 
-  obs_tlane.C =
-      obs_tlane.B - ego_info_under_slot.origin_pose_local.heading_vec *
-                        (origin_slot_length - param.virtual_obs_x_pos + 0.68);
+  obs_tlane.C = obs_tlane.B -
+                ego_info_under_slot.origin_pose_local.heading_vec *
+                    (origin_slot_length - param.virtual_obs_left_x_pos + 0.68);
 
-  obs_tlane.D =
-      obs_tlane.E - ego_info_under_slot.origin_pose_local.heading_vec *
-                        (origin_slot_length - param.virtual_obs_x_pos + 0.68);
+  obs_tlane.D = obs_tlane.E -
+                ego_info_under_slot.origin_pose_local.heading_vec *
+                    (origin_slot_length - param.virtual_obs_right_x_pos + 0.68);
 
   obs_tlane.F = obs_tlane.E - pt_01_unit_vec * area_length;
   obs_tlane.G = obs_tlane.F +

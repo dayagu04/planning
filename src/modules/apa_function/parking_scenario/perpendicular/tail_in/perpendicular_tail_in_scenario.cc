@@ -570,15 +570,15 @@ const bool PerpendicularTailInScenario::CalcPtInside() {
 
   const Eigen::Vector2d virtual_left_obs =
       pt_01_mid -
-      param.virtual_obs_x_pos *
+      param.virtual_obs_left_x_pos *
           ego_info_under_slot.origin_pose_local.heading_vec +
-      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+      (half_origin_slot_width + param.virtual_obs_left_y_pos) * pt_01_unit_vec;
 
   const Eigen::Vector2d virtual_right_obs =
       pt_01_mid -
-      param.virtual_obs_x_pos *
+      param.virtual_obs_right_x_pos *
           ego_info_under_slot.origin_pose_local.heading_vec -
-      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+      (half_origin_slot_width + param.virtual_obs_right_y_pos) * pt_01_unit_vec;
 
   left_pq_for_y.emplace(virtual_left_obs);
   left_pq_for_x.emplace(virtual_left_obs);

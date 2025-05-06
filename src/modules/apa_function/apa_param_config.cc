@@ -384,17 +384,17 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().safe_threshold, double, "safe_threshold");
 
-  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_y_pos, double,
-                  "virtual_obs_y_pos");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_left_y_pos, double,
+                  "virtual_obs_left_y_pos");
 
-  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_x_pos, double,
-                  "virtual_obs_x_pos");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_left_x_pos, double,
+                  "virtual_obs_left_x_pos");
 
-  JSON_READ_VALUE(apa_param.SetPram().obs_consider_long_threshold, double,
-                  "obs_consider_long_threshold");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_right_y_pos, double,
+                  "virtual_obs_right_y_pos");
 
-  JSON_READ_VALUE(apa_param.SetPram().obs_consider_lat_threshold, double,
-                  "obs_consider_lat_threshold");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_right_x_pos, double,
+                  "virtual_obs_right_x_pos");
 
   JSON_READ_VALUE(apa_param.SetPram().max_pt_inside_drop_dx_mono, double,
                   "max_pt_inside_drop_dx_mono");

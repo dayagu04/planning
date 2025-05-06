@@ -48,7 +48,10 @@ void Init() {
 
 void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
                       int is_complete_path, int use_average_obs_dist,
-                      int force_mid_process_plan, double sample_ds) {
+                      int force_mid_process_plan, double sample_ds, int set_obs,
+                      double right_obj_dx, double right_obj_dy,
+                      double left_obj_dx, double left_obj_dy,
+                      double channel_width) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
@@ -57,6 +60,16 @@ void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
   g_simu_param.use_average_obs_dist = use_average_obs_dist;
   g_simu_param.force_mid_process_plan = force_mid_process_plan;
   g_simu_param.sample_ds = sample_ds;
+
+  ApaParameters& muable_param = apa_param.SetPram();
+  SyncParkingParameters(true);
+  if (set_obs == 1) {
+    muable_param.channel_width = channel_width;
+    muable_param.virtual_obs_left_x_pos = left_obj_dx;
+    muable_param.virtual_obs_left_y_pos = left_obj_dy;
+    muable_param.virtual_obs_right_x_pos = right_obj_dx;
+    muable_param.virtual_obs_right_y_pos = right_obj_dy;
+  }
 }
 
 void UpdateLocalization(Eigen::Vector3d pose) {

@@ -115,7 +115,7 @@ fig1.patches('x_vec', 'y_vec', source = data_simu_car_box_cur_gear, fill_color =
 fig1.circle('plan_path_x', 'plan_path_y', source = data_planning_complete, size=4, color='black', legend_label = 'plan_complete')
 fig1.line('plan_path_x', 'plan_path_y', source = data_planning_complete, line_width = 6, line_color = 'red', line_dash = 'solid', line_alpha = 0.5, legend_label = 'plan_complete')
 fig1.patches('x_vec', 'y_vec', source = data_car_box_complete, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "cyan", line_width = 1, legend_label = 'sampled_carbox_complete', visible = False)
-fig1.circle('x_vec','y_vec', source = data_virtual_obs_pos, size=8, color='orange', alpha = 0.1, legend_label = 'virtual_obs_pos', visible = True)
+fig1.circle('x_vec','y_vec', source = data_virtual_obs_pos, size=8, color='orange', alpha = 0.5, legend_label = 'virtual_obs_pos', visible = True)
 fig1.circle('plan_path_x', 'plan_path_y', source = data_planning_tune_substitute, size=2, color='yellow', legend_label = 'sim_tuned_plan_substitute')
 fig1.multi_line('plan_path_x', 'plan_path_y', source = data_planning_tune_substitute, line_width = 4, line_color = 'green', line_dash = 'solid', line_alpha = 0.3, legend_label = 'sim_tuned_plan_substitute')
 fig1.patches('x_vec', 'y_vec', source = data_simu_car_box_substitute, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "red", line_width = 1, legend_label = 'sim_sampled_carbox_substitute', visible = False)
@@ -222,6 +222,12 @@ class LocalViewSlider:
     self.is_cilqr_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "cilqr_enable",min=0, max=1, value=1, step=1)
     self.is_complete_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "complete_path",min=0, max=1, value=0, step=1)
 
+    self.set_obs_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set_obs",min=0, max=1, value=0, step=1)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=4.0, value=2.68, step=0.05)
+    self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.68, step=0.05)
+    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=4.0, value=2.68, step=0.05)
+    self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.68, step=0.05)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=8.68, step=0.1)
 
     ipywidgets.interact(slider_callback, vehicle_type = self.vehicle_type_slider,
                                          car_inflation = self.car_inflation_slider,
@@ -238,10 +244,17 @@ class LocalViewSlider:
                                          is_path_optimization = self.is_path_optimization_slider,
                                          is_cilqr_enable = self.is_cilqr_enable_slider,
                                          is_complete_path = self.is_complete_path_slider,
+                                         set_obs = self.set_obs_slider,
+                                         right_obj_dx = self.right_obj_dx_slider,
+                                         right_obj_dy = self.right_obj_dy_slider,
+                                         left_obj_dx = self.left_obj_dx_slider,
+                                         left_obj_dy = self.left_obj_dy_slider,
+                                         channel_width = self.channel_width_slider,
                                        )
 
 ### sliders callback
-def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist, selected_id, substitute_path_id, trigger_plan, force_mid_process_plan, data_json_id, ego_offset_lon, ego_offset_lat, ego_offset_heading, is_path_optimization, is_cilqr_enable, is_complete_path):
+def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist, selected_id, substitute_path_id, trigger_plan, force_mid_process_plan, data_json_id, ego_offset_lon, ego_offset_lat, ego_offset_heading, is_path_optimization, is_cilqr_enable, is_complete_path,
+                    set_obs, right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width):
   kwargs = locals()
 
   data_car_start_pos.data.update({'x': [],'y': [],})
@@ -292,7 +305,7 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist
     loaded_data = json.load(json_file)
 
   # 更新仿真参数
-  perpendicular_slant_tail_in_with_json_py.UpdateSimuParams(is_path_optimization, is_cilqr_enable, is_complete_path, use_average_obs_dist, force_mid_process_plan, sample_ds)
+  perpendicular_slant_tail_in_with_json_py.UpdateSimuParams(is_path_optimization, is_cilqr_enable, is_complete_path, use_average_obs_dist, force_mid_process_plan, sample_ds, set_obs, right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width)
 
   # 读取定位信息
   loc_data = loaded_data["loc_pos"]
@@ -435,6 +448,7 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist
   data_uss_obj.data.update({'x_vec': obs_x_vec, 'y_vec': obs_y_vec,})
 
   perpendicular_slant_tail_in_with_json_py.UpdateStateMachine()
+
   complete_path_pt_vec = []
   cur_gear_path_pt_vec = []
   virtual_obs_vec = []
