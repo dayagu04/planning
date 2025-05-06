@@ -50,6 +50,8 @@ class ParkingScenarioManager final {
 
   void GenerateHmiSlotReleaseState();
 
+  void RecommendParkingDirection();
+
  private:
   // if user select a slot id, autonomous system will call this to try plan.
   void ScenarioTry();
