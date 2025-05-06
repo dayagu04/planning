@@ -82,6 +82,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     double strict_col_lon_safe_dist = 0.0;
 
     bool is_searching_stage = false;
+    bool optimize_plan = false;
 
     std::vector<geometry_lib::PathPoint> tange_pose_vec;
 
@@ -93,6 +94,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     bool should_prepare_third = false;
     bool first_multi_plan = true;
     bool multi_plan = false;
+
+    bool cur_gear_path_flag = false;
 
     double col_det_time = 0.0;
 
@@ -121,6 +124,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       is_searching_stage = false;
       is_left_side = true;
       slot_side_sgn = 1.0;
+
+      cur_gear_path_flag = false;
 
       strict_car_lat_inflation = 0.0;
       strict_col_lon_safe_dist = 0.0;
@@ -154,6 +159,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       pre_line_normal_vec.setZero();
 
       tange_pose_vec.clear();
+
+      optimize_plan = false;
     }
   };
 
@@ -167,6 +174,14 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   };
 
  public:
+  PerpendicularTailInPathGenerator() {}
+  PerpendicularTailInPathGenerator(
+      const std::shared_ptr<CollisionDetectorInterface>
+          &collision_detector_interface_ptr) {
+    collision_detector_interface_ptr_ = collision_detector_interface_ptr;
+  }
+  ~PerpendicularTailInPathGenerator() {}
+
   virtual void Reset() override;
   virtual const bool Update() override;
   virtual const bool CheckCurrentGearLength() override;
@@ -265,13 +280,15 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                             const double lon_buffer,
                             geometry_lib::GeometryPath &geometry_path,
                             const bool same_gear = false,
-                            const bool enable_log = true);
+                            const bool enable_log = true,
+                            const bool iter = true);
 
   const bool AlignAndSTurnPathPlan(
       const geometry_lib::PathPoint &pose, const uint8_t ref_gear,
       const double lat_buffer, const double lon_buffer,
       geometry_lib::GeometryPath &geometry_path, const bool same_gear = false,
-      const bool enable_log = true, const bool easy_to_line = false);
+      const bool enable_log = true, const bool easy_to_line = false,
+      const bool iter = true);
 
   const bool DubinsPathPlan(const geometry_lib::PathPoint &pose,
                             const uint8_t ref_gear, const double lat_buffer,
@@ -333,9 +350,12 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   const bool FindPtCanReverseToSlot(
       std::vector<geometry_lib::PathSegment> &seg_vec, const uint8_t gear,
-      const uint8_t steer, const double radius, const double max_length,
-      const geometry_lib::PathPoint &pose, const double lat_buffer,
-      const double lon_buffer, const GeometryPathType type);
+      const uint8_t steer, const double radius, const double init_length,
+      const double max_length, const geometry_lib::PathPoint &pose,
+      const double lat_buffer, const double lon_buffer,
+      const GeometryPathType type, const double step = 0.168,
+      const bool need_col_det = true, const bool should_all_path_safe = false,
+      const bool should_same_gear = false);
 
   PlannerParams calc_params_;
 };

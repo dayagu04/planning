@@ -1026,6 +1026,12 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
     LOG_DEBUG("Enable_bound is invalid!");
     return;
   }
+  if (ref_path_points_.empty()) {
+    LOG_DEBUG("lat ref path points is empty! \n");
+  }
+  if (plan_history_traj_.empty()) {
+    LOG_DEBUG("plan history traj is empty! \n");
+  }
 
   if (plan_history_traj_.empty() || ref_path_points_.empty()) {
     last_lat_obstacle_decision_.clear();
@@ -2546,6 +2552,18 @@ void GeneralLateralDecider::SaveLatDebugInfo(
     soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
     hard_bounds_info_output.emplace_back(soft_bounds_info[i]);
     soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
+  }
+
+  // 障碍物决策是否存在跳动
+  lat_debug_info_.mutable_obstacle_ids()->Resize(dynamic_obstacle_decisions_.size() + static_obstacle_decisions_.size(), 0);
+  int i = 0;
+  for (const auto&dynamic_obstacle_decision : dynamic_obstacle_decisions_) {
+    lat_debug_info_.mutable_obstacle_ids()->Set(i, dynamic_obstacle_decision.first);
+    i++;
+  }
+  for (const auto&static_obstacle_decision : static_obstacle_decisions_) {
+    lat_debug_info_.mutable_obstacle_ids()->Set(i, static_obstacle_decision.first);
+    i++;
   }
 
   DebugInfoManager::GetInstance()

@@ -7,7 +7,7 @@
 #include "speed_limit_profile.h"
 
 namespace planning {
-
+namespace apa_planner {
 // 限速来源：
 // 1. path kappa change
 // 2. gap too much bettwen car steering wheel kappa with path kappa.
@@ -79,5 +79,5 @@ class ParkSpeedLimitDecider : public ParkingTask {
   double jerk_upper_;
   double jerk_lower_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

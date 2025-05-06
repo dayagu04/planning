@@ -1,6 +1,7 @@
 #pragma once
 
 namespace planning {
+namespace apa_planner {
 struct PiecewiseJerkSpeedQPConfig {
   double delta_time;
   double acc_weight;
@@ -13,5 +14,5 @@ struct PiecewiseJerkSpeedQPConfig {
 
   void Init();
 };
-
+}  // namespace apa_planner
 }  // namespace planning

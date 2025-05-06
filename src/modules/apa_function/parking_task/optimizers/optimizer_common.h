@@ -1,7 +1,7 @@
 #pragma once
 
 namespace planning {
-
+namespace apa_planner {
 enum class SpeedOptimizerState {
   NONE = 0,
   FAIL = 1,
@@ -10,3 +10,4 @@ enum class SpeedOptimizerState {
   SUCCESS = 4,
 };
 }
+}  // namespace planning

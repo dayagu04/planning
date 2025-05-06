@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250102/20250102-19-24-00/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2025-01-02-19-24-00_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250212/20250212-15-36-05/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-02-12-15-36-05_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250410/20250410-16-38-51/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-04-10-16-38-52_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -211,11 +211,11 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
 
     gl_obs = []
     if bag_loader.fus_ground_line_msg['enable'] == True:
-      for i in range(fus_ground_line_msg.ground_lines_size):
+      for i in range(fus_ground_line_msg.groundline_size):
         single_gl_obs = []
-        origin_single_gl_obs = fus_ground_line_msg.ground_lines[i]
-        for j in range(origin_single_gl_obs.points_3d_size):
-          single_gl_obs.append([origin_single_gl_obs.points_3d[j].x, origin_single_gl_obs.points_3d[j].y])
+        origin_single_gl_obs = fus_ground_line_msg.groundline[i]
+        for j in range(origin_single_gl_obs.groundline_point_size):
+          single_gl_obs.append([origin_single_gl_obs.groundline_point[j].x, origin_single_gl_obs.groundline_point[j].y])
         gl_obs.append(single_gl_obs)
 
     fusion_slot = []

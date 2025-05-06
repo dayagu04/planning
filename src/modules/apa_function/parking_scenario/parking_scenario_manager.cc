@@ -26,54 +26,6 @@
 namespace planning {
 namespace apa_planner {
 
-void PrintApaScenarioType(const ParkingScenarioType scenario_type) {
-  ILOG_INFO << "scenario_type = " << GetApaScenarioTypeString(scenario_type);
-}
-
-const std::string GetApaScenarioTypeString(
-    const ParkingScenarioType scenario_type) {
-  std::string type;
-  switch (scenario_type) {
-    case ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN:
-      type = "SCENARIO_PERPENDICULAR_TAIL_IN";
-      break;
-    case ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_OUT:
-      type = "SCENARIO_PERPENDICULAR_TAIL_OUT";
-      break;
-    case ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN:
-      type = "SCENARIO_PERPENDICULAR_HEAD_IN";
-      break;
-    case ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT:
-      type = "SCENARIO_PERPENDICULAR_HEAD_OUT";
-      break;
-    case ParkingScenarioType::SCENARIO_SLANT_TAIL_IN:
-      type = "SCENARIO_SLANT_TAIL_IN";
-      break;
-    case ParkingScenarioType::SCENARIO_SLANT_TAIL_OUT:
-      type = "SCENARIO_SLANT_TAIL_OUT";
-      break;
-    case ParkingScenarioType::SCENARIO_SLANT_HEAD_IN:
-      type = "SCENARIO_SLANT_HEAD_IN";
-      break;
-    case ParkingScenarioType::SCENARIO_SLANT_HEAD_OUT:
-      type = "SCENARIO_SLANT_HEAD_OUT";
-      break;
-    case ParkingScenarioType::SCENARIO_PARALLEL_IN:
-      type = "SCENARIO_PARALLEL_IN";
-      break;
-    case ParkingScenarioType::SCENARIO_PARALLEL_OUT:
-      type = "SCENARIO_PARALLEL_OUT";
-      break;
-    case ParkingScenarioType::SCENARIO_NARROW_SPACE:
-      type = "SCENARIO_NARROW_SPACE";
-      break;
-    default:
-      type = "SCENARIO_UNKNOWN";
-      break;
-  }
-  return type;
-}
-
 bool ParkingScenarioManager::Init(
     const std::shared_ptr<apa_planner::ApaWorld> &apa_world) {
   if (init_) {
@@ -192,6 +144,8 @@ void ParkingScenarioManager::Reset() {
 
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
+
+  apa_world_->GetParkingTaskInterfacePtr()->Reset();
 
   // reset all planner
   for (const auto &scene : scenario_list_) {

@@ -8,13 +8,14 @@
 #include "pose2d.h"
 
 namespace planning {
-
+namespace apa_planner {
 void ApaTrajectoryStitcher::Process(
     const Pose2D& ego_pose,
     const std::vector<pnc::geometry_lib::PathPoint>& path, const double ego_v,
-    const double front_wheel_angle) {
+    const double front_wheel_angle, const double predict_horizon) {
   double kappa = std::tan(front_wheel_angle) / apa_param.GetParam().wheel_base;
-  Pose2D predict_pose = ComputeTrajPointByPrediction(ego_pose, ego_v, kappa);
+  Pose2D predict_pose =
+      ComputeTrajPointByPrediction(ego_pose, ego_v, kappa, predict_horizon);
 
   size_t min_dist_id = 0;
   size_t min_dist_neioghbour_id = 0;
@@ -48,9 +49,10 @@ void ApaTrajectoryStitcher::GeneTrajPointFromPath(
 }
 
 Pose2D ApaTrajectoryStitcher::ComputeTrajPointByPrediction(
-    const Pose2D& ego_pose, const double ego_v, const double kappa) {
+    const Pose2D& ego_pose, const double ego_v, const double kappa,
+    const double predict_horizon) {
   Pose2D predict_pose;
-  double dist = std::fabs(ego_v * 0.1);
+  double dist = std::fabs(ego_v * predict_horizon);
 
   if (std::fabs(ego_v) < 1e-2) {
     predict_pose = ego_pose;
@@ -165,7 +167,8 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr = pose.DistanceSquareTo(path[i].pos);
+    dist_sqr =
+        pose.DistanceSquareTo(Eigen::Vector2f(path[i].pos[0], path[i].pos[1]));
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
@@ -224,7 +227,8 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr = ego_pose.DistanceSquareTo(path[i].pos);
+    dist_sqr = ego_pose.DistanceSquareTo(
+        Eigen::Vector2f(path[i].pos[0], path[i].pos[1]));
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
@@ -239,10 +243,10 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   } else if (index_min + 1 == path.size()) {
     neighbour_id = index_min - 1;
   } else {
-    double left_neighbour_dist =
-        ego_pose.DistanceSquareTo(path[index_min - 1].pos);
-    double right_neighbour_dist =
-        ego_pose.DistanceSquareTo(path[index_min + 1].pos);
+    double left_neighbour_dist = ego_pose.DistanceSquareTo(Eigen::Vector2f(
+        path[index_min - 1].pos[0], path[index_min - 1].pos[1]));
+    double right_neighbour_dist = ego_pose.DistanceSquareTo(Eigen::Vector2f(
+        path[index_min + 1].pos[0], path[index_min + 1].pos[1]));
     if (left_neighbour_dist < right_neighbour_dist) {
       neighbour_id = index_min - 1;
     } else {
@@ -306,11 +310,11 @@ void ApaTrajectoryStitcher::EvaluateStitchTraj(
   // evaluate stitch traj
   trajectory_.clear();
   trajectory_.emplace_back(stitch_point_);
-  for (size_t i = global_path_stitch_start_id; i<path.size(); i++) {
+  for (size_t i = global_path_stitch_start_id; i < path.size(); i++) {
     trajectory_.emplace_back(path[i]);
   }
 
-    // get path lengh
+  // get path lengh
   double accumulated_s = 0.0;
   auto last_x = trajectory_.front().pos.x();
   auto last_y = trajectory_.front().pos.y();
@@ -339,5 +343,5 @@ const double ApaTrajectoryStitcher::GetStitchTrajLength() const {
 
   return trajectory_.back().s;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

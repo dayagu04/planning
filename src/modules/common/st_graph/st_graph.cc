@@ -172,6 +172,7 @@ void STGraph::MakeStaticAgentStBoundary(
       st_graph_input_->large_agent_small_expand_param_for_consistency();
   const auto& planning_init_point_box =
       st_graph_input_->planning_init_point_box();
+  const bool is_rads_scene = st_graph_input_->is_rads_scene();
   if (nullptr == planned_kd_path || reserve_num <= 0 ||
       nullptr == mutable_agent_manager || nullptr == ptr_ego_lane ||
       nullptr == path_border_querier || nullptr == ptr_virtual_lane_manager ||
@@ -192,7 +193,7 @@ void STGraph::MakeStaticAgentStBoundary(
       (!reuse_for_close_pass) && (nullptr != ptr_obj_lane) &&
       StGraphUtils::CheckCandicateAgentForClosePass(
           is_lane_keeping, init_point, planned_kd_path, ptr_ego_lane,
-          ptr_obj_lane, agent, type);
+          ptr_obj_lane, agent, type, is_rads_scene);
 
   const bool consider_virtual_time_range =
       (agent.type() == agent::AgentType::VIRTUAL ||
@@ -237,7 +238,7 @@ void STGraph::MakeStaticAgentStBoundary(
   if (StGraphUtils::CalculateSRange(
           planned_kd_path, *path_border_querier, obs_box, type, path_range,
           agent_sl_boundary, considered_corners, planning_init_point_box,
-          &lower_s, &upper_s)) {
+          &lower_s, &upper_s, is_rads_scene)) {
     for (double t = time_range.first; t < time_range.second;
          t += kTimeResolution) {
       min_t = std::fmin(min_t, t);
@@ -311,6 +312,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       st_graph_input_->large_agent_small_expand_param_for_consistency();
   const auto& planning_init_point_box =
       st_graph_input_->planning_init_point_box();
+  const bool is_rads_scene = st_graph_input_->is_rads_scene();
   if (nullptr == planned_kd_path || nullptr == path_border_querier ||
       reserve_num <= 0 || nullptr == mutable_agent_manager ||
       nullptr == ptr_virtual_lane_manager || nullptr == ptr_ego_lane ||
@@ -341,7 +343,7 @@ void STGraph::MakeDynamicAgentStBoundary(
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
     need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
         init_point, ptr_virtual_lane_manager, ptr_ego_lane, ptr_obj_lane, agent,
-        is_parallel, is_lane_keeping);
+        is_parallel, is_lane_keeping, is_rads_scene);
   }
 
   const bool need_dynamic_buffer =
@@ -352,7 +354,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       (!reuse_for_close_pass) && (nullptr != ptr_obj_lane) &&
       StGraphUtils::CheckCandicateAgentForClosePass(
           is_lane_keeping, init_point, planned_kd_path, ptr_ego_lane,
-          ptr_obj_lane, agent, type);
+          ptr_obj_lane, agent, type, is_rads_scene);
 
   const double start_absolute_time = st_graph_input_->start_absolute_time();
   const auto& time_range =
@@ -425,7 +427,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       if (StGraphUtils::CalculateSRange(
               planned_kd_path, *path_border_querier, obs_box, type, path_range,
               agent_sl_boundary, considered_corners, planning_init_point_box,
-              &lower_s, &upper_s)) {
+              &lower_s, &upper_s, is_rads_scene)) {
         min_t = std::fmin(min_t, relative_time);
         st_point_pairs.emplace_back(
             STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
@@ -515,7 +517,8 @@ void STGraph::MakeStPointsTable() {
     const auto& upper_points = st_boundary->upper_points();
     for (int i = 0; i < lower_points.size(); ++i) {
       if (lower_points[i].valid() && upper_points[i].valid()) {
-        int index = (lower_points[i].t() - time_range.first) / kTimeResolution;
+        int index = std::round((lower_points[i].t() - time_range.first) /
+                               kTimeResolution);
         st_points_table_[index].emplace_back(lower_points[i], upper_points[i]);
       }
     }
@@ -652,7 +655,7 @@ void STGraph::BackwardExtendSingleStBoundary(
       st_graph_input_->backward_extend_time_s();
   const auto& planning_init_point_box =
       st_graph_input_->planning_init_point_box();
-
+  const bool is_rads_scene = st_graph_input_->is_rads_scene();
   const double start_time = std::fmax(st_boundary.max_t(), time_range.first);
   const double end_time =
       std::fmin(start_time + backward_extend_time_s, time_range.second);
@@ -675,7 +678,7 @@ void STGraph::BackwardExtendSingleStBoundary(
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
     need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
         init_point, ptr_virtual_lane_manager, ptr_ego_lane, ptr_obj_lane, agent,
-        is_parallel, is_lane_keeping);
+        is_parallel, is_lane_keeping, is_rads_scene);
   }
   std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
   st_point_pairs.reserve((end_time - start_time) / kTimeResolution);
@@ -710,7 +713,7 @@ void STGraph::BackwardExtendSingleStBoundary(
     if (StGraphUtils::CalculateSRange(
             planned_kd_path, *path_border_querier, obs_box, type, path_range,
             agent_sl_boundary, considered_corners, planning_init_point_box,
-            &lower_s, &upper_s)) {
+            &lower_s, &upper_s, is_rads_scene)) {
       constexpr double kDistThr = 1e-3;
       if (std::fabs(lower_s - upper_s) < kDistThr) {
         continue;

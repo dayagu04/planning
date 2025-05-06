@@ -194,11 +194,43 @@ const bool GJKCollisionDetector::IsPolygonCollision(
 
   if (col_flag) {
     for (const Eigen::Vector2d& pt : *pt_clout) {
-      gjk_interface_.PolygonPointCollisionDetect(&polygon, pt, &col_flag);
+      gjk_interface_.PolygonPointCollisionDetect(
+          &polygon, Eigen::Vector2f(pt[0], pt[1]), &col_flag);
       if (col_flag) {
         return true;
       }
     }
+  }
+
+  return false;
+}
+
+const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
+                                            const double lat_buffer,
+                                            const Eigen::Vector2d& obs) {
+  UpdateSafeBuffer(lat_buffer, 0.0);
+  GenCarPolygon();
+  TransformPolygonFootPrintLocalToGlobal(pose);
+  bool col_flag = false;
+  gjk_interface_.PolygonPointCollisionDetect(&polygon_foot_print_global_.body,
+                                             Eigen::Vector2f(obs.x(), obs.y()),
+                                             &col_flag);
+  if (col_flag) {
+    return true;
+  }
+
+  gjk_interface_.PolygonPointCollisionDetect(
+      &polygon_foot_print_global_.mirror_left,
+      Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
+  if (col_flag) {
+    return true;
+  }
+
+  gjk_interface_.PolygonPointCollisionDetect(
+      &polygon_foot_print_global_.mirror_right,
+      Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
+  if (col_flag) {
+    return true;
   }
 
   return false;
@@ -253,7 +285,7 @@ void GJKCollisionDetector::GenCarPolygon() {
           mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_);
 
   polygon_foot_print_local_.mirror_to_rear_overhang.FillTangentCircleParams(
-      mirror_to_rear_overhanging_rectangle_vertex_with_buffer_);
+      mirror_to_rear_overhanging_polygon_vertex_with_buffer_);
 }
 
 void GJKCollisionDetector::Reset() {}

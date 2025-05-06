@@ -421,7 +421,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   } else {
     slot_input.slot.angle_ =
         std::fabs(geometry_lib::GetAngleFromTwoVec(
-            slot_input.slot.origin_corner_coord_global_.pt_23mid_01_mid,
+            slot_input.slot.origin_corner_coord_global_.pt_23mid_01mid_vec,
             slot_input.slot.origin_corner_coord_global_.pt_01_vec)) *
         kRad2Deg;
 
@@ -507,8 +507,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       slot_input.slot.origin_corner_coord_local_.pt_0;
   // no use
   slot_input.origin_pose_global.heading_vec =
-      slot_input.slot.processed_corner_coord_global_.pt_23mid_01_mid
-          .normalized();
+      slot_input.slot.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
   slot_input.origin_pose_global.heading =
       std::atan2(slot_input.origin_pose_global.heading_vec.y(),
@@ -532,13 +531,13 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   slot_input.slot.limiter_.start_pt =
       Eigen::Vector2d(global_target_pose_.x(), global_target_pose_.y()) -
-      slot_input.slot.processed_corner_coord_global_.pt_01_vec.normalized() *
-          0.5 * slot_input.slot.slot_width_;
+      slot_input.slot.processed_corner_coord_global_.pt_01_unit_vec * 0.5 *
+          slot_input.slot.slot_width_;
 
   slot_input.slot.limiter_.end_pt =
       Eigen::Vector2d(global_target_pose_.x(), global_target_pose_.y()) +
-      slot_input.slot.processed_corner_coord_global_.pt_01_vec.normalized() *
-          0.5 * slot_input.slot.slot_width_;
+      slot_input.slot.processed_corner_coord_global_.pt_01_unit_vec * 0.5 *
+          slot_input.slot.slot_width_;
 
   slot_input.virtual_limiter.first =
       slot_input.g2l_tf.GetPos(slot_input.slot.limiter_.start_pt);

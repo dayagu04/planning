@@ -22,8 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250315/20250315-10-53-42/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-03-15-10-53-42_no_camera.bag'
-#bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250414/20250414-17-34-25/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-04-14-17-34-26_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -152,6 +151,7 @@ data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
 data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_delete_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_gear_switch_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path')
@@ -176,6 +176,7 @@ fig1.line('y_vec', 'x_vec', source = data_search_sequence_path, line_width = 2, 
 fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
+fig1.circle('y_vec', 'x_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
 
 ### sliders config
 class LocalViewSlider:
@@ -196,6 +197,7 @@ class LocalViewSlider:
     self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
     self.use_state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="use_state_machine", min=0, max=1, value=0, step=1)
     self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
+    self.path_plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="path_plan_method", min=0, max=10, value=1, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -214,12 +216,14 @@ class LocalViewSlider:
                         plot_child_node=self.plot_child_node,
                         use_state_machine=self.use_state_machine,
                         state_machine=self.state_machine,
+                        path_plan_method=self.path_plan_method,
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine):
+                    lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine,
+                    path_plan_method):
 
   time0 = time.time()
 
@@ -536,7 +540,8 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         sample_ds, target_managed_slot_x_vec,
         target_managed_slot_y_vec,
         target_managed_limiter_x_vec,
-        target_managed_limiter_y_vec)
+        target_managed_limiter_y_vec,
+        path_plan_method)
 
     print('end')
   elif force_plan:
@@ -1093,11 +1098,17 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   safe_node_y = []
   collision_node_x = []
   collision_node_y = []
+  gear_switch_node_x = []
+  gear_switch_node_y = []
 
   for i in range(len(nodes)):
     if (nodes[i][2] > 0.8):
-      safe_node_x.append(nodes[i][0])
-      safe_node_y.append(nodes[i][1])
+      if nodes[i][3] > 0.8:
+        gear_switch_node_x.append(nodes[i][0])
+        gear_switch_node_y.append(nodes[i][1])
+      else:
+        safe_node_x.append(nodes[i][0])
+        safe_node_y.append(nodes[i][1])
     else:
       collision_node_x.append(nodes[i][0])
       collision_node_y.append(nodes[i][1])
@@ -1109,6 +1120,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_all_search_collision_node.data.update({
     'x_vec': collision_node_x,
     'y_vec': collision_node_y
+  })
+  data_gear_switch_node.data.update({
+    'x_vec': gear_switch_node_x,
+    'y_vec': gear_switch_node_y
   })
 
   if (is_reset):

@@ -5,6 +5,7 @@ from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')
+from bokeh.resources import INLINE
 
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240701/20240701-18-12-17/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-07-01-18-12-17_no_camera.bag"
@@ -12,7 +13,7 @@ bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240701/20240
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 #bag_loader = LoadCyberbag(bag_path)
 bag_loader = LoadRosbag(bag_path)

@@ -56,6 +56,7 @@
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "vehicle_service_c.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -111,9 +112,9 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
 
   iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
@@ -246,9 +247,9 @@ const bool InterfaceUpdateParam(
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::UssPerceptInfo uss_perception_info =
       BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(

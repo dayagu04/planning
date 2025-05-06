@@ -11,7 +11,7 @@ sys.path.append('../../../')
 sys.path.append('../../python_proto')
 from python_proto import lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
-
+from bokeh.resources import INLINE
 # bag path and frame dt
 bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
 bag_path = "/data_cold/abu_zone/cailiu2/0802/165_66a1bb682933546a92b11980_66a77fb17af211090bc13d38.bag.PP"
@@ -20,7 +20,7 @@ frame_dt = 0.1 # sec
 steer_ratio = 13.0 # e0y
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()

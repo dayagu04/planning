@@ -323,12 +323,14 @@ message DrivingFunctionInfo {
     SCC = 1;
     NOA = 2;
     HPP = 3;
+    RADS = 4;
   }
   enum DrivingFunctionstate {
     ACTIVATE = 0;
     STANDSTILL = 1;
     OVERRIDE = 2;
     SECURE = 3;
+    SUSPEND = 4;
   }
   optional DrivingFunctionMode function_mode = 1 [default = SCC];
   optional DrivingFunctionstate function_state = 2 [default = ACTIVATE];

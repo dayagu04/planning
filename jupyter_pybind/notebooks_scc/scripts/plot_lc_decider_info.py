@@ -10,24 +10,25 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
+from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-11-00-32/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-11-00-32_no_camera.bag.1741754618.open-loop.noa.plan"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250318/20250318-13-41-54/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2025-03-18-13-41-54_no_camera.bag.1742452110.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
-fig1.height = 950
-fig1.width = 700
+fig1.height = 1050
+fig1.width = 900
 
-fig2, data_st = load_lc_path_figure()
+fig2, fig3, data_st = load_lc_path_figure()
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -139,7 +140,7 @@ def slider_callback(bag_time):
   push_notebook()
 
 # +
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), fig2), notebook_handle=True)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), column(fig2, fig3)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 
 # slider_class = ObjText(obj_id_handler)

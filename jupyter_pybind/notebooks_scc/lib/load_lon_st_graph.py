@@ -181,6 +181,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
                               "agents_headway_id", "agents_headway_value", \
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
+                              "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
@@ -188,9 +189,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
-                          'v3_start_stop_status','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','cipv_relative_s_ego_stop',"distance_to_go_condition",
+                          'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','cipv_relative_s_ego_stop',"distance_to_go_condition",
                           "cipv_vel_frenet","traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
-                          "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent']
+                          "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',
+                          "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s"]
 
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
@@ -266,6 +268,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   expanded_nodes_s_vec = plan_debug_json_info['expanded_nodes_s_vec']
   history_cur_nodes_t_vec = plan_debug_json_info['history_cur_nodes_t_vec']
   history_cur_nodes_s_vec = plan_debug_json_info['history_cur_nodes_s_vec']
+  
 
   st_path_final_nodes_time_vec = plan_debug_json_info['st_path_final_nodes_time_vec']
   st_path_final_nodes_cost_yield_vec = plan_debug_json_info['st_path_final_nodes_cost_yield_vec']

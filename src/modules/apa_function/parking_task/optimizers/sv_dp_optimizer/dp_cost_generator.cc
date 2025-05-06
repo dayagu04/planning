@@ -1,8 +1,9 @@
 #include "dp_cost_generator.h"
+
 #include <cmath>
 
 namespace planning {
-
+namespace apa_planner {
 void DPCostGenerator::CalcStopoverCost(SVGraphNode* point) {
   if (point->IsZeroSpeed() && point->GetSVPoint().s < total_s_) {
     point->MutableCost()->stopover_cost =
@@ -110,4 +111,5 @@ void DPCostGenerator::Init(const double total_s, const DpSpeedConfig* config) {
 
   return;
 }
+}  // namespace apa_planner
 }  // namespace planning

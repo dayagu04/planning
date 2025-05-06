@@ -313,8 +313,10 @@ bool StGraphSearcher::SearchStPath(
   SetSearchConfigBySearchStyle(search_style);
 
   double planning_distance = planned_kd_path->Length();
-  UpdateHeuristicTargetSInLaneChange(
-      session_, search_config_.planning_time_horizon, &planning_distance);
+  /* Note: is no different in st graph when in lane change, don't need to update
+   heuristic s*/
+  //  UpdateHeuristicTargetSInLaneChange(
+  //      session_, search_config_.planning_time_horizon, &planning_distance);
   StSearchInput st_search_input_info(
       planning_init_point, planning_distance,
       search_config_.planning_time_horizon, v_cruise,
@@ -585,11 +587,12 @@ StSearchNode StGraphSearcher::GenerateStartNode(
         lower_bound.boundary_id(), speed::STBoundary::DecisionType::OVERTAKE));
   }
 
+  start_node.set_upper_bound(upper_bound);
+  start_node.set_lower_bound(lower_bound);
   start_node.set_decision_table(start_decision_table);
   // Same dicision table for start node.
   start_node.set_current_decision_table(start_decision_table);
   start_node.set_is_valid(true);
-
   return start_node;
 }
 
@@ -742,6 +745,7 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
   const double weight_vel = config_.weight_vel;
   const double weight_accel = config_.weight_accel;
   const double weight_accel_sign = config_.weight_accel_sign;
+  const double weight_accel_sign_overtake = config_.weight_accel_sign_overtake;
   const double weight_jerk = config_.weight_jerk;
   // const double weight_virtual_yield = config_.weight_virtual_yield;
 
@@ -764,10 +768,15 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
   // double cost_virtual_yield = ComputeVirtualYieldCost(input_info,
   // *succ_node);
 
+  double weighted_cost_accel_sign_changed =
+      cost_overtake == config_.cost_ego_overtake_has_collision_with_lower_bound
+          ? cost_accel_sign_changed * weight_accel_sign_overtake
+          : cost_accel_sign_changed * weight_accel_sign;
+
   double edge_cost =
       cost_yield * weight_yield + cost_overtake * weight_overtake +
       cost_vel * weight_vel + cost_accel * weight_accel +
-      cost_accel_sign_changed * weight_accel_sign + cost_jerk * weight_jerk +
+      weighted_cost_accel_sign_changed + cost_jerk * weight_jerk +
       cost_length /* + cost_virtual_yield * weight_virtual_yield8 */;
   StSearchNode::EdgeSubCost edge_sub_cost{
       .fathernode_to_childnode_cost_yield = cost_yield * weight_yield,
@@ -776,7 +785,7 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
       .fathernode_to_childnode_edge_cost_vel = cost_vel * weight_vel,
       .fathernode_to_childnode_edge_cost_accel = cost_accel * weight_accel,
       .fathernode_to_childnode_edge_cost_accel_sign_changed =
-          cost_accel_sign_changed * weight_accel_sign,
+          weighted_cost_accel_sign_changed,
       .fathernode_to_childnode_edge_cost_jerk = cost_jerk * weight_jerk,
       .fathernode_to_childnode_edge_cost_length = cost_length};
 
@@ -903,17 +912,32 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
   if (lower_bound.boundary_id() == speed::kNoAgentId) {
     return 0.0;
   }
-
+  const auto vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double lower_truncation_time_buffer =
       config_.lower_truncation_time_buffer;
   const double min_lower_distance_buffer = config_.min_lower_distance_buffer;
   const double lower_truncation_distance = std::max(
       node.vel() * lower_truncation_time_buffer, min_lower_distance_buffer);
+  auto cur_lane_change_state =
+      session_->planning_context().lane_change_decider_output().curr_state;
 
   const double distance_to_rear = node.s() - lower_bound.s();
   if (distance_to_rear < 0.0) {
     return 0.0;
   }
+
+  // TODO: need consider lane change hold status in the future
+  if ((cur_lane_change_state !=
+           StateMachineLaneChangeStatus::kLaneChangeComplete &&
+       cur_lane_change_state !=
+           StateMachineLaneChangeStatus::kLaneChangeExecution) &&
+      distance_to_rear <
+          vehicle_param.length +
+              config_.distance_ego_rear_edge_to_lower_bound_when_overtake) {
+    return config_.cost_ego_overtake_has_collision_with_lower_bound;
+  }
+
   if (distance_to_rear < lower_truncation_distance) {
     // currently use proportional func, can be switched to exponential func
     return (1.0 - (distance_to_rear / lower_truncation_distance));

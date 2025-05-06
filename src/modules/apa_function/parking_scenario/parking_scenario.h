@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "apa_context.h"
 #include "apa_param_config.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
@@ -23,29 +24,6 @@
 
 namespace planning {
 namespace apa_planner {
-
-enum class ParkingScenarioStatus {
-  STATUS_UNKNOWN = 0,
-  // 表示点击泊车，这个场景正在运行
-  STATUS_RUNNING = 1,
-  STATUS_DONE = 2,
-  // 表示点击车位，尝试计算这个场景
-  STATUS_TRY = 3,
-  STATUS_FAIL = 4,
-};
-
-enum PathPlannerResult {
-  PLAN_FAILED,  // path plan failed
-  PLAN_HOLD,    // follow last
-  PLAN_UPDATE,
-  WAIT_PATH,
-};
-
-void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
-
-const std::string GetApaScenarioStatusString(
-    const ParkingScenarioStatus scenario_status);
-
 // 1.
 // 对于泊车而言，不同的行为对应不同的场景，包括垂直泊入场景、垂直泊出场景,等等.
 // 2. 每一个场景, 都有不同的计算任务.
@@ -211,6 +189,7 @@ class ParkingScenario {
       replan_reason = NOT_REPLAN;
       plan_fail_reason = NOT_FAILED;
       correct_path_for_limiter = false;
+      can_correct_path_for_limiter = true;
       dynamic_plan_fail_flag = false;
       gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
@@ -221,7 +200,14 @@ class ParkingScenario {
       is_park_out_left = true;
 
       stuck_by_dynamic_obs = false;
+
+      process_obs_method = ProcessObsMethod::DO_NOTHING;
+
+      dynamic_plan_path_superior = false;
     }
+
+    ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
+
     bool can_first_plan_again = true;
 
     bool is_left_empty = false;
@@ -249,6 +235,7 @@ class ParkingScenario {
     double path_extended_dist = 1.0;
     double vel_target = 1.168;
     double stuck_time = 0.0;
+    // stuck by static obs
     double stuck_obs_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
@@ -273,7 +260,9 @@ class ParkingScenario {
     uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
 
     bool correct_path_for_limiter = false;
+    bool can_correct_path_for_limiter = true;
     bool dynamic_plan_fail_flag = false;
+    bool dynamic_plan_path_superior = false;
 
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
@@ -301,6 +290,7 @@ class ParkingScenario {
     CHECK_GEAR_LENGTH,
     PATH_PLAN_FAILED,
     PLAN_COUNT_EXCEED_LIMIT,
+    DYNAMIC_PATH_NOT_SUPERIOR,
   };
 
  public:
@@ -377,7 +367,9 @@ class ParkingScenario {
   virtual const double CalRemainDistFromObs(
       const double safe_dist = 0.3,
       const double lat_buffer = apa_param.GetParam().lat_inflation,
-      const double extra_buffer_when_reversing = 0.068);
+      const double extra_buffer_when_reversing = 0.068,
+      const double dynamic_lat_buffer = 0.368,
+      const bool is_parallel_condition = false);
   virtual const bool PostProcessPath();
 
   // check if need replan
@@ -403,6 +395,13 @@ class ParkingScenario {
 
   virtual const bool CheckStuckFailed(
       const double stuck_failed_time = apa_param.GetParam().stuck_failed_time);
+
+  virtual const bool CheckEgoPoseInBelieveObsArea(
+      const double lat_expand, const double lon_expand,
+      const double heading_err = 60.0);
+
+  const geometry_lib::PathPoint GetCarFrontPoseFromCarPose(
+      const geometry_lib::PathPoint &pose);
 
   void CreateTasks();
 

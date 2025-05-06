@@ -180,6 +180,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       else:
         print('match loc fail')
 
+    soc_state_msg_tmp = find(bag_loader.soc_state_msg, soc_state_timestamp)
+    if soc_state_msg_tmp != None:
+      soc_state_msg = soc_state_msg_tmp
+    else:
+      print("match soc_state fail")
+
   local_view_data['data_msg']['plan_msg'] = plan_msg
   local_view_data['data_msg']['plan_debug_msg'] = plan_debug_msg
   local_view_data['data_msg']['planning_hmi_msg'] = planning_hmi_msg
@@ -324,6 +330,28 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'text_yn': [0],
       })
 
+  if bag_loader.soc_state_msg['enable'] == True:
+    soc_state = soc_state_msg.current_state
+    print("FunctionalState: ", soc_state)
+    rads_traj_x, rads_traj_y = [], []
+    try:
+      rads_map = soc_state_msg.rads_map
+      points = rads_map.points
+      if g_is_display_enu:
+        for point in points:
+          rads_traj_x.append(point.boot.x)
+          rads_traj_y.append(point.boot.y)
+      else:
+        for point in points:
+          rads_traj_x_local, rads_traj_y_local = coord_tf.global_to_local(point.boot.x, point.boot.y)
+          rads_traj_x.append(rads_traj_x_local)
+          rads_traj_y.append(rads_traj_y_local)
+    except:
+      print("no RADS traj info!")
+    local_view_data['data_rads_traj'].data.update({
+      'traj_y': rads_traj_y,
+      'traj_x': rads_traj_x,
+    })
   if bag_loader.plan_msg['enable'] == True and  plan_msg != None:
     if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
       is_enu_to_car = False
@@ -890,6 +918,32 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #   'text_xn': [text_xn],
     #   'text_yn': [text_yn],
     # })
+
+    obstacle_polygon_id = local_view_data['data_select_obs_id'].data['obstacle_polygon_id']
+    plan_obstacle_info = load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_enu_to_car, loc_msg)
+    if g_is_display_enu:
+      local_view_data['data_obj_polygon'].data.update({
+        'polygon_x' : plan_obstacle_info['polygon_x'],
+        'polygon_y' : plan_obstacle_info['polygon_y'],
+        'obs_id' : plan_obstacle_info['id'],
+        'obs_type' : plan_obstacle_info['type'],
+        'obs_vs' : plan_obstacle_info['frenet_vs'],
+        'obs_vl' : plan_obstacle_info['frenet_vl'],
+        'obs_lat_decision' : plan_obstacle_info['lat_decision'],
+        'obs_is_static' : plan_obstacle_info['is_static'],
+      })
+    else:
+      local_view_data['data_obj_polygon'].data.update({
+        'polygon_x' : plan_obstacle_info['polygon_x_rel'],
+        'polygon_y' : plan_obstacle_info['polygon_y_rel'],
+        'obs_id' : plan_obstacle_info['id'],
+        'obs_type' : plan_obstacle_info['type'],
+        'obs_vs' : plan_obstacle_info['frenet_vs'],
+        'obs_vl' : plan_obstacle_info['frenet_vl'],
+        'obs_lat_decision' : plan_obstacle_info['lat_decision'],
+        'obs_is_static' : plan_obstacle_info['is_static'],
+      })
+
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
@@ -986,6 +1040,69 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
       break
 
+  # only plot stop_destination_virtual_obj in cartesian coordinate        
+  local_view_data['data_stop_destination_virtual_obj'].data.update({
+    'agent_vertices_y': [],
+    'agent_vertices_x': [],
+    'agent_center_y' : [],
+    'agent_center_x' : [],
+    'agent_id' : [],
+  })
+  stop_destination_virtual_agent_pos_x = plan_debug_json_msg['stop_destination_virtual_agent_pos_x']
+  stop_destination_virtual_agent_pos_y = plan_debug_json_msg['stop_destination_virtual_agent_pos_y']
+  stop_destination_virtual_agent_theta = plan_debug_json_msg['stop_destination_virtual_agent_theta']
+  stop_destination_virtual_agent_id = plan_debug_json_msg['stop_destination_virtual_agent_id']
+  stop_destination_virtual_agent_width = plan_debug_json_msg['stop_destination_virtual_agent_width']
+  stop_destination_virtual_agent_length = plan_debug_json_msg['stop_destination_virtual_agent_length']
+  cos_heading_stop_destination_virtual_agent = math.cos(stop_destination_virtual_agent_theta)
+  sin_heading_stop_destination_virtual_agent = math.sin(stop_destination_virtual_agent_theta)
+  dx1_tmp = cos_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_length / 2
+  dy1_tmp = sin_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_length / 2
+  dx2_tmp = sin_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_width / 2
+  dy2_tmp = -cos_heading_stop_destination_virtual_agent * stop_destination_virtual_agent_width / 2
+  obs_x_tmp = [
+    stop_destination_virtual_agent_pos_x + dx1_tmp + dx2_tmp,
+    stop_destination_virtual_agent_pos_x + dx1_tmp - dx2_tmp,\
+    stop_destination_virtual_agent_pos_x - dx1_tmp - dx2_tmp,\
+    stop_destination_virtual_agent_pos_x - dx1_tmp + dx2_tmp,\
+    stop_destination_virtual_agent_pos_x + dx1_tmp + dx2_tmp
+  ]
+  obs_y_tmp = [
+    stop_destination_virtual_agent_pos_y + dy1_tmp + dy2_tmp,
+    stop_destination_virtual_agent_pos_y + dy1_tmp - dy2_tmp,\
+    stop_destination_virtual_agent_pos_y - dy1_tmp - dy2_tmp,\
+    stop_destination_virtual_agent_pos_y - dy1_tmp + dy2_tmp,\
+    stop_destination_virtual_agent_pos_y + dy1_tmp + dy2_tmp
+  ]
+  stop_destination_virtual_agent_info = {
+    'agent_vertices_y': [],
+    'agent_vertices_x': [],
+    'agent_center_y' : [],
+    'agent_center_x' : [],
+    'agent_id' : [],
+  }
+  if loc_msg != None: # 长时轨迹
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+    stop_destination_virtual_agent_x_rel, stop_destination_virtual_agent_y_rel = coord_tf.global_to_local(obs_x_tmp, obs_y_tmp)
+    stop_destination_virtual_agent_pos_x_rel, stop_destination_virtual_agent_pos_y_rel = \
+    coord_tf.global_to_local([stop_destination_virtual_agent_pos_x], [stop_destination_virtual_agent_pos_y])
+
+    stop_destination_virtual_agent_info['agent_vertices_y'].append(stop_destination_virtual_agent_y_rel)
+    stop_destination_virtual_agent_info['agent_vertices_x'].append(stop_destination_virtual_agent_x_rel)
+    stop_destination_virtual_agent_info['agent_center_y'].append(stop_destination_virtual_agent_pos_y_rel)
+    stop_destination_virtual_agent_info['agent_center_x'].append(stop_destination_virtual_agent_pos_x_rel)
+    stop_destination_virtual_agent_info['agent_id'].append(stop_destination_virtual_agent_id)
+
+    local_view_data['data_stop_destination_virtual_obj'].data.update({
+      'agent_vertices_y': stop_destination_virtual_agent_info['agent_vertices_y'],
+      'agent_vertices_x': stop_destination_virtual_agent_info['agent_vertices_x'],
+      'agent_center_y' : stop_destination_virtual_agent_info['agent_center_y'],
+      'agent_center_x' : stop_destination_virtual_agent_info['agent_center_x'],
+      'agent_id' : stop_destination_virtual_agent_info['agent_id'],
+    })
   # load mobileye_obj
   if bag_loader.mobileye_objects_msg['enable'] == True:
 
@@ -1673,6 +1790,13 @@ def load_local_view_figure():
                                               'merge_point_y':[]})
   data_lon_collision_object_position = ColumnDataSource(data = {'lon_collision_object_position_x':[],
                                                                 'lon_collision_object_position_y':[]})
+  data_stop_destination_virtual_obj = ColumnDataSource(data = {
+    'agent_vertices_y': [],
+    'agent_vertices_x': [],
+    'agent_center_y': [],
+    'agent_center_x': [],
+    'agent_id': []
+  })
   macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
                                               'macroeconomic_decider_merge_point_y':[]})
   boundary_line_merge_point = ColumnDataSource(data = {'boundary_line_merge_point_x':[],
@@ -1828,6 +1952,9 @@ def load_local_view_figure():
                                           'polygon_y':[], 'polygon_x':[],
                                           'pos_y':[], 'pos_x':[],
                                           'obs_id':[], 'obs_label':[]})
+  data_stop_destination_virtual_obj = ColumnDataSource(data = {'agent_vertices_y':[], 'agent_vertices_x':[],
+                                                               'agent_center_y':[], 'agent_center_x':[],
+                                                               'agent_id':[]})
   data_me_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
@@ -1937,6 +2064,15 @@ def load_local_view_figure():
                                               'obs_id':[],
                                               'obs_label':[]})
 
+  data_obj_polygon = ColumnDataSource(data = {'polygon_y':[],
+                                              'polygon_x':[],
+                                              'obs_id':[],
+                                              'obs_type':[],
+                                              'obs_vs':[],
+                                              'obs_vl':[],
+                                              'obs_lat_decision':[],
+                                              'obs_is_static':[]})
+
   data_rdg_general_obj = ColumnDataSource(data = {'obstacles_y':[],
                                                   'obstacles_x':[],
                                                   'pos_y':[],
@@ -1990,6 +2126,8 @@ def load_local_view_figure():
                                              'pos_y':[],
                                              'pos_x':[],
                                              'speed_bump_label':[]})
+  data_rads_traj = ColumnDataSource(data = {'traj_y':[],
+                                            'traj_x':[]})
 
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -2120,6 +2258,8 @@ def load_local_view_figure():
                      'data_fus_occ' : data_fus_occ, \
                      'data_fus_occ_obj' : data_fus_occ_obj, \
                      'data_fus_obj':data_fus_obj, \
+                     'data_obj_polygon':data_obj_polygon, \
+                     'data_stop_destination_virtual_obj':data_stop_destination_virtual_obj,\
                      'data_me_obj':data_me_obj, \
                      'data_rdg_obj':data_rdg_obj, \
                      'data_rdg_general_obj': data_rdg_general_obj, \
@@ -2196,7 +2336,8 @@ def load_local_view_figure():
                      'zebra_crossing_line_8':zebra_crossing_line_8,\
                      'zebra_crossing_line_9':zebra_crossing_line_9,\
                      'zebra_crossing_line_10':zebra_crossing_line_10,\
-                     'zebra_crossing_line_11':zebra_crossing_line_11,
+                     'zebra_crossing_line_11':zebra_crossing_line_11,\
+                     'data_rads_traj':data_rads_traj,
                      }
   if is_vis_map:
     for i in range(len(ehr_data_lanes)):
@@ -2387,6 +2528,7 @@ def load_local_view_figure():
   fig1.line('origin_lane_y', 'origin_lane_x', source = data_origin_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'origin_lane')
   fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj')
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info')
+  fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
 
   fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info',visible = False)
@@ -2399,6 +2541,8 @@ def load_local_view_figure():
     fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "maroon", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="maroon", text_align="center", text_font_size="10pt", legend_label = 'me_info',visible = False)
 
+  fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path', visible = False)
+  fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path', visible=False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
@@ -2444,19 +2588,20 @@ def load_local_view_figure():
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_plan_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
     fig1.patches('parking_slot_y', 'parking_slot_x', source = data_select_parking_slot, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 2, legend_label = 'parking slot')
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
-    fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
+    # fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    # fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 3,color='red', legend_label = 'occ obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)
-    fig_ehr_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    # fig_ehr_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'ehr_road_mark')
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
     # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
     # fig1.multi_line('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'ehr_ground_line', visible = False)
     fig1.scatter('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, size = 2,color='black', legend_label = 'ehr_ground_line', visible = False)
-    fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
+    # fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
 
     fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ground_line_info', visible = False)
     fig_ground_line = fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
@@ -2497,16 +2642,20 @@ def load_local_view_figure():
   if is_vis_hpp:
     # hover1_12 = HoverTool(renderers=[fig_ground_line], tooltips=[('id', '@ground_line_id')])
     # hover1_13 = HoverTool(renderers=[fig_ground_line_cluster], tooltips=[('id', '@ground_line_id')])
-    hover1_14 = HoverTool(renderers=[fig_fus_obj_polygon], tooltips=[('id', '@obs_id')])
-    hover1_15 = HoverTool(renderers=[fig_fus_occ_obj_polygon], tooltips=[('id', '@obs_id')])
-    hover1_16 = HoverTool(renderers=[fig_ehr_polygon], tooltips=[('id', '@polygon_id')])
-    hover1_17 = HoverTool(renderers=[fig_ground_line_polygon], tooltips=[('id', '@ground_line_id')])
+    # hover1_14 = HoverTool(renderers=[fig_fus_obj_polygon], tooltips=[('id', '@obs_id')])
+    # hover1_15 = HoverTool(renderers=[fig_fus_occ_obj_polygon], tooltips=[('id', '@obs_id')])
+    # hover1_16 = HoverTool(renderers=[fig_ehr_polygon], tooltips=[('id', '@polygon_id')])
+    # hover1_17 = HoverTool(renderers=[fig_ground_line_polygon], tooltips=[('id', '@ground_line_id')])
+    hover1_18 = HoverTool(renderers=[fig_obs_polygon_in_plan], tooltips=[('id', '@obs_id'), ('type', '@obs_type'),
+                                                                         ('v_s', '@obs_vs'), ('v_l', '@obs_vl'),
+                                                                         ('lat_decision', '@obs_lat_decision'), ('is_static', '@obs_is_static')])
     # fig1.add_tools(hover1_12)
     # fig1.add_tools(hover1_13)
-    fig1.add_tools(hover1_14)
-    fig1.add_tools(hover1_15)
-    fig1.add_tools(hover1_16)
-    fig1.add_tools(hover1_17)
+    # fig1.add_tools(hover1_14)
+    # fig1.add_tools(hover1_15)
+    # fig1.add_tools(hover1_16)
+    # fig1.add_tools(hover1_17)
+    fig1.add_tools(hover1_18)
 
   # tap1 = TapTool(renderers=[fig_virtual_line])
   # fig1.add_tools(tap1)

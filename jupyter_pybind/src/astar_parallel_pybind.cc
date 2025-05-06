@@ -34,6 +34,7 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
+#include "vecf32.h"
 #include "virtual_wall_decider.h"
 #include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "transform2d.h"
@@ -60,10 +61,9 @@ std::vector<Eigen::Vector2d> corrected_park_space_points_;
 Eigen::Vector2d right_wall1_upper_;
 
 std::vector<Eigen::Vector2d> obs_global_points_;
-ParkObstacleList hybrid_astar_obs_;
 std::vector<Eigen::Vector4d> obs_line_list_;
 
-std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
+std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 std::vector<Eigen::Vector2d> search_sequence_path_;
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
@@ -180,11 +180,12 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
       global_position = ego_slot_info.l2g_tf.GetPos(Eigen::Vector2d(
           real_time_node_list_[i][j].x(), real_time_node_list_[i][j].y()));
 
-      real_time_node_list_[i][j] = global_position;
+      real_time_node_list_[i][j] =
+          Eigen::Vector2f(global_position[0], global_position[1]);
     }
   }
 
-  const std::vector<ad_common::math::Vec2d> &search_path =
+  const std::vector<Vec2df32> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   search_sequence_path_.clear();
@@ -217,7 +218,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   }
 
   ILOG_INFO << "rs path copy ";
-  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
+  std::vector<std::vector<Vec2df32>> path_list;
   hybrid_astar_interface_->GetRSPathHeuristic(path_list);
 
   rs_h_path_.clear();
@@ -497,6 +498,8 @@ int GenerateObstacleByJupyter(
   obs_global_points_.clear();
 
   //
+  ParkObstacleList &hybrid_astar_obs_ =
+      hybrid_astar_interface_->GetMutableObstacleList();
   hybrid_astar_obs_.Clear();
 
   for (const auto &line : line_vec) {
@@ -723,8 +726,7 @@ std::vector<Eigen::Vector3d> Update(
     request.history_gear = AstarPathGear::DRIVE;
     request.swap_start_goal = swap_start_goal;
 
-    hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
-                                          request);
+    hybrid_astar_interface_->GeneratePath(start, end, request);
 
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
@@ -738,7 +740,7 @@ std::vector<Eigen::Vector3d> Update(
 
     bool is_connected_to_goal;
 
-    Pose2D start_pose = {start[0], start[1], start[2]};
+    Pose2D start_pose = Pose2D(start[0], start[1], start[2]);
     Pose2D end_pose = request.real_goal;
 
     RSPathInterface rs_interface;
@@ -800,7 +802,7 @@ const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
   return polynomial_path_;
 }
 
-const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
+const std::vector<std::vector<Eigen::Vector2f>> &GetAstarAllNodes() {
   return real_time_node_list_;
 }
 

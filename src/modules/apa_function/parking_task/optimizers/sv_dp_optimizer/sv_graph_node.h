@@ -2,12 +2,12 @@
 
 #include <limits>
 #include <vector>
-#include "dp_speed_cost.h"
-#include "dp_speed_common.h"
 
+#include "dp_speed_common.h"
+#include "dp_speed_cost.h"
 
 namespace planning {
-
+namespace apa_planner {
 // sv-searching point
 class SVGraphNode {
  public:
@@ -78,5 +78,5 @@ class SVGraphNode {
 
   DpSpeedCost cost_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

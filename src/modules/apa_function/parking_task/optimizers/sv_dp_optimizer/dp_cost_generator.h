@@ -4,7 +4,7 @@
 #include "sv_graph_node.h"
 
 namespace planning {
-
+namespace apa_planner {
 class DPCostGenerator {
  public:
   DPCostGenerator() = default;
@@ -38,7 +38,7 @@ class DPCostGenerator {
 
  private:
   double total_s_ = 0.0;
-  const DpSpeedConfig *config_;
-
+  const DpSpeedConfig* config_;
 };
+}  // namespace apa_planner
 }  // namespace planning

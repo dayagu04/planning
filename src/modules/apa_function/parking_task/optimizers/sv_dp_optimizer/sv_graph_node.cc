@@ -3,7 +3,7 @@
 #include <cmath>
 
 namespace planning {
-
+namespace apa_planner {
 int32_t SVGraphNode::IndexS() const { return grid_index_.s_index; }
 
 int32_t SVGraphNode::indexV() const { return grid_index_.v_index; }
@@ -58,7 +58,8 @@ void SVGraphNode::EvaluateAcc(const SVGraphNode* parent_node,
   return;
 }
 
-void SVGraphNode::EvaluateTime(const SVGraphNode* parent_node, const double dist) {
+void SVGraphNode::EvaluateTime(const SVGraphNode* parent_node,
+                               const double dist) {
   if (parent_node == nullptr) {
     sv_point_.t = 0.0;
     return;
@@ -162,7 +163,6 @@ void SVGraphNode::SetZeroCost() {
 }
 
 void SVGraphNode::EvaluateJerk(const SVGraphNode* parent_node) {
-
   // node is start
   if (parent_node == nullptr) {
     sv_point_.jerk = 0.0;
@@ -172,12 +172,12 @@ void SVGraphNode::EvaluateJerk(const SVGraphNode* parent_node) {
   double delta_time = sv_point_.t - parent_node->GetSVPoint().t;
   double max_jerk = 10000.0;
   if (delta_time < 0.00001) {
-    sv_point_.jerk =max_jerk;
+    sv_point_.jerk = max_jerk;
   }
 
   sv_point_.jerk = (sv_point_.acc - parent_node->GetSVPoint().acc) / delta_time;
 
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

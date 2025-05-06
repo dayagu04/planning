@@ -18,20 +18,25 @@
 #include "./../reeds_shepp/reeds_shepp_interface.h"
 #include "ad_common/math/line_segment2d.h"
 #include "compact_node_pool.h"
-#include "cubic_polynomial_path.h"
-#include "dynamic_programing_cost.h"
+#include "cost/dynamic_programing_cost.h"
+#include "curve/cubic_polynomial_path.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
 #include "hybrid_astar_request.h"
 #include "node3d.h"
+#include "node_collision_detect.h"
 #include "node_shrink_decider.h"
 #include "obstacle_clear_zone.h"
 #include "park_reference_line.h"
 #include "planning_debug_info.pb.h"
 #include "polygon_base.h"
+#include "polynomial_curve_sampling.h"
 #include "pose2d.h"
 #include "rs_expansion_decider.h"
 #include "rs_path_interpolate.h"
+#include "rs_sampling.h"
+#include "spiral_sampling.h"
+#include "vecf32.h"
 
 namespace planning {
 
@@ -40,69 +45,39 @@ class HybridAStar {
   HybridAStar() = default;
 
   explicit HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
-                       const VehicleParam& veh_param);
+                       const VehicleParam& veh_param,
+                       const ParkObstacleList* obstacles,
+                       EulerDistanceTransform* edt,
+                       const ObstacleClearZone* clear_zone,
+                       ParkReferenceLine* ref_line,
+                       GridSearch *dp_map);
 
   virtual ~HybridAStar() = default;
 
   void Init();
 
-  void UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
-                                const double lat_buffer_inside,
-                                const double lon_buffer);
+  void UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
+                                const float lat_buffer_inside,
+                                const float lon_buffer);
 
-  int UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf);
-
-  void UpdateConfig(const AstarRequest& request);
+  void SetRequest(const AstarRequest& request);
 
   /**
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
    */
   bool AstarSearch(const Pose2D& start, const Pose2D& end,
-                   const MapBound& XYbounds, const ParkObstacleList& obstacles,
-                   const AstarRequest& request,
-                   const ObstacleClearZone* clear_zone,
-                   HybridAStarResult* result, EulerDistanceTransform* edt,
-                   ParkReferenceLine* ref_line);
+                   const MapBound& XYbounds, HybridAStarResult* result);
 
-  // use rs path sampling to link start point and end point.
-  // 库内向前揉库使用.
-  // todo: 向前揉库，向后揉库统一起来.
-  bool PlanByRSPathSampling(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-      const double lon_min_sampling_length, const MapBound& XYbounds,
-      const ParkObstacleList& obstacles, const AstarRequest& request,
-      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
-      ParkReferenceLine* ref_line);
-
-  // use cubic path sampling to link start point and end point.
-  bool SamplingByCubicPolyForVerticalSlot(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
-      const double lon_min_sampling_length, const MapBound& XYbounds,
-      const ParkObstacleList& obstacles, const AstarRequest& request,
-      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
-      ParkReferenceLine* ref_line);
-
-  // use cubic spiral path sampling to link start point and end point.
-  bool SamplingByCubicSpiralForVerticalSlot(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
-      const double lon_min_sampling_length, const MapBound& XYbounds,
-      const ParkObstacleList& obstacles, const AstarRequest& request,
-      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
-      ParkReferenceLine* ref_line);
-
-  void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
-                         std::vector<double>& phi);
-
-  // for debug
-  void DebugRSPath(const RSPath* reeds_shepp_path);
+  void GetRSPathForDebug(std::vector<float>& x, std::vector<float>& y,
+                         std::vector<float>& phi);
 
   // for debug
   const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
 
   // for debug
-  const std::vector<ad_common::math::Vec2d>& GetQueuePathForDebug();
-  const std::vector<ad_common::math::Vec2d>& GetDelQueuePathForDebug();
+  const std::vector<Vec2df32>& GetQueuePathForDebug();
+  const std::vector<Vec2df32>& GetDelQueuePathForDebug();
   // for debug
   const std::vector<RSPath>& GetRSPathHeuristic();
 
@@ -110,7 +85,7 @@ class HybridAStar {
   void GetNodeListMessage(planning::common::AstarNodeList* list);
 
   // for debug
-  void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
+  void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2f>>& list);
 
   const ParkReferenceLine* GetConstRefLine() const;
 
@@ -118,60 +93,44 @@ class HybridAStar {
 
   void CopyFallbackPath(HybridAStarResult* path);
 
-  // search single gear path by gear reverse searching.
-  // todo: gear drive searching.
-  void GearRerversePathAttempt(
-      const MapBound& XYbounds, const ParkObstacleList& obstacles,
-      const AstarRequest& request, const ObstacleClearZone* clear_zone,
-      const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
-      EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
-
   // If search success, return a path linked wtih goal point;
-  // If search fail, return a path nearby goal point;
-  void GearDrivePathAttempt(
-      const MapBound& XYbounds, const ParkObstacleList& obstacles,
-      const AstarRequest& request, const ObstacleClearZone* clear_zone,
-      const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
-      EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
-
-  // for debug
-  void DebugPathString(const HybridAStarResult* result) const;
-
-  // use cubic path sampling to link start point and end point.
-  bool SamplingByCubicPolyForParallelSlot(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-      const double lon_min_sampling_length, const MapBound& XYbounds,
-      const ParkObstacleList& obstacles, const AstarRequest& request,
-      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
-      ParkReferenceLine* ref_line);
+  // todo: unify this API with AstarSearch().
+  void OneShotPathAttempt(const MapBound& XYbounds, const Pose2D& start,
+                          const Pose2D& target, HybridAStarResult* result);
 
   // debug
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
+  // todo: move sampling based method out of astar class, we can move it to
+  // interface.
+  bool SamplingByCubicPolyForParallelSlot(HybridAStarResult* result,
+                                          const Pose2D& start,
+                                          const Pose2D& end,
+                                          const float lon_min_sampling_length) {
+    return polynomial_sampling_->SamplingByCubicPolyForParallelSlot(
+        result, start, end, lon_min_sampling_length);
+  }
+
+  // use rs path sampling to link start point and end point.
+  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2D& start,
+                            const Pose2D& end,
+                            const float lon_min_sampling_length) {
+    return rs_sampling_->PlanByRSPathSampling(result, start, end,
+                                              lon_min_sampling_length);
+  }
+
+  bool SamplingByCubicSpiralForVerticalSlot(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      const float lon_min_sampling_length) {
+    return spiral_sampling_->SamplingByCubicSpiralForVerticalSlot(
+        result, start, target, lon_min_sampling_length);
+  }
+
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,
-                             const PathGearRequest gear_request_info,
+                             const AstarPathGear gear_request_info,
                              Node3d* rs_node_to_goal);
-
-  bool SamplingByQunticPolynomial(Node3d* current_node,
-                                  std::vector<AStarPathPoint>& path,
-                                  Node3d* polynomial_node,
-                                  PolynomialPathErrorCode* fail_type);
-
-  // 向后揉库使用
-  bool SamplingByRSPath(const PathGearRequest gear_request,
-                        Node3d* current_node, Node3d* polynomial_node);
-
-  // check collision and validity
-  bool ValidityCheckByConvex(Node3d* node);
-
-  // check collision and validity
-  const bool ValidityCheckByEDT(Node3d* node);
-
-  // check Reeds Shepp path collision and validity
-  bool RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
-                            Node3d* rs_node_to_goal);
 
   void CalculateNodeFCost(Node3d* current_node, Node3d* next_node);
 
@@ -181,10 +140,10 @@ class HybridAStar {
 
   void GetSingleShotNodeHeuCost(const Node3d* father_node, Node3d* next_node);
 
-  double CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
+  float CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
 
-  double CalcRSGCostToParentNode(Node3d* current_node, Node3d* rs_node,
-                                 const RSPath* rs_path);
+  float CalcRSGCostToParentNode(Node3d* current_node, Node3d* rs_node,
+                                const RSPath* rs_path);
 
   void GetSingleShotNodeGCost(Node3d* current_node, Node3d* next_node);
 
@@ -193,18 +152,14 @@ class HybridAStar {
   // wheel. so car is nonholonomic.
   // for human, freedom is x,y,theta, controllable variables are x speed, y
   // speed, rotate wheel, so human is holonomic.
-  double ObstacleHeuristicWithHolonomic(Node3d* next_node);
+  float ObstacleHeuristicWithHolonomic(Node3d* next_node);
 
-  double GenerateHeuristicCost(Node3d* next_node);
+  float GenerateHeuristicCost(Node3d* next_node);
 
-  double GenerateRefLineHeuristicCost(Node3d* next_node,
-                                      const double dist_to_go);
+  float GenerateRefLineHeuristicCost(Node3d* next_node, const float dist_to_go);
 
-  double GenerateHeuristicCostByRsPath(Node3d* next_node,
-                                       NodeHeuristicCost* cost);
-
-  const bool BackwardPassByRSPath(HybridAStarResult* result,
-                                  Node3d* best_rs_node, const RSPath* rs_path);
+  float GenerateHeuristicCostByRsPath(Node3d* next_node,
+                                      NodeHeuristicCost* cost);
 
   void ResetNodePool();
 
@@ -214,144 +169,97 @@ class HybridAStar {
 
   bool NodeInSearchBound(const NodeGridIndex& id);
 
-  // todo: refact
-  const NodeShrinkType NextNodeGenerator(
-      Node3d* new_node, Node3d* parent_node, size_t next_node_index,
-      const PathGearRequest gear_request_info);
+  // do searching in normal pipline, no gear request
+  const NodeShrinkType NextNodeGenerator(Node3d* new_node, Node3d* parent_node,
+                                         size_t next_node_index,
+                                         const AstarPathGear gear_request_info);
 
   bool IsAllPathSegmentLongEnough(const RSPath* reeds_shepp_to_end,
-                                  const double father_node_dist);
+                                  const float father_node_dist);
 
   bool IsRsPathFirstSegmentLongEnough(const RSPath* reeds_shepp_to_end,
-                                      const double father_node_dist);
+                                      const float father_node_dist);
 
   bool RsLastSegmentSatisfyRequest(const RSPath* reeds_shepp_to_end);
 
   bool CheckRSPathGear(const RSPath* reeds_shepp_to_end,
-                       const PathGearRequest gear_request_info);
-
-  bool IsRSPathSafeByConvexHull(const RSPath* reeds_shepp_path, Node3d* node);
-
-  const bool IsRSPathSafeByEDT(const RSPath* reeds_shepp_path, Node3d* node);
-
-  const bool IsPolynomialPathSafeByEDT(const std::vector<AStarPathPoint>& path,
-                                       Node3d* node);
-
-  void LinkRsToAstarEndPoint(HybridAStarResult* result,
-                             const Pose2D& astar_end);
-
-  void DebugEDTCheck(HybridAStarResult* path);
-
-  Polygon2D* GetVehPolygon(const AstarPathGear& gear);
+                       const AstarPathGear gear_request_info);
 
   // radius:left is positve
-  void KineticsModel(const Pose2D* old_pose, const double radius, Pose2D* pose,
+  void KineticsModel(const Pose2D* old_pose, const float radius, Pose2D* pose,
                      const bool is_forward);
 
   // radius:left is positve
   // arc: is always positive
-  void GetPathByBicycleModel(NodePath* path, const double arc,
-                             const double radius, const bool is_forward);
+  void GetPathByBicycleModel(NodePath* path, const float arc,
+                             const float radius, const bool is_forward);
 
-  void GetPathByLine(NodePath* path, const double arc, const bool is_forward);
+  void GetPathByLine(NodePath* path, const float arc, const bool is_forward);
 
   // if left, radius is positive
-  void GetPathByCircle(NodePath* path, const double arc, const double radius,
+  void GetPathByCircle(NodePath* path, const float arc, const float radius,
                        const bool is_forward);
 
   // dist_to_start: if forward, dist_to_start is positive
   int GetStraightLinePoint(Pose2D* goal_state, const Pose2D* start_state,
-                           const double dist_to_start,
+                           const float dist_to_start,
                            const Pose2D* unit_vector);
 
   // radius: if left turn, radius is positive
   int GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2D* pose,
-                         const double radius, const AstarPathGear gear);
+                         const float radius, const AstarPathGear gear);
 
   // arc is positive.
   // inverse_radius is positive
   int InterpolateByArcOffset(Pose2D* pose, const VehicleCircle* veh_circle,
-                             const Pose2D* start_pose, const double arc,
-                             const double inverse_radius);
+                             const Pose2D* start_pose, const float arc,
+                             const float inverse_radius);
 
-  void UpdatePoseByPathPointInterval(const Pose2D* old_pose,
-                                     const double radius, const double interval,
-                                     Pose2D* pose, const bool is_forward);
+  void UpdatePoseByPathPointInterval(const Pose2D* old_pose, const float radius,
+                                     const float interval, Pose2D* pose,
+                                     const bool is_forward);
 
-  void UpdatePoseBySamplingNumber(const Pose2D* old_pose, const double radius,
+  void UpdatePoseBySamplingNumber(const Pose2D* old_pose, const float radius,
                                   const int number, Pose2D* pose,
                                   const bool is_forward);
-
-  size_t GetPathCollisionIndex(HybridAStarResult* result);
-
-  const bool IsPointBeyondBound(const double x, const double y) const;
 
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
                         const bool need_anchor_point,
                         const RSPathRequestType rs_request,
-                        const double rs_radius);
+                        const float rs_radius);
 
-  double CalcSafeDistCost(Node3d* node);
-
-  // for debug
-  void DebugObstacleString() const;
+  float CalcSafeDistCost(Node3d* node);
 
   // for debug
   void DebugLineSegment(const ad_common::math::LineSegment2d& line) const;
 
-  void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2D& start,
-                               const Pose2D& end,
-                               const double lon_min_sampling_length,
-                               const double radius);
-
-  size_t GetPathCollisionIDByEDT(HybridAStarResult* result);
-
-  void GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
-                               const Pose2D& start, const double start_kappa,
-                               const Pose2D& end);
-
-  const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-                                const Pose2D& start, const Pose2D& end,
-                                const AstarPathGear ref_gear);
-
-  const bool BackwardPassByPolynomialPath(
-      HybridAStarResult* result, Node3d* poly_node,
-      const std::vector<AStarPathPoint>& poly_path);
-
-  void DebugPolynomialPath(const std::vector<AStarPathPoint>& poly_path);
-
-  size_t GetPathCollisionIDByEDT(const std::vector<AStarPathPoint>& poly_path);
-
   void ReversePathBySwapStartGoal(HybridAStarResult* result);
 
-  const bool IsPolygonCollision(const Polygon2D* polygon);
+  // todo: unify different path
+  const bool BackwardPassByNode(HybridAStarResult* result, Node3d* best_node,
+                                const RSPath* rs_path,
+                                const std::vector<AStarPathPoint>& poly_path);
 
-  const bool IsFootPrintCollision(const Transform2d& tf);
+  const bool BestNodeIsNice(const Node3d* node);
 
-  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose);
+  void CopyNodePath(const Node3d* node, HybridAStarResult* astar_path);
 
-  const bool IsExpectedGearForRsPath(const RSPath &path);
+  void UpdatePathS(HybridAStarResult* path);
 
-  // copy path from rs path
-  void PathTransformByRSPath(const RSPath& rs_path, HybridAStarResult* result);
+  // If expect gear is drive, check ego pose.
+  const bool IsNeedGearDriveSearch(const Pose2D& start);
 
-  const bool BackwardPassByNode(HybridAStarResult* result, Node3d* end_node);
+  // If expect gear is reverse, check ego pose.
+  const bool IsNeedGearReverseSearch(const Pose2D& start);
 
-  const bool BestNodeIsNice(const Node3d *node);
+  void DebugNodeList(const std::vector<Node3d*>& node_list);
 
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
-  double car_half_width_;
-  double min_radius_;
-  double inv_radius_;
-
-  // todo, width = vehicle width + mirror width + safe width, bounding box
-  Polygon2D veh_box_gear_none_;
-  Polygon2D veh_box_gear_drive_;
-  Polygon2D veh_box_gear_reverse_;
-  // convex hull for accurate car
-  PolygonFootPrint cvx_hull_foot_print_;
+  float car_half_width_;
+  float min_radius_;
+  float inv_radius_;
 
   size_t next_node_num_ = 0;
   // front wheel angle, [-pi, +pi]
@@ -362,12 +270,12 @@ class HybridAStar {
   NodeShrinkDecider node_shrink_decider_;
 
   //  front wheel angle, not steering wheel angle
-  double max_steer_angle_ = 0.0;
+  float max_steer_angle_ = 0.0;
 
-  double node_path_dist_resolution_ = 0.0;
-  double kinetics_model_step_ = 0.05;
-  double xy_grid_resolution_ = 0.0;
-  double phi_grid_resolution_ = 0.0;
+  float node_path_dist_resolution_ = 0.0;
+  float kinetics_model_step_ = 0.05;
+  float xy_grid_resolution_ = 0.0;
+  float phi_grid_resolution_ = 0.0;
 
   // search bound
   // todo: map bound is large, unify map bound and search bound.
@@ -394,7 +302,7 @@ class HybridAStar {
 
   // std::priority_queue<QueuePoint, std::vector<QueuePoint>, QueueCompare>
   //     open_pq_;
-  std::multimap<double, Node3d*> open_pq_;
+  std::multimap<float, Node3d*> open_pq_;
 
   // open set + close set
   std::unordered_map<size_t, Node3d*> node_set_;
@@ -403,28 +311,25 @@ class HybridAStar {
   RSExpansionDecider rs_expansion_decider_;
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;
-  CubicPathInterface cubic_path_interface_;
 
-  std::unique_ptr<GridSearch> dp_heuristic_generator_;
+  GridSearch* dp_heuristic_generator_;
 
   ParkReferenceLine* ref_line_;
 
   AstarRequest request_;
 
-  GJK2DInterface gjk_interface_;
+  std::shared_ptr<NodeCollisionDetect> collision_detect_;
 
   HybridAStarResult fallback_path_;
 
-  // 用于区分库内库外
-  cdl::AABB slot_box_;
-
-  // 根据车辆位置，使用不同buffer
-  HierarchyBufferCircleFootPrint hierachy_circle_model_;
+  std::shared_ptr<PolynomialCurveSampling> polynomial_sampling_;
+  std::shared_ptr<RSSampling> rs_sampling_;
+  std::shared_ptr<SpiralSampling> spiral_sampling_;
 
   // just for debug, display all result in hmi/plot
   std::vector<DebugAstarSearchPoint> child_node_debug_;
-  std::vector<ad_common::math::Vec2d> queue_path_debug_;
-  std::vector<ad_common::math::Vec2d> delete_queue_path_debug_;
+  std::vector<Vec2df32> queue_path_debug_;
+  std::vector<Vec2df32> delete_queue_path_debug_;
   std::vector<RSPath> rs_path_h_cost_debug_;
 
   // for debug

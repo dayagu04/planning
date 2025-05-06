@@ -5,11 +5,12 @@ from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_lat_plan import *
 from bokeh.models import DataTable, TableColumn, Panel, Tabs
+from bokeh.resources import INLINE
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250226/20250226-16-49-20/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2025-02-26-16-49-20_no_camera.bag.1741327084.open-loop.noa.plan"
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_20260/common_frame/20250325/20250325-08-42-37/data_collection_CHERY_E0Y_20260_ALL_MANUAL_2025-03-25-08-42-37_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -19,7 +20,7 @@ frame_dt = 0.1 # sec
 global_fig_plot = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
@@ -33,7 +34,7 @@ fig1.height = 1500
 
 load_measure_distance_tool(fig1)
 fig_lat_offset = load_lateral_offset(bag_loader)
-data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
+# data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 
 behavior_data_1 = ColumnDataSource({
   'name':[],
@@ -195,7 +196,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
-  update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
+  # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
     update_lat_behavior_data(lat_behavior_common)

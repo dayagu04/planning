@@ -32,8 +32,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LateralMotionPlanner>(config_builder, session);
 
   // long pipeline V3
-  virtual_obstacle_decider_ =
-      std::make_unique<VirtualObstacleDecider>(config_builder, session);
+  stop_destination_decider_ =
+      std::make_unique<StopDestinationDecider>(config_builder, session);
   agent_longitudinal_decider_ =
       std::make_unique<AgentLongitudinalDecider>(config_builder, session);
   expand_st_boundaries_decider_ =
@@ -134,9 +134,9 @@ bool LongTimeTaskPipelineV3::Run() {
   }
 
   // --↓↓↓↓↓↓--long behavior--↓↓↓↓↓↓--
-  ok = virtual_obstacle_decider_->Execute();
+  ok = stop_destination_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(virtual_obstacle_decider_->Name());
+    AddErrorInfo(stop_destination_decider_->Name());
     return false;
   }
 

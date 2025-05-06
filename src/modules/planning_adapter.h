@@ -142,7 +142,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   }
 
   void Feed_IflytekUssUsswaveInfo(
-      const iflyauto::UssWaveInfo& uss_wave_info_msg) override {
+      const iflyauto::UssPdcIccSendDataType& uss_wave_info_msg) override {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     uss_wave_info_msg_ = uss_wave_info_msg;
     uss_wave_info_msg_recv_time_ = IflyTime::Now_ms();
@@ -274,7 +274,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   int64_t func_state_machine_msg_recv_time_;
   std::atomic<bool> is_func_state_machine_msg_updated_{false};
 
-  iflyauto::UssWaveInfo uss_wave_info_msg_;
+  iflyauto::UssPdcIccSendDataType uss_wave_info_msg_;
   int64_t uss_wave_info_msg_recv_time_;
   std::atomic<bool> is_uss_wave_info_msg_updated_{false};
 

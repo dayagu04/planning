@@ -121,7 +121,10 @@ bool LateralMotionPlanner::AssembleInput() {
 
   JSON_DEBUG_VALUE("init_pos_x1", planning_init_point.lat_init_state.x())
   JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
-
+  JSON_DEBUG_VALUE("coarse_planning_info_ref_pnts_size",
+                   reference_path_ptr->get_points().size())
+  JSON_DEBUG_VALUE("coarse_planning_info_ref_line_s",
+                   reference_path_ptr->get_points().back().path_point.s())
   planning_input_.mutable_init_state()->set_x(
       planning_init_point.lat_init_state.x());
   planning_input_.mutable_init_state()->set_y(
@@ -151,15 +154,34 @@ bool LateralMotionPlanner::AssembleInput() {
   // static const double min_v_cruise = 0.5;
   const double ref_vel =
       std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
-  planning_input_.set_ref_vel(ref_vel);
 
-  // set reference trajectory
   std::vector<double> ref_theta_vec(enu_ref_theta.size());
+  if (session_->environmental_model().function_info().function_mode() ==
+      common::DrivingFunctionInfo_DrivingFunctionMode::
+          DrivingFunctionInfo_DrivingFunctionMode_RADS) {
+    planning_input_.set_ref_vel(-ref_vel);
 
-  for (size_t i = 0; i < enu_ref_path.size(); ++i) {
-    planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
-    planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
-    ref_theta_vec[i] = enu_ref_theta[i];
+    // set reference trajectory
+    for (size_t i = 0; i < enu_ref_path.size(); ++i) {
+      planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
+      planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
+      double enu_ref_theta_i = enu_ref_theta[i] - M_PI;
+      if (enu_ref_theta_i > M_PI) {
+        enu_ref_theta_i -= 2.0 * M_PI;
+      } else if (enu_ref_theta_i < -M_PI) {
+        enu_ref_theta_i += 2.0 * M_PI;
+      }
+      ref_theta_vec[i] = enu_ref_theta_i;
+    }
+  } else {
+    planning_input_.set_ref_vel(ref_vel);
+
+    // set reference trajectory
+    for (size_t i = 0; i < enu_ref_path.size(); ++i) {
+      planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
+      planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
+      ref_theta_vec[i] = enu_ref_theta[i];
+    }
   }
 
   // angle fix of difference between theta and ref_theta, such as [-179deg and
@@ -519,6 +541,14 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_input_.set_motion_plan_concerned_index(
       motion_plan_concerned_end_index);
 
+  // [hack](bsniu):
+  if (session_->environmental_model().function_info().function_mode() ==
+      common::DrivingFunctionInfo_DrivingFunctionMode::
+          DrivingFunctionInfo_DrivingFunctionMode_RADS) {
+    planning_input_.set_q_soft_corridor(0);
+    planning_input_.set_q_hard_corridor(0);
+    planning_input_.set_complete_follow(true);
+  }
   return true;
 }
 
@@ -590,12 +620,16 @@ bool LateralMotionPlanner::Update() {
     }
     s_vec[i + 1] = s;
     t_vec[i + 1] = t;
-    if (std::fabs(planning_output.theta_vec(i) - planning_input_.ref_theta_vec(i)) * 57.3 > 90) {
+    if (std::fabs(planning_output.theta_vec(i) -
+                  planning_input_.ref_theta_vec(i)) *
+            57.3 >
+        90) {
       is_solver_success = false;
     }
   }
 
-  if ((!is_solver_success) || (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL)) {
+  if ((!is_solver_success) ||
+      (solver_condition >= ilqr_solver::iLqr::BACKWARD_PASS_FAIL)) {
     return false;
   }
   // generate motion planning output into planning_context
@@ -624,7 +658,10 @@ bool LateralMotionPlanner::Update() {
       x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
       y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
   const double end_points_size = concerned_index + 1;
-  if ((!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
+  if ((!(session_->environmental_model().function_info().function_mode() ==
+         common::DrivingFunctionInfo_DrivingFunctionMode::
+             DrivingFunctionInfo_DrivingFunctionMode_RADS)) &&
+      (!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
       (!session_->planning_context()
             .general_lateral_decider_output()
             .lane_change_scene)) {

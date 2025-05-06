@@ -2,21 +2,20 @@
 
 #include <vector>
 
-#include "./../../modules/common/local_view.h"
-#include "./../convex_collision_detection/aabb2d.h"
-#include "./../convex_collision_detection/polygon_base.h"
+#include "src/modules/common/local_view.h"
+#include "src/library/convex_collision_detection/aabb2d.h"
+#include "src/library/convex_collision_detection/polygon_base.h"
 #include "pose2d.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
-#include "src/modules/apa_function/apa_world/apa_obstacle_manager.h"
+#include "src/modules/apa_function/apa_common/apa_obstacle_manager.h"
 #include "transform2d.h"
+#include "gjk2d_interface.h"
 
 namespace planning {
 
 // now, use convex hull collision detection API, so we use point to restore
 // point cloud. But in the future, we will use occupancy grid
 // map (ogm) to represent all obstacle in astar search.
-// todo: use heirachy collision checker by different height.
-// e.g. lower obs < 0.3 meter. upper obs > 2.3 meter.
 // todo: move to apa_function
 struct PointCloudObstacle {
   std::vector<Position2D> points;
@@ -54,24 +53,27 @@ class PointCloudObstacleTransform {
 
   void GenerateLocalObstacleByLocalView(ParkObstacleList& obs_list,
                                         const LocalView* local_view,
-                                        const double slot_length,
-                                        const double slot_width,
+                                        const float slot_length,
+                                        const float slot_width,
                                         const Pose2D& slot_base_pose,
                                         const Pose2D& ego_start,
                                         const bool enable_limiter_obs);
 
   void GenerateLocalObstacle(
       std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-      ParkObstacleList& obs_list);
-
-  void GenerateLocalObstacle(
-      std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
-      ParkObstacleList& obs_list, cdl::AABB& box);
+      ParkObstacleList& obs_list, const Pose2D& ego_pose,
+      const cdl::AABB& slot_box, const bool delete_slot_obs);
 
  private:
-  void SampleInLineSegment(const Eigen::Vector2d& start,
-                           const Eigen::Vector2d& end,
+  void SampleInLineSegment(const Eigen::Vector2f& start,
+                           const Eigen::Vector2f& end,
                            std::vector<Position2D>* points);
+
+  void GetCompactCarPolygonByParam(Polygon2D* box, const float lat_buffer,
+                                   const float lon_buffer);
+
+ private:
+  GJK2DInterface gjk_;
 };
 
 }  // namespace planning

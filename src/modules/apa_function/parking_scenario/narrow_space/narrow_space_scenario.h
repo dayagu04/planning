@@ -125,6 +125,13 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool NeedBlindZonePlanning(const EgoInfoUnderSlot& ego_info);
 
+  // check path replan by slot pose change
+  const bool CheckDynamicUpdate() override;
+
+  void FillPlanningReason(AstarRequest& cur_request);
+
+  void FillGearRequest(const bool is_scenario_try, AstarRequest& cur_request);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
@@ -134,6 +141,10 @@ class NarrowSpaceScenario : public ParkingScenario {
   int in_slot_car_adjust_count_;
   // path connected with goal
   bool is_path_connected_to_goal_;
+
+  // offset to slot center.
+  double lateral_offset_;
+  double lon_offset_;
 
   // 一个车位泊车中，通道虚拟墙只能增长，不能缩减.
   // 如果根据车辆位置去缩减，导致2次规划之间路径差异太大.

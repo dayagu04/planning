@@ -25,8 +25,8 @@ struct CollisionCheckStatus {
   int16_t point_index = 0;
   int obstacle_id = 0;
   CollisionType collision_type = CollisionType::NONE_COLLISION;
-  Pose2D collision_object_position{std::numeric_limits<double>::max(),
-                                   std::numeric_limits<double>::max(), 0};
+  Pose2D collision_object_position{std::numeric_limits<float>::max(),
+                                   std::numeric_limits<float>::max(), 0.0f};
 };
 
 class CollisionChecker {

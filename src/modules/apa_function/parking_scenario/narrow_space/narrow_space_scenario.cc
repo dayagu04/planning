@@ -6,6 +6,7 @@
 
 #include "aabb2d.h"
 #include "apa_slot.h"
+#include "apa_trajectory_stitcher.h"
 #include "collision_detection/path_safe_checker.h"
 #include "common.pb.h"
 #include "common_c.h"
@@ -60,10 +61,12 @@ void NarrowSpaceScenario::Reset() {
   in_slot_car_adjust_count_ = 0;
   is_path_connected_to_goal_ = false;
   path_planning_fail_num_ = 0;
+  lateral_offset_ = 0;
+  lon_offset_ = 0;
 
   ParkingScenario::Reset();
 
-  narrow_space_decider_.Clear();
+  narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
 
   return;
@@ -110,15 +113,14 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   const bool lon_condition =
       ego_info.terminal_err.pos.x() < config.finish_lon_err;
 
-  const double astar_target_pose_y = thread_.GetAstarTargetPose().GetY();
   const double lat_offset =
-      std::fabs(ego_info.cur_pose.pos.y() - astar_target_pose_y);
+      std::fabs(ego_info.cur_pose.pos.y() - lateral_offset_);
 
   const double ego_head_lat_offset = std::fabs(
       (ego_info.cur_pose.pos + (config.wheel_base + config.front_overhanging) *
                                    ego_info.cur_pose.heading_vec)
           .y() -
-      astar_target_pose_y);
+      lateral_offset_);
 
   const bool ego_center_lat_condition =
       std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict;
@@ -331,13 +333,13 @@ void NarrowSpaceScenario::Log() const {
   slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
 
   pt_vec[0] = pt_vec[0] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[1] = pt_vec[1] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_01_vec.normalized();
+                              origin_corner_coord_global.pt_01_unit_vec;
   pt_vec[2] = pt_vec[2] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
   pt_vec[3] = pt_vec[3] + ego_info_under_slot.move_slot_dist *
-                              origin_corner_coord_global.pt_23_vec.normalized();
+                              origin_corner_coord_global.pt_23_unit_vec;
 
   for (const Eigen::Vector2d& pt : pt_vec) {
     slot_corner_X.emplace_back(pt.x());
@@ -445,11 +447,6 @@ void NarrowSpaceScenario::Log() const {
     JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0);
   }
 
-  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3);
-  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3);
-  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3);
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3);
-
   return;
 }
 
@@ -489,15 +486,30 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   // start
   Pose2D start;
-  start.x = ego_info.cur_pose.pos[0];
-  start.y = ego_info.cur_pose.pos[1];
-  start.theta = ego_info.cur_pose.heading;
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    ApaTrajectoryStitcher traj_stitcher;
+    traj_stitcher.Process(
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
+        current_path_point_global_vec_,
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(), 0.2);
+
+    const pnc::geometry_lib::PathPoint& stitch_point =
+        traj_stitcher.GetStitchPoint();
+    Eigen::Vector2d local_pos = ego_info.g2l_tf.GetPos(stitch_point.pos);
+
+    start = Pose2D(local_pos.x(), local_pos.y(),
+                   ego_info.g2l_tf.GetHeading(stitch_point.heading));
+  } else {
+    start = Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
+                   ego_info.cur_pose.heading);
+  }
 
   // real target pose in slot
   Pose2D real_end;
-  real_end.x = ego_info.target_pose.pos[0];
-  real_end.y = ego_info.target_pose.pos[1];
-  real_end.theta = ego_info.target_pose.heading;
+  real_end.x = static_cast<float>(ego_info.target_pose.pos[0]);
+  real_end.y = static_cast<float>(ego_info.target_pose.pos[1]);
+  real_end.theta = static_cast<float>(ego_info.target_pose.heading);
 
   // astar end, maybe different with real end.
   Pose2D end = real_end;
@@ -529,12 +541,13 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     }
     slot_type = ParkSpaceType::VERTICAL;
   }
-  end.x = real_end.x + end_straight_len;
+  end.x = real_end.x + static_cast<float>(end_straight_len);
 
   double astar_start_time = IflyTime::Now_ms();
-  Pose2D slot_base_pose = Pose2D(ego_info.origin_pose_global.pos.x(),
-                                 ego_info.origin_pose_global.pos.y(),
-                                 ego_info.origin_pose_global.heading);
+  Pose2D slot_base_pose =
+      Pose2D(static_cast<float>(ego_info.origin_pose_global.pos.x()),
+             static_cast<float>(ego_info.origin_pose_global.pos.y()),
+             static_cast<float>(ego_info.origin_pose_global.heading));
 
   ParkObstacleList obs;
 
@@ -543,30 +556,41 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
     virtual_wall_decider_.Init(start);
   }
-  virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot.slot_width_,
-                                ego_info.slot.slot_length_, start, real_end,
-                                slot_type, ego_info.slot_side, parking_in_type);
+  virtual_wall_decider_.Process(
+      obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
+      static_cast<float>(ego_info.slot.slot_length_), start, real_end,
+      slot_type, ego_info.slot_side, parking_in_type);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
 
   PointCloudObstacleTransform obstacle_generator;
+  cdl::AABB slot_box;
   if (NeedBlindZonePlanning(ego_info)) {
     const SlotCoord slot_info = ego_info.slot.GetProcessedCornerCoordLocal();
-    cdl::AABB box;
-    double y_buffer = 0.01;
-    box.min_ = cdl::Vector2r(
-        slot_info.pt_23_mid.x() - 0.01,
-        std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) - y_buffer);
-    box.max_ = cdl::Vector2r(
-        slot_info.pt_01_mid.x() + 4.0,
-        std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) + y_buffer);
+    double y_buffer;
+    if (path_planning_fail_num_ == 1) {
+      y_buffer = 0.01;
+    } else if (path_planning_fail_num_ == 2) {
+      // obstacles invade slot too much, delete bigger range obstacle around
+      // slot.
+      y_buffer = 0.1;
+    }
+
+    slot_box.min_ = cdl::Vector2r(
+        slot_info.pt_23_mid.x() - 0.01f,
+        static_cast<float>(std::min(slot_info.pt_0.y(), slot_info.pt_1.y()) -
+                           y_buffer));
+    slot_box.max_ = cdl::Vector2r(
+        slot_info.pt_01_mid.x() + 4.0f,
+        static_cast<float>(std::max(slot_info.pt_0.y(), slot_info.pt_1.y()) +
+                           y_buffer));
 
     obstacle_generator.GenerateLocalObstacle(
-        apa_world_ptr_->GetObstacleManagerPtr(), obs, box);
+        apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, true);
   } else {
     obstacle_generator.GenerateLocalObstacle(
-        apa_world_ptr_->GetObstacleManagerPtr(), obs);
+        apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, false);
   }
 
   double search_start_time = IflyTime::Now_ms();
@@ -596,29 +620,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
                             ? geometry_lib::SEG_GEAR_REVERSE
                             : geometry_lib::SEG_GEAR_INVALID;
 
-  switch (frame_.replan_reason) {
-    case FIRST_PLAN:
-      cur_request.plan_reason = PlanningReason::FIRST_PLAN;
-      break;
-    case SEG_COMPLETED_PATH:
-      cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
-      break;
-    case SEG_COMPLETED_OBS:
-      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
-      break;
-    case STUCKED:
-      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
-      break;
-    case DYNAMIC:
-      cur_request.plan_reason = PlanningReason::ADJUST_SELF_CAR_POSE;
-      break;
-    case SEG_COMPLETED_COL_DET:
-      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
-      break;
-    default:
-      cur_request.plan_reason = PlanningReason::NONE;
-      break;
-  }
+  FillPlanningReason(cur_request);
 
   is_path_connected_to_goal_ = false;
 
@@ -626,13 +628,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   bool need_adjust_plan = IsEgoNeedAdjustInSlot(start, ego_info.slot.GetWidth(),
                                                 ego_info.slot.GetLength());
   if (need_adjust_plan) {
-    if (apa_param.GetParam().astar_config.cubic_polynomial_pose_adjustment) {
-      cur_request.path_generate_method =
-          planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
-    } else {
-      cur_request.path_generate_method =
-          planning::AstarPathGenerateType::REEDS_SHEPP_SAMPLING;
-    }
+    cur_request.path_generate_method =
+        planning::AstarPathGenerateType::SPIRAL_SAMPLING;
     end.y = real_end.y;
     end.x = start.x + 30.0;
     cur_request.goal_ = end;
@@ -641,37 +638,17 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     cur_request.goal_ = end;
   }
 
-  // gear need be different with history in next replanning
-  if (frame_.replan_reason != FIRST_PLAN) {
-    switch (current_gear_) {
-      case AstarPathGear::REVERSE:
-        cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
-        break;
-      case AstarPathGear::DRIVE:
-        cur_request.first_action_request.gear_request = AstarPathGear::REVERSE;
-        break;
-      default:
-        break;
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    if (parking_in_type == ParkingVehDirection::TAIL_IN) {
+      cur_request.path_generate_method =
+          planning::AstarPathGenerateType::GEAR_REVERSE_SEARCHING;
+    } else {
+      cur_request.path_generate_method =
+          planning::AstarPathGenerateType::GEAR_DRIVE_SEARCHING;
     }
   }
 
-  if (is_scenario_try) {
-    cur_request.path_generate_method =
-        planning::AstarPathGenerateType::TRY_SEARCHING;
-    cur_request.first_action_request.gear_request = AstarPathGear::NONE;
-  }
-
-  // 目前,平行车位入库使用混合A星搜索，交换起点终点
-  cur_request.swap_start_goal = false;
-  if (cur_request.space_type == ParkSpaceType::PARALLEL) {
-    if (cur_request.path_generate_method ==
-            planning::AstarPathGenerateType::ASTAR_SEARCHING ||
-        cur_request.path_generate_method ==
-            planning::AstarPathGenerateType::TRY_SEARCHING) {
-      cur_request.swap_start_goal = true;
-      ClearFirstActionReqeust(&cur_request);
-    }
-  }
+  FillGearRequest(is_scenario_try, cur_request);
 
   // search state
   AstarResponse response;
@@ -689,6 +666,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       thread_.Clear();
       thread_state_ = RequestResponseState::NONE;
     }
+  }
+
+  // If path planning failed in slot refresh, do nothing.
+  if (response.request.plan_reason == PlanningReason::SLOT_REFRESHED &&
+      response.result.x.size() < 4) {
+    return PathPlannerResult::PLAN_HOLD;
   }
 
   // publish result
@@ -722,7 +705,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       double search_end_time = IflyTime::Now_ms();
 
       // check path is single shot to goal.
-      if (response.result.gear_change_num > 0) {
+      if (response.result.gear_change_num > 0 ||
+          IsEgoPoseAdjustPlanning(response.request.path_generate_method)) {
         is_path_connected_to_goal_ = false;
       } else {
         is_path_connected_to_goal_ = true;
@@ -734,6 +718,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
                 << PathGearDebugString(response.first_seg_path[0].gear)
                 << ",dist = " << path_dist
                 << ",gear_change_num=" << response.result.gear_change_num;
+
+      lateral_offset_ = response.result.y.back();
 
       PathOptimizationByCILRQ(local_path, &response_tf);
 
@@ -754,16 +740,19 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
-      if (path_planning_fail_num_ == 0) {
+      path_planning_fail_num_ +=1;
+      if (path_planning_fail_num_ == 1 || path_planning_fail_num_ == 2) {
         res = PathPlannerResult::WAIT_PATH;
+      } else if (response.request.plan_reason ==
+                 PlanningReason::SLOT_REFRESHED) {
+        // If path planning in dynamic replan is fail, use history path.
+        res = PathPlannerResult::PLAN_HOLD;
       } else {
         res = PathPlannerResult::PLAN_FAILED;
       }
 
-      path_planning_fail_num_ +=1;
-
       // publish fallback path
-      GenerateFallBackPath();
+      // GenerateFallBackPath();
 
       ILOG_INFO << "path planning fail number = " << path_planning_fail_num_;
     }
@@ -782,7 +771,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       }
 
       thread_.Clear();
-      ILOG_INFO << "clear thread";
     }
 
     frame_.gear_command = frame_.current_gear;
@@ -794,7 +782,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     res = PathPlannerResult::WAIT_PATH;
 
     // publish fallback path
-    GenerateFallBackPath();
+    // GenerateFallBackPath();
 
     ILOG_INFO << "set input";
 
@@ -807,7 +795,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     res = PathPlannerResult::WAIT_PATH;
 
     // publish fallback path
-    GenerateFallBackPath();
+    // GenerateFallBackPath();
     HybridAstarDebugInfoClear();
 
     ILOG_INFO << "has input";
@@ -825,6 +813,11 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     ILOG_INFO << "no path";
     return 0;
   }
+
+  std::vector<double> path_x;
+  std::vector<double> path_y;
+  std::vector<double> path_theta;
+  std::vector<double> path_lat_buffer;
 
   size_t i;
   Pose2D local_position;
@@ -854,7 +847,17 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     } else {
       point->set_l(1.0);
     }
+
+    path_x.emplace_back(global_position.x);
+    path_y.emplace_back(global_position.y);
+    path_theta.emplace_back(global_position.theta);
+    path_lat_buffer.emplace_back(0.0);
   }
+
+  JSON_DEBUG_VECTOR("plan_traj_x", path_x, 3);
+  JSON_DEBUG_VECTOR("plan_traj_y", path_y, 3);
+  JSON_DEBUG_VECTOR("plan_traj_heading", path_theta, 3);
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", path_lat_buffer, 3);
 
   // do not publish it.
   if (0) {
@@ -982,8 +985,8 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
 
   ego_info_under_slot.origin_pose_global.heading_vec =
-      ego_info_under_slot.slot.processed_corner_coord_global_.pt_23mid_01_mid
-          .normalized();
+      ego_info_under_slot.slot.processed_corner_coord_global_
+          .pt_23mid_01mid_unit_vec;
 
   ego_info_under_slot.origin_pose_global.heading =
       std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
@@ -1339,6 +1342,10 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
 const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
                                                       const double slot_width,
                                                       const double slot_len) {
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    return false;
+  }
+
   double ego_lat_offset = std::fabs(ego_pose.y);
   bool need_adjust_plan = false;
   const ApaStateMachine fsm =
@@ -1747,11 +1754,12 @@ void NarrowSpaceScenario::ScenarioTry() {
     SlotReleaseState astar_release_state =
         ego_info_under_slot.slot.release_info_
             .release_state[ASTAR_PLANNING_RELEASE];
-    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，使用上一帧的结果填充.
-    if (astar_release_state == SlotReleaseState::RELEASE) {
+    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，不改变上一帧结果;
+    // 如果上一帧结果未知，使用计算中状态填充;
+    if (astar_release_state == SlotReleaseState::UNKOWN) {
       ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
+          SlotReleaseState::COMPUTING;
     }
   }
 
@@ -1808,19 +1816,155 @@ const bool NarrowSpaceScenario::IsVehicleOverlapWithSlotLine(
 
 const bool NarrowSpaceScenario::NeedBlindZonePlanning(
     const EgoInfoUnderSlot& ego_info) {
-  if (!apa_param.GetParam().astar_config.enable_blind_zone ||
-      path_planning_fail_num_ != 1) {
+  if (!apa_param.GetParam().astar_config.enable_blind_zone) {
+    return false;
+  }
+
+  if (path_planning_fail_num_ <= 0 || path_planning_fail_num_ >= 3) {
     return false;
   }
 
   double position_y_error = std::fabs(ego_info.cur_pose.pos[1]);
   double position_x_error = std::fabs(ego_info.cur_pose.pos[0]);
   if (position_y_error < ego_info.slot.slot_width_ / 2 &&
-      position_x_error < ego_info.slot.slot_length_) {
+      (position_x_error > 0.0 &&
+       position_x_error < ego_info.slot.slot_length_ + 1.0)) {
     return false;
   }
 
   return true;
+}
+
+const bool NarrowSpaceScenario::CheckDynamicUpdate() {
+  const ApaParameters& param = apa_param.GetParam();
+  const bool car_motion_flag =
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const bool car_pos_flag =
+      ego_info_under_slot.cur_pose.pos.x() <
+      (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+       3.68);
+
+  const bool occupied_ratio_flag = (ego_info_under_slot.slot_occupied_ratio <
+                                    param.pose_slot_occupied_ratio_3);
+
+  // check path remain dist
+  bool path_dist_flag = false;
+  if (frame_.remain_dist_path > 1.5) {
+    path_dist_flag = true;
+  }
+
+  const bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
+                                   occupied_ratio_flag &&
+                                   is_path_connected_to_goal_ && path_dist_flag;
+  if (!dynamic_replan_flag) {
+    return false;
+  }
+
+  // path end pose check
+  bool lateral_offset_flag = false;
+  bool theta_offset_flag = false;
+  if (current_path_point_global_vec_.size() > 0) {
+    double history_lat_offset = lateral_offset_;
+
+    Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
+    Eigen::Vector2d point_local;
+    point_local = ego_info_under_slot.g2l_tf.GetPos(path_end_global);
+    double later_error = std::fabs(point_local.y() - lateral_offset_);
+    if (later_error > 0.06) {
+      lateral_offset_flag = true;
+    }
+
+    double phi = current_path_point_global_vec_.back().heading;
+    double phi_error = ego_info_under_slot.g2l_tf.GetHeading(phi) -
+                       ego_info_under_slot.target_pose.heading;
+
+    if (std::fabs(phi_error) > 0.026) {
+      theta_offset_flag = true;
+    }
+
+    ILOG_INFO << "lat offset error = " << later_error
+              << ", theta error = " << phi_error * kDeg2Rad;
+  }
+
+  if (lateral_offset_flag || theta_offset_flag) {
+    return true;
+  }
+
+  return false;
+}
+
+void NarrowSpaceScenario::FillPlanningReason(AstarRequest& cur_request) {
+  switch (frame_.replan_reason) {
+    case FIRST_PLAN:
+      cur_request.plan_reason = PlanningReason::FIRST_PLAN;
+      break;
+    case SEG_COMPLETED_PATH:
+      cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
+      break;
+    case SEG_COMPLETED_OBS:
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
+      break;
+    case STUCKED:
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
+      break;
+    case DYNAMIC:
+      cur_request.plan_reason = PlanningReason::SLOT_REFRESHED;
+      break;
+    case SEG_COMPLETED_COL_DET:
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
+      break;
+    default:
+      cur_request.plan_reason = PlanningReason::NONE;
+      break;
+  }
+
+  return;
+}
+
+void NarrowSpaceScenario::FillGearRequest(const bool is_scenario_try,
+                                          AstarRequest& cur_request) {
+  // gear need be different with history in next replanning
+  if (frame_.replan_reason != ReplanReason::FIRST_PLAN &&
+      frame_.replan_reason != ReplanReason::DYNAMIC) {
+    switch (current_gear_) {
+      case AstarPathGear::REVERSE:
+        cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
+        break;
+      case AstarPathGear::DRIVE:
+        cur_request.first_action_request.gear_request = AstarPathGear::REVERSE;
+        break;
+      default:
+        cur_request.first_action_request.gear_request = AstarPathGear::NONE;
+        break;
+    }
+  }
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    cur_request.first_action_request.gear_request = current_gear_;
+  }
+
+  if (is_scenario_try) {
+    cur_request.path_generate_method =
+        planning::AstarPathGenerateType::TRY_SEARCHING;
+    cur_request.first_action_request.gear_request = AstarPathGear::NONE;
+  }
+
+  // 目前,平行车位入库使用混合A星搜索，交换起点终点
+  cur_request.swap_start_goal = false;
+  if (cur_request.space_type == ParkSpaceType::PARALLEL) {
+    if (cur_request.path_generate_method ==
+            planning::AstarPathGenerateType::ASTAR_SEARCHING ||
+        cur_request.path_generate_method ==
+            planning::AstarPathGenerateType::TRY_SEARCHING) {
+      cur_request.swap_start_goal = true;
+      ClearFirstActionReqeust(&cur_request);
+    }
+  }
+
+  return;
 }
 
 }  // namespace apa_planner

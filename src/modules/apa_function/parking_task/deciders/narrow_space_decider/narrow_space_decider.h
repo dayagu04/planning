@@ -5,10 +5,10 @@
 #include "parking_task.h"
 
 namespace planning {
+namespace apa_planner {
 
-// 目前的调用逻辑是：点击车位后，进行预规划，几何规划器失败，才调用Hybrid astar预规划;
-// 根据预规划结果，在正式泊车中选择几何还是A星;
-// 暂时只有车尾入库会调用A star, 其他场景不会调用A star.
+// 目前的调用逻辑是：点击车位后，进行预规划，几何规划器失败，才调用Hybrid
+// astar预规划; 根据预规划结果，在正式泊车中选择几何还是A星;
 class NarrowScenarioDecider : public ParkingTask {
  public:
   NarrowScenarioDecider() = default;
@@ -16,7 +16,7 @@ class NarrowScenarioDecider : public ParkingTask {
 
   void Process(const apa_planner::SlotType slot_type);
 
-  void Clear();
+  void Reset();
 
   const bool IsNarrowSpaceScenario() const;
 
@@ -35,5 +35,5 @@ class NarrowScenarioDecider : public ParkingTask {
   bool is_narrow_space_;
   bool is_need_astar_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

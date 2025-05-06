@@ -9,6 +9,7 @@ enum SceneType {
   HIGHWAY = 1;
   PARKING_APA = 2;
   HPP = 3;
+  RADS = 4;
 }
 
 message ModuleList {

@@ -17,7 +17,7 @@
 #include "ad_common/math/linear_interpolation.h"
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
-#include "apa_world/apa_world.h"
+#include "apa_world.h"
 #include "camera_perception_groundline_c.h"
 #include "collision_detection/path_safe_checker.h"
 #include "config_context.h"
@@ -33,6 +33,7 @@
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -71,6 +72,7 @@
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "transform2d.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -95,7 +97,7 @@ Eigen::Vector3d astar_end_pose_;
 Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
 EigenPointSet2d virtual_wall_points_;
-std::vector<EigenPath2d> real_time_node_list_;
+std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 // 所有启发项的rs path，record in here
 std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
@@ -107,7 +109,7 @@ EigenPointSet2d deletenode_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
 // all search node, not only include: open + close, and include deleted node.
-std::vector<Eigen::Vector3d> all_searched_node_;
+std::vector<Eigen::Vector4d> all_searched_node_;
 AstarPathGear history_gear_request_;
 // local coordinate system
 std::vector<Eigen::Vector3d> footprint_circle_model_normal_gear_;
@@ -149,6 +151,10 @@ void UpdateFootprintCircle(const AstarPathGear gear,
 
   FootPrintCircleModel *model =
       hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
+  if (model == nullptr) {
+    return;
+  }
+
   const FootPrintCircleList circle_footprint =
       model->GetLocalFootPrintCircleByGear(gear);
 
@@ -247,14 +253,14 @@ int GetPathFromHybridAstar() {
                                      real_time_node_list_[i][j].y(), 0));
 
       real_time_node_list_[i][j] =
-          Eigen::Vector2d(global_position.x, global_position.y);
+          Eigen::Vector2f(global_position.x, global_position.y);
     }
   }
 
   ILOG_INFO << "pybind node size " << real_time_node_list_.size();
 
   static_rs_path_list_.clear();
-  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
+  std::vector<std::vector<Vec2df32>> path_list;
   thread_solver_->GetRSPathHeuristicInThread(path_list);
 
   for (i = 0; i < path_list.size(); i++) {
@@ -271,7 +277,7 @@ int GetPathFromHybridAstar() {
     static_rs_path_list_.emplace_back(path);
   }
 
-  std::vector<ad_common::math::Vec2d> rs_path;
+  std::vector<Vec2df32> rs_path;
   thread_solver_->GetRSPathLinkInThread(rs_path);
   std::vector<Eigen::Vector2d> tmp_path;
   for (size_t j = 0; j < rs_path.size(); j++) {
@@ -294,7 +300,7 @@ int GetPathFromHybridAstar() {
   static_ref_line_.clear();
 
   // start
-  ad_common::math::Vec2d point;
+  Vec2df32 point;
   ref_line.GetPointByDist(&point, -5.0);
   local_position.x = point.x();
   local_position.y = point.y();
@@ -318,7 +324,7 @@ int GetPathFromHybridAstar() {
 
   // 为了调试搜索过程，plot it
   search_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &search_path =
+  const std::vector<Vec2df32> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   for (i = 0; i < search_path.size(); i++) {
@@ -331,7 +337,7 @@ int GetPathFromHybridAstar() {
   }
 
   deletenode_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &delnode_path =
+  const std::vector<Vec2df32> &delnode_path =
       hybrid_astar_interface_->GetDelNodeQueueNode();
 
   for (i = 0; i < delnode_path.size(); i++) {
@@ -353,15 +359,17 @@ int GetPathFromHybridAstar() {
 
   all_searched_node_.clear();
   double is_safe = 0;
+  double is_gear_switch_node = 0;
   for (i = 0; i < all_search_node.size(); i++) {
     local_position.x = all_search_node[i].pos.x;
     local_position.y = all_search_node[i].pos.y;
     tf.ULFLocalPoseToGlobal(&global_position, local_position);
 
     is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+    is_gear_switch_node = all_search_node[i].gear_switch_point ? 1.0 : 0.0;
 
-    all_searched_node_.emplace_back(
-        Eigen::Vector3d(global_position.x, global_position.y, is_safe));
+    all_searched_node_.emplace_back(Eigen::Vector4d(
+        global_position.x, global_position.y, is_safe, is_gear_switch_node));
   }
 
   AstarRequest request = thread_solver_->GetAstarRequest();
@@ -402,9 +410,9 @@ const void UpdateLocalView(
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -477,7 +485,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     std::vector<double> target_managed_slot_x_vec,
                     std::vector<double> target_managed_slot_y_vec,
                     std::vector<double> target_managed_limiter_x_vec,
-                    std::vector<double> target_managed_limiter_y_vec) {
+                    std::vector<double> target_managed_limiter_y_vec,
+                    const int path_plan_method) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -494,6 +503,19 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   sim_param.use_slot_in_bag = false;
 
   apa_interface_ptr->SetSimuParam(sim_param);
+
+  switch (path_plan_method) {
+    case 0:
+      apa_param.SetPram().path_generator_type =
+          ParkPathGenerationType::GEOMETRY_BASED;
+      break;
+    case 1:
+      apa_param.SetPram().path_generator_type =
+          ParkPathGenerationType::SEARCH_BASED;
+      break;
+    default:
+      break;
+  }
 
   iflyauto::FuncStateMachine func_statemachine =
       BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
@@ -512,9 +534,9 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -847,7 +869,7 @@ const bool SetSlotInfo() {
   return true;
 }
 
-const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
+const std::vector<std::vector<Eigen::Vector2f>> &GetAstarAllNodes() {
   return real_time_node_list_;
 }
 
@@ -877,7 +899,7 @@ const std::vector<Eigen::Vector2d> &GetDelNodeSequencePath() {
 
 const Eigen::Vector3d GetCoordinateSystem() { return coordinate_system_; }
 
-const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+const std::vector<Eigen::Vector4d> &GetAllSearchNode() {
   return all_searched_node_;
 }
 

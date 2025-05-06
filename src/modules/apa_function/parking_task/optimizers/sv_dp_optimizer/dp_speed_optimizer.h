@@ -5,22 +5,22 @@
 #include <memory>
 #include <vector>
 
+#include "dp_cost_generator.h"
+#include "dp_error_code.h"
 #include "dp_speed_common.h"
+#include "dp_speed_config.h"
 #include "dp_speed_cost.h"
 #include "geometry_math.h"
+#include "optimizer_common.h"
 #include "parking_task.h"
 #include "pose2d.h"
 #include "speed/apa_speed_decision.h"
 #include "src/modules/apa_function/parking_task/deciders/speed_limit_decider/speed_limit_profile.h"
-#include "sv_graph_node.h"
-#include "dp_speed_config.h"
 #include "src/modules/common/speed/speed_data.h"
-#include "dp_cost_generator.h"
-#include "dp_error_code.h"
-#include "optimizer_common.h"
+#include "sv_graph_node.h"
 
 namespace planning {
-
+namespace apa_planner {
 // solution for speed generation:
 // 1. search in s-v graph;
 // 2. search in s-t graph;
@@ -100,8 +100,8 @@ class DpSpeedOptimizer : public ParkingTask {
   void RecordDebugInfo();
 
  private:
-  const SpeedDecisions *speed_decisions_;
-  const SpeedLimitProfile *speed_limit_profile_;
+  const SpeedDecisions* speed_decisions_;
+  const SpeedLimitProfile* speed_limit_profile_;
   std::vector<pnc::geometry_lib::PathPoint> path_;
 
   double ego_v_;
@@ -133,5 +133,5 @@ class DpSpeedOptimizer : public ParkingTask {
 
   SpeedOptimizerState solver_state_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

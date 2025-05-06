@@ -11,13 +11,14 @@ from bokeh.models import ColumnDataSource, DataTable, TableColumn, TextInput
 from ipywidgets import Layout
 from python_proto import gap_selector_pb2
 from jupyter_pybind import gap_selector_py
+from bokeh.resources import INLINE
 
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240104/20240104-18-51-49/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-01-04-18-51-49.record.1704873529.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container {width:95% !important;  } </style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadCyberbag(bag_path)
 max_time = bag_loader.load_all_data()

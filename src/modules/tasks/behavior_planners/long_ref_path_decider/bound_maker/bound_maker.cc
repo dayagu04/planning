@@ -4,15 +4,15 @@
 
 namespace planning {
 namespace {
-constexpr double IsoAccLimitUpper = -3.0;
-constexpr double IsoAccLimitLower = -4.0;
+constexpr double IsoAccLimitUpper = -2.0;
+constexpr double IsoAccLimitLower = -3.0;
 constexpr double IsoAccLimitSpeedUpper = 20.0;
-constexpr double IsoAccLimitSpeedLower = 5.0;
+constexpr double IsoAccLimitSpeedLower = 3.0;
 
-constexpr double IsoJerkLimitUpper = -3.5;
-constexpr double IsoJerkLimitLower = -5.0;
+constexpr double IsoJerkLimitUpper = -2.0;
+constexpr double IsoJerkLimitLower = -3.0;
 constexpr double IsoJerkLimitSpeedUpper = 20.0;
-constexpr double IsoJerkLimitSpeedLower = 5.0;
+constexpr double IsoJerkLimitSpeedLower = 3.0;
 
 constexpr double kFollowBuffer = 0.2;
 constexpr double kOvertakeBuffer = 2.0;
@@ -21,7 +21,7 @@ constexpr double kSpeedBoundFactor = 1.1;
 constexpr double kPerSecondPlanLenth = 50.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
-constexpr double kBrakeDelayTimeBuffer = 0.3;
+constexpr double kBrakeDelayTimeBuffer = 0.5;
 
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -125,7 +125,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-      acc_upper_bound_[i] = std::fmax(init_lon_state_[2], acc_target.second);
+      acc_upper_bound_[i] =
+          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
       continue;
     }
 
@@ -280,6 +281,10 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_follow_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_max_decel_target();
+  const auto& st_graph = session_->planning_context().st_graph_helper();
+  if (!st_graph) {
+    return;
+  }
   for (int32_t i = 0; i < plan_points_num_; i++) {
     auto* ptr = max_decel_target_pb_.add_max_decel_s_ref();
     const double t = i * dt_;
@@ -295,6 +300,8 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
     const double t = i * dt_;
     const double s_safe = max_deceleration_curve.Evaluate(0, t);
+    const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
+    const double agent_s = corridor_upper_point.s();
     const double vel = virtual_acc_curve->Evaluate(1, t);
     const double brake_buffer = vel * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
@@ -302,7 +309,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
         target_value.target_type() == TargetType::kNeighborYield ||
         target_value.target_type() == TargetType::kCautionYield) {
       // check s_target by s_safe
-      if (target_value.s_target_val() < s_safe) {
+      if (agent_s - brake_buffer < s_safe) {
         is_need_comfortable_decel = false;
         break;
       }
@@ -358,8 +365,7 @@ SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve()
   constexpr double kSlowAccLowerBound = -3.0;
   state_limit.a_max = acc_upper_bound_with_speed_;
   state_limit.a_min = acc_lower_bound;
-  state_limit.j_max =
-      speed_planning_config_.speed_planning_bound.jerk_upper_bound;
+  state_limit.j_max = 3.0;
   state_limit.j_min = jerk_lower_bound;
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }

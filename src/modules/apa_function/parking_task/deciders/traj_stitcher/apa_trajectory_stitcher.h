@@ -1,13 +1,14 @@
 #pragma once
 
 #include <cstddef>
+
 #include "geometry_math.h"
 #include "pose2d.h"
 #include "src/library/reeds_shepp/rs_path_interpolate.h"
 #include "trajectory/trajectory.h"
 
 namespace planning {
-
+namespace apa_planner {
 // add trajectory stitcher.
 // If do path/speed planning in every frame, need a stitcher.
 // If navigation and parking switch in hpp, need trajectory stitcher for
@@ -27,7 +28,8 @@ class ApaTrajectoryStitcher {
    */
   void Process(const Pose2D& ego_pose,
                const std::vector<pnc::geometry_lib::PathPoint>& path,
-               const double ego_v, const double front_wheel_angle);
+               const double ego_v, const double front_wheel_angle,
+               const double predict_horizon);
 
   const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchTrajectory()
       const {
@@ -42,6 +44,14 @@ class ApaTrajectoryStitcher {
 
   const double GetStitchTrajLength() const;
 
+  const pnc::geometry_lib::PathPoint& GetStitchPoint() const {
+    return stitch_point_;
+  }
+
+  const pnc::geometry_lib::PathPoint* GetStitchPointPtr() {
+    return &stitch_point_;
+  }
+
  private:
   // If vehicle speed is zero, use vehicle state to generate stitch point.
   void GeneTrajPointFromVehicleState(const Pose2D& ego_pose);
@@ -51,7 +61,8 @@ class ApaTrajectoryStitcher {
   // ego_v: gear drive, v is positive
   // kappa: left is positive.
   Pose2D ComputeTrajPointByPrediction(const Pose2D& pose, const double ego_v,
-                                      const double kappa);
+                                      const double kappa,
+                                      const double predict_horizon);
 
   // move_dist is > 0
   void PredictByLine(const Pose2D& ego, const double move_dist,
@@ -97,4 +108,5 @@ class ApaTrajectoryStitcher {
 
   double drived_distance_;
 };
+}  // namespace apa_planner
 }  // namespace planning

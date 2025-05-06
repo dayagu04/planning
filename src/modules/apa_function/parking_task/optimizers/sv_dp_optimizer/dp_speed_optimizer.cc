@@ -6,13 +6,13 @@
 #include <limits>
 #include <string>
 
+#include "debug_info_log.h"
 #include "dp_speed_common.h"
 #include "log_glog.h"
 #include "sv_graph_node.h"
-#include "debug_info_log.h"
 
 namespace planning {
-
+namespace apa_planner {
 #define DEBUG_INIT_COST_TABLE (0)
 #define DEBUG_RETRIEVE_SPEED_PROFILE (0)
 #define DEBUG_SEARCH (0)
@@ -59,7 +59,7 @@ void DpSpeedOptimizer::Excute(
     config_.unit_v = config_.unit_v_for_short_path;
     config_.unit_s = config_.unit_s_for_short_path;
 
-    ILOG_INFO <<"need use jlt speed profile";
+    ILOG_INFO << "need use jlt speed profile";
   }
 
   ego_v_ = ego_v;
@@ -575,7 +575,7 @@ void DpSpeedOptimizer::DebugSpeedData() {
 
 void DpSpeedOptimizer::DebugSpeedLimitLookUp() const {
   for (int32_t i = 0; i < speed_limit_by_index_.size(); ++i) {
-    ILOG_INFO <<"i = " <<i <<", speed limit = " <<speed_limit_by_index_[i];
+    ILOG_INFO << "i = " << i << ", speed limit = " << speed_limit_by_index_[i];
   }
 
   return;
@@ -614,5 +614,5 @@ const SVPoint DpSpeedOptimizer::GetStartSpeedPoint() const {
 
   return point_sv;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

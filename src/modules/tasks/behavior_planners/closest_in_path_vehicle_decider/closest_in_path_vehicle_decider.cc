@@ -147,6 +147,9 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   constexpr double kEgoCenterToBackCenter = 1.1;
   // *relative_s = min_s - kEgoCenterToBackCenter;
   *relative_s = min_s - ego_vehi_param.front_edge_to_rear_axle;
+  if (session_->is_rads_scene()) {
+    *relative_s = min_s - ego_vehi_param.rear_edge_to_rear_axle;
+  }
 
   double center_s = 0.0;
   double center_l = 0.0;

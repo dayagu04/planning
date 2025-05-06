@@ -115,12 +115,17 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
   }
 
+  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
+  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
+
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0);
+  frame_.remain_dist_obs = CalRemainDistFromObs(
+      safe_uss_remain_dist, lat_buffer, 0.0, lat_buffer, true);
+
+  ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -143,8 +148,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  const double max_replan_path_dist = 0.15;
   // check replan
-  if (!CheckReplan()) {
+  if (!CheckReplan(max_replan_path_dist, 0.068,
+                   apa_param.GetParam().max_replan_remain_dist,
+                   apa_param.GetParam().uss_stuck_replan_wait_time,
+                   apa_param.GetParam().stuck_replan_time)) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
     return;
@@ -257,11 +266,11 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
         pnc::geometry_lib::GetCrossFromTwoVec2d(
             measures_ptr->GetHeadingVec(),
             ego_info_under_slot.slot.origin_corner_coord_global_
-                .pt_23mid_01_mid);
+                .pt_23mid_01mid_vec);
     ILOG_INFO << "ego_info_under_slot.slot.processed_corner_coord_global_.pt_"
                  "23mid_01_mid = "
               << ego_info_under_slot.slot.origin_corner_coord_global_
-                     .pt_23mid_01_mid.transpose();
+                     .pt_23mid_01mid_vec.transpose();
 
     ILOG_INFO
         << "ego_info_under_slot.slot.origin_corner_coord_global_.pt_center = "

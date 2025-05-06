@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
@@ -73,6 +74,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_vel_variable_;
   double weight_gap_avaliable_;
   double weight_acc_limit_;
+  double weight_stop_penalty_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
@@ -115,6 +117,11 @@ class SamplePolySpeedAdjustDecider : public Task {
   double distance_to_road_split_ = kMaxMergeDistance;
   double distance_to_ramp_ = kMaxMergeDistance;
 
+  double front_edge_to_rear_axle_ = 4.025;
+  double rear_edge_to_rear_axle_ = 0.925;
+
+  std::pair<size_t, size_t> min_cost_traj_index_{0, 0};
+
  public:  // set private values
   void set_weight_match_gap_vel(const double weight) {
     weight_match_gap_vel_ = weight;
@@ -153,6 +160,15 @@ class SamplePolySpeedAdjustDecider : public Task {
     weight_gap_avaliable_ = weight;
   }
   double weight_gap_avaliable() const { return weight_gap_avaliable_; };
+
+  void set_weight_acc_limit(const double weight) { weight_acc_limit_ = weight; }
+  double weight_acc_limit() const { return weight_acc_limit_; };
+
+  void set_weight_stop_penalty(const double weight) {
+    weight_stop_penalty_ = weight;
+  }
+  double weight_stop_penalty() const { return weight_stop_penalty_; };
+
   void set_ego_v(const double ego_v) { ego_v_ = ego_v; }
   double ego_v() const { return ego_v_; }
 
@@ -318,6 +334,10 @@ class SamplePolySpeedAdjustDecider : public Task {
 
   const AgentInfo& leading_veh() const { return leading_veh_; }
   AgentInfo& mutable_leading_veh() { return leading_veh_; }
+
+  const std::pair<size_t, size_t>& min_cost_traj_index() const {
+    return min_cost_traj_index_;
+  };
 };
 };  // namespace planning
 

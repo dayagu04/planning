@@ -3,7 +3,7 @@
 #include "log_glog.h"
 
 namespace planning {
-
+namespace apa_planner {
 #define DP_SPEED_INVALID_COST (10000.0)
 
 void DpSpeedCost::DebugCost() const {
@@ -25,5 +25,5 @@ void DpSpeedCost::Clear() {
   total_cost = DP_SPEED_INVALID_COST;
   return;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

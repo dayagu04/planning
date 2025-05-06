@@ -17,7 +17,7 @@
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "apa_slot_manager.h"
-#include "apa_world/apa_world.h"
+#include "apa_world.h"
 #include "camera_perception_groundline_c.h"
 #include "config_context.h"
 #include "control_command_c.h"
@@ -72,8 +72,10 @@
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "transform2d.h"
+#include "vecf32.h"
 #include "vehicle_service_c.h"
 #include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider/virtual_wall_decider.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -97,8 +99,8 @@ std::vector<Eigen::Vector3d> static_rs_path_;
 Eigen::Vector3d astar_end_pose_;
 Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
-EigenPointSet2d virtual_wall_points_;
-std::vector<EigenPath2d> real_time_node_list_;
+std::vector<Eigen::Vector2d> virtual_wall_points_;
+std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 // 所有启发项的rs path，record in here
 std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
@@ -211,14 +213,14 @@ int GetPathFromHybridAstar() {
                                      real_time_node_list_[i][j].y(), 0));
 
       real_time_node_list_[i][j] =
-          Eigen::Vector2d(global_position.x, global_position.y);
+          Eigen::Vector2f(global_position.x, global_position.y);
     }
   }
 
   ILOG_INFO << "pybind node size " << real_time_node_list_.size();
 
   static_rs_path_list_.clear();
-  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
+  std::vector<std::vector<Vec2df32>> path_list;
   thread_solver_->GetRSPathHeuristicInThread(path_list);
 
   for (i = 0; i < path_list.size(); i++) {
@@ -235,7 +237,7 @@ int GetPathFromHybridAstar() {
     static_rs_path_list_.emplace_back(path);
   }
 
-  std::vector<ad_common::math::Vec2d> rs_path;
+  std::vector<Vec2df32> rs_path;
   thread_solver_->GetRSPathLinkInThread(rs_path);
   std::vector<Eigen::Vector2d> tmp_path;
   for (size_t j = 0; j < rs_path.size(); j++) {
@@ -258,7 +260,7 @@ int GetPathFromHybridAstar() {
   static_ref_line_.clear();
 
   // start
-  ad_common::math::Vec2d point;
+  Vec2df32 point;
   ref_line.GetPointByDist(&point, -5.0);
   local_position.x = point.x();
   local_position.y = point.y();
@@ -282,7 +284,7 @@ int GetPathFromHybridAstar() {
 
   // 为了调试搜索过程，plot it
   search_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &search_path =
+  const std::vector<Vec2df32> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   for (i = 0; i < search_path.size(); i++) {
@@ -355,9 +357,9 @@ const void UpdateLocalView(
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -462,9 +464,9 @@ const bool PlanOnce(
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -779,7 +781,7 @@ const bool SetSlotInfo() {
   return true;
 }
 
-const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
+const std::vector<std::vector<Eigen::Vector2f>> &GetAstarAllNodes() {
   return real_time_node_list_;
 }
 

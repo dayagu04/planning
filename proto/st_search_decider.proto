@@ -40,17 +40,16 @@ message SampleParam {
   optional double weight_acc_limit = 13;
 };
 message PolyCurveCostInfo {
-  optional double end_point_match_gap_s_cost = 1;
-  optional double end_point_match_gap_vel_cost = 2;
-  optional double end_point_match_gap_center_cost = 3;
-  optional double mid_point_match_gap_s_cost = 4;
-  optional double mid_point_match_gap_vel_cost = 5;
-  optional double mid_point_match_gap_center_cost = 6;
-  optional double follow_vel_cost = 7;
-  optional double stop_line_cost = 8;
-  optional double leading_veh_safe_cost = 9;
-  optional double vel_variable_cost = 10;
-  optional double gap_avaliable_cost = 11;
+  optional double match_gap_cost_s_sum = 1;
+  optional double match_gap_cost_v_sum = 2;
+  optional double follow_vel_cost = 3;
+  optional double stop_line_cost = 4;
+  optional double leading_veh_safe_cost = 5;
+  optional double vel_variable_cost = 6;
+  optional double gap_avaliable_cost = 7;
+  optional double match_gap_cost_center_sum = 8;
+  optional double acc_limit_cost = 9;
+  optional double stop_penalty_cost = 10;
 }
 message MatchGapId {
   optional int32 gap_front_id = 1;
@@ -61,7 +60,7 @@ message SamplePrintTableInfo {
   optional MatchGapId stitched_sample_match_gap_id = 1;
   optional MatchGapId current_sample_match_gap_id = 2;
   optional PolyCurveCostInfo best_poly_cost_info = 3;
-  optional PolyCurveCostInfo stitched_poly_cost_info = 4;
+  // optional PolyCurveCostInfo stitched_poly_cost_info = 4;
   optional double sample_cost_time = 5;
   optional double evaluate_cost_time = 6;
   optional double all_cost_time = 7;

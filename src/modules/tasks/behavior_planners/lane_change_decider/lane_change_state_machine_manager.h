@@ -7,6 +7,7 @@
 #include "define/geometry.h"
 #include "session.h"
 #include "task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "trajectory1d/second_order_time_optimal_trajectory.h"
 #include "virtual_lane.h"
 namespace planning {
 struct StateTransitionInfo {
@@ -158,6 +159,9 @@ class LaneChangeStateMachineManager {
   bool IsLCFeasibleForTrafficConeInTargetLane(
       const planning_data::DynamicAgentNode* traffic_cone,
       const int fix_lane_virtual_id) const;
+  bool IsNotNeedLCBackForTrafficConeInTargetLane(
+      const planning_data::DynamicAgentNode* traffic_cone,
+      const int fix_lane_virtual_id, const double t_remain_lc) const;
   const std::vector<double> GetObjsDebugInfo(const double obj_v,
                                              const double obj_a,
                                              const double obj_t,
@@ -187,9 +191,19 @@ class LaneChangeStateMachineManager {
       const planning_data::DynamicAgentNode* agent_node,
       const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
       const bool is_ego_lane_agent);
+  SecondOrderTimeOptimalTrajectory GenerateEgoMaxDecelerationCurve(
+      const double ego_v, const double target_v);
+  double CalculateLCSafetyCheckTime() const;
+  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
+      const std::array<double, 3> init_lon_state) const;
+
+  bool IsTargetLaneMergeToOriginLane() const;
+
+  bool IsNeedCancelLCTargetLaneMergeToOriginLane();
 
  private:
   ScenarioStateMachineConfig config_;
+  SpeedPlannerConfig speed_planning_config_;
   framework::Session* session_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
@@ -200,6 +214,7 @@ class LaneChangeStateMachineManager {
   double pre_lane_change_finish_time_ = 0.0;
   int lc_back_cnt_ = 0;
   int lc_valid_cnt_ = 0;
+  int lc_target_lane_merge_to_origin_lane_cnt_ = 0;
   RequestType map_turn_signal_ = NO_CHANGE;
 
   TrackInfo lc_invalid_track_;
@@ -225,6 +240,12 @@ class LaneChangeStateMachineManager {
   std::vector<double> lc_time_vec_{};
   std::vector<double> lc_front_obj_need_dis_vec_{};
   std::vector<double> lc_rear_obj_need_dis_vec_{};
+  std::vector<double> front_obj_future_v_{};
+  std::vector<double> rear_obj_future_v_{};
+  std::vector<double> ego_future_v_{};
+
   TrajectoryPoints ego_trajs_future_;
+  double lc_safety_check_time_ = 0.0;
+  int lc_safety_check_num_ = 0;
 };
 }  // namespace planning

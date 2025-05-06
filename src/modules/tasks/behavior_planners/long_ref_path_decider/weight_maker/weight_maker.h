@@ -5,6 +5,7 @@
 #include "session.h"
 #include "src/modules/common/status/status.h"
 #include "tasks/behavior_planners/long_ref_path_decider/target_marker/target_maker.h"
+#include "trajectory1d/second_order_time_optimal_trajectory.h"
 
 namespace planning {
 
@@ -37,6 +38,8 @@ class WeightMaker {
 
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve();
 
+  SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve();
+
   void CollectDataToProto(const TargetMaker& target_maker);
 
   SpeedPlannerConfig speed_planning_config_;
@@ -50,6 +53,7 @@ class WeightMaker {
   std::vector<double> acc_weight_;
   std::vector<double> jerk_weight_;
   bool is_urgent_ = false;
+  bool is_more_urgent_ = false;
   planning::common::WeightMakerReplayInfo weight_maker_replay_info_;
 };
 

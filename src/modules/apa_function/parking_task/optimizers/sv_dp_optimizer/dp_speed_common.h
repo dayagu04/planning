@@ -1,10 +1,11 @@
 #pragma once
 
 #include <bits/stdint-intn.h>
+
 #include "log_glog.h"
 
 namespace planning {
-
+namespace apa_planner {
 struct SVPoint {
   // [0, inf]
   double s = 0.0;
@@ -62,5 +63,5 @@ struct SpeedBoundaryIndex {
     return;
   }
 };
-
+}  // namespace apa_planner
 }  // namespace planning

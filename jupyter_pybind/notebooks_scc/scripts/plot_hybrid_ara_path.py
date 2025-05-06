@@ -4,7 +4,7 @@ sys.path.append("../lib/")
 from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_hybrid_ara_path import *
-
+from bokeh.resources import INLINE
 sys.path.append('../..')
 sys.path.append('../../../')
 
@@ -19,7 +19,7 @@ g_is_display_enu = global_var.get_value('g_is_display_enu')
 global_fig_plot = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()

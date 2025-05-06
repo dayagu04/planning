@@ -53,7 +53,7 @@ static constexpr auto TOPIC_TRAFFIC_SIGN =
 // apa topics
 static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
 static constexpr auto TOPIC_USS_PERCEPT_INFO =
-    "/iflytek/uss/uss_perception_info";
+    "/iflytek/fusion/uss_perception_info";
 static constexpr auto TOPIC_VISION_PARKING_SLOT =
     "/iflytek/camera_perception/parking_slot_list";
 static constexpr auto TOPIC_CONTROL_DEBUG_INFO = "/iflytek/control/debug_info";
@@ -136,6 +136,11 @@ bool PlanningPlayer::FindSceneType(const std::string& scene_type,
         find_scene_type = true;
         scene_type_ = "apa";
         break;
+      } else if (current_state == iflyauto::FunctionalState_RADS_TRACING) {
+        find_scene_type = true;
+        scene_type_ = "rads";
+        auto_timestamp_ = fsm_msg->msg_header.stamp;
+        break;
       }
     }
   }
@@ -170,7 +175,7 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
   copy_confif_files(source, destination);
 
   if (scene_type_ == "scc" || scene_type_ == "hpp" || scene_type_ == "noa" ||
-      scene_type_ == "acc") {
+      scene_type_ == "acc" || scene_type_ == "rads") {
     for (const auto& it : msg_cache_[TOPIC_PLANNING_DEBUG_INFO]) {
       auto debug_info_msg =
           boost::any_cast<sensor_interface::DebugInfo::Ptr>(it.second);
@@ -477,7 +482,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
   if (scene_type_ == "apa") {
     for (const auto& msg : view) {
       if (msg.getTopic() == TOPIC_USS_WAVE_INFO) {
-        cache_with_ros_msg_and_header_time<struct_msgs::UssWaveInfo>(msg);
+        cache_with_ros_msg_and_header_time<struct_msgs::UssPdcIccSendDataType>(
+            msg);
       } else if (msg.getTopic() == TOPIC_USS_PERCEPT_INFO) {
         cache_with_ros_msg_and_header_time<struct_msgs::UssPerceptInfo>(msg);
       } else if (msg.getTopic() == TOPIC_VISION_PARKING_SLOT) {
@@ -583,8 +589,8 @@ void PlanningPlayer::StoreRosBag() {
         write_ros_msg<struct_msgs::CameraPerceptionTsrInfo::Ptr>(
             it_msg.second, TOPIC_TRAFFIC_SIGN, bag);
       } else if (it_msg.first == TOPIC_USS_WAVE_INFO) {
-        write_ros_msg<struct_msgs::UssWaveInfo::Ptr>(it_msg.second,
-                                                     TOPIC_USS_WAVE_INFO, bag);
+        write_ros_msg<struct_msgs::UssPdcIccSendDataType::Ptr>(
+            it_msg.second, TOPIC_USS_WAVE_INFO, bag);
       } else if (it_msg.first == TOPIC_USS_PERCEPT_INFO) {
         write_ros_msg<struct_msgs::UssPerceptInfo::Ptr>(
             it_msg.second, TOPIC_USS_PERCEPT_INFO, bag);
@@ -804,10 +810,10 @@ void PlanningPlayer::PlayOneFrame(
   }
 
   auto uss_wave_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs::UssWaveInfo>(
+      find_ros_msg_with_header_time<struct_msgs::UssPdcIccSendDataType>(
           TOPIC_USS_WAVE_INFO, input_time_list.uss_wave());
   if (uss_wave_ros_msg) {
-    iflyauto::UssWaveInfo uss_wave_msg{};
+    iflyauto::UssPdcIccSendDataType uss_wave_msg{};
     convert(uss_wave_msg, *uss_wave_ros_msg, ConvertTypeInfo::TO_STRUCT);
     planning_adapter_->Feed_IflytekUssUsswaveInfo(uss_wave_msg);
   } else {
@@ -825,7 +831,7 @@ void PlanningPlayer::PlayOneFrame(
     planning_adapter_->Feed_IflytekFusionUssPerceptionInfo(uss_percept_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
-    //           << " missing /iflytek/uss/uss_perception_info" << std::endl;
+    //           << " missing /iflytek/fusion/uss_perception_info" << std::endl;
   }
 
   if (input_time_list_map_ != input_time_list.map()) {
@@ -914,6 +920,7 @@ void PlanningPlayer::PlayOneFrame(
   if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
     bool find_function_state_machine = false;
     struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
+    uint8_t functional_state = func_state_machine_ros_msg.current_state;
     if (input_time_list.function_state_machine()) {
       auto cached_func_state_machine_ros_msg =
           find_ros_msg_with_header_time<struct_msgs::FuncStateMachine>(
@@ -922,12 +929,14 @@ void PlanningPlayer::PlayOneFrame(
       if (cached_func_state_machine_ros_msg) {
         func_state_machine_ros_msg = *cached_func_state_machine_ros_msg;
         find_function_state_machine = true;
+        if (scene_type_ == "rads") {
+          functional_state = func_state_machine_ros_msg.current_state;
+        }
       } else {
         std::cerr << "frame_num " << frame_num_
                   << " missing /iflytek/fsm/soc_state" << std::endl;
       }
     }
-    uint8_t functional_state = func_state_machine_ros_msg.current_state;
     if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
       if (scene_type_ == "acc") {
         functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
@@ -982,6 +991,12 @@ void PlanningPlayer::PlayOneFrame(
       } else if (scene_type_ == "hpp") {
         if (is_close_loop) {
           functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+        } else {
+          functional_state = func_state_machine_ros_msg.current_state;
+        }
+      } else if (scene_type_ == "rads") {
+        if (is_close_loop) {
+          functional_state = iflyauto::FunctionalState_RADS_TRACING;
         } else {
           functional_state = func_state_machine_ros_msg.current_state;
         }
@@ -1109,8 +1124,8 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
 
 void PlanningPlayer::RunCloseLoop(
     const struct_msgs::PlanningOutput& planning_output) {
-  if (scene_type_ == "scc" || scene_type_ == "noa" ||
-      scene_type_ == "hpp") {  // scc
+  if (scene_type_ == "scc" || scene_type_ == "noa" || scene_type_ == "hpp" ||
+      scene_type_ == "rads") {  // scc
     if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO)) {
       std::cerr << "Error!!! missing planning debug info" << std::endl;
       return;
@@ -1713,7 +1728,8 @@ void PlanningPlayer::UpdateVehicleServiceAPA(
 void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   if (mileage_path != "") {
     double pathLength = 0.0;
-    if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp") {
+    if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp" or
+        scene_type_ == "rads") {
       if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
         auto it_loc_msg = msg_cache_[TOPIC_LOCALIZATION].begin();
         for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1; ++i) {
@@ -1908,11 +1924,10 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     }
 
     // apa module
-    auto uss_wave_ros_msg =
-        find_ros_msg_with_header_time_upper_bound<struct_msgs::UssWaveInfo>(
-            TOPIC_USS_WAVE_INFO, start_time);
+    auto uss_wave_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs::UssPdcIccSendDataType>(TOPIC_USS_WAVE_INFO, start_time);
     if (uss_wave_ros_msg) {
-      iflyauto::UssWaveInfo uss_wave_msg{};
+      iflyauto::UssPdcIccSendDataType uss_wave_msg{};
       convert(uss_wave_msg, *uss_wave_ros_msg, ConvertTypeInfo::TO_STRUCT);
       planning_adapter_->Feed_IflytekUssUsswaveInfo(uss_wave_msg);
     } else {
@@ -1930,7 +1945,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       planning_adapter_->Feed_IflytekFusionUssPerceptionInfo(uss_percept_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/uss/uss_perception_info" << std::endl;
+                << " missing /iflytek/fusion/uss_perception_info" << std::endl;
     }
 
     // for (auto it = msg_cache_[TOPIC_EHR_PARKING_MAP].begin();
@@ -2070,6 +2085,8 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
           }
         } else if (scene_type_ == "hpp") {
           functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+        } else if (scene_type_ == "rads") {
+          functional_state = iflyauto::FunctionalState_RADS_TRACING;
         }
       }
 

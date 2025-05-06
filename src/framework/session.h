@@ -45,6 +45,10 @@ class Session : public planning::common::Arena {
     return get_scene_type() == planning::common::SceneType::HPP;
   }
 
+  bool is_rads_scene() const {
+    return get_scene_type() == planning::common::SceneType::RADS;
+  }
+
   planning::common::SceneType get_scene_type() const { return scene_type_; }
   void set_scene_type(const planning::common::SceneType &default_scene_type) {
     scene_type_ = default_scene_type;

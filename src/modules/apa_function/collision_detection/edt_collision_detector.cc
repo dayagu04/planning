@@ -271,9 +271,9 @@ void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
   car_with_mirror_circles_list_.Reset();
 
   car_with_mirror_circles_list_.height_type = ApaObsHeightType::HIGH;
-  const std::vector<double> &circle_x = apa_param.GetParam().footprint_circle_x;
-  const std::vector<double> &circle_y = apa_param.GetParam().footprint_circle_y;
-  const std::vector<double> &circle_r = apa_param.GetParam().footprint_circle_r;
+  const std::vector<float> &circle_x = apa_param.GetParam().footprint_circle_x;
+  const std::vector<float> &circle_y = apa_param.GetParam().footprint_circle_y;
+  const std::vector<float> &circle_r = apa_param.GetParam().footprint_circle_r;
 
   if (circle_x.empty() || circle_y.empty() || circle_r.empty()) {
     return;
@@ -337,9 +337,9 @@ void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
 
   // todo: use right circle and height type
   car_without_mirror_circles_list_.height_type = ApaObsHeightType::HIGH;
-  const std::vector<double> &circle_x = apa_param.GetParam().footprint_circle_x;
-  const std::vector<double> &circle_y = apa_param.GetParam().footprint_circle_y;
-  const std::vector<double> &circle_r = apa_param.GetParam().footprint_circle_r;
+  const std::vector<float> &circle_x = apa_param.GetParam().footprint_circle_x;
+  const std::vector<float> &circle_y = apa_param.GetParam().footprint_circle_y;
+  const std::vector<float> &circle_r = apa_param.GetParam().footprint_circle_r;
 
   if (circle_x.empty() || circle_y.empty() || circle_r.empty()) {
     return;
@@ -404,9 +404,9 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
   // todo: use right circle and height type
   car_chassis_circles_list_.height_type = ApaObsHeightType::HIGH;
 
-  const std::vector<double> &circle_x = apa_param.GetParam().footprint_circle_x;
-  const std::vector<double> &circle_y = apa_param.GetParam().footprint_circle_y;
-  const std::vector<double> &circle_r = apa_param.GetParam().footprint_circle_r;
+  const std::vector<float> &circle_x = apa_param.GetParam().footprint_circle_x;
+  const std::vector<float> &circle_y = apa_param.GetParam().footprint_circle_y;
+  const std::vector<float> &circle_r = apa_param.GetParam().footprint_circle_r;
 
   car_chassis_circles_list_.max_circle.center_local << circle_x[0], circle_y[0];
   car_chassis_circles_list_.max_circle.radius =
@@ -680,8 +680,7 @@ const ColResult EDTCollisionDetector::Update(
     }
   }
   // min_obs_dist is the dist that obs to expanded car
-  col_res_.pt_closest2obs =
-      std::make_pair(min_obs_dist + lat_buffer, pt_closest_to_obs);
+  col_res_.pt_closest2obs = std::make_pair(min_obs_dist, pt_closest_to_obs);
 
   return col_res_;
 }

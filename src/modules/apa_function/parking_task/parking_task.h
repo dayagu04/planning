@@ -3,25 +3,12 @@
 #include <memory>
 #include <string>
 
-#include "collision_detection/collision_detector_interface.h"
+#include "apa_context.h"
+#include "collision_detector_interface.h"
+
 
 namespace planning {
-
-enum class TaskType {
-  CENTER_LINE_DECIDER,
-  SLOT_RELEASE_DECIDER,
-  TARGET_POSE_DECIDER,
-  VIRTUAL_WALL_DECIDER,
-  SLOT_MANAGER,
-  OBSTACLE_MANAGER,
-  PATH_OPTIMIZER,
-  SPEED_LIMIT_DECIDER,
-  STOP_DECIDER,
-  SPEED_OPTIMIZER,
-  ASTAR_PATH_GENERATOR,
-  CURVE_BASED_PATH_GENERATOR,
-};
-
+namespace apa_planner {
 // todo：move all park task to the task pipline in next refact. But for now,
 // the first refact keep old logic.
 // 为了让各个模块容易维护,所以增加Task.
@@ -44,7 +31,7 @@ class ParkingTask {
 
   virtual void Execute();
 
-  virtual void Clear();
+  virtual void Reset();
 
   // push debug info in here.
   virtual void TaskDebug();
@@ -63,5 +50,5 @@ class ParkingTask {
   std::shared_ptr<apa_planner::CollisionDetectorInterface>
       collision_detector_interface_ptr_ = nullptr;
 };
-
+}  // namespace apa_planner
 }  // namespace planning

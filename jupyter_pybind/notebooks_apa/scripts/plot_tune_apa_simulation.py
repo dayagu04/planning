@@ -21,7 +21,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250317/20250317-17-42-56/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-03-17-17-42-57_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250415/20250415-14-06-06/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-04-15-14-06-07_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -105,6 +105,10 @@ data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[],
                                               'plan_path_heading':[],})
 
+data_complete_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
+                                              'plan_path_y':[],
+                                              'plan_path_heading':[],})
+
 data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_sim_target_line = ColumnDataSource(data = {'x':[], 'y':[]})
@@ -118,14 +122,15 @@ data_sim_car_predict_traj_path = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_car_predict_traj_path_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan')
+fig1.line('plan_path_y', 'plan_path_x', source = data_complete_planning_tune, line_width = 6, line_color = 'red', line_dash = 'dashed', line_alpha = 0.7, legend_label = 'sim_tuned_complete_plan', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_sim_target_pos, fill_color = "blue", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_limiter, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_limiter', visible = False)
 fig1.circle('obs_y', 'obs_x', source = data_sim_obs, size=6.0, color='red', legend_label='sim obs', visible = False)
-fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
-fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
+# fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
+# fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
 
 fig1.circle('y', 'x', source = data_sim_car_predict_traj_path, size=4, color='orange', legend_label = 'sim_car_predict_traj_path', visible = False)
 fig1.line('y', 'x', source = data_sim_car_predict_traj_path, line_width = 6, line_color = 'orange', line_dash = 'dashed', line_alpha = 0.5, legend_label = 'sim_car_predict_traj_path', visible = False)
@@ -381,6 +386,10 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
                              'plan_path_y': [],
                              'plan_path_heading': []}
 
+  data_complete_planning_tune.data = {'plan_path_x': [],
+                          'plan_path_y': [],
+                          'plan_path_heading': []}
+
   plan_path_x = []
   plan_path_y = []
   plan_path_heading = []
@@ -406,6 +415,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
   plan_traj_y_vec = []
   plan_traj_heading_vec = []
   plan_traj_lat_buffer_vec = []
+  complete_x_vec, complete_y_vec = [], []
   if res == True:
     tuned_planning_output = PlanningOutput()
     tuned_planning_output.deserialize(apa_simulation_py.GetPlanningOutput())
@@ -536,13 +546,15 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
           tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_path_x[i], plan_path_y[i], plan_path_heading[i])
           car_xn_temp.append(tmp_x)
           car_yn_temp.append(tmp_y)
-        if i % 1 == 0 or  i == len(plan_path_x) - 1:
+        if i % 1 == 0 or i == len(plan_path_x) - 1:
           car_box_x_vec.append(car_xn_temp)
           car_box_y_vec.append(car_yn_temp)
     else:
       for i in range(len(plan_traj_x_list)):
         car_xn_temp = []
         car_yn_temp = []
+        complete_x_vec.append(plan_traj_x_list[i])
+        complete_y_vec.append(plan_traj_y_list[i])
         car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_traj_lat_buffer_list[i])
         for j in range(len(car_xb_temp)):
           tmp_x, tmp_y = local2global(car_xb_temp[j], car_yb_temp[j], plan_traj_x_list[i], plan_traj_y_list[i], plan_traj_heading_list[i])
@@ -558,6 +570,12 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
     'plan_path_x': plan_path_x,
     'plan_path_y': plan_path_y,
     'plan_path_heading': plan_path_heading,
+  })
+
+  data_complete_planning_tune.data.update({
+    'plan_path_x': complete_x_vec,
+    'plan_path_y': complete_y_vec,
+    'plan_path_heading': complete_y_vec,
   })
 
   data_simu_car_box.data.update({

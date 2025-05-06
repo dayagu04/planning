@@ -2,6 +2,8 @@
 
 #include <bitset>
 
+#include "log.h"
+
 namespace planning {
 
 namespace {
@@ -17,6 +19,111 @@ StSearchNode::StSearchNode(double s, double t, double vel, double s_step,
   vel_ = vel;
 
   id_ = ComputeId(s_, t_, vel_, s_step, t_step, vel_step, only_s_t_hash);
+  LOG_DEBUG("StSearchNode constructor is called \n");
+}
+
+StSearchNode::StSearchNode(const StSearchNode& st_search_node)
+    : id_(st_search_node.id()),
+      parent_id_(st_search_node.parent_id()),
+      is_valid_(st_search_node.is_valid()),
+      s_(st_search_node.s()),
+      t_(st_search_node.t()),
+      vel_(st_search_node.vel()),
+      accel_(st_search_node.accel()),
+      jerk_(st_search_node.jerk()),
+      cost_(st_search_node.cost()),
+      g_cost_(st_search_node.g_cost()),
+      h_cost_(st_search_node.h_cost()),
+      edge_sub_cost_(st_search_node.edge_sub_cost()),
+      node_sub_cost_(st_search_node.node_sub_cost()),
+      decision_table_(st_search_node.decision_table()),
+      current_decision_table_(st_search_node.current_decision_table()),
+      upper_bound_(st_search_node.upper_bound().s(),
+                   st_search_node.upper_bound().t(),
+                   st_search_node.upper_bound().agent_id(),
+                   st_search_node.upper_bound().boundary_id(),
+                   st_search_node.upper_bound().velocity(),
+                   st_search_node.upper_bound().acceleration(),
+                   st_search_node.upper_bound().extreme_l()),
+      lower_bound_(st_search_node.lower_bound().s(),
+                   st_search_node.lower_bound().t(),
+                   st_search_node.lower_bound().agent_id(),
+                   st_search_node.lower_bound().boundary_id(),
+                   st_search_node.lower_bound().velocity(),
+                   st_search_node.lower_bound().acceleration(),
+                   st_search_node.lower_bound().extreme_l()) {
+  LOG_DEBUG("StSearchNode copy constructor is called \n");
+}
+
+StSearchNode::StSearchNode(StSearchNode&& st_search_node)
+    : id_(st_search_node.id()),
+      parent_id_(st_search_node.parent_id()),
+      is_valid_(st_search_node.is_valid()),
+      s_(st_search_node.s()),
+      t_(st_search_node.t()),
+      vel_(st_search_node.vel()),
+      accel_(st_search_node.accel()),
+      jerk_(st_search_node.jerk()),
+      cost_(st_search_node.cost()),
+      g_cost_(st_search_node.g_cost()),
+      h_cost_(st_search_node.h_cost()),
+      edge_sub_cost_(std::move(st_search_node.edge_sub_cost())),
+      node_sub_cost_(std::move(st_search_node.node_sub_cost())),
+      decision_table_(std::move(st_search_node.decision_table())),
+      current_decision_table_(
+          std::move(st_search_node.current_decision_table())),
+      upper_bound_(st_search_node.upper_bound().s(),
+                   st_search_node.upper_bound().t(),
+                   st_search_node.upper_bound().agent_id(),
+                   st_search_node.upper_bound().boundary_id(),
+                   st_search_node.upper_bound().velocity(),
+                   st_search_node.upper_bound().acceleration(),
+                   st_search_node.upper_bound().extreme_l()),
+      lower_bound_(st_search_node.lower_bound().s(),
+                   st_search_node.lower_bound().t(),
+                   st_search_node.lower_bound().agent_id(),
+                   st_search_node.lower_bound().boundary_id(),
+                   st_search_node.lower_bound().velocity(),
+                   st_search_node.lower_bound().acceleration(),
+                   st_search_node.lower_bound().extreme_l()) {
+  LOG_DEBUG("StSearchNode move constructor is called \n");
+}
+
+StSearchNode& StSearchNode::operator=(const StSearchNode& st_search_node) {
+  if (this == &st_search_node) {
+    return *this;
+  }
+  id_ = st_search_node.id();
+  parent_id_ = st_search_node.parent_id();
+  is_valid_ = st_search_node.is_valid();
+  s_ = st_search_node.s();
+  t_ = st_search_node.t();
+  vel_ = st_search_node.vel();
+  accel_ = st_search_node.accel();
+  jerk_ = st_search_node.jerk();
+  cost_ = st_search_node.cost();
+  g_cost_ = st_search_node.g_cost();
+  h_cost_ = st_search_node.h_cost();
+  edge_sub_cost_ = st_search_node.edge_sub_cost();
+  node_sub_cost_ = st_search_node.node_sub_cost();
+  decision_table_ = st_search_node.decision_table();
+  current_decision_table_ = st_search_node.current_decision_table();
+  upper_bound_.set_s(st_search_node.upper_bound().s());
+  upper_bound_.set_t(st_search_node.upper_bound().t());
+  upper_bound_.set_agent_id(st_search_node.upper_bound().agent_id());
+  upper_bound_.set_boundary_id(st_search_node.upper_bound().boundary_id());
+  upper_bound_.set_velocity(st_search_node.upper_bound().velocity());
+  upper_bound_.set_acceleration(st_search_node.upper_bound().acceleration());
+  upper_bound_.set_extreme_l(st_search_node.upper_bound().extreme_l());
+  lower_bound_.set_s(st_search_node.lower_bound().s());
+  lower_bound_.set_t(st_search_node.lower_bound().t());
+  lower_bound_.set_agent_id(st_search_node.lower_bound().agent_id());
+  lower_bound_.set_boundary_id(st_search_node.lower_bound().boundary_id());
+  lower_bound_.set_velocity(st_search_node.lower_bound().velocity());
+  lower_bound_.set_acceleration(st_search_node.lower_bound().acceleration());
+  lower_bound_.set_extreme_l(st_search_node.lower_bound().extreme_l());
+  LOG_DEBUG("StSearchNode copy assignment is called \n");
+  return *this;
 }
 
 int64_t StSearchNode::ComputeId(double s, double t, double vel, double s_step,
