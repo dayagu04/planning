@@ -100,7 +100,7 @@ class StGraphUtils {
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       const std::shared_ptr<VirtualLane>& ego_lane,
       const std::shared_ptr<VirtualLane>& agent_lane, const agent::Agent& agent,
-      const StBoundaryType& type);
+      const StBoundaryType& type, const bool is_rads_scene);
 
   static double RecalculateLateralBufferForLargeAgent(
       const trajectory::TrajectoryPoint& planning_init_point,
@@ -124,7 +124,7 @@ class StGraphUtils {
       const std::vector<double>& agent_sl_boundary,
       std::vector<std::pair<int32_t, planning_math::Vec2d>>& considered_corners,
       const planning_math::Box2d& planning_init_point_box,
-      double* const lower_s, double* const upper_s);
+      double* const lower_s, double* const upper_s, const bool is_rads_scene);
 
   static void GetIntersectiveLineSegments(
       const std::shared_ptr<planning_math::KDPath>& kd_path, const bool is_left,
@@ -148,7 +148,8 @@ class StGraphUtils {
       const std::shared_ptr<VirtualLaneManager>& virtual_lane_manager,
       const std::shared_ptr<VirtualLane>& ego_lane,
       const std::shared_ptr<VirtualLane>& agent_lane, const agent::Agent& agent,
-      const bool is_parallel_to_ego_lane, const bool is_lane_keeping);
+      const bool is_parallel_to_ego_lane, const bool is_lane_keeping,
+      const bool is_rads_scene);
 
   static bool NeedDynamicBufferForTimeRange(const agent::Agent& agent);
 

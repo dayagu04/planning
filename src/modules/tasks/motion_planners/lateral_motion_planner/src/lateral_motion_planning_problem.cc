@@ -13,6 +13,15 @@
 
 using namespace ilqr_solver;
 
+// static const double kMaxWheelAngle =
+//     360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc
+// static const double kMaxWheelAngleRate =
+//     240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc
+// [hack](bsniu): rads
+static const double kMaxWheelAngle =
+    540.0 / 13.0 / 57.3;  // 540 deg steering angle for rads
+static const double kMaxWheelAngleRate =
+    360.0 / 13.0 / 57.3;  // 360 deg/s steering angle rate for rads
 namespace pnc {
 namespace lateral_planning {
 void LateralMotionPlanningProblem::Init() {

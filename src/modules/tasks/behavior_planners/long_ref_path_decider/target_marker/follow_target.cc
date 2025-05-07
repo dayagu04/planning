@@ -1,4 +1,5 @@
 #include "follow_target.h"
+
 #include <cstdint>
 
 #include "config/basic_type.h"
@@ -71,7 +72,11 @@ FollowTarget::FollowTarget(const SpeedPlannerConfig config,
 
   MakeMinFollowDistance();
 
-  GenerateFollowTarget();
+  if (session_->is_rads_scene()) {
+    GenerateRadsFollowTarget();
+  } else {
+    GenerateFollowTarget();
+  }
 
   AddFollowTargetDataToProto();
 }
@@ -154,6 +159,9 @@ void FollowTarget::GenerateFollowTarget() {
       session_->planning_context().agent_headway_decider_output();
   const auto& agents_headway_map =
       agent_headway_decider_output.agents_headway_Info();
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  const auto& stop_destination_decider_output =
+      session_->planning_context().stop_destination_decider_output();
 
   auto lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
@@ -245,7 +253,7 @@ void FollowTarget::GenerateFollowTarget() {
         std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
     double target_s =
         std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
-    const double s_target_value = std::min(upper_bound_s, target_s);
+    double s_target_value = std::min(upper_bound_s, target_s);
 
     target_value.set_s_target_val(s_target_value);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
@@ -270,6 +278,70 @@ void FollowTarget::GenerateFollowTarget() {
     //   target_value.set_target_type(TargetType::kFollow);
     //   JSON_DEBUG_VALUE("has_target_follow_curve", 1.0)
     // }
+  }
+}
+
+void FollowTarget::GenerateRadsFollowTarget() {
+  double matched_desired_headway = default_headway;
+  const double default_t = 0.0;
+  const bool default_has_target = false;
+  const double default_s_target = 0.0;
+  const double default_v_target = 0.0;
+  const TargetType default_target_type = TargetType::kNotSet;
+  auto default_target_value =
+      TargetValue(default_t, default_has_target, default_s_target,
+                  default_v_target, default_target_type);
+  target_values_ =
+      std::vector<TargetValue>(plan_points_num_, default_target_value);
+
+  const auto& agent_headway_decider_output =
+      session_->planning_context().agent_headway_decider_output();
+  const auto& agents_headway_map =
+      agent_headway_decider_output.agents_headway_Info();
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  const auto& stop_destination_decider_output =
+      session_->planning_context().stop_destination_decider_output();
+
+  for (int32_t i = 0; i < plan_points_num_; i++) {
+    const double t = i * dt_;
+    auto& target_value = target_values_[i];
+    target_value.set_relative_t(t);
+    if (upper_bound_infos_[i].target_type == TargetType::kNotSet) {
+      target_values_[i] = target_value;
+      double s_value = target_value.s_target_val();
+      if (MakeSValueWithTargetFollowCurve(i, false, &s_value)) {
+        target_value.set_has_target(true);
+        target_value.set_s_target_val(s_value);
+        target_value.set_target_type(TargetType::kFollow);
+      }
+      continue;
+    }
+    target_value.set_has_target(true);
+    const double vel = virtual_zero_acc_curve_->Evaluate(1, t);
+    const auto& agent_id = upper_bound_infos_[i].agent_id;
+    double follow_time_gap = min_follow_distance_gap_cut_in;
+    auto iter = agents_headway_map.find(agent_id);
+    if (iter != agents_headway_map.end()) {
+      follow_time_gap = iter->second.current_headway;
+    }
+    double target_s_disatnce = std::max(
+        vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
+
+    double upper_bound_s =
+        std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
+    double target_s =
+        std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
+    double s_target_value = std::min(upper_bound_s, target_s);
+
+    if (cipv_info.cipv_id() ==
+        stop_destination_decider_output.stop_destination_virtual_agent_id()) {
+      target_s_disatnce = vel * follow_time_gap;
+      s_target_value =
+          std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
+    }
+
+    target_value.set_s_target_val(s_target_value);
+    target_value.set_target_type(upper_bound_infos_[i].target_type);
   }
 }
 

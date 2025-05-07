@@ -9,6 +9,13 @@ if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   add_compile_options(-Werror)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PLATFORM STREQUAL "X86")
+  add_definitions(-DENABLE_IFLYTEK_LOG)
+  message("ENABLE_IFLYTEK_LOG_SRC_CMAKE")
+else()
+  message("UNENABLE_IFLYTEK_LOG_SRC_CMAKE")
+endif()
+
 add_subdirectory(common EXCLUDE_FROM_ALL)
 add_subdirectory(modules EXCLUDE_FROM_ALL)
 add_subdirectory(framework EXCLUDE_FROM_ALL)

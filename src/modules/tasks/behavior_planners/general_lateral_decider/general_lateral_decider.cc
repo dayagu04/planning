@@ -1026,6 +1026,12 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
     LOG_DEBUG("Enable_bound is invalid!");
     return;
   }
+  if (ref_path_points_.empty()) {
+    LOG_DEBUG("lat ref path points is empty! \n");
+  }
+  if (plan_history_traj_.empty()) {
+    LOG_DEBUG("plan history traj is empty! \n");
+  }
 
   if (plan_history_traj_.empty() || ref_path_points_.empty()) {
     last_lat_obstacle_decision_.clear();

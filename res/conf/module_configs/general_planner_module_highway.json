@@ -334,8 +334,8 @@
     "warm_start_enable": true,
     "curv_factor": 0.33,
     "delta_t": 0.2,
-    "min_v_cruise": 2.0,
-    "min_ego_vel": 2.0,
+    "min_v_cruise": 0.1,
+    "min_ego_vel": 1.0,
     "acc_bound": 1.0,
     "map_jerk_bound": [1.2, 1.0, 0.8, 0.25],
     "jerk_bound_avoid": 0.4,
@@ -594,6 +594,9 @@
     "enable_speed_adjust": true
   },
   "speed_planning": {
+    "stop_destination_decider": {
+      "stop_destination_virtual_agent_time_headway": 0.1
+    },
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,
       "ignore_ego_ttc_to_agent_thrd" : 2.8,

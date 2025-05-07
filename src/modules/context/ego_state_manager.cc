@@ -43,6 +43,7 @@ void EgoStateManager::SetConfig(
   steer_ratio_ = config_.steer_ratio;
   cruise_routing_speed_ = config_.cruise_routing_speed;
   cruise_searching_speed_ = config_.cruise_searching_speed;
+  rads_cruise_speed_ = config_.rads_cruise_speed;
   max_replan_lat_err_ = config_.max_replan_lat_err;
   max_replan_theta_err_ = config_.max_replan_theta_err;
   max_replan_dist_err_ = config_.max_replan_dist_err;
@@ -143,6 +144,9 @@ void EgoStateManager::set_ego_v_cruise(
     } else {
       ego_v_cruise_ = cruise_routing_speed_;
     }
+  }
+  if (session_->is_rads_scene()) {
+    ego_v_cruise_ = config_.rads_cruise_speed;
   }
 }
 
@@ -341,10 +345,30 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     max_replan_dist_err = hpp_max_replan_dist_err_;
   }
 
+  double ego_acc_replan = session_->is_rads_scene() ? -(ego_state->ego_acc())
+                                                    : ego_state->ego_acc();
+  double ego_vel_replan =
+      session_->is_rads_scene() ? -(ego_state->ego_v()) : ego_state->ego_v();
   const auto start_stop_state =
       session_->planning_context().start_stop_result().state();
-  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v) &&
+  if (start_stop_state == common::StartStopInfo::START) {
+    ego_acc_replan = std::max(0.0, ego_acc_replan);
+  } else if (start_stop_state == common::StartStopInfo::STOP) {
+    ego_acc_replan = std::min(0.0, ego_acc_replan);
+  }
+  bool low_speed_replan = (ego_vel_replan < config_.kEpsilon_v) &&
                           (start_stop_state == common::StartStopInfo::START);
+  // avoid dramatic acc in ACC mode
+  const bool is_acc_mode =
+      session_->environmental_model().function_info().function_mode() ==
+      common::DrivingFunctionInfo::ACC;
+  if (is_acc_mode && ego_acc_replan > 1.0) {
+    ego_acc_replan = 1.0;
+  }
+  cur_vehicle_state_process_.linear_acceleration = ego_acc_replan;
+  cur_vehicle_state_process_.linear_velocity = ego_vel_replan;
+  VehicleState cur_vehicle_state = cur_vehicle_state_process_;
+
   // replan type judge
   int replan_code = 0;
   if (fabs(lat_err) > max_replan_lat_err) {
@@ -371,24 +395,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     replan_type_.insert(LON_TINY_SPEED_REPLAN);
     replan_code += LON_TINY_SPEED_REPLAN;
   }
-
-  // deal with ego_acc which has noise
-  // TODO: need to recieve linear acceleration from vehicle wheel speed
-  double ego_acc_replan = ego_state->ego_acc();
-  if (start_stop_state == common::StartStopInfo::START) {
-    ego_acc_replan = std::max(0.0, ego_acc_replan);
-  } else if (start_stop_state == common::StartStopInfo::STOP) {
-    ego_acc_replan = std::min(0.0, ego_acc_replan);
-  }
-  // avoid dramatic acc in ACC mode
-  const bool is_acc_mode =
-      session_->environmental_model().function_info().function_mode() ==
-      common::DrivingFunctionInfo::ACC;
-  if (is_acc_mode && ego_acc_replan > 1.0) {
-    ego_acc_replan = 1.0;
-  }
-  cur_vehicle_state_process_.linear_acceleration = ego_acc_replan;
-  VehicleState cur_vehicle_state = cur_vehicle_state_process_;
 
   PncTrajectoryPoint reinit_point;
   if (!replan_type_.empty()) {
@@ -431,6 +437,10 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   cur_vehicle_state_process_.angular_velocity = ego_state->ego_yaw_rate();
   cur_vehicle_state_process_.linear_velocity =
       std::max(ego_state->ego_v(), 0.0);
+  if (session_->is_rads_scene()) {
+    cur_vehicle_state_process_.linear_velocity =
+        std::min(ego_state->ego_v(), 0.0);
+  }
   cur_vehicle_state_process_.jerk = ego_state->ego_jerk();
   cur_vehicle_state_process_.linear_acceleration = ego_state->ego_acc();
   cur_vehicle_state_process_.delta =
@@ -707,7 +717,7 @@ bool EgoStateManager::LateralStitch() {
 
     // max delta as equivalent steer angle = 120 deg
     double max_delta = 120.0 / 57.3 / steer_ratio_;
-    if (session_->is_hpp_scene()) {
+    if (session_->is_hpp_scene() || session_->is_rads_scene()) {
       max_delta = 540.0 / 57.3 / steer_ratio_;
     }
 
@@ -834,7 +844,8 @@ void EgoStateManager::UpdatePlanningInitState() {
       set_lat_replan = true;
     } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
                cur_fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE ||
-               cur_fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE) {
+               cur_fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
+               cur_fsm_state == iflyauto::FunctionalState_RADS_SUSPEND) {
       set_lat_replan = true;
       set_lon_replan = true;
     }

@@ -27,6 +27,7 @@ class StartStopDecider : public Task {
   StartStopDeciderConfig config_;
   StartStopStatusManager start_stop_status_manager_;
   StopSpeedDecisonInfo stop_speed_decision_info_;
+  bool rads_scene_is_completed_ = false;
 };
 
 }  // namespace planning

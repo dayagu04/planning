@@ -937,16 +937,22 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       vehicle_length - vehicle_param.front_edge_to_rear_axle;
   const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
   const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
-  const double ego_rear_edge_s = ego_s - rear_axle_to_rear_edge;
-  const double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
-  const double ego_center_s = ego_s + rear_axle_to_center;
-  const double ego_front_axle_s = ego_s + rear_axle_to_front_axle;
+  double ego_rear_edge_s = ego_s - rear_axle_to_rear_edge;
+  double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
+  double ego_center_s = ego_s + rear_axle_to_center;
+  double ego_front_axle_s = ego_s + rear_axle_to_front_axle;
+  if (session_->is_rads_scene()) {
+    ego_rear_edge_s = ego_s - rear_axle_to_front_edge;
+    ego_front_edge_s = ego_s + rear_axle_to_rear_edge;
+    ego_center_s = ego_s - rear_axle_to_center;
+  }
 
   for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
     }
-    if (agent->is_tfl_virtual_obs()) {
+    if (agent->is_tfl_virtual_obs() ||
+        agent->is_stop_destination_virtual_obs()) {
       continue;
     }
     double agent_s = 0.0;
@@ -1261,7 +1267,11 @@ void AgentLongitudinalDecider::FilterUltradistantObs() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   // const double vehicle_length = vehicle_param.length;
   const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
-  const double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
+  const double rear_axle_to_rear_edge = vehicle_param.rear_edge_to_rear_axle;
+  double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
+  if (session_->is_rads_scene()) {
+    ego_front_edge_s = ego_s + rear_axle_to_rear_edge;
+  }
 
   double filter_ultra_distance = kFilterUltraDistanceHighThd;
   filter_ultra_distance =

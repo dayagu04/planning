@@ -148,6 +148,7 @@ class EgoStateManager {
   double steer_ratio_;  // hack
   double cruise_routing_speed_;
   double cruise_searching_speed_;
+  double rads_cruise_speed_;
   double max_replan_lat_err_;
   double max_replan_theta_err_;
   double max_replan_lon_err_;

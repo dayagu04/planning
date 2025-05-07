@@ -63,6 +63,8 @@ correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
 load_uss_wave_from_uss_percept_msg = False
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
+# valeo uss point cloud type
+read_uss_wave_version = 2.9
 load_fusion_object_from_occupancy = True
 version_245 = True
 # OD obstacle
@@ -651,6 +653,7 @@ class LoadCyberbag:
     except:
       self.wave_msg['enable'] = False
       print("missing /iflytek/uss/usswave_info !!!")
+
    #load adas_debug_msg
     try:
       adas_debug_msg_dict = {}
@@ -1650,7 +1653,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'start_angle':[],
         'end_angle':[],
       })
-  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg and read_uss_wave_version == 2.8:
     # load uss wave from wave_msg
     #get cur pose and uss wave
     upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
@@ -1721,6 +1724,29 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'start_angle':[],
         'end_angle':[],
       })
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and read_uss_wave_version == 2.9:
+    # load uss wave from wave_msg
+    pts_x, pts_y = [], []
+    veh_pose_x = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    veh_pose_y = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    veh_pose_theta = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
+
+    points = bag_loader.wave_msg['data'][wave_msg_idx].priv_point_data
+    # size 150, version 2.9.0
+    obj_count = 150
+    for j in range(obj_count):
+      x = points.priv_point_data_prop[j].point_x * 0.01
+      y = points.priv_point_data_prop[j].point_y * 0.01
+
+      global_x, global_y = local2global(x, y, veh_pose_x, veh_pose_y, veh_pose_theta)
+
+      pts_x.append(global_x)
+      pts_y.append(global_y)
+
+    local_view_data['data_dluss_point'].data.update({
+      'obj_pt_x': pts_x,
+      'obj_pt_y': pts_y,
+    })
 
   if plot_ctrl_flag == True:
     names = []
@@ -2027,7 +2053,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
           model_x.append(x)
           model_y.append(y)
 
-    local_view_data['data_dluss_post'].data.update({
+    local_view_data['data_dluss_point'].data.update({
       'obj_pt_x': post_x,
       'obj_pt_y': post_y,
     })
@@ -2117,7 +2143,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'start_angle':[],
         'end_angle':[],
       })
-  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg  and read_uss_wave_version == 2.8:
     # load uss wave for wave_msg
     #get cur pose and uss wave
     upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
@@ -2370,7 +2396,7 @@ def load_local_view_figure_parking():
   data_all_managed_occupied_slot = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
 
   data_dluss_model = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
-  data_dluss_post = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
+  data_dluss_point = ColumnDataSource(data = {'obj_pt_y':[], 'obj_pt_x':[]})
   data_spatial_parking_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -2433,7 +2459,7 @@ def load_local_view_figure_parking():
                      'data_all_managed_limiter':data_all_managed_limiter,\
                      'data_all_managed_occupied_slot':data_all_managed_occupied_slot,\
                      'data_dluss_model':data_dluss_model,\
-                     'data_dluss_post':data_dluss_post,\
+                     'data_dluss_point':data_dluss_point,\
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
                      'data_fusion_obj':data_fusion_obj,\
                      'data_fusion_obj_box':data_fusion_obj_box,\
@@ -2497,7 +2523,7 @@ def load_local_view_figure_parking():
   # fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
 
   # dluss
-  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
+  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_point, size=3, color='orange', legend_label = 'dluss_point', visible = True)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
@@ -3010,7 +3036,7 @@ table_params={
 dluss_post_params={
   "size" : 3,
   "color" : 'orange',
-  "legend_label" : 'dluss_post',
+  "legend_label" : 'dluss_point',
   "visible" : True
 }
 

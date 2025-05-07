@@ -846,7 +846,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
     kappa_radius_vec[i] = std::min(
         std::max(1.0 / (ref_point.at(i).path_point.kappa() + 1e-6), -10000.0),
         10000.0);
-    if (cart_ref_info.s_vec[i] >
+    if (!session_->is_rads_scene() && cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);

@@ -7,7 +7,6 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <fastdds/dds/log/Log.hpp>
 #include <iterator>
 #include <limits>
 #include <memory>

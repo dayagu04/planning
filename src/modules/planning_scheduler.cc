@@ -81,6 +81,7 @@ void PlanningScheduler::Init(
   noa_function_ = std::make_unique<NoaFunction>(&session_);
   scc_function_ = std::make_unique<SccFunction>(&session_);
   apa_function_ = std::make_unique<ApaFunction>(&session_);
+  rads_function_ = std::make_unique<RadsFunction>(&session_);
 }
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
@@ -88,6 +89,9 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
   switch (scene_type) {
+    case planning::common::SceneType::RADS:
+      path = engine_config.module_cfg_dir + "/general_planner_module_rads.json";
+      break;
     case planning::common::SceneType::HIGHWAY:
       path =
           engine_config.module_cfg_dir + "/general_planner_module_highway.json";
@@ -111,7 +115,8 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
       session_.environmental_model().config_builder(scene_type);
   config_ = config_builder->cast<GeneralPlanningConfig>();
   environmental_model_manager_.SetConfig(scene_type);
-  // all parameters can be changed here
+  // TODO: need to update rads param when switch to rads scene
+  //  all parameters can be changed here
   JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
                   "planner_type");
 }
@@ -126,6 +131,8 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
     scene_type = planning::common::SceneType::PARKING_APA;
   } else if (IsValidHppState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HPP;
+  } else if (IsValidRadsState(func_state_machine.current_state)) {
+    scene_type = planning::common::SceneType::RADS;
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
@@ -177,7 +184,8 @@ bool PlanningScheduler::RunOnce(
     planning_success = ExcuteParkingFunction(function_type, planning_output);
   }
 
-  if (function_type == common::HIGHWAY || function_type == common::HPP) {
+  if (function_type == common::HIGHWAY || function_type == common::HPP ||
+      function_type == common::RADS) {
     planning_success = ExcuteNavigationFunction(
         function_type, start_timestamp, planning_output, planning_hmi_info);
   }
@@ -390,6 +398,24 @@ void PlanningScheduler::FillPlanningTrajectory(
   gear_command->available = true;
   // 需要获取目标挡位值
   gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
+  const auto &state_machine = local_view_->function_state_machine_info;
+  const auto rads_scene_is_completed = session_.planning_context()
+                                           .start_stop_decider_output()
+                                           .rads_scene_is_completed();
+  if (session_.is_rads_scene()) {
+    if (state_machine.current_state == iflyauto::FunctionalState_RADS_TRACING &&
+        !rads_scene_is_completed) {
+      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
+    } else if (state_machine.current_state ==
+                   iflyauto::FunctionalState_RADS_TRACING &&
+               rads_scene_is_completed) {
+      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
+    } else {
+      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_NONE;
+    }
+  }
+  JSON_DEBUG_VALUE("gear_command",
+                   static_cast<int>(gear_command->gear_command_value))
 
   // 7.Open loop steering command
   auto open_loop_steering_command =
@@ -413,12 +439,23 @@ void PlanningScheduler::FillPlanningTrajectory(
   // WB end:--------临时hack以上信号--------
   const bool planning_success = planning_context.planning_success();
   const bool planning_completed = planning_context.planning_completed();
-  if (planning_completed) {
-    planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
-  } else if (planning_success) {
-    planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
-  } else {
-    planning_status->hpp_planning_status = iflyauto::HPP_RUNNING_FAILED;
+  const auto scene_type = session_.get_scene_type();
+  if (scene_type == common::SceneType::HPP) {
+    if (planning_completed) {
+      planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
+    } else if (planning_success) {
+      planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
+    } else {
+      planning_status->hpp_planning_status = iflyauto::HPP_RUNNING_FAILED;
+    }
+  } else if (scene_type == common::SceneType::RADS) {
+    if (planning_completed) {
+      planning_status->rads_planning_status = iflyauto::RADS_COMPLETED;
+    } else if (planning_success) {
+      planning_status->rads_planning_status = iflyauto::RADS_RUNNING;
+    } else {
+      planning_status->rads_planning_status = iflyauto::RADS_RUNNING_FAILED;
+    }
   }
 }
 
@@ -521,8 +558,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->cipv_info.cipv_id = cipv_info.cipv_id;
 
   // HMI for ad_info
-  const auto &ad_info =
-      session_.planning_context().planning_hmi_info().ad_info;
+  const auto &ad_info = session_.planning_context().planning_hmi_info().ad_info;
   planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
   planning_hmi_info->ad_info.lane_change_direction =
       ad_info.lane_change_direction;
@@ -556,15 +592,15 @@ void PlanningScheduler::FillPlanningHmiInfo(
       lat_offset_decider_output.avoid_id > 0
           ? iflyauto::AvoidObstacle::AVOID_HIDING
           : iflyauto::AvoidObstacle::AVOID_NO_HIDING;
-  planning_hmi_info->ad_info.aovid_id =
-      lat_offset_decider_output.avoid_id;
+  planning_hmi_info->ad_info.aovid_id = lat_offset_decider_output.avoid_id;
   planning_hmi_info->ad_info.avoiddirect =
       static_cast<iflyauto::AvoidObstacleDirection>(
           lat_offset_decider_output.avoid_direction);
 
   // HMI for hpp
-  const bool is_reached_target_slot =
-      session_.environmental_model().get_parking_slot_manager()->IsReachedTargetSlot();
+  const bool is_reached_target_slot = session_.environmental_model()
+                                          .get_parking_slot_manager()
+                                          ->IsReachedTargetSlot();
   const auto &ego_state_manager =
       session_.environmental_model().get_ego_state_manager();
   const auto &route_info_output =
@@ -573,8 +609,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
   hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
-  hpp_info->distance_to_parking_space = is_reached_target_slot ?
-      0.0 : route_info_output.distance_to_target_slot;
+  hpp_info->distance_to_parking_space =
+      is_reached_target_slot ? 0.0 : route_info_output.distance_to_target_slot;
   hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
   // hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
@@ -670,7 +706,7 @@ void PlanningScheduler::ClearParkingInfo(
 bool PlanningScheduler::IsUndefinedScene(
     const iflyauto::FunctionalState &current_state) {
   return current_state == iflyauto::FunctionalState_MANUAL ||
-         current_state == iflyauto::FunctionalState_ERROR ||
+         current_state == iflyauto::FunctionalState_SYSTEM_ERROR ||
          current_state == iflyauto::FunctionalState_MRC;
 }
 
@@ -678,6 +714,15 @@ bool PlanningScheduler::IsValidHppState(
     const iflyauto::FunctionalState &current_state) {
   return current_state >= iflyauto::FunctionalState_HPP_STANDBY &&
          current_state <= iflyauto::FunctionalState_HPP_ERROR;
+}
+
+bool PlanningScheduler::IsValidRadsState(
+    const iflyauto::FunctionalState &current_state) {
+  return current_state == iflyauto::FunctionalState_RADS_STANDBY ||
+         current_state == iflyauto::FunctionalState_RADS_PRE_ACTIVE ||
+         current_state == iflyauto::FunctionalState_RADS_TRACING ||
+         current_state == iflyauto::FunctionalState_RADS_SUSPEND ||
+         current_state == iflyauto::FunctionalState_RADS_COMPLETE;
 }
 
 void PlanningScheduler::InitSccFunction() {
@@ -856,7 +901,7 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
 
     double s_end =
         std::min(target_reference->get_frenet_coord()->Length(),
-            target_reference->get_frenet_ego_state().s() + presee_dist);
+                 target_reference->get_frenet_ego_state().s() + presee_dist);
     if (target_reference->get_frenet_coord()->SLToXY(
             Point2D(s_end, 0), presee_cart_point_in_target)) {
       if (origin_reference->get_frenet_coord()->XYToSL(
@@ -952,12 +997,15 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     planning_success = scc_function_->Plan();
   } else if (function_type == planning::common::SceneType::HPP) {
     planning_success = hpp_function_->Plan();
+  } else if (function_type == planning::common::SceneType::RADS) {
+    planning_success = rads_function_->Plan();
   } else {
     planning_success = scc_function_->Plan();
   }
 
   JSON_DEBUG_VALUE("current planning_success", planning_success);
-  session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
+  session_.mutable_planning_context()->mutable_last_planning_success() =
+      planning_success;
   if (!planning_success) {
     LOG_DEBUG("Planning failed !!!! \n");
     if (!UpdateFailedPlanningResult()) {
@@ -972,7 +1020,8 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
 
   std::cout << "The RunOnce is successed !!!!:" << std::endl;
   // 存在问题
-  // session_.mutable_planning_context()->mutable_last_planning_success() = planning_success;
+  // session_.mutable_planning_context()->mutable_last_planning_success() =
+  // planning_success;
   session_.mutable_planning_context()->mutable_planning_success() = true;
 
   const auto end_timestamp = IflyTime::Now_ms();

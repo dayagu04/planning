@@ -9,6 +9,7 @@
 #include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
+#include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
@@ -252,6 +253,14 @@ class PlanningContext {
     return start_stop_result_;
   }
 
+  const StopDestinationDeciderOutput &stop_destination_decider_output() const {
+    return stop_destination_decider_output_;
+  }
+
+  StopDestinationDeciderOutput &mutable_stop_destination_decider_output() {
+    return stop_destination_decider_output_;
+  }
+
   const AdaptiveCruiseControlInfo &adaptive_cruise_control_result() const {
     return adaptive_cruise_control_result_;
   }
@@ -347,8 +356,8 @@ class PlanningContext {
     return &longitudinal_decision_decider_output_;
   }
 
-  const std::shared_ptr<AdaptiveCruiseControl>
-      &adaptive_cruise_control_function() {
+  const std::shared_ptr<AdaptiveCruiseControl> &
+  adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(
@@ -379,8 +388,8 @@ class PlanningContext {
     lane_keep_assit_ptr_ = lane_keep_assit;
   }
 
-  const std::shared_ptr<class IntelligentHeadlightControl>
-      &intelligent_headlight_control_function() {
+  const std::shared_ptr<class IntelligentHeadlightControl> &
+  intelligent_headlight_control_function() {
     return intelligent_headlight_control_;
   }
   void set_intelligent_headlight_control_function(
@@ -389,8 +398,8 @@ class PlanningContext {
     intelligent_headlight_control_ = intelligent_headlight_control;
   }
 
-  const std::shared_ptr<TrafficSignRecognition>
-      &traffic_sign_recognition_function() {
+  const std::shared_ptr<TrafficSignRecognition> &
+  traffic_sign_recognition_function() {
     return traffic_sign_recognition_;
   }
   void set_traffic_sign_recognition_function(
@@ -518,10 +527,9 @@ class PlanningContext {
   AgentHeadwayDeciderOutput agent_headway_decider_output_;
 
   StartStopDeciderOutPut start_stop_decider_output_;
-
+  StopDestinationDeciderOutput stop_destination_decider_output_;
   // LonRefPathDeciderOutput
   LonRefPathDeciderOutput lon_ref_path_decider_output_;
-
 };
 
 }  // namespace planning

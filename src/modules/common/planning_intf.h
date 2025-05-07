@@ -44,7 +44,7 @@ class PlanningInterface : public ComponentInterface {
   virtual void Feed_IflytekVehicleService(
       const iflyauto::VehicleServiceOutputInfo &data) = 0;
   virtual void Feed_IflytekUssUsswaveInfo(
-      const iflyauto::UssWaveInfo& uss_wave_info_msg) = 0;
+      const iflyauto::UssPdcIccSendDataType& uss_wave_info_msg) = 0;
   virtual void Feed_IflytekFusionUssPerceptionInfo(
       const iflyauto::UssPerceptInfo& uss_percept_info_msg) = 0;
   virtual void Feed_IflytekFsmSocState(

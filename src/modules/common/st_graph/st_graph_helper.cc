@@ -193,6 +193,7 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
   const auto planned_kd_path = st_graph_input->processed_path();
   const auto& planning_init_point_box =
       st_graph_input->planning_init_point_box();
+  const bool is_rads_scene = st_graph_input->is_rads_scene();
   if (nullptr == planned_kd_path || nullptr == path_border_querier ||
       reserve_num <= 0) {
     return;
@@ -215,10 +216,11 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
   double upper_s = std::numeric_limits<double>::lowest();
   const int64_t boundary_id = (agent.agent_id() << 8) + 0;
 
-  if (StGraphUtils::CalculateSRange(
-          planned_kd_path, *path_border_querier, obs_box,
-          StBoundaryType::NORMAL, path_range, agent_sl_boundary,
-          considered_corners, planning_init_point_box, &lower_s, &upper_s)) {
+  if (StGraphUtils::CalculateSRange(planned_kd_path, *path_border_querier,
+                                    obs_box, StBoundaryType::NORMAL, path_range,
+                                    agent_sl_boundary, considered_corners,
+                                    planning_init_point_box, &lower_s, &upper_s,
+                                    is_rads_scene)) {
     for (double t = time_range.first; t < time_range.second;
          t += kTimeResolution) {
       st_point_pairs.emplace_back(

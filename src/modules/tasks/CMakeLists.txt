@@ -8,6 +8,7 @@ file(GLOB_RECURSE SRC_FILES
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+  common
   modules_common
   modules_adas_function
   ilqr_lib

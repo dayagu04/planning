@@ -130,6 +130,8 @@ class StGraphInput {
 
   const planning_math::Box2d& planning_init_point_box() const;
 
+  const bool is_rads_scene() const;
+
   std::shared_ptr<SecondOrderTimeOptimalTrajectory>
   GenerateMaxAccelerationCurve(
       const trajectory::TrajectoryPoint& planning_init_point,

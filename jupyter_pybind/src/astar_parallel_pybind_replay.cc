@@ -75,6 +75,7 @@
 #include "vecf32.h"
 #include "vehicle_service_c.h"
 #include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider/virtual_wall_decider.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -356,9 +357,9 @@ const void UpdateLocalView(
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -463,9 +464,9 @@ const bool PlanOnce(
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  iflyauto::UssWaveInfo uss_wave_info =
-      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-          uss_wave_info_bytes);
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,

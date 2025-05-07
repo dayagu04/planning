@@ -83,7 +83,7 @@ build/tools/planning_player/pp --play <bag的路径>
 ```
 --auto-time=1.5
 ```
-- 可选参数，程序会自动判断，如果自动判断失败，会使用此处指定的场景，默认scc，可选acc/scc/noa/hpp/apa
+- 可选参数，程序会自动判断，如果自动判断失败，会使用此处指定的场景，默认scc，可选acc/scc/noa/hpp/apa/rads
 ```
 --scene-type=acc
 ```

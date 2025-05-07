@@ -1,5 +1,6 @@
 #include "agent_headway_decider.h"
 
+#include "agent/agent.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "log.h"
@@ -181,6 +182,25 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
           agents_headway_map_[st_agent_id].current_headway + headway_step,
           gear_headway);
       agents_headway_map_[st_agent_id].current_headway = final_headway;
+    }
+
+    // for destination stop(only virtual agent)
+    const auto& stop_destination_decider_output =
+        session_->planning_context().stop_destination_decider_output();
+    const auto stop_destination_virtual_agent_id =
+        stop_destination_decider_output.stop_destination_virtual_agent_id();
+    const auto stop_destination_agent =
+        agent_manager->GetAgent(stop_destination_virtual_agent_id);
+    agent::AgentType stop_destination_agent_type = agent::AgentType::UNKNOWN;
+    if (stop_destination_agent) {
+      stop_destination_agent_type = stop_destination_agent->type();
+    }
+    if (agent::AgentDefaultInfo::kNoAgentId !=
+            stop_destination_virtual_agent_id &&
+        stop_destination_agent_type == agent::AgentType::VIRTUAL) {
+      agents_headway_map_[st_agent_id].current_headway =
+          stop_destination_decider_output
+              .stop_destination_virtual_agent_time_headway();
     }
   }
 
