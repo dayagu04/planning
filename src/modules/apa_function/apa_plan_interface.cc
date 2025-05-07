@@ -84,8 +84,6 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   scenario_manager_.RecommendParkingDirection();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
 
-  ILOG_INFO << "release state = " << apa_hmi_.prepare_plan_state;
-
   AddReleasedSlotInfo(planning_output_);
 
   const auto end_timestamp_ms = IflyTime::Now_ms();

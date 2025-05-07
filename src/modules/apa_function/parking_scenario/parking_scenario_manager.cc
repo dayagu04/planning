@@ -294,6 +294,8 @@ void ParkingScenarioManager::GenerateHmiSlotReleaseState() {
       break;
   }
 
+  ILOG_INFO << "release state = " << apa_hmi_data_.prepare_plan_state;
+
   return;
 }
 
@@ -313,7 +315,7 @@ void ParkingScenarioManager::RecommendParkingDirection() {
   generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalHeadIn);
   generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalTailIn);
 
-  // ILOG_INFO << "dir = " << apa_hmi_data_.planning_park_dir;
+  ILOG_INFO << "dir = " << apa_hmi_data_.planning_park_dir;
 
   return;
 }

@@ -506,12 +506,12 @@ void ParkingScenario::ThreadClear() { return; }
 
 void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
-  std::shared_ptr<ApaSlotManager> sslot_manager =
+  std::shared_ptr<ApaSlotManager> slot_manager =
       apa_world_ptr_->GetSlotManagerPtr();
-  sslot_manager->ego_info_under_slot_.slot.release_info_
+  slot_manager->ego_info_under_slot_.slot.release_info_
       .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
-  sslot_manager->ego_info_under_slot_.slot.release_info_
+  slot_manager->ego_info_under_slot_.slot.release_info_
       .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
 

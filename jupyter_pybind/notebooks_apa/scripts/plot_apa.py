@@ -154,6 +154,11 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
     print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
     print("vel_tar = ", plan_msg.trajectory.target_reference.target_velocity)
 
+  if bag_loader.plan_hmi_msg['enable'] == True:
+    plan_hmi_msg = bag_loader.plan_hmi_msg['data'][index_map['plan_hmi_msg_idx']]
+    print("prepare state = ", plan_hmi_msg.apa_info.prepare_plan_state)
+    print("park dir = ", plan_hmi_msg.apa_info.planning_park_dir)
+
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
     # print("plan_msg = ", plan_msg.trajectory.trajectory_points)

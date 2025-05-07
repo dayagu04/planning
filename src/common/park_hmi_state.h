@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include "adas_function/lkas_function/lane_keep_assist_type.h"
+#include "planning_hmi_c.h"
+
 namespace planning {
 
 // planning generate parking direction for hmi

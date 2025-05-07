@@ -68,11 +68,9 @@ void ApaSlotManager::Update(
   // 泊出
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
-      ILOG_INFO << "dist_id_map_.begin()->second = "
-                << dist_id_map_.begin()->second;
-      ILOG_INFO << "slots_map_[ego_info_under_slot_.id].slot_type_ = "
-                << static_cast<int>(
-                       slots_map_[ego_info_under_slot_.id].slot_type_);
+      ParkingLotCruiseProcess();
+
+      ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
       ego_info_under_slot_.id = dist_id_map_.begin()->second;
       ego_info_under_slot_.slot_type =
           slots_map_[ego_info_under_slot_.id].slot_type_;
@@ -232,8 +230,18 @@ const bool ApaSlotManager::IsEgoCloseToObs() {
   const Pose2D ego =
       Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
              measure_data_ptr_->GetHeading());
+
+  double lat_buffer = 0.0;
+  double lon_buffer = 0.0;
+  if (state_machine_ptr_->IsParkOutStatus()) {
+    lat_buffer = 0.05;
+    lon_buffer = 0.03;
+  } else {
+    lat_buffer = 0.268;
+    lon_buffer = 0.1;
+  }
   return col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
-      ego, 0.268, 0.1);
+      ego, lat_buffer, lon_buffer);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {

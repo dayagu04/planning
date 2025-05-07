@@ -111,6 +111,7 @@ class LoadCyberbag:
 
     # planning msg
     self.plan_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+    self.plan_hmi_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # planning debug msg
     self.plan_debug_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
@@ -253,6 +254,27 @@ class LoadCyberbag:
     except:
       self.plan_msg['enable'] = False
       print("missing /iflytek/planning/plan !!!")
+
+    try:
+      planning_hmi_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/hmi"):
+        planning_hmi_msg_dict[msg.header.timestamp / 1e6] = msg
+
+      print('planning_hmi_msg_dict size:',len(planning_hmi_msg_dict))
+      planning_hmi_msg_dict = {key: val for key, val in sorted(planning_hmi_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in planning_hmi_msg_dict.items():
+        self.plan_hmi_msg['t'].append(t)
+        self.plan_hmi_msg['abs_t'].append(t)
+        self.plan_hmi_msg['data'].append(msg)
+      self.plan_hmi_msg['t'] = [tmp - t0  for tmp in self.plan_hmi_msg['t']]
+      print('planning_hmi_msg time:',self.plan_hmi_msg['t'][-1])
+      if len(self.plan_hmi_msg['t']) > 0:
+        self.plan_hmi_msg['enable'] = True
+      else:
+        self.plan_hmi_msg['enable'] = False
+    except:
+      self.plan_hmi_msg['enable'] = False
+      print('missing /iflytek/planning/hmi topic !!!')
 
     # load planning debug msg
     try:
@@ -798,6 +820,13 @@ class LoadCyberbag:
           plan_msg_idx = plan_msg_idx + 1
     # print("plan_msg_idx:", plan_msg_idx)
     out['plan_msg_idx'] = plan_msg_idx
+
+    plan_hmi_msg_idx = 0
+    if self.plan_hmi_msg['enable'] == True:
+      while self.plan_hmi_msg['abs_t'][plan_hmi_msg_idx] <= abs_t and plan_hmi_msg_idx < (len(self.plan_hmi_msg['abs_t'])-1):
+          plan_hmi_msg_idx = plan_hmi_msg_idx + 1
+    # print("plan_hmi_msg_idx:", plan_hmi_msg_idx)
+    out['plan_hmi_msg_idx'] = plan_hmi_msg_idx
 
     plan_debug_msg_idx = 0
     if self.plan_debug_msg['enable'] == True:
