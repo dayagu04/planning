@@ -22,6 +22,7 @@
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_scenario.h"
 #include "planning_plan_c.h"
+#include "park_hmi_state.h"
 
 namespace planning {
 namespace apa_planner {
@@ -292,6 +293,29 @@ void ParkingScenarioManager::GenerateHmiSlotReleaseState() {
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_COMPUTING;
       break;
   }
+
+  ILOG_INFO << "release state = " << apa_hmi_data_.prepare_plan_state;
+
+  return;
+}
+
+void ParkingScenarioManager::RecommendParkingDirection() {
+  ApaDirectionGenerator generator;
+  generator.ClearRecommendationDirectionFlag(apa_hmi_data_);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, ParityBit);
+
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalFrontLeft);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, ParallelFrontLeft);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalFront);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalFrontRight);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, ParallelFrontRight);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalBack);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalBackLeft);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalBackRight);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalHeadIn);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalTailIn);
+
+  ILOG_INFO << "dir = " << apa_hmi_data_.planning_park_dir;
 
   return;
 }
