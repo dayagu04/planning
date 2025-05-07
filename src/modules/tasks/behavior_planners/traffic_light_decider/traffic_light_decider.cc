@@ -171,6 +171,22 @@ bool TrafficLightDecider::Execute() {
     }
   }
   */
+  auto cur_fsm_state = environmental_model.get_local_view()
+                          .function_state_machine_info.current_state;
+  if (cur_fsm_state == iflyauto::FunctionalState_ACC_STANDBY ||
+      cur_fsm_state == iflyauto::FunctionalState_SCC_STANDBY ||
+      cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY) {
+    auto &ad_info =
+        session_->mutable_planning_context()->mutable_planning_hmi_info()->ad_info;
+    if (IsRunningRedTFL()) {
+      ad_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
+    }
+    if (IsStayingStillGreenTFL()) {
+      ad_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
+    }
+
+  }
+
   auto &tfl_decider = session_->mutable_planning_context()
                           ->mutable_traffic_light_decider_output();
   tfl_decider.can_pass = can_pass_;
@@ -292,6 +308,34 @@ bool TrafficLightDecider::IsIntersectionMatchTFL() {
     is_match = true;
   }
   return is_match;
+}
+
+bool TrafficLightDecider::IsRunningRedTFL() {
+  const auto &environmental_model = session_->environmental_model();
+  double dis_to_stopline = environmental_model.get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+  double dis_to_crosswalk = environmental_model.get_virtual_lane_manager()
+                                ->GetEgoDistanceToCrosswalk();
+
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+
+  double brake_stop_dis = std::max(0.1, std::min(dis_to_stopline - 4.5, dis_to_crosswalk - 6.5));
+  double avg_decel = (0.0 - v_ego * v_ego) / (2.0 * brake_stop_dis);
+  if (can_pass_ == false && avg_decel < -2.5) {
+    return true;
+  }
+  return false;
+}
+
+bool TrafficLightDecider::IsStayingStillGreenTFL() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+  if (v_ego < 0.1 && is_first_car_ && green_light_timer_ > 1.5) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace planning
