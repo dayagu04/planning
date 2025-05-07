@@ -78,6 +78,9 @@ class CruiseTarget : public Target {
   const std::vector<double> _LOW_SPEED_FOLLOW_ACC_BP{5.0, 21.0, 35.0};
   const std::vector<double> _LOW_SPEED_FOLLOW_ACC_V{0.25, 0.50, 1.20};
 
+  const std::vector<double> _LOW_SPEED_FOLLOW_JERK_BP{5.0, 21.0, 35.0};
+  const std::vector<double> _LOW_SPEED_FOLLOW_JERK_V{1.00, 1.70, 2.20};
+
   std::map<SpeedLimitType, KinematicsBound> speed_limit_kinematics_bound_table_;
   planning::common::CruiseTarget cruise_target_pb_;
 };

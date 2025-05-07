@@ -35,9 +35,10 @@ constexpr double kMaxCheckTime = 3.0;
 constexpr double kKphToMps = 1.0 / 3.6;
 constexpr double kLowSpeedFollowCIPVTrajLength = 35.0;
 constexpr double kLowSpeedFollowCIPVDis = 25.0;
-constexpr double kLowSpeedFollowTrajLengthThres = 10.0;
-constexpr double kLowSpeedFollowJerkPosBoundHigh = 1.0;
-constexpr double kLowSpeedFollowJerkPosBoundLow = 0.5;
+//constexpr double kLowSpeedFollowTrajLengthThres = 10.0;
+//constexpr double kLowSpeedFollowJerkPosBoundHigh = 1.0;
+//constexpr double kLowSpeedFollowJerkPosBoundLow = 0.5;
+constexpr double kReleaseBrakeMaxJerk = 6.0;
 }  // namespace
 
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
@@ -250,8 +251,9 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
   if (cipv_traj_length < kLowSpeedFollowCIPVTrajLength &&
       cipv_relative_s < kLowSpeedFollowCIPVDis) {
     *acc = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_ACC_BP, _LOW_SPEED_FOLLOW_ACC_V);
-    *jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
-            kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
+    //*jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
+    //        kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
+    *jerk = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_JERK_BP, _LOW_SPEED_FOLLOW_JERK_V);
     return true;
   } else {
     return false;
@@ -302,8 +304,13 @@ double CruiseTarget::CalculateAccelerationWithinBound(
   double acc_next = a_next;
   acc_next = std::min(acc_next, kinematics_bound.acc_positive_mps2);
   acc_next = std::max(acc_next, kinematics_bound.acc_negative_mps2);
-  acc_next = std::min(
-      acc_next, a_t + kinematics_bound.jerk_positive_mps3 * t_step_length);
+  if (acc_next > 0.5 && a_t < -0.5) {
+    acc_next = std::min(
+      acc_next, a_t + kReleaseBrakeMaxJerk * t_step_length);
+  } else {
+    acc_next = std::min(
+        acc_next, a_t + kinematics_bound.jerk_positive_mps3 * t_step_length);
+  }
   acc_next = std::max(
       acc_next, a_t + kinematics_bound.jerk_negative_mps3 * t_step_length);
   return acc_next;
