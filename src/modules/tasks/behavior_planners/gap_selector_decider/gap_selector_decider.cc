@@ -444,7 +444,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
     } else {
       RefineLCTime(&lc_end_s, &remain_lh_time, avoid_lat_offset);
-      FixedTimeQuinticPathPlan(ego_frenet_pose.y, lc_end_s, remain_lh_time,
+      FixedTimeQuinticPathPlan(avoid_lat_offset, lc_end_s, remain_lh_time,
                               traj_points);
     }
   } else if (is_lc_back_scene) {
