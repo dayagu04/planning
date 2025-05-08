@@ -98,6 +98,14 @@ void ParkingScenario::UpdateStuckTime() {
   } else {
     frame_.pause_time = 0.0;
   }
+
+  if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    frame_.replan_fail_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.replan_fail_time = 0.0;
+  }
+
+  return;
 }
 
 const bool ParkingScenario::CheckPaused() const {

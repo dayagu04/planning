@@ -77,9 +77,9 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.lon_min_safe_buffer = 0.01;
 
   // slot release related
-  safe_buffer.scenario_try_lat_buffer_outside = 0.3;
-  safe_buffer.scenario_try_lat_buffer_inside = 0.15;
-  safe_buffer.scenario_try_lon_buffer = 0.4;
+  safe_buffer.scenario_try_lat_buffer_outside = 0.12;
+  safe_buffer.scenario_try_lat_buffer_inside = 0.08;
+  safe_buffer.scenario_try_lon_buffer = 0.3;
 
   turn_radius_buffer = 0.01;
 

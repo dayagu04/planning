@@ -251,8 +251,12 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
         ego_info_under_slot.lon_move_dist_replan_success =
             ego_info_under_slot.lon_move_dist_every_replan;
       } else {
-        SetParkingStatus(PARKING_FAILED);
-        ILOG_INFO << "postprocess path failed!";
+        frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+        if (frame_.replan_fail_time >
+            apa_param.GetParam().max_replan_failed_time) {
+          SetParkingStatus(PARKING_FAILED);
+          ILOG_INFO << "postprocess path failed!";
+        }
       }
       frame_.can_correct_path_for_limiter = true;
       break;
@@ -260,7 +264,10 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
 
     if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
       ILOG_INFO << "static replan fail, i = " << i;
-      SetParkingStatus(PARKING_FAILED);
+      if (frame_.replan_fail_time >
+          apa_param.GetParam().max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
       // if path plan fail, can try again or directly quit, now choosing quit
       // continue;
       break;

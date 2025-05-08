@@ -140,8 +140,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   HybridAStarThreadSolver thread_;
 
   AstarPathGear current_gear_;
-  // 库内揉库次数
-  int in_slot_car_adjust_count_;
+  int replan_number_inside_slot_;
   // path connected with goal
   bool is_path_connected_to_goal_;
 
