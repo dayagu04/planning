@@ -953,8 +953,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
     cur_predicion_obj.trajectory_valid = trajectory_point_size < 1 ? false : true;
-    for (int i = 0; i < TRAJ_POINT_NUM_USED + 1; i++) {
-      const auto &point = prediction_traj.trajectory_point[i];
+    for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
+      const auto &point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
       double point_relative_time =
           cur_predicion_obj.delay_time + step_time * traj_index;
