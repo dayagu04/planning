@@ -34,7 +34,7 @@ static SamplePolySpeedAdjustDecider* pSamplePolySpeedAdjustDecider;
 int Init() {
   pSamplePolySpeedAdjustDecider = new SamplePolySpeedAdjustDecider();
   return 1;
-}//
+}
 
 int Execute() {
   bool ok = true;
@@ -213,7 +213,7 @@ std::vector<Eigen::Vector3d> GetMinCostTraj() {
     std::cout << "min cost traj ptr! " << std::endl;
     return min_cost_points;
   }
-  return min_cost_points; 
+  return min_cost_points;
 }
 
 std::vector<Eigen::Vector2d> GetMinCostAccJerk() {

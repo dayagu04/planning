@@ -9,7 +9,7 @@
 namespace planning {
 namespace trajectory {
 
-class Trajectory : public std::vector<TrajectoryPoint> {// 继承 vector<>的所有方法
+class Trajectory : public std::vector<TrajectoryPoint> {
  public:
   Trajectory() = default;
   explicit Trajectory(std::vector<TrajectoryPoint>&& trajectory_points);

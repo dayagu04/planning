@@ -1689,24 +1689,33 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       })
 
   # dp
-  sampled_xs = plan_debug_msg.dp_road_info.sample_lanes_info.sampled_xs
-  sampled_ys = plan_debug_msg.dp_road_info.sample_lanes_info.sampled_ys
   rel_sampled_x_values = []
   rel_sampled_y_values = []
-  for x, y in zip(sampled_xs, sampled_ys):
-    rel_x, rel_y = coord_tf.global_to_local(x, y)
-    rel_sampled_x_values.append(rel_x)
-    rel_sampled_y_values.append(rel_y)
-  local_view_data['sampled_points_data_source_xy'].data.update({'x':rel_sampled_y_values,'y':rel_sampled_x_values})
-  fined_xs = plan_debug_msg.dp_road_info.dp_result_path.fined_xs
-  fined_ys = plan_debug_msg.dp_road_info.dp_result_path.fined_ys
+  if hasattr(plan_debug_msg.dp_road_info, 'sample_lanes_info'):
+      sampled_xs = plan_debug_msg.dp_road_info.sample_lanes_info.sampled_xs
+      sampled_ys = plan_debug_msg.dp_road_info.sample_lanes_info.sampled_ys
+      for x, y in zip(sampled_xs, sampled_ys):
+          rel_x, rel_y = coord_tf.global_to_local(x, y)
+          rel_sampled_x_values.append(rel_x)
+          rel_sampled_y_values.append(rel_y)
+      local_view_data['sampled_points_data_source_xy'].data.update({
+          'x': rel_sampled_y_values,
+          'y': rel_sampled_x_values
+      })
+
   rel_fined_path_x_values = []
-  rel_fined_path_y_values =  []
-  for x, y in zip(fined_xs, fined_ys):
-    rel_x, rel_y = coord_tf.global_to_local(x, y)
-    rel_fined_path_x_values.append(rel_x)
-    rel_fined_path_y_values.append(rel_y)
-  local_view_data['fined_path_xy'].data.update({'x':rel_fined_path_y_values,'y':rel_fined_path_x_values})
+  rel_fined_path_y_values = []
+  if hasattr(plan_debug_msg.dp_road_info, 'dp_result_path'):
+      fined_xs = plan_debug_msg.dp_road_info.dp_result_path.fined_xs
+      fined_ys = plan_debug_msg.dp_road_info.dp_result_path.fined_ys
+      for x, y in zip(fined_xs, fined_ys):
+          rel_x, rel_y = coord_tf.global_to_local(x, y)
+          rel_fined_path_x_values.append(rel_x)
+          rel_fined_path_y_values.append(rel_y)
+      local_view_data['fined_path_xy'].data.update({
+          'x': rel_fined_path_y_values,
+          'y': rel_fined_path_x_values
+      })
   return local_view_data
 
 def update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data):

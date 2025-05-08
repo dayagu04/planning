@@ -70,13 +70,13 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
 
   ConstructDefaultStPassCorridor();
 
-  AddStGraphDataToProto();// debug
+  AddStGraphDataToProto();
 
   return true;
 }
 
 bool STGraph::InsertAgent(const agent::Agent& agent,
-                          const StBoundaryType type) {// ST 没用 纵向决策才用
+                          const StBoundaryType type) {
   if (agent.agent_id() < 0) {
     return false;
   }
@@ -113,14 +113,14 @@ void STGraph::MakeAgentStBoundaries() {
     auto iter_dynamic = dynamic_close_pass_candicate_agent_ids_.find(agent_id);
     if (iter_static == static_close_pass_candicate_agent_ids_.end() &&
         iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
-      continue;// 非动 非静态的过滤
+      continue;
     }
     const bool is_static = StGraphUtils::IsStaticAgent(*agent);
     const bool reuse_for_close_pass = true;
     // TODO:different buffer for vru,truck and normal agent
     const double extra_lateral_buffer_for_close_pass =
-        agent->is_vru() ? 1.0 : 0.5;// 远离行人
-    if (is_static) {// 已经存在的前提下 增加buff
+        agent->is_vru() ? 1.0 : 0.5;
+    if (is_static) {
       MakeStaticAgentStBoundary(*agent, StBoundaryType::NORMAL,
                                 reuse_for_close_pass,
                                 extra_lateral_buffer_for_close_pass);
@@ -155,7 +155,7 @@ void STGraph::MakeAgentStBoundaries() {
 void STGraph::MakeStaticAgentStBoundary(
     const agent::Agent& agent, const StBoundaryType type,
     const bool reuse_for_close_pass,
-    const double extra_lateral_buffer_for_close_pass) {// 声明中有默认参数
+    const double extra_lateral_buffer_for_close_pass) {
   const bool is_large_agent =
       StGraphUtils::IsLargeAgent(agent) && type == StBoundaryType::NORMAL;
   const int32_t reserve_num = st_graph_input_->reserve_num();
@@ -227,7 +227,7 @@ void STGraph::MakeStaticAgentStBoundary(
 
   StGraphUtils::CalculateAgentSLBoundary(planned_kd_path, obs_box, path_range,
                                          type, &agent_sl_boundary,
-                                         &considered_corners);// 障碍物角点 xy 投影到path上的 sl 有干涉存入consider
+                                         &considered_corners);
   std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
   st_point_pairs.reserve(reserve_num);
   double lower_s = std::numeric_limits<double>::max();
@@ -236,23 +236,23 @@ void STGraph::MakeStaticAgentStBoundary(
   double min_t = std::numeric_limits<double>::max();
   const double max_l = agent_sl_boundary[2];
   const double min_l = agent_sl_boundary[3];
-  if (StGraphUtils::CalculateSRange(// 确定该障碍物对路径 kd_path 的影响范围 [lower_s, upper_s]
+  if (StGraphUtils::CalculateSRange(
           planned_kd_path, *path_border_querier, obs_box, type, path_range,
           agent_sl_boundary, considered_corners, planning_init_point_box,
           &lower_s, &upper_s, is_rads_scene)) {
     for (double t = time_range.first; t < time_range.second;
          t += kTimeResolution) {
       min_t = std::fmin(min_t, t);
-      st_point_pairs.emplace_back(// 障碍物沿着path 移动的t 和对应的s上下界限
+      st_point_pairs.emplace_back(
           STPoint(lower_s, t, agent.agent_id(), boundary_id, 0.0, 0.0, min_l),
           STPoint(upper_s, t, agent.agent_id(), boundary_id, 0.0, 0.0, max_l));
-    }// 静态的障碍物上下s是不动的 只有t在变化
+    }
   }
   std::vector<int64_t> st_boundaries;
-  if (!st_point_pairs.empty()) {// 用 “boundary id 索引边界” boundary_id -> STBoundary
-    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));// 批量创建st_boundary
+  if (!st_point_pairs.empty()) {
+    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
     st_boundary->set_id(boundary_id);
-    if (type == StBoundaryType::NEIGHBOR) {// 根据障碍物类型 塞入不同边界 neighbor normal(close pass?) expand
+    if (type == StBoundaryType::NEIGHBOR) {
       neighbor_boundary_id_st_boundaries_map_.insert(
           std::make_pair(boundary_id, std::move(st_boundary)));
     } else if (type == StBoundaryType::NORMAL) {
@@ -267,14 +267,14 @@ void STGraph::MakeStaticAgentStBoundary(
     }
     st_boundaries.emplace_back(boundary_id);
   }
-  if (!st_boundaries.empty()) {// 用agent id 索引st边界id  agent_id -> [boundary_id1, boundary_id2, ...]
-    if (type == StBoundaryType::NEIGHBOR) {// 邻居
+  if (!st_boundaries.empty()) {
+    if (type == StBoundaryType::NEIGHBOR) {
       neighbor_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
-    } else if (type == StBoundaryType::NORMAL) {// 一般
+    } else if (type == StBoundaryType::NORMAL) {
       reuse_for_close_pass
-          ? close_pass_agent_id_st_boundaries_map_[agent.agent_id()] =// 近距离超越
+          ? close_pass_agent_id_st_boundaries_map_[agent.agent_id()] =
                 st_boundaries
-          : agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;// 普通
+          : agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
       is_in_st_graph = true && !reuse_for_close_pass;
     } else if (type == StBoundaryType::EXPAND) {
       expand_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
@@ -284,7 +284,7 @@ void STGraph::MakeStaticAgentStBoundary(
     static_close_pass_candicate_agent_ids_.insert(agent.agent_id());
   }
   if (is_large_agent && !reuse_for_close_pass) {
-    mutable_agent_st_info->is_in_st_graph_ =is_in_st_graph;
+    mutable_agent_st_info->is_in_st_graph_ = is_in_st_graph;
     mutable_agent_st_info->lateral_buffer_ = lat_buffer;
     mutable_agent_st_info->st_graph_count_ =
         is_in_st_graph ? ++prev_st_count : 0;
@@ -385,14 +385,14 @@ void STGraph::MakeDynamicAgentStBoundary(
     if (trajectories[i].empty()) {
       continue;
     }
-    //
+
     const double agent_pred_end_time = trajectories[i].back().absolute_time();
     std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
     st_point_pairs.reserve(reserve_num);
     const int64_t boundary_id =
         (agent.agent_id() << 8) + i + agent.trajectories().size();
-    for (double relative_time = time_range.first; relative_time <= time_horizon;// 5.5 horizon
-         relative_time += kTimeResolution) {// 0.1
+    for (double relative_time = time_range.first; relative_time <= time_horizon;
+         relative_time += kTimeResolution) {
       // find path_border_segments which have collison risk
       trajectory::TrajectoryPoint point;
       if (start_absolute_time + relative_time < agent_pred_end_time) {
@@ -428,7 +428,7 @@ void STGraph::MakeDynamicAgentStBoundary(
 
       Box2d obs_box(Vec2d(point.x(), point.y()), point.theta(),
                     agent.length() + 2.0 * lon_buffer,
-                    agent.width() + 2.0 * specific_lat_buffer);// 本时刻对应的box
+                    agent.width() + 2.0 * specific_lat_buffer);
 
       // max_s min_s max_l min_l
       std::vector<double> agent_sl_boundary(4);
@@ -436,12 +436,12 @@ void STGraph::MakeDynamicAgentStBoundary(
 
       StGraphUtils::CalculateAgentSLBoundary(
           planned_kd_path, obs_box, path_range, type, &agent_sl_boundary,
-          &considered_corners);// 计算当前时刻的box 四角 投影在path上的 sl 存储干涉的sl
+          &considered_corners);
       const double max_l = agent_sl_boundary[2];
       const double min_l = agent_sl_boundary[3];
       double lower_s = std::numeric_limits<double>::max();
       double upper_s = std::numeric_limits<double>::lowest();
-      if (StGraphUtils::CalculateSRange(// 考虑具体车的尺寸做裁剪/扩张s的上下边界
+      if (StGraphUtils::CalculateSRange(
               planned_kd_path, *path_border_querier, obs_box, type, path_range,
               agent_sl_boundary, considered_corners, planning_init_point_box,
               &lower_s, &upper_s, is_rads_scene)) {
@@ -1045,8 +1045,7 @@ void STGraph::AddStGraphDataToProto() {
   }
 
   for (auto it = neighbor_boundary_id_st_boundaries_map.begin();
-       it != neighbor_boundary_id_st_boundaries_map.end(); ++it) {// 一个 t index 可能有多个 (lower_s, upper_s) 区间
-
+       it != neighbor_boundary_id_st_boundaries_map.end(); ++it) {
     auto* boundary = st_graph_data_pb_.add_neighbor_st_boundaries();
     boundary->set_boundary_id(it->first);
     auto lower_points = it->second->lower_points();

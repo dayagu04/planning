@@ -39,12 +39,12 @@ class StGraphInput {
       const std::vector<std::shared_ptr<agent::Agent>>& origin_agents);
 
   void ExtendProcessedPath(
-      const bool is_lane_keeping,
+      const bool is_lane_keeping, const bool is_lane_borrow,
       const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
       const std::shared_ptr<planning_math::KDPath>& planned_path);
 
   void ForwardExtendPlannedPath(
-      const bool is_lane_keeping,
+      const bool is_lane_keeping, const bool is_lane_borrow,
       const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       std::vector<planning_math::PathPoint>* const ptr_path_points);

@@ -6,21 +6,23 @@
 #include "config/vehicle_param.h"
 #include "define/geometry.h"
 #include "ego_state_manager.h"
+#include "ifly_time.h"
 #include "math/box2d.h"
 #include "math/curve1d/quintic_polynomial_curve1d.h"
-#include "ifly_time.h"
+#include "task_interface/lane_borrow_decider_output.h"
 namespace planning {
 
 ComparableCost TrajectoryCost::Calculate(const QuinticPolynomialCurve1d& curve,
                                          const double start_s,
                                          const double end_s, int current_level,
-                                         int total_level)  {
+                                         int total_level,LaneBorrowStatus lane_borrow_status) {
   ComparableCost total_cost;
   // total_cost = CalculateStaticObsCost(curve, start_s, end_s);
   double time_stamp_1 = IflyTime::Now_ms();
   total_cost = CalObsCartCost(curve, start_s, end_s);
   double time_stamp_2 = IflyTime::Now_ms();
-  total_cost += CalculatePathCost(curve, start_s, end_s, current_level, total_level);
+  total_cost +=
+      CalculatePathCost(curve, start_s, end_s, current_level, total_level, lane_borrow_status);
   double time_stamp_3 = IflyTime::Now_ms();
   total_cost += CalculateStitchCost(curve, start_s, end_s);
   double time_stamp_4 = IflyTime::Now_ms();
@@ -34,7 +36,7 @@ ComparableCost TrajectoryCost::Calculate(const QuinticPolynomialCurve1d& curve,
 
 ComparableCost TrajectoryCost::CalculatePathCost(
     const QuinticPolynomialCurve1d& curve, const double start_s,
-    const double end_s, int current_level, int total_level) const {
+    const double end_s, int current_level, int total_level,LaneBorrowStatus lane_borrow_status) const {
   ComparableCost cost;
   double path_cost = 0.0;
   // lateral sample two lanes
@@ -44,28 +46,56 @@ ComparableCost TrajectoryCost::CalculatePathCost(
   for (double path_s = 0.0; path_s < (end_s - start_s);
        path_s += path_resolution_) {
     const double frenet_l = curve.Evaluate(0, path_s);
-    // if (frenet_l < sample_right_boundary_ || frenet_l > sample_left_boundary_) {
+    // if (frenet_l < sample_right_boundary_ || frenet_l >
+    // sample_left_boundary_) {
     //   cost.out_boundary_ = true;
     // }
-     // lateral sample  lanes
+    // lateral sample  lanes
     double sample_left_boundary = 0.0;
     double sample_right_boundary = 0.0;
     // avaliable lane boundary
-    double ego_s =  current_reference_path_ptr_->get_frenet_ego_state().s();
+    double ego_s = current_reference_path_ptr_->get_frenet_ego_state().s();
     double aheads = path_s + start_s - ego_s;
     double vehicle_width = vehicle_param.width;
     if (current_lane_ptr_ != nullptr) {
       sample_left_boundary =
-          current_lane_ptr_->width_by_s(path_s+start_s) * 0.5 - vehicle_width * 0.5;
+          current_lane_ptr_->width_by_s(path_s + start_s) * 0.5 -
+          vehicle_width * 0.5;
       sample_right_boundary =
-          - current_lane_ptr_->width_by_s(path_s+start_s) * 0.5 + vehicle_width * 0.5;
+          -current_lane_ptr_->width_by_s(path_s + start_s) * 0.5 +
+          vehicle_width * 0.5;
     }
     if (left_lane_ptr_ != nullptr) {
-      sample_left_boundary += left_lane_ptr_->width_by_s(path_s+start_s)*0.6;// larger than different from sample boundary
+      if (lane_borrow_status == kLaneBorrowCrossing)
+      {
+        sample_left_boundary +=
+          left_lane_ptr_->width_by_s(path_s + start_s) *
+          1.2;
+      }else{
+        sample_left_boundary +=
+          left_lane_ptr_->width_by_s(path_s + start_s) *
+          0.6;  // larger than different from sample boundary
+      }
     }
     if (right_lane_ptr_ != nullptr) {
-      sample_right_boundary -= right_lane_ptr_->width_by_s(path_s+start_s)*0.6;
+      if (lane_borrow_status == kLaneBorrowCrossing)
+      {
+        sample_right_boundary -=
+          right_lane_ptr_->width_by_s(path_s + start_s) * 1.2;
+      }else{
+      sample_right_boundary -=
+          right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
+      }
     }
+    // if (left_lane_ptr_ != nullptr) {
+    //   sample_left_boundary +=
+    //       left_lane_ptr_->width_by_s(path_s + start_s) *
+    //       0.6;  // larger than different from sample boundary
+    // }
+    // if (right_lane_ptr_ != nullptr) {
+    //   sample_right_boundary -=
+    //       right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
+    // }
 
     if (frenet_l < sample_right_boundary || frenet_l > sample_left_boundary) {
       cost.out_boundary_ = true;
@@ -141,10 +171,11 @@ ComparableCost TrajectoryCost::GetObsSLCost(
       coeff_collision_cost_ * softmax(delta_s, collision_distance_);
   return obstacle_cost;
 }
-ComparableCost TrajectoryCost::GetBoxCost(const Box2d &ego_box,const Box2d &obs_box)const {
-ComparableCost obstacle_cost;
+ComparableCost TrajectoryCost::GetBoxCost(const Box2d& ego_box,
+                                          const Box2d& obs_box) const {
+  ComparableCost obstacle_cost;
   double distance = ego_box.DistanceTo(obs_box);
-  if (distance< 0.01) {
+  if (distance < 0.01) {
     obstacle_cost.has_collision_ = true;
   }
   // no overlap  but need consider
@@ -157,11 +188,12 @@ ComparableCost obstacle_cost;
       coeff_collision_cost_ * softmax(distance, collision_distance_);
   return obstacle_cost;
 }
-bool TrajectoryCost::BoxHasOverlap(const Box2d &ego_box,const Box2d &obs_box)const { // unused
-  std::vector<planning_math::Vec2d> corners =  obs_box.GetAllCorners();
+bool TrajectoryCost::BoxHasOverlap(const Box2d& ego_box,
+                                   const Box2d& obs_box) const {  // unused
+  std::vector<planning_math::Vec2d> corners = obs_box.GetAllCorners();
   bool has_overlap = false;
   for (size_t i = 0; i < corners.size(); ++i) {
-    if(ego_box.IsPointIn(corners[i])){
+    if (ego_box.IsPointIn(corners[i])) {
       has_overlap = true;
       break;
     }
@@ -176,32 +208,39 @@ bool TrajectoryCost::BoxHasOverlap(const Box2d &ego_box,const Box2d &obs_box)con
 //   for (double curr_s = start_s; curr_s <= end_s; curr_s += 2.0) {
 //     const double curr_l = curve.Evaluate(0, curr_s - start_s);
 //     for (const auto& obstacle:obstacles_info_){
-//       FrenetObstacleBoundary obstacle_sl{obstacle.s_start, obstacle.s_end, obstacle.l_start, obstacle.l_end};
-//       obstacles_cost += GetObsSLCost(obstacle_sl, curr_s, curr_l);
+//       FrenetObstacleBoundary obstacle_sl{obstacle.s_start, obstacle.s_end,
+//       obstacle.l_start, obstacle.l_end}; obstacles_cost +=
+//       GetObsSLCost(obstacle_sl, curr_s, curr_l);
 //     }
 //   }
 //   obstacles_cost.safety_cost_ *= path_resolution;
 //   return obstacles_cost;
 // }
-ComparableCost TrajectoryCost::CalculateStitchCost(const QuinticPolynomialCurve1d& curve, const double start_s,
-    const double end_s) const{
+ComparableCost TrajectoryCost::CalculateStitchCost(
+    const QuinticPolynomialCurve1d& curve, const double start_s,
+    const double end_s) const {
   ComparableCost cost;
   double stitch_cost = 0;
   const auto& frenet_coord = current_reference_path_ptr_->get_frenet_coord();
-  for (double path_s = 0.0; path_s < (end_s - start_s); path_s += path_resolution_) {
-    if(ref_path_curve_.s_vec.size() == 0 || path_s + start_s > ref_path_curve_.s_vec.back()){
-      break; // cur curve too long or first path
+  for (double path_s = 0.0; path_s < (end_s - start_s);
+       path_s += path_resolution_) {
+    if (ref_path_curve_.s_vec.size() == 0 ||
+        path_s + start_s > ref_path_curve_.s_vec.back()) {
+      break;  // cur curve too long or first path
     }
-    const double frenet_l = curve.Evaluate(0, path_s);// relative s in current curve
+    const double frenet_l =
+        curve.Evaluate(0, path_s);  // relative s in current curve
     const double frenet_s = path_s + start_s;
-    const Point2D sl_point(frenet_s,frenet_l);
+    const Point2D sl_point(frenet_s, frenet_l);
     Point2D cart_point;
     frenet_coord->SLToXY(sl_point, cart_point);
-    Eigen::Vector2d point_to_proj (cart_point.x,cart_point.y);
+    Eigen::Vector2d point_to_proj(cart_point.x, cart_point.y);
     // calculate projection
     pnc::spline::Projection projection_point;
-    projection_point.CalProjectionPoint(ref_path_curve_.x_s_spline, ref_path_curve_.y_s_spline,
-    ref_path_curve_.s_vec.front(), ref_path_curve_.s_vec.back(), point_to_proj);
+    projection_point.CalProjectionPoint(
+        ref_path_curve_.x_s_spline, ref_path_curve_.y_s_spline,
+        ref_path_curve_.s_vec.front(), ref_path_curve_.s_vec.back(),
+        point_to_proj);
     // get projection GetOutput
     double dist = projection_point.GetOutput().dist_proj;
     stitch_cost += dist * coeff_stitch_cost_;
@@ -211,10 +250,12 @@ ComparableCost TrajectoryCost::CalculateStitchCost(const QuinticPolynomialCurve1
   return cost;
 }
 
-void TrajectoryCost::BuildCurveBorder(const QuinticPolynomialCurve1d &curve,const double start_s,
-                                    const double end_s){
+void TrajectoryCost::BuildCurveBorder(const QuinticPolynomialCurve1d& curve,
+                                      const double start_s,
+                                      const double end_s) {
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
-  const auto & vehicle_param =  VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_center = vehicle_param.front_edge_to_rear_axle;
   const double back_edge_to_center = vehicle_param.rear_edge_to_rear_axle;
   const double vehicle_length = vehicle_param.length;
@@ -222,8 +263,7 @@ void TrajectoryCost::BuildCurveBorder(const QuinticPolynomialCurve1d &curve,cons
   const double back_axle_to_center_dist =
       0.5 * (front_edge_to_center - back_edge_to_center);
 
-  const int32_t start_idx =
-  std::max(0, int32_t(start_s / path_resolution_));
+  const int32_t start_idx = std::max(0, int32_t(start_s / path_resolution_));
   const int32_t end_idx = int32_t(end_s / path_resolution_);
   const double total_len = end_s - start_s;
   int32_t search_num = int32_t(total_len / path_resolution_) + 1;
@@ -231,99 +271,112 @@ void TrajectoryCost::BuildCurveBorder(const QuinticPolynomialCurve1d &curve,cons
   path_border_segments.reserve(search_num);
 
   for (int32_t i = start_idx; i < end_idx; ++i) {
-  double desired_s = i * path_resolution_;
-  double l = curve.Evaluate(0, desired_s);
-  double tan_local_theta = curve.Evaluate(1, desired_s);
+    double desired_s = i * path_resolution_;
+    double l = curve.Evaluate(0, desired_s);
+    double tan_local_theta = curve.Evaluate(1, desired_s);
 
-  Point2D frenet_point(desired_s,l);
-  Point2D cart_point;
-  frenet_coord->SLToXY(frenet_point, cart_point);
-  Vec2d point(cart_point.x,cart_point.y);
-  double theta = std::atan(tan_local_theta) + frenet_coord->GetPathCurveHeading(desired_s);
+    Point2D frenet_point(desired_s, l);
+    Point2D cart_point;
+    frenet_coord->SLToXY(frenet_point, cart_point);
+    Vec2d point(cart_point.x, cart_point.y);
+    double theta = std::atan(tan_local_theta) +
+                   frenet_coord->GetPathCurveHeading(desired_s);
 
-  Vec2d center = point + Vec2d::CreateUnitVec2d(theta) * back_axle_to_center_dist;
-  Box2d ego_box(center, theta, vehicle_length, vehicle_width);
-  auto corners = ego_box.GetAllCorners();
+    Vec2d center =
+        point + Vec2d::CreateUnitVec2d(theta) * back_axle_to_center_dist;
+    Box2d ego_box(center, theta, vehicle_length, vehicle_width);
+    auto corners = ego_box.GetAllCorners();
 
-  LineSegment2d left_segment(corners[2], corners[1]);
-  LineSegment2d right_segment(corners[3], corners[0]);
+    LineSegment2d left_segment(corners[2], corners[1]);
+    LineSegment2d right_segment(corners[3], corners[0]);
 
-  speed::PathBorderSegment path_border_segment(// 边界包含 前后s 左右 segment
-      i, desired_s, desired_s - back_edge_to_center,
-      desired_s + front_edge_to_center, left_segment, right_segment);
-  path_border_segments.emplace_back(path_border_segment);
+    speed::PathBorderSegment
+        path_border_segment(  // 边界包含 前后s 左右 segment
+            i, desired_s, desired_s - back_edge_to_center,
+            desired_s + front_edge_to_center, left_segment, right_segment);
+    path_border_segments.emplace_back(path_border_segment);
+  }
+  curve_border_querier_ =
+      std::make_shared<speed::PathBorderQuerier>(path_border_segments);
 }
-curve_border_querier_ =
-    std::make_shared<speed::PathBorderQuerier>(path_border_segments);
-}
-ComparableCost TrajectoryCost::CalObsCartCost(const QuinticPolynomialCurve1d &curve,const double start_s,
-                                    const double end_s) const{
+ComparableCost TrajectoryCost::CalObsCartCost(
+    const QuinticPolynomialCurve1d& curve, const double start_s,
+    const double end_s) const {
   ComparableCost cost;
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
-  const auto & vehicle_param =  VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_center = vehicle_param.front_edge_to_rear_axle;
   const double back_edge_to_center = vehicle_param.rear_edge_to_rear_axle;
   const double vehicle_length = vehicle_param.length;
   const double vehicle_width = vehicle_param.width;
-  const double back_axle_to_center_dist =   0.5 * (front_edge_to_center - back_edge_to_center);
+  const double back_axle_to_center_dist =
+      0.5 * (front_edge_to_center - back_edge_to_center);
   const double path_resolution = path_resolution_;
-  double lateral_buffer = 0.1;
-  double longitudinal_buffer = 0.1;
+  double lateral_buffer = 0.4;
+  double longitudinal_buffer = 0.0;
   for (double curr_s = start_s; curr_s <= end_s; curr_s += 2.0) {
     const double curr_l = curve.Evaluate(0, curr_s - start_s);
-    double tan_local_theta = curve.Evaluate(1, curr_s- start_s);
-    Point2D frenet_point(curr_s ,curr_l);
+    double tan_local_theta = curve.Evaluate(1, curr_s - start_s);
+    Point2D frenet_point(curr_s, curr_l);
     Point2D cart_point;
     frenet_coord->SLToXY(frenet_point, cart_point);
-    Vec2d point(cart_point.x,cart_point.y);
-    double theta = std::atan(tan_local_theta) + frenet_coord->GetPathCurveHeading(curr_s);
-    Vec2d center = point + Vec2d::CreateUnitVec2d(theta) * back_axle_to_center_dist;
-    Box2d ego_box(center, theta, vehicle_length + longitudinal_buffer , vehicle_width + lateral_buffer);
-    for(const auto& obs_box:static_obstacles_box_){
+    Vec2d point(cart_point.x, cart_point.y);
+    double reference_heading = frenet_coord->GetPathCurveHeading(curr_s);
+    double theta =
+        std::atan(tan_local_theta) + frenet_coord->GetPathCurveHeading(curr_s);
+    Vec2d center =
+        point + Vec2d::CreateUnitVec2d(theta) * back_axle_to_center_dist;
+    Box2d ego_box(center, theta, vehicle_length + longitudinal_buffer,
+                  vehicle_width + lateral_buffer);
+    for (const auto& obs_box : static_obstacles_box_) {
       // bool has_overlap = BoxHasOverlap(ego_box,obs_box);
-      cost += GetBoxCost(ego_box,obs_box);
+      cost += GetBoxCost(ego_box, obs_box);
+    }
+    // used all prediction time
+    for (const auto& obs_box : flatted_dynamic_obstacles_box_) {
+      cost += GetBoxCost(ego_box, obs_box);
+    }
   }
-   // used all prediction time
-    for(const auto& obs_box:flatted_dynamic_obstacles_box_){
-      cost += GetBoxCost(ego_box,obs_box);
-  }
-}
-// dynamic
-// longitudinal_buffer = 1.5;
-// unused time- time check
-// double ego_s = ego_frenet_state_.s();
-// double ego_v = ego_frenet_state_.velocity();
-// for(const auto& obs_boxes:dynamic_obstacles_box_){
-//     for(size_t i = 0; i < obs_boxes.size(); i++){
-//       // 0,0.6,1.2 ...
-//       const auto& agent_pred_box = obs_boxes[i];
-//       double ego_pred_s = 0.6 * i * ego_v + ego_s;
-//       if(ego_pred_s < start_s || ego_pred_s > end_s){
-//         break;
-//       }
-//       const double pred_l = curve.Evaluate(0, ego_pred_s - start_s);
-//       double tan_local_theta = curve.Evaluate(1, ego_pred_s- start_s);
-//       Point2D frenet_point(ego_pred_s ,pred_l);
-//       Point2D cart_point;
-//       frenet_coord->SLToXY(frenet_point, cart_point);
-//       Vec2d point(cart_point.x,cart_point.y);
-//       double theta = std::atan(tan_local_theta) + frenet_coord->GetPathCurveHeading(ego_pred_s);
-//       Vec2d center = point + Vec2d::CreateUnitVec2d(theta) * back_axle_to_center_dist;
-//       Box2d ego_pred_box(center, theta, vehicle_length + longitudinal_buffer , vehicle_width + lateral_buffer);
-//       cost += GetBoxCost(ego_pred_box,agent_pred_box);
-//       // const auto& ego_pred_box
-//     }
-//     // cost
-//   }
+  // dynamic
+  // longitudinal_buffer = 1.5;
+  // unused time- time check
+  // double ego_s = ego_frenet_state_.s();
+  // double ego_v = ego_frenet_state_.velocity();
+  // for(const auto& obs_boxes:dynamic_obstacles_box_){
+  //     for(size_t i = 0; i < obs_boxes.size(); i++){
+  //       // 0,0.6,1.2 ...
+  //       const auto& agent_pred_box = obs_boxes[i];
+  //       double ego_pred_s = 0.6 * i * ego_v + ego_s;
+  //       if(ego_pred_s < start_s || ego_pred_s > end_s){
+  //         break;
+  //       }
+  //       const double pred_l = curve.Evaluate(0, ego_pred_s - start_s);
+  //       double tan_local_theta = curve.Evaluate(1, ego_pred_s- start_s);
+  //       Point2D frenet_point(ego_pred_s ,pred_l);
+  //       Point2D cart_point;
+  //       frenet_coord->SLToXY(frenet_point, cart_point);
+  //       Vec2d point(cart_point.x,cart_point.y);
+  //       double theta = std::atan(tan_local_theta) +
+  //       frenet_coord->GetPathCurveHeading(ego_pred_s); Vec2d center = point +
+  //       Vec2d::CreateUnitVec2d(theta) * back_axle_to_center_dist; Box2d
+  //       ego_pred_box(center, theta, vehicle_length + longitudinal_buffer ,
+  //       vehicle_width + lateral_buffer); cost +=
+  //       GetBoxCost(ego_pred_box,agent_pred_box);
+  //       // const auto& ego_pred_box
+  //     }
+  //     // cost
+  //   }
 
   cost.safety_cost_ *= path_resolution_;
   return cost;
 }
-ComparableCost TrajectoryCost::CalDynamicObsCartCost(const QuinticPolynomialCurve1d &curve,const double start_s,
-                                    const double end_s) const{
-ComparableCost cost;
-// TODO
-return cost;
+ComparableCost TrajectoryCost::CalDynamicObsCartCost(
+    const QuinticPolynomialCurve1d& curve, const double start_s,
+    const double end_s) const {
+  ComparableCost cost;
+  // TODO
+  return cost;
 }
 // namespace planning
-}
+}  // namespace planning

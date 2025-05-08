@@ -15,9 +15,9 @@
 #include "reference_path.h"
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
+#include "tasks/behavior_planners/dp_path_decider/dp_road_graph.h"
 #include "tasks/task.h"
 #include "virtual_lane.h"
-#include "tasks/behavior_planners/dp_path_decider/dp_road_graph.h"
 namespace planning {
 namespace lane_borrow_deciderV2 {
 
@@ -35,9 +35,12 @@ class LaneBorrowDecider : public Task {
 
  private:
   bool ProcessEnvInfos();
+  bool ProcessAllEnvInfos();
+  void LaneTypeDistanceInfo();
   void UpdateToDP();
   void LogDebugInfo();
-
+  bool DPDecision();
+  bool LaneBorrowPreCheck();
   bool RunDP();
   bool CheckIfNoBorrowToDPLaneBorrowDriving();
   bool CheckIfDPLaneBorrowToNoBorrow();
@@ -48,13 +51,13 @@ class LaneBorrowDecider : public Task {
   bool CheckIfBackOriginLaneToLaneBorrowDriving();
   bool CheckIfBackOriginLaneToLaneBorrowCrossing();
 
-
   bool CheckLaneBorrowCondition();
   void UpdateJunctionInfo();
   bool IsLaneTypeDashedOrMixed(const iflyauto::LaneBoundaryType& type);
   bool UpdateLaneBorrowDirection();
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
+  bool CheckDynamicCutin();
   BorrowDirection GetBypassDirection(
       const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
 
@@ -64,6 +67,7 @@ class LaneBorrowDecider : public Task {
                             double heading_angle, double ego_x, double ego_y);
 
   void ClearLaneBorrowStatus();
+  bool CheckBackWardObs();
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
@@ -82,12 +86,14 @@ class LaneBorrowDecider : public Task {
   bool left_borrow_{false};
   bool right_borrow_{false};
   bool is_first_frame_to_lane_borrow_{false};
+  bool is_facility_{false};
   BorrowDirection bypass_direction_{NO_BORROW};
   BorrowDirection dp_path_direction_{NO_BORROW};
   planning::common::IntersectionState intersection_state_ =
       planning::common::NO_INTERSECTION;
 
   std::pair<double, double> ego_sl_;  // s, l
+  FrenetEgoState ego_sl_state_;
   double ego_speed_;
 
   FrenetBoundary ego_frenet_boundary_;
@@ -96,6 +102,7 @@ class LaneBorrowDecider : public Task {
   Pose2D ego_xy_;
 
   int observe_frame_num_{0};
+  int dp_observe_frame_num_{0};
   std::unordered_map<int, std::pair<BorrowDirection, int>> obs_direction_map_;
   int lane_change_state_{0};
 
@@ -109,5 +116,5 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDeciderConfig config_;
   std::unique_ptr<DPRoadGraph> dp_path_decider_;
 };
-}
+}  // namespace lane_borrow_deciderV2
 }  // namespace planning

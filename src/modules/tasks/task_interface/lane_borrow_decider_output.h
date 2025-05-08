@@ -30,10 +30,11 @@ enum LaneBorrowFailedReason {
   TRIGGER_BUT_DP_SEARCH_FAILED,
   CURRENT_LANE_LOSS,
   DP_NO_DIRECTION,
-  BORROWDIRECTION_DIFFERENT
+  BORROWDIRECTION_DIFFERENT,
+  TMP_DP_SEARCH_FAILED,
+  CUTIN_RISK
 };
 enum BorrowDirection { NO_BORROW = 0, LEFT_BORROW, RIGHT_BORROW };
-
 
 struct LaneBorrowDeciderOutput {
   LaneBorrowFailedReason lane_borrow_failed_reason = NONE_FAILED_REASON;

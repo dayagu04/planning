@@ -2,11 +2,11 @@
 #include <memory>
 
 #include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
+#include "ego_planning_config.h"
 #include "log.h"
 #include "speed/st_graph_input.h"
 
 namespace planning {
-using namespace lane_borrow_deciderV2;
 LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
@@ -18,8 +18,12 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
   lateral_obstacle_decider_ =
       std::make_unique<LateralObstacleDecider>(config_builder, session);
-  lane_borrow_decider_ =
-      std::make_unique<LaneBorrowDecider>(config_builder,session);
+  lane_borrow_deciderV1_ =
+      std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
+                                                                 session);
+  lane_borrow_deciderV2_ =
+      std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
+                                                                 session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -69,6 +73,9 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<SccLongitudinalMotionPlannerV3>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
+  auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
+  enable_lane_borrow_deciderV2_ =
+      lane_borrow_config.enable_lane_borrow_deciderV2;
 }
 
 bool LongTimeTaskPipelineV3::Run() {
@@ -101,13 +108,19 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(lateral_obstacle_decider_->Name());
     return false;
   }
-
-  ok = lane_borrow_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(lane_borrow_decider_->Name());
-    return false;
+  if (enable_lane_borrow_deciderV2_) {
+    ok = lane_borrow_deciderV2_->Execute();
+    if (!ok) {
+      AddErrorInfo(lane_borrow_deciderV2_->Name());
+      return false;
+    }
+  } else {
+    ok = lane_borrow_deciderV1_->Execute();
+    if (!ok) {
+      AddErrorInfo(lane_borrow_deciderV1_->Name());
+      return false;
+    }
   }
-
   ok = lateral_offset_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_offset_decider_->Name());
@@ -167,7 +180,7 @@ bool LongTimeTaskPipelineV3::Run() {
 
   // 构建st input
   double time_start = IflyTime::Now_ms();
-  st_graph_input_->Update();// 相关障碍物 轨迹延长 初始轨迹的车身边界 box
+  st_graph_input_->Update();  // 相关障碍物 轨迹延长 初始轨迹的车身边界 box
   ok = st_graph_->Init(st_graph_input_);
   auto planning_context = session_->mutable_planning_context();
   planning_context->set_st_graph(st_graph_);

@@ -1524,9 +1524,9 @@ def draw_local_view(dataLoader, layer_manager):
     load_parking_slot(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
     load_speed_bump(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
     load_occupancy_object(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
-    # # 加载hpp ehr
-    # load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
-    # load_ground_line(dataLoader, layer_manager, fig_local_view)
+    # 加载hpp ehr
+    load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    load_ground_line(dataLoader, layer_manager, fig_local_view)
 
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 

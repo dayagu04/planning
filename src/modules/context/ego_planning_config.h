@@ -230,6 +230,7 @@ struct EgoPlanningConfig : public Config {
     hpp_min_search_range = read_json_key<double>(json, "hpp_min_search_range");
     raw_ref_extend_buff =
         read_json_key<double>(json, "raw_ref_extend_buff", raw_ref_extend_buff);
+    enable_lane_borrow_deciderV2 = read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -256,6 +257,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_ehr_column_box = false;
   double hpp_min_search_range = 20;
   double raw_ref_extend_buff = 0;
+  bool enable_lane_borrow_deciderV2 =  true;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -515,7 +517,7 @@ struct DPRoadGraphConfig : public EgoPlanningConfig {
     double collision_distance = 0.8;
     double coeff_stitch_cost = 5e5;
 
-    double min_sample_distance = 20.0;
+    double min_sample_distance = 32.0;
     double sample_forward_time = 1.8;
     double min_level_distance = 10.0;
     double max_level_distance = 30.0;

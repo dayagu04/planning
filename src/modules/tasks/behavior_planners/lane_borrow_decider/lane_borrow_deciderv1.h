@@ -107,5 +107,5 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDeciderConfig config_;
   bool if_left_turn_center_{false};
 };
-}
+}  // namespace lane_borrow_deciderV1
 }  // namespace planning

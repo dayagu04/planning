@@ -23,6 +23,8 @@
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
+#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
+#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
@@ -32,21 +34,17 @@
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
+#include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/behavior_planners/truck_longitudinal_avoid_decider/truck_longitudinal_avoid_decider.h"
-#include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
-#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
-
 namespace planning {
-
 class TaskPipelineRADS : public BaseTaskPipeline {
  public:
-  explicit TaskPipelineRADS(
-      const EgoPlanningConfigBuilder *config_builder,
-      framework::Session *session);
+  explicit TaskPipelineRADS(const EgoPlanningConfigBuilder *config_builder,
+                            framework::Session *session);
 
   virtual ~TaskPipelineRADS() = default;
 
@@ -61,7 +59,10 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
-  std::unique_ptr<LaneBorrowDecider> lane_borrow_decider_;
+  std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
+      lane_borrow_deciderV2_;
+  std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
+      lane_borrow_deciderV1_;
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<ExpandStBoundariesDecider> expand_st_boundaries_decider_;
@@ -94,6 +95,7 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::shared_ptr<speed::StGraphInput> st_graph_input_;
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
+  bool enable_lane_borrow_deciderV2_ = false;
 };
 
 }  // namespace planning

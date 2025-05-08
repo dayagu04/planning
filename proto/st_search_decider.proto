@@ -83,7 +83,7 @@ message SamplePrintTableInfo {
   optional double v_suggestted = 24;
 }
 message SamplePolySpeedInfo {
-  repeated LaneChangeVehInfo agent_infos = 1; 
+  repeated LaneChangeVehInfo agent_infos = 1;
   optional LaneChangeVehInfo leading_veh_info = 2;
   repeated double sample_s_vec = 3;
   repeated double sample_v_vec = 4;

@@ -1184,12 +1184,8 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    if (is_blocked_obstacle_) {
-      GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
-    } else {
-      GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
-      GenerateStaticObstacleDecision(obstacle, obstacle_decision, false);
-    }
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision, false);
 
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);

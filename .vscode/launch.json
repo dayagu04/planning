@@ -11,21 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241216/20241216-18-07-12/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-12-16-18-07-12_no_camera.bag",
-                // "/root/clzhao/lane_borrow_data/bi-direction_2024-12-16-18-12-00.bag_2025-01-10-14-02-38",
-                // "/root/clzhao/lane_borrow_data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-26-11-22-40.bag_2025-04-01-10-18-13",
-                // "/root/clzhao/lane_borrow_data/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2025-01-15-11-38-36.bag_2025-01-15-13-57-56",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250107/20250107-19-56-06/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2025-01-07-19-56-06_no_camera.bag",// v2
-                // "/data_cold/abu_zone/autoparse/chery_e0y_20260/trigger/20250217/20250217-14-43-16/data_collection_CHERY_E0Y_20260_EVENT_MANUAL_2025-02-17-14-43-16_no_camera.bag"//v3 case
-            // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250326/20250326-11-22-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-26-11-22-40_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250326/20250326-11-22-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-26-11-22-40_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250401/20250401-16-12-19/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-01-16-12-19_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250319/20250319-16-38-14/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-19-16-38-14_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-15-14-22/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-03-15-14-22_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250417/20250417-12-02-01/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-04-17-12-02-01_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-20-42-15/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-04-03-20-42-15_no_camera.bag",
-                // "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-19-16-38-14.bag_2025-04-07-16-02-38",
-            "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250418/20250418-16-46-25/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-18-16-46-25_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20241218/20241218-16-16-50/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2024-12-18-16-16-50_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
@@ -49,20 +35,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                // "data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20241218/20241218-16-16-50/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2024-12-18-16-16-50_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-15-14-22/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-03-15-14-22_no_camera.bag",
-                // "/root/clzhao/lane_borrow_data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-19-16-38-14.bag_2025-04-07-16-02-38",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-15-14-22/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-03-15-14-22_no_camera.bag",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-15-14-22/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-03-15-14-22_no_camera.bag",
-                //  "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-19-16-38-14.bag_2025-04-07-16-02-38",
-                // "/root/clzhao/lane_borrow_data/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2025-04-14-17-09-06.bag_2025-04-17-10-17-02",
-                // "/root/clzhao/lane_borrow_data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-15-16-06-16.bag_2025-04-17-15-19-37",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-20-42-15/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-04-03-20-42-15_no_camera.bag",
-                // "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-15-16-06-16.bag_2025-04-17-15-19-37",
-                // "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-04-17-15-40-23.bag_2025-04-17-19-23-26",
-                // "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-18-16-43-31.bag_2025-04-21-11-10-22",
-                // "/home/hanli13/data/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-18-16-47-21.bag_2025-04-21-15-24-43",
-                 "/root/clzhao/log_data/data_collection_CHERY_E0Y_18047_EVENT_FILTER_2025-04-29-19-51-02.bag_2025-05-07-14-28-42",
+                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20241218/20241218-16-16-50/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2024-12-18-16-16-50_no_camera.bag",
                 "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留

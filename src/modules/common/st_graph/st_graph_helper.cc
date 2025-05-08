@@ -19,7 +19,7 @@ constexpr double kTimeResolution = 0.2;
 StGraphHelper::StGraphHelper(const STGraph& st_graph) : st_graph_(st_graph) {}
 
 const bool StGraphHelper::GetStBoundary(const int64_t boundary_id,
-                                        STBoundary* const st_boundary) const {// 获得指定id 的st boundary
+                                        STBoundary* const st_boundary) const {
   const auto& boundary_id_st_boundaries_map =
       st_graph_.boundary_id_st_boundaries_map();
   const auto it = boundary_id_st_boundaries_map.find(boundary_id);
@@ -31,7 +31,7 @@ const bool StGraphHelper::GetStBoundary(const int64_t boundary_id,
 }
 
 const bool StGraphHelper::GetAgentStBoundaries(
-    const int32_t agent_id, std::vector<int64_t>* const st_boundaries) const {// 获得指定id agent 的st boundary id
+    const int32_t agent_id, std::vector<int64_t>* const st_boundaries) const {
   const auto& agent_id_st_boundaries_map =
       st_graph_.agent_id_st_boundaries_map();
   const auto it = agent_id_st_boundaries_map.find(agent_id);
@@ -100,9 +100,7 @@ void StGraphHelper::DetermineIfConeBucketCIPV(
     }
   }
 }
-/*在 ST 图中查找某个 (s, t) 点的边界。
-如果 s 位于已有的轨迹范围内，则返回 false；
-如果 s 在轨迹范围之外，则找到最近的 s 上、下边界，返回 true，并填充 lower_st_point 和 upper_st_poin*/
+
 bool StGraphHelper::GetBorderByStPoint(double s, double t,
                                        STPoint* const lower_st_point,
                                        STPoint* const upper_st_point) const {
