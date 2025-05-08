@@ -23,7 +23,7 @@ class EgoLaneTrackManger {
   ~EgoLaneTrackManger(){};
 
   void SetConfig(const EgoPlanningConfigBuilder *config_builder);
-  
+
   void Update(const RouteInfoOutput &route_info_output);
 
   void Reset();
@@ -73,6 +73,10 @@ class EgoLaneTrackManger {
       const std::vector<int> &order_ids,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
           &virtual_id_mapped_lane);
+
+  void MakesureManualLaneChangeByLaneOffset(
+      std::shared_ptr<VirtualLane>& last_zero_relative_id_lane_,
+      const std::shared_ptr<VirtualLane>& current_zero_relative_id_lane_, bool& is_manual_lane_change);
 
   bool CheckIfInRampSelectSplit(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
@@ -182,6 +186,8 @@ class EgoLaneTrackManger {
   // int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> last_zero_relative_id_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> current_zero_relative_id_lane_ = nullptr;
   // uint lane_num_ = 0;
   uint last_zero_relative_id_nums_ = 0;
   int last_zero_relative_id_order_id_index_ = -1;
