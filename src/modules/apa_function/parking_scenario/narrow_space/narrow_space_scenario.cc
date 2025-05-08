@@ -58,7 +58,7 @@ void NarrowSpaceScenario::Reset() {
   }
 
   current_gear_ = AstarPathGear::PARKING;
-  in_slot_car_adjust_count_ = 0;
+  replan_number_inside_slot_ = 0;
   is_path_connected_to_goal_ = false;
   path_planning_fail_num_ = 0;
   lateral_offset_ = 0;
@@ -80,7 +80,7 @@ void NarrowSpaceScenario::Init() {
   ILOG_INFO << "init astar thread";
 
   current_gear_ = AstarPathGear::PARKING;
-  in_slot_car_adjust_count_ = 0;
+  replan_number_inside_slot_ = 0;
   is_path_connected_to_goal_ = false;
   path_planning_fail_num_ = 0;
 
@@ -278,7 +278,10 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
         }
         break;
       case PathPlannerResult::PLAN_FAILED:
-        SetParkingStatus(PARKING_FAILED);
+        if (frame_.replan_fail_time >
+            apa_param.GetParam().max_replan_failed_time) {
+          SetParkingStatus(PARKING_FAILED);
+        }
         break;
       default:
         SetParkingStatus(PARKING_RUNNING);
@@ -710,21 +713,28 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
         frame_.total_plan_count++;
         path_planning_fail_num_ = 0;
-        ILOG_INFO << "frame_.total_plan_count = "
-                  << static_cast<int>(frame_.total_plan_count);
+        if (ego_info.slot_occupied_ratio > 0.2) {
+          replan_number_inside_slot_++;
+        }
+
+        ILOG_INFO << "total_plan_count = "
+                  << static_cast<int>(frame_.total_plan_count)
+                  << ", replan_number_inside_slot = "
+                  << replan_number_inside_slot_;
       }
 
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
-      path_planning_fail_num_ += 1;
-      if (path_planning_fail_num_ == 1 || path_planning_fail_num_ == 2) {
-        res = PathPlannerResult::WAIT_PATH;
-      } else if (response.request.plan_reason ==
-                 PlanningReason::SLOT_REFRESHED) {
-        // If path planning in dynamic replan is fail, use history path.
-        res = PathPlannerResult::PLAN_HOLD;
-      } else {
-        res = PathPlannerResult::PLAN_FAILED;
+      res = PathPlannerResult::PLAN_FAILED;
+      if (!is_scenario_try) {
+        path_planning_fail_num_ += 1;
+        if (path_planning_fail_num_ == 1 || path_planning_fail_num_ == 2) {
+          res = PathPlannerResult::WAIT_PATH;
+        } else if (response.request.plan_reason ==
+                   PlanningReason::SLOT_REFRESHED) {
+          // If path planning in dynamic replan is fail, use history path.
+          res = PathPlannerResult::PLAN_HOLD;
+        }
       }
 
       // publish fallback path
@@ -743,7 +753,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
           fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
         current_gear_ = response.first_seg_path[0].gear;
-        path_planning_fail_num_ = 0;
       }
 
       thread_.Clear();
@@ -761,12 +770,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     // GenerateFallBackPath();
 
     ILOG_INFO << "set input";
-
-    if (ego_info.slot_occupied_ratio > 0.2) {
-      in_slot_car_adjust_count_++;
-      ILOG_INFO << "in_slot_car_adjust_count_ = " << in_slot_car_adjust_count_;
-    }
-
   } else if (thread_state_ == RequestResponseState::HAS_REQUEST) {
     res = PathPlannerResult::WAIT_PATH;
 
@@ -1299,26 +1302,23 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
 }
 
 const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
-  if (is_replan) {
-    // check total plan number
-    if (frame_.total_plan_count >
-        apa_param.GetParam().headin_max_replan_count) {
-      return false;
-    }
+  if (!is_replan) {
+    return true;
+  }
+
+  // check total plan number
+  if (frame_.total_plan_count >
+      apa_param.GetParam().astar_config.max_replan_number) {
+    return false;
   }
 
   // check plan number in slot
   EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
-
-  const ApaStateMachine fsm =
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
-
-  if (is_replan && ego_info.slot_occupied_ratio > 0.2) {
-    if (in_slot_car_adjust_count_ >=
-        apa_param.GetParam().in_slot_car_adjust_max_count) {
-      return false;
-    }
+  if (ego_info.slot_occupied_ratio > 0.2 &&
+      replan_number_inside_slot_ >=
+          apa_param.GetParam().astar_config.max_replan_number_inside_slot) {
+    return false;
   }
 
   return true;

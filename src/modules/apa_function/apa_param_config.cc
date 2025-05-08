@@ -122,8 +122,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
 
-  JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
-                  "in_slot_car_adjust_max_count");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.max_replan_number_inside_slot, int,
+      "max_replan_number_inside_slot");
   // car params
   JSON_READ_VALUE(apa_param.SetPram().force_fold_mirror, bool,
                   "force_fold_mirror");
@@ -240,6 +241,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().pause_failed_time, double,
                   "pause_failed_time");
+  JSON_READ_VALUE(apa_param.SetPram().max_replan_failed_time, double,
+                  "max_replan_failed_time");
 
   // check static params
   JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err_strict, double,
@@ -960,6 +963,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.head_in_slot_virtual_wall_y_offset,
       float, "head_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.max_replan_number, int,
+                  "max_replan_number");
   return;
 }
 

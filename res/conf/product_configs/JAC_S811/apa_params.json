@@ -30,7 +30,6 @@
   "headin_min_radius_out_slot": 11.8,
   "headin_sturn_steer_ratio_dist": 0.5,
   "headin_max_replan_count": 20,
-  "in_slot_car_adjust_max_count": 20,
 
   "comment_1": "schedule params",
   "plan_time": 0.1,
@@ -101,6 +100,7 @@
   "comment_6": "check fail params",
   "stuck_failed_time": 10.0,
   "pause_failed_time": 33.0,
+  "max_replan_failed_time": 3.0,
 
   "comment_7": "check static params",
   "car_static_pos_err_strict": 0.005,
@@ -145,7 +145,7 @@
   "comment_9": "check replan params",
   "stuck_replan_time": 5.0,
   "max_replan_remain_dist": 0.2,
-  "max_replan_count": 12,
+  "max_replan_count": 16,
 
   "comment_10": "construct t_lane params",
   "vacant_pt_outside_dx": 0.5,
@@ -350,6 +350,8 @@
   "enable_blind_zone" : true,
   "vertical_slot_passage_height_bound" : 10.0,
   "vertical_slot_passage_length_bound" : 18.0,
+  "max_replan_number": 25,
+  "max_replan_number_inside_slot": 15,
 
   "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 1.0,

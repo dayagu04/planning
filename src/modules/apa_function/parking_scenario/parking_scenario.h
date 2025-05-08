@@ -171,6 +171,7 @@ class ParkingScenario {
       stuck_obs_time = 0.0;
       pause_time = 0.0;
       dynamic_plan_time = 0.0;
+      replan_fail_time = 0.0;
       remain_dist_path = 5.01;
       remain_dist_obs = 5.01;
       remain_dist_col_det = 5.01;
@@ -239,6 +240,8 @@ class ParkingScenario {
     double stuck_obs_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
+    // If replan fail time is long, set PARKING_FAILED.
+    double replan_fail_time = 0.0;
     // remain dist for path
     double remain_dist_path = 5.01;
     // remain dist for obs

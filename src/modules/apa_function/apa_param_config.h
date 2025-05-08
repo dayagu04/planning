@@ -52,6 +52,11 @@ struct AstarParkingConfig {
   // perception range is 6 * 6, need set the virtual wall small.
   float vertical_slot_passage_height_bound;
   float vertical_slot_passage_length_bound;
+
+  // max replan number total
+  int max_replan_number = 25;
+  // max replan number inside slot
+  int max_replan_number_inside_slot = 15;
 };
 
 struct ParkingSpeedConfig {
@@ -179,6 +184,7 @@ struct ApaParameters {
   // check fail params
   double stuck_failed_time = 9.0;
   double pause_failed_time = 12.68;
+  double max_replan_failed_time = 3.0;
 
   // check static params
   double car_static_pos_err_strict = 0.005;
@@ -229,7 +235,6 @@ struct ApaParameters {
   double max_replan_remain_dist = 0.2;
   int max_replan_count = 12;
   int headin_max_replan_count = 20;
-  int in_slot_car_adjust_max_count = 20;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;
