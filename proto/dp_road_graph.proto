@@ -1,0 +1,91 @@
+syntax = "proto2";
+package planning.common;
+import "basic_types.proto";
+message SampleSLPoint{
+optional double s = 1;
+optional double l = 2;
+};
+message LevelPoints{
+  repeated SampleSLPoint level_points = 1;
+}
+message DPRoadGraphInfo {// unused
+  repeated  double xs = 1;
+  repeated double ys = 2;// sample
+  repeated double dp_path_xs = 3;
+  repeated double dp_path_ys = 4;//path
+  repeated double fine_path_xs = 5;
+  repeated double fine_path_ys = 6;//path
+};
+
+message StaticObstacleInfo  {
+  optional int32 id = 1;
+  optional double s_start = 2;
+  optional double s_end = 3;
+  optional double l_start = 4;
+  optional double l_end = 5;
+}
+
+message SampleLaneInfo { //
+  optional double left_boundary = 1;
+  optional double right_boundary = 2;
+  repeated LevelPoints sampled_points = 4;
+  repeated double sampled_xs = 5;
+  repeated double sampled_ys = 6;
+}
+
+// 参数信息
+message DPRoadParam{
+  optional double coeff_l_cost =1;
+  optional double coeff_dl_cost = 2;
+  optional double coeff_ddl_cost = 3;
+  optional double path_resolution = 4;
+  optional double coeff_end_l_cost = 5;
+  optional double coeff_collision_cost = 6;
+  optional double collision_distance = 7;
+  optional double coeff_stitch_cost = 8;
+}
+message DPCost{
+
+}
+message DPPath{
+  repeated SampleSLPoint selected_points = 2;
+  repeated double selected_xs = 3;
+  repeated double selected_ys = 4;//path
+  repeated SampleSLPoint fined_points = 7;
+  repeated double fined_xs = 5;
+  repeated double fined_ys = 6;//path
+}
+message PrintInfo{
+ optional double ego_s = 1;
+ optional double ego_l = 2;
+ optional double ego_v = 3;
+ optional double safe_cost = 4;
+ optional double obstacle_cost = 5;
+ optional double smooth_cost = 6;
+ optional double stitch_cost = 7;
+ optional double concerned_obs_num = 9;
+ optional uint64 iter_num = 10;
+ optional double dp_cost_time = 8;
+ optional double dp_search_cost_time = 11;
+ optional double path_cost_time = 12;
+ optional double safety_cost_time = 13;
+ optional double stitch_cost_time = 14;
+
+}
+// conclude
+message DPRoadInfo{
+repeated StaticObstacleInfo  obstacles_info= 1;
+optional SampleLaneInfo sample_lanes_info= 2;
+optional  double v_cruise = 12;
+optional double total_length = 3;
+optional double s_range = 4;
+optional double l_range = 14;
+repeated double selected_s = 5;
+repeated double selected_l = 6;
+repeated double refined_s = 7;
+repeated double refined_l = 8;
+optional DPRoadParam dp_param = 9;
+optional DPCost dp_cost = 10;
+optional PrintInfo print_info = 11;
+optional DPPath dp_result_path = 15;
+}

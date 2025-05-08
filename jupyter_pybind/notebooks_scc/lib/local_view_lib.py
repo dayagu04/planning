@@ -813,7 +813,7 @@ def findME(data, t):
 def draw_local_view(dataLoader, layer_manager):
     #define figure
     # 定义 local_view fig
-    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=1000, match_aspect = True, aspect_scale=1)
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=700, height=1000, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
@@ -1202,7 +1202,7 @@ def draw_local_view(dataLoader, layer_manager):
           prediction_generator_5.xys.append((prediction_dict[4]['y'], prediction_dict[4]['x'],[0.3]*len(prediction_dict[4]['x'])))
           # prediction_generator.xys.append((trajectory_info['y'], trajectory_info['x'],[0.5]*len(trajectory_info['x'])))
         except:
-          print("prediction_objects error")
+          # print("prediction_objects error")
           prediction_generator_1.xys.append(([], [],[]))
           prediction_generator_2.xys.append(([], [],[]))
           prediction_generator_3.xys.append(([], [],[]))
@@ -1524,6 +1524,9 @@ def draw_local_view(dataLoader, layer_manager):
     load_parking_slot(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
     load_speed_bump(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
     load_occupancy_object(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    # # 加载hpp ehr
+    # load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
+    # load_ground_line(dataLoader, layer_manager, fig_local_view)
 
     return fig_local_view, (tab_debug_layer1.plot, tab_debug_layer2.plot)
 
@@ -2287,7 +2290,7 @@ def load_occupancy_object(dataLoader, layer_manager, fig_local_view, g_is_displa
         occupancy_object_text_generate.xys.append(([], [], []))
         continue
       loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-      obstacles_info_all = load_occupancy_obstacle(fus_occ_obj_msg, True, loc_msg, plan_debug.environment_model_info)
+      obstacles_info_all = load_occupancy_obstacle(fus_occ_obj_msg, loc_msg, plan_debug.environment_model_info)
       obstacles_info = obstacles_info_all[0]
       if g_is_display_enu:
         occupancy_object_generate.xys.append((obstacles_info['obstacles_y'], obstacles_info['obstacles_x']))

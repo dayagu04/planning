@@ -458,6 +458,100 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double extend_obs_distance = 10.0;
 };
 
+
+struct DPRoadGraphConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    coeff_l_cost = read_json_keys<double>(
+        json,std::vector<std::string>{"dp_path_decider", "coeff_l_cost"});
+    coeff_dl_cost = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_dl_cost"});
+    coeff_ddl_cost = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_ddl_cost"});
+    path_resolution = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "path_resolution"});
+    coeff_end_l_cost = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_end_l_cost"});
+    coeff_collision_cost = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_collision_cost"});
+    collision_distance = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "collision_distance"});
+    coeff_stitch_cost = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_stitch_cost"});
+    min_sample_distance = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "min_sample_distance"});
+    sample_forward_time = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "sample_forward_time"});
+    min_level_distance = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "min_level_distance"});
+
+
+    coeff_l_cost2 = read_json_keys<double>(
+        json,std::vector<std::string>{"dp_path_decider", "coeff_l_cost2"});
+    coeff_dl_cost2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_dl_cost2"});
+    coeff_ddl_cost2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_ddl_cost2"});
+    path_resolution2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "path_resolution2"});
+    coeff_end_l_cost2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_end_l_cost2"});
+    coeff_collision_cost2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_collision_cost2"});
+    collision_distance2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "collision_distance2"});
+    coeff_stitch_cost2 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_stitch_cost2"});
+
+  }
+   double coeff_l_cost = 6e6;
+   double coeff_dl_cost = 8e3;
+   double coeff_ddl_cost = 5e3;
+   double path_resolution = 2.0;
+   double coeff_end_l_cost = 1e6;
+
+    double coeff_collision_cost = 1e6;
+    double collision_distance = 0.8;
+    double coeff_stitch_cost = 5e5;
+
+    double min_sample_distance = 20.0;
+    double sample_forward_time = 1.8;
+    double min_level_distance = 10.0;
+    double max_level_distance = 30.0;
+
+
+    double coeff_l_cost2 = 6e6;
+    double coeff_dl_cost2 = 8e3;
+    double coeff_ddl_cost2 = 5e3;
+    double path_resolution2 = 2.0;
+    double coeff_end_l_cost2 = 1e6;
+
+    double coeff_collision_cost2 = 1e6;
+    double collision_distance2 = 0.8;
+    double coeff_stitch_cost2 = 5e5;
+};
+
+struct DPSpeedGraphConfig: public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    total_time = read_json_keys<double>(
+        json,std::vector<std::string>{"dp_speed_decider", "total_time"});
+    total_path_length = read_json_keys<double>(
+        json,std::vector<std::string>{"dp_speed_decider", "total_path_length"});
+    total_path_length = read_json_keys<double>(
+       json,std::vector<std::string>{"dp_speed_decider", "matrix_dimension_s"});
+    total_path_length = read_json_keys<double>(
+      json,std::vector<std::string>{"dp_speed_decider", "matrix_dimension_t"});
+  }
+  double total_path_length = 50.0;
+  double total_time = 5.0;
+  double matrix_dimension_s = 10;
+  double matrix_dimension_t = 10;
+
+};
+
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

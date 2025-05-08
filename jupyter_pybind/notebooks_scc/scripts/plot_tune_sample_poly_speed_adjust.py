@@ -115,7 +115,7 @@ lines = [
     for i, source in enumerate(obj_data_sources)
 ]
 
-leading_data_source = ColumnDataSource(data={'t': [], 's': []})
+leading_data_source = ColumnDataSource(data={'t': [], 's': []})# 先创建空的数据
 fig2.line('t', 's', source = leading_data_source, line_width=2, line_color='red', line_dash='dashed', legend_label = "leading veh obj")
 
 update_traj_source = ColumnDataSource(data={'t': [], 's': []})
@@ -142,18 +142,25 @@ fig5.line('t', 's', source = origin_j_min_cost_traj_source, line_width=2, line_c
 ego_v_keep_traj_source = ColumnDataSource(data={'t': [], 's': []})
 fig3.line('t', 's', source = ego_v_keep_traj_source, line_width=2, line_color='green', line_dash='dashed', line_alpha=0.7, legend_label='v_cruise')
 
+# 表格类信息
+table_info_name= ["match_gap_cost", "follow_vel_cost", "vel_bound_cost", "stop_line_cost", "acc_bound_cost", "jerk_cost", "leading_veh_safe_cost", "vel_variable_cost", "end_s", \
+                  "end_v", "ego_v", "v_suggested", "target_lane_objs_flow_vel", "traffic_density","leading_veh_id", "sample status", "sample_scene","count_normal_to_hover_state", "count_hover_to_normal_state",\
+                  "is_nearing_ramp","merge_emegency_distance", "is_in_merge_region", "distance_to_road_merge", "distance_to_road_split","stitched_match_front_gap_id","stitched_match_back_gap_id",\
+                   "current_match_front_gap_id", "current_match_back_gap_id"
+                    ]
 table_info =  ColumnDataSource(data = {'name':[], 'info':[]})
 info_column = [
   TableColumn(field="name", title="name"),
   TableColumn(field="info", title="info")
 ]
+# 把 ColumnDataSource（数据字典）和 TableColumn（列定义）绑定在一起，这样数据和表格的显示就能对应上
 tab2 = DataTable(source = table_info, columns = info_column, width = 300, height = 600)
 
 class LocalViewSlider:
-  def __init__(self,  slider_callback):
+  def __init__(self,  slider_callback): # 浮点数滑块，用于调整数值参数
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.1, max=max_time, value=0.1, step=frame_dt)
     self.enable_pybind = ipywidgets.Checkbox(description= "enable_pybind", value=True)
-    self.update_param = ipywidgets.Checkbox(description= "update_param", value=False)
+    self.update_param = ipywidgets.Checkbox(description= "update_param", value=False)# 创建一个复选框（布尔值开关）
     self.update_suggested_v = ipywidgets.Checkbox(description= "update_suggested_v", value=False)
     self.weight_follow_vel = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "w_follow_vel",min=0.0, max=100.0, value=weight_follow_vel0, step=frame_dt)
     self.weight_match_gap_s = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "w_match_gap_s",min=0.0, max=100.0, value=weight_match_gap_s0, step=frame_dt)
@@ -165,19 +172,20 @@ class LocalViewSlider:
     self.weight_gap_avaliable = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "weight_gap_avaliable",min=0.0, max=100.0, value=weight_gap_avaliable0, step=frame_dt)
     self.set_suggested_v = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "set_suggested_v",min=0.0, max=100.0, value=15.0, step=frame_dt)
 
-    ipywidgets.interact(slider_callback, enable_pybind = self.enable_pybind, update_param = self.update_param, update_suggested_v = self.update_suggested_v,\
+    ipywidgets.interact(slider_callback,# 回调函数名字 # 以及其回调函数参数
+                        enable_pybind = self.enable_pybind, update_param = self.update_param, update_suggested_v = self.update_suggested_v,\
                         bag_time = self.time_slider, weight_follow_vel = self.weight_follow_vel, \
                         weight_match_gap_s = self.weight_match_gap_s, weight_match_gap_vel = self.weight_match_gap_vel,\
                         weight_stop_line = self.weight_stop_line, weight_leading_safe_s = self.weight_leading_safe_s,weight_leading_safe_v = self.weight_leading_safe_v, weight_vel_variable = self.weight_vel_variable,\
                         weight_gap_avaliable = self.weight_gap_avaliable,\
                         set_suggested_v = self.set_suggested_v
                                     )
-
+      # 传递：ipywidgets FloatSlider控制件获取数值变动，ipywidgets.interact 调用 slider_callback 函数，并将新的数值传递
 def plot_env_info(sample_poly_debug_msg):
   ego_s = sample_poly_debug_msg.sample_print_table_info.ego_s
   agent_input = sample_poly_debug_msg.agent_infos
   agent_nums = len(agent_input)
-  data_st_objs = [ColumnDataSource(data={'t': [], 's': []}) for _ in range(agent_nums)]
+  data_st_objs = [ColumnDataSource(data={'t': [], 's': []}) for _ in range(agent_nums)]# 空
   print("agnet info:\n", agent_input)
   t_values = [0.0, 5.0, 5.0, 0.0, 0.0]
   for i, agent in enumerate(agent_input):

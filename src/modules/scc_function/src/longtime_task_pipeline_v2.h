@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "base_task_pipeline.h"
-#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
+#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "ego_planning_config.h"
 #include "session.h"
 #include "tasks/behavior_planners/agent_longitudinal_decider/agent_longitudinal_decider.h"
@@ -29,6 +29,7 @@
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 
 namespace planning {
+using namespace lane_borrow_deciderV2;
 
 class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
  public:
@@ -61,5 +62,4 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   std::unique_ptr<SamplePolySpeedAdjustDecider>
       sample_poly_speed_adjust_decider_;
 };
-
 }  // namespace planning

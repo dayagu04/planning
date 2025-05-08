@@ -1,12 +1,12 @@
 #include "longtime_task_pipeline_v3.h"
 #include <memory>
 
-#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
+#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "log.h"
 #include "speed/st_graph_input.h"
 
 namespace planning {
-
+using namespace lane_borrow_deciderV2;
 LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
@@ -167,7 +167,7 @@ bool LongTimeTaskPipelineV3::Run() {
 
   // 构建st input
   double time_start = IflyTime::Now_ms();
-  st_graph_input_->Update();
+  st_graph_input_->Update();// 相关障碍物 轨迹延长 初始轨迹的车身边界 box
   ok = st_graph_->Init(st_graph_input_);
   auto planning_context = session_->mutable_planning_context();
   planning_context->set_st_graph(st_graph_);

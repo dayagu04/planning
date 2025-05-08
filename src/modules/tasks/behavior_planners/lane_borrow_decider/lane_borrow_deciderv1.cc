@@ -51,7 +51,7 @@ constexpr double kBackNeededDistance = 5.0;
 };  // namespace
 
 namespace planning {
-
+namespace lane_borrow_deciderV1 {
 bool LaneBorrowDecider::Execute() {
   Update();
 
@@ -1313,5 +1313,5 @@ void LaneBorrowDecider::LogDebugInfo() {
 
   lane_borrow_pb_info->set_intersection_state(intersection_state_);
 }
-
+}
 }  // namespace planning

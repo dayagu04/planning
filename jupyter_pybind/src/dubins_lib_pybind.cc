@@ -82,11 +82,11 @@ double GetThetaBC() { return pBase->GetThetaBC(); }
 double GetThetaD() { return pBase->GetThetaD(); }
 double GetRadius() { return pBase->GetOutput().arc_AB.circle_info.radius; }
 
-PYBIND11_MODULE(dubins_lib_py, m) {
+PYBIND11_MODULE(dubins_lib_py, m) { // Python 模块名
   m.doc() = "m";
 
   m.def("Init", &Init)
-      .def("Update", &Update)
+      .def("Update", &Update)// 绑定函数
       .def("UpdateLineArc", &UpdateLineArc)
       .def("GetABCenter", &GetABCenter)
       .def("GetCDCenter", &GetCDCenter)

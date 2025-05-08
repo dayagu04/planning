@@ -6,7 +6,7 @@ namespace planning {
 namespace speed {
 
 // The helper of st_graph to support read-only method.
-class StGraphHelper {
+class StGraphHelper {//返回一些st 的可行边界 可通行走廊等等
  public:
   explicit StGraphHelper(const STGraph& st_graph);
   ~StGraphHelper() = default;

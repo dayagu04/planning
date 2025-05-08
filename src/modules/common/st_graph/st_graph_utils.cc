@@ -732,7 +732,7 @@ double StGraphUtils::RecalculateLateralBufferForLargeAgent(
 
 void StGraphUtils::CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath>& kd_path,
-    const planning_math::Box2d& obs_box,
+    const planning_math::Box2d& obs_box,// 物理尺寸+中心位置得到
     const std::pair<double, double>& path_range, const StBoundaryType type,
     std::vector<double>* const agent_sl_boundary,
     std::vector<std::pair<int32_t, planning_math::Vec2d>>* const
@@ -751,13 +751,13 @@ void StGraphUtils::CalculateAgentSLBoundary(
   for (size_t i = 0; i < obs_corners.size(); ++i) {
     double project_s = 0.0, project_l = 0.0;
     kd_path->XYToSL(obs_corners[i].x(), obs_corners[i].y(), &project_s,
-                    &project_l);
+                    &project_l);// 这是投影在路径上的 障碍物角点 sl 3 2 分别存最大最小的l
     agent_sl_boundary->at(3) = std::fmin(agent_sl_boundary->at(3), project_l);
     agent_sl_boundary->at(2) = std::fmax(agent_sl_boundary->at(2), project_l);
     agent_sl_boundary->at(1) = std::fmin(agent_sl_boundary->at(1), project_s);
     agent_sl_boundary->at(0) = std::fmax(agent_sl_boundary->at(0), project_s);
     if (project_l >= right_border_position &&
-        project_l <= left_border_position) {
+        project_l <= left_border_position) {// l 干涉
       considered_corners->emplace_back(i, Vec2d(project_s, project_l));
     }
   }
@@ -798,8 +798,8 @@ bool StGraphUtils::CalculateSRange(
   }
 
   if (type == StBoundaryType::NEIGHBOR) {
-    *lower_s = min_s - front_edge_to_center;
-    *upper_s = max_s + back_edge_to_center;
+    *lower_s = min_s - front_edge_to_center;// 自车在后方
+    *upper_s = max_s + back_edge_to_center;// 进一步排除自车的尺寸
     return true;
   } else if (type == StBoundaryType::EXPAND) {
     *lower_s = min_s - front_edge_to_center;
@@ -808,7 +808,7 @@ bool StGraphUtils::CalculateSRange(
     *upper_s = std::fmax(0.0, std::fmin(*upper_s, path_range.second));
     return *lower_s > kMathEpsilon || *upper_s > kMathEpsilon;
   }
-
+// case
   if (min_s > path_range.second || max_s < path_range.first) {
     return false;
   }
@@ -820,8 +820,8 @@ bool StGraphUtils::CalculateSRange(
   } else if (min_l >= right_border_position && max_l <= left_border_position) {
     *lower_s = std::fmin(min_s - front_edge_to_center, *lower_s);
     *upper_s = std::fmax(max_s + back_edge_to_center, *upper_s);
-    *lower_s = std::fmax(0.0, *lower_s);
-    *upper_s = std::fmin(*upper_s, path_range.second);
+    *lower_s = std::fmax(0.0, *lower_s);// 防开头
+    *upper_s = std::fmin(*upper_s, path_range.second);// 防结尾
     return true;
   }
 
@@ -833,7 +833,7 @@ bool StGraphUtils::CalculateSRange(
   const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
   int32_t start_index = -1;
   int32_t end_index = -1;
-  if (!path_border_querier.GetObjects(obs_center_s - search_distance,
+  if (!path_border_querier.GetObjects(obs_center_s - search_distance,// 在自车周围搜索干涉的s序列
                                       obs_center_s + search_distance,
                                       &start_index, &end_index)) {
     return false;
@@ -886,7 +886,7 @@ bool StGraphUtils::CalculateSRange(
   }
   if (considered_corners.empty() && !has_left_intersect_point &&
       !has_right_intersect_point) {
-    return false;
+    return false;// 不相交
   }
   for (const auto& corner : considered_corners) {
     if (corner.second.x() < *lower_s) {

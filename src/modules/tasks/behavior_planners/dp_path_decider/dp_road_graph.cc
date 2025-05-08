@@ -1,0 +1,651 @@
+#include "dp_road_graph.h"
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <iostream>
+#include <ostream>
+#include <utility>
+#include <vector>
+#include "basic_types.pb.h"
+#include "config/message_type.h"
+#include "dp_road_graph.pb.h"
+#include "ego_state_manager.h"
+#include "environmental_model.h"
+#include "frenet_ego_state.h"
+#include "ifly_time.h"
+#include "log.h"
+#include "math/curve1d/quintic_polynomial_curve1d.h"
+#include "math_lib.h"
+#include "task_interface/lane_borrow_decider_output.h"
+namespace planning {
+bool DPRoadGraph::Execute() {
+  // double time_stamp_start = IflyTime::Now_ms();
+  // ProcessEnvInfos();
+  // SetSampleParams();
+  // SetDPCostParams();
+  // double start_time = IflyTime::Now_ms();
+  // SampleLanes();
+  // DPSearchPath();
+
+  // double time_stamp_end = IflyTime::Now_ms();
+  // dp_cost_time_ = time_stamp_end - start_time;
+  // LogDebugInfo();
+  // DPPathClear();
+
+  return true;
+}
+bool DPRoadGraph::ProcessEnvInfos() {
+    const auto& dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+ const auto& agents = dynamic_world->agent_manager()->GetAllCurrentAgents();
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  current_lane_ptr_ = virtual_lane_manager->get_current_lane();
+  current_reference_path_ptr_ = current_lane_ptr_->get_reference_path();
+  left_lane_ptr_ = virtual_lane_manager->get_left_lane();
+  right_lane_ptr_ = virtual_lane_manager->get_right_lane();
+  ego_frenet_state_ = session_->environmental_model()
+                          .get_reference_path_manager()
+                          ->get_reference_path_by_current_lane()
+                          ->get_frenet_ego_state();
+  ego_frenet_boundary_ = session_->environmental_model()
+                             .get_reference_path_manager()
+                             ->get_reference_path_by_current_lane()
+                             ->get_ego_frenet_boundary();
+  ego_s_ = ego_frenet_state_.s();
+  ego_l_ = ego_frenet_state_.l();
+  ego_v_ = ego_frenet_state_.velocity();
+  ego_cartes_state.x = session_->environmental_model().get_ego_state_manager()->ego_carte().x;
+  ego_cartes_state.y = session_->environmental_model().get_ego_state_manager()->ego_carte().y;
+  v_cruise_ = session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+  vehicle_width_ =   VehicleConfigurationContext::Instance()->get_vehicle_param().width;
+  vehicle_length_ = VehicleConfigurationContext::Instance()->get_vehicle_param().length;
+  // const auto& planning_init_point = session_->environmental_model().get_ego_state_manager()->planning_init_point();
+   const auto& planning_init_point = current_reference_path_ptr_->get_frenet_ego_state().planning_init_point();
+  init_sl_point_.l = planning_init_point.frenet_state.r;
+  init_sl_point_.s = planning_init_point.frenet_state.s;
+
+  const auto& current_frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+
+  // env lanes
+  if (current_lane_ptr_ == nullptr){
+    return false;
+  }
+  //env obs filtering
+  obstacles_info_.clear();
+  static_obstacles_box_.clear();
+  flatted_dynamic_obstacles_box_.clear();
+  if(agents.empty()){
+    return true;
+  }
+  for(const auto& agent:agents){
+    int id = agent->agent_id();
+    //  continue
+    if (agent == nullptr) {
+      continue;
+    }
+    if (agent->agent_decision().agent_decision_type() ==
+        agent::AgentDecisionType::IGNORE) {// ignore 忽略
+      continue;
+    }
+    if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {// 非视觉忽略
+      continue;
+    }
+    //static and dynamic sl current time
+    std::vector<planning_math::Vec2d> obs_corners;
+    const auto& obs_box = agent->box();
+    obs_corners = obs_box.GetAllCorners();
+    std::vector<double> agent_sl_boundary(4);
+    agent_sl_boundary.at(0) = std::numeric_limits<double>::lowest();
+    agent_sl_boundary.at(1) = std::numeric_limits<double>::max();
+    agent_sl_boundary.at(2) = std::numeric_limits<double>::lowest();
+    agent_sl_boundary.at(3) = std::numeric_limits<double>::max();
+    for (size_t i = 0; i < obs_corners.size(); ++i) {
+      double project_s = 0.0, project_l = 0.0;
+      current_frenet_coord->XYToSL(obs_corners[i].x(), obs_corners[i].y(), &project_s,
+                      &project_l);// 这是投影在路径上的 障碍物角点
+      agent_sl_boundary.at(3) = std::fmin(agent_sl_boundary.at(3), project_l);
+      agent_sl_boundary.at(2) = std::fmax(agent_sl_boundary.at(2), project_l);
+      agent_sl_boundary.at(1) = std::fmin(agent_sl_boundary.at(1), project_s);
+      agent_sl_boundary.at(0) = std::fmax(agent_sl_boundary.at(0), project_s);
+    }
+    if (agent->is_static()) {
+      // sl meaasge
+      if(std::fabs(0.5 *(agent_sl_boundary[3]+agent_sl_boundary[2]) - ego_l_ ) > 5.0){// tmp: should according to boundary
+        continue;
+      }
+      // ahead 100m after 15m static filtered
+      if(agent_sl_boundary[0] > 100.0||agent_sl_boundary[1]< 35.0){// tmp: should kvalue
+        continue;
+      }
+      StaticObstacleInfo static_obs_info{
+      agent->agent_id(),
+      agent_sl_boundary.at(1),
+      agent_sl_boundary.at(0),
+      agent_sl_boundary.at(3),
+      agent_sl_boundary.at(2)
+      };
+      obstacles_info_.emplace_back(std::move(static_obs_info));// just log info
+      static_obstacles_box_.emplace_back(obs_box);
+    }else if(agent->speed()< 4.2){// slow dynamic filter
+    // filtered backward dynamic obs
+    if(!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end || agent_sl_boundary[2] < ego_frenet_boundary_.l_start)
+          && agent_sl_boundary[0] < ego_frenet_boundary_.s_start){
+        continue;
+      }
+
+      std::vector<planning_math::Vec2d> predict_corners;// corner points
+      const auto& trajectories = agent->trajectories();
+      if (trajectories[0].empty()) { // one trajectory 26 points 0.2s internal
+        continue;
+      }
+      for (size_t i = 0; i < trajectories[0].size();  i=i+3) {
+      trajectory::TrajectoryPoint point = trajectories[0][i]; // 0s 0.6s ... 4.8s 10
+      Box2d obs_box(Vec2d(point.x(), point.y()), point.theta(),
+              agent->length(),
+              agent->width());// 本时刻对应的box
+      // log
+      std::vector<planning_math::Vec2d> corners;
+      corners = obs_box.GetAllCorners();
+      for (size_t i = 0; i < corners.size(); ++i) {
+        predict_corners.emplace_back(corners[i]);//add  points
+      }
+     }
+     // points to polygon
+      planning_math::Polygon2d agent_prediction_polygon;
+      planning_math::Polygon2d::ComputeConvexHull(predict_corners,
+                                                  &agent_prediction_polygon);
+      planning_math::Box2d flatted_box = agent_prediction_polygon.MinAreaBoundingBox();
+      flatted_dynamic_obstacles_box_.emplace_back(flatted_box);
+
+  // log
+      std::vector<planning_math::Vec2d> flatted_corners;
+      flatted_corners = flatted_box.GetAllCorners();
+      std::vector<double> flatted_sl_boundary(4);
+      flatted_sl_boundary.at(0) = std::numeric_limits<double>::lowest();
+      flatted_sl_boundary.at(1) = std::numeric_limits<double>::max();
+      flatted_sl_boundary.at(2) = std::numeric_limits<double>::lowest();
+      flatted_sl_boundary.at(3) = std::numeric_limits<double>::max();
+      for (size_t i = 0; i < flatted_corners.size(); ++i) {
+        predict_corners.emplace_back(flatted_corners[i]);// points
+        double project_s = 0.0, project_l = 0.0;
+        current_frenet_coord->XYToSL(flatted_corners[i].x(), flatted_corners[i].y(), &project_s,
+                        &project_l);// 这是投影在路径上的 障碍物角点
+        flatted_sl_boundary.at(3) = std::fmin(flatted_sl_boundary.at(3), project_l);
+        flatted_sl_boundary.at(2) = std::fmax(flatted_sl_boundary.at(2), project_l);
+        flatted_sl_boundary.at(1) = std::fmin(flatted_sl_boundary.at(1), project_s);
+        flatted_sl_boundary.at(0) = std::fmax(flatted_sl_boundary.at(0), project_s);
+      }
+      StaticObstacleInfo flatted_obs_info{
+      agent->agent_id(),
+      flatted_sl_boundary.at(1),
+      flatted_sl_boundary.at(0),
+      flatted_sl_boundary.at(3),
+      flatted_sl_boundary.at(2)
+      };
+
+    obstacles_info_.emplace_back(flatted_obs_info);
+    }else{ //high speed
+      continue;
+    }
+  }
+
+   dp_cost_time_ = 0.0;
+   iter_num_ = 0;
+   path_cost_time_ = 0;
+   safety_cost_time_ = 0;
+   stitch_cost_time_ = 0;
+
+    return true;
+  }
+
+bool DPRoadGraph::DPSearchPath(){
+    // get min cost path
+  double dp_search_start_time = IflyTime::Now_ms();
+  std::vector<std::vector<DPRoadGraphNode>> graph_nodes(sampled_points_.size());
+  if (sampled_points_.size() < 2) {
+    return false;
+  }
+  TrajectoryCost trajectory_cost(init_sl_point_,
+                                 sample_left_boundary_,
+                                 sample_right_boundary_,
+                                 config_,
+                                 ref_path_curve_,
+                                 flatted_dynamic_obstacles_box_,
+                                static_obstacles_box_,
+                                left_lane_ptr_,
+                                right_lane_ptr_,
+                                current_lane_ptr_,
+                                ego_frenet_state_);
+  trajectory_cost.SetCostParams(
+                  coeff_l_cost_,
+                  coeff_dl_cost_,
+                  coeff_ddl_cost_,
+                  path_resolution_,
+                  coeff_end_l_cost_,
+                  coeff_collision_cost_,
+                  collision_distance_,
+                  coeff_stitch_cost_);
+  graph_nodes[0].emplace_back(init_sl_point_, nullptr, ComparableCost());
+
+
+
+    const double lateral_resolution = l_range_;
+    const double d_max = s_range_ * std::tan(theta_max_);
+
+    // 转换为横向采样点数量
+    const int d = ceil(d_max / lateral_resolution);
+    const int valid_d = std::max(1, d);
+
+  for (std::size_t level = 1; level < sampled_points_.size(); ++level) {
+    const auto& prev_dp_nodes = graph_nodes[level - 1];
+    const auto& level_points = sampled_points_[level];
+      // 预排序前级节点的横向位置
+    std::vector<double> prev_l_cache;
+    if (prev_l_cache.size() != prev_dp_nodes.size()) {
+      prev_l_cache.clear();
+      for (const auto& node : prev_dp_nodes) {
+        prev_l_cache.push_back(node.sl_point.l);
+      }
+      std::sort(prev_l_cache.begin(), prev_l_cache.end());
+    }
+    for (const auto& cur_point : level_points) {
+
+      graph_nodes[level].emplace_back(cur_point, nullptr);
+      auto& cur_node = graph_nodes[level].back();
+      const double cur_l = cur_point.l;
+      auto lower = std::lower_bound(prev_l_cache.begin(), prev_l_cache.end(), cur_l - d_max);
+      auto upper = std::upper_bound(prev_l_cache.begin(), prev_l_cache.end(), cur_l + d_max);
+      const int start_idx = std::distance(prev_l_cache.begin(), lower);
+      const int end_idx = std::distance(prev_l_cache.begin(), upper);
+      for (int k = start_idx; k < end_idx; ++k) {
+      const auto& prev_dp_node = prev_dp_nodes[k];
+      const auto& prev_sl_point = prev_dp_node.sl_point;
+
+        if (std::abs(prev_sl_point.l - cur_l) > d_max) {
+          continue;
+        }
+        if (prev_dp_node.min_cost_.has_collision_ == true || prev_dp_node.min_cost_.out_boundary_ == true ) {
+          continue;
+        }
+
+      // for (const auto& prev_dp_node : prev_dp_nodes) {
+      //   const auto& prev_sl_point = prev_dp_node.sl_point;
+        double init_dl = 0.0;
+        double init_ddl = 0.0;
+        planning_math::QuinticPolynomialCurve1d curve(prev_sl_point.l, init_dl, init_ddl,
+                                       cur_point.l, 0.0, 0.0,
+                                       cur_point.s - prev_sl_point.s);// s=0 s=sf
+        const auto cost =
+            trajectory_cost.Calculate(curve, prev_sl_point.s, cur_point.s,
+                                      level, sampled_points_.size() -1 ) + prev_dp_node.min_cost_;
+        cur_node.UpdateCost(cost, &prev_dp_node, curve);
+        // record
+        iter_num_++;
+      }
+    }
+  }
+  path_cost_time_ = trajectory_cost.path_cost_time_;
+  stitch_cost_time_ = trajectory_cost.stitch_cost_time_;
+  safety_cost_time_ = trajectory_cost.safety_cost_time_;
+  // find path
+  DPRoadGraphNode fake_head;
+  min_cost_path_.clear();
+  dp_selected_points_.clear();
+  for (const auto& cur_dp_node : graph_nodes.back()) {// 实际只是选择到达最后一层中代价最小的一个节点
+    fake_head.UpdateCost(cur_dp_node.min_cost_, &cur_dp_node,
+                         cur_dp_node.min_cost_curve_);
+  }
+  const auto* min_cost_node = &fake_head;
+  while (min_cost_node->min_cost_prev_node_) {
+    min_cost_node = min_cost_node->min_cost_prev_node_;
+    min_cost_path_.push_back(*min_cost_node);
+  }
+  std::reverse(min_cost_path_.begin(), min_cost_path_.end());
+  for (const auto& node : min_cost_path_) {
+    Point2D sl_cart;
+    dp_selected_points_.emplace_back(node.sl_point);
+    // std::cout<<"node.min_cost_.smooth_cost "<<node.min_cost_.smooth_cost_<<std::endl;
+    // std::cout<<"node.min_cost_.safety_cost "<<node.min_cost_.safety_cost_<<std::endl;
+    // std::cout<<"node.min_cost_.stitch_cost "<<node.min_cost_.stitch_cost_<<std::endl;
+  }
+  double dp_search_end_time = IflyTime::Now_ms();
+  dp_search_cost_time_ = dp_search_end_time - dp_search_start_time;
+  return true;
+}
+bool DPRoadGraph::FinedReferencePath(LaneBorrowDeciderOutput* lane_borrow_decider_output){
+  std::vector<SLPoint> frenet_dp_path;
+
+  double accumulated_s = init_sl_point_.s;
+  const double path_resolution = 2.0;
+  refined_paths_.clear();
+  if (min_cost_path_.size() <= 1) {
+      lane_borrow_decider_output->lane_borrow_failed_reason = TRIGGER_BUT_DP_SEARCH_FAILED;
+      lane_borrow_decider_output->is_in_lane_borrow_status = false;
+    return false;
+  }
+  for (std::size_t i = 1; i < min_cost_path_.size(); i++) {
+    const auto& prev_node = min_cost_path_[i - 1];
+    const auto& current_node = min_cost_path_[i];
+    if(prev_node.min_cost_.has_collision_ == true || prev_node.min_cost_.out_boundary_ == true){
+      lane_borrow_decider_output->lane_borrow_failed_reason = TRIGGER_BUT_DP_SEARCH_FAILED;
+      lane_borrow_decider_output->is_in_lane_borrow_status = false;
+      break;
+    }
+    const double path_s_length = current_node.sl_point.s - prev_node.sl_point.s;
+    double current_s = 0.0;
+    const auto& curve = current_node.min_cost_curve_;
+    // donnot delete, discard for pybind
+    const auto&current_frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+    while (current_s + path_resolution * 0.5 < path_s_length) {
+      // current_s += path_resolution;
+      const double l = curve.Evaluate(0, current_s);
+      const double dl = curve.Evaluate(1, current_s);
+      const double ddl = curve.Evaluate(2, current_s);
+      const double dddl = curve.Evaluate(3, current_s);
+      const double theta = std::atan2(dl, 1);  // 计算heading角度
+      const double kappa = curve.EvaluateKappa(current_s);  // 获取曲率
+      const double denominator = std::pow(1 + dl * dl, 1.5);
+      const double numerator1 = dddl;
+      const double numerator2 = 3 * ddl * dl * ddl / std::pow(1 + dl * dl, 2.5);
+      const double dkappa = numerator1 / denominator - numerator2;
+      const double ddkappa = 0.;
+
+
+      const SLPoint sl_point(accumulated_s + current_s, l);
+
+      frenet_dp_path.emplace_back(sl_point);
+
+      Point2D sl_cart(0,0);// nonsene
+      // donnot delete, discard for pybind
+      current_frenet_coord->SLToXY(accumulated_s + current_s, l, &sl_cart.x, &sl_cart.y);
+      planning_math::PathPoint path_point{sl_cart.x, sl_cart.y,sl_point.s,sl_point.l,
+          theta,kappa,dkappa,ddkappa};
+      refined_paths_.emplace_back(path_point);
+      current_s += path_resolution;
+    }
+    if (i == min_cost_path_.size() - 1) {
+      accumulated_s += current_s;
+    } else {
+      accumulated_s += path_s_length;
+    }
+}
+
+return true;
+}
+bool DPRoadGraph::CartSpline(LaneBorrowDeciderOutput* lane_borrow_decider_output){
+  std::vector<double> s_vec;
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  if(refined_paths_.size()<2){
+    return false;
+  }
+  for(const auto& path_point:refined_paths_)
+  {
+    double cur_s = path_point.s();
+    s_vec.emplace_back(cur_s);
+    x_vec.emplace_back(path_point.x());
+    y_vec.emplace_back(path_point.y());
+  }
+  ref_path_curve_.x_vec = x_vec;
+  ref_path_curve_.y_vec = y_vec;
+  ref_path_curve_.s_vec = s_vec;
+  ref_path_curve_.x_s_spline.set_points(s_vec,x_vec);
+  ref_path_curve_.y_s_spline.set_points(s_vec,y_vec);
+
+  lane_borrow_decider_output->dp_path_ref = ref_path_curve_;
+  return true;
+}
+bool DPRoadGraph::SetSampleParams(LaneBorrowStatus lane_borrow_status){
+
+  double total_length = ego_s_ + std::fmax(v_cruise_ * 6.0, // 6s
+                         config_.min_sample_distance);
+  total_length_ = total_length;//set_total_length(total_length); // length is not update in pybind, same as .logs
+
+  const double level_distance = pnc::mathlib::Clamp(
+      v_cruise_ * config_.sample_forward_time, config_.min_level_distance,
+       config_.max_level_distance);  // s_range  is update with v_cruise_ in logs, but not in pybind
+  s_range_ = level_distance;
+  l_range_ = 0.5;
+
+  if (current_lane_ptr_ != nullptr) {
+      sample_left_boundary_ =
+          current_lane_ptr_->width() * 0.5 - vehicle_width_ * 0.5;
+      sample_right_boundary_ =
+          - current_lane_ptr_->width() * 0.5 + vehicle_width_ * 0.5;
+    }
+    if (left_lane_ptr_ != nullptr) {
+      sample_left_boundary_ += left_lane_ptr_->width()*0.5;
+    }
+    if (right_lane_ptr_ != nullptr) {
+      sample_right_boundary_ -= right_lane_ptr_->width()*0.5;
+    }
+
+    LaneBorrowStatus lane_borrow_state;
+    lane_borrow_state = lane_borrow_status;
+    if (lane_borrow_state == kNoLaneBorrow
+        ||lane_borrow_state == kLaneBorrowDriving) {
+      theta_max_ = 0.15;
+    }else if (lane_borrow_state == kLaneBorrowCrossing) {
+      theta_max_ = 0.12;
+    }else if (lane_borrow_state == kLaneBorrowBackOriginLane) {
+      theta_max_ = 0.1;
+    }
+
+  return true;
+}
+bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status){
+  LaneBorrowStatus lane_borrow_state;
+  lane_borrow_state = lane_borrow_status;
+  if (lane_borrow_state == kNoLaneBorrow
+      ||lane_borrow_state == kLaneBorrowDriving) {
+    coeff_l_cost_ = config_.coeff_l_cost;
+    coeff_dl_cost_ = config_.coeff_dl_cost;
+    coeff_ddl_cost_ = config_.coeff_ddl_cost;
+    path_resolution_ = config_.path_resolution;
+    coeff_end_l_cost_ = config_.coeff_end_l_cost;
+    coeff_collision_cost_ = config_.coeff_collision_cost;
+    collision_distance_ = config_.collision_distance;
+    coeff_stitch_cost_ = config_.coeff_stitch_cost;
+  }else if (lane_borrow_state == kLaneBorrowCrossing||lane_borrow_state == kLaneBorrowBackOriginLane) {
+    coeff_l_cost_ = config_.coeff_l_cost2;
+    coeff_dl_cost_ = config_.coeff_dl_cost2;
+    coeff_ddl_cost_ = config_.coeff_ddl_cost2;
+    path_resolution_ = config_.path_resolution2;
+    coeff_end_l_cost_ = config_.coeff_end_l_cost2;
+    coeff_collision_cost_ = config_.coeff_collision_cost2;
+    collision_distance_ = config_.collision_distance2;
+    coeff_stitch_cost_ = config_.coeff_stitch_cost2;
+  }
+  return true;
+}
+bool DPRoadGraph::SampleLanes(LaneBorrowDeciderOutput* lane_borrow_decider_output){
+  // if(current_lane_ptr_ == nullptr){
+  //   return false;
+  // }
+  sampled_points_.clear();
+  // std::cout<<"s range"<<s_range_<< "  l_range"<<l_range_<<std::endl;
+
+  double accumulated_s = init_sl_point_.s;
+  double prev_s = accumulated_s;
+  sampled_points_.insert(sampled_points_.begin(), std::vector<SLPoint>{init_sl_point_});
+  for (size_t i = 0; accumulated_s < total_length_; ++i) {
+    accumulated_s += s_range_;
+    if (accumulated_s + s_range_ / 2.0 > total_length_) {
+      accumulated_s = total_length_;
+    }
+    const double s_step = std::fmin(total_length_, accumulated_s);
+    if (std::fabs(s_step - prev_s) < 1.0) {
+      continue;
+    }
+    prev_s = s_step;
+    // donnot delete more precise but abort for pybind
+
+    // lateral sample  lanes
+
+    double sample_left_boundary = 0.0;
+    double sample_right_boundary = 0.0;
+    // avaliable lane boundary
+    if (current_lane_ptr_ == nullptr && left_lane_ptr_ == nullptr &&
+        right_lane_ptr_ == nullptr) {
+      LOG_ERROR("No avaliable lanes");
+      return false;
+    }
+    double aheads = s_step - ego_s_;
+    if (current_lane_ptr_ != nullptr) {
+      sample_left_boundary =
+          current_lane_ptr_->width_by_s(s_step) * 0.5 - vehicle_width_ * 0.5;
+      sample_right_boundary =
+          - current_lane_ptr_->width_by_s(s_step) * 0.5 + vehicle_width_ * 0.5;
+    }
+    if (left_lane_ptr_ != nullptr) {
+      sample_left_boundary += left_lane_ptr_->width_by_s(s_step)*0.5;
+    }
+    if (right_lane_ptr_ != nullptr) {
+      sample_right_boundary -= right_lane_ptr_->width_by_s(s_step)*0.5;
+    }
+    // 间隔不变
+    if(lane_borrow_decider_output->borrow_direction ==  LEFT_BORROW){
+      // l_range_ = 0.5;
+      sample_right_boundary = 0.0;
+    }else if(lane_borrow_decider_output->borrow_direction ==  RIGHT_BORROW){
+      // l_range_ = 0.5;
+      sample_left_boundary = 0.0;
+    }else {
+      // l_range_ = 1.0;
+
+    }
+    // slice lateral range
+    std::vector<double> samples_l;
+      // 负方向采样
+    for (double l = -l_range_; l >= sample_right_boundary; l -= l_range_) {
+        samples_l.push_back(l);
+    }
+    std::reverse(samples_l.begin(), samples_l.end());
+    // 正方向采样（包括0）
+    for (double l = - 1e-6; l <= sample_left_boundary ; l += l_range_) {
+        samples_l.push_back(l);
+    }
+    // sampled sl points
+    double l_step = 0;
+    std::vector<SLPoint> level_points;
+    const auto& current_frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+    for (size_t j = 0; j < samples_l.size(); j++) {
+      l_step = samples_l[j];
+      SLPoint sl_point;
+      sl_point.l = l_step;
+      sl_point.s = s_step;
+      bool has_overlap = false;
+      for (const auto& obs : obstacles_info_) {
+        if (sl_point.s > obs.s_start - vehicle_length_*0.5&&
+                      sl_point.s < obs.s_end + vehicle_length_*0.5 &&
+                      sl_point.l < obs.l_end + vehicle_width_ *0.5 &&
+                      sl_point.l > obs.l_start - vehicle_width_ *0.5  )   {
+              has_overlap = true;
+        }
+      }
+      if (has_overlap) {
+        continue;
+      }
+      level_points.push_back(sl_point);
+    }
+    if (!level_points.empty()) {
+      sampled_points_.emplace_back(level_points);
+    }
+  }
+  // std::cout<<"sampled_points_ level num_"<<sampled_points_.size()<< "level point num "<<sampled_points_.back().size()<<std::endl;
+  // std::cout<<"sample_left_boundary "<< sample_left_boundary_<< " sample_right_boundary "<<sample_right_boundary_<<std::endl;
+  return true;
+}
+void DPRoadGraph::LogDebugInfo(){
+
+  auto dp_road_pb_info = DebugInfoManager::GetInstance()
+                                       .GetDebugInfoPb()
+                                       ->mutable_dp_road_info();
+  dp_road_pb_info->Clear();
+  // env
+  dp_road_pb_info->mutable_sample_lanes_info()->set_left_boundary(sample_left_boundary_);
+  dp_road_pb_info->mutable_sample_lanes_info()->set_right_boundary(sample_right_boundary_);
+  dp_road_pb_info->set_s_range(s_range_);
+  dp_road_pb_info->set_l_range(l_range_);
+  dp_road_pb_info->set_total_length(total_length_);
+  dp_road_pb_info->set_v_cruise(v_cruise_);
+  const auto& current_frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+for (const auto& level_points : sampled_points_) {
+    auto* new_level_points = dp_road_pb_info->mutable_sample_lanes_info()->add_sampled_points();  // 添加 LevelPoints
+    for (const auto& point : level_points) {
+        auto* sample_sl_point = new_level_points->add_level_points();  // 添加 SampleSLPoint
+        sample_sl_point->set_s(point.s);
+        sample_sl_point->set_l(point.l);
+        // 转换 SL 坐标到 XY 坐标
+        Point2D sl_cart;
+        current_frenet_coord->SLToXY(point.s, point.l, &sl_cart.x, &sl_cart.y);
+        // 添加转换后的坐标
+        dp_road_pb_info->mutable_sample_lanes_info()->add_sampled_xs(sl_cart.x);
+        dp_road_pb_info->mutable_sample_lanes_info()->add_sampled_ys(sl_cart.y);
+    }
+}
+
+  for(const auto& static_ob:obstacles_info_){ // static
+    auto* static_obs_info = dp_road_pb_info->mutable_obstacles_info()->Add();
+    static_obs_info->set_id(static_ob.id);
+    static_obs_info->set_s_start(static_ob.s_start);
+    static_obs_info->set_s_end(static_ob.s_end);
+    static_obs_info->set_l_start(static_ob.l_start);
+    static_obs_info->set_l_end(static_ob.l_end);
+  }
+  dp_road_pb_info->mutable_print_info()->set_ego_s(ego_s_);
+  dp_road_pb_info->mutable_print_info()->set_ego_l(ego_l_);
+  dp_road_pb_info->mutable_print_info()->set_ego_v(ego_v_);
+  double safe_cost = 0.0;
+  double smooth_cost = 0.0;
+  double stitch_cost = 0.0;
+  for (const auto& node : min_cost_path_) {
+    safe_cost+=node.min_cost_.safety_cost_;
+    smooth_cost+=node.min_cost_.smooth_cost_;
+    stitch_cost+=node.min_cost_.stitch_cost_;
+  }
+  dp_road_pb_info->mutable_print_info()->set_safe_cost(safe_cost);
+  dp_road_pb_info->mutable_print_info()->set_smooth_cost(smooth_cost);
+  dp_road_pb_info->mutable_print_info()->set_stitch_cost(stitch_cost);
+
+  dp_road_pb_info->mutable_print_info()->set_ego_l(ego_l_);
+  dp_road_pb_info->mutable_print_info()->set_ego_v(ego_v_);
+// sample result
+  for(const auto& selected_point:dp_selected_points_){
+    auto* selected_points_pb = dp_road_pb_info->mutable_dp_result_path()->mutable_selected_points()->Add();
+    selected_points_pb->set_s(selected_point.s);
+    selected_points_pb->set_l(selected_point.l);
+    Point2D sl_cart;
+    current_frenet_coord->SLToXY(selected_point.s, selected_point.l, &sl_cart.x, &sl_cart.y);
+    dp_road_pb_info->mutable_dp_result_path()->mutable_selected_xs()->Add(sl_cart.x);
+    dp_road_pb_info->mutable_dp_result_path()->mutable_selected_ys()->Add(sl_cart.y);
+  }
+// fined path
+  for(const auto& path_point:refined_paths_){
+    auto* fined_points_pb = dp_road_pb_info->mutable_dp_result_path()->mutable_fined_points()->Add();
+    dp_road_pb_info->mutable_dp_result_path()->mutable_fined_xs()->Add(path_point.x());
+    dp_road_pb_info->mutable_dp_result_path()->mutable_fined_ys()->Add(path_point.y());
+    fined_points_pb->set_s(path_point.s());
+    fined_points_pb->set_l(path_point.l());
+  }
+  // cost params
+  dp_road_pb_info->mutable_dp_param()->set_coeff_l_cost(coeff_l_cost_);
+  dp_road_pb_info->mutable_dp_param()->set_coeff_dl_cost(coeff_dl_cost_);
+  dp_road_pb_info->mutable_dp_param()->set_coeff_ddl_cost(coeff_ddl_cost_);
+  dp_road_pb_info->mutable_dp_param()->set_coeff_end_l_cost(coeff_end_l_cost_);
+  dp_road_pb_info->mutable_dp_param()->set_path_resolution(path_resolution_);
+  dp_road_pb_info->mutable_dp_param()->set_coeff_collision_cost(coeff_collision_cost_);
+  dp_road_pb_info->mutable_dp_param()->set_collision_distance(collision_distance_);
+  dp_road_pb_info->mutable_dp_param()->set_coeff_stitch_cost(coeff_stitch_cost_);
+  // cost end_time
+  dp_road_pb_info->mutable_print_info()->set_dp_cost_time(dp_cost_time_);
+  dp_road_pb_info->mutable_print_info()->set_safety_cost_time(safety_cost_time_);
+  dp_road_pb_info->mutable_print_info()->set_stitch_cost_time(stitch_cost_time_);
+  dp_road_pb_info->mutable_print_info()->set_path_cost_time(path_cost_time_);
+  dp_road_pb_info->mutable_print_info()->set_iter_num(iter_num_);
+
+  dp_road_pb_info->mutable_print_info()->set_dp_search_cost_time(dp_search_cost_time_);
+  dp_road_pb_info->mutable_print_info()->set_concerned_obs_num(flatted_dynamic_obstacles_box_.size() + static_obstacles_box_.size());
+
+}  // namespace planning
+}

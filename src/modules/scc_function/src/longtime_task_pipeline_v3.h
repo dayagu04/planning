@@ -38,11 +38,11 @@
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
-#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
+#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 
 
 namespace planning {
-
+using namespace lane_borrow_deciderV2;
 class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
  public:
   explicit LongTimeTaskPipelineV3(

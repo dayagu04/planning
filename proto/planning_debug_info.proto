@@ -32,6 +32,7 @@ import "lon_target_maker.proto";
 import "hybrid_ara_star.proto";
 import "lane_borrow_decider.proto";
 import "apa_debug_data.proto";
+import "dp_road_graph.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -123,4 +124,5 @@ message PlanningDebugInfo {
   optional WeightMaker weight_maker = 36;
   optional HybridARAInfo hybrid_ara_info = 37;
   repeated DoublePair dis_curv_list = 38;
+  optional DPRoadInfo dp_road_info=39;
 }

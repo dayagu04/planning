@@ -520,6 +520,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
   const auto &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   const auto &planning_init_point =
@@ -619,8 +621,19 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           motion_planner_output.s_lat_vec.back() - motion_planner_output.s_lat_vec[1];
       s = std::min(s, last_ref_length + 0.5);
     }
-    const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
+    auto cart_ref_info = coarse_planning_info.cart_ref_info;
     double s_ref = planning_init_point.frenet_state.s;
+    if (lane_borrow_decider_output.is_in_lane_borrow_status) {
+      cart_ref_info = lane_borrow_decider_output.dp_path_ref;
+      Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
+                                      planning_init_point.lat_init_state.y());
+      pnc::spline::Projection projection_spline;
+      projection_spline.CalProjectionPoint(
+          cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
+          cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
+          cart_init_point);
+      s_ref = projection_spline.GetOutput().s_proj;
+    }
     const double max_ref_length = std::max(
         std::min(cart_ref_info.s_vec.back(),frenet_coord->Length()) - s_ref - 0.01,
         0.0);
@@ -1171,8 +1184,12 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, false);
+    if (is_blocked_obstacle_) {
+      GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
+    } else {
+      GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
+      GenerateStaticObstacleDecision(obstacle, obstacle_decision, false);
+    }
 
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);

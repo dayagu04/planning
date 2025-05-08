@@ -30,7 +30,7 @@ void GenerateParallelMap(
   std::shared_ptr<VirtualLane> ptr_base_lane = nullptr;
   std::shared_ptr<VirtualLane> ptr_neighbor_lane = nullptr;
   const auto& all_lanes = virtual_Lane_Manager->get_virtual_lanes();
-  for (const auto& lane : all_lanes) {
+  for (const auto& lane : all_lanes) {// 遍历所有车道线
     const auto& lane_id = lane->get_virtual_id();
     const auto& ptr_lane =
         virtual_Lane_Manager->get_lane_with_virtual_id(lane_id);
@@ -70,7 +70,7 @@ void GenerateParallelMap(
       continue;
     }
     constexpr double kParallelLateralThresholdM = 1.5;
-    constexpr double kMinLaneWidthM = 2.5;
+    constexpr double kMinLaneWidthM = 2.5;// 判断平行车道
     const bool is_parallel =
         (front_l * back_l > 0.0) &&
         (std::fabs(front_l - back_l) < kParallelLateralThresholdM) &&
@@ -79,7 +79,7 @@ void GenerateParallelMap(
     // std::cout << "is parallel:" << is_parallel << ",lane_id:" << lane_id <<
     // ",front_l:" << front_l
     //           << ",back_l:" << back_l << '\n';
-    (*ptr_is_parallel_lane_map)[lane_id] = is_parallel;
+    (*ptr_is_parallel_lane_map)[lane_id] = is_parallel;// id 以及 是否平行
   }
 }
 }  // namespace planning
@@ -103,14 +103,15 @@ void StGraphInput::Update() {
       session_->environmental_model().get_ego_state_manager();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto& lane_change_status = lane_change_decider_output.curr_state;
+  const auto& lane_change_status = lane_change_decider_output.curr_state;// 以上借道可以得到
   const auto& planned_kd_path =
-      session_->planning_context().motion_planner_output().lateral_path_coord;
+      session_->planning_context().motion_planner_output().lateral_path_coord; //借道采用 DP path
   is_lane_keeping_ = lane_change_status == kLaneKeeping;
-  GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);
-  const auto& init_point = ego_state_manager->planning_init_point();
+  GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);// 如果是lane keep 状态 就没有目标车道的障碍物 // 根据变道状态阶段 分自车前方后方的障碍物
+
+  const auto& init_point = ego_state_manager->planning_init_point();// 规划轨迹初始点planning_init_point 有何特殊
   PlanningInitPointToTrajectoryPoint(init_point);
-  MakeBuffer(lane_change_status, config_);
+  MakeBuffer(lane_change_status, config_);// 根据障碍物和变道状态 设定不同障碍物的buff
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
   const auto& ego_lane = virtual_lane_manager_->get_current_lane();
@@ -124,7 +125,7 @@ void StGraphInput::Update() {
 
   const double path_extend_distance = planning_init_point_.vel() * kExtendTime;
   path_range_.first = 0.0;
-  path_range_.second = planned_kd_path->Length() + path_extend_distance;
+  path_range_.second = planned_kd_path->Length() + path_extend_distance;// 增加速度相关的冗余
   time_range_.first = 0.0;
   time_range_.second = kPlanningHorizon + kTimeBuffer;
 
@@ -137,22 +138,23 @@ void StGraphInput::Update() {
   // update for the forward extend path
   if (nullptr != processed_path_ && !processed_path_->path_points().empty()) {
     path_range_.second =
-        processed_path_->path_points().back().s() + path_extend_distance;
+        processed_path_->path_points().back().s() + path_extend_distance;// 再次加上拓展的距离
   }
 
-  MakePathBorderQuerier(planned_kd_path);
+  MakePathBorderQuerier(planned_kd_path);// 沿着路径生成的边界 边界包含 前后s 左右 segment
 
   max_acceleration_curve_ =
-      GenerateMaxAccelerationCurve(planning_init_point_, ego_state_manager);
+      GenerateMaxAccelerationCurve(planning_init_point_, ego_state_manager);// 最大加速度 最短时间的轨迹
   if (config_.enable_backward_extend_st_boundary) {
     enable_backward_extend_st_boundary_ =
         config_.enable_backward_extend_st_boundary;
     backward_extend_time_s_ = config_.backward_extend_time_s;
   }
-  MakePlanningInitPointBox();
+  MakePlanningInitPointBox();// 初始 box
 }
 
-void StGraphInput::GetAgentOfTargetLane(
+void StGraphInput::GetAgentOfTargetLane(// 根据变道状态阶段 分自车前方后方的障碍物
+
     const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
     const bool is_lane_keeping) {
   if (is_lane_keeping) {
@@ -162,7 +164,7 @@ void StGraphInput::GetAgentOfTargetLane(
   }
 
   const auto target_lane_front_rear_agents =
-      MakeTargetLaneFrontRearAgents(session_);
+      MakeTargetLaneFrontRearAgents(session_);// 根据变道状态阶段 分自车前方后方的障碍物
 
   front_agent_of_target_ = dynamic_world->agent_manager()->GetAgent(
       target_lane_front_rear_agents.first);
@@ -182,17 +184,17 @@ void StGraphInput::FilterAgentsByDecisionType(
       continue;
     }
     if (agent->agent_decision().agent_decision_type() ==
-        agent::AgentDecisionType::IGNORE) {
+        agent::AgentDecisionType::IGNORE) {// ignore 忽略
       continue;
     }
-    if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
+    if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {// 非视觉忽略
       continue;
     }
     filtered_agents_.emplace_back(agent);
   }
 }
 
-void StGraphInput::ExtendProcessedPath(
+void StGraphInput::ExtendProcessedPath(//前后方向拓展 放到 processed_path_
     const bool is_lane_keeping,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path) {
@@ -224,7 +226,7 @@ void StGraphInput::ForwardExtendPlannedPath(
   const double plan_time_length = 5.0;
   double desired_path_length =
       init_v * plan_time_length +
-      0.5 * ego_max_acc * plan_time_length * plan_time_length;
+      0.5 * ego_max_acc * plan_time_length * plan_time_length;// 向前的期望长度
   desired_path_length = std::fmax(kMinLength, desired_path_length);
 
   if (is_lane_keeping) {
@@ -374,7 +376,7 @@ void StGraphInput::BackwardExtendPoints(
   // if project_s < thr, then extend planned_path
   const double delta_s = config_.backward_extend_sample_resolution;
   const double backward_extend_length =
-      config_.backward_extend_length_for_lane_change;
+      config_.backward_extend_length_for_lane_change;// 向后的长度
   if (ego_project_s < delta_s) {
     if (!planned_path_points.empty()) {
       const auto& first_point = planned_path_points.front();
@@ -822,8 +824,8 @@ StGraphInput::GenerateMaxAccelerationCurve(
                                                             state_limit);
 }
 
-std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents(
-    framework::Session* session) {
+
+std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents( framework::Session* session) {
   const auto& dynamic_world =
       session->environmental_model().get_dynamic_world();
   // get lane change status

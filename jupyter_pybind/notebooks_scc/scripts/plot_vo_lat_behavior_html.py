@@ -8,7 +8,6 @@ from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
 
-# +
 import numpy as np
 from IPython.core.display import display, HTML
 from plot_local_view_html import *
@@ -21,11 +20,12 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
+import lib
+from google.protobuf.descriptor import FieldDescriptor
+# from lib import is_bag_main
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241017/20241017-15-20-43/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-10-17-15-20-43_no_camera.bag.1729168548.open-loop.plan"
-
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250429/20250429-19-48-42/data_collection_CHERY_E0Y_18047_EVENT_FILTER_2025-04-29-19-48-42_no_camera.bag"
 html_file = bag_path +".vo_lat_behavior.html"
-# -
 
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
@@ -95,6 +95,18 @@ lane_borrow_turn_circle_params = {
   # 'fill_alpha' : 0.3,
   'line_dash': 'dashed',
   'legend_label': 'lane_borrow_turn_circle'
+}
+dp_path_sample_params = {
+  'legend_label': 'dp_path_sample_points',
+   "color": "red",
+   "size":4.0
+}
+dp_path_curve_params = {
+  'line_color' : "red",
+  'line_width' : 3.0,
+  # 'fill_alpha' : 0.3,
+  'line_dash': 'dashed',
+  'legend_label': 'dp_path_curve'
 }
 sample_poly_s_params = {
     'line_width': 2,
@@ -503,19 +515,21 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
   ts = []
   xys = []
   circle_xys=[]
+  sampled_xys=[]
+  dp_curve_xys = []
   coord_tf = coord_transformer()
   for i, debug_info in enumerate(dataLoader.plan_debug_msg["data"]):
     input_topic_timestamp = debug_info.input_topic_timestamp
-    if lib.load_ros_bag.is_new_loc:
-      if 0 != input_topic_timestamp.localization:
-        localization_timestamp = input_topic_timestamp.localization
-      else :
-        localization_timestamp = input_topic_timestamp.localization_estimate
-    else :
-      if is_bag_main:
-        localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
-      else:
-        localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
+    # if lib.load_ros_bag.is_new_loc:
+    #   if 0 != input_topic_timestamp.localization:
+    #     localization_timestamp = input_topic_timestamp.localization
+    #   else :
+    #     localization_timestamp = input_topic_timestamp.localization_estimate
+    # else :
+    # if lib.load_ros_bag.is_bag_main:
+    #   localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+    # else:
+    localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
     match_loc_msg = find(loc_msg, localization_timestamp)
     if match_loc_msg != None: # 长时轨迹
       cur_pos_xn = match_loc_msg.position.position_boot.x
@@ -556,6 +570,30 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
     corner_point_y.append(rel_back_left_corner_y)
     corner_point_y.append(rel_front_left_corner_y)
     xys.append((corner_point_y, corner_point_x))
+    # dp path decider
+    sample_xs = []
+    sample_ys = []
+    try:
+      sampled_points_xs = debug_info.dp_road_info.sample_lanes_info.sampled_xs
+      sampled_points_ys = debug_info.dp_road_info.sample_lanes_info.sampled_ys
+      for sample_x, sample_y in zip(sampled_points_xs,sampled_points_ys):
+        rel_sample_x, rel_sample_y = coord_tf.global_to_local(sample_x,sample_y)
+        sample_xs.append(rel_sample_x)
+        sample_ys.append(rel_sample_y)
+      sampled_xys.append((sample_ys,sample_xs))
+
+      dp_curve_xs = []
+      dp_curve_ys = []
+      dp_curve_points_xs = debug_info.dp_road_info.dp_result_path.fined_xs
+      dp_curve_points_ys = debug_info.dp_road_info.dp_result_path.fined_ys
+      for curve_x, curve_y in zip(dp_curve_points_xs,dp_curve_points_ys):
+        rel_curve_x, rel_curve_y = coord_tf.global_to_local(curve_x, curve_y)
+        dp_curve_xs.append(rel_curve_x)
+        dp_curve_ys.append(rel_curve_y)
+      dp_curve_xys.append((dp_curve_ys,dp_curve_xs))
+    except AttributeError as e:
+      print(f"[跳过] 字段缺失：{e}")
+
   lane_borrow_base_static_obs_area_generator = CommonGenerator()
   lane_borrow_base_static_obs_area_generator.xys = xys
   lane_borrow_base_static_obs_area_generator.ts = ts
@@ -567,6 +605,19 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
   lane_borrow_base_turn_circle_generator.ts = ts
   lane_borrow_base_turn_circle_layer = CurveLayer(fig_local_view, lane_borrow_turn_circle_params)
   layer_manager.AddLayer(lane_borrow_base_turn_circle_layer, 'lane_borrow_base_turn_circle_layer', lane_borrow_base_turn_circle_generator, 'lane_borrow_base_turn_circle_generator', 2)
+
+  dp_path_sample_layer_generator = CommonGenerator()
+  dp_path_sample_layer_generator.xys = sampled_xys
+  dp_path_sample_layer_generator.ts = ts
+  dp_path_sample_layer = PointsLayer(fig_local_view, dp_path_sample_params)
+  layer_manager.AddLayer(dp_path_sample_layer, 'dp_path_sample_layer', dp_path_sample_layer_generator, 'dp_path_sample_layer_generator', 2)
+
+  dp_path_curve_layer_generator = CommonGenerator()
+  dp_path_curve_layer_generator.xys = dp_curve_xys
+  dp_path_curve_layer_generator.ts = ts
+  dp_path_curve_layer = CurveLayer(fig_local_view, dp_path_curve_params)
+  layer_manager.AddLayer(dp_path_curve_layer, 'dp_path_curve_layer', dp_path_curve_layer_generator, 'dp_path_curve_layer_generator', 2)
+
 
 
 def load_lane_borrow_tab_info(dataLoader, layer_manager):
@@ -611,6 +662,48 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
       lane_borrow_decider_table_layer, 'lane_borrow_decider1', lane_borrow_decider_table, 'lane_borrow_decider_table1', 3)
   return lane_borrow_decider_table_layer.plot
 
+# dp path table 1
+
+def extract_fields_with_names(proto, prefix="DP"):
+    table_name = []
+    table_value = []
+
+    for field in proto.DESCRIPTOR.fields:
+        field_name = field.name
+        full_name = f"{prefix}.{field_name}" if prefix else field_name
+
+        value = getattr(proto, field_name)
+        if field.type == FieldDescriptor.TYPE_MESSAGE:
+            if value.ListFields():  #
+                sub_table_name, sub_table_value = extract_fields_with_names(value, full_name)
+                table_name.extend(sub_table_name)
+                table_value.extend(sub_table_value)
+            else:
+                table_name.append(full_name)
+                table_value.append(None)
+        else:
+            # 普通字段直接添加
+            table_name.append(full_name)
+            table_value.append(value)
+
+    return table_name, table_value
+
+def load_dp_path_tab_info(dataLoader, layer_manager):
+  dp_path_decider_table = TextGenerator()
+  plan_debug_ts = []
+  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+    t = dataLoader.plan_debug_msg["t"][i]
+    plan_debug_ts.append(t)
+    print_info = plan_debug.dp_road_info.print_info
+    table_name, table_var = extract_fields_with_names(print_info)
+    dp_path_decider_table.xys.append((table_name, table_var, [None] * len(table_name)))
+  dp_path_decider_table.ts = plan_debug_ts
+  tab_attr_list = ['Attr', 'Val']
+  dp_road_tab_info_table_layer = TableLayerV2(None, tab_attr_list, table_params)
+  layer_manager.AddLayer(
+      dp_road_tab_info_table_layer, 'dp_road_tab_info', dp_path_decider_table, 'dp_road_tab_info_table', 3)
+  return dp_road_tab_info_table_layer.plot
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
@@ -634,6 +727,7 @@ def plotOnce(bag_path, html_file):
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
     load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
     tab_lane_borrow_decider = load_lane_borrow_tab_info(dataLoader, layer_manager)
+    tab_dp_path_decider = load_dp_path_tab_info(dataLoader, layer_manager)# dp table
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j, sample_base_s = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
@@ -786,9 +880,10 @@ def plotOnce(bag_path, html_file):
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
     pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
+    pan_dp_path_info = Panel(child = row(column(tab_dp_path_decider)), title="DPPathDeciderInfo")
     # pan_sample_poly_info = Panel(child = row(column(fig_st_new, fig_sample_vt), column(fig_sample_at, fig_sample_jt)), title="SamplePolyInfo")
-    pans = Tabs(tabs=[pan_lane_borrow_info,pan_general_info, pan_speed_search_info])
-    bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
+    pans = Tabs(tabs=[pan_lane_borrow_info,pan_dp_path_info,pan_general_info, pan_speed_search_info])
+    bkp.show(layout(car_slider, row(fig_local_view, pans)))
 
 def printHelp():
     print('''\n

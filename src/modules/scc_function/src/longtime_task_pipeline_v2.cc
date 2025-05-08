@@ -6,7 +6,7 @@
 #include "behavior_planners/speed_search_decider/speed_adjust_decider.h"
 
 namespace planning {
-
+using namespace lane_borrow_deciderV2;
 LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
