@@ -181,10 +181,6 @@ class LateralMotionPlanningWeight {
     return end_ratio_for_qjerk_;
   }
 
-  const std::vector<double>& GetSoftBoundWeightRatioVec() const { return q_soft_bound_vec_; }
-
-  const std::vector<double>& GetHardBoundWeightRatioVec() const { return q_hard_bound_vec_; }
-
   const PathWeight& GetPathWeights() const { return weight_; }
 
  private:
@@ -233,15 +229,16 @@ class LateralMotionPlanningWeight {
   double expected_average_acc_;
   double expected_max_acc_;
   double expected_min_acc_;
-  double min_curvature_radius_;
+  double min_road_radius_;
   double min_q_jerk_;
   double last_path_max_dist2ref_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
-  bool is_emergence_;
+  bool is_emergency_;
   bool is_search_success_;
-  std::vector<double> q_soft_bound_vec_;
-  std::vector<double> q_hard_bound_vec_;
+  bool is_s_bend_;
+  std::vector<double> soft_bound_qratio_vec_;
+  std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;
 };
 

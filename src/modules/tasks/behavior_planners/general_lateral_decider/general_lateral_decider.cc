@@ -556,14 +556,14 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // if (cruise_v < 4.167) {  // low speed cruise
     //   kMaxAcc = 0.4;
     // }
-    if (is_LC_CHANGE || is_LC_BACK) {
-      ego_v = std::max(ego_v, config_.min_v_cruise);
-      kMaxAcc = 1e-6;
-    }
     if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
       ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 0.2;
+    }
+    if (is_LC_CHANGE || is_LC_BACK) {
+      ego_v = std::max(ego_v, config_.min_v_cruise);
+      kMaxAcc = 1e-6;
     }
     double s = 0.0;
     double span_t = config_.delta_t * config_.num_step;

@@ -359,8 +359,8 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_wheel_angle_rate =
       max_steer_angle_rate / steer_ratio;
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
-  std::vector<double> xp_v{config_.min_ego_vel, 4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_max_jerk{0.5, 2.0, 2.0, 1.5, 1.0};
+  std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
+  std::vector<double> fp_max_jerk{1.538, 1.846, 1.231, 0.8};
   double max_jerk = planning::interp(ego_v, xp_v, fp_max_jerk);
   max_jerk = std::min(max_wheel_angle_rate * kv2, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
