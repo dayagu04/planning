@@ -483,8 +483,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   bool limit_ref_vel_on_ramp_valid = false;
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-       (coarse_planning_info.target_state == kLaneChangeComplete) ||
-       (coarse_planning_info.target_state == kLaneChangeHold));
+       (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
 
   const double lateral_offset = session_->mutable_planning_context()
@@ -507,7 +507,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   }
 
   if (config_.lateral_ref_traj_type ||
-      ((dist_to_second_stage >= 1e-6) && (is_LC_CHANGE || is_LC_BACK) &&
+      ((is_LC_HOLD ||
+      ((dist_to_second_stage >= 1e-6) && (is_LC_CHANGE || is_LC_BACK))) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
@@ -593,12 +594,12 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   } else {
     general_lateral_decider_output.ramp_scene = false;
   }
-  if ((is_LC_CHANGE || is_LC_BACK) &&
+  if ((is_LC_CHANGE || is_LC_BACK || is_LC_HOLD) &&
       ((config_.not_use_gap_flag) ||
        gap_selector_decider_output.gap_selector_trustworthy)) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
-    if (dist_to_second_stage < -1e-6) {
+    if ((dist_to_second_stage < -1e-6) && !is_LC_HOLD) {
       HandleAvoidScene(traj_points, dynamic_ref_buffer);
     }
   } else {
