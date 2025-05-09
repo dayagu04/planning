@@ -15,7 +15,7 @@
 namespace planning {
 namespace {
 constexpr double kLargeAgentLengthM = 8.0;
-} 
+}
 LaneChangeRequest::LaneChangeRequest(
     framework::Session *session,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
@@ -183,7 +183,7 @@ bool LaneChangeRequest::ComputeLcValid(RequestType direction) {
     return false;
   }
   const double v_ego =
-    session_->environmental_model().get_ego_state_manager()->ego_v();
+      session_->environmental_model().get_ego_state_manager()->ego_v();
   if (target_lane_front_node) {
     const double distance_rel =
         target_lane_front_node->node_back_edge_to_ego_front_edge_distance();
@@ -322,12 +322,12 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                              ->get_current_lane();
   if (route_info_output.dis_to_ramp < 100 ||
       (cur_lane->is_nearing_split_mlc_task() &&
-      route_info_output.distance_to_first_road_split < 100)) {
+       route_info_output.distance_to_first_road_split < 100)) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
       if (left_boundary_type ==
-          iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
           left_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
           left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID) {
         return true;
@@ -336,7 +336,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       iflyauto::LaneBoundaryType right_boundary_type =
           MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_id);
       if (right_boundary_type ==
-          iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
           right_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
           right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID) {
         return true;
@@ -463,6 +463,92 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
       return false;
     }
   } else if (lc_request == RIGHT_CHANGE) {
+    if (sample_path_point.distance_to_right_road_border <
+        ego_lateral_offset_in_target_lane) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
+  }
+}
+
+bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
+    const RequestType lc_direction, const int origin_lane_id,
+    const int target_lane_id) {
+  ReferencePathPoint sample_path_point{};
+  const double cut_length = 1.4;
+  const double sample_forward_distance = 1.0;
+  const double predict_time_horizon = 8.0;
+
+  ReferencePathPoint refpath_pt{};
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+
+  std::shared_ptr<ReferencePath> reference_path_ptr =
+      reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
+  const std::shared_ptr<VirtualLane> target_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
+
+  if (!reference_path_ptr) {
+    LOG_ERROR("IsRoadBorderSurpressDuringLaneChange: invalid reference path");
+    return true;
+  }
+  if (!target_lane) {
+    LOG_ERROR("IsRoadBorderSurpressDuringLaneChange: invalid target lane");
+    return true;
+  }
+
+  const double ego_lateral_offset_in_target_lane =
+      std::fabs(target_lane->get_ego_lateral_offset());
+  const std::shared_ptr<planning_math::KDPath> base_frenet_coord =
+      reference_path_ptr->get_frenet_coord();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const PlanningInitPoint planning_init_point =
+      ego_state->planning_init_point();
+  double ego_vel = ego_state->ego_v();
+  Point2D ego_frenet_point;
+  Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
+                         planning_init_point.lat_init_state.y()};
+  if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
+    LOG_DEBUG(
+        "IsRoadBorderSurpressLaneChange::fail to get ego position on base "
+        "lane");
+    return true;
+  }
+  if (!reference_path_ptr->get_reference_point_by_lon(ego_frenet_point.x,
+                                                      sample_path_point)) {
+    return true;
+  }
+  for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
+       s < ego_vel * predict_time_horizon; s += cut_length) {
+    if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
+      sample_path_point.distance_to_left_lane_border =
+          std::fmin(refpath_pt.distance_to_left_lane_border,
+                    sample_path_point.distance_to_left_lane_border);
+      sample_path_point.distance_to_right_lane_border =
+          std::fmin(refpath_pt.distance_to_right_lane_border,
+                    sample_path_point.distance_to_right_lane_border);
+      sample_path_point.distance_to_left_road_border =
+          std::fmin(refpath_pt.distance_to_left_road_border,
+                    sample_path_point.distance_to_left_road_border);
+      sample_path_point.distance_to_right_road_border =
+          std::fmin(refpath_pt.distance_to_right_road_border,
+                    sample_path_point.distance_to_right_road_border);
+    }
+  }
+  if (lc_direction == LEFT_CHANGE) {
+    if (sample_path_point.distance_to_left_road_border <
+        ego_lateral_offset_in_target_lane) {
+      return true;
+    } else {
+      return false;
+    }
+  } else if (lc_direction == RIGHT_CHANGE) {
     if (sample_path_point.distance_to_right_road_border <
         ego_lateral_offset_in_target_lane) {
       return true;

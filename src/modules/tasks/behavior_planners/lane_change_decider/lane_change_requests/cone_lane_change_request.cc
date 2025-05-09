@@ -563,7 +563,11 @@ void ConeRequest::ConeDir() {
                   ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
-          if (CheckTargetLaneAvailable(false, rlane) && ComputeLcValid(RIGHT_CHANGE)) {
+          if (CheckTargetLaneAvailable(false, rlane) &&
+              ComputeLcValid(RIGHT_CHANGE) &&
+              !IsRoadBorderSurpressDuringLaneChange(RIGHT_CHANGE,
+                                                    origin_lane_virtual_id_,
+                                                    rlane->get_virtual_id())) {
             right_change_available = true;
             LOG_DEBUG("right_change_available: %d \n", right_change_available);
           }
@@ -589,7 +593,11 @@ void ConeRequest::ConeDir() {
                   ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
-          if (CheckTargetLaneAvailable(true, llane) && ComputeLcValid(LEFT_CHANGE)) {
+          if (CheckTargetLaneAvailable(true, llane) &&
+              ComputeLcValid(LEFT_CHANGE) &&
+              !IsRoadBorderSurpressDuringLaneChange(LEFT_CHANGE,
+                origin_lane_virtual_id_,
+                llane->get_virtual_id())) {
             left_change_available = true;
             LOG_DEBUG("left_change_available: %d \n", left_change_available);
           }

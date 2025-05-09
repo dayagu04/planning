@@ -121,10 +121,16 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   }
   bool enable_left = llane && left_reference_path_;
   bool enable_right = rlane && right_reference_path_;
-  const bool is_left_lane_change_safe = enable_left;
-      // (enable_left && ComputeLcValid(LEFT_CHANGE));
-  const bool is_right_lane_change_safe = enable_right;
-      // (enable_right && ComputeLcValid(RIGHT_CHANGE));
+  const bool is_left_lane_change_safe =
+      enable_left &&
+      !IsRoadBorderSurpressDuringLaneChange(
+          LEFT_CHANGE, origin_lane_virtual_id_, llane->get_virtual_id());
+  // (enable_left && ComputeLcValid(LEFT_CHANGE));
+  const bool is_right_lane_change_safe =
+      enable_right &&
+      !IsRoadBorderSurpressDuringLaneChange(
+          RIGHT_CHANGE, origin_lane_virtual_id_, rlane->get_virtual_id());
+  // (enable_right && ComputeLcValid(RIGHT_CHANGE));
   const bool emergency_avoidance_valid =
       (is_left_lane_change_safe || is_right_lane_change_safe);
   bool lane_change_to_left = true;
@@ -166,9 +172,10 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to left "
             "\n");
       }
-      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
-            (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane)))) {
+      if (request_type_ != NO_CHANGE &&
+          (lc_status == kLaneChangeCancel &&
+           (lane_change_lane_mgr_->has_origin_lane() &&
+            lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
@@ -189,9 +196,10 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to right "
             "\n");
       }
-      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
-            (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane)))) {
+      if (request_type_ != NO_CHANGE &&
+          (lc_status == kLaneChangeCancel &&
+           (lane_change_lane_mgr_->has_origin_lane() &&
+            lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
