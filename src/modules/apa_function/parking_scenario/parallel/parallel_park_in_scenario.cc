@@ -91,7 +91,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   double safe_uss_remain_dist = 0.0;
 
   if (apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot_occupied_ratio < 0.05) {
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio < 0.05) {
     lat_buffer = 0.09;
     safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
 
@@ -105,7 +106,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     if (frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE &&
         std::fabs(cur_path_end_pose.pos.y()) <
             0.5 * apa_world_ptr_->GetSlotManagerPtr()
-                      ->ego_info_under_slot_.slot.slot_width_) {
+                      ->GetEgoInfoUnderSlot()
+                      .slot.slot_width_) {
       lat_buffer = 0.04;
       safe_uss_remain_dist = 0.12;
     }
@@ -200,7 +202,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
 const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   auto& select_slot_global =
       ego_info_under_slot.slot.origin_corner_coord_global_;
@@ -385,7 +387,7 @@ const bool ParallelParkInScenario::GenTlane() {
   // |_______________|   right side
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   const double slot_length = ego_info_under_slot.slot.GetLength();
   const double slot_width = ego_info_under_slot.slot.GetWidth();
@@ -690,8 +692,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   //                         c-------------D
 
   apa_world_ptr_->GetCollisionDetectorPtr()->Reset();
-  const auto& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   // set T-Boundary obstacles
   const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
@@ -888,7 +890,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // construct input
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
   GeometryPathInput path_planner_input;
   path_planner_input.tlane = t_lane_;
   path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
@@ -1186,8 +1188,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 }
 
 const bool ParallelParkInScenario::CheckFinished() {
-  const auto& ego_slot_info =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const EgoInfoUnderSlot& ego_slot_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   // const Eigen::Vector2d rear_bumper_center =
   //     ego_slot_info.ego_pos_slot - apa_param.GetParam().rear_overhanging *
@@ -1287,8 +1289,8 @@ void ParallelParkInScenario::Log() const {
   const auto& obs_map =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
 
-  const auto& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const auto& l2g_tf = ego_info_under_slot.l2g_tf;
 

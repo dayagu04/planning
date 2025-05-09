@@ -503,8 +503,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     std::vector<double> target_managed_slot_y_vec,
                     std::vector<double> target_managed_limiter_x_vec,
                     std::vector<double> target_managed_limiter_y_vec,
-                    const int path_plan_method,
-                    const int swap_start_goal) {
+                    const int path_plan_method, const int swap_start_goal) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -609,7 +608,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info =
-        scenario->GetApaWorldPtr()->GetSlotManagerPtr()->ego_info_under_slot_;
+        scenario->GetApaWorldPtr()->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
     ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();
