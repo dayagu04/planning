@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -43,7 +44,7 @@ class HybridAStarInterface {
                                   std::vector<float>& phi,
                                   const HybridAStarResult& result);
 
-  const HybridAStarResult& GetConstFullLengthPath() const;
+  const HybridAStarResult* GetConstFullLengthPath() const;
 
   const bool GetFirstSegmentPath(std::vector<AStarPathPoint>& result);
 
@@ -54,8 +55,6 @@ class HybridAStarInterface {
   const int GetFallBackPath(std::vector<AStarPathPoint>& result);
 
   const int GetFallBackPath(HybridAStarResult* result);
-
-  int ExtendPathToRealTargetPose(const Pose2D& real_end);
 
   const ParkObstacleList& GetConstObstacles() const;
 
@@ -112,10 +111,7 @@ class HybridAStarInterface {
 
   int UpdateEDT();
 
-  void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
-                                      const Pose2D& real_end);
-
-  void PathClear(HybridAStarResult* path);
+  void PathClear();
 
   void UpdateSearchBoundary();
 
@@ -127,7 +123,7 @@ class HybridAStarInterface {
 
   const bool IsEgoOverlapWithSlot();
 
-  // 基于采样的揉库API
+  // 基于采样的揉库API, will be retired.
   void PathSamplingForScenarioRunning();
 
   void PathSearchForScenarioTry(const TargetPoseRegulator& regulator);
@@ -146,6 +142,8 @@ class HybridAStarInterface {
                                          const float ego_obs_dist,
                                          const bool is_ego_overlap_with_slot);
 
+  void PathCandidateCompare();
+
  private:
   // read vehicle param from file
   VehicleParam vehicle_param_;
@@ -156,7 +154,8 @@ class HybridAStarInterface {
   std::shared_ptr<HybridAStar> hybrid_astar_;
   GridSearch dp_heuristic_generator_;
   // path = astar node path + rs path.
-  HybridAStarResult coarse_traj_;
+  HybridAStarResult *best_traj_;
+  std::array<HybridAStarResult, 3> traj_candidates_;
 
   Pose2D ego_state_;
   // 对于垂直、平行车位，goal_state位于车位中心线上.
@@ -176,6 +175,9 @@ class HybridAStarInterface {
   OccupancyGridMap ogm_;
   EulerDistanceTransform edt_;
   ParkReferenceLine ref_line_;
+
+  int gear_switch_number_scenario_try_;
+  double search_time_;
 };
 
 }  // namespace planning

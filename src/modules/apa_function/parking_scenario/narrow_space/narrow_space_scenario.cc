@@ -600,25 +600,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   frame_.current_gear = current_gear_ == AstarPathGear::DRIVE
                             ? geometry_lib::SEG_GEAR_REVERSE
                             : geometry_lib::SEG_GEAR_INVALID;
-
+  cur_request.goal_ = end;
   FillPlanningReason(cur_request);
 
   is_path_connected_to_goal_ = false;
 
   // generate request
-  bool need_adjust_plan = IsEgoNeedAdjustInSlot(start, ego_info.slot.GetWidth(),
-                                                ego_info.slot.GetLength());
-  if (need_adjust_plan) {
-    cur_request.path_generate_method =
-        planning::AstarPathGenerateType::SPIRAL_SAMPLING;
-    end.y = real_end.y;
-    end.x = start.x + 30.0;
-    cur_request.goal_ = end;
-
-  } else {
-    cur_request.goal_ = end;
-  }
-
   if (frame_.replan_reason == ReplanReason::DYNAMIC) {
     if (parking_in_type == ParkingVehDirection::TAIL_IN) {
       cur_request.path_generate_method =
@@ -1324,49 +1311,6 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   }
 
   return true;
-}
-
-const bool NarrowSpaceScenario::IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
-                                                      const double slot_width,
-                                                      const double slot_len) {
-  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
-    return false;
-  }
-
-  // TODO: this api will retire.
-  // SOP should use search-based method to link real goal, not sampling-based
-  // method to link a virtual goal.
-  double ego_lat_offset = std::fabs(ego_pose.y);
-  bool need_adjust_plan = false;
-  const ApaStateMachine fsm =
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
-  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
-    if (current_gear_ != AstarPathGear::REVERSE) {
-      return false;
-    }
-    // If ego is beyond slot and ego neayby center line, use spiral,rs,or
-    // polynomial curve to adjust ego pose.
-    // For astar searching, ego maybe switch gear too much or generate weird
-    // path, we will improve it in the future for better parking performance.
-    if (ego_pose.x >= slot_len) {
-      if (ego_lat_offset < apa_param.GetParam()
-                               .astar_config.adjust_ego_y_thresh_outside_slot &&
-          std::fabs(ego_pose.theta) < ifly_deg2rad(5.0)) {
-        need_adjust_plan = true;
-      }
-    } else {
-      if (ego_lat_offset < 1.0 &&
-          std::fabs(ego_pose.theta) < ifly_deg2rad(15.0)) {
-        need_adjust_plan = true;
-      }
-    }
-  }
-
-  ILOG_INFO << "lateral dist = " << ego_lat_offset
-            << ",theta = " << ifly_rad2deg(ego_pose.theta)
-            << ",need_adjust_plan = " << need_adjust_plan;
-
-  return need_adjust_plan;
 }
 
 const double NarrowSpaceScenario::CalRemainDistFromPath() {

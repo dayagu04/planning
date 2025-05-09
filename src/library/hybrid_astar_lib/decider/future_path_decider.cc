@@ -41,8 +41,7 @@ void FuturePathDecider::Clear() {
   return;
 }
 
-void FuturePathDecider::Process(const HybridAStarResult *history_path,
-                                const ParkReferenceLine *ref_line,
+void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
                                 const float min_turn_radius,
                                 const float sampling_lon_resolution,
                                 EulerDistanceTransform *edt,

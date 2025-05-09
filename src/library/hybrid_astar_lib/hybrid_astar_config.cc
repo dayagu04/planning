@@ -58,22 +58,19 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   // update safe buffer
   // todo: use more safe buffer in release version.
-  safe_buffer.lat_safe_buffer_outside.reserve(3);
-  safe_buffer.lat_safe_buffer_outside.emplace_back(0.4);
-  safe_buffer.lat_safe_buffer_outside.emplace_back(0.2);
-  safe_buffer.lat_safe_buffer_outside.emplace_back(0.1);
+  safe_buffer.lat_safe_buffer_outside[0] = 0.4;
+  safe_buffer.lat_safe_buffer_outside[1] = 0.2;
+  safe_buffer.lat_safe_buffer_outside[2] = 0.1;
   safe_buffer.circle_path_extra_buffer_outside = 0.10;
 
-  safe_buffer.lat_safe_buffer_inside.reserve(3);
-  safe_buffer.lat_safe_buffer_inside.emplace_back(0.2);
-  safe_buffer.lat_safe_buffer_inside.emplace_back(0.15);
-  safe_buffer.lat_safe_buffer_inside.emplace_back(0.08);
+  safe_buffer.lat_safe_buffer_inside[0] = 0.2;
+  safe_buffer.lat_safe_buffer_inside[1] = 0.15;
+  safe_buffer.lat_safe_buffer_inside[2] = 0.08;
   safe_buffer.circle_path_extra_buffer_inside = 0.0;
 
-  safe_buffer.lon_safe_buffer.reserve(3);
-  safe_buffer.lon_safe_buffer.emplace_back(0.4);
-  safe_buffer.lon_safe_buffer.emplace_back(0.35);
-  safe_buffer.lon_safe_buffer.emplace_back(0.30);
+  safe_buffer.lon_safe_buffer[0] = 0.4;
+  safe_buffer.lon_safe_buffer[1] = 0.35;
+  safe_buffer.lon_safe_buffer[2] = 0.30;
   safe_buffer.lon_min_safe_buffer = 0.01;
 
   // slot release related

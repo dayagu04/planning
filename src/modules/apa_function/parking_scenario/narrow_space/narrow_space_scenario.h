@@ -103,10 +103,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckEgoReplanNumber(const bool is_replan);
 
-  const bool IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
-                                   const double slot_width,
-                                   const double slot_len);
-
   const double CalRemainDistFromPath() override;
 
   size_t GetNearestPathPoint(
