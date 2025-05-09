@@ -88,7 +88,8 @@ void UpdateSlot(
   auto& park_slot = g_local_view.parking_fusion_info;
   park_slot.parking_fusion_slot_lists_size = id_vec.size();
   park_slot.select_slot_id = select_id;
-  g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.id = select_id;
+  g_apa_world_ptr->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot().id =
+      select_id;
 
   for (size_t i = 0; i < id_vec.size(); ++i) {
     auto& slot = park_slot.parking_fusion_slot_lists[i];
@@ -97,16 +98,19 @@ void UpdateSlot(
     if (slot.id == select_id) {
       switch (slot.type) {
         case iflyauto::PARKING_SLOT_TYPE_VERTICAL:
-          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
-              SlotType::PERPENDICULAR;
+          g_apa_world_ptr->GetSlotManagerPtr()
+              ->GetMutableEgoInfoUnderSlot()
+              .slot_type = SlotType::PERPENDICULAR;
           break;
         case iflyauto::PARKING_SLOT_TYPE_SLANTING:
-          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
-              SlotType::SLANT;
+          g_apa_world_ptr->GetSlotManagerPtr()
+              ->GetMutableEgoInfoUnderSlot()
+              .slot_type = SlotType::SLANT;
           break;
         case ::iflyauto::PARKING_SLOT_TYPE_HORIZONTAL:
-          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
-              SlotType::PARALLEL;
+          g_apa_world_ptr->GetSlotManagerPtr()
+              ->GetMutableEgoInfoUnderSlot()
+              .slot_type = SlotType::PARALLEL;
           break;
         default:
           break;
@@ -199,8 +203,8 @@ std::vector<std::vector<Eigen::Vector4d>> GetPerferredPlanPath() {
   }
   path_vec_vec.reserve(g_scenario_ptr->GetPerferredGeometryPathVec().size() +
                        6);
-  const auto& l2g_tf =
-      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+  const geometry_lib::LocalToGlobalTf& l2g_tf =
+      g_apa_world_ptr->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
   for (auto& geometry_path : g_scenario_ptr->GetPerferredGeometryPathVec()) {
     geometry_path.Sample(g_simu_param.sample_ds);
     std::vector<Eigen::Vector4d> path_vec;
@@ -249,7 +253,7 @@ std::vector<Eigen::Vector2d> GetObsVec() {
     return obs_vec;
   }
   const geometry_lib::LocalToGlobalTf& l2g_tf =
-      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+      g_apa_world_ptr->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
 
   const std::unordered_map<size_t, ApaObstacle>& obs =
       g_apa_world_ptr->GetObstacleManagerPtr()->GetObstacles();

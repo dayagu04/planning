@@ -30,6 +30,8 @@ struct GenerateObstacleRequest {
   void Reset() {
     scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
     process_obs_method = ProcessObsMethod::DO_NOTHING;
+    min_channel_width = 0.0;
+    min_channel_length = 0.0;
   }
 };
 
@@ -47,19 +49,18 @@ class GenerateObstacleDecider final : public ParkingTask {
   const bool GenObs(const EgoInfoUnderSlot& ego_info_under_slot,
                     GenerateObstacleRequest request);
 
-  const bool GenObsForPerpendicularTailIn();
-
-  const bool CalcVirtualTLane();
-
-  const bool GenObsForPerpendicularHeadingIn();
-
   virtual void Reset() override {
     ego_info_under_slot_.Reset();
     request_.Reset();
     virtual_tlane_.Reset();
   }
 
-  const TLane& GetVirtualTLane() const { return virtual_tlane_; }
+ private:
+  const bool GenObsForPerpendicularTailIn();
+
+  const bool GenObsForPerpendicularHeadingIn();
+
+  const bool CalcVirtualTLane();
 
  private:
   std::shared_ptr<ApaObstacleManager> obs_manager_ptr_;

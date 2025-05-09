@@ -10,7 +10,7 @@ using namespace pnc;
 
 struct TargetPoseDeciderRequest {
   std::vector<double> lat_buffer_vec;
-  double lon_buffer;
+  double lon_buffer = 0.0;
   ParkingScenarioType scenario_type;
   bool consider_obs = true;
   bool base_on_slot = false;
@@ -59,6 +59,7 @@ class TargetPoseDecider final : public ParkingTask {
   const TargetPoseDeciderResult CalcTargetPose(
       const ApaSlot& slot, const TargetPoseDeciderRequest& request);
 
+ private:
   const TargetPoseDeciderResult CalcTargetPoseForPerpendicularTailIn();
 
   const TargetPoseDeciderResult CalcTargetPoseForPerpendicularHeadIn();
@@ -76,7 +77,7 @@ class TargetPoseDecider final : public ParkingTask {
       col_det_interface_ptr_;
   ApaSlot slot_;
   std::vector<double> lat_buffer_vec_;
-  double lon_buffer_{0.};
+  double lon_buffer_ = 0.0;
   bool consider_obs_ = false;
   bool base_on_slot_ = false;
   TargetPoseDeciderResult result_;

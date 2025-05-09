@@ -236,12 +236,13 @@ void ParkingScenario::GenPlanningPath() {
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
       apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot_occupied_ratio;
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio;
 
   // send slot type to control
   planning_output_.trajectory.trajectory_points[2].distance =
       static_cast<double>(
-          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot_type);
+          apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type);
 
   planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
@@ -271,10 +272,10 @@ const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
     const double lat_expand, const double lon_expand,
     const double heading_err) {
   const geometry_lib::PathPoint& ego_pose =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.cur_pose;
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().cur_pose;
 
   const ApaSlot& slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot;
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot;
 
   if ((slot.IsPointInExpandSlot(ego_pose.pos, true, lat_expand, lon_expand) &&
        std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
@@ -516,10 +517,12 @@ void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
   std::shared_ptr<ApaSlotManager> slot_manager =
       apa_world_ptr_->GetSlotManagerPtr();
-  slot_manager->ego_info_under_slot_.slot.release_info_
+  slot_manager->GetMutableEgoInfoUnderSlot()
+      .slot.release_info_
       .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
-  slot_manager->ego_info_under_slot_.slot.release_info_
+  slot_manager->GetMutableEgoInfoUnderSlot()
+      .slot.release_info_
       .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
 

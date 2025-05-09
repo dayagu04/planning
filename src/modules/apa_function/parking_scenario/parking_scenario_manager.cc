@@ -74,11 +74,11 @@ void ParkingScenarioManager::UpdateScenarioType() {
     Reset();
   }
 
-  const auto &cur_state =
+  const ApaStateMachine &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
-  const auto &ego_info_under_slot =
-      apa_world_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const EgoInfoUnderSlot &ego_info_under_slot =
+      apa_world_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
@@ -195,11 +195,11 @@ void ParkingScenarioManager::ScenarioTry() {
     return;
   }
 
-  const auto &cur_state =
+  const ApaStateMachine &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
-  const auto &ego_info_under_slot =
-      apa_world_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const EgoInfoUnderSlot &ego_info_under_slot =
+      apa_world_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     // 车尾泊入功能
@@ -238,26 +238,27 @@ void ParkingScenarioManager::ScenarioTry() {
     current_scenario_->ScenarioTry();
   }
 
-  ILOG_INFO
-      << "GEOMETRY RELEASE = "
-      << GetSlotReleaseStateString(ego_info_under_slot.slot.release_info_
-                                   .release_state[GEOMETRY_PLANNING_RELEASE])
-      << ", ASTAR RELEASE = "
-      << GetSlotReleaseStateString(ego_info_under_slot.slot.release_info_
-                                   .release_state[ASTAR_PLANNING_RELEASE]);
+  ILOG_INFO << "GEOMETRY RELEASE = "
+            << GetSlotReleaseStateString(
+                   ego_info_under_slot.slot.release_info_
+                       .release_state[GEOMETRY_PLANNING_RELEASE])
+            << ", ASTAR RELEASE = "
+            << GetSlotReleaseStateString(
+                   ego_info_under_slot.slot.release_info_
+                       .release_state[ASTAR_PLANNING_RELEASE]);
   return;
 }
 
 const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
-  SlotReleaseState astar_path_release =
+  const SlotReleaseState astar_path_release =
       apa_world_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot.release_info_
-          .release_state[ASTAR_PLANNING_RELEASE];
+          ->GetEgoInfoUnderSlot()
+          .slot.release_info_.release_state[ASTAR_PLANNING_RELEASE];
 
-  SlotReleaseState geometry_path_release =
+  const SlotReleaseState geometry_path_release =
       apa_world_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot.release_info_
-          .release_state[GEOMETRY_PLANNING_RELEASE];
+          ->GetEgoInfoUnderSlot()
+          .slot.release_info_.release_state[GEOMETRY_PLANNING_RELEASE];
 
   if (planning_output_.planning_status.apa_planning_status ==
           iflyauto::APA_IN_PROGRESS ||
