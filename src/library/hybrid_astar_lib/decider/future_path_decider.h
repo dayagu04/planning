@@ -32,11 +32,10 @@ class FuturePathDecider : public AstarDecider {
   FuturePathDecider() = default;
 
   /**
-   * [in]: history_path, ref_line, min_turn_radius, sampling_lon_resolution
+   * [in]: ref_line, min_turn_radius, sampling_lon_resolution
    * [out]: edt, request
    */
-  void Process(const HybridAStarResult *history_path,
-               const ParkReferenceLine *ref_line, const float min_turn_radius,
+  void Process(const ParkReferenceLine *ref_line, const float min_turn_radius,
                const float sampling_lon_resolution, EulerDistanceTransform *edt,
                AstarRequest &request);
 

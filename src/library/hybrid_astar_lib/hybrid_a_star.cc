@@ -1544,7 +1544,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
             << " ,collision time " << collision_check_time_ms_
-            << ", search fail= " << static_cast<int>(result->fail_type)
+            << ", gear switch num = " << result->gear_change_num
             << ", hybrid astar search time (ms)= " << astar_search_time;
 
   double astar_end_time = IflyTime::Now_ms();
@@ -2006,7 +2006,8 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
 
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
-            << " ,collision time " << collision_check_time_ms_;
+            << " ,collision time " << collision_check_time_ms_
+            << ", gear switch num = " << result->gear_change_num;
 
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;

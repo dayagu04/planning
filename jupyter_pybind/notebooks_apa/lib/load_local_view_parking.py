@@ -31,7 +31,7 @@ from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 from lib.local_view_lib import *
 import rosbag
-from ifly_parking_map_pb2 import *
+# from ifly_parking_map_pb2 import *
 
 plan_debug_ts = []
 plan_debug_timestamps = []

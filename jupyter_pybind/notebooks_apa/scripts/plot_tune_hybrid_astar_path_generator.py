@@ -101,7 +101,7 @@ fig1.line('x_vec', 'y_vec', source = data_search_path, line_width = 2, line_colo
 fig1.circle('x_vec', 'y_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('x_vec', 'y_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
-fig1.circle(x='car_circle_xn', y='car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = True)
+fig1.circle(x='car_circle_xn', y='car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
 fig1.circle('x_vec', 'y_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -169,11 +169,11 @@ hybrid_astar_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.1, step=0.01)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.61, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=2.2, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=286.0, step=1)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=93.0, step=1)
 
-    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=5, step=1)
+    self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=1, step=1)
     self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
 
@@ -192,7 +192,7 @@ class LocalViewSlider:
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
     self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=1, value=0, step=1)
-    self.gear_request = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="gear_request", min=0, max=3, value=2, step=1)
+    self.gear_request = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="gear_request", min=0, max=3, value=1, step=1)
 
     ipywidgets.interact(slider_callback, ego_x=self.ego_x_slider,
                         ego_y=self.ego_y_slider,

@@ -892,7 +892,6 @@ std::vector<Eigen::Vector3d> Update(
     request.swap_start_goal = swap_start_goal;
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
-    hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
     // hybrid_astar_interface_->UpdateEDTByObs(hybrid_astar_obs_);
 
