@@ -17,6 +17,8 @@ constexpr double kSpeedlimitScale = 0.6;
 constexpr double kSSharpBendRadius = 300.0;
 constexpr double kSSharpBendCurvDis = 30.0;
 constexpr double kTFLSpeedLimitDis = 160.0;
+constexpr double kStaticAgentAvoidLimitedSpeed = 5.56;
+constexpr double kDynamicAgentAvoidLimitedSpeed = 2.78;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -565,9 +567,11 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
 
   for (auto avoid_agent : avoid_agents) {
     // check speed diff and ignore < 5 mps avoid agent
-    constexpr double kSpeedDiffThdInSpeedLimit = 2.0;
+    const double SpeedDiffThdInSpeedLimit =
+        avoid_agent->is_static() ? kStaticAgentAvoidLimitedSpeed
+                                 : kDynamicAgentAvoidLimitedSpeed;
     const double speed_diff = v_ego - avoid_agent->speed();
-    if (speed_diff < kSpeedDiffThdInSpeedLimit) {
+    if (speed_diff < SpeedDiffThdInSpeedLimit) {
       continue;
     }
 
@@ -605,7 +609,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     std::array<double, 2> xp{agent_half_width, lane_width};
     std::array<double, 2> fp{kSpeedlimitScale * v_ego, v_ego};
     double v_limit = interp(fabs(min_lat_l_by_lat_path), xp, fp);
-    const double v_limit_lower = kSpeedDiffThdInSpeedLimit + avoid_agent->speed();
+    const double v_limit_lower = SpeedDiffThdInSpeedLimit + avoid_agent->speed();
     v_limit = std::max(v_limit, v_limit_lower);
 
     SpeedLimitAgent speed_limit_agent;
