@@ -570,6 +570,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     ReadItem<double>(json, default_lc_time, "gap_selector", "default_lc_time");
+    ReadItem<double>(json, default_lh_time, "gap_selector", "default_lh_time");
     ReadItem<double>(json, collision_check_length_threshold, "gap_selector",
                      "collision_check_length_threshold");
     ReadItem<double>(json, lc_premove_time, "gap_selector", "lc_premove_time");
@@ -581,6 +582,13 @@ struct GapSelectorConfig : public EgoPlanningConfig {
                      "lb_heading_error_max");
     ReadItem<double>(json, lb_heading_error_min, "gap_selector",
                      "lb_heading_error_min");
+    ReadItem<double>(json, lh_t_max, "gap_selector", "lh_t_max");
+    ReadItem<double>(json, lh_t_min, "gap_selector", "lh_t_min");
+    ReadItem<double>(json, lh_heading_error_max, "gap_selector",
+                     "lh_heading_error_max");
+    ReadItem<double>(json, lh_heading_error_min, "gap_selector",
+                     "lh_heading_error_min");
+
     ReadItem<bool>(json, use_gs, "gap_selector", "use_gs");
     read_json_vec<double>(
         json, std::vector<std::string>{"gap_selector", "lat_ref_offset"},
@@ -590,14 +598,20 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   }
 
   double default_lc_time = 6.0;
+  double default_lh_time = 3.0;
   double collision_check_length_threshold = 2.2;
   double lc_premove_time = 1.5;
   double near_car_ttc = 0.2;
   bool use_ego_v = false;
   double lb_t_min = 1.5;
   double lb_t_max = 5.0;
+  double lh_t_min = 1.5;
+  double lh_t_max = 4.5;
+
   double lb_heading_error_min = 4.5;
   double lb_heading_error_max = 0.5;
+  double lh_heading_error_min = 0.5;
+  double lh_heading_error_max = 4.5;
   bool use_gs = true;
   std::vector<double> lat_ref_offset{0.0, 0.1, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;

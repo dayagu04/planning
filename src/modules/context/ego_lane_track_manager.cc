@@ -260,6 +260,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
   bool is_lc_change =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete) ||
+       (coarse_planning_info.target_state == kLaneChangeHold) ||
        (coarse_planning_info.target_state == kLaneChangeCancel));
 
   if (is_lc_change && (lc_state != kLaneKeeping)) {
@@ -535,6 +536,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
                                         .coarse_planning_info;
   bool is_lc_change =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeHold) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_lc_back = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = (is_lc_change || is_lc_back);
