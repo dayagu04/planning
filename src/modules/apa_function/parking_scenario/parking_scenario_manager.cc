@@ -265,7 +265,7 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
       planning_output_.planning_status.hpp_planning_status ==
           iflyauto::HPP_RUNNING) {
     JSON_DEBUG_VALUE("geometry_path_release",
-                     geometry_path_release == SlotReleaseState::RELEASE)
+                     !(astar_path_release == SlotReleaseState::RELEASE));
   }
 
   if (geometry_path_release == SlotReleaseState::NOT_RELEASE &&

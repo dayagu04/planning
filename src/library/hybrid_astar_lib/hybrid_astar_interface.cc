@@ -792,7 +792,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     // check path
     if (request_.plan_reason == PlanningReason::FIRST_PLAN &&
         traj_candidates_[i].gear_change_num <=
-            gear_switch_number_scenario_try_) {
+            gear_switch_number_scenario_try_ &&
+        traj_candidates_[i].x.size() > 2) {
       ILOG_INFO << "path gear is nice";
       break;
     }
