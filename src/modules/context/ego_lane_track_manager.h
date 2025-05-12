@@ -148,7 +148,8 @@ class EgoLaneTrackManger {
       const std::shared_ptr<VirtualLane> current_relative_id_lane,
       const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
-          &virtual_id_mapped_lane);
+          &virtual_id_mapped_lane,
+      const bool &is_fix);
 
   double ComputeAverageHeadingDiff(std::shared_ptr<VirtualLane> base_lane,
                                    const double ego_heading_angle);
@@ -184,6 +185,7 @@ class EgoLaneTrackManger {
   // uint lane_num_ = 0;
   uint last_zero_relative_id_nums_ = 0;
   int last_zero_relative_id_order_id_index_ = -1;
+  int current_fix_lane_order_id_ = -1;
   bool is_ego_on_expressway_ = false;
   bool is_on_ramp_ = false;
   double dis_to_ramp_ = NL_NMAX;
