@@ -49,8 +49,13 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
   return base_dis + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
 
-double CalDesireLonOverlapDistance(double ego_vel, double agent_vel) {
-  return std::fmax(0., 1.0 - (std::fmax((agent_vel - ego_vel - 1), 0)));
+double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
+                                   bool is_rear_obstacle) {
+  if (is_rear_obstacle) {
+    return std::fmax(0., 1.0 - (std::fmax((ego_vel - agent_vel), 0)));
+  } else {
+    return std::fmax(0., 1.0 - (std::fmax((agent_vel - ego_vel - 1), 0)));
+  }
 }
 
 double CalDesireStaticLateralDistance(const double base_distance,
