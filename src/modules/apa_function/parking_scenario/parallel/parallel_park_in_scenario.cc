@@ -21,6 +21,7 @@
 #include "dubins_lib.h"
 #include "func_state_machine_c.h"
 #include "geometry_math.h"
+#include "geometry_path_generator.h"
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
@@ -68,6 +69,60 @@ void ParallelParkInScenario::Reset() {
   ParkingScenario::Reset();
 }
 
+void ParallelParkInScenario::CalBufferInDiffSteps(
+    double& lat_buffer, double& safe_uss_remain_dist) const {
+  const auto slot_mgr = apa_world_ptr_->GetSlotManagerPtr();
+  const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
+
+  static const double kLatBufferOutSlot = 0.22;
+  static const double kLonBuffer1Rstep = 0.18;
+  static const double kLatBuffer1Rstep = 0.0;
+
+  const auto& output = parallel_path_planner_.GetOutput();
+
+  const auto& start_pose =
+      output.path_segment_vec[output.path_seg_index.first].GetStartPose();
+
+  const auto& end_pose =
+      output.path_segment_vec[output.path_seg_index.second].GetEndPose();
+
+  const bool is_start_pose_in_slot =
+      CalcSlotOccupiedRatio(start_pose) >= kEnterMultiPlanSlotRatio;
+
+  const bool is_end_pose_in_slot =
+      CalcSlotOccupiedRatio(end_pose) >= kEnterMultiPlanSlotRatio;
+
+  const bool is_ego_in_slot =
+      ego_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio;
+
+  ILOG_INFO << "is_start_pose_in_slot = " << is_start_pose_in_slot;
+  ILOG_INFO << "is_end_pose_in_slot = " << is_end_pose_in_slot;
+  ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
+
+  // in slot plan step
+  if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
+    lat_buffer = 0.0;
+    safe_uss_remain_dist =
+        apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
+    ILOG_INFO << "in slot!";
+  } else {
+    // out slot
+    lat_buffer = kLatBufferOutSlot;
+    safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
+    if (output.gear_cmd_vec[output.path_seg_index.first] ==
+            geometry_lib::SEG_GEAR_REVERSE &&
+        !is_start_pose_in_slot && is_end_pose_in_slot) {
+      lat_buffer = kLatBuffer1Rstep;
+      safe_uss_remain_dist = kLonBuffer1Rstep;
+      ILOG_INFO << "in 1r step!";
+    } else {
+      ILOG_INFO << "outside slot not 1r step!";
+    }
+  }
+  ILOG_INFO << "lat_buffer = " << lat_buffer;
+  ILOG_INFO << "lon_buffer = " << safe_uss_remain_dist;
+}
+
 void ParallelParkInScenario::ExcutePathPlanningTask() {
   // init simulation
   InitSimulation();
@@ -89,34 +144,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   double lat_buffer = 0.0;
   double safe_uss_remain_dist = 0.0;
-
-  if (apa_world_ptr_->GetSlotManagerPtr()
-          ->GetEgoInfoUnderSlot()
-          .slot_occupied_ratio < 0.05) {
-    lat_buffer = 0.09;
-    safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
-
-    const auto& path_planner_output = parallel_path_planner_.GetOutputPtr();
-    const auto& cur_path_end_pose =
-        path_planner_output
-            ->path_segment_vec[path_planner_output->path_seg_index.second]
-            .GetEndPose();
-
-    // first enter slot
-    if (frame_.current_gear == geometry_lib::SEG_GEAR_REVERSE &&
-        std::fabs(cur_path_end_pose.pos.y()) <
-            0.5 * apa_world_ptr_->GetSlotManagerPtr()
-                      ->GetEgoInfoUnderSlot()
-                      .slot.slot_width_) {
-      lat_buffer = 0.04;
-      safe_uss_remain_dist = 0.12;
-    }
-  } else {
-    lat_buffer = 0.0;
-    safe_uss_remain_dist =
-        apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
-  }
-
+  CalBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
   ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
   ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
 
@@ -124,8 +152,10 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   frame_.remain_dist_path = CalRemainDistFromPath();
 
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs = CalRemainDistFromObs(
-      safe_uss_remain_dist, lat_buffer, 0.0, lat_buffer, true);
+  frame_.remain_dist_obs =
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0,
+                           apa_param.GetParam().parallel_dynamic_lat_buffer,
+                           apa_param.GetParam().parallel_dynamic_lon_buffer);
 
   ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
@@ -151,10 +181,11 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   const double max_replan_path_dist = 0.15;
+  const double uss_stuck_replan_wait_time = 1.5;
   // check replan
   if (!CheckReplan(max_replan_path_dist, 0.068,
                    apa_param.GetParam().max_replan_remain_dist,
-                   apa_param.GetParam().uss_stuck_replan_wait_time,
+                   uss_stuck_replan_wait_time,
                    apa_param.GetParam().stuck_replan_time)) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
@@ -401,8 +432,12 @@ const bool ParallelParkInScenario::GenTlane() {
 
   for (const auto& pair :
        apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+    if (pair.second.GetObsMovementType() != ApaObsMovementType::STATIC) {
+      continue;
+    }
+
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
-      if ((obs_pt_local - slot_center).norm() > 20.0) {
+      if ((obs_pt_local - slot_center).norm() > 25.0) {
         continue;
       }
 
@@ -1285,11 +1320,25 @@ const double ParallelParkInScenario::CalcSlotOccupiedRatio(
   return slot_occupied_ratio;
 }
 
-void ParallelParkInScenario::Log() const {
-  const auto& obs_map =
-      apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
+const double ParallelParkInScenario::CalcSlotOccupiedRatio(
+    const pnc::geometry_lib::PathPoint start_pose) const {
+  double slot_occupied_ratio = 0.0;
 
-  const EgoInfoUnderSlot& ego_info_under_slot =
+  if (pnc::mathlib::IsInBound(start_pose.pos.x(), t_lane_.pt_outside.x(),
+                              t_lane_.pt_inside.x())) {
+    const double y_err_ratio = start_pose.pos.y() / (0.5 * t_lane_.slot_width);
+
+    if (t_lane_.slot_side_sgn) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
+    } else {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
+    }
+  }
+  return slot_occupied_ratio;
+}
+
+void ParallelParkInScenario::Log() const {
+  const auto& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const auto& l2g_tf = ego_info_under_slot.l2g_tf;
@@ -1299,36 +1348,21 @@ void ParallelParkInScenario::Log() const {
   ILOG_INFO << "obs p out = " << p0_g.transpose();
   ILOG_INFO << "obs p in = " << p1_g.transpose();
 
-  int obs_size = 0;
-  for (const auto& obs_pair : obs_map) {
-    if (obs_pair.first != CollisionDetector::VIRTUAL_OBS) {
-      obs_size += obs_pair.second.size();
-    }
-  }
+  const int obs_size = obs_pt_local_vec_.size();
   ILOG_INFO << "obs_size = " << obs_size;
-  const int count_unit = std::ceil(obs_size / 500.0);
+  const int count_unit = std::ceil(obs_size / 400.0);
   const size_t simplify_obs_num = std::ceil(obs_size / count_unit);
 
-  size_t idx = 0;
   std::vector<double> obstaclesX;
   std::vector<double> obstaclesY;
   obstaclesX.reserve(simplify_obs_num);
   obstaclesY.reserve(simplify_obs_num);
-
-  for (const auto& obs_pair : obs_map) {
-    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
-      continue;
-    }
-
-    for (const auto& obs : obs_pair.second) {
-      if (idx % count_unit == 0) {
-        const auto obs_g = l2g_tf.GetPos(obs);
-        obstaclesX.emplace_back(obs_g.x());
-        obstaclesY.emplace_back(obs_g.y());
-      }
-      idx++;
-    }
+  for (size_t i = 0; i < obs_pt_local_vec_.size(); i += count_unit) {
+    const auto obs_g = l2g_tf.GetPos(obs_pt_local_vec_[i]);
+    obstaclesX.emplace_back(obs_g.x());
+    obstaclesY.emplace_back(obs_g.y());
   }
+
   ILOG_INFO << "obstaclesX simp size = " << obstaclesX.size();
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)

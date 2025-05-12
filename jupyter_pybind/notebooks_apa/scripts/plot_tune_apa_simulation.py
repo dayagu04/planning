@@ -21,7 +21,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20250506/20250506-21-06-55/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2025-05-06-21-06-55_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250507/20250507-16-17-27/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-05-07-16-17-27_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -32,8 +32,15 @@ plot_speed_graph = False
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
+start_time = time.time()
 bag_loader = LoadCyberbag(bag_path, parking_flag)
+load_bag_end_time = time.time()
+print(f"load bag time: {load_bag_end_time - start_time:.6f} seconds")
+
 max_time = bag_loader.load_all_data()
+load_all_data_end_time = time.time()
+print(f"load all data time: {load_all_data_end_time - load_bag_end_time:.6f} seconds")
+
 fig1, local_view_data = load_local_view_figure_parking()
 
 if plot_speed_graph:

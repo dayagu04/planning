@@ -587,6 +587,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().dynamic_plan_interval_time, double,
                   "dynamic_plan_interval_time");
 
+  JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lat_buffer, double,
+                  "parallel_dynamic_lat_buffer");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lon_buffer, double,
+                  "parallel_dynamic_lon_buffer");
+
   // slot update params when parking
   JSON_READ_VALUE(apa_param.SetPram().fix_slot_occupied_ratio, double,
                   "fix_slot_occupied_ratio");

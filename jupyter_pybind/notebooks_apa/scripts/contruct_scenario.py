@@ -4,7 +4,7 @@ import bokeh
 import sys, os, copy
 sys.path.append("..")
 from io import BytesIO
-from lib.load_local_view_parking import *
+# from lib.load_local_view_parking import *
 from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../build')
