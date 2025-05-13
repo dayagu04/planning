@@ -607,7 +607,14 @@
       "ignore_ego_ttc_to_agent_thrd" : 2.8,
       "lat_distance_close_enough_to_planned_path_thrd": 0.45
     },
-
+    "agent_headway_decider": {
+      "ego_vel_table": [0.0, 3.33, 10.0, 16.67, 26.67, 36.67],
+      "ego_normal_thw_table_level_1": [1.05, 1.05, 1.15, 1.2, 1.25, 1.3],
+      "ego_normal_thw_table_level_2": [1.1, 1.1, 1.25, 1.35, 1.5, 1.65],
+      "ego_normal_thw_table_level_3": [1.15, 1.15, 1.35, 1.5, 1.75, 2.0],
+      "ego_normal_thw_table_level_4": [1.2, 1.2, 1.4, 1.65, 2.0, 2.3],
+      "ego_normal_thw_table_level_5": [1.25, 1.25, 1.5, 1.8, 2.2, 2.6]
+    },
     "st_graph_searcher" : {
       "enable_only_s_t_hash": true,
       "upper_collision_dist": 1.0,
@@ -646,7 +653,7 @@
       "distance_stop_buffer_between_ego_and_cipv_threshold": 2.0,
       "distance_start_between_ego_and_cipv_threshold": 0.3,
       "distance_to_stop_line_ego_threshold": 7.5,
-      "desired_stopped_distance_between_ego_and_cipv_threshold": 3.5,
+      "desired_stopped_distance_between_ego_and_cipv_threshold": 3.0,
       "distance_to_go_threshold": 5.7
     },
 
