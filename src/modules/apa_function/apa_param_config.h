@@ -322,6 +322,8 @@ struct ApaParameters {
   double max_slot_jump_dist = 0.088;
   double max_slot_jump_heading = 0.68;
   double dynamic_plan_interval_time = 0.4;
+  double parallel_dynamic_lat_buffer = 0.4;
+  double parallel_dynamic_lon_buffer = 1.68;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;

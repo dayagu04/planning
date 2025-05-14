@@ -327,22 +327,33 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
   using namespace pnc::geometry_lib;
 
   Arc arc_1;
-  Arc arc_2;
+  Arc diverse_arc_2;
+  Arc narrow_arc_2;
+
   bool success = false;
+  bool diverse_radius_success = false;
+  bool narrow_channel_success = false;
+
   auto ego_line_unit = BuildLineSegByPose(start_pose.pos, start_pose.heading);
   auto ego_line = ego_line_unit;
 
-  arc_1.circle_info.radius = apa_param.GetParam().min_turn_radius;
+  const double min_turn_radius = apa_param.GetParam().min_turn_radius;
+
+  arc_1.circle_info.radius = min_turn_radius;
   const uint8_t arc_1_steer =
       (calc_params_.is_left_side ? SEG_STEER_RIGHT : SEG_STEER_LEFT);
 
-  bool is_narrow_channel = false;
+  const std::vector<double> arc2_radius_vec = {
+      min_turn_radius,     min_turn_radius + 1,  min_turn_radius + 2,
+      min_turn_radius + 3, min_turn_radius + 4,  min_turn_radius + 5,
+      min_turn_radius + 8, min_turn_radius + 10, min_turn_radius + 12};
+
   std::vector<PathSegment> narrow_path_seg_vec;
   for (const auto& target_pose : calc_params_.valid_target_pt_vec) {
     arc_1.pA = target_pose.pos;
     arc_1.headingA = target_pose.heading;
-    arc_1.circle_info.center = CalEgoTurningCenter(
-        target_pose, apa_param.GetParam().min_turn_radius, arc_1_steer);
+    arc_1.circle_info.center =
+        CalEgoTurningCenter(target_pose, min_turn_radius, arc_1_steer);
 
     // last line step length should be more than min_leng with dirve gear
     if (calc_params_.valid_target_pt_vec.size() > 1) {
@@ -351,76 +362,59 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       const pnc::geometry_lib::PathPoint last_pB(
           input_.tlane.pt_terminal_pos, calc_params_.target_line.heading);
 
-      const LineSegment last_line_seg(last_pA.pos, last_pB.pos,
-                                      last_pA.heading);
-      const uint8_t last_line_gear = CalLineSegGear(last_line_seg);
+      const LineSegment last_line(last_pA.pos, last_pB.pos, last_pA.heading);
+      const uint8_t last_line_gear = CalLineSegGear(last_line);
 
       if (!CheckSamePose(last_pA, last_pB) &&
           last_line_gear == SEG_GEAR_DRIVE &&
-          last_line_seg.length < apa_param.GetParam().min_path_length) {
+          last_line.length < apa_param.GetParam().min_path_length) {
         continue;
       }
     }
 
-    Arc ori_arc_2;
     bool is_arc_2_set = false;
-
-    const std::vector<double> arc2_radius_vec = {
-        apa_param.GetParam().min_turn_radius,
-        apa_param.GetParam().min_turn_radius + 1,
-        apa_param.GetParam().min_turn_radius + 2,
-        apa_param.GetParam().min_turn_radius + 3,
-        apa_param.GetParam().min_turn_radius + 5,
-        apa_param.GetParam().min_turn_radius + 12};
-
-    for (size_t i = 0; i < arc2_radius_vec.size(); i++) {
+    size_t i = 0;
+    for (; i < arc2_radius_vec.size(); i++) {
       const auto& arc2_radius = arc2_radius_vec[i];
-      arc_2.circle_info.radius = arc2_radius;
+      diverse_arc_2.circle_info.radius = arc2_radius;
 
-      if (!CalTwoSameGearArcWithLine(arc_1, arc_2, ego_line_unit,
+      if (!CalTwoSameGearArcWithLine(arc_1, diverse_arc_2, ego_line_unit,
                                      SEG_GEAR_DRIVE, true)) {
-        ILOG_INFO << "CalTwoSameGearArcWithLine failed!";
         continue;
       }
-      ILOG_INFO << "CalTwoSameGearArcWithLine success!";
 
       if (i == 0) {
-        ori_arc_2 = arc_2;
+        narrow_arc_2 = diverse_arc_2;
         is_arc_2_set = true;
       }
 
       ego_line.heading = start_pose.heading;
-      ego_line.SetPoints(start_pose.pos, arc_2.pB);
+      ego_line.SetPoints(start_pose.pos, diverse_arc_2.pB);
       if (!CheckEgoLine(ego_line, is_park_out)) {
-        ILOG_INFO << "CheckEgoLine failed!";
+        // ILOG_INFO << "CheckEgoLine failed!";
         continue;
       }
 
-      auto col_res =
-          collision_detector_ptr_->UpdateByObsMap(arc_2, arc_2.headingA);
+      auto col_res = collision_detector_ptr_->UpdateByObsMap(
+          diverse_arc_2, diverse_arc_2.headingA);
       if (col_res.collision_flag ||
           col_res.remain_car_dist >
               col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
-        ILOG_INFO << "arc2 collided!";
+        // ILOG_INFO << "arc2 collided!";
         continue;
       }
       ILOG_INFO << "arc2_radius = " << arc2_radius << "calc success!";
       success = true;
+      diverse_radius_success = true;
       break;
     }
-    if (!success) {
-      ILOG_INFO << "all arc vec calc failed!";
-    }
 
-    if (!success && is_arc_2_set) {
-      is_narrow_channel = true;
-      arc_2 = ori_arc_2;
-      if (!PlanFromTargetToLineInNarrowChannel(narrow_path_seg_vec, arc_1,
-                                               arc_2)) {
-        ILOG_INFO << "narrow channel plan failed";
-        continue;
+    if (is_arc_2_set && i > 2) {
+      if (PlanFromTargetToLineInNarrowChannel(narrow_path_seg_vec, arc_1,
+                                              narrow_arc_2)) {
+        success = true;
+        narrow_channel_success = true;
       }
-      success = true;
     }
 
     if (success) {
@@ -432,19 +426,40 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     // ILOG_INFO <<"arc2 collided! && narrow plan failed!");
     return false;
   }
+  bool is_narrow_channel = false;
 
+  ILOG_INFO << "diverse_radius_success = " << diverse_radius_success;
+  ILOG_INFO << "narrow_channel_success = " << narrow_channel_success;
+
+  if (diverse_radius_success && !narrow_channel_success) {
+    is_narrow_channel = false;
+  } else if (!diverse_radius_success && narrow_channel_success) {
+    is_narrow_channel = true;
+  } else if (diverse_radius_success && narrow_channel_success) {
+    is_narrow_channel =
+        narrow_path_seg_vec.back().GetEndPos().x() < diverse_arc_2.pB.x();
+    ILOG_INFO << "narrow_path_seg_vec.back().GetEndPos().x() = "
+              << narrow_path_seg_vec.back().GetEndPos().x();
+    ILOG_INFO << "diverse_arc_2.pB.x() = " << diverse_arc_2.pB.x();
+  }
+
+  Arc arc_2;
   if (is_narrow_channel) {
     ego_line.heading = start_pose.heading;
     ego_line.SetPoints(start_pose.pos, narrow_path_seg_vec.back().GetEndPos());
+    arc_2 = narrow_arc_2;
+  } else {
+    arc_2 = diverse_arc_2;
   }
 
   const double ego_length = ego_line.length;
   const auto ego_gear = CalLineSegGear(ego_line);
-  const bool is_ego_line_reserved =
-      (ego_gear == SEG_GEAR_DRIVE && ego_length > 0.12) ||
+  const bool is_ego_line_needed =
+      (ego_gear == SEG_GEAR_DRIVE &&
+       ego_length > apa_param.GetParam().min_path_length) ||
       (ego_gear == SEG_GEAR_REVERSE && ego_length > 0.01);
 
-  if (is_ego_line_reserved) {
+  if (is_ego_line_needed) {
     path_seg_vec.emplace_back(PathSegment(ego_gear, ego_line));
   }
 
@@ -494,15 +509,15 @@ const bool ParallelPathGenerator::CheckEgoLine(
       }
     }
 
-    collision_detector_ptr_->SetParam(
-        CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
+    // collision_detector_ptr_->SetParam(
+    //     CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
 
     auto col_res =
         collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
     if (col_res.collision_flag ||
         col_res.remain_car_dist >
             col_res.remain_obstacle_dist - kColBufferOutSlot) {
-      ILOG_INFO << "ego line collided!";
+      // ILOG_INFO << "ego line collided!";
       return false;
     }
   }
@@ -992,16 +1007,17 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
         parallel_success_cnt > 1) {
       continue;
     }
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
 
     std::vector<pnc::geometry_lib::PathSegment> inversed_park_out_path;
     if (!PlanFromTargetToLine(inversed_park_out_path, preparing_pose_vec[i])) {
-      // ILOG_INFO <<" PlanFromTargetToLine failed!");
+      ILOG_INFO << " PlanFromTargetToLine failed!";
       continue;
     }
 
-    // ILOG_INFO <<
-    //     "inversed_park_out_path size =" << inversed_park_out_path.size());
     if (inversed_park_out_path.size() == 0) {
+      ILOG_INFO << "inversed_park_out_path size ="
+                << inversed_park_out_path.size();
       continue;
     }
 
@@ -1020,6 +1036,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     const double min_lat_buffer =
         std::min(calc_params_.lat_outside_slot_buffer_vec[0],
                  calc_params_.lat_outside_slot_buffer_vec[1]);
+    ILOG_INFO << "min_lat_buffer = " << min_lat_buffer;
 
     collision_detector_ptr_->SetParam(
         CollisionDetector::Paramters(min_lat_buffer, false));
@@ -1035,7 +1052,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
 
     // ILOG_INFO <<"prepare_seg_vec size == " << prepare_seg_vec.size());
     if (prepare_seg_vec.size() == 0) {
-      // ILOG_INFO <<"prepare_seg_vec size == 0");
+      ILOG_INFO << "prepare_seg_vec size == 0";
       continue;
     }
 
@@ -1332,7 +1349,7 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
   dy = y_bound / nums;
 
   if (std::fabs(input_.tlane.channel_y) < 4.0 + 1.2) {
-    dy = 0.1;
+    dy = 0.07;
   }
 
   ILOG_INFO << "channel dy = " << dy;

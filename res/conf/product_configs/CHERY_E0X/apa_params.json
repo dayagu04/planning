@@ -233,6 +233,8 @@
   "max_slot_jump_dist": 0.088,
   "max_slot_jump_heading": 0.48,
   "dynamic_plan_interval_time": 0.4,
+  "parallel_dynamic_lat_buffer": 0.5,
+  "parallel_dynamic_lon_buffer": 1.78,
 
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.868,
@@ -287,7 +289,7 @@
   "adjust_plan_max_lat_err": 0.8,
   "adjust_plan_max_heading2_err": 26.68,
   "min_gear_path_length": 0.216,
-  "parallel_lat_opt_enable": false,
+  "parallel_lat_opt_enable": true,
   "cilqr_path_optimization_enable": true,
   "perpendicular_lat_opt_enable": false,
   "min_opt_path_length": 0.9,

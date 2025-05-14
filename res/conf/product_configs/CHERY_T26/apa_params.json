@@ -233,6 +233,8 @@
   "max_slot_jump_dist": 0.088,
   "max_slot_jump_heading": 0.48,
   "dynamic_plan_interval_time": 0.4,
+  "parallel_dynamic_lat_buffer": 0.4,
+  "parallel_dynamic_lon_buffer": 1.68,
 
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.868,
