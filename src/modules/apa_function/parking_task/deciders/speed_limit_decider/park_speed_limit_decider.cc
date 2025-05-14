@@ -62,7 +62,7 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
             std::min(speed_limit, config_.speed_limit_by_kappa_switch_);
 
         speed_limit_decision.decision_speed = speed_limit;
-        speed_limit_decision.reason_code = LonDecisionReason::PATH_KAPPA_CHANGE;
+        speed_limit_decision.reason_code = LonDecisionReason::PATH_KAPPA_SWITCH;
         speed_limit_decision.path_s = path_s;
 
         speed_decisions->decisions.emplace_back(speed_limit_decision);

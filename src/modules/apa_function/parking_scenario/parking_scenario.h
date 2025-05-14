@@ -409,7 +409,6 @@ class ParkingScenario {
   virtual void GenPlanningHmiOutput();
   // No speed planning method.
   virtual void SetPlanningPath();
-  void SetPlanningTraj();
 
   virtual const double CalRemainDistFromPath();
   virtual const double CalRemainDistFromObs(

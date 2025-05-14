@@ -64,17 +64,26 @@ struct ParkingSpeedConfig {
   bool enable_apa_speed_plan;
   double default_cruise_speed;
   double min_cruise_speed;
+  double speed_limit_by_kappa;
+  double speed_limit_by_kappa_switch;
+  double speed_limit_by_obs_dist;
+
   // If obs dist is smaller than this value, add speed limit.
   double obs_dist_for_speed_limit;
 
   // speed limit
-  double acc_upper = 0.51;
+  double path_thresh_for_acc_bound = 0.4;
+  double long_path_acc_upper = 0.51;
+  double short_path_acc_upper = 0.15;
   double acc_lower = -2.0;
   double jerk_upper = 7.0;
   double jerk_lower = -7.0;
 
   double min_path_dist_for_speed_optimizer;
   double min_path_dist_for_veh_starting;
+
+  double optimizer_time_limit = 0.4;
+  bool use_remain_dist;
 };
 
 // todo

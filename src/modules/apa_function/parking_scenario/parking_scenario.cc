@@ -174,11 +174,7 @@ void ParkingScenario::PublishPlanningTraj() {
              frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
              frame_.plan_stm.planning_status == PARKING_RUNNING ||
              frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
-      SetPlanningPath();
-    } else {
-      SetPlanningTraj();
-    }
+    SetPlanningPath();
   } else if (frame_.plan_stm.planning_status == PARKING_IDLE) {
     SetIdlePlanningOutput(planning_output_, current_ego_pose);
   }
@@ -214,29 +210,6 @@ void ParkingScenario::SetPlanningPath() {
   planning_output_.planning_status.apa_planning_status =
       iflyauto::APA_IN_PROGRESS;
 
-  auto trajectory = &(planning_output_.trajectory);
-  trajectory->available = true;
-
-  trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
-
-  size_t N = current_path_point_global_vec_.size();
-  if (N > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
-    ILOG_INFO << "sample ds is possible err";
-    N = PLANNING_TRAJ_POINTS_MAX_NUM - 1;
-  }
-  trajectory->trajectory_points_size = N;
-
-  for (size_t i = 0; i < N; ++i) {
-    const auto& global_point = current_path_point_global_vec_[i];
-    trajectory->trajectory_points[i].x = global_point.pos.x();
-    trajectory->trajectory_points[i].y = global_point.pos.y();
-    trajectory->trajectory_points[i].heading_yaw = global_point.heading;
-    trajectory->trajectory_points[i].v = 0.5;
-  }
-
-  planning_output_.trajectory.target_reference.target_velocity =
-      frame_.vel_target;
-
   // record last frame remain dist path
   frame_.remain_dist_path_last = frame_.remain_dist_path;
 
@@ -251,68 +224,63 @@ void ParkingScenario::SetPlanningPath() {
     frame_.remain_dist_col_det = 2.68;
   }
 
-  // send obs remain dist to control
-  planning_output_.trajectory.trajectory_points[0].distance =
-      std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
-
-  // send slot occupation ratio to control
-  planning_output_.trajectory.trajectory_points[1].distance =
-      apa_world_ptr_->GetSlotManagerPtr()
-          ->GetEgoInfoUnderSlot()
-          .slot_occupied_ratio;
-
-  // send slot type to control
-  planning_output_.trajectory.trajectory_points[2].distance =
-      static_cast<double>(
-          apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type);
-
-  planning_output_.trajectory.trajectory_points[3].distance = 0.0;
-
-  planning_output_.trajectory.trajectory_points[4].distance =
-      frame_.remain_dist_col_det;
-
-  // set plan gear cmd
-  auto gear_command = &(planning_output_.gear_command);
-  gear_command->available = true;
-  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-  } else {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
-  }
-  ILOG_INFO << "gear command in planning output = "
-            << static_cast<int>(gear_command->gear_command_value);
-
-  return;
-}
-
-void ParkingScenario::SetPlanningTraj() {
-  memset(&planning_output_, 0, sizeof(planning_output_));
-  planning_output_.planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
-  planning_output_.planning_status.apa_planning_status =
-      iflyauto::APA_IN_PROGRESS;
-
   auto publish_traj = &(planning_output_.trajectory);
   publish_traj->available = true;
   publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
+  publish_traj->target_reference.target_velocity = frame_.vel_target;
 
-  size_t N = trajectory_.size();
-  publish_traj->trajectory_points_size =
-      std::min(N, size_t(PLANNING_TRAJ_POINTS_MAX_NUM));
+  if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
+    size_t N = current_path_point_global_vec_.size();
+    if (N > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
+      ILOG_INFO << "sample ds is possible err";
+      N = PLANNING_TRAJ_POINTS_MAX_NUM - 1;
+    }
+    publish_traj->trajectory_points_size = N;
 
-  for (size_t i = 0; i < publish_traj->trajectory_points_size; ++i) {
-    const auto& point = trajectory_[i];
-    publish_traj->trajectory_points[i].x = point.x();
-    publish_traj->trajectory_points[i].y = point.y();
-    publish_traj->trajectory_points[i].heading_yaw = point.theta();
-    publish_traj->trajectory_points[i].curvature = point.kappa();
-    publish_traj->trajectory_points[i].t = point.absolute_time();
-    publish_traj->trajectory_points[i].distance = point.s();
-    publish_traj->trajectory_points[i].v = point.vel();
-    publish_traj->trajectory_points[i].a = point.acc();
-    publish_traj->trajectory_points[i].jerk = point.jerk();
+    for (size_t i = 0; i < N; ++i) {
+      const auto& global_point = current_path_point_global_vec_[i];
+      publish_traj->trajectory_points[i].x = global_point.pos.x();
+      publish_traj->trajectory_points[i].y = global_point.pos.y();
+      publish_traj->trajectory_points[i].heading_yaw = global_point.heading;
+      publish_traj->trajectory_points[i].v = 0.5;
+    }
+
+    // send obs remain dist to control
+    publish_traj->trajectory_points[0].distance =
+        std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
+
+    // send slot occupation ratio to control
+    publish_traj->trajectory_points[1].distance =
+        apa_world_ptr_->GetSlotManagerPtr()
+            ->GetEgoInfoUnderSlot()
+            .slot_occupied_ratio;
+
+    // send slot type to control
+    publish_traj->trajectory_points[2].distance = static_cast<double>(
+        apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type);
+    publish_traj->trajectory_points[3].distance = 0.0;
+    publish_traj->trajectory_points[4].distance = frame_.remain_dist_col_det;
+  } else {
+    size_t N = trajectory_.size();
+    publish_traj->trajectory_points_size =
+        std::min(N, size_t(PLANNING_TRAJ_POINTS_MAX_NUM));
+
+    for (size_t i = 0; i < publish_traj->trajectory_points_size; ++i) {
+      const auto& point = trajectory_[i];
+      publish_traj->trajectory_points[i].x = point.x();
+      publish_traj->trajectory_points[i].y = point.y();
+      publish_traj->trajectory_points[i].heading_yaw = point.theta();
+      publish_traj->trajectory_points[i].curvature = point.kappa();
+      publish_traj->trajectory_points[i].t = point.absolute_time();
+      publish_traj->trajectory_points[i].distance = point.s();
+      publish_traj->trajectory_points[i].v = point.vel();
+      publish_traj->trajectory_points[i].a = point.acc();
+      publish_traj->trajectory_points[i].jerk = point.jerk();
+    }
+
+    planning_output_.trajectory.target_reference.polynomial[0] =
+        trajectory_.GetStopS();
   }
-
-  planning_output_.trajectory.target_reference.target_velocity = 1.0;
 
   // set plan gear cmd
   auto gear_command = &(planning_output_.gear_command);
@@ -601,6 +569,11 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
+  // check planning status
+  if (CheckPlanSkip()) {
+    return;
+  }
+
   double acc = apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel() < 0.0) {
     acc = -apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
@@ -615,7 +588,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       current_path_point_global_vec_,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
       ego_speed_point, 0.1, trajectory_,
-      pnc::geometry_lib::GetGearType(frame_.current_gear));
+      pnc::geometry_lib::GetGearType(frame_.gear_command));
 
   const SVPoint stitch_init_speed = traj_stitcher.GetStitchSpeed();
 
@@ -626,7 +599,20 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       apa_world_ptr_->GetObstacleManagerPtr());
 
   SpeedDecisions speed_decisions;
-  stop_decider.Execute(stitch_init_speed, traj_stitcher.GetConstStitchPath());
+  stop_decider.Execute(
+      stitch_init_speed, traj_stitcher.GetConstStitchPath(),
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
+      pnc::geometry_lib::GetGearType(frame_.gear_command));
+
+  // todo: will be retired
+  if (apa_param.GetParam().speed_config.use_remain_dist) {
+    double stop_s =
+        std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
+    stop_decider.AddStopDecisionByDistance(stop_s,
+                                           LonDecisionReason::REMAIN_DIST,
+                                           traj_stitcher.GetConstStitchPath());
+  }
+
   const ParkLonDecision stop_decision = stop_decider.GetStopDecision();
   if (stop_decision.decision_type == LonDecisionType::STOP) {
     speed_decisions.decisions.emplace_back(stop_decision);
@@ -666,6 +652,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   }
 
   trajectory_ = traj_stitcher.GetConstCombinedTraj();
+  trajectory_.SetStopS(stop_decider.GetStopDecisionS());
 
   return;
 }

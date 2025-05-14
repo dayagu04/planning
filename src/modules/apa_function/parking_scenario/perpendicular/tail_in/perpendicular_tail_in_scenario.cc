@@ -2085,28 +2085,34 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
     std::vector<double> y_vec;
     std::vector<double> s_vec;
     std::vector<double> heading_vec;
+    std::vector<double> kappa_vec;
     x_vec.reserve(origin_optimized_path_vec.size());
     y_vec.reserve(origin_optimized_path_vec.size());
     s_vec.reserve(origin_optimized_path_vec.size());
     heading_vec.reserve(origin_optimized_path_vec.size());
+    kappa_vec.reserve(origin_optimized_path_vec.size());
     for (const auto& pt : origin_optimized_path_vec) {
       x_vec.emplace_back(pt.pos.x());
       y_vec.emplace_back(pt.pos.y());
       s_vec.emplace_back(pt.s);
       heading_vec.emplace_back(pt.heading);
+      kappa_vec.emplace_back(pt.kappa);
     }
     mathlib::spline x_s_spline;
     mathlib::spline y_s_spline;
     mathlib::spline heading_s_spline;
+    mathlib::spline kappa_s_spline;
     x_s_spline.set_points(s_vec, x_vec);
     y_s_spline.set_points(s_vec, y_vec);
     heading_s_spline.set_points(s_vec, heading_vec);
+    kappa_s_spline.set_points(s_vec, kappa_vec);
     geometry_lib::PathPoint tmp_pt;
     double ds = 0.0;
     for (size_t i = 1; i < max_pt_number; ++i) {
       tmp_pt.pos << x_s_spline(ds), y_s_spline(ds);
       tmp_pt.heading = heading_s_spline(ds);
       tmp_pt.s = ds;
+      tmp_pt.kappa = kappa_s_spline(ds);
       ds += resampled_ds;
       if (optimal_path_vec.size() > 0) {
         const double dist_err =
@@ -2129,6 +2135,7 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
         tmp_pt.pos << x_s_spline(s_vec.back()), y_s_spline(s_vec.back());
         tmp_pt.heading = heading_s_spline(s_vec.back());
         tmp_pt.s = s_vec.back();
+        tmp_pt.kappa = kappa_s_spline(s_vec.back());
         optimal_path_vec.emplace_back(tmp_pt);
       }
     }

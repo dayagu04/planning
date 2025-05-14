@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "apa_debug_data.pb.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "camera_perception_groundline_c.h"
 #include "config_context.h"
@@ -24,11 +23,14 @@
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
 #include "ifly_localization_c.h"
+#include "log_glog.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
+#include "pose2d.h"
 #include "serialize_utils.h"
 #include "spline.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/control_command_c.h"
@@ -45,18 +47,19 @@
 #include "struct_convert/vehicle_service_c.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
-#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
+#include "transform2d.h"
 #include "vehicle_service_c.h"
-#include "struct_msgs/UssPdcIccSendDataType.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -174,12 +177,13 @@ const bool InterfaceUpdateParam(
     py::bytes &fus_occ_obj_info_bytes, py::bytes &control_output_bytes,
     int plan_type, int select_id, bool force_plan, bool is_path_optimization,
     bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
-    bool sim_to_target, int pybind_state, bool use_obs_in_bag,
-    double sample_ds, std::vector<double> target_managed_slot_x_vec,
+    bool sim_to_target, int pybind_state, bool use_obs_in_bag, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec,
-    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec, std::vector<double> lat_path_optimizier_params) {
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
+    std::vector<double> lat_path_optimizier_params) {
   SimulationParam param;
   param.is_simulation = true;
   param.plan_type = plan_type;
@@ -225,8 +229,7 @@ const bool InterfaceUpdateParam(
 
   iflyauto::FusionGroundLineInfo ground_line_info =
       BytesToStruct<iflyauto::FusionGroundLineInfo,
-                    struct_msgs::FusionGroundLineInfo>(
-          ground_line_info_bytes);
+                    struct_msgs::FusionGroundLineInfo>(ground_line_info_bytes);
 
   iflyauto::FusionObjectsInfo fus_obj_info =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -256,11 +259,14 @@ const bool InterfaceUpdateParam(
 
   // ground_line_info.groundline_size = gl_coord.size();
   // for (size_t i = 0; i < ground_line_info.groundline_size; ++i) {
-  //   ground_line_info.groundline[i].groundline_point_size = gl_coord[i].size();
-  //   for (size_t j = 0; j < ground_line_info.groundline[i].groundline_point_size;
+  //   ground_line_info.groundline[i].groundline_point_size =
+  //   gl_coord[i].size(); for (size_t j = 0; j <
+  //   ground_line_info.groundline[i].groundline_point_size;
   //        ++j) {
-  //     ground_line_info.groundline[i].groundline_point[j].x = gl_coord[i][j].x();
-  //     ground_line_info.groundline[i].groundline_point[j].y = gl_coord[i][j].y();
+  //     ground_line_info.groundline[i].groundline_point[j].x =
+  //     gl_coord[i][j].x();
+  //     ground_line_info.groundline[i].groundline_point[j].y =
+  //     gl_coord[i][j].y();
   //   }
   // }
   // fus_obj_info.fusion_object_size = fus_obj_coord.size();
@@ -268,7 +274,8 @@ const bool InterfaceUpdateParam(
   //   fus_obj_info.fusion_object[i].additional_info.polygon_points_size =
   //       fus_obj_coord[i].size();
   //   for (size_t j = 0;
-  //        j < fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
+  //        j <
+  //        fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
   //        ++j) {
   //     fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
   //         fus_obj_coord[i][j].x();
@@ -294,7 +301,8 @@ const bool InterfaceUpdateParam(
   // }
 
   if (pybind_state != 0) {
-    func_statemachine.current_state = static_cast<FunctionalState>(pybind_state);
+    func_statemachine.current_state =
+        static_cast<FunctionalState>(pybind_state);
   }
 
   local_view.localization = localization_info;
@@ -309,7 +317,8 @@ const bool InterfaceUpdateParam(
   local_view.control_output = control_output_info;
 
   // DEBUG_PRINT(
-  //     "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
+  //     "c++ gl size = " <<
+  //     static_cast<int>(ground_line_info.ground_lines_size));
 
   // DEBUG_PRINT("c++ fus_obj_num = "
   //             << static_cast<int>(fus_obj_info.fusion_object_size));
@@ -434,6 +443,195 @@ std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
   return speed_debug_data;
 }
 
+std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
+  std::vector<Eigen::Vector2d> speed_debug_data;
+  Eigen::Vector2d v;
+  v.setZero();
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_debug_data.emplace_back(v);
+    return speed_debug_data;
+  }
+
+  int size = 0;
+  if (speed_debug->has_qp_speed_constraint()) {
+    size = speed_debug->qp_speed_constraint().s_size();
+  }
+
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->qp_speed_constraint().s(i);
+    if (i < speed_debug->qp_speed_constraint().v_upper_bound_size()) {
+      v[1] = speed_debug->qp_speed_constraint().v_upper_bound(i);
+    }
+
+    speed_debug_data.emplace_back(v);
+  }
+
+  if (speed_debug_data.size() == 0) {
+    speed_debug_data.emplace_back(v);
+  }
+
+  return speed_debug_data;
+}
+
+const double GetRefCruiseSpeed() {
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+  if (speed_debug == nullptr) {
+    return 0.0;
+  }
+
+  double speed = 0.0;
+  if (speed_debug->has_ref_cruise_speed()) {
+    speed = speed_debug->ref_cruise_speed();
+  }
+
+  return speed;
+}
+
+std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd v(5);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_profile.emplace_back(v);
+    return speed_profile;
+  }
+
+  int size = speed_debug->dp_profile_size();
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->dp_profile(i).s();
+    v[1] = speed_debug->dp_profile(i).t();
+    v[2] = speed_debug->dp_profile(i).vel();
+    v[3] = speed_debug->dp_profile(i).acc();
+    v[4] = speed_debug->dp_profile(i).jerk();
+
+    speed_profile.push_back(v);
+  }
+
+  return speed_profile;
+}
+
+std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd v(5);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_profile.emplace_back(v);
+    return speed_profile;
+  }
+
+  int size = speed_debug->qp_profile_size();
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->qp_profile(i).s();
+    v[1] = speed_debug->qp_profile(i).t();
+    v[2] = speed_debug->qp_profile(i).vel();
+    v[3] = speed_debug->qp_profile(i).acc();
+    v[4] = speed_debug->qp_profile(i).jerk();
+
+    speed_profile.push_back(v);
+  }
+
+  return speed_profile;
+}
+
+std::vector<Eigen::VectorXd> GetStopSigns() {
+  std::vector<Eigen::VectorXd> stop_signs;
+  stop_signs.clear();
+
+  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug->has_apa_speed_debug()) {
+    speed_debug = debug->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    return stop_signs;
+  }
+
+  int size = speed_debug->stop_signs_size();
+  if (size <= 0) {
+    return stop_signs;
+  }
+
+  Eigen::VectorXd stop_sign(4);
+  Transform2d tf;
+  Position2D local;
+  Position2D global;
+
+  for (int i = 0; i < size; i++) {
+    tf.SetBasePose(Pose2D(speed_debug->stop_signs(i).stop_pose().x(),
+                          speed_debug->stop_signs(i).stop_pose().y(),
+                          speed_debug->stop_signs(i).stop_pose().theta()));
+
+    local.x = 0;
+    local.y = -1.5;
+    tf.ULFLocalPointToGlobal(&global, local);
+    stop_sign[0] = global.x;
+    stop_sign[1] = global.y;
+
+    local.x = 0;
+    local.y = 1.5;
+    tf.ULFLocalPointToGlobal(&global, local);
+    stop_sign[2] = global.x;
+    stop_sign[3] = global.y;
+
+    stop_signs.push_back(stop_sign);
+  }
+
+  return stop_signs;
+}
+
+std::vector<Eigen::VectorXd> GetJLTSpeedData() {
+  std::vector<Eigen::VectorXd> speed_profile;
+  Eigen::VectorXd point(5);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_profile.emplace_back(point);
+    return speed_profile;
+  }
+
+  int size = speed_debug->jlt_profile_size();
+  for (int i = 0; i < size; i++) {
+    point[0] = speed_debug->jlt_profile(i).s();
+    point[1] = speed_debug->jlt_profile(i).t();
+    point[2] = speed_debug->jlt_profile(i).vel();
+    point[3] = speed_debug->jlt_profile(i).acc();
+    point[4] = speed_debug->jlt_profile(i).jerk();
+
+    speed_profile.push_back(point);
+  }
+
+  return speed_profile;
+}
+
 PYBIND11_MODULE(apa_simulation_py, m) {
   m.doc() = "m";
 
@@ -446,5 +644,11 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("DynamicsUpdate", &DynamicsUpdate)
       .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
       .def("GetDpSpeedConstraints", &GetDpSpeedConstraints)
+      .def("GetQPSpeedConstraints", &GetQPSpeedConstraints)
+      .def("GetRefCruiseSpeed", &GetRefCruiseSpeed)
+      .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
+      .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
+      .def("GetJLTSpeedData", &GetJLTSpeedData)
+      .def("GetStopSigns", &GetStopSigns)
       .def("GetDynamicState", &GetDynamicState);
 }

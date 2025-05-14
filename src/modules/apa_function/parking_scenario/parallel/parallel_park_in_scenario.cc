@@ -1357,6 +1357,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
           ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
           ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
 
+      global_point.s = path_point.s;
+      global_point.kappa = path_point.kappa;
+
       current_path_point_global_vec_.emplace_back(global_point);
     }
 
@@ -1380,6 +1383,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       global_point.Set(
           ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
           ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+      global_point.s = path_point.s;
+      global_point.kappa = path_point.kappa;
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
@@ -1538,7 +1543,8 @@ void ParallelParkInScenario::Log() const {
 
   ILOG_INFO << "obs_size = " << real_obs_size;
   const int count_unit = std::ceil(real_obs_size / 400.0);
-  const size_t simplify_obs_num = std::ceil(real_obs_size / count_unit);
+  const size_t simplify_obs_num =
+      std::ceil(real_obs_size / std::max(1, count_unit));
 
   std::vector<double> obstaclesX;
   std::vector<double> obstaclesY;

@@ -17,6 +17,7 @@
 #include "collision_detection/collision_detection.h"
 #include "common.h"
 #include "future_path_decider.h"
+#include "geometry_math.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
@@ -217,11 +218,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   ParkingStopDecider stop_decider =
       ParkingStopDecider(col_det_interface_ptr, localization_ptr, obstacles);
 
-  stop_decider.Execute(init_point, path2);
+  stop_decider.Execute(init_point, path2, path2,
+                       pnc::geometry_lib::SEG_GEAR_DRIVE);
   if (dist_to_obs < 0.06) {
     planning::LonDecisionReason decision_reason =
         planning::LonDecisionReason::STATIC_OCC_COLLISION;
-    stop_decider.AddStopDecisionByDistance(obs_s, decision_reason);
+    stop_decider.AddStopDecisionByDistance(obs_s, decision_reason, path2);
   }
   speed_decisions.decisions.emplace_back(stop_decider.GetStopDecision());
 

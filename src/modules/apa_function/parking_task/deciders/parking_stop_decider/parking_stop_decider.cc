@@ -4,19 +4,98 @@
 #include <cstddef>
 #include <vector>
 
+#include "apa_debug_data.pb.h"
 #include "apa_obstacle.h"
 #include "collision_detection/path_safe_checker.h"
 #include "debug_info_log.h"
 #include "log_glog.h"
 #include "obstacle_manager.h"
+#include "path/discretized_path.h"
 #include "pose2d.h"
 #include "speed/apa_speed_decision.h"
 #include "task_basic_types.h"
+#include "vec2d.h"
 
 namespace planning {
 namespace apa_planner {
 
 #define DECIDER_DEBUG (1)
+
+void ParkingStopDecider::Execute(
+    const SVPoint& init_point,
+    const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
+    const std::vector<pnc::geometry_lib::PathPoint>& control_path,
+    const pnc::geometry_lib::PathSegGear gear) {
+  // init
+  stop_obstacle_ = nullptr;
+  stop_decision_.Clear();
+  init_point_ = init_point;
+  gear_ = gear;
+  config_.Init();
+
+  AddDecisionByPathTargetPoint(lateral_path);
+
+  // todo: use lateral path and control path
+  if (!apa_param.GetParam().speed_config.use_remain_dist) {
+    AddDecisionByObstacle(control_path, false);
+    // AddDecisionByObstacle(lateral_path, true);
+    RecordDebugInfo(lateral_path);
+  }
+
+#if DECIDER_DEBUG
+  TaskDebug();
+#endif
+
+  return;
+}
+
+void ParkingStopDecider::RecordDebugInfo(
+    const std::vector<pnc::geometry_lib::PathPoint>& lateral_path) {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
+  speed_debug->clear_stop_signs();
+
+  DiscretizedPath path_data;
+  planning_math::PathPoint path_point;
+  for (size_t i = 0; i < lateral_path.size(); ++i) {
+    path_point.set_x(lateral_path[i].pos.x());
+    path_point.set_y(lateral_path[i].pos.y());
+    path_point.set_theta(lateral_path[i].heading);
+    path_point.set_s(lateral_path[i].s);
+    path_point.set_kappa(lateral_path[i].kappa);
+
+    path_data.push_back(path_point);
+  }
+
+  if (stop_decision_.decision_type == LonDecisionType::STOP) {
+    double s = stop_decision_.path_s - stop_decision_.lon_decision_buffer;
+    path_point = path_data.Evaluate(s);
+
+    planning_math::Vec2d base(path_point.x(), path_point.y());
+    planning_math::Vec2d vec =
+        planning_math::Vec2d::CreateUnitVec2d(path_point.theta());
+    planning_math::Vec2d stop_sign_pose;
+
+    const auto& config = apa_param.GetParam();
+    if (gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+      stop_sign_pose = base - vec * config.rear_overhanging;
+    } else {
+      stop_sign_pose =
+          base + vec * (config.front_overhanging + config.wheel_base);
+    }
+
+    common::ApaStopSign stop_sign;
+    stop_sign.mutable_stop_pose()->set_x(stop_sign_pose.x());
+    stop_sign.mutable_stop_pose()->set_y(stop_sign_pose.y());
+    stop_sign.mutable_stop_pose()->set_theta(path_point.theta());
+
+    speed_debug->add_stop_signs()->CopyFrom(stop_sign);
+  }
+
+  ILOG_INFO << "stop sign size = " << speed_debug->stop_signs_size();
+
+  return;
+}
 
 bool ParkingStopDecider::IsVehComponentCollision(const Polygon2D* polygon,
                                                  const ApaObstacle& obs) {
@@ -154,11 +233,11 @@ void ParkingStopDecider::GeneratePathFootPrint(
   // generate veh local polygon
   PolygonFootPrint foot_print_little_buffer;
   PolygonFootPrint foot_print_big_buffer;
-  GenerateVehCompactPolygon(config_.static_agent_lat_buffer, lon_buffer,
-                            config_.static_agent_lat_buffer,
+  GenerateVehCompactPolygon(config_.lat_buffer_to_static_agent, lon_buffer,
+                            config_.lat_buffer_to_static_agent,
                             &foot_print_little_buffer);
-  GenerateVehCompactPolygon(config_.dynamic_agent_lat_buffer, lon_buffer,
-                            config_.dynamic_agent_lat_buffer,
+  GenerateVehCompactPolygon(config_.lat_buffer_to_dynamic_agent, lon_buffer,
+                            config_.lat_buffer_to_dynamic_agent,
                             &foot_print_big_buffer);
 
   little_buffer_path_polygons_.clear();
@@ -200,10 +279,13 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
 
   // For those with no predicted trajectories, just map the obstacle's
   // current position to ST-graph and always assume it's static.
-  int collision_index;
+  int collision_index = 0;
   bool is_collision = GetPathCollisionByObstacle(&collision_index, obstacle);
 
   if (is_collision && collision_index >= 0 && collision_index < path.size()) {
+    collision_index -= 1;
+    collision_index = std::max(0, collision_index);
+
     const auto& curr_point = path[collision_index];
     double low_s = std::fmax(0.0, curr_point.s);
     double high_s = end_s;
@@ -238,10 +320,10 @@ void ParkingStopDecider::ComputeSTBoundary(
   decision.decision_speed = 0.0;
   decision.decision_type = LonDecisionType::STOP;
   if (obstacle.GetObsMovementType() == ApaObsMovementType::STATIC) {
-    decision.lon_decision_buffer = config_.static_agent_lon_buffer;
+    decision.lon_decision_buffer = config_.lon_buffer_to_static_agent;
     decision.reason_code = LonDecisionReason::STATIC_OCC_COLLISION;
   } else {
-    decision.lon_decision_buffer = config_.dynamic_agent_lon_buffer;
+    decision.lon_decision_buffer = config_.lon_buffer_to_dynamic_agent;
     decision.reason_code = LonDecisionReason::DYNAMIC_OCC_COLLISION;
   }
   decision.path_s = lower_points.front().s();
@@ -253,11 +335,11 @@ void ParkingStopDecider::ComputeSTBoundary(
       std::min(decision.lon_decision_buffer, decision.path_s - hard_brake_s);
 
   // if emergency brake, todo:
-  if (decision.lon_decision_buffer < 0.05) {
+  if (decision.lon_decision_buffer < config_.min_lon_buffer) {
     ILOG_INFO << "emergency brake, lon buffer is not safe, buffer = "
               << decision.lon_decision_buffer;
 
-    decision.lon_decision_buffer = 0.05;
+    decision.lon_decision_buffer = config_.min_lon_buffer;
   }
 
   boundary.SetCharacteristicLength(decision.lon_decision_buffer);
@@ -273,7 +355,8 @@ void ParkingStopDecider::ComputeSTBoundary(
 }
 
 void ParkingStopDecider::AddDecisionByObstacle(
-    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    const bool check_extend_path) {
   // check
   if (obs_manager_ == nullptr || path.size() <= 0 ||
       obs_manager_->GetObstacles().size() == 0) {
@@ -281,14 +364,15 @@ void ParkingStopDecider::AddDecisionByObstacle(
   }
 
   std::vector<pnc::geometry_lib::PathPoint> extend_path = path;
-  ExtendPath(0.3, extend_path);
+  if (check_extend_path) {
+    ExtendPath(config_.extra_check_dist, extend_path);
+  }
 
   GeneratePathFootPrint(extend_path);
 
   // Go through every obstacle.
-  double min_stop_s = std::numeric_limits<double>::max();
-  ParkLonDecision stop_decision;
-  stop_decision.Clear();
+  double min_stop_s =
+      stop_decision_.path_s - stop_decision_.lon_decision_buffer;
 
   for (auto& obj : obs_manager_->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
@@ -301,37 +385,10 @@ void ParkingStopDecider::AddDecisionByObstacle(
       if (decision.path_s - decision.lon_decision_buffer < min_stop_s) {
         stop_obstacle_ = &obstacle;
         min_stop_s = decision.path_s - decision.lon_decision_buffer;
-        stop_decision = decision;
+        stop_decision_ = decision;
       }
     }
   }
-
-  if (stop_decision.decision_type == LonDecisionType::STOP &&
-      min_stop_s < stop_decision_.path_s - stop_decision_.lon_decision_buffer) {
-    stop_decision_ = stop_decision;
-  }
-
-  return;
-}
-
-void ParkingStopDecider::Execute(
-    const SVPoint& init_point,
-    const std::vector<pnc::geometry_lib::PathPoint>& path) {
-  // init
-  stop_obstacle_ = nullptr;
-  stop_decision_.Clear();
-  init_point_ = init_point;
-  config_.Init();
-
-  AddDecisionByPathTargetPoint(path);
-
-  AddDecisionByObstacle(path);
-
-  // AddStopDecisionByControlPath(path, 20.0, speed_decisions);
-
-#if DECIDER_DEBUG
-  TaskDebug();
-#endif
 
   return;
 }
@@ -403,12 +460,13 @@ void ParkingStopDecider::TaskDebug() {
 }
 
 void ParkingStopDecider::AddStopDecisionByDistance(
-    const double stop_s, const LonDecisionReason decision_reason) {
+    const double stop_s, const LonDecisionReason decision_reason,
+    const std::vector<pnc::geometry_lib::PathPoint>& lateral_path) {
   ParkLonDecision stop_decision;
   if (decision_reason == LonDecisionReason::STATIC_OCC_COLLISION) {
-    stop_decision.lon_decision_buffer = config_.static_agent_lon_buffer;
+    stop_decision.lon_decision_buffer = config_.lon_buffer_to_static_agent;
   } else if (decision_reason == LonDecisionReason::DYNAMIC_OCC_COLLISION) {
-    stop_decision.lon_decision_buffer = config_.dynamic_agent_lon_buffer;
+    stop_decision.lon_decision_buffer = config_.lon_buffer_to_dynamic_agent;
   } else {
     stop_decision.lon_decision_buffer = 0;
   }
@@ -417,13 +475,39 @@ void ParkingStopDecider::AddStopDecisionByDistance(
   stop_decision.decision_type = LonDecisionType::STOP;
   stop_decision.path_s = stop_s;
 
-  if (stop_decision.decision_type == LonDecisionType::STOP &&
-      stop_decision.path_s - stop_decision.lon_decision_buffer <
-          stop_decision_.path_s - stop_decision_.lon_decision_buffer) {
+  if (stop_decision.path_s - stop_decision.lon_decision_buffer <
+      stop_decision_.path_s - stop_decision_.lon_decision_buffer) {
     stop_decision_ = stop_decision;
   }
 
+  // todo: need delete
+  RecordDebugInfo(lateral_path);
+
+#if DECIDER_DEBUG
+  TaskDebug();
+#endif
+
   return;
+}
+
+void ParkingStopDecider::PathDebug(
+    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+  for (auto& point : path) {
+    ILOG_INFO << "s = " << point.s << ",x = " << point.pos.x()
+              << ", y = " << point.pos.y() << ", theta = " << point.heading;
+  }
+  return;
+}
+
+const double ParkingStopDecider::GetStopDecisionS() {
+  // sanity check
+  double total_s = 20.0;
+  if (stop_decision_.decision_type == LonDecisionType::STOP) {
+    total_s = std::min(
+        total_s, stop_decision_.path_s - stop_decision_.lon_decision_buffer);
+  }
+
+  return total_s;
 }
 
 }  // namespace apa_planner

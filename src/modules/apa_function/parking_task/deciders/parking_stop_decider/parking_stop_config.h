@@ -4,10 +4,16 @@ namespace planning {
 namespace apa_planner {
 
 struct ParkStopConfig {
-  double dynamic_agent_lat_buffer;
-  double dynamic_agent_lon_buffer;
-  double static_agent_lat_buffer;
-  double static_agent_lon_buffer;
+  // todo: buffer should be different inside slot and outside slot;
+  // buffer should be different for different type obstacle;
+  double lat_buffer_to_dynamic_agent;
+  double lon_buffer_to_dynamic_agent;
+  double lat_buffer_to_static_agent;
+  double lon_buffer_to_static_agent;
+
+  double extra_check_dist;
+
+  double min_lon_buffer;
 
   void Init();
 };

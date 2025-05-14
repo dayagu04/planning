@@ -13,7 +13,7 @@ sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import replay_simulation_hybrid_astar
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo,ControlOutput
 
 
 # bag path and frame dt
@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250528/20250528-17-01-55/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-05-28-17-01-56_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250609/20250609-17-06-30/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-06-09-17-06-31_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -48,7 +48,7 @@ end_time = time.time()
 print('load_local_view_figure_parking, ms===== ', (end_time - start_time) * 1000)
 
 # plot speed
-plot_speed = False
+plot_speed = True
 if plot_speed:
   load_lon_global_data_figure(bag_loader)
   pans, lon_plan_data = create_lon_plan_figure(fig1)
@@ -133,10 +133,6 @@ data_record_rs_path = ColumnDataSource(data={'plan_path_x': [],
 data_astar_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
-data_revised_astar_path = ColumnDataSource(data={'plan_path_x': [],
-                                      'plan_path_y': [],
-                                      'plan_path_heading': [], })
-
 data_record_astar_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
@@ -160,10 +156,10 @@ data_gear_switch_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_polynomial_path = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[],
                                               'plan_path_heading':[],})
-data_online_traj = ColumnDataSource(data={'plan_path_x': [],
+optimizer_traj = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
-standstill_traj = ColumnDataSource(data={'plan_path_x': [],
+non_optimizer_traj = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
 
@@ -171,8 +167,8 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 3, l
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 3, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path',visible = False)
 fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width = 2, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref_line')
 fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 3, line_color = '#7b0ec4', line_dash = 'solid', line_alpha = 0.5, legend_label = 'astar_path')
-fig1.line('plan_path_y', 'plan_path_x', source = data_online_traj, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'online_traj')
-fig1.line('plan_path_y', 'plan_path_x', source = standstill_traj, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'standstill_traj')
+fig1.line('plan_path_y', 'plan_path_x', source = optimizer_traj, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'optimizer_traj')
+fig1.line('plan_path_y', 'plan_path_x', source = non_optimizer_traj, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'non_optimizer_traj')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 3, line_color = 'gray', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path',visible = False)
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
@@ -341,6 +337,11 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     fus_occ_obj_msg = bag_loader.fus_occupancy_objects_msg['data'][index_map['fus_occupancy_objects_msg_idx']]
   else:
     fus_occ_obj_msg = FusionOccupancyObjectsInfo()
+
+  if bag_loader.ctrl_msg['enable'] == True:
+    control_msg = bag_loader.ctrl_msg['data'][index_map['ctrl_msg_idx']]
+  else:
+    control_msg = ControlOutput()
 
   record_plan_path_x =[]
   record_plan_path_y =[]
@@ -553,6 +554,10 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
   print('fusion occ obj size', fus_occ_obj_msg.fusion_object_size)
 
+  control_msg_buff = BytesIO()
+  control_msg.serialize(control_msg_buff)
+  control_msg_bytes = control_msg_buff.getvalue()
+
   # if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and data_valid['wave_msg_idx'] and data_valid['uss_percept_msg_idx'] and fus_parking_msg.select_slot_id > 0:
   # if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and data_valid['wave_msg_idx'] and data_valid['uss_percept_msg_idx']:
   if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx']:
@@ -568,6 +573,7 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
         ground_line_perception_msg_bytes,
         fus_obj_msg_bytes,
         fus_occ_obj_msg_bytes,
+        control_msg_bytes,
         select_id, force_plan, is_path_optimization,
         is_cilqr_enable, is_reset, is_complete_path,
         sample_ds, target_managed_slot_x_vec,
@@ -601,9 +607,9 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   current_gear_end_x=0
   current_gear_end_y=0
   current_gear_end_theta=0
-  standstill_path_x = []
-  standstill_path_y = []
-  standstill_path_theta = []
+  non_optimizer_path_x = []
+  non_optimizer_path_y = []
+  non_optimizer_path_theta = []
 
   if res == True:
     tuned_planning_output = PlanningOutput()
@@ -620,9 +626,9 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
       current_gear_end_theta = tuned_planning_output.trajectory.trajectory_points[i].heading_yaw
 
       if (point.v <= 0.0 and point.distance > 0.0):
-        standstill_path_x.append(point.x)
-        standstill_path_y.append(point.y)
-        standstill_path_theta.append(point.heading_yaw)
+        non_optimizer_path_x.append(point.x)
+        non_optimizer_path_y.append(point.y)
+        non_optimizer_path_theta.append(point.heading_yaw)
 
     if (len(current_gear_path_x) > 1):
       half_car_width = 0.9
@@ -662,15 +668,10 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     print("tuned_gear_command = ", tuned_planning_output.gear_command.gear_command_value)
 
   # draw current gear path envelop
-  data_online_traj.data.update({
+  optimizer_traj.data.update({
       'plan_path_x': current_gear_path_x,
       'plan_path_y': current_gear_path_y,
       'plan_path_heading': current_gear_path_heading,
-  })
-  standstill_traj.data.update({
-      'plan_path_x': standstill_path_x,
-      'plan_path_y': standstill_path_y,
-      'plan_path_heading': standstill_path_theta,
   })
 
   cur_gear_path_box_x_vec = []
@@ -1132,6 +1133,11 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     update_jlt_online_data(jlt_speed_data, lon_plan_data)
 
     update_record_speed_data(traj_speed_profile, lon_plan_data)
+    non_optimizer_traj.data.update({
+      'plan_path_x': non_optimizer_path_x,
+      'plan_path_y': non_optimizer_path_y,
+      'plan_path_heading': non_optimizer_path_theta,
+      })
 
   push_notebook()
 

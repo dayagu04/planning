@@ -104,8 +104,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   ILOG_INFO << "smooth init, v = " << init_state[1]
             << ", a = " << init_state[2];
 
-  double total_length = qp_speed_data_.back().s;
-
+  double total_length = dp_speed_data.back().s;
   const ParkLonDecision* stop_decision = GetCloseStopDecision(speed_decisions);
   if (stop_decision != nullptr) {
     total_length =
@@ -117,14 +116,18 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     return;
   }
 
-  double total_time = qp_speed_data_.back().t;
+  double total_time = dp_speed_data.back().t;
   if (total_time < 0.1) {
     return;
   }
 
-  if (total_time > 1.0) {
-    delta_time_ = 0.1;
-    num_of_knots_ = total_time / delta_time_;
+  if (total_time > qp_config_.time_horizon) {
+    delta_time_ = qp_config_.time_resolution;
+    num_of_knots_ = std::ceil(qp_config_.time_horizon / delta_time_);
+    total_time = qp_config_.time_horizon;
+  } else if (total_time > 1.0) {
+    delta_time_ = qp_config_.time_resolution;
+    num_of_knots_ = std::ceil(total_time / delta_time_);
   } else {
     num_of_knots_ = 20;
     delta_time_ = total_time / num_of_knots_;
@@ -147,8 +150,13 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   piecewise_jerk_problem.set_x_bounds(0.0, total_length + 1e-3);
 
   // set acc boundary
-  piecewise_jerk_problem.set_ddx_bounds(speed_config.acc_lower,
-                                        speed_config.acc_upper);
+  if (total_length > speed_config.path_thresh_for_acc_bound) {
+    piecewise_jerk_problem.set_ddx_bounds(speed_config.acc_lower,
+                                          speed_config.long_path_acc_upper);
+  } else {
+    piecewise_jerk_problem.set_ddx_bounds(speed_config.acc_lower,
+                                          speed_config.short_path_acc_upper);
+  }
 
   // set jerk boundary
   piecewise_jerk_problem.set_dddx_bound(speed_config.jerk_lower,
@@ -166,7 +174,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
 
   for (int i = 0; i < num_of_knots_; ++i) {
     // get path
-    qp_speed_data_.EvaluateByTime(curr_time, &speed_point);
+    dp_speed_data.EvaluateByTime(curr_time, &speed_point);
 
     t_ref.emplace_back(speed_point.t);
     x_ref.emplace_back(speed_point.s);
@@ -202,17 +210,23 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   // todo: set acc ref
 
   // set end state
-  std::array<double, 3> end_state_ref = {{total_length, 0.0, 0.0}};
-  piecewise_jerk_problem.set_end_state_constriants(end_state_ref);
+  if (dp_speed_data.back().t > qp_config_.time_horizon) {
+    std::array<double, 3> weight_end_state = {{0.1, 5.0, 0.0}};
+    std::array<double, 3> end_state_ref = {{x_ref.back(), dx_ref.back(), 0.0}};
+    piecewise_jerk_problem.set_end_state_ref(weight_end_state, end_state_ref);
+  } else {
+    std::array<double, 3> end_state_ref = {{total_length, 0.0, 0.0}};
+    piecewise_jerk_problem.set_end_state_constriants(end_state_ref);
+  }
 
   // debug info
 #if DECIDER_DEBUG
-  // DebugRef(t_ref, x_ref, dx_ref);
+  DebugRef(t_ref, x_ref, dx_ref);
   DebugLinearConstraints(x_ref, ds_bounds);
 #endif
 
   // Solve the problem
-  if (!piecewise_jerk_problem.Optimize(10000)) {
+  if (!piecewise_jerk_problem.Optimize(6000, qp_config_.optimizer_time_limit)) {
     ILOG_INFO << "Piecewise jerk speed optimizer failed!";
     state_ = TaskExcuteState::FAIL;
     return;
@@ -239,7 +253,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   qp_speed_data_.AppendSpeedPoint(s[0], 0.0, ds[0], dds[0], jerk_start);
   for (int i = 1; i < num_of_knots_; ++i) {
     // Avoid the very last points when already stopped
-    if (ds[i] <= 0.0) {
+    if (qp_speed_data_.back().v <= 0.0 && ds[i] <= 0.0) {
       break;
     }
     qp_speed_data_.AppendSpeedPoint(s[i], delta_time_ * i, ds[i], dds[i],
@@ -336,7 +350,7 @@ void PiecewiseJerkSpeedQPOptimizer::DebugLinearConstraints(
 
   ILOG_INFO << "s lower = " << 0.0 << ", upper = " << total_length;
   ILOG_INFO << "acc lower = " << speed_config.acc_lower
-            << ", upper = " << speed_config.acc_upper;
+            << ", upper = " << speed_config.long_path_acc_upper;
   ILOG_INFO << "jerk lower = " << speed_config.jerk_lower
             << ", upper = " << speed_config.jerk_upper;
 

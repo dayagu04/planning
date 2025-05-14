@@ -23,8 +23,8 @@ namespace apa_planner {
 
 DpSpeedOptimizer::DpSpeedOptimizer() {}
 
-bool DpSpeedOptimizer::Init() {
-  config_.Init();
+bool DpSpeedOptimizer::Init(const double path_length) {
+  config_.Init(path_length);
 
   start_node_ = nullptr;
   end_node_ = nullptr;
@@ -32,7 +32,7 @@ bool DpSpeedOptimizer::Init() {
   state_ = TaskExcuteState::NONE;
   ClearDebugInfo();
 
-  ILOG_INFO << "dp init";
+  // ILOG_INFO << "dp init";
   return true;
 }
 
@@ -41,8 +41,6 @@ void DpSpeedOptimizer::Excute(
     const Pose2D& ego_pose, const SVPoint& init_point,
     const SpeedDecisions* speed_decisions,
     const SpeedLimitProfile* speed_limit_profile) {
-  Init();
-
   if (speed_decisions == nullptr || speed_limit_profile == nullptr) {
     return;
   }
@@ -61,19 +59,7 @@ void DpSpeedOptimizer::Excute(
         total_s_, stop_decision->path_s - stop_decision->lon_decision_buffer);
   }
 
-  // update resolution
-  if (total_s_ > config_.long_path_thresh) {
-    config_.unit_v = config_.unit_v_for_long_path;
-    config_.unit_s = config_.unit_s_for_long_path;
-  } else if (total_s_ > config_.extreme_short_path_thresh) {
-    config_.unit_v = config_.unit_v_for_short_path;
-    config_.unit_s = config_.unit_s_for_short_path;
-  } else {
-    config_.unit_v = config_.unit_v_for_extream_short_path;
-    config_.unit_s = config_.unit_s_for_extream_short_path;
-
-    ILOG_INFO << "need use jlt speed profile";
-  }
+  Init(total_s_);
 
   ego_v_ = init_point.v;
   ego_acc_ = init_point.acc;
@@ -634,7 +620,7 @@ void DpSpeedOptimizer::RecordDebugInfo(
       dp_speed_constraint_debug->add_s(points[i].first);
       dp_speed_constraint_debug->add_obs_dist(path[i].dist_to_obs);
       dp_speed_constraint_debug->add_v_upper_bound(points[i].second);
-      dp_speed_constraint_debug->add_a_upper_bound(speed_config.acc_upper);
+      dp_speed_constraint_debug->add_a_upper_bound(config_.acceleration_limit);
       dp_speed_constraint_debug->add_a_lower_bound(speed_config.acc_lower);
       dp_speed_constraint_debug->add_jerk_upper_bound(speed_config.jerk_upper);
       dp_speed_constraint_debug->add_jerk_lower_bound(speed_config.jerk_lower);

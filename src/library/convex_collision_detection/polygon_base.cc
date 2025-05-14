@@ -708,7 +708,7 @@ void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
   }
 
   polygon->vertexes[0].x = config.car_vertex_x_vec[2] + lon_buffer;
-  polygon->vertexes[0].y = config.car_vertex_y_vec[2] + lat_buffer;
+  polygon->vertexes[0].y = config.car_vertex_y_vec[1] + lat_buffer;
 
   polygon->vertexes[1].x = config.car_vertex_x_vec[0] + lon_buffer;
   polygon->vertexes[1].y = config.car_vertex_y_vec[0] + lat_buffer;
@@ -717,10 +717,10 @@ void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
   polygon->vertexes[2].y = config.car_vertex_y_vec[15] + lat_buffer;
 
   polygon->vertexes[3].x = config.car_vertex_x_vec[13] - lon_buffer;
-  polygon->vertexes[3].y = config.car_vertex_y_vec[13] + lat_buffer;
+  polygon->vertexes[3].y = config.car_vertex_y_vec[14] + lat_buffer;
 
   polygon->vertexes[4].x = config.car_vertex_x_vec[12] - lon_buffer;
-  polygon->vertexes[4].y = config.car_vertex_y_vec[12] - lat_buffer;
+  polygon->vertexes[4].y = config.car_vertex_y_vec[11] - lat_buffer;
 
   polygon->vertexes[5].x = config.car_vertex_x_vec[10] - lon_buffer;
   polygon->vertexes[5].y = config.car_vertex_y_vec[10] - lat_buffer;
@@ -729,7 +729,7 @@ void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
   polygon->vertexes[6].y = config.car_vertex_y_vec[5] - lat_buffer;
 
   polygon->vertexes[7].x = config.car_vertex_x_vec[3] + lon_buffer;
-  polygon->vertexes[7].y = config.car_vertex_y_vec[3] - lat_buffer;
+  polygon->vertexes[7].y = config.car_vertex_y_vec[4] - lat_buffer;
 
   polygon->vertex_num = 8;
 

@@ -13,6 +13,7 @@ namespace apa_planner {
 
 #define DEBUG_OPTIMIZER (0)
 #define DEBUG_SAMPLING (0)
+#define DEBUG_RESULT (0)
 
 bool JerkLimitedTrajOptimizer::Init() {
   config_.Init();
@@ -45,11 +46,8 @@ void JerkLimitedTrajOptimizer::Execute(
 
   double opt_start_time = IflyTime::Now_ms();
 
-  if (ego_speed_point.v < 1e-2 &&
-      total_s < config_.min_path_dist_for_veh_starting) {
-    GenerateStandstillTraj(ego_speed_point, total_s);
-  } else if (total_s < 1e-2) {
-    GenerateStoppingTraj(stitch_speed_point, total_s);
+  if (total_s < config_.min_path_dist_for_veh_starting) {
+    GenerateStoppingTraj(ego_speed_point, total_s);
   } else {
     UpdatePositionTargetSolver(stitch_speed_point, total_s, 0.0);
   }
@@ -83,16 +81,16 @@ const bool JerkLimitedTrajOptimizer::GenerateJLTSpeed(const SVPoint& init_point,
   state_limit.v_max = speed_config.default_cruise_speed;
   state_limit.v_min = -0.1;
 
-  if (init_point.v < 0.1) {
-    state_limit.a_max = speed_config.acc_upper;
+  if (s_des > speed_config.path_thresh_for_acc_bound) {
+    state_limit.a_max = speed_config.long_path_acc_upper;
   } else {
-    state_limit.a_max = 0.3;
+    state_limit.a_max = speed_config.short_path_acc_upper;
   }
   state_limit.j_max = 10.0;
   state_limit.j_min = -10.0;
   state_limit.p_desire = s_des;
   state_limit.v_desire = v_des;
-  state_limit.a_min = -0.2;
+  state_limit.a_min = -0.1;
 
   init_point_state.p = init_point.s;
   init_point_state.v = init_point.v;
@@ -233,8 +231,8 @@ void JerkLimitedTrajOptimizer::DebugJLTSpeed(
   return;
 }
 
-void JerkLimitedTrajOptimizer::GenerateStoppingTraj(const SVPoint& init_point,
-                                                    const double s_des) {
+void JerkLimitedTrajOptimizer::GenerateStoppingTraj(
+    const SVPoint& init_point, const double s_des) {
   speed_data_.clear();
 
   // path is none, need emergency brake.
@@ -243,19 +241,28 @@ void JerkLimitedTrajOptimizer::GenerateStoppingTraj(const SVPoint& init_point,
     dec = -0.5;
   } else {
     dec = -init_point.v * init_point.v / 2.0 / s_des;
-    // comfortable brake.
-    dec = std::min(-0.3, dec);
-    dec = std::max(-0.7, dec);
+    // limit dec
+    dec = std::max(-0.5, dec);
   }
 
-  double total_time = -init_point.v / dec;
+  double total_time = 0.0;
+  if (std::abs(dec) < 1e-5) {
+    total_time = 1.0;
+  } else {
+    total_time = -init_point.v / dec;
+  }
+  total_time = std::min(total_time, 3.0);
+  total_time = std::max(total_time, 1.0);
+
   double time = 0.0;
   double p;
   double v;
   int point_size = std::ceil(total_time / config_.delta_time);
   for (int i = 0; i < point_size; i++) {
     p = init_point.v * time + 0.5 * dec * time * time;
+    p = std::max(p, init_point.s);
     v = init_point.v + dec * time;
+    v = std::max(0.0, v);
 
     speed_data_.AppendSpeedPoint(p, time, v, dec, 0.0);
 
@@ -406,10 +413,11 @@ void JerkLimitedTrajOptimizer::GenerateStandstillTraj(const SVPoint& init_point,
   double delta_s = 0.02;
   double s = 0.0;
   int point_size = std::ceil(s_des / delta_s);
+  point_size = std::max(point_size, 1);
 
   for (int i = 0; i < point_size; i++) {
     v = 0;
-    speed_data_.AppendSpeedPoint(s, time, v, 0, 0.0);
+    speed_data_.AppendSpeedPoint(s, time, v, -0.3, 0.0);
 
     s += delta_s;
     time += config_.delta_time;
@@ -420,7 +428,7 @@ void JerkLimitedTrajOptimizer::GenerateStandstillTraj(const SVPoint& init_point,
 
 void JerkLimitedTrajOptimizer::FallbackTrajByExpectState() {
   speed_data_.clear();
-  speed_data_.AppendSpeedPoint(0, 0, 0, 0, 0.0);
+  speed_data_.AppendSpeedPoint(0, 0, 0, -0.1, 0.0);
 
   return;
 }
@@ -450,7 +458,7 @@ void JerkLimitedTrajOptimizer::RecordDebugInfo() {
 
   speed_debug->set_speed_type(common::SpeedProfileType::JLT);
 
-#if DEBUG_OPTIMIZER
+#if DEBUG_RESULT
   TaskDebug();
 #endif
 

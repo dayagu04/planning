@@ -82,6 +82,7 @@ const bool Trajectory::QueryNearestPointWithBuffer(
     const planning_math::Vec2d& position, const double buffer,
     TrajectoryPoint* point) const {
   if (empty()) {
+    ILOG_INFO << "empty";
     return false;
   }
 
@@ -98,6 +99,7 @@ const bool Trajectory::QueryNearestPointWithBuffer(
   }
 
   if (min_sqr_dist > 1.0) {
+    ILOG_INFO << "dist = " << min_sqr_dist;
     return false;
   }
 
@@ -136,14 +138,14 @@ const bool Trajectory::QueryNearestPointWithBuffer(
     return true;
   }
 
-  ILOG_INFO << "predecessor s = " << predecessor_s
-            << ",project s = " << projection_s;
+  // ILOG_INFO << "predecessor s = " << predecessor_s
+  //           << ",project s = " << projection_s;
 
   *point = InterpolateUsingLinearApproximation(
       data()[predecessor_id], data()[predecessor_id + 1], projection_s);
 
-  ILOG_INFO << "lon stitch v = " << point->vel() << ", a = " << point->acc()
-            << ", s = " << point->s();
+  // ILOG_INFO << "lon stitch v = " << point->vel() << ", a = " << point->acc()
+  //           << ", s = " << point->s();
 
   return true;
 }
