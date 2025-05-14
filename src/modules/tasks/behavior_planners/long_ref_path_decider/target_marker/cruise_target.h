@@ -75,8 +75,8 @@ class CruiseTarget : public Target {
   bool CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk);
 
  private:
-  const std::vector<double> _LOW_SPEED_FOLLOW_ACC_BP{10.0, 21.0, 35.0};
-  const std::vector<double> _LOW_SPEED_FOLLOW_ACC_V{0.50, 0.80, 1.35};
+  const std::vector<double> _LOW_SPEED_FOLLOW_ACC_BP{6.0, 10.0, 21.0, 35.0};
+  const std::vector<double> _LOW_SPEED_FOLLOW_ACC_V{0.30, 0.50, 0.80, 1.35};
 
   const std::vector<double> _LOW_SPEED_FOLLOW_JERK_BP{15.0, 25.0, 35.0};
   const std::vector<double> _LOW_SPEED_FOLLOW_JERK_V{2.50, 2.20, 2.00};
