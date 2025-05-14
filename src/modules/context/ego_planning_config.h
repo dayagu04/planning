@@ -1559,6 +1559,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         q_jerk_for_big_theta);
     ReadItem<double>(json, path_backward_appended_length, "lat_motion_ilqr",
                      "path_backward_appended_length");
+    ReadItem<double>(json, max_steer_angle_dot, "lat_motion_ilqr",
+                     "max_steer_angle_dot");
   }
 
   bool warm_start_enable = true;
@@ -1566,6 +1568,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double delta_t = 0.2;
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
+  double max_steer_angle_dot = 200.0;
 
   double acc_bound = 1.5;
   double jerk_bound = 1.0;
