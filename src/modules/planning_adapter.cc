@@ -30,10 +30,16 @@ static uint64_t get_latency(double now, uint64_t input_time) {
 
 bool PlanningAdapter::Init() {
   std::cout << "The planning component init!!!" << std::endl;
-  std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
+  std::string engine_config_path =
+      params_["res_path"] +
+      "/res/conf/engine_configs/planning_engine_config_ap.json";
+  common::ConfigurationContext::Instance()->load_engine_config_from_json(
+      params_["res_path"], engine_config_path);
+#ifdef X86
+  engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);
-
+#endif
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
 
@@ -61,7 +67,7 @@ bool PlanningAdapter::Init() {
 
   std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
   iflyauto::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
-                                    log_level);
+                                         log_level);
   LOG_DEBUG("The planning component init!!! \n");
 
   local_view_ptr_ = std::make_shared<LocalView>();
