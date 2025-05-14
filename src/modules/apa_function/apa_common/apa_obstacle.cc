@@ -1,4 +1,5 @@
 #include "apa_obstacle.h"
+#include "speed/st_boundary.h"
 
 namespace planning {
 namespace apa_planner {
@@ -25,6 +26,8 @@ void ApaObstacle::Reset() {
   pt_clout_3d_local_.clear();
 
   obs_id_ = 0;
+  st_boundary_ = STBoundary();
+  lon_decision_.Clear();
 }
 
 void ApaObstacle::TransformCoordFromGlobalToLocal(
@@ -91,6 +94,30 @@ void ApaObstacle::GenerateLocalBoundingbox(cdl::AABB* box) const {
     box->MergePointfloat64(pt);
   }
 
+  return;
+}
+
+const STBoundary& ApaObstacle::PathSTBoundary() const { return st_boundary_; }
+
+void ApaObstacle::SetPathSTBoundary(const STBoundary& boundary) {
+  st_boundary_ = boundary;
+  return;
+}
+
+void ApaObstacle::EraseStBoundary() { st_boundary_ = STBoundary(); }
+
+const ParkLonDecision& ApaObstacle::LongitudinalDecision() const {
+  return lon_decision_;
+}
+
+void ApaObstacle::SetLonDecision(const ParkLonDecision& decision) {
+  lon_decision_ = decision;
+  return;
+}
+
+void ApaObstacle::ClearDecision() {
+  EraseStBoundary();
+  lon_decision_.Clear();
   return;
 }
 

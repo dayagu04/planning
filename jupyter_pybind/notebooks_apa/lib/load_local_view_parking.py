@@ -27,6 +27,8 @@ import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS
 from bokeh.models import DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
+from bokeh.resources import INLINE
+import bokeh.io
 from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 from lib.local_view_lib import *

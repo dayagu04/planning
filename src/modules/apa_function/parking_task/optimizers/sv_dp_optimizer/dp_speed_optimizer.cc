@@ -8,17 +8,18 @@
 
 #include "debug_info_log.h"
 #include "dp_speed_common.h"
+#include "ifly_time.h"
 #include "log_glog.h"
+#include "speed/apa_speed_decision.h"
 #include "sv_graph_node.h"
 
 namespace planning {
 namespace apa_planner {
+
 #define DEBUG_INIT_COST_TABLE (0)
 #define DEBUG_RETRIEVE_SPEED_PROFILE (0)
 #define DEBUG_SEARCH (0)
 #define DEBUG_RESULT (0)
-
-static constexpr double kDoubleEpsilon = 1e-6;
 
 DpSpeedOptimizer::DpSpeedOptimizer() {}
 
@@ -27,16 +28,20 @@ bool DpSpeedOptimizer::Init() {
 
   start_node_ = nullptr;
   end_node_ = nullptr;
+  speed_data_.clear();
+  state_ = TaskExcuteState::NONE;
+  ClearDebugInfo();
+
+  ILOG_INFO << "dp init";
   return true;
 }
 
 void DpSpeedOptimizer::Excute(
     const std::vector<pnc::geometry_lib::PathPoint>& path,
-    const Pose2D& ego_pose, const double ego_v, const double ego_acc,
+    const Pose2D& ego_pose, const SVPoint& init_point,
     const SpeedDecisions* speed_decisions,
     const SpeedLimitProfile* speed_limit_profile) {
-  speed_data_.clear();
-  solver_state_ = SpeedOptimizerState::NONE;
+  Init();
 
   if (speed_decisions == nullptr || speed_limit_profile == nullptr) {
     return;
@@ -48,32 +53,44 @@ void DpSpeedOptimizer::Excute(
     total_s_ = path.back().s;
   }
 
+  double opt_start_time = IflyTime::Now_ms();
+
+  const ParkLonDecision* stop_decision = GetCloseStopDecision(speed_decisions);
+  if (stop_decision != nullptr) {
+    total_s_ = std::min(
+        total_s_, stop_decision->path_s - stop_decision->lon_decision_buffer);
+  }
+
   // update resolution
-  if (total_s_ > config_.short_path_thresh) {
+  if (total_s_ > config_.long_path_thresh) {
     config_.unit_v = config_.unit_v_for_long_path;
     config_.unit_s = config_.unit_s_for_long_path;
   } else if (total_s_ > config_.extreme_short_path_thresh) {
     config_.unit_v = config_.unit_v_for_short_path;
     config_.unit_s = config_.unit_s_for_short_path;
   } else {
-    config_.unit_v = config_.unit_v_for_short_path;
-    config_.unit_s = config_.unit_s_for_short_path;
+    config_.unit_v = config_.unit_v_for_extream_short_path;
+    config_.unit_s = config_.unit_s_for_extream_short_path;
 
     ILOG_INFO << "need use jlt speed profile";
   }
 
-  ego_v_ = ego_v;
-  ego_acc_ = ego_acc;
+  ego_v_ = init_point.v;
+  ego_acc_ = init_point.acc;
   speed_decisions_ = speed_decisions;
   speed_limit_profile_ = speed_limit_profile;
 
-  if (total_s_ < config_.enable_dp_by_path_length) {
+  if (total_s_ < config_.extreme_short_path_thresh) {
     return;
   }
 
   cost_generator_.Init(total_s_, &config_);
 
   Search();
+
+  RecordDebugInfo(path);
+
+  ILOG_INFO << "dp optimizer time = " << IflyTime::Now_ms() - opt_start_time;
 
   return;
 }
@@ -136,15 +153,14 @@ void DpSpeedOptimizer::UpdateSpeedLimitLookUp() {
   double curr_s = 0.0;
   double speed_limit;
   for (int32_t i = 0; i < dimension_s_; ++i) {
-    speed_limit = speed_limit_profile_->GetSpeedLimitByRange(
-        curr_s - config_.unit_s / 2 - 0.1, curr_s + config_.unit_s / 2 + 0.1);
+    speed_limit = speed_limit_profile_->GetSpeedLimitByRange(curr_s, 0.1);
     speed_limit_by_index_[i] = speed_limit;
 
     curr_s += config_.unit_s;
     curr_s = std::min(curr_s, total_s_);
   }
 
-  DebugSpeedLimitLookUp();
+  // DebugSpeedLimitLookUp();
 
   return;
 }
@@ -225,7 +241,7 @@ void DpSpeedOptimizer::GridIndexTransform(const SVPoint* point,
 void DpSpeedOptimizer::UpdateStartNode() {
   SVPoint point_sv;
   point_sv.s = 0;
-  point_sv.acc = 0;
+  point_sv.acc = ego_acc_;
   point_sv.v = ego_v_;
   point_sv.t = 0.0;
   point_sv.jerk = 0.0;
@@ -459,9 +475,7 @@ void DpSpeedOptimizer::Search() {
 
   DebugSpeedData();
 
-  RecordDebugInfo();
-
-  solver_state_ = SpeedOptimizerState::SUCCESS;
+  state_ = TaskExcuteState::SUCCESS;
 
   return;
 }
@@ -581,7 +595,17 @@ void DpSpeedOptimizer::DebugSpeedLimitLookUp() const {
   return;
 }
 
-void DpSpeedOptimizer::RecordDebugInfo() {
+void DpSpeedOptimizer::ClearDebugInfo() {
+  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  speed_debug->clear_dp_profile();
+  speed_debug->clear_dp_speed_constraint();
+  speed_debug->clear_jlt_profile();
+  return;
+}
+
+void DpSpeedOptimizer::RecordDebugInfo(
+    const std::vector<pnc::geometry_lib::PathPoint>& path) {
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
 
@@ -595,6 +619,32 @@ void DpSpeedOptimizer::RecordDebugInfo() {
     proto_point.set_jerk(point.da);
 
     speed_debug->add_dp_profile()->CopyFrom(proto_point);
+  }
+
+  if (speed_limit_profile_ != nullptr) {
+    const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
+
+    common::SVGraphSpeedConstraint* dp_speed_constraint_debug =
+        speed_debug->mutable_dp_speed_constraint();
+
+    const std::vector<std::pair<double, double>>& points =
+        speed_limit_profile_->SpeedLimitPoints();
+
+    for (size_t i = 0; i < points.size(); i++) {
+      dp_speed_constraint_debug->add_s(points[i].first);
+      dp_speed_constraint_debug->add_obs_dist(path[i].dist_to_obs);
+      dp_speed_constraint_debug->add_v_upper_bound(points[i].second);
+      dp_speed_constraint_debug->add_a_upper_bound(speed_config.acc_upper);
+      dp_speed_constraint_debug->add_a_lower_bound(speed_config.acc_lower);
+      dp_speed_constraint_debug->add_jerk_upper_bound(speed_config.jerk_upper);
+      dp_speed_constraint_debug->add_jerk_lower_bound(speed_config.jerk_lower);
+
+#if DECIDER_DEBUG
+      ILOG_INFO << "i = " << i << ",s = " << points[i].first
+                << ",v up = " << points[i].second << ",jerk upper = "
+                << dp_speed_constraint_debug->jerk_upper_bound(i);
+#endif
+    }
   }
 
   return;

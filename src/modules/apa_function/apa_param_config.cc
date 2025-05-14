@@ -994,6 +994,12 @@ void SyncParkingParameters(const bool is_simulation) {
                   "min_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.obs_dist_for_speed_limit,
                   double, "obs_dist_for_speed_limit");
+  JSON_READ_VALUE(
+      apa_param.SetPram().speed_config.min_path_dist_for_speed_optimizer,
+      double, "min_path_dist_for_speed_optimizer");
+  JSON_READ_VALUE(
+      apa_param.SetPram().speed_config.min_path_dist_for_veh_starting,
+      double, "min_path_dist_for_veh_starting");
 
   // hybrid a star params
   JSON_READ_VALUE(

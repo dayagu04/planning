@@ -5,38 +5,80 @@
 #include <cstddef>
 
 #include "debug_info_log.h"
+#include "ifly_time.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
-#define DEBUG_OPTIMIZER (1)
 
-bool JerkLimitedTrajOptimizer::Init() { return true; }
+#define DEBUG_OPTIMIZER (0)
+#define DEBUG_SAMPLING (0)
 
-void JerkLimitedTrajOptimizer::Execute(const SVPoint& init_point,
-                                       const double path_len) {
-  delta_time_ = 0.05;
+bool JerkLimitedTrajOptimizer::Init() {
+  config_.Init();
   speed_data_.clear();
+  ClearDebugInfo();
 
-  if (path_len < 0.01) {
-    solver_state_ = SpeedOptimizerState::NONE;
-    return;
+  state_ = TaskExcuteState::NONE;
+  fail_code_ = JLTFailCode::NONE;
+
+  return true;
+}
+
+void JerkLimitedTrajOptimizer::Execute(
+    const SVPoint& stitch_speed_point, const SVPoint& ego_speed_point,
+    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    const SpeedDecisions* speed_decisions) {
+  Init();
+
+  // sanity check
+  double total_s = 0.0;
+  if (path.size() > 1) {
+    total_s = path.back().s;
+  }
+  const ParkLonDecision* stop_decision = GetCloseStopDecision(speed_decisions);
+  if (stop_decision != nullptr) {
+    total_s = std::min(
+        total_s, stop_decision->path_s - stop_decision->lon_decision_buffer);
+  }
+  ILOG_INFO << "total s = " << total_s;
+
+  double opt_start_time = IflyTime::Now_ms();
+
+  if (ego_speed_point.v < 1e-2 &&
+      total_s < config_.min_path_dist_for_veh_starting) {
+    GenerateStandstillTraj(ego_speed_point, total_s);
+  } else if (total_s < 1e-2) {
+    GenerateStoppingTraj(stitch_speed_point, total_s);
+  } else {
+    UpdatePositionTargetSolver(stitch_speed_point, total_s, 0.0);
   }
 
-  UpdateSolver(init_point, path_len, 0.0);
+  if (speed_data_.empty()) {
+    FallbackTrajByExpectState();
+  }
 
   RecordDebugInfo();
+  state_ = TaskExcuteState::SUCCESS;
+
+  ILOG_INFO << "jlt optimizer time = " << IflyTime::Now_ms() - opt_start_time;
 
   return;
 }
 
-void JerkLimitedTrajOptimizer::UpdateSolver(const SVPoint& init_point,
-                                            const double s_des,
-                                            const double v_des) {
+const bool JerkLimitedTrajOptimizer::GenerateJLTSpeed(const SVPoint& init_point,
+                                                      const double s_des,
+                                                      const double v_des) {
+  // sanity check
+  if (s_des < 0.05) {
+    fail_code_ = JLTFailCode::SHORT_PATH;
+    return false;
+  }
+
   planning::jlt::StateLimitParam state_limit;
   planning::jlt::PointState init_point_state;
 
-  const apa_planner::ParkingSpeedConfig& speed_config =
-      apa_param.GetParam().speed_config;
+  const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
 
   state_limit.v_max = speed_config.default_cruise_speed;
   state_limit.v_min = -0.1;
@@ -46,43 +88,63 @@ void JerkLimitedTrajOptimizer::UpdateSolver(const SVPoint& init_point,
   } else {
     state_limit.a_max = 0.3;
   }
-  state_limit.j_max = speed_config.jerk_upper;
-  state_limit.j_min = speed_config.jerk_lower;
+  state_limit.j_max = 10.0;
+  state_limit.j_min = -10.0;
   state_limit.p_desire = s_des;
   state_limit.v_desire = v_des;
   state_limit.a_min = -0.2;
 
   init_point_state.p = init_point.s;
   init_point_state.v = init_point.v;
-  init_point_state.a = init_point.acc;
-
-  jlt::JerkLimitedTrajectory solver;
-  double acc_step = -0.03;
+  // add acc slack variable.
+  double acc_slack_variable = 0.1;
+  if (init_point.acc > acc_slack_variable) {
+    init_point_state.a = init_point.acc - acc_slack_variable;
+  } else if (init_point.acc < -acc_slack_variable) {
+    init_point_state.a = init_point.acc + acc_slack_variable;
+  }
+  init_point_state.a = 0.0;
 
   // update min deceleration
-  double min_dec = -10.0;
-  int sampling_num = std::ceil(min_dec / acc_step);
+  double dec_step = -0.03;
+  double min_dec = -2.0;
+  int sampling_num = std::ceil(min_dec / dec_step);
 
-  bool valid_resolution = false;
+  bool valid_solution = false;
 
   for (int i = 0; i < sampling_num; i++) {
-    if (SamplingAccLowerBound(init_point_state, state_limit, &solver)) {
-      valid_resolution = true;
+    if (SamplingAccLowerBound(init_point_state, state_limit, &solver_)) {
+      valid_solution = true;
       break;
     }
 
-#if DEBUG_OPTIMIZER
-    DebugJLTSpeed(&solver, &state_limit);
+#if DEBUG_SAMPLING
+    DebugJLTSpeed(&solver_, &state_limit);
 #endif
 
-    state_limit.a_min += acc_step;
+    state_limit.a_min += dec_step;
   }
 
-  solver_state_ = SpeedOptimizerState::SUCCESS;
-  if (valid_resolution) {
-    CopySpeedData(&solver);
+  if (!valid_solution) {
+    ILOG_INFO << "init, p = " << init_point_state.p
+              << ", v = " << init_point_state.v
+              << ", a = " << init_point_state.a;
+    ILOG_INFO << "end , p = " << state_limit.p_desire
+              << ",v = " << state_limit.v_desire;
+    ILOG_INFO << "a min = " << state_limit.a_min;
+  }
+
+  return valid_solution;
+}
+
+void JerkLimitedTrajOptimizer::UpdatePositionTargetSolver(
+    const SVPoint& init_point, const double s_des, const double v_des) {
+  if (GenerateJLTSpeed(init_point, s_des, v_des)) {
+    CopySpeedData(&solver_);
   } else {
-    UpdateFallbackTraj(init_point, s_des);
+    GenerateFallbackTraj(init_point, s_des);
+
+    ILOG_INFO << "JLT fail reason = " << static_cast<int>(fail_code_);
   }
 
   return;
@@ -93,34 +155,37 @@ bool JerkLimitedTrajOptimizer::SamplingAccLowerBound(
     const planning::jlt::StateLimitParam& state_limit,
     jlt::JerkLimitedTrajectory* solver) {
   bool state = solver->Update(init_point, state_limit, planning::jlt::SOLVE_POS,
-                              delta_time_);
+                              config_.delta_time);
 
   // check valid
   const std::vector<double>& s_profile = solver->GetSCurve();
   const std::vector<double>& v_profile = solver->GetVelCurve();
 
   if (s_profile.empty() || v_profile.empty()) {
-#if DEBUG_OPTIMIZER
+#if DEBUG_SAMPLING
     ILOG_INFO << "jlt fail";
 #endif
+    fail_code_ = JLTFailCode::SOLVER_FAIL;
     return false;
   }
 
   // check speed
-  for (size_t i = v_profile.size() - 1; i > 0; i--) {
+  for (int i = v_profile.size() - 1; i > 0; i--) {
     if (v_profile[i] < -0.001) {
-#if DEBUG_OPTIMIZER
+#if DEBUG_SAMPLING
       ILOG_INFO << "jlt speed is less than 0";
 #endif
+      fail_code_ = JLTFailCode::NEGATIVE_SPEED;
       return false;
     }
   }
 
-  for (size_t i = s_profile.size() - 1; i > 0; i--) {
+  for (int i = s_profile.size() - 1; i > 0; i--) {
     if (s_profile[i] > state_limit.p_desire + 0.001) {
-#if DEBUG_OPTIMIZER
+#if DEBUG_SAMPLING
       ILOG_INFO << "jlt distance is bigger than path s";
 #endif
+      fail_code_ = JLTFailCode::PATH_OVERSHOOT;
       return false;
     }
   }
@@ -136,12 +201,12 @@ void JerkLimitedTrajOptimizer::CopySpeedData(
   const std::vector<double>& jerk_profile = solver->GetJerkCurve();
 
   for (int i = 0; i < s_profile.size(); ++i) {
-    speed_data_.AppendSpeedPoint(s_profile[i], delta_time_ * i, v_profile[i],
-                                 acc_profile[i], jerk_profile[i]);
+    speed_data_.AppendSpeedPoint(s_profile[i], config_.delta_time * i,
+                                 v_profile[i], acc_profile[i], jerk_profile[i]);
 
 #if DEBUG_OPTIMIZER
     ILOG_INFO << "i = " << i << ",s = " << s_profile[i]
-              << ", t = " << delta_time_ * i << ",v = " << v_profile[i];
+              << ", t = " << config_.delta_time * i << ",v = " << v_profile[i];
 
 #endif
   }
@@ -161,78 +226,209 @@ void JerkLimitedTrajOptimizer::DebugJLTSpeed(
 
   for (int i = 0; i < s_profile.size(); ++i) {
     ILOG_INFO << "i = " << i << ",s = " << s_profile[i]
-              << ", t = " << delta_time_ * i << ",v = " << v_profile[i]
+              << ", t = " << config_.delta_time * i << ",v = " << v_profile[i]
               << ", acc =" << acc_profile[i] << ",jerk = " << jerk_profile[i];
   }
 
   return;
 }
 
-void JerkLimitedTrajOptimizer::UpdateFallbackTraj(const SVPoint& init_point,
-                                                  const double s_des) {
-  if (init_point.v < 0.01) {
-    double half_s = s_des / 2.0;
-    double acc = 0.3;
-    double dec = -0.2;
+void JerkLimitedTrajOptimizer::GenerateStoppingTraj(const SVPoint& init_point,
+                                                    const double s_des) {
+  speed_data_.clear();
 
-    double s1 = (init_point.v * init_point.v + 2 * acc * s_des) /
-                (2.0 * acc - 2.0 * dec);
-    double max_v = std::sqrt(2 * acc * s1 + init_point.v * init_point.v);
+  // path is none, need emergency brake.
+  double dec;
+  if (s_des <= 1e-2) {
+    dec = -0.5;
+  } else {
+    dec = -init_point.v * init_point.v / 2.0 / s_des;
+    // comfortable brake.
+    dec = std::min(-0.3, dec);
+    dec = std::max(-0.7, dec);
+  }
 
-    double time1 = (max_v - init_point.v) / acc;
-    double time2 = -max_v / dec + time1;
+  double total_time = -init_point.v / dec;
+  double time = 0.0;
+  double p;
+  double v;
+  int point_size = std::ceil(total_time / config_.delta_time);
+  for (int i = 0; i < point_size; i++) {
+    p = init_point.v * time + 0.5 * dec * time * time;
+    v = init_point.v + dec * time;
 
-    speed_data_.clear();
+    speed_data_.AppendSpeedPoint(p, time, v, dec, 0.0);
+
+    time += config_.delta_time;
+    time = std::min(time, total_time);
+  }
+
+  // todo: if path is long, need speed up or cruise.
+
+  return;
+}
+
+void JerkLimitedTrajOptimizer::GenerateStartingAndStoppingTraj(
+    const SVPoint& init_point, const double s_des) {
+  speed_data_.clear();
+
+  // second order system.
+  // first phase is acc;
+  // second phase is cruise;
+  // third phase is dec;
+
+  // constraints
+  double acc = 0.3;
+  double dec = -0.2;
+  double max_cruise_speed = 0.5;
+
+  // first phase
+  double s1 = -(init_point.v * init_point.v + 2 * dec * s_des) /
+              (2.0 * acc - 2.0 * dec);
+  double phase1_end_v = std::sqrt(2 * acc * s1 + init_point.v * init_point.v);
+
+  bool need_second_phase = false;
+  if (phase1_end_v > max_cruise_speed) {
+    need_second_phase = true;
+  }
+
+  if (!need_second_phase) {
+    double first_phase_total_time = (phase1_end_v - init_point.v) / acc;
+
     double time = 0.0;
     double p;
     double v;
-
     // speed up
-    int point_size = std::ceil(time1 / delta_time_);
+    int point_size = std::ceil(first_phase_total_time / config_.delta_time);
     for (int i = 0; i < point_size; i++) {
       p = init_point.v * time + 0.5 * acc * time * time;
       v = init_point.v + acc * time;
 
       speed_data_.AppendSpeedPoint(p, time, v, acc, 0.0);
 
-      time += delta_time_;
-      time = std::min(time, time1);
+      time += config_.delta_time;
+      time = std::min(time, first_phase_total_time);
     }
 
     // speed down
-    time += delta_time_;
-    point_size = std::ceil(time2 - time1 / delta_time_);
+    // third phase
+    double third_phase_total_time = -phase1_end_v / dec;
+    time = config_.delta_time;
+    point_size = std::ceil(third_phase_total_time / config_.delta_time);
     for (int i = 0; i < point_size; i++) {
-      p = max_v * time + 0.5 * dec * time * time;
-      v = max_v + dec * time;
+      p = s1 + phase1_end_v * time + 0.5 * dec * time * time;
+      v = phase1_end_v + dec * time;
 
-      speed_data_.AppendSpeedPoint(p, time, v, dec, 0.0);
+      speed_data_.AppendSpeedPoint(p, first_phase_total_time + time, v, dec,
+                                   0.0);
 
-      time += delta_time_;
-      time = std::min(time, time2);
+      time += config_.delta_time;
+      time = std::min(time, third_phase_total_time);
     }
-
   } else {
-    double dec = -init_point.v * init_point.v / 2.0 / s_des;
-    double total_time = -init_point.v / dec;
+    double first_phase_time = (max_cruise_speed - init_point.v) / acc;
+    double first_phase_dist =
+        (max_cruise_speed * max_cruise_speed - init_point.v * init_point.v) /
+        2.0 / acc;
 
-    speed_data_.clear();
     double time = 0.0;
     double p;
     double v;
-    double acc;
-    int point_size = std::ceil(total_time / delta_time_);
+    // speed up
+    int point_size = std::ceil(first_phase_time / config_.delta_time);
     for (int i = 0; i < point_size; i++) {
-      p = init_point.v * time + 0.5 * dec * time * time;
-      v = init_point.v + dec * time;
+      p = init_point.v * time + 0.5 * acc * time * time;
+      v = init_point.v + acc * time;
 
-      speed_data_.AppendSpeedPoint(p, time, v, dec, 0.0);
+      speed_data_.AppendSpeedPoint(p, time, v, acc, 0.0);
 
-      time += delta_time_;
-      time = std::min(time, total_time);
+      time += config_.delta_time;
+      time = std::min(time, first_phase_time);
+    }
+
+    double third_phase_dist = -max_cruise_speed * max_cruise_speed / 2.0 / dec;
+
+    double second_phase_dist = s_des - third_phase_dist - p;
+    double second_phase_time = second_phase_dist / max_cruise_speed;
+
+    point_size = std::ceil(second_phase_time / config_.delta_time);
+    time = config_.delta_time;
+    for (int i = 0; i < point_size; i++) {
+      p = first_phase_dist + max_cruise_speed * time;
+      v = max_cruise_speed;
+
+      speed_data_.AppendSpeedPoint(p, first_phase_time + time, v, 0, 0.0);
+
+      time += config_.delta_time;
+      time = std::min(time, first_phase_time + second_phase_time);
+    }
+
+    // speed down
+    // third phase
+    double third_phase_total_time = -max_cruise_speed / dec;
+    time = config_.delta_time;
+    point_size = std::ceil(third_phase_total_time / config_.delta_time);
+    for (int i = 0; i < point_size; i++) {
+      p = first_phase_dist + second_phase_dist + max_cruise_speed * time +
+          0.5 * dec * time * time;
+      v = max_cruise_speed + dec * time;
+      speed_data_.AppendSpeedPoint(
+          p, first_phase_time + second_phase_time + time, v, dec, 0.0);
+
+      time += config_.delta_time;
+      time = std::min(
+          time, first_phase_time + second_phase_time + third_phase_total_time);
     }
   }
 
+  return;
+}
+
+void JerkLimitedTrajOptimizer::GenerateFallbackTraj(const SVPoint& init_point,
+                                                    const double s_des) {
+  speed_data_.clear();
+
+  if (init_point.v < 0.1) {
+    GenerateStartingAndStoppingTraj(init_point, s_des);
+  } else {
+    GenerateStoppingTraj(init_point, s_des);
+  }
+
+  return;
+}
+
+void JerkLimitedTrajOptimizer::GenerateStandstillTraj(const SVPoint& init_point,
+                                                      const double s_des) {
+  speed_data_.clear();
+
+  double time = 0.0;
+  double v;
+  double delta_s = 0.02;
+  double s = 0.0;
+  int point_size = std::ceil(s_des / delta_s);
+
+  for (int i = 0; i < point_size; i++) {
+    v = 0;
+    speed_data_.AppendSpeedPoint(s, time, v, 0, 0.0);
+
+    s += delta_s;
+    time += config_.delta_time;
+  }
+
+  return;
+}
+
+void JerkLimitedTrajOptimizer::FallbackTrajByExpectState() {
+  speed_data_.clear();
+  speed_data_.AppendSpeedPoint(0, 0, 0, 0, 0.0);
+
+  return;
+}
+
+void JerkLimitedTrajOptimizer::ClearDebugInfo() {
+  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  speed_debug->clear_jlt_profile();
   return;
 }
 
@@ -252,6 +448,23 @@ void JerkLimitedTrajOptimizer::RecordDebugInfo() {
     speed_debug->add_jlt_profile()->CopyFrom(proto_point);
   }
 
+  speed_debug->set_speed_type(common::SpeedProfileType::JLT);
+
+#if DEBUG_OPTIMIZER
+  TaskDebug();
+#endif
+
+  return;
+}
+
+void JerkLimitedTrajOptimizer::TaskDebug() {
+  for (size_t i = 0; i < speed_data_.size(); i++) {
+    const SpeedPoint& point = speed_data_[i];
+
+    ILOG_INFO << "s = " << point.s << ", t = " << point.t
+              << ", velocity = " << point.v << ", acc = " << point.a
+              << ", jerk = " << point.da;
+  }
   return;
 }
 }  // namespace apa_planner

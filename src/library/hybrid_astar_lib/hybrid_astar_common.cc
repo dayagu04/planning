@@ -122,7 +122,8 @@ void DebugPathString(const HybridAStarResult* result) {
               << result->y[i] << ", " << result->phi[i] * 57.4 << ", "
               << PathGearDebugString(result->gear[i])
               << ",path type = " << GetNodeCurveDebugString(result->type[i])
-              << ", s = " << result->accumulated_s[i];
+              << ", s = " << result->accumulated_s[i]
+              << ", kappa = " << result->kappa[i];
   }
 
   return;

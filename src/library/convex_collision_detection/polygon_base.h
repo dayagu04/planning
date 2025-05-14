@@ -181,8 +181,8 @@ int RULocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
 
 int RULocalPolygonToGlobalFast(Polygon2D *poly_global,
                                const Polygon2D *poly_local,
-                               const Pose2D *global_pose,
-                               const float cos_theta, const float sin_theta);
+                               const Pose2D *global_pose, const float cos_theta,
+                               const float sin_theta);
 
 int GlobalPolygonToRULocal(Polygon2D *poly_local, const Polygon2D *poly_global,
                            const Pose2D *global_pose);
@@ -208,16 +208,18 @@ int GetBoundingBoxByPolygon(cdl::AABB *box, const Polygon2D *polygon);
 void PolygonDebugString(const Polygon2D *polygon, const std::string &name);
 
 // up left frame
-int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
-                            const Pose2D &global_pose);
+void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
+                             const Polygon2D *poly_local,
+                             const Pose2D &global_pose);
 
 int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
                                       const float back_overhanging,
                                       const float front_edge_to_rear_axis,
                                       const float half_width);
 
-int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
-                            const Transform2d &tf);
+void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
+                             const Polygon2D *poly_local,
+                             const Transform2d &tf);
 
 void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
                              const Transform2d &tf, Polygon2D *poly_local);
@@ -228,6 +230,7 @@ void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
 // Compact car body for accurate safe check.
 void GenerateVehCompactPolygon(const float lateral_safe_buffer,
                                const float lon_safe_buffer,
+                               const float aabb_buffer,
                                PolygonFootPrint *foot_print);
 
 void GenerateMirrorPolygon(const float x_length, const float y_length,
@@ -243,5 +246,9 @@ void LocalPolygonToGlobal(const std::vector<Eigen::Vector2f> &poly_local,
 
 void GeneratePolygonByPoints(const std::vector<Eigen::Vector2f> &points,
                              Polygon2D *polygon);
+
+void FootPrintLocalToGlobal(const Transform2d &tf,
+                            const PolygonFootPrint *local_foot_print,
+                            PolygonFootPrint *global_foot_print);
 
 }  // namespace planning

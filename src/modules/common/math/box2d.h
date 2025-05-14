@@ -13,8 +13,8 @@
 #include <string>
 #include <vector>
 
-#include "math/aabox2d.h"
-#include "math/line_segment2d.h"
+#include "src/modules/common/math/aabox2d.h"
+#include "src/modules/common/math/line_segment2d.h"
 #include "vec2d.h"
 
 namespace planning {

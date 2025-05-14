@@ -12,7 +12,7 @@ sys.path.append('../../../')
 
 sys.path.append('python_proto')
 # from python_proto import common_pb2
-from jupyter_pybind import dp_speed_optimizer_py
+from jupyter_pybind import apa_speed_optimizer_py
 
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -97,7 +97,7 @@ fig1.js_on_event(Tap, callback)
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 fig1.legend.click_policy = 'hide'
 
-dp_speed_optimizer_py.Init()
+apa_speed_optimizer_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
@@ -108,8 +108,8 @@ class LocalViewSlider:
     self.path_radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path_radius",min=-1000.0, max=1000.0, value=-10.0, step=1.0)
     self.ego_v_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_v",min=0.0, max=20.0, value=0.7, step=0.1)
     self.ego_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_acc",min=-10.0, max=10.0, value=0.0, step=0.1)
-    self.obs_s_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "dist_s",min=0.0, max=20.0, value=0.5, step=0.1)
-    self.dist_to_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "dist_to_obs",min=-2.0, max=20.0, value=0.3, step=0.1)
+    self.obs_s_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "dist_s",min=0.0, max=20.0, value=0.5, step=0.05)
+    self.dist_to_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "dist_to_obs",min=-2.0, max=20.0, value=0.3, step=0.05)
     self.max_cruise_speed_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "max_speed",min=-2.0, max=20.0, value=1.0, step=0.1)
     self.jlt_acc_lower = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "jlt_acc_lower",min=-10.0, max=0.0, value=-1.0, step=0.1)
 
@@ -158,7 +158,7 @@ def slider_callback(ego_x, ego_y, ego_heading, path_length, path_radius, ego_v, 
 
   ego_pose = [ego_x, ego_y, ego_heading / 57.3]
 
-  current_path_point_global_vec = dp_speed_optimizer_py.Update(
+  current_path_point_global_vec = apa_speed_optimizer_py.Update(
       ego_pose, path_length, path_radius, ego_v, ego_acc,obs_s,dist_to_obs,max_cruise_speed, jlt_acc_lower)
 
   # plot path
@@ -221,16 +221,17 @@ def slider_callback(ego_x, ego_y, ego_heading, path_length, path_radius, ego_v, 
     'y_vec': car_box_y_vec,
   })
 
-  dp_speed_constraints = dp_speed_optimizer_py.GetDpSpeedConstraints()
-  qp_speed_constraints = dp_speed_optimizer_py.GetQPSpeedConstraints()
-  ref_cruise_speed = dp_speed_optimizer_py.GetRefCruiseSpeed()
-  dp_speed_data = dp_speed_optimizer_py.GetDPSpeedOptimizationData()
-  qp_speed_data = dp_speed_optimizer_py.GetQPSpeedOptimizationData()
+  dp_speed_constraints = apa_speed_optimizer_py.GetDpSpeedConstraints()
+  qp_speed_constraints = apa_speed_optimizer_py.GetQPSpeedConstraints()
+  ref_cruise_speed = apa_speed_optimizer_py.GetRefCruiseSpeed()
+  dp_speed_data = apa_speed_optimizer_py.GetDPSpeedOptimizationData()
+  qp_speed_data = apa_speed_optimizer_py.GetQPSpeedOptimizationData()
   update_lon_plan_online_data(
-      dp_speed_constraints,qp_speed_constraints, ref_cruise_speed, dp_speed_data,qp_speed_data, lon_plan_data)
+      dp_speed_constraints,qp_speed_constraints, ref_cruise_speed,
+      dp_speed_data, qp_speed_data, lon_plan_data)
 
   # jlt data
-  jlt_speed_data = dp_speed_optimizer_py.GetJLTSpeedData()
+  jlt_speed_data = apa_speed_optimizer_py.GetJLTSpeedData()
   update_jlt_online_data(jlt_speed_data, lon_plan_data)
 
   push_notebook()

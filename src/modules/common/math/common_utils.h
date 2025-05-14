@@ -157,33 +157,6 @@ std::unordered_set<T> Intersection(const std::unordered_set<T>& s1,
   }
 }
 
-/**
- * calculate the distance beteween Point u and Point v, which are all have
- * member function x() and y() in XY dimension.
- * @param u one point that has member function x() and y().
- * @param b one point that has member function x() and y().
- * @return sqrt((u.x-v.x)^2 + (u.y-v.y)^2), i.e., the Euclid distance on XY
- * dimension.
- */
-template <typename U, typename V>
-double DistanceXY(const U& u, const V& v) {
-  return std::hypot(u.x - v.x, u.y - v.y);
-}
-
-/**
- * Check if two points u and v are the same point on XY dimension.
- * @param u one point that has member function x() and y().
- * @param v one point that has member function x() and y().
- * @return sqrt((u.x-v.x)^2 + (u.y-v.y)^2) < epsilon, i.e., the Euclid distance
- * on XY dimension.
- */
-template <typename U, typename V>
-bool SamePointXY(const U& u, const V& v) {
-  constexpr double kMathEpsilonSqr = 1e-8 * 1e-8;
-  return (u.x - v.x) * (u.x - v.x) < kMathEpsilonSqr &&
-         (u.y - v.y) * (u.y - v.y) < kMathEpsilonSqr;
-}
-
 planning_math::PathPoint GetWeightedAverageOfTwoPathPoints(
     const planning_math::PathPoint& p1, const planning_math::PathPoint& p2,
     const double w1, const double w2);

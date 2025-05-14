@@ -11,7 +11,6 @@
 #include "dp_speed_config.h"
 #include "dp_speed_cost.h"
 #include "geometry_math.h"
-#include "optimizer_common.h"
 #include "parking_task.h"
 #include "pose2d.h"
 #include "speed/apa_speed_decision.h"
@@ -30,8 +29,10 @@ class DpSpeedOptimizer : public ParkingTask {
  public:
   DpSpeedOptimizer();
 
+  virtual ~DpSpeedOptimizer() = default;
+
   void Excute(const std::vector<pnc::geometry_lib::PathPoint>& path,
-              const Pose2D& ego_pose, const double ego_v, const double ego_acc,
+              const Pose2D& ego_pose, const SVPoint& init_point,
               const SpeedDecisions* speed_decisions,
               const SpeedLimitProfile* speed_limit_profile);
 
@@ -40,8 +41,6 @@ class DpSpeedOptimizer : public ParkingTask {
   const SpeedData& SpeedProfile() const { return speed_data_; }
 
   const SVPoint GetStartSpeedPoint() const;
-
-  const SpeedOptimizerState GetDPState() const { return solver_state_; }
 
  private:
   // dp搜索
@@ -97,12 +96,13 @@ class DpSpeedOptimizer : public ParkingTask {
 
   void DebugSpeedLimitLookUp() const;
 
-  void RecordDebugInfo();
+  void RecordDebugInfo(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
+  void ClearDebugInfo();
 
  private:
   const SpeedDecisions* speed_decisions_;
   const SpeedLimitProfile* speed_limit_profile_;
-  std::vector<pnc::geometry_lib::PathPoint> path_;
 
   double ego_v_;
   double ego_acc_;
@@ -130,8 +130,6 @@ class DpSpeedOptimizer : public ParkingTask {
   SVGraphNode* end_node_;
 
   SpeedData speed_data_;
-
-  SpeedOptimizerState solver_state_;
 };
 }  // namespace apa_planner
 }  // namespace planning

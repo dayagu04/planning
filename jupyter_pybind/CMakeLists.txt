@@ -311,8 +311,8 @@ target_link_libraries(spiral_py PRIVATE
 )
 
 
-pybind11_add_module(dp_speed_optimizer_py MODULE src/dp_speed_optimizer_pybind.cc)
-target_link_libraries(dp_speed_optimizer_py PRIVATE
+pybind11_add_module(apa_speed_optimizer_py MODULE src/apa_speed_optimizer_pybind.cc)
+target_link_libraries(apa_speed_optimizer_py PRIVATE
   autoplt
   ad_common
   modules

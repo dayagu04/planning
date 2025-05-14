@@ -45,8 +45,8 @@ fig1, local_view_data = load_local_view_figure_parking()
 
 if plot_speed_graph:
   # plot speed
-  velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
-  pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
+  load_lon_global_data_figure(bag_loader)
+  pans, lon_plan_data = create_lon_plan_figure(fig1)
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')

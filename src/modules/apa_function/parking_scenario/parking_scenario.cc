@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "apa_context.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_utils.h"
@@ -19,13 +20,13 @@
 #include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
-#include "optimizer_common.h"
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
 #include "planning_plan_c.h"
 #include "pose2d.h"
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
+#include "speed/apa_speed_decision.h"
 #include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "traj_stitcher/apa_trajectory_stitcher.h"
 
@@ -42,7 +43,15 @@ std::string ParkingScenario::GetName() { return ""; }
 
 void ParkingScenario::Init() { return; }
 
-void ParkingScenario::Reset() { return; }
+void ParkingScenario::Reset() {
+  memset(&planning_output_, 0, sizeof(planning_output_));
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+  frame_.Reset();
+  current_path_point_global_vec_.clear();
+  trajectory_.clear();
+
+  return;
+}
 
 void ParkingScenario::ScenarioRunning() {
   // run plan core
@@ -51,7 +60,7 @@ void ParkingScenario::ScenarioRunning() {
   ExcuteSpeedPlanningTask();
 
   // generate planning output
-  GenPlanningOutput();
+  PublishPlanningTraj();
 
   GenPlanningHmiOutput();
 
@@ -141,7 +150,7 @@ void ParkingScenario::SetParkingStatus(uint8_t status) {
   return;
 }
 
-void ParkingScenario::GenPlanningOutput() {
+void ParkingScenario::PublishPlanningTraj() {
   pnc::geometry_lib::PathPoint current_ego_pose(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(),
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetHeading());
@@ -159,7 +168,11 @@ void ParkingScenario::GenPlanningOutput() {
              frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
              frame_.plan_stm.planning_status == PARKING_RUNNING ||
              frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    GenPlanningPath();
+    if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
+      SetPlanningPath();
+    } else {
+      SetPlanningTraj();
+    }
   } else if (frame_.plan_stm.planning_status == PARKING_IDLE) {
     SetIdlePlanningOutput(planning_output_, current_ego_pose);
   }
@@ -188,7 +201,7 @@ void ParkingScenario::GenPlanningHmiOutput() {
   return;
 }
 
-void ParkingScenario::GenPlanningPath() {
+void ParkingScenario::SetPlanningPath() {
   // planning_output_.Clear();
   memset(&planning_output_, 0, sizeof(planning_output_));
   planning_output_.planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
@@ -255,6 +268,49 @@ void ParkingScenario::GenPlanningPath() {
 
   planning_output_.trajectory.trajectory_points[4].distance =
       frame_.remain_dist_col_det;
+
+  // set plan gear cmd
+  auto gear_command = &(planning_output_.gear_command);
+  gear_command->available = true;
+  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
+  } else {
+    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
+  }
+  ILOG_INFO << "gear command in planning output = "
+            << static_cast<int>(gear_command->gear_command_value);
+
+  return;
+}
+
+void ParkingScenario::SetPlanningTraj() {
+  memset(&planning_output_, 0, sizeof(planning_output_));
+  planning_output_.planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
+  planning_output_.planning_status.apa_planning_status =
+      iflyauto::APA_IN_PROGRESS;
+
+  auto publish_traj = &(planning_output_.trajectory);
+  publish_traj->available = true;
+  publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
+
+  size_t N = trajectory_.size();
+  publish_traj->trajectory_points_size =
+      std::min(N, size_t(PLANNING_TRAJ_POINTS_MAX_NUM));
+
+  for (size_t i = 0; i < publish_traj->trajectory_points_size; ++i) {
+    const auto& point = trajectory_[i];
+    publish_traj->trajectory_points[i].x = point.x();
+    publish_traj->trajectory_points[i].y = point.y();
+    publish_traj->trajectory_points[i].heading_yaw = point.theta();
+    publish_traj->trajectory_points[i].curvature = point.kappa();
+    publish_traj->trajectory_points[i].t = point.absolute_time();
+    publish_traj->trajectory_points[i].distance = point.s();
+    publish_traj->trajectory_points[i].v = point.vel();
+    publish_traj->trajectory_points[i].a = point.acc();
+    publish_traj->trajectory_points[i].jerk = point.jerk();
+  }
+
+  planning_output_.trajectory.target_reference.target_velocity = 1.0;
 
   // set plan gear cmd
   auto gear_command = &(planning_output_.gear_command);
@@ -405,10 +461,12 @@ const bool ParkingScenario::PostProcessPath() {
   std::vector<double> y_vec;
   std::vector<double> heading_vec;
   std::vector<double> s_vec;
+  std::vector<double> kappa_vec;
   x_vec.reserve(origin_trajectory_size + 1);
   y_vec.reserve(origin_trajectory_size + 1);
   heading_vec.reserve(origin_trajectory_size + 1);
   s_vec.reserve(origin_trajectory_size + 1);
+  kappa_vec.reserve(origin_trajectory_size + 1);
   double s = 0.0;
   double ds = 0.0;
   for (size_t i = 0; i < origin_trajectory_size; ++i) {
@@ -425,6 +483,7 @@ const bool ParkingScenario::PostProcessPath() {
     y_vec.emplace_back(pt.pos.y());
     heading_vec.emplace_back(pt.heading);
     s_vec.emplace_back(s);
+    kappa_vec.emplace_back(pt.kappa);
   }
 
   size_t x_vec_size = x_vec.size();
@@ -458,6 +517,7 @@ const bool ParkingScenario::PostProcessPath() {
     y_vec.emplace_back(extend_point.pos.y());
     heading_vec.emplace_back(extend_point.heading);
     s_vec.emplace_back(s);
+    kappa_vec.emplace_back(0);
     x_vec_size = x_vec.size();
   }
 
@@ -468,6 +528,7 @@ const bool ParkingScenario::PostProcessPath() {
     point.pos << x_vec[i], y_vec[i];
     point.heading = heading_vec[i];
     point.s = s_vec[i];
+    point.kappa = kappa_vec[i];
     current_path_point_global_vec_[i] = point;
   }
 
@@ -528,58 +589,71 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
+  double acc = apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
+  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel() < 0.0) {
+    acc = -apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
+  }
+  SVPoint ego_speed_point = SVPoint(
+      0, std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()), acc);
+
   // task: update traj stitcher
   ApaTrajectoryStitcher traj_stitcher;
-  traj_stitcher.Process(
+  traj_stitcher.Execute(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
       current_path_point_global_vec_,
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(), 0.1);
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
+      ego_speed_point, 0.1, trajectory_,
+      pnc::geometry_lib::GetGearType(frame_.current_gear));
 
-  double tracking_path_collision_dist = frame_.remain_dist_obs;
-  tracking_path_collision_dist =
-      std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
-
-  ILOG_INFO << "remain_dist_obs = " << frame_.remain_dist_obs
-            << ", frame_.remain_dist_col_det = " << frame_.remain_dist_col_det;
+  const SVPoint stitch_init_speed = traj_stitcher.GetStitchSpeed();
 
   // task: update stop decision
   ParkingStopDecider stop_decider(
       apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
-      apa_world_ptr_->GetMeasureDataManagerPtr());
+      apa_world_ptr_->GetMeasureDataManagerPtr(),
+      apa_world_ptr_->GetObstacleManagerPtr());
 
   SpeedDecisions speed_decisions;
-  stop_decider.Process(tracking_path_collision_dist,
-                       traj_stitcher.GetMutableStitchTrajectory(),
-                       &speed_decisions);
+  stop_decider.Execute(stitch_init_speed, traj_stitcher.GetConstStitchPath());
+  const ParkLonDecision stop_decision = stop_decider.GetStopDecision();
+  if (stop_decision.decision_type == LonDecisionType::STOP) {
+    speed_decisions.decisions.emplace_back(stop_decision);
+  }
 
   // task: update speed limit decision
-  ParkSpeedLimitDecider speed_limit_decider;
-  speed_limit_decider.Process(traj_stitcher.GetConstStitchTrajectory(),
+  ParkSpeedLimitDecider speed_limit_decider(
+      apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+      apa_world_ptr_->GetMeasureDataManagerPtr(),
+      apa_world_ptr_->GetObstacleManagerPtr());
+  speed_limit_decider.Execute(traj_stitcher.GetMutableStitchPath(),
                               &speed_decisions);
 
   // task: generate dp speed
   DpSpeedOptimizer dp_speed_optimizer;
-  dp_speed_optimizer.Init();
   dp_speed_optimizer.Excute(
-      traj_stitcher.GetConstStitchTrajectory(),
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
-      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()), 0.0,
+      traj_stitcher.GetConstStitchPath(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(), stitch_init_speed,
       &speed_decisions, &speed_limit_decider.GetSpeedLimitProfile());
 
   // task: generate qp speed
   PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
   const SpeedData& dp_speed = dp_speed_optimizer.SpeedProfile();
-  SVPoint init_point = dp_speed_optimizer.GetStartSpeedPoint();
-  qp_speed_optimizer.Execute(
-      init_point, &speed_limit_decider.GetSpeedLimitProfile(), dp_speed);
+  qp_speed_optimizer.Execute(stitch_init_speed,
+                             &speed_limit_decider.GetSpeedLimitProfile(),
+                             dp_speed, &speed_decisions);
 
   // task: generate jlt speed
-  if (dp_speed_optimizer.GetDPState() != SpeedOptimizerState::SUCCESS ||
-      qp_speed_optimizer.GetQPState() != SpeedOptimizerState::SUCCESS) {
+  if (dp_speed_optimizer.GetExcuteState() != TaskExcuteState::SUCCESS ||
+      qp_speed_optimizer.GetExcuteState() != TaskExcuteState::SUCCESS) {
     JerkLimitedTrajOptimizer jlt_optimizer;
-    jlt_optimizer.Execute(init_point, traj_stitcher.GetStitchTrajLength());
+    jlt_optimizer.Execute(stitch_init_speed, ego_speed_point,
+                          traj_stitcher.GetConstStitchPath(), &speed_decisions);
+    traj_stitcher.CombineTrajBasedOnTime(jlt_optimizer.GetSpeedData());
+  } else {
+    traj_stitcher.CombineTrajBasedOnTime(qp_speed_optimizer.GetSpeedData());
   }
+
+  trajectory_ = traj_stitcher.GetConstCombinedTraj();
 
   return;
 }

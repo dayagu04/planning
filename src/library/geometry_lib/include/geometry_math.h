@@ -52,6 +52,7 @@ enum PathSegSteer {
   SEG_STEER_COUNT,
 };
 
+// todo: unify all gear enum
 enum PathSegGear {
   SEG_GEAR_INVALID,
   SEG_GEAR_DRIVE,
@@ -1226,6 +1227,8 @@ const bool GetPolygonBound(double *x_min, double *x_max, double *y_min,
 const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
                               PathSegment &seg2, const double s,
                               const bool from_start = true);
+
+const PathSegGear GetGearType(const uint8_t gear);
 
 }  // namespace geometry_lib
 }  // namespace pnc

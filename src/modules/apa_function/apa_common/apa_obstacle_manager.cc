@@ -144,6 +144,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
+      apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
     }
@@ -195,6 +196,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       }
 
       apa_obs.SetId(obs_id_generate_);
+      apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
     }
@@ -269,6 +271,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
+      apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
     }
@@ -305,6 +308,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
+      apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
     }

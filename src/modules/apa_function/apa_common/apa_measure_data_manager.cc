@@ -103,7 +103,8 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
   ILOG_INFO << "pos = " << pos_.transpose()
             << "  heading = " << heading_ * kRad2Deg << "  vel = " << vel_
-            << " m/s";
+            << " m/s"
+            << ", acc = " << acceleration_;
   ILOG_INFO << "car_static_timer_by_pos_strict = "
             << car_static_timer_by_pos_strict_ << " s";
   ILOG_INFO << "car_static_timer_by_pos_normal = "

@@ -31,6 +31,8 @@ class ApaMeasureDataManager final {
   }
 
   const double GetVel() const { return vel_; }
+  const double GetAcceleration() const { return acceleration_; }
+
   void SetPose(const Eigen::Vector2d pos, const double heading) {
     pos_ = pos;
     heading_ = heading;

@@ -93,6 +93,14 @@ struct RealTimeBrakeInfo {
   ~RealTimeBrakeInfo() = default;
 };
 
+enum class TaskExcuteState {
+  NONE = 0,
+  FAIL = 1,
+  TIME_OUT = 2,
+  MAX_ITERATION = 3,
+  SUCCESS = 4,
+};
+
 void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
 
 const std::string GetApaScenarioStatusString(

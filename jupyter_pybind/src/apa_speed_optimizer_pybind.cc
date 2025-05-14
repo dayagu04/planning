@@ -20,6 +20,7 @@
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 #include "log_glog.h"
 #include "math_lib.h"
 #include "narrow_space_scenario.h"
@@ -30,6 +31,7 @@
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
 #include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
+#include "speed/apa_speed_decision.h"
 #include "src/library/convex_collision_detection/aabb2d.h"
 #include "src/library/hybrid_astar_lib/hybrid_a_star.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
@@ -40,11 +42,8 @@
 #include "src/modules/apa_function/parking_task/optimizers/sv_dp_optimizer/dp_speed_optimizer.h"
 #include "transform2d.h"
 #include "virtual_wall_decider.h"
-#include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 
-namespace py = pybind11;
 using namespace planning::apa_planner;
-using namespace planning;
 using namespace pnc::geometry_lib;
 
 // test item:
@@ -55,14 +54,14 @@ using namespace pnc::geometry_lib;
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
 static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
 std::vector<Eigen::Vector3d> global_path_;
-SpeedData dp_speed_profile_;
-SpeedData qp_speed_profile_;
-SpeedData jlt_speed_profile_;
+planning::SpeedData dp_speed_profile_;
+planning::SpeedData qp_speed_profile_;
+planning::SpeedData jlt_speed_profile_;
 double delta_time = 0.1;
 
 void Init() {
-  FilePath::SetName("dp_speed_optimizer");
-  InitGlog(FilePath::GetName().c_str());
+  planning::FilePath::SetName("apa_speed_optimizer");
+  planning::InitGlog(planning::FilePath::GetName().c_str());
 
   ILOG_INFO << "log init finish";
 
@@ -71,14 +70,16 @@ void Init() {
 
   parking_interface->Init();
 
-  std::shared_ptr<apa_planner::ParkingScenario> planner =
+  std::shared_ptr<planning::apa_planner::ParkingScenario> planner =
       parking_interface->GetPlannerByType(
           ParkingScenarioType::SCENARIO_NARROW_SPACE);
 
-  std::shared_ptr<apa_planner::NarrowSpaceScenario> hybrid_astar_park_ =
-      std::dynamic_pointer_cast<apa_planner::NarrowSpaceScenario>(planner);
+  std::shared_ptr<planning::apa_planner::NarrowSpaceScenario>
+      hybrid_astar_park_ =
+          std::dynamic_pointer_cast<planning::apa_planner::NarrowSpaceScenario>(
+              planner);
 
-  HybridAStarThreadSolver *thread = hybrid_astar_park_->GetThread();
+  planning::HybridAStarThreadSolver *thread = hybrid_astar_park_->GetThread();
   hybrid_astar_interface_ = thread->GetHybridAStarInterface();
 
   if (hybrid_astar_interface_ == nullptr) {
@@ -136,10 +137,13 @@ void UpdatePathObsDistance(std::vector<pnc::geometry_lib::PathPoint> &path,
     return;
   }
   for (size_t i = 0; i < path.size(); ++i) {
-
     path[i].dist_to_obs = 10.0;
-    if (std::fabs(path[i].s - obs_s) < 0.15) {
+    path[i].col_flag = false;
+    if (std::fabs(path[i].s - obs_s) < 0.06) {
       path[i].dist_to_obs = dist_to_obs;
+      if (dist_to_obs < 0.06) {
+        path[i].col_flag = true;
+      }
     }
 
     // ILOG_INFO << "i = " << i << ",s = " << accumulated_s
@@ -161,10 +165,10 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   const ApaParameters &param = apa_param.GetParam();
 
-  Pose2D start_pose(ego_pose[0], ego_pose[1], ego_pose[2]);
-  std::vector<Pose2D> path;
+  planning::Pose2D start_pose(ego_pose[0], ego_pose[1], ego_pose[2]);
+  std::vector<planning::Pose2D> path;
 
-  FuturePathDecider future_path_decider;
+  planning::FuturePathDecider future_path_decider;
 
   double radius;
   if (path_radius > 0) {
@@ -188,55 +192,65 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       std::make_shared<ApaObstacleManager>();
   obstacles->Reset();
 
-  std::shared_ptr<apa_planner::ApaMeasureDataManager> localization_ptr =
-      std::make_shared<apa_planner::ApaMeasureDataManager>();
+  std::shared_ptr<planning::apa_planner::ApaMeasureDataManager>
+      localization_ptr =
+          std::make_shared<planning::apa_planner::ApaMeasureDataManager>();
   localization_ptr->SetPose(Eigen::Vector2d(start_pose.x, start_pose.y),
-                       start_pose.theta);
+                            start_pose.theta);
 
-  std::shared_ptr<apa_planner::ApaPredictPathManager> predict_path =
+  std::shared_ptr<planning::apa_planner::ApaPredictPathManager> predict_path =
       std::make_shared<ApaPredictPathManager>();
 
-  std::shared_ptr<apa_planner::CollisionDetectorInterface>
+  std::shared_ptr<planning::apa_planner::CollisionDetectorInterface>
       col_det_interface_ptr =
-          std::make_shared<apa_planner::CollisionDetectorInterface>(
+          std::make_shared<planning::apa_planner::CollisionDetectorInterface>(
               obstacles, localization_ptr, predict_path);
 
-  // collision check
-  SpeedDecisions speed_decisions;
-  ParkingStopDecider stop_decider =
-      ParkingStopDecider(col_det_interface_ptr, localization_ptr);
-  stop_decider.Process(100, path2, &speed_decisions);
-
-  // use boken obs dist, need retire
-  UpdatePathObsDistance(path2, obs_s, dist_to_obs);
-  stop_decider.AddDebugInfo(path2);
-
-  // update speed limit decision
-  ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
-  speed_limit_decider.Process(path2, &speed_decisions);
-  const SpeedLimitProfile &speed_limit =
-      speed_limit_decider.GetSpeedLimitProfile();
-
-  // generate dp speed
-  DpSpeedOptimizer dp_speed_optimizer;
-  dp_speed_optimizer.Init();
-  dp_speed_optimizer.Excute(path2, start_pose, ego_v, ego_acc, &speed_decisions,
-                         &speed_limit);
-
-  dp_speed_profile_ = dp_speed_optimizer.SpeedProfile();
-
-  PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
   SVPoint init_point;
   init_point.s = 0.0;
   init_point.v = ego_v;
   init_point.acc = ego_acc;
   init_point.t = 0.0;
 
-  qp_speed_optimizer.Execute(init_point, &speed_limit, dp_speed_profile_);
+  // collision check
+  planning::SpeedDecisions speed_decisions;
+  ParkingStopDecider stop_decider =
+      ParkingStopDecider(col_det_interface_ptr, localization_ptr, obstacles);
+
+  stop_decider.Execute(init_point, path2);
+  if (dist_to_obs < 0.06) {
+    planning::LonDecisionReason decision_reason =
+        planning::LonDecisionReason::STATIC_OCC_COLLISION;
+    stop_decider.AddStopDecisionByDistance(obs_s, decision_reason);
+  }
+  speed_decisions.decisions.emplace_back(stop_decider.GetStopDecision());
+
+  // update speed limit decision
+  ParkSpeedLimitDecider speed_limit_decider =
+      ParkSpeedLimitDecider(col_det_interface_ptr, localization_ptr, obstacles);
+  speed_limit_decider.Execute(path2, &speed_decisions);
+
+  // use boken obs dist, need retire
+  UpdatePathObsDistance(path2, obs_s, dist_to_obs);
+  speed_limit_decider.AddSpeedLimitDecisions(path2, &speed_decisions);
+  speed_limit_decider.PublishDebugInfo(path2);
+  const SpeedLimitProfile &speed_limit =
+      speed_limit_decider.GetSpeedLimitProfile();
+
+  // generate dp speed
+  DpSpeedOptimizer dp_speed_optimizer;
+  dp_speed_optimizer.Excute(path2, start_pose, init_point, &speed_decisions,
+                            &speed_limit);
+
+  dp_speed_profile_ = dp_speed_optimizer.SpeedProfile();
+
+  PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
+  qp_speed_optimizer.Execute(init_point, &speed_limit, dp_speed_profile_,
+                             &speed_decisions);
   qp_speed_profile_ = qp_speed_optimizer.GetSpeedData();
 
   JerkLimitedTrajOptimizer jlt_optimizer;
-  jlt_optimizer.Execute(init_point, path_length);
+  jlt_optimizer.Execute(init_point, init_point, path2, &speed_decisions);
   jlt_speed_profile_ = jlt_optimizer.GetSpeedData();
 
   return global_path_;
@@ -246,7 +260,7 @@ std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
   std::vector<Eigen::VectorXd> speed_debug_data;
   Eigen::VectorXd v(7);
 
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto &debug_ = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaSpeedDebug *speed_debug;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
@@ -303,7 +317,7 @@ std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
   std::vector<Eigen::Vector2d> speed_debug_data;
   Eigen::Vector2d v;
 
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto &debug_ = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaSpeedDebug *speed_debug;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
@@ -336,7 +350,7 @@ std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
 }
 
 const double GetRefCruiseSpeed() {
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto &debug_ = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaSpeedDebug *speed_debug;
   if (debug_->has_apa_speed_debug()) {
     speed_debug = debug_->mutable_apa_speed_debug();
@@ -404,7 +418,7 @@ std::vector<Eigen::VectorXd> GetJLTSpeedData() {
   return speed_profile;
 }
 
-PYBIND11_MODULE(dp_speed_optimizer_py, m) {
+PYBIND11_MODULE(apa_speed_optimizer_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)

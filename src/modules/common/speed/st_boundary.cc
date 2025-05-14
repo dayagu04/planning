@@ -1,21 +1,16 @@
 #include "speed/st_boundary.h"
-#include "config/dp_st_speed_config.h"
-#include "math/math_utils.h"
 
 #include <iostream>
+
 #include "assert.h"
 #include "common.h"
+#include "math/math_utils.h"
 
 namespace planning {
 
-planning_math::IntervalMethodSolution<double> STBoundary::interval_methods_;
-
 STBoundary::STBoundary(
     const std::vector<std::pair<STPoint, STPoint>>& point_pairs) {
-  // assert(IsValid(point_pairs));
-
   std::vector<std::pair<STPoint, STPoint>> reduced_pairs(point_pairs);
-  // RemoveRedundantPoints(&reduced_pairs);
 
   for (const auto& item : reduced_pairs) {
     // use same t for both points
@@ -23,15 +18,6 @@ STBoundary::STBoundary(
     lower_points_.emplace_back(item.first);
     upper_points_.emplace_back(item.second);
   }
-
-  for (const auto& point : lower_points_) {
-    points_.emplace_back(point);
-  }
-  for (auto rit = upper_points_.rbegin(); rit != upper_points_.rend(); ++rit) {
-    points_.emplace_back(*rit);
-  }
-
-  BuildFromPoints();
 
   for (const auto& point : lower_points_) {
     min_s_ = std::min(min_s_, point.s());
@@ -49,58 +35,9 @@ bool STBoundary::IsPointNear(const planning_math::LineSegment2d& seg,
   return seg.DistanceSquareTo(point) < max_dist * max_dist;
 }
 
-std::string STBoundary::TypeName(BoundaryType type) {
-  if (type == BoundaryType::FOLLOW) {
-    return "FOLLOW";
-  } else if (type == BoundaryType::KEEP_CLEAR) {
-    return "KEEP_CLEAR";
-  } else if (type == BoundaryType::OVERTAKE) {
-    return "OVERTAKE";
-  } else if (type == BoundaryType::STOP) {
-    return "STOP";
-  } else if (type == BoundaryType::YIELD) {
-    return "YIELD";
-  } else if (type == BoundaryType::UNKNOWN) {
-    return "UNKNOWN";
-  }
-  LOG_DEBUG("Unknown boundary type %d, treated as UNKNOWN",
-            static_cast<int>(type));
-  return "UNKNOWN";
-}
-
-void STBoundary::RemoveRedundantPoints(
-    std::vector<std::pair<STPoint, STPoint>>* point_pairs) {
-  if (!point_pairs || point_pairs->size() <= 2) {
-    return;
-  }
-
-  const double kMaxDist = 0.1;
-  size_t i = 0;
-  size_t j = 1;
-
-  while (i < point_pairs->size() && j + 1 < point_pairs->size()) {
-    planning_math::LineSegment2d lower_seg(point_pairs->at(i).first,
-                                           point_pairs->at(j + 1).first);
-    planning_math::LineSegment2d upper_seg(point_pairs->at(i).second,
-                                           point_pairs->at(j + 1).second);
-    if (!IsPointNear(lower_seg, point_pairs->at(j).first, kMaxDist) ||
-        !IsPointNear(upper_seg, point_pairs->at(j).second, kMaxDist)) {
-      ++i;
-      if (i != j) {
-        point_pairs->at(i) = point_pairs->at(j);
-      }
-    }
-    ++j;
-  }
-  point_pairs->at(++i) = point_pairs->back();
-  point_pairs->resize(i + 1);
-}
-
 bool STBoundary::IsValid(
     const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const {
   if (point_pairs.size() < 2) {
-    LOG_DEBUG("point_pairs.size() must > 2. current point_pairs.size() = %lu",
-              point_pairs.size());
     return false;
   }
 
@@ -110,12 +47,10 @@ bool STBoundary::IsValid(
     const auto& curr_lower = point_pairs[i].first;
     const auto& curr_upper = point_pairs[i].second;
     if (curr_upper.s() < curr_lower.s()) {
-      LOG_DEBUG("s is not increasing");
       return false;
     }
 
     if (abs(curr_lower.t() - curr_upper.t()) > kStBoundaryEpsilon) {
-      LOG_DEBUG("t diff is larger in each STPoint pair");
       return false;
     }
 
@@ -124,11 +59,6 @@ bool STBoundary::IsValid(
       const auto& next_upper = point_pairs[i + 1].second;
       if (std::max(curr_lower.t(), curr_upper.t()) + kMinDeltaT >=
           std::min(next_lower.t(), next_upper.t())) {
-        LOG_DEBUG("t is not increasing");
-        // std::cout << " curr_lower: " << curr_lower.DebugString();
-        // std::cout << " curr_upper: " << curr_upper.DebugString();
-        // std::cout << " next_lower: " << next_lower.DebugString();
-        // std::cout << " next_upper: " << next_upper.DebugString();
         return false;
       }
     }
@@ -143,7 +73,6 @@ bool STBoundary::IsPointInBoundary(const STPoint& st_point) const {
   size_t left = 0;
   size_t right = 0;
   if (!GetIndexRange(lower_points_, st_point.t(), &left, &right)) {
-    LOG_DEBUG("failed to get index range.");
     return false;
   }
   const double check_upper = planning_math::CrossProd(
@@ -281,16 +210,9 @@ STBoundary STBoundary::ExpandByT(const double t) const {
   return STBoundary(std::move(point_pairs));
 }
 
-STBoundary::BoundaryType STBoundary::boundary_type() const {
-  return boundary_type_;
-}
-void STBoundary::SetBoundaryType(const BoundaryType& boundary_type) {
-  boundary_type_ = boundary_type;
-}
+size_t STBoundary::id() const { return id_; }
 
-int STBoundary::id() const { return id_; }
-
-void STBoundary::set_id(const int& id) { id_ = id; }
+void STBoundary::set_id(const size_t id) { id_ = id; }
 
 double STBoundary::characteristic_length() const {
   return characteristic_length_;
@@ -298,114 +220,6 @@ double STBoundary::characteristic_length() const {
 
 void STBoundary::SetCharacteristicLength(const double characteristic_length) {
   characteristic_length_ = characteristic_length;
-}
-
-bool STBoundary::GetUnblockSRange(const double curr_time, double* s_upper,
-                                  double* s_lower) const {
-  assert(s_upper != nullptr);
-  assert(s_lower != nullptr);
-
-  if (interval_methods_.is_in_intervals(invalid_time_sections_, curr_time)) {
-    return false;
-  }
-
-  *s_upper = dp_st_config::FLAGS_speed_lon_decision_horizon;
-  *s_lower = 0.0;
-  if (curr_time < min_t_ || curr_time > max_t_) {
-    return true;
-  }
-
-  size_t left = 0;
-  size_t right = 0;
-  if (!GetIndexRange(lower_points_, curr_time, &left, &right)) {
-    // std::cout << "Fail to get index range.";
-    return false;
-  }
-  double r = 0.0;
-  // if (left != right) {
-  //   r = (curr_time - upper_points_[left].t()) /
-  //       (upper_points_.at(right).t() - upper_points_.at(left).t());
-  // }
-  if (left != right) {
-    double left_time_dis = std::abs(curr_time - upper_points_[left].t());
-    double range_time_dis =
-        std::abs(upper_points_[left].t() - upper_points_[right].t());
-    std::pair<double, double> time_range{upper_points_[left].t(),
-                                         upper_points_[right].t()};
-    if (!interval_methods_.intersect(invalid_time_sections_, time_range)
-             .empty()) {
-      r = left_time_dis < range_time_dis ? 0 : 1;
-    } else {
-      r = (curr_time - upper_points_[left].t()) /
-          (upper_points_.at(right).t() - upper_points_.at(left).t());
-    }
-  }
-
-  double upper_cross_s =
-      upper_points_[left].s() +
-      r * (upper_points_[right].s() - upper_points_[left].s());
-  double lower_cross_s =
-      lower_points_[left].s() +
-      r * (lower_points_[right].s() - lower_points_[left].s());
-
-  if (boundary_type_ == BoundaryType::STOP ||
-      boundary_type_ == BoundaryType::YIELD ||
-      boundary_type_ == BoundaryType::FOLLOW) {
-    *s_upper = lower_cross_s;
-    // todo: add 0 < s_lower < s_upper < horizon check
-  } else if (boundary_type_ == BoundaryType::OVERTAKE) {
-    *s_lower = std::fmax(*s_lower, upper_cross_s);
-  } else {
-    LOG_DEBUG("boundary_type is not supported. boundary_type: %d",
-              static_cast<int>(boundary_type_));
-    return false;
-  }
-  return true;
-}
-
-bool STBoundary::GetBoundarySRange(const double curr_time, double* s_upper,
-                                   double* s_lower) const {
-  assert(s_upper != nullptr);
-  assert(s_lower != nullptr);
-  if (curr_time < min_t_ || curr_time > max_t_) {
-    return false;
-  }
-  if (interval_methods_.is_in_intervals(invalid_time_sections_, curr_time)) {
-    return false;
-  }
-
-  size_t left = 0;
-  size_t right = 0;
-  if (!GetIndexRange(lower_points_, curr_time, &left, &right)) {
-    // std::cout << "Fail to get index range.";
-    return false;
-  }
-  double r = 0.0;
-  if (left != right) {
-    double left_time_dis = std::abs(curr_time - upper_points_[left].t());
-    double range_time_dis =
-        std::abs(upper_points_[left].t() - upper_points_[right].t());
-    std::pair<double, double> time_range{upper_points_[left].t(),
-                                         upper_points_[right].t()};
-    if (!interval_methods_.intersect(invalid_time_sections_, time_range)
-             .empty()) {
-      r = left_time_dis < range_time_dis ? 0 : 1;
-    } else {
-      r = (curr_time - upper_points_[left].t()) /
-          (upper_points_.at(right).t() - upper_points_.at(left).t());
-    }
-  }
-
-  *s_upper = upper_points_[left].s() +
-             r * (upper_points_[right].s() - upper_points_[left].s());
-  *s_lower = lower_points_[left].s() +
-             r * (lower_points_[right].s() - lower_points_[left].s());
-
-  // *s_upper = std::min(*s_upper,
-  // dp_st_config::FLAGS_speed_lon_decision_horizon);
-  *s_lower = std::max(*s_lower, 0.0);
-  *s_upper = std::max(*s_upper, *s_lower);
-  return true;
 }
 
 double STBoundary::min_s() const { return min_s_; }
@@ -450,20 +264,6 @@ STBoundary STBoundary::CreateInstance(
         STPoint(upper_points.at(i).s(), upper_points.at(i).t()));
   }
   return STBoundary(point_pairs);
-}
-
-STBoundary STBoundary::CutOffByT(const double t) const {
-  std::vector<STPoint> lower_points;
-  std::vector<STPoint> upper_points;
-  for (size_t i = 0; i < lower_points_.size() && i < upper_points_.size();
-       ++i) {
-    if (lower_points_[i].t() <= t) {
-      continue;
-    }
-    lower_points.push_back(lower_points_[i]);
-    upper_points.push_back(upper_points_[i]);
-  }
-  return CreateInstance(lower_points, upper_points);
 }
 
 void STBoundary::set_upper_left_point(STPoint st_point) {

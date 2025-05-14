@@ -8,7 +8,7 @@
 #include "config/message_type.h"
 #include "planning_plan_c.h"
 #include "prediction_object.h"
-#include "src/modules//common/utils/path_point.h"
+#include "src/modules/common/utils/path_point.h"
 /**
  * @namespace apollo::common::math
  * @brief apollo::common::math
