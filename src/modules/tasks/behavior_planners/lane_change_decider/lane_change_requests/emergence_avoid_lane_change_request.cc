@@ -25,7 +25,8 @@
 namespace planning {
 
 namespace {
-constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.33;
+constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.2;
+constexpr double kEmergencyAvoidanceHalfDistance = 0.65;
 constexpr double kEmergencyAvoidancelongitudinalDistanceThreshold = 100.0;
 constexpr int kInvalidAgentId = -1;
 constexpr double kEmergencySituationDuration = 0.4;
@@ -250,12 +251,11 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     Reset();
     return;
   }
-  const double ego_left_edge = vehicle_param.max_width * 0.5;
-  const double ego_right_edge = vehicle_param.max_width * 0.5;
+
   const double lateral_left_offset =
-      ego_left_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
+  kEmergencyAvoidanceHalfDistance + kEmergencyAvoidanceLateralSafeDistanceThreshold;
   const double lateral_right_offset =
-      ego_right_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
+  kEmergencyAvoidanceHalfDistance + kEmergencyAvoidanceLateralSafeDistanceThreshold;
   bool has_emergency_leading_vehicle = false;
   int leading_vehicle_id_ = -1;
   double leading_vehicle_speed = std::numeric_limits<double>::max();
@@ -328,6 +328,7 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     }
   } else {
     emergency_situation_timetstamp_ = std::numeric_limits<double>::max();
+    is_emergency_avoidance_situation_ = false;
   }
 }
 
