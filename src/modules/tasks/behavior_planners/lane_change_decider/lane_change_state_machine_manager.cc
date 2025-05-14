@@ -545,12 +545,19 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
 
   const auto &current_reference_path =
       reference_path_mgr->get_reference_path_by_lane(clane_virtual_id);
+  const auto &frenet_coord = current_reference_path->get_frenet_coord();
   const auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
-
+  const auto &planning_init_point = frenet_ego_state.planning_init_point();
+  double diff_heading_angle = planning_math::NormalizeAngle(
+      planning_init_point.heading_angle -
+      frenet_coord->GetPathCurveHeading(planning_init_point.frenet_state.s));
   bool perfect_in_lane = false;
+  // perfect_in_lane =
+  //     ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
+  //      (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
   perfect_in_lane =
-      ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
-       (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+      ((std::fabs(planning_init_point.frenet_state.r) < dist_threshold) &&
+       (std::fabs(diff_heading_angle) < angle_threshold));
   return perfect_in_lane;
 }
 
@@ -828,6 +835,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
   auto point_size = ref_point.size();
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
+  cart_ref_info.k_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
   std::vector<double> kappa_radius_vec;
   kappa_radius_vec.resize(point_size);
@@ -860,14 +868,41 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y() -
                                    ref_point.at(i - 1).path_point.y())
               : 0.;
+    if (i > 0 && i < point_size - 1) {
+      double side_a =
+          std::hypot(ref_point.at(i + 1).path_point.x() -
+                     ref_point.at(i).path_point.x(),
+                     ref_point.at(i + 1).path_point.y() -
+                     ref_point.at(i).path_point.y());
+      double side_b =
+          std::hypot(ref_point.at(i + 1).path_point.x() -
+                     ref_point.at(i - 1).path_point.x(),
+                     ref_point.at(i + 1).path_point.y() -
+                     ref_point.at(i - 1).path_point.y());
+      double side_c =
+          std::hypot(ref_point.at(i).path_point.x() -
+                     ref_point.at(i - 1).path_point.x(),
+                     ref_point.at(i).path_point.y() -
+                     ref_point.at(i - 1).path_point.y());
+      if (side_a == 0 || side_b == 0 || side_c == 0) {
+        cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
+      } else {
+        double cos_B = (side_a * side_a + side_c * side_c - side_b * side_b) / (2 * side_a * side_c);
+        double sin_B = std::sqrt(1 - cos_B * cos_B);
+        cart_ref_info.k_vec[i] = 2.0 * sin_B / side_b;
+      }
+    } else {
+      cart_ref_info.k_vec[i] = ref_point.at(i).path_point.kappa();
+    }
     kappa_radius_vec[i] = std::min(
-        std::max(1.0 / (ref_point.at(i).path_point.kappa() + 1e-6), -10000.0),
+        std::max(1.0 / (cart_ref_info.k_vec[i] + 1e-6), -10000.0),
         10000.0);
     if (!session_->is_rads_scene() && cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);
       cart_ref_info.y_vec.resize(i);
+      cart_ref_info.k_vec.resize(i);
       cart_ref_info.s_vec.resize(i);
       kappa_radius_vec.resize(i);
       break;
@@ -876,6 +911,14 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   cart_ref_info.x_s_spline.set_points(cart_ref_info.s_vec, cart_ref_info.x_vec);
   cart_ref_info.y_s_spline.set_points(cart_ref_info.s_vec, cart_ref_info.y_vec);
+  if (cart_ref_info.k_vec.size() > 2) {
+    cart_ref_info.k_vec[0] =
+        cart_ref_info.k_vec[1];
+    cart_ref_info.k_vec[cart_ref_info.k_vec.size() - 1] =
+        cart_ref_info.k_vec[cart_ref_info.k_vec.size() - 2];
+  }
+  cart_ref_info.k_s_spline.set_points(
+      cart_ref_info.s_vec, cart_ref_info.k_vec, pnc::mathlib::spline::linear);
 
   JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)

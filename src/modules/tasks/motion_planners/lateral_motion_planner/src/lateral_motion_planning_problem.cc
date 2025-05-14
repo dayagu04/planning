@@ -52,7 +52,7 @@ void LateralMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
+      std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk soft bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor cost
   ilqr_core_ptr_->AddCost(
@@ -76,21 +76,25 @@ void LateralMotionPlanningProblem::Init() {
 uint8_t LateralMotionPlanningProblem::Update(
     const double end_ratio_for_qxy, const double end_ratio_for_qtheta,
     const double end_ratio_for_qjerk,
-    const size_t motion_plan_concerned_start_index,
     const double concerned_start_q_jerk, const double ego_vel,
+    const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
     planning::common::LateralPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
   std::vector<ilqr_solver::IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
 
+  const auto &path_weights = planning_weight->GetPathWeights();
   const double ref_vel = planning_input.ref_vel();
   const double kv2 = planning_input.curv_factor() * ego_vel * ego_vel;
 
   for (size_t i = 0; i < N; ++i) {
+    double expected_delta = path_weights.expected_acc[i] / kv2;
     // calculate delta_bound and omega_bound
-    double delta_bound = planning_input.acc_bound() / kv2;
-    double omega_bound = planning_input.jerk_bound() / kv2;
+    double delta_upper_bound = path_weights.acc_upper_bound[i] / kv2;
+    double delta_lower_bound = path_weights.acc_lower_bound[i] / kv2;
+    double omega_upper_bound = path_weights.jerk_upper_bound[i] / kv2;
+    double omega_lower_bound = path_weights.jerk_lower_bound[i] / kv2;
     // reference
     cost_config_vec.at(i)[REF_X] = planning_input.ref_x_vec(i);
     cost_config_vec.at(i)[REF_Y] = planning_input.ref_y_vec(i);
@@ -103,9 +107,13 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[CONTINUITY_Y] = planning_input.last_y_vec(i);
     cost_config_vec.at(i)[CONTINUITY_THETA] = planning_input.last_theta_vec(i);
 
+    cost_config_vec.at(i)[EXPECTEDE_DELTA] = expected_delta;
+
     // bounds
-    cost_config_vec.at(i)[DELTA_BOUND] = delta_bound;
-    cost_config_vec.at(i)[OMEGA_BOUND] = omega_bound;
+    cost_config_vec.at(i)[DELTA_UPPER_BOUND] = delta_upper_bound;
+    cost_config_vec.at(i)[DELTA_LOWER_BOUND] = delta_lower_bound;
+    cost_config_vec.at(i)[OMEGA_UPPER_BOUND] = omega_upper_bound;
+    cost_config_vec.at(i)[OMEGA_LOWER_BOUND] = omega_lower_bound;
 
     cost_config_vec.at(i)[SOFT_UPPER_BOUND_X0] =
         planning_input.soft_upper_bound_x0_vec(i);
@@ -157,24 +165,28 @@ uint8_t LateralMotionPlanningProblem::Update(
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
+
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();
     cost_config_vec.at(i)[W_JERK_BOUND] = planning_input.q_jerk_bound();
 
+    // cost_config_vec.at(i)[W_SOFT_CORRIDOR] = path_weights.q_pos_soft_bound[i];
+    // cost_config_vec.at(i)[W_HARD_CORRIDOR] = path_weights.q_pos_hard_bound[i];
     cost_config_vec.at(i)[W_SOFT_CORRIDOR] = planning_input.q_soft_corridor();
     cost_config_vec.at(i)[W_HARD_CORRIDOR] = planning_input.q_hard_corridor();
 
     if (!planning_input.complete_follow()) {
-      if (i < motion_plan_concerned_start_index) {
+      if (i < path_weights.proximal_index) {
         double start_step =
             std::max((concerned_start_q_jerk - planning_input.q_jerk()) /
-                         motion_plan_concerned_start_index,
+                         path_weights.proximal_index,
                      0.0);
         cost_config_vec.at(i)[W_JERK] = concerned_start_q_jerk - start_step * i;
-        cost_config_vec.at(i)[W_SOFT_CORRIDOR] =
-            planning_input.q_soft_corridor() * 1.5;
-        cost_config_vec.at(i)[W_HARD_CORRIDOR] =
-            planning_input.q_hard_corridor() * 1.5;
+        // cost_config_vec.at(i)[W_SOFT_CORRIDOR] =
+        //     planning_input.q_soft_corridor() * 1.5;
+        // cost_config_vec.at(i)[W_HARD_CORRIDOR] =
+        //     planning_input.q_hard_corridor() * 1.5;
       } else if (i > planning_input.motion_plan_concerned_index()) {
+        cost_config_vec.at(i)[EXPECTEDE_DELTA] = cost_config_vec.at(i - 1)[EXPECTEDE_DELTA];
         cost_config_vec.at(i)[W_REF_X] =
             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_REF_X];
         cost_config_vec.at(i)[W_REF_Y] =
@@ -303,6 +315,7 @@ uint8_t LateralMotionPlanningProblem::Update(
 }
 
 uint8_t LateralMotionPlanningProblem::Update(
+    double expected_acc, double start_acc, double end_acc,
     double end_ratio_for_qxy, double end_ratio_for_qtheta,
     double end_ratio_for_qjerk, double max_iter,
     const size_t motion_plan_concerned_start_index,
@@ -318,6 +331,7 @@ uint8_t LateralMotionPlanningProblem::Update(
   const double kv2 = planning_input.curv_factor() * ego_vel * ego_vel;
 
   for (size_t i = 0; i < N; ++i) {
+    double expected_delta = expected_acc / kv2;
     // calculate delta_bound and omega_bound
     double delta_bound = planning_input.acc_bound() / kv2;
     double omega_bound = planning_input.jerk_bound() / kv2;
@@ -333,9 +347,13 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[CONTINUITY_Y] = planning_input.last_y_vec(i);
     cost_config_vec.at(i)[CONTINUITY_THETA] = planning_input.last_theta_vec(i);
 
+    cost_config_vec.at(i)[EXPECTEDE_DELTA] = expected_delta;
+
     // bounds
-    cost_config_vec.at(i)[DELTA_BOUND] = delta_bound;
-    cost_config_vec.at(i)[OMEGA_BOUND] = omega_bound;
+    cost_config_vec.at(i)[DELTA_UPPER_BOUND] = delta_bound;
+    cost_config_vec.at(i)[DELTA_LOWER_BOUND] = -delta_bound;
+    cost_config_vec.at(i)[OMEGA_UPPER_BOUND] = omega_bound;
+    cost_config_vec.at(i)[OMEGA_LOWER_BOUND] = -omega_bound;
 
     cost_config_vec.at(i)[SOFT_UPPER_BOUND_X0] =
         planning_input.soft_upper_bound_x0_vec(i);
@@ -387,6 +405,7 @@ uint8_t LateralMotionPlanningProblem::Update(
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
+
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();
     cost_config_vec.at(i)[W_JERK_BOUND] = planning_input.q_jerk_bound();
 
@@ -404,6 +423,7 @@ uint8_t LateralMotionPlanningProblem::Update(
             planning_input.q_soft_corridor() * 1.5;
         cost_config_vec.at(i)[W_HARD_CORRIDOR] =
             planning_input.q_hard_corridor() * 1.5;
+        cost_config_vec.at(i)[W_ACC] = start_acc;
       } else if (i > planning_input.motion_plan_concerned_index()) {
         cost_config_vec.at(i)[W_REF_X] =
             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_REF_X];
@@ -417,6 +437,7 @@ uint8_t LateralMotionPlanningProblem::Update(
             cost_config_vec.at(i - 1)[W_SOFT_CORRIDOR] * 0.3;
         cost_config_vec.at(i)[W_HARD_CORRIDOR] =
             cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.3;
+        cost_config_vec.at(i)[W_ACC] = end_acc;
       }
     }
 

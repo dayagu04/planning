@@ -616,8 +616,10 @@ class ReferencePath;
 struct CarReferenceInfo {
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
+  pnc::mathlib::spline k_s_spline;
   std::vector<double> x_vec;
   std::vector<double> y_vec;
+  std::vector<double> k_vec;
   std::vector<double> s_vec;
 };
 struct CoarsePlanningInfo {

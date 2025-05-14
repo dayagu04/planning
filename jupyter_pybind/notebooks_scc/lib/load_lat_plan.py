@@ -638,6 +638,92 @@ def update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data
                                             'polygon_id': select_obstacle_polygon_id})
 
 
+def load_center_line_info():
+  data_current_line_info = ColumnDataSource(data ={
+    'line_s': [],
+    'line_confidence': [],
+  })
+  data_left_line_info = ColumnDataSource(data ={
+    'line_s': [],
+    'line_confidence': [],
+  })
+  data_right_line_info = ColumnDataSource(data ={
+    'line_s': [],
+    'line_confidence': [],
+  })
+  data_default_line_info = ColumnDataSource(data ={
+    'line_s': [0, 250],
+    'line_confidence': [0.5, 0.5],
+  })
+
+  data_fig = {
+    'current_line': data_current_line_info,
+    'left_line': data_left_line_info,
+    'right_line': data_right_line_info,
+    'default_line': data_default_line_info,
+  }
+
+  fig = bkp.figure(x_axis_label='line_s', y_axis_label='confidence', width=800, height=160)
+  c_fig = fig.line('line_s', 'line_confidence', source = data_fig['current_line'], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'current line')
+  l_fig = fig.line('line_s', 'line_confidence', source = data_fig['left_line'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'left line')
+  r_fig = fig.line('line_s', 'line_confidence', source = data_fig['right_line'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right line')
+  fig.line('line_s', 'line_confidence', source = data_fig['default_line'], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'threshold')
+
+  hover1 = HoverTool(renderers=[c_fig], tooltips=[('s', '@line_s'), ('confidence', '@line_confidence')], mode='vline')
+  hover2 = HoverTool(renderers=[l_fig], tooltips=[('s', '@line_s'), ('confidence', '@line_confidence')], mode='vline')
+  hover3 = HoverTool(renderers=[r_fig], tooltips=[('s', '@line_s'), ('confidence', '@line_confidence')], mode='vline')
+  fig.add_tools(hover1)
+  fig.add_tools(hover2)
+  fig.add_tools(hover3)
+
+  fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
+  fig.legend.click_policy = 'hide'
+  return fig, data_fig
+
+def update_center_line_info(data_fig, local_view_data):
+  data_fig['current_line'].data.update({
+    'line_s': [],
+    'line_confidence': [],
+  })
+  data_fig['left_line'].data.update({
+    'line_s': [],
+    'line_confidence': [],
+  })
+  data_fig['right_line'].data.update({
+    'line_s': [],
+    'line_confidence': [],
+  })
+
+  data_center_line_dict = {
+    0:local_view_data['data_center_line_0'],
+    1:local_view_data['data_center_line_1'],
+    2:local_view_data['data_center_line_2'],
+    3:local_view_data['data_center_line_3'],
+    4:local_view_data['data_center_line_4'],
+    5:local_view_data['data_center_line_5'],
+    6:local_view_data['data_center_line_6'],
+    7:local_view_data['data_center_line_7'],
+    8:local_view_data['data_center_line_8'],
+    9:local_view_data['data_center_line_9'],
+  }
+  for i in range(10):
+    data_center_line = data_center_line_dict[i]
+    if data_center_line.data['center_line_{}_id'.format(i)][0] == 0:
+      data_fig['current_line'].data.update({
+        'line_s': data_center_line.data['center_line_{}_s'.format(i)],
+        'line_confidence': data_center_line.data['center_line_{}_confidence'.format(i)],
+      })
+    elif data_center_line.data['center_line_{}_id'.format(i)][0] == -1:
+      data_fig['left_line'].data.update({
+        'line_s': data_center_line.data['center_line_{}_s'.format(i)],
+        'line_confidence': data_center_line.data['center_line_{}_confidence'.format(i)],
+      })
+    elif data_center_line.data['center_line_{}_id'.format(i)][0] == 1:
+      data_fig['right_line'].data.update({
+        'line_s': data_center_line.data['center_line_{}_s'.format(i)],
+        'line_confidence': data_center_line.data['center_line_{}_confidence'.format(i)],
+      })
+
 def load_lateral_offset(bag_loader):
   data_fig = ColumnDataSource(data ={
     'lateral_offset_1': [],

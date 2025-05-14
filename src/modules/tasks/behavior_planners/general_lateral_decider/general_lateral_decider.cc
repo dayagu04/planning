@@ -117,7 +117,8 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds);
+  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds,
+                                      general_lateral_decider_output);
   GenerateLateralDeciderOutput(frenet_soft_bounds, frenet_hard_bounds,
                                general_lateral_decider_output);
 
@@ -397,68 +398,98 @@ void GeneralLateralDecider::UnitTest() {
 }
 
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
-    const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
-  const auto &route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
-  if (session_->environmental_model()
-          .get_virtual_lane_manager()
+    const double ego_v, const CoarsePlanningInfo& coars_planning_info, double &cruise_v) {
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager
           ->get_is_exist_ramp_on_road() ||
-      session_->environmental_model()
-          .get_virtual_lane_manager()
-          ->get_is_exist_split_on_ramp()) {
+      virtual_lane_manager
+          ->get_is_exist_split_on_ramp() ||
+      virtual_lane_manager
+          ->get_is_exist_intersection_split()) {
+      // (virtual_lane_manager
+      //         ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+      //  virtual_lane_manager
+      //         ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
     return false;
   }
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
     cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
   }
-  const double preview_length = 20.0;
+  const auto& reference_path = coars_planning_info.reference_path;
+  const double init_s =
+      reference_path->get_frenet_ego_state().planning_init_point().frenet_state.s;
+  const auto& cart_ref_info =
+      coars_planning_info.cart_ref_info;
+  const double preview_length = 15.0;
   const double preview_step = 1.0;
-  // double sum_close_kappa = 0.0;
   double sum_far_kappa = 0.0;
-  double preview_x = 3.0 * ego_v - 10.0;
-  std::vector<double> d_polys;
-  d_polys.resize(d_poly.size());
-  std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
-  for (double preview_distance = 0.0; preview_distance < preview_length;
-       preview_distance += preview_step) {
-    // sum_close_kappa +=
-    //     std::fabs(2 * d_polys[0] * preview_distance + d_polys[1]) /
-    //     std::pow(
-    //         std::pow(2 * d_polys[0] * preview_distance + d_polys[1], 2) + 1,
-    //         1.5);
-    sum_far_kappa +=
-        std::fabs(2 * d_polys[0] * (preview_distance + preview_x) +
-                  d_polys[1]) /
-        std::pow(std::pow(2 * d_polys[0] * (preview_distance + preview_x) +
-                              d_polys[1],
-                          2) +
-                     1,
-                 1.5);
-  }
-
-  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-    // double aver_close_kappa = sum_close_kappa / std::max((preview_length /
-    // preview_step), 1.0);
-    double aver_far_kappa =
-        sum_far_kappa / std::max((preview_length / preview_step), 1.0);
-    // double close_kappa_radius = 1.0 / std::max(aver_close_kappa, 0.0001);
-    double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
-    // JSON_DEBUG_VALUE("close_kappa_radius", close_kappa_radius);
-    JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
-    // if ((close_kappa_radius < 750.0) || (far_kappa_radius < 750.0)) {
-    //   double road_radius = close_kappa_radius < far_kappa_radius
-    //                           ? close_kappa_radius
-    //                           : far_kappa_radius;
-    if (far_kappa_radius < 750.0) {
-      double road_radius = far_kappa_radius;
-      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
-      std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
-      double acc_max = interp(road_radius, xp_radius, fp_acc);
-      cruise_v = std::min(
-          std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
-      return true;
+  double preview_s = std::max(3.0 * ego_v - 5.0, 20.0);
+  if (cart_ref_info.k_s_spline.get_x().size() > 0) {
+    for (double preview_distance = 0.0; preview_distance < preview_length;
+        preview_distance += preview_step) {
+      sum_far_kappa +=
+          std::fabs(cart_ref_info.k_s_spline(init_s + preview_s + preview_distance));
+    }
+  } else {
+    for (double preview_distance = 0.0; preview_distance < preview_length;
+        preview_distance += preview_step) {
+      ReferencePathPoint ref_ponit;
+      reference_path->get_reference_point_by_lon(init_s + preview_s + preview_distance,
+                                                 ref_ponit);
+      sum_far_kappa += std::fabs(ref_ponit.path_point.kappa());
     }
   }
+  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
+    double aver_far_kappa =
+        sum_far_kappa / std::max((preview_length / preview_step), 1.0);
+    double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
+    JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
+    if (virtual_lane_manager
+            ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+        virtual_lane_manager
+            ->GetIntersectionState() <= common::OFF_INTERSECTION) {
+      if (far_kappa_radius <= 50.0) {
+        return true;
+      }
+    } else {
+      if (far_kappa_radius < 750.0) {
+        return true;
+      }
+    }
+
+  }
+  // std::vector<double> d_polys;
+  // d_polys.resize(d_poly.size());
+  // std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
+  // for (double preview_distance = 0.0; preview_distance < preview_length;
+  //      preview_distance += preview_step) {
+  //   sum_far_kappa +=
+  //       std::fabs(2 * d_polys[0] * (preview_distance + preview_x) +
+  //                 d_polys[1]) /
+  //       std::pow(std::pow(2 * d_polys[0] * (preview_distance + preview_x) +
+  //                             d_polys[1],
+  //                         2) +
+  //                    1,
+  //                1.5);
+  // }
+  // if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
+  //   double aver_far_kappa =
+  //       sum_far_kappa / std::max((preview_length / preview_step), 1.0);
+  //   double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
+  //   JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
+  //   if (far_kappa_radius < 750.0) {
+  //     double road_radius = far_kappa_radius;
+  //     std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
+  //     std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
+  //     double acc_max = interp(road_radius, xp_radius, fp_acc);
+  //     cruise_v = std::min(
+  //         std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
+  //     return true;
+  //   }
+  // }
   return false;
 }
 
@@ -473,13 +504,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
   const auto &frenet_coord =
-      coarse_planning_info.reference_path->get_frenet_coord();
-  Eigen::Vector2d cart_init_point(
-      ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
-      ego_cart_state_manager_->planning_init_point().lat_init_state.y());
-  Point2D frenet_init_pt{0.0, 3.0};
-  Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
-  frenet_coord->XYToSL(cart_init_pt, frenet_init_pt);
+      reference_path_ptr_->get_frenet_coord();
+  const auto &planning_init_point =
+      ego_frenet_state_.planning_init_point();
 
   bool limit_ref_vel_on_ramp_valid = false;
   bool is_LC_CHANGE =
@@ -495,15 +522,22 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
   double dynamic_ref_buffer =
-      interp(v_ego, xp_v_ego, config_.dynamic_ref_buffer);
+      interp(v_ego, xp_v_ego, config_.dynamic_lc_ref_buffer);
+  if (is_LC_BACK) {
+    dynamic_ref_buffer =
+        interp(v_ego, xp_v_ego, config_.dynamic_lc_finished_ref_buffer);
+  }
   double init_dist_to_ref =
-      std::fabs(frenet_init_pt.y - lateral_offset) - dynamic_ref_buffer;
+      std::fabs(planning_init_point.frenet_state.r - lateral_offset) - dynamic_ref_buffer;
   double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
+  if (is_LC_BACK) {
+    dist_to_second_stage = init_dist_to_ref - config_.lc_finished_second_dist_thr;
+  }
   if (dist_to_second_stage < -1e-6) {
     dynamic_ref_buffer =
         std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
   }
-  if (frenet_init_pt.y < -1e-6) {
+  if (planning_init_point.frenet_state.r < -1e-6) {
     dynamic_ref_buffer = -dynamic_ref_buffer;
   }
 
@@ -514,19 +548,22 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
     // generate traj_points based on kMaxAcc or kMinAcc
-    const auto &planning_init_point =
-        ego_cart_state_manager_->planning_init_point();
     double kMaxAcc = 0.8;
-    if (is_LC_CHANGE || is_LC_BACK) {
-      kMaxAcc = 1e-6;
-    }
     const double kMinAcc = -5.5;
-    // double cruise_v = session_->planning_context().v_ref_cruise();
     double cruise_v = std::max(config_.min_v_cruise,
                                session_->planning_context().v_ref_cruise());
     double ego_v = planning_init_point.v;
-    if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
+    // if (cruise_v < 4.167) {  // low speed cruise
+    //   kMaxAcc = 0.4;
+    // }
+    if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
+      ego_v = std::max(ego_v, config_.min_v_cruise);
+      kMaxAcc = 0.2;
+    }
+    if (is_LC_CHANGE || is_LC_BACK) {
+      ego_v = std::max(ego_v, config_.min_v_cruise);
+      kMaxAcc = 1e-6;
     }
     double s = 0.0;
     double span_t = config_.delta_t * config_.num_step;
@@ -547,21 +584,21 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
-    const double max_ref_length =
-        session_->planning_context().v_ref_cruise() * span_t;
-    double avg_cruise_v = std::min(s, max_ref_length) / span_t;
-    double delta_s = avg_cruise_v * config_.delta_t;
-    // Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
-    //                                 planning_init_point.lat_init_state.y());
+    const auto &motion_planner_output =
+        session_->planning_context().motion_planner_output();
+    if (motion_planner_output.lat_enable_flag &&
+        motion_planner_output.lat_init_flag) {
+      double last_ref_length =
+          motion_planner_output.s_lat_vec.back() - motion_planner_output.s_lat_vec[1];
+      s = std::min(s, last_ref_length + 0.5);
+    }
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
-    pnc::spline::Projection projection_spline;
-    projection_spline.CalProjectionPoint(
-        cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
-        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
-        cart_init_point);
-
-    double s_ref = projection_spline.GetOutput().s_proj;
-    s_ref = frenet_init_pt.x;
+    double s_ref = planning_init_point.frenet_state.s;
+    const double max_ref_length = std::max(
+        std::min(cart_ref_info.s_vec.back(),frenet_coord->Length()) - s_ref - 0.01,
+        0.0);
+    double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
+    double delta_s = avg_cruise_v * config_.delta_t;
     traj_points.clear();
     TrajectoryPoint point;
     constexpr double kEps = 1e-4;
@@ -600,7 +637,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
        gap_selector_decider_output.gap_selector_trustworthy)) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
-    if ((dist_to_second_stage < -1e-6) && !is_LC_HOLD) {
+    if ((dist_to_second_stage < -1e-6 ||
+        !gap_selector_decider_output.gap_selector_trustworthy) && !is_LC_HOLD) {
       HandleAvoidScene(traj_points, dynamic_ref_buffer);
     }
   } else {
@@ -615,9 +653,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
 void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
                                              double dynamic_ref_buffer) {
   const auto &frenet_coord =
-      session_->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info.reference_path->get_frenet_coord();
+      reference_path_ptr_->get_frenet_coord();
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
@@ -648,6 +684,11 @@ void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
 bool GeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
   ref_path_points_.reserve(traj_points.size());
+  min_road_radius_ = 10.0;
+  const auto &coarse_planning_info =
+      session_->planning_context()
+              .lane_change_decider_output()
+              .coarse_planning_info;
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
@@ -655,6 +696,14 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
       // add logs
       LOG_ERROR("Get reference point by lon failed!");
     }
+    double road_radius1 =
+        1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
+    double road_radius2 = 10.0;
+    if (coarse_planning_info.cart_ref_info.k_s_spline.get_x().size() > 0) {
+      road_radius2 =
+          1 / std::max(std::fabs(coarse_planning_info.cart_ref_info.k_s_spline(traj_point.s)), 1e-6);
+    }
+    min_road_radius_ = std::max(std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_), 0.2);
     ref_path_points_.emplace_back(refpath_pt);
   }
 
@@ -662,9 +711,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
   const auto &frenet_coord =
-      session_->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info.reference_path->get_frenet_coord();
+      reference_path_ptr_->get_frenet_coord();
   auto &last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
                                .raw_traj_points;
@@ -786,11 +833,20 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
 
   const double kDefaultDistanceToRoad = 10.0;
+  min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound soft_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    Bound hard_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    Bound soft_bound_road{-min_road_radius_, min_road_radius_};
+    Bound hard_bound_road{-min_road_radius_, min_road_radius_};
+    // if (ref_path_points_[i].path_point.kappa() > 0.0) {
+    //   soft_bound_road.upper = min_road_radius;
+    //   hard_bound_road.upper = min_road_radius;
+    // } else {
+    //   soft_bound_road.lower = -min_road_radius;
+    //   hard_bound_road.lower = -min_road_radius;
+    // }
+
     MapObstaclePositionDecision map_obstacle_decision;
 
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;
@@ -2582,12 +2638,19 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 }
 
 void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+  bool bound_avoid = false;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
+    if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
+        ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
+      bound_avoid = true;
+    }
     ref_traj_points_[i].l =
         std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
                  frenet_soft_bounds[i].second);
   }
+  general_lateral_decider_output.bound_avoid = bound_avoid;
 }
 
 void GeneralLateralDecider::GenerateLateralDeciderOutput(

@@ -910,14 +910,23 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "lc_second_dist_thr"},
         lc_second_dist_thr);
+    lc_finished_second_dist_thr = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "lc_finished_second_dist_thr"},
+        lc_finished_second_dist_thr);
     use_obstacle_prediction_model_in_planning =
         read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
                             use_obstacle_prediction_model_in_planning);
 
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
-                                                   "dynamic_ref_buffer"},
-                          dynamic_ref_buffer);
+                                                   "dynamic_lc_ref_buffer"},
+                          dynamic_lc_ref_buffer);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "dynamic_lc_finished_ref_buffer"},
+                          dynamic_lc_finished_ref_buffer);
     ReadItem<bool>(json, not_use_gap_flag, "general_lateral_decider",
                    "not_use_gap_flag");
 
@@ -1057,7 +1066,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double ramp_limit_v = 19.44;
   bool ramp_limit_v_valid = false;
   double lc_second_dist_thr = 1.5;
-  std::vector<double> dynamic_ref_buffer{0.0, 0.1, 0.2, 0.3};
+  double lc_finished_second_dist_thr = 1.5;
+  std::vector<double> dynamic_lc_ref_buffer{0.0, 0.1, 0.2, 0.3};
+  std::vector<double> dynamic_lc_finished_ref_buffer{0.0, 0.05, 0.1, 0.2};
   bool not_use_gap_flag = true;
   double min_v_cruise = 5.0;
 
@@ -1344,6 +1355,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
+    ReadItem<double>(json, jerk_bound, "lat_motion_ilqr", "jerk_bound");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"},
         map_jerk_bound, map_jerk_bound);
@@ -1359,6 +1371,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_continuity, "lat_motion_ilqr", "q_continuity");
     ReadItem<double>(json, q_continuity_search, "lat_motion_ilqr",
                      "q_continuity_search");
+    ReadItem<double>(json, q_continuity_lane_change, "lat_motion_ilqr",
+                     "q_continuity_lane_change");
     ReadItem<double>(json, q_acc, "lat_motion_ilqr", "q_acc");
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
     ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
@@ -1490,8 +1504,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "motion_plan_concerned_start_index");
     ReadItem<size_t>(json, motion_plan_concerned_end_index, "lat_motion_ilqr",
                      "motion_plan_concerned_end_index");
-    ReadItem<double>(json, valid_perception_range, "lat_motion_ilqr",
-                     "valid_perception_range");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "valid_perception_range"}, valid_perception_range);
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"},
         map_qxy, map_qxy);
@@ -1539,11 +1553,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "q_jerk_ramp_close");
     ReadItem<double>(json, q_jerk_ramp_mid, "lat_motion_ilqr",
                      "q_jerk_ramp_mid");
-    ReadItem<double>(json, valid_perception_range_on_ramp, "lat_motion_ilqr",
-                     "valid_perception_range_on_ramp");
     ReadItem<double>(json, big_theta_thr, "lat_motion_ilqr", "big_theta_thr");
-    ReadItem<double>(json, q_jerk_for_big_theta, "lat_motion_ilqr",
-                     "q_jerk_for_big_theta");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_for_big_theta"},
+        q_jerk_for_big_theta);
     ReadItem<double>(json, path_backward_appended_length, "lat_motion_ilqr",
                      "path_backward_appended_length");
   }
@@ -1555,15 +1568,16 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double min_v_cruise = 2.0;
 
   double acc_bound = 1.5;
-  std::vector<double> map_jerk_bound{1.2, 1.0, 0.8, 0.25};
+  double jerk_bound = 1.0;
+  std::vector<double> map_jerk_bound{0.4, 0.35, 0.3, 0.25};
   double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
-  double q_acc_bound = 200.0;
-  double q_jerk_bound = 5000.0;
+  double q_acc_bound = 20000.0;
+  double q_jerk_bound = 500000.0;
 
-  std::vector<double> map_qsoft_bound{1000.0, 3000.0, 4000.0, 5000.0};
-  std::vector<double> map_qhard_bound{3000.0, 5000.0, 6000.0, 7000.0};
+  std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
+  std::vector<double> map_qhard_bound{500, 1000, 3000.0, 5000.0, 6000.0, 7000.0};
   double emergence_avoid_factor = 2.0;
   double intersection_avoid_factor = 2.0;
 
@@ -1572,6 +1586,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_theta = 15.0;
   double q_continuity = 0.;
   double q_continuity_search = 0.5;
+  double q_continuity_lane_change = 0.;
   double q_acc = 0.5;
   double q_jerk = 0.6;
 
@@ -1647,7 +1662,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_ramp = 0.02;
   double q_jerk_ramp_close = 45.0;
   double q_jerk_ramp_mid = 10.0;
-  double valid_perception_range_on_ramp = 30.0;
 
   double road_curvature_radius = 750.0;
   size_t curvature_change_index = 15;
@@ -1656,11 +1670,11 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double curvature_preview_step = 1.0;
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
-  double valid_perception_range = 60.0;
-  std::vector<double> map_qxy{80.0, 400.0, 500.0, 500.0};
-  std::vector<double> map_qtheta{1000.0, 5000.0, 5000.0, 20000.0};
-  std::vector<double> map_qjerk1{120.0, 90.0, 60.0, 500.0};
-  std::vector<double> map_qjerk2{40.0, 30.0, 30.0, 100.0};
+  std::vector<double> valid_perception_range{15.0, 30.0, 50.0, 70.0, 90.0};
+  std::vector<double> map_qxy{80.0, 80.0, 400.0, 500.0};
+  std::vector<double> map_qtheta{3000.0, 5000.0, 7000.0, 10000.0};
+  std::vector<double> map_qjerk1{45.0, 10.0, 100.0, 300.0, 600.0};
+  std::vector<double> map_qjerk2{10.0, 5.0, 50.0, 150.0, 400.0};
   double end_ratio_for_qrefxy = 1.0;
   double end_ratio_for_qreftheta = 1.0;
   double end_ratio_for_qjerk = 1.0;
@@ -1668,7 +1682,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double lc_end_ratio_for_second_qrefxy = 1.0;
   double lc_end_ratio_for_qreftheta = 1.0;
   double big_theta_thr = 1.0;
-  double q_jerk_for_big_theta = 2.0;
+  std::vector<double> q_jerk_for_big_theta{20.0, 5.0};
   double path_backward_appended_length = 2.5;
 };
 
@@ -2622,7 +2636,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     enable_constanct_velocity_in_predicted_vehicle_state = read_json_key<bool>(
         json, "enable_constanct_velocity_in_predicted_vehicle_state",
         enable_constanct_velocity_in_predicted_vehicle_state);
-    steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
     enable_delta_stitch_in_replan = read_json_key<bool>(
         json, "enable_delta_stitch_in_replan", enable_delta_stitch_in_replan);
     enable_ego_state_compensation = read_json_key<bool>(
@@ -2661,7 +2674,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double kEpsilon_v = 0.0;
   double kEpsilon_a = 0.0;
 
-  double steer_ratio = 16.5;
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
 };

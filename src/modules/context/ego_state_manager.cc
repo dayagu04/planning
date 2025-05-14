@@ -40,7 +40,6 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
 void EgoStateManager::SetConfig(
     const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
-  steer_ratio_ = config_.steer_ratio;
   cruise_routing_speed_ = config_.cruise_routing_speed;
   cruise_searching_speed_ = config_.cruise_searching_speed;
   rads_cruise_speed_ = config_.rads_cruise_speed;
@@ -255,6 +254,9 @@ bool EgoStateManager::update(
 #endif
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+  steer_ratio_ = vehicle_param.steer_ratio;
+  max_steer_angle_ = vehicle_param.max_steer_angle;
+  max_delta_ = vehicle_param.max_front_wheel_angle;
   planning_math::Vec2d center(
       ego_pose_.x +
           std::cos(ego_pose_.theta) * vehicle_param.rear_axle_to_center,
@@ -716,9 +718,9 @@ bool EgoStateManager::LateralStitch() {
     // const double s = motion_planner_output.s_t_spline(planning_loop_dt);
 
     // max delta as equivalent steer angle = 120 deg
-    double max_delta = 120.0 / 57.3 / steer_ratio_;
-    if (session_->is_hpp_scene() || session_->is_rads_scene()) {
-      max_delta = 540.0 / 57.3 / steer_ratio_;
+    double max_delta = 120 / 57.3 / steer_ratio_;
+    if (ego_v_ < 10.0) {
+      max_delta = max_delta_;
     }
 
     lat_init_state.set_x(motion_planner_output.x_t_spline(planning_loop_dt));
