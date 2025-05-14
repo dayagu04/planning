@@ -153,6 +153,7 @@ void LateralOffsetDecider::GenerateOutput() {
   lateral_offset_decider_output.lateral_offset = lateral_offset_;
   lateral_offset_decider_output.enable_bound =
       lateral_offset_calculatorv2_.enable_bound();
+  lateral_offset_decider_output.avoid_ids.clear();
 
   // for hmi
   const std::array<AvoidObstacleInfo, 2> avd_obstacles =
@@ -184,5 +185,12 @@ void LateralOffsetDecider::GenerateOutput() {
       }
     }
   }
+  // if (lateral_offset_decider_output.avoid_id != -1) {
+  //   if (std::find(lateral_offset_decider_output.avoid_ids.begin(),
+  //       lateral_offset_decider_output.avoid_ids.end(),
+  //       lateral_offset_decider_output.avoid_id) == lateral_offset_decider_output.avoid_ids.end()) {
+  //     lateral_offset_decider_output.avoid_ids.emplace_back(lateral_offset_decider_output.avoid_id);
+  //   }
+  // }
 }
 }  // namespace planning

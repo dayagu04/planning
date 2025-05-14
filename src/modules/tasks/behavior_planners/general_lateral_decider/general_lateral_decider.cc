@@ -112,6 +112,7 @@ bool GeneralLateralDecider::Execute() {
 
   ExtractBoundary(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info,
                   hard_bounds_info);
+  CalculateAvoidObstacles(frenet_soft_bounds, soft_bounds_info);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
@@ -2716,6 +2717,63 @@ void GeneralLateralDecider::SampleRoadDistanceInfo(
                     sample_path_point.distance_to_right_road_border);
     }
   }
+}
+
+void GeneralLateralDecider::CalculateAvoidObstacles(
+    const std::vector<std::pair<double, double>> frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info) {
+  auto &lateral_offset_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lateral_offset_decider_output();
+  const double planning_init_point_l =
+      ego_frenet_state_.planning_init_point().frenet_state.r;
+  for (int i = 0; i < frenet_soft_bounds.size(); i++) {
+    // lower bound 是否影响自车
+    auto find_object = reference_path_ptr_->get_obstacles_map().find(soft_bounds_info[i].first.id);
+    if (find_object == reference_path_ptr_->get_obstacles_map().end()) {
+      continue;
+    }
+    auto frenet_obstacle = find_object->second;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+          frenet_obstacle->frenet_obstacle_boundary().s_end) {
+      continue;
+    }
+    if ((soft_bounds_info[i].first.type == BoundType::DYNAMIC_AGENT ||
+         soft_bounds_info[i].first.type == BoundType::AGENT) &&
+         soft_bounds_info[i].first.id != -100) {
+      if (frenet_soft_bounds[i].first > planning_init_point_l ||
+          frenet_soft_bounds[i].first > config_.bound2center_line_distance_thr) {
+        if (std::find(lateral_offset_decider_output.avoid_ids.begin(),
+            lateral_offset_decider_output.avoid_ids.end(),
+            soft_bounds_info[i].first.id) == lateral_offset_decider_output.avoid_ids.end()) {
+          lateral_offset_decider_output.avoid_ids.emplace_back(soft_bounds_info[i].first.id);
+        }
+      }
+    }
+    // upper bound 是否影响自车
+    find_object = reference_path_ptr_->get_obstacles_map().find(soft_bounds_info[i].second.id);
+    if (find_object == reference_path_ptr_->get_obstacles_map().end()) {
+      continue;
+    }
+    frenet_obstacle = find_object->second;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+          frenet_obstacle->frenet_obstacle_boundary().s_end) {
+      continue;
+    }
+    if ((soft_bounds_info[i].second.type == BoundType::DYNAMIC_AGENT ||
+         soft_bounds_info[i].second.type == BoundType::AGENT) &&
+         soft_bounds_info[i].second.id != -100) {
+      if (frenet_soft_bounds[i].second < planning_init_point_l ||
+          frenet_soft_bounds[i].second < -config_.bound2center_line_distance_thr) {
+        if (std::find(lateral_offset_decider_output.avoid_ids.begin(),
+            lateral_offset_decider_output.avoid_ids.end(),
+            soft_bounds_info[i].second.id) == lateral_offset_decider_output.avoid_ids.end()) {
+          lateral_offset_decider_output.avoid_ids.emplace_back(soft_bounds_info[i].second.id);
+        }
+      }
+    }
+  }
+  JSON_DEBUG_VECTOR("lateral_avoid_ids", lateral_offset_decider_output.avoid_ids, 0);
 }
 
 void GeneralLateralDecider::CalcLateralBehaviorOutput() {

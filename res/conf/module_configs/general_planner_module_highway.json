@@ -192,6 +192,7 @@
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,
   "general_lateral_decider": {
+    "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,
     "min_v_cruise": 4.0,
     "lc_second_dist_thr": 2.0,
@@ -479,7 +480,9 @@
     "q_acc_bound_v3": 3200.0,
     "q_jerk_bound": 800.0,
     "q_stop_s": 2000.0,
-    "q_ref_pos_speed_adjust": 35.0
+    "q_ref_pos_speed_adjust": 35.0,
+    "q_acc_speed_adjust": 20.0,
+    "q_jerk_speed_adjust": 50.0
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,

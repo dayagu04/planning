@@ -863,7 +863,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     ReadItem<double>(json, hard_buffer2static_agent, "general_lateral_decider",
                      "hard_buffer2static_agent");
-
+    ReadItem<double>(json, bound2center_line_distance_thr, "general_lateral_decider",
+                     "bound2center_line_distance_thr");
     ReadItem<double>(json, soft_buffer2lane, "general_lateral_decider",
                      "soft_buffer2lane");
     ReadItem<double>(json, extra_soft_buffer2road, "general_lateral_decider",
@@ -1023,6 +1024,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
   double hard_buffer2static_agent = 0.15;
+  double bound2center_line_distance_thr = 0.1;
   double dynamic_obj_safe_buffer = 0.8;      //
   double min_obstacle_avoid_distance = 0.2;  // check it
   double lateral_bound_converge_speed = 1.0;
@@ -2436,6 +2438,10 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_ref_pos_speed_adjust");
     ReadItem<bool>(json, enable_speed_adjust, "speed_adjust",
                    "enable_speed_adjust");
+    ReadItem<double>(json, q_acc_speed_adjust, "long_motion_ilqr",
+                     "q_acc_speed_adjust");
+    ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
+                     "q_jerk_speed_adjust");
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -2482,6 +2488,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
 
   bool enable_speed_adjust = true;
   double q_ref_pos_speed_adjust = 10.0;
+  double q_acc_speed_adjust = 10.0;
+  double q_jerk_speed_adjust = 5.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {

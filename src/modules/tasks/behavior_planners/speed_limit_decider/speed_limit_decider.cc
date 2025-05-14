@@ -3,9 +3,11 @@
 #include <algorithm>
 
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
+#include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
 #include "planning_context.h"
+#include "vec2d.h"
 
 namespace planning {
 namespace {
@@ -15,6 +17,8 @@ constexpr double kSpeedlimitScale = 0.6;
 constexpr double kSSharpBendRadius = 300.0;
 constexpr double kSSharpBendCurvDis = 30.0;
 constexpr double kTFLSpeedLimitDis = 160.0;
+constexpr double kStaticAgentAvoidLimitedSpeed = 8.33;
+constexpr double kDynamicAgentAvoidLimitedSpeed = 5.56;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -115,6 +119,8 @@ bool SpeedLimitDecider::Execute() {
   CalculateLaneBorrowSpeedLimit();
   // 8. speed limit from tfl distance
   CalculateSpeedLimitFromTFLDis();
+  // 9. speed limit from avoid agent
+  CalculateAvoidAgentSpeedLimit();
 
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
@@ -517,4 +523,121 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
   }
 }
 
+void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
+  // get avoid agent id
+  const auto avoid_ids =
+      session_->planning_context().lateral_offset_decider_output().avoid_ids;
+
+  // get lane borrow agent
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager == nullptr) {
+    return;
+  }
+  const auto &current_lane = virtual_lane_manager->get_current_lane();
+
+  std::vector<SpeedLimitAgent> speed_limit_agents;
+  std::vector<const agent::Agent *> avoid_agents;
+  for (const int avoid_id : avoid_ids) {
+    const auto avoid_agent = agent_manager->GetAgent(avoid_id);
+    if (avoid_agent != nullptr) {
+      avoid_agents.emplace_back(avoid_agent);
+    }
+  }
+
+  // get lateral path
+  const auto &planned_kd_path =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (planned_kd_path == nullptr) {
+    return;
+  }
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+  const auto init_point = ego_state_mgr->planning_init_point();
+
+  for (auto avoid_agent : avoid_agents) {
+    // check speed diff and ignore < 5 mps avoid agent
+    const double SpeedDiffThdInSpeedLimit =
+        avoid_agent->is_static() ? kStaticAgentAvoidLimitedSpeed
+                                 : kDynamicAgentAvoidLimitedSpeed;
+    const double speed_diff = v_ego - avoid_agent->speed();
+    if (speed_diff < SpeedDiffThdInSpeedLimit) {
+      continue;
+    }
+
+    Point2D agent_point(avoid_agent->x(), avoid_agent->y());
+    Point2D frenet_point;
+    if (!(planned_kd_path->XYToSL(agent_point, frenet_point))) {
+      continue;
+    }
+
+    double min_s_by_lat_path = std::numeric_limits<double>::max();
+    double max_s_by_lat_path = std::numeric_limits<double>::lowest();
+    double min_l_by_lat_path = std::numeric_limits<double>::max();
+    double max_l_by_lat_path = std::numeric_limits<double>::lowest();
+    bool is_success = CalculateAgentSLBoundary(
+        planned_kd_path, *avoid_agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        &min_l_by_lat_path, &max_l_by_lat_path);
+    if (!is_success) {
+      continue;
+    }
+
+    double min_lat_l_by_lat_path = 0.0;
+    if (frenet_point.y > planning_math::kMathEpsilon) {
+      min_lat_l_by_lat_path =
+          (frenet_point.y * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    } else if (frenet_point.y < planning_math::kMathEpsilon) {
+      min_lat_l_by_lat_path =
+          (frenet_point.y * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
+    } else {
+      continue;
+    }
+
+    double agent_half_width = 0.5 * avoid_agent->width();
+    double lane_width = current_lane->width_by_s(min_s_by_lat_path);
+    // calc limit speed
+    std::array<double, 2> xp{agent_half_width, lane_width};
+    std::array<double, 2> fp{kSpeedlimitScale * v_ego, v_ego};
+    double v_limit = interp(fabs(min_lat_l_by_lat_path), xp, fp);
+    const double v_limit_lower =
+        std::fmin(SpeedDiffThdInSpeedLimit + avoid_agent->speed(), v_ego);
+    v_limit = std::max(v_limit, v_limit_lower);
+
+    SpeedLimitAgent speed_limit_agent;
+    speed_limit_agent.id = avoid_agent->agent_id();
+    speed_limit_agent.min_s = min_s_by_lat_path;
+    speed_limit_agent.v_limit = v_limit;
+    speed_limit_agents.emplace_back(speed_limit_agent);
+
+    // sort
+    auto comp = [](const SpeedLimitAgent &a, const SpeedLimitAgent &b) {
+      return a.min_s < b.min_s;
+    };
+    std::sort(speed_limit_agents.begin(), speed_limit_agents.end(), comp);
+  }
+
+  if (speed_limit_agents.empty()) {
+    JSON_DEBUG_VALUE("avoid_agent_id", -1.0)
+    JSON_DEBUG_VALUE("avoid_agent_v_limit", 100.0)
+    return;
+  }
+  for (const auto &speed_limit_agent : speed_limit_agents) {
+    if (speed_limit_agent.v_limit < v_target_) {
+      v_target_ = speed_limit_agent.v_limit;
+      v_target_type_ = SpeedLimitType::AVOID_AGENT;
+      JSON_DEBUG_VALUE("avoid_agent_id", speed_limit_agent.id)
+      JSON_DEBUG_VALUE("avoid_agent_v_limit", v_target_)
+    }
+  }
+}
 }  // namespace planning

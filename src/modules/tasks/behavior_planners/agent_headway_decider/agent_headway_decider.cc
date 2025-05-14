@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "agent/agent.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "log.h"
@@ -16,7 +17,7 @@ namespace {
 constexpr double user_time_gap = 1.5;
 constexpr double lane_change_decrease_time_gap = 0.8;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
-constexpr double first_appear_time_gap = 1.0;
+constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = 2.78;
 constexpr double kTflVirtualAgentHW = 1.5;
 }  // namespace
@@ -57,7 +58,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const bool is_in_lane_change_execution =
-      lane_change_state == kLaneChangeExecution;
+      lane_change_state == kLaneChangeExecution ||
+      lane_change_state == kLaneChangeComplete;
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -119,8 +121,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double init_headway_by_ego =
         CalcAgentInitHeadway(ego_state_manager, agent);
     const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
+    double first_appear_time_gap = k_first_appear_time_gap;
     if (is_tfl_virtual_agent) {
       gear_headway = kTflVirtualAgentHW;
+      first_appear_time_gap = 0.5;
     }
     const double agent_init_headway =
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);

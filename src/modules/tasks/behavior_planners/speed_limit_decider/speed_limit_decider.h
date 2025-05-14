@@ -45,6 +45,8 @@ class SpeedLimitDecider : public Task {
 
   void CalculateSpeedLimitFromTFLDis();
 
+  void CalculateAvoidAgentSpeedLimit();
+
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   // used in curv speed limit

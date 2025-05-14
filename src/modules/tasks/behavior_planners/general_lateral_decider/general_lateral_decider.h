@@ -178,6 +178,9 @@ class GeneralLateralDecider : public Task {
     double lat_buf_dis, bool is_nudge_left,
     double rear_lon_buf_dis, double front_lon_buf_dis,
     LatObstacleDecisionType lat_decision, int index);
+  void CalculateAvoidObstacles(
+    const std::vector<std::pair<double, double>> frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
 
  private:
   GeneralLateralDeciderConfig config_;
