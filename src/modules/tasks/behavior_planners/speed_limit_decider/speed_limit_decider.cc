@@ -16,6 +16,7 @@ constexpr double kLaneBorrowLimitedSpeed = 5.56;
 constexpr double kSpeedlimitScale = 0.6;
 constexpr double kSSharpBendRadius = 300.0;
 constexpr double kSSharpBendCurvDis = 30.0;
+constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
 constexpr double kStaticAgentAvoidLimitedSpeed = 8.33;
 constexpr double kDynamicAgentAvoidLimitedSpeed = 5.56;
@@ -248,21 +249,19 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double v_limit_road = 40.0;
   double road_radius = 10000.0;
   bool is_s_bend = IsSSharpBend(preview_curv_info_vec);
-  if (!is_s_bend) {
-    double max_curv = 0.0001;
-    for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
-      if (preview_curv_info_vec[idx].curv > max_curv) {
-        max_curv = preview_curv_info_vec[idx].curv;
-      }
+  double max_curv = 0.0001;
+  for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
+    if (preview_curv_info_vec[idx].curv > max_curv) {
+      max_curv = preview_curv_info_vec[idx].curv;
     }
-    road_radius = 1 / std::max(max_curv, 0.0001);
-    if (road_radius < 400) {
-      acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
-    }
-    v_limit_road = std::sqrt(acc_lat_max * road_radius);
-  } else {
-    road_radius = 50.0;
-    v_limit_road = 40.0 / 3.6;
+  }
+  road_radius = 1 / std::max(max_curv, 0.0001);
+  if (road_radius < 400) {
+    acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+  }
+  v_limit_road = std::sqrt(acc_lat_max * road_radius);
+  if (is_s_bend) {
+    v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
   LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,

@@ -92,7 +92,7 @@ bool TrafficLightDecider::Execute() {
         can_pass_ = true;
       } else {
         if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
-                              std::max(5.0 - green_blink_timer_, 0.0) >
+                              std::max(4.0 - green_blink_timer_, 0.0) >
                           dis_to_stopline)) {
           can_pass_ = true;
         } else {
@@ -196,7 +196,7 @@ bool TrafficLightDecider::AddVirtualObstacle() {
                                 .coarse_planning_info.reference_path;
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
-  double virtual_obs_dis = std::min(dis_to_stopline + 4.0, dis_to_crosswalk + 2.0);
+  double virtual_obs_dis = std::min(dis_to_stopline + 3.5, dis_to_crosswalk + 1.5);
   ReferencePathPoint refpath_pt;
   if (reference_path_ptr->get_reference_point_by_lon(
     ego_start_s + virtual_obs_dis, refpath_pt)) {
