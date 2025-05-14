@@ -1197,8 +1197,15 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
 
   if (!end_pos_has_obs_condition) {
+    double move_back_dist = 0.168;
+    if (lon_err < 0.368) {
+      // if only can move 0.1m, no move, finish
+      move_back_dist = param.safe_uss_remain_dist_in_slot + 0.1;
+    }
+
     const geometry_lib::PathPoint uss_pose{
-        ego_info_under_slot.target_pose.pos - 0.168 * Eigen::Vector2d(1.0, 0.0),
+        ego_info_under_slot.target_pose.pos -
+            move_back_dist * Eigen::Vector2d(1.0, 0.0),
         ego_info_under_slot.target_pose.heading};
 
     end_pos_has_obs_condition =
