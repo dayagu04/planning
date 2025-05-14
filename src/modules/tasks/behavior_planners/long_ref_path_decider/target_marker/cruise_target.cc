@@ -193,6 +193,10 @@ bool CruiseTarget::MakeSpeedLimitKinematicTable(
 }
 
 bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  double ego_v = ego_state_manager->ego_v();
+
   const auto& cipv_decider_output =
       session_->planning_context().cipv_decider_output();
 
@@ -250,7 +254,11 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
   double cipv_traj_length = last_traj_pt_s - first_traj_pt_s;
   if (cipv_traj_length < kLowSpeedFollowCIPVTrajLength &&
       cipv_relative_s < kLowSpeedFollowCIPVDis) {
-    *acc = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_ACC_BP, _LOW_SPEED_FOLLOW_ACC_V);
+    if (cipv_traj_length < 5.0 && ego_v > 1.0) {
+      *acc = 0.0;
+    } else {
+      *acc = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_ACC_BP, _LOW_SPEED_FOLLOW_ACC_V);
+    }
     //*jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
     //        kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
     *jerk = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_JERK_BP, _LOW_SPEED_FOLLOW_JERK_V);
