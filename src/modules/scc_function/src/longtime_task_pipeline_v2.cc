@@ -36,8 +36,6 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
       std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
-  steering_wheel_stationary_decider_ =
-      std::make_unique<SteeringWheelStationaryDecider>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
   cipv_lost_prohibit_acceleration_decider_ =
@@ -133,12 +131,6 @@ bool LongTimeTaskPipelineV2::Run() {
   ok = scc_longitudinal_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(scc_longitudinal_motion_planner_->Name());
-    return false;
-  }
-
-  ok = steering_wheel_stationary_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(steering_wheel_stationary_decider_->Name());
     return false;
   }
 

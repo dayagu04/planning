@@ -67,8 +67,6 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<StartStopDecider>(config_builder, session);
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlannerV3>(config_builder, session);
-  steering_wheel_stationary_decider_ =
-      std::make_unique<SteeringWheelStationaryDecider>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
 }
@@ -261,12 +259,6 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = scc_longitudinal_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(scc_longitudinal_motion_planner_->Name());
-    return false;
-  }
-
-  ok = steering_wheel_stationary_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(steering_wheel_stationary_decider_->Name());
     return false;
   }
 

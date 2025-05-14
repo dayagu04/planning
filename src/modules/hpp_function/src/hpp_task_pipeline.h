@@ -11,7 +11,6 @@
 #include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
-#include "tasks/behavior_planners/steering_wheel_stationary_decider/steering_wheel_stationary_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/longitudinal_motion_planner/longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -34,7 +33,6 @@ class HppTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<GeneralLongitudinalDecider> general_longitudinal_decider;
   std::unique_ptr<LongitudinalMotionPlanner> longitudinal_motion_planner_;
-  std::unique_ptr<SteeringWheelStationaryDecider> steering_wheel_stationary_decider_;
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
   std::unique_ptr<ParkingSwitchDecider> parking_switch_decider_;
 };

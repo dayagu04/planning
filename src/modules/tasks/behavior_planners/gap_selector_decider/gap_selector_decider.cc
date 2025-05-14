@@ -414,15 +414,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
   } else if (coarse_planning_info.target_state == kLaneChangeExecution ||
              coarse_planning_info.target_state == kLaneChangeComplete) {
     if (ego_v > 1e-2) {
-    lc_timer_ += 0.1;
-    } else if (std::fabs(ego_v) <= 1e-2) {
-      double target_steering_angle = ego_state_mgr->ego_steer_angle();
-      session_->mutable_planning_context()
-              ->mutable_steering_wheel_stationary_decider_output()
-              .is_need_steering_wheel_stationary = true;
-      session_->mutable_planning_context()
-              ->mutable_steering_wheel_stationary_decider_output()
-            .target_steering_angle = target_steering_angle;
+      lc_timer_ += 0.1;
     }
     is_lc_scene = true;
   } else if (coarse_planning_info.target_state == kLaneChangeCancel) {

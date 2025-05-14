@@ -719,7 +719,7 @@ bool EgoStateManager::LateralStitch() {
 
     // max delta as equivalent steer angle = 120 deg
     double max_delta = 120 / 57.3 / steer_ratio_;
-    if (ego_v_ < 8.333) {
+    if (ego_v_ < 10.0) {
       max_delta = max_delta_;
     }
 
@@ -851,18 +851,6 @@ void EgoStateManager::UpdatePlanningInitState() {
       set_lat_replan = true;
       set_lon_replan = true;
     }
-
-    const auto &steering_wheel_stationary_output=
-      session_->planning_context().steering_wheel_stationary_decider_output();
-    if (cur_fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE ||
-        (steering_wheel_stationary_output.is_need_steering_wheel_stationary &&
-         std::fabs(steering_wheel_stationary_output.target_steering_angle - ego_steer_angle_) <
-         config_.steer_angle_thr / 57.3 &&
-         ego_v_ < config_.kEpsilon_v)) {
-      set_lat_replan = true;
-      set_lon_replan = true;
-    }
-
     replan_type_.clear();
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
   } else {
@@ -887,7 +875,6 @@ void EgoStateManager::UpdatePlanningInitState() {
   planning_init_point_.x = lat_init_state.x();
   planning_init_point_.y = lat_init_state.y();
   planning_init_point_.heading_angle = lat_init_state.theta();
-  planning_init_point_.delta = lat_init_state.delta();
   planning_init_point_.curvature = lat_init_state.curv();
   planning_init_point_.dkappa = lat_init_state.d_curv();
   planning_init_point_.v = lon_init_state.v();

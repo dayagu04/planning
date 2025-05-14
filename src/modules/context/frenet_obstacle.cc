@@ -153,14 +153,12 @@ void FrenetObstacle::compute_frenet_obstacle(
       frenet_obstacle_corners_.l_rear_right - ego_l};
   double min_corners_l_relative_ego = *std::min_element(
       corners_l_relative_ego.begin(), corners_l_relative_ego.end());
-  double max_corners_l_relative_ego = *std::max_element(
-      corners_l_relative_ego.begin(), corners_l_relative_ego.end());
   if (frenet_l_ >= ego_l) {
     l_relative_to_ego_ =
         min_corners_l_relative_ego > 0 ? min_corners_l_relative_ego : 0;
   } else {
     l_relative_to_ego_ =
-        max_corners_l_relative_ego < 0 ? max_corners_l_relative_ego : 0;
+        min_corners_l_relative_ego < 0 ? min_corners_l_relative_ego : 0;
   }
 
   frenet_relative_velocity_s_ =

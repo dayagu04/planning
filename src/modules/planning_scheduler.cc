@@ -417,7 +417,15 @@ void PlanningScheduler::FillPlanningTrajectory(
   JSON_DEBUG_VALUE("gear_command",
                    static_cast<int>(gear_command->gear_command_value))
 
-  // 7.Planning status
+  // 7.Open loop steering command
+  auto open_loop_steering_command =
+      &(planning_output->open_loop_steering_command);
+  open_loop_steering_command->available = true;
+  open_loop_steering_command->jerk_factor = 70.0;  // hack
+  open_loop_steering_command->need_steering_wheel_stationary = false;
+  open_loop_steering_command->steering_wheel_rad_limit = 0.1;
+
+  // 8.Planning status
   auto planning_status = &(planning_output->planning_status);
   planning_status->standstill = false;
   if (function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
@@ -429,18 +437,6 @@ void PlanningScheduler::FillPlanningTrajectory(
                                  common::StartStopInfo::STOP;
   planning_status->apa_planning_status = iflyauto::APA_NONE;
   // WB end:--------临时hack以上信号--------
-  // 8.Open loop steering command
-  const auto &steering_wheel_stationary_output =
-      planning_context.steering_wheel_stationary_decider_output();
-  auto open_loop_steering_command =
-      &(planning_output->open_loop_steering_command);
-  open_loop_steering_command->available = true;
-  open_loop_steering_command->jerk_factor = 6.28;  // rad/s^3
-  open_loop_steering_command->need_steering_wheel_stationary =
-      steering_wheel_stationary_output.is_need_steering_wheel_stationary;
-  open_loop_steering_command->steering_wheel_rad_limit =
-      steering_wheel_stationary_output.target_steering_angle;
-
   const bool planning_success = planning_context.planning_success();
   const bool planning_completed = planning_context.planning_completed();
   const auto scene_type = session_.get_scene_type();
