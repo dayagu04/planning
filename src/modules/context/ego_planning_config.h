@@ -1409,6 +1409,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_y, "lat_motion_ilqr", "q_ref_y");
     ReadItem<double>(json, q_ref_theta, "lat_motion_ilqr", "q_ref_theta");
     ReadItem<double>(json, q_continuity, "lat_motion_ilqr", "q_continuity");
+    ReadItem<double>(json, q_continuity_low_speed, "lat_motion_ilqr",
+                     "q_continuity_low_speed");
     ReadItem<double>(json, q_continuity_search, "lat_motion_ilqr",
                      "q_continuity_search");
     ReadItem<double>(json, q_continuity_lane_change, "lat_motion_ilqr",
@@ -1628,6 +1630,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_y = 20.0;
   double q_ref_theta = 15.0;
   double q_continuity = 0.;
+  double q_continuity_low_speed = 0.5;
   double q_continuity_search = 0.5;
   double q_continuity_lane_change = 0.;
   double q_acc = 0.5;

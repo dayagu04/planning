@@ -11,7 +11,6 @@ enum iLqrCostconfigId {
   REF_Y,
   REF_THETA,
   REF_VEL,
-  EGO_VEL,
   CURV_FACTOR,
   TERMINAL_FLAG,
   CONTINUITY_X,

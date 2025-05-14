@@ -474,10 +474,10 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
     min_curv = std::min(avg_curv, min_curv);
     preview_curv_vec.emplace_back(avg_curv);
   }
-  // std::vector<double> xp_vel{4.167, 8.333, 16.667};
-  // std::vector<double> fp_radius_thr{150.0, 400.0, 750.0};
-  double kappa_radius_thr = 750;
-      // planning::interp(ego_v, xp_vel, fp_radius_thr);
+  std::vector<double> xp_vel{4.167, 8.333, 10.0};
+  std::vector<double> fp_radius_thr{250.0, 500.0, 750.0};
+  double kappa_radius_thr =
+      planning::interp(ego_v, xp_vel, fp_radius_thr);
   // double far_kappa_radius = 1.0 / std::max(preview_curv, 0.0001);
   double far_min_kappa_radius = 1.0 / std::max(max_curv, 0.0001);
   double far_max_kappa_radius = 1.0 / std::max(min_curv, 0.0001);

@@ -225,7 +225,7 @@ bool LateralMotionPlanner::AssembleInput() {
   auto last_s_vec = motion_planner_output.s_lat_vec;
   double last_path_length = last_s_vec.size() > 0 ? last_s_vec.back() : 0.0;
   bool is_ref_consistent = (ref_vel * final_t - last_path_length) <= 2.0;
-  if (motion_planner_output.lat_init_flag == true) {
+  if (motion_planner_output.lat_init_flag) {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
       planning_input_.mutable_last_x_vec()->Set(
@@ -257,25 +257,25 @@ bool LateralMotionPlanner::AssembleInput() {
   }
 
   // set soft and hard bound
-  const auto &soft_bounds =
+  const auto &soft_bounds_cart_point =
       general_lateral_decider_output.soft_bounds_cart_point;
-  const auto &hard_bounds =
+  const auto &hard_bounds_cart_point =
       general_lateral_decider_output.hard_bounds_cart_point;
-  assert(soft_bounds.size() == hard_bounds.size());
+  assert(soft_bounds_cart_point.size() == hard_bounds_cart_point.size());
 
-  for (size_t i = 0; i < soft_bounds.size(); ++i) {
+  for (size_t i = 0; i < soft_bounds_cart_point.size(); ++i) {
     size_t index = i;
     size_t next_index = i + 1;
 
-    if (i == soft_bounds.size() - 1) {
+    if (i == soft_bounds_cart_point.size() - 1) {
       index = i - 1;
       next_index = i;
     }
 
-    const auto &soft_lower_bound = soft_bounds[index].first;
-    const auto &soft_upper_bound = soft_bounds[index].second;
-    const auto &next_soft_lower_bound = soft_bounds[next_index].first;
-    const auto &next_soft_upper_bound = soft_bounds[next_index].second;
+    const auto &soft_lower_bound = soft_bounds_cart_point[index].first;
+    const auto &soft_upper_bound = soft_bounds_cart_point[index].second;
+    const auto &next_soft_lower_bound = soft_bounds_cart_point[next_index].first;
+    const auto &next_soft_upper_bound = soft_bounds_cart_point[next_index].second;
 
     planning_input_.mutable_soft_lower_bound_x0_vec()->Set(i,
                                                            soft_lower_bound.x);
@@ -295,10 +295,10 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_input_.mutable_soft_upper_bound_y1_vec()->Set(
         i, next_soft_upper_bound.y);
 
-    const auto &hard_lower_bound = hard_bounds[index].first;
-    const auto &hard_upper_bound = hard_bounds[index].second;
-    const auto &next_hard_lower_bound = hard_bounds[next_index].first;
-    const auto &next_hard_upper_bound = hard_bounds[next_index].second;
+    const auto &hard_lower_bound = hard_bounds_cart_point[index].first;
+    const auto &hard_upper_bound = hard_bounds_cart_point[index].second;
+    const auto &next_hard_lower_bound = hard_bounds_cart_point[next_index].first;
+    const auto &next_hard_upper_bound = hard_bounds_cart_point[next_index].second;
 
     planning_input_.mutable_hard_lower_bound_x0_vec()->Set(i,
                                                            hard_lower_bound.x);
@@ -343,13 +343,13 @@ bool LateralMotionPlanner::AssembleInput() {
   const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
+  planning_weight_ptr_->SetRefVel(ref_vel);
   planning_weight_ptr_->SetInitL(planning_init_point.frenet_state.r);
   planning_weight_ptr_->CalculateLastPathDistToRef(reference_path_ptr, planning_input_);
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kv2 =
-      config_.curv_factor *
-      std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
+      config_.curv_factor * ref_vel * ref_vel;
   double steer_ratio = vehicle_param.steer_ratio;
   double max_steer_angle = vehicle_param.max_steer_angle;  // rad
   double max_steer_angle_rate =
@@ -359,10 +359,11 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_wheel_angle_rate =
       max_steer_angle_rate / steer_ratio;
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
+  double limit_jerk = max_wheel_angle_rate * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_max_jerk{1.538, 1.846, 1.231, 0.8};
-  double max_jerk = planning::interp(ego_v, xp_v, fp_max_jerk);
-  max_jerk = std::min(max_wheel_angle_rate * kv2, max_jerk);
+  std::vector<double> fp_max_jerk{limit_jerk, 1.538, 1.231, 0.8};
+  double max_jerk = planning::interp(ref_vel, xp_v, fp_max_jerk);
+  max_jerk = std::min(limit_jerk, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
   std::vector<double> expected_steer_vec;
@@ -375,10 +376,14 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
+  // const auto &soft_bounds = general_lateral_decider_output.soft_bounds;
+  const auto &hard_bounds = general_lateral_decider_output.hard_bounds;
   const auto &soft_bounds_info = general_lateral_decider_output.soft_bounds_info;
   const auto &hard_bounds_info = general_lateral_decider_output.hard_bounds_info;
   planning_weight_ptr_->CalculateLatAvoidBoundPriority(
-      soft_bounds_frenet_point, hard_bounds_frenet_point, soft_bounds_info, hard_bounds_info);
+      soft_bounds_frenet_point, hard_bounds_frenet_point,
+      hard_bounds,
+      soft_bounds_info, hard_bounds_info);
 
   if (session_->is_hpp_scene()) {
     // const bool &search_success = session_->mutable_planning_context()
@@ -459,7 +464,7 @@ bool LateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::STATIC_AVOID, planning_input_);
   } else if (lateral_offset_decider_output.is_valid ||
              (avoid_back_status &&
-              ((ego_v > config_.avoid_high_vel) || is_in_intersection))) {
+              ((ref_vel > config_.avoid_high_vel) || is_in_intersection))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
   } else if (split_scene) {
@@ -473,12 +478,19 @@ bool LateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
   // handle big shaking for steer
-  planning_weight_ptr_->CalculateJerkBoundByLastJerk(
-      planning_problem_ptr_->GetOutput(), planning_input_);
+  if (session_->environmental_model().GetVehicleDbwStatus()) {
+    planning_weight_ptr_->CalculateJerkBoundByLastJerk(
+        reference_path_ptr,
+        planning_problem_ptr_->GetOutput(), planning_input_);
+  }
   // set motion_plan_concerned_end_index
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(
       complete_follow, is_divide_lane_into_two_,
       reference_path_ptr, planning_input_);
+  // set continuity protection
+  if (!motion_planner_output.lat_init_flag) {
+    planning_input_.set_q_continuity(0.0);
+  }
   // [hack](bsniu):
   if (session_->environmental_model().function_info().function_mode() ==
       common::DrivingFunctionInfo_DrivingFunctionMode::
@@ -498,14 +510,11 @@ bool LateralMotionPlanner::Update() {
       planning_weight_ptr_->GetConcernedEndRatioForXY();
   const double end_ratio_for_qreftheta =
       planning_weight_ptr_->GetConcernedEndRatioForTheta();
-  const double ego_vel =
-      std::max(session_->environmental_model().get_ego_state_manager()->ego_v(),
-               config_.min_ego_vel);
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
       end_ratio_for_qrefxy, end_ratio_for_qreftheta,
       config_.end_ratio_for_qjerk,
-      concerned_start_q_jerk, ego_vel, planning_weight_ptr_, planning_input_);
+      concerned_start_q_jerk, planning_weight_ptr_, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
@@ -593,8 +602,8 @@ bool LateralMotionPlanner::Update() {
 
   const double concerned_index = 20;  // planning_input_.motion_plan_concerned_index();
   double concerned_dis_to_ref = std::hypot(
-      x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
-      y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
+      x_vec[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index + 1),
+      y_vec[concerned_index + 2] - planning_input_.ref_y_vec(concerned_index + 1));
   const double end_points_size = concerned_index + 1;
   if ((!(session_->environmental_model().function_info().function_mode() ==
          common::DrivingFunctionInfo_DrivingFunctionMode::
