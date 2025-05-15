@@ -3385,8 +3385,37 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                                    "cruise_target", "speed_table"},
           lane_change_kappa_speed_limit_table.speed_table);
     }
+    // loading low speed follow config values
+    {
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "cruise_target",
+                                             "low_speed_follow_acc_traj_table",
+                                             "traj_table"},
+                    low_speed_follow_acc_traj_table.traj_table);
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "cruise_target",
+                                             "low_speed_follow_acc_traj_table",
+                                             "acc_table"},
+                    low_speed_follow_acc_traj_table.acc_table);
+
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "cruise_target",
+                                             "low_speed_follow_jerk_traj_table",
+                                             "traj_table"},
+                    low_speed_follow_jerk_traj_table.traj_table);
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "cruise_target",
+                                             "low_speed_follow_jerk_traj_table",
+                                             "jerk_table"},
+                    low_speed_follow_jerk_traj_table.jerk_table);
+    }
+
     ReadItem<double>(json, lane_change_upper_speed_limit_kph, "speed_planning",
                      "lane_change_upper_speed_limit_kph");
+    ReadItem<double>(json, low_speed_follow_speed_thred_mps, "speed_planning",
+                     "low_speed_follow_speed_thred_mps");
+    ReadItem<double>(json, low_speed_follow_accel_release_traj_len, "speed_planning",
+                    "low_speed_follow_accel_release_traj_len");
     ReadItem<bool>(json, enable_speed_adjust, "speed_adjust",
                    "enable_speed_adjust");
 
@@ -3469,6 +3498,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   // cruise target relevance
   double lane_change_upper_speed_limit_kph = 150.0;
+  double low_speed_follow_speed_thred_mps = 1.0;
+  double low_speed_follow_accel_release_traj_len = 5.0;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;
@@ -3509,6 +3540,16 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                                     20.0,  15.0,  10.0,  7.0};
   };
 
+  struct LowSpeedFollowAccTrajTable {
+    std::vector<double> traj_table{10.0, 21.0, 35.0};
+    std::vector<double> acc_table {0.50, 0.80, 1.35};
+  };
+
+  struct LowSpeedFollowJerkTrajTable {
+    std::vector<double> traj_table{15.0, 25.0, 35.0};
+    std::vector<double> jerk_table{2.50, 2.20, 2.00};
+  };
+
   KinematicParam comfort_kinematic_param;
   KinematicParam kappa_kinematic_param;
 
@@ -3516,6 +3557,9 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   KappaSpeedLimitTable normal_kappa_speed_limit_table;
   KappaSpeedLimitTable lane_change_kappa_speed_limit_table;
+
+  LowSpeedFollowAccTrajTable low_speed_follow_acc_traj_table;
+  LowSpeedFollowJerkTrajTable low_speed_follow_jerk_traj_table;
 
   // weight maker
   struct WeightConfig {

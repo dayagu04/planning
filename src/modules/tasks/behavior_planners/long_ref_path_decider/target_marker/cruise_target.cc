@@ -256,14 +256,17 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
   double cipv_traj_length = last_traj_pt_s - first_traj_pt_s;
   if (cipv_traj_length < kLowSpeedFollowCIPVTrajLength &&
       cipv_relative_s < kLowSpeedFollowCIPVDis) {
-    if (cipv_traj_length < 5.0 && ego_v > 1.0) {
+    if (cipv_traj_length < config_.low_speed_follow_accel_release_traj_len &&
+        ego_v > config_.low_speed_follow_speed_thred_mps) {
       *acc = 0.0;
     } else {
-      *acc = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_ACC_BP, _LOW_SPEED_FOLLOW_ACC_V);
+      *acc = interp(cipv_traj_length, config_.low_speed_follow_acc_traj_table.traj_table,
+                    config_.low_speed_follow_acc_traj_table.acc_table);
     }
     //*jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
     //        kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
-    *jerk = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_JERK_BP, _LOW_SPEED_FOLLOW_JERK_V);
+    *jerk = interp(cipv_traj_length, config_.low_speed_follow_jerk_traj_table.traj_table,
+                   config_.low_speed_follow_jerk_traj_table.jerk_table);
     return true;
   } else {
     return false;
