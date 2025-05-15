@@ -339,6 +339,7 @@
     "delta_t": 0.2,
     "min_v_cruise": 0.2,
     "min_ego_vel": 1.5,
+    "max_steer_angle_dot": 200.0,
     "acc_bound": 3.0,
     "jerk_bound": 0.2,
     "map_jerk_bound": [1.0, 1.0, 0.6, 0.4],

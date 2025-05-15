@@ -353,7 +353,7 @@ bool LateralMotionPlanner::AssembleInput() {
   double steer_ratio = vehicle_param.steer_ratio;
   double max_steer_angle = vehicle_param.max_steer_angle;  // rad
   double max_steer_angle_rate =
-      std::min(vehicle_param.max_steer_angle_rate, 3.49);  // rad (min 200deg/s)
+      std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot / 57.3);
   double max_wheel_angle =
       max_steer_angle / steer_ratio;
   double max_wheel_angle_rate =
