@@ -39,6 +39,7 @@ constexpr double kLowSpeedFollowCIPVDis = 13.5;
 //constexpr double kLowSpeedFollowJerkPosBoundHigh = 1.0;
 //constexpr double kLowSpeedFollowJerkPosBoundLow = 0.5;
 constexpr double kReleaseBrakeMaxJerk = 6.0;
+constexpr double kReleaseAccelMinJerk = -5.0;
 }  // namespace
 
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
@@ -101,6 +102,7 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
         speed_limit_kinematics_bound_table_[speed_limit_type_ref];
       kinematic_bound.acc_positive_mps2 = low_speed_follow_a;
       kinematic_bound.jerk_positive_mps3 = low_speed_follow_j;
+      kinematic_bound.jerk_negative_mps3 = kReleaseAccelMinJerk;
     }
   }
   auto acceleration_trajectory1d =
