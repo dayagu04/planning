@@ -546,7 +546,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
     const bool front_parallel_line_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_length - 0.2,
-                                slot_length + 1.6) &&
+                                slot_length + 2.2) &&
         pnc::mathlib::IsInBound(obstacle_point_slot.y(), 0.0, 2.2 * side_sgn);
 
     if (front_parallel_line_condition) {
