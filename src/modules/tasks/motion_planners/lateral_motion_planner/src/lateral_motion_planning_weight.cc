@@ -537,64 +537,68 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     planning::common::LateralPlanningInput &planning_input) {
   // set upper limit
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_extra_jerk{0.5, 0.4, 0.3, 0.2};
+  std::vector<double> fp_extra_jerk{0.4, 0.3, 0.2, 0.1};
   double vel_factor = planning::interp(ego_vel_, xp_v, fp_extra_jerk);
-  double jerk_bound = planning::interp(ego_vel_, xp_v, config_.map_jerk_bound);
+  double jerk_bound =  // 0.8 0.8 0.6 0.4
+      planning::interp(ego_vel_, xp_v, config_.map_jerk_bound);
   if (lateral_motion_scene_ == AVOID) {
     jerk_bound = config_.jerk_bound_avoid;  // 0.4,
   } else if (lateral_motion_scene_ == LANE_CHANGE ||
       is_lane_change_back_) {
-    jerk_bound = config_.jerk_bound_lane_change;  // 0.55,
+    jerk_bound = config_.jerk_bound_lane_change;  // 0.6,
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
   } else if (lateral_motion_scene_ == RAMP) {
     jerk_bound = config_.jerk_bound_ramp;  // 1.0
   } else if (is_emergency_) {
-    jerk_bound += vel_factor;  // 1.0 1.5 1.2 0.8
+    jerk_bound += vel_factor;  // 1.2 1.1 0.8 0.5
   }
   jerk_bound = std::min(jerk_bound, max_jerk_);
   // use last jerk
-  bool is_update_upper_jerk_bound = false;
-  bool is_update_lower_jerk_bound = false;
+  // when last big jerk exceed jerk bound , loosening jerk bound
   bool is_need_loosening_upper_jerk_bound = false;
   bool is_need_loosening_lower_jerk_bound = false;
-  double new_jerk_bound = 0;
-  double jerk_thr = 0.1;
+  double new_jerk_ubound = 0;
+  double new_jerk_lbound = 0;
   for (size_t i = 0; i < last_planning_output.jerk_vec_size(); ++i) {
     double last_jerk_i = last_planning_output.jerk_vec(i);
-    // if (std::fabs(last_jerk_i) <= jerk_thr ||
-    //     (is_update_upper_jerk_bound && last_jerk_i > -jerk_thr) ||
-    //     (is_update_lower_jerk_bound && last_jerk_i < jerk_thr)) {
-    //   break;
-    // }
-    // // when last positive or negative jerk is big, adding zero jerk bound protection for this time
-    // if (last_jerk_i > jerk_thr && lateral_motion_scene_ != RAMP) {
-    //   is_update_lower_jerk_bound = true;
-    //   weight_.jerk_lower_bound[i] = std::max(0.0, weight_.jerk_lower_bound[i]);
-    // } else if (last_jerk_i < -jerk_thr) {
-    //   is_update_upper_jerk_bound = true;
-    //   weight_.jerk_upper_bound[i] = std::min(0.0, weight_.jerk_upper_bound[i]);
-    // }
-    // when last big jerk exceed jerk bound , loosening jerk bound
-    if (i < 20) {
+    if (i < 20) {  // only use 4s
       double extra_upper_jerk = last_jerk_i - weight_.jerk_upper_bound[i];
       double extra_lower_jerk = last_jerk_i - weight_.jerk_lower_bound[i];
       if (extra_upper_jerk > -1e-3) {
         is_need_loosening_upper_jerk_bound = true;
-        new_jerk_bound = std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + 0.1, new_jerk_bound), jerk_bound);
+        new_jerk_ubound = std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + 0.1, new_jerk_ubound), jerk_bound);
       } else if (extra_lower_jerk < 1e-3) {
         is_need_loosening_lower_jerk_bound = true;
-        new_jerk_bound = std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - 0.1, new_jerk_bound), -jerk_bound);
+        new_jerk_lbound = std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - 0.1, new_jerk_lbound), -jerk_bound);
       }
     }
   }
   if (is_need_loosening_upper_jerk_bound ||
       is_need_loosening_lower_jerk_bound) {
+    double new_jerk_bound =
+        std::max(std::fabs(new_jerk_ubound), std::fabs(new_jerk_lbound));
+    new_jerk_bound = std::min(new_jerk_bound, max_jerk_);
     weight_.jerk_upper_bound.clear();
     weight_.jerk_upper_bound.resize(weight_.point_num, std::fabs(new_jerk_bound));
     weight_.jerk_lower_bound.clear();
     weight_.jerk_lower_bound.resize(weight_.point_num, -std::fabs(new_jerk_bound));
     planning_input.set_jerk_bound(std::fabs(new_jerk_bound));
+  }
+  // when last positive or negative jerk is big, adding zero jerk bound protection for this time
+  if (lateral_motion_scene_ == LANE_KEEP) {  // not big curvature
+    if (last_planning_output.jerk_vec_size() >= 2) {
+      double jerk_thr = 0.1;
+      double init_jerk =
+          0.5 * (last_planning_output.jerk_vec(0) + last_planning_output.jerk_vec(1));
+      if (init_jerk > jerk_thr) {
+        weight_.jerk_lower_bound[0] = 0.;
+        weight_.jerk_lower_bound[1] = -0.1;
+      } else if (init_jerk < -jerk_thr) {
+        weight_.jerk_upper_bound[0] = 0.;
+        weight_.jerk_upper_bound[1] = 0.1;
+      }
+    }
   }
 }
 
