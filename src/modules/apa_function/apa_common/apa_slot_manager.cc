@@ -68,12 +68,27 @@ void ApaSlotManager::Update(
   // 泊出
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
-      ParkingLotCruiseProcess();
+      if (!dist_id_map_.empty()) {
+        ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
+        ego_info_under_slot_.id = dist_id_map_.begin()->second;
 
-      ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
-      ego_info_under_slot_.id = dist_id_map_.begin()->second;
-      ego_info_under_slot_.slot_type =
-          slots_map_[ego_info_under_slot_.id].slot_type_;
+        auto it = slots_map_.find(ego_info_under_slot_.id);
+        if (it != slots_map_.end()) {
+          ego_info_under_slot_.slot_type = it->second.slot_type_;
+          // forced release of self slot
+          ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
+          slot.release_info_.release_state[RULE_BASED_RELEASE] =
+              SlotReleaseState::RELEASE;
+        } else {
+          ILOG_WARN << "slot id = " << ego_info_under_slot_.id
+                    << " not found in slots_map_";
+        }
+
+      } else {
+        ILOG_WARN
+            << "dist_id_map_ is empty, cannot update ego_info_under_slot_";
+      }
+
     } else if (state_machine_ptr_->IsParkingStatus()) {
     }
   }
@@ -508,10 +523,9 @@ const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
           .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
       SlotReleaseState::RELEASE) {
     return SlotReleaseState::RELEASE;
-  }
-  else if (ego_info_under_slot_.slot.release_info_
-          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
-      SlotReleaseState::NOT_RELEASE) {
+  } else if (ego_info_under_slot_.slot.release_info_
+                 .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+             SlotReleaseState::NOT_RELEASE) {
     return SlotReleaseState::NOT_RELEASE;
   } else if (ego_info_under_slot_.slot.release_info_
                  .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
