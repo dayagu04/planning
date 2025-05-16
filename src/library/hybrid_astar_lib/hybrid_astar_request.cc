@@ -12,14 +12,15 @@ void DebugAstarRequestString(const AstarRequest &request) {
             << ", gear = "
             << PathGearDebugString(request.first_action_request.gear_request)
             << ", dist = " << request.first_action_request.dist_request
-            << ", path method = " << static_cast<int>(request.path_generate_method)
+            << ", path method = "
+            << static_cast<int>(request.path_generate_method)
             << ", history gear = " << PathGearDebugString(request.history_gear)
             << ", slot type = " << static_cast<int>(request.space_type);
 
   ILOG_INFO << " rs request: " << GetRSRequestType(request.rs_request)
             << ", plan reason = " << PlanReasonDebugString(request.plan_reason)
-            << ", swap goal = " << request.swap_start_goal << ", dir = "
-            << static_cast<int>(request.direction_request);
+            << ", swap goal = " << request.swap_start_goal
+            << ", dir = " << static_cast<int>(request.direction_request);
 
   // ILOG_INFO << "start pose";
   // request.start_.DebugString();
@@ -74,6 +75,16 @@ const bool IsNeedZigZagPathToAdjustPose(const AstarRequest &request) {
   theta_error = ad_common::math::NormalizeAngle(theta_error);
   if (std::fabs(request.start_.y) < 2.0 &&
       std::fabs(theta_error) < ifly_deg2rad(10.0)) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsHeadOutRequest(const ParkingVehDirection &direction) {
+  if (direction == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+      direction == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+      direction == ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
     return true;
   }
 

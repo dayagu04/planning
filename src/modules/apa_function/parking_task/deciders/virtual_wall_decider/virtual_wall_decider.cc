@@ -68,18 +68,25 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
     float virtual_wall_y_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;
 
+    float passage_half_length =
+        apa_param.GetParam().astar_config.vertical_slot_passage_length_bound /
+        2;
+
     if (parking_in_type == ParkingVehDirection::HEAD_IN) {
       virtual_wall_x_offset =
           apa_param.GetParam().astar_config.head_in_slot_virtual_wall_x_offset;
 
       virtual_wall_y_offset =
           apa_param.GetParam().astar_config.head_in_slot_virtual_wall_y_offset;
+    } else if (parking_in_type == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+               parking_in_type == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+               parking_in_type == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+      passage_half_length = 18.0;
     }
 
-    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,
-                            virtual_wall_x_offset, virtual_wall_y_offset);
+    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end, 1.5,
+                            virtual_wall_y_offset, passage_half_length);
 
-    ILOG_INFO << "vertical slot virtual wall";
   } else {
     if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
@@ -144,7 +151,8 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
 void VirtualWallDecider::CalcVerticalVirtualWall(
     std::vector<Position2D>& points, const float slot_width,
     const float slot_length, const Pose2D& ego_pose, const Pose2D& end,
-    const float virtual_wall_x_offset, const float virtual_wall_y_offset) {
+    const float virtual_wall_x_offset, const float virtual_wall_y_offset,
+    const float passage_half_length) {
   // slot virtual wall
   VirtualWallBoundary slot_boundary;
 
@@ -161,11 +169,11 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   // passage up bound
   float passage_height =
       apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
-  float passage_up_bound_x = slot_length + passage_height;
+  float passage_up_bound_x = slot_length + 8.0;
+  // float passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
   // passage left/right bound
-  const float passage_half_length =
-      apa_param.GetParam().astar_config.vertical_slot_passage_length_bound / 2;
+
   tmp_passage_boundary.y_lower = -passage_half_length;
   tmp_passage_boundary.y_upper = passage_half_length;
   tmp_passage_boundary.Combine(veh_boundary_);
@@ -223,27 +231,27 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
       Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), false,
       &points);
 
-  // perception blind zone
-  int point_a_idx;
-  int point_b_idx;
-  for (int i = 0; i < blind_global_box_.vertex_num; i++) {
-    if (i == blind_global_box_.vertex_num - 1) {
-      point_a_idx = i;
-      point_b_idx = 0;
+  //   // perception blind zone
+  //   int point_a_idx;
+  //   int point_b_idx;
+  //   for (int i = 0; i < blind_global_box_.vertex_num; i++) {
+  //     if (i == blind_global_box_.vertex_num - 1) {
+  //       point_a_idx = i;
+  //       point_b_idx = 0;
 
-    } else {
-      point_a_idx = i;
-      point_b_idx = i + 1;
-    }
+  //     } else {
+  //       point_a_idx = i;
+  //       point_b_idx = i + 1;
+  //     }
 
-    SampleInLineSegment(
-        Eigen::Vector2d(blind_global_box_.vertexes[point_a_idx].x,
-                        blind_global_box_.vertexes[point_a_idx].y),
-        Eigen::Vector2d(blind_global_box_.vertexes[point_b_idx].x,
-                        blind_global_box_.vertexes[point_b_idx].y),
+  //     SampleInLineSegment(
+  //         Eigen::Vector2d(blind_global_box_.vertexes[point_a_idx].x,
+  //                         blind_global_box_.vertexes[point_a_idx].y),
+  //         Eigen::Vector2d(blind_global_box_.vertexes[point_b_idx].x,
+  //                         blind_global_box_.vertexes[point_b_idx].y),
 
-        true, &points);
-  }
+  //         true, &points);
+  //   }
 
   return;
 }

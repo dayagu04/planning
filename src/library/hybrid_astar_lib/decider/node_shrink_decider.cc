@@ -1,9 +1,11 @@
 #include "node_shrink_decider.h"
+
 #include <algorithm>
 #include <cmath>
 
 #include "astar_decider.h"
 #include "hybrid_astar_common.h"
+#include "log_glog.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "utils_math.h"
@@ -32,7 +34,17 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
   }
 
   x_bound_.upper = XYbounds.x_max;
-  x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
+
+  switch (park_dir) {
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      x_bound_.lower = kXBoundLowerForHeadOut;
+      break;
+    default:
+      x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
+      break;
+  }
 
   return;
 }

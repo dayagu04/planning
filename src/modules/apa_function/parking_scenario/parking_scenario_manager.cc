@@ -16,13 +16,13 @@
 #include "narrow_space_scenario.h"
 #include "parallel_park_in_scenario.h"
 #include "parallel_park_out_scenario.h"
+#include "park_hmi_state.h"
 #include "parking_scenario.h"
 #include "perpendicular_head_in_scenario.h"
 #include "perpendicular_head_out_scenario.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_scenario.h"
 #include "planning_plan_c.h"
-#include "park_hmi_state.h"
 
 namespace planning {
 namespace apa_planner {
@@ -121,7 +121,12 @@ void ParkingScenarioManager::UpdateScenarioType() {
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
-      scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::GEOMETRY_BASED) {
+        scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
+      } else {
+        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      }
     } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
     }

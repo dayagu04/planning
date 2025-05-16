@@ -54,6 +54,7 @@ struct PlannerOpenSpaceConfig {
   int next_node_num = 10;
   float node_step;
   float perpendicular_slot_node_step;
+  float perpendicular_head_out_slot_node_step;
   float parallel_slot_node_step;
 
   float xy_grid_resolution_inv;

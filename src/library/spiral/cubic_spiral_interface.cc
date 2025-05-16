@@ -62,9 +62,8 @@ const bool CubicSpiralInterface::GenerateCubicSpiralPathByStrictSolve(
   }
 
   bool solution_usable = (bool)(sol.solve_status);
-  /* usable */
-  if (solution_usable) {
-    ret = SampleCubicSpiralStatesBySol(states, &sol, step_length);
+  if (solution_usable) /* usable */
+  {
     if (!SampleCubicSpiralStatesBySol(states, &sol, step_length)) {
       // ILOG_ERROR << "cubic spiral sampling failed !";
       return false;

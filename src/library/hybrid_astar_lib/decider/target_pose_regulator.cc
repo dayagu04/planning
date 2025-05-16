@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "hybrid_astar_common.h"
+#include "hybrid_astar_request.h"
 #include "log_glog.h"
 #include "math_utils.h"
 #include "pose2d.h"
@@ -64,10 +65,10 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   ego_dist_to_obs_ = static_cast<float>(dist);
 
 #if DEBUG_DECIDER
-    DebugString();
+  DebugString();
 
-    dist = GetDistToObs(&request->start_, edt);
-    ILOG_INFO << "start point obs dist = " << dist;
+  dist = GetDistToObs(&request->start_, edt);
+  ILOG_INFO << "start point obs dist = " << dist;
 #endif
 
   return;
@@ -104,7 +105,12 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   }
 
   if (request->space_type == ParkSpaceType::VERTICAL) {
-    GenerateCandidatesForVerticalSlot(edt, request, veh_param);
+    if (IsHeadOutRequest(request->direction_request)) {
+      GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
+    } else {
+      GenerateCandidatesForVerticalSlot(edt, request, veh_param);
+    }
+    // GenerateCandidatesForVerticalSlot(edt, request, veh_param);
   } else {
     GenerateCandidatesForParallelSlot(edt, request, veh_param);
   }
@@ -204,6 +210,39 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   // Todo: adjust x offset
   return;
 }
+void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
+    EulerDistanceTransform *edt, const AstarRequest *request,
+    const VehicleParam &veh_param) {
+  // 因为存在障碍物入侵情形，不管偏移范围设定多大，总会存在失败情况.
+  // 目前策略:不删除任何障碍物，只会将目标增加平移.
+  Pose2D global_pose;
+  global_pose = center_line_target_;
+  PoseRegulateCandidate origin_end_pose;
+  origin_end_pose.pose = global_pose;
+  candidate_info_.emplace_back(origin_end_pose);
+  const double dist = GetDistToObs(&global_pose, edt);
+
+  // PoseRegulateCandidate candidate;
+  // if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
+  //   candidate.lat_offset = 9.0;
+  //   candidate.dist_to_obs = dist;
+  //   candidate.pose.SetPose(8.0, 2.0, 0.5 * M_PI);
+  //   candidate_info_.emplace_back(candidate);
+  // } else if (request->direction_request ==
+  //            ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+  //   candidate.lat_offset = 9.0;
+  //   candidate.dist_to_obs = dist;
+  //   candidate.pose.SetPose(8.0, -2.0, -0.5 * M_PI);
+  //   candidate_info_.emplace_back(candidate);
+  // }
+
+#if DEBUG_DECIDER
+  DebugString();
+#endif
+
+  // Todo: adjust x offset
+  return;
+}
 
 void TargetPoseRegulator::Clear() {
   candidate_info_.clear();
@@ -273,6 +312,10 @@ const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePose(
       best_candidate = &obj;
     }
   }
+
+  // if (request_->direction_request == ParkingVehDirection::TAIL_IN) {
+  //   return GetCandidatePoseForTailIn(lat_buffer);
+  // }
 
   return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
 
@@ -359,7 +402,8 @@ const int TargetPoseRegulator::GenerateOffsetPreference() const {
     return 0;
   }
 
-  // 车辆在[0-170], [-170~0],说明车辆需要打方向盘调整入库，此时需要故意将目标点增加一个偏移量
+  // 车辆在[0-170],
+  // [-170~0],说明车辆需要打方向盘调整入库，此时需要故意将目标点增加一个偏移量
   if (std::fabs(request_->start_.theta) < ifly_deg2rad(170.0)) {
     // right
     if (request_->start_.theta > 0.0) {

@@ -222,6 +222,22 @@ target_link_libraries(hybrid_astar_py PRIVATE
   spiral
   )
 
+pybind11_add_module(hybrid_astar_out_py MODULE src/hybrid_astar_out_path_generator_pybind.cc)
+target_link_libraries(hybrid_astar_out_py PRIVATE
+  autoplt
+  ad_common
+  modules
+  modules_apa_function
+  modules_common
+  modules_context
+  modules_tasks
+  hybrid_astar_lib
+  reeds_shepp
+  occupancy_grid_map
+  ${OpenCV_LIBRARIES}
+  spiral
+  )
+
 pybind11_add_module(astar_parallel_py MODULE src/astar_parallel_pybind.cc)
 target_link_libraries(astar_parallel_py PRIVATE
   autoplt

@@ -32,6 +32,7 @@ struct AstarParkingConfig {
   // move target point in slot to another point for easy tracking
   double vertical_tail_in_end_straight_dist = 1.0;
   double vertical_head_in_end_straight_dist = 0.8;
+  double vertical_head_out_end_straight_dist = 1.0;
   double parallel_slot_end_straight_dist = 0.0;
   bool enable_delete_occ_in_slot;
   bool enable_delete_occ_in_ego;
@@ -255,6 +256,8 @@ struct ApaParameters {
   double occupied_pt_inside_dy = 0.0;
   bool enable_use_dynamic_obs = true;
   double safe_threshold = 0.2;
+  double virtual_head_out_obs_y_pos = 0.68;
+  double virtual_head_out_obs_x_pos = 2.68;
   double virtual_obs_left_y_pos = 2.5;
   double virtual_obs_left_x_pos = 2.68;
   double virtual_obs_right_y_pos = 6.68;

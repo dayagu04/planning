@@ -22,10 +22,11 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250508/20250508-20-05-41/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-05-08-20-05-41_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20250513/20250513-20-46-39/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2025-05-13-20-46-40_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
-
+global last_plan_pose_
+last_plan_pose_ = []
 astar_path_start_time = -1
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -47,7 +48,7 @@ end_time = time.time()
 print('load_local_view_figure_parking, ms===== ', (end_time - start_time) * 1000)
 
 # plot speed
-plot_speed = True
+plot_speed = False
 if plot_speed:
   velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
   pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
@@ -132,6 +133,10 @@ data_record_rs_path = ColumnDataSource(data={'plan_path_x': [],
 data_astar_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
+data_revised_astar_path = ColumnDataSource(data={'plan_path_x': [],
+                                      'plan_path_y': [],
+                                      'plan_path_heading': [], })
+
 data_record_astar_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
@@ -160,6 +165,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 6, l
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width = 2, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref_line')
 fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'astar_path')
+fig1.line('plan_path_y', 'plan_path_x', source = data_revised_astar_path, line_width = 8, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'revised_astar_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
@@ -187,6 +193,7 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
+    self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.search_sequence_num = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="search_sequence_num", min=0, max=500000, value=1, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
     self.refresh_thread = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "refresh_thread",min=0, max=1, value=0, step=1)
@@ -207,6 +214,7 @@ class LocalViewSlider:
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
                         select_id = self.select_id_slider,
+                        sim_to_target = self.sim_to_target_slider,
                         search_sequence_num = self.search_sequence_num,
                         force_plan = self.force_plan_slider,
                         refresh_thread = self.refresh_thread,
@@ -225,7 +233,7 @@ class LocalViewSlider:
                         swap_start_goal=self.swap_start_goal)
 
 ### sliders callback
-def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
+def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
                     lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine,
                     path_plan_method,swap_start_goal):
@@ -443,10 +451,14 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   sim_ego_x = current_ego_x + lon_pos_dif * math.cos(sim_ego_heading) - lat_pos_dif * math.sin(sim_ego_heading)
   sim_ego_y = current_ego_y + lon_pos_dif * math.sin(sim_ego_heading) + lat_pos_dif * math.cos(sim_ego_heading)
 
+  if len(last_plan_pose_) > 0 and sim_to_target == 1:
+    sim_ego_x = last_plan_pose_[0]
+    sim_ego_y = last_plan_pose_[1]
+    sim_ego_heading = last_plan_pose_[2]
+
   loc_msg.position.position_boot.x = sim_ego_x
   loc_msg.position.position_boot.y = sim_ego_y
   loc_msg.orientation.euler_boot.yaw = sim_ego_heading
-  # loc_msg.pose.heading = sim_ego_heading
 
   data_sim_pos.data.update({
     'x': [sim_ego_x],
@@ -588,11 +600,21 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       current_gear_end_y = tuned_planning_output.trajectory.trajectory_points[i].y
       current_gear_end_theta = tuned_planning_output.trajectory.trajectory_points[i].heading_yaw
 
+    data_revised_astar_path.data.update({
+        'plan_path_x': current_gear_path_x,
+        'plan_path_y': current_gear_path_y,
+        'plan_path_heading': current_gear_path_heading,
+    })
+
     if (len(current_gear_path_x) > 1):
       half_car_width = 0.9
       last_x = current_gear_path_x[-1]
       last_y = current_gear_path_y[-1]
       last_heading = current_gear_path_heading[-1]
+      last_plan_pose_.clear()
+      last_plan_pose_.append(last_x)
+      last_plan_pose_.append(last_y)
+      last_plan_pose_.append(last_heading)
       for i in range(len(car_polygon_x)):
         tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], last_x, last_y, last_heading)
         car_xn.append(tmp_x)

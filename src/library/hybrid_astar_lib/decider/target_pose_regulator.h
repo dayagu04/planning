@@ -51,6 +51,10 @@ class TargetPoseRegulator : public AstarDecider {
                                          const AstarRequest *request,
                                          const VehicleParam &veh_param);
 
+  void GenerateCandidatesForVerticalHeadOut(EulerDistanceTransform *edt,
+                                            const AstarRequest *request,
+                                            const VehicleParam &veh_param);
+
   void GenerateCandidatesForParallelSlot(EulerDistanceTransform *edt,
                                          const AstarRequest *request,
                                          const VehicleParam &veh_param);
