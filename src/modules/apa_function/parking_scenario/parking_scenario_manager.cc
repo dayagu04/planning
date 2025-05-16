@@ -109,6 +109,13 @@ void ParkingScenarioManager::UpdateScenarioType() {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
         ego_info_under_slot.slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::GEOMETRY_BASED) {
+        scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_IN;
+      } else {
+        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      }
     }
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
