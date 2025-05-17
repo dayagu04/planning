@@ -20,6 +20,7 @@
 #include "compact_node_pool.h"
 #include "cost/dynamic_programing_cost.h"
 #include "curve/cubic_polynomial_path.h"
+#include "head_out_end_decider.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
 #include "hybrid_astar_request.h"
@@ -293,6 +294,7 @@ class HybridAStar {
   // astar start, end
   Node3d* start_node_;
   Node3d* astar_end_node_;
+  HeadOutEndDecider head_out_end_decider_;
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;

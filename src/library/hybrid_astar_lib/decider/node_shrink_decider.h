@@ -7,7 +7,6 @@
 #include "pose2d.h"
 
 namespace planning {
-constexpr double kXBoundLowerForHeadOut = 1.0;
 
 struct NodeHeadingShrink {
   bool limit_search_heading_;

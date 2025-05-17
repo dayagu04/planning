@@ -253,24 +253,37 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   UpdateEDT();
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
   // vertical parking center ref line
-  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x - 10.0, request_.real_goal.y,
-                             request_.real_goal.theta));
-  } else if (request_.direction_request ==
-             ParkingVehDirection::TAIL_OUT_TO_LEFT) {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x, request_.real_goal.y + 10.0,
-                             request_.real_goal.theta));
-  } else if (request_.direction_request ==
-             ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x, request_.real_goal.y - 10.0,
-                             request_.real_goal.theta));
-  } else {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
-                             request_.real_goal.theta));
+  switch (request_.direction_request) {
+    case ParkingVehDirection::HEAD_IN:
+      ILOG_INFO << "HEAD_IN";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x - 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::TAIL_IN:
+      ILOG_INFO << "TAIL_IN";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x - 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      ILOG_INFO << "TAIL_OUT_TO_LEFT";
+      ref_line_.Process(request_.real_goal, Pose2D(request_.real_goal.x,
+                                                   request_.real_goal.y + 10.0,
+                                                   request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      ILOG_INFO << "TAIL_OUT_TO_RIGHT";
+      ref_line_.Process(request_.real_goal, Pose2D(request_.real_goal.x,
+                                                   request_.real_goal.y - 10.0,
+                                                   request_.real_goal.theta));
+      break;
+    default:
+      ILOG_INFO << "Unknown Direction : HEAD_OUT_TO_MIDDLE";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x + 5.0, request_.real_goal.y,
+                               request_.real_goal.theta));
+      break;
   }
 
   // update future path decider

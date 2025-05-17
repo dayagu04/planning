@@ -34,6 +34,7 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
   }
 
   x_bound_.upper = XYbounds.x_max;
+  constexpr double kXBoundLowerForHeadOut = 1.0;
 
   switch (park_dir) {
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:

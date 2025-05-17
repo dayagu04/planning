@@ -1654,10 +1654,14 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return false;
   }
-  Pose2D real_end = end;
-  for (int i = 0; i < 10; i++) {
-    ILOG_INFO << " end_node dedcider [" << i << "]";
-    astar_end_node_->Set(NodePath(real_end), XYbounds_, config_, 0.0);
+
+  Pose2D decider_end = end;
+
+  if (IsHeadOutRequest(request_.direction_request)) {
+    head_out_end_decider_.Process(decider_end, astar_end_node_, result, XYbounds_,
+                                  config_, collision_detect_, request_);
+  } else {
+    astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
     astar_end_node_->SetGearType(AstarPathGear::NONE);
     astar_end_node_->SetPathType(AstarPathType::END_NODE);
     astar_end_node_->DebugString();
@@ -1673,58 +1677,23 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
     check_start_time = IflyTime::Now_ms();
     if (!collision_detect_->ValidityCheckByEDT(astar_end_node_)) {
       ILOG_INFO << "end_node in collision with obstacles "
-                << static_cast<int>(astar_end_node_->GetConstCollisionType())
-                << "end pose : " << real_end.GetX() << ", " << real_end.GetY();
+                << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
       check_end_time = IflyTime::Now_ms();
       collision_check_time_ms_ += check_end_time - check_start_time;
-
-    } else {
-      break;
     }
-    if (request_.direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
-      real_end.y -= 1.0;
-      real_end.x = 8.0;
-    } else if (request_.direction_request ==
-               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
-      real_end.y += 1.0;
-      real_end.x = 8.0;
-    }
-    collision_check_time_ms_ = 0.0;
-    astar_end_node_->Clear();
   }
-  // astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
-  // astar_end_node_->SetGearType(AstarPathGear::NONE);
-  // astar_end_node_->SetPathType(AstarPathType::END_NODE);
-  // astar_end_node_->DebugString();
-
-  // if (!astar_end_node_->IsNodeValid()) {
-  //   ILOG_ERROR << "end_node invalid";
-
-  //   result->fail_type = AstarFailType::OUT_OF_BOUND;
-  //   return false;
-  // }
-
-  // // check end
-  // check_start_time = IflyTime::Now_ms();
-  // if (!collision_detect_->ValidityCheckByEDT(astar_end_node_)) {
-  //   ILOG_INFO << "end_node in collision with obstacles "
-  //             << static_cast<int>(astar_end_node_->GetConstCollisionType());
-
-  //   check_end_time = IflyTime::Now_ms();
-  //   collision_check_time_ms_ += check_end_time - check_start_time;
-  // }
 
   // node shrink related
-  node_shrink_decider_.Process(start, real_end, request_.direction_request,
+  node_shrink_decider_.Process(start, decider_end, request_.direction_request,
                                request_.real_goal, XYbounds_);
 
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, real_end, vehicle_param_.width, request_.space_type,
+      start, decider_end, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
-  SetSamplingTarget(end);
+  SetSamplingTarget(decider_end);
 
   PathComparator path_comparator;
   path_comparator.SetHeuristicPose(request_);

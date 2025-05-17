@@ -218,23 +218,19 @@ int GetPathFromHybridAstar() {
   if (result.x.size() > 0) {
     bool sample_finish = false;
     for (i = 0; i < result.x.size(); i++) {
-      if (fabs(result.phi[i] * kRad2Deg) < 89 && !sample_finish) {
-        local_position.x = result.x[i];
-        local_position.y = result.y[i];
-        local_position.theta = result.phi[i];
+      local_position.x = result.x[i];
+      local_position.y = result.y[i];
+      local_position.theta = result.phi[i];
 
-        tf.ULFLocalPoseToGlobal(&global_position, local_position);
-        global_astar_path_.emplace_back(Eigen::Vector3d(
+      tf.ULFLocalPoseToGlobal(&global_position, local_position);
+      global_astar_path_.emplace_back(Eigen::Vector3d(
+          global_position.x, global_position.y, global_position.theta));
+
+      global_path_s_.emplace_back(result.accumulated_s[i]);
+
+      if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
+        static_rs_path_.push_back(Eigen::Vector3d(
             global_position.x, global_position.y, global_position.theta));
-
-        global_path_s_.emplace_back(result.accumulated_s[i]);
-
-        if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
-          static_rs_path_.push_back(Eigen::Vector3d(
-              global_position.x, global_position.y, global_position.theta));
-        }
-      } else {
-        sample_finish = true;
       }
     }
   }

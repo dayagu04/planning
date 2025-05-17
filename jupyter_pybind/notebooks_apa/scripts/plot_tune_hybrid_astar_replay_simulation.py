@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20250513/20250513-20-46-39/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2025-05-13-20-46-40_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250517/20250517-14-02-18/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-05-17-14-02-18_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -165,7 +165,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 6, l
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width = 2, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref_line')
 fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'astar_path')
-fig1.line('plan_path_y', 'plan_path_x', source = data_revised_astar_path, line_width = 8, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'revised_astar_path')
+fig1.line('plan_path_y', 'plan_path_x', source = data_revised_astar_path, line_width = 8, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'current_gear_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')

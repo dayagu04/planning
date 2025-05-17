@@ -53,22 +53,35 @@ bool PathComparator::Compare(const AstarRequest *request,
   if (request->space_type == ParkSpaceType::VERTICAL) {
     switch (request->direction_request) {
       case ParkingVehDirection::TAIL_IN:
-        CheckVerticalSlotTailIn(best_node, node_challenger);
+        if (CheckVerticalSlotTailIn(best_node, node_challenger)) {
+          return true;
+        }
         break;
+
       case ParkingVehDirection::HEAD_IN:
-        CheckVerticalSlotHeadIn(best_node, node_challenger);
+        if (CheckVerticalSlotHeadIn(best_node, node_challenger)) {
+          return true;
+        }
         break;
       case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-        CheckVerticalSlotHeadOut(request, best_node, node_challenger);
+        if (CheckVerticalSlotHeadOut(request, best_node, node_challenger)) {
+          return true;
+        }
         break;
+
       case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-        CheckVerticalSlotHeadOut(request, best_node, node_challenger);
+        if (CheckVerticalSlotHeadOut(request, best_node, node_challenger)) {
+          return true;
+        }
         break;
+
       case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
-        CheckVerticalSlotHeadOut(request, best_node, node_challenger);
+        if (CheckVerticalSlotHeadOut(request, best_node, node_challenger)) {
+          return true;
+        }
         break;
+
       default:
-        CheckVerticalSlotHeadOut(request, best_node, node_challenger);
         break;
     }
   }

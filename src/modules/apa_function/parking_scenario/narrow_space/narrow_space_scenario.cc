@@ -1038,30 +1038,47 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
         std::vector<pnc::geometry_lib::PathPoint> local_path;
         size_t i;
-        pnc::geometry_lib::PathPoint point;
-        bool sample_finish = false;
-        bool heanding_flag = true;
+
         const size_t num = response.first_seg_path.size();
-        double heanding_diff = 1000;
         ILOG_INFO << " path num " << num;
 
-        for (i = 0; i < num; i++) {
-          point = pnc::geometry_lib::PathPoint(
-              Eigen::Vector2d(response.first_seg_path[i].x,
-                              response.first_seg_path[i].y),
-              response.first_seg_path[i].phi, response.first_seg_path[i].kappa);
-          point.s = response.first_seg_path[i].accumulated_s;
+        constexpr double kHeadingStartDeg = 80.0;
+        constexpr double kHeadingEndDeg = 89.9;
+        constexpr double kHeadingDiffThresh = 1e-3;
 
-          if (point.heading * kRad2Deg > 80 && i < num) {
-            heanding_diff = response.first_seg_path[i].phi -
-                            response.first_seg_path[i - 1].phi;
-            heanding_flag = heanding_diff > 1e-3;
-          }
-          if (fabs(point.heading) * kRad2Deg <= 89 && !sample_finish &&
-              heanding_flag) {
-            local_path.emplace_back(point);
+        bool heading_flag = true;
+        bool sample_finish = false;
+
+        pnc::geometry_lib::PathPoint point;
+
+        for (int i = 0; i < num; ++i) {
+          const AStarPathPoint& path_pt = response.first_seg_path[i];
+          point = pnc::geometry_lib::PathPoint(
+              Eigen::Vector2d(path_pt.x, path_pt.y), path_pt.phi,
+              path_pt.kappa);
+          point.s = path_pt.accumulated_s;
+
+          const bool is_park_out =
+              apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus();
+
+          if (is_park_out) {
+            const double heading_deg = std::abs(point.heading * kRad2Deg);
+
+            if (heading_deg > kHeadingStartDeg) {
+              double heading_diff =
+                  path_pt.phi - response.first_seg_path[i - 1].phi;
+              heading_flag = heading_diff > kHeadingDiffThresh;
+            }
+
+            if (std::abs(point.heading) * kRad2Deg <= kHeadingEndDeg &&
+                !sample_finish && heading_flag) {
+              local_path.emplace_back(point);
+            } else {
+              sample_finish = true;
+            }
+
           } else {
-            sample_finish = true;
+            local_path.emplace_back(point);
           }
         }
 
