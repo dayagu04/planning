@@ -836,13 +836,14 @@ def load_lon_global_figure(bag_loader):
   # fig_replan_status.line('time', 'location_latency', source = plan_debug_multi, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'location_latency')
   # 在fig_replan_status画的图中添加相关标签注释：图的左侧竖直排列添加如下所有文字注释
   # LAT_POSITION_REPLAN:1,LAT_ANGLE_REPLAN:2,lON_POSITION_REPLAN:4,LON_TINY_SPEED_REPLAN:8,FUNCTION_REQUEST_REPLAN:16,LAT_LON_REST:32
-  fig_replan_status.text(x=t_plan_debug[10], y=12, text=['LAT_POSITION_REPLAN:1'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=10, text=['LAT_ANGLE_REPLAN:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=8, text=['LON_POSITION_REPLAN:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=6, text=['LON_TINY_SPEED_REPLAN:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=4, text=['LAT_LON_REPLAN:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=2, text=['LAT_REPLAN:32'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=0, text=['LAT_LON_REST:64'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=14, text=['LAT_POSITION_REPLAN:1'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=12, text=['LAT_ANGLE_REPLAN:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=10, text=['LON_POSITION_REPLAN:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=8, text=['LON_TINY_SPEED_REPLAN:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=6, text=['LAT_LON_REPLAN:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=4, text=['LAT_REPLAN:32'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=2, text=['LON_REPLAN:64'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=0, text=['LAT_LON_RESET:128'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
 
   hover_fsm_state = HoverTool(renderers=[f_fsm_state], tooltips=[('time', '@time'), ('fsm_cur_state', '@fsm_cur_state')], mode='vline')
   fig_fsm_state.add_tools(hover_fsm_state)
