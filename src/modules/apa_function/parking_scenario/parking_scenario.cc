@@ -324,9 +324,8 @@ const double ParkingScenario::CalRemainDistFromPath() {
 }
 
 const double ParkingScenario::CalRemainDistFromObs(
-    const double safe_dist, const double lat_buffer,
-    const double extra_buffer_when_reversing, const double dynamic_lat_buffer,
-    const double dynamic_lon_buffer) {
+    const double static_lon_buffer, const double static_lat_buffer,
+    const double dynamic_lon_buffer, const double dynamic_lat_buffer) {
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetUssObsAvoidancePtr();
@@ -338,39 +337,33 @@ const double ParkingScenario::CalRemainDistFromObs(
   uss_obstacle_avoider_ptr->Update();
 
   double uss_remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
+      static_lat_buffer;
 
+  // check static obs, it can be radical
   GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
                                        ApaObsMovementType::STATIC);
-
   ColResult col_res = gjk_col_det_ptr->Update(
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), lat_buffer,
-      0.0, gjl_col_det_request);
-
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
+      static_lat_buffer, 0.0, gjl_col_det_request);
   if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
   }
-  double obs_pt_remain_dist_static = col_res.remain_dist_static - safe_dist;
+  const double obs_pt_remain_dist_static =
+      col_res.remain_dist_static - static_lat_buffer;
 
+  // check dynamic obs, it should be conservative
   gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
-
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_lat_buffer, 0.0, gjl_col_det_request);
-
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
   }
-  double obs_pt_remain_dist_dynamic =
+  const double obs_pt_remain_dist_dynamic =
       col_res.remain_dist_dynamic - dynamic_lon_buffer;
 
-  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    uss_remain_dist -= extra_buffer_when_reversing;
-    obs_pt_remain_dist_static -= extra_buffer_when_reversing;
-    obs_pt_remain_dist_dynamic -= extra_buffer_when_reversing;
-  }
-
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", lat_buffer)
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", static_lat_buffer)
 
   ILOG_INFO << "  enable_corner_uss_process = "
             << apa_param.GetParam().enable_corner_uss_process

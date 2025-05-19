@@ -153,9 +153,9 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0,
-                           apa_param.GetParam().parallel_dynamic_lat_buffer,
-                           apa_param.GetParam().parallel_dynamic_lon_buffer);
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer,
+                           apa_param.GetParam().parallel_dynamic_lon_buffer,
+                           apa_param.GetParam().parallel_dynamic_lat_buffer);
 
   ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 

@@ -1423,6 +1423,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+
   const ApaParameters& param = apa_param.GetParam();
   double lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
                           ? param.safe_uss_remain_dist_out_slot
@@ -1446,147 +1448,45 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
         geometry_path_brake.total_length < 0.76) {
       lon_buffer = param.limited_safe_uss_remain_dist;
       ILOG_INFO << "next path is col and length is short, so this path need be "
-                   "more limited";
+                   "more radical";
     }
   }
 
-  double lat_buffer = param.lat_inflation;
+  // adopting a graded lat buffer real-time braking
+  std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
+  real_time_brake_info_vec.resize(3);
+  RealTimeBrakeInfo real_time_brake_info(
+      RealTimeBrakeType::STOP, param.stop_lat_inflation, param.stop_lon_dist);
+  real_time_brake_info_vec[0] = real_time_brake_info;
 
-  // 计算当前的真实车位终点位置
-  geometry_lib::PathPoint real_target_pose =
-      ego_info_under_slot.origin_target_pose;
-  real_target_pose.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
-  real_target_pose.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
+  real_time_brake_info.Set(RealTimeBrakeType::HEAVY_BRAKE,
+                           param.heavy_brake_lat_inflation,
+                           param.heavy_brake_lon_dist);
+  real_time_brake_info_vec[1] = real_time_brake_info;
 
-  const geometry_lib::PathPoint terminal_err(
-      ego_info_under_slot.cur_pose.pos - real_target_pose.pos,
-      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-                                   real_target_pose.heading));
+  real_time_brake_info.Set(RealTimeBrakeType::SLIGHT_BRAKE,
+                           param.slight_brake_lat_inflation,
+                           param.slight_brake_lon_dist);
+  real_time_brake_info_vec[2] = real_time_brake_info;
 
-  // 如果当前车位姿已经几乎摆正，但是自车横向误差依然较大，可以增大横向buffer保证安全
-  const bool case_1 = frame_.is_last_path;
-  const bool case_2 = ego_info_under_slot.slot_occupied_ratio > 0.308;
-  const bool case_3 = std::fabs(terminal_err.heading) * kRad2Deg < 6.8;
-  const bool case_4 = std::fabs(terminal_err.pos.y()) > 0.076;
-  const bool case_5 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
-
-  if (case_1 && case_2 && case_3 && case_4 && case_5) {
-    lat_buffer = std::max(lat_buffer, 0.146);
-  }
-
-  ILOG_INFO << "lat_buffer = " << lat_buffer << "  case_1 = " << case_1
-            << "  case_2 = " << case_2 << "  case_3 = " << case_3
-            << "  case_4 = " << case_4;
-
-  // 计算上次规划路径终点的位置
-  geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
-  geometry_path_bef.GlobalToLocal(
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
-  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
-
-  // 计算当前的真实车位终点位置与上次规划路径终点的横向距离
-  const double lat_dist =
-      std::fabs((real_target_pose.pos - tar_pose_bef.pos).y());
-
-  const double heading_err =
-      std::fabs(real_target_pose.heading - tar_pose_bef.heading) * kRad2Deg;
-
-  // 如果相差较大， 说明车位跳动较大，需要增大刹停buffer
-  const bool case2_1 = (lat_dist > 0.08 || heading_err > 1.48);
-  const bool case2_2 = ego_info_under_slot.slot_occupied_ratio > 1e-3;
-  const bool case2_3 = (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
-
-  if (case2_1 && case2_2 && case2_3) {
-    lat_buffer = std::max(0.146, lat_buffer);
-  }
-
-  ILOG_INFO << "lat_buffer = " << lat_buffer << "  lat_dist = " << lat_dist
-            << "  heading_err = " << heading_err << "  case2_1 = " << case2_1
-            << "  case2_2 = " << case2_2 << "  case2_3 = " << case2_3;
-
-  // 库外在空间足够的情况下尽量使用较大的安全buffer
-  const double slot_x =
-      ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid.x();
-  if (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE) {
-    if (ego_info_under_slot.cur_pose.pos.x() > slot_x + 2.0 ||
-        (ego_info_under_slot.cur_pose.pos.x() > slot_x + 1.0 &&
-         std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg > 92.6)) {
-      if (std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()
-                        ->GetSteerWheelAngle()) *
-              kRad2Deg >
-          200.68) {
-        lat_buffer = std::max(0.198, lat_buffer);
-      } else {
-        lat_buffer = std::max(0.146, lat_buffer);
-      }
-      ILOG_INFO << "out slot use big lat buffer = " << lat_buffer;
+  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
+    if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
+        std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
+      lon_buffer += 0.05;  // extra lon buffer when ref gear in special case
     }
   }
 
-  // 如果当前控制误差过大 增大横向buffer
-  double s_proj = 0.0;
-  if (apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
-    ILOG_INFO << "control err is relatively big, should increase realtime "
-                 "brake lat buffer";
-    if (ego_info_under_slot.slot_occupied_ratio > 0.0 &&
-        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 1.68) {
-      lat_buffer = std::max(0.0968, lat_buffer);
-    } else {
-      lat_buffer = std::max(0.20, lat_buffer);
-    }
+  double safe_remain_dist = std::numeric_limits<double>::infinity();
+  for (const auto& real_time_brake_info : real_time_brake_info_vec) {
+    double remain_dist =
+        CalRemainDistFromObs(lon_buffer, real_time_brake_info.lat_buffer);
+    remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
+    safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
-  // 计算当前段的规划轨迹是否与障碍物碰撞  如果碰撞
-  // 说明障碍物的位置相比于重规划时刻已经发生变化，那么增大横向buffer，从而保证安全
-  if (current_path_point_global_vec_.size() > 0 &&
-      frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
-    ColResult res =
-        apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-            ->GetGJKCollisionDetectorPtr()
-            ->Update(current_path_point_global_vec_,
-                     current_path_point_global_vec_.front().lat_buffer, 0.0,
-                     GJKColDetRequest(false));
-    if (res.col_flag && res.remain_dist > frame_.current_path_length -
-                                              frame_.remain_dist_path) {
-      ILOG_INFO << "current plan path has collision, it indicate the obs has "
-                   "changed, and should increase realtime brake "
-                   "lat buffer";
-      lat_buffer = std::max(0.146, lat_buffer);
-    }
-  }
+  ILOG_INFO << "safe_remain_dist = " << safe_remain_dist;
 
-  // 倒库时，如果车辆已经入库，但是比如车在中心线左侧 但是方向盘往右打
-  // 就类似于把车头往左甩  相对比较危险， 此时车辆安全buffer应该相对较大
-  const bool case3_1 = frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE;
-  const bool case3_2 = ego_info_under_slot.slot_occupied_ratio > 0.368;
-  const bool case3_3 =
-      (ego_info_under_slot.cur_pose.pos.y() > 0.04 &&
-       apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
-               kRad2Deg <
-           -168.8);
-  const bool case3_4 =
-      (ego_info_under_slot.cur_pose.pos.y() < -0.04 &&
-       apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
-               kRad2Deg >
-           168.8);
-  if (case3_1 && case3_2 && (case3_3 || case3_4)) {
-    lat_buffer = std::max(0.146, lat_buffer);
-  }
-
-  ILOG_INFO << "lat_buffer = " << lat_buffer << "  case3_1 = " << case3_1
-            << "  case3_2 = " << case3_2 << "  case3_3 = " << case3_3
-            << "  case3_4 = " << case3_4;
-
-  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) < 0.4 &&
-      ego_info_under_slot.slot_occupied_ratio > 0.728 &&
-      std::fabs(
-          apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
-          kRad2Deg) < 216.0) {
-    lat_buffer = std::min(0.07, lat_buffer);
-  }
-
-  return CalRemainDistFromObs(lon_buffer, lat_buffer);
+  return safe_remain_dist;
 }
 
 const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
