@@ -1655,45 +1655,45 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
     return false;
   }
 
-  Pose2D decider_end = end;
+  // if (IsHeadOutRequest(request_.direction_request)) {
+  //   head_out_end_decider_.Process(XYbounds_, config_, collision_detect_,
+  //                                 request_, decider_end, astar_end_node_,
+  //                                 result);
+  // } else {
+  // }
 
-  if (IsHeadOutRequest(request_.direction_request)) {
-    head_out_end_decider_.Process(decider_end, astar_end_node_, result, XYbounds_,
-                                  config_, collision_detect_, request_);
-  } else {
-    astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
-    astar_end_node_->SetGearType(AstarPathGear::NONE);
-    astar_end_node_->SetPathType(AstarPathType::END_NODE);
-    astar_end_node_->DebugString();
+  astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
+  astar_end_node_->SetGearType(AstarPathGear::NONE);
+  astar_end_node_->SetPathType(AstarPathType::END_NODE);
+  astar_end_node_->DebugString();
 
-    if (!astar_end_node_->IsNodeValid()) {
-      ILOG_ERROR << "end_node invalid";
+  if (!astar_end_node_->IsNodeValid()) {
+    ILOG_ERROR << "end_node invalid";
 
-      result->fail_type = AstarFailType::OUT_OF_BOUND;
-      return false;
-    }
+    result->fail_type = AstarFailType::OUT_OF_BOUND;
+    return false;
+  }
 
-    // check end
-    check_start_time = IflyTime::Now_ms();
-    if (!collision_detect_->ValidityCheckByEDT(astar_end_node_)) {
-      ILOG_INFO << "end_node in collision with obstacles "
-                << static_cast<int>(astar_end_node_->GetConstCollisionType());
+  // check end
+  check_start_time = IflyTime::Now_ms();
+  if (!collision_detect_->ValidityCheckByEDT(astar_end_node_)) {
+    ILOG_INFO << "end_node in collision with obstacles "
+              << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
-      check_end_time = IflyTime::Now_ms();
-      collision_check_time_ms_ += check_end_time - check_start_time;
-    }
+    check_end_time = IflyTime::Now_ms();
+    collision_check_time_ms_ += check_end_time - check_start_time;
   }
 
   // node shrink related
-  node_shrink_decider_.Process(start, decider_end, request_.direction_request,
+  node_shrink_decider_.Process(start, end, request_.direction_request,
                                request_.real_goal, XYbounds_);
 
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, decider_end, vehicle_param_.width, request_.space_type,
+      start, end, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
-  SetSamplingTarget(decider_end);
+  SetSamplingTarget(end);
 
   PathComparator path_comparator;
   path_comparator.SetHeuristicPose(request_);
@@ -1830,17 +1830,9 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
         continue;
       }
 
-      if (request_.direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
-        if (new_node.IsForward() && new_node.GetPhi() * kRad2Deg < -30) {
-          continue;
-        }
-      }
-
-      if (request_.direction_request ==
-          ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
-        if (new_node.IsForward() && new_node.GetPhi() * kRad2Deg > 30) {
-          continue;
-        }
+      if (node_shrink_decider_.IsShrinkByHeadOutDirection(request_,
+                                                          &new_node)) {
+        continue;
       }
 
       if (node_shrink_decider_.IsShrinkByStartNode(start_node_->GetGlobalID(),
@@ -2028,12 +2020,6 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
   ILOG_INFO << "hybrid astar total time (ms) = " << result->time_ms;
-
-  for (int i = 0; i < result->x.size(); i++) {
-    ILOG_INFO << "result [" << i << "] " << result->x[i] << ", " << result->y[i]
-              << ", " << result->phi[i] << ", " << result->kappa[i] << ", "
-              << static_cast<int>(result->gear[i]);
-  }
 
   // ILOG_INFO << "hybrid astar finished";
   // ILOG_INFO << "child node size" << child_node_debug_.size();
@@ -2373,7 +2359,7 @@ void HybridAStar::SetRequest(const AstarRequest& request) {
     if (request.direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
         request.direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
         request.direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
-      config_.node_step = config_.perpendicular_head_out_slot_node_step;
+      config_.node_step = config_.perpendicular_slot_head_out_node_step;
     }
   }
 

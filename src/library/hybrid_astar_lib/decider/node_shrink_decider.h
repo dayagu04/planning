@@ -3,6 +3,7 @@
 #include <cstddef>
 
 #include "astar_decider.h"
+#include "hybrid_astar_request.h"
 #include "node3d.h"
 #include "pose2d.h"
 
@@ -41,6 +42,9 @@ class NodeShrinkDecider : public AstarDecider {
   bool IsShrinkByStartNode(const size_t start_id, Node3d *child);
 
   bool IsShrinkByGearSwitchNumber(Node3d *child);
+
+  bool IsShrinkByHeadOutDirection(const AstarRequest &request,
+                                  const Node3d *child);
 
   const bool IsLoopBackNode(const Node3d *new_node,
                             const Node3d *old_node) const;

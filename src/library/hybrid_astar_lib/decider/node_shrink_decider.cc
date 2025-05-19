@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "astar_decider.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "node3d.h"
@@ -161,6 +162,28 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
   return false;
 }
+
+bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
+                                                   const Node3d *child) {
+  constexpr double ANGLE_THRESHOLD_DEG = 30.0;
+
+  // 计算角度并转换为度数
+  const double heading_deg = child->GetPhi() * kRad2Deg;
+
+  // 检查是否为前进方向
+  const bool is_forward = child->IsForward();
+
+  switch (request.direction_request) {
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      return is_forward && heading_deg < -ANGLE_THRESHOLD_DEG;
+
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      return is_forward && heading_deg > ANGLE_THRESHOLD_DEG;
+
+    default:
+      return false;
+  }
+};
 
 const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
                                              const Node3d *old_node) const {

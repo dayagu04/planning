@@ -294,7 +294,6 @@ class HybridAStar {
   // astar start, end
   Node3d* start_node_;
   Node3d* astar_end_node_;
-  HeadOutEndDecider head_out_end_decider_;
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;

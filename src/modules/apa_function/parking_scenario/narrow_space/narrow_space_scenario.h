@@ -60,8 +60,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   virtual const uint8_t PathPlanOnce() override;
 
-  const bool GenInsidePoint();
-
   const PerpendicularHeadOutScenario::SlotObsType CalSlotObsType(
       const Eigen::Vector2d& obs_slot);
 

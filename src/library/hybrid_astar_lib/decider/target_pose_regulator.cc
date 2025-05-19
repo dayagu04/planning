@@ -33,7 +33,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       float veh_x_upper = min_passage_width + request->slot_length -
-                       veh_param.front_edge_to_rear_axle;
+                          veh_param.front_edge_to_rear_axle;
       x_check_upper_ = std::max(center_line_target_.x, veh_x_upper);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
@@ -219,22 +219,30 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   global_pose = center_line_target_;
   PoseRegulateCandidate origin_end_pose;
   origin_end_pose.pose = global_pose;
+  origin_end_pose.dist_to_obs = GetDistToObs(&global_pose, edt);
   candidate_info_.emplace_back(origin_end_pose);
-  const double dist = GetDistToObs(&global_pose, edt);
 
-  // PoseRegulateCandidate candidate;
-  // if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
-  //   candidate.lat_offset = 9.0;
-  //   candidate.dist_to_obs = dist;
-  //   candidate.pose.SetPose(8.0, 2.0, 0.5 * M_PI);
-  //   candidate_info_.emplace_back(candidate);
-  // } else if (request->direction_request ==
-  //            ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
-  //   candidate.lat_offset = 9.0;
-  //   candidate.dist_to_obs = dist;
-  //   candidate.pose.SetPose(8.0, -2.0, -0.5 * M_PI);
-  //   candidate_info_.emplace_back(candidate);
-  // }
+
+  const size_t max_candidate_num = 10;
+
+  PoseRegulateCandidate candidate;
+  for (size_t i = 0; i < max_candidate_num; i++) {
+    global_pose.x = 8.0;
+    if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
+      global_pose.y -= 1.0;
+      // candidate.lat_offset = 9.0;
+      candidate.dist_to_obs = GetDistToObs(&global_pose, edt);
+      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+      candidate_info_.emplace_back(candidate);
+    } else if (request->direction_request ==
+               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      global_pose.y += 1.0;
+      // candidate.lat_offset = 9.0;
+      candidate.dist_to_obs = GetDistToObs(&global_pose, edt);
+      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+      candidate_info_.emplace_back(candidate);
+    }
+  }
 
 #if DEBUG_DECIDER
   DebugString();
@@ -313,12 +321,7 @@ const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePose(
     }
   }
 
-  // if (request_->direction_request == ParkingVehDirection::TAIL_IN) {
-  //   return GetCandidatePoseForTailIn(lat_buffer);
-  // }
-
   return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
-
 }
 
 void TargetPoseRegulator::DebugString() {

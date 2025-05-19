@@ -64,17 +64,7 @@ bool PathComparator::Compare(const AstarRequest *request,
         }
         break;
       case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-        if (CheckVerticalSlotHeadOut(request, best_node, node_challenger)) {
-          return true;
-        }
-        break;
-
       case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-        if (CheckVerticalSlotHeadOut(request, best_node, node_challenger)) {
-          return true;
-        }
-        break;
-
       case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
         if (CheckVerticalSlotHeadOut(request, best_node, node_challenger)) {
           return true;

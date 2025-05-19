@@ -178,6 +178,8 @@ class HybridAStarInterface {
 
   int gear_switch_number_scenario_try_;
   double search_time_;
+  
+  HeadOutEndDecider head_out_end_decider_;
 };
 
 }  // namespace planning

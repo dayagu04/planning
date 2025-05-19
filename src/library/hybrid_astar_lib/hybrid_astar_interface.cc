@@ -154,7 +154,7 @@ void HybridAStarInterface::UpdateOutput() {
     case ParkingVehDirection::TAIL_IN:
       ILOG_INFO << "TAIL_IN";
       ref_line_.Process(request_.real_goal,
-                        Pose2D(request_.real_goal.x - 10.0,
+                        Pose2D(request_.real_goal.x + 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
@@ -263,7 +263,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     case ParkingVehDirection::TAIL_IN:
       ILOG_INFO << "TAIL_IN";
       ref_line_.Process(request_.real_goal,
-                        Pose2D(request_.real_goal.x - 10.0,
+                        Pose2D(request_.real_goal.x + 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
@@ -780,10 +780,10 @@ const bool HybridAStarInterface::IsEgoOverlapWithSlot() {
 void HybridAStarInterface::PathSearchForScenarioRunning(
     const TargetPoseRegulator& regulator, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
-  double lat_buffer_outside;
-  double lat_buffer_inside;
-  double advised_lat_buffer_inside;
-  double lon_buffer;
+  float lat_buffer_outside;
+  float lat_buffer_inside;
+  float advised_lat_buffer_inside;
+  float lon_buffer;
 
   // judge target regulator goal if collide
   std::pair<Pose2D, float> target_regulator_result;
@@ -841,6 +841,13 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
         AstarPathGenerateType::ASTAR_SEARCHING) {
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
+
+      // head_out_end_decider_.Process(
+      //     const MapBound& XYbounds, const PlannerOpenSpaceConfig& config,
+      //     const std::shared_ptr<NodeCollisionDetect>& collision_detect,
+      //     const AstarRequest request, Pose2D& end, Node3d* astar_end_node,
+      //     HybridAStarResult* result);
+
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                  &traj_candidates_[i]);
 

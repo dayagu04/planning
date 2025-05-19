@@ -350,147 +350,6 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   return;
 }
 
-const bool NarrowSpaceScenario::GenInsidePoint() {
-  // construct tlane pq
-  // left y is positive, right y is negative
-  // left y should be smallest, right y should be largest
-  // all x should be largest
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      geometry_lib::Compare>
-      left_pq_for_y(geometry_lib::Compare(3));
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      geometry_lib::Compare>
-      left_pq_for_x(geometry_lib::Compare(0));
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      geometry_lib::Compare>
-      right_pq_for_y(geometry_lib::Compare(2));
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
-                      geometry_lib::Compare>
-      right_pq_for_x(geometry_lib::Compare(0));
-
-  const auto& param = apa_param.GetParam();
-
-  const double mir_width =
-      (param.max_car_width - param.car_width) * 0.5 - 0.0168;
-
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-
-  const double mir_x = ego_info_under_slot.target_pose.pos.x() +
-                       param.lon_dist_mirror_to_rear_axle - 0.368;
-
-  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
-      ego_info_under_slot.g2l_tf);
-
-  const auto& obstacles =
-      apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
-
-  Eigen::Vector2d obs_pt_slot;
-  size_t obs_count_in_slot = 0;
-  for (const auto& pair : obstacles) {
-    for (const auto& obs : pair.second.GetPtClout2dLocal()) {
-      obs_pt_slot = obs;
-      PerpendicularHeadOutScenario::SlotObsType obs_slot_type =
-          CalSlotObsType(obs_pt_slot);
-      if (obs_slot_type == PerpendicularHeadOutScenario::SlotObsType::IN_OBS) {
-        obs_count_in_slot++;
-      }
-      if (obs_slot_type !=
-              PerpendicularHeadOutScenario::SlotObsType::INSIDE_OBS &&
-          obs_slot_type !=
-              PerpendicularHeadOutScenario::SlotObsType::OUTSIDE_OBS) {
-        continue;
-      }
-
-      // the obs lower mir can relax lat requirements
-      if (obs_pt_slot.x() < mir_x) {
-        if (obs_pt_slot.y() > 1e-6) {
-          obs_pt_slot.y() += mir_width;
-        } else {
-          obs_pt_slot.y() -= mir_width;
-        }
-      }
-
-      // the obs far from slot can relax lon equirements
-      if (std::fabs(obs_pt_slot.y()) >
-          ego_info_under_slot.slot.slot_width_ * 0.5 + 0.468) {
-        obs_pt_slot.x() -= 0.268;
-      }
-
-      if (obs_pt_slot.y() > 1e-6) {
-        left_pq_for_y.emplace(std::move(obs_pt_slot));
-        left_pq_for_x.emplace(std::move(obs_pt_slot));
-      } else {
-        right_pq_for_y.emplace(std::move(obs_pt_slot));
-        right_pq_for_x.emplace(std::move(obs_pt_slot));
-      }
-    }
-  }
-
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
-    if (obs_count_in_slot > 0) {
-      ILOG_INFO << "there are obs in slot";
-      return false;
-    }
-  }
-
-  // apa_param.SetPram().actual_mono_plan_enable = param.mono_plan_enable;
-  // // 如果保守的话  两侧全空才开启一把进 无意义 这个保守泊入已关闭
-  // const bool left_empty = left_pq_for_x.empty();
-  // const bool right_empty = right_pq_for_x.empty();
-  // if (param.conservative_mono_enable && (!left_empty || !right_empty)) {
-  //   apa_param.SetPram().actual_mono_plan_enable = false;
-  // }
-
-  // 加入左右侧的虚拟障碍物
-  const Eigen::Vector2d pt_01_unit_vec =
-      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec
-          .normalized();
-
-  const Eigen::Vector2d pt_01_mid =
-      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid;
-
-  double half_origin_slot_width =
-      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec.norm() *
-      0.5;
-  half_origin_slot_width =
-      std::max(half_origin_slot_width, param.max_car_width * 0.5 + 0.168);
-
-  const Eigen::Vector2d virtual_left_obs =
-      pt_01_mid -
-      param.virtual_head_out_obs_x_pos *
-          ego_info_under_slot.origin_pose_local.heading_vec +
-      (half_origin_slot_width + param.virtual_head_out_obs_y_pos) *
-          pt_01_unit_vec;
-
-  const Eigen::Vector2d virtual_right_obs =
-      pt_01_mid -
-      param.virtual_head_out_obs_x_pos *
-          ego_info_under_slot.origin_pose_local.heading_vec -
-      (half_origin_slot_width + param.virtual_head_out_obs_y_pos) *
-          pt_01_unit_vec;
-
-  left_pq_for_y.emplace(virtual_left_obs);
-  left_pq_for_x.emplace(virtual_left_obs);
-  right_pq_for_y.emplace(virtual_right_obs);
-  right_pq_for_x.emplace(virtual_right_obs);
-
-  // 找到左侧和右侧障碍物极限位置
-  const Eigen::Vector2d left_obs(left_pq_for_x.top().x(),
-                                 left_pq_for_y.top().y());
-  const Eigen::Vector2d right_obs(right_pq_for_x.top().x(),
-                                  right_pq_for_y.top().y());
-
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
-      ApaParkOutDirection::LEFT_FRONT) {
-    ego_info_under_slot.pt_inside = left_obs;
-  } else if (apa_world_ptr_->GetStateMachineManagerPtr()
-                 ->GetParkOutDirection() == ApaParkOutDirection::RIGHT_FRONT) {
-    ego_info_under_slot.pt_inside = right_obs;
-  }
-  return true;
-}
-
 const PerpendicularHeadOutScenario::SlotObsType
 NarrowSpaceScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   const EgoInfoUnderSlot& ego_info_under_slot =
@@ -1067,7 +926,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
             if (heading_deg > kHeadingStartDeg) {
               double heading_diff =
                   path_pt.phi - response.first_seg_path[i - 1].phi;
-              heading_flag = heading_diff > kHeadingDiffThresh;
+              heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
             }
 
             if (std::abs(point.heading) * kRad2Deg <= kHeadingEndDeg &&
@@ -1185,28 +1044,24 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
   bool sample_finish = false;
 
   for (i = 0; i < result.x.size(); i++) {
-    if (fabs(result.phi[i]) <= 89 * kDeg2Rad && !sample_finish) {
-      local_position.x = result.x[i];
-      local_position.y = result.y[i];
-      local_position.theta = result.phi[i];
+    local_position.x = result.x[i];
+    local_position.y = result.y[i];
+    local_position.theta = result.phi[i];
 
-      tf->ULFLocalPoseToGlobal(&global_position, local_position);
+    tf->ULFLocalPoseToGlobal(&global_position, local_position);
 
-      planning::common::TrajectoryPoint* point = debug_->add_refline_info();
+    planning::common::TrajectoryPoint* point = debug_->add_refline_info();
 
-      point->set_x(global_position.x);
-      point->set_y(global_position.y);
-      point->set_heading_angle(global_position.theta);
-      point->set_s(result.accumulated_s[i]);
+    point->set_x(global_position.x);
+    point->set_y(global_position.y);
+    point->set_heading_angle(global_position.theta);
+    point->set_s(result.accumulated_s[i]);
 
-      // todo, add hybrid astar msg. but now reuse TrajectoryPoint.
-      if (result.type[i] == AstarPathType::REEDS_SHEPP) {
-        point->set_l(-1.0);
-      } else {
-        point->set_l(1.0);
-      }
+    // todo, add hybrid astar msg. but now reuse TrajectoryPoint.
+    if (result.type[i] == AstarPathType::REEDS_SHEPP) {
+      point->set_l(-1.0);
     } else {
-      sample_finish = true;
+      point->set_l(1.0);
     }
 
     path_x.emplace_back(global_position.x);
@@ -1326,7 +1181,6 @@ const bool NarrowSpaceScenario::UpdateEgoSlotInfo() {
   bool ret = false;
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
     ret = UpdateVerticalOutSlotInfo();
-    GenInsidePoint();
   } else {
     if (apa_world_ptr_->GetSlotManagerPtr()
             ->GetMutableEgoInfoUnderSlot()
@@ -1615,36 +1469,13 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
     ego_info_under_slot.target_pose.pos << 7.0, 11.0;
     ego_info_under_slot.target_pose.heading = 0.5 * M_PI;
     ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
-    // ILOG_INFO << "origin target collision "
-    //           << ego_info_under_slot.pt_inside.x();
-    // if (ego_info_under_slot.pt_inside.x() > 7.5) {
-    //   ILOG_INFO << "origin target collision";
-    //   ego_info_under_slot.target_pose.pos << 8.0, 3.0;
-    // }
-    // if (frame_.replan_reason == FIRST_PLAN) {
-    //   ego_info_under_slot.target_pose.pos << 7.0, 11.0;
-    // } else {
-    //   ego_info_under_slot.target_pose.pos
-    //       << ego_info_under_slot.pt_inside.x() + 2.0,
-    //       6.0;
-    // }
 
   } else if (apa_world_ptr_->GetStateMachineManagerPtr()
                  ->GetParkOutDirection() == ApaParkOutDirection::RIGHT_FRONT) {
     ego_info_under_slot.target_pose.pos << 7.0, -11.0;
     ego_info_under_slot.target_pose.heading = -0.5 * M_PI;
     ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
-    // if (ego_info_under_slot.pt_inside.x() > 7.5) {
-    //   ILOG_INFO << "origin target collision";
-    //   ego_info_under_slot.target_pose.pos << 8.0, -3.0;
-    // }
-    // if (frame_.replan_reason == FIRST_PLAN) {
-    //   ego_info_under_slot.target_pose.pos << 7.0, -11.0;
-    // } else {
-    //   ego_info_under_slot.target_pose.pos
-    //       << ego_info_under_slot.pt_inside.x() + 2.0,
-    //       -6.0;
-    // }
+
   } else {
     ego_info_under_slot.target_pose.pos << 3.0, 0.0;
     ego_info_under_slot.target_pose.heading = 0.0;

@@ -82,10 +82,12 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                parking_in_type == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
                parking_in_type == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
       passage_half_length = 18.0;
+      virtual_wall_x_offset = 1.5;
     }
 
-    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end, 1.5,
-                            virtual_wall_y_offset, passage_half_length);
+    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,
+                            virtual_wall_x_offset, virtual_wall_y_offset,
+                            passage_half_length);
 
   } else {
     if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
@@ -169,8 +171,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   // passage up bound
   float passage_height =
       apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
-  float passage_up_bound_x = slot_length + 8.0;
-  // float passage_up_bound_x = slot_length + passage_height;
+  float passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
   // passage left/right bound
 
@@ -231,27 +232,27 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
       Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), false,
       &points);
 
-  //   // perception blind zone
-  //   int point_a_idx;
-  //   int point_b_idx;
-  //   for (int i = 0; i < blind_global_box_.vertex_num; i++) {
-  //     if (i == blind_global_box_.vertex_num - 1) {
-  //       point_a_idx = i;
-  //       point_b_idx = 0;
+  // perception blind zone
+  int point_a_idx;
+  int point_b_idx;
+  for (int i = 0; i < blind_global_box_.vertex_num; i++) {
+    if (i == blind_global_box_.vertex_num - 1) {
+      point_a_idx = i;
+      point_b_idx = 0;
 
-  //     } else {
-  //       point_a_idx = i;
-  //       point_b_idx = i + 1;
-  //     }
+    } else {
+      point_a_idx = i;
+      point_b_idx = i + 1;
+    }
 
-  //     SampleInLineSegment(
-  //         Eigen::Vector2d(blind_global_box_.vertexes[point_a_idx].x,
-  //                         blind_global_box_.vertexes[point_a_idx].y),
-  //         Eigen::Vector2d(blind_global_box_.vertexes[point_b_idx].x,
-  //                         blind_global_box_.vertexes[point_b_idx].y),
+    SampleInLineSegment(
+        Eigen::Vector2d(blind_global_box_.vertexes[point_a_idx].x,
+                        blind_global_box_.vertexes[point_a_idx].y),
+        Eigen::Vector2d(blind_global_box_.vertexes[point_b_idx].x,
+                        blind_global_box_.vertexes[point_b_idx].y),
 
-  //         true, &points);
-  //   }
+        true, &points);
+  }
 
   return;
 }

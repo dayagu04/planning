@@ -3,10 +3,10 @@
 namespace planning {
 
 const bool HeadOutEndDecider::Process(
-    Pose2D &end, Node3d *astar_end_node, HybridAStarResult *result,
     const MapBound &XYbounds, const PlannerOpenSpaceConfig &config,
     const std::shared_ptr<NodeCollisionDetect> &collision_detect,
-    const AstarRequest request) {
+    const AstarRequest request, Pose2D &end, Node3d *astar_end_node,
+    HybridAStarResult *result) {
   for (int i = 0; i < 10; i++) {
     ILOG_INFO << " end_node dedcider [" << i << "]";
     astar_end_node->Set(NodePath(end), XYbounds, config, 0.0);
