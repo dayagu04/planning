@@ -337,10 +337,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   if (session_->is_hpp_scene()) {
     hpp_max_replan_lat_err_ =
         interp(ego_v_, config_.hpp_replan_threshold_speed,
-              config_.hpp_replan_lat_err_threshold_value);
+               config_.hpp_replan_lat_err_threshold_value);
     hpp_max_replan_lon_err_ =
         interp(ego_v_, config_.hpp_replan_threshold_speed,
-              config_.hpp_replan_lon_err_threshold_value);
+               config_.hpp_replan_lon_err_threshold_value);
     max_replan_lat_err = hpp_max_replan_lat_err_;
     max_replan_theta_err = hpp_max_replan_theta_err_ / 57.3;
     max_replan_lon_err = hpp_max_replan_lon_err_;
@@ -389,6 +389,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     replan_type_.insert(LAT_REPLAN);
     replan_code += LAT_REPLAN;
   }
+  if (set_lon_replan && !set_lat_replan) {
+    replan_type_.insert(LON_REPLAN);
+    replan_code += LON_REPLAN;
+  }
   if (fabs(lon_err) > max_replan_lon_err) {
     replan_type_.insert(LON_POSITION_REPLAN);
     replan_code += LON_POSITION_REPLAN;
@@ -412,6 +416,17 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
           cur_vehicle_state);
       LateralInitStateReset(reinit_point);
       LongitudinalInitStateReset(reinit_point);
+    } else if (replan_type_.find(LON_REPLAN) != replan_type_.end()) {
+      reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+          cur_vehicle_state);
+      if (replan_type_.find(LAT_POSITION_REPLAN) == replan_type_.end() &&
+          replan_type_.find(LAT_ANGLE_REPLAN) == replan_type_.end()) {
+        LongitudinalInitStateReset(reinit_point);
+      } else {
+        enable_delta_stitch_in_replan_ = false;
+        LateralInitStateReset(reinit_point);
+        LongitudinalInitStateReset(reinit_point);
+      }
     } else if (replan_type_.find(LAT_REPLAN) != replan_type_.end()) {
       enable_delta_stitch_in_replan_ = false;
       reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
@@ -844,11 +859,12 @@ void EgoStateManager::UpdatePlanningInitState() {
       set_lon_replan = true;
     } else if (cur_fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) {
       set_lat_replan = true;
-    } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
-               cur_fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE ||
-               cur_fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
+    } else if (cur_fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
                cur_fsm_state == iflyauto::FunctionalState_RADS_SUSPEND) {
       set_lat_replan = true;
+      set_lon_replan = true;
+    } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
+               cur_fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) {
       set_lon_replan = true;
     }
     replan_type_.clear();
