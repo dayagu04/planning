@@ -270,7 +270,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
         SetParkingStatus(PARKING_FAILED);
       }
       // if path plan fail, can try again or directly quit, now choosing quit
-      // continue;
+      continue;
       break;
     }
   }
@@ -780,10 +780,12 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
+  const auto& simu_param = apa_world_ptr_->GetSimuParam();
+
   GeometryPathInput input;
   input.ego_info_under_slot = ego_info_under_slot;
-  input.is_complete_path = apa_world_ptr_->GetSimuParam().is_complete_path;
-  input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
+  input.is_complete_path = simu_param.is_complete_path;
+  input.sample_ds = simu_param.sample_ds;
   input.ref_gear = frame_.current_gear;
   input.ref_arc_steer = frame_.current_arc_steer;
   input.is_replan_first = frame_.is_replan_first;
@@ -879,12 +881,11 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     break;
   }
 
-  input.force_mid_process_plan =
-      apa_world_ptr_->GetSimuParam().force_mid_process_plan;
+  input.force_mid_process_plan = simu_param.force_mid_process_plan;
 
   input.can_first_plan_again = frame_.can_first_plan_again;
 
-  input.is_simulation = apa_world_ptr_->GetSimuParam().is_simulation;
+  input.is_simulation = simu_param.is_simulation;
 
   if (input.is_simulation) {
     apa_param.SetPram().use_average_obs_dist =
@@ -940,26 +941,36 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   } else {
     // static replan
     if (path_plan_success) {
+      ILOG_INFO << "path plan success";
+      if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
+          !frame_.is_replan_first) {
+        if (per_path_planner_ptr->GetOutput().current_gear !=
+            frame_.current_gear) {
+          ILOG_INFO
+              << "when process_obs_method is do nothing and no first replan, "
+                 "plan gear should be same with ref gear, otherwise fail";
+          return PathPlannerResult::PLAN_FAILED;
+        }
+      }
+
       plan_result = PathPlannerResult::PLAN_UPDATE;
     } else {
       ILOG_INFO << "path plan fail";
-      if (!frame_.can_first_plan_again ||
-          (frame_.is_replan_first &&
-           !apa_world_ptr_->GetSimuParam().is_simulation)) {
-        frame_.plan_fail_reason = PATH_PLAN_FAILED;
-        current_plan_path_vec_.clear();
-        current_path_point_global_vec_.clear();
-        if (!apa_world_ptr_->GetSimuParam().is_simulation) {
-          plan_result = PathPlannerResult::PLAN_FAILED;
-        } else {
-          plan_result = PathPlannerResult::PLAN_UPDATE;
-        }
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING ||
+          frame_.process_obs_method == ProcessObsMethod::MOVE_OBS_OUT_SLOT) {
+        return PathPlannerResult::PLAN_FAILED;
+      }
 
-        return plan_result;
+      if (!frame_.can_first_plan_again) {
+        return PathPlannerResult::PLAN_FAILED;
+      }
+
+      if (frame_.is_replan_first) {
+        return PathPlannerResult::PLAN_FAILED;
       }
 
       ILOG_INFO << "try first path plan again";
-
       frame_.is_replan_first = true;
       frame_.is_replan_second = false;
       frame_.can_first_plan_again = false;
@@ -969,22 +980,14 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       per_path_planner_ptr->SetInput(input);
       if (!per_path_planner_ptr->Update()) {
         ILOG_INFO << "try first path plan again also fail";
-        frame_.plan_fail_reason = PATH_PLAN_FAILED;
-        current_plan_path_vec_.clear();
-        current_path_point_global_vec_.clear();
-        if (!apa_world_ptr_->GetSimuParam().is_simulation) {
-          plan_result = PathPlannerResult::PLAN_FAILED;
-        } else {
-          plan_result = PathPlannerResult::PLAN_UPDATE;
-        }
-
-        return plan_result;
+        return PathPlannerResult::PLAN_FAILED;
       }
       if (per_path_planner_ptr->GetOutput().current_gear !=
           frame_.current_gear) {
         // return PathPlannerResult::PLAN_FAILED;
       }
       ILOG_INFO << "try first path plan again success";
+      frame_.plan_fail_reason = NOT_FAILED;
       plan_result = PathPlannerResult::PLAN_UPDATE;
     }
   }
