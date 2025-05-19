@@ -891,43 +891,28 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("PreprocessRoadSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 &&
-          last_zero_relative_id_nums_ == order_ids.size() &&
-          zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ =
-            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-        for (auto& lane : relative_id_lanes) {
-          int lane_order_id = lane->get_order_id();
-          int lane_relative_id =
-              lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
-          lane->set_relative_id(lane_relative_id);
-        }
-        is_exist_ramp_on_road_ = true;
-        return;
-      } else {
-        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
-                                          relative_id_lanes, order_ids,
-                                          zero_relative_id_order_id_index);
+      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                        relative_id_lanes, order_ids,
+                                        zero_relative_id_order_id_index);
 
-        if (enable_using_last_frame_track_ego_lane) {
-          if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() >
-                  order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ =
-                relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ =
-                zero_relative_id_order_id_index;
-            for (auto& lane : relative_id_lanes) {
-              int lane_order_id = lane->get_order_id();
-              int lane_relative_id =
-                  lane_order_id - order_ids[zero_relative_id_order_id_index];
-              lane->set_relative_id(lane_relative_id);
-            }
-            is_exist_ramp_on_road_ = true;
-            return;
-          } else {
-            return;
+      if (enable_using_last_frame_track_ego_lane) {
+        if (zero_relative_id_order_id_index < order_ids.size() &&
+            relative_id_lanes.size() >
+                order_ids[zero_relative_id_order_id_index]) {
+          last_track_ego_lane_ =
+              relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_zero_relative_id_order_id_index_ =
+              zero_relative_id_order_id_index;
+          for (auto& lane : relative_id_lanes) {
+            int lane_order_id = lane->get_order_id();
+            int lane_relative_id =
+                lane_order_id - order_ids[zero_relative_id_order_id_index];
+            lane->set_relative_id(lane_relative_id);
           }
+          is_exist_ramp_on_road_ = true;
+          return;
+        } else {
+          return;
         }
       }
     }
@@ -975,43 +960,28 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("PreprocessRampSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 &&
-          last_zero_relative_id_nums_ == order_ids.size() &&
-          zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ =
-            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-        for (auto& lane : relative_id_lanes) {
-          int lane_order_id = lane->get_order_id();
-          int lane_relative_id =
-              lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
-          lane->set_relative_id(lane_relative_id);
-        }
-        is_exist_split_on_ramp_ = true;
-        return;
-      } else {
-        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
-                                          relative_id_lanes, order_ids,
-                                          zero_relative_id_order_id_index);
+      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                        relative_id_lanes, order_ids,
+                                        zero_relative_id_order_id_index);
 
-        if (enable_using_last_frame_track_ego_lane) {
-          if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() >
-                  order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ =
-                relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ =
-                zero_relative_id_order_id_index;
-            for (auto& lane : relative_id_lanes) {
-              int lane_order_id = lane->get_order_id();
-              int lane_relative_id =
-                  lane_order_id - order_ids[zero_relative_id_order_id_index];
-              lane->set_relative_id(lane_relative_id);
-            }
-            is_exist_split_on_ramp_ = true;
-            return;
-          } else {
-            return;
+      if (enable_using_last_frame_track_ego_lane) {
+        if (zero_relative_id_order_id_index < order_ids.size() &&
+            relative_id_lanes.size() >
+                order_ids[zero_relative_id_order_id_index]) {
+          last_track_ego_lane_ =
+              relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_zero_relative_id_order_id_index_ =
+              zero_relative_id_order_id_index;
+          for (auto& lane : relative_id_lanes) {
+            int lane_order_id = lane->get_order_id();
+            int lane_relative_id =
+                lane_order_id - order_ids[zero_relative_id_order_id_index];
+            lane->set_relative_id(lane_relative_id);
           }
+          is_exist_split_on_ramp_ = true;
+          return;
+        } else {
+          return;
         }
       }
     }
@@ -1130,43 +1100,28 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("PreprocessOrdinarySplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 &&
-          last_zero_relative_id_nums_ == order_ids.size() &&
-          zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ =
-            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-        for (auto& lane : relative_id_lanes) {
-          int lane_order_id = lane->get_order_id();
-          int lane_relative_id =
-              lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
-          lane->set_relative_id(lane_relative_id);
-        }
-        is_exist_split_on_expressway_ = true;
-        return;
-      } else {
-        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
-                                          relative_id_lanes, order_ids,
-                                          zero_relative_id_order_id_index);
+      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                        relative_id_lanes, order_ids,
+                                        zero_relative_id_order_id_index);
 
-        if (enable_using_last_frame_track_ego_lane) {
-          if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() >
-                  order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ =
-                relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ =
-                zero_relative_id_order_id_index;
-            for (auto& lane : relative_id_lanes) {
-              int lane_order_id = lane->get_order_id();
-              int lane_relative_id =
-                  lane_order_id - order_ids[zero_relative_id_order_id_index];
-              lane->set_relative_id(lane_relative_id);
-            }
-            is_exist_split_on_expressway_ = true;
-            return;
-          } else {
-            return;
+      if (enable_using_last_frame_track_ego_lane) {
+        if (zero_relative_id_order_id_index < order_ids.size() &&
+            relative_id_lanes.size() >
+                order_ids[zero_relative_id_order_id_index]) {
+          last_track_ego_lane_ =
+              relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_zero_relative_id_order_id_index_ =
+              zero_relative_id_order_id_index;
+          for (auto& lane : relative_id_lanes) {
+            int lane_order_id = lane->get_order_id();
+            int lane_relative_id =
+                lane_order_id - order_ids[zero_relative_id_order_id_index];
+            lane->set_relative_id(lane_relative_id);
           }
+          is_exist_split_on_expressway_ = true;
+          return;
+        } else {
+          return;
         }
       }
     }
@@ -1255,43 +1210,28 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 &&
-          last_zero_relative_id_nums_ == order_ids.size() &&
-          zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ =
-            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-        for (auto& lane : relative_id_lanes) {
-          int lane_order_id = lane->get_order_id();
-          int lane_relative_id =
-              lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
-          lane->set_relative_id(lane_relative_id);
-        }
-        is_exist_split_on_intersection_ = true;
-        return;
-      } else {
-        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
-                                          relative_id_lanes, order_ids,
-                                          zero_relative_id_order_id_index);
+      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                        relative_id_lanes, order_ids,
+                                        zero_relative_id_order_id_index);
 
-        if (enable_using_last_frame_track_ego_lane) {
-          if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() >
-                  order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ =
-                relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ =
-                zero_relative_id_order_id_index;
-            for (auto& lane : relative_id_lanes) {
-              int lane_order_id = lane->get_order_id();
-              int lane_relative_id =
-                  lane_order_id - order_ids[zero_relative_id_order_id_index];
-              lane->set_relative_id(lane_relative_id);
-            }
-            is_exist_split_on_intersection_ = true;
-            return;
-          } else {
-            return;
+      if (enable_using_last_frame_track_ego_lane) {
+        if (zero_relative_id_order_id_index < order_ids.size() &&
+            relative_id_lanes.size() >
+                order_ids[zero_relative_id_order_id_index]) {
+          last_track_ego_lane_ =
+              relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_zero_relative_id_order_id_index_ =
+              zero_relative_id_order_id_index;
+          for (auto& lane : relative_id_lanes) {
+            int lane_order_id = lane->get_order_id();
+            int lane_relative_id =
+                lane_order_id - order_ids[zero_relative_id_order_id_index];
+            lane->set_relative_id(lane_relative_id);
           }
+          is_exist_split_on_intersection_ = true;
+          return;
+        } else {
+          return;
         }
       }
     }
