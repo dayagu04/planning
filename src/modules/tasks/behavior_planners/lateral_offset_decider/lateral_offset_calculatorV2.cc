@@ -1257,28 +1257,21 @@ void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
   avoid_info_.Reset();
   avoid_id_ = -1;
 
-  auto &enough_space_hysteresis_map =
-      std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
-          max_opposite_offset_hysteresis_maps_
-              [HysteresisType::EnoughSpaceHysteresis]);
-  enough_space_hysteresis_map.clear();
-
-  auto &is_in_consider_lateral_range_hysteresis_map =
-      std::get<std::map<int, HysteresisDecision>>(
-          max_opposite_offset_hysteresis_maps_
-              [HysteresisType::IsInConsiderLateralRangeHysteresis]);
-  is_in_consider_lateral_range_hysteresis_map.clear();
-
-  auto &avoid_way_select_hysteresis_map =
-      std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
-          max_opposite_offset_hysteresis_maps_[HysteresisType::AvoidWaySelect]);
-  avoid_way_select_hysteresis_map.clear();
-
-  auto &is_obstacle_considered_hysteresis_map =
-      std::get<std::map<int, HysteresisDecision>>(
-          max_opposite_offset_hysteresis_maps_
-              [HysteresisType::IsObstacleConsideredHysteresis]);
-  is_obstacle_considered_hysteresis_map.clear();
+  // 定义需要重置的Hysteresis类型
+  std::vector<HysteresisType> types_to_reset = {
+    HysteresisType::EnoughSpaceHysteresis,
+    HysteresisType::AvoidWaySelect,
+    HysteresisType::IsObstacleConsideredHysteresis,
+    HysteresisType::IsInConsiderLateralRangeHysteresis
+  };
+  for (const auto& type : types_to_reset) {
+    auto it = max_opposite_offset_hysteresis_maps_.find(type);
+    if (it != max_opposite_offset_hysteresis_maps_.end()) {
+      std::visit([](auto& map) {
+          map.clear();
+      }, it->second);
+    }
+  }
   SaveDebugInfo();
   // TODO(huwang5)
 }

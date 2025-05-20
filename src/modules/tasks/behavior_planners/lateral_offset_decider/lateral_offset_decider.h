@@ -23,7 +23,7 @@ class LateralOffsetDecider : public Task {
   void SaveDebugInfo();
   void CheckAvoidObstaclesDecision();
   bool IsObstacleDecisionSwitch(
-      LatObstacleDecisionType last_decision_,
+      LatObstacleDecisionType last_decision,
       LatObstacleDecisionType current_decision);
   void Reset();
   void GenerateOutput();

@@ -60,57 +60,42 @@ void LateralOffsetDecider::CheckAvoidObstaclesDecision() {
   const auto &lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
-  const auto first_obs_decision_iter =
-      lat_obstacle_decision.find(avoid_obstacle_maintainer5v_.avd_obstacles()[0].track_id);
-  const auto second_obs_decision_iter =
-      lat_obstacle_decision.find(avoid_obstacle_maintainer5v_.avd_obstacles()[1].track_id);
-  if (first_obs_decision_iter != lat_obstacle_decision.end()) {
-    if (avoid_obstacle_maintainer5v_.avd_obstacles()[0].track_id == last_first_obstacle_id_) {
-      // avd_obstacles()[0] == last_first_obstacle_id_
-      // 判断是否决策相反（左变右 or 右变左）
-      if (IsObstacleDecisionSwitch(last_first_obstacle_decision_,
-          first_obs_decision_iter->second)) {
-        Reset();
-      }
-    } else if (avoid_obstacle_maintainer5v_.avd_obstacles()[0].track_id == last_second_obstacle_id_) {
-      // avd_obstacles()[0] == last_second_obstacle_id_
-      // 判断是否决策相反（左变右 or 右变左）
-      if (IsObstacleDecisionSwitch(last_second_obstacle_decision_,
-          first_obs_decision_iter->second)) {
-        Reset();
-      }
+  auto check_and_update = [&](int index) {
+    if (index >= avoid_obstacle_maintainer5v_.avd_obstacles().size()) {
+      return;
     }
-    last_first_obstacle_id_ = avoid_obstacle_maintainer5v_.avd_obstacles()[0].track_id;
-    last_first_obstacle_decision_ = first_obs_decision_iter->second;
-  }
-
-  if (second_obs_decision_iter != lat_obstacle_decision.end()) {
-    if (avoid_obstacle_maintainer5v_.avd_obstacles()[1].track_id == last_first_obstacle_id_) {
-      // avd_obstacles()[1] == last_first_obstacle_id_
-      // 判断是否决策相反（左变右 or 右变左）
-      if (IsObstacleDecisionSwitch(last_first_obstacle_decision_,
-          second_obs_decision_iter->second)) {
-        Reset();
-      }
-    } else if (avoid_obstacle_maintainer5v_.avd_obstacles()[1].track_id == last_second_obstacle_id_) {
-      // avd_obstacles()[1] == last_second_obstacle_id_
-      // 判断是否决策相反（左变右 or 右变左）
-      if (IsObstacleDecisionSwitch(last_second_obstacle_decision_,
-          second_obs_decision_iter->second)) {
-        Reset();
-      }
+    const auto& obs = avoid_obstacle_maintainer5v_.avd_obstacles()[index];
+    auto iter = lat_obstacle_decision.find(obs.track_id);
+    if (iter == lat_obstacle_decision.end()) {
+      return;
     }
-    last_second_obstacle_id_ = avoid_obstacle_maintainer5v_.avd_obstacles()[1].track_id;
-    last_second_obstacle_decision_ = second_obs_decision_iter->second;
-  }
+    int track_id = obs.track_id;
+    const auto& decision = iter->second;
+    if (track_id == last_first_obstacle_id_) {
+      if (IsObstacleDecisionSwitch(last_first_obstacle_decision_, decision)) {
+        Reset();
+      }
+      last_first_obstacle_decision_ = decision;
+      last_first_obstacle_id_ = track_id;
+    } else if (track_id == last_second_obstacle_id_) {
+      if (IsObstacleDecisionSwitch(last_second_obstacle_decision_, decision)) {
+        Reset();
+      }
+      last_second_obstacle_decision_ = decision;
+      last_second_obstacle_id_ = track_id;
+    }
+  };
+  // 对两个障碍物执行检查
+  check_and_update(0);
+  check_and_update(1);
 }
 
 bool LateralOffsetDecider::IsObstacleDecisionSwitch(
-    LatObstacleDecisionType last_decision_,
+    LatObstacleDecisionType last_decision,
     LatObstacleDecisionType current_decision) {
-  return (last_decision_ == LatObstacleDecisionType::RIGHT &&
+  return (last_decision == LatObstacleDecisionType::RIGHT &&
          current_decision == LatObstacleDecisionType::LEFT) ||
-         (last_decision_ == LatObstacleDecisionType::LEFT &&
+         (last_decision == LatObstacleDecisionType::LEFT &&
          current_decision == LatObstacleDecisionType::RIGHT);
 }
 
