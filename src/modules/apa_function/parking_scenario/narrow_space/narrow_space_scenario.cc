@@ -16,6 +16,7 @@
 #include "hybrid_astar_response.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "math/math_utils.h"
 #include "math/vec2d.h"
 #include "math_utils.h"
 #include "narrow_space_decider.h"
@@ -259,8 +260,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
             << " ,is_replan = " << is_replan;
 
   // check replan
-  if (is_replan || update_thread_path ||
-      apa_world_ptr_->GetSimuParam().force_plan) {
+  if (is_replan || update_thread_path) {
     ILOG_INFO << "plan reason = " << GetPlanReason(frame_.replan_reason)
               << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
               << ",thread update = " << update_thread_path
@@ -699,9 +699,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         double publish_end_time = IflyTime::Now_ms();
         ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
 
-        frame_.total_plan_count++;
+        if (response.request.plan_reason != PlanningReason::SLOT_REFRESHED) {
+          frame_.total_plan_count++;
+        }
         path_planning_fail_num_ = 0;
-        if (ego_info.slot_occupied_ratio > 0.2) {
+        if (ego_info.slot_occupied_ratio > 0.2 &&
+            response.request.plan_reason != PlanningReason::SLOT_REFRESHED) {
           replan_number_inside_slot_++;
         }
 
@@ -1794,16 +1797,22 @@ const bool NarrowSpaceScenario::CheckDynamicUpdate() {
       lateral_offset_flag = true;
     }
 
-    double phi = current_path_point_global_vec_.back().heading;
-    double phi_error = ego_info_under_slot.g2l_tf.GetHeading(phi) -
-                       ego_info_under_slot.target_pose.heading;
-
+    double path_heading = current_path_point_global_vec_.back().heading;
+    double slot_heading = ego_info_under_slot.origin_pose_global.heading;
+    const ApaStateMachine fsm =
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+        fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+      slot_heading -= M_PI;
+    }
+    double phi_error =
+        ad_common::math::NormalizeAngle(path_heading - slot_heading);
     if (std::fabs(phi_error) > 0.026) {
       theta_offset_flag = true;
     }
 
     ILOG_INFO << "lat offset error = " << later_error
-              << ", theta error = " << phi_error * kDeg2Rad;
+              << ", theta error = " << phi_error * kRad2Deg;
   }
 
   if (lateral_offset_flag || theta_offset_flag) {
