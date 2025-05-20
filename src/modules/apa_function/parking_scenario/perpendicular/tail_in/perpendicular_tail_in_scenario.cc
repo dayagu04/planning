@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_context.h"
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
@@ -1457,7 +1458,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
-  real_time_brake_info_vec.resize(3);
+  real_time_brake_info_vec.resize(4);
   RealTimeBrakeInfo real_time_brake_info(
       RealTimeBrakeType::STOP, param.stop_lat_inflation, param.stop_lon_dist);
   real_time_brake_info_vec[0] = real_time_brake_info;
@@ -1467,10 +1468,15 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                            param.heavy_brake_lon_dist);
   real_time_brake_info_vec[1] = real_time_brake_info;
 
+  real_time_brake_info.Set(RealTimeBrakeType::MODERATE_BRAKE,
+                           param.moderate_brake_lat_inflation,
+                           param.moderate_brake_lon_dist);
+  real_time_brake_info_vec[2] = real_time_brake_info;
+
   real_time_brake_info.Set(RealTimeBrakeType::SLIGHT_BRAKE,
                            param.slight_brake_lat_inflation,
                            param.slight_brake_lon_dist);
-  real_time_brake_info_vec[2] = real_time_brake_info;
+  real_time_brake_info_vec[3] = real_time_brake_info;
 
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
     if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
@@ -1487,7 +1493,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
-  ILOG_INFO << "safe_remain_dist = " << safe_remain_dist;
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", param.stop_lat_inflation)
+
+  ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
+            << "  lon_buffer = " << lon_buffer;
 
   return safe_remain_dist;
 }
@@ -1809,6 +1818,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
       std::fabs(front_lat_err_bef) <
           std::fabs(front_lat_err_now) + front_allow_err) {
     if (geometry_path_now.IsHasSTurnPath()) {
+      ILOG_INFO << "now path has s turn";
       return false;
     } else {
       return true;

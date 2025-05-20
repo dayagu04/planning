@@ -346,11 +346,11 @@ const double ParkingScenario::CalRemainDistFromObs(
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       static_lat_buffer, 0.0, gjl_col_det_request);
-  if (!col_res.col_flag) {
+    if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
   }
   const double obs_pt_remain_dist_static =
-      col_res.remain_dist_static - static_lat_buffer;
+      col_res.remain_dist_static - static_lon_buffer;
 
   // check dynamic obs, it should be conservative
   gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;

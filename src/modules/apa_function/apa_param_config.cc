@@ -285,6 +285,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().heavy_brake_lat_inflation, double,
                   "heavy_brake_lat_inflation");
 
+  JSON_READ_VALUE(apa_param.SetPram().moderate_brake_lat_inflation, double,
+                  "moderate_brake_lat_inflation");
+
   JSON_READ_VALUE(apa_param.SetPram().slight_brake_lat_inflation, double,
                   "slight_brake_lat_inflation");
 
@@ -292,6 +295,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().heavy_brake_lon_dist, double,
                   "heavy_brake_lon_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().moderate_brake_lon_dist, double,
+                  "moderate_brake_lon_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().slight_brake_lon_dist, double,
                   "slight_brake_lon_dist");

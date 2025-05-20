@@ -202,10 +202,12 @@ struct ApaParameters {
   double detection_distance = 2.5;
   double stop_lat_inflation = 0.06;
   double heavy_brake_lat_inflation = 0.1;
-  double slight_brake_lat_inflation = 0.14;
+  double moderate_brake_lat_inflation = 0.14;
+  double slight_brake_lat_inflation = 0.18;
   double stop_lon_dist = -0.1;
-  double heavy_brake_lon_dist = 0.4;
-  double slight_brake_lon_dist = 0.6;
+  double heavy_brake_lon_dist = 0.41;
+  double moderate_brake_lon_dist = 0.66;
+  double slight_brake_lon_dist = 0.91;
   double safe_uss_remain_dist_in_slot = 0.35;
   double limited_safe_uss_remain_dist = 0.2;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;

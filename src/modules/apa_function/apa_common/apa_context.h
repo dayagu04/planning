@@ -68,6 +68,7 @@ enum class ProcessObsMethod : uint8_t {
 enum class RealTimeBrakeType : uint8_t {
   STOP,
   HEAVY_BRAKE,
+  MODERATE_BRAKE,
   SLIGHT_BRAKE,
   COUNT,
 };
