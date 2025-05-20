@@ -198,7 +198,7 @@ class GeneralLateralDecider : public Task {
     double limit_overlap_min_y, double limit_overlap_max_y,
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
-    double &overlap_min_y_new, double &overlap_max_y_new);
+    double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);
 

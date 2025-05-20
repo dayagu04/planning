@@ -996,13 +996,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "general_lateral_decider", "bound_rear_agent_weight");
     ReadItem<double>(json, map_bound_weight[BoundType::LOW_PRIORITY_AGENT],
                      "general_lateral_decider", "bound_low_priority_agent_weight");
-
-    ReadItem<double>(json, nudge_extra_buffer_in_lane_change_scene,
+    ReadItem<double>(json, nudge_extra_decrease_buffer_in_lane_change_scene,
                      "general_lateral_decider",
-                     "nudge_extra_buffer_in_lane_change_scene");
-    ReadItem<double>(json, nudge_extra_front_lon_buf_dis_in_lane_change_scene,
-                     "general_lateral_decider",
-                     "nudge_extra_front_lon_buf_dis_in_lane_change_scene");
+                     "nudge_extra_decrease_buffer_in_lane_change_scene");
 
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
@@ -1038,18 +1034,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
 
     ReadItem<double>(json, truck_decrease_extra_buffer,
                      "general_lateral_decider", "truck_decrease_extra_buffer");
-    ReadItem<double>(json, care_exceed_distance_with_blocked_obstacle,
+    ReadItem<double>(json, lane_borrow_extra_front_lon_buffer,
                      "general_lateral_decider",
-                     "care_exceed_distance_with_blocked_obstacle");
-    ReadItem<double>(json, extra_hard_buffer2blockobstacle,
+                     "lane_borrow_extra_front_lon_buffer");
+    ReadItem<double>(json, lane_borrow_extra_rear_lon_buffer,
                      "general_lateral_decider",
-                     "extra_hard_buffer2blockobstacle");
-    ReadItem<double>(json, extra_front_lon_buffer2blockobstacle,
-                     "general_lateral_decider",
-                     "extra_front_lon_buffer2blockobstacle");
-    ReadItem<double>(json, extra_rear_lon_buffer2blockobstacle,
-                     "general_lateral_decider",
-                     "extra_rear_lon_buffer2blockobstacle");
+                     "lane_borrow_extra_rear_lon_buffer");
     ReadItem<double>(json, extra_lane_type_decrease_buffer,
                      "general_lateral_decider",
                      "extra_lane_type_decrease_buffer");
@@ -1059,12 +1049,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, static_nudge_buffer2lane_boundary,
                      "general_lateral_decider",
                      "static_nudge_buffer2lane_boundary");
-    ReadItem<int>(json, agent_predlonoverlap_up_total_count,
+    ReadItem<int>(json, obstacle_predlonoverlap_up_total_count,
                      "general_lateral_decider",
-                     "agent_predlonoverlap_up_total_count");
-    ReadItem<int>(json, agent_predlonoverlap_down_total_count,
+                     "obstacle_predlonoverlap_up_total_count");
+    ReadItem<int>(json, obstacle_predlonoverlap_down_total_count,
                      "general_lateral_decider",
-                     "agent_predlonoverlap_down_total_count");
+                     "obstacle_predlonoverlap_down_total_count");
 
     /* read config from json */
   }
@@ -1136,8 +1126,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
       {BoundType::REAR_AGENT, 0.1},
       {BoundType::LOW_PRIORITY_AGENT, 0.06}};
   double nudge_extra_buffer_in_intersection = 0.1;
-  double nudge_extra_buffer_in_lane_change_scene = 0.1;
-  double nudge_extra_front_lon_buf_dis_in_lane_change_scene = 1.0;
+  double nudge_extra_decrease_buffer_in_lane_change_scene = 0.1;
 
   std::vector<double> _relative_positon_bp = {0, 1, 2, 3, 4, 5};
   std::vector<double> _relative_positon_decrease_extra_buffer = {0,   0.1, 0.2,
@@ -1150,14 +1139,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
       0.1, 0.2, 0.3, 0.4, 0.5};
   double extra_lane_type_decrease_buffer = 0.05;
   double truck_decrease_extra_buffer = 0.05;
-  double care_exceed_distance_with_blocked_obstacle = 2.0;
-  double extra_hard_buffer2blockobstacle = 2.0;
-  double extra_front_lon_buffer2blockobstacle = 1.0;
-  double extra_rear_lon_buffer2blockobstacle = 2.0;
+  double lane_borrow_extra_front_lon_buffer = 1.0;
+  double lane_borrow_extra_rear_lon_buffer = 2.0;
   double side_obstacle_lat_buffer_limit = 0.5;
   double static_nudge_buffer2lane_boundary = 0.1;
-  int agent_predlonoverlap_up_total_count = 0;
-  int agent_predlonoverlap_down_total_count = 0;
+  int obstacle_predlonoverlap_up_total_count = 0;
+  int obstacle_predlonoverlap_down_total_count = 0;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

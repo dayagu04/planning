@@ -157,7 +157,7 @@ bool LateralObstacleDecider::Execute() {
 
     // determine is_avd_car
     std::vector<double> avd_car_id;
-    std::vector<double> emergency_avoid;
+    std::vector<double> maintain_avoid;
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
@@ -245,12 +245,12 @@ bool LateralObstacleDecider::Execute() {
       if (history.is_avd_car) {
         avd_car_id.emplace_back(obs->id());
       }
-      if (history.emergency_avoid) {
-        emergency_avoid.emplace_back(obs->id());
+      if (history.maintain_avoid) {
+        maintain_avoid.emplace_back(obs->id());
       }
     }
 
-    JSON_DEBUG_VECTOR("emergency_avoid", emergency_avoid, 0);
+    JSON_DEBUG_VECTOR("maintain_avoid", maintain_avoid, 0);
     JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
     JSON_DEBUG_VALUE("can_left_borrow", left_borrow_);
     JSON_DEBUG_VALUE("can_right_borrow", right_borrow_);
@@ -262,19 +262,24 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
-
+  const auto lat_obs_decision_iter =
+      output_.find(obstacle.id());
+  if (lat_obs_decision_iter == output_.end()){
+    return;
+  }
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
-  bool emergency_avoid =
-      (!history.rear_car && v_s_rel < 0 &&
+  bool maintain_avoid =
+      (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE &&
+       !history.rear_car && v_s_rel < 0 &&
        ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_lower) ||
         ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_upper &&
           d_s_rel < config_.emegency_cutin_front_area))));
-  if (emergency_avoid) {
+  if (maintain_avoid) {
     history.is_avd_car = true;
-    history.emergency_avoid = true;
+    history.maintain_avoid = true;
   } else {
-    history.emergency_avoid = false;
+    history.maintain_avoid = false;
   }
 }
 

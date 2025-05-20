@@ -963,13 +963,13 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
       }
 
       // hold lat_offset，不更新横向位置
-      bool emergency_avoid = false;
+      bool maintain_avoid = false;
       auto lateral_obstacle_iter =
           lateral_obstacle_history_info.find(avd_obstacles.track_id);
       if (lateral_obstacle_iter != lateral_obstacle_history_info.end()) {
-        emergency_avoid = lateral_obstacle_iter->second.emergency_avoid;
+        maintain_avoid = lateral_obstacle_iter->second.maintain_avoid;
       }
-      if (emergency_avoid) {
+      if (maintain_avoid) {
         avd_obstacles.min_l_to_ref = avd_obstacle_past.min_l_to_ref;
         avd_obstacles.max_l_to_ref = avd_obstacle_past.max_l_to_ref;
       }

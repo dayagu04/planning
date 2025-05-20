@@ -28,7 +28,7 @@ struct LateralObstacleHistoryInfo {
   int cut_in_or_cross_count = 0;
   double front_expand_len = 0.0;
   double rear_expand_len = 0.0;
-  bool emergency_avoid = false;
+  bool maintain_avoid = false;
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };

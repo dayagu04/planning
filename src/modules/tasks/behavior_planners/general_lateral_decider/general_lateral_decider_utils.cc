@@ -4,6 +4,10 @@
 #include "common/math/linear_interpolation.h"
 #include "utils/pose2d_utils.h"
 
+namespace {
+constexpr double kExtraFrontBufferInLaneChange = 1.0;
+};  // namespace
+
 namespace planning {
 namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
@@ -22,7 +26,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
     base_dis += config.nudge_extra_buffer_in_intersection;
   }
   if (is_same_side_obstacle_during_lane_change) {
-    base_dis -= config.nudge_extra_buffer_in_lane_change_scene;
+    base_dis -= config.nudge_extra_decrease_buffer_in_lane_change_scene;
   }
   double extra_pred_ts_decrease_buffer = interp(pred_ts, config.obstacle_pred_ts_bp,
                                config.obstacle_pred_decrease_buffer);
@@ -37,7 +41,7 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
                             GeneralLateralDeciderConfig &config) {
   double base_dis = 3.0;
   if (is_same_side_obstacle_during_lane_change) {
-    return std::fmax(base_dis - config.nudge_extra_front_lon_buf_dis_in_lane_change_scene,0);
+    return kExtraFrontBufferInLaneChange;
   }
   return base_dis + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
