@@ -952,12 +952,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
-                                 "extra_buffer_for_road_lane_width_bp"},
-        extra_buffer_for_road_lane_width_bp);
+                                 "extra_road_decrease_buffer_for_lane_width_bp"},
+        extra_road_decrease_buffer_for_lane_width_bp);
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
-                                                   "extra_lane_width_road_decrease_buffer"},
-                          extra_lane_width_road_decrease_buffer);
+                                                   "extra_road_decrease_buffer"},
+                          extra_road_decrease_buffer);
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
                                                    "lateral_road_boader_v_bp"},
@@ -1086,8 +1086,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
 
   std::vector<double> extra_buffer_for_lane_width_bp{2.8, 3.1, 3.4, 3.7, 4.2};
   std::vector<double> extra_lane_width_buffer{0.2, 0.15, 0.1, 0.05, 0.0};
-  std::vector<double> extra_buffer_for_road_lane_width_bp{2.8, 3.1, 3.4, 3.7, 4.2};
-  std::vector<double> extra_lane_width_road_decrease_buffer{0.2, 0.15, 0.1, 0.05, 0.0};
+  std::vector<double> extra_road_decrease_buffer_for_lane_width_bp{2.8, 3.1, 3.4, 3.7, 4.2};
+  std::vector<double> extra_road_decrease_buffer{0.2, 0.15, 0.1, 0.05, 0.0};
 
   std::vector<double> lateral_road_boader_v_bp{10, 40, 60, 100, 130};
   std::vector<double> extra_lateral_buffer{0.0, 0.0, 0.0, 0.0, 0.0};

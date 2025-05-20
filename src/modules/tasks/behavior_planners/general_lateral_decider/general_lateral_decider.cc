@@ -982,16 +982,16 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   // double extra_buffer =
   double extra_buffer = interp(ego_v * 3.6, config_.lateral_road_boader_v_bp,
                                config_.extra_lateral_buffer);
-  double extra_lane_width_road_decrease_buffer = 0.0;
+  double extra_road_decrease_buffer = 0.0;
   if (!general_lateral_decider_output.lane_change_scene &&
       !lane_borrow_decider_output.is_in_lane_borrow_status) {
     const double lane_mean_width = CalLaneWidth();
-    extra_lane_width_road_decrease_buffer =
-        interp(lane_mean_width, config_.extra_buffer_for_road_lane_width_bp,
-                config_.extra_lane_width_road_decrease_buffer);
+    extra_road_decrease_buffer =
+        interp(lane_mean_width, config_.extra_road_decrease_buffer_for_lane_width_bp,
+                config_.extra_road_decrease_buffer);
   }
   extra_buffer = std::max(extra_buffer, kMinExtraBuffer);
-  extra_buffer = std::max(extra_buffer - extra_lane_width_road_decrease_buffer, 0.0);
+  extra_buffer = std::max(extra_buffer - extra_road_decrease_buffer, 0.0);
   *left_road_extra_buffer += extra_buffer;
   *right_road_extra_buffer += extra_buffer;
 }
