@@ -60,6 +60,8 @@ bool LateralObstacleDecider::Execute() {
 
   UpdateLaneBorrowDirection();
 
+  UpdateIntersection();
+
   // get info of ego
   // const auto& reference_path_ptr = session_->planning_context().
   //                     lane_change_decider_output().coarse_planning_info.reference_path;
@@ -153,24 +155,6 @@ bool LateralObstacleDecider::Execute() {
     double expand_vel =
         interp(ego_v_, config_.expand_ego_vel, config_.expand_obs_rel_vel);
 
-    auto intersection_state = session_->environmental_model()
-                                .get_virtual_lane_manager()
-                                ->GetIntersectionState();
-    double distance_to_stopline = session_->environmental_model()
-                                      .get_virtual_lane_manager()
-                                      ->GetEgoDistanceToStopline();
-    bool current_intersection_state =
-        intersection_state == common::IntersectionState::IN_INTERSECTION ||
-        intersection_state == common::IntersectionState::OFF_INTERSECTION ||
-        (intersection_state == common::IntersectionState::APPROACH_INTERSECTION &&
-        (distance_to_stopline > 500 || distance_to_stopline < 0));
-    if (current_intersection_state) {
-      intersection_count_ = 2;
-    } else {
-      intersection_count_ = std::max(intersection_count_ - 1, 0);
-    }
-    in_intersection_ = intersection_count_ > 0;
-
     // determine is_avd_car
     std::vector<double> avd_car_id;
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
@@ -212,7 +196,7 @@ bool LateralObstacleDecider::Execute() {
         history.side_car = false;
         history.rear_car = true;
       }
-      if (CalculateIntersection(*frenet_obs, reference_path_ptr, lane_width)) {
+      if (CalculateCutInAndCross(*frenet_obs, reference_path_ptr, lane_width)) {
         history.is_avd_car = false;
         history.ncar_count = 0;
         history.ncar_count_in = false;
@@ -731,7 +715,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
   }
 
   // cut_in 或 横穿
-  if (history.intersection) {
+  if (history.cut_in_or_cross) {
     output_[id] = LatObstacleDecisionType::IGNORE;
   }
 
@@ -749,7 +733,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
   }
 }
 
-bool LateralObstacleDecider::CalculateIntersection(
+bool LateralObstacleDecider::CalculateCutInAndCross(
     FrenetObstacle &frenet_obstacle,
     std::shared_ptr<ReferencePath> reference_path, double lane_width) {
   LateralObstacleHistoryInfo &history =
@@ -775,7 +759,7 @@ bool LateralObstacleDecider::CalculateIntersection(
     }
 
     // 滞回
-    if (history.intersection) {
+    if (history.cut_in_or_cross) {
       lat_safety_buffer += 0.1;
     }
     auto &frenet_coord = reference_path->get_frenet_coord();
@@ -805,29 +789,49 @@ bool LateralObstacleDecider::CalculateIntersection(
          extreme_l < kLThreshold - kAdditionL) ||
         (frenet_obstacle.frenet_l() < 0 &&
          extreme_l > -(kLThreshold - kAdditionL))) {
-      history.intersection = true;
-      history.intersection_count = 5;
+      history.cut_in_or_cross = true;
+      history.cut_in_or_cross_count = 5;
       return true;
     } else if (std::abs(frenet_obstacle.frenet_velocity_l()) < kVelLThreshold &&
                ((frenet_obstacle.frenet_l() > 0 && extreme_l < kLThreshold) ||
                 (frenet_obstacle.frenet_l() < 0 && extreme_l > -kLThreshold))) {
-      history.intersection_count += 1;
-      history.intersection_count = std::min(history.intersection_count, 5);
+      history.cut_in_or_cross_count += 1;
+      history.cut_in_or_cross_count = std::min(history.cut_in_or_cross_count, 5);
     } else {
-      history.intersection_count -= 1;
-      history.intersection_count = std::max(history.intersection_count, 0);
+      history.cut_in_or_cross_count -= 1;
+      history.cut_in_or_cross_count = std::max(history.cut_in_or_cross_count, 0);
     }
 
-    if (history.intersection_count > 2) {
-      history.intersection = true;
+    if (history.cut_in_or_cross_count > 2) {
+      history.cut_in_or_cross = true;
       return true;
     } else {
-      history.intersection = false;
+      history.cut_in_or_cross = false;
       return false;
     }
   }
-  history.intersection = false;
+  history.cut_in_or_cross = false;
   return false;
+}
+
+void LateralObstacleDecider::UpdateIntersection() {
+  const auto intersection_state = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToStopline();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      intersection_state == common::IntersectionState::OFF_INTERSECTION ||
+      (intersection_state == common::IntersectionState::APPROACH_INTERSECTION &&
+      (distance_to_stopline > 500 || distance_to_stopline < 0));
+  if (current_intersection_state) {
+    intersection_count_ = 2;
+  } else {
+    intersection_count_ = std::max(intersection_count_ - 1, 0);
+  }
+  in_intersection_ = intersection_count_ > 0;
 }
 
 void LateralObstacleDecider::UpdateLaneBorrowDirection() {

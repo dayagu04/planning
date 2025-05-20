@@ -23,8 +23,8 @@ struct LateralObstacleHistoryInfo {
   bool front_car = false;
   bool side_car = false;
   bool rear_car = false;
-  bool intersection = false;
-  int intersection_count = 0;
+  bool cut_in_or_cross = false;
+  int cut_in_or_cross_count = 0;
   double front_expand_len = 0.0;
   double rear_expand_len = 0.0;
 };

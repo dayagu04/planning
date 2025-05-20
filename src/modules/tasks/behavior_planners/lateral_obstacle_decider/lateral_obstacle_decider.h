@@ -38,10 +38,11 @@ class LateralObstacleDecider : public Task {
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
-  bool CalculateIntersection(FrenetObstacle &frenet_obstacle,
+  bool CalculateCutInAndCross(FrenetObstacle &frenet_obstacle,
                              std::shared_ptr<ReferencePath> reference_path,
                              double lane_width);
   void UpdateLaneBorrowDirection();
+  void UpdateIntersection();
 
  private:
   planning::framework::Session *session_;

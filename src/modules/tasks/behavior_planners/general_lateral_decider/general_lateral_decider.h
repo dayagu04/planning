@@ -182,6 +182,11 @@ class GeneralLateralDecider : public Task {
   void CalculateAvoidObstacles(
     const std::vector<std::pair<double, double>> frenet_soft_bounds,
     std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
+  double CalStaticNudgeLatBufDis(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    bool is_side_obstacle, double extra_lane_type_decrease_buffer,
+    bool is_update_hard_bound, double ego_width, double lane_width);
 
  private:
   GeneralLateralDeciderConfig config_;
