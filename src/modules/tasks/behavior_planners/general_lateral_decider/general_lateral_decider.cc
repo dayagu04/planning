@@ -1285,13 +1285,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   // Step 5) calculate soft_bound, hard_bound
   Polygon2d obstacle_sl_polygon;
   bool ok = false;
-  if (config_.use_obstacle_prediction_model_in_planning) {
-    ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
-                                       obstacle_sl_polygon);
-  } else {
-    ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
-                                           obstacle_sl_polygon);
-  }
+  ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
+                                      obstacle_sl_polygon);
   if (!ok) {
     // TBD add log
     return;
@@ -1436,13 +1431,8 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
-    if (config_.use_obstacle_prediction_model_in_planning) {
-      ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
-                                         obstacle_sl_polygon);
-    } else {
-      ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
-                                             obstacle_sl_polygon);
-    }
+    ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
+                                        obstacle_sl_polygon);
     if (!ok) {
       // TBD add log
       return false;
@@ -1819,10 +1809,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   Polygon2d trusted_predicted_sl_polygon;
   bool has_trusted_predicted_polygon = false;
-  if (config_.use_obstacle_prediction_model_in_planning) {
-    has_trusted_predicted_polygon = obstacle->get_polygon_at_time(config_.trust_prediction_t_threshold, reference_path_ptr_,
-                                                trusted_predicted_sl_polygon);
-  }
+  has_trusted_predicted_polygon = obstacle->get_polygon_at_time(config_.trust_prediction_t_threshold, reference_path_ptr_,
+                                              trusted_predicted_sl_polygon);
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
@@ -3192,8 +3180,7 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
   // const double KDynamicLonOverlapDisBuffer = 1.0;
   const double dynamic_lon_overlap_dis_buffer =
       general_lateral_decider_utils::CalDesireLonOverlapDistance(
-          ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(),
-          config_.use_obstacle_prediction_model_in_planning);
+          ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double rear_axle_to_front_bumper =  // TBD：define as consexpr
@@ -3218,13 +3205,8 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     }
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
-    if (config_.use_obstacle_prediction_model_in_planning) {
-      ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
-                                         obstacle_sl_polygon);
-    } else {
-      ok = obstacle->get_polygon_at_time_tmp(t, reference_path_ptr_,
-                                             obstacle_sl_polygon);
-    }
+    ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
+                                        obstacle_sl_polygon);
     if (!ok) {
       continue;
     }

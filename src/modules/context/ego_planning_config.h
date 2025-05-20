@@ -797,9 +797,6 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
-    use_obstacle_prediction_model_in_planning =
-        read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
-                            use_obstacle_prediction_model_in_planning);
     base_nudge_distance =
         read_json_key<double>(json, "base_nudge_distance", base_nudge_distance);
     nudge_buffer_road_boundary =
@@ -840,7 +837,6 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   }
   double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
-  bool use_obstacle_prediction_model_in_planning = false;
   double nudge_buffer_road_boundary = 0.3;
   double nudge_buffer_lane_boundary = 0.1;
   double nudge_lat_offset_threshold = 0.1;
@@ -920,10 +916,6 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "lc_finished_second_dist_thr"},
         lc_finished_second_dist_thr);
-    use_obstacle_prediction_model_in_planning =
-        read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
-                            use_obstacle_prediction_model_in_planning);
-
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
                                                    "dynamic_lc_ref_buffer"},
@@ -1076,7 +1068,6 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
 
     /* read config from json */
   }
-  bool use_obstacle_prediction_model_in_planning = false;
   double desired_vel = 11.11;                    // KPH_40;
   double l_care_width = 15.;                     // TBD: more beautiful
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful

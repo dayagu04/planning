@@ -134,7 +134,6 @@
   "safe_buffer": 0.3,
   "pnp_collision_threshold": 0.1,
   "is_valid_lateral_offset": true,
-  "use_obstacle_prediction_model_in_planning": true,
   "near_car_thr": 0.25,
   "lat_safety_buffer": 1.0,
   "oversize_veh_addition_buffer": 0.0,
