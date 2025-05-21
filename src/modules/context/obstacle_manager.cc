@@ -433,6 +433,9 @@ void ObstacleManager::split_points(
     std::vector<std::vector<planning_math::Vec2d>> &result) {
   constexpr double LATTHRESHOLD = 1;
   constexpr double LONTHRESHOLD = 1;
+  constexpr double LATTHRESHOLD2 = 0.5;
+  constexpr double LONTHRESHOLD2 = 3;
+  constexpr double LONTHRESHOLD3 = 5;
   constexpr double MINSPLITLONTHRESHOLD = 3;
   constexpr double THRESHOLD = 2;
   constexpr double MAXDISTANCETHRESHOLD = 4;
@@ -467,7 +470,9 @@ void ObstacleManager::split_points(
       max_diff_l = std::max(fabs(points_vec[i].first.second - points_vec[init_index].first.second), max_diff_l);
       if (points_vec.back().first.first - points_vec.front().first.first > MINSPLITLONTHRESHOLD) {
         if (ds > LONTHRESHOLD ||
-            (max_diff_l > LATTHRESHOLD && max_diff_s > LONTHRESHOLD)) {
+            (max_diff_l > LATTHRESHOLD && max_diff_s > LONTHRESHOLD) ||
+            (max_diff_l > LATTHRESHOLD2 && max_diff_s > LONTHRESHOLD2) ||
+            (max_diff_s > LONTHRESHOLD3)) {
           // 当前点与前一个点相差超过阈值，开启新分割
           init_index = i;
           max_diff_s = 0;
