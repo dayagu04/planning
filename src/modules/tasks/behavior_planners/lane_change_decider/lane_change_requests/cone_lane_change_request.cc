@@ -283,6 +283,9 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     cone_alc_trigger_counter_ =
         std::max(cone_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);
     LOG_DEBUG("trigger_counter is %d \n", cone_alc_trigger_counter_);
+    if (cone_alc_trigger_counter_ < kConeAlcCountThre) {
+      is_cone_lane_change_situation_ = false;
+    }
   }
   // if all cone l is larger than threshold, then no need to lane change
   return;
