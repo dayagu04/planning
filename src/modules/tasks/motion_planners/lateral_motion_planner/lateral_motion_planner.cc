@@ -451,6 +451,9 @@ bool LateralMotionPlanner::AssembleInput() {
                                 .coarse_planning_info.target_state;
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
+  bool lane_change_hold = target_state == kLaneChangeHold;
+  planning_weight_ptr_->SetLCHoldFlag(lane_change_hold);
+
   // lane borrow
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
@@ -487,8 +490,10 @@ bool LateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
   // handle big shaking for steer
+  const bool is_high_priority_back =
+      session_->planning_context().lane_change_decider_output().is_high_priority_back;
   planning_weight_ptr_->CalculateJerkBoundByLastJerk(
-      reference_path_ptr,
+      is_high_priority_back, reference_path_ptr,
       planning_problem_ptr_->GetOutput(), planning_input_);
   // set motion_plan_concerned_end_index
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(

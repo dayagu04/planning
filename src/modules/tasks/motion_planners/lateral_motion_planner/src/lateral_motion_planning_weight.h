@@ -128,6 +128,7 @@ class LateralMotionPlanningWeight {
       std::vector<double>& expected_steer_vec);
 
   void CalculateJerkBoundByLastJerk(
+      const bool is_high_priority_back,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       const planning::common::LateralPlanningOutput &last_planning_output,
       planning::common::LateralPlanningInput &planning_input);
@@ -164,6 +165,10 @@ class LateralMotionPlanningWeight {
 
   void SetLCBackFlag(const bool is_lane_change_back) {
     is_lane_change_back_ = is_lane_change_back;
+  }
+
+  void SetLCHoldFlag(const bool is_lane_change_hold) {
+    is_lane_change_hold_ = is_lane_change_hold;
   }
 
   void SetIsInIntersection(const bool is_in_intersection) {
@@ -252,6 +257,7 @@ class LateralMotionPlanningWeight {
   double min_q_jerk_;
   double last_path_max_dist2ref_;
   double last_jerk_bound_limit_;
+  bool is_lane_change_hold_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
   bool is_search_success_;

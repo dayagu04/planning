@@ -119,7 +119,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         }
       }
 
-      if (is_lane_change_back_) {
+      if (is_lane_change_back_ ||
+          is_lane_change_hold_) {
         MakeLaneChangeBackDynamicWeight(planning_input);
       }
       break;
@@ -517,6 +518,7 @@ void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
 }
 
 void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
+    const bool is_high_priority_back,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     const planning::common::LateralPlanningOutput &last_planning_output,
     planning::common::LateralPlanningInput &planning_input) {
@@ -579,6 +581,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     }
   } else {
     emergency_level_ = NONE;
+  }
+  if (is_high_priority_back &&
+      is_lane_change_hold_) {
+    emergency_level_ = P0;
   }
   if (emergency_level_ == P0) {
     jerk_bound = emergency_jerk_bound;
@@ -793,8 +799,8 @@ void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(
   double q_ref_theta_factor =
       planning::interp(init_lat_dist, xp_xy, fp_factor2);
   planning_input.set_q_ref_theta(q_ref_theta_lc_back * q_ref_theta_factor);
-  std::vector<double> xp_v{1.5, 3.0, 4.167, 8.333};
-  std::vector<double> fp_qjerk{500.0, 200.0, 100.0, config_.q_jerk_lane_change_back};
+  std::vector<double> xp_v{1.5, 3.0, 4.167, 8.333, 16.667};
+  std::vector<double> fp_qjerk{500.0, 200.0, 100.0, 20.0, config_.q_jerk_lane_change_back};
   double q_jerk = planning::interp(ref_vel_, xp_v, fp_qjerk);
   planning_input.set_q_jerk(q_jerk);
   concerned_start_q_jerk_ = q_jerk;
@@ -857,8 +863,7 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
       planning::interp(ref_vel_, xp_v, config_.map_qhard_bound) *
       emergence_factor * intersection_factor;
   if (std::fabs(avoid_dist_) > 0.4 &&
-      (lateral_motion_scene_ != LANE_CHANGE &&
-       !is_lane_change_back_)) {
+      lateral_motion_scene_ != LANE_CHANGE) {
     std::vector<double> xp_lat_dist{0.4, 1.5, 3.0};
     std::vector<double> fp_ratio_to_bound{1.0, 0.4, 0.1};
     double decay_ratio = planning::interp(std::fabs(avoid_dist_), xp_lat_dist, fp_ratio_to_bound);
@@ -919,7 +924,9 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
   }
 
   // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
-  if ((lateral_motion_scene_ == LANE_CHANGE) && (!is_lane_change_back_)) {
+  if ((lateral_motion_scene_ == LANE_CHANGE) &&
+      (!is_lane_change_back_) &&
+      (!is_lane_change_hold_)) {
     if (ref_vel_ <= config_.lane_change_high_vel || config_.use_new_lc_param) {
       weight_.complete_follow = false;
       weight_.remotely_index = 20;
