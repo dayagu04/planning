@@ -538,7 +538,9 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
     ego_v = (coord->Length() - frenet_init_point.x - 0.5) /
             std::fmax(remain_lc_duration, (traj_points.size() - 1) * 0.2);
   }
-  auto lane_change_end_s = frenet_init_point.x + ego_v * remain_lc_duration;
+
+  const double lc_path_length = std::max(ego_v * remain_lc_duration, 20.0);
+  auto lane_change_end_s = frenet_init_point.x + lc_path_length;
 
   const auto v_x = ego_v * std::cos(heading_angle);
   const auto v_y = ego_v * std::sin(heading_angle);
