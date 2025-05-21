@@ -401,7 +401,10 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
       // TODO(clren)
       // keep
       avoid_info_.avoid_way = AvoidWay::Center;
-      lateral_offset = ego_frenet_state_.l();
+      lateral_offset =
+          ego_frenet_state_.l() < 0
+              ? std::max(ego_frenet_state_.l(), - avoid_info_.normal_right_avoid_threshold)
+              : std::min(ego_frenet_state_.l(), avoid_info_.normal_left_avoid_threshold);
       avoid_info_.is_use_ego_position = true;
     }
   } else {
@@ -1248,6 +1251,29 @@ void LateralOffsetCalculatorV2::Reset() {
   avoid_id_ = -1;
   SaveDebugInfo();
   // TODO(clren)
+}
+
+void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
+  avoid_info_.Reset();
+  avoid_id_ = -1;
+
+  // 定义需要重置的Hysteresis类型
+  std::vector<HysteresisType> types_to_reset = {
+    HysteresisType::EnoughSpaceHysteresis,
+    HysteresisType::AvoidWaySelect,
+    HysteresisType::IsObstacleConsideredHysteresis,
+    HysteresisType::IsInConsiderLateralRangeHysteresis
+  };
+  for (const auto& type : types_to_reset) {
+    auto it = max_opposite_offset_hysteresis_maps_.find(type);
+    if (it != max_opposite_offset_hysteresis_maps_.end()) {
+      std::visit([](auto& map) {
+          map.clear();
+      }, it->second);
+    }
+  }
+  SaveDebugInfo();
+  // TODO(huwang5)
 }
 
 void LateralOffsetCalculatorV2::SaveDebugInfo() {

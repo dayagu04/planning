@@ -118,7 +118,7 @@ struct AvoidObstacleInfo {
   double curr_time;              //单位s
   double t_exceed_avd_obstacle;  //单位s
   double allow_max_opposite_offset;
-  uint track_id;
+  uint track_id = 0;
   int type;
   int update_flag = AvoidObstacleUpdateFlag::Update;
   double length;
