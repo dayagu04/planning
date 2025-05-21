@@ -39,8 +39,7 @@ class TargetPoseRegulator : public AstarDecider {
   void Clear();
 
   // Get most safe target pose
-  const std::pair<Pose2D, float> GetCandidatePose(
-      const float lat_buffer) const;
+  const std::pair<Pose2D, float> GetCandidatePose(const float lat_buffer) const;
 
   const float GetEgoObsDist() const { return ego_dist_to_obs_; }
 
@@ -62,6 +61,9 @@ class TargetPoseRegulator : public AstarDecider {
   // 检查目标点直线入库路径，和障碍物距离
   // return true: 直线路径没有障碍物
   const float GetDistToObs(const Pose2D *global_pose,
+                           EulerDistanceTransform *edt);
+
+  const float GetDistFromEndToObs(const Pose2D *global_pose,
                            EulerDistanceTransform *edt);
 
   void DebugString();

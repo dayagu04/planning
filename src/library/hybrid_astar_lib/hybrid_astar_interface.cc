@@ -793,8 +793,6 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
   target_regulator_goal_ = target_regulator_result.first;
-  ILOG_INFO << "target_regulator_goal_ " << target_regulator_goal_.x << ", "
-            << target_regulator_goal_.y;
 
   // If target slot is not wide enough, return.
   if (target_regulator_result.second < advised_lat_buffer_inside &&

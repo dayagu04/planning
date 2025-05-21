@@ -50,7 +50,15 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   x_step_ = 0.2;
   x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
 
-  float dist = GetDistToObs(&center_line_target_, edt);
+  float dist = 10.0;
+  if (IsHeadOutRequest(request->direction_request)) {
+    // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
+    dist = GetDistFromEndToObs(&center_line_target_, edt);
+    ILOG_INFO << "center_line_target_ dist : " << dist;
+  } else {
+    dist = GetDistToObs(&center_line_target_, edt);
+  }
+
   PoseRegulateCandidate candidate;
   candidate.lat_offset = 0.0;
   candidate.dist_to_obs = dist;
@@ -94,6 +102,11 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
     return;
   }
 
+  if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+    GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
+  }
+
   // Parking out no need regulator.
   if (!IsParkingIn(request)) {
     ILOG_INFO << "not park in";
@@ -105,11 +118,7 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   }
 
   if (request->space_type == ParkSpaceType::VERTICAL) {
-    if (IsHeadOutRequest(request->direction_request)) {
-      GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
-    } else {
-      GenerateCandidatesForVerticalSlot(edt, request, veh_param);
-    }
+    GenerateCandidatesForVerticalSlot(edt, request, veh_param);
     // GenerateCandidatesForVerticalSlot(edt, request, veh_param);
   } else {
     GenerateCandidatesForParallelSlot(edt, request, veh_param);
@@ -213,16 +222,10 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
 void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
-  // 因为存在障碍物入侵情形，不管偏移范围设定多大，总会存在失败情况.
-  // 目前策略:不删除任何障碍物，只会将目标增加平移.
+  // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
+  // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
   Pose2D global_pose;
   global_pose = center_line_target_;
-  PoseRegulateCandidate origin_end_pose;
-  origin_end_pose.pose = global_pose;
-  origin_end_pose.dist_to_obs = GetDistToObs(&global_pose, edt);
-  candidate_info_.emplace_back(origin_end_pose);
-
-
   const size_t max_candidate_num = 10;
 
   PoseRegulateCandidate candidate;
@@ -230,15 +233,15 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     global_pose.x = 8.0;
     if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
       global_pose.y -= 1.0;
-      // candidate.lat_offset = 9.0;
-      candidate.dist_to_obs = GetDistToObs(&global_pose, edt);
+      candidate.lat_offset = 0.0;
+      candidate.dist_to_obs = GetDistFromEndToObs(&global_pose, edt);
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     } else if (request->direction_request ==
                ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
       global_pose.y += 1.0;
-      // candidate.lat_offset = 9.0;
-      candidate.dist_to_obs = GetDistToObs(&global_pose, edt);
+      candidate.lat_offset = 0.0;
+      candidate.dist_to_obs = GetDistFromEndToObs(&global_pose, edt);
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     }
@@ -277,6 +280,23 @@ const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
       break;
     }
   }
+
+  return min_dist;
+}
+
+const float TargetPoseRegulator::GetDistFromEndToObs(
+    const Pose2D *global_pose, EulerDistanceTransform *edt) {
+  Transform2d tf;
+  AstarPathGear gear = AstarPathGear::NONE;
+  float dist;
+  float min_dist = 10.0;
+  Pose2D pose = *global_pose;
+
+  tf.SetBasePose(pose);
+
+  edt->DistanceCheckForPoint(&dist, &tf, gear);
+
+  min_dist = std::min(min_dist, dist);
 
   return min_dist;
 }
