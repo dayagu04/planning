@@ -216,7 +216,6 @@ int GetPathFromHybridAstar() {
   Pose2D global_position;
 
   if (result.x.size() > 0) {
-    bool sample_finish = false;
     for (i = 0; i < result.x.size(); i++) {
       local_position.x = result.x[i];
       local_position.y = result.y[i];
@@ -230,6 +229,13 @@ int GetPathFromHybridAstar() {
 
       if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
         static_rs_path_.push_back(Eigen::Vector3d(
+            global_position.x, global_position.y, global_position.theta));
+      }
+
+      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::CUBIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::SPIRAL) {
+        polynomial_path_.emplace_back(Eigen::Vector3d(
             global_position.x, global_position.y, global_position.theta));
       }
     }

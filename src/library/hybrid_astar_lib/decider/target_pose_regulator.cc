@@ -53,7 +53,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   float dist = 10.0;
   if (IsHeadOutRequest(request->direction_request)) {
     // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
-    dist = GetDistFromEndToObs(&center_line_target_, edt);
+    dist = GetDistToObsHeadOut(&center_line_target_, edt);
     ILOG_INFO << "center_line_target_ dist : " << dist;
   } else {
     dist = GetDistToObs(&center_line_target_, edt);
@@ -234,14 +234,14 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
       global_pose.y -= 1.0;
       candidate.lat_offset = 0.0;
-      candidate.dist_to_obs = GetDistFromEndToObs(&global_pose, edt);
+      candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     } else if (request->direction_request ==
                ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
       global_pose.y += 1.0;
       candidate.lat_offset = 0.0;
-      candidate.dist_to_obs = GetDistFromEndToObs(&global_pose, edt);
+      candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     }
@@ -284,13 +284,35 @@ const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
   return min_dist;
 }
 
-const float TargetPoseRegulator::GetDistFromEndToObs(
+const float TargetPoseRegulator::GetDistToObsHeadOut(
     const Pose2D *global_pose, EulerDistanceTransform *edt) {
   Transform2d tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
   float min_dist = 10.0;
   Pose2D pose = *global_pose;
+  const size_t num = 10;
+  const float y_step = 0.5;
+  for (int j = 0; j < num; j++) {
+    if (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
+      pose.y = global_pose->y - y_step * j;
+    } else if (request_->direction_request ==
+               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      pose.y = global_pose->y + y_step * j;
+    } else {
+      break;
+    }
+
+    tf.SetBasePose(pose);
+
+    edt->DistanceCheckForPoint(&dist, &tf, gear);
+
+    min_dist = std::min(min_dist, dist);
+
+    if (min_dist < 0.04) {
+      break;
+    }
+  }
 
   tf.SetBasePose(pose);
 

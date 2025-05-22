@@ -63,7 +63,7 @@ class TargetPoseRegulator : public AstarDecider {
   const float GetDistToObs(const Pose2D *global_pose,
                            EulerDistanceTransform *edt);
 
-  const float GetDistFromEndToObs(const Pose2D *global_pose,
+  const float GetDistToObsHeadOut(const Pose2D *global_pose,
                            EulerDistanceTransform *edt);
 
   void DebugString();
