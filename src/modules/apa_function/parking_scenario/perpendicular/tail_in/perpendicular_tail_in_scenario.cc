@@ -868,6 +868,13 @@ void PerpendicularTailInScenario::PathPlanByGeometry() {
   if (!CheckCanDelObsInSlot()) {
     frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
   }
+
+  if (apa_world_ptr_->GetSimuParam().is_simulation &&
+      apa_world_ptr_->GetSimuParam().process_obs_method != -1) {
+    frame_.process_obs_method = static_cast<ProcessObsMethod>(
+        apa_world_ptr_->GetSimuParam().process_obs_method);
+  }
+
   const bool exist_target_pose = GenTlane();
   if (!frame_.replan_flag) {
     ILOG_INFO << "replan is not required!";

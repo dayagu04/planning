@@ -167,6 +167,10 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
   col_det_interface_ptr_->GetEDTCollisionDetectorPtr()->PreProcess(bound);
 
+  col_det_interface_ptr_->GetEDTCollisionDetectorPtr()->UpdateObsClearZone(
+      std::vector<Eigen::Vector2d>{ego_pose.pos,
+                                   ego_info_under_slot_.target_pose.pos});
+
   return true;
 }
 

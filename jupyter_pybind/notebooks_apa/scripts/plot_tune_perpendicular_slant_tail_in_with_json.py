@@ -97,6 +97,8 @@ data_planning_tune_substitute_selected = ColumnDataSource(data = {'plan_path_x':
                                               'plan_path_y':[],
                                               'plan_path_heading':[],})
 
+data_obs_clear_zone = ColumnDataSource(data = {'x': [], 'y': [],})
+
 
 fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car_start_pos')
 fig1.circle('x','y', source = data_car_start_pos, size=8, color='red', legend_label = 'car_start_pos')
@@ -121,6 +123,7 @@ fig1.multi_line('plan_path_x', 'plan_path_y', source = data_planning_tune_substi
 fig1.patches('x_vec', 'y_vec', source = data_simu_car_box_substitute, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "red", line_width = 1, legend_label = 'sim_sampled_carbox_substitute', visible = False)
 fig1.circle('plan_path_x', 'plan_path_y', source = data_planning_tune_substitute_selected, size=2, color='grey', legend_label = 'sim_tuned_plan_substitute_selected')
 fig1.line('plan_path_x', 'plan_path_y', source = data_planning_tune_substitute_selected, line_width = 4, line_color = 'cyan', line_dash = 'solid', line_alpha = 0.3, legend_label = 'sim_tuned_plan_substitute_selected')
+fig1.multi_line('x', 'y', source = data_obs_clear_zone, line_width = 2, line_color = 'black', line_dash = 'dashed', line_alpha = 0.6, legend_label = 'obs_clear_zone', visible = False)
 
 coord_tf = coord_transformer()
 
@@ -210,7 +213,7 @@ class LocalViewSlider:
     self.trigger_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "trigger_plan",min=0, max=1, value=0, step=1)
     self.use_average_obs_dist_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_average_obs_dist",min=0, max=1, value=0, step=1)
     self.force_mid_process_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_mid_process_plan",min=0, max=2, value=0, step=1)
-    self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "selected_id",min=0, max=1000, value=0, step=1)
+    self.selected_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "selected_id",min=0, max=1000, value=0, step=1)
     self.substitute_path_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "substitute_path_id",min=0, max=80, value=0, step=1)
     self.sample_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='25%'), description= "sample_ds",min=0.02, max=2.0, value=0.1, step=0.02)
     self.car_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.30, value=0.0, step=0.01)
@@ -228,6 +231,9 @@ class LocalViewSlider:
     self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=4.0, value=2.68, step=0.05)
     self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.68, step=0.05)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=8.68, step=0.1)
+
+    self.process_obs_method_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "process_obs_method",min=-1, max=2, value=-1, step=1)
+
 
     ipywidgets.interact(slider_callback, vehicle_type = self.vehicle_type_slider,
                                          car_inflation = self.car_inflation_slider,
@@ -250,11 +256,12 @@ class LocalViewSlider:
                                          left_obj_dx = self.left_obj_dx_slider,
                                          left_obj_dy = self.left_obj_dy_slider,
                                          channel_width = self.channel_width_slider,
+                                         process_obs_method = self.process_obs_method_slider,
                                        )
 
 ### sliders callback
-def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist, selected_id, substitute_path_id, trigger_plan, force_mid_process_plan, data_json_id, ego_offset_lon, ego_offset_lat, ego_offset_heading, is_path_optimization, is_cilqr_enable, is_complete_path,
-                    set_obs, right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width):
+def slider_callback(trigger_plan, data_json_id, selected_id, process_obs_method, substitute_path_id, force_mid_process_plan, ego_offset_lon, ego_offset_lat, ego_offset_heading, is_path_optimization, is_cilqr_enable, is_complete_path,
+                    set_obs, right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width, sample_ds, car_inflation, vehicle_type, use_average_obs_dist):
   kwargs = locals()
 
   data_car_start_pos.data.update({'x': [],'y': [],})
@@ -285,6 +292,7 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist
   data_planning_tune_substitute_selected.data.update({'plan_path_x':[],
                                                 'plan_path_y':[],
                                                 'plan_path_heading':[],})
+  data_obs_clear_zone.data.update({'x': [], 'y': [],})
 
   if vehicle_type == 0:
     vehicle_type = JAC_S811
@@ -305,7 +313,7 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist
     loaded_data = json.load(json_file)
 
   # 更新仿真参数
-  perpendicular_slant_tail_in_with_json_py.UpdateSimuParams(is_path_optimization, is_cilqr_enable, is_complete_path, use_average_obs_dist, force_mid_process_plan, sample_ds, set_obs, right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width)
+  perpendicular_slant_tail_in_with_json_py.UpdateSimuParams(is_path_optimization, is_cilqr_enable, is_complete_path, use_average_obs_dist, force_mid_process_plan, sample_ds, set_obs, right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width, process_obs_method)
 
   # 读取定位信息
   loc_data = loaded_data["loc_pos"]
@@ -453,12 +461,14 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist
   cur_gear_path_pt_vec = []
   virtual_obs_vec = []
   substitute_path_pt_vec = []
+  obs_clear_zone_vec_vec = []
   if (trigger_plan == 1):
     perpendicular_slant_tail_in_with_json_py.Update()
     complete_path_pt_vec = perpendicular_slant_tail_in_with_json_py.GetCompletePlanPath()
     cur_gear_path_pt_vec = perpendicular_slant_tail_in_with_json_py.GetCurrentGearPlanPath()
     virtual_obs_vec = perpendicular_slant_tail_in_with_json_py.GetObsVec()
     substitute_path_pt_vec = perpendicular_slant_tail_in_with_json_py.GetPerferredPlanPath()
+    obs_clear_zone_vec_vec = perpendicular_slant_tail_in_with_json_py.GetObsClearZone()
 
   substitute_path_x_vec_vec, substitute_path_y_vec_vec, substitute_path_heading_vec_vec, substitute_path_lat_buffer_vec_vec = [], [], [], []
   for i in range(len(substitute_path_pt_vec)):
@@ -606,6 +616,19 @@ def slider_callback(vehicle_type, car_inflation, sample_ds, use_average_obs_dist
     'x_vec': car_box_x_vec,
     'y_vec': car_box_y_vec,
   })
+
+  obs_clear_zone_x_vec, obs_clear_zone_y_vec = [], []
+  for i in range(len(obs_clear_zone_vec_vec)):
+    single_obs_clear_zone_x_vec, single_obs_clear_zone_y_vec = [], []
+    for j in range(len(obs_clear_zone_vec_vec[i])):
+      single_obs_clear_zone_x_vec.append(obs_clear_zone_vec_vec[i][j][0])
+      single_obs_clear_zone_y_vec.append(obs_clear_zone_vec_vec[i][j][1])
+    single_obs_clear_zone_x_vec.append(obs_clear_zone_vec_vec[i][0][0])
+    single_obs_clear_zone_y_vec.append(obs_clear_zone_vec_vec[i][0][1])
+    obs_clear_zone_x_vec.append(single_obs_clear_zone_x_vec)
+    obs_clear_zone_y_vec.append(single_obs_clear_zone_y_vec)
+
+  data_obs_clear_zone.data.update({'x': obs_clear_zone_x_vec, 'y': obs_clear_zone_y_vec,})
 
 
   fig1.x_range = Range1d(start = ego_x - 10.0, end = ego_x + 10.0)

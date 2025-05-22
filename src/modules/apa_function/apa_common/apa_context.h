@@ -59,9 +59,9 @@ enum PathPlannerResult {
 };
 
 enum class ProcessObsMethod : uint8_t {
-  DO_NOTHING,
-  MOVE_OBS_OUT_SLOT,
-  MOVE_OBS_OUT_CAR_SAFE_POS,
+  DO_NOTHING = 0,
+  MOVE_OBS_OUT_SLOT = 1,
+  MOVE_OBS_OUT_CAR_SAFE_POS = 2,
   COUNT,
 };
 

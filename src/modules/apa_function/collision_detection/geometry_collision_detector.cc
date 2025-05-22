@@ -11,7 +11,7 @@ const ColResult GeometryCollisionDetector::Update(
     const geometry_lib::PathSegment &path_seg, const double lat_buffer,
     const double lon_buffer) {
   col_res_.Reset();
-  if (obs_manager_ == nullptr || obs_manager_->GetObstacles().empty()) {
+  if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty()) {
     return col_res_;
   }
 
@@ -92,7 +92,7 @@ void GeometryCollisionDetector::Update(
   const Eigen::Vector2d unit_obs_move_line = -AB.normalized();
 
   const std::unordered_map<size_t, ApaObstacle> &obs_map =
-      obs_manager_->GetObstacles();
+      obs_manager_ptr_->GetObstacles();
 
   std::vector<geometry_lib::LineSegment> *car_line_vec;
   geometry_lib::LineSegment obs_move_line;
@@ -201,7 +201,7 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   const double car_rot_angle = geometry_lib::GetAngleFromTwoVec(v_OA, v_OB);
 
   const std::unordered_map<size_t, ApaObstacle> &obs_map =
-      obs_manager_->GetObstacles();
+      obs_manager_ptr_->GetObstacles();
 
   std::vector<geometry_lib::LineSegment> *car_line_vec;
   // obstacle rotates around the the car rotation center to form a circle
