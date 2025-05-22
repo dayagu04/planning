@@ -83,7 +83,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0);
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {

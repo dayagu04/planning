@@ -65,6 +65,34 @@ enum class ProcessObsMethod : uint8_t {
   COUNT,
 };
 
+enum class RealTimeBrakeType : uint8_t {
+  STOP,
+  HEAVY_BRAKE,
+  MODERATE_BRAKE,
+  SLIGHT_BRAKE,
+  COUNT,
+};
+
+struct RealTimeBrakeInfo {
+  RealTimeBrakeType brake_type = RealTimeBrakeType::STOP;
+  double lat_buffer = 0.0;
+  double min_lon_dist = 0.0;
+
+  RealTimeBrakeInfo() = default;
+  RealTimeBrakeInfo(const RealTimeBrakeType brake_type, const double lat_buffer,
+                    const double min_lon_dist)
+      : brake_type(brake_type),
+        lat_buffer(lat_buffer),
+        min_lon_dist(min_lon_dist) {}
+  void Set(const RealTimeBrakeType brake_type, const double lat_buffer,
+           const double min_lon_dist) {
+    this->brake_type = brake_type;
+    this->lat_buffer = lat_buffer;
+    this->min_lon_dist = min_lon_dist;
+  }
+  ~RealTimeBrakeInfo() = default;
+};
+
 void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
 
 const std::string GetApaScenarioStatusString(

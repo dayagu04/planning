@@ -368,11 +368,10 @@ class ParkingScenario {
   virtual void GenPlanningPath();
   virtual const double CalRemainDistFromPath();
   virtual const double CalRemainDistFromObs(
-      const double safe_dist = 0.3,
-      const double lat_buffer = apa_param.GetParam().lat_inflation,
-      const double extra_buffer_when_reversing = 0.068,
-      const double dynamic_lat_buffer = 0.368,
-      const double dynamic_lon_buffer = 1.168);
+      const double static_lon_buffer = 0.3,
+      const double static_lat_buffer = apa_param.GetParam().stop_lat_inflation,
+      const double dynamic_lon_buffer = 1.168,
+      const double dynamic_lat_buffer = 0.368);
   virtual const bool PostProcessPath();
 
   // check if need replan
