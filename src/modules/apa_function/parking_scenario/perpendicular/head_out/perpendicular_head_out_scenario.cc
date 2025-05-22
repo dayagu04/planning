@@ -1214,8 +1214,7 @@ const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
   return !path_trim_flag_ &&
          apa_world_ptr_->GetSlotManagerPtr()
                  ->GetEgoInfoUnderSlot()
-                 .slot_occupied_ratio < 0.15 &&
-         fabs(frame_.current_path_last_point_heading * kRad2Deg) > 80;
+                 .slot_occupied_ratio < 0.15;
 }
 
 const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {
