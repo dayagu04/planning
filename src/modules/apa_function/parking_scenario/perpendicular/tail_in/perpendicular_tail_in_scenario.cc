@@ -288,7 +288,11 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter;
 
     if (dist_ego_limiter < param.car_to_limiter_dis &&
-        frame_.can_correct_path_for_limiter) {
+        frame_.can_correct_path_for_limiter &&
+        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg <
+            apa_param.GetParam().finish_heading_err * 1.05 &&
+        std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+            apa_param.GetParam().finish_lat_err_strict * 1.05) {
       ILOG_INFO << "should correct path according limiter";
       ego_info_under_slot.fix_slot = true;
       PostProcessPathAccordingLimiter();
