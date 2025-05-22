@@ -849,7 +849,10 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                  &traj_candidates_[i]);
 
-      ExtendPathToRealParkSpacePoint(&traj_candidates_[i], request_.real_goal);
+      if (!IsHeadOutRequest(request_.direction_request)) {
+        ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
+                                       request_.real_goal);
+      }
     }
 
     // check time
