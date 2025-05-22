@@ -294,6 +294,7 @@ class ParkingScenario {
     PATH_PLAN_FAILED,
     PLAN_COUNT_EXCEED_LIMIT,
     DYNAMIC_PATH_NOT_SUPERIOR,
+    NO_TARGET_POSE,
   };
 
  public:
