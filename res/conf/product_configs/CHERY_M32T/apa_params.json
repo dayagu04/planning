@@ -141,7 +141,7 @@
   "comment_9": "check replan params",
   "stuck_replan_time": 5.0,
   "max_replan_remain_dist": 0.2,
-  "max_replan_count": 12,
+  "max_replan_count": 26,
 
   "comment_10": "construct t_lane params",
   "vacant_pt_outside_dx": 0.5,
