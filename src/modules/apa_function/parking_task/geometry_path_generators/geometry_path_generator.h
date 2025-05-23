@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_slot.h"
 #include "apa_slot_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "dubins_lib.h"
@@ -28,6 +29,7 @@ struct Tlane {
   Eigen::Vector2d pt_lower_boundry_pos = Eigen::Vector2d::Zero();
   double pt_terminal_heading = 0.0;
   uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+  Limiter limiter;
 
   // obs tlane
   Eigen::Vector2d obs_pt_inside = Eigen::Vector2d::Zero();
@@ -61,6 +63,7 @@ struct Tlane {
     channel_y = 6.5;
     channel_x_limit = 16.6;
     slot_side_sgn = 1.0;
+    limiter.Reset();
   }
 };
 

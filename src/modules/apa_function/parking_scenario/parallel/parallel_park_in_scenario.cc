@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <queue>
 #include <utility>
 #include <vector>
@@ -33,11 +34,12 @@
 
 namespace planning {
 namespace apa_planner {
+static double kStopLonBuffer = 0.3;
 static double kInsertLineLonBuffer = 0.2;
 static double kFrontDetaXMagWhenFrontVacant = 1.98;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.4;
-static double kRearDetaXMagWhenBothSidesVacant = 0.2;
+static double kRearDetaXMagWhenBothSidesVacant = 0.5;
 static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.2;
 static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
@@ -281,8 +283,14 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ego_info_under_slot.slot.slot_width_ = std::min(dist_01_2, dist_01_3);
   ego_info_under_slot.slot.slot_length_ =
       (select_slot_global.pt_0 - select_slot_global.pt_1).norm();
+
   ILOG_INFO << "slot_length_ = " << ego_info_under_slot.slot.slot_length_;
   ILOG_INFO << "slot_width = " << ego_info_under_slot.slot.slot_width_;
+  if (ego_info_under_slot.slot.slot_length_ <
+      ego_info_under_slot.slot.slot_width_) {
+    ILOG_ERROR << " slot_length_ > slot_width_ in parallel slot";
+    return false;
+  }
 
   // calc slot side once at first
   if (frame_.is_replan_first) {
@@ -338,11 +346,11 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ILOG_INFO << "ego_info_under_slot.origin_pose_global.pos = "
             << ego_info_under_slot.origin_pose_global.pos.transpose();
 
-  ego_info_under_slot.g2l_tf = geometry_lib::GlobalToLocalTf(
+  ego_info_under_slot.g2l_tf = pnc::geometry_lib::GlobalToLocalTf(
       ego_info_under_slot.origin_pose_global.pos,
       ego_info_under_slot.origin_pose_global.heading);
 
-  ego_info_under_slot.l2g_tf = geometry_lib::LocalToGlobalTf(
+  ego_info_under_slot.l2g_tf = pnc::geometry_lib::LocalToGlobalTf(
       ego_info_under_slot.origin_pose_global.pos,
       ego_info_under_slot.origin_pose_global.heading);
 
@@ -368,11 +376,49 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ILOG_INFO << "t_lane_.slot_side = " << static_cast<int>(t_lane_.slot_side);
   ILOG_INFO << "frame_.current_arc_steer = "
             << static_cast<int>(frame_.current_arc_steer);
-  ego_info_under_slot.target_pose.pos
-      << 0.5 * (ego_info_under_slot.slot.slot_length_ -
-                apa_param.GetParam().car_length) +
-             apa_param.GetParam().rear_overhanging,
-      0.0;
+
+  // firstly locate in middle of slot
+  double target_x = 0.5 * (ego_info_under_slot.slot.slot_length_ -
+                           apa_param.GetParam().car_length) +
+                    apa_param.GetParam().rear_overhanging;
+
+  ILOG_INFO << "target x in middle = " << target_x;
+
+  const auto& limiter = ego_info_under_slot.slot.GetLimiter();
+  ILOG_INFO << "limiter.valid = " << limiter.valid;
+  if (limiter.valid) {
+    t_lane_.limiter.valid = true;
+    // transfer limiter in slot coordination
+    t_lane_.limiter.start_pt =
+        ego_info_under_slot.g2l_tf.GetPos(limiter.start_pt);
+
+    t_lane_.limiter.end_pt = ego_info_under_slot.g2l_tf.GetPos(limiter.end_pt);
+
+    ILOG_INFO << "limiter start pos = " << t_lane_.limiter.start_pt.transpose();
+    ILOG_INFO << "limiter end pos = " << t_lane_.limiter.end_pt.transpose();
+
+    const double max_limiter_x =
+        std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
+
+    const double min_limiter_x =
+        std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
+
+    if (max_limiter_x < 0.5 * ego_info_under_slot.slot.slot_length_) {
+      ILOG_INFO << "limiter behind!";
+      target_x = std::max(
+          target_x,
+          max_limiter_x +
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+    } else {
+      ILOG_INFO << "limiter front!";
+      target_x = std::min(
+          target_x,
+          min_limiter_x - apa_param.GetParam().wheel_base -
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+    }
+  }
+  ILOG_INFO << "target x consider limiter = " << target_x;
+  ego_info_under_slot.target_pose.pos << target_x, 0.0;
   ego_info_under_slot.target_pose.heading = 0.0;
   ego_info_under_slot.target_pose.heading_vec << 1.0, 0.0;
 
@@ -649,6 +695,56 @@ const bool ParallelParkInScenario::GenTlane() {
   t_lane_.slot_length = slot_length;
   t_lane_.slot_width = slot_width;
 
+  // ego target x is already set according to middle of slot and limiter in
+  // gentlane, it's time to set target x and y considering obstacles
+  double upper_bound = std::min(
+      t_lane_.obs_pt_inside.x(),
+      t_lane_.slot_length +
+          apa_param.GetParam().parallel_max_ego_x_offset_with_invasion);
+
+  ILOG_INFO << "debug for target x ---------------------------";
+  ILOG_INFO << "obs_pt_inside x = " << t_lane_.obs_pt_inside.x();
+  ILOG_INFO << "slot length +  parallel_max_ego_x_offset_with_invasion = "
+            << t_lane_.slot_length +
+                   apa_param.GetParam().parallel_max_ego_x_offset_with_invasion;
+  ILOG_INFO << "upper_bound min of them = " << upper_bound;
+
+  upper_bound -= (apa_param.GetParam().front_overhanging +
+                  apa_param.GetParam().wheel_base);
+
+  if (!front_vacant) {
+    ILOG_INFO << "FRONT occupied! need to reduce extra buffer";
+    upper_bound -= kStopLonBuffer;
+  }
+  ILOG_INFO << "final upper_bound = " << upper_bound;
+
+  double lower_bound =
+      std::max(t_lane_.obs_pt_outside.x(),
+               -apa_param.GetParam().parallel_max_ego_x_offset_with_invasion);
+  ILOG_INFO << "debug for target y ---------";
+  ILOG_INFO << "obs_pt_outside x = " << t_lane_.obs_pt_outside.x();
+  ILOG_INFO
+      << "--apa_param.GetParam().parallel_max_ego_x_offset_with_invasion = "
+      << -apa_param.GetParam().parallel_max_ego_x_offset_with_invasion;
+
+  lower_bound += apa_param.GetParam().rear_overhanging;
+
+  if (!rear_vacant) {
+    ILOG_INFO << "rear occupied, need extra buffer!";
+    lower_bound = t_lane_.pt_outside.x() += kStopLonBuffer;
+  }
+  ILOG_INFO << "lower_bound max of them = " << lower_bound;
+  if (lower_bound > upper_bound) {
+    ILOG_ERROR << "lower_bound > upper_bound!";
+    return false;
+  }
+
+  ILOG_INFO << "ego_info_under_slot.target_pose.pos.x() before = "
+            << ego_info_under_slot.target_pose.pos.x();
+  ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
+      ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
+
+  // set target y with curb
   const double target_y_with_curb =
       curb_y_limit +
       side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
@@ -658,12 +754,6 @@ const bool ParallelParkInScenario::GenTlane() {
       (side_sgn > 0.0 ? std::max(0.0, target_y_with_curb)
                       : std::min(0.0, target_y_with_curb));
 
-  const double target_x_in_slot_center =
-      0.5 * (ego_info_under_slot.slot.slot_length_ -
-             apa_param.GetParam().car_length) +
-      apa_param.GetParam().rear_overhanging;
-
-  ego_info_under_slot.target_pose.pos.x() = target_x_in_slot_center;
   t_lane_.pt_terminal_pos = ego_info_under_slot.target_pose.pos;
 
   ego_info_under_slot.terminal_err.Set(
