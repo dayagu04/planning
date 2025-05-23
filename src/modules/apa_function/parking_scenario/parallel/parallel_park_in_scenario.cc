@@ -1010,6 +1010,47 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       tlane_obstacle_vec, CollisionDetector::CURB_OBS);
+
+  point_set.clear();
+  tlane_obstacle_vec.clear();
+  if (t_lane_.limiter.valid) {
+    double limiter_obs_x = 0.0;
+    if (t_lane_.limiter.start_pt.x() < 0.5 * t_lane_.slot_length) {
+      // rear limiter
+      double limiter_obs_x =
+          std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
+      limiter_obs_x +=
+          (apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter * 0.66 -
+           apa_param.GetParam().rear_overhanging - 0.22);
+    } else {
+      // front limiter
+      double limiter_obs_x =
+          std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
+      limiter_obs_x +=
+          (-apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter * 0.66 -
+           apa_param.GetParam().front_overhanging + 0.22);
+    }
+
+    const Eigen::Vector2d limiter_obs_start(limiter_obs_x,
+                                            t_lane_.limiter.start_pt.y());
+    const Eigen::Vector2d limiter_obs_end(limiter_obs_x,
+                                          t_lane_.limiter.end_pt.y());
+
+    const pnc::geometry_lib::LineSegment limiter_line(limiter_obs_start,
+                                                      limiter_obs_end);
+
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, limiter_line,
+                                               kTBoundarySampleDist);
+
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+        tlane_obstacle_vec, CollisionDetector::LIMITER_OBS);
+  }
 }
 
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
@@ -1438,19 +1479,35 @@ void ParallelParkInScenario::Log() const {
   ILOG_INFO << "obs p out = " << p0_g.transpose();
   ILOG_INFO << "obs p in = " << p1_g.transpose();
 
-  const int obs_size = obs_pt_local_vec_.size();
-  ILOG_INFO << "obs_size = " << obs_size;
-  const int count_unit = std::ceil(obs_size / 400.0);
-  const size_t simplify_obs_num = std::ceil(obs_size / count_unit);
+  size_t real_obs_size = 0;
+  for (const auto& obs_pair :
+       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap()) {
+    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+      continue;
+    }
+    real_obs_size += obs_pair.second.size();
+  }
+
+  ILOG_INFO << "obs_size = " << real_obs_size;
+  const int count_unit = std::ceil(real_obs_size / 400.0);
+  const size_t simplify_obs_num = std::ceil(real_obs_size / count_unit);
 
   std::vector<double> obstaclesX;
   std::vector<double> obstaclesY;
   obstaclesX.reserve(simplify_obs_num);
   obstaclesY.reserve(simplify_obs_num);
-  for (size_t i = 0; i < obs_pt_local_vec_.size(); i += count_unit) {
-    const auto obs_g = l2g_tf.GetPos(obs_pt_local_vec_[i]);
-    obstaclesX.emplace_back(obs_g.x());
-    obstaclesY.emplace_back(obs_g.y());
+  for (const auto& obs_pair :
+       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap()) {
+    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+      continue;
+    }
+    const auto& obs_vec = obs_pair.second;
+
+    for (size_t i = 0; i < obs_vec.size(); i += count_unit) {
+      const auto obs_g = l2g_tf.GetPos(obs_vec[i]);
+      obstaclesX.emplace_back(obs_g.x());
+      obstaclesY.emplace_back(obs_g.y());
+    }
   }
 
   ILOG_INFO << "obstaclesX simp size = " << obstaclesX.size();

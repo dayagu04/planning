@@ -38,6 +38,7 @@ class CollisionDetector {
     RECORD_OBS,
     VIRTUAL_OBS,
     USS_OBS,
+    LIMITER_OBS,
     COUNT_OBS,
   };
 
