@@ -952,6 +952,14 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
 void GeneralLateralDecider::GetDesireRoadExtraBuffer(
     double *const left_road_extra_buffer,
     double *const right_road_extra_buffer) {
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
   const double kMinExtraBuffer = config_.extra_soft_buffer2road;
   const auto &planning_init_point =
       ego_cart_state_manager_->planning_init_point();
@@ -974,7 +982,16 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   // double extra_buffer =
   double extra_buffer = interp(ego_v * 3.6, config_.lateral_road_boader_v_bp,
                                config_.extra_lateral_buffer);
+  double extra_road_decrease_buffer = 0.0;
+  if (!general_lateral_decider_output.lane_change_scene &&
+      !lane_borrow_decider_output.is_in_lane_borrow_status) {
+    const double lane_mean_width = CalLaneWidth();
+    extra_road_decrease_buffer =
+        interp(lane_mean_width, config_.extra_road_decrease_buffer_for_lane_width_bp,
+                config_.extra_road_decrease_buffer);
+  }
   extra_buffer = std::max(extra_buffer, kMinExtraBuffer);
+  extra_buffer = std::max(extra_buffer - extra_road_decrease_buffer, 0.0);
   *left_road_extra_buffer += extra_buffer;
   *right_road_extra_buffer += extra_buffer;
 }
