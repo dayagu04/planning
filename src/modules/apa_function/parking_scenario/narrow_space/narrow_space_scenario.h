@@ -140,6 +140,10 @@ class NarrowSpaceScenario : public ParkingScenario {
   // check path replan by slot pose change
   const bool CheckDynamicUpdate() override;
 
+  const bool CheckDynamicHeadOut();
+
+  const bool CheckDynamicParkingIn();
+
   void FillPlanningReason(AstarRequest& cur_request);
 
   void FillGearRequest(const bool is_scenario_try, AstarRequest& cur_request);

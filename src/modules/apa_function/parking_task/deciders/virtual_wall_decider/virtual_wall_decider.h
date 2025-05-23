@@ -60,7 +60,7 @@ class VirtualWallDecider : public ParkingTask {
                const float slot_length, const Pose2D& ego_pose,
                const Pose2D& end, const ParkSpaceType slot_type,
                const pnc::geometry_lib::SlotSide slot_side,
-               const ParkingVehDirection parking_in_type);
+               const ParkingVehDirection parking_type);
 
   void Reset(const Pose2D& ego_pose) {
     passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));

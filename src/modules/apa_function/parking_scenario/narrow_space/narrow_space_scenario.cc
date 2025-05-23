@@ -681,13 +681,30 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   Pose2D end = real_end;
   double end_straight_len;
   ParkSpaceType slot_type;
-  ParkingVehDirection parking_in_type;
+  ParkingVehDirection parking_type;
   const ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
     end.y = real_end.y;
     slot_type = ParkSpaceType::VERTICAL;
-    parking_in_type = ParkingVehDirection::HEAD_OUT_TO_LEFT;  // todo
+    switch (
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection()) {
+      case ApaParkOutDirection::LEFT_FRONT:
+        parking_type = ParkingVehDirection::HEAD_OUT_TO_LEFT;
+        break;
+
+      case ApaParkOutDirection::RIGHT_FRONT:
+        parking_type = ParkingVehDirection::HEAD_OUT_TO_RIGHT;
+        break;
+
+      case ApaParkOutDirection::FRONT:
+        parking_type = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
+        break;
+
+      default:
+        parking_type = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
+        break;
+    }
   } else {
     if (ego_info.slot.slot_type_ == SlotType::PARALLEL) {
       end_straight_len =
@@ -703,11 +720,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         end_straight_len = apa_param.GetParam()
                                .astar_config.vertical_tail_in_end_straight_dist;
 
-        parking_in_type = ParkingVehDirection::TAIL_IN;
+        parking_type = ParkingVehDirection::TAIL_IN;
       } else {
         end_straight_len = apa_param.GetParam()
                                .astar_config.vertical_head_in_end_straight_dist;
-        parking_in_type = ParkingVehDirection::HEAD_IN;
+        parking_type = ParkingVehDirection::HEAD_IN;
       }
       slot_type = ParkSpaceType::VERTICAL;
     }
@@ -730,7 +747,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   virtual_wall_decider_.Process(
       obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
       static_cast<float>(ego_info.slot.slot_length_), start, real_end,
-      slot_type, ego_info.slot_side, parking_in_type);
+      slot_type, ego_info.slot_side, parking_type);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
@@ -814,12 +831,29 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   // generate request
   if (frame_.replan_reason == ReplanReason::DYNAMIC) {
-    if (parking_in_type == ParkingVehDirection::TAIL_IN) {
-      cur_request.path_generate_method =
-          planning::AstarPathGenerateType::GEAR_REVERSE_SEARCHING;
-    } else {
-      cur_request.path_generate_method =
-          planning::AstarPathGenerateType::GEAR_DRIVE_SEARCHING;
+    switch (cur_request.direction_request) {
+      break;
+      case ParkingVehDirection::TAIL_IN:
+        cur_request.path_generate_method =
+            planning::AstarPathGenerateType::GEAR_REVERSE_SEARCHING;
+        break;
+
+      case ParkingVehDirection::HEAD_IN:
+        cur_request.path_generate_method =
+            planning::AstarPathGenerateType::GEAR_DRIVE_SEARCHING;
+        break;
+
+      case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+        cur_request.path_generate_method =
+            planning::AstarPathGenerateType::ASTAR_SEARCHING;
+        break;
+
+      default:
+        cur_request.path_generate_method =
+            planning::AstarPathGenerateType::ASTAR_SEARCHING;
+        break;
     }
   }
   // gear need be different with history in next replanning
@@ -1480,7 +1514,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       std::fabs(ego_info_under_slot.cur_pose.heading) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     const std::vector<double> x_tab = {
-        ego_info_under_slot.target_pose.pos.x(),
+        ego_info_under_slot.virtual_limiter.first.x(),
         ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
 
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
@@ -2106,6 +2140,14 @@ const bool NarrowSpaceScenario::NeedBlindZonePlanning(
 }
 
 const bool NarrowSpaceScenario::CheckDynamicUpdate() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
+    return CheckDynamicHeadOut();
+  } else {
+    return CheckDynamicParkingIn();
+  }
+}
+
+const bool NarrowSpaceScenario::CheckDynamicParkingIn() {
   const ApaParameters& param = apa_param.GetParam();
   const bool car_motion_flag =
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
@@ -2170,6 +2212,36 @@ const bool NarrowSpaceScenario::CheckDynamicUpdate() {
   }
 
   return false;
+}
+
+const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
+  const ApaParameters& param = apa_param.GetParam();
+  const bool car_motion_flag =
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const bool car_pos_flag =
+      ego_info_under_slot.cur_pose.pos.x() <
+      (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+       3.68);
+
+  const bool occupied_ratio_flag = (ego_info_under_slot.slot_occupied_ratio <
+                                    param.pose_slot_occupied_ratio_2);
+
+  // check path remain dist
+  const bool path_dist_flag = frame_.remain_dist_path > 1.5;
+
+  const float perception_blind_spot_distance = 6.0;
+
+  const bool current_path_length_flag =
+      frame_.current_path_length > perception_blind_spot_distance;
+
+  const bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
+                                   occupied_ratio_flag && path_dist_flag &&
+                                   current_path_length_flag;
+
+  return dynamic_replan_flag;
 }
 
 void NarrowSpaceScenario::FillPlanningReason(AstarRequest& cur_request) {
