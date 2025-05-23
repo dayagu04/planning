@@ -165,6 +165,8 @@ struct ApaParameters {
   double terminal_target_x_to_limiter = 0.15;
   double terminal_parallel_y_offset = 0.0;
   double terminal_parallel_y_offset_with_curb = 0.45;
+  double parallel_max_ego_x_offset_with_invasion = 0.5;
+  double parallel_ego_ac_x_offset_with_limiter = 0.3;
 
   // check finish params
   double finish_lat_err = 0.08;

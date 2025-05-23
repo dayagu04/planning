@@ -1,8 +1,10 @@
 #include "apa_slot_manager.h"
 
+#include <cmath>
 #include <cstddef>
 #include <map>
 #include <unordered_map>
+#include <vector>
 
 #include "apa_param_config.h"
 #include "apa_slot.h"
@@ -419,51 +421,139 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
 const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const ApaSlot& slot) {
   const auto& v_ego_heading = measure_data_ptr_->GetHeadingVec();
-  Eigen::Vector2d n = (slot.processed_corner_coord_global_.pt_0 -
-                       slot.processed_corner_coord_global_.pt_1)
-                          .normalized();
-  if (n.dot(v_ego_heading) < 1e-9) {
-    n *= -1.0;
+
+  SlotCoord corrected_global_slot = slot.processed_corner_coord_global_;
+
+  Eigen::Vector2d v_10 =
+      (corrected_global_slot.pt_0 - corrected_global_slot.pt_1).normalized();
+
+  if (v_10.dot(v_ego_heading) < 1e-9) {
+    v_10 *= -1.0;
+    corrected_global_slot.pt_0.swap(corrected_global_slot.pt_1);
+    corrected_global_slot.pt_2.swap(corrected_global_slot.pt_3);
   }
-  const double slot_heading = std::atan2(n.y(), n.x());
+  corrected_global_slot.CalExtraCoord();
+  const double slot_heading = std::atan2(v_10.y(), v_10.x());
+  const Eigen::Vector2d n(-v_10.y(), v_10.x());
 
-  const Eigen::Vector2d t(-n.y(), n.x());
+  const pnc::geometry_lib::LineSegment line_01(
+      corrected_global_slot.pt_1, corrected_global_slot.pt_0, slot_heading);
 
-  const Eigen::Vector2d center = slot.origin_corner_coord_global_.pt_center;
+  const double dist_01_2 =
+      pnc::geometry_lib::CalPoint2LineDist(corrected_global_slot.pt_2, line_01);
 
-  const double slot_length = (slot.origin_corner_coord_global_.pt_0 -
-                              slot.origin_corner_coord_global_.pt_1)
-                                 .norm();
+  const double dist_01_3 =
+      pnc::geometry_lib::CalPoint2LineDist(corrected_global_slot.pt_3, line_01);
 
-  const double center_to_rac_dist = 0.5 * apa_param.GetParam().car_length -
-                                    apa_param.GetParam().rear_overhanging;
+  const double slot_width = std::min(dist_01_2, dist_01_3);
+  const double slot_length =
+      (corrected_global_slot.pt_0 - corrected_global_slot.pt_1).norm();
 
-  const Eigen::Vector2d target_ego_pos =
-      center - center_to_rac_dist * v_ego_heading;
+  const Eigen::Vector2d slot_13_mid =
+      0.5 * (corrected_global_slot.pt_1 + corrected_global_slot.pt_3);
+  const Eigen::Vector2d slot_02_mid =
+      0.5 * (corrected_global_slot.pt_0 + corrected_global_slot.pt_2);
 
-  const std::vector<double> move_slot_dist_vec{-0.5, 0.0, 0.5};
+  geometry_lib::GlobalToLocalTf g2l_tf(slot_13_mid, slot_heading);
+  geometry_lib::LocalToGlobalTf l2g_tf(slot_13_mid, slot_heading);
 
-  const double lat_buffer = 0.05;
-  const double lon_buffer = 0.1;
-  double move_slot_dist = 0.0;
+  // cacl loc
+  double target_x = 0.5 * (slot_length - apa_param.GetParam().car_length) +
+                    apa_param.GetParam().rear_overhanging;
+
+  bool is_limiter_rear = true;
+  const auto& limiter = slot.GetLimiter();
+  ILOG_INFO << "limiter.valid = " << limiter.valid;
+  if (limiter.valid) {
+    // transfer limiter in slot coordination
+    const auto limiter_start_pt_local = g2l_tf.GetPos(limiter.start_pt);
+    const auto limiter_end_pt_local = g2l_tf.GetPos(limiter.end_pt);
+    ILOG_INFO << "limiter_start_pt_local start pos = "
+              << limiter_start_pt_local.transpose();
+    ILOG_INFO << "limiter_end_pt_local end pos = "
+              << limiter_end_pt_local.transpose();
+
+    const double max_limiter_x =
+        std::max(limiter_start_pt_local.x(), limiter_end_pt_local.x());
+
+    const double min_limiter_x =
+        std::min(limiter_start_pt_local.x(), limiter_end_pt_local.x());
+
+    // limiter behind
+    if (max_limiter_x < 0.5 * slot_length) {
+      is_limiter_rear = true;
+      target_x = std::max(
+          target_x,
+          max_limiter_x +
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+      ILOG_INFO << "limiter in rear!";
+    } else {
+      // limiter front
+      is_limiter_rear = false;
+      target_x = std::min(
+          target_x,
+          min_limiter_x - apa_param.GetParam().wheel_base -
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+      ILOG_INFO << "limiter in front!";
+    }
+  }
+
+  const Eigen::Vector2d target_ego_pos_global =
+      l2g_tf.GetPos(Eigen::Vector2d(target_x, 0.0));
+
+  // avoid foreach obs or establish tlane, so use rough try.
+  const std::vector<double> lat_mov_dist_vec{0.0, -0.5, 0.5};
+
+  std::vector<double> lon_mov_dist_vec{0.0};
+
+  // if one side is occupied with obs
+  const double invade_x_limit =
+      0.5 * slot_length +
+      apa_param.GetParam().parallel_max_ego_x_offset_with_invasion -
+      0.5 * apa_param.GetParam().car_length;
+
+  const double step = 0.2;
+  double x_diff = step;
+
+  while (x_diff < invade_x_limit) {
+    if (!limiter.valid || (limiter.valid && is_limiter_rear)) {
+      lon_mov_dist_vec.emplace_back(x_diff);
+    }
+    if (!limiter.valid || (limiter.valid && (!is_limiter_rear))) {
+      lon_mov_dist_vec.emplace_back(-x_diff);
+    }
+    x_diff += step;
+  }
+
+  for (const auto x_diff : lon_mov_dist_vec) {
+    ILOG_INFO << "lon move displacement = " << x_diff;
+  }
+
   bool is_slot_occupied = true;
-  for (const double dist : move_slot_dist_vec) {
-    const Eigen::Vector2d target_pos = target_ego_pos + dist * t;
-    const Pose2D target_pose(target_pos.x(), target_pos.y(), slot_heading);
+  const double lat_buffer = 0.1;
+  const double lon_buffer = 0.3;
 
-    const bool is_collided =
-        col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
-            target_pose, lat_buffer, lon_buffer);
+  for (const double lat_move_dist : lat_mov_dist_vec) {
+    for (const double lon_move_dist : lon_mov_dist_vec) {
+      const Eigen::Vector2d target_pos =
+          target_ego_pos_global + lon_move_dist * v_10 + lat_move_dist * n;
 
-    ILOG_INFO << "lateral moving dist = " << dist
-              << ". target_pos= " << target_pose.GetX() << ", "
-              << target_pose.GetY() << ", is_collided = " << is_collided;
+      const Pose2D target_pose(target_pos.x(), target_pos.y(), slot_heading);
 
-    if (!is_collided) {
-      move_slot_dist = dist;
-      ILOG_INFO << "release slot with move_slot_dist = " << move_slot_dist;
-      is_slot_occupied = false;
-      break;
+      const bool is_collided =
+          col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
+              target_pose, lat_buffer, lon_buffer);
+
+      // ILOG_INFO << "lateral moving dist = " << lat_move_dist
+      //           << ". target_pos= " << target_pose.GetX() << ", "
+      //           << target_pose.GetY() << ", is_collided = " << is_collided;
+
+      if (!is_collided) {
+        ILOG_INFO << "release slot with lat offset = " << lat_move_dist;
+        ILOG_INFO << "release slot with lon offset = " << lon_move_dist;
+        is_slot_occupied = false;
+        break;
+      }
     }
   }
   ILOG_INFO << "final parallel slot is occupied = " << is_slot_occupied;

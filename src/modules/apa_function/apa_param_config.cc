@@ -195,6 +195,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().terminal_parallel_y_offset_with_curb,
                   double, "terminal_parallel_y_offset_with_curb");
 
+  JSON_READ_VALUE(apa_param.SetPram().parallel_max_ego_x_offset_with_invasion,
+                  double, "parallel_max_ego_x_offset_with_invasion");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_ego_ac_x_offset_with_limiter,
+                  double, "parallel_ego_ac_x_offset_with_limiter");
+
   // check finish params
   JSON_READ_VALUE(apa_param.SetPram().finish_lat_err, double, "finish_lat_err");
 
