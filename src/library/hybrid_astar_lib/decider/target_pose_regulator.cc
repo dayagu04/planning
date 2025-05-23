@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "hybrid_astar_common.h"
+#include "hybrid_astar_request.h"
 #include "log_glog.h"
 #include "math_utils.h"
 #include "pose2d.h"
@@ -32,7 +33,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       float veh_x_upper = min_passage_width + request->slot_length -
-                       veh_param.front_edge_to_rear_axle;
+                          veh_param.front_edge_to_rear_axle;
       x_check_upper_ = std::max(center_line_target_.x, veh_x_upper);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
@@ -49,7 +50,15 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   x_step_ = 0.2;
   x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
 
-  float dist = GetDistToObs(&center_line_target_, edt);
+  float dist = 10.0;
+  if (IsHeadOutRequest(request->direction_request)) {
+    // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
+    dist = GetDistToObsHeadOut(&center_line_target_, edt);
+    ILOG_INFO << "center_line_target_ dist : " << dist;
+  } else {
+    dist = GetDistToObs(&center_line_target_, edt);
+  }
+
   PoseRegulateCandidate candidate;
   candidate.lat_offset = 0.0;
   candidate.dist_to_obs = dist;
@@ -64,10 +73,10 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   ego_dist_to_obs_ = static_cast<float>(dist);
 
 #if DEBUG_DECIDER
-    DebugString();
+  DebugString();
 
-    dist = GetDistToObs(&request->start_, edt);
-    ILOG_INFO << "start point obs dist = " << dist;
+  dist = GetDistToObs(&request->start_, edt);
+  ILOG_INFO << "start point obs dist = " << dist;
 #endif
 
   return;
@@ -93,6 +102,11 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
     return;
   }
 
+  if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+    GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
+  }
+
   // Parking out no need regulator.
   if (!IsParkingIn(request)) {
     ILOG_INFO << "not park in";
@@ -105,6 +119,7 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
 
   if (request->space_type == ParkSpaceType::VERTICAL) {
     GenerateCandidatesForVerticalSlot(edt, request, veh_param);
+    // GenerateCandidatesForVerticalSlot(edt, request, veh_param);
   } else {
     GenerateCandidatesForParallelSlot(edt, request, veh_param);
   }
@@ -204,6 +219,41 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   // Todo: adjust x offset
   return;
 }
+void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
+    EulerDistanceTransform *edt, const AstarRequest *request,
+    const VehicleParam &veh_param) {
+  // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
+  // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
+  Pose2D global_pose;
+  global_pose = center_line_target_;
+  const size_t max_candidate_num = 10;
+
+  PoseRegulateCandidate candidate;
+  for (size_t i = 0; i < max_candidate_num; i++) {
+    global_pose.x = 8.0;
+    if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
+      global_pose.y -= 1.0;
+      candidate.lat_offset = 0.0;
+      candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
+      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+      candidate_info_.emplace_back(candidate);
+    } else if (request->direction_request ==
+               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      global_pose.y += 1.0;
+      candidate.lat_offset = 0.0;
+      candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
+      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+      candidate_info_.emplace_back(candidate);
+    }
+  }
+
+#if DEBUG_DECIDER
+  DebugString();
+#endif
+
+  // Todo: adjust x offset
+  return;
+}
 
 void TargetPoseRegulator::Clear() {
   candidate_info_.clear();
@@ -230,6 +280,45 @@ const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
       break;
     }
   }
+
+  return min_dist;
+}
+
+const float TargetPoseRegulator::GetDistToObsHeadOut(
+    const Pose2D *global_pose, EulerDistanceTransform *edt) {
+  Transform2d tf;
+  AstarPathGear gear = AstarPathGear::NONE;
+  float dist;
+  float min_dist = 10.0;
+  Pose2D pose = *global_pose;
+  const size_t num = 10;
+  const float y_step = 0.5;
+  for (int j = 0; j < num; j++) {
+    if (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
+      pose.y = global_pose->y - y_step * j;
+    } else if (request_->direction_request ==
+               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      pose.y = global_pose->y + y_step * j;
+    } else {
+      break;
+    }
+
+    tf.SetBasePose(pose);
+
+    edt->DistanceCheckForPoint(&dist, &tf, gear);
+
+    min_dist = std::min(min_dist, dist);
+
+    if (min_dist < 0.04) {
+      break;
+    }
+  }
+
+  tf.SetBasePose(pose);
+
+  edt->DistanceCheckForPoint(&dist, &tf, gear);
+
+  min_dist = std::min(min_dist, dist);
 
   return min_dist;
 }
@@ -275,7 +364,6 @@ const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePose(
   }
 
   return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
-
 }
 
 void TargetPoseRegulator::DebugString() {
@@ -359,7 +447,8 @@ const int TargetPoseRegulator::GenerateOffsetPreference() const {
     return 0;
   }
 
-  // 车辆在[0-170], [-170~0],说明车辆需要打方向盘调整入库，此时需要故意将目标点增加一个偏移量
+  // 车辆在[0-170],
+  // [-170~0],说明车辆需要打方向盘调整入库，此时需要故意将目标点增加一个偏移量
   if (std::fabs(request_->start_.theta) < ifly_deg2rad(170.0)) {
     // right
     if (request_->start_.theta > 0.0) {

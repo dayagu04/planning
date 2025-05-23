@@ -73,7 +73,8 @@ class VirtualWallDecider : public ParkingTask {
                                const float slot_length, const Pose2D& ego_pose,
                                const Pose2D& end,
                                const float virtual_wall_x_offset,
-                               const float virtual_wall_y_offset);
+                               const float virtual_wall_y_offset,
+                               const float passage_half_length);
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
                                     const float slot_width,

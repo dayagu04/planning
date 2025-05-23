@@ -1,9 +1,12 @@
 #include "node_shrink_decider.h"
+
 #include <algorithm>
 #include <cmath>
 
 #include "astar_decider.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
+#include "log_glog.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "utils_math.h"
@@ -32,7 +35,18 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
   }
 
   x_bound_.upper = XYbounds.x_max;
-  x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
+  constexpr double kXBoundLowerForHeadOut = 1.0;
+
+  switch (park_dir) {
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      x_bound_.lower = kXBoundLowerForHeadOut;
+      break;
+    default:
+      x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
+      break;
+  }
 
   return;
 }
@@ -148,6 +162,33 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
   return false;
 }
+
+bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
+                                                   const Node3d *child) {
+  if (request.direction_request != ParkingVehDirection::TAIL_OUT_TO_LEFT &&
+      request.direction_request != ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+    return false;
+  }
+
+  constexpr double ANGLE_THRESHOLD_DEG = 30.0;
+
+  // 计算角度并转换为度数
+  const double heading_deg = child->GetPhi() * kRad2Deg;
+
+  // 检查是否为前进方向
+  const bool is_forward = child->IsForward();
+
+  switch (request.direction_request) {
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      return is_forward && heading_deg < -ANGLE_THRESHOLD_DEG;
+
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      return is_forward && heading_deg > ANGLE_THRESHOLD_DEG;
+
+    default:
+      return false;
+  }
+};
 
 const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
                                              const Node3d *old_node) const {

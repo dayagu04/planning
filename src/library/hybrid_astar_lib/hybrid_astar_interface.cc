@@ -11,6 +11,7 @@
 #include "future_path_decider.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
+#include "hybrid_astar_request.h"
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "polygon_base.h"
@@ -143,14 +144,37 @@ void HybridAStarInterface::UpdateOutput() {
   hybrid_astar_->Clear();
 
   // vertical parking center ref line
-  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x - 10.0, request_.real_goal.y,
-                             request_.real_goal.theta));
-  } else {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
-                             request_.real_goal.theta));
+  switch (request_.direction_request) {
+    case ParkingVehDirection::HEAD_IN:
+      ILOG_INFO << "HEAD_IN";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x - 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::TAIL_IN:
+      ILOG_INFO << "TAIL_IN";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x + 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      ILOG_INFO << "TAIL_OUT_TO_LEFT";
+      ref_line_.Process(request_.real_goal, Pose2D(request_.real_goal.x,
+                                                   request_.real_goal.y + 10.0,
+                                                   request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      ILOG_INFO << "TAIL_OUT_TO_RIGHT";
+      ref_line_.Process(request_.real_goal, Pose2D(request_.real_goal.x,
+                                                   request_.real_goal.y - 10.0,
+                                                   request_.real_goal.theta));
+      break;
+    default:
+      ILOG_INFO << "Unknown Direction : HEAD_OUT_TO_MIDDLE";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x + 5.0, request_.real_goal.y,
+                               request_.real_goal.theta));
+      break;
   }
 
   // update future path decider
@@ -229,14 +253,37 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   UpdateEDT();
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
   // vertical parking center ref line
-  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x - 10.0, request_.real_goal.y,
-                             request_.real_goal.theta));
-  } else {
-    ref_line_.Process(request_.real_goal,
-                      Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
-                             request_.real_goal.theta));
+  switch (request_.direction_request) {
+    case ParkingVehDirection::HEAD_IN:
+      ILOG_INFO << "HEAD_IN";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x - 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::TAIL_IN:
+      ILOG_INFO << "TAIL_IN";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x + 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      ILOG_INFO << "TAIL_OUT_TO_LEFT";
+      ref_line_.Process(request_.real_goal, Pose2D(request_.real_goal.x,
+                                                   request_.real_goal.y + 10.0,
+                                                   request_.real_goal.theta));
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      ILOG_INFO << "TAIL_OUT_TO_RIGHT";
+      ref_line_.Process(request_.real_goal, Pose2D(request_.real_goal.x,
+                                                   request_.real_goal.y - 10.0,
+                                                   request_.real_goal.theta));
+      break;
+    default:
+      ILOG_INFO << "Unknown Direction : HEAD_OUT_TO_MIDDLE";
+      ref_line_.Process(request_.real_goal,
+                        Pose2D(request_.real_goal.x + 5.0, request_.real_goal.y,
+                               request_.real_goal.theta));
+      break;
   }
 
   // update future path decider
@@ -269,12 +316,20 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   std::pair<Pose2D, float> target_regulator_result;
   target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);
 
-  if (target_regulator_result.second < lat_buffer) {
-    ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-    ILOG_INFO << "target_regulator_goal_ will collide";
-    search_state_ = AstarSearchState::FAILURE;
-    return;
+  // todo : head out no need target_pose_regulator;
+  if (request_.direction_request == ParkingVehDirection::TAIL_IN ||
+      request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    if (target_regulator_result.second < lat_buffer) {
+      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second
+                << ", lat_buffer " << lat_buffer << ", best_candidate->pose "
+                << target_regulator_result.first.GetX() << ", "
+                << target_regulator_result.first.GetY();
+      ILOG_INFO << "target_regulator_goal_ will collide";
+      search_state_ = AstarSearchState::FAILURE;
+      return;
+    }
   }
+
   target_regulator_goal_ = target_regulator_result.first;
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
@@ -726,6 +781,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     const TargetPoseRegulator& regulator, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
   float lat_buffer_outside;
+  float lat_buffer_inside;
   float advised_lat_buffer_inside;
   float lon_buffer;
 
@@ -739,8 +795,9 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
   target_regulator_goal_ = target_regulator_result.first;
 
   // If target slot is not wide enough, return.
-  if (target_regulator_result.second < advised_lat_buffer_inside) {
-    ILOG_INFO << "goal dist to obs = " << target_regulator_result.second
+  if (target_regulator_result.second < advised_lat_buffer_inside &&
+      !IsHeadOutRequest(request_.direction_request)) {
+    ILOG_INFO << "goal dist = " << target_regulator_result.second
               << ", lat buffer inside = " << advised_lat_buffer_inside;
     search_state_ = AstarSearchState::FAILURE;
     return;
@@ -748,10 +805,16 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
        i++) {
-    lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
+    if (IsHeadOutRequest(request_.direction_request)) {
+      lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
+      lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
+    } else {
+      lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
+      lat_buffer_inside = advised_lat_buffer_inside;
+    }
     lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
-    hybrid_astar_->UpdateCarBoxBySafeBuffer(
-        lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer_outside,
+                                            lat_buffer_inside, lon_buffer);
 
     // search single shot path.
     if (advised_lat_buffer_inside > config_.single_shot_path_width_thresh ||
@@ -776,10 +839,14 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
         AstarPathGenerateType::ASTAR_SEARCHING) {
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
+
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                  &traj_candidates_[i]);
 
-      ExtendPathToRealParkSpacePoint(&traj_candidates_[i], request_.real_goal);
+      if (!IsHeadOutRequest(request_.direction_request)) {
+        ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
+                                       request_.real_goal);
+      }
     }
 
     // check time

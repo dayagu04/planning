@@ -408,6 +408,12 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().safe_threshold, double, "safe_threshold");
 
+  JSON_READ_VALUE(apa_param.SetPram().virtual_head_out_obs_y_pos, double,
+                  "virtual_head_out_obs_y_pos");
+
+  JSON_READ_VALUE(apa_param.SetPram().virtual_head_out_obs_x_pos, double,
+                  "virtual_head_out_obs_x_pos");
+
   JSON_READ_VALUE(apa_param.SetPram().virtual_obs_left_y_pos, double,
                   "virtual_obs_left_y_pos");
 
@@ -784,7 +790,7 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");
 
-  int path_generator_type = 0;
+  int path_generator_type = 1;
   JSON_READ_VALUE(path_generator_type, int, "path_generator_type");
   switch (path_generator_type) {
     case 0:

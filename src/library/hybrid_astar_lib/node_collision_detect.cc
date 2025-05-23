@@ -1,6 +1,9 @@
 #include "node_collision_detect.h"
+
 #include <cmath>
+
 #include "hybrid_astar_request.h"
+#include "log_glog.h"
 #include "math/math_utils.h"
 #include "obstacle.h"
 
@@ -837,20 +840,19 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
 
   // gear r
   GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_reverse_,
-      vehicle_param.rear_edge_to_rear_axle + lon_buffer,
+      &veh_box_gear_reverse_, vehicle_param.rear_edge_to_rear_axle + lon_buffer,
       vehicle_param.wheel_base + vehicle_param.front_overhanging +
           config.safe_buffer.lon_min_safe_buffer,
       safe_half_width);
 
   // gear none
-  GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_none_,
-      vehicle_param.rear_edge_to_rear_axle +
-          config.safe_buffer.lon_min_safe_buffer,
-      vehicle_param.wheel_base + vehicle_param.front_overhanging +
-          config.safe_buffer.lon_min_safe_buffer,
-      safe_half_width);
+  GetRightUpCoordinatePolygonByParam(&veh_box_gear_none_,
+                                     vehicle_param.rear_edge_to_rear_axle +
+                                         config.safe_buffer.lon_min_safe_buffer,
+                                     vehicle_param.wheel_base +
+                                         vehicle_param.front_overhanging +
+                                         config.safe_buffer.lon_min_safe_buffer,
+                                     safe_half_width);
 
   GenerateVehCompactPolygon(lat_buffer_inside,
                             config.safe_buffer.lon_min_safe_buffer,
