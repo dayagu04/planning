@@ -1655,13 +1655,6 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
     return false;
   }
 
-  // if (IsHeadOutRequest(request_.direction_request)) {
-  //   head_out_end_decider_.Process(XYbounds_, config_, collision_detect_,
-  //                                 request_, decider_end, astar_end_node_,
-  //                                 result);
-  // } else {
-  // }
-
   astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);

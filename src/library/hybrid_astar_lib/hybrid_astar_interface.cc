@@ -840,12 +840,6 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
 
-      // head_out_end_decider_.Process(
-      //     const MapBound& XYbounds, const PlannerOpenSpaceConfig& config,
-      //     const std::shared_ptr<NodeCollisionDetect>& collision_detect,
-      //     const AstarRequest request, Pose2D& end, Node3d* astar_end_node,
-      //     HybridAStarResult* result);
-
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                  &traj_candidates_[i]);
 

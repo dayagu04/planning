@@ -165,6 +165,11 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
 bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
                                                    const Node3d *child) {
+  if (request.direction_request != ParkingVehDirection::TAIL_OUT_TO_LEFT &&
+      request.direction_request != ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+    return false;
+  }
+
   constexpr double ANGLE_THRESHOLD_DEG = 30.0;
 
   // 计算角度并转换为度数

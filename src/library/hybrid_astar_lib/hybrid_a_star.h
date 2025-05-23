@@ -20,7 +20,6 @@
 #include "compact_node_pool.h"
 #include "cost/dynamic_programing_cost.h"
 #include "curve/cubic_polynomial_path.h"
-#include "head_out_end_decider.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
 #include "hybrid_astar_request.h"
@@ -50,8 +49,7 @@ class HybridAStar {
                        const ParkObstacleList* obstacles,
                        EulerDistanceTransform* edt,
                        const ObstacleClearZone* clear_zone,
-                       ParkReferenceLine* ref_line,
-                       GridSearch *dp_map);
+                       ParkReferenceLine* ref_line, GridSearch* dp_map);
 
   virtual ~HybridAStar() = default;
 

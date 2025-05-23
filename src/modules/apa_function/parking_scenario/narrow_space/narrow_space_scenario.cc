@@ -823,21 +823,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     }
   }
   // gear need be different with history in next replanning
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
-    cur_request.swap_start_goal = false;
-    switch (current_gear_) {
-      case AstarPathGear::REVERSE:
-        cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
-        break;
-      case AstarPathGear::DRIVE:
-        cur_request.first_action_request.gear_request = AstarPathGear::REVERSE;
-        break;
-      default:
-        break;
-    }
-  } else {
-    FillGearRequest(is_scenario_try, cur_request);
-  }
+  FillGearRequest(is_scenario_try, cur_request);
 
   // search state
   AstarResponse response;
