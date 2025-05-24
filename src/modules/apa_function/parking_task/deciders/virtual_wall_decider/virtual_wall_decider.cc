@@ -49,7 +49,7 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                                  const Pose2D& ego_pose, const Pose2D& end,
                                  const ParkSpaceType slot_type,
                                  const pnc::geometry_lib::SlotSide slot_side,
-                                 const ParkingVehDirection parking_in_type) {
+                                 const ParkingVehDirection parking_type) {
   start_ = ego_pose;
   end_ = end;
 
@@ -72,15 +72,15 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
         apa_param.GetParam().astar_config.vertical_slot_passage_length_bound /
         2;
 
-    if (parking_in_type == ParkingVehDirection::HEAD_IN) {
+    if (parking_type == ParkingVehDirection::HEAD_IN) {
       virtual_wall_x_offset =
           apa_param.GetParam().astar_config.head_in_slot_virtual_wall_x_offset;
 
       virtual_wall_y_offset =
           apa_param.GetParam().astar_config.head_in_slot_virtual_wall_y_offset;
-    } else if (parking_in_type == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-               parking_in_type == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-               parking_in_type == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+    } else if (parking_type == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+               parking_type == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+               parking_type == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
       passage_half_length = 18.0;
       virtual_wall_x_offset = 1.5;
     }
