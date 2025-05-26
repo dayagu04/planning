@@ -92,7 +92,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
       Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
   EgoInfoUnderSlot &ego_info_under_slot =
-      apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   ego_info_under_slot.id = 1;
 
   const double half_slot_width = 0.5 * slot_width;

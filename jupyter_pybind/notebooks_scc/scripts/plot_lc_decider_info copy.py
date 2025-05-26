@@ -10,25 +10,24 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
-from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250403/20250403-19-14-24/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-04-03-19-14-24_no_camera.bag.1744359287.open-loop.noa.plan"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250409/20250409-11-06-15/data_collection_CHERY_E0Y_18047_EVENT_FILTER_2025-04-09-11-06-15_no_camera.bag"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook(resources=INLINE)
+output_notebook()
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
-fig1.height = 1150
+fig1.height = 1050
 fig1.width = 900
 
-fig1, fig2, fig3, data_st, lat_data_vec, ori_lat_data_vec = load_lc_path_figure(fig1)
+fig2, fig3, data_st = load_lc_path_figure()
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -121,7 +120,7 @@ def update_lc_data (noa_info, plan_debug_json):
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec,bag_loader, bag_time, local_view_data)
+  update_lc_path_figure (data_st,bag_loader, bag_time, local_view_data)
 
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
     plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']

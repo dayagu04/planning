@@ -180,7 +180,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
       Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
   EgoInfoUnderSlot &ego_info_under_slot =
-      apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   ego_info_under_slot.id = 1;
 
   const double half_slot_width = 0.5 * slot_width;
@@ -198,12 +198,19 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   ILOG_INFO << "2";
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
   ILOG_INFO << "3";
-  parallel_park_planner.UpdateEgoSlotInfo();
+  if (!parallel_park_planner.UpdateEgoSlotInfo()) {
+    ILOG_INFO << "UpdateEgoSlotInfo failed!";
+
+    return false;
+  }
   ILOG_INFO << "4";
   parallel_park_planner.GenTlane();
   ILOG_INFO << "5";
   parallel_park_planner.GenTBoundaryObstacles();
   ILOG_INFO << "6";
+
+  ILOG_INFO << "ego_info_under_slot ego in pybind = "
+            << ego_info_under_slot.cur_pose.pos.transpose();
 
   GeometryPathInput path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();

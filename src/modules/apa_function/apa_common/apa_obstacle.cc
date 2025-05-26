@@ -43,14 +43,13 @@ void ApaObstacle::TransformBoxFromGlobalToLocal(
 
 void ApaObstacle::TransformPtClout2dFromGlobalToLocal(
     const pnc::geometry_lib::GlobalToLocalTf& g2l_tf) {
+  pt_clout_2d_local_.clear();
   if (pt_clout_2d_global_.empty()) {
     return;
   }
-  pt_clout_2d_local_.clear();
-  Eigen::Vector2d pt_local;
-  for (const auto& pt : pt_clout_2d_global_) {
-    pt_local = g2l_tf.GetPos(pt);
-    pt_clout_2d_local_.emplace_back(pt_local);
+  pt_clout_2d_local_.reserve(pt_clout_2d_global_.size());
+  for (const Eigen::Vector2d& pt : pt_clout_2d_global_) {
+    pt_clout_2d_local_.emplace_back(g2l_tf.GetPos(pt));
   }
 }
 

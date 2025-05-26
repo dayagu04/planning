@@ -14,7 +14,6 @@ namespace apa_planner {
 #define edt_ogm_resolution (0.05)
 #define edt_ogm_grid_x_max (512)
 #define edt_ogm_grid_y_max (800)
-#define MAX_CAR_FOOTPRINT_CIRCLE_NUM (12)
 
 // x -> row   y -> column
 // slot coordinate system
@@ -42,61 +41,6 @@ struct OGMIndex {
 struct OGMObsData {
   // store the distance from each grid to the nearest obstacle
   float dist[edt_ogm_grid_x_max][edt_ogm_grid_y_max];
-};
-
-struct CarFootPrintCircle {
-  Eigen::Vector2d center_local = Eigen::Vector2d(0.0, 0.0);
-  Eigen::Vector2d center_global = Eigen::Vector2d(0.0, 0.0);
-  double radius{0.0};
-
-  void Reset() {
-    center_local.setZero();
-    center_global.setZero();
-    radius = 0.0;
-  }
-
-  void LocalToGlobal(const geometry_lib::PathPoint &pt) {
-    geometry_lib::LocalToGlobalTf l2g_tf(pt.pos, pt.heading);
-    center_global = l2g_tf.GetPos(center_local);
-  }
-
-  void LocalToGlobal(const geometry_lib::LocalToGlobalTf &l2g_tf) {
-    center_global = l2g_tf.GetPos(center_local);
-  }
-};
-
-struct CarFootPrintCircleList {
-  uint8_t count{0};
-  CarFootPrintCircle circles[MAX_CAR_FOOTPRINT_CIRCLE_NUM];
-
-  // if max circle no collision, then no need to check other circle
-  CarFootPrintCircle max_circle;
-
-  // applicable obstacle height type
-  ApaObsHeightType height_type;
-
-  void Reset() {
-    count = 0;
-    max_circle.Reset();
-    height_type = ApaObsHeightType::UNKNOWN;
-    memset(circles, 0,
-           MAX_CAR_FOOTPRINT_CIRCLE_NUM * sizeof(CarFootPrintCircle));
-  }
-
-  void LocalToGlobal(const geometry_lib::PathPoint &pt) {
-    geometry_lib::LocalToGlobalTf l2g_tf(pt.pos, pt.heading);
-    max_circle.LocalToGlobal(l2g_tf);
-    for (uint8_t i = 0; i < count; ++i) {
-      circles[i].LocalToGlobal(l2g_tf);
-    }
-  }
-
-  void LocalToGlobal(const geometry_lib::LocalToGlobalTf &l2g_tf) {
-    max_circle.LocalToGlobal(l2g_tf);
-    for (uint8_t i = 0; i < count; ++i) {
-      circles[i].LocalToGlobal(l2g_tf);
-    }
-  }
 };
 
 class EDTCollisionDetector final : public BaseCollisionDetector {
@@ -187,9 +131,9 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   // 存储车包络圆信息
   // local->veh coord sys
   // global->slot coord sys
-  CarFootPrintCircleList car_with_mirror_circles_list_;
-  CarFootPrintCircleList car_without_mirror_circles_list_;
-  CarFootPrintCircleList car_chassis_circles_list_;
+  CarFootPrintCircleList car_with_mirror_circles_list_buffer_;
+  CarFootPrintCircleList car_without_mirror_circles_list_with_buffer_;
+  CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
 
   double lon_buffer_ = 0.3;
   double lat_buffer_ = 0.1;

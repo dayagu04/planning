@@ -67,7 +67,7 @@ void CautionTarget::GenerateCautionTarget() {
     double target_s_disatnce = std::max(
         vel * follow_time_gap + min_follow_distance_m, min_follow_distance_m);
 
-    const double s_target_value = upper_bound_infos_[i].s - target_s_disatnce;
+    const double s_target_value = std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
     target_value.set_s_target_val(s_target_value);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
   }

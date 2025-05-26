@@ -59,6 +59,9 @@ struct SimulationParam {
   double q_u = 10.0;
   double q_k_bound = 100.0;
   double q_u_bound = 50.0;
+
+  bool enable_debug_swap_start_goal = false;
+  bool swap_start_goal = false;
 };
 
 class ApaWorld {

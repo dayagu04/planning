@@ -209,8 +209,7 @@ class ApaSlotManager final {
     return ego_info_under_slot_;
   }
 
- public:
-  EgoInfoUnderSlot ego_info_under_slot_;
+  const SlotReleaseState GetSlotReleaseState() const;
 
  private:
   void ParkingLotCruiseProcess();
@@ -236,6 +235,8 @@ class ApaSlotManager final {
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
   std::shared_ptr<CollisionDetectorInterface> col_det_interface_ptr_;
+
+  EgoInfoUnderSlot ego_info_under_slot_;
 };
 }  // namespace apa_planner
 }  // namespace planning

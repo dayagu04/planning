@@ -190,12 +190,12 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
       std::max(half_origin_slot_width, param.max_car_width * 0.5 + 0.168);
 
   const Eigen::Vector2d virtual_left_obs =
-      pt_01_mid - param.virtual_obs_x_pos * pt_23mid_01_mid_unit_vec +
-      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+      pt_01_mid - param.virtual_obs_left_x_pos * pt_23mid_01_mid_unit_vec +
+      (half_origin_slot_width + param.virtual_obs_left_y_pos) * pt_01_unit_vec;
 
   const Eigen::Vector2d virtual_right_obs =
-      pt_01_mid - param.virtual_obs_x_pos * pt_23mid_01_mid_unit_vec -
-      (half_origin_slot_width + param.virtual_obs_y_pos) * pt_01_unit_vec;
+      pt_01_mid - param.virtual_obs_right_x_pos * pt_23mid_01_mid_unit_vec -
+      (half_origin_slot_width + param.virtual_obs_right_y_pos) * pt_01_unit_vec;
 
   virtual_tlane_.B = virtual_left_obs;
   virtual_tlane_.E = virtual_right_obs;
@@ -218,7 +218,8 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
 
   const double area_length = virtual_tlane_.channel_length;
   const double area_width =
-      virtual_tlane_.channel_width + param.virtual_obs_x_pos;
+      virtual_tlane_.channel_width +
+      std::max(param.virtual_obs_left_x_pos, param.virtual_obs_right_x_pos);
 
   virtual_tlane_.A = virtual_tlane_.B + pt_01_unit_vec * area_length;
   virtual_tlane_.H = virtual_tlane_.A + pt_23mid_01_mid_unit_vec * area_width;
@@ -227,13 +228,15 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
                                      slot.origin_corner_coord_local_.pt_2)
                                         .norm();
 
-  virtual_tlane_.C = virtual_tlane_.B -
-                     pt_23mid_01_mid_unit_vec *
-                         (origin_slot_length - param.virtual_obs_x_pos + 0.68);
+  virtual_tlane_.C =
+      virtual_tlane_.B -
+      pt_23mid_01_mid_unit_vec *
+          (origin_slot_length - param.virtual_obs_left_x_pos + 0.68);
 
-  virtual_tlane_.D = virtual_tlane_.E -
-                     pt_23mid_01_mid_unit_vec *
-                         (origin_slot_length - param.virtual_obs_x_pos + 0.68);
+  virtual_tlane_.D =
+      virtual_tlane_.E -
+      pt_23mid_01_mid_unit_vec *
+          (origin_slot_length - param.virtual_obs_right_x_pos + 0.68);
 
   virtual_tlane_.F = virtual_tlane_.E - pt_01_unit_vec * area_length;
   virtual_tlane_.G = virtual_tlane_.F + pt_23mid_01_mid_unit_vec * area_width;

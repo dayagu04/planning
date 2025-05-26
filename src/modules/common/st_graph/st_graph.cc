@@ -43,6 +43,7 @@ using namespace planning_math;
 // constexpr double kSearchBuffer = 5.0;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
+constexpr double kConsideredReverseVruTime = 2.0;
 }  // namespace
 
 bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
@@ -334,11 +335,16 @@ void STGraph::MakeDynamicAgentStBoundary(
   // check whether need adjust buffer by t
   bool need_ajust_buffer_by_t = false;
   bool is_parallel = false;
+  bool is_within_ego_lane = false;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
   const auto& ptr_obj_lane = ptr_virtual_lane_manager->GetNearestLane(
       {agent.x(), agent.y()}, &nearest_s, &nearest_l);
+  const double half_ego_lane_width = 0.5 * ptr_ego_lane->width_by_s(nearest_s);
   if (nullptr != ptr_obj_lane) {
+    is_within_ego_lane =
+        ptr_ego_lane->get_virtual_id() == ptr_obj_lane->get_virtual_id() &&
+        nearest_l < half_ego_lane_width;
     is_parallel =
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
     need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
@@ -366,6 +372,8 @@ void STGraph::MakeDynamicAgentStBoundary(
   // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
   const auto& trajectories = agent.trajectories();
+  // only consider 2s traj to reverse vru within ego_lane
+  const bool is_need_truncate_traj = agent.is_vru() && agent.is_reverse() && is_within_ego_lane;
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
@@ -388,10 +396,19 @@ void STGraph::MakeDynamicAgentStBoundary(
       // find path_border_segments which have collison risk
       trajectory::TrajectoryPoint point;
       if (start_absolute_time + relative_time < agent_pred_end_time) {
-        point = trajectories[i].Evaluate(start_absolute_time + relative_time);
+        if (is_need_truncate_traj) {
+          point = trajectories[i].Evaluate(std::fmin(
+              start_absolute_time + relative_time, kConsideredReverseVruTime));
+        } else {
+          point = trajectories[i].Evaluate(start_absolute_time + relative_time);
+        }
       } else {
-        StGraphUtils::LinearExtendTrajectory(
-            trajectories[i], start_absolute_time + relative_time, &point);
+        if (is_need_truncate_traj) {
+          point = trajectories[i].Evaluate(kConsideredReverseVruTime);
+        } else {
+          StGraphUtils::LinearExtendTrajectory(
+              trajectories[i], start_absolute_time + relative_time, &point);
+        }
       }
       double specific_lat_buffer = need_ajust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(

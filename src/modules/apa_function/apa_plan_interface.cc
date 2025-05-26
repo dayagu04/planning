@@ -77,9 +77,11 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // run planner
-  scenario_manager_.Excute();
+  scenario_manager_.UpdateScenarioType();
   scenario_manager_.Process();
   planning_output_ = scenario_manager_.GetPlanningOutput();
+  scenario_manager_.GenerateHmiSlotReleaseState();
+  scenario_manager_.RecommendParkingDirection();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
 
   AddReleasedSlotInfo(planning_output_);

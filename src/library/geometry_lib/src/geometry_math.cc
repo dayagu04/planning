@@ -1790,7 +1790,8 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
 }
 
 const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
-                                     const uint8_t gear) {
+                                     const uint8_t gear,
+                                     const bool is_arc2_radius_given) {
   // arc1 and line are intersected
   // the start point and center info of the arc1 are known, cal the
   // end point info of the arc1, the end point is tangent
@@ -1834,17 +1835,19 @@ const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     return LogErr(__func__, 2);
   }
 
+  const double arc2_radius =
+      is_arc2_radius_given ? arc2.circle_info.radius : arc1.circle_info.radius;
+
   // O2 is on ego car sides of the line
   // the O2 is on arc2_center_line
-  LineSegment arc2_center_line(
-      line.pA - line_norm_vec * arc1.circle_info.radius,
-      line.pB - line_norm_vec * arc1.circle_info.radius);
+  LineSegment arc2_center_line(line.pA - line_norm_vec * arc2_radius,
+                               line.pB - line_norm_vec * arc2_radius);
 
   // the O2 is on tmp_circle, arc1 is tangent with arc2, than the dist of O1
   // and O2 is 2*r
   Circle tmp_circle;
   tmp_circle.center = arc1.circle_info.center;
-  tmp_circle.radius = arc1.circle_info.radius * 2.0;
+  tmp_circle.radius = arc1.circle_info.radius + arc2_radius;
 
   std::vector<Eigen::Vector2d> arc2_centers;
   // must 2 cross points
@@ -1859,14 +1862,16 @@ const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     arc2.circle_info.center = arc2_centers.front();
   }
 
+  const Eigen::Vector2d v_O1_O2 =
+      (arc2.circle_info.center - arc1.circle_info.center).normalized();
   // the mid of two center is tangent, also pB
-  arc1.pB = (arc1.circle_info.center + arc2.circle_info.center) * 0.5;
+  arc1.pB = arc1.circle_info.center + v_O1_O2 * arc1.circle_info.radius;
   if (!CompleteArcInfo(arc1)) {
     return LogErr(__func__, 4);
   }
 
   // give arc2 info
-  arc2.circle_info.radius = arc1.circle_info.radius;
+  arc2.circle_info.radius = arc2_radius;
   arc2.pA = arc1.pB;
   arc2.headingA = arc1.headingB;
 

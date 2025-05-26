@@ -703,7 +703,7 @@ double LateralOffsetCalculatorV2::LimitLateralOffset(
 }
 
 void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
-    const vector<int> &obstacle_ids, bool is_left,
+    const std::vector<int> &obstacle_ids, bool is_left,
     const AvoidObstacleInfo &avoid_obstacle,
     std::map<std::pair<int, int>, HysteresisDecision> &hysteresis_map) {
   const auto &lateral_obstacle =
@@ -760,8 +760,8 @@ void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
 }
 
 void LateralOffsetCalculatorV2::CalcSideMaxOppositeOffset(
-    const vector<int> &obstacle_ids, const AvoidObstacleInfo &avoid_obstacle,
-    bool is_left) {
+    const std::vector<int> &obstacle_ids,
+    const AvoidObstacleInfo &avoid_obstacle, bool is_left) {
   const auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
   TrackedObject track_object;
@@ -1004,8 +1004,8 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
           max_opposite_offset_hysteresis_maps_
               [HysteresisType::EnoughSpaceHysteresis]);
 
-  vector<int> front_ids;
-  vector<int> side_ids;
+  std::vector<int> front_ids;
+  std::vector<int> side_ids;
 
   TrackedObject except_obstacle;
   if (lateral_obstacle->find_track(except_id, except_obstacle)) {

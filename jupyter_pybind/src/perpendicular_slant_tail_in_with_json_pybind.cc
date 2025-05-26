@@ -48,7 +48,10 @@ void Init() {
 
 void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
                       int is_complete_path, int use_average_obs_dist,
-                      int force_mid_process_plan, double sample_ds) {
+                      int force_mid_process_plan, double sample_ds, int set_obs,
+                      double right_obj_dx, double right_obj_dy,
+                      double left_obj_dx, double left_obj_dy,
+                      double channel_width) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
@@ -57,6 +60,16 @@ void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
   g_simu_param.use_average_obs_dist = use_average_obs_dist;
   g_simu_param.force_mid_process_plan = force_mid_process_plan;
   g_simu_param.sample_ds = sample_ds;
+
+  ApaParameters& muable_param = apa_param.SetPram();
+  SyncParkingParameters(true);
+  if (set_obs == 1) {
+    muable_param.channel_width = channel_width;
+    muable_param.virtual_obs_left_x_pos = left_obj_dx;
+    muable_param.virtual_obs_left_y_pos = left_obj_dy;
+    muable_param.virtual_obs_right_x_pos = right_obj_dx;
+    muable_param.virtual_obs_right_y_pos = right_obj_dy;
+  }
 }
 
 void UpdateLocalization(Eigen::Vector3d pose) {
@@ -75,7 +88,8 @@ void UpdateSlot(
   auto& park_slot = g_local_view.parking_fusion_info;
   park_slot.parking_fusion_slot_lists_size = id_vec.size();
   park_slot.select_slot_id = select_id;
-  g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.id = select_id;
+  g_apa_world_ptr->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot().id =
+      select_id;
 
   for (size_t i = 0; i < id_vec.size(); ++i) {
     auto& slot = park_slot.parking_fusion_slot_lists[i];
@@ -84,16 +98,19 @@ void UpdateSlot(
     if (slot.id == select_id) {
       switch (slot.type) {
         case iflyauto::PARKING_SLOT_TYPE_VERTICAL:
-          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
-              SlotType::PERPENDICULAR;
+          g_apa_world_ptr->GetSlotManagerPtr()
+              ->GetMutableEgoInfoUnderSlot()
+              .slot_type = SlotType::PERPENDICULAR;
           break;
         case iflyauto::PARKING_SLOT_TYPE_SLANTING:
-          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
-              SlotType::SLANT;
+          g_apa_world_ptr->GetSlotManagerPtr()
+              ->GetMutableEgoInfoUnderSlot()
+              .slot_type = SlotType::SLANT;
           break;
         case ::iflyauto::PARKING_SLOT_TYPE_HORIZONTAL:
-          g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.slot_type =
-              SlotType::PARALLEL;
+          g_apa_world_ptr->GetSlotManagerPtr()
+              ->GetMutableEgoInfoUnderSlot()
+              .slot_type = SlotType::PARALLEL;
           break;
         default:
           break;
@@ -186,8 +203,8 @@ std::vector<std::vector<Eigen::Vector4d>> GetPerferredPlanPath() {
   }
   path_vec_vec.reserve(g_scenario_ptr->GetPerferredGeometryPathVec().size() +
                        6);
-  const auto& l2g_tf =
-      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+  const geometry_lib::LocalToGlobalTf& l2g_tf =
+      g_apa_world_ptr->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
   for (auto& geometry_path : g_scenario_ptr->GetPerferredGeometryPathVec()) {
     geometry_path.Sample(g_simu_param.sample_ds);
     std::vector<Eigen::Vector4d> path_vec;
@@ -236,7 +253,7 @@ std::vector<Eigen::Vector2d> GetObsVec() {
     return obs_vec;
   }
   const geometry_lib::LocalToGlobalTf& l2g_tf =
-      g_apa_world_ptr->GetSlotManagerPtr()->ego_info_under_slot_.l2g_tf;
+      g_apa_world_ptr->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
 
   const std::unordered_map<size_t, ApaObstacle>& obs =
       g_apa_world_ptr->GetObstacleManagerPtr()->GetObstacles();

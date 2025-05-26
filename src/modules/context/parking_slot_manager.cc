@@ -8,6 +8,8 @@
 #include "ego_state_manager.h"
 #include "environmental_model.h"
 #include "log.h"
+#include "obstacle_manager.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -27,6 +29,10 @@ void ParkingSlotManager::Init() {
   target_slot_id_ = 0;
   distance_to_target_slot_ = NL_NMAX;
   is_reached_target_slot_ = false;
+  is_exist_target_slot_ = false;
+  is_exist_nearest_slot_ = false;
+  nearest_slot_id_ = 0;
+  distance_to_nearest_slot_ = NL_NMAX;
 }
 
 bool ParkingSlotManager::Update(const Map::StaticMap& static_map) {
@@ -179,4 +185,72 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
   }
   return true;
 }
+
+bool ParkingSlotManager::CalculateDistanceToNearestSlot(
+    const std::shared_ptr<ReferencePath> &reference_path) {
+  const size_t successful_slot_info_list_size =
+      session_->planning_context()
+              .planning_output()
+              .successful_slot_info_list_size;
+  const auto &successful_slot_info_list =
+      session_->planning_context()
+              .planning_output()
+              .successful_slot_info_list;
+  const auto &parking_slots =
+      session_->environmental_model()
+              .get_obstacle_manager()
+              ->get_parking_space();
+  const auto &planning_init_point =
+      reference_path->get_frenet_ego_state().planning_init_point();
+  const auto &frenet_coord = reference_path->get_frenet_coord();
+  if (successful_slot_info_list_size > 0) {
+    double dist_to_nearest_slot = NL_NMAX;
+    double nearest_slot_width = 3.0;
+    double dist_buffer = std::max(1.5 * planning_init_point.v, 0.0);
+    if (planning_init_point.v < 0.1) {
+      dist_buffer = 0;
+    }
+    size_t last_nearest_slot_id =
+        is_exist_nearest_slot_ ? nearest_slot_id_ : 0;
+    for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
+      auto iter =
+          parking_slots.Find((successful_slot_info_list[i].id + 6000000));
+      if (iter != nullptr) {
+        Point2D cart_point, frenet_point;
+        cart_point.x = iter->x_center();
+        cart_point.y = iter->y_center();
+        if (frenet_coord != nullptr) {
+          if (frenet_coord->XYToSL(cart_point, frenet_point)) {
+            double s_diff =
+                frenet_point.x - planning_init_point.frenet_state.s;
+            if (iter->id() == last_nearest_slot_id) {
+              is_exist_nearest_slot_ = true;
+              nearest_slot_id_ = iter->id();
+              distance_to_nearest_slot_ = std::max(s_diff, dist_buffer);
+              return true;
+            }
+            if (s_diff - dist_buffer <= -0.5 * iter->width()) {
+              continue;
+            }
+            double s_dist = std::fabs(s_diff - dist_buffer);
+            if (s_dist < dist_to_nearest_slot) {
+              dist_to_nearest_slot = s_dist;
+              is_exist_nearest_slot_ = true;
+              nearest_slot_id_ = iter->id();
+              distance_to_nearest_slot_ = std::max(s_diff, dist_buffer);
+            }
+          }
+        }
+      }
+    }
+    if (is_exist_nearest_slot_) {
+      return true;
+    }
+  }
+  is_exist_nearest_slot_ = false;
+  nearest_slot_id_ = 0;
+  distance_to_nearest_slot_ = NL_NMAX;
+  return false;
+}
+
 }  // namespace planning

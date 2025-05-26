@@ -25,7 +25,7 @@ class CurveSampling {
 
   void SetSearchGoal(const Pose2D& search_goal) {
     search_goal_ = search_goal;
-    search_goal_.DebugString();
+    // search_goal_.DebugString();
     return;
   }
 
@@ -47,6 +47,7 @@ class CurveSampling {
   float min_radius_;
   std::shared_ptr<NodeCollisionDetect> collision_detect_;
 
+  // target pose for astar search.
   Pose2D search_goal_;
 };
 

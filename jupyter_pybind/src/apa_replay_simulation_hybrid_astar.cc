@@ -102,6 +102,7 @@ std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
 EigenPath2d static_ref_line_;
+std::vector<Eigen::Vector3d> polynomial_path_;
 
 // bit 4 is flag
 EigenPointSet2d search_sequence_path_;
@@ -137,6 +138,8 @@ int Init() {
   hybrid_astar_interface_ = thread_solver_->GetHybridAStarInterface();
   ILOG_INFO << "replay init success";
 
+  global_astar_path_.clear();
+
   return 0;
 }
 
@@ -148,6 +151,9 @@ int StopPybind() {
 void UpdateFootprintCircle(const AstarPathGear gear,
                            std::vector<Eigen::Vector3d> &footprint_circle) {
   footprint_circle.clear();
+  if (hybrid_astar_interface_ == nullptr) {
+    return;
+  }
 
   FootPrintCircleModel *model =
       hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
@@ -161,7 +167,8 @@ void UpdateFootprintCircle(const AstarPathGear gear,
   const FootPrintCircle *circle = &circle_footprint.max_circle;
   footprint_circle.push_back(
       Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
-  for (int i = 0; i < circle_footprint.size; i++) {
+  for (int i = 0; i < std::min(FOOTPRINT_CIRCLE_NUM, circle_footprint.size);
+       i++) {
     circle = &circle_footprint.circles[i];
 
     footprint_circle.push_back(
@@ -185,11 +192,10 @@ void UpdateFootprintCircleList() {
 }
 
 int GetPathFromHybridAstar() {
-  //
-  global_astar_path_.clear();
   global_path_s_.clear();
   bool success = false;
   static_rs_path_.clear();
+  polynomial_path_.clear();
 
   HybridAStarResult result;
 
@@ -204,7 +210,8 @@ int GetPathFromHybridAstar() {
   Pose2D local_position;
   Pose2D global_position;
 
-  if (result.x.size() > 0) {
+  if (result.x.size() > 1) {
+    global_astar_path_.clear();
     for (i = 0; i < result.x.size(); i++) {
       local_position.x = result.x[i];
       local_position.y = result.y[i];
@@ -218,7 +225,14 @@ int GetPathFromHybridAstar() {
       global_path_s_.emplace_back(result.accumulated_s[i]);
 
       if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
-        static_rs_path_.push_back(Eigen::Vector3d(
+        static_rs_path_.emplace_back(Eigen::Vector3d(
+            global_position.x, global_position.y, global_position.theta));
+      }
+
+      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::CUBIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::SPIRAL) {
+        polynomial_path_.emplace_back(Eigen::Vector3d(
             global_position.x, global_position.y, global_position.theta));
       }
     }
@@ -335,6 +349,7 @@ int GetPathFromHybridAstar() {
     search_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position.x, global_position.y));
   }
+  ILOG_INFO << "search_path size = " << search_path.size();
 
   deletenode_sequence_path_.clear();
   const std::vector<Vec2df32> &delnode_path =
@@ -348,6 +363,7 @@ int GetPathFromHybridAstar() {
     deletenode_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position.x, global_position.y));
   }
+  ILOG_INFO << "delnode_path size = " << delnode_path.size();
 
   // 基坐标位置
   coordinate_system_[0] = ego_slot_info_.origin_pose_global.pos[0];
@@ -371,8 +387,9 @@ int GetPathFromHybridAstar() {
     all_searched_node_.emplace_back(Eigen::Vector4d(
         global_position.x, global_position.y, is_safe, is_gear_switch_node));
   }
+  ILOG_INFO << "all_searched_node_ size = " << all_searched_node_.size();
 
-  AstarRequest request = thread_solver_->GetAstarRequest();
+  AstarRequest request = hybrid_astar_interface_->GetConstRequest();
   history_gear_request_ = request.first_action_request.gear_request;
 
   UpdateFootprintCircleList();
@@ -486,7 +503,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     std::vector<double> target_managed_slot_y_vec,
                     std::vector<double> target_managed_limiter_x_vec,
                     std::vector<double> target_managed_limiter_y_vec,
-                    const int path_plan_method) {
+                    const int path_plan_method, const int swap_start_goal) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -501,6 +518,8 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   sim_param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
   sim_param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
   sim_param.use_slot_in_bag = false;
+  sim_param.enable_debug_swap_start_goal = swap_start_goal > 0 ? true : false;
+  sim_param.swap_start_goal = swap_start_goal == 1 ? true : false;
 
   apa_interface_ptr->SetSimuParam(sim_param);
 
@@ -568,10 +587,6 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   double copy_data_time = IflyTime::Now_us();
   ILOG_INFO << " copy data time ms " << (copy_data_time - start_time) / 1000.0;
 
-  if (force_plan) {
-    local_view.function_state_machine_info.current_state =
-        iflyauto::FunctionalState_PARK_IN_SEARCHING;
-  }
   if (select_id > 0) {
     local_view.parking_fusion_info.select_slot_id = select_id;
     ILOG_INFO << "pybind select slot id "
@@ -593,7 +608,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info =
-        scenario->GetApaWorldPtr()->GetSlotManagerPtr()->ego_info_under_slot_;
+        scenario->GetApaWorldPtr()->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
     ego_slot_info_ = ego_info;
 
     GetPathFromHybridAstar();
@@ -623,152 +638,6 @@ const bool RefreshThreadResult() {
   }
 
   return false;
-}
-
-const bool TriggerPlan(bool force_plan, bool is_path_optimization,
-                       bool is_cilqr_optimization, bool is_reset,
-                       std::vector<double> target_managed_slot_x_vec,
-                       std::vector<double> target_managed_slot_y_vec,
-                       std::vector<double> target_managed_limiter_x_vec,
-                       std::vector<double> target_managed_limiter_y_vec,
-                       std::vector<double> &end_pose, const double time) {
-  SimulationParam sim_param;
-  sim_param.force_plan = force_plan;
-  sim_param.is_path_optimization = is_path_optimization;
-  sim_param.is_cilqr_optimization = is_cilqr_optimization;
-  sim_param.is_reset = is_reset;
-  sim_param.target_managed_slot_x_vec = target_managed_slot_x_vec;
-  sim_param.target_managed_slot_y_vec = target_managed_slot_y_vec;
-  sim_param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
-  sim_param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
-
-  apa_interface_ptr->SetSimuParam(sim_param);
-
-  bool update_path = false;
-
-  if (force_plan) {
-    planning::apa_planner::EgoInfoUnderSlot ego_info;
-    ego_info = ego_slot_info_;
-
-    hybrid_astar_obs_.Clear();
-
-    // obs
-    const ApaParameters &park_param = apa_param.GetParam();
-    // translate perception
-    Pose2D slot_base_pose = Pose2D(ego_info.origin_pose_global.pos.x(),
-                                   ego_info.origin_pose_global.pos.y(),
-                                   ego_info.origin_pose_global.heading);
-
-    // start
-    Pose2D start = Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
-                          ego_info.cur_pose.heading);
-
-    Pose2D real_end =
-        Pose2D(ego_info.target_pose.pos[0], ego_info.target_pose.pos[1],
-               ego_info.target_pose.heading);
-    PointCloudObstacleTransform obstacle_generator;
-
-    ParkSpaceType slot_type;
-    if (ego_info.slot_type == SlotType::PARALLEL) {
-      slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_info.slot_type == SlotType::SLANT) {
-      slot_type = ParkSpaceType::SLANTING;
-    } else {
-      slot_type = ParkSpaceType::VERTICAL;
-    }
-
-    ParkingVehDirection parking_in_type;
-    const std::shared_ptr<apa_planner::ApaWorld> world =
-        hybrid_astar_park_->GetApaWorldPtr();
-
-    if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
-        world->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
-      parking_in_type = ParkingVehDirection::TAIL_IN;
-    } else {
-      parking_in_type = ParkingVehDirection::HEAD_IN;
-    }
-
-    VirtualWallDecider *wall_decider =
-        hybrid_astar_park_->MutableVirtualWallDecider();
-    wall_decider->Process(
-        hybrid_astar_obs_.virtual_obs, ego_info.slot.GetWidth(),
-        ego_info.slot.GetLength(), start, real_end, slot_type,
-        pnc::geometry_lib::SlotSide::SLOT_SIDE_INVALID, parking_in_type);
-
-    obstacle_generator.GenerateLocalObstacleByLocalView(
-        hybrid_astar_obs_, &local_view, ego_info.slot.GetLength(),
-        ego_info.slot.GetWidth(), slot_base_pose, start, false);
-
-    CopyVirtualWallForPlot(hybrid_astar_obs_, ego_info);
-
-    // end
-    Eigen::Vector3d end;
-    double end_straight_dist = 0.0;
-    if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
-        world->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
-      end_straight_dist =
-          apa_param.GetParam().astar_config.vertical_tail_in_end_straight_dist;
-    } else {
-      end_straight_dist = 0.5;
-    }
-
-    end[0] = ego_info.target_pose.pos.x() + end_straight_dist;
-    end[1] = ego_info.target_pose.pos.y();
-    end[2] = ego_info.target_pose.heading;
-
-    AstarRequest request;
-    request.first_action_request.has_request = true;
-    if (history_gear_request_ == AstarPathGear::DRIVE) {
-      request.first_action_request.gear_request = AstarPathGear::REVERSE;
-    } else {
-      request.first_action_request.gear_request = AstarPathGear::DRIVE;
-    }
-    request.path_generate_method =
-        planning::AstarPathGenerateType::ASTAR_SEARCHING;
-
-    base_pose_ = slot_base_pose;
-    request.start_ = start;
-    ILOG_INFO << "start pose";
-    request.start_.DebugString();
-    request.goal_ = Pose2D(end[0], end[1], end[2]);
-    request.real_goal = real_end;
-    request.base_pose_ = base_pose_;
-    request.space_type = ParkSpaceType::VERTICAL;
-    request.swap_start_goal = false;
-
-    if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
-        world->GetStateMachineManagerPtr()->GetStateMachine() ==
-            ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
-      request.direction_request = ParkingVehDirection::HEAD_IN;
-    } else {
-      request.direction_request = ParkingVehDirection::TAIL_IN;
-    }
-
-    request.rs_request = RSPathRequestType::NONE;
-    request.slot_width = ego_info.slot.GetWidth();
-    request.slot_length = ego_info.slot.GetLength();
-    request.history_gear = history_gear_request_;
-
-    thread_solver_->SetRequest(hybrid_astar_obs_, request);
-
-    ego_slot_info_ = ego_info;
-
-    GetPathFromHybridAstar();
-
-    update_path = true;
-
-  } else {
-    ILOG_INFO << "hybrid_astar_interface_ is null";
-  }
-
-  ILOG_INFO << "trigger plan ";
-
-  return update_path;
 }
 
 py::bytes GetPlanningOutput() {
@@ -1118,6 +987,10 @@ std::vector<Eigen::VectorXd> GetJLTSpeedData() {
   return speed_profile;
 }
 
+const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
+  return polynomial_path_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -1130,7 +1003,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetReedsShapePath", &GetReedsShapePath)
       .def("GetAstarPath", &GetAstarPath)
       .def("SetLocalization", &SetLocalization)
-      .def("TriggerPlan", &TriggerPlan)
       .def("SetSlotInfo", &SetSlotInfo)
       .def("GetVirtualWall", &GetVirtualWall)
       .def("SetGroundLine", &SetGroundLine)
@@ -1152,5 +1024,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetFootPrintModel", &GetFootPrintModel)
+      .def("GetPolynomialPath", &GetPolynomialPath)
       .def("GetDynamicState", &GetDynamicState);
 }

@@ -26,6 +26,9 @@ class ParallelParkInScenario : public ParkingScenario {
   const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,
                                      const double slot_width,
                                      const bool is_right_side) const;
+  const double CalcSlotOccupiedRatio(
+      const pnc::geometry_lib::PathPoint start_pose) const;
+
   virtual const bool UpdateEgoSlotInfo() override;
   virtual const bool GenTlane() override;
   void GenTBoundaryObstacles();
@@ -36,7 +39,8 @@ class ParallelParkInScenario : public ParkingScenario {
 
  private:
   // virtual func
-
+  void CalBufferInDiffSteps(double& lat_buffer,
+                            double& safe_uss_remain_dist) const;
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;

@@ -103,10 +103,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckEgoReplanNumber(const bool is_replan);
 
-  const bool IsEgoNeedAdjustInSlot(const Pose2D& ego_pose,
-                                   const double slot_width,
-                                   const double slot_len);
-
   const double CalRemainDistFromPath() override;
 
   size_t GetNearestPathPoint(
@@ -125,6 +121,9 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool NeedBlindZonePlanning(const EgoInfoUnderSlot& ego_info);
 
+  const cdl::AABB GenerateBlindZoneSlotBox(
+      const EgoInfoUnderSlot& ego_info) const;
+
   // check path replan by slot pose change
   const bool CheckDynamicUpdate() override;
 
@@ -137,8 +136,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   HybridAStarThreadSolver thread_;
 
   AstarPathGear current_gear_;
-  // 库内揉库次数
-  int in_slot_car_adjust_count_;
+  int replan_number_inside_slot_;
   // path connected with goal
   bool is_path_connected_to_goal_;
 

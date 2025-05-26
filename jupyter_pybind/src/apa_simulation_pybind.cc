@@ -174,7 +174,7 @@ const bool InterfaceUpdateParam(
     py::bytes &fus_occ_obj_info_bytes, py::bytes &control_output_bytes,
     int plan_type, int select_id, bool force_plan, bool is_path_optimization,
     bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
-    bool sim_to_target, bool use_slot_in_bag, bool use_obs_in_bag,
+    bool sim_to_target, int pybind_state, bool use_obs_in_bag,
     double sample_ds, std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
@@ -198,7 +198,6 @@ const bool InterfaceUpdateParam(
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
   param.sim_to_target = sim_to_target;
-  param.use_slot_in_bag = use_slot_in_bag;
   param.use_obs_in_bag = use_obs_in_bag;
   param.target_managed_slot_x_vec = target_managed_slot_x_vec;
   param.target_managed_slot_y_vec = target_managed_slot_y_vec;
@@ -293,6 +292,10 @@ const bool InterfaceUpdateParam(
   //         .y = fus_occ_obj_coord[i][j].y();
   //   }
   // }
+
+  if (pybind_state != 0) {
+    func_statemachine.current_state = static_cast<FunctionalState>(pybind_state);
+  }
 
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;

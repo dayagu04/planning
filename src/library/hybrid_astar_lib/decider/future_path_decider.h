@@ -10,6 +10,7 @@
 #include "park_reference_line.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
+#include "hybrid_astar_request.h"
 
 namespace planning {
 
@@ -30,13 +31,13 @@ class FuturePathDecider : public AstarDecider {
  public:
   FuturePathDecider() = default;
 
-  void Process(const HybridAStarResult *history_path,
-               const PlanningReason plan_reason, const Pose2D &ego_pose,
-               EulerDistanceTransform *edt, const ParkReferenceLine *ref_line,
-               const float min_turn_radius, const bool swap_start_goal,
-               const AstarPathGenerateType path_generate_type,
-               const float sampling_lon_resolution,
-               ParkFirstActionRequest *future_path_request);
+  /**
+   * [in]: ref_line, min_turn_radius, sampling_lon_resolution
+   * [out]: edt, request
+   */
+  void Process(const ParkReferenceLine *ref_line, const float min_turn_radius,
+               const float sampling_lon_resolution, EulerDistanceTransform *edt,
+               AstarRequest &request);
 
   void Process(const Pose2D &start, const Pose2D &end);
 

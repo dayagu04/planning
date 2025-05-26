@@ -122,9 +122,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
                   "headin_max_replan_count");
 
-  JSON_READ_VALUE(apa_param.SetPram().in_slot_car_adjust_max_count, int,
-                  "in_slot_car_adjust_max_count");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.max_replan_number_inside_slot, int,
+      "max_replan_number_inside_slot");
   // car params
+  JSON_READ_VALUE(apa_param.SetPram().force_fold_mirror, bool,
+                  "force_fold_mirror");
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
 
@@ -135,6 +138,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().car_width, double, "car_width");
   JSON_READ_VALUE(apa_param.SetPram().car_length, double, "car_length");
   JSON_READ_VALUE(apa_param.SetPram().max_car_width, double, "max_car_width");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_max_car_width, double,
+                  "fold_mirror_max_car_width");
   JSON_READ_VALUE(apa_param.SetPram().lon_dist_mirror_to_rear_axle, double,
                   "lon_dist_mirror_to_rear_axle");
 
@@ -149,6 +154,11 @@ void SyncParkingParameters(const bool is_simulation) {
                   "car_vertex_x_vec");
   JSON_READ_VALUE(apa_param.SetPram().car_vertex_y_vec, std::vector<double>,
                   "car_vertex_y_vec");
+
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_car_vertex_x_vec,
+                  std::vector<double>, "fold_mirror_car_vertex_x_vec");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_car_vertex_y_vec,
+                  std::vector<double>, "fold_mirror_car_vertex_y_vec");
 
   // slot params
   JSON_READ_VALUE(apa_param.SetPram().normal_slot_length, double,
@@ -231,6 +241,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().pause_failed_time, double,
                   "pause_failed_time");
+  JSON_READ_VALUE(apa_param.SetPram().max_replan_failed_time, double,
+                  "max_replan_failed_time");
 
   // check static params
   JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err_strict, double,
@@ -271,6 +283,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_slot, double,
                   "safe_uss_remain_dist_in_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().limited_safe_uss_remain_dist, double,
+                  "limited_safe_uss_remain_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_parallel_slot,
                   double, "safe_uss_remain_dist_in_parallel_slot");
@@ -372,17 +387,17 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().safe_threshold, double, "safe_threshold");
 
-  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_y_pos, double,
-                  "virtual_obs_y_pos");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_left_y_pos, double,
+                  "virtual_obs_left_y_pos");
 
-  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_x_pos, double,
-                  "virtual_obs_x_pos");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_left_x_pos, double,
+                  "virtual_obs_left_x_pos");
 
-  JSON_READ_VALUE(apa_param.SetPram().obs_consider_long_threshold, double,
-                  "obs_consider_long_threshold");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_right_y_pos, double,
+                  "virtual_obs_right_y_pos");
 
-  JSON_READ_VALUE(apa_param.SetPram().obs_consider_lat_threshold, double,
-                  "obs_consider_lat_threshold");
+  JSON_READ_VALUE(apa_param.SetPram().virtual_obs_right_x_pos, double,
+                  "virtual_obs_right_x_pos");
 
   JSON_READ_VALUE(apa_param.SetPram().max_pt_inside_drop_dx_mono, double,
                   "max_pt_inside_drop_dx_mono");
@@ -456,12 +471,17 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
 
-  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_column, bool, "use_fus_occ_column");
+  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_column, bool,
+                  "use_fus_occ_column");
 
   JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
                   "use_uss_pt_clound");
 
   JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
+
+  JSON_READ_VALUE(apa_param.SetPram().use_ground_line_wall_column, bool,
+                  "use_ground_line_wall_column");
+
   JSON_READ_VALUE(apa_param.SetPram().use_object_detect, bool,
                   "use_object_detect");
 
@@ -491,17 +511,15 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().parallel_ego_front_corner_to_obs_in_buffer, double,
       "parallel_ego_front_corner_to_obs_in_buffer");
 
-  JSON_READ_VALUE(apa_param.SetPram().slot_max_jump_dist, double,
-                  "slot_max_jump_dist");
+  JSON_READ_VALUE(apa_param.SetPram().min_dynamic_plan_proj_dt, double,
+                  "min_dynamic_plan_proj_dt");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_slot_occupied_ratio, double,
-                  "line_arc_obs_slot_occupied_ratio");
+  JSON_READ_VALUE(apa_param.SetPram().max_dynamic_plan_proj_dt, double,
+                  "max_dynamic_plan_proj_dt");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_width, double,
-                  "line_arc_obs_channel_width");
+  JSON_READ_VALUE(apa_param.SetPram().max_lat_err, double, "max_lat_err");
 
-  JSON_READ_VALUE(apa_param.SetPram().line_arc_obs_channel_length, double,
-                  "line_arc_obs_channel_length");
+  JSON_READ_VALUE(apa_param.SetPram().max_phi_err, double, "max_phi_err");
 
   JSON_READ_VALUE(apa_param.SetPram().dynamic_col_det_enable, bool,
                   "dynamic_col_det_enable");
@@ -569,6 +587,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().dynamic_plan_interval_time, double,
                   "dynamic_plan_interval_time");
 
+  JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lat_buffer, double,
+                  "parallel_dynamic_lat_buffer");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lon_buffer, double,
+                  "parallel_dynamic_lon_buffer");
+
   // slot update params when parking
   JSON_READ_VALUE(apa_param.SetPram().fix_slot_occupied_ratio, double,
                   "fix_slot_occupied_ratio");
@@ -577,8 +601,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().uss_slot_occupied_ratio, double,
                   "uss_slot_occupied_ratio");
 
-  JSON_READ_VALUE(apa_param.SetPram().path_heading_slot, double,
-                  "path_heading_slot");
+  JSON_READ_VALUE(apa_param.SetPram().max_front_exceed_line_dx, double,
+                  "max_front_exceed_line_dx");
 
   JSON_READ_VALUE(apa_param.SetPram().path_pos_err, double, "path_pos_err");
 
@@ -865,6 +889,13 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<float>,
                   "footprint_circle_r");
 
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_footprint_circle_x,
+                  std::vector<float>, "fold_mirror_footprint_circle_x");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_footprint_circle_y,
+                  std::vector<float>, "fold_mirror_footprint_circle_y");
+  JSON_READ_VALUE(apa_param.SetPram().fold_mirror_footprint_circle_r,
+                  std::vector<float>, "fold_mirror_footprint_circle_r");
+
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.perpendicular_slot_auto_switch_to_astar,
       bool, "perpendicular_slot_auto_switch_to_astar");
@@ -938,6 +969,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.head_in_slot_virtual_wall_y_offset,
       float, "head_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.max_replan_number, int,
+                  "max_replan_number");
   return;
 }
 

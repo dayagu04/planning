@@ -104,7 +104,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
       else:
         localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
-    # prediction_timestamp = input_topic_timestamp.prediction
+    prediction_timestamp = input_topic_timestamp.prediction
     # vehicle_service_timestamp = input_topic_timestamp.vehicle_service
     # control_output_timestamp = input_topic_timestamp.control_output
 
@@ -174,11 +174,18 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           print('find rdg_lane_lines_msg success')
         else :
           print('find rdg_lane_lines_msg fail')
+
       loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
       if loc_msg_tmp != None:
         loc_msg = loc_msg_tmp
       else:
         print('match loc fail')
+      
+      prediction_msg_tmp = find(bag_loader.prediction_msg, prediction_timestamp)
+      if prediction_msg_tmp != None:
+        prediction_msg = prediction_msg_tmp
+      else:
+        print("match prediction_msg fail")
 
     soc_state_msg_tmp = find(bag_loader.soc_state_msg, soc_state_timestamp)
     if soc_state_msg_tmp != None:
@@ -469,6 +476,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         data_center_line.data.update({
           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+          'center_line_{}_s'.format(i): center_line_list[i]['line_s_vec'],
+          'center_line_{}_k'.format(i): center_line_list[i]['curvature_vec'],
+          'center_line_{}_confidence'.format(i): center_line_list[i]['confidence_vec'],
+          'center_line_{}_id'.format(i): center_line_list[i]['relative_id'],
         })
         lane_mark_data = data_lane_mark_dict[i]
         # lane_mark_loc_x = []
@@ -486,9 +497,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'lane_mark_loc_x_{}'.format(i): center_line_list[i]['lane_mark_loc_x'],
           'lane_mark_loc_y_{}'.format(i): center_line_list[i]['lane_mark_loc_y'],
         })
-
-
-
 
     # 加载topo车道线和中心线
     if bag_loader.lane_topo_msg['enable'] == True:
@@ -675,6 +683,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = loc_msg.position.position_boot.y
     cur_yaw = loc_msg.orientation.euler_boot.yaw
     try:
+      version = plan_debug_msg.frame_info.version
+      print(version)
       scene_type = plan_debug_msg.frame_info.scene_type
       print("scene_type: ", scene_type)
       planning_succ = plan_debug_msg.frame_info.planning_succ
@@ -1907,16 +1917,16 @@ def load_local_view_figure():
     data_sdmap_inlink = ColumnDataSource(data = {'data_sdmap_inlink_y':[], 'data_sdmap_inlink_x':[]})
     data_sdmap_outlink = ColumnDataSource(data = {'data_sdmap_outlink_y':[], 'data_sdmap_outlink_x':[]})
 
-  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
-  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
-  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
-  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
-  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
-  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[]})
-  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[]})
-  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[]})
-  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[]})
-  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[]})
+  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[], 'center_line_0_id':[], 'center_line_0_s':[], 'center_line_0_k':[], 'center_line_0_confidence':[]})
+  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[], 'center_line_1_id':[], 'center_line_1_s':[], 'center_line_1_k':[], 'center_line_1_confidence':[]})
+  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[], 'center_line_2_id':[], 'center_line_2_s':[], 'center_line_2_k':[], 'center_line_2_confidence':[]})
+  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[], 'center_line_3_id':[], 'center_line_3_s':[], 'center_line_3_k':[], 'center_line_3_confidence':[]})
+  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[], 'center_line_4_id':[], 'center_line_4_s':[], 'center_line_4_k':[], 'center_line_4_confidence':[]})
+  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[], 'center_line_5_id':[], 'center_line_5_s':[], 'center_line_5_k':[], 'center_line_5_confidence':[]})
+  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[], 'center_line_6_id':[], 'center_line_6_s':[], 'center_line_6_k':[], 'center_line_6_confidence':[]})
+  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[], 'center_line_7_id':[], 'center_line_7_s':[], 'center_line_7_k':[], 'center_line_7_confidence':[]})
+  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[], 'center_line_8_id':[], 'center_line_8_s':[], 'center_line_8_k':[], 'center_line_8_confidence':[]})
+  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[], 'center_line_9_id':[], 'center_line_9_s':[], 'center_line_9_k':[], 'center_line_9_confidence':[]})
 
   data_center_line_topo_0 = ColumnDataSource(data = {'center_line_topo_0_y':[], 'center_line_topo_0_x':[]})
   data_center_line_topo_1 = ColumnDataSource(data = {'center_line_topo_1_y':[], 'center_line_topo_1_x':[]})
@@ -2588,10 +2598,10 @@ def load_local_view_figure():
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_plan_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
     fig1.patches('parking_slot_y', 'parking_slot_x', source = data_select_parking_slot, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 2, legend_label = 'parking slot')
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
-    fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
     # fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     # fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 3,color='red', legend_label = 'occ obj')
+    fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'occ obj')
+    fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)

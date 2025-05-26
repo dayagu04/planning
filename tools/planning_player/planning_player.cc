@@ -937,6 +937,9 @@ void PlanningPlayer::PlayOneFrame(
                   << " missing /iflytek/fsm/soc_state" << std::endl;
       }
     }
+    if (is_close_loop) {
+      functional_state = iflyauto::FunctionalState_MANUAL;
+    }
     if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
       if (scene_type_ == "acc") {
         functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
@@ -1233,6 +1236,9 @@ void PlanningPlayer::RunCloseLoop(
 
 void PlanningPlayer::PerpareTrajectory(
     const struct_msgs::PlanningOutput& plan_msg) {
+  if (plan_msg.planning_request.take_over_req_level > iflyauto::REQUEST_LEVEL_NO_REQ) {
+    return;
+  }
   const auto& trajectory = plan_msg.trajectory;
   auto traj_size = trajectory.trajectory_points_size;
   std::vector<double> x_vec(traj_size);

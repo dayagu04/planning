@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250414/20250414-17-34-25/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-04-14-17-34-26_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250508/20250508-20-05-41/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-05-08-20-05-41_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -152,7 +152,9 @@ data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_delete_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_gear_switch_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
-
+data_polynomial_path = ColumnDataSource(data = {'plan_path_x':[],
+                                              'plan_path_y':[],
+                                              'plan_path_heading':[],})
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path')
@@ -177,6 +179,8 @@ fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='blac
 fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 fig1.circle('y_vec', 'x_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
+fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
+
 
 ### sliders config
 class LocalViewSlider:
@@ -198,6 +202,7 @@ class LocalViewSlider:
     self.use_state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="use_state_machine", min=0, max=1, value=0, step=1)
     self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
     self.path_plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="path_plan_method", min=0, max=10, value=1, step=1)
+    self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=2, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -217,13 +222,13 @@ class LocalViewSlider:
                         use_state_machine=self.use_state_machine,
                         state_machine=self.state_machine,
                         path_plan_method=self.path_plan_method,
-                        )
+                        swap_start_goal=self.swap_start_goal)
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
                     lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine,
-                    path_plan_method):
+                    path_plan_method,swap_start_goal):
 
   time0 = time.time()
 
@@ -522,7 +527,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
   # if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and data_valid['wave_msg_idx'] and data_valid['uss_percept_msg_idx'] and fus_parking_msg.select_slot_id > 0:
   # if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and data_valid['wave_msg_idx'] and data_valid['uss_percept_msg_idx']:
-  if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and force_plan==0:
+  if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx']:
 
     print('plan once')
     res = replay_simulation_hybrid_astar.PlanOnce(
@@ -541,96 +546,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         target_managed_slot_y_vec,
         target_managed_limiter_x_vec,
         target_managed_limiter_y_vec,
-        path_plan_method)
+        path_plan_method,
+        swap_start_goal)
 
     print('end')
-  elif force_plan:
-      print('plan once by force')
-
-      replay_simulation_hybrid_astar.SetLocalization(loc_msg_bytes)
-      replay_simulation_hybrid_astar.SetSlotInfo()
-
-      if data_valid['fus_objects_msg_idx']:
-        replay_simulation_hybrid_astar.SetFusionObject(fus_obj_msg_bytes)
-
-      if data_valid['fus_ground_line_msg_idx']:
-        replay_simulation_hybrid_astar.SetGroundLine(ground_line_perception_msg_bytes)
-
-      localization_index_map = bag_loader.get_localization_msg_index(max_time)
-      end_loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][localization_index_map])
-
-      end_x = end_loc_msg.position.position_boot.x - 1.1 * math.cos(end_loc_msg.orientation.euler_boot.yaw)
-      end_y = end_loc_msg.position.position_boot.y - 1.1 * math.sin(end_loc_msg.orientation.euler_boot.yaw)
-      end_theta = end_loc_msg.orientation.euler_boot.yaw
-
-      target_managed_slot_x_vec =[]
-      target_managed_slot_y_vec = []
-
-      # 0
-      local_x = 5
-      local_y = -1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-
-      #1
-      local_x = 5
-      local_y = 1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-      #2
-      local_x = -1.1
-      local_y = -1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-      #3
-      local_x = -1.1
-      local_y = 1.1
-
-      global_x, global_y = local2global(
-          local_x, local_y, end_x, end_y, end_theta)
-
-      target_managed_slot_x_vec.append(global_x)
-      target_managed_slot_y_vec.append(global_y)
-
-      # limit
-
-      target_managed_limiter_x_vec = [0,0]
-      target_managed_limiter_y_vec = [1.1,-1.1]
-
-
-      print('TriggerPlan')
-
-      end_pose = [end_x, end_y, end_theta]
-
-      time_to_start_time = 0
-      global astar_path_start_time
-      if astar_path_start_time >= 0.0:
-        time_to_start_time = bag_time - astar_path_start_time
-
-      print('time ', time_to_start_time)
-
-      update_path = replay_simulation_hybrid_astar.TriggerPlan(
-          force_plan, is_path_optimization,
-          is_cilqr_enable, is_reset, target_managed_slot_x_vec,
-          target_managed_slot_y_vec,
-          target_managed_limiter_x_vec,
-          target_managed_limiter_y_vec, end_pose,time_to_start_time)
-
-      if update_path:
-        astar_path_start_time = bag_time
-
   else:
     print('no plan call')
 
@@ -1124,6 +1043,23 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_gear_switch_node.data.update({
     'x_vec': gear_switch_node_x,
     'y_vec': gear_switch_node_y
+  })
+
+  # plot polynomial
+  polynomial_path = replay_simulation_hybrid_astar.GetPolynomialPath()
+  plan_path_x = []
+  plan_path_y = []
+  plan_path_heading = []
+
+  for i in range(len(polynomial_path)):
+     plan_path_x.append(polynomial_path[i][0])
+     plan_path_y.append(polynomial_path[i][1])
+     plan_path_heading.append(polynomial_path[i][2])
+
+  data_polynomial_path.data.update({
+    'plan_path_x': plan_path_x,
+    'plan_path_y': plan_path_y,
+    'plan_path_heading': plan_path_heading,
   })
 
   if (is_reset):

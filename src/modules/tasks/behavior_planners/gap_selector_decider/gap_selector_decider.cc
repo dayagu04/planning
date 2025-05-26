@@ -21,6 +21,7 @@
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
+#include "geometry_math.h"
 #include "refline.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_interface.h"
 // #include "gap_selector.pb.h"
@@ -87,6 +88,11 @@ GapSelectorDecider::GapSelectorDecider(
   _LB_T_.emplace_back(config_.lb_t_max);
   _LB_HEADING_ERROR_.emplace_back(config_.lb_heading_error_min);
   _LB_HEADING_ERROR_.emplace_back(config_.lb_heading_error_max);
+
+  _LH_T_.emplace_back(config_.lh_t_min);
+  _LH_T_.emplace_back(config_.lh_t_max);
+  _LH_HEADING_ERROR_.emplace_back(config_.lh_heading_error_min);
+  _LH_HEADING_ERROR_.emplace_back(config_.lh_heading_error_max);
 };
 
 bool GapSelectorDecider::Execute() {
@@ -303,12 +309,22 @@ GapSelectorStatus GapSelectorDecider::Update() {
           ->mutable_gap_selector_decider_output();
   bool is_lc_scene{false};
   bool is_lc_back_scene{false};
+  bool is_lh_scene{false};
+
   // lat avoid scene
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  double avoid_lat_offset = lateral_offset_decider_output.is_valid
-                                ? lateral_offset_decider_output.lateral_offset
-                                : 0.0;
+
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+
+  bool is_lc_hold = coarse_planning_info.target_state == kLaneChangeHold;
+
+  double avoid_lat_offset =
+      is_lc_hold ? lane_change_decider_output.lc_hold_state_lat_offset
+      : lateral_offset_decider_output.is_valid
+          ? lateral_offset_decider_output.lateral_offset
+          : 0.0;
   const auto &ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
   Point2D ego_cart_pose{ego_state_mgr->ego_carte().x,
@@ -321,7 +337,13 @@ GapSelectorStatus GapSelectorDecider::Update() {
   const double ego_v = ego_state_mgr->ego_v();
   std::vector<double> xp_ego_v{10.0, 15.0, 20.0, 25.0};
   double lat_ref_offset = interp(ego_v, xp_ego_v, config_.lat_ref_offset);
-  if (ego_frenet_pose.y > 1e-6) {
+  if (coarse_planning_info.target_state == kLaneChangeCancel) {
+    lat_ref_offset -= 0.05;
+    lat_ref_offset = std::max(lat_ref_offset, 0.0);
+  }
+  if (std::fabs(ego_frenet_pose.y) < lat_ref_offset) {
+    avoid_lat_offset += 0.;
+  } else if (ego_frenet_pose.y >= 1e-6) {
     avoid_lat_offset += lat_ref_offset;
   } else {
     avoid_lat_offset -= lat_ref_offset;
@@ -358,17 +380,49 @@ GapSelectorStatus GapSelectorDecider::Update() {
       lc_back_timer_ = 0.;
       is_lc_back_scene = true;
 
+    } else if (coarse_planning_info.target_state == kLaneChangeHold) {
+      lc_timer_ = 0.;                            // reset
+      lc_total_time_ = config_.default_lc_time;  // reset
+      use_ego_v_ = true;                         // reset
+      // cart pose and heading
+      // calc lc hold duration
+      const double ref_line_theta =
+          coarse_planning_info.reference_path->get_frenet_coord()
+              ->GetPathCurveHeading(ego_frenet_pose.x);
+      const double ego_theta_error =
+          std::fabs(ref_line_theta - ego_cart_heading) * kRad2Deg;
+
+      if (ego_theta_error < config_.lh_heading_error_min) {
+        lh_total_time_ = 0.0;
+
+      } else {
+        lh_total_time_ = interp(ego_theta_error, _LH_HEADING_ERROR_, _LH_T_);
+        lh_vel_ = ego_frenet_pose.y / lh_total_time_;
+      }
+      lh_timer_ = 0.0;
+      is_lh_scene = true;
+    } else if (coarse_planning_info.target_state == kLaneChangeExecution) {
+      lc_timer_ = 0.;
+      lc_total_time_ = config_.default_lc_time;
+      use_ego_v_ = false;
+      is_lc_scene = true;
+
     } else {
       lc_timer_ += 0.1;
       is_lc_scene = true;
     }
   } else if (coarse_planning_info.target_state == kLaneChangeExecution ||
              coarse_planning_info.target_state == kLaneChangeComplete) {
-    lc_timer_ += 0.1;
+    if (ego_v > 1e-2) {
+      lc_timer_ += 0.1;
+    }
     is_lc_scene = true;
   } else if (coarse_planning_info.target_state == kLaneChangeCancel) {
     lc_back_timer_ += 0.1;
     is_lc_back_scene = true;
+  } else if (coarse_planning_info.target_state == kLaneChangeHold) {
+    lh_timer_ += 0.1;
+    is_lh_scene = true;
   }
 
   gap_selector_decider_output.gap_selector_trustworthy = false;
@@ -390,16 +444,33 @@ GapSelectorStatus GapSelectorDecider::Update() {
     gap_selector_decider_output.gap_selector_trustworthy =
         remain_lc_time < 1.0 ? false : true;
 
+  } else if (is_lh_scene) {
+    double lc_end_s, remain_lh_time = lh_total_time_ - lh_timer_;
+    gap_selector_decider_output.gap_selector_trustworthy = true;
+    if (remain_lh_time < 1.0) {
+      GenerateLHTrajectory(traj_points, avoid_lat_offset);
+
+    } else {
+      RefineLCTime(&lc_end_s, &remain_lh_time, avoid_lat_offset);
+      FixedTimeQuinticPathPlan(avoid_lat_offset, lc_end_s, remain_lh_time,
+                              traj_points);
+    }
   } else if (is_lc_back_scene) {
     double lb_end_s{0.0}, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
-    if (remain_lb_time > 1.0) {
-      lb_target_l =
-          lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_;
+    if (ego_frenet_pose.y >= std::fabs(avoid_lat_offset)) {
+      if (ego_frenet_pose.y >= 1e-6) {
+        lb_target_l = std::max(avoid_lat_offset,
+            lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
+      } else {
+        lb_target_l = std::min(avoid_lat_offset,
+            lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
+      }
 
       FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
-                               traj_points);
-      gap_selector_decider_output.gap_selector_trustworthy = true;
+                                traj_points);
+      gap_selector_decider_output.gap_selector_trustworthy =
+          remain_lb_time < 1.0 ? false : true;
     }
   }
 
@@ -568,7 +639,9 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
 
 void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
                                       const double lat_avoid_offset) {
-  if (*remain_lc_time > 1.0 || use_ego_v_) {
+  const auto &ego_state_mgr =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  if (ego_state_mgr->ego_v() >= config_.min_ego_v_cruise && (*remain_lc_time > 1.0 || use_ego_v_ )) {
     return;
   }
 
@@ -2360,6 +2433,41 @@ void GapSelectorDecider::GenerateLHTrajectory(
   //   traj_point.t = i * delta_t;
   // }
   // return;
+}
+
+void GapSelectorDecider::GenerateLHTrajectory(
+    TrajectoryPoints &traj_points, const double lat_offset) {
+
+  const auto &cur_ref_path = session_->environmental_model()
+                                 .get_reference_path_manager()
+                                 ->get_reference_path_by_current_lane();
+
+  if (cur_ref_path == nullptr) {
+    return;
+  }
+
+  const auto &cur_ref_path_coor = cur_ref_path->get_frenet_coord();
+
+  if (cur_ref_path_coor == nullptr) {
+    return;
+  }
+
+  for (auto i = 0; i < traj_points.size(); i++) {
+    auto &traj_point = traj_points[i];
+    Point2D tmp_frenet_point{
+        traj_point.s,
+        lat_offset};
+    Point2D tmp_cart_point;
+
+    if (cur_ref_path_coor->SLToXY(tmp_frenet_point, tmp_cart_point)) {
+      LOG_ERROR("Restore Traj Result!");
+      traj_point.s = tmp_frenet_point.x;
+      traj_point.l = tmp_frenet_point.y;
+      traj_point.x = tmp_cart_point.x;
+      traj_point.y = tmp_cart_point.y;
+    }
+  }
+  return;
 }
 
 void GapSelectorDecider::GenerateLinearRefTrajectory(

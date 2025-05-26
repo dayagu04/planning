@@ -51,7 +51,7 @@ class CollisionDetectorInterface {
     return path_safe_check_ptr_;
   }
 
-  void Init();
+  void Init(const bool fold_mirror_flag);
   void Reset();
 
  private:
@@ -62,6 +62,10 @@ class CollisionDetectorInterface {
   std::shared_ptr<PathSafeChecker> path_safe_check_ptr_;
 
   std::shared_ptr<ApaObstacleManager> obs_manager_ptr_;
+
+  bool fold_mirror_flag_ = false;
+
+  bool init_flag_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

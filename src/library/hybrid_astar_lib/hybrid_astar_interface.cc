@@ -29,8 +29,7 @@ HybridAStarInterface::~HybridAStarInterface() {}
 
 int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
                                const float car_length, const float car_width,
-                               const float steer_ratio,
-                               const float wheel_base,
+                               const float steer_ratio, const float wheel_base,
                                const float min_turn_radius,
                                const float mirror_width) {
   config_.InitConfig();
@@ -129,7 +128,7 @@ void HybridAStarInterface::UpdateOutput() {
     return;
   }
 
-  PathClear(&coarse_traj_);
+  PathClear();
   search_state_ = AstarSearchState::SEARCHING;
 
   UpdateSearchBoundary();
@@ -156,43 +155,28 @@ void HybridAStarInterface::UpdateOutput() {
 
   // update future path decider
   FuturePathDecider future_path_decider;
-  future_path_decider.Process(
-      &coarse_traj_, request_.plan_reason, request_.start_, &edt_, &ref_line_,
-      vehicle_param_.min_turn_radius, request_.swap_start_goal,
-      request_.path_generate_method, config_.node_step,
-      &request_.first_action_request);
+  future_path_decider.Process(&ref_line_, vehicle_param_.min_turn_radius,
+                              config_.node_step, &edt_, request_);
 
   RSExpansionDecider::UpdateRSPathRequest(&request_);
 
   bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
 
   TargetPoseRegulator target_pose_regulator;
-  Pose2D center_line_pose;
-  // 揉库时，使用车位内pose判断车位内目标点障碍物距离.
-  if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
-    center_line_pose = request_.real_goal;
-  } else {
-    // 正常规划时，使用搜索目标点判断车位内目标点障碍物距离
-    center_line_pose = goal_state_;
-  }
-  target_pose_regulator.Process(&edt_, &request_, request_.start_,
-                                center_line_pose, vehicle_param_);
+  target_pose_regulator.Process(&edt_, &request_, request_.start_, goal_state_,
+                                vehicle_param_);
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
   DebugAstarRequestString(request_);
   hybrid_astar_->SetRequest(request_);
 
-  if (request_.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING ||
-      request_.path_generate_method ==
-          AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
-      request_.path_generate_method ==
-          AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
+  if (IsSearchBasedPlanning(request_.path_generate_method)) {
     PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
                                  is_ego_overlap_with_slot);
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::TRY_SEARCHING) {
     PathSearchForScenarioTry(target_pose_regulator);
-  } else if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
+  } else if (IsSamplingBasedPlanning(request_.path_generate_method)) {
     PathSamplingForScenarioRunning();
   }
 
@@ -201,7 +185,7 @@ void HybridAStarInterface::UpdateOutput() {
   ILOG_INFO << "hybrid astar finish, plan once time = "
             << response_end_time - response_start_time;
 
-  // hybrid_astar_->DebugPathString(&coarse_traj_);
+  // hybrid_astar_->DebugPathString(best_traj_;
 
   return;
 }
@@ -215,7 +199,6 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   }
   request_ = request;
   DebugAstarRequestString(request_);
-  hybrid_astar_->SetRequest(request_);
 
   // range
   UpdateSearchBoundary();
@@ -240,7 +223,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     return;
   }
 
-  PathClear(&coarse_traj_);
+  PathClear();
   search_state_ = AstarSearchState::SEARCHING;
 
   UpdateEDT();
@@ -256,18 +239,18 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                              request_.real_goal.theta));
   }
 
+  // update future path decider
+  FuturePathDecider future_path_decider;
+  future_path_decider.Process(&ref_line_, vehicle_param_.min_turn_radius,
+                              config_.node_step, &edt_, request_);
+
   dp_heuristic_generator_.GenerateDpMap(
       request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
 
   TargetPoseRegulator target_pose_regulator;
-  Pose2D center_line_pose;
-  if (IsEgoPoseAdjustPlanning(request_.path_generate_method)) {
-    center_line_pose = request_.real_goal;
-  } else {
-    center_line_pose = goal_state_;
-  }
-  target_pose_regulator.Process(&edt_, &request_, request_.start_,
-                                center_line_pose, vehicle_param_);
+  target_pose_regulator.Process(&edt_, &request_, request_.start_, goal_state_,
+                                vehicle_param_);
+  hybrid_astar_->SetRequest(request_);
 
   float lat_buffer = 0.1;
   float lon_buffer = 0.2;
@@ -280,6 +263,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     lon_buffer = 0.4;
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer, lon_buffer);
   }
+
+  DebugAstarRequestString(request_);
 
   std::pair<Pose2D, float> target_regulator_result;
   target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);
@@ -294,13 +279,13 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                               &coarse_traj_);
+                               &traj_candidates_[0]);
   } else if (request.path_generate_method ==
                  AstarPathGenerateType::GEAR_REVERSE_SEARCHING ||
              request.path_generate_method ==
                  AstarPathGenerateType::GEAR_DRIVE_SEARCHING) {
     hybrid_astar_->OneShotPathAttempt(map_bounds_, GetStartPoint(),
-                                      GetGoalPoint(), &coarse_traj_);
+                                      GetGoalPoint(), &traj_candidates_[0]);
   } else {
     Pose2D start_pose;
     Pose2D end_pose;
@@ -324,99 +309,33 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
       lon_min_sampling_dist = 0.4;
     }
 
-    hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, start_pose, end_pose,
-                                        lon_min_sampling_dist);
+    hybrid_astar_->PlanByRSPathSampling(&traj_candidates_[0], start_pose,
+                                        end_pose, lon_min_sampling_dist);
   }
 
   search_state_ = AstarSearchState::SUCCESS;
-  ILOG_INFO << "hybrid astar finish, point size " << coarse_traj_.x.size();
+
+  best_traj_ = &traj_candidates_[0];
+  ExtendPathToRealParkSpacePoint(best_traj_, request_.real_goal);
+
+  ILOG_INFO << "hybrid astar finish, point size " << best_traj_->x.size();
 
   return;
 }
 
 const AstarSearchState HybridAStarInterface::GetFullLengthPath(
     HybridAStarResult* result) {
-  if (coarse_traj_.x.size() < 1) {
+  if (best_traj_ == nullptr || best_traj_->x.size() < 1) {
     GetFallBackPath(result);
 
     return AstarSearchState::FAILURE;
   }
 
-  *result = coarse_traj_;
+  *result = *best_traj_;
 
   AstarSearchState search_state = AstarSearchState::SUCCESS;
 
   return search_state;
-}
-
-int HybridAStarInterface::ExtendPathToRealTargetPose(const Pose2D& real_end) {
-  ExtendPathToRealParkSpacePoint(&coarse_traj_, real_end);
-
-  return 0;
-}
-
-void HybridAStarInterface::ExtendPathToRealParkSpacePoint(
-    HybridAStarResult* result, const Pose2D& real_end) {
-  if (result->x.size() < 1) {
-    ILOG_INFO << "no path";
-    return;
-  }
-
-  Eigen::Vector2f astar_end_point;
-  astar_end_point[0] = result->x.back();
-  astar_end_point[1] = result->y.back();
-
-  // check path end
-  if (astar_end_point[0] <= real_end.x) {
-    return;
-  }
-
-  float extend_dist = real_end.DistanceTo(
-      Pose2D(astar_end_point[0], astar_end_point[1], result->phi.back()));
-  if (extend_dist < 0.1) {
-    return;
-  }
-
-  float phi = result->phi.back();
-  AstarPathGear gear = result->gear.back();
-  float astar_end_s = result->accumulated_s.back();
-  AstarPathType path_type = AstarPathType::LINE_SEGMENT;
-
-  Eigen::Vector2f unit_line_vec = Eigen::Vector2f(-1.0, 0.0);
-
-  float s = 0.1;
-  float ds = 0.1;
-
-  Eigen::Vector2f point;
-  while (s < extend_dist) {
-    point = astar_end_point + s * unit_line_vec;
-    result->x.emplace_back(point[0]);
-    result->y.emplace_back(point[1]);
-    result->phi.emplace_back(phi);
-    result->gear.emplace_back(gear);
-    result->type.emplace_back(path_type);
-    result->accumulated_s.emplace_back(astar_end_s + s);
-    result->kappa.emplace_back(0.0);
-
-    s += ds;
-  }
-
-  float x_diff = real_end.x - result->x.back();
-  float dist_diff = std::sqrt(x_diff * x_diff);
-  if (dist_diff > 1e-2) {
-    float last_s = result->accumulated_s.back();
-
-    // add end
-    result->x.emplace_back(real_end.x);
-    result->y.emplace_back(astar_end_point[1]);
-    result->phi.emplace_back(phi);
-    result->gear.emplace_back(gear);
-    result->type.emplace_back(path_type);
-    result->accumulated_s.emplace_back(last_s + dist_diff);
-    result->kappa.emplace_back(0);
-  }
-
-  return;
 }
 
 const std::vector<DebugAstarSearchPoint>&
@@ -424,13 +343,11 @@ HybridAStarInterface::GetChildNodeForDebug() {
   return hybrid_astar_->GetChildNodeForDebug();
 }
 
-const std::vector<Vec2df32>&
-HybridAStarInterface::GetPriorQueueNode() {
+const std::vector<Vec2df32>& HybridAStarInterface::GetPriorQueueNode() {
   return hybrid_astar_->GetQueuePathForDebug();
 }
 
-const std::vector<Vec2df32>&
-HybridAStarInterface::GetDelNodeQueueNode() {
+const std::vector<Vec2df32>& HybridAStarInterface::GetDelNodeQueueNode() {
   return hybrid_astar_->GetDelQueuePathForDebug();
 }
 
@@ -453,8 +370,8 @@ void HybridAStarInterface::GetRSPathHeuristic(
       const RSPathSegment* path_segment = &path.paths[j];
 
       for (int k = 0; k < path_segment->size; k++) {
-        tmp_path.emplace_back(Vec2df32(
-            path_segment->points[k].x, path_segment->points[k].y));
+        tmp_path.emplace_back(
+            Vec2df32(path_segment->points[k].x, path_segment->points[k].y));
       }
     }
 
@@ -497,19 +414,23 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
   // init
   result.clear();
 
+  if (best_traj_ == nullptr) {
+    return false;
+  }
+
   AStarPathPoint point;
   float kappa_bound = 0.15;
   bool kappa_change_too_much = false;
 
-  if (coarse_traj_.x.size() > 0) {
-    size_t x_size = coarse_traj_.x.size();
-    size_t y_size = coarse_traj_.y.size();
-    size_t phi_size = coarse_traj_.phi.size();
-    size_t gear_size = coarse_traj_.gear.size();
-    size_t accumulated_s_size = coarse_traj_.accumulated_s.size();
+  if (best_traj_->x.size() > 0) {
+    size_t x_size = best_traj_->x.size();
+    size_t y_size = best_traj_->y.size();
+    size_t phi_size = best_traj_->phi.size();
+    size_t gear_size = best_traj_->gear.size();
+    size_t accumulated_s_size = best_traj_->accumulated_s.size();
     float kappa_diff;
 
-    AstarPathGear first_point_gear = coarse_traj_.gear[0];
+    AstarPathGear first_point_gear = best_traj_->gear[0];
     for (size_t i = 0; i < x_size; i++) {
       if (i >= gear_size || i >= x_size || i >= y_size || i >= phi_size ||
           i >= accumulated_s_size) {
@@ -520,11 +441,11 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
         break;
       }
 
-      if (coarse_traj_.gear[i] == first_point_gear) {
-        point = AStarPathPoint(coarse_traj_.x[i], coarse_traj_.y[i],
-                               coarse_traj_.phi[i], coarse_traj_.gear[i],
-                               coarse_traj_.accumulated_s[i],
-                               coarse_traj_.type[i], coarse_traj_.kappa[i]);
+      if (best_traj_->gear[i] == first_point_gear) {
+        point = AStarPathPoint(best_traj_->x[i], best_traj_->y[i],
+                               best_traj_->phi[i], best_traj_->gear[i],
+                               best_traj_->accumulated_s[i],
+                               best_traj_->type[i], best_traj_->kappa[i]);
 
         result.emplace_back(point);
 
@@ -535,7 +456,7 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
 
       // check kappa
       if (i > 0) {
-        kappa_diff = coarse_traj_.kappa[i] - coarse_traj_.kappa[i - 1];
+        kappa_diff = best_traj_->kappa[i] - best_traj_->kappa[i - 1];
 
         if (std::fabs(kappa_diff) > kappa_bound) {
           kappa_change_too_much = true;
@@ -637,8 +558,12 @@ void HybridAStarInterface::GetRSPathInFullPath(
   return;
 }
 
-void HybridAStarInterface::PathClear(HybridAStarResult* path) {
-  path->Clear();
+void HybridAStarInterface::PathClear() {
+  best_traj_ = nullptr;
+  for (size_t i = 0; i < traj_candidates_.size(); i++) {
+    traj_candidates_.at(i).Clear();
+  }
+  search_time_ = 0.0;
 
   // ILOG_INFO << "reset path";
 
@@ -690,8 +615,8 @@ void HybridAStarInterface::GetRSPathForDebug(std::vector<float>& x,
   return;
 }
 
-const HybridAStarResult& HybridAStarInterface::GetConstFullLengthPath() const {
-  return coarse_traj_;
+const HybridAStarResult* HybridAStarInterface::GetConstFullLengthPath() const {
+  return best_traj_;
 }
 
 const ParkReferenceLine& HybridAStarInterface::GetConstRefLine() const {
@@ -701,11 +626,15 @@ const ParkReferenceLine& HybridAStarInterface::GetConstRefLine() const {
 void HybridAStarInterface::GetPolynomialPathForDebug(std::vector<float>& x,
                                                      std::vector<float>& y,
                                                      std::vector<float>& phi) {
-  for (size_t i = 0; i < coarse_traj_.x.size(); i++) {
-    if (coarse_traj_.type[i] == AstarPathType::QUNTIC_POLYNOMIAL) {
-      x.push_back(coarse_traj_.x[i]);
-      y.push_back(coarse_traj_.y[i]);
-      phi.push_back(coarse_traj_.phi[i]);
+  if (best_traj_ == nullptr) {
+    return;
+  }
+
+  for (size_t i = 0; i < best_traj_->x.size(); i++) {
+    if (best_traj_->type[i] == AstarPathType::QUNTIC_POLYNOMIAL) {
+      x.push_back(best_traj_->x[i]);
+      y.push_back(best_traj_->y[i]);
+      phi.push_back(best_traj_->phi[i]);
     }
   }
 
@@ -831,13 +760,14 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
         request_.path_generate_method ==
             AstarPathGenerateType::GEAR_REVERSE_SEARCHING) {
       hybrid_astar_->OneShotPathAttempt(map_bounds_, GetStartPoint(),
-                                        GetGoalPoint(), &coarse_traj_);
+                                        GetGoalPoint(), &traj_candidates_[i]);
 
       // check path
-      if (coarse_traj_.x.size() > 2) {
+      if (traj_candidates_[i].x.size() > 2) {
         ILOG_INFO << "path is single shot";
 
-        ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
+        ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
+                                       request_.real_goal);
         break;
       }
     }
@@ -847,21 +777,29 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                                 &coarse_traj_);
+                                 &traj_candidates_[i]);
 
-      ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
+      ExtendPathToRealParkSpacePoint(&traj_candidates_[i], request_.real_goal);
     }
 
     // check time
-    if (coarse_traj_.time_ms > config_.max_search_time_ms) {
+    search_time_ += traj_candidates_[i].time_ms;
+    if (search_time_ > config_.max_search_time_ms) {
+      ILOG_INFO << "time out";
       break;
     }
 
     // check path
-    if (coarse_traj_.x.size() > 1) {
+    if (request_.plan_reason == PlanningReason::FIRST_PLAN &&
+        traj_candidates_[i].gear_change_num <=
+            gear_switch_number_scenario_try_ &&
+        traj_candidates_[i].x.size() > 2) {
+      ILOG_INFO << "path gear is nice";
       break;
     }
   }
+
+  PathCandidateCompare();
 
   return;
 }
@@ -891,7 +829,10 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   target_regulator_goal_ = target_regulator_result.first;
   hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                             &coarse_traj_);
+                             &traj_candidates_[0]);
+
+  best_traj_ = &traj_candidates_[0];
+  gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
 
   return;
 }
@@ -914,7 +855,7 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
   float advised_lat_buffer_inside;
   float lon_buffer;
 
-  coarse_traj_.Clear();
+  best_traj_ = &traj_candidates_[0];
   HybridAStarResult path;
   path.Clear();
 
@@ -945,9 +886,8 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
       }
 
     } else {
-      hybrid_astar_->PlanByRSPathSampling(&path, GetStartPoint(),
-                                          GetGoalPoint(),
-                                          lon_min_sampling_length);
+      hybrid_astar_->PlanByRSPathSampling(
+          &path, GetStartPoint(), GetGoalPoint(), lon_min_sampling_length);
     }
 
     // check time
@@ -956,24 +896,24 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
     }
 
     // compare path
-    if (coarse_traj_.accumulated_s.size() < path.accumulated_s.size()) {
-      coarse_traj_ = path;
+    if (best_traj_->accumulated_s.size() < path.accumulated_s.size()) {
+      *best_traj_ = path;
     }
 
     // check path is long enough
-    if (coarse_traj_.accumulated_s.size() > 0 &&
-        coarse_traj_.accumulated_s.back() > lon_min_sampling_length - 0.1) {
+    if (best_traj_->accumulated_s.size() > 0 &&
+        best_traj_->accumulated_s.back() > lon_min_sampling_length - 0.1) {
       break;
     }
   }
 
-  if (coarse_traj_.x.size() <= 1) {
-    hybrid_astar_->CopyFallbackPath(&coarse_traj_);
+  if (best_traj_->x.size() <= 1) {
+    hybrid_astar_->CopyFallbackPath(best_traj_);
     ILOG_INFO << "copy fallback path";
   }
 
   ILOG_INFO << "hybrid astar finish, path point size = "
-            << coarse_traj_.x.size();
+            << best_traj_->x.size();
 
   return;
 }
@@ -981,7 +921,10 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
 const float HybridAStarInterface::GetLatBufferForInsideSlot(
     const float target_obs_dist, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
-  float safe_buffer = 0.0;
+  float safe_buffer = 0.1;
+  // For searching a solution easily, safe buffer should samller than obstacle
+  // distance.
+  float soft_buffer = 0.15;
 
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_inside.size();
        i++) {
@@ -989,18 +932,39 @@ const float HybridAStarInterface::GetLatBufferForInsideSlot(
 
     // ego is inside slot
     if (is_ego_overlap_with_slot) {
-      if (safe_buffer < ego_obs_dist && safe_buffer < target_obs_dist) {
+      if (safe_buffer < ego_obs_dist - soft_buffer &&
+          safe_buffer < target_obs_dist - soft_buffer) {
         break;
       }
     } else {
       // ego is outside slot
-      if (safe_buffer < target_obs_dist) {
+      if (safe_buffer < target_obs_dist - soft_buffer) {
         break;
       }
     }
   }
 
   return safe_buffer;
+}
+
+void HybridAStarInterface::PathCandidateCompare() {
+  best_traj_ = &traj_candidates_[0];
+  for (size_t i = 1; i < traj_candidates_.size(); i++) {
+    // best traj is invalid, update
+    if (best_traj_->x.size() < 2) {
+      best_traj_ = &traj_candidates_[i];
+      continue;
+    }
+
+    // current traj is better
+    if ((traj_candidates_[i].gear_change_num <=
+         best_traj_->gear_change_num - 2) &&
+        (traj_candidates_[i].x.size() > 1)) {
+      best_traj_ = &traj_candidates_[i];
+    }
+  }
+
+  return;
 }
 
 }  // namespace planning

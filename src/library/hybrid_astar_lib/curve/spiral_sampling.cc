@@ -108,7 +108,8 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
   // sampling for path end
   // sampling start point: move start point forward dist
   // (lon_min_sampling_length)
-  Pose2D sampling_end = start;
+  Pose2D sampling_start = start;
+  Pose2D sampling_end;
   sampling_end.y = 0.0;
   sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
@@ -135,7 +136,7 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     sampling_end.x += 0.1;
     cubic_spiral_path.clear();
 
-    if (!GetCubicSpiralPath(cubic_spiral_path, start, sampling_end,
+    if (!GetCubicSpiralPath(cubic_spiral_path, sampling_start, sampling_end,
                             spiral_gear)) {
       continue;
     }

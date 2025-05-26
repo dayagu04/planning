@@ -35,6 +35,7 @@ lat_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].lateral_motion_pl
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
 load_measure_distance_tool(fig1)
+load_measure_distance_tool(fig7)
 
 init_info_name = ["dbw status", "replan status", "lat err", "theta err", "lon err", "dist err", "init theta", "ego theta", "ref theta", "ref vel", "steer angle", "steer angle rate", "ego_lat_jerk"]
 init_info = ColumnDataSource(data = {'name':[], 'init info':[]})
@@ -114,6 +115,7 @@ f10_1 = fig10.line('center_line_s', 'center_line_curvature', source = lat_plan_d
 fig10.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'road radius')
 refline_kappa_radius = ColumnDataSource(data = {'refline_s':[], 'refline_curvature':[]})
 f10_2 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
+fig10.line('center_line_s', 'center_line_confidence', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'road confidence')
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
 hover10_1 = HoverTool(renderers=[f10_1], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
@@ -159,6 +161,9 @@ class LocalViewSlider:
     self.motion_plan_concerned_end_index = ipywidgets.IntText(value=lat_motion_plan_input0.motion_plan_concerned_index, description='motion_plan_concerned_end_index:')
     self.q_start_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_start_jerk",min=0.0, max=1000.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
     self.curv_factor_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "curv_factor",min=0.0, max=1.0, value=lat_motion_plan_input0.curv_factor, step=0.01)
+    self.expected_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "expected_acc",min=-5.0, max=5.0, value=0.0, step=0.01)
+    self.start_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "start_acc",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_acc, step=0.01)
+    self.end_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_acc",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_acc, step=0.01)
     self.end_ratio1_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio1",min=0.0, max=10.0, value=0.3, step=0.1)
     self.end_ratio2_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio2",min=0.0, max=10.0, value=0.3, step=0.1)
     self.end_ratio3_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio3",min=0.0, max=10.0, value=1.5, step=0.1)
@@ -208,6 +213,9 @@ class LocalViewSlider:
                                          motion_plan_concerned_end_index = self.motion_plan_concerned_end_index,
                                          q_start_jerk = self.q_start_jerk_slider,
                                          curv_factor = self.curv_factor_slider,
+                                         expected_acc = self.expected_acc_slider,
+                                         start_acc = self.start_acc_slider,
+                                         end_acc = self.end_acc_slider,
                                          end_ratio1 = self.end_ratio1_slider,
                                          end_ratio2 = self.end_ratio2_slider,
                                          end_ratio3 = self.end_ratio3_slider,
@@ -217,7 +225,7 @@ class LocalViewSlider:
 ### sliders callback
 def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
                     upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
-                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, end_ratio1, end_ratio2, end_ratio3, max_iter):
+                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter):
   g_is_display_enu = global_var.get_value('g_is_display_enu')
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -240,10 +248,12 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
   print("right_turn_light_state_available: ",vs_msg.right_turn_light_state_available)
   print("right_turn_light_state: ",vs_msg.right_turn_light_state)
   print("current_state:", lat_behavior_common.current_state)
-  if lat_behavior_common.current_state in [0, 1, 2, 15, 16, 17, 30, 31, 32, 45, 46, 47]:
-    print("Cruising")
-  else:
+  if lat_behavior_common.current_state in [1, 2, 3]:
     print("Lane Change")
+  elif lat_behavior_common.current_state == 4:
+    print("Lane Change Back")
+  else:
+    print("Cruising")
 
   try:
     refline_kappa_radius.data.update({
@@ -332,7 +342,8 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
     lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound,
                                               ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
                                               safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
-                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.0), end_ratio1, end_ratio2, end_ratio3, max_iter)
+                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.5), expected_acc,
+                                              start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()

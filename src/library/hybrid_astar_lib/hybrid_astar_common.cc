@@ -108,6 +108,10 @@ void DebugPolynomialPath(const std::vector<AStarPathPoint>& poly_path) {
 }
 
 void DebugPathString(const HybridAStarResult* result) {
+  if (result == nullptr) {
+    return;
+  }
+
   ILOG_INFO << "path x point size " << result->x.size() << " gear size "
             << result->gear.size() << "y size " << result->y.size()
             << "phi size " << result->phi.size() << "type size "
@@ -119,6 +123,70 @@ void DebugPathString(const HybridAStarResult* result) {
               << PathGearDebugString(result->gear[i])
               << ",path type = " << GetNodeCurveDebugString(result->type[i])
               << ", s = " << result->accumulated_s[i];
+  }
+
+  return;
+}
+
+void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
+                                    const Pose2D& real_end) {
+  if (result == nullptr || result->x.size() < 1) {
+    ILOG_INFO << "no path";
+    return;
+  }
+
+  Eigen::Vector2f astar_end_point;
+  astar_end_point[0] = result->x.back();
+  astar_end_point[1] = result->y.back();
+
+  // check path end
+  if (astar_end_point[0] <= real_end.x) {
+    return;
+  }
+
+  float extend_dist = real_end.DistanceTo(
+      Pose2D(astar_end_point[0], astar_end_point[1], result->phi.back()));
+  if (extend_dist < 0.1) {
+    return;
+  }
+
+  float phi = result->phi.back();
+  AstarPathGear gear = result->gear.back();
+  float astar_end_s = result->accumulated_s.back();
+  AstarPathType path_type = AstarPathType::LINE_SEGMENT;
+
+  Eigen::Vector2f unit_line_vec = Eigen::Vector2f(-1.0, 0.0);
+
+  float s = 0.1;
+  float ds = 0.1;
+
+  Eigen::Vector2f point;
+  while (s < extend_dist) {
+    point = astar_end_point + s * unit_line_vec;
+    result->x.emplace_back(point[0]);
+    result->y.emplace_back(point[1]);
+    result->phi.emplace_back(phi);
+    result->gear.emplace_back(gear);
+    result->type.emplace_back(path_type);
+    result->accumulated_s.emplace_back(astar_end_s + s);
+    result->kappa.emplace_back(0.0);
+
+    s += ds;
+  }
+
+  float x_diff = real_end.x - result->x.back();
+  float dist_diff = std::sqrt(x_diff * x_diff);
+  if (dist_diff > 1e-2) {
+    float last_s = result->accumulated_s.back();
+
+    // add end
+    result->x.emplace_back(real_end.x);
+    result->y.emplace_back(astar_end_point[1]);
+    result->phi.emplace_back(phi);
+    result->gear.emplace_back(gear);
+    result->type.emplace_back(path_type);
+    result->accumulated_s.emplace_back(last_s + dist_diff);
+    result->kappa.emplace_back(0);
   }
 
   return;

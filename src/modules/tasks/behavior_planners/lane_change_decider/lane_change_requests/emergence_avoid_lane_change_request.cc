@@ -25,7 +25,8 @@
 namespace planning {
 
 namespace {
-constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.33;
+constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.2;
+constexpr double kEmergencyAvoidanceHalfDistance = 0.65;
 constexpr double kEmergencyAvoidancelongitudinalDistanceThreshold = 100.0;
 constexpr int kInvalidAgentId = -1;
 constexpr double kEmergencySituationDuration = 0.4;
@@ -120,10 +121,10 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   }
   bool enable_left = llane && left_reference_path_;
   bool enable_right = rlane && right_reference_path_;
-  const bool is_left_lane_change_safe =
-      (enable_left && ComputeLcValid(LEFT_CHANGE));
-  const bool is_right_lane_change_safe =
-      (enable_right && ComputeLcValid(RIGHT_CHANGE));
+  const bool is_left_lane_change_safe = enable_left;
+      // (enable_left && ComputeLcValid(LEFT_CHANGE));
+  const bool is_right_lane_change_safe = enable_right;
+      // (enable_right && ComputeLcValid(RIGHT_CHANGE));
   const bool emergency_avoidance_valid =
       (is_left_lane_change_safe || is_right_lane_change_safe);
   bool lane_change_to_left = true;
@@ -165,11 +166,9 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to left "
             "\n");
       }
-      if (request_type_ != NO_CHANGE &&
-          (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-           (lc_status == kLaneChangeCancel &&
+      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane))))) {
+             lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
@@ -190,11 +189,9 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to right "
             "\n");
       }
-      if (request_type_ != NO_CHANGE &&
-          (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-           (lc_status == kLaneChangeCancel &&
+      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane))))) {
+             lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
@@ -254,12 +251,11 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     Reset();
     return;
   }
-  const double ego_left_edge = vehicle_param.max_width * 0.5;
-  const double ego_right_edge = vehicle_param.max_width * 0.5;
+
   const double lateral_left_offset =
-      ego_left_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
+  kEmergencyAvoidanceHalfDistance + kEmergencyAvoidanceLateralSafeDistanceThreshold;
   const double lateral_right_offset =
-      ego_right_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
+  kEmergencyAvoidanceHalfDistance + kEmergencyAvoidanceLateralSafeDistanceThreshold;
   bool has_emergency_leading_vehicle = false;
   int leading_vehicle_id_ = -1;
   double leading_vehicle_speed = std::numeric_limits<double>::max();
@@ -278,20 +274,20 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
       //     iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC;
       // if ((!object_type_static ||
       //      (front_vehicle_iter->second.type !=
-      //           Common::ObjectType::OBJECT_TYPE_COUPE &&
+      //           iflyauto::OBJECT_TYPE_COUPE &&
       //       front_vehicle_iter->second.type !=
-      //           Common::ObjectType::OBJECT_TYPE_TRUCK) ||
+      //           iflyauto::OBJECT_TYPE_TRUCK) ||
       //       function_info.function_mode() ==
       //       common::DrivingFunctionInfo::NOA) &&
       // 对静止车暂时不做处理
       if (front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
+              iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
           front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
           front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_CRASH_BARREL &&
+              iflyauto::OBJECT_TYPE_CTASH_BARREL &&
           front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
+              iflyauto::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
         continue;
       }
       const double long_dis = front_vehicle_iter->second.d_rel;
@@ -332,6 +328,7 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     }
   } else {
     emergency_situation_timetstamp_ = std::numeric_limits<double>::max();
+    is_emergency_avoidance_situation_ = false;
   }
 }
 

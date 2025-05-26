@@ -67,7 +67,7 @@ std::vector<Eigen::Vector4d> obs_line_list_;
 std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
 std::vector<Eigen::Vector2d> search_sequence_path_;
 // all search node, not only include: open + close, and include deleted node.
-std::vector<Eigen::Vector3d> all_searched_node_;
+std::vector<Eigen::Vector4d> all_searched_node_;
 std::vector<std::vector<Eigen::Vector2d>> rs_h_path_;
 std::vector<Eigen::Vector3d> footprint_circle_model_global_;
 std::vector<Eigen::Vector3d> footprint_circle_model_local_;
@@ -166,7 +166,9 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
         rs_path_.emplace_back(
             Eigen::Vector3d(global_position[0], global_position[1], heading));
       }
-      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL) {
+      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::CUBIC_POLYNOMIAL ||
+          result.type[i] == AstarPathType::SPIRAL) {
         polynomial_path_.emplace_back(
             Eigen::Vector3d(global_position[0], global_position[1], heading));
       }
@@ -206,6 +208,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
 
   all_searched_node_.clear();
   double is_safe = 0;
+  double is_gear_switch_node = 0;
   for (i = 0; i < all_search_node.size(); i++) {
     local_position[0] = all_search_node[i].pos.x;
     local_position[1] = all_search_node[i].pos.y;
@@ -213,9 +216,10 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
     global_position = ego_slot_info.l2g_tf.GetPos(local_position);
 
     is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+    is_gear_switch_node = all_search_node[i].gear_switch_point ? 1.0 : 0.0;
 
-    all_searched_node_.emplace_back(
-        Eigen::Vector3d(global_position[0], global_position[1], is_safe));
+    all_searched_node_.emplace_back(Eigen::Vector4d(
+        global_position[0], global_position[1], is_safe, is_gear_switch_node));
   }
 
   ILOG_INFO << "rs path copy ";
@@ -601,7 +605,7 @@ std::vector<Eigen::Vector3d> Update(
     std::vector<Eigen::Vector2d> global_park_space_points,
     const int plan_method,
     std::vector<double> obs_params, const bool trigger_plan,
-    const int parking_dir) {
+    const int parking_dir, const bool swap_start_goal, const int gear_request) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   EgoInfoUnderSlot ego_slot_info;
@@ -849,6 +853,29 @@ std::vector<Eigen::Vector3d> Update(
                                ego_slot_info.target_pose.heading);
     request.base_pose_ = Pose2D(0, 0, 0);
 
+    // enum class AstarPathGear {
+    //   NONE = 0,
+    //   DRIVE = 1,
+    //   REVERSE,
+    //   NORMAL,
+    //   PARKING,
+    //   MAX_NUM
+    // };
+    if (gear_request > 0) {
+      switch (gear_request) {
+        case 1:
+          request.first_action_request.gear_request = AstarPathGear::DRIVE;
+          break;
+        case 2:
+          request.first_action_request.gear_request = AstarPathGear::REVERSE;
+          break;
+        default:
+          request.first_action_request.gear_request = AstarPathGear::NONE;
+          break;
+      }
+      request.first_action_request.has_request = true;
+    }
+
     ILOG_INFO <<"planning goal";
     request.goal_.DebugString();
 
@@ -862,10 +889,9 @@ std::vector<Eigen::Vector3d> Update(
     }
     request.rs_request = RSPathRequestType::NONE;
     request.history_gear = AstarPathGear::NONE;
-    request.swap_start_goal = false;
+    request.swap_start_goal = swap_start_goal;
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
-    hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
     // hybrid_astar_interface_->UpdateEDTByObs(hybrid_astar_obs_);
 
@@ -954,7 +980,7 @@ const std::vector<Eigen::Vector2d> &GetSearchPathPoint() {
   return search_sequence_path_;
 }
 
-const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+const std::vector<Eigen::Vector4d> &GetAllSearchNode() {
   return all_searched_node_;
 }
 

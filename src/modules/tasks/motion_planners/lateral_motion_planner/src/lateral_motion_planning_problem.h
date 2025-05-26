@@ -9,6 +9,7 @@
 #include "lateral_motion_planner.pb.h"
 #include "lateral_motion_planning_cost.h"
 #include "lateral_motion_planning_model.h"
+#include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_weight.h"
 #include "spline.h"
 namespace pnc {
 namespace lateral_planning {
@@ -19,11 +20,12 @@ class LateralMotionPlanningProblem {
   uint8_t Update(const double end_ratio_for_qxy,
                  const double end_ratio_for_qtheta,
                  const double end_ratio_for_qjerk,
-                 const size_t motion_plan_concerned_start_index,
                  const double concerned_start_q_jerk, const double ego_vel,
+                 const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
                  planning::common::LateralPlanningInput &planning_input);
 
-  uint8_t Update(double end_ratio_for_qxy, double end_ratio_for_qtheta,
+  uint8_t Update(double expected_acc, double start_acc, double end_acc,
+                 double end_ratio_for_qxy, double end_ratio_for_qtheta,
                  double end_ratio_for_qjerk, double max_iter,
                  const size_t motion_plan_concerned_start_index,
                  const double concerned_start_q_jerk, const double ego_vel,

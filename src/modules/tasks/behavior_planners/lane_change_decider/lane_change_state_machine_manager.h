@@ -8,6 +8,7 @@
 #include "session.h"
 #include "task_interface/vision_longitudinal_behavior_planner_output.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
+#include "trajectory1d/third_order_time_optimal_trajectory.h"
 #include "virtual_lane.h"
 namespace planning {
 struct StateTransitionInfo {
@@ -70,6 +71,7 @@ struct LaneChangeStageInfo {
   bool lc_valid{false};
   std::string lc_back_reason{"none"};
   LaneChangeGapInfo lc_gap_info;
+  bool is_cancel_to_hold{false};
   void Reset() {
     should_premove = false;
     lc_invalid_reason = "none";
@@ -78,6 +80,7 @@ struct LaneChangeStageInfo {
     lc_back_reason = "none";
     lc_gap_info.front_node_id = -1;
     lc_gap_info.rear_node_id = -1;
+    is_cancel_to_hold = false;
   }
 };
 
@@ -201,6 +204,13 @@ class LaneChangeStateMachineManager {
 
   bool IsNeedCancelLCTargetLaneMergeToOriginLane();
 
+  ThirdOrderTimeOptimalTrajectory GenerateLatMaxDecelerationCurve(
+      const std::shared_ptr<ReferencePath> ref_path, const double p_end);
+
+  bool IsCancelToHold();
+  double CalculateLCHoldStateLatOffset() const;
+  bool IsHighPriorityCompleteMLC() const;
+
  private:
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
@@ -225,7 +235,10 @@ class LaneChangeStateMachineManager {
   double overlap_lane_virtual_id_ = 0;
   int propose_state_frame_nums_ = 0;
   int execution_state_frame_nums_ = 0;
+  int hold_state_frame_nums_ = 0;
+  int complete_state_frame_nums_ = 0;
   double lat_close_boundary_offset_ = 0;
+  double lc_hold_state_lat_offset_ = 0;
   const planning_data::DynamicAgentNode* target_lane_front_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;

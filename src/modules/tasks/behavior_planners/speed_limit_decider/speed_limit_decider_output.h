@@ -22,7 +22,8 @@ enum class SpeedLimitType {
   MAP_ON_RAMP = 12,
   INTERSECTION = 13,
   LANE_BORROW = 14,
-  NEAR_TFL = 15
+  NEAR_TFL = 15,
+  AVOID_AGENT = 16
 };
 
 class SpeedLimitDeciderOutput {
@@ -94,7 +95,8 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::NORMAL_KAPPA, SpeedLimitType::VRU_ROUND,
       SpeedLimitType::MERGE_ALC,    SpeedLimitType::MAP_NEAR_RAMP,
       SpeedLimitType::MAP_ON_RAMP,  SpeedLimitType::INTERSECTION,
-      SpeedLimitType::LANE_BORROW,  SpeedLimitType::NEAR_TFL};
+      SpeedLimitType::LANE_BORROW,  SpeedLimitType::NEAR_TFL,
+      SpeedLimitType::AVOID_AGENT};
 };
 
 }  // namespace planning

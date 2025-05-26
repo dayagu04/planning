@@ -68,7 +68,8 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   double safe_uss_remain_dist = 0.0;
 
   if (apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot_occupied_ratio < 0.05) {
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio < 0.05) {
     lat_buffer = 0.09;
     safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
   } else {
@@ -155,7 +156,7 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   using namespace pnc::geometry_lib;
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   auto& select_slot_global =
       ego_info_under_slot.slot.origin_corner_coord_global_;
@@ -313,14 +314,14 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 }
 
 const bool ParallelParkOutScenario::CheckFinished() {
-  const double slot_occupied_ratio =
-      apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot_occupied_ratio;
+  const double slot_occupied_ratio = apa_world_ptr_->GetSlotManagerPtr()
+                                         ->GetEgoInfoUnderSlot()
+                                         .slot_occupied_ratio;
 
-  const double heading_mag_deg =
-      std::fabs(apa_world_ptr_->GetSlotManagerPtr()
-                    ->ego_info_under_slot_.cur_pose.heading *
-                kRad2Deg);
+  const double heading_mag_deg = std::fabs(apa_world_ptr_->GetSlotManagerPtr()
+                                               ->GetEgoInfoUnderSlot()
+                                               .cur_pose.heading *
+                                           kRad2Deg);
 
   const bool static_condition =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
@@ -350,7 +351,7 @@ const bool ParallelParkOutScenario::GenTlane() {
   // |_______________|   right side
 
   EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   const double slot_length = ego_info_under_slot.slot.GetLength();
   const double slot_width = ego_info_under_slot.slot.GetWidth();
@@ -797,7 +798,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
 const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   // construct input
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
   GeometryPathInput path_planner_input;
   path_planner_input.tlane = tlane_;
   path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
@@ -902,8 +903,8 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
 }
 
 void ParallelParkOutScenario::Log() const {
-  const auto& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const auto& l2g_tf = ego_info_under_slot.l2g_tf;
 

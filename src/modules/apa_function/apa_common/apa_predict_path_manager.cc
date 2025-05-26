@@ -1,5 +1,6 @@
 #include "apa_predict_path_manager.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -47,6 +48,9 @@ void ApaPredictPathManager::Update(
   double path_length = 0.0;
   double proj_s = 0.0;
   int i = 0;
+  const double ego_x = measure_data_ptr->GetPos().x();
+  const double ego_y = measure_data_ptr->GetPos().y();
+  const double ego_phi = measure_data_ptr->GetHeading();
   for (i = 0; i < std::min(planning_output->trajectory.trajectory_points_size,
                            static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
        ++i) {
@@ -62,8 +66,7 @@ void ApaPredictPathManager::Update(
     }
 
     const double dist =
-        std::hypot(planning_pt.x - measure_data_ptr->GetPos().x(),
-                   planning_pt.y - measure_data_ptr->GetPos().y());
+        std::hypot(planning_pt.x - ego_x, planning_pt.y - ego_y);
     if (dist < min_dist) {
       min_index = i;
       min_dist = dist;
@@ -75,17 +78,27 @@ void ApaPredictPathManager::Update(
     return;
   }
 
-  bool control_err_big = false;
-  if (std::hypot(
-          measure_data_ptr->GetPos().x() -
-              planning_output->trajectory.trajectory_points[min_index].x,
-          measure_data_ptr->GetPos().y() -
-              planning_output->trajectory.trajectory_points[min_index].y) >
-      0.068) {
-    control_err_big = true;
+  const double match_pt_x =
+      planning_output->trajectory.trajectory_points[min_index].x;
+  const double match_pt_y =
+      planning_output->trajectory.trajectory_points[min_index].y;
+  const double match_pt_phi =
+      planning_output->trajectory.trajectory_points[min_index].heading_yaw;
+
+  phi_err_ =
+      pnc::geometry_lib::NormalizeAngle(ego_phi - match_pt_phi) * kRad2Deg;
+
+  lat_err_ = Eigen::Vector2d(ego_x - match_pt_x, ego_y - match_pt_y)
+                 .dot(Eigen::Vector2d(-std::sin(match_pt_phi),
+                                      std::cos(match_pt_phi)));
+
+  if (std::fabs(lat_err_) > apa_param.GetParam().max_lat_err ||
+      std::fabs(phi_err_) > apa_param.GetParam().max_phi_err) {
+    control_err_big_ = true;
   }
 
-  ILOG_INFO << "control_err_big: " << control_err_big;
+  ILOG_INFO << "lat_err: " << lat_err_ << ", phi_err: " << phi_err_
+            << ", control_err_big_: " << control_err_big_;
 
   const double predict_distance = std::min(3.0, path_length - proj_s + 1.86);
 
@@ -139,7 +152,7 @@ void ApaPredictPathManager::Update(
       // 最后一个点的s小于predict_distance，需要补全到predict_distance
       pnc::geometry_lib::PathPoint car_predict_pt;
       const double step = 0.1;
-      if (control_err_big) {
+      if (control_err_big_) {
         // 直线延长
         do {
           size_t n = predict_pt_vec_.size();

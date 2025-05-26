@@ -98,6 +98,14 @@ void ParkingScenario::UpdateStuckTime() {
   } else {
     frame_.pause_time = 0.0;
   }
+
+  if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    frame_.replan_fail_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.replan_fail_time = 0.0;
+  }
+
+  return;
 }
 
 const bool ParkingScenario::CheckPaused() const {
@@ -228,12 +236,13 @@ void ParkingScenario::GenPlanningPath() {
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
       apa_world_ptr_->GetSlotManagerPtr()
-          ->ego_info_under_slot_.slot_occupied_ratio;
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio;
 
   // send slot type to control
   planning_output_.trajectory.trajectory_points[2].distance =
       static_cast<double>(
-          apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot_type);
+          apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type);
 
   planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
@@ -263,10 +272,10 @@ const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
     const double lat_expand, const double lon_expand,
     const double heading_err) {
   const geometry_lib::PathPoint& ego_pose =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.cur_pose;
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().cur_pose;
 
   const ApaSlot& slot =
-      apa_world_ptr_->GetSlotManagerPtr()->ego_info_under_slot_.slot;
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot;
 
   if ((slot.IsPointInExpandSlot(ego_pose.pos, true, lat_expand, lon_expand) &&
        std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
@@ -317,7 +326,7 @@ const double ParkingScenario::CalRemainDistFromPath() {
 const double ParkingScenario::CalRemainDistFromObs(
     const double safe_dist, const double lat_buffer,
     const double extra_buffer_when_reversing, const double dynamic_lat_buffer,
-    const bool is_parallel_condition) {
+    const double dynamic_lon_buffer) {
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetUssObsAvoidancePtr();
@@ -339,7 +348,7 @@ const double ParkingScenario::CalRemainDistFromObs(
       0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
-    col_res.remain_dist_static = 3.68;
+    col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
   }
   double obs_pt_remain_dist_static = col_res.remain_dist_static - safe_dist;
 
@@ -350,9 +359,10 @@ const double ParkingScenario::CalRemainDistFromObs(
       dynamic_lat_buffer, 0.0, gjl_col_det_request);
 
   if (!col_res.col_flag) {
-    col_res.remain_dist_dynamic = 6.68;
+    col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
   }
-  double obs_pt_remain_dist_dynamic = col_res.remain_dist_dynamic - 1.168;
+  double obs_pt_remain_dist_dynamic =
+      col_res.remain_dist_dynamic - dynamic_lon_buffer;
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     uss_remain_dist -= extra_buffer_when_reversing;
@@ -372,17 +382,10 @@ const double ParkingScenario::CalRemainDistFromObs(
     frame_.stuck_by_dynamic_obs = false;
     return uss_remain_dist;
   } else {
-    if (!is_parallel_condition) {
-      ILOG_INFO << "perpendicular or tilt condition!";
-      if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
-        frame_.stuck_by_dynamic_obs = true;
-        return obs_pt_remain_dist_dynamic;
-      } else {
-        frame_.stuck_by_dynamic_obs = false;
-        return obs_pt_remain_dist_static;
-      }
+    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
+      frame_.stuck_by_dynamic_obs = true;
+      return obs_pt_remain_dist_dynamic;
     } else {
-      ILOG_INFO << "parallel condition! Currently don't need dynamic check!";
       frame_.stuck_by_dynamic_obs = false;
       return obs_pt_remain_dist_static;
     }
@@ -506,12 +509,14 @@ void ParkingScenario::ThreadClear() { return; }
 
 void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
-  std::shared_ptr<ApaSlotManager> sslot_manager =
+  std::shared_ptr<ApaSlotManager> slot_manager =
       apa_world_ptr_->GetSlotManagerPtr();
-  sslot_manager->ego_info_under_slot_.slot.release_info_
+  slot_manager->GetMutableEgoInfoUnderSlot()
+      .slot.release_info_
       .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
-  sslot_manager->ego_info_under_slot_.slot.release_info_
+  slot_manager->GetMutableEgoInfoUnderSlot()
+      .slot.release_info_
       .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
 

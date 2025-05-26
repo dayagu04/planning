@@ -39,7 +39,6 @@ namespace planning {
 #define DEBUG_NODE_GEAR_SWITCH_NUMBER (0)
 
 #define LOG_TIME_PROFILE (0)
-#define DEBUG_GJK (0)
 
 #define DEBUG_ONE_SHOT_PATH (0)
 #define DEBUG_ONE_SHOT_PATH_MAX_NODE (10000)
@@ -114,12 +113,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   const float rs_radius = vehicle_param_.min_turn_radius + 0.2;
 
   RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
-  bool need_anchor_point = false;
-  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    need_anchor_point = true;
-  }
-  if (!CalcRSPathToGoal(current_node, false, need_anchor_point, rs_request,
-                        rs_radius)) {
+  if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius)) {
     ILOG_INFO << " generate rs fail";
 
     return false;
@@ -1250,6 +1244,8 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       start, target, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
+  SetSamplingTarget(target);
+
   // load open set, pq
   start_node_->SetMultiMapIter(
       open_pq_.insert(std::make_pair(0.0, start_node_)));
@@ -1276,13 +1272,13 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   bool is_safe = false;
   float child_node_dist;
   float father_node_dist;
-  NodeShrinkType node_shrink_type;
   std::vector<AStarPathPoint> poly_path;
   Node3d polynomial_node;
   PolynomialPathErrorCode poly_path_fail_type;
   polynomial_node.Clear();
 
   PathComparator path_comparator;
+  path_comparator.SetHeuristicPose(request_);
 
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
@@ -1350,7 +1346,6 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     explored_rs_path_num++;
 
     for (size_t i = 0; i < next_node_num_; ++i) {
-      node_shrink_type =
           NextNodeGenerator(&new_node, current_node, i, full_path_gear_request);
       explored_node_num++;
 
@@ -1549,7 +1544,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
             << " ,collision time " << collision_check_time_ms_
-            << ", search fail= " << static_cast<int>(result->fail_type)
+            << ", gear switch num = " << result->gear_change_num
             << ", hybrid astar search time (ms)= " << astar_search_time;
 
   double astar_end_time = IflyTime::Now_ms();
@@ -1695,7 +1690,10 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
       start, end, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
+  SetSamplingTarget(end);
+
   PathComparator path_comparator;
+  path_comparator.SetHeuristicPose(request_);
 
   // load open set, pq
   start_node_->SetMultiMapIter(
@@ -2008,7 +2006,8 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
 
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
-            << " ,collision time " << collision_check_time_ms_;
+            << " ,collision time " << collision_check_time_ms_
+            << ", gear switch num = " << result->gear_change_num;
 
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
@@ -2351,9 +2350,7 @@ void HybridAStar::SetRequest(const AstarRequest& request) {
     config_.node_step = config_.perpendicular_slot_node_step;
   }
 
-  polynomial_sampling_->SetSearchGoal(request.goal_);
-  spiral_sampling_->SetSearchGoal(request.goal_);
-  rs_sampling_->SetSearchGoal(request.goal_);
+  SetSamplingTarget(request.goal_);
 
   return;
 }
@@ -2491,7 +2488,7 @@ const bool HybridAStar::IsNeedGearDriveSearch(const Pose2D& start) {
     return false;
   }
 
-  if (start.GetY() < -3.8 || start.GetY() > 3.8) {
+  if (start.GetY() < -5.0 || start.GetY() > 5.0) {
     ILOG_INFO << "start.GetY() =" << start.GetY();
     return false;
   }
@@ -2534,6 +2531,14 @@ void HybridAStar::DebugNodeList(const std::vector<Node3d*>& node_list) {
               << ", length: "
               << node_path_dist_resolution_ * node_list[i]->GetStepSize();
   }
+
+  return;
+}
+
+void HybridAStar::SetSamplingTarget(const Pose2D& pose) {
+  polynomial_sampling_->SetSearchGoal(pose);
+  spiral_sampling_->SetSearchGoal(pose);
+  rs_sampling_->SetSearchGoal(pose);
 
   return;
 }

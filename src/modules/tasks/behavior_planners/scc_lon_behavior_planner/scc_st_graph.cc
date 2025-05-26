@@ -78,8 +78,8 @@ bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
   }
   const auto &all_corners = agent_box.GetAllCorners();
   for (const auto &corner : all_corners) {
-    Point2D agent_sl{0.0, 0.0};
-    Point2D corner_sl{corner.x(), corner.y()};
+    planning::Point2D agent_sl{0.0, 0.0};
+    planning::Point2D corner_sl{corner.x(), corner.y()};
     if (!planned_path->XYToSL(corner_sl, agent_sl)) {
       continue;
     }

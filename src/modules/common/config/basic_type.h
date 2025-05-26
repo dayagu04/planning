@@ -616,8 +616,10 @@ class ReferencePath;
 struct CarReferenceInfo {
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
+  pnc::mathlib::spline k_s_spline;
   std::vector<double> x_vec;
   std::vector<double> y_vec;
+  std::vector<double> k_vec;
   std::vector<double> s_vec;
 };
 struct CoarsePlanningInfo {
@@ -733,6 +735,7 @@ struct LateralOffsetDeciderOutput {
   bool is_valid = false;
   double lateral_offset = 0.0;
   bool enable_bound = false;
+  std::vector<double> avoid_ids;
 
   // hmi
   int avoid_id = -1;

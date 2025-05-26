@@ -451,7 +451,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
 }
 
 Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
-                   const iflyauto::FusionOccupancyObject &occupancy_objects)
+                   iflyauto::ObjectType type)
     : id_(id),
       perception_id_(id),
       is_static_(true),
@@ -461,10 +461,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   fusion_source_ = 1;
 
   if (id_ > 7000000) {  // occupancy object
-    type_ = occupancy_objects.common_occupancy_info.type;
-    if (type_ < iflyauto::OBJECT_TYPE_OCC_EMPTY) {
-      type_ = iflyauto::OBJECT_TYPE_OCC_EMPTY;
-    }
+    type_ = type;
     source_type_ = SourceType::OCC;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
@@ -472,7 +469,9 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   if (perception_polygon_.is_convex() &&
       perception_polygon_.points().size() >= 3) {
     perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
-    if (perception_polygon_.area() < 0.01) {
+    if (perception_polygon_.area() < 0.01 &&
+        type_ != iflyauto::OBJECT_TYPE_OCC_COLUMN &&
+        type_ != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       valid_ = false;
     }
   } else {
@@ -489,15 +488,10 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   y_center_ = perception_bounding_box_.center_y();
   width_ = perception_bounding_box_.width();
   length_ = perception_bounding_box_.length();
-  yaw_ = planning_math::NormalizeAngle(
-      occupancy_objects.common_occupancy_info.heading_angle);
-  velocity_ = std::hypot(occupancy_objects.common_occupancy_info.velocity.x,
-                         occupancy_objects.common_occupancy_info.velocity.y);
-  velocity_angle_ =
-      std::atan2(occupancy_objects.common_occupancy_info.velocity.y,
-                 occupancy_objects.common_occupancy_info.velocity.x);
+
   acc_ = 0;
-  is_VRU_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) || (type_ == iflyauto::OBJECT_TYPE_OCC_CYCLIST);
+  is_VRU_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
+            (type_ == iflyauto::OBJECT_TYPE_OCC_CYCLIST);
   is_car_ = (type_ == iflyauto::OBJECT_TYPE_OCC_CAR);
 
   std::vector<planning_math::Vec2d> ego_polygon_points;

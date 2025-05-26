@@ -14,7 +14,7 @@ using namespace planning_math;
 
 constexpr double kPathSampleInterval = 1.0;
 constexpr double kExtendTime = 0.3;
-constexpr double kTimeBuffer = 0.5;
+constexpr double kTimeBuffer = 0.2;
 constexpr double kTimeResolution = 0.2;
 constexpr int32_t kMinPathPointSize = 2;
 constexpr double kPlanningHorizon = 5.0;

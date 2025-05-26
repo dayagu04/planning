@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250102/20250102-19-24-00/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2025-01-02-19-24-00_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250410/20250410-16-38-51/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-04-10-16-38-52_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250324/20250324-20-52-08/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-03-24-20-52-08_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -153,6 +153,11 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
     # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
     print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
     print("vel_tar = ", plan_msg.trajectory.target_reference.target_velocity)
+
+  if bag_loader.plan_hmi_msg['enable'] == True:
+    plan_hmi_msg = bag_loader.plan_hmi_msg['data'][index_map['plan_hmi_msg_idx']]
+    print("prepare state = ", plan_hmi_msg.apa_info.prepare_plan_state)
+    print("park dir = ", plan_hmi_msg.apa_info.planning_park_dir)
 
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]

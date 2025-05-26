@@ -718,7 +718,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
-                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[]}
+                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
@@ -738,6 +738,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       line_curvature = []
       d_poly_line_curvature = []
       line_s = []
+      line_confidence = []
       if g_is_display_enu:
         line_x = [virtual_lane_refline_points[j].local_point.x for j in range(virtual_lane_refline_points_size)]
         line_y = [virtual_lane_refline_points[j].local_point.y for j in range(virtual_lane_refline_points_size)]
@@ -764,6 +765,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
           line_y = [virtual_lane_refline_points[j].car_point.y for j in range(virtual_lane_refline_points_size)]
 
       line_s = [virtual_lane_refline_points[j].s for j in range(virtual_lane_refline_points_size)]
+      line_confidence = [virtual_lane_refline_points[j].confidence for j in range(virtual_lane_refline_points_size)]
       line_curvature = [max(min(1.0 / (virtual_lane_refline_points[j].curvature + 1e-6), 10000.0), -10000.0) for j in range(virtual_lane_refline_points_size)]
       try:
         d_poly_line_curvature = [max(min(1.0 / ((math.fabs(2 * d_poly[3] * (virtual_lane_refline_points[j].s - 50.0) + d_poly[2]) / math.pow(math.pow(2 * d_poly[3] * (virtual_lane_refline_points[j].s - 50.0) + d_poly[2], 2) + 1,1.5)) + 1e-6), 10000.0), -10000.0) for j in range(virtual_lane_refline_points_size)]
@@ -772,9 +774,10 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
-      lane_info['relative_id'] = lane.relative_id
-      lane_info['type'] = 0
+      lane_info['relative_id'] = [lane.relative_id for j in range(virtual_lane_refline_points_size)]
+      lane_info['type'] = [0]
       lane_info['line_s_vec'] = line_s
+      lane_info['confidence_vec'] = line_confidence
       lane_info['curvature_vec'] = line_curvature
       lane_info['d_poly_curvature_vec'] = d_poly_line_curvature
 
@@ -823,13 +826,14 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_mark_point_y = []
       lane_mark_loc_x = []
       lane_mark_loc_y = []
-      lane_info['line_x_vec'] = default_line_x
-      lane_info['line_y_vec'] = default_line_y
-      lane_info['relative_id'] = 1000
-      lane_info['type'] = 0
-      lane_info['line_s_vec'] = 0
-      lane_info['curvature_vec'] = 0
-      lane_info['d_poly_curvature_vec'] = 0
+      lane_info['line_x_vec'] = [0]
+      lane_info['line_y_vec'] = [0]
+      lane_info['relative_id'] = [1000]
+      lane_info['type'] = [0]
+      lane_info['line_s_vec'] = [0]
+      lane_info['curvature_vec'] = [0]
+      lane_info['d_poly_curvature_vec'] = [0]
+      lane_info['confidence_vec'] = [0]
       lane_info['lane_mark_vec'] = []
 
     lane_info['lane_mark_point_x'] = lane_mark_point_x
@@ -1853,36 +1857,6 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
                      2: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
                      3: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
                      4: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []}}
-  # obs_info = {'obstacles_x': [],
-  #             'obstacles_y': [],
-  #             'pos_x': [],
-  #             'pos_y': [],
-  #             'loc_x': [],
-  #             'loc_y': [],
-  #             'obstacles_vel': [],
-  #             'obstacles_acc': [],
-  #             'obstacles_tid': [],
-  #             'is_cipv': [],
-  #             'obs_label':[]
-  #             }
-  # localization_x = 0
-  # localization_y = 0
-  # if localization_info.pose.type == 1:
-  #   localization_x = localization_info.pose.enu_position.x
-  #   localization_y = localization_info.pose.enu_position.y
-  # elif localization_info.pose.type == 2:
-  #   localization_x = localization_info.pose.llh_position.x
-  #   localization_y = localization_info.pose.llh_position.y
-  # elif localization_info.pose.type == 3:
-  #   localization_x = localization_info.pose.local_position.x
-  #   localization_y = localization_info.pose.local_position.y
-  # elif localization_info.pose.type == 0:
-  #   localization_x = localization_info.pose.local_position.x
-  #   localization_y = localization_info.pose.local_position.y
-  # localization_x = localization_info.position.position_boot.x
-  # localization_y = localization_info.position.position_boot.y
-  # linear_velocity_from_wheel = localization_info.pose.linear_velocity_from_wheel
-  # localization_theta = localization_info.orientation.euler_boot.yaw
 
   trajectory_info = {'x':[],'y':[], 'obs_x': [], 'obs_y': [], 'r':[]}
   p_x = []
@@ -1891,8 +1865,7 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
   p_obs_y = []
   obs_id_num = len(prediction_obs_id)
   obs_num = len(obstacle_list)
-  # num = len(obstacle_list[0].trajectory.trajectory_point)
-  # print("num", num)
+
   for i in range(obs_num):
     obs_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
     if (obs_id_num > 0) and (obs_id not in prediction_obs_id):
@@ -1934,10 +1907,7 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
       # obs_info['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
       # obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
       # obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
-
       for j in range(len(obstacle_list[i].trajectory.trajectory_point)):
-        # local_x = obstacle_list[i].trajectory.trajectory_point[j].relative_position.x
-        # local_y = obstacle_list[i].trajectory.trajectory_point[j].relative_position.y
         global_x = obstacle_list[i].trajectory.trajectory_point[j].position.x
         global_y = obstacle_list[i].trajectory.trajectory_point[j].position.y
         global_yaw = obstacle_list[i].trajectory.trajectory_point[j].yaw
@@ -1983,22 +1953,22 @@ def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info,
             p_obs_y.append(obs_y)
             print("load_prediction_objects: localization_info error!")
 
-      # trajectory_info[track_id] = [p_x, p_y]
   trajectory_info['x']=p_x
   trajectory_info['y']=p_y
   trajectory_info['obs_x']=p_obs_x
   trajectory_info['obs_y']=p_obs_y
 
-  for i in range(len(trajectory_info['x'])):
-    index_object = (int)(i / 40)
-    index = (int)((i - index_object * 40) / 8)
-    if index > 4:
-      break
-    prediction_dict[index]['x'].append(trajectory_info['x'][i])
-    prediction_dict[index]['y'].append(trajectory_info['y'][i])
+  for j in range(len(trajectory_info['x'])):
+    index_object = (int)(j / 26)
+    if (j - 1 - index_object * 26) < 5:
+      index = 0
+    else:
+      index = (int)((j - 1 - index_object * 26) / 5)
+    prediction_dict[index]['x'].append(trajectory_info['x'][j])
+    prediction_dict[index]['y'].append(trajectory_info['y'][j])
     if obs_id_num > 0:
-      prediction_dict[index]['obs_x'].append(trajectory_info['obs_x'][i])
-      prediction_dict[index]['obs_y'].append(trajectory_info['obs_y'][i])
+      prediction_dict[index]['obs_x'].append(trajectory_info['obs_x'][j])
+      prediction_dict[index]['obs_y'].append(trajectory_info['obs_y'][j])
     else:
       prediction_dict[index]['obs_x'].append([])
       prediction_dict[index]['obs_y'].append([])
@@ -2268,6 +2238,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
     if g_is_display_enu:
       for j in range(groundline_size):
         groundline = ground_lines[j]
+        id = groundline.id
         type = groundline.type
         resource_type = groundline.resource_type
         single_groundline_x_vec = []
@@ -2284,7 +2255,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
         polygon_y = []
         lat_decision = "None"
         is_static = ""
-        ground_line_id = ground_line_id + 1
+        ground_line_id = id + 5000000
         groundline_id_vec.append(ground_line_id)
         try:
           obs_polygon = []
@@ -2321,6 +2292,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
         coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
         for j in range(groundline_size):
           groundline = ground_lines[j]
+          id = groundline.id
           type = groundline.type
           resource_type = groundline.resource_type
           single_groundline_x_vec = []
@@ -2338,7 +2310,7 @@ def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info
           polygon_y = []
           lat_decision = "None"
           is_static = ""
-          ground_line_id = ground_line_id + 1
+          ground_line_id = id + 5000000
           groundline_id_vec.append(ground_line_id)
           try:
             obs_polygon = []
@@ -3071,7 +3043,7 @@ def load_lat_common(plan_debug, planning_json):
   avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                         "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
                         "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l"]
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","emergency_avoid", "lateral_avoid_ids"]
   for key in avoid_debug_key:
     try:
       data_dict2[key] = planning_json[key]
@@ -3094,7 +3066,7 @@ def load_avoid(plan_debug, planning_json):
   avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                         "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
                         "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l"]
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","emergency_avoid","lateral_avoid_ids"]
   for key in avoid_debug_key:
     try:
       data_dict2[key] = planning_json[key]

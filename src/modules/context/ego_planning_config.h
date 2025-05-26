@@ -458,7 +458,7 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   double static_obs_buffer = 0.5;
   int centric_obs_frames = 10;
   double dense_obstacle_dist = 8.0;
-  double extend_obs_distance = 30.0;
+  double extend_obs_distance = 10.0;
 };
 
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
@@ -570,6 +570,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     ReadItem<double>(json, default_lc_time, "gap_selector", "default_lc_time");
+    ReadItem<double>(json, default_lh_time, "gap_selector", "default_lh_time");
     ReadItem<double>(json, collision_check_length_threshold, "gap_selector",
                      "collision_check_length_threshold");
     ReadItem<double>(json, lc_premove_time, "gap_selector", "lc_premove_time");
@@ -581,6 +582,13 @@ struct GapSelectorConfig : public EgoPlanningConfig {
                      "lb_heading_error_max");
     ReadItem<double>(json, lb_heading_error_min, "gap_selector",
                      "lb_heading_error_min");
+    ReadItem<double>(json, lh_t_max, "gap_selector", "lh_t_max");
+    ReadItem<double>(json, lh_t_min, "gap_selector", "lh_t_min");
+    ReadItem<double>(json, lh_heading_error_max, "gap_selector",
+                     "lh_heading_error_max");
+    ReadItem<double>(json, lh_heading_error_min, "gap_selector",
+                     "lh_heading_error_min");
+
     ReadItem<bool>(json, use_gs, "gap_selector", "use_gs");
     read_json_vec<double>(
         json, std::vector<std::string>{"gap_selector", "lat_ref_offset"},
@@ -590,14 +598,20 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   }
 
   double default_lc_time = 6.0;
+  double default_lh_time = 3.0;
   double collision_check_length_threshold = 2.2;
   double lc_premove_time = 1.5;
   double near_car_ttc = 0.2;
   bool use_ego_v = false;
   double lb_t_min = 1.5;
   double lb_t_max = 5.0;
+  double lh_t_min = 1.5;
+  double lh_t_max = 4.5;
+
   double lb_heading_error_min = 4.5;
   double lb_heading_error_max = 0.5;
+  double lh_heading_error_min = 0.5;
+  double lh_heading_error_max = 4.5;
   bool use_gs = true;
   std::vector<double> lat_ref_offset{0.0, 0.1, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;
@@ -780,9 +794,9 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
-    use_obstacle_prediction_model_in_planning = read_json_key<bool>(
-        json, "use_obstacle_prediction_model_in_planning",
-        use_obstacle_prediction_model_in_planning);
+    use_obstacle_prediction_model_in_planning =
+        read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
+                            use_obstacle_prediction_model_in_planning);
     base_nudge_distance =
         read_json_key<double>(json, "base_nudge_distance", base_nudge_distance);
     nudge_buffer_road_boundary =
@@ -849,7 +863,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     ReadItem<double>(json, hard_buffer2static_agent, "general_lateral_decider",
                      "hard_buffer2static_agent");
-
+    ReadItem<double>(json, bound2center_line_distance_thr, "general_lateral_decider",
+                     "bound2center_line_distance_thr");
     ReadItem<double>(json, soft_buffer2lane, "general_lateral_decider",
                      "soft_buffer2lane");
     ReadItem<double>(json, extra_soft_buffer2road, "general_lateral_decider",
@@ -895,14 +910,23 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "lc_second_dist_thr"},
         lc_second_dist_thr);
-    use_obstacle_prediction_model_in_planning = read_json_key<bool>(
-        json, "use_obstacle_prediction_model_in_planning",
-        use_obstacle_prediction_model_in_planning);
+    lc_finished_second_dist_thr = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "lc_finished_second_dist_thr"},
+        lc_finished_second_dist_thr);
+    use_obstacle_prediction_model_in_planning =
+        read_json_key<bool>(json, "use_obstacle_prediction_model_in_planning",
+                            use_obstacle_prediction_model_in_planning);
 
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
-                                                   "dynamic_ref_buffer"},
-                          dynamic_ref_buffer);
+                                                   "dynamic_lc_ref_buffer"},
+                          dynamic_lc_ref_buffer);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "dynamic_lc_finished_ref_buffer"},
+                          dynamic_lc_finished_ref_buffer);
     ReadItem<bool>(json, not_use_gap_flag, "general_lateral_decider",
                    "not_use_gap_flag");
 
@@ -959,14 +983,16 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                                  "relative_position_decrease_extra_buffer"},
         _relative_positon_decrease_extra_buffer);
 
-    read_json_vec<double>(json,
-                          std::vector<std::string>{"general_lateral_decider",
-                                                   "side_obstacle_relative_position_bp"},
-                          _side_obstacle_relative_position_bp);
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
-                                 "side_obstacle_relative_position_decrease_extra_buffer"},
+                                 "side_obstacle_relative_position_bp"},
+        _side_obstacle_relative_position_bp);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{
+            "general_lateral_decider",
+            "side_obstacle_relative_position_decrease_extra_buffer"},
         _side_obstacle_relative_position_decrease_extra_buffer);
 
     read_json_vec<double>(
@@ -1007,6 +1033,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
   double hard_buffer2static_agent = 0.15;
+  double bound2center_line_distance_thr = 0.1;
   double dynamic_obj_safe_buffer = 0.8;      //
   double min_obstacle_avoid_distance = 0.2;  // check it
   double lateral_bound_converge_speed = 1.0;
@@ -1039,7 +1066,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double ramp_limit_v = 19.44;
   bool ramp_limit_v_valid = false;
   double lc_second_dist_thr = 1.5;
-  std::vector<double> dynamic_ref_buffer{0.0, 0.1, 0.2, 0.3};
+  double lc_finished_second_dist_thr = 1.5;
+  std::vector<double> dynamic_lc_ref_buffer{0.0, 0.1, 0.2, 0.3};
+  std::vector<double> dynamic_lc_finished_ref_buffer{0.0, 0.05, 0.1, 0.2};
   bool not_use_gap_flag = true;
   double min_v_cruise = 5.0;
 
@@ -1067,8 +1096,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> _relative_v_decrease_extra_buffer = {0,   0.02, 0.05,
                                                            0.1, 0.15, 0.23};
   std::vector<double> _side_obstacle_relative_position_bp = {1, 2, 3, 4, 5};
-  std::vector<double> _side_obstacle_relative_position_decrease_extra_buffer = {0.1, 0.2,
-                                                                                0.3, 0.4, 0.5};
+  std::vector<double> _side_obstacle_relative_position_decrease_extra_buffer = {
+      0.1, 0.2, 0.3, 0.4, 0.5};
   double extra_lane_type_decrease_buffer = 0.05;
   double truck_decrease_extra_buffer = 0.05;
   double care_exceed_distance_with_blocked_obstacle = 2.0;
@@ -1326,6 +1355,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
+    ReadItem<double>(json, jerk_bound, "lat_motion_ilqr", "jerk_bound");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"},
         map_jerk_bound, map_jerk_bound);
@@ -1341,6 +1371,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_continuity, "lat_motion_ilqr", "q_continuity");
     ReadItem<double>(json, q_continuity_search, "lat_motion_ilqr",
                      "q_continuity_search");
+    ReadItem<double>(json, q_continuity_lane_change, "lat_motion_ilqr",
+                     "q_continuity_lane_change");
     ReadItem<double>(json, q_acc, "lat_motion_ilqr", "q_acc");
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
     ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
@@ -1472,8 +1504,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "motion_plan_concerned_start_index");
     ReadItem<size_t>(json, motion_plan_concerned_end_index, "lat_motion_ilqr",
                      "motion_plan_concerned_end_index");
-    ReadItem<double>(json, valid_perception_range, "lat_motion_ilqr",
-                     "valid_perception_range");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "valid_perception_range"}, valid_perception_range);
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"},
         map_qxy, map_qxy);
@@ -1521,13 +1553,14 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "q_jerk_ramp_close");
     ReadItem<double>(json, q_jerk_ramp_mid, "lat_motion_ilqr",
                      "q_jerk_ramp_mid");
-    ReadItem<double>(json, valid_perception_range_on_ramp, "lat_motion_ilqr",
-                     "valid_perception_range_on_ramp");
     ReadItem<double>(json, big_theta_thr, "lat_motion_ilqr", "big_theta_thr");
-    ReadItem<double>(json, q_jerk_for_big_theta, "lat_motion_ilqr",
-                     "q_jerk_for_big_theta");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_for_big_theta"},
+        q_jerk_for_big_theta);
     ReadItem<double>(json, path_backward_appended_length, "lat_motion_ilqr",
                      "path_backward_appended_length");
+    ReadItem<double>(json, max_steer_angle_dot, "lat_motion_ilqr",
+                     "max_steer_angle_dot");
   }
 
   bool warm_start_enable = true;
@@ -1535,17 +1568,19 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double delta_t = 0.2;
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
+  double max_steer_angle_dot = 200.0;
 
   double acc_bound = 1.5;
-  std::vector<double> map_jerk_bound{1.2, 1.0, 0.8, 0.25};
+  double jerk_bound = 1.0;
+  std::vector<double> map_jerk_bound{0.4, 0.35, 0.3, 0.25};
   double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
-  double q_acc_bound = 200.0;
-  double q_jerk_bound = 5000.0;
+  double q_acc_bound = 20000.0;
+  double q_jerk_bound = 500000.0;
 
-  std::vector<double> map_qsoft_bound{1000.0, 3000.0, 4000.0, 5000.0};
-  std::vector<double> map_qhard_bound{3000.0, 5000.0, 6000.0, 7000.0};
+  std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
+  std::vector<double> map_qhard_bound{500, 1000, 3000.0, 5000.0, 6000.0, 7000.0};
   double emergence_avoid_factor = 2.0;
   double intersection_avoid_factor = 2.0;
 
@@ -1554,6 +1589,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_theta = 15.0;
   double q_continuity = 0.;
   double q_continuity_search = 0.5;
+  double q_continuity_lane_change = 0.;
   double q_acc = 0.5;
   double q_jerk = 0.6;
 
@@ -1629,7 +1665,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_ramp = 0.02;
   double q_jerk_ramp_close = 45.0;
   double q_jerk_ramp_mid = 10.0;
-  double valid_perception_range_on_ramp = 30.0;
 
   double road_curvature_radius = 750.0;
   size_t curvature_change_index = 15;
@@ -1638,11 +1673,11 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double curvature_preview_step = 1.0;
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
-  double valid_perception_range = 60.0;
-  std::vector<double> map_qxy{80.0, 400.0, 500.0, 500.0};
-  std::vector<double> map_qtheta{1000.0, 5000.0, 5000.0, 20000.0};
-  std::vector<double> map_qjerk1{120.0, 90.0, 60.0, 500.0};
-  std::vector<double> map_qjerk2{40.0, 30.0, 30.0, 100.0};
+  std::vector<double> valid_perception_range{15.0, 30.0, 50.0, 70.0, 90.0};
+  std::vector<double> map_qxy{80.0, 80.0, 400.0, 500.0};
+  std::vector<double> map_qtheta{3000.0, 5000.0, 7000.0, 10000.0};
+  std::vector<double> map_qjerk1{45.0, 10.0, 100.0, 300.0, 600.0};
+  std::vector<double> map_qjerk2{10.0, 5.0, 50.0, 150.0, 400.0};
   double end_ratio_for_qrefxy = 1.0;
   double end_ratio_for_qreftheta = 1.0;
   double end_ratio_for_qjerk = 1.0;
@@ -1650,7 +1685,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double lc_end_ratio_for_second_qrefxy = 1.0;
   double lc_end_ratio_for_qreftheta = 1.0;
   double big_theta_thr = 1.0;
-  double q_jerk_for_big_theta = 2.0;
+  std::vector<double> q_jerk_for_big_theta{20.0, 5.0};
   double path_backward_appended_length = 2.5;
 };
 
@@ -2420,6 +2455,10 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_ref_pos_speed_adjust");
     ReadItem<bool>(json, enable_speed_adjust, "speed_adjust",
                    "enable_speed_adjust");
+    ReadItem<double>(json, q_acc_speed_adjust, "long_motion_ilqr",
+                     "q_acc_speed_adjust");
+    ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
+                     "q_jerk_speed_adjust");
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -2466,6 +2505,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
 
   bool enable_speed_adjust = true;
   double q_ref_pos_speed_adjust = 10.0;
+  double q_acc_speed_adjust = 10.0;
+  double q_jerk_speed_adjust = 5.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
@@ -2598,7 +2639,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     enable_constanct_velocity_in_predicted_vehicle_state = read_json_key<bool>(
         json, "enable_constanct_velocity_in_predicted_vehicle_state",
         enable_constanct_velocity_in_predicted_vehicle_state);
-    steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
     enable_delta_stitch_in_replan = read_json_key<bool>(
         json, "enable_delta_stitch_in_replan", enable_delta_stitch_in_replan);
     enable_ego_state_compensation = read_json_key<bool>(
@@ -2637,7 +2677,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double kEpsilon_v = 0.0;
   double kEpsilon_a = 0.0;
 
-  double steer_ratio = 16.5;
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
 };
@@ -2942,6 +2981,8 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
     ReadItem(json, cost_ego_overtake_has_collision_with_lower_bound,
              "speed_planning", "st_graph_searcher",
              "cost_ego_overtake_has_collision_with_lower_bound");
+    ReadItem(json, cutin_time_st_graph_threshold, "speed_planning",
+             "st_graph_searcher", "cutin_time_st_graph_threshold");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -3005,6 +3046,7 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
 
   double distance_ego_rear_edge_to_lower_bound_when_overtake = 5.0;
   double cost_ego_overtake_has_collision_with_lower_bound = 1.0;
+  double cutin_time_st_graph_threshold = 5.5;
 };
 
 struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
@@ -3040,12 +3082,39 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    ReadVector(json, ego_vel_table, "speed_planning", "agent_headway_decider",
+               "ego_vel_table");
+    ReadVector(json, ego_normal_thw_table_level_1,
+               "speed_planning", "agent_headway_decider",
+               "ego_normal_thw_table_level_1");
+    ReadVector(json, ego_normal_thw_table_level_2,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_2");
+    ReadVector(json, ego_normal_thw_table_level_3,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_3");
+    ReadVector(json, ego_normal_thw_table_level_4,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_4");
+    ReadVector(json, ego_normal_thw_table_level_5,
+                "speed_planning", "agent_headway_decider",
+                "ego_normal_thw_table_level_5");
   }
   double plan_time = 5.0;
   double dt = 0.2;
   double cutin_headway_threshold = 1.0;
   double smallest_headway_threshold = 1.2;
   double headway_step = 0.1;
+  std::vector<double> ego_vel_table = {0.0, 3.33, 16.67, 26.67, 36.67};
+  std::vector<double> ego_normal_thw_table_level_1 = {1.05, 1.14, 1.25, 1.5,
+                                                      2.0};
+  std::vector<double> ego_normal_thw_table_level_2 = {1.1, 1.16, 1.35, 2.1,
+                                                      2.2};
+  std::vector<double> ego_normal_thw_table_level_3 = {1.15, 1.18, 1.5, 2.2,
+                                                      2.4};
+  std::vector<double> ego_normal_thw_table_level_4 = {1.2, 1.4, 1.65, 2.3, 2.5};
+  std::vector<double> ego_normal_thw_table_level_5 = {1.2, 1.5, 1.75, 2.4,
+                                                      2.55};
   std::vector<std::pair<int32_t, double>> normal_headway_table = {
       {0, 1.1}, {1, 1.3}, {2, 1.5}, {3, 2.1}, {4, 2.8}};
   std::vector<std::pair<int32_t, double>> aggressive_headway_table = {

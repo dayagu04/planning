@@ -282,6 +282,9 @@ class ApaSlot final {
   Limiter limiter_;
 
   SlotReleaseInfo release_info_;
+
+  geometry_lib::GlobalToLocalTf g2l_tf_;
+  geometry_lib::LocalToGlobalTf l2g_tf_;
 };
 
 const std::string GetSlotTypeString(const SlotType type);

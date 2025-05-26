@@ -46,6 +46,8 @@ constexpr double kInitPosCostWeight = 2.0;
 constexpr double kCumuLateralDistanceCostWeight = 1.5;
 constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 0.5;
+constexpr double kLaneChangeOrderidDiffWeight = 0.5;
+
 constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kLaneLineSegmentLength = 5.0;
 constexpr double kConsiderLaneLineLength = 50.0;
@@ -112,6 +114,7 @@ void EgoLaneTrackManger::TrackEgoLane(
   is_select_ego_lane_with_plan_ = false;
   is_in_ramp_select_split_situation_ = false;
   is_on_road_select_ramp_situation_ = false;
+  current_fix_lane_order_id_ = -1;
 
   //判断自车是否处于分流场景
   ComputeIsSplitRegion(
@@ -260,6 +263,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
   bool is_lc_change =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete) ||
+       (coarse_planning_info.target_state == kLaneChangeHold) ||
        (coarse_planning_info.target_state == kLaneChangeCancel));
 
   if (is_lc_change && (lc_state != kLaneKeeping)) {
@@ -267,7 +271,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
       if (relative_id_lane != nullptr) {
         current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
             target_lane_vitrual_id, relative_id_lane, relative_id_lanes,
-            virtual_id_mapped_lane);
+            virtual_id_mapped_lane, true);
         if (current_relative_id_lane_mapping_cost <
             target_lane_maping_diff_total) {
           target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
@@ -306,7 +310,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
       if (relative_id_lane != nullptr) {
         current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
             origin_lane_virtual_id, relative_id_lane, relative_id_lanes,
-            virtual_id_mapped_lane);
+            virtual_id_mapped_lane, false);
         if (current_relative_id_lane_mapping_cost <
             origin_lane_maping_diff_total) {
           origin_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
@@ -494,6 +498,11 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     const std::vector<int>& order_ids,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  int origin_lane_virtual_id =
+      lane_change_decider_output.origin_lane_virtual_id;
+  int origin_lane_order_id = -1;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const bool is_in_lane_borrow_status = session_->planning_context()
@@ -502,11 +511,6 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;
-  const auto& plannig_init_point = ego_state->planning_init_point();
-  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
-                         plannig_init_point.lat_init_state.y()};
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
   const int fix_lane_virtual_id =
       lane_change_decider_output.fix_lane_virtual_id;
   const int lc_state = lane_change_decider_output.curr_state;
@@ -514,6 +518,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
   int last_track_virtual_id = 0;
   double last_ego_lane_curv = 0.0;
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
+                         plannig_init_point.lat_init_state.y()};
 
   if (!virtual_id_mapped_lane.empty()) {
     for (const auto& virtual_id_lane : virtual_id_mapped_lane) {
@@ -521,8 +528,11 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         last_track_virtual_id_lane = virtual_id_lane.second;
         last_track_virtual_id = virtual_id_lane.first;
       }
+      if (virtual_id_lane.second->get_virtual_id() == origin_lane_virtual_id) {
+        origin_lane_order_id = virtual_id_lane.second->get_order_id();
+      }
     }
-  } else {
+  } else { 
     return;
   }
 
@@ -532,9 +542,10 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
 
   const auto coarse_planning_info = session_->planning_context()
                                         .lane_change_decider_output()
-                                        .coarse_planning_info;
+                                        .coarse_planning_info;                    
   bool is_lc_change =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeHold) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_lc_back = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = (is_lc_change || is_lc_back);
@@ -542,6 +553,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
       is_lane_change ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
                      : kInitPosCostWeight;
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
+  double k_lane_change_order_id_diff_wegiht = 
+      (is_lane_change && origin_lane_order_id != -1 && !ego_in_split_region_) ? kLaneChangeOrderidDiffWeight : 0.0;
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
       order_ids.size() < 2) {
@@ -568,6 +581,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     double cumu_lat_dis_cost = 0.0;
     double init_pose_cost = 0.0;
     double crosslane_cost = 0.0;
+    double order_id_diff_cost = 0.0;
 
     if ((!is_lane_change) &&
         CalcCrosslaneStatus(relative_id_lane, lane_points)) {
@@ -679,18 +693,23 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
       init_pose_cost =
           std::fabs(ego_cart_frenet_in_lane.y) / kInitPosCostStandardThr;
     }
+
+    int lane_order_id = relative_id_lane->get_order_id();
+    order_id_diff_cost = std::fabs(lane_order_id - origin_lane_order_id);
     total_cost = lateral_distance_cost_weight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
-                 k_init_pos_cost_weight * init_pose_cost;
+                 k_init_pos_cost_weight * init_pose_cost + 
+                 k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
     std::vector<double> cost_list{cumu_lat_dis_cost, crosslane_cost,
-                                  init_pose_cost, total_cost};
-    lane_cost_list[relative_id_lane->get_order_id()] = cost_list;
+                                  init_pose_cost, order_id_diff_cost,total_cost};
+    lane_cost_list[lane_order_id] = cost_list;
 
     if (total_cost < clane_min_diff_total) {
       clane_min_diff_total = total_cost;
       current_order_id = relative_id_lane->get_order_id();
       last_track_ego_lane_ = relative_id_lane;
       relative_id_lane->set_relative_id(0);
+      current_fix_lane_order_id_ = relative_id_lane->get_order_id();;
     }
   }
 
@@ -1649,8 +1668,11 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
     int virtual_id, const std::shared_ptr<VirtualLane> current_relative_id_lane,
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
-        virtual_id_mapped_lane) {
+        virtual_id_mapped_lane,
+    const bool &is_fix) {
   const double default_lane_mapping_cost = 10.0;
+  double order_id_diff_cost = 0.0;
+  double k_lane_change_order_id_diff_wegiht = is_fix ? kLaneChangeOrderidDiffWeight : 0.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -1743,10 +1765,13 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
         }
       }
       point_nums = std::max(1, point_nums);
+      int lane_order_id = current_relative_id_lane->get_order_id();
+      order_id_diff_cost = std::fabs(lane_order_id - current_fix_lane_order_id_);
       if (point_nums < kLeastDefaultPointNums) {
         lane_mapping_cost = default_lane_mapping_cost;
       } else {
-        lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
+        lane_mapping_cost = 
+            std::fabs(total_lateral_offset / point_nums) + k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
       }
       return lane_mapping_cost;
     } else {

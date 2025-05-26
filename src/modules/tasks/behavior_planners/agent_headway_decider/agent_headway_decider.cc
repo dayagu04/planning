@@ -1,6 +1,8 @@
 #include "agent_headway_decider.h"
+#include <vector>
 
 #include "agent/agent.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "log.h"
@@ -15,7 +17,7 @@ namespace {
 constexpr double user_time_gap = 1.5;
 constexpr double lane_change_decrease_time_gap = 0.8;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
-constexpr double first_appear_time_gap = 1.0;
+constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = 2.78;
 constexpr double kTflVirtualAgentHW = 1.5;
 }  // namespace
@@ -56,7 +58,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const bool is_in_lane_change_execution =
-      lane_change_state == kLaneChangeExecution;
+      lane_change_state == kLaneChangeExecution ||
+      lane_change_state == kLaneChangeComplete;
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -118,8 +121,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double init_headway_by_ego =
         CalcAgentInitHeadway(ego_state_manager, agent);
     const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
+    double first_appear_time_gap = k_first_appear_time_gap;
     if (is_tfl_virtual_agent) {
       gear_headway = kTflVirtualAgentHW;
+      first_appear_time_gap = 0.5;
     }
     const double agent_init_headway =
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
@@ -156,8 +161,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
     if (is_neighbor_target_valid) {
       const double neighbor_target_headway = std::fmin(
-          (user_time_gap - neighbor_valid_decrease_time_gap),
-          current_headway);
+          (user_time_gap - neighbor_valid_decrease_time_gap), current_headway);
       agents_headway_map_[st_agent_id].current_headway =
           std::fmin(neighbor_target_headway + headway_step, gear_headway);
       continue;
@@ -228,7 +232,9 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
 void AgentHeadwayDecider::MatchHeadwayWithGearTable(
     double* const matched_desired_headway) const {
-  static auto headway_table = config_.normal_headway_table;
+  auto time_headway_table = config_.ego_normal_thw_table_level_3;
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
   // const auto gear = planning_data->system_manager_info().navi_ttc_gear();
   // get ttc through different gears
   auto time_headway_level = session_->environmental_model()
@@ -244,22 +250,38 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
 
   // const auto driving_style =
   //     planning_data->system_manager_info().driving_style();
-  const auto driving_style = DrivingStyle::NORMAL;
-
-  if (driving_style == DrivingStyle::AGGRESIVE) {
-    headway_table = config_.aggressive_headway_table;
-  } else if (driving_style == DrivingStyle::NORMAL) {
-    headway_table = config_.normal_headway_table;
-  } else if (driving_style == DrivingStyle::CONSERVATIVE) {
-    headway_table = config_.conservative_headway_table;
+  switch (time_headway_level) {
+    case 1:
+      time_headway_table = config_.ego_normal_thw_table_level_1;
+      break;
+    case 2:
+      time_headway_table = config_.ego_normal_thw_table_level_2;
+      break;
+    case 3:
+      time_headway_table = config_.ego_normal_thw_table_level_3;
+      break;
+    case 4:
+      time_headway_table = config_.ego_normal_thw_table_level_4;
+      break;
+    case 5:
+      time_headway_table = config_.ego_normal_thw_table_level_5;
+      break;
+    default:
+      time_headway_table = config_.ego_normal_thw_table_level_3;
+      break;
   }
 
-  if (time_headway_level > headway_table.size()) {
+  const double planning_init_vel =
+      ego_state_manager->planning_init_point().lon_init_state.v();
+
+  if (time_headway_level > time_headway_table.size()) {
     return;
   }
 
-  *matched_desired_headway = headway_table.at(time_headway_level - 1).second;
+  *matched_desired_headway =
+      planning::interp(planning_init_vel, config_.ego_vel_table, time_headway_table);
   JSON_DEBUG_VALUE("time_headway_level", time_headway_level);
+  JSON_DEBUG_VALUE("THW", *matched_desired_headway);
   return;
 }
 

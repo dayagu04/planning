@@ -68,11 +68,9 @@ void ApaSlotManager::Update(
   // 泊出
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
-      ILOG_INFO << "dist_id_map_.begin()->second = "
-                << dist_id_map_.begin()->second;
-      ILOG_INFO << "slots_map_[ego_info_under_slot_.id].slot_type_ = "
-                << static_cast<int>(
-                       slots_map_[ego_info_under_slot_.id].slot_type_);
+      ParkingLotCruiseProcess();
+
+      ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
       ego_info_under_slot_.id = dist_id_map_.begin()->second;
       ego_info_under_slot_.slot_type =
           slots_map_[ego_info_under_slot_.id].slot_type_;
@@ -232,8 +230,18 @@ const bool ApaSlotManager::IsEgoCloseToObs() {
   const Pose2D ego =
       Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
              measure_data_ptr_->GetHeading());
+
+  double lat_buffer = 0.0;
+  double lon_buffer = 0.0;
+  if (state_machine_ptr_->IsParkOutStatus()) {
+    lat_buffer = 0.05;
+    lon_buffer = 0.03;
+  } else {
+    lat_buffer = 0.268;
+    lon_buffer = 0.1;
+  }
   return col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
-      ego, 0.268, 0.1);
+      ego, lat_buffer, lon_buffer);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
@@ -315,9 +323,12 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   std::vector<double> lat_buffer_vec{0.23, 0.17, 0.14, 0.13};
 
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
-  TargetPoseDeciderResult res = tar_pose_decider.CalcTargetPose(
-      slot, lat_buffer_vec, 0.3,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true);
+  TargetPoseDeciderRequest tar_pose_decider_request(
+      lat_buffer_vec, 0.3, ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
+      true, false);
+
+  TargetPoseDeciderResult res =
+      tar_pose_decider.CalcTargetPose(slot, tar_pose_decider_request);
 
   if (!res.exist_target_pose) {
     ILOG_INFO << "slot is occupied";
@@ -478,6 +489,37 @@ const bool ApaSlotManager::IsTargetSlotReleaseByRule() const {
   }
 
   return false;
+}
+
+const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::RULE_BASED_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return SlotReleaseState::NOT_RELEASE;
+  }
+
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] ==
+      SlotReleaseState::RELEASE) {
+    return SlotReleaseState::RELEASE;
+  }
+
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+      SlotReleaseState::RELEASE) {
+    return SlotReleaseState::RELEASE;
+  }
+  else if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return SlotReleaseState::NOT_RELEASE;
+  } else if (ego_info_under_slot_.slot.release_info_
+                 .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
+             SlotReleaseState::COMPUTING) {
+    return SlotReleaseState::COMPUTING;
+  }
+
+  return SlotReleaseState::UNKOWN;
 }
 
 }  // namespace apa_planner

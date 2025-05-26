@@ -728,8 +728,6 @@ std::vector<Eigen::Vector3d> Update(
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
 
-    hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
-
     ILOG_INFO << "hybrid_astar_interface finish";
     GetPathFromHybridAstar(
         ego_slot_info,

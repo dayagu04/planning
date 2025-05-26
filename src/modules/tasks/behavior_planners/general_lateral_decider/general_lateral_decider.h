@@ -39,7 +39,7 @@ class GeneralLateralDecider : public Task {
 
  private:
   bool CalCruiseVelByCurvature(const double ego_v,
-                               const std::vector<double> &d_poly,
+                               const CoarsePlanningInfo& coars_planning_info,
                                double &cruise_v);
 
   void ConstructTrajPoints(TrajectoryPoints &traj_points);
@@ -98,7 +98,8 @@ class GeneralLateralDecider : public Task {
   iflyauto::LaneBoundaryType CalLaneBoundaryType(const LineDirection direction,
                                                  const double s) const;
   void PostProcessReferenceTrajBySoftBound(
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds);
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -178,6 +179,9 @@ class GeneralLateralDecider : public Task {
     double lat_buf_dis, bool is_nudge_left,
     double rear_lon_buf_dis, double front_lon_buf_dis,
     LatObstacleDecisionType lat_decision, int index);
+  void CalculateAvoidObstacles(
+    const std::vector<std::pair<double, double>> frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -199,6 +203,7 @@ class GeneralLateralDecider : public Task {
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
+  double min_road_radius_ = 10000.0;
   double cruise_vel_ = 0.0;
   double extra_lane_width_decrease_buffer_ = 0.0;
   double overlap_start_s_ = 0.0;

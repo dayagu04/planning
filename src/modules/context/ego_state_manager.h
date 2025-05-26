@@ -82,7 +82,7 @@ class EgoStateManager {
   // };
   double navi_timestamp() const { return navi_timestamp_; }  // todo
   double location_timestamp() const { return timestamp_us_; }
-  Pose location_enu() const { return location_enu_; };
+  QuaternionPose location_enu() const { return location_enu_; };
   PointLLH position_llh() const { return position_llh_; };
   EulerAngle euler_angle() const { return euler_angle_; }
   Pose2D ego_pose() const { return ego_pose_; };
@@ -145,7 +145,9 @@ class EgoStateManager {
  private:
   framework::Session *session_ = nullptr;
   EgoPlanningEgoStateManagerConfig config_;
-  double steer_ratio_;  // hack
+  double steer_ratio_ = 13.0;
+  double max_steer_angle_ = 7.33;
+  double max_delta_ = 0.56;
   double cruise_routing_speed_;
   double cruise_searching_speed_;
   double rads_cruise_speed_;
@@ -161,7 +163,7 @@ class EgoStateManager {
   uint64_t timestamp_us_ = 0;
   uint64_t timestamp_us_last_ = 0;
   uint32_t ego_gear_;
-  Pose location_enu_;
+  QuaternionPose location_enu_;
   PointLLH position_llh_;
   EulerAngle euler_angle_;  // 车身姿态yaw, pitch, roll
   Pose2D ego_pose_;

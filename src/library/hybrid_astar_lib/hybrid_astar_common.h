@@ -340,4 +340,7 @@ void DebugPathString(const HybridAStarResult* result);
 
 std::string GetNodeCurveDebugString(const AstarPathType type);
 
+void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
+                                    const Pose2D& real_end);
+
 }  // namespace planning

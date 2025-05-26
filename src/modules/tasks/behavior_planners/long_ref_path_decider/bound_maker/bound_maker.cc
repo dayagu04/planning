@@ -302,8 +302,8 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     const double s_safe = max_deceleration_curve.Evaluate(0, t);
     const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
     const double agent_s = corridor_upper_point.s();
-    const double vel = virtual_acc_curve->Evaluate(1, t);
-    const double brake_buffer = vel * kBrakeDelayTimeBuffer;
+    // const double vel = virtual_acc_curve->Evaluate(1, t);
+    const double brake_buffer = init_lon_state_[i] * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
     if (target_value.target_type() == TargetType::kFollow ||
         target_value.target_type() == TargetType::kNeighborYield ||

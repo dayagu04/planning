@@ -908,7 +908,8 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
                              bool is_shifted = true);
 
 const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
-                                     const uint8_t gear);
+                                     const uint8_t gear,
+                                     const bool is_arc2_radius_given = false);
 
 const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
                         const double lat_err, const double heading_err);

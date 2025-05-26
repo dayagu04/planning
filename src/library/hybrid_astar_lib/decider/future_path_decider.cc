@@ -41,33 +41,35 @@ void FuturePathDecider::Clear() {
   return;
 }
 
-void FuturePathDecider::Process(
-    const HybridAStarResult *history_path, const PlanningReason plan_reason,
-    const Pose2D &ego_pose, EulerDistanceTransform *edt,
-    const ParkReferenceLine *ref_line, const float min_turn_radius,
-    const bool swap_start_goal, const AstarPathGenerateType path_generate_type,
-    const float sampling_lon_resolution,
-    ParkFirstActionRequest *future_path_request) {
+void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
+                                const float min_turn_radius,
+                                const float sampling_lon_resolution,
+                                EulerDistanceTransform *edt,
+                                AstarRequest &request) {
   if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
-    future_path_request->Clear();
+    request.first_action_request.Clear();
     return;
   }
 
   min_turn_radius_ = min_turn_radius;
-  swap_start_goal_ = swap_start_goal;
-  path_generate_type_ = path_generate_type;
-  gear_request_ = future_path_request->gear_request;
+  swap_start_goal_ = request.swap_start_goal;
+  path_generate_type_ = request.path_generate_method;
+  gear_request_ = request.first_action_request.gear_request;
   sampling_lon_resolution_ = sampling_lon_resolution;
   path_inference_lat_buffer_ = 0.1;
   Clear();
 
   edt->UpdateSafeBuffer(0.01, 0.01, 0.4);
 
-  CalcDriveDistByLineModel(ego_pose, edt, ref_line);
+  CalcDriveDistByLineModel(request.start_, edt, ref_line);
 
-  CalcDriveDistByCircleModel(ego_pose, edt);
+  // If ego need zigzag path to adjust pose, use line model to estimate path
+  // length.
+  if (!IsNeedZigZagPathToAdjustPose(request)) {
+    CalcDriveDistByCircleModel(request.start_, edt);
+  }
 
-  UpdateFuturePathRequest(future_path_request);
+  UpdateFuturePathRequest(&request.first_action_request);
 
   return;
 }
@@ -115,7 +117,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
       future_drive_dist_info_.gear_drive_path[i][1] = obs_dist;
     }
 
-    if (obs_dist < 0.05) {
+    if (obs_dist < 0.001) {
       break;
     }
 
@@ -139,7 +141,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
       future_drive_dist_info_.gear_reverse_path[i][1] = obs_dist;
     }
 
-    if (obs_dist < 0.05) {
+    if (obs_dist < 0.001) {
       break;
     }
     s += point_resolution_;
@@ -444,10 +446,6 @@ void FuturePathDecider::UpdatePathDistInfo(
 
     if (obs_dist < path_dist_info[i][1]) {
       path_dist_info[i][1] = obs_dist;
-    }
-
-    if (obs_dist < 0.05) {
-      break;
     }
   }
 

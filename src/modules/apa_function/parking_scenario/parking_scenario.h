@@ -171,6 +171,7 @@ class ParkingScenario {
       stuck_obs_time = 0.0;
       pause_time = 0.0;
       dynamic_plan_time = 0.0;
+      replan_fail_time = 0.0;
       remain_dist_path = 5.01;
       remain_dist_obs = 5.01;
       remain_dist_col_det = 5.01;
@@ -239,6 +240,8 @@ class ParkingScenario {
     double stuck_obs_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
+    // If replan fail time is long, set PARKING_FAILED.
+    double replan_fail_time = 0.0;
     // remain dist for path
     double remain_dist_path = 5.01;
     // remain dist for obs
@@ -369,7 +372,7 @@ class ParkingScenario {
       const double lat_buffer = apa_param.GetParam().lat_inflation,
       const double extra_buffer_when_reversing = 0.068,
       const double dynamic_lat_buffer = 0.368,
-      const bool is_parallel_condition = false);
+      const double dynamic_lon_buffer = 1.168);
   virtual const bool PostProcessPath();
 
   // check if need replan

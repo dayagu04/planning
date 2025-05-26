@@ -47,6 +47,7 @@ constexpr double kObsFilterVel = 2.5;
 constexpr double kBlockHeading = 0.17;
 constexpr double kCheckTurningDistance = 10.0;
 constexpr double kMaxCentricOffset = 0.75;
+constexpr double kBackNeededDistance = 5.0;
 };  // namespace
 
 namespace planning {
@@ -150,12 +151,12 @@ void LaneBorrowDecider::Update() {
     }
 
     case LaneBorrowStatus::kLaneBorrowBackOriginLane: {
-      if (CheckIfLaneBorrowBackOriginLaneToNoBorrow()) {
-        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
+      if (CheckIfLaneBorrowBackOriginToLaneBorrowCrossing()) {
+        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowCrossing;
       } else if (CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving;
-      } else if (CheckIfLaneBorrowBackOriginToLaneBorrowCrossing()) {
-        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowCrossing;
+      } else if (CheckIfLaneBorrowBackOriginLaneToNoBorrow()) {
+        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
       }
       break;
     }
@@ -206,6 +207,10 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
+  if (!last_static_blocked_obj_id_vec_.empty() && !static_blocked_obj_id_vec_.empty() &&
+      last_static_blocked_obj_id_vec_[0] == static_blocked_obj_id_vec_[0]) {
+    return false;
+  }
 
   for (const auto& obstacle : obstacles) {
     const auto& id = obstacle->obstacle()->id();
@@ -300,19 +305,6 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToNoBorrow() {
 bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   UpdateJunctionInfo();
 
-  if ((forward_solid_start_dis_ < kMinDisToSolidLane &&
-       forward_solid_start_dis_ > 0) ||
-      (distance_to_cross_walk_ < kMinDisToCrossWalk &&
-       distance_to_cross_walk_ > 0.0) ||
-      (distance_to_stop_line_ < kMinDisToStopLine &&
-       distance_to_stop_line_ > 0.0) ||
-      (dis_to_traffic_lights_ < kMinDisToTrafficLight &&
-       dis_to_traffic_lights_ > 0.0)) {
-    LOG_DEBUG("Ego car is near junction");
-    lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
-    return false;
-  }
-
   if (!UpdateLaneBorrowDirection()) {
     return false;
   }
@@ -322,6 +314,20 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   }
 
   if (!ObstacleDecision()) {
+    return false;
+  }
+
+  if ((forward_solid_start_dis_ <
+           obs_end_s_ - ego_frenet_boundary_.s_start + kBackNeededDistance &&
+       forward_solid_start_dis_ > 0) ||
+      (distance_to_cross_walk_ < kMinDisToCrossWalk &&
+       distance_to_cross_walk_ > 0.0) ||
+      (distance_to_stop_line_ < kMinDisToStopLine &&
+       distance_to_stop_line_ > 0.0) ||
+      (dis_to_traffic_lights_ < kMinDisToTrafficLight &&
+       dis_to_traffic_lights_ > 0.0)) {
+    LOG_DEBUG("Ego car is near junction");
+    lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
     return false;
   }
 
@@ -396,13 +402,11 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
       }
     }
     // TODO: concern more scene
-    if (frenet_obstacle_sl.l_end < left_width &&
-        frenet_obstacle_sl.l_start > -right_width) {
-      if (!obstacle->obstacle()->is_static()) {
-        continue;
-      }
+    if (frenet_obstacle_sl.l_end < -right_width ||
+        frenet_obstacle_sl.l_start > left_width) {  // away from cur lane
+      continue;
     } else {
-      if (!obstacle->obstacle()->is_static()) {
+      if (!obstacle->obstacle()->is_static()) {  // part in lane
         continue;
       }
     }
@@ -542,8 +546,11 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
     const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
   const double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
-
-  if (std::fabs(obs_center_l) <= kMaxCentricOffset) {
+  double scale = 1.0;
+  if (lane_borrow_status_ != kNoLaneBorrow) {
+    scale = 0.5;
+  }
+  if (std::fabs(obs_center_l) <= scale * kMaxCentricOffset) {
     if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {
       obs_direction_map_[obs_id].second += 1;
       return obs_direction_map_[obs_id].first;
@@ -551,7 +558,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
       obs_direction_map_[obs_id].first = NO_BORROW;
       return NO_BORROW;
     }
-  } else if (obs_center_l < -kMaxCentricOffset) {
+  } else if (obs_center_l < -scale * kMaxCentricOffset) {
     obs_direction_map_[obs_id].first = LEFT_BORROW;
     obs_direction_map_[obs_id].second = 0;
     return LEFT_BORROW;
@@ -578,22 +585,15 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   // # Accumulate lane segment lengths.
   // Record current segment type and break loop when exceeding vehicle
   // wheelbase.
-  for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-    lane_line_length += left_lane_boundarys.type_segments[i].length;
-    if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
-      left_lane_boundary_type = left_lane_boundarys.type_segments[i].type;
+  const auto& lane_points = current_lane_ptr_->lane_points();
+  for (int i = 0; i < lane_points.size(); i++) {
+    lane_line_length = lane_points[i].s;
+    if (lane_line_length > ego_frenet_boundary_.s_end) {
+      left_lane_boundary_type = lane_points[i].left_lane_border_type;
+      right_lane_boundary_type = lane_points[i].right_lane_border_type;
       break;
     }
   }
-  lane_line_length = 0.0;
-  for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-    lane_line_length += right_lane_boundarys.type_segments[i].length;
-    if (lane_line_length > vehicle_param.front_edge_to_rear_axle) {
-      right_lane_boundary_type = right_lane_boundarys.type_segments[i].type;
-      break;
-    }
-  }
-
   // If the lane marking is not left dashed/right solid or double dashed, return
   // False.
   if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
@@ -632,7 +632,8 @@ bool LaneBorrowDecider::IsLaneTypeDashedOrMixed(
     const iflyauto::LaneBoundaryType& type) {
   return type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
          type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
-         type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED;
+         type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
+         type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
 }
 
 void LaneBorrowDecider::UpdateJunctionInfo() {
@@ -709,6 +710,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
     // Calculate the total width that can be borrowed from the left lane
     left_left_bounds_l =
         current_left_lane_width + neighbor_right_width + neighbor_left_width;
+    if_left_turn_center_ = true;
     safe_to_left_lane_borrow =
         IsSafeForPath(left_left_bounds_l, left_right_bounds_l);
 
@@ -732,6 +734,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
         right_lane_ptr_->width(vehicle_param.front_edge_to_rear_axle);
     right_right_bounds_l =
         -current_right_lane_width - neighbor_left_width - neighbor_right_width;
+    if_left_turn_center_ = false;
     safe_to_right_lane_borrow =
         IsSafeForPath(right_left_bounds_l, right_right_bounds_l);
     target_right_l = std::max(
@@ -828,7 +831,7 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
         (obs_v > ego_speed_ + kObsSpeedBuffer)) {
       continue;
     }
-    //?
+
     if (frenet_obstacle_sl.s_end > ego_frenet_boundary_.s_start) {
       return false;
     }
@@ -1078,7 +1081,7 @@ const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos,
   Eigen::Vector2d rear_pos(ego_pos.x, ego_pos.y);
   Eigen::Vector2d ego_n_vec(-ego_heading_vec.y(), ego_heading_vec.x());
 
-  if (right_borrow_ == true) {
+  if (if_left_turn_center_ == false) {
     ego_n_vec *= -1.0;
   }
   Eigen::Vector2d center = rear_pos + ego_n_vec * radius;
@@ -1117,7 +1120,7 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
   SLPoint corner_front_left, corner_rear_left, corner_front_right,
       corner_rear_right;
 
-  if (left_borrow_) {
+  if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
     Point2D corner_front_left_xy = CartesianRotation(
         corner_front_left_point_xy, heading_angle, ego_x, ego_y);
     Point2D corner_rear_left_xy = CartesianRotation(
@@ -1139,7 +1142,7 @@ bool LaneBorrowDecider::ChecekIfLaneBorrowToLaneBorrowCrossing() {
     }
     return false;
 
-  } else if (right_borrow_) {
+  } else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
     Point2D corner_front_right_xy = CartesianRotation(
         corner_front_right_point_xy, heading_angle, ego_x, ego_y);
     Point2D corner_rear_right_xy = CartesianRotation(
@@ -1192,19 +1195,6 @@ bool LaneBorrowDecider::CheckIfLaneBorrowCrossingToBackDriving() {
 bool LaneBorrowDecider::CheckLaneBorrowCrossingCondition() {
   UpdateJunctionInfo();
 
-  if ((forward_solid_start_dis_ < kMinDisToSolidLane &&
-       forward_solid_start_dis_ > 0) ||
-      (distance_to_cross_walk_ < kMinDisToCrossWalk &&
-       distance_to_cross_walk_ > 0.0) ||
-      (distance_to_stop_line_ < kMinDisToStopLine &&
-       distance_to_stop_line_ > 0.0) ||
-      (dis_to_traffic_lights_ < kMinDisToTrafficLight &&
-       dis_to_traffic_lights_ > 0.0)) {
-    LOG_DEBUG("Ego car is near junction");
-    lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
-    return false;
-  }
-
   if (!UpdateLaneBorrowDirection()) {
     return false;
   }
@@ -1214,6 +1204,20 @@ bool LaneBorrowDecider::CheckLaneBorrowCrossingCondition() {
   }
 
   if (!ObstacleDecision()) {
+    return false;
+  }
+
+  if ((forward_solid_start_dis_ <
+           obs_end_s_ - ego_frenet_boundary_.s_start + kBackNeededDistance &&
+       forward_solid_start_dis_ > 0) ||
+      (distance_to_cross_walk_ < kMinDisToCrossWalk &&
+       distance_to_cross_walk_ > 0.0) ||
+      (distance_to_stop_line_ < kMinDisToStopLine &&
+       distance_to_stop_line_ > 0.0) ||
+      (dis_to_traffic_lights_ < kMinDisToTrafficLight &&
+       dis_to_traffic_lights_ > 0.0)) {
+    LOG_DEBUG("Ego car is near junction");
+    lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
     return false;
   }
 
