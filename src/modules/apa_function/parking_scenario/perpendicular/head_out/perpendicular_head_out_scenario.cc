@@ -679,7 +679,7 @@ const bool PerpendicularHeadOutScenario::GenObstacles() {
 
   OccupancyGridBound bound(
       obs_tlane.min_x - bound_threshold, obs_tlane.min_y - bound_threshold,
-      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + +bound_threshold);
+      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + bound_threshold);
 
   bound.PrintInfo();
 

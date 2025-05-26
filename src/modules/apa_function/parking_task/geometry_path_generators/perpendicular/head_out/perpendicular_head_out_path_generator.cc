@@ -12,6 +12,11 @@
 namespace planning {
 namespace apa_planner {
 
+constexpr float kSafeDistSlotOut = 0.35f;
+constexpr float kSafeDistSlotIn = 0.20f;
+constexpr float kLateralInflationSlotOut = 0.20f;
+constexpr float kLateralInflationSlotIn = 0.08f;
+
 void PerpendicularPathOutPlanner::Reset() { return; }
 
 const bool PerpendicularPathOutPlanner::Update() {
@@ -269,28 +274,45 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
   }
 
   // param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.08));
   bool prepare_success = true;
-  // collision detect
-  for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
-    if (&tmp_path_seg == &tmp_path_seg_vec.back()) {
-      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
+  PathColDetRes path_col_det_res;
+
+  for (size_t i = 0; i < tmp_path_seg_vec.size(); ++i) {
+    auto& tmp_path_seg = tmp_path_seg_vec[i];
+    bool is_last = (i == tmp_path_seg_vec.size() - 1);
+
+    float lateral_inflation =
+        is_last ? kLateralInflationSlotOut : kLateralInflationSlotIn;
+    float safe_dist = is_last ? kSafeDistSlotOut : kSafeDistSlotIn;
+
+    collision_detector_ptr_->SetParam(
+        CollisionDetector::Paramters(lateral_inflation));
+    path_col_det_res = TrimPathByCollisionDetection(tmp_path_seg, safe_dist);
+
+    switch (path_col_det_res) {
+      case PathColDetRes::NORMAL:
+      case PathColDetRes::SHORTEN:
+        path_seg_vec.emplace_back(tmp_path_seg);
+        if (path_col_det_res == PathColDetRes::SHORTEN) {
+          ILOG_INFO << " Path Col Det Res::SHORTEN ";
+        }
+        break;
+
+      case PathColDetRes::INVALID:
+        ILOG_INFO << " Path Col Det Res::INVALID ";
+        prepare_success = false;
+        break;
+
+      case PathColDetRes::INSIDE_STUCK:
+        ILOG_INFO << " Path Col Det Res::INSIDE_STUCK ";
+        prepare_success = false;
+        break;
+
+      default:
+        break;
     }
-    const PathColDetRes path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg, 0.20);
-    // path_seg_vec.emplace_back(tmp_path_seg);
-    if (path_col_det_res == PathColDetRes::NORMAL) {
-      path_seg_vec.emplace_back(tmp_path_seg);
-    } else if (path_col_det_res == PathColDetRes::SHORTEN) {
-      path_seg_vec.emplace_back(tmp_path_seg);
-      ILOG_INFO << " Path Col Det Res::SHORTEN ";
-    } else if (path_col_det_res == PathColDetRes::INVALID) {
-      prepare_success = false;
-      ILOG_INFO << " Path Col Det Res::INVALID ";
-      break;
-    } else if (path_col_det_res == PathColDetRes::INSIDE_STUCK) {
-      prepare_success = false;
-      ILOG_INFO << " Path Col Det Res::INSIDE_STUCK ";
+
+    if (!prepare_success) {
       break;
     }
   }
@@ -374,9 +396,9 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
   //   }
   // }
 
-  const double safe_dist_r = 0.4;
-  const double safe_dist_d = 0.268;
-  const double adjust_line_length = 2.0;
+  const float safe_dist_r = 0.4f;
+  const float safe_dist_d = 0.268f;
+  const float adjust_line_length = 2.0f;
 
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     if (AdjustPlanOnce(tmp_path_seg_vec, current_pose, safe_dist_d,
@@ -437,9 +459,6 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
     success = false;
     output_.path_available = false;
   }
-
-  // CollisionDetector::Paramters params;
-  // collision_detector_ptr_->SetParam(params);
 
   if (!success) {
     ILOG_INFO << "adjust plan failed!";
@@ -525,7 +544,8 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
                 cos((input_.ego_info_under_slot.slot.angle_ * kDeg2Rad));
   }
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.10));
+  collision_detector_ptr_->SetParam(
+      CollisionDetector::Paramters(kLateralInflationSlotOut));
 
   if (CheckArcOrLineAvailable(current_arc) &&
       pnc::geometry_lib::CompleteArcInfo(current_arc)) {
@@ -539,8 +559,6 @@ const bool PerpendicularPathOutPlanner::AdjustPlanOnce(
           TrimPathByCollisionDetection(arc_seg, safe_dist);
       if (arc_path_col_det_res == PathColDetRes::INVALID ||
           arc_path_col_det_res == PathColDetRes::INSIDE_STUCK) {
-        // ILOG_INFO << "arc_path_col_det_res "
-        //           << static_cast<int>(arc_path_col_det_res);
         ILOG_INFO << "arc path is invalid, adjust plan failed";
         return false;
       }
@@ -873,32 +891,46 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
   }
 
   // collision detect
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.08));
-  for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
-    if (&tmp_path_seg == &tmp_path_seg_vec.back()) {
-      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.20));
-    }
-    const PathColDetRes path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg, 0.08);
-    // path_seg_vec.emplace_back(tmp_path_seg);
-    if (path_col_det_res == PathColDetRes::NORMAL) {
-      path_seg_vec.emplace_back(tmp_path_seg);
-    } else if (path_col_det_res == PathColDetRes::SHORTEN) {
-      path_seg_vec.emplace_back(tmp_path_seg);
-    } else if (path_col_det_res == PathColDetRes::INVALID) {
-      success = false;
-      ILOG_INFO << " Path Col Det Res::INVALID ";
-      break;
-    } else if (path_col_det_res == PathColDetRes::INSIDE_STUCK) {
-      success = false;
-      ILOG_INFO << " Path Col Det Res::INSIDE_STUCK ";
-      break;
-    }
-  }
+  PathColDetRes path_col_det_res;
 
-  if (!success) {
-  } else {
-    ILOG_INFO << "s turn parallel plan success";
+  for (size_t i = 0; i < tmp_path_seg_vec.size(); ++i) {
+    auto& tmp_path_seg = tmp_path_seg_vec[i];
+    bool is_last = (i == tmp_path_seg_vec.size() - 1);
+
+    float lateral_inflation =
+        is_last ? kLateralInflationSlotOut : kLateralInflationSlotIn;
+    float safe_dist = is_last ? kSafeDistSlotOut : kSafeDistSlotIn;
+
+    collision_detector_ptr_->SetParam(
+        CollisionDetector::Paramters(lateral_inflation));
+    path_col_det_res = TrimPathByCollisionDetection(tmp_path_seg, safe_dist);
+
+    switch (path_col_det_res) {
+      case PathColDetRes::NORMAL:
+      case PathColDetRes::SHORTEN:
+        path_seg_vec.emplace_back(tmp_path_seg);
+        if (path_col_det_res == PathColDetRes::SHORTEN) {
+          ILOG_INFO << " Path Col Det Res::SHORTEN ";
+        }
+        break;
+
+      case PathColDetRes::INVALID:
+        ILOG_INFO << " Path Col Det Res::INVALID ";
+        success = false;
+        break;
+
+      case PathColDetRes::INSIDE_STUCK:
+        ILOG_INFO << " Path Col Det Res::INSIDE_STUCK ";
+        success = false;
+        break;
+
+      default:
+        break;
+    }
+
+    if (!success) {
+      break;
+    }
   }
 
   return success;
