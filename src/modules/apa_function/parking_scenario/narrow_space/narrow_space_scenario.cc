@@ -1483,23 +1483,52 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
     }
   }
 
-  // 后续横向终点位置会随着障碍物而进行改变
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
-      ApaParkOutDirection::LEFT_FRONT) {
-    ego_info_under_slot.target_pose.pos << 7.0, 11.0;
-    ego_info_under_slot.target_pose.heading = 0.5 * M_PI;
-    ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
+  constexpr double kInitialTargetX = 7.0;
+  constexpr double kInitialTargetY = 11.0;
+  constexpr double kInitialTargetHeading = 0.5 * M_PI;
+  constexpr double kAlternateTargetX = 8.0;
+  constexpr double kAlternateTargetY = 5.0;
+  constexpr double kPositionThresholdX = 7.0;
+  constexpr double kHeadingThresholdRad = 70.0 * M_PI / 180.0;
 
-  } else if (apa_world_ptr_->GetStateMachineManagerPtr()
-                 ->GetParkOutDirection() == ApaParkOutDirection::RIGHT_FRONT) {
-    ego_info_under_slot.target_pose.pos << 7.0, -11.0;
-    ego_info_under_slot.target_pose.heading = -0.5 * M_PI;
-    ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
+  const ApaParkOutDirection park_out_direction =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection();
 
-  } else {
-    ego_info_under_slot.target_pose.pos << 3.0, 0.0;
-    ego_info_under_slot.target_pose.heading = 0.0;
-    ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 0);
+  switch (park_out_direction) {
+    case ApaParkOutDirection::LEFT_FRONT:
+      ego_info_under_slot.target_pose.pos << kInitialTargetX, kInitialTargetY;
+      ego_info_under_slot.target_pose.heading = kInitialTargetHeading;
+      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
+
+      // 特殊位置要对目标点进行特殊调整
+      if (ego_info_under_slot.cur_pose.pos.x() < kInitialTargetX &&
+          std::abs(ego_info_under_slot.cur_pose.heading) >
+              kHeadingThresholdRad) {
+        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+            kAlternateTargetY;
+      }
+      break;
+
+    case ApaParkOutDirection::RIGHT_FRONT:
+      ego_info_under_slot.target_pose.pos << kInitialTargetX, -kInitialTargetY;
+      ego_info_under_slot.target_pose.heading = -kInitialTargetHeading;
+      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
+
+      // 特殊位置要对目标点进行特殊调整
+      if (ego_info_under_slot.cur_pose.pos.x() < kInitialTargetX &&
+          std::abs(ego_info_under_slot.cur_pose.heading) >
+              kHeadingThresholdRad) {
+        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+            -kAlternateTargetY;
+      }
+      break;
+
+    case ApaParkOutDirection::FRONT:
+    default:
+      ego_info_under_slot.target_pose.pos << kInitialTargetX - 4, 0.0;
+      ego_info_under_slot.target_pose.heading = 0.0;
+      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 0);
+      break;
   }
 
   // 终点误差
