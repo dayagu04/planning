@@ -1326,7 +1326,6 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
               relative_id_lanes[order_ids[i]];
           MakesureVirtualLaneIsVirtual(relative_id_lane, lane_exist_virtual);
           if (!lane_exist_virtual) {
-            break;
             origin_order_id = relative_id_lane->get_order_id();
             relative_id_lane->set_relative_id(0);
             last_zero_relative_id_order_id_index_ = i;
