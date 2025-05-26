@@ -144,6 +144,8 @@ bool GeneralLateralDecider::Execute() {
   ExtractBoundary(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
                   hard_bounds_info_);
   CalculateAvoidObstacles(frenet_soft_bounds_, soft_bounds_info_);
+  LimitFrenetLateralSlope(frenet_soft_bounds_);
+  LimitFrenetLateralSlope(frenet_hard_bounds_);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
@@ -3634,6 +3636,36 @@ void GeneralLateralDecider::ExtractBoundary(
   assert(frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
+void GeneralLateralDecider::LimitFrenetLateralSlope(
+    std::vector<std::pair<double, double>> &frenet_bounds) {
+  // 避免dl ds 差值过大
+  const int boundsize = frenet_bounds.size();
+  const int dl_ds_ratio = 3;
+  double ds = 0;
+  double dl = 0;
+  if (boundsize > 1) {
+    for (int i = 1; i <= boundsize - 1; i++) {
+      ds = ref_traj_points_[i].s - ref_traj_points_[i - 1].s;
+      dl = frenet_bounds[i].second - frenet_bounds[i - 1].second;
+      if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
+        if (dl > 0) {
+          frenet_bounds[i].second = frenet_bounds[i - 1].second + dl_ds_ratio * ds;
+        } else {
+          frenet_bounds[i - 1].second = frenet_bounds[i].second + dl_ds_ratio * ds;
+        }
+      }
+      dl = frenet_bounds[i].first - frenet_bounds[i - 1].first;
+      if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
+        if (dl > 0) {
+          frenet_bounds[i - 1].first = frenet_bounds[i].first - dl_ds_ratio * ds;
+        } else {
+          frenet_bounds[i].first = frenet_bounds[i - 1].first - dl_ds_ratio * ds;
+        }
+      }
+    }
+  }
+}
+
 void GeneralLateralDecider::ProtectBoundByInitPoint(
     std::pair<double, double> &bound,
     std::pair<BoundInfo, BoundInfo> &bound_info) {
@@ -4829,6 +4861,7 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
   if (!obstacle->obstacle()->is_normal()) {
     return false;
   }
+
   is_blocked_obstacle_ = IsBlockedObstacleInLaneBorrow(obstacle);
   if (is_blocked_obstacle_) {
     return true;
