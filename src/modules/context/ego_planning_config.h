@@ -2706,10 +2706,25 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
     /* read config from json */
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
+    ReadItem<double>(json, curv_factor, "result_trajectory_generator",
+                     "curv_factor");
+    ReadItem<double>(json, lat_acc_thr, "result_trajectory_generator",
+                     "lat_acc_thr");
+    ReadItem<double>(json, lat_jerk_thr, "result_trajectory_generator",
+                     "lat_jerk_thr");
+    ReadItem<double>(json, lon_acc_thr, "result_trajectory_generator",
+                     "lon_acc_thr");
+    ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
+                     "lon_jerk_thr");
   }
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
+  double curv_factor = 0.35;
+  double lat_acc_thr = 3.0;
+  double lat_jerk_thr = 0.3;
+  double lon_acc_thr = 3.0;
+  double lon_jerk_thr = 0.3;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {
