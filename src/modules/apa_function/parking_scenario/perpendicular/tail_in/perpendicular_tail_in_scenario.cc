@@ -100,6 +100,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   // update remain dist
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
+  CalRemainDistBySlotJump();
 
   // check finish
   if (CheckFinished()) {
@@ -951,11 +952,11 @@ void PerpendicularTailInScenario::PathPlanByGeometry() {
         geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                      ego_info_under_slot.target_pose.heading));
 
-    const bool ego_should_stop = CheckShouldStopWhenSlotJumpsMuch();
-    JSON_DEBUG_VALUE("ego_should_stop", ego_should_stop)
-    ILOG_INFO << "  ego_should_stop = " << ego_should_stop
-              << "  dynamic_replan_fail_count = "
-              << static_cast<int>(frame_.dynamic_replan_fail_count);
+    // const bool ego_should_stop = CheckShouldStopWhenSlotJumpsMuch();
+    // JSON_DEBUG_VALUE("ego_should_stop", ego_should_stop)
+    // ILOG_INFO << "  ego_should_stop = " << ego_should_stop
+    //           << "  dynamic_replan_fail_count = "
+    //           << static_cast<int>(frame_.dynamic_replan_fail_count);
 
     return;
   }
@@ -1605,6 +1606,80 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
                                      frame_.remain_dist_path + ego_stop_dist);
 
   return true;
+}
+
+void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  JSON_DEBUG_VALUE("ego_should_stop", false)
+
+  const double ego_stop_dist = 1.0;
+  if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
+      frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
+      ego_info_under_slot.slot_occupied_ratio < 0.168 ||
+      ego_info_under_slot.slot_occupied_ratio > 0.708 ||
+      frame_.remain_dist_path < ego_stop_dist + 0.168) {
+    frame_.car_already_move_dist = 0.0;
+    frame_.remain_dist_slot_jump = 5.01;
+    return;
+  }
+
+  // 计算上次规划终点位置
+  geometry_lib::PathPoint tar_pose_bef = current_path_point_global_vec_.back();
+  geometry_lib::PathPoint front_tar_pose_bef =
+      GetCarFrontPoseFromCarPose(tar_pose_bef);
+  tar_pose_bef.GlobalToLocal(ego_info_under_slot.g2l_tf);
+  front_tar_pose_bef.GlobalToLocal(ego_info_under_slot.g2l_tf);
+
+  // 计算当前真实终点位置
+  geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
+  tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
+  tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
+  const geometry_lib::PathPoint front_tar_pose_now =
+      GetCarFrontPoseFromCarPose(tar_pose_now);
+
+  // 计算两次终点位置误差
+  const double lat_err = std::max(
+      std::fabs(tar_pose_now.pos.y() - tar_pose_bef.pos.y()),
+      std::fabs(front_tar_pose_now.pos.y() - front_tar_pose_bef.pos.y()));
+
+  const double heading_err =
+      std::fabs(tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
+
+  const auto& param = apa_param.GetParam();
+
+  ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
+            << "  lat_err_threshold = " << param.should_stop_lat_err
+            << "  heading_err_threshold = " << param.should_stop_heading_err;
+
+  if (lat_err < param.should_stop_lat_err &&
+      heading_err < param.should_stop_heading_err) {
+    frame_.car_already_move_dist = 0.0;
+    frame_.remain_dist_slot_jump = 5.01;
+    return;
+  }
+
+  ILOG_INFO << "should stop because of the slot jump much";
+
+  // 上一帧自车沿路径已经行驶的距离
+  const double car_already_move_dist_last =
+      frame_.current_path_length - frame_.remain_dist_path_last;
+
+  // 当前帧自车沿路径已经行驶的距离
+  const double car_already_move_dist =
+      frame_.current_path_length - frame_.remain_dist_path;
+
+  // 车位跳动剩余距离等于停止距离减去从应该停车时刻到现在行驶的累计距离
+  frame_.remain_dist_slot_jump = ego_stop_dist - frame_.car_already_move_dist;
+
+  // 计算从应该停车时刻到现在行驶的累计距离
+  frame_.car_already_move_dist +=
+      std::fabs(car_already_move_dist - car_already_move_dist_last);
+
+  JSON_DEBUG_VALUE("ego_should_stop", true)
+
+  return;
 }
 
 const bool PerpendicularTailInScenario::PostProcessPathAccordingRemainDist(
@@ -2308,6 +2383,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
   JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
+  JSON_DEBUG_VALUE("remain_dist_slot_jump", frame_.remain_dist_slot_jump)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
