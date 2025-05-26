@@ -117,7 +117,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  PathPlanByGeometry();
+  PathPlan();
 
   // check finish
   if (CheckFinished()) {
@@ -291,9 +291,9 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     if (dist_ego_limiter < param.car_to_limiter_dis &&
         frame_.can_correct_path_for_limiter &&
         std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg <
-            apa_param.GetParam().finish_heading_err * 1.05 &&
+            param.finish_heading_err * 1.05 &&
         std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
-            apa_param.GetParam().finish_lat_err_strict * 1.05) {
+            param.finish_lat_err_strict * 1.05) {
       ILOG_INFO << "should correct path according limiter";
       ego_info_under_slot.fix_slot = true;
       PostProcessPathAccordingLimiter();
@@ -313,7 +313,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 }
 
 const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
-  return (frame_.current_gear != geometry_lib::SEG_GEAR_DRIVE) ||
+  return (frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
          !CheckEgoPoseInBelieveObsArea(
              0.2, apa_param.GetParam().believe_obs_ego_area);
 }
@@ -865,7 +865,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   return plan_result;
 }
 
-void PerpendicularTailInScenario::PathPlanByGeometry() {
+void PerpendicularTailInScenario::PathPlan() {
   frame_.replan_flag = CheckReplan();
   frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
   frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
@@ -982,6 +982,8 @@ void PerpendicularTailInScenario::PathPlanByGeometry() {
 
     ego_info_under_slot.lon_move_dist_replan_success =
         ego_info_under_slot.lon_move_dist_every_replan;
+
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
 
     if (frame_.is_replan_dynamic) {
       ILOG_INFO << "dynamic replan success and path is superior, update path";

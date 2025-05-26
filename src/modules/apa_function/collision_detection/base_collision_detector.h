@@ -104,8 +104,8 @@ class BaseCollisionDetector {
   BaseCollisionDetector() {}
   virtual ~BaseCollisionDetector() = default;
   void Init(const bool fold_mirror_flag);
-  void SetObsManager(const std::shared_ptr<ApaObstacleManager> &obs_manager) {
-    obs_manager_ptr_ = obs_manager;
+  void SetObsManager(const std::shared_ptr<ApaObstacleManager> &obs_manager_ptr) {
+    obs_manager_ptr_ = obs_manager_ptr;
   };
   void SetSampleDs(const double sample_ds) { sample_ds_ = sample_ds; }
   void UpdateSafeBuffer(const double lat_buffer, const double lon_buffer);
