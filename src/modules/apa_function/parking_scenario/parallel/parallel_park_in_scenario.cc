@@ -36,7 +36,7 @@ namespace planning {
 namespace apa_planner {
 static double kStopLonBuffer = 0.3;
 static double kInsertLineLonBuffer = 0.2;
-static double kFrontDetaXMagWhenFrontVacant = 1.98;
+static double kFrontDetaXMagWhenFrontVacant = 3.0;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.4;
 static double kRearDetaXMagWhenBothSidesVacant = 0.5;
@@ -106,6 +106,10 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
     lat_buffer = 0.0;
     safe_uss_remain_dist =
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
+    if (t_lane_.is_inside_rigid) {
+      ILOG_INFO << "rigid body in side slot!";
+      lat_buffer = 0.15;
+    }
     ILOG_INFO << "in slot!";
   } else {
     // out slot
@@ -116,6 +120,10 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
         !is_start_pose_in_slot && is_end_pose_in_slot) {
       lat_buffer = kLatBuffer1Rstep;
       safe_uss_remain_dist = kLonBuffer1Rstep;
+      if (t_lane_.is_inside_rigid) {
+        lat_buffer = 0.15;
+        safe_uss_remain_dist = 0.3;
+      }
       ILOG_INFO << "in 1r step!";
     } else {
       ILOG_INFO << "outside slot not 1r step!";
@@ -482,6 +490,11 @@ const bool ParallelParkInScenario::GenTlane() {
       continue;
     }
 
+    const auto obs_scement = pair.second.GetObsScemanticType();
+
+    bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
+                     obs_scement == ApaObsScemanticType::COLUMN);
+
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
       if ((obs_pt_local - slot_center).norm() > 25.0) {
         continue;
@@ -524,6 +537,13 @@ const bool ParallelParkInScenario::GenTlane() {
         // in_ego_cnt++;
         continue;
       }
+
+      if (mathlib::IsInBound(obs_pt_local.x(), 0.0, t_lane_.slot_length) &&
+          obs_pt_local.y() * side_sgn < -0.25 * t_lane_.slot_width &&
+          is_rigid) {
+        t_lane_.is_inside_rigid = true;
+      }
+
       obs_pt_local_vec_.emplace_back(std::move(obs_pt_local));
     }
   }
@@ -592,8 +612,8 @@ const bool ParallelParkInScenario::GenTlane() {
 
     const bool front_parallel_line_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_length - 0.2,
-                                slot_length + 2.2) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y(), 0.0, 2.2 * side_sgn);
+                                slot_length + kFrontDetaXMagWhenFrontVacant) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(), 0.0, 2.5 * side_sgn);
 
     if (front_parallel_line_condition) {
       front_parallel_line_y_limit =
@@ -744,11 +764,16 @@ const bool ParallelParkInScenario::GenTlane() {
   ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
       ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
 
+  ILOG_INFO << "t_lane_.is_inside_rigid = " << t_lane_.is_inside_rigid;
   // set target y with curb
+  const double y_offset_with_obs_type =
+      t_lane_.is_inside_rigid
+          ? apa_param.GetParam().terminal_parallel_y_offset_with_wall
+          : apa_param.GetParam().terminal_parallel_y_offset_with_curb;
+
   const double target_y_with_curb =
-      curb_y_limit +
-      side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
-                  0.5 * apa_param.GetParam().car_width);
+      curb_y_limit + side_sgn * (y_offset_with_obs_type +
+                                 0.5 * apa_param.GetParam().car_width);
 
   ego_info_under_slot.target_pose.pos.y() =
       (side_sgn > 0.0 ? std::max(0.0, target_y_with_curb)
@@ -1011,23 +1036,22 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 
-  point_set.clear();
-  tlane_obstacle_vec.clear();
   if (t_lane_.limiter.valid) {
     double limiter_obs_x = 0.0;
     if (t_lane_.limiter.start_pt.x() < 0.5 * t_lane_.slot_length) {
-      // rear limiter
-      double limiter_obs_x =
+      ILOG_INFO << "rear limiter";
+      limiter_obs_x =
           std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
       limiter_obs_x +=
-          (apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter * 0.66 -
+          (apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
            apa_param.GetParam().rear_overhanging - 0.22);
+      ILOG_INFO << "limiter_obs_x = " << limiter_obs_x;
     } else {
-      // front limiter
-      double limiter_obs_x =
+      ILOG_INFO << "front limiter";
+      limiter_obs_x =
           std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
       limiter_obs_x +=
-          (-apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter * 0.66 -
+          (-apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
            apa_param.GetParam().front_overhanging + 0.22);
     }
 
@@ -1038,10 +1062,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
     const pnc::geometry_lib::LineSegment limiter_line(limiter_obs_start,
                                                       limiter_obs_end);
-
+    point_set.clear();
+    tlane_obstacle_vec.clear();
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, limiter_line,
                                                kTBoundarySampleDist);
-
     for (const auto& obs : point_set) {
       if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
