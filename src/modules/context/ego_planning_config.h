@@ -2827,7 +2827,7 @@ struct STGraphConfig : public EgoPlanningConfig {
   bool enable_backward_extend_st_boundary = true;
   double backward_extend_length_for_lane_change = 50.0;
   double backward_extend_sample_resolution = 3.0;
-  double lane_keeping_lower_lateral_buffer_m = 0.2;
+  double lane_keeping_lower_lateral_buffer_m = 0.1;
   double lane_keeping_upper_lateral_buffer_m = 0.3;
   double lane_keeping_lower_speed_kph = 10.0;
   double lane_keeping_upper_speed_kph = 30.0;
