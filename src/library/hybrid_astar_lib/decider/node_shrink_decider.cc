@@ -35,7 +35,7 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
   }
 
   x_bound_.upper = XYbounds.x_max;
-  constexpr double kXBoundLowerForHeadOut = 1.0;
+  constexpr float kXBoundLowerForHeadOut = 1.0f;
 
   switch (park_dir) {
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
@@ -170,10 +170,10 @@ bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
     return false;
   }
 
-  constexpr double ANGLE_THRESHOLD_DEG = 30.0;
+  constexpr float ANGLE_THRESHOLD_DEG = 30.0f;
 
   // 计算角度并转换为度数
-  const double heading_deg = child->GetPhi() * kRad2Deg;
+  const float heading_deg = child->GetPhi() * 180.0f / static_cast<float>(M_PI);
 
   // 检查是否为前进方向
   const bool is_forward = child->IsForward();

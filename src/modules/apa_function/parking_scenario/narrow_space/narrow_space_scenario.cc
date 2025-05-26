@@ -921,9 +921,10 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         const size_t num = response.first_seg_path.size();
         ILOG_INFO << " path num " << num;
 
-        constexpr double kHeadingStartDeg = 80.0;
-        constexpr double kHeadingEndDeg = 89.9;
-        constexpr double kHeadingDiffThresh = 1e-3;
+        constexpr float kHeadingStartDeg = 80.0f;
+        constexpr float kHeadingEndDeg = 89.9f;
+        constexpr float kHeadingDiffThresh = 1e-3f;
+        constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
 
         bool heading_flag = true;
         bool sample_finish = false;
@@ -941,15 +942,15 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
               apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus();
 
           if (is_park_out) {
-            const double heading_deg = std::abs(point.heading * kRad2Deg);
+            const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
             if (heading_deg > kHeadingStartDeg) {
-              double heading_diff =
+              float heading_diff =
                   path_pt.phi - response.first_seg_path[i - 1].phi;
               heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
             }
 
-            if (std::abs(point.heading) * kRad2Deg <= kHeadingEndDeg &&
+            if (std::abs(path_pt.phi) * kRad2Deg <= kHeadingEndDeg &&
                 !sample_finish && heading_flag) {
               local_path.emplace_back(point);
             } else {
