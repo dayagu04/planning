@@ -628,8 +628,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "traffic_cone_thr", traffic_cone_thr);
     static_obs_buffer =
         read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
-    extra_avoid_front_buffer =
-        read_json_key<double>(json, "extra_avoid_front_buffer", extra_avoid_front_buffer);
+    avoid_persistence_front_buffer =
+        read_json_key<double>(json, "avoid_persistence_front_buffer", avoid_persistence_front_buffer);
     near_car_hysteresis =
         read_json_key<double>(json, "near_car_hysteresis", near_car_hysteresis);
     in_range_v = read_json_key<double>(json, "in_range_v", in_range_v);
@@ -677,7 +677,7 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double oversize_veh_addition_buffer = 0.15;
   double traffic_cone_thr = 0.15;
   double static_obs_buffer = 3.4;
-  double extra_avoid_front_buffer = 0.15;
+  double avoid_persistence_front_buffer = 0.15;
   double near_car_hysteresis = 1.3;
   double in_range_v = 1.0;
   double in_range_v_hysteresis = 1.5;

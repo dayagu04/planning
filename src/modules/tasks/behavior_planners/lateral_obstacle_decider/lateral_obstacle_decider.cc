@@ -47,6 +47,7 @@ LateralObstacleDecider::LateralObstacleDecider(
 
 bool LateralObstacleDecider::Execute() {
   if (!PreCheck()) {
+    output_.clear();
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
@@ -423,39 +424,39 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
           (borrow_bicycle_lane && d_max_cpath > 0 && d_min_cpath < 0 &&
            v_s < 0.5);
 
-      double d_max_cpath_recursion = d_max_cpath;
-      double d_min_cpath_recursion = d_min_cpath;
+      double d_max_cpath_updated = d_max_cpath;
+      double d_min_cpath_updated= d_min_cpath;
       std::array<double, 3> x_v_lat{-0.6, -0.4, -0.2};
       std::array<double, 3> f_times{10, 5, 1};
       double times = interp(v_lat, x_v_lat, f_times);
       if (d_max_cpath < 0) {
-        d_max_cpath_recursion = d_max_cpath - v_lat * 0.1 * times;
+        d_max_cpath_updated = d_max_cpath - v_lat * 0.1 * times;
       } else if (d_min_cpath > 0) {
-        d_min_cpath_recursion = d_min_cpath + v_lat * 0.1 * times;
+        d_min_cpath_updated= d_min_cpath + v_lat * 0.1 * times;
       }
 
       // can avoid flag
       bool can_avoid =
-          (d_min_cpath_recursion >
+          (d_min_cpath_updated>
            std::min((ego_width_ + lat_safety_buffer) - lane_width / 2, 1.8)) ||
-          (d_max_cpath_recursion <
+          (d_max_cpath_updated <
            std::max(lane_width / 2 - (ego_width_ + lat_safety_buffer), -1.8)) ||
           ((obstacle.is_static()) &&
-           ((d_min_cpath_recursion >
+           ((d_min_cpath_updated>
              (ego_width_ + static_obs_buffer) - lane_width / 2) ||
-            (d_max_cpath_recursion <
+            (d_max_cpath_updated <
              lane_width / 2 - (ego_width_ + static_obs_buffer))));
 
       // can avoid flag for LateralObstacleDecision
       lateral_obstacle_decision_can_avoid =
-          (d_min_cpath_recursion >
+          (d_min_cpath_updated>
            std::min((ego_width_ + lat_safety_buffer_for_lateral_obstacle_decision) - lane_width / 2, 1.8)) ||
-          (d_max_cpath_recursion <
+          (d_max_cpath_updated <
            std::max(lane_width / 2 - (ego_width_ + lat_safety_buffer_for_lateral_obstacle_decision), -1.8)) ||
           ((obstacle.is_static()) &&
-           ((d_min_cpath_recursion >
+           ((d_min_cpath_updated>
              (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision) - lane_width / 2) ||
-            (d_max_cpath_recursion <
+            (d_max_cpath_updated <
              lane_width / 2 - (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision))));
 
       if (is_need_avoid && !can_avoid) {
@@ -502,19 +503,16 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   int can_avoid_count_thr = 2;
   if (lateral_obstacle_decision_can_avoid) {
     // 根据侵入的距离，动态调整计数
-    double intrusion_distance = 0;
+    double intrusion_distance = DBL_MAX;
     if (d_max_cpath < 0) {
       intrusion_distance =  lane_width * 0.5 - std::fabs(d_max_cpath);
     } else if (d_min_cpath > 0) {
       intrusion_distance =  lane_width * 0.5 - d_min_cpath;
-    } else {
-      intrusion_distance = lane_width;
     }
     std::array<double, 3> intrusion_distance_xp{0.1, 0.2, 0.3};
     std::array<double, 3> can_avoid_count_fp{3.1, 2.1, 1.1};
-    double can_avoid_count_tmp =
-        interp(intrusion_distance, intrusion_distance_xp, can_avoid_count_fp);
-    int can_avoid_count = static_cast<int>(can_avoid_count_tmp);
+    int can_avoid_count =
+      static_cast<int>(interp(intrusion_distance, intrusion_distance_xp, can_avoid_count_fp));
     history.can_avoid_count = std::min(history.can_avoid_count + can_avoid_count, max_can_avoid_count);
   } else {
     // 如果当前帧不能避让，则不避让
@@ -633,7 +631,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
     // }
 
     // for cut in and cut out
-    if (v_lat > 0.3 || v_lat < -0.3) {
+    if (std::fabs(v_lat) > 0.3) {
       history.ncar_count = std::max(
           history.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
     }
@@ -691,7 +689,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
           (last_output_[id] == LatObstacleDecisionType::LEFT ||
           last_output_[id] == LatObstacleDecisionType::RIGHT);
       if (last_was_avoid) {
-        avoid_front_buffer = config_.extra_avoid_front_buffer;
+        avoid_front_buffer = config_.avoid_persistence_front_buffer;
       }
       if (obstacle.is_traffic_facilities()) {
         avoid_front_buffer += config_.traffic_cone_thr;
