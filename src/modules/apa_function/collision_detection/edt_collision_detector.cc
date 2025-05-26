@@ -548,50 +548,65 @@ const ColResult EDTCollisionDetector::Update(
     } while (s < lon_buffer_);
   }
 
-  double lon_safe_dist = 0.0;
-  double obs_dist = 26.8;
-  int circle_id = -1;
   bool col_flag = false;
+  double lon_safe_dist = 0.0;
+  double obs_dist = 0.0;
+  int circle_id = -1;
   geometry_lib::CarSafePos car_safe_pos = geometry_lib::CarSafePos::ALL;
   CarFootPrintCircleList *car_circle_list = nullptr;
   for (const geometry_lib::PathPoint &pt : path_pt_vec_) {
+    circle_id = -1;
+    obs_dist = 26.8;
     if (!IsPoseInClearZone(pt)) {
-      col_flag = need_cal_obs_dist
-                     ? IsCollisionForPoint(pt, &car_with_mirror_circles_list_,
-                                           &obs_dist, &circle_id)
-                     : IsCollisionForPoint(pt, &car_with_mirror_circles_list_);
-      if (col_flag) {
-        break;
-      }
-#if have_different_height_car_circle
       col_flag =
           need_cal_obs_dist
-              ? IsCollisionForPoint(pt, &car_without_mirror_circles_list_,
+              ? IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_,
                                     &obs_dist, &circle_id)
-              : IsCollisionForPoint(pt, &car_without_mirror_circles_list_);
+              : IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_);
+
       if (col_flag) {
         break;
       }
 
+#if have_different_height_car_circle
       col_flag = need_cal_obs_dist
-                     ? IsCollisionForPoint(pt, &car_chassis_circles_list_,
-                                           &obs_dist, &circle_id)
-                     : IsCollisionForPoint(pt, &car_chassis_circles_list_);
+                     ? IsCollisionForPoint(
+                           pt, &car_without_mirror_circles_list_with_buffer_,
+                           &obs_dist, &circle_id)
+                     : IsCollisionForPoint(
+                           pt, &car_without_mirror_circles_list_with_buffer_);
+
+      if (col_flag) {
+        break;
+      }
+
+      col_flag =
+          need_cal_obs_dist
+              ? IsCollisionForPoint(pt, &car_chassis_circles_list_with_buffer_,
+                                    &obs_dist, &circle_id)
+              : IsCollisionForPoint(pt, &car_chassis_circles_list_with_buffer_);
+
+      if (col_flag) {
+        break;
+      }
+
 #endif
     }
 
-    if (circle_id == -1) {
-      car_safe_pos = geometry_lib::CarSafePos::ALL;
-    } else if (circle_id == 0 || circle_id == 1 || circle_id == 2 ||
-               circle_id == 5 || circle_id == 6) {
-      car_safe_pos = geometry_lib::CarSafePos::CAR_REAR;
-    } else {
-      car_safe_pos = geometry_lib::CarSafePos::CAR_FRONT;
-    }
+    if (need_cal_obs_dist) {
+      if (circle_id == -1) {
+        car_safe_pos = geometry_lib::CarSafePos::ALL;
+      } else if (circle_id == 0 || circle_id == 1 || circle_id == 2 ||
+                 circle_id == 5 || circle_id == 6) {
+        car_safe_pos = geometry_lib::CarSafePos::CAR_REAR;
+      } else {
+        car_safe_pos = geometry_lib::CarSafePos::CAR_FRONT;
+      }
 
-    col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
-        std::pair<double, geometry_lib::PathPoint>{obs_dist + lat_buffer, pt},
-        circle_id, car_safe_pos));
+      col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
+          std::pair<double, geometry_lib::PathPoint>{obs_dist + lat_buffer, pt},
+          circle_id, car_safe_pos));
+    }
 
     lon_safe_dist = pt.s;
   }
