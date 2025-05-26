@@ -447,8 +447,14 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATIC_FUSION;
-  msg_meta.input_list[input_list_count].seq =
-      local_view_ptr_->road_info.msg_header.seq;
+  const auto &state_machine = local_view_ptr_->function_state_machine_info;
+  if (IsSwitchApaState(state_machine.current_state)) {
+    msg_meta.input_list[input_list_count].seq =
+        local_view_ptr_->parking_fusion_info.msg_header.seq;
+  } else {
+    msg_meta.input_list[input_list_count].seq =
+        local_view_ptr_->road_info.msg_header.seq;
+  }
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
