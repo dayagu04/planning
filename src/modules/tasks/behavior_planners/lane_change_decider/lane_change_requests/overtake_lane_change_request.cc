@@ -8,6 +8,7 @@
 #include <complex>
 #include <limits>
 
+#include "agent/agent.h"
 #include "common.pb.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -247,27 +248,20 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  TrackedObject* lead_one = lateral_obstacle_->leadone();
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  const int32_t cipv_id = cipv_info.cipv_id();
+  const auto& agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
+  const agent::Agent* agent = agent_manager->GetAgent(cipv_id);
 
   // 无效的track_id暂时赋值为-1
-  if ((lead_one != nullptr && lead_one->track_id == -1) ||
-      lead_one == nullptr || lead_one->d_rel > kDefaultLeadOneConsiderRange) {
+  if ((agent != nullptr && agent->agent_id() == -1) || agent == nullptr ||
+      cipv_info.relative_s() > kDefaultLeadOneConsiderRange) {
     LOG_DEBUG("not exist stable leading vehicle");
     overtake_count_ = 0;
     Finish();
     return;
   }
-
-  // HACK：由于目前无法识别红绿灯路口
-  // 暂时将速度低于10km/h的目标物看作静止目标物
-  double active_lane_change_min_object_speed_threshold = 2.778;
-  if (lead_one->v <= active_lane_change_min_object_speed_threshold) {
-    LOG_DEBUG("lead_one is static object");
-    overtake_count_ = 0;
-    Finish();
-    return;
-  }
-
   auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(base_lane_virtual_id);
 
@@ -296,18 +290,18 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
   const double long_diff =
-      lead_one->d_rel - ego_front_edge - lead_one->length * 0.5;
+      cipv_info.relative_s() - ego_front_edge - agent->length() * 0.5;
 
   const double ego_speed = ego_state->ego_v();
   const double reference_speed = ego_state->ego_v_cruise();
   const bool is_rain_mode =
       false;  // hack：当前planning中没有区分下雨天、不下雨场景
   const bool is_satisfy_update_condition =
-      isSatisfyOvertakeCountUpdateCondition(
-          lead_one, ego_speed, reference_speed, long_diff, is_rain_mode);
+      isSatisfyOvertakeCountUpdateCondition(agent, ego_speed, reference_speed,
+                                            long_diff, is_rain_mode);
   const bool is_satisfy_maintain_condition =
-      isSatisfyOvertakeCountMaintainCondition(lead_one, reference_speed,
-                                              long_diff, is_rain_mode);
+      isSatisfyOvertakeCountMaintainCondition(agent, reference_speed, long_diff,
+                                              is_rain_mode);
 
   std::cout << "reference_speed: " << reference_speed
             << "is_satisfy_update_condition: " << is_satisfy_update_condition
@@ -321,8 +315,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     right_count_thres += kExtraOvertakeCountForRainMode;
   }
   if (is_satisfy_update_condition) {
-    updateOvertakeCount(lead_one, ego_speed, reference_speed,
-                        right_count_thres);
+    updateOvertakeCount(agent, ego_speed, reference_speed, right_count_thres);
   } else if (!is_satisfy_maintain_condition) {
     overtake_count_ = 0;
   }
@@ -339,7 +332,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   updateRouteTrafficSpeed(true, &left_route_traffic_speed);
   updateRouteTrafficSpeed(false, &right_route_traffic_speed);
-  const double leading_vehicle_speed = lead_one->v;
+  const double leading_vehicle_speed = agent->speed();
 
   JSON_DEBUG_VALUE("left_route_traffic_speed", left_route_traffic_speed);
   JSON_DEBUG_VALUE("right_route_traffic_speed", right_route_traffic_speed);
@@ -441,7 +434,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "[OvertakeRequest::update] %s:%d finish request, dash not enough \n",
           __FUNCTION__, __LINE__);
     } else {
-      overtake_vehicle_id_ = lead_one->track_id;
+      overtake_vehicle_id_ = agent->agent_id();
       overtake_vehicle_speed_ = leading_vehicle_speed;
       LOG_DEBUG("overtake_vehicle_id_: [%d] overtake_vehicle_speed_: [%f] \n",
                 overtake_vehicle_id_, overtake_vehicle_speed_);
@@ -475,7 +468,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "[OvertakeRequest::update] %s:%d finish request, dash not enough \n",
           __FUNCTION__, __LINE__);
     } else {
-      overtake_vehicle_id_ = lead_one->track_id;
+      overtake_vehicle_id_ = agent->agent_id();
       overtake_vehicle_speed_ = leading_vehicle_speed;
       LOG_DEBUG("overtake_vehicle_id_: [%d] overtake_vehicle_speed_: [%f] \n",
                 overtake_vehicle_id_, overtake_vehicle_speed_);
@@ -493,10 +486,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 }
 
 bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
-    const TrackedObject* leading_vehicle, const double ego_speed,
+    const agent::Agent* leading_agent, const double ego_speed,
     const double reference_speed, const double leading_vehicle_dist,
     const bool rain_mode) {
-  if (leading_vehicle->track_id == -1) {
+  if (leading_agent->agent_id() == -1) {
     return false;
   }
 
@@ -504,12 +497,12 @@ bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
     return false;
   }
 
-  const double speed_diff = std::max(reference_speed - leading_vehicle->v,
+  const double speed_diff = std::max(reference_speed - leading_agent->speed(),
                                      kOvertakeMinSpeedDiffThreshold);
   const double front_ttc = (speed_diff > 0.0)
                                ? (leading_vehicle_dist / speed_diff)
                                : std::numeric_limits<double>::max();
-  std::cout << "leading_vehicle_speed: " << leading_vehicle->v
+  std::cout << "leading_vehicle_speed: " << leading_agent->speed()
             << "ego_speed: " << ego_speed << "speed_diff: " << speed_diff
             << "long_distance: " << leading_vehicle_dist
             << "front_ttc: " << front_ttc << std::endl;
@@ -539,16 +532,16 @@ bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
 }
 
 bool OvertakeRequest::isSatisfyOvertakeCountMaintainCondition(
-    const TrackedObject* leading_vehicle, const double reference_speed,
+    const agent::Agent* leading_agent, const double reference_speed,
     const double leading_vehicle_dist, const bool rain_mode) {
-  if (leading_vehicle->track_id == -1) {
+  if (leading_agent->agent_id() == -1) {
     return false;
   }
 
   if (leading_vehicle_dist > kOvertakeLeadingVehicleDistanceThreshold) {
     return false;
   }
-  const double speed_diff = std::max(reference_speed - leading_vehicle->v,
+  const double speed_diff = std::max(reference_speed - leading_agent->speed(),
                                      kOvertakeMinSpeedDiffThreshold);
   const double front_ttc = (speed_diff > 0.0)
                                ? (leading_vehicle_dist / speed_diff)
@@ -568,15 +561,15 @@ bool OvertakeRequest::isSatisfyOvertakeCountMaintainCondition(
   return false;
 }
 
-void OvertakeRequest::updateOvertakeCount(const TrackedObject* leading_vehicle,
+void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
                                           const double ego_speed,
                                           const double reference_speed,
                                           const int max_count_thres) {
   int type_value = kOvertakeUpdateCountCarTypeThreshold;
-  if (leading_vehicle->type == iflyauto::OBJECT_TYPE_TRUCK) {
+  if (leading_agent->type() == agent::AgentType::TRUCK) {
     type_value = kOvertakeUpdateCountTruckTypeThreshold;
   }
-  const int curr_count = round((reference_speed - leading_vehicle->v) *
+  const int curr_count = round((reference_speed - leading_agent->speed()) *
                                kOvertakeUpdateCountSpeedRatioThreshold) +
                          type_value;
   overtake_count_ += curr_count;
