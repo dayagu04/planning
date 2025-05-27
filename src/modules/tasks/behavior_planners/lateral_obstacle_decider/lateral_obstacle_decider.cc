@@ -307,14 +307,6 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double d_min_cpath = frenet_obstacle.d_min_cpath();
   double d_max_cpath = frenet_obstacle.d_max_cpath();
 
-  // for Intersection
-  if (d_s_rel > farthest_distance + ego_length_ ||
-      (d_s_rel > farthest_distance - ego_length_ &&
-       ((d_max_cpath < 0 && std::fabs(d_max_cpath) > lane_width * 0.5) ||
-        (d_min_cpath > 0 && d_min_cpath > lane_width * 0.5)))) {
-    return false;
-  }
-
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
   double near_car_d_lane_thr = interp(d_s_rel, xp, fp);
