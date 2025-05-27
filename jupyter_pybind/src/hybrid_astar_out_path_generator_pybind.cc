@@ -197,8 +197,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
       global_position = ego_slot_info.l2g_tf.GetPos(Eigen::Vector2d(
           real_time_node_list_[i][j].x(), real_time_node_list_[i][j].y()));
 
-      real_time_node_list_[i][j] = Eigen::Vector2f(
-          real_time_node_list_[i][j].x(), real_time_node_list_[i][j].y());
+      real_time_node_list_[i][j] << global_position[0], global_position[1];
     }
   }
 

@@ -32,6 +32,7 @@ namespace apa_planner {
 
 struct SimulationParam {
   int force_mid_process_plan = 0;
+  int process_obs_method = -1;
   bool is_simulation = false;
   int plan_type = 0;
   bool is_complete_path = false;

@@ -224,7 +224,7 @@ void ParkingScenarioManager::ScenarioTry() {
         // 先用几何尝试
         std::shared_ptr<ParkingScenario> temp_geometry_scenario =
             scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
-        temp_geometry_scenario->ScenarioTry();
+                temp_geometry_scenario->ScenarioTry();
       }
 
       if (ego_info_under_slot.slot.release_info_

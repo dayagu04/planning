@@ -51,7 +51,7 @@ void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
                       int force_mid_process_plan, double sample_ds, int set_obs,
                       double right_obj_dx, double right_obj_dy,
                       double left_obj_dx, double left_obj_dy,
-                      double channel_width) {
+                      double channel_width, int process_obs_method) {
   ILOG_INFO << "\n\n\n UpdateSimuParams";
   g_simu_param.is_simulation = true;
   g_simu_param.is_path_optimization = is_path_optimization;
@@ -60,6 +60,7 @@ void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
   g_simu_param.use_average_obs_dist = use_average_obs_dist;
   g_simu_param.force_mid_process_plan = force_mid_process_plan;
   g_simu_param.sample_ds = sample_ds;
+  g_simu_param.process_obs_method = process_obs_method;
 
   ApaParameters& muable_param = apa_param.SetPram();
   SyncParkingParameters(true);
@@ -270,6 +271,29 @@ std::vector<Eigen::Vector2d> GetObsVec() {
   return obs_vec;
 }
 
+std::vector<std::vector<Eigen::Vector2d>> GetObsClearZone() {
+  const std::vector<cdl::AABB>& box_vec =
+      g_apa_world_ptr->GetCollisionDetectorInterfacePtr()
+          ->GetEDTCollisionDetectorPtr()
+          ->GetBoxVec();
+  const geometry_lib::LocalToGlobalTf& l2g_tf =
+      g_apa_world_ptr->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
+  std::vector<std::vector<Eigen::Vector2d>> rectangle_vec;
+  for (const cdl::AABB& box : box_vec) {
+    std::vector<Eigen::Vector2d> rectangle;
+    rectangle.emplace_back(
+        l2g_tf.GetPos(Eigen::Vector2d(box.min_.x(), box.min_.y())));
+    rectangle.emplace_back(
+        l2g_tf.GetPos(Eigen::Vector2d(box.max_.x(), box.min_.y())));
+    rectangle.emplace_back(
+        l2g_tf.GetPos(Eigen::Vector2d(box.max_.x(), box.max_.y())));
+    rectangle.emplace_back(
+        l2g_tf.GetPos(Eigen::Vector2d(box.min_.x(), box.max_.y())));
+    rectangle_vec.emplace_back(rectangle);
+  }
+  return rectangle_vec;
+}
+
 PYBIND11_MODULE(perpendicular_slant_tail_in_with_json_py, m) {
   m.doc() = "m";
 
@@ -285,6 +309,7 @@ PYBIND11_MODULE(perpendicular_slant_tail_in_with_json_py, m) {
       .def("GetCurrentGearPlanPath", &GetCurrentGearPlanPath)
       .def("GetCompletePlanPath", &GetCompletePlanPath)
       .def("GetObsVec", &GetObsVec)
-      .def("GetPerferredPlanPath", &GetPerferredPlanPath);
+      .def("GetPerferredPlanPath", &GetPerferredPlanPath)
+      .def("GetObsClearZone", &GetObsClearZone);
   ;
 }

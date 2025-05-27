@@ -27,7 +27,7 @@ const ColResult GJKCollisionDetector::Update(
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
-  if (obs_manager_ == nullptr || obs_manager_->GetObstacles().empty() ||
+  if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty() ||
       N == 0) {
     return col_res_;
   }
@@ -66,7 +66,7 @@ const ColResult GJKCollisionDetector::Update(
   bool col_flag = false;
   double lon_safe_dist = 0.0;
   const std::unordered_map<size_t, ApaObstacle>& obs_map =
-      obs_manager_->GetObstacles();
+      obs_manager_ptr_->GetObstacles();
 
   for (const geometry_lib::PathPoint& pt : path_pt_vec_) {
     TransformPolygonFootPrintLocalToGlobal(pt);
@@ -165,7 +165,7 @@ const ColResult GJKCollisionDetector::Update(
 const bool GJKCollisionDetector::IsPolygonCollision(
     const Polygon2D& polygon, const GJKColDetRequest gjk_col_det_request) {
   const std::unordered_map<size_t, ApaObstacle>& obs_map =
-      obs_manager_->GetObstacles();
+      obs_manager_ptr_->GetObstacles();
 
   for (const auto& obs_pair : obs_map) {
     const ApaObstacle& obs = obs_pair.second;

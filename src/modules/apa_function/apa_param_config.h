@@ -435,7 +435,8 @@ struct ApaParameters {
   double min_slot_release_long_dist_slot2mirror = 3.86;
   double min_parallel_vis_slot_release_long_dist_slot2mirror = 1.87;
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
-  double easy_slot_release_channel_width = 7.68;
+  double one_side_empty_slot_release_channel_width = 7.68;
+  double two_side_empty_slot_release_channel_width = 7.68;
 
   double believe_obs_ego_area = 2.68;
   double limiter_length = 0.0;

@@ -275,6 +275,17 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
   }
 }
 
+void BaseCollisionDetector::UpdateObsClearZone(
+    const std::vector<Eigen::Vector2d>& pt_vec) {
+  obs_clear_zone_decider_.GenerateBoundingBox(pt_vec, obs_manager_ptr_);
+}
+
+const bool BaseCollisionDetector::IsPoseInClearZone(
+    const geometry_lib::PathPoint& pose) {
+  const geometry_lib::RectangleBound bound = CalCarRectangleBound(pose);
+  return obs_clear_zone_decider_.IsInClearZone(bound);
+}
+
 const geometry_lib::RectangleBound BaseCollisionDetector::CalCarRectangleBound(
     const geometry_lib::PathPoint& current_pose) {
   geometry_lib::RectangleBound bound;

@@ -86,7 +86,7 @@ void EDTCollisionDetector::AddObsToOGM() {
   Reset();
   // now only one default height is supported, which includes all car body
   const std::unordered_map<size_t, ApaObstacle> &obs_map =
-      obs_manager_->GetObstacles();
+      obs_manager_ptr_->GetObstacles();
 
   OGMIndex index;
   // add pt cloud
@@ -513,7 +513,7 @@ const ColResult EDTCollisionDetector::Update(
   // The input PathPoint s must be assigned a value
   col_res_.Reset();
   size_t N = pt_vec.size();
-  if (obs_manager_ == nullptr || obs_manager_->GetObstacles().empty() ||
+  if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty() ||
       N == 0) {
     return col_res_;
   }
@@ -550,59 +550,63 @@ const ColResult EDTCollisionDetector::Update(
 
   bool col_flag = false;
   double lon_safe_dist = 0.0;
-  geometry_lib::PathPoint pt_closest_to_obs;
   double obs_dist = 0.0;
   int circle_id = -1;
   geometry_lib::CarSafePos car_safe_pos = geometry_lib::CarSafePos::ALL;
   CarFootPrintCircleList *car_circle_list = nullptr;
   for (const geometry_lib::PathPoint &pt : path_pt_vec_) {
-    if (need_cal_obs_dist) {
-      col_flag = IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_,
-                                     &obs_dist, &circle_id);
-      if (pt.s < col_res_.remain_car_dist + 1e-3) {
-        if (circle_id == -1) {
-          car_safe_pos = geometry_lib::CarSafePos::ALL;
-        } else if (circle_id == 0 || circle_id == 1 || circle_id == 2 ||
-                   circle_id == 5 || circle_id == 6) {
-          car_safe_pos = geometry_lib::CarSafePos::CAR_REAR;
-        } else {
-          car_safe_pos = geometry_lib::CarSafePos::CAR_FRONT;
-        }
-        col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
-            std::pair<double, geometry_lib::PathPoint>{obs_dist + lat_buffer,
-                                                       pt},
-            circle_id, car_safe_pos));
+    circle_id = -1;
+    obs_dist = 26.8;
+    if (!IsPoseInClearZone(pt)) {
+      col_flag =
+          need_cal_obs_dist
+              ? IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_,
+                                    &obs_dist, &circle_id)
+              : IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_);
+
+      if (col_flag) {
+        break;
       }
-    } else {
-      col_flag = IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_);
-    }
 
-    if (col_flag) {
-      break;
-    }
 #if have_different_height_car_circle
-    if (need_cal_obs_dist) {
-      col_flag = IsCollisionForPoint(pt, &car_without_mirror_circles_list_,
-                                     &obs_dist, &circle_id);
-    } else {
-      col_flag = IsCollisionForPoint(pt, &car_without_mirror_circles_list_);
-    }
+      col_flag = need_cal_obs_dist
+                     ? IsCollisionForPoint(
+                           pt, &car_without_mirror_circles_list_with_buffer_,
+                           &obs_dist, &circle_id)
+                     : IsCollisionForPoint(
+                           pt, &car_without_mirror_circles_list_with_buffer_);
 
-    if (col_flag) {
-      break;
-    }
+      if (col_flag) {
+        break;
+      }
 
-    if (need_cal_obs_dist) {
-      col_flag = IsCollisionForPoint(pt, &car_chassis_circles_list_, &obs_dist,
-                                     &circle_id);
-    } else {
-      col_flag = IsCollisionForPoint(pt, &car_chassis_circles_list_);
-    }
+      col_flag =
+          need_cal_obs_dist
+              ? IsCollisionForPoint(pt, &car_chassis_circles_list_with_buffer_,
+                                    &obs_dist, &circle_id)
+              : IsCollisionForPoint(pt, &car_chassis_circles_list_with_buffer_);
 
-    if (col_flag) {
-      break;
-    }
+      if (col_flag) {
+        break;
+      }
+
 #endif
+    }
+
+    if (need_cal_obs_dist) {
+      if (circle_id == -1) {
+        car_safe_pos = geometry_lib::CarSafePos::ALL;
+      } else if (circle_id == 0 || circle_id == 1 || circle_id == 2 ||
+                 circle_id == 5 || circle_id == 6) {
+        car_safe_pos = geometry_lib::CarSafePos::CAR_REAR;
+      } else {
+        car_safe_pos = geometry_lib::CarSafePos::CAR_FRONT;
+      }
+
+      col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
+          std::pair<double, geometry_lib::PathPoint>{obs_dist + lat_buffer, pt},
+          circle_id, car_safe_pos));
+    }
 
     lon_safe_dist = pt.s;
   }
@@ -615,6 +619,7 @@ const ColResult EDTCollisionDetector::Update(
     col_res_.pt_obs_dist_info_vec.resize(safe_pt_number);
   }
   double min_obs_dist = 26.8;
+  geometry_lib::PathPoint pt_closest_to_obs;
   for (auto &info : col_res_.pt_obs_dist_info_vec) {
     if (info.dist_pt.first < min_obs_dist) {
       min_obs_dist = info.dist_pt.first;

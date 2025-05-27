@@ -173,8 +173,10 @@ class ParkingScenario {
       dynamic_plan_time = 0.0;
       replan_fail_time = 0.0;
       remain_dist_path = 5.01;
+      remain_dist_path_last = 5.01;
       remain_dist_obs = 5.01;
       remain_dist_col_det = 5.01;
+      remain_dist_slot_jump = 5.01;
       vel_target = 1.168;
       car_already_move_dist = 0.0;
       current_path_last_point_heading = 0.0;
@@ -244,10 +246,12 @@ class ParkingScenario {
     double replan_fail_time = 0.0;
     // remain dist for path
     double remain_dist_path = 5.01;
+    double remain_dist_path_last = 5.01;
     // remain dist for obs
     double remain_dist_obs = 5.01;
     // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
+    double remain_dist_slot_jump = 5.01;
     double car_already_move_dist = 0.0;
     double current_path_last_point_heading = 0.0;
     pnc::mathlib::spline x_s_spline;

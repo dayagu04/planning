@@ -218,6 +218,13 @@ void ParkingScenario::GenPlanningPath() {
   planning_output_.trajectory.target_reference.target_velocity =
       frame_.vel_target;
 
+  // record last frame remain dist path
+  frame_.remain_dist_path_last = frame_.remain_dist_path;
+
+  // temp use remain_dist_obs to lat cat stop
+  frame_.remain_dist_obs =
+      std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
+
   // reset obs remain dist when gear shift
   if ((frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE &&
        planning_output_.gear_command.gear_command_value ==
@@ -346,7 +353,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       static_lat_buffer, 0.0, gjl_col_det_request);
-    if (!col_res.col_flag) {
+  if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
   }
   const double obs_pt_remain_dist_static =
