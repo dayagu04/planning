@@ -74,8 +74,6 @@ class HybridAStarThreadSolver {
   // for publish
   void GetNodeListMessagePublish(planning::common::AstarNodeList* list);
 
-  const bool IsInit() const { return init_; }
-
  public:
   // get result api
   // const int PublishSearchPath(HybridAStarResult* result,

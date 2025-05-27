@@ -49,16 +49,6 @@ void NarrowSpaceScenario::Reset() {
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   const ApaParameters& params = apa_param.GetParam();
-  if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
-    // init thread first
-    if (!thread_.IsInit()) {
-      thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
-                   params.steer_ratio, params.wheel_base,
-                   params.min_turn_radius,
-                   (params.max_car_width - params.car_width) * 0.5);
-      thread_.Start();
-    }
-  }
 
   current_gear_ = AstarPathGear::PARKING;
   replan_number_inside_slot_ = 0;
