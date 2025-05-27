@@ -139,7 +139,7 @@
   "oversize_veh_addition_buffer": 0.0,
   "traffic_cone_thr": 0.2,
   "avoid_persistence_front_buffer": 0.1,
-  "large_static_obs_buffer": 0.8,
+  "large_static_obs_buffer": 0.6,
   "small_static_obs_buffer": 0.4,
   "near_car_hysteresis": 1.6,
   "in_range_v": 1.0,
