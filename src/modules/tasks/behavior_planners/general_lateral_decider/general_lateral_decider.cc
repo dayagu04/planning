@@ -400,96 +400,108 @@ void GeneralLateralDecider::UnitTest() {
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
     const double ego_v, const CoarsePlanningInfo& coars_planning_info, double &cruise_v) {
   const auto &virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
-  if (virtual_lane_manager
-          ->get_is_exist_ramp_on_road() ||
-      virtual_lane_manager
-          ->get_is_exist_split_on_ramp() ||
-      virtual_lane_manager
-          ->get_is_exist_intersection_split()) {
-      // (virtual_lane_manager
-      //         ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-      //  virtual_lane_manager
-      //         ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
-    return false;
-  }
+      session_->environmental_model()
+              .get_virtual_lane_manager();
+  // if (virtual_lane_manager
+  //         ->get_is_exist_ramp_on_road() ||
+  //     virtual_lane_manager
+  //         ->get_is_exist_split_on_ramp() ||
+  //     virtual_lane_manager
+  //         ->get_is_exist_intersection_split()) {
+  //     // (virtual_lane_manager
+  //     //         ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+  //     //  virtual_lane_manager
+  //     //         ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
+  //   return false;
+  // }
   const auto &route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
-  if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
-    cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
+      session_->environmental_model()
+              .get_route_info()
+              ->get_route_info_output();
+  if ((config_.ramp_limit_v_valid) &&
+      (route_info_output.is_on_ramp)) {
+    cruise_v =
+        std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
   }
   const auto& reference_path = coars_planning_info.reference_path;
   const double init_s =
-      reference_path->get_frenet_ego_state().planning_init_point().frenet_state.s;
+      reference_path->get_frenet_ego_state()
+                    .planning_init_point()
+                    .frenet_state.s;
   const auto& cart_ref_info =
       coars_planning_info.cart_ref_info;
-  const double preview_length = 15.0;
-  const double preview_step = 1.0;
-  double sum_far_kappa = 0.0;
-  double preview_s = std::max(3.0 * ego_v - 5.0, 20.0);
-  if (cart_ref_info.k_s_spline.get_x().size() > 0) {
-    for (double preview_distance = 0.0; preview_distance < preview_length;
-        preview_distance += preview_step) {
-      sum_far_kappa +=
-          std::fabs(cart_ref_info.k_s_spline(init_s + preview_s + preview_distance));
+  double preview_start_time = 0.0;
+  double preview_end_time = 4.0;
+  double preview_dt = 1.0;
+  double min_sampling_gap = 10.0;
+  double preview_step = 2.0;
+  double max_curv = 0.0001;
+  double min_curv = 0.2;
+  double last_preview_s = init_s;
+  std::vector<double> preview_curv_vec;
+  // average curvature filter. sliding window
+  for (double idx = preview_start_time; idx < preview_end_time; idx += preview_dt) {
+    double preview_s = std::min(std::max(idx * ego_v, 0.0), 90.0);
+    if (preview_s - last_preview_s < min_sampling_gap) {
+      preview_s += min_sampling_gap;
+    }
+    last_preview_s = preview_s;
+    std::vector<double> curv_window_vec;
+    for (int j = -5; j <= 5; ++j) {
+      double curv = 0.0001;
+      if (cart_ref_info.k_s_spline.get_x().size() > 0) {
+        curv = std::fabs(cart_ref_info.k_s_spline(init_s + preview_s + j * preview_step));
+      } else {
+        ReferencePathPoint refpath_pt;
+        if (reference_path->get_reference_point_by_lon(
+          init_s + preview_s + j * preview_step, refpath_pt)) {
+          curv = std::fabs(refpath_pt.path_point.kappa());
+        }
+      }
+      curv_window_vec.emplace_back(curv);
+    }
+    double curv_sum = 0.0;
+    for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
+      curv_sum += curv_window_vec[ind];
+    }
+    double avg_curv = curv_sum / curv_window_vec.size();
+    max_curv = std::max(avg_curv, max_curv);
+    min_curv = std::min(avg_curv, min_curv);
+    preview_curv_vec.emplace_back(avg_curv);
+  }
+  // std::vector<double> xp_vel{4.167, 8.333, 16.667};
+  // std::vector<double> fp_radius_thr{150.0, 400.0, 750.0};
+  double kappa_radius_thr = 750;
+      // planning::interp(ego_v, xp_vel, fp_radius_thr);
+  // double far_kappa_radius = 1.0 / std::max(preview_curv, 0.0001);
+  double far_min_kappa_radius = 1.0 / std::max(max_curv, 0.0001);
+  double far_max_kappa_radius = 1.0 / std::max(min_curv, 0.0001);
+  JSON_DEBUG_VALUE("far_kappa_radius", far_min_kappa_radius);
+  if (virtual_lane_manager
+          ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+      virtual_lane_manager
+          ->GetIntersectionState() <= common::OFF_INTERSECTION) {
+    if (far_min_kappa_radius <= 50.0) {
+      return true;
     }
   } else {
-    for (double preview_distance = 0.0; preview_distance < preview_length;
-        preview_distance += preview_step) {
-      ReferencePathPoint ref_ponit;
-      reference_path->get_reference_point_by_lon(init_s + preview_s + preview_distance,
-                                                 ref_ponit);
-      sum_far_kappa += std::fabs(ref_ponit.path_point.kappa());
+    int large_curv_count = 0;
+    int max_large_curv_count = 0;
+    for (int i = preview_curv_vec.size() -1; i >= 0; --i) {
+      double far_kappa_radius = 1.0 / std::max(preview_curv_vec[i], 0.0001);
+      if (far_kappa_radius < kappa_radius_thr) {
+        large_curv_count += 1;
+      } else {
+        large_curv_count = 0;
+      }
+      max_large_curv_count = std::max(large_curv_count, max_large_curv_count);
+    }
+    if ((max_large_curv_count == 1 &&
+         large_curv_count == 1) ||
+        (max_large_curv_count >= 2)) {
+      return true;
     }
   }
-  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-    double aver_far_kappa =
-        sum_far_kappa / std::max((preview_length / preview_step), 1.0);
-    double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
-    JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
-    if (virtual_lane_manager
-            ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-        virtual_lane_manager
-            ->GetIntersectionState() <= common::OFF_INTERSECTION) {
-      if (far_kappa_radius <= 50.0) {
-        return true;
-      }
-    } else {
-      if (far_kappa_radius < 750.0) {
-        return true;
-      }
-    }
-
-  }
-  // std::vector<double> d_polys;
-  // d_polys.resize(d_poly.size());
-  // std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
-  // for (double preview_distance = 0.0; preview_distance < preview_length;
-  //      preview_distance += preview_step) {
-  //   sum_far_kappa +=
-  //       std::fabs(2 * d_polys[0] * (preview_distance + preview_x) +
-  //                 d_polys[1]) /
-  //       std::pow(std::pow(2 * d_polys[0] * (preview_distance + preview_x) +
-  //                             d_polys[1],
-  //                         2) +
-  //                    1,
-  //                1.5);
-  // }
-  // if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-  //   double aver_far_kappa =
-  //       sum_far_kappa / std::max((preview_length / preview_step), 1.0);
-  //   double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
-  //   JSON_DEBUG_VALUE("far_kappa_radius", far_kappa_radius);
-  //   if (far_kappa_radius < 750.0) {
-  //     double road_radius = far_kappa_radius;
-  //     std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
-  //     std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
-  //     double acc_max = interp(road_radius, xp_radius, fp_acc);
-  //     cruise_v = std::min(
-  //         std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
-  //     return true;
-  //   }
-  // }
   return false;
 }
 
@@ -556,7 +568,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // if (cruise_v < 4.167) {  // low speed cruise
     //   kMaxAcc = 0.4;
     // }
-    if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
+    const auto &virtual_lane_manager =
+        session_->environmental_model().get_virtual_lane_manager();
+    if (virtual_lane_manager
+            ->get_is_exist_ramp_on_road() ||
+        virtual_lane_manager
+            ->get_is_exist_split_on_ramp() ||
+        virtual_lane_manager
+            ->get_is_exist_intersection_split()) {
+      ego_v = std::max(ego_v, config_.min_v_cruise);
+      kMaxAcc = 0.2;
+    } else if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
       ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 0.2;

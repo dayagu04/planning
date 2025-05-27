@@ -30,6 +30,7 @@ void LateralMotionPlanningWeight::Init() {
   max_acc_ = 3.0;
   max_jerk_ = 1.5;
   last_expected_average_acc_ = 0.0;
+  last_jerk_bound_limit_ = 0.2;
   expected_average_acc_ = 0.0;
   expected_max_acc_ = 0.0;
   expected_min_acc_ = 0.0;
@@ -553,6 +554,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   } else if (is_emergency_) {
     jerk_bound += vel_factor;  // 1.2 1.1 0.8 0.5
   }
+  jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
   jerk_bound = std::min(jerk_bound, max_jerk_);
   // use last jerk
   // when last big jerk exceed jerk bound , loosening jerk bound
@@ -585,6 +587,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     weight_.jerk_lower_bound.resize(weight_.point_num, -std::fabs(new_jerk_bound));
     planning_input.set_jerk_bound(std::fabs(new_jerk_bound));
   }
+  last_jerk_bound_limit_ = planning_input.jerk_bound();
   // when last positive or negative jerk is big, adding zero jerk bound protection for this time
   if (lateral_motion_scene_ == LANE_KEEP) {  // not big curvature
     if (last_planning_output.jerk_vec_size() >= 2) {

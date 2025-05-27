@@ -868,27 +868,27 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y() -
                                    ref_point.at(i - 1).path_point.y())
               : 0.;
-    if (i > 0 && i < point_size - 1) {
+    if (i > 4 && i < point_size - 5) {
       double side_a =
-          std::hypot(ref_point.at(i + 1).path_point.x() -
+          std::hypot(ref_point.at(i + 5).path_point.x() -
                      ref_point.at(i).path_point.x(),
-                     ref_point.at(i + 1).path_point.y() -
+                     ref_point.at(i + 5).path_point.y() -
                      ref_point.at(i).path_point.y());
       double side_b =
-          std::hypot(ref_point.at(i + 1).path_point.x() -
-                     ref_point.at(i - 1).path_point.x(),
-                     ref_point.at(i + 1).path_point.y() -
-                     ref_point.at(i - 1).path_point.y());
+          std::hypot(ref_point.at(i + 5).path_point.x() -
+                     ref_point.at(i - 5).path_point.x(),
+                     ref_point.at(i + 5).path_point.y() -
+                     ref_point.at(i - 5).path_point.y());
       double side_c =
           std::hypot(ref_point.at(i).path_point.x() -
-                     ref_point.at(i - 1).path_point.x(),
+                     ref_point.at(i - 5).path_point.x(),
                      ref_point.at(i).path_point.y() -
-                     ref_point.at(i - 1).path_point.y());
+                     ref_point.at(i - 5).path_point.y());
       if (side_a == 0 || side_b == 0 || side_c == 0) {
         cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
       } else {
         double cos_B = (side_a * side_a + side_c * side_c - side_b * side_b) / (2 * side_a * side_c);
-        double sin_B = std::sqrt(1 - cos_B * cos_B);
+        double sin_B = std::sqrt(std::max((1 - cos_B * cos_B), 1e-6));
         cart_ref_info.k_vec[i] = 2.0 * sin_B / side_b;
       }
     } else {

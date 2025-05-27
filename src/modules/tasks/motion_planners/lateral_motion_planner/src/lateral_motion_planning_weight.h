@@ -232,6 +232,7 @@ class LateralMotionPlanningWeight {
   double min_road_radius_;
   double min_q_jerk_;
   double last_path_max_dist2ref_;
+  double last_jerk_bound_limit_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
   bool is_emergency_;
