@@ -12,6 +12,8 @@ namespace planning {
 
 struct LateralObstacleHistoryInfo {
   bool lane_borrow = false;
+  bool can_avoid = false;
+  int can_avoid_count = 0;
   bool can_not_avoid = false;
   double ncar_count = 0;
   bool ncar_count_in = false;

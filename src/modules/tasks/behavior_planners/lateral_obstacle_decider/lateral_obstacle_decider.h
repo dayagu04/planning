@@ -47,6 +47,7 @@ class LateralObstacleDecider : public Task {
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       &lateral_obstacle_history_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
+  std::unordered_map<uint32_t, LatObstacleDecisionType> last_output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
   SearchResult &search_result_;
   // ego info
