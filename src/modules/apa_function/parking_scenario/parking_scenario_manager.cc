@@ -121,10 +121,11 @@ void ParkingScenarioManager::UpdateScenarioType() {
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::GEOMETRY_BASED) {
+      if (apa_param.GetParam().use_geometry_path_head_out) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
       } else {
+        // 垂直泊出功能不使用几何规划时，设置 path_generator_type 为
+        // SEARCH_BASED ，进行 hybrid a*；
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
     } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {

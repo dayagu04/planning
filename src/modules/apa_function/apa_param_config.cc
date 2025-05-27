@@ -813,6 +813,9 @@ void SyncParkingParameters(const bool is_simulation) {
   ILOG_INFO << "path_generator_type "
             << static_cast<int>(apa_param.GetParam().path_generator_type);
 
+  JSON_READ_VALUE(apa_param.SetPram().use_geometry_path_head_out, bool,
+                  "use_geometry_path_head_out");
+
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().prohibit_move_slot, bool,
                   "prohibit_move_slot");

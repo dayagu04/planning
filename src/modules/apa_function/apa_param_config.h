@@ -398,6 +398,7 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
+  bool use_geometry_path_head_out = false;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;

@@ -165,12 +165,12 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
 bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
                                                    const Node3d *child) {
-  if (request.direction_request != ParkingVehDirection::TAIL_OUT_TO_LEFT &&
-      request.direction_request != ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+  if (request.direction_request != ParkingVehDirection::HEAD_OUT_TO_LEFT &&
+      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
     return false;
   }
 
-  constexpr float ANGLE_THRESHOLD_DEG = 30.0f;
+  constexpr float ANGLE_THRESHOLD_DEG = 15.0f;
 
   // 计算角度并转换为度数
   const float heading_deg = child->GetPhi() * 180.0f / static_cast<float>(M_PI);
@@ -179,10 +179,10 @@ bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
   const bool is_forward = child->IsForward();
 
   switch (request.direction_request) {
-    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
       return is_forward && heading_deg < -ANGLE_THRESHOLD_DEG;
 
-    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
       return is_forward && heading_deg > ANGLE_THRESHOLD_DEG;
 
     default:
