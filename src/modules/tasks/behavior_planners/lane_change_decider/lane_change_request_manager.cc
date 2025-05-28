@@ -57,6 +57,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto&  reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
+  const auto& virtual_lane_manager =
+        session_->environmental_model().get_virtual_lane_manager();
+  const auto& intersection_state = virtual_lane_manager->GetIntersectionState();
   auto mrc_condition = session_->mutable_planning_context()->mrc_condition();
   const bool location_valid = session_->environmental_model().location_valid();
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
@@ -123,12 +126,14 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   if (int_request_.request_type() == NO_CHANGE) {
     if (enable_use_cone_change_request &&
         request_source_ != EMERGENCE_AVOID_REQUEST &&
-        dis_to_stopline > default_distance_threshld_to_stop_line) {
+        dis_to_stopline > default_distance_threshld_to_stop_line &&
+        intersection_state != planning::common::IN_INTERSECTION) {
       cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request &&
         request_source_ != CONE_REQUEST &&
-        dis_to_stopline > default_distance_threshld_to_stop_line) {
+        dis_to_stopline > default_distance_threshld_to_stop_line &&
+        intersection_state != planning::common::IN_INTERSECTION) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
@@ -138,6 +143,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         origin_relative_id_zero_nums == 1 &&
         ego_distance_to_boundary_merge >
         distance_nearby_merge_point_to_surpress_merge_request &&
+        intersection_state != planning::common::IN_INTERSECTION &&
         dis_to_stopline > default_distance_threshld_to_stop_line) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
