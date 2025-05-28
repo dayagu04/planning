@@ -1838,7 +1838,10 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 const bool ParallelPathGenerator::CalMinSafeCircle() {
   const auto time0 = IflyTime::Now_ms();
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
+  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.0;
+
+  collision_detector_ptr_->SetParam(
+      CollisionDetector::Paramters(lat_buffer, false));
 
   std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
   const bool success_tra =
