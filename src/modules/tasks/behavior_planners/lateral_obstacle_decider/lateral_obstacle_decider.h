@@ -25,9 +25,10 @@ class LateralObstacleDecider : public Task {
  private:
   bool IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle,
                               double lane_width, bool rightest_lane,
-                              double farthest_distance);
-  void LateralObstacleDecision(FrenetObstacle &frenet_obstacle,
-                               double lane_width);
+                              double farthest_distance, bool can_left_borrow,
+                              bool can_right_borrow);
+  void LateralObstacleDecision(
+      FrenetObstacle &frenet_obstacle, double lane_width);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
@@ -37,9 +38,15 @@ class LateralObstacleDecider : public Task {
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
-  bool CalculateIntersection(FrenetObstacle &frenet_obstacle,
+  bool CalculateCutInAndCross(FrenetObstacle &frenet_obstacle,
                              std::shared_ptr<ReferencePath> reference_path,
                              double lane_width);
+  void UpdateLaneBorrowDirection();
+  void UpdateIntersection();
+  void HoldLatOffset(FrenetObstacle &frenet_obstacle);
+  bool CheckSideObstacle(
+        const std::shared_ptr<ReferencePath> &reference_path_ptr,
+        FrenetObstacle &frenet_obstacle);
 
  private:
   planning::framework::Session *session_;
@@ -62,6 +69,8 @@ class LateralObstacleDecider : public Task {
   double ego_rear_edge_to_rear_axle_ = 0;
   bool &in_intersection_;
   int intersection_count_ = 0;
+  bool &left_borrow_;
+  bool &right_borrow_;
 };
 
 }  // namespace planning

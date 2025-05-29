@@ -19,6 +19,8 @@
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
+#include "utils/hysteresis_decision.h"
+
 namespace planning {
 
 using namespace planning_math;
@@ -179,9 +181,26 @@ class GeneralLateralDecider : public Task {
     double lat_buf_dis, bool is_nudge_left,
     double rear_lon_buf_dis, double front_lon_buf_dis,
     LatObstacleDecisionType lat_decision, int index);
+  bool CheckPredLonOverlapStability(
+      int id, bool is_agent_pred_lon_overlap_with_plan_path);
+  void ResetIsExceedObstacleHysteresisMap(int id = -1);
   void CalculateAvoidObstacles(
     const std::vector<std::pair<double, double>> frenet_soft_bounds,
     std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
+  double CalStaticNudgeLatBufDis(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    bool is_side_obstacle, double extra_lane_type_decrease_buffer,
+    bool is_update_hard_bound, double ego_width, double lane_width);
+  double CalDynamicNudgeLatBufDis(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    double limit_overlap_min_y, double limit_overlap_max_y,
+    double pred_ts, double extra_lane_type_decrease_buffer,
+    bool is_same_side_obstacle_during_lane_change,
+    double &updated_overlap_min_y, double &updated_overlap_max_y);
+  bool IsSameSideObstacleDuringLaneChange(
+      const std::shared_ptr<FrenetObstacle> obstacle);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -191,7 +210,8 @@ class GeneralLateralDecider : public Task {
   TrajectoryPoints ref_traj_points_;
   TrajectoryPoints plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
-  std::unordered_map<uint32_t, LatObstacleDecisionType> last_lat_obstacle_decision_;
+  std::unordered_map<int,HysteresisDecision> is_exceed_obstacle_hysteresis_map_;
+  bool is_agent_current_pred_lonoverlap_ = false;
 
   ReferencePathPoints ref_path_points_;
   ObstacleDecisions static_obstacle_decisions_;
@@ -204,6 +224,8 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
   double min_road_radius_ = 10000.0;
+  double last_overlap_min_y_ = 0.0;
+  double last_overlap_max_y_ = 0.0;
   double cruise_vel_ = 0.0;
   double extra_lane_width_decrease_buffer_ = 0.0;
   double overlap_start_s_ = 0.0;

@@ -1668,7 +1668,7 @@ double HppGeneralLateralDecider::CalculateExtraDecreaseBuffer(const std::shared_
   }
 
   double extra_type_decrease_buffer = 0.0;
-  if (hpp_general_lateral_decider_utils::IsTruck(obstacle->type())) {
+  if (hpp_general_lateral_decider_utils::IsTruck(obstacle)) {
     extra_type_decrease_buffer = config_.truck_decrease_extra_buffer;
   }
 
@@ -1821,7 +1821,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
 
     double lat_buf_dis =
         hpp_general_lateral_decider_utils::CalDesireLateralDistance(
-            ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
+            ego_cart_state_manager_->ego_v(), t, 0, obstacle,
             is_nudge_left, in_intersection, config_);
     // todo: high speed vehicle
     // do decision

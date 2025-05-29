@@ -20,6 +20,8 @@ const std::string BoundType2String(BoundType in) {
       return "ROAD_BORDER";
     case BoundType::EGO_POSITION:
       return "EGO_POSITION";
+    case BoundType::LOW_PRIORITY_AGENT:
+      return "LOW_PRIORITY_AGENT";
 
     case BoundType::GROUNDLINE:
       return "GROUNDLINE";
