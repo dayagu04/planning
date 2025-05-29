@@ -2257,10 +2257,15 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
   const bool current_path_length_flag =
       frame_.current_path_length > perception_blind_spot_distance;
 
+  const double& path_heading = current_path_point_global_vec_.back().heading;
+  constexpr double kHeadingThreshold = 0.05;
+
+  const bool heading_flag =
+      std::abs(path_heading) - 0.5 * M_PI > kHeadingThreshold;
+
   const bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
                                    occupied_ratio_flag && path_dist_flag &&
-                                   current_path_length_flag;
-
+                                   current_path_length_flag && heading_flag;
   return dynamic_replan_flag;
 }
 
