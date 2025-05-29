@@ -118,7 +118,9 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // 7.update jerk bounds
     Bound lon_j_bound;
     if (lane_change_info.s_search_status &&
-        speed_planning_config_.enable_speed_adjust) {
+        speed_planning_config_.enable_speed_adjust &&
+        start_stop_decider_output.ego_start_stop_info().state() !=
+        common::StartStopInfo::STOP) {
       lon_j_bound.lower = -1.0;
       lon_j_bound.upper = 1.0;
     } else {
@@ -129,7 +131,9 @@ void LongRefPathDecider::UpdateLonRefPath() {
 
     // 8. use speed adjust s search ref
     if (lane_change_info.s_search_status &&
-        speed_planning_config_.enable_speed_adjust) {
+        speed_planning_config_.enable_speed_adjust &&
+        start_stop_decider_output.ego_start_stop_info().state() !=
+        common::StartStopInfo::STOP) {
       if (lane_change_info.st_search_vec.size() == plan_points_num_) {
         for (size_t i = 0; i <= plan_points_num_; i++) {
           lon_behavior_output_.s_refs[i].first =

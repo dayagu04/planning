@@ -677,6 +677,8 @@
 
     "cruise_target": {
       "lane_change_upper_speed_limit_kph" : 120.0,
+      "low_speed_follow_speed_thred_mps" : 1.0,
+      "low_speed_follow_accel_release_traj_len" : 5.0,
       "comfort_kinematic_param": {
         "acc_positive_upper": 1.35,
         "acc_positive_speed_lower": 4.2,
@@ -712,6 +714,22 @@
         "jerk_negative_speed_lower": 1.0,
         "jerk_negative_upper": -1.0,
         "jerk_negative_speed_upper": 25.0
+      },
+      "low_speed_follow_acc_traj_table": {
+        "traj_table": [
+          10.0, 21.0, 35.0
+        ],
+        "acc_table": [
+          0.50, 0.80, 1.35
+        ]
+      },
+      "low_speed_follow_jerk_traj_table": {
+        "traj_table": [
+          15.0, 25.0, 35.0
+        ],
+        "jerk_table": [
+          2.50, 2.20, 2.00
+        ]
       },
       "normal_kappa_speed_limit_table": {
         "kappa_table": [

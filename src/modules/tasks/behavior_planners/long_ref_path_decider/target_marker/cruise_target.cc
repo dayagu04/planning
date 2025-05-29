@@ -34,11 +34,12 @@ constexpr double kMinCheckLength = 30.0;
 constexpr double kMaxCheckTime = 3.0;
 constexpr double kKphToMps = 1.0 / 3.6;
 constexpr double kLowSpeedFollowCIPVTrajLength = 35.0;
-constexpr double kLowSpeedFollowCIPVDis = 25.0;
+constexpr double kLowSpeedFollowCIPVDis = 13.5;
 //constexpr double kLowSpeedFollowTrajLengthThres = 10.0;
 //constexpr double kLowSpeedFollowJerkPosBoundHigh = 1.0;
 //constexpr double kLowSpeedFollowJerkPosBoundLow = 0.5;
 constexpr double kReleaseBrakeMaxJerk = 6.0;
+constexpr double kReleaseAccelMinJerk = -5.0;
 }  // namespace
 
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
@@ -101,6 +102,7 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
         speed_limit_kinematics_bound_table_[speed_limit_type_ref];
       kinematic_bound.acc_positive_mps2 = low_speed_follow_a;
       kinematic_bound.jerk_positive_mps3 = low_speed_follow_j;
+      kinematic_bound.jerk_negative_mps3 = kReleaseAccelMinJerk;
     }
   }
   auto acceleration_trajectory1d =
@@ -193,6 +195,10 @@ bool CruiseTarget::MakeSpeedLimitKinematicTable(
 }
 
 bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  double ego_v = ego_state_manager->ego_v();
+
   const auto& cipv_decider_output =
       session_->planning_context().cipv_decider_output();
 
@@ -250,10 +256,17 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
   double cipv_traj_length = last_traj_pt_s - first_traj_pt_s;
   if (cipv_traj_length < kLowSpeedFollowCIPVTrajLength &&
       cipv_relative_s < kLowSpeedFollowCIPVDis) {
-    *acc = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_ACC_BP, _LOW_SPEED_FOLLOW_ACC_V);
+    if (cipv_traj_length < config_.low_speed_follow_accel_release_traj_len &&
+        ego_v > config_.low_speed_follow_speed_thred_mps) {
+      *acc = 0.0;
+    } else {
+      *acc = interp(cipv_traj_length, config_.low_speed_follow_acc_traj_table.traj_table,
+                    config_.low_speed_follow_acc_traj_table.acc_table);
+    }
     //*jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
     //        kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
-    *jerk = interp(cipv_traj_length, _LOW_SPEED_FOLLOW_JERK_BP, _LOW_SPEED_FOLLOW_JERK_V);
+    *jerk = interp(cipv_traj_length, config_.low_speed_follow_jerk_traj_table.traj_table,
+                   config_.low_speed_follow_jerk_traj_table.jerk_table);
     return true;
   } else {
     return false;
