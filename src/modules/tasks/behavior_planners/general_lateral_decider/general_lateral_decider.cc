@@ -3142,11 +3142,13 @@ bool GeneralLateralDecider::IsSameSideObstacleDuringLaneChange(
           ->mutable_general_lateral_decider_output();
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
-  const bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
-      LatObstacleDecisionType::RIGHT;
-  if ((((lc_request_direction == RequestType::RIGHT_CHANGE) && (is_nudge_left)) ||
-      ((lc_request_direction == RequestType::LEFT_CHANGE) && (!is_nudge_left))) &&
-      (general_lateral_decider_output.lane_change_scene)) {
+  if ((((lc_request_direction == RequestType::RIGHT_CHANGE) &&
+        (lat_obstacle_decision.at(obstacle->id()) ==
+         LatObstacleDecisionType::RIGHT)) ||
+       ((lc_request_direction == RequestType::LEFT_CHANGE) &&
+        (lat_obstacle_decision.at(obstacle->id()) ==
+        LatObstacleDecisionType::LEFT))) &&
+     (general_lateral_decider_output.lane_change_scene)) {
     return true;
   }
   return false;
