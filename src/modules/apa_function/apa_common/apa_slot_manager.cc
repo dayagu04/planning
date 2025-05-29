@@ -84,11 +84,13 @@ void ApaSlotManager::Update(
         } else {
           ILOG_WARN << "slot id = " << ego_info_under_slot_.id
                     << " not found in slots_map_";
+          ego_info_under_slot_.Reset();
         }
 
       } else {
         ILOG_WARN
             << "dist_id_map_ is empty, cannot update ego_info_under_slot_";
+        ego_info_under_slot_.Reset();
       }
 
     } else if (state_machine_ptr_->IsParkingStatus()) {
