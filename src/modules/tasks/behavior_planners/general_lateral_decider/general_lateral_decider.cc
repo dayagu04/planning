@@ -3118,24 +3118,13 @@ bool GeneralLateralDecider::CheckPredLonOverlapStability(
     }
     is_exceed_obstacle_hysteresis_map_[id] = std::move(agent_pred_lon_overlap_hysteresis);
   } else {
-    if (!is_exceed_obstacle_hysteresis_map_[id].IsValid()) {
-      // The agent_pred_lon_overlap is false at last timestamp
-      if (!is_agent_pred_lon_overlap_with_plan_path) {
-        // The agent_pred_lon_overlap is false at curent timestamp
-        is_exceed_obstacle_hysteresis_map_[id].SetInvalidCount();
-      } else {
-        // The agent_pred_lon_overlap is true at curent timestamp
-        is_exceed_obstacle_hysteresis_map_[id].SetValidByCount();
-      }
+    // The agent_pred_lon_overlap is true at last timestamp
+    if (!is_agent_pred_lon_overlap_with_plan_path) {
+      // The agent_pred_lon_overlap is false at curent timestamp
+      is_exceed_obstacle_hysteresis_map_[id].SetInvalidCount();
     } else {
-      // The agent_pred_lon_overlap is true at last timestamp
-      if (!is_agent_pred_lon_overlap_with_plan_path) {
-        // The agent_pred_lon_overlap is false at curent timestamp
-        is_exceed_obstacle_hysteresis_map_[id].SetInvalidCount();
-      } else {
-        // The agent_pred_lon_overlap is true at curent timestamp
-        is_exceed_obstacle_hysteresis_map_[id].SetValidByCount();
-      }
+      // The agent_pred_lon_overlap is true at curent timestamp
+      is_exceed_obstacle_hysteresis_map_[id].SetValidByCount();
     }
   }
   return is_exceed_obstacle_hysteresis_map_[id].IsValid();
@@ -3332,7 +3321,7 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   if (lat_obs_decision_iter == lat_obstacle_decision.end()){
     return false;
   }
-  
+
   is_blocked_obstacle_ = IsBlockedObstacleInLaneBorrow(obstacle);
   if (is_blocked_obstacle_) {
     return true;
