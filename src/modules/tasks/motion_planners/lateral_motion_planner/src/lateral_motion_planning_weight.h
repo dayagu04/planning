@@ -42,18 +42,18 @@ struct PathWeight {  // temp
   std::vector<double> q_pos_soft_bound;
   std::vector<double> q_pos_hard_bound;
   std::unordered_map<size_t, double> time2soft_ratio = {
-    {0, 2.5},
-    {1, 1.5},
+    {0, 1.3},
+    {1, 1.3},
     {2, 1.2},
-    {3, 0.8},
-    {4, 0.3}
+    {3, 1.0},
+    {4, 0.8}
   };
   std::unordered_map<size_t, double> time2hard_ratio = {
-    {0, 3.0},
-    {1, 2.0},
-    {2, 1.5},
-    {3, 1.0},
-    {4, 0.5}
+    {0, 1.5},
+    {1, 1.5},
+    {2, 1.4},
+    {3, 1.2},
+    {4, 1.0}
   };
 
   void Init() {
@@ -110,6 +110,7 @@ class LateralMotionPlanningWeight {
   void CalculateLatAvoidBoundPriority(
       const std::vector<std::pair<double, double>> &soft_bounds,
       const std::vector<std::pair<double, double>> &hard_bounds,
+      const std::vector<planning::WeightedBounds> hard_bounds_vec,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &soft_bounds_info,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &hard_bounds_info);
 
@@ -119,6 +120,7 @@ class LateralMotionPlanningWeight {
       std::vector<double>& expected_steer_vec);
 
   void CalculateJerkBoundByLastJerk(
+      const std::shared_ptr<planning::ReferencePath> &reference_path,
       const planning::common::LateralPlanningOutput &last_planning_output,
       planning::common::LateralPlanningInput &planning_input);
 
@@ -141,6 +143,8 @@ class LateralMotionPlanningWeight {
   void SetEgoVel(const double ego_vel) { ego_vel_ = ego_vel; }
 
   void SetEgoL(const double ego_l) { ego_l_ = ego_l; }
+
+  void SetRefVel(const double ref_vel) { ref_vel_ = ref_vel; }
 
   void SetInitL(const double init_l) { init_l_ = init_l; }
 
@@ -219,6 +223,7 @@ class LateralMotionPlanningWeight {
   double concerned_start_q_jerk_;
   double ego_vel_;
   double ego_l_;
+  double ref_vel_;
   double init_l_;
   double end_ratio_for_qrefxy_;
   double end_ratio_for_qreftheta_;
@@ -241,6 +246,8 @@ class LateralMotionPlanningWeight {
   std::vector<double> soft_bound_qratio_vec_;
   std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;
+  pnc::mathlib::spline hard_lbound_l_s_spline_;
+  pnc::mathlib::spline hard_ubound_l_s_spline_;
 };
 
 }  // namespace lateral_planning
