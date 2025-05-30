@@ -3168,9 +3168,8 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double rear_axle_to_front_bumper =  // TBD：define as consexpr
       vehicle_param.length - vehicle_param.rear_edge_to_rear_axle;
-  const double span_t = config_.delta_t * config_.num_step;
   const double rear_obstacle_care_t = 2.0;
-  double care_t = span_t;
+  double care_t = config_.delta_t * config_.num_step;;
   if (is_rear_obstacle) {
     care_t = rear_obstacle_care_t;
   }
