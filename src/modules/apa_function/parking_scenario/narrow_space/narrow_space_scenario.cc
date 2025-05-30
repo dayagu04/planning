@@ -26,6 +26,7 @@
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "spiral_typedefs.h"
 #include "transform2d.h"
 #include "utils_math.h"
 #include "virtual_wall_decider.h"
@@ -187,11 +188,19 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
   const EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
+  const double& target_heading_deg_head_out =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_;
+
+  constexpr double kTargetHeadingThreshold = 5.0;
+
   const bool heading_condition_1 =
-      std::fabs(ego_info.cur_pose.heading) <= 95.0 * kDeg2Rad;  // TODU::
+      std::fabs(ego_info.cur_pose.heading) <=
+      (target_heading_deg_head_out + kTargetHeadingThreshold) *
+          kDeg2Rad;  // TODU::
 
   const bool heading_condition_2 =
-      std::fabs(ego_info.cur_pose.heading) >= 85.0 * kDeg2Rad;
+      std::fabs(ego_info.cur_pose.heading) >=
+      (target_heading_deg_head_out - kTargetHeadingThreshold) * kDeg2Rad;
 
   const bool lat_condition = heading_condition_1 && heading_condition_2;
 
@@ -1476,11 +1485,14 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
 
   constexpr double kInitialTargetX = 7.0;
   constexpr double kInitialTargetY = 11.0;
-  constexpr double kInitialTargetHeading = 0.5 * M_PI;
   constexpr double kAlternateTargetX = 8.0;
   constexpr double kAlternateTargetY = 5.0;
   constexpr double kPositionThresholdX = 7.0;
   constexpr double kHeadingThresholdRad = 70.0 * M_PI / 180.0;
+
+  const double target_heading_rad_head_out =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_ *
+      M_PI / 180.0;
 
   const ApaParkOutDirection park_out_direction =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection();
@@ -1488,7 +1500,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
   switch (park_out_direction) {
     case ApaParkOutDirection::LEFT_FRONT:
       ego_info_under_slot.target_pose.pos << kInitialTargetX, kInitialTargetY;
-      ego_info_under_slot.target_pose.heading = kInitialTargetHeading;
+      ego_info_under_slot.target_pose.heading = target_heading_rad_head_out;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
 
       // 特殊位置要对目标点进行特殊调整
@@ -1502,7 +1514,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
 
     case ApaParkOutDirection::RIGHT_FRONT:
       ego_info_under_slot.target_pose.pos << kInitialTargetX, -kInitialTargetY;
-      ego_info_under_slot.target_pose.heading = -kInitialTargetHeading;
+      ego_info_under_slot.target_pose.heading = -target_heading_rad_head_out;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
 
       // 特殊位置要对目标点进行特殊调整
@@ -2029,7 +2041,8 @@ void NarrowSpaceScenario::ScenarioTry() {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-  if (ego_info_under_slot.slot.slot_type_ != SlotType::PERPENDICULAR) {
+  if (ego_info_under_slot.slot.slot_type_ != SlotType::PERPENDICULAR &&
+      ego_info_under_slot.slot.slot_type_ != SlotType::SLANT) {
     return;
   }
 

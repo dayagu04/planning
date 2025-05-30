@@ -119,7 +119,8 @@ void ParkingScenarioManager::UpdateScenarioType() {
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
+        ego_info_under_slot.slot_type == SlotType::SLANT) {
       if (apa_param.GetParam().use_geometry_path_head_out) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
       } else {
