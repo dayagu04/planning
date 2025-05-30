@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <unordered_map>
+#include "behavior_planners/lane_change_decider/lane_change_path_generate.h"
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "config/basic_type.h"
 #include "define/geometry.h"
@@ -152,6 +154,7 @@ class LaneChangeStateMachineManager {
       double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
   const double CalculateEgoFrontLineLength();
+  void GetFrontRiskAgentTrajs();
 
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request) const;
@@ -185,6 +188,8 @@ class LaneChangeStateMachineManager {
       const bool is_front_agent, const bool is_ego_lane_agent,
       const planning_data::DynamicAgentNode** after_filter_agent);
   TrajectoryPoints CalculateEgoFutureTrajs() const;
+  TrajectoryPoints CalculateEgoPPIDMTrajs();
+  TrajectoryPoints CalculateEgoPPIDMTrajs(const planning_data::DynamicAgentNode* front_agent_node);
   bool CheckIfSafetyForPredictionTrajs(
       const TrajectoryPoints& agent_traj,
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
@@ -215,7 +220,24 @@ class LaneChangeStateMachineManager {
   bool IsHighPriorityCompleteMLC() const;
   bool IsFilterStaticAgentLC(const planning_data::DynamicAgentNode& agent_node) const;
 
+  void UpdateLCCoarsePlanningInfo();
+
+  void UpdateLCPath(TrajectoryPoints& traj_points,
+                    const LaneChangePathGenerateManager::LCPathResult& lc_path_result,
+                    const std::shared_ptr<ReferencePath> ref_path);
+  void CheckTargetFrontNode(int64_t target_lane_front_node_id);
+  FrenetObstacleBoundary  GetSLboundaryFromAgent(
+    const std::shared_ptr<ReferencePath>ref_path, const Box2d& obs_box);
+  bool PassInLane(double lane_width,
+                    const FrenetObstacleBoundary& obs_bd,
+                    const double car_width,
+                    const double safety_margin,
+                    const RequestType direction);
+  bool CheckFrontRiskAgentTrajs(
+    const planning_data::DynamicAgentNode *agent_node, bool is_large_car);
+
  private:
+//   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
   CongestionDetectionConfig congestion_detection_config_;
@@ -264,10 +286,18 @@ class LaneChangeStateMachineManager {
   std::vector<double> ego_future_v_{};
 
   TrajectoryPoints ego_trajs_future_;
+  TrajectoryPoints front_node_trajs_future_;
+  std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;
 
   CongestionResult fix_lane_congestion_level_;
+
+  std::shared_ptr<LaneChangePathGenerateManager> lc_path_generate_;
+  std::vector<double> agent_box_corners_x_{};
+  std::vector<double> agent_box_corners_y_{};
+  std::vector<double> ego_box_corners_x_{};
+  std::vector<double> ego_box_corners_y_{};
 };
 }  // namespace planning
