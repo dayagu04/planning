@@ -87,6 +87,10 @@ class Obstacle {
   iflyauto::ObjectType type() const { return type_; }
   SourceType source_type() const { return source_type_; }
   bool is_vaild() const { return valid_; }
+  bool is_reverse() const { return is_reverse_; }
+  void set_is_reverse(bool is_reverse) {
+    is_reverse_ = is_reverse;
+  }
   bool abnormal_data_dectection(const PredictionObject &prediction_object);
   bool is_oversize_vehicle() const { return is_oversize_vehicle_; }
   bool is_VRU() const { return is_VRU_; }
@@ -110,7 +114,6 @@ class Obstacle {
 
   planning_math::Polygon2d get_polygon_at_point(
       const PncTrajectoryPoint &point) const;
-
  private:
   void extract_point_at_specified_resolution(
       std::vector<planning_math::Vec2d> &points) const;
@@ -150,7 +153,7 @@ class Obstacle {
   bool is_traffic_facilities_ = false;
   bool is_car_ = false;
   bool trajectory_valid_ = false;
-
+  bool is_reverse_ = false;
   std::vector<PncTrajectoryPoint> trajectory_{};
   // iflyauto::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;

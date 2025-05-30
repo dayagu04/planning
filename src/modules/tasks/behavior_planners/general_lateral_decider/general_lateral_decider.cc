@@ -3160,20 +3160,25 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     return true;
   }
   // const double KDynamicLonOverlapDisBuffer = 1.0;
+  const bool is_rear_obstacle = IsRearObstacle(obstacle);
   const double dynamic_lon_overlap_dis_buffer =
       general_lateral_decider_utils::CalDesireLonOverlapDistance(
-          ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
+          ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(), is_rear_obstacle);
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double rear_axle_to_front_bumper =  // TBD：define as consexpr
       vehicle_param.length - vehicle_param.rear_edge_to_rear_axle;
-  const double span_t = config_.delta_t * config_.num_step;
+  const double rear_obstacle_care_t = 2.0;
+  double care_t = config_.delta_t * config_.num_step;;
+  if (is_rear_obstacle) {
+    care_t = rear_obstacle_care_t;
+  }
   double ego_s_start = 0;
   double ego_s_end = 0;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
-    if (t > span_t) {
+    if (t > care_t) {
       continue;
     }
     if (i == 0) {

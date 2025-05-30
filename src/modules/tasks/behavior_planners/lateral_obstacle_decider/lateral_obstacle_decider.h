@@ -28,7 +28,8 @@ class LateralObstacleDecider : public Task {
                               double farthest_distance, bool can_left_borrow,
                               bool can_right_borrow);
   void LateralObstacleDecision(
-      FrenetObstacle &frenet_obstacle, double lane_width);
+      FrenetObstacle &frenet_obstacle, double lane_width,
+      const std::shared_ptr<ReferencePath> reference_path_ptr);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
@@ -47,7 +48,8 @@ class LateralObstacleDecider : public Task {
   bool CheckSideObstacle(
         const std::shared_ptr<ReferencePath> &reference_path_ptr,
         FrenetObstacle &frenet_obstacle);
-
+  void CheckObstaclesIsReverse();
+  
  private:
   planning::framework::Session *session_;
   LateralObstacleDeciderConfig config_;
@@ -59,6 +61,7 @@ class LateralObstacleDecider : public Task {
   SearchResult &search_result_;
   // ego info
   double ego_rear_axis_to_front_edge_;
+  double ego_rear_axle_to_center_;
   double ego_length_;
   double ego_width_;
   double ego_head_s_ = 0;

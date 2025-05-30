@@ -15,7 +15,8 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 bool is_same_side_obstacle_during_lane_change,
                                 GeneralLateralDeciderConfig &config);
 
-double CalDesireLonOverlapDistance(double ego_vel, double agent_vel);
+double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
+                                   bool is_rear_obstacle);
 double CalDesireLonDistance(double ego_vel, double agent_vel,
                             bool is_same_side_obstacle_during_lane_change,
                             GeneralLateralDeciderConfig &config);
