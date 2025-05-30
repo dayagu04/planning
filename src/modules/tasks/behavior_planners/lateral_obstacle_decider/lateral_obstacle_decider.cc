@@ -11,6 +11,7 @@
 #include "debug_info_log.h"
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
+#include "math/math_utils.h"
 #include "planning_context.h"
 #include "edt_manager.h"
 #include "task_interface/lateral_obstacle_decider_output.h"
@@ -1238,8 +1239,8 @@ void LateralObstacleDecider::CheckObstaclesIsReverse() {
   const double kMaxHeadingDiff = 2.3;
   auto frenet_obstacles = reference_path_ptr->get_obstacles();
   for (auto &frenet_obstacle : frenet_obstacles) {
-    bool is_reverse = std::fabs(frenet_obstacle->obstacle()->velocity_angle() -
-      reference_path_ptr->get_frenet_coord()->GetPathPointByS(frenet_obstacle->frenet_s()).theta()) > kMaxHeadingDiff;
+    bool is_reverse = std::fabs(NormalizeAngle(frenet_obstacle->obstacle()->velocity_angle() -
+      reference_path_ptr->get_frenet_coord()->GetPathPointByS(frenet_obstacle->frenet_s()).theta())) > kMaxHeadingDiff;
     auto obstacle = obstacle_manager->find_obstacle(frenet_obstacle->id());
     if (obstacle != nullptr) {
       obstacle->set_is_reverse(is_reverse);
