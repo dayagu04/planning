@@ -1044,7 +1044,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
           std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
       limiter_obs_x +=
           (apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
-           apa_param.GetParam().rear_overhanging - 0.22);
+           apa_param.GetParam().rear_overhanging - 0.12);
       ILOG_INFO << "limiter_obs_x = " << limiter_obs_x;
     } else {
       ILOG_INFO << "front limiter";
@@ -1052,7 +1052,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
           std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
       limiter_obs_x +=
           (-apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
-           apa_param.GetParam().front_overhanging + 0.22);
+           apa_param.GetParam().front_overhanging + 0.12);
     }
 
     const Eigen::Vector2d limiter_obs_start(limiter_obs_x,
