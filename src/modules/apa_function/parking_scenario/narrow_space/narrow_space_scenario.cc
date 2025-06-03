@@ -52,6 +52,9 @@ void NarrowSpaceScenario::Reset() {
   lateral_offset_ = 0;
   lon_offset_ = 0;
 
+  current_path_last_heading_ = 0.0;
+  dynamic_falg_head_out_ = false;
+
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
 
@@ -961,6 +964,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
             local_path.emplace_back(point);
           }
         }
+
+        current_path_last_heading_ = local_path.back().heading;
 
         PathOptimizationByCILRQ(local_path, &response_tf);
         ILOG_INFO << " current_path_point_global_vec num "
@@ -2269,15 +2274,17 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
   const bool current_path_length_flag =
       frame_.current_path_length > perception_blind_spot_distance;
 
-  const double& path_heading = current_path_point_global_vec_.back().heading;
   constexpr double kHeadingThreshold = 0.05;
 
   const bool heading_flag =
-      std::abs(path_heading) - 0.5 * M_PI > kHeadingThreshold;
+      std::abs(current_path_last_heading_) - 0.5 * M_PI > kHeadingThreshold;
 
   const bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
                                    occupied_ratio_flag && path_dist_flag &&
-                                   current_path_length_flag && heading_flag;
+                                   current_path_length_flag && heading_flag &&
+                                   !dynamic_falg_head_out_;
+
+  dynamic_falg_head_out_ = dynamic_replan_flag ? true : false;
   return dynamic_replan_flag;
 }
 
