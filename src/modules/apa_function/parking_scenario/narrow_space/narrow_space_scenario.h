@@ -15,8 +15,7 @@ namespace apa_planner {
 
 // TODO: 默认几何规划无解的场景，就是狭窄场景，调用hybrid astar即可.
 // 后续需要在普通场景中，调用A star.
-// 后续需要普通场景优先调用A星时，再删除narrow space
-// 场景. 直接在正常场景中调用混合A星算法.
+// 后续需要普通场景优先调用A星时，再删除narrow space场景,直接在正常场景中调用混合A星算法
 class NarrowSpaceScenario : public ParkingScenario {
  public:
   NarrowSpaceScenario() = default;

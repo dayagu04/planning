@@ -97,6 +97,8 @@ class PiecewiseJerkProblem {
 
   void DebugString();
 
+  void set_end_state_constriants(const std::array<double, 3>& end_state_ref);
+
  protected:
   // naming convention follows osqp solver.
   // square cost, hessian matrix
@@ -147,6 +149,8 @@ class PiecewiseJerkProblem {
   double weight_ddx_ = 0.0;
   double weight_dddx_ = 0.0;
 
+  // For lon optimization, delta_s is time;
+  // For lateral optimization, delta_s is distance;
   double delta_s_ = 1.0;
 
   bool has_x_ref_ = false;
@@ -155,7 +159,9 @@ class PiecewiseJerkProblem {
 
   bool has_end_state_ref_ = false;
   std::array<double, 3> weight_end_state_ = {{0.0, 0.0, 0.0}};
-  std::array<double, 3> end_state_ref_;
+  std::array<double, 3> end_state_;
+
+  bool has_end_state_constriants_;
 };
 
 }  // namespace planning

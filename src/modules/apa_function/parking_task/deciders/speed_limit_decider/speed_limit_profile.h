@@ -7,6 +7,7 @@
 
 namespace planning {
 namespace apa_planner {
+
 class SpeedLimitProfile {
  public:
   SpeedLimitProfile() = default;
@@ -21,11 +22,10 @@ class SpeedLimitProfile {
 
   void Clear();
 
-  const size_t GetIndexByS(const double s);
+  const size_t GetIndexByS(const double s) const;
 
   // return lowest speed
-  double GetSpeedLimitByRange(const double range_start_s,
-                              const double range_end_s) const;
+  double GetSpeedLimitByRange(const double s, const double buffer) const;
 
  private:
   void DebugString();

@@ -153,11 +153,11 @@ void PiecewiseJerkSpeedProblem::CalculateOffset(std::vector<c_float>* q) {
 
   if (has_end_state_ref_) {
     q->at(n - 1) +=
-        -2.0 * weight_end_state_[0] * end_state_ref_[0] / scale_factor_[0];
+        -2.0 * weight_end_state_[0] * end_state_[0] / scale_factor_[0];
     q->at(2 * n - 1) +=
-        -2.0 * weight_end_state_[1] * end_state_ref_[1] / scale_factor_[1];
+        -2.0 * weight_end_state_[1] * end_state_[1] / scale_factor_[1];
     q->at(3 * n - 1) +=
-        -2.0 * weight_end_state_[2] * end_state_ref_[2] / scale_factor_[2];
+        -2.0 * weight_end_state_[2] * end_state_[2] / scale_factor_[2];
   }
 
   return;

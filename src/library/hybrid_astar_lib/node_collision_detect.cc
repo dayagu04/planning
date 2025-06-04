@@ -856,7 +856,7 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
 
   GenerateVehCompactPolygon(lat_buffer_inside,
                             config.safe_buffer.lon_min_safe_buffer,
-                            &cvx_hull_foot_print_);
+                            lat_buffer_inside, &cvx_hull_foot_print_);
 
   // PolygonDebugString(&veh_box_gear_drive_, "drive");
   // PolygonDebugString(&veh_box_gear_reverse_, "reverse");

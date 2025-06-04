@@ -1,0 +1,35 @@
+#include "park_speed_limit_config.h"
+#include <cmath>
+#include "apa_param_config.h"
+#include "log_glog.h"
+
+namespace planning {
+namespace apa_planner {
+
+void ParkSpeedLimitConfig::Init() {
+  const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
+
+  default_cruise_speed_ = speed_config.default_cruise_speed;
+  min_cruise_speed_ = speed_config.min_cruise_speed;
+
+  // update path point kappa gap
+  // If front wheel change 0.8 ratio, add speed limit.
+  double kappa = 1.0 / apa_param.GetParam().min_turn_radius;
+  kappa_switch_in_path_point_ = kappa * 0.8;
+  speed_limit_by_kappa_switch_ = min_cruise_speed_;
+
+  // kappa limit speed
+  kappa_thresh_ = kappa * 0.8;
+  speed_limit_by_kappa_ = 0.5;
+
+  // obs distance related
+  obs_dist_thresh_ = 0.5;
+  speed_limit_by_obs_ = speed_config.obs_dist_for_speed_limit;
+
+  ILOG_INFO << "kappa switch thresh = " << kappa_switch_in_path_point_
+            << ",kappa thresh = " << kappa_thresh_;
+
+  return;
+}
+}  // namespace apa_planner
+}  // namespace planning

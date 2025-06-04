@@ -40,13 +40,7 @@ NarrowSpaceScenario::NarrowSpaceScenario(
 }
 
 void NarrowSpaceScenario::Reset() {
-  frame_.Reset();
-  current_path_point_global_vec_.clear();
-
-  // reset planning output
-  memset(&planning_output_, 0, sizeof(planning_output_));
-
-  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+  ParkingScenario::Reset();
 
   const ApaParameters& params = apa_param.GetParam();
 
@@ -56,8 +50,6 @@ void NarrowSpaceScenario::Reset() {
   path_planning_fail_num_ = 0;
   lateral_offset_ = 0;
   lon_offset_ = 0;
-
-  ParkingScenario::Reset();
 
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
@@ -643,15 +635,24 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   // start
   Pose2D start;
   if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    double acc = apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
+    if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel() < 0.0) {
+      acc = -apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
+    }
+    SVPoint init_point = SVPoint(
+        0, std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()),
+        acc);
+
     ApaTrajectoryStitcher traj_stitcher;
-    traj_stitcher.Process(
+    traj_stitcher.Execute(
         apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
         current_path_point_global_vec_,
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
-        apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(), 0.2);
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
+        init_point, 0.2, trajectory_,
+        pnc::geometry_lib::GetGearType(frame_.current_gear));
 
     const pnc::geometry_lib::PathPoint& stitch_point =
-        traj_stitcher.GetStitchPoint();
+        traj_stitcher.GetStitchPathPoint();
     Eigen::Vector2d local_pos = ego_info.g2l_tf.GetPos(stitch_point.pos);
 
     start = Pose2D(local_pos.x(), local_pos.y(),
@@ -1145,8 +1146,6 @@ const int NarrowSpaceScenario::PathOptimizationByCILRQ(
     const std::vector<pnc::geometry_lib::PathPoint>& local_path,
     Transform2d* tf) {
   LocalPathToGlobal(local_path, tf);
-  ILOG_INFO << "output path by coarse a star path";
-
   return 0;
 }
 
@@ -1842,7 +1841,7 @@ void NarrowSpaceScenario::DebugPathString(
     const std::vector<pnc::geometry_lib::PathPoint>& path) {
   for (size_t i = 0; i < path.size(); i++) {
     ILOG_INFO << "i = " << i << ",x = " << path[i].pos.x()
-              << ",y = " << path[i].pos.y();
+              << ",y = " << path[i].pos.y() << ", kappa = " << path[i].kappa;
   }
   return;
 }

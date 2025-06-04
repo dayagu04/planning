@@ -368,9 +368,12 @@ class ParkingScenario {
   virtual const bool CheckPaused() const;
   virtual const bool CheckPlanSkip() const;
   virtual void SetParkingStatus(uint8_t status);
-  virtual void GenPlanningOutput();
+  virtual void PublishPlanningTraj();
   virtual void GenPlanningHmiOutput();
-  virtual void GenPlanningPath();
+  // No speed planning method.
+  virtual void SetPlanningPath();
+  void SetPlanningTraj();
+
   virtual const double CalRemainDistFromPath();
   virtual const double CalRemainDistFromObs(
       const double static_lon_buffer = 0.3,
@@ -434,6 +437,8 @@ class ParkingScenario {
 
   // only debug for choosing the best path
   std::vector<pnc::geometry_lib::GeometryPath> perferred_geometry_path_vec_;
+
+  trajectory::Trajectory trajectory_;
 };
 
 }  // namespace apa_planner

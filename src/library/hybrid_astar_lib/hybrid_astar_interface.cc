@@ -209,7 +209,7 @@ void HybridAStarInterface::UpdateOutput() {
   ILOG_INFO << "hybrid astar finish, plan once time = "
             << response_end_time - response_start_time;
 
-  // hybrid_astar_->DebugPathString(best_traj_;
+  // DebugPathString(best_traj_);
 
   return;
 }

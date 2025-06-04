@@ -72,6 +72,9 @@ struct ParkingSpeedConfig {
   double acc_lower = -2.0;
   double jerk_upper = 7.0;
   double jerk_lower = -7.0;
+
+  double min_path_dist_for_speed_optimizer;
+  double min_path_dist_for_veh_starting;
 };
 
 // todo

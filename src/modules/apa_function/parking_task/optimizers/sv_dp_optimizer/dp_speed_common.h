@@ -28,8 +28,8 @@ struct SVPoint {
           const double jerk_)
       : s(s_), v(v_), acc(acc_), jerk(jerk_) {}
 
-  void DebugString() const {
-    ILOG_INFO << "s = " << s << ", v = " << v << ", acc = " << acc;
+  void DebugString(const std::string &info) const {
+    ILOG_INFO << info << ": s = " << s << ", v = " << v << ", acc = " << acc;
     return;
   }
 };

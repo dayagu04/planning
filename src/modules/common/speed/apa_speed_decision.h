@@ -3,65 +3,100 @@
 #include "pose2d.h"
 namespace planning {
 
-enum class StopDecisionReason {
+enum class LonDecisionReason {
   NONE = 0,
   USS_POINT_CLOUD_COLLISION = 1,
   PATH_FINISH = 2,
-  VIRTUAL_WALL_COLLISION = 3,
-  OCC_COLLISION = 4,
+  STATIC_OCC_COLLISION = 3,
+  DYNAMIC_OCC_COLLISION = 4,
   GROUD_LINE_COLLISION = 5,
   // If object is human, need add a stop desion.
-  STATIC_POLYGON_OBJECT_COLLISION = 6,
+  STATIC_POLYGON_OBJECT = 6,
   DYNAMIC_POLYGON_OBJECT = 7,
   LIMITER_COLLISION = 8,
-  USS_DISTANCE_SMALL = 9,
   // slot pose change too much, add stop decision for gear switch?
   SLOT_POSE_CHANGE = 10,
   // If predicted tracking path collision with obstacle, add stop decision.
-  PREDICTED_TRACKING_PATH_COLLISION = 11,
-};
-
-enum class SpeedLimitReason {
-  NONE = 0,
+  CONTROL_PATH_COLLISION = 11,
   // If distance < 0.3 meter, add a speed limit decision.
-  CLOSE_TO_OBSTACLE = 1,
+  CLOSE_TO_OBSTACLE = 12,
   // path kappa change too much
-  PATH_KAPPA_CHANGE = 2,
-  // 方向盘和路径曲率，差距大要限速.
-  KAPPA_GAP_BETTWEN_PATH_WITH_WHEEL = 3,
-  PATH_KAPPA = 4,
+  PATH_KAPPA_CHANGE = 13,
+  // lateral error is big
+  PATH_TRACKING_ERROR = 14,
+  PATH_KAPPA = 15,
 };
 
-struct StopDecision {
-  StopDecisionReason reason_code;
-  // If caused by obs, add this id.
+enum class LonDecisionType {
+  NONE = 0,
+  IGNORE = 1,
+  OVERTAKE = 2,
+  STOP = 3,
+  CAUTION = 4,
+};
+
+enum class LateralDecisionType {
+  NONE = 0,
+  IGNORE = 1,
+  // If decision is side pass, need nudge an obstacle.
+  SIDE_PASS = 2,
+};
+
+struct ParkLonDecision {
+  LonDecisionReason reason_code;
+  LonDecisionType decision_type;
+
+  // If is caused by obs, add this id.
   int32_t perception_id;
 
   // s from path start. ego is nearby path start.
   double path_s;
-  Pose2D stop_point;
+  Pose2D path_interaction_point;
+  double lat_dist_to_obs;
 
-  double lateral_safe_buffer;
-  double lon_safe_buffer;
-};
+  double decision_speed;
+  // todo: add hard constraint, soft constraint.
+  double lon_decision_buffer;
 
-struct SpeedLimitDecision {
-  SpeedLimitReason reason_code;
-
-  // If speed limit is caused by obs, add this id.
-  int32_t perception_id;
-
-  // s from path start. ego is nearby path start.
-  double path_s;
-  Pose2D path_point;
-
-  double advised_speed;
-  double dist_to_obs;
+  void Clear() {
+    reason_code = LonDecisionReason::NONE;
+    decision_type = LonDecisionType::NONE;
+    perception_id = 0;
+    path_s = 100.0;
+    lat_dist_to_obs = 10.0;
+    decision_speed = 0;
+    lon_decision_buffer = 0;
+    return;
+  }
 };
 
 struct SpeedDecisions {
-  std::vector<SpeedLimitDecision> speed_limit_decisions;
-  std::vector<StopDecision> stop_decisions;
+  std::vector<ParkLonDecision> decisions;
 };
+
+enum class RoadScenario {
+  UPHILL,
+  DOWNHILL,
+  BUMP,
+  CURBS,
+  NORMAL,
+  POTHOLE,
+};
+
+enum class SpeedMode {
+  // [0, 0.5]
+  SOFT_ACCELERATE,
+  HARD_ACCELERATE,
+  // [0, -0.5]
+  SOFT_BRAKE,
+  // (-0.5, -2.0)
+  HARD_BRAKE,
+  // (-2.0, -inf)
+  EMERGENCY_BRAKE,
+  CRUISE,
+};
+
+const ParkLonDecision* GetCloseStopDecision(
+    const SpeedDecisions* speed_decisions);
 
 }  // namespace planning

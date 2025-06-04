@@ -3,7 +3,12 @@
 namespace planning {
 namespace jlt {
 
-enum JltType { SOLVE_VEL, SOLVE_POS, SOLVE_RELATIVE_POS };
+enum JltType {
+  SOLVE_VEL = 0,
+  SOLVE_POS = 1,
+  SOLVE_RELATIVE_POS = 2,
+  JLT_TYPE_MAX = 3
+};
 
 struct StateLimitParam {
   double p_desire = 0.0;
@@ -28,7 +33,7 @@ struct VelocityParam {
 struct PositionParam {
   VelocityParam velocity_param_a;
   VelocityParam velocity_param_b;
-  double curise_time = 0.0;
+  double cruise_time = 0.0;
   double switch_time = 0.0;
   double curise_velocity = 0.0;
 };

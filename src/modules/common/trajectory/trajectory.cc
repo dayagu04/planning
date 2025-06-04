@@ -1,8 +1,12 @@
 #include "trajectory.h"
 
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <vector>
+
+#include "log_glog.h"
 
 namespace planning {
 namespace trajectory {
@@ -74,20 +78,86 @@ size_t Trajectory::QueryNearestPoint(
   return min_index;
 }
 
-size_t Trajectory::QueryNearestPointWithBuffer(
-    const planning_math::Vec2d& position, const double buffer) const {
+const bool Trajectory::QueryNearestPointWithBuffer(
+    const planning_math::Vec2d& position, const double buffer,
+    TrajectoryPoint* point) const {
+  if (empty()) {
+    return false;
+  }
+
   double min_sqr_dist = std::numeric_limits<double>::max();
   size_t min_index = 0;
   for (size_t i = 0; i < size(); ++i) {
     const planning_math::Vec2d curr_point(data()[i].x(), data()[i].y());
 
     const double curr_sqr_dist_m = curr_point.DistanceSquareTo(position);
-    if (curr_sqr_dist_m < min_sqr_dist + buffer) {
+    if (curr_sqr_dist_m < min_sqr_dist) {
       min_sqr_dist = curr_sqr_dist_m;
       min_index = i;
     }
   }
-  return min_index;
+
+  if (min_sqr_dist > 1.0) {
+    return false;
+  }
+
+  if (min_index >= size() - 1) {
+    *point = data()[min_index];
+    return true;
+  }
+
+  size_t predecessor_id;
+  if (min_index < size() - 1) {
+    predecessor_id = min_index;
+  } else {
+    predecessor_id = min_index - 1;
+  }
+
+  planning_math::Vec2d predecessor;
+  planning_math::Vec2d successor;
+  predecessor = data()[predecessor_id];
+  successor = data()[predecessor_id + 1];
+  double predecessor_s = data()[predecessor_id].s();
+
+  planning_math::Vec2d base_vector = successor - predecessor;
+  if (base_vector.LengthSquare() < 1e-4) {
+    *point = data()[predecessor_id];
+    return true;
+  }
+
+  base_vector.Normalize();
+  planning_math::Vec2d predecessor_to_ego(position - predecessor);
+  double dot = predecessor_to_ego.InnerProd(base_vector);
+  double projection_s = predecessor_s + dot;
+  projection_s = std::max(projection_s, 0.0);
+
+  if (projection_s < 1e-3) {
+    *point = data()[0];
+    return true;
+  }
+
+  ILOG_INFO << "predecessor s = " << predecessor_s
+            << ",project s = " << projection_s;
+
+  *point = InterpolateUsingLinearApproximation(
+      data()[predecessor_id], data()[predecessor_id + 1], projection_s);
+
+  ILOG_INFO << "lon stitch v = " << point->vel() << ", a = " << point->acc()
+            << ", s = " << point->s();
+
+  return true;
+}
+
+void Trajectory::Clear() {
+  clear();
+  speed_type_ = common::SpeedProfileType::NONE;
+  gear_ = 0;
+  return;
+}
+
+void Trajectory::SetGear(const int gear) {
+  gear_ = gear;
+  return;
 }
 
 }  // namespace trajectory

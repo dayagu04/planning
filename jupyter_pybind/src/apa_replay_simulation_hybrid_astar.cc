@@ -142,6 +142,9 @@ int Init() {
 
   global_astar_path_.clear();
 
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug_->Clear();
+
   return 0;
 }
 

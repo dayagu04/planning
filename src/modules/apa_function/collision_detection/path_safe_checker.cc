@@ -60,7 +60,8 @@ void PathSafeChecker::ExcuteDistanceCheck(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, 0.0);
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_,
+                            &polygon_foot_print_);
 
   // check path
   size_t collision_index = 100000;
@@ -133,7 +134,8 @@ void PathSafeChecker::ExcuteCollisionCheck(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_);
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_,
+                            &polygon_foot_print_);
 
   // check path
   size_t collision_index = 100000;
@@ -202,48 +204,6 @@ void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
       config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
       config.max_car_width / 2.0 + max_bbox_lat_buffer);
-
-  return;
-}
-
-void PathSafeChecker::GenerateVehCompactPolygon(
-    const double lateral_safe_buffer, const double lon_safe_buffer,
-    const double max_bbox_lat_buffer) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
-
-  if (config.car_vertex_x_vec.size() != 20) {
-    ILOG_ERROR << "config invalid";
-    GenerateVehBox(lateral_safe_buffer, lon_safe_buffer, max_bbox_lat_buffer);
-    return;
-  }
-
-  GetCompactCarPolygonByParam(&polygon_foot_print_.body, lateral_safe_buffer,
-                              lon_safe_buffer);
-
-  // left mirror
-  Position2D center;
-  center.x = config.footprint_circle_x[6];
-  center.y = config.footprint_circle_y[6] + lateral_safe_buffer;
-  double radius = std::fabs(config.footprint_circle_r[6]);
-  GenerateMirrorPolygon(&polygon_foot_print_.mirror_left, 0.3, radius * 2,
-                        center);
-
-  // right mirror
-  center.x = config.footprint_circle_x[3];
-  center.y = config.footprint_circle_y[3] - lateral_safe_buffer;
-  GenerateMirrorPolygon(&polygon_foot_print_.mirror_right, 0.3, radius * 2,
-                        center);
-
-  GetUpLeftCoordinatePolygonByParam(
-      &polygon_foot_print_.max_polygon,
-      config.rear_overhanging + lon_safe_buffer,
-      config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + max_bbox_lat_buffer);
-
-#if DEBUG_PATH_CHECKER
-  PolygonDebugString(&polygon_foot_print_.max_polygon, "max_polygon");
-  ILOG_INFO << "config.max_car_width = " << config.max_car_width;
-#endif
 
   return;
 }

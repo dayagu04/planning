@@ -27,16 +27,10 @@ frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
 last_plan_pose_ = []
-plot_speed_graph = False
 
 bag_loader = LoadCyberbag(bag_path, parking_flag)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure_parking()
-
-if plot_speed_graph:
-  # plot speed
-  velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
-  pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
@@ -642,11 +636,4 @@ for bag_time in np.arange(0.0,max_time - 1,0.1):
     'x_vec': car_box_x_vec,
     'y_vec': car_box_y_vec,
   })
-
-  if plot_speed_graph == True:
-
-    speed_data = apa_simulation_py.GetDpSpeedConstraints()
-    update_lon_plan_online_data(speed_data,lon_plan_data)
-    update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
-
 

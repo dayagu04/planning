@@ -1,12 +1,13 @@
 #pragma once
 
 #include "dp_speed_common.h"
-#include "optimizer_common.h"
 #include "parking_task.h"
 #include "piecewise_jerk_speed_config.h"
+#include "speed/st_point.h"
 #include "src/modules/apa_function/parking_task/deciders/speed_limit_decider/speed_limit_profile.h"
 #include "src/modules/common/math/piecewise_jerk/piecewise_jerk_speed_problem.h"
 #include "src/modules/common/speed/speed_data.h"
+#include "speed/apa_speed_decision.h"
 
 namespace planning {
 namespace apa_planner {
@@ -22,11 +23,12 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
 
   void Execute(const SVPoint& init_point,
                const SpeedLimitProfile* speed_limit_profile,
-               const SpeedData& dp_speed_data);
+               const SpeedData& dp_speed_data,
+               const SpeedDecisions* speed_decisions);
 
   const SpeedData& GetSpeedData() const { return qp_speed_data_; }
 
-  const SpeedOptimizerState GetQPState() const { return solver_state_; }
+  bool Init() override;
 
  private:
   void DebugPiecewiseJerkProblem(const PiecewiseJerkSpeedProblem& pwj);
@@ -43,14 +45,22 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
       const std::vector<double>& x_ref,
       const std::vector<std::pair<double, double>>& s_dot_bounds);
 
+  void ClearDebugInfo();
+
+  // 限速不能超过制动能力
+  double ComputeFastBrakeProfile(const std::array<double, 3>& init,
+                                 const double time);
+
+  void GenerateInitState(const SVPoint& init_point,
+                         std::array<double, 3>& init_state);
+
  private:
   PiecewiseJerkSpeedQPConfig qp_config_;
   const SpeedLimitProfile* speed_limit_profile_;
   int num_of_knots_;
+  double delta_time_;
 
   SpeedData qp_speed_data_;
-
-  SpeedOptimizerState solver_state_;
 };
 }  // namespace apa_planner
 }  // namespace planning

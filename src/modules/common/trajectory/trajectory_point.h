@@ -43,6 +43,11 @@ class TrajectoryPoint : public planning_math::PathPoint {
 
   double jerk() const { return jerk_; }
 
+  void set_jerk(const double jerk) {
+    jerk_ = jerk;
+    return;
+  }
+
   double absolute_time() const { return absolute_time_; }
 
   void set_absolute_time(const double absolute_time) {
@@ -166,6 +171,10 @@ class TrajectoryPoint : public planning_math::PathPoint {
   double absolute_time_ = 0.0;  // s
   // double relative_time_ = 0.0;  // s
 };
+
+TrajectoryPoint InterpolateUsingLinearApproximation(const TrajectoryPoint &p0,
+                                                    const TrajectoryPoint &p1,
+                                                    const double s);
 
 }  // namespace trajectory
 }  // namespace planning

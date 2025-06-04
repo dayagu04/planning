@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 
 #include "log_glog.h"
 
@@ -50,7 +51,7 @@ double SpeedLimitProfile::GetSpeedLimitByS(const double s) const {
   return it_lower->second;
 }
 
-const size_t SpeedLimitProfile::GetIndexByS(const double s) {
+const size_t SpeedLimitProfile::GetIndexByS(const double s) const {
   if (speed_limit_points_.size() < 1) {
     return 0;
   }
@@ -96,43 +97,27 @@ void SpeedLimitProfile::SetSpeedLimitByIndex(const int index, const double v) {
   speed_limit_points_[index].second = v;
 }
 
-double SpeedLimitProfile::GetSpeedLimitByRange(const double range_start_s,
-                                               const double range_end_s) const {
+double SpeedLimitProfile::GetSpeedLimitByRange(const double s,
+                                               const double buffer) const {
   if (speed_limit_points_.empty()) {
     ILOG_INFO << "no points";
     return 10.0;
   }
 
-  if (range_start_s > speed_limit_points_.back().first) {
+  if (s > speed_limit_points_.back().first) {
     return speed_limit_points_.back().first;
   }
 
-  if (range_end_s < speed_limit_points_.front().first) {
+  if (s < speed_limit_points_.front().first) {
     return speed_limit_points_.front().first;
   }
 
-  bool find_point = false;
-  double min_speed = 100.0;
-  for (size_t i = 0; i < speed_limit_points_.size(); i++) {
-    if (speed_limit_points_[i].first <= range_end_s &&
-        speed_limit_points_[i].first >= range_start_s) {
+  int32_t id = GetIndexByS(s);
+  double min_speed = speed_limit_points_[id].second;
+  for (int32_t i = std::max(0, id - 4); i < speed_limit_points_.size(); i++) {
+    if (speed_limit_points_[i].first <= s + buffer &&
+        speed_limit_points_[i].first >= s - buffer) {
       min_speed = std::min(min_speed, speed_limit_points_[i].second);
-      find_point = true;
-    }
-  }
-
-  if (!find_point) {
-    auto compare_s = [](const std::pair<double, double>& point,
-                        const double s) { return point.first < s; };
-
-    auto it_lower =
-        std::lower_bound(speed_limit_points_.begin(), speed_limit_points_.end(),
-                         (range_start_s + range_end_s) / 2.0, compare_s);
-
-    if (it_lower == speed_limit_points_.end()) {
-      min_speed = (it_lower - 1)->second;
-    } else {
-      min_speed = it_lower->second;
     }
   }
 

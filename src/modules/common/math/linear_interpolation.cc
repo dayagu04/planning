@@ -47,7 +47,15 @@ PathPoint InterpolateUsingLinearApproximation(const PathPoint &p0,
   double s1 = p1.s();
 
   PathPoint path_point;
-  double weight = (s - s0) / (s1 - s0);
+  double weight;
+
+  // sanity check
+  if (std::fabs(s1 - s0) < 1e-4) {
+    weight = 0.0;
+  } else {
+    weight = (s - s0) / (s1 - s0);
+  }
+
   double x = (1 - weight) * p0.x() + weight * p1.x();
   double y = (1 - weight) * p0.y() + weight * p1.y();
   double theta = slerp(p0.theta(), p0.s(), p1.theta(), p1.s(), s);

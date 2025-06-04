@@ -2,8 +2,10 @@
 
 #include <cstddef>
 
+#include "dp_speed_common.h"
 #include "geometry_math.h"
 #include "pose2d.h"
+#include "speed/speed_data.h"
 #include "src/library/reeds_shepp/rs_path_interpolate.h"
 #include "trajectory/trajectory.h"
 
@@ -11,10 +13,8 @@ namespace planning {
 namespace apa_planner {
 // add trajectory stitcher.
 // If do path/speed planning in every frame, need a stitcher.
-// If navigation and parking switch in hpp, need trajectory stitcher for
-// navigation trajectory and parking trajectory.
 // Caution:
-// If car is overshoting in path terminal, define a proper stitching rule;
+// If car is overshoot in path terminal, define a proper stitching rule;
 // If car is not reached the start point of a path, define a proper stitching
 // rule;
 class ApaTrajectoryStitcher {
@@ -22,39 +22,46 @@ class ApaTrajectoryStitcher {
   ApaTrajectoryStitcher() = default;
 
   /**
-   * [out]: trajectory
+   * [out]: path
    * [in]: front_wheel_angle, left is positive
    * [in]: ego_v, (-inf, +inf)
    */
-  void Process(const Pose2D& ego_pose,
+  void Execute(const Pose2D& ego_pose,
                const std::vector<pnc::geometry_lib::PathPoint>& path,
-               const double ego_v, const double front_wheel_angle,
-               const double predict_horizon);
+               const double front_wheel_angle, const SVPoint& ego_lon_point,
+               const double predict_horizon,
+               const trajectory::Trajectory& trajectory,
+               const pnc::geometry_lib::PathSegGear gear);
 
-  const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchTrajectory()
-      const {
-    return trajectory_;
-  }
+  const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchPath() const;
 
-  std::vector<pnc::geometry_lib::PathPoint>& GetMutableStitchTrajectory() {
-    return trajectory_;
-  }
+  const trajectory::Trajectory& GetConstCombinedTraj() const;
 
-  const double DrivedDistance() const { return drived_distance_; }
+  std::vector<pnc::geometry_lib::PathPoint>& GetMutableStitchPath();
 
-  const double GetStitchTrajLength() const;
+  trajectory::Trajectory& GetCombinedTraj() { return trajectory_; }
 
-  const pnc::geometry_lib::PathPoint& GetStitchPoint() const {
-    return stitch_point_;
-  }
+  const double GetStitchPathLength() const;
 
-  const pnc::geometry_lib::PathPoint* GetStitchPointPtr() {
-    return &stitch_point_;
-  }
+  const pnc::geometry_lib::PathPoint& GetStitchPathPoint() const;
+
+  const pnc::geometry_lib::PathPoint* GetStitchPathPointPtr();
+
+  // based on time to compute path point.
+  void CombineTrajBasedOnTime(const SpeedData& speed_profile);
+
+  // based on path point to compute time.
+  // TODO: complete it.
+  void CombineTrajBasedOnPath();
+
+  void TaskDebug(const std::vector<pnc::geometry_lib::PathPoint>& path,
+                 const trajectory::Trajectory& trajectory);
+
+  const SVPoint GetStitchSpeed() const;
 
  private:
   // If vehicle speed is zero, use vehicle state to generate stitch point.
-  void GeneTrajPointFromVehicleState(const Pose2D& ego_pose);
+  void GenePathPointFromVehicleState(const Pose2D& ego_pose);
 
   // If history traj is null, and vehicle speed is not zero, need to generate
   // predict point.
@@ -86,8 +93,6 @@ class ApaTrajectoryStitcher {
                          const std::vector<pnc::geometry_lib::PathPoint>& path,
                          size_t* index) const;
 
-  void GeneTrajPointFromPath(const pnc::geometry_lib::PathPoint& point);
-
   void ClearSticthPoint();
 
   bool QueryNearestPoint(const Pose2D& ego_pose,
@@ -95,18 +100,21 @@ class ApaTrajectoryStitcher {
                          size_t* min_dist_point,
                          size_t* min_dist_point_neighbor);
 
-  void EvaluateStitchTraj(const Pose2D& ego_pose,
+  void EvaluateStitchPath(const Pose2D& ego_pose,
                           const std::vector<pnc::geometry_lib::PathPoint>& path,
                           const size_t min_dist_point_id,
                           const size_t min_dist_point_neighbor_id);
 
+  void GeneSpeedPointFromVehicleState(const SVPoint& init_point);
+
  private:
-  pnc::geometry_lib::PathPoint stitch_point_;
+  SVPoint ego_lon_state_;
+  pnc::geometry_lib::PathPoint stitch_path_point_;
+  std::vector<pnc::geometry_lib::PathPoint> stitch_path_;
 
-  // todo: update speed data
-  std::vector<pnc::geometry_lib::PathPoint> trajectory_;
-
-  double drived_distance_;
+  trajectory::TrajectoryPoint lon_stitch_point_;
+  trajectory::Trajectory trajectory_;
+  pnc::geometry_lib::PathSegGear gear_;
 };
 }  // namespace apa_planner
 }  // namespace planning

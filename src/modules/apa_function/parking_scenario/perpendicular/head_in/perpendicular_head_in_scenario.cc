@@ -39,13 +39,7 @@ void PerpendicularHeadInScenario::Reset() {
   frame_.Reset();
   perpendicular_path_planner_.Reset();
 
-  current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
-
-  // reset planning output
-  memset(&planning_output_, 0, sizeof(planning_output_));
-
-  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   ParkingScenario::Reset();
 }
