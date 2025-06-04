@@ -374,7 +374,7 @@
   "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.3,
   "obs_dist_for_speed_limit" : 0.4,
-  "min_path_dist_for_speed_optimizer" : 0.2,
+  "min_path_dist_for_speed_optimizer" : 0.25,
   "min_path_dist_for_veh_starting" : 0.1,
 
   "comment_18": "hybrid a star params",

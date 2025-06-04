@@ -371,11 +371,11 @@
   "max_replan_number": 25,
   "max_replan_number_inside_slot": 15,
 
-  "enable_apa_speed_plan" : true,
-  "default_cruise_speed" : 1.0,
+  "enable_apa_speed_plan" : false,
+  "default_cruise_speed" : 0.9,
   "min_cruise_speed" : 0.4,
   "obs_dist_for_speed_limit" : 0.4,
-  "min_path_dist_for_speed_optimizer" : 0.2,
+  "min_path_dist_for_speed_optimizer" : 0.25,
   "min_path_dist_for_veh_starting" : 0.1,
 
   "comment_18": "hybrid a star params",
