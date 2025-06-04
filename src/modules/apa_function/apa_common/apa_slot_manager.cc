@@ -532,10 +532,6 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     x_diff += step;
   }
 
-  for (const auto x_diff : lon_mov_dist_vec) {
-    ILOG_INFO << "lon move displacement = " << x_diff;
-  }
-
   bool is_slot_occupied = true;
   const double lat_buffer = 0.1;
   const double lon_buffer = 0.3;
@@ -551,16 +547,15 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
           col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
               target_pose, lat_buffer, lon_buffer);
 
-      // ILOG_INFO << "lateral moving dist = " << lat_move_dist
-      //           << ". target_pos= " << target_pose.GetX() << ", "
-      //           << target_pose.GetY() << ", is_collided = " << is_collided;
-
       if (!is_collided) {
         ILOG_INFO << "release slot with lat offset = " << lat_move_dist;
         ILOG_INFO << "release slot with lon offset = " << lon_move_dist;
         is_slot_occupied = false;
         break;
       }
+    }
+    if (!is_slot_occupied) {
+      break;
     }
   }
   ILOG_INFO << "final parallel slot is occupied = " << is_slot_occupied;

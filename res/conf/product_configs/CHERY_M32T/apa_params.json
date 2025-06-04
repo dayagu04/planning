@@ -84,6 +84,7 @@
   "terminal_parallel_y_offset_with_wall": 0.45,
   "parallel_max_ego_x_offset_with_invasion": 1.0,
   "parallel_ego_ac_x_offset_with_limiter": 0.3,
+  "parallel_terminal_y_offset_with_obs": 0.35,
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.15,
@@ -247,6 +248,8 @@
   "dynamic_plan_interval_time": 0.4,
   "parallel_dynamic_lat_buffer": 0.5,
   "parallel_dynamic_lon_buffer": 1.78,
+  "parallel_dynamic_lat_buffer_in_slot": 0.2,
+  "parallel_dynamic_lon_buffer_in_slot": 0.8,
 
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.868,

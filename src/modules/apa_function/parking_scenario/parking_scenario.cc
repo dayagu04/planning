@@ -420,9 +420,12 @@ const double ParkingScenario::CalRemainDistFromObs(
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_lat_buffer, 0.0, gjl_col_det_request);
+  ILOG_INFO << "DYNAMIC col_res.col_flag = " << col_res.col_flag;
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
   }
+  ILOG_INFO << "col_res.remain_dist_dynamic = " << col_res.remain_dist_dynamic;
+  ILOG_INFO << "dynamic_lon_buffer = " << dynamic_lon_buffer;
   const double obs_pt_remain_dist_dynamic =
       col_res.remain_dist_dynamic - dynamic_lon_buffer;
 

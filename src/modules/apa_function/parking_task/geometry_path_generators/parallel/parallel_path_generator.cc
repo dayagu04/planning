@@ -36,7 +36,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kLonBufferTrippleStep = 0.2;
 // static const double kLatBufferTrippleStep = 0.05;
-static const double kColBufferInSlot = 0.22;
+static const double kColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.3;
 static const double kColLargeLatBufferOutSlot = 0.3;
 static const double kColSmallLatBufferOutSlot = 0.1;
@@ -1854,6 +1854,24 @@ const bool ParallelPathGenerator::CalMinSafeCircle() {
       adv_search_out_res, calc_params_.target_pose);
   const auto time2 = IflyTime::Now_ms();
 
+  std::vector<pnc::geometry_lib::PathSegment> search_out_res;
+
+  if (!apa_param.GetParam().is_parallel_advanced_method) {
+    if (success_tra) {
+      search_out_res = tra_search_out_res;
+    } else {
+      return false;
+    }
+  }
+
+  if (apa_param.GetParam().is_parallel_advanced_method) {
+    if (success_adv) {
+      search_out_res = adv_search_out_res;
+    } else {
+      return false;
+    }
+  }
+
   ILOG_INFO << "Traditional vs Advanced Method";
   // heading
   double tra_heading_deg = 0.0;
@@ -1901,24 +1919,6 @@ const bool ParallelPathGenerator::CalMinSafeCircle() {
 
   // ILOG_INFO <<"apa_param.GetParam().is_parallel_advanced_method = "
   //             << apa_param.GetParam().is_parallel_advanced_method);
-
-  std::vector<pnc::geometry_lib::PathSegment> search_out_res;
-
-  if (!apa_param.GetParam().is_parallel_advanced_method) {
-    if (success_tra) {
-      search_out_res = tra_search_out_res;
-    } else {
-      return false;
-    }
-  }
-
-  if (apa_param.GetParam().is_parallel_advanced_method) {
-    if (success_adv) {
-      search_out_res = adv_search_out_res;
-    } else {
-      return false;
-    }
-  }
 
   if (search_out_res.size() == 0) {
     ILOG_INFO << "search_out_res size = 0";

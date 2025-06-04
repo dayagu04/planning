@@ -34,8 +34,8 @@
 
 namespace planning {
 namespace apa_planner {
-static double kStopLonBuffer = 0.3;
-static double kInsertLineLonBuffer = 0.2;
+
+static double kInsertLineLonBuffer = 0.4;
 static double kFrontDetaXMagWhenFrontVacant = 3.0;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.4;
@@ -50,7 +50,7 @@ static double kCurbYMagIdentification = 0.0;
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 static double kMinChannelYMagIdentification = 3.3;
-static double kExtendLengthOutsideSlot = 0.4;
+static double kExtendLengthOutsideSlot = 0.5;
 static double kDeletedObsDistOutSlot = 0.3;
 static double kDeletedObsDistInSlot = 0.10;
 static double kTBoundarySampleDist = 0.38;
@@ -72,8 +72,8 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
   const auto slot_mgr = apa_world_ptr_->GetSlotManagerPtr();
   const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
 
-  static const double kLatBufferOutSlot = 0.22;
-  static const double kLonBuffer1Rstep = 0.18;
+  static const double kLatBufferOutSlot = 0.2;
+  static const double kLonBuffer1Rstep = 0.28;
   static const double kLatBuffer1Rstep = 0.0;
 
   const auto& output = parallel_path_planner_.GetOutput();
@@ -157,6 +157,19 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
+  double dynaminc_lat_buffer = 0.0;
+  double dynamic_lon_buffer = 0.0;
+
+  if (apa_world_ptr_->GetSlotManagerPtr()
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio < kEnterMultiPlanSlotRatio) {
+    dynaminc_lat_buffer = apa_param.GetParam().parallel_dynamic_lat_buffer;
+    dynamic_lon_buffer = apa_param.GetParam().parallel_dynamic_lon_buffer;
+  } else {
+    dynaminc_lat_buffer = apa_param.GetParam().parallel_dynamic_lat_buffer_in_slot;
+    dynamic_lon_buffer = apa_param.GetParam().parallel_dynamic_lon_buffer_in_slot;
+  }
+
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
       CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer,
@@ -201,7 +214,11 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   ILOG_INFO << "replan is required!";
 
   // generate t-lane
-  GenTlane();
+  if (!GenTlane()) {
+    SetParkingStatus(PARKING_FAILED);
+    ILOG_INFO << "GenTlane failed!";
+    return;
+  }
 
   // update obstacles
   GenTBoundaryObstacles();
@@ -730,7 +747,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   if (!front_vacant) {
     ILOG_INFO << "FRONT occupied! need to reduce extra buffer";
-    upper_bound -= kStopLonBuffer;
+    upper_bound -= apa_param.GetParam().parallel_terminal_y_offset_with_obs;
   }
   ILOG_INFO << "final upper_bound = " << upper_bound;
 
@@ -747,7 +764,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   if (!rear_vacant) {
     ILOG_INFO << "rear occupied, need extra buffer!";
-    lower_bound = t_lane_.pt_outside.x() += kStopLonBuffer;
+    lower_bound += apa_param.GetParam().parallel_terminal_y_offset_with_obs;
   }
   ILOG_INFO << "lower_bound max of them = " << lower_bound;
   if (lower_bound > upper_bound) {
@@ -1202,7 +1219,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
                            0.75 * t_lane_.slot_length) &&
         heading_deg_diff_mag > 5.0) {
       extend_lenth = 0.5;
-      lon_buffer = 0.05;
+      lon_buffer = 0.3;
     }
 
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(extend_lenth,
