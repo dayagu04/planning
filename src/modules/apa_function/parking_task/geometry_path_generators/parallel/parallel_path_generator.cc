@@ -3363,9 +3363,9 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
     last_line.pA = current_pose.pos;
     last_line.heading = current_pose.heading;
 
-    if (CheckLonToTarget(current_pose)) {
-      return true;
-    }
+    // if (CheckLonToTarget(current_pose)) {
+    //   return true;
+    // }
 
     if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
       AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
