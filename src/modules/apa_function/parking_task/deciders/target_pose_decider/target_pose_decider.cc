@@ -58,14 +58,24 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   if (!slot_.limiter_.valid) {
     virtual_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() +
                     param.terminal_target_x;
+
+    // park in the middle of the slot
+    const double mid_ego_x =
+        (slot_.processed_corner_coord_local_.pt_01_mid.x() -
+         slot_.processed_corner_coord_local_.pt_23_mid.x()) *
+            0.5 -
+        (0.5 * param.car_length - param.rear_overhanging);
+
+    virtual_tar_x = std::max(virtual_tar_x, mid_ego_x);
   }
 
   // If the limiter is too far back or the slot is too long,  can combine the
   // front corner information of slot
-  virtual_tar_x = std::max(virtual_tar_x,
-                           slot_.processed_corner_coord_local_.pt_01_mid.x() -
-                               param.limiter_length - param.wheel_base -
-                               param.front_overhanging);
+  // virtual_tar_x = std::max(virtual_tar_x,
+  //                          slot_.processed_corner_coord_local_.pt_01_mid.x()
+  //                          -
+  //                              param.limiter_length - param.wheel_base -
+  //                              param.front_overhanging);
 
   geometry_lib::PathPoint tar_pose_local;
   geometry_lib::PathPoint tar_pose_global;
