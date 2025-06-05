@@ -203,6 +203,11 @@ class GeneralLateralDecider : public Task {
     double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);
+  void PostProcessRoadSoftBoundary();
+  void ExtendRoadSoftBound(
+    int num_rear_extended_points,
+    int num_front_extended_points,
+    bool is_lower, int bound_size);
 
  private:
   GeneralLateralDeciderConfig config_;

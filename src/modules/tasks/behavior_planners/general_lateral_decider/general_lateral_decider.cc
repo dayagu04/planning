@@ -919,6 +919,7 @@ void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
   UpdateDistanceToRoadBorder();
   GenerateRoadHardSoftBoundary();
   GenerateLaneSoftBoundary();
+  PostProcessRoadSoftBoundary();
 }
 
 void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
@@ -1003,6 +1004,64 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
   }
 }
+
+void GeneralLateralDecider::PostProcessRoadSoftBoundary() {
+  if (ref_traj_points_.size() <= 1) {
+    return;
+  }
+  // 路沿与静态障碍物膨胀距离一致
+  const double rear_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(
+      ego_frenet_state_.velocity_s(), 0,
+      false, config_);
+  const int bound_size = soft_bounds_.size();
+  const double delta_s = (ref_traj_points_.back().s - ref_traj_points_.front().s) / (ref_traj_points_.size() - 1);
+  if (delta_s <= 1e-6) {
+    return;
+  }
+  const int num_rear_extended_points = static_cast<int>(std::ceil(rear_lon_buf_dis / delta_s));
+  // 先只延申靠近自车的一侧soft bound
+  // 处理lower_bound
+  ExtendRoadSoftBound(num_rear_extended_points, 0, true, bound_size);
+  // 处理hard_bound
+  ExtendRoadSoftBound(num_rear_extended_points, 0, false, bound_size);
+}
+
+void GeneralLateralDecider::ExtendRoadSoftBound(
+    int num_rear_extended_points,
+    int num_front_extended_points, // 暂未使用，可后续扩展
+    bool is_lower, int bound_size) {
+  if (num_rear_extended_points < 0) {
+    return;
+  }
+  for (int i = 0; i < bound_size - num_rear_extended_points; ++i) {
+    if (is_lower) {
+      int max_lower_idx = i;
+      double max_lower_val = soft_bounds_[i][0].lower;
+      for (int j = i; j < i + num_rear_extended_points; ++j) {
+        if (soft_bounds_[j][0].lower > max_lower_val) {
+          max_lower_val = soft_bounds_[j][0].lower;
+          max_lower_idx = j;
+        }
+      }
+      for (int j = i; j < max_lower_idx; ++j) {
+        soft_bounds_[j][0].lower = max_lower_val;
+      }
+    } else {
+      int min_upper_idx  = i;
+      double min_upper_val = soft_bounds_[i][0].upper;
+      for (int j = i; j < i + num_rear_extended_points; ++j) {
+        if (soft_bounds_[j][0].upper < min_upper_val) {
+          min_upper_val = soft_bounds_[j][0].upper;
+          min_upper_idx = j;
+        }
+      }
+      for (int j = i; j < min_upper_idx ; ++j) {
+        soft_bounds_[j][0].upper = min_upper_val;
+      }
+    }
+  }
+}
+
 
 void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   const auto &vehicle_param =
