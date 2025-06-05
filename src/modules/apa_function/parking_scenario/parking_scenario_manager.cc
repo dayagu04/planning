@@ -65,8 +65,7 @@ bool ParkingScenarioManager::Init(
 }
 
 void ParkingScenarioManager::UpdateScenarioType() {
-  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute "
-               "--------------------";
+  ILOG_INFO << "UpdateScenarioType";
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
@@ -225,7 +224,7 @@ void ParkingScenarioManager::ScenarioTry() {
         // 先用几何尝试
         std::shared_ptr<ParkingScenario> temp_geometry_scenario =
             scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
-                temp_geometry_scenario->ScenarioTry();
+        temp_geometry_scenario->ScenarioTry();
       }
 
       if (ego_info_under_slot.slot.release_info_

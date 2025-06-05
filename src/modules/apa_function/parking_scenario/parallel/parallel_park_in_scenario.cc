@@ -37,12 +37,11 @@ namespace apa_planner {
 
 static double kInsertLineLonBuffer = 0.4;
 static double kFrontDetaXMagWhenFrontVacant = 3.0;
-static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
-static double kRearDetaXMagWhenFrontVacant = 0.4;
+static double kFrontMaxDetaXMagWhenFrontOccupied = 0.8;
 static double kRearDetaXMagWhenBothSidesVacant = 0.5;
 static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.2;
 static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
-static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
+static double kRearMaxDetaXMagWhenRearOccupied = 0.8;
 static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.46;
@@ -130,6 +129,7 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
 }
 
 void ParallelParkInScenario::ExcutePathPlanningTask() {
+  ILOG_INFO << "Enter parallel parking planner!-----------------------";
   // init simulation
   InitSimulation();
 
@@ -166,8 +166,10 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     dynaminc_lat_buffer = apa_param.GetParam().parallel_dynamic_lat_buffer;
     dynamic_lon_buffer = apa_param.GetParam().parallel_dynamic_lon_buffer;
   } else {
-    dynaminc_lat_buffer = apa_param.GetParam().parallel_dynamic_lat_buffer_in_slot;
-    dynamic_lon_buffer = apa_param.GetParam().parallel_dynamic_lon_buffer_in_slot;
+    dynaminc_lat_buffer =
+        apa_param.GetParam().parallel_dynamic_lat_buffer_in_slot;
+    dynamic_lon_buffer =
+        apa_param.GetParam().parallel_dynamic_lon_buffer_in_slot;
   }
 
   // calculate remain dist uss according to uss
@@ -180,8 +182,15 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
-    ILOG_INFO << "update ego slot info";
+    ILOG_INFO << "update ego slot info failed";
     SetParkingStatus(PARKING_FAILED);
+    return;
+  }
+
+  // generate t-lane
+  if (!GenTlane()) {
+    SetParkingStatus(PARKING_FAILED);
+    ILOG_INFO << "GenTlane failed!";
     return;
   }
 
@@ -212,13 +221,6 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   ILOG_INFO << "replan is required!";
-
-  // generate t-lane
-  if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
-    ILOG_INFO << "GenTlane failed!";
-    return;
-  }
 
   // update obstacles
   GenTBoundaryObstacles();
@@ -470,7 +472,7 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 }
 
 const bool ParallelParkInScenario::GenTlane() {
-  // Todo: generate t-lane according to nearby obstacles
+  ILOG_INFO << "GenTlane ------------";
 
   // y
   // ^_______________    left side
@@ -682,7 +684,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   ILOG_INFO << "front_min_x before clamp = " << front_min_x;
   front_min_x = pnc::mathlib::Clamp(
-      front_min_x, slot_length - kRearDetaXMagWhenFrontVacant,
+      front_min_x, slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
       slot_length + kFrontDetaXMagWhenFrontVacant);
   ILOG_INFO << "front_min_x after clamp =" << front_min_x;
 
@@ -747,7 +749,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   if (!front_vacant) {
     ILOG_INFO << "FRONT occupied! need to reduce extra buffer";
-    upper_bound -= apa_param.GetParam().parallel_terminal_y_offset_with_obs;
+    upper_bound -= apa_param.GetParam().parallel_terminal_x_offset_with_obs;
   }
   ILOG_INFO << "final upper_bound = " << upper_bound;
 
@@ -764,7 +766,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   if (!rear_vacant) {
     ILOG_INFO << "rear occupied, need extra buffer!";
-    lower_bound += apa_param.GetParam().parallel_terminal_y_offset_with_obs;
+    lower_bound += apa_param.GetParam().parallel_terminal_x_offset_with_obs;
   }
   ILOG_INFO << "lower_bound max of them = " << lower_bound;
   if (lower_bound > upper_bound) {
@@ -774,6 +776,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   ILOG_INFO << "ego_info_under_slot.target_pose.pos.x() before = "
             << ego_info_under_slot.target_pose.pos.x();
+  ILOG_INFO << "bound = [ " << lower_bound << ", " << upper_bound << " ]";
   ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
       ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
 
@@ -792,6 +795,10 @@ const bool ParallelParkInScenario::GenTlane() {
       (side_sgn > 0.0 ? std::max(0.0, target_y_with_curb)
                       : std::min(0.0, target_y_with_curb));
 
+  ILOG_INFO << "ego pose = " << ego_info_under_slot.cur_pose.pos.transpose();
+
+  ILOG_INFO << "Final terminal pose = "
+            << ego_info_under_slot.target_pose.pos.transpose();
   t_lane_.pt_terminal_pos = ego_info_under_slot.target_pose.pos;
 
   ego_info_under_slot.terminal_err.Set(
@@ -1091,6 +1098,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 }
 
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
+  ILOG_INFO << "start PathPlanOnce -------------";
   // construct input
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
@@ -1199,7 +1207,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
         extend_lenth = apa_param.GetParam().min_path_length + 0.1 - x_diff;
       } else if (heading_deg_diff_mag > 10.0 &&
                  frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-        extend_lenth = apa_param.GetParam().min_path_length;
+        extend_lenth = 0.1;
       } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         extend_lenth = 0.0;
       }
@@ -1391,6 +1399,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 }
 
 const bool ParallelParkInScenario::CheckFinished() {
+  ILOG_INFO << "start CheckFinished!";
+
   const EgoInfoUnderSlot& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
@@ -1545,6 +1555,10 @@ void ParallelParkInScenario::Log() const {
       obstaclesX.emplace_back(obs_g.x());
       obstaclesY.emplace_back(obs_g.y());
     }
+  }
+  if (obstaclesX.empty()) {
+    obstaclesX = {0.0};
+    obstaclesY = {0.0};
   }
 
   ILOG_INFO << "obstaclesX simp size = " << obstaclesX.size();
