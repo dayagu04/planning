@@ -606,7 +606,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     weight_.jerk_lower_bound.clear();
     weight_.jerk_lower_bound.resize(weight_.point_num, -std::fabs(new_jerk_bound));
     planning_input.set_jerk_bound(std::fabs(new_jerk_bound));
-  } else if (is_emergency_) {
+  } else {
     is_emergency_ = false;
   }
   last_jerk_bound_limit_ = planning_input.jerk_bound();

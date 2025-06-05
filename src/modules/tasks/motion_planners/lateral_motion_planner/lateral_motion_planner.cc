@@ -478,11 +478,9 @@ bool LateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
   // handle big shaking for steer
-  if (session_->environmental_model().GetVehicleDbwStatus()) {
-    planning_weight_ptr_->CalculateJerkBoundByLastJerk(
-        reference_path_ptr,
-        planning_problem_ptr_->GetOutput(), planning_input_);
-  }
+  planning_weight_ptr_->CalculateJerkBoundByLastJerk(
+      reference_path_ptr,
+      planning_problem_ptr_->GetOutput(), planning_input_);
   // set motion_plan_concerned_end_index
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(
       complete_follow, is_divide_lane_into_two_,
