@@ -133,7 +133,7 @@
   "limited_safe_uss_remain_dist": 0.21,
   "safe_uss_remain_dist_in_parallel_slot": 0.28,
   "safe_uss_remain_dist_out_slot": 0.4286,
-  "uss_stuck_replan_wait_time": 2.5,
+  "uss_stuck_replan_wait_time": 2.0,
   "uss_scan_angle_deg": 60.0,
   "uss_apa_scan_angle_deg": 70.0,
   "uss_upa_scan_angle_deg": 100.0,

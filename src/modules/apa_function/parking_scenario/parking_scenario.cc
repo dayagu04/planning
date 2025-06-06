@@ -89,8 +89,9 @@ void ParkingScenario::UpdateStuckTime() {
 
   // update stuck by obs time
   if (static_flag && !brake_flag && !frame_.stuck_by_dynamic_obs &&
-      (plan_status == PARKING_RUNNING ||
-       (plan_status == PARKING_PLANNING && pathplan_result == PLAN_FAILED))) {
+      (plan_status == ParkingStatus::PARKING_RUNNING ||
+       (plan_status == ParkingStatus::PARKING_PLANNING &&
+        pathplan_result == PathPlannerResult::PLAN_FAILED))) {
     frame_.stuck_obs_time += param.plan_time;
   } else {
     frame_.stuck_obs_time = 0.0;
@@ -98,7 +99,8 @@ void ParkingScenario::UpdateStuckTime() {
 
   // update stuck time
   if (static_flag && !brake_flag &&
-      (plan_status == PARKING_RUNNING || plan_status == PARKING_PLANNING)) {
+      (plan_status == ParkingStatus::PARKING_RUNNING ||
+       plan_status == ParkingStatus::PARKING_PLANNING)) {
     frame_.stuck_time += param.plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -106,7 +108,7 @@ void ParkingScenario::UpdateStuckTime() {
 
   // update pause time  这个时间其实没用  因为踩刹车导致的暂停根本进不来规划器
   // 后面删除
-  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
+  if (frame_.plan_stm.planning_status == ParkingStatus::PARKING_PAUSED) {
     frame_.pause_time += apa_param.GetParam().plan_time;
   } else {
     frame_.pause_time = 0.0;

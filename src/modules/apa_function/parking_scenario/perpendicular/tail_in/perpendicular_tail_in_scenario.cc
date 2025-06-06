@@ -2266,9 +2266,10 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
 
   if (frame_.dynamic_plan_time > param.dynamic_plan_interval_time) {
     frame_.dynamic_plan_time = 0.0;
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 void PerpendicularTailInScenario::Log() const {
