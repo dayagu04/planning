@@ -80,22 +80,26 @@ void ParkingScenario::InitSimulation() {
 }
 
 void ParkingScenario::UpdateStuckTime() {
-  // update stuck by uss time  重规划清空
-  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag() &&
-      !frame_.stuck_by_dynamic_obs) {
-    frame_.stuck_obs_time += apa_param.GetParam().plan_time;
+  const auto& param = apa_param.GetParam();
+  const auto& measure_data_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  const bool static_flag = measure_data_ptr->GetStaticFlag();
+  const bool brake_flag = measure_data_ptr->GetBrakeFlag();
+  const uint8_t plan_status = frame_.plan_stm.planning_status;
+  const uint8_t pathplan_result = frame_.pathplan_result;
+
+  // update stuck by obs time
+  if (static_flag && !brake_flag && !frame_.stuck_by_dynamic_obs &&
+      (plan_status == PARKING_RUNNING ||
+       (plan_status == PARKING_PLANNING && pathplan_result == PLAN_FAILED))) {
+    frame_.stuck_obs_time += param.plan_time;
   } else {
     frame_.stuck_obs_time = 0.0;
   }
 
-  // 重规划不清空
-  if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
-       frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag()) {
-    frame_.stuck_time += apa_param.GetParam().plan_time;
+  // update stuck time
+  if (static_flag && !brake_flag &&
+      (plan_status == PARKING_RUNNING || plan_status == PARKING_PLANNING)) {
+    frame_.stuck_time += param.plan_time;
   } else {
     frame_.stuck_time = 0.0;
   }
@@ -234,10 +238,6 @@ void ParkingScenario::SetPlanningPath() {
   // record last frame remain dist path
   frame_.remain_dist_path_last = frame_.remain_dist_path;
 
-  // temp use remain_dist_obs to lat cat stop
-  frame_.remain_dist_obs =
-      std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
-
   // reset obs remain dist when gear shift
   if ((frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE &&
        planning_output_.gear_command.gear_command_value ==
@@ -251,7 +251,7 @@ void ParkingScenario::SetPlanningPath() {
 
   // send obs remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
-      frame_.remain_dist_obs;
+      std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
 
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
