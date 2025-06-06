@@ -103,8 +103,9 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  CheckReplanParams replan_params;
   // check replan
-  if (CheckReplan()) {
+  if (CheckReplan(replan_params)) {
     ILOG_INFO << "replan is required!";
 
     // generate t-lane

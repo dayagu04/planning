@@ -73,7 +73,8 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  frame_.replan_flag = CheckReplan();
+  CheckReplanParams replan_params;
+  frame_.replan_flag = CheckReplan(replan_params);
 
   GenTlane();
   GenObstacles();
@@ -1205,10 +1206,9 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 }
 
 const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
-  return !path_trim_flag_ &&
-         apa_world_ptr_->GetSlotManagerPtr()
-                 ->GetEgoInfoUnderSlot()
-                 .slot_occupied_ratio < 0.15;
+  return !path_trim_flag_ && apa_world_ptr_->GetSlotManagerPtr()
+                                     ->GetEgoInfoUnderSlot()
+                                     .slot_occupied_ratio < 0.15;
 }
 
 const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {

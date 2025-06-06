@@ -286,11 +286,14 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  bool is_replan = CheckReplan(
+  CheckReplanParams replan_params(
       apa_param.GetParam().max_replan_remain_dist, 0.068,
       apa_param.GetParam().max_replan_remain_dist,
       apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time,
+      apa_param.GetParam().max_replan_remain_dist, 0.168,
       apa_param.GetParam().stuck_replan_time);
+
+  bool is_replan = CheckReplan(replan_params);
 
   if (!CheckEgoReplanNumber(is_replan)) {
     SetParkingStatus(PARKING_FAILED);

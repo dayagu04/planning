@@ -661,11 +661,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   return;
 }
 
-const bool ParkingScenario::CheckReplan(const double replan_dist_path,
-                                        const double wait_time_path,
-                                        const double replan_dist_obs,
-                                        const double wait_time_obs,
-                                        const double stuck_replan_time) {
+const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
   frame_.is_replan_by_obs = false;
   frame_.is_replan_dynamic = false;
   frame_.replan_reason = NOT_REPLAN;
@@ -682,19 +678,21 @@ const bool ParkingScenario::CheckReplan(const double replan_dist_path,
     return true;
   }
 
-  if (CheckSegCompleted(replan_dist_path, wait_time_path)) {
+  if (CheckSegCompleted(check_params.replan_dist_path,
+                        check_params.wait_time_path)) {
     ILOG_INFO << "replan by current segment completed!";
     frame_.replan_reason = SEG_COMPLETED_PATH;
     return true;
   }
 
-  if (CheckObsStucked(replan_dist_obs, wait_time_obs)) {
+  if (CheckObsStucked(check_params.replan_dist_obs,
+                      check_params.wait_time_obs)) {
     ILOG_INFO << "replan by uss stucked!";
     frame_.replan_reason = SEG_COMPLETED_OBS;
     return true;
   }
 
-  if (CheckStuckTimeEnough(stuck_replan_time)) {
+  if (CheckStuckTimeEnough(check_params.stuck_replan_time)) {
     ILOG_INFO << "replan by stuck!";
     frame_.replan_reason = STUCKED;
     return true;

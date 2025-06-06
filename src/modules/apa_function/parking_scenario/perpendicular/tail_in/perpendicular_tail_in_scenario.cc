@@ -858,7 +858,8 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 }
 
 void PerpendicularTailInScenario::PathPlan() {
-  frame_.replan_flag = CheckReplan();
+  CheckReplanParams replan_params;
+  frame_.replan_flag = CheckReplan(replan_params);
   frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
   frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
   const ApaParameters& param = apa_param.GetParam();
@@ -1654,8 +1655,6 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
     return;
   }
 
-  ILOG_INFO << "should stop because of the slot jump much";
-
   // 上一帧自车沿路径已经行驶的距离
   const double car_already_move_dist_last =
       frame_.current_path_length - frame_.remain_dist_path_last;
@@ -1670,6 +1669,10 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   // 计算从应该停车时刻到现在行驶的累计距离
   frame_.car_already_move_dist +=
       std::fabs(car_already_move_dist - car_already_move_dist_last);
+
+  ILOG_INFO
+      << "should stop because of the slot jump much, remain_dist_slot_jump = "
+      << frame_.remain_dist_slot_jump;
 
   JSON_DEBUG_VALUE("ego_should_stop", true)
 

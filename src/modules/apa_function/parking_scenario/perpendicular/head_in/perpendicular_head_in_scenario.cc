@@ -129,8 +129,9 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  CheckReplanParams replan_params;
   // check replan
-  if (CheckReplan()) {
+  if (CheckReplan(replan_params)) {
     ILOG_INFO << "replan is required!";
     frame_.replan_flag = true;
     EgoInfoUnderSlot& ego_info_under_slot =

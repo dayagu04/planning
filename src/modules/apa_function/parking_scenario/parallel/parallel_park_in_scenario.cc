@@ -210,11 +210,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   const double max_replan_path_dist = 0.15;
   const double uss_stuck_replan_wait_time = 1.5;
+  CheckReplanParams replan_params(
+      max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
+      uss_stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
+      0.168, apa_param.GetParam().stuck_replan_time);
   // check replan
-  if (!CheckReplan(max_replan_path_dist, 0.068,
-                   apa_param.GetParam().max_replan_remain_dist,
-                   uss_stuck_replan_wait_time,
-                   apa_param.GetParam().stuck_replan_time)) {
+  if (!CheckReplan(replan_params)) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
     return;
