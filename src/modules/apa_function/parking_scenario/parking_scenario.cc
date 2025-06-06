@@ -687,8 +687,15 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
 
   if (CheckObsStucked(check_params.replan_dist_obs,
                       check_params.wait_time_obs)) {
-    ILOG_INFO << "replan by uss stucked!";
+    ILOG_INFO << "replan by obs stucked!";
     frame_.replan_reason = SEG_COMPLETED_OBS;
+    return true;
+  }
+
+  if (CheckSlotJumpStucked(check_params.replan_dist_slot_jump,
+                           check_params.wait_time_slot_jump)) {
+    ILOG_INFO << "replan by slot jump stucked!";
+    frame_.replan_reason = SEG_COMPLETED_SLOT_JUMP;
     return true;
   }
 
@@ -726,7 +733,22 @@ const bool ParkingScenario::CheckObsStucked(const double replan_dist,
                                             const double wait_time) {
   if (frame_.remain_dist_obs < replan_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
+    ILOG_INFO << "close to obstacle!, need wait a certain time!";
+    if (frame_.stuck_obs_time > wait_time) {
+      ILOG_INFO << "wait a certain time, start plan";
+      frame_.is_replan_by_obs = true;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::CheckSlotJumpStucked(const double replan_dist,
+                                                 const double wait_time) {
+  if (frame_.remain_dist_slot_jump < replan_dist &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    ILOG_INFO << "close to slot jumped!, need wait a certain time!";
     if (frame_.stuck_obs_time > wait_time) {
       ILOG_INFO << "wait a certain time, start plan";
       frame_.is_replan_by_obs = true;

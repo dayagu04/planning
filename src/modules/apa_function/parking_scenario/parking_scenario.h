@@ -41,6 +41,7 @@ class ParkingScenario {
     FIRST_PLAN,
     SEG_COMPLETED_PATH,
     SEG_COMPLETED_OBS,
+    SEG_COMPLETED_SLOT_JUMP,
     STUCKED,
     DYNAMIC,
     SEG_COMPLETED_COL_DET,
@@ -414,6 +415,9 @@ class ParkingScenario {
 
   virtual const bool CheckObsStucked(const double replan_dist,
                                      const double wait_time);
+
+  virtual const bool CheckSlotJumpStucked(const double replan_dist,
+                                          const double wait_time);
 
   virtual const bool CheckStuckTimeEnough(const double stuck_replan_time);
 
