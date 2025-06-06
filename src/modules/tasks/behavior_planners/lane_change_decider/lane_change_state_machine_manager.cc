@@ -341,6 +341,16 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
     double l_front_right =
         target_reference_path->get_frenet_ego_state().corners().l_front_right;
     const double width_by_target = target_lane->width();
+
+    //在变道过程中，判断自车后轴中心和前面两个角点都过车道线，在低速时会导致不合理返回
+    //将前面两个角点的约束放松一点，两个边角的l减小0.2m
+    const double buffer = 0.3;
+    if (lane_change_direction == LEFT_CHANGE) {
+      l_front_right = l_front_right + buffer;
+    } else if (lane_change_direction == RIGHT_CHANGE) {
+      l_front_left = l_front_left - buffer;
+    }
+
     if (std::abs(ego_l_target) < std::abs(width_by_target) / 2 &&
         std::abs(l_front_left) < std::abs(width_by_target) / 2 &&
         std::abs(l_front_right) < std::abs(width_by_target) / 2) {
@@ -348,34 +358,34 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
     }
   }
 
-  const auto &reference_path_ego_state =
-      current_reference_path->get_frenet_ego_state();
-  const double ego_s = reference_path_ego_state.s();
-  const double ego_l = reference_path_ego_state.l();
-  double width = ego_lane->width(ego_s);
-  double lane_change_complete_l_threshold =
-      std::min(std::max(0.5, width / 4.0), 1.0);
+  // const auto &reference_path_ego_state =
+  //     current_reference_path->get_frenet_ego_state();
+  // const double ego_s = reference_path_ego_state.s();
+  // const double ego_l = reference_path_ego_state.l();
+  // double width = ego_lane->width(ego_s);
+  // double lane_change_complete_l_threshold =
+  //     std::min(std::max(0.5, width / 4.0), 1.0);
 
-  // check if ego lane jump to right direction
-  bool jump_to_target_lane = false;
-  if (ego_l * pre_ego_l_ < 0) {
-    if (lane_change_direction == LEFT_CHANGE) {
-      if (ego_l < 0 && pre_ego_l_ > 0) {
-        jump_to_target_lane = true;
-      }
-    } else if (lane_change_direction == RIGHT_CHANGE) {
-      if (ego_l > 0 && pre_ego_l_ < 0) {
-        jump_to_target_lane = true;
-      }
-    }
-  }
-  if (jump_to_target_lane &&
-      (std::fabs(ego_l) > lane_change_complete_l_threshold ||
-       std::fabs(pre_ego_l_) > lane_change_complete_l_threshold)) {
-    pre_ego_l_ = ego_l;
-    return true;
-  }
-  pre_ego_l_ = ego_l;
+  // // check if ego lane jump to right direction
+  // bool jump_to_target_lane = false;
+  // if (ego_l * pre_ego_l_ < 0) {
+  //   if (lane_change_direction == LEFT_CHANGE) {
+  //     if (ego_l < 0 && pre_ego_l_ > 0) {
+  //       jump_to_target_lane = true;
+  //     }
+  //   } else if (lane_change_direction == RIGHT_CHANGE) {
+  //     if (ego_l > 0 && pre_ego_l_ < 0) {
+  //       jump_to_target_lane = true;
+  //     }
+  //   }
+  // }
+  // if (jump_to_target_lane &&
+  //     (std::fabs(ego_l) > lane_change_complete_l_threshold ||
+  //      std::fabs(pre_ego_l_) > lane_change_complete_l_threshold)) {
+  //   pre_ego_l_ = ego_l;
+  //   return true;
+  // }
+  // pre_ego_l_ = ego_l;
   return false;
 }
 
@@ -2913,9 +2923,9 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
       (ego_dis_to_line / standard_half_lane_width) * base_time;
   // 注：自车在接近车道线的时候ego_dis_to_line的值很小，后轴中心越过车道线时ego_dis_to_line为负的，
   // 因此，需要保证自车在每个时刻对未来至少要判断一定时间是安全的才合理，
-  // 考虑到驾驶员的反应时间约为0.2s和自车执行器的响应时间0.7s，目前该值取1.5s。
+  // 考虑到驾驶员的反应时间约为0.2s和自车执行器的响应时间0.7s，目前该值取2.0s。
 
-  reach_line_time = std::max(reach_line_time, 1.5);
+  reach_line_time = std::max(reach_line_time, 2.0);
 
   return reach_line_time;
 }
@@ -3044,7 +3054,7 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const{
 
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
-      
+
   const auto& cur_lane = virtual_lane_manager->get_current_lane();
 
   if (cur_lane == nullptr) {
@@ -3052,11 +3062,11 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const{
   }
 
   const double cur_lane_width = cur_lane->width();
-  
+
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kEgoWidth = vehicle_param.width;
-  
+
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
     lc_hold_state_lat_offset = -(cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2);
   } else {
