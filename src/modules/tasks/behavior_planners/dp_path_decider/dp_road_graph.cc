@@ -147,7 +147,7 @@ bool DPRoadGraph::ProcessEnvInfos() {
       obstacles_info_.emplace_back(
           std::move(static_obs_info));  // just log info
       static_obstacles_box_.emplace_back(obs_box);
-    } else if (agent->speed() < kMaxNudgingSpeed || agent->speed() <  0.5 * ego_v_) {  // slow dynamic filter
+    } else if (agent->speed() < kMaxNudgingSpeed ) {  // slow dynamic filter
                                         // filtered backward dynamic obs
       if (!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end ||
             agent_sl_boundary[2] < ego_frenet_boundary_.l_start) &&
@@ -318,7 +318,7 @@ bool DPRoadGraph::DPSearchPath(const LaneBorrowStatus lane_borrow_status) {
   //   fake_head.UpdateCost(cur_dp_node.min_cost_, &cur_dp_node,
   //                        cur_dp_node.min_cost_curve_);
   // }
-   for( int i = graph_nodes.size() - 1; i >=0; --i){
+   for( int i = graph_nodes.size() - 1; i >=2; --i){
     for (const auto& cur_dp_node :graph_nodes[i]) {  // 实际只是选择到达最后一层中代价最小的一个节点
       fake_head.UpdateCost(cur_dp_node.min_cost_, &cur_dp_node,
                          cur_dp_node.min_cost_curve_);
@@ -425,6 +425,7 @@ bool DPRoadGraph::CartSpline(
   ref_path_curve_.x_s_spline.set_points(s_vec, x_vec);
   ref_path_curve_.y_s_spline.set_points(s_vec, y_vec);
 
+  lane_borrow_decider_output->dp_path_coord = ConstructLaneBorrowKDPath(x_vec, y_vec);
   lane_borrow_decider_output->dp_path_ref = ref_path_curve_;
   return true;
 }
@@ -674,6 +675,31 @@ void DPRoadGraph::ClearDPInfo(){
   dp_selected_points_.clear();
   min_cost_path_.clear();
 }
+  std::shared_ptr<planning_math::KDPath> DPRoadGraph:: ConstructLaneBorrowKDPath(const std::vector<double> &x_vec,
+                                             const std::vector<double> &y_vec){
+  std::vector<planning_math::PathPoint> dp_path_points;
+  dp_path_points.reserve(x_vec.size());
+  for (int i = 0; i <= x_vec.size()-1; ++i) {
+    if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
+      LOG_ERROR("skip NaN point");
+      continue;
+    }
+    planning_math::PathPoint path_point{x_vec[i], y_vec[i]};
+    dp_path_points.emplace_back(path_point);
+    if (!dp_path_points.empty()) {
+      auto &last_pt = dp_path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - path_point.x(),
+                               last_pt.y() - path_point.y())
+              .Length() < 1e-3) {
+        continue;
+      }
+    }
+  }
+  if (dp_path_points.size() <= 2) {
+    return nullptr;
+  }
+  return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));
+                                             }
 
 void DPRoadGraph::LogDebugInfo() {
   auto dp_road_pb_info =

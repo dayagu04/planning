@@ -43,6 +43,8 @@ constexpr double kObsLonDisBuffer = 2.0;
 constexpr double kMaxCentricOffset = 0.75;
 constexpr double kBackNeededDistance = 5.0;
 constexpr double kMaxConcernCollisionTime =5.0;
+constexpr double kPreCentricOffsetHigh = 0.75;
+constexpr double kPreCentricOffsetLow = 0.45;
 };  // namespace
 
 namespace planning {
@@ -218,6 +220,7 @@ void LaneBorrowDecider::UpdateToDP() {
     static_blocked_obj_id_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
+    lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
     return;
   }
 
@@ -274,6 +277,9 @@ void LaneBorrowDecider::UpdateToDP() {
     static_blocked_obj_id_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
+    // if(lane_borrow_decider_output_.lane_borrow_failed_reason != OBSERVE_TIME_CHECK_FAILED){
+    //   ClearLaneBorrowStatus();
+    // }
   }
 
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
@@ -384,6 +390,7 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToNoBorrow() {
   if (ego_frenet_boundary_.l_end < left_width &&
       ego_frenet_boundary_.l_start > -right_width) {
     ClearLaneBorrowStatus();
+
     return true;
   } else {
     return false;
@@ -444,7 +451,7 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowDriving() {
       // if (!obstacle->obstacle()->is_static()) {    //dp obs_speed selset
       //   continue;
       // }
-      if (obs_v > 4.2 && obs_v > 0.5 * ego_speed_) {  // dp  concern obs_v <     15kph
+      if (obs_v > 4.2) {  // dp  concern obs_v <     15kph
         continue;
       }
 
@@ -500,6 +507,16 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowCrossing() {
 // v2
 bool LaneBorrowDecider::CheckLaneBorrowCondition() {
 
+  if (lane_borrow_status_ != kNoLaneBorrow) {
+    if (!is_first_frame_to_lane_borrow_) {
+      if (!RunDP()) {
+        return false;
+      }
+    } else {
+      is_first_frame_to_lane_borrow_ = false;
+    }
+  }
+
   UpdateJunctionInfo();
 
   if (!SelectStaticBlockingObstcales()) {
@@ -509,6 +526,12 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   if (!UpdateLaneBorrowDirection()) {
     return false;
   }
+
+
+  if(!CheckDynamicCutin()){
+    return false;
+  }
+
 
   if (!ObstacleDecision()) {
     return false;
@@ -553,15 +576,6 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
     }
   }
 
-  if (lane_borrow_status_ != kNoLaneBorrow) {
-    if (!is_first_frame_to_lane_borrow_) {
-      if (!RunDP()) {
-        return false;
-      }
-    } else {
-      is_first_frame_to_lane_borrow_ = false;
-    }
-  }
 
   return true;
 }
@@ -801,7 +815,7 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
         frenet_obstacle_sl.l_start > left_width) {  // away from cur lane
       continue;
     } else {
-      if (obstacle->obstacle()->velocity() > 4.2 && obstacle->obstacle()->velocity() > 0.5 * ego_speed_) {
+      if (obstacle->obstacle()->velocity() > 4.2 ) {
         continue;
       }
     }
@@ -838,10 +852,79 @@ bool LaneBorrowDecider::CheckDynamicCutin(){
     int blocked_obs_id = static_blocked_obj_id_vec_[i];
     const auto& agent = agent_mgr->GetAgent(blocked_obs_id);
     bool cut_in = false;
+    bool cut_out  = false;
     //
     //.....//
     //
-    if(cut_in){
+    if (agent->speed() < 4.2){
+      std::vector<planning_math::Vec2d> obs_corners;
+      const auto& obs_box = agent->box();
+      obs_corners = obs_box.GetAllCorners();
+      std::vector<double> agent_sl_boundary(4);
+      FrenetObstacleBoundary frenet_obstacle_sl;
+      agent_sl_boundary.at(0) = std::numeric_limits<double>::lowest();
+      agent_sl_boundary.at(1) = std::numeric_limits<double>::max();
+      agent_sl_boundary.at(2) = std::numeric_limits<double>::lowest();
+      agent_sl_boundary.at(3) = std::numeric_limits<double>::max();
+      for (size_t i = 0; i < obs_corners.size(); ++i) {
+        double project_s = 0.0, project_l = 0.0;
+        current_reference_path_ptr_->get_frenet_coord()->XYToSL(
+            obs_corners[i].x(), obs_corners[i].y(), &project_s,
+            &project_l);  // 这是投影在路径上的 障碍物角点
+        agent_sl_boundary.at(3) = std::fmin(agent_sl_boundary.at(3), project_l);
+        agent_sl_boundary.at(2) = std::fmax(agent_sl_boundary.at(2), project_l);
+        agent_sl_boundary.at(1) = std::fmin(agent_sl_boundary.at(1), project_s);
+        agent_sl_boundary.at(0) = std::fmax(agent_sl_boundary.at(0), project_s);
+      }
+      double MinCentricOffset = 0.0;
+      const double obs_center_l =
+      0.5 * (agent_sl_boundary[2]+agent_sl_boundary[3]);
+      // 获取障碍物的预测轨迹
+      const auto& obs_trajectories = agent->trajectories();
+      if (!obs_trajectories.empty() && !obs_trajectories[0].empty()) {
+
+        for (size_t j = 0; j < obs_trajectories[0].size(); j = j + 3) {
+
+          const auto& point = obs_trajectories[0][j];
+          SLPoint obs_sl;
+          current_reference_path_ptr_->get_frenet_coord()->XYToSL(point.x(), point.y(), &obs_sl.s, &obs_sl.l);
+          if(j <= 13){  // 0 3 6 9 12 15 18 21 24   0-5s
+            MinCentricOffset = kPreCentricOffsetHigh;
+          }else{
+            MinCentricOffset = kPreCentricOffsetLow;
+          }
+          // 判断是否切入自车车道
+          // 判断是否切入自车车道
+          if(lane_borrow_status_ != kLaneBorrowCrossing){
+            if (std::fabs(obs_sl.l) < MinCentricOffset &&
+                agent_sl_boundary[1] - ego_frenet_boundary_.s_end < 20){
+                  cut_in = true;
+                  break;
+            }
+
+            if(lane_borrow_decider_output_.borrow_direction == LEFT_BORROW
+            && obs_center_l - obs_sl.l > 0.5){
+                cut_out = true;
+            }else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW
+            && obs_center_l - obs_sl.l < -0.5) {
+                cut_out = true;
+            }
+
+          }else {
+            if(std::fabs(obs_center_l) < kPreCentricOffsetHigh && agent_sl_boundary[1] - ego_frenet_boundary_.s_end < 20 ){     //status == crossing   center_obs
+              if(lane_borrow_decider_output_.borrow_direction == LEFT_BORROW
+              && agent_sl_boundary[2] - obs_sl.l < -current_lane_ptr_->width() * 0.5){
+                  cut_in = true;
+              }else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW
+              && agent_sl_boundary[3] - obs_sl.l > current_lane_ptr_->width() * 0.5) {
+                  cut_in = true;
+              }
+            }
+          }
+        }
+      }
+    }
+    if(cut_in || cut_out){
       static_blocked_obstacles_.erase(static_blocked_obstacles_.begin() + i);
       static_blocked_obj_id_vec_.erase(static_blocked_obj_id_vec_.begin() + i);
     }

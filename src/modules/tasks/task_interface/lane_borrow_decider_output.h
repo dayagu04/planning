@@ -3,6 +3,8 @@
 
 #include "config/basic_type.h"
 #include "lane_borrow_decider.pb.h"
+#include "utils/kd_path.h"
+
 namespace planning {
 
 enum LaneBorrowStatus {
@@ -49,6 +51,7 @@ struct LaneBorrowDeciderOutput {
   bool can_right_borrow = false;
   CarReferenceInfo dp_path_ref;
   LaneBorrowStatus lane_borrow_state;
+  std::shared_ptr<planning_math::KDPath> dp_path_coord;
 };
 
 }  // namespace planning

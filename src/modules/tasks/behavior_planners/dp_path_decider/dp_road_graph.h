@@ -153,6 +153,8 @@ class DPRoadGraph : public Task {
   bool LastFramePath();
   void LogDebugInfo();
   void ClearDPInfo();
+  std::shared_ptr<planning_math::KDPath> ConstructLaneBorrowKDPath(const std::vector<double> &x_vec,
+                                             const std::vector<double> &y_vec);
 
   // inputs methods
   // Setters
