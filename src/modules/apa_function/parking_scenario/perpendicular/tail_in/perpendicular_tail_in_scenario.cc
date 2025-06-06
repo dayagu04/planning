@@ -92,7 +92,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   // update remain dist
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
-  CalRemainDistBySlotJump();
+  frame_.remain_dist_slot_jump = CalRemainDistBySlotJump();
 
   // check finish
   if (CheckFinished()) {
@@ -946,9 +946,11 @@ void PerpendicularTailInScenario::PathPlan() {
         geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                      ego_info_under_slot.target_pose.heading));
 
-    // const bool ego_should_stop = CheckShouldStopWhenSlotJumpsMuch();
-    // JSON_DEBUG_VALUE("ego_should_stop", ego_should_stop)
-    // ILOG_INFO << "  ego_should_stop = " << ego_should_stop
+    // const bool ego_should_stop_by_slot_jump =
+    // CheckShouldStopWhenSlotJumpsMuch();
+    // JSON_DEBUG_VALUE("ego_should_stop_by_slot_jump",
+    // ego_should_stop_by_slot_jump) ILOG_INFO << " ego_should_stop_by_slot_jump
+    // = " << ego_should_stop_by_slot_jump
     //           << "  dynamic_replan_fail_count = "
     //           << static_cast<int>(frame_.dynamic_replan_fail_count);
 
@@ -1605,23 +1607,20 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   return true;
 }
 
-void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
+const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-
-  JSON_DEBUG_VALUE("ego_should_stop", false)
 
   const double ego_stop_dist = 1.0;
   if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
       frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
       ego_info_under_slot.slot_occupied_ratio < 0.168 ||
       (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
-       frame_.remain_dist_slot_jump >
-           apa_param.GetParam().max_replan_remain_dist) ||
+       !frame_.ego_should_stop_by_slot_jump) ||
       frame_.remain_dist_path < ego_stop_dist + 0.168) {
     frame_.car_already_move_dist = 0.0;
-    frame_.remain_dist_slot_jump = 5.01;
-    return;
+    frame_.ego_should_stop_by_slot_jump = false;
+    return 5.01;
   }
 
   // 计算上次规划终点位置
@@ -1655,8 +1654,8 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   if (lat_err < param.finish_lat_err_strict - 1e-3 &&
       heading_err < param.finish_heading_err - 1e-2) {
     frame_.car_already_move_dist = 0.0;
-    frame_.remain_dist_slot_jump = 5.01;
-    return;
+    frame_.ego_should_stop_by_slot_jump = false;
+    return 5.01;
   }
 
   // 上一帧自车沿路径已经行驶的距离
@@ -1668,7 +1667,8 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
       frame_.current_path_length - frame_.remain_dist_path;
 
   // 车位跳动剩余距离等于停止距离减去从应该停车时刻到现在行驶的累计距离
-  frame_.remain_dist_slot_jump = ego_stop_dist - frame_.car_already_move_dist;
+  const double remain_dist_slot_jump =
+      ego_stop_dist - frame_.car_already_move_dist;
 
   // 计算从应该停车时刻到现在行驶的累计距离
   frame_.car_already_move_dist +=
@@ -1676,11 +1676,11 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   ILOG_INFO
       << "should stop because of the slot jump much, remain_dist_slot_jump = "
-      << frame_.remain_dist_slot_jump;
+      << remain_dist_slot_jump;
 
-  JSON_DEBUG_VALUE("ego_should_stop", true)
+  frame_.ego_should_stop_by_slot_jump = true;
 
-  return;
+  return remain_dist_slot_jump;
 }
 
 const bool PerpendicularTailInScenario::PostProcessPathAccordingRemainDist(
@@ -2387,6 +2387,9 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
+
+  JSON_DEBUG_VALUE("ego_should_stop_by_slot_jump",
+                   frame_.ego_should_stop_by_slot_jump)
 
   JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.id)
   JSON_DEBUG_VALUE("slot_length", ego_info_under_slot.slot.slot_length_)

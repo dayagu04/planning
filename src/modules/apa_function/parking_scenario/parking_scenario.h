@@ -230,6 +230,8 @@ class ParkingScenario {
       process_obs_method = ProcessObsMethod::DO_NOTHING;
 
       dynamic_plan_path_superior = false;
+
+      ego_should_stop_by_slot_jump = false;
     }
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
@@ -295,6 +297,8 @@ class ParkingScenario {
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
     bool stuck_by_dynamic_obs = false;
+
+    bool ego_should_stop_by_slot_jump = false;
   };
 
   enum ParkingStatus {
