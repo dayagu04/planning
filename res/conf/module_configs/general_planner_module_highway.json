@@ -25,6 +25,7 @@
   "enable_fusion_occupancy_objects": true,
   "enable_fusion_parking_slot": true,
   "enable_fusion_ground_line": true,
+  "enable_lane_borrow_deciderV2": true,
   "is_ground_line_cluster": false,
   "enable_ehr_column_box": false,
   "enable_bbox_mode": true,
@@ -793,6 +794,38 @@
   "maximum_speed_adjustment":4.0,
   "sample_t_upper":5.0,
   "sample_t_lower":1.0
+},
+"dp_path_decider":{
+  "coeff_l_cost":60.0,
+  "coeff_dl_cost":20.0,
+  "coeff_ddl_cost ":0,
+  "coeff_end_l_cost":100,
+  "coeff_collision_cost":100.0,
+  "collision_distance":0.8,
+  "coeff_stitch_cost":30.0,
+  "path_resolution":2.0,
+
+
+  "coeff_l_cost2":60.0,
+  "coeff_dl_cost2":5.0,
+  "coeff_ddl_cost2 ":0,
+  "coeff_end_l_cost2":100.0,
+  "coeff_collision_cost2":10.0,
+  "collision_distance2":0.8,
+  "coeff_stitch_cost2":30.0,
+  "path_resolution2":2.0,
+
+  "min_sample_distance":20.0,
+  "sample_forward_time":2.0,
+  "min_level_distance":10.0,
+  "max_level_distance":30.0
+},
+"dp_speed_decider":{
+  "total_path_length" : 50.0,
+  "total_time" : 5.0,
+  "matrix_dimension_s" : 2.0,
+  "matrix_dimension_t" : 0.5
 }
+
 }
 
