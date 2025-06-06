@@ -171,7 +171,7 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
     print("remain_dist = ", planning_json['remain_dist'])
-    print("remain_dist_uss =", planning_json['remain_dist_uss'])
+    print("remain_dist_obs =", planning_json['remain_dist_obs'])
     # print("path plan time =", planning_json['path_plan_time_ms'])
 
   if bag_loader.fus_parking_msg['enable'] == True:

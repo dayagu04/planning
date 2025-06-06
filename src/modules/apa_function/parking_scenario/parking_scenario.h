@@ -41,11 +41,11 @@ class ParkingScenario {
     FIRST_PLAN,
     SEG_COMPLETED_PATH,
     SEG_COMPLETED_OBS,
-    SEG_COMPLETED_SLOT_JUMP,
     STUCKED,
     DYNAMIC,
     SEG_COMPLETED_COL_DET,
     FORCE_PLAN,
+    SEG_COMPLETED_SLOT_JUMP,
   };
 
   struct CheckReplanParams {
