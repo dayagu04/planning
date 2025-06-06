@@ -662,52 +662,50 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 }
 
 const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
-  frame_.is_replan_by_obs = false;
-  frame_.is_replan_dynamic = false;
-  frame_.replan_reason = NOT_REPLAN;
+  frame_.replan_reason = ReplanReason::NOT_REPLAN;
 
   if (frame_.is_replan_first) {
     ILOG_INFO << "first plan";
-    frame_.replan_reason = FIRST_PLAN;
+    frame_.replan_reason = ReplanReason::FIRST_PLAN;
     return true;
   }
 
   if (apa_world_ptr_->GetSimuParam().force_plan) {
     ILOG_INFO << "force plan";
-    frame_.replan_reason = FORCE_PLAN;
+    frame_.replan_reason = ReplanReason::FORCE_PLAN;
     return true;
   }
 
   if (CheckSegCompleted(check_params.replan_dist_path,
                         check_params.wait_time_path)) {
     ILOG_INFO << "replan by current segment completed!";
-    frame_.replan_reason = SEG_COMPLETED_PATH;
+    frame_.replan_reason = ReplanReason::SEG_COMPLETED_PATH;
     return true;
   }
 
   if (CheckObsStucked(check_params.replan_dist_obs,
                       check_params.wait_time_obs)) {
     ILOG_INFO << "replan by obs stucked!";
-    frame_.replan_reason = SEG_COMPLETED_OBS;
+    frame_.replan_reason = ReplanReason::SEG_COMPLETED_OBS;
     return true;
   }
 
   if (CheckSlotJumpStucked(check_params.replan_dist_slot_jump,
                            check_params.wait_time_slot_jump)) {
     ILOG_INFO << "replan by slot jump stucked!";
-    frame_.replan_reason = SEG_COMPLETED_SLOT_JUMP;
+    frame_.replan_reason = ReplanReason::SEG_COMPLETED_SLOT_JUMP;
     return true;
   }
 
   if (CheckStuckTimeEnough(check_params.stuck_replan_time)) {
     ILOG_INFO << "replan by stuck!";
-    frame_.replan_reason = STUCKED;
+    frame_.replan_reason = ReplanReason::STUCKED;
     return true;
   }
 
   if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
     ILOG_INFO << "replan by dynamic!";
-    frame_.replan_reason = DYNAMIC;
+    frame_.replan_reason = ReplanReason::DYNAMIC;
     return true;
   }
 
@@ -736,7 +734,6 @@ const bool ParkingScenario::CheckObsStucked(const double replan_dist,
     ILOG_INFO << "close to obstacle!, need wait a certain time!";
     if (frame_.stuck_obs_time > wait_time) {
       ILOG_INFO << "wait a certain time, start plan";
-      frame_.is_replan_by_obs = true;
       return true;
     }
   }
@@ -751,7 +748,6 @@ const bool ParkingScenario::CheckSlotJumpStucked(const double replan_dist,
     ILOG_INFO << "close to slot jumped!, need wait a certain time!";
     if (frame_.stuck_obs_time > wait_time) {
       ILOG_INFO << "wait a certain time, start plan";
-      frame_.is_replan_by_obs = true;
       return true;
     }
   }

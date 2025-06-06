@@ -944,7 +944,6 @@ void ParallelParkOutScenario::Log() const {
                    ego_info_under_slot.terminal_err.heading)
 
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)

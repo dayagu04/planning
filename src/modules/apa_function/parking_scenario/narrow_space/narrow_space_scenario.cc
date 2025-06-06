@@ -550,7 +550,6 @@ void NarrowSpaceScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
@@ -2310,22 +2309,22 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
 
 void NarrowSpaceScenario::FillPlanningReason(AstarRequest& cur_request) {
   switch (frame_.replan_reason) {
-    case FIRST_PLAN:
+    case ReplanReason::FIRST_PLAN:
       cur_request.plan_reason = PlanningReason::FIRST_PLAN;
       break;
-    case SEG_COMPLETED_PATH:
+    case ReplanReason::SEG_COMPLETED_PATH:
       cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
       break;
-    case SEG_COMPLETED_OBS:
+    case ReplanReason::SEG_COMPLETED_OBS:
       cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
-    case STUCKED:
+    case ReplanReason::STUCKED:
       cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
-    case DYNAMIC:
+    case ReplanReason::DYNAMIC:
       cur_request.plan_reason = PlanningReason::SLOT_REFRESHED;
       break;
-    case SEG_COMPLETED_COL_DET:
+    case ReplanReason::SEG_COMPLETED_COL_DET:
       cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     default:
