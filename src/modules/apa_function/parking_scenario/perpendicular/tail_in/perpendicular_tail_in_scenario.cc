@@ -1615,7 +1615,9 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
       frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
       ego_info_under_slot.slot_occupied_ratio < 0.168 ||
-      ego_info_under_slot.slot_occupied_ratio > 0.708 ||
+      (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
+       frame_.remain_dist_slot_jump >
+           apa_param.GetParam().max_replan_remain_dist) ||
       frame_.remain_dist_path < ego_stop_dist + 0.168) {
     frame_.car_already_move_dist = 0.0;
     frame_.remain_dist_slot_jump = 5.01;
@@ -1647,11 +1649,11 @@ void PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   const auto& param = apa_param.GetParam();
 
   ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
-            << "  lat_err_threshold = " << param.should_stop_lat_err
-            << "  heading_err_threshold = " << param.should_stop_heading_err;
+            << "  lat_err_threshold = " << param.finish_lat_err_strict
+            << "  heading_err_threshold = " << param.finish_heading_err;
 
-  if (lat_err < param.should_stop_lat_err &&
-      heading_err < param.should_stop_heading_err) {
+  if (lat_err < param.finish_lat_err_strict - 1e-3 &&
+      heading_err < param.finish_heading_err - 1e-2) {
     frame_.car_already_move_dist = 0.0;
     frame_.remain_dist_slot_jump = 5.01;
     return;
