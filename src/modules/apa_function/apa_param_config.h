@@ -171,6 +171,7 @@ struct ApaParameters {
   double terminal_parallel_y_offset_with_wall = 0.45;
   double parallel_max_ego_x_offset_with_invasion = 0.5;
   double parallel_ego_ac_x_offset_with_limiter = 0.3;
+  double parallel_terminal_x_offset_with_obs = 0.35;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -340,6 +341,8 @@ struct ApaParameters {
   double dynamic_plan_interval_time = 0.4;
   double parallel_dynamic_lat_buffer = 0.4;
   double parallel_dynamic_lon_buffer = 1.68;
+  double parallel_dynamic_lat_buffer_in_slot = 0.2;
+  double parallel_dynamic_lon_buffer_in_slot = 0.8;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;
