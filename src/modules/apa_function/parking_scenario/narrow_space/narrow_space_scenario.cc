@@ -53,7 +53,7 @@ void NarrowSpaceScenario::Reset() {
   lon_offset_ = 0;
 
   current_path_last_heading_ = 0.0;
-  dynamic_falg_head_out_ = false;
+  dynamic_flag_head_out_ = false;
 
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
@@ -748,10 +748,19 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
     virtual_wall_decider_.Init(start);
   }
+
+  constexpr float passage_height_tmp = 7.0;
+
+  float passage_height =
+      ego_info.slot_occupied_ratio >
+              apa_param.GetParam().pose_slot_occupied_ratio_2
+          ? passage_height_tmp
+          : apa_param.GetParam()
+                .astar_config.vertical_slot_passage_height_bound;
   virtual_wall_decider_.Process(
       obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
       static_cast<float>(ego_info.slot.slot_length_), start, real_end,
-      slot_type, ego_info.slot_side, parking_type);
+      slot_type, ego_info.slot_side, parking_type, passage_height);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
@@ -1550,9 +1559,9 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
           param.slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_info_under_slot.cur_pose.heading) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
+    constexpr double kTabX0 = 1.1;
     const std::vector<double> x_tab = {
-        ego_info_under_slot.virtual_limiter.first.x(),
-        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+        kTabX0, ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
 
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
     ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
@@ -1570,6 +1579,9 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
 NarrowSpaceScenario::~NarrowSpaceScenario() {}
 
 void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
+    return;
+  }
   const ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
   if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
@@ -2265,7 +2277,7 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
        3.68);
 
   const bool occupied_ratio_flag = (ego_info_under_slot.slot_occupied_ratio <
-                                    param.pose_slot_occupied_ratio_2);
+                                    param.pose_slot_occupied_ratio_3);
 
   // check path remain dist
   const bool path_dist_flag = frame_.remain_dist_path > 1.5;
@@ -2277,15 +2289,20 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
 
   constexpr double kHeadingThreshold = 0.05;
 
-  const bool heading_flag =
-      std::abs(current_path_last_heading_) - 0.5 * M_PI > kHeadingThreshold;
+  bool heading_flag =
+      current_path_last_heading_ - ego_info_under_slot.target_pose.heading >
+      kHeadingThreshold;
 
-  const bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
-                                   occupied_ratio_flag && path_dist_flag &&
-                                   current_path_length_flag && heading_flag &&
-                                   !dynamic_falg_head_out_;
+  if (dynamic_flag_head_out_ && !heading_flag) {
+    // 如果上一次当前动态规划的heading 接近 目标heading，则无需再次重规划。
+    return false;
+  }
 
-  dynamic_falg_head_out_ = dynamic_replan_flag ? true : false;
+  bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
+                             occupied_ratio_flag && path_dist_flag &&
+                             current_path_length_flag;
+
+  dynamic_flag_head_out_ = dynamic_replan_flag ? true : false;
   return dynamic_replan_flag;
 }
 
