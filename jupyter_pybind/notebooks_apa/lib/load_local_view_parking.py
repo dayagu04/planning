@@ -2337,7 +2337,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size)
+    print("groundline_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size)
     for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size):
       ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline[i]
 
@@ -3877,9 +3877,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find ground line error')
       else:
-        #print("ground_lines_size = ",fus_ground_line_msg.ground_lines_size)
-        for i in range(fus_ground_line_msg.ground_lines_size):
-          ground_line = fus_ground_line_msg.ground_lines[i]
+        #print("groundline_size = ",fus_ground_line_msg.groundline_size)
+        for i in range(fus_ground_line_msg.groundline_size):
+          ground_line = fus_ground_line_msg.ground_line[i]
           points_3d = ground_line.points_3d
           for j in range(ground_line.points_3d_size):
             point_3d = points_3d[j]
