@@ -537,6 +537,10 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
   lane_line_info['line_y_vec'] = line_y_vec
   lane_line_info['type_vec'] = type_vec
   lane_line_info['relative_id_vec'] = relative_id_vec
+  print("lane_line_info['relative_id_vec']")
+  print(lane_line_info['relative_id_vec'][0][1])
+  print(lane_line_info['line_y_vec'][0][1])
+  print(lane_line_info['line_y_vec'][0])
   return lane_line_info
 
 # 加载车道boundary
