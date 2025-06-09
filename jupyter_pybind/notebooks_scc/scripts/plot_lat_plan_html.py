@@ -22,7 +22,7 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240607/20240607-16-37-00/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-07-16-37-00_no_camera.bag"
+bag_path =   "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250521/20250521-15-51-10/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-05-21-15-51-10_no_camera.bag"
 html_file = bag_path +".latplan.html"
 
 # bokeh创建的html在jupyter中显示
