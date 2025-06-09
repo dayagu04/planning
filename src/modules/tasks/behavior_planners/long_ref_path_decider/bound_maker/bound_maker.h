@@ -114,7 +114,7 @@ class BoundMaker {
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
   const std::vector<double> _A_CRUISE_MIN_BP{0.0, 5.0, 10.0, 20.0, 40.0};
-  const std::vector<double> _A_CRUISE_MIN_V{-0.5, -0.5, -0.5, -0.5, -0.3};
+  const std::vector<double> _A_CRUISE_MIN_V{-1.5, -1.5, -1.5, -1.0, -0.3};
   const std::vector<double> _A_CRUISE_MAX_BP{0.0, 5.0, 10.0, 20.0, 40.0};
   const std::vector<double> _A_CRUISE_MAX_V{1.0, 0.85, 0.6, 0.5, 0.3};
   const std::vector<double> _A_LEAD_LOW_SPEED_BP{0.0, 5.0};

@@ -110,8 +110,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   acc_upper_bound_.resize(plan_points_num_);
   acc_lower_bound_.resize(plan_points_num_);
   // cruise acc target
-  acc_target.first = interp(v_ego, _A_CRUISE_MIN_BP, _A_CRUISE_MIN_V);
-  acc_target.second = interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+  acc_target.first = interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table, speed_planning_config_.cruise_dec_bound_table.acc_table);
+  acc_target.second = interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table, speed_planning_config_.cruise_acc_bound_table.acc_table);
 
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   const auto& agent_headway_decider_output =
