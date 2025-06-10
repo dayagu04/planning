@@ -464,7 +464,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
                                      ->mutable_input_topic_timestamp();
     auto timestamp = 0 != input_topic_timestamp->localization_estimate()
                          ? local_view.localization_estimate.header.timestamp
-                         : local_view.localization.msg_header.stamp;
+                         : local_view.localization.meta.timestamp;
     if (!session_->is_hpp_scene()) {
       truncate_prediction_info(local_view.prediction_result, timestamp,
         prediction_obj_id_set);
@@ -555,7 +555,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         new_local ? localization.position.position_boot.z
                   : localization_estimate.pose.local_position.z);
     vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
-        localization.msg_header.stamp);
+        localization.meta.timestamp);
     // auto enu_orientation = localization_estimate.pose.orientation;
     // auto enu_orientation = localization.orientation.quaternion_boot;
     vehicle_status.mutable_location()

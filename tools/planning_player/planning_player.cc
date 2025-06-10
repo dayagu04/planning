@@ -1160,7 +1160,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+        auto loc_header_time_i = loc_msg_i->meta.timestamp; // 2.10.0 localization adapt
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -1210,7 +1210,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+        auto loc_header_time_i = loc_msg_i->meta.timestamp;// 2.10.0 localization adapt
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
