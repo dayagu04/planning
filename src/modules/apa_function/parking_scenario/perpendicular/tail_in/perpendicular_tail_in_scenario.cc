@@ -1611,13 +1611,11 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
-  const double ego_stop_dist = 1.0;
   if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
       frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
       ego_info_under_slot.slot_occupied_ratio < 0.168 ||
       (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
-       !frame_.ego_should_stop_by_slot_jump) ||
-      frame_.remain_dist_path < ego_stop_dist + 0.168) {
+       !frame_.ego_should_stop_by_slot_jump)) {
     frame_.car_already_move_dist = 0.0;
     frame_.ego_should_stop_by_slot_jump = false;
     return 5.01;
@@ -1666,9 +1664,29 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   const double car_already_move_dist =
       frame_.current_path_length - frame_.remain_dist_path;
 
+  if (!frame_.ego_should_stop_by_slot_jump) {
+    double stop_dist1, stop_dist2;
+    for (const auto& path_point : current_path_point_global_vec_) {
+      if (path_point.pos.x() > ego_info_under_slot.target_pose.pos.x() + 1.68) {
+        stop_dist1 = path_point.s;
+      }
+      if (std::fabs(path_point.heading) * kRad2Deg > 12.68) {
+        stop_dist2 = path_point.s;
+      }
+    }
+
+    stop_dist1 -= car_already_move_dist;
+    stop_dist2 -= car_already_move_dist;
+    frame_.ego_should_stop_dist_by_slot_jump = std::min(stop_dist1, stop_dist2);
+  }
+
+  // if (frame_.remain_dist_path < ego_stop_dist + 0.168) {
+
+  // }
+
   // 车位跳动剩余距离等于停止距离减去从应该停车时刻到现在行驶的累计距离
   const double remain_dist_slot_jump =
-      ego_stop_dist - frame_.car_already_move_dist;
+      frame_.ego_should_stop_dist_by_slot_jump - frame_.car_already_move_dist;
 
   // 计算从应该停车时刻到现在行驶的累计距离
   frame_.car_already_move_dist +=
@@ -1676,7 +1694,8 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   ILOG_INFO
       << "should stop because of the slot jump much, remain_dist_slot_jump = "
-      << remain_dist_slot_jump;
+      << remain_dist_slot_jump
+      << "  ego_stop_dist = " << frame_.ego_should_stop_dist_by_slot_jump;
 
   frame_.ego_should_stop_by_slot_jump = true;
 

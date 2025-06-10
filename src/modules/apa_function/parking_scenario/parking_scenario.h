@@ -232,6 +232,8 @@ class ParkingScenario {
       dynamic_plan_path_superior = false;
 
       ego_should_stop_by_slot_jump = false;
+
+      ego_should_stop_dist_by_slot_jump = 1.368;
     }
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
@@ -299,6 +301,8 @@ class ParkingScenario {
     bool stuck_by_dynamic_obs = false;
 
     bool ego_should_stop_by_slot_jump = false;
+
+    double ego_should_stop_dist_by_slot_jump = 1.368;
   };
 
   enum ParkingStatus {
