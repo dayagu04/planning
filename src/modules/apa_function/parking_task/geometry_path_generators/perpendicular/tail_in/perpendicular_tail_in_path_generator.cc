@@ -1938,7 +1938,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   geometry_lib::GeometryPath geometry_path;
   geometry_lib::GeometryPath geometry_path_copy;
 
-  int max_try_count = 10;
+  int max_try_count = 14;
   if (input_.is_replan_dynamic) {
     max_try_count = 1;
   }
