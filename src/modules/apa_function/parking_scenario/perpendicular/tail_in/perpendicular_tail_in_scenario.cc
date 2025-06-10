@@ -89,6 +89,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  CalSlotJumpErr();
   // update remain dist
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
@@ -1464,6 +1465,16 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     }
   }
 
+  // 如果在库外或者在库内，但是车位跳动较大时 横向buffer要更大
+  const bool increase_lat_err_flag =
+      (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
+       ego_info_under_slot.cur_pose.pos.x() >
+           ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+               2.168) ||
+      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+       ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+       frame_.slot_jump_lat_err > param.finish_lat_err_strict - 0.02);
+
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
   real_time_brake_info_vec.resize(4);
@@ -1486,6 +1497,13 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                            param.slight_brake_lon_dist);
   real_time_brake_info_vec[3] = real_time_brake_info;
 
+  for (size_t i = 0;
+       i < real_time_brake_info_vec.size() && increase_lat_err_flag; ++i) {
+    real_time_brake_info_vec[i].lat_buffer =
+        std::max(real_time_brake_info_vec[i].lat_buffer,
+                 param.moderate_brake_lat_inflation);
+  }
+
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
     if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
         std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
@@ -1501,10 +1519,12 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", param.stop_lat_inflation)
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
+                   real_time_brake_info_vec[0].lat_buffer)
 
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
-            << "  lon_buffer = " << lon_buffer;
+            << "  lon_buffer = " << lon_buffer
+            << "  lat_buffer = " << real_time_brake_info_vec[0].lat_buffer;
 
   return safe_remain_dist;
 }
@@ -1607,19 +1627,13 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   return true;
 }
 
-const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
+void PerpendicularTailInScenario::CalSlotJumpErr() {
+  if (current_path_point_global_vec_.size() < 1) {
+    return;
+  }
+
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-
-  if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
-      frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
-      ego_info_under_slot.slot_occupied_ratio < 0.168 ||
-      (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
-       !frame_.ego_should_stop_by_slot_jump)) {
-    frame_.car_already_move_dist = 0.0;
-    frame_.ego_should_stop_by_slot_jump = false;
-    return 5.01;
-  }
 
   // 计算上次规划终点位置
   geometry_lib::PathPoint tar_pose_bef = current_path_point_global_vec_.back();
@@ -1643,14 +1657,36 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   const double heading_err =
       std::fabs(tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
 
+  const double lon_err = std::fabs(tar_pose_now.pos.x() - tar_pose_bef.pos.x());
+
   const auto& param = apa_param.GetParam();
 
-  ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
-            << "  lat_err_threshold = " << param.finish_lat_err_strict
-            << "  heading_err_threshold = " << param.finish_heading_err;
+  ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
+            << "  heading_err = " << heading_err;
 
-  if (lat_err < param.finish_lat_err_strict - 1e-3 &&
-      heading_err < param.finish_heading_err - 1e-2) {
+  frame_.slot_jump_lat_err = lat_err;
+  frame_.slot_jump_lon_err = lon_err;
+  frame_.slot_jump_heading_err = heading_err;
+}
+
+const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
+      frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
+      ego_info_under_slot.slot_occupied_ratio < 0.168 ||
+      (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
+       !frame_.ego_should_stop_by_slot_jump)) {
+    frame_.car_already_move_dist = 0.0;
+    frame_.ego_should_stop_by_slot_jump = false;
+    return 5.01;
+  }
+
+  const auto& param = apa_param.GetParam();
+
+  if (frame_.slot_jump_lat_err < param.finish_lat_err_strict - 1e-3 &&
+      frame_.slot_jump_heading_err < param.finish_heading_err - 1e-2) {
     frame_.car_already_move_dist = 0.0;
     frame_.ego_should_stop_by_slot_jump = false;
     return 5.01;

@@ -234,6 +234,10 @@ class ParkingScenario {
       ego_should_stop_by_slot_jump = false;
 
       ego_should_stop_dist_by_slot_jump = 1.368;
+
+      slot_jump_lat_err = 0.0;
+      slot_jump_lon_err = 0.0;
+      slot_jump_heading_err = 0.0;
     }
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
@@ -303,6 +307,10 @@ class ParkingScenario {
     bool ego_should_stop_by_slot_jump = false;
 
     double ego_should_stop_dist_by_slot_jump = 1.368;
+
+    double slot_jump_lat_err = 0.0;
+    double slot_jump_lon_err = 0.0;
+    double slot_jump_heading_err = 0.0;
   };
 
   enum ParkingStatus {
