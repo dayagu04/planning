@@ -1715,7 +1715,8 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
     stop_dist1 -= car_already_move_dist;
     stop_dist2 -= car_already_move_dist;
-    frame_.ego_should_stop_dist_by_slot_jump = std::min(stop_dist1, stop_dist2);
+    frame_.ego_should_stop_dist_by_slot_jump =
+        std::max(std::min(stop_dist1, stop_dist2), 1.268);
   }
 
   // if (frame_.remain_dist_path < ego_stop_dist + 0.168) {

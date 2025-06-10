@@ -391,6 +391,13 @@ const double ParkingScenario::CalRemainDistFromPath() {
 const double ParkingScenario::CalRemainDistFromObs(
     const double static_lon_buffer, const double static_lat_buffer,
     const double dynamic_lon_buffer, const double dynamic_lat_buffer) {
+  if (apa_world_ptr_->GetSlotManagerPtr()
+          ->GetEgoInfoUnderSlot()
+          .slot_disappear_flag) {
+    ILOG_INFO << "slot disappear, should stop, set remain dist obs = 0.0168";
+    return 0.0168;
+  }
+
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetCollisionDetectorInterfacePtr()
           ->GetUssObsAvoidancePtr();
@@ -422,12 +429,12 @@ const double ParkingScenario::CalRemainDistFromObs(
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_lat_buffer, 0.0, gjl_col_det_request);
-  ILOG_INFO << "DYNAMIC col_res.col_flag = " << col_res.col_flag;
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
   }
-  ILOG_INFO << "col_res.remain_dist_dynamic = " << col_res.remain_dist_dynamic;
-  ILOG_INFO << "dynamic_lon_buffer = " << dynamic_lon_buffer;
+  ILOG_INFO << "col_res.remain_dist_dynamic = " << col_res.remain_dist_dynamic
+            << "  dynamic_lon_buffer = " << dynamic_lon_buffer
+            << "  dynamic col_res.col_flag = " << col_res.col_flag;
   const double obs_pt_remain_dist_dynamic =
       col_res.remain_dist_dynamic - dynamic_lon_buffer;
 
