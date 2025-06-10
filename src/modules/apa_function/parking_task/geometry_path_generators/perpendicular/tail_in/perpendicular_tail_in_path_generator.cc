@@ -1975,8 +1975,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     }
 
     if (input_.is_replan_dynamic) {
-      lat_buffer += 0.0268;
-      lon_buffer += 0.0268;
+      lat_buffer = apa_param.GetParam().car_lat_inflation_dynamic_plan;
     }
 
     for (const geometry_lib::PathPoint& cur_pose : cur_pose_vec) {

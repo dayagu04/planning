@@ -1833,7 +1833,7 @@ void PerpendicularHeadInScenario::RealTimeDynamicColDet(
     // when dynamic col det, use small car lat inflation, try to avoid getting
     // stuck as much as possible
     CollisionDetector::Paramters params;
-    params.lat_inflation = apa_param_.car_lat_inflation_dynamic_col;
+    params.lat_inflation = apa_param_.car_lat_inflation_dynamic_plan;
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
     // construct real time obs
     GenTlane();
