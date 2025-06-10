@@ -222,7 +222,7 @@
   "obs2slot_max_dist": 10.08,
   "min_dynamic_plan_proj_dt": 0.068,
   "max_dynamic_plan_proj_dt": 0.8,
-  "max_lat_err": 0.068,
+  "max_lat_err": 0.086,
   "max_phi_err": 2.68,
   "dynamic_col_det_enable": true,
   "parallel_obs2slot_max_dist": 16.66,

@@ -1473,7 +1473,9 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                2.168) ||
       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-       frame_.slot_jump_lat_err > param.finish_lat_err_strict - 0.02);
+       frame_.slot_jump_lat_err > param.finish_lat_err_strict - 0.02) ||
+      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+       apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig());
 
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
