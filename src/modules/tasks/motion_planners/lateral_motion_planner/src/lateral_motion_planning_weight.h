@@ -16,7 +16,8 @@ enum LateralMotionSceneEnum {
   LANE_CHANGE,
   STATIC_AVOID,
   SPLIT,
-  RAMP
+  RAMP,
+  LANE_BORROW
 };
 
 struct PathWeight {  // temp
@@ -195,6 +196,9 @@ class LateralMotionPlanningWeight {
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void MakeLateralOffsetAvoidDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeRampDynamicWeight(

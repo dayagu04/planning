@@ -590,6 +590,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 0.2;
     }
+    if (lane_borrow_decider_output.is_in_lane_borrow_status) {
+      kMaxAcc = 0.4;
+    }
     if (is_LC_CHANGE || is_LC_BACK) {
       ego_v = std::max(ego_v, config_.min_v_cruise);
       kMaxAcc = 1e-6;

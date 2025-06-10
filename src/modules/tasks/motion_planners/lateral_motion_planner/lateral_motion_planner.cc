@@ -451,12 +451,27 @@ bool LateralMotionPlanner::AssembleInput() {
                                 .coarse_planning_info.target_state;
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
-
+  // lane borrow
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
+  bool lane_borrow_scene =
+      lane_borrow_decider_output.is_in_lane_borrow_status;
+  // search
   planning_weight_ptr_->SetIsSearchSuccess(false);
   // set weight
   if (lane_change_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
+  } else if (lane_borrow_scene) {
+    complete_follow = true;
+    planning_weight_ptr_->SetLateralMotionWeight(
+        pnc::lateral_planning::LANE_BORROW, planning_input_);
+  } else if (split_scene) {
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
+                                                 planning_input_);
+  } else if ((ramp_scene) && (config_.ramp_valid)) {
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
+                                                 planning_input_);
   } else if (session_->environmental_model()
                  .get_lateral_obstacle()
                  ->is_static_avoid_scene()) {
@@ -466,12 +481,6 @@ bool LateralMotionPlanner::AssembleInput() {
              (avoid_back_status &&
               ((ref_vel > config_.avoid_high_vel) || is_in_intersection))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
-                                                 planning_input_);
-  } else if (split_scene) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
-                                                 planning_input_);
-  } else if ((ramp_scene) && (config_.ramp_valid)) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
                                                  planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(

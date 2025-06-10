@@ -351,8 +351,7 @@
     "q_jerk_avoid": 15.0,
     "avoid_high_vel": 20.0,
     "q_ref_theta_avoid_high_vel": 20000.0,
-    "q_jerk_avoid_high_vel_close": 10.0,
-    "q_jerk_avoid_high_vel_middle": 10.0,
+    "q_jerk_avoid_high_vel": 10.0,
     "q_jerk_bound_avoid_high_vel": 100000.0,
     "q_ref_x_static_avoid": 200.0,
     "q_ref_y_static_avoid": 200.0,
@@ -553,7 +552,7 @@
     "lb_t_min": 3.5,
     "use_gs": true,
     "lat_ref_offset": [0.1, 0.15, 0.2, 0.3],
-    "min_ego_v_cruise": 2.0
+    "min_ego_v_cruise": 3.333
   },
   "speed_adjust": {
     "max_acc_limit_lower": 0.5,
