@@ -2362,6 +2362,11 @@ void PerpendicularTailInScenario::Log() const {
     }
   }
 
+  const size_t max_count = 798;
+  if (obstaclesX.size() > max_count) {
+    obstaclesX.resize(max_count);
+    obstaclesY.resize(max_count);
+  }
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
