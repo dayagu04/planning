@@ -1662,7 +1662,7 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
   geometry_lib::GeometryPath geometry_path;
   geometry_lib::GeometryPath geometry_path_copy;
 
-  calc_params_.optimize_plan = false;
+  calc_params_.optimize_plan = true;
 
   // const double rough_lat_buffer_penalty_value = 0.0268;
   const double rough_lat_buffer_penalty_value = 0.0;
