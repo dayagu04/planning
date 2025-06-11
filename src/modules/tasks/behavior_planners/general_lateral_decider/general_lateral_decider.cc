@@ -526,14 +526,31 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       reference_path_ptr_->get_frenet_coord();
   const auto &planning_init_point =
       ego_frenet_state_.planning_init_point();
-
+  // get scene
   bool limit_ref_vel_on_ramp_valid = false;
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
-
+  // calculate frenet init head point
+  double init_l = planning_init_point.frenet_state.r;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double front_edge_to_rear_axle =
+      vehicle_param.front_edge_to_rear_axle;
+  double init_heading =
+      planning_init_point.heading_angle;
+  double init_head_x =
+      planning_init_point.x + front_edge_to_rear_axle * std::cos(init_heading);
+  double init_head_y =
+      planning_init_point.y + front_edge_to_rear_axle * std::sin(init_heading);
+  double init_head_l = init_l;
+  Point2D frenet_head_pt;
+  if (frenet_coord->XYToSL(Point2D(init_head_x, init_head_y), frenet_head_pt)) {
+    init_head_l = frenet_head_pt.y;
+  }
+  // calculate distance and ref buffer
   const double lateral_offset = session_->mutable_planning_context()
                                     ->lateral_offset_decider_output()
                                     .lateral_offset;
@@ -547,7 +564,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         interp(v_ego, xp_v_ego, config_.dynamic_lc_finished_ref_buffer);
   }
   double init_dist_to_ref =
-      std::fabs(planning_init_point.frenet_state.r - lateral_offset) - dynamic_ref_buffer;
+      std::fabs(init_l - lateral_offset) - dynamic_ref_buffer;
   double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
   if (is_LC_BACK) {
     dist_to_second_stage = init_dist_to_ref - config_.lc_finished_second_dist_thr;
@@ -556,13 +573,15 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     dynamic_ref_buffer =
         std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
   }
-  if (planning_init_point.frenet_state.r < -1e-6) {
+  if (init_l < -1e-6) {
     dynamic_ref_buffer = -dynamic_ref_buffer;
   }
-
+  // construct ref
   if (config_.lateral_ref_traj_type ||
       ((is_LC_HOLD ||
-      ((dist_to_second_stage >= 1e-6) && (is_LC_CHANGE || is_LC_BACK))) &&
+        ((dist_to_second_stage >= 1e-6 ||
+          std::fabs(init_head_l) > std::fabs(init_l)) &&
+         (is_LC_CHANGE || is_LC_BACK))) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
@@ -621,7 +640,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     if (motion_planner_output.lat_enable_flag &&
         motion_planner_output.lat_init_flag) {
       double last_ref_length =
-          motion_planner_output.s_lat_vec.back() - motion_planner_output.s_lat_vec[1];
+          motion_planner_output.s_lat_vec.back() -
+          motion_planner_output.s_lat_vec[1];
       s = std::min(s, last_ref_length + 0.5);
     }
     auto cart_ref_info = coarse_planning_info.cart_ref_info;
@@ -637,10 +657,11 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           cart_init_point);
       s_ref = projection_spline.GetOutput().s_proj;
     }
-    const double max_ref_length = std::max(
-        std::min(cart_ref_info.s_vec.back(),frenet_coord->Length()) - s_ref - 0.01,
-        0.0);
-    double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
+    const double max_ref_length =
+        std::max(std::min(cart_ref_info.s_vec.back(),
+                 frenet_coord->Length()) - s_ref - 0.01, 0.0);
+    double avg_cruise_v =
+        std::max(std::min(s, max_ref_length) / span_t, 0.0);
     double delta_s = avg_cruise_v * config_.delta_t;
     traj_points.clear();
     TrajectoryPoint point;
@@ -669,7 +690,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   }
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
+              ->mutable_general_lateral_decider_output();
   if (limit_ref_vel_on_ramp_valid) {
     general_lateral_decider_output.ramp_scene = true;
   } else {
@@ -681,14 +702,16 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
     if ((dist_to_second_stage < -1e-6 ||
-        !gap_selector_decider_output.gap_selector_trustworthy) && !is_LC_HOLD) {
+        !gap_selector_decider_output.gap_selector_trustworthy) &&
+        !is_LC_HOLD) {
       HandleAvoidScene(traj_points, dynamic_ref_buffer);
     }
   } else {
+    // fusion is unsteady, lane keep weight need decay in end of ref
     general_lateral_decider_output.complete_follow =
-        false;  // fusion is unsteady, lane keep weight need decay in end of
-                // ref
-    general_lateral_decider_output.lane_change_scene = false;
+        false;
+    general_lateral_decider_output.lane_change_scene =
+        false;
     HandleAvoidScene(traj_points, 0.0);
   }
 }
