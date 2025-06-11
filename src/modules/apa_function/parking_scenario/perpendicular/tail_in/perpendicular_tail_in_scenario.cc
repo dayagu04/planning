@@ -533,7 +533,10 @@ const bool PerpendicularTailInScenario::GenTlane() {
     if (apa_param.GetParam().force_use_little_buffer_move_slot ||
         prohibit_move_slot || move_slot_with_little_buffer) {
       ILOG_INFO << "force use little lat safe buffer";
-      lat_buffer_vec = std::vector<double>{min_lat_buffer + step};
+      lat_buffer_vec.clear();
+      for (int i = 3; i >= 0; --i) {
+        lat_buffer_vec.emplace_back(min_lat_buffer + i * step);
+      }
     }
 
     TargetPoseDeciderRequest tar_pose_decider_request(
