@@ -14,7 +14,7 @@ sys.path.append('../../../')
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250530/20250530-11-33-08/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-05-30-11-33-09_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250610/20250610-16-56-26/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-06-10-16-56-26_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -171,7 +171,7 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
     print("remain_dist = ", planning_json['remain_dist'])
-    print("remain_dist_uss =", planning_json['remain_dist_uss'])
+    print("remain_dist_obs =", planning_json['remain_dist_obs'])
     # print("path plan time =", planning_json['path_plan_time_ms'])
 
   if bag_loader.fus_parking_msg['enable'] == True:

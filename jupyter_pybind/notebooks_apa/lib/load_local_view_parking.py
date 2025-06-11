@@ -283,7 +283,7 @@ class LoadCyberbag:
       json_value_list = ["tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "slot_side",
                          "terminal_error_x", "terminal_error_y", "terminal_error_y_front", "terminal_error_heading", "car_real_time_col_lat_buffer",
                          "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason", "plan_fail_reason",
-                         "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_uss", "stuck_time", "replan_consume_time", "total_plan_consume_time",
+                         "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_obs", "remain_dist_slot_jump", "stuck_time", "replan_consume_time", "total_plan_consume_time",
                          "car_static_timer_by_pos_strict", "car_static_timer_by_pos_normal", "car_static_timer_by_vel_strict", "car_static_timer_by_vel_normal", "static_flag", "ego_heading_slot",
                          "selected_slot_id", "slot_length", "slot_width", "slot_origin_pos_x", "slot_origin_pos_y", "slot_origin_heading",
                          "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
@@ -1831,7 +1831,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
       names.append("replan_reason")
       replan_reason = plan_json['replan_reason']
-      replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET'}
+      replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_OBS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET', 7: "FORCE_PLAN", 8: "SEG_COMPLETED_SLOT_JUMP"}
       reason = replan_reason_dict.get(replan_reason, 'UNKNOWN')
       datas.append(str(replan_reason) + ": " + str(reason))
 
@@ -1889,8 +1889,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       names.append("remain_dist")
       datas.append(str(plan_json['remain_dist']))
 
-      names.append("remain_dist_uss")
-      datas.append(str(plan_json['remain_dist_uss']))
+      names.append("remain_dist_obs")
+      datas.append(str(plan_json['remain_dist_obs']))
+
+      names.append("remain_dist_slot_jump")
+      datas.append(str(plan_json['remain_dist_slot_jump']))
 
       names.append("remain_dist_col_det")
       datas.append(str(plan_json['remain_dist_col_det']))
@@ -2334,7 +2337,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size)
+    print("groundline_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size)
     for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline_size):
       ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].groundline[i]
 
@@ -3874,9 +3877,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find ground line error')
       else:
-        #print("ground_lines_size = ",fus_ground_line_msg.ground_lines_size)
-        for i in range(fus_ground_line_msg.ground_lines_size):
-          ground_line = fus_ground_line_msg.ground_lines[i]
+        #print("groundline_size = ",fus_ground_line_msg.groundline_size)
+        for i in range(fus_ground_line_msg.groundline_size):
+          ground_line = fus_ground_line_msg.ground_line[i]
           points_3d = ground_line.points_3d
           for j in range(ground_line.points_3d_size):
             point_3d = points_3d[j]
@@ -4319,7 +4322,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("replan_reason")
             replan_reason = plan_json['replan_reason']
-            replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET'}
+            replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_OBS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET', 7: "FORCE_PLAN", 8: "SEG_COMPLETED_SLOT_JUMP"}
             reason = replan_reason_dict.get(replan_reason, 'UNKNOWN')
             datas.append(str(replan_reason) + ": " + str(reason))
 
@@ -4413,8 +4416,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             names.append("remain_dist")
             datas.append(str(plan_json['remain_dist']))
 
-            names.append("remain_dist_uss")
-            datas.append(str(plan_json['remain_dist_uss']))
+            names.append("remain_dist_obs")
+            datas.append(str(plan_json['remain_dist_obs']))
+
+            names.append("remain_dist_slot_jump")
+            datas.append(str(plan_json['remain_dist_slot_jump']))
 
             names.append("remain_dist_col_det")
             datas.append(str(plan_json['remain_dist_col_det']))

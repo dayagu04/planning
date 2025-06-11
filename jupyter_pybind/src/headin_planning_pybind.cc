@@ -557,7 +557,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   new_input.ref_gear = frame.current_gear;
   new_input.is_replan_first = frame.is_replan_first;
   new_input.is_replan_second = frame.is_replan_second;
-  new_input.is_replan_dynamic = frame.is_replan_dynamic;
+  new_input.is_replan_dynamic =
+      (frame.replan_reason == ParkingScenario::ReplanReason::DYNAMIC);
   new_input.ego_info_under_slot.slot_side =
       static_cast<pnc::geometry_lib::SlotSide>(slot_t_lane.slot_side);
   pBase->SetInput(new_input);

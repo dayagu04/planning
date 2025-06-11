@@ -121,6 +121,8 @@ struct EgoInfoUnderSlot {
 
   size_t history_slot_id;
 
+  bool slot_disappear_flag = false;
+
   void Reset() {
     id = 0;
     slot_type = SlotType::INVALID;
@@ -159,6 +161,8 @@ struct EgoInfoUnderSlot {
 
     obs_tlane.Reset();
     history_slot_id = 0;
+
+    slot_disappear_flag = false;
   }
 };
 

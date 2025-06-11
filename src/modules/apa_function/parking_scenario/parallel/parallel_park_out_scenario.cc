@@ -103,8 +103,9 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  CheckReplanParams replan_params;
   // check replan
-  if (CheckReplan()) {
+  if (CheckReplan(replan_params)) {
     ILOG_INFO << "replan is required!";
 
     // generate t-lane
@@ -943,13 +944,12 @@ void ParallelParkOutScenario::Log() const {
                    ego_info_under_slot.terminal_err.heading)
 
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
+  JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
 

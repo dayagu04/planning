@@ -59,7 +59,9 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
 
   void SwitchProcessObsMethod();
 
-  void CalRemainDistBySlotJump();
+  void CalSlotJumpErr();
+
+  const double CalRemainDistBySlotJump();
 
   virtual const bool PostProcessPathAccordingLimiter() override;
 

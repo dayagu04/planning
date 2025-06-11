@@ -73,7 +73,8 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  frame_.replan_flag = CheckReplan();
+  CheckReplanParams replan_params;
+  frame_.replan_flag = CheckReplan(replan_params);
 
   GenTlane();
   GenObstacles();
@@ -86,7 +87,8 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
 
     const double start_time = IflyTime::Now_ms();
 
-    if (frame_.replan_reason != FORCE_PLAN && frame_.replan_reason != DYNAMIC) {
+    if (frame_.replan_reason != FORCE_PLAN &&
+        frame_.replan_reason != ReplanReason::DYNAMIC) {
       frame_.total_plan_count++;
     }
 
@@ -725,14 +727,9 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   input.ref_arc_steer = frame_.current_arc_steer;
   input.is_replan_first = frame_.is_replan_first;
   input.is_replan_second = frame_.is_replan_second;
-  input.is_replan_dynamic = frame_.is_replan_dynamic;
+  input.is_replan_dynamic = (frame_.replan_reason == ReplanReason::DYNAMIC);
   input.is_searching_stage =
       apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
-
-  // if (frame_.replan_reason == DYNAMIC) {
-  //   ILOG_INFO << "dynamic replan, gear should be reverse";
-  //   input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-  // }
 
   perpendicular_path_planner_.SetInput(input);
 
@@ -1036,14 +1033,13 @@ void PerpendicularHeadOutScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
+  JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -1205,10 +1201,9 @@ PerpendicularHeadOutScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 }
 
 const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
-  return !path_trim_flag_ &&
-         apa_world_ptr_->GetSlotManagerPtr()
-                 ->GetEgoInfoUnderSlot()
-                 .slot_occupied_ratio < 0.15;
+  return !path_trim_flag_ && apa_world_ptr_->GetSlotManagerPtr()
+                                     ->GetEgoInfoUnderSlot()
+                                     .slot_occupied_ratio < 0.15;
 }
 
 const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {

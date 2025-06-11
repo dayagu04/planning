@@ -117,7 +117,13 @@ void ApaSlotManager::Update(
       if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) ==
           0) {
         ILOG_INFO << "the selected slot disappear when parking";
-        ego_info_under_slot_.Reset();
+        ego_info_under_slot_.slot_disappear_flag = true;
+        if (measure_data_ptr_->GetStaticFlag()) {
+          ILOG_INFO << "car is static, reset ego_info_under_slot";
+          ego_info_under_slot_.Reset();
+        }
+      } else {
+        ego_info_under_slot_.slot_disappear_flag = false;
       }
     }
   }

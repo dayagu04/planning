@@ -383,6 +383,18 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
+      // 如果1D的终点处自车横向误差比较小  但是航向误差比较大
+      // 那么需要施加惩罚代价
+      if (complete_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
+        for (const auto& seg : complete_path.path_segment_vec) {
+          if (seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE &&
+              std::fabs(seg.GetStartPos().y()) < 1.0 &&
+              std::fabs(seg.GetStartHeading()) * kRad2Deg > 16.8) {
+            cost += 268.0;
+          }
+        }
+      }
+
       // cur_gear_path_length_cost = 0.0;
       // fist_reverse_path_err_cost = 0.0;
       // ego_pose_cost = 0.0;
@@ -1926,7 +1938,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   geometry_lib::GeometryPath geometry_path;
   geometry_lib::GeometryPath geometry_path_copy;
 
-  int max_try_count = 10;
+  int max_try_count = 14;
   if (input_.is_replan_dynamic) {
     max_try_count = 1;
   }
@@ -1963,8 +1975,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     }
 
     if (input_.is_replan_dynamic) {
-      lat_buffer += 0.0268;
-      lon_buffer += 0.0268;
+      lat_buffer = apa_param.GetParam().car_lat_inflation_dynamic_plan;
     }
 
     for (const geometry_lib::PathPoint& cur_pose : cur_pose_vec) {
@@ -2199,13 +2210,14 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
   int optimal_path_index = -1;
   double min_cost = std::numeric_limits<double>::infinity();
   for (int k = 0; k < success_geometry_path_vec.size(); ++k) {
-    // success_geometry_path_vec[k].PrintInfo();
+    geometry_lib::GeometryPath& temp_path = success_geometry_path_vec[k];
+    // temp_path.PrintInfo();
     geometry_lib::GeometryPath complete_path;
     if (output_.path_segment_vec.size() > 0) {
       complete_path.SetPath(output_.path_segment_vec);
-      complete_path.AddPath(success_geometry_path_vec[k]);
+      complete_path.AddPath(temp_path);
     } else {
-      complete_path.SetPath(success_geometry_path_vec[k].path_segment_vec);
+      complete_path.SetPath(temp_path.path_segment_vec);
     }
 
     if (complete_path.path_count < 1) {
@@ -2215,8 +2227,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     double cost = 0.0;
 
     if (!apa_param.GetParam().actual_mono_plan_enable &&
-        calc_params_.first_multi_plan &&
-        success_geometry_path_vec[k].gear_change_count < 2) {
+        calc_params_.first_multi_plan && temp_path.gear_change_count < 2) {
       // when mono plan is not allowed, the gear change count of multi_adjust
       // plan should be bigger than one
       cost += 200.0;
@@ -2305,12 +2316,12 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     }
 
     // 加上一个障碍物距离代价
-    CalcObsDistConsiderSlotForGeometryPath(success_geometry_path_vec[k]);
+    CalcObsDistConsiderSlotForGeometryPath(temp_path);
     if (apa_param.GetParam().use_average_obs_dist) {
-      cost += 16.8 / success_geometry_path_vec[k].average_obs_dist;
+      cost += 16.8 / temp_path.average_obs_dist;
     } else {
-      cost += 12.68 / success_geometry_path_vec[k].obs_dist_info.out_slot.first;
-      cost += 18.68 / success_geometry_path_vec[k].obs_dist_info.in_slot.first;
+      cost += 12.68 / temp_path.obs_dist_info.out_slot.first;
+      cost += 18.68 / temp_path.obs_dist_info.in_slot.first;
     }
 
     // 增加当前挡位路径横向和航向误差代价
@@ -2348,6 +2359,37 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
+    // 如果当前挡位路径的整体趋势只是增加航向误差 那么需要施加惩罚代价
+    if (temp_path.cur_gear_path_segments_vec.size() > 0) {
+      if (std::fabs(
+              temp_path.cur_gear_path_segments_vec.back().GetEndHeading()) *
+              kRad2Deg >
+          std::fabs(
+              temp_path.cur_gear_path_segments_vec.front().GetStartHeading()) *
+                  kRad2Deg +
+              1.68) {
+        cost += 668.68;
+      }
+    }
+
+    // 如果当前挡位路径的整体趋势 没有减小横向误差 也没有减小航向误差
+    // 那么需要施加惩罚代价
+    if (temp_path.cur_gear_path_segments_vec.size() > 0) {
+      const double yaw_err =
+          std::fabs(
+              temp_path.cur_gear_path_segments_vec.back().GetEndHeading() -
+              temp_path.cur_gear_path_segments_vec.front().GetStartHeading()) *
+          kRad2Deg;
+
+      const double lateral_err = std::fabs(
+          temp_path.cur_gear_path_segments_vec.back().GetEndPos().y() -
+          temp_path.cur_gear_path_segments_vec.front().GetStartPos().y());
+
+      if (yaw_err < 1.86 && lateral_err < 0.05) {
+        cost += 268.68;
+      }
+    }
+
     // 整条路径的换挡、换向和长度代价
     cost += complete_path.cost;
 
@@ -2367,14 +2409,14 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    ILOG_INFO << "gear_change_count = "
-              << static_cast<int>(
-                     success_geometry_path_vec[k].gear_change_count)
-              << "  cost = " << cost;
     if (cost < min_cost) {
       optimal_path_index = k;
       min_cost = cost;
     }
+
+    ILOG_INFO << "gear_change_count = "
+              << static_cast<int>(temp_path.gear_change_count)
+              << "  cost = " << cost << "  min_cost = " << min_cost;
   }
 
   optimal_geometry_path = success_geometry_path_vec[optimal_path_index];

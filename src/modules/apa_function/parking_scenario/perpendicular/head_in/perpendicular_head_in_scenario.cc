@@ -129,8 +129,9 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  CheckReplanParams replan_params;
   // check replan
-  if (CheckReplan()) {
+  if (CheckReplan(replan_params)) {
     ILOG_INFO << "replan is required!";
     frame_.replan_flag = true;
     EgoInfoUnderSlot& ego_info_under_slot =
@@ -948,12 +949,12 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.is_replan_first = frame_.is_replan_first;
   path_planner_input.is_replan_second = frame_.is_replan_second;
-  path_planner_input.is_replan_dynamic = frame_.is_replan_dynamic;
+  path_planner_input.is_replan_dynamic = (frame_.replan_reason == ReplanReason::DYNAMIC);
 
   path_planner_input.is_left_empty = frame_.is_left_empty;
   path_planner_input.is_right_empty = frame_.is_right_empty;
 
-  if (frame_.replan_reason == DYNAMIC &&
+  if (frame_.replan_reason == ReplanReason::DYNAMIC &&
       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     ILOG_INFO << "dynamic replan, gear should be reverse/drive";
     path_planner_input.ref_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
@@ -972,16 +973,16 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
 
   uint8_t plan_result = 0;
   if (!path_plan_success && !apa_world_ptr_->GetSimuParam().is_simulation &&
-      !frame_.is_replan_dynamic) {
+      frame_.replan_reason != ReplanReason::DYNAMIC) {
     ILOG_INFO << "path plan fail";
     plan_result = PathPlannerResult::PLAN_FAILED;
-    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
     current_plan_path_vec_.clear();
     current_path_point_global_vec_.clear();
     return plan_result;
   }
 
-  if (!path_plan_success && frame_.is_replan_dynamic) {
+  if (!path_plan_success && frame_.replan_reason == ReplanReason::DYNAMIC) {
     ILOG_INFO << "path dynamic plan fail, save last plan path.";
     plan_result = PathPlannerResult::PLAN_UPDATE;
     frame_.dynamic_plan_fail_flag = true;
@@ -1064,7 +1065,7 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
       (frame_.is_replan_first && planner_output.gear_shift) ||
       (frame_.is_replan_second && planner_output.gear_shift) ||
       (!frame_.is_replan_first && !frame_.is_replan_second &&
-       frame_.replan_reason != DYNAMIC);
+       frame_.replan_reason != ReplanReason::DYNAMIC);
 
   // std::cout << "gear shift = " << gear_steer_shift << std::endl;
 
@@ -1759,14 +1760,13 @@ void PerpendicularHeadInScenario::Log() const {
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
-  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_obs)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
-  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_obs)
+  JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
@@ -1833,7 +1833,7 @@ void PerpendicularHeadInScenario::RealTimeDynamicColDet(
     // when dynamic col det, use small car lat inflation, try to avoid getting
     // stuck as much as possible
     CollisionDetector::Paramters params;
-    params.lat_inflation = apa_param_.car_lat_inflation_dynamic_col;
+    params.lat_inflation = apa_param_.car_lat_inflation_dynamic_plan;
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
     // construct real time obs
     GenTlane();

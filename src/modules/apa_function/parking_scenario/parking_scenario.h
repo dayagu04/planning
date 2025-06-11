@@ -45,6 +45,31 @@ class ParkingScenario {
     DYNAMIC,
     SEG_COMPLETED_COL_DET,
     FORCE_PLAN,
+    SEG_COMPLETED_SLOT_JUMP,
+  };
+
+  struct CheckReplanParams {
+    double replan_dist_path = apa_param.GetParam().max_replan_remain_dist;
+    double wait_time_path = 0.068;
+    double replan_dist_obs = apa_param.GetParam().max_replan_remain_dist;
+    double wait_time_obs = apa_param.GetParam().uss_stuck_replan_wait_time;
+    double replan_dist_slot_jump = apa_param.GetParam().max_replan_remain_dist;
+    double wait_time_slot_jump = 0.168;
+    double stuck_replan_time = apa_param.GetParam().stuck_replan_time;
+
+    CheckReplanParams() = default;
+    CheckReplanParams(double replan_dist_path, double wait_time_path,
+                      double replan_dist_obs, double wait_time_obs,
+                      double replan_dist_slot_jump, double wait_time_slot_jump,
+                      double stuck_replan_time)
+        : replan_dist_path(replan_dist_path),
+          wait_time_path(wait_time_path),
+          replan_dist_obs(replan_dist_obs),
+          wait_time_obs(wait_time_obs),
+          replan_dist_slot_jump(replan_dist_slot_jump),
+          wait_time_slot_jump(wait_time_slot_jump),
+          stuck_replan_time(stuck_replan_time) {}
+    ~CheckReplanParams() = default;
   };
 
   // will be retired
@@ -158,8 +183,6 @@ class ParkingScenario {
       replan_flag = false;
       is_replan_first = true;
       is_replan_second = false;
-      is_replan_dynamic = false;
-      is_replan_by_obs = false;
       is_last_path = false;
       dynamic_replan_count = 0;
       dynamic_replan_fail_count = 0;
@@ -207,6 +230,14 @@ class ParkingScenario {
       process_obs_method = ProcessObsMethod::DO_NOTHING;
 
       dynamic_plan_path_superior = false;
+
+      ego_should_stop_by_slot_jump = false;
+
+      ego_should_stop_dist_by_slot_jump = 1.368;
+
+      slot_jump_lat_err = 0.0;
+      slot_jump_lon_err = 0.0;
+      slot_jump_heading_err = 0.0;
     }
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
@@ -220,14 +251,12 @@ class ParkingScenario {
     bool replan_flag = false;
     bool is_replan_first = true;
     bool is_replan_second = false;
-    bool is_replan_dynamic = false;
-    bool is_replan_by_obs = false;
     bool is_last_path = false;
     uint8_t dynamic_replan_count = 0;
     uint8_t dynamic_replan_fail_count = 0;
     bool ego_stop_when_slot_jumps_much = false;
-    uint8_t replan_reason = NOT_REPLAN;
-    uint8_t plan_fail_reason = NOT_FAILED;
+    uint8_t replan_reason = ReplanReason::NOT_REPLAN;
+    uint8_t plan_fail_reason = ParkingFailReason::NOT_FAILED;
     uint8_t total_plan_count = 0;
     uint8_t in_slot_plan_count = 0;
     bool is_fix_slot = false;
@@ -274,6 +303,14 @@ class ParkingScenario {
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
     bool stuck_by_dynamic_obs = false;
+
+    bool ego_should_stop_by_slot_jump = false;
+
+    double ego_should_stop_dist_by_slot_jump = 1.368;
+
+    double slot_jump_lat_err = 0.0;
+    double slot_jump_lon_err = 0.0;
+    double slot_jump_heading_err = 0.0;
   };
 
   enum ParkingStatus {
@@ -383,21 +420,16 @@ class ParkingScenario {
   virtual const bool PostProcessPath();
 
   // check if need replan
-  virtual const bool CheckReplan(
-      const double replan_dist_path =
-          apa_param.GetParam().max_replan_remain_dist,
-      const double wait_time_path = 0.068,
-      const double replan_dist_obs =
-          apa_param.GetParam().max_replan_remain_dist,
-      const double wait_time_obs =
-          apa_param.GetParam().uss_stuck_replan_wait_time,
-      const double stuck_replan_time = apa_param.GetParam().stuck_replan_time);
+  virtual const bool CheckReplan(const CheckReplanParams &check_params);
 
   virtual const bool CheckSegCompleted(const double replan_dist,
                                        const double wait_time);
 
   virtual const bool CheckObsStucked(const double replan_dist,
                                      const double wait_time);
+
+  virtual const bool CheckSlotJumpStucked(const double replan_dist,
+                                          const double wait_time);
 
   virtual const bool CheckStuckTimeEnough(const double stuck_replan_time);
 
