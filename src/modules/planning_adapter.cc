@@ -105,7 +105,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.1 receive prediction
   if (is_prediction_result_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
     local_view_ptr_->prediction_result = prediction_result_msg_;
     local_view_ptr_->prediction_result_recv_time =
         prediction_result_msg_recv_time_;
@@ -118,7 +118,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.2 receive fusion_road
   if (is_road_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(road_info_msg_mutex_);
     local_view_ptr_->road_info = road_info_msg_;
     local_view_ptr_->road_info_recv_time = road_info_msg_recv_time_;
     is_road_info_msg_updated_.store(false);
@@ -130,7 +130,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.3 receive localization
   if (is_localization_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(localization_msg_mutex_);
     local_view_ptr_->localization = localization_msg_;
     local_view_ptr_->localization_recv_time = localization_msg_recv_time_;
     is_localization_msg_updated_.store(false);
@@ -142,7 +142,7 @@ bool PlanningAdapter::Proc() {
 
   // 老定位
   if (is_localization_estimate_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(localization_estimate_msg_mutex_);
     local_view_ptr_->localization_estimate = localization_estimate_msg_;
     local_view_ptr_->localization_estimate_recv_time =
         localization_estimate_msg_recv_time_;
@@ -155,7 +155,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.4 receive ground_line
   if (is_ground_line_perception_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(ground_line_msg_mutex_);
     local_view_ptr_->ground_line_perception = ground_line_perception_msg_;
     local_view_ptr_->ground_line_perception_recv_time =
         ground_line_perception_msg_recv_time_;
@@ -168,7 +168,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.5 receive fusion_object
   if (is_fusion_objects_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(fusion_objects_msg_mutex_);
     local_view_ptr_->fusion_objects_info = fusion_objects_info_msg_;
     local_view_ptr_->fusion_objects_info_recv_time =
         fusion_objects_info_msg_recv_time_;
@@ -181,7 +181,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.6 receive fusion_occupancy_object
   if (is_fusion_occupancy_objects_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(fusion_occupancy_objects_msg_mutex_);
     local_view_ptr_->fusion_occupancy_objects_info =
         fusion_occupancy_objects_info_msg_;
     local_view_ptr_->fusion_occupancy_objects_info_recv_time =
@@ -196,7 +196,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.7 receive vehicle_service
   if (is_vehicle_service_output_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(vehicle_service_output_msg_mutex_);
     local_view_ptr_->vehicle_service_output_info =
         vehicle_service_output_info_msg_;
     local_view_ptr_->vehicle_service_output_info_recv_time =
@@ -211,7 +211,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.7 receive control_output
   if (is_control_output_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(control_output_msg_mutex_);
     local_view_ptr_->control_output = control_output_msg_;
     local_view_ptr_->control_output_recv_time = control_output_msg_recv_time_;
     is_control_output_msg_updated_.store(false);
@@ -223,7 +223,7 @@ bool PlanningAdapter::Proc() {
 
   // 不再接收hmi消息，统一从状态机获取
   // if (is_hmi_inner_info_msg_updated_) {
-  //   std::lock_guard<std::mutex> lock(msg_mutex_);
+  //   std::lock_guard<std::mutex> lock(hmi_inner_info_msg_mutex_);
   //   local_view_ptr_->hmi_inner_info = hmi_inner_info_msg_;
   //   local_view_ptr_->hmi_inner_info_recv_time =
   //   hmi_inner_info_msg_recv_time_;
@@ -235,7 +235,7 @@ bool PlanningAdapter::Proc() {
   //     start_time, local_view_ptr_->hmi_inner_info.msg_header.stamp));
 
   if (is_hmi_mcu_inner_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
     local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
     local_view_ptr_->hmi_mcu_inner_info_recv_time =
         hmi_mcu_inner_info_msg_recv_time_;
@@ -248,7 +248,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.7 receive parking_fusion
   if (is_parking_fusion_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(parking_fusion_msg_mutex_);
     local_view_ptr_->parking_fusion_info = parking_fusion_info_msg_;
     local_view_ptr_->parking_fusion_info_recv_time =
         parking_fusion_info_msg_recv_time_;
@@ -261,7 +261,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.8 receive function_state_machine
   if (is_func_state_machine_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(func_state_machine_msg_mutex_);
     local_view_ptr_->function_state_machine_info = func_state_machine_msg_;
     local_view_ptr_->function_state_machine_info_recv_time =
         func_state_machine_msg_recv_time_;
@@ -275,7 +275,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.9 receive uss_wave
   if (is_uss_wave_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(uss_wave_info_msg_mutex_);
     local_view_ptr_->uss_wave_info = uss_wave_info_msg_;
     local_view_ptr_->uss_wave_info_recv_time = uss_wave_info_msg_recv_time_;
     is_uss_wave_info_msg_updated_.store(false);
@@ -287,7 +287,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.10 receive uss_perception
   if (is_uss_percept_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(uss_percept_msg_mutex_);
     local_view_ptr_->uss_percept_info = uss_percept_info_msg_;
     local_view_ptr_->uss_percept_info_recv_time =
         uss_percept_info_msg_recv_time_;
@@ -300,7 +300,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.11 receive static_map
   if (is_map_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(map_msg_mutex_);
     local_view_ptr_->static_map_info = map_info_msg_;
     local_view_ptr_->static_map_info_recv_time = map_info_msg_recv_time_;
     is_map_info_msg_updated_.store(false);
@@ -312,7 +312,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.12 receive sd_map
   if (is_sd_map_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(sd_map_infomsg_mutex_);
     local_view_ptr_->sd_map_info = sd_map_info_msg_;
     local_view_ptr_->sd_map_info_recv_time = sd_map_info_msg_recv_time_;
     is_sd_map_info_msg_updated_.store(false);
@@ -324,7 +324,7 @@ bool PlanningAdapter::Proc() {
 
   // 1.13 receive parking_map
   //   if (is_parking_map_info_msg_updated_) {
-  //     std::lock_guard<std::mutex> lock(msg_mutex_);
+  //     std::lock_guard<std::mutex> lock(parking_map_info_msg_mutex_);
   //     local_view_ptr_->parking_map_info = parking_map_info_msg_;
   //     local_view_ptr_->parking_map_info_recv_time =
   //     parking_map_info_msg_recv_time_;
@@ -336,7 +336,7 @@ bool PlanningAdapter::Proc() {
   //       start_time, local_view_ptr_->parking_map_info.header().timestamp()));
 
   if (is_perception_tsr_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(perception_tsr_msg_mutex_);
     local_view_ptr_->perception_tsr_info = perception_tsr_msg_;
     local_view_ptr_->perception_tsr_info_recv_time =
         perception_tsr_msg_recv_time_;
@@ -348,7 +348,7 @@ bool PlanningAdapter::Proc() {
       start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
 
   if (is_fusion_speed_bump_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(fusion_speed_bump_msg_mutex_);
     local_view_ptr_->fusion_speed_bump_info = fusion_speed_bump_msg_;
     local_view_ptr_->fusion_speed_bump_info_recv_time =
         fusion_speed_bump_msg_recv_time_;
