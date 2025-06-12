@@ -180,6 +180,9 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
 }
 
 const bool NarrowSpaceScenario::CheckHeadOutFinished() {
+  const ApaParkOutDirection& park_out_direction =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection();
+
   bool parking_finish = false;
   const EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
@@ -198,27 +201,25 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
   const bool remain_s_condition =
       frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
-  if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
-    parking_finish = remain_s_condition && static_condition;
-  } else {
-    parking_finish = lat_condition && static_condition && remain_s_condition;
+  const bool pos_condition =
+      (ego_info.cur_pose.pos.x() - ego_info.target_pose.pos.x()) > 0.5;
+
+  switch (park_out_direction) {
+    case ApaParkOutDirection::LEFT_FRONT:
+      parking_finish = lat_condition && static_condition && remain_s_condition;
+    case ApaParkOutDirection::RIGHT_FRONT:
+      parking_finish = lat_condition && static_condition && remain_s_condition;
+    case ApaParkOutDirection::FRONT:
+      parking_finish = remain_s_condition && static_condition && pos_condition;
+      break;
+
+    default:
+      break;
   }
 
   if (parking_finish) {
     return true;
   }
-
-  // stucked by directly behind uss
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr();
-  const bool enter_slot_condition =
-      ego_info.slot_occupied_ratio >
-      apa_param.GetParam().finish_uss_slot_occupied_ratio;
-  const bool remain_uss_condition =
-      frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
-
-  parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_uss_condition;
 
   return parking_finish;
 }
