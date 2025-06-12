@@ -63,6 +63,8 @@ constexpr double kExistSplitLateralDisThd = 1.5;
 constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kExistSplitEgoRearLateralDisThd = 1.5;
 constexpr double kNearPreviewDistanceThd = 20.0;
+constexpr double kManualLaneChangeDisThd = 1.5;
+constexpr double kConsiderManualLength = 80.0;
 
 constexpr double kAverageKappaCostWeight = 2.0;
 constexpr double kAverageThetaDiffCostWeight = 6.0;
@@ -431,6 +433,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
   const double init_pos_lateral_offset_weight = 1.0;
   const double heading_angle_diff_weight = 2.5;
   Point2D ego_cart(ego_state->ego_pose().x, ego_state->ego_pose().y);
+  const bool active = session_->environmental_model().GetVehicleDbwStatus();
+  bool is_manual_lane_change = false;  // 是否发生了手动接管导致的变道
 
   for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane != nullptr) {
@@ -488,10 +492,79 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
     int lane_order_id = lane->get_order_id();
     int lane_relative_id = lane_order_id - origin_order_id;
     lane->set_relative_id(lane_relative_id);
+    if (lane_relative_id == 0) {
+      current_zero_relative_id_lane_ = lane;
+    }
   }
+  if (!active) {
+    MakesureManualLaneChangeByLaneOffset(last_zero_relative_id_lane_, current_zero_relative_id_lane_, is_manual_lane_change);
+  }
+  last_zero_relative_id_lane_ = current_zero_relative_id_lane_;
 
   return;
 }
+
+void EgoLaneTrackManger::MakesureManualLaneChangeByLaneOffset(
+  std::shared_ptr<VirtualLane>& last_zero_relative_id_lane_,
+  const std::shared_ptr<VirtualLane>& current_zero_relative_id_lane_, bool& is_manual_lane_change) {
+  is_manual_lane_change = false;
+  const auto& ego_state =
+  session_->environmental_model().get_ego_state_manager();
+  Point2D ego_point = {ego_state->planning_init_point().x,
+                       ego_state->planning_init_point().y};
+
+  if (!last_zero_relative_id_lane_ || !last_zero_relative_id_lane_->get_lane_frenet_coord()
+      || !current_zero_relative_id_lane_ || current_zero_relative_id_lane_->lane_points().empty()) {
+    return;
+  }
+
+  double ego_s_base = 0.0, ego_l_base = 0.0;
+  last_zero_relative_id_lane_->get_lane_frenet_coord()->XYToSL(
+    ego_point.x, ego_point.y, &ego_s_base, &ego_l_base);
+
+  double sum_l = 0.0;
+  int lane_pt_count = 0;
+  for (const auto& pt : current_zero_relative_id_lane_->lane_points()) {
+    if (std::isnan(pt.local_point.x) || std::isnan(pt.local_point.y)) {
+      continue;
+    }
+
+    double pt_s = 0.0, pt_l = 0.0;
+    const auto& last_zero_relative_id_lane_frenet_crd =
+      last_zero_relative_id_lane_->get_lane_frenet_coord();
+
+    if (!last_zero_relative_id_lane_frenet_crd->XYToSL(
+      pt.local_point.x, pt.local_point.y, &pt_s, &pt_l)) {
+        continue;
+    } else{
+      if (pt_s > last_zero_relative_id_lane_frenet_crd->Length()) {
+        continue;
+      }
+      if (pt_s > ego_s_base && pt_s < ego_s_base + kConsiderManualLength) {
+        sum_l += pt_l;
+        ++lane_pt_count;
+      }
+    }
+  }
+  if (lane_pt_count == 0) {
+    return;
+  }
+  double average_l = sum_l / lane_pt_count;
+  if (average_l > kManualLaneChangeDisThd) {
+    current_lane_virtual_id_ -= 1;
+    LOG_DEBUG("Manual lane change to [%s]! Updated current_lane_virtual_id_ to %d",
+      average_l > 0 ? "RIGHT" : "LEFT", current_lane_virtual_id_);
+    is_manual_lane_change = true;
+  } else if(average_l < -kManualLaneChangeDisThd){
+    current_lane_virtual_id_ += 1;
+    LOG_DEBUG("Manual lane change to [%s]! Updated current_lane_virtual_id_ to %d",
+      average_l > 0 ? "RIGHT" : "LEFT", current_lane_virtual_id_);
+    is_manual_lane_change = true;
+  } else{
+    is_manual_lane_change = false;
+  }
+}
+
 
 void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
