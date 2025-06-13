@@ -5,11 +5,13 @@
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "config/basic_type.h"
 #include "define/geometry.h"
+#include "ego_planning_config.h"
 #include "session.h"
 #include "task_interface/vision_longitudinal_behavior_planner_output.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
 #include "trajectory1d/third_order_time_optimal_trajectory.h"
 #include "virtual_lane.h"
+#include "traffic_congestion_decider.h"
 namespace planning {
 struct StateTransitionInfo {
   StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
@@ -214,6 +216,7 @@ class LaneChangeStateMachineManager {
  private:
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
+  CongestionDetectionConfig congestion_detection_config_;
   framework::Session* session_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;

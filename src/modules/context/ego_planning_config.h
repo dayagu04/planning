@@ -3894,4 +3894,28 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   };
   WeightConfig weight_maker_config;
 };
+
+struct CongestionDetectionConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ReadItem<double>(json, heavy_density,
+                     "heavy_density");
+    ReadItem<double>(json, jam_speed, "jam_speed");
+    ReadItem<double>(json, free_flow_speed, "free_flow_speed");
+  }
+
+  double heavy_density = 0.5;
+  double jam_speed = 5.5;
+  double free_flow_speed = 0.2;
+  double deviation_factor = 0.2;
+  double speed_deviation = 0.1;
+  double space_headway = 20.0;
+  double time_headway = 3.0;
+  double density_weight = 0.3;
+  double speed_weight = 0.3;
+  double speed_deviation_weight = 0.1;
+  double time_headway_weight = 0.1;
+  double space_headway_weight = 0.2;
+};
 }  // namespace planning

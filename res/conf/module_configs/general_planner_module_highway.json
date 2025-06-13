@@ -898,7 +898,20 @@
   "total_time" : 5.0,
   "matrix_dimension_s" : 2.0,
   "matrix_dimension_t" : 0.5
+},
+"lane_congestion_decider":{
+  "heavy_density" : 0.5,
+  "jam_speed" : 5.5,
+  "free_flow_speed" : 0.2,
+  "deviation_factor" : 0.2,
+  "speed_deviation" : 0.1,
+  "space_headway" : 20.0,
+  "time_headway" : 3.0,
+  "density_weight" : 0.3,
+  "speed_weight" : 0.3,
+  "speed_deviation_weight" : 0.1,
+  "time_headway_weight" : 0.1,
+  "space_headway_weight" : 0.2
 }
-
 }
 

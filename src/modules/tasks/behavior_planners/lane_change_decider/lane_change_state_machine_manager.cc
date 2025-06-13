@@ -51,7 +51,7 @@ LaneChangeStateMachineManager::LaneChangeStateMachineManager(
       lc_lane_mgr_(lane_change_lane_mgr) {
   config_ = config_builder->cast<ScenarioStateMachineConfig>();
   speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
-}
+  congestion_detection_config_ = config_builder->cast<CongestionDetectionConfig>();}
 
 void LaneChangeStateMachineManager::Update() {
   PreProcess();
@@ -1771,40 +1771,73 @@ bool LaneChangeStateMachineManager::IsLargeAgent(
 }
 
 void LaneChangeStateMachineManager::CalculateLatCloseValue() {
-  // 当前plannning的规划周期为10hz，安全性检查连续5帧通过则视为安全。
+  // 当前planning的规划周期为10Hz，安全性检查连续5帧通过则视为安全。
   // 若在10帧内未通过则采取自车向目标车道靠近的策略
-  const auto &virtual_lane_mgr =
-      session_->environmental_model().get_virtual_lane_manager();
-  const double ego_half_width =
-      VehicleConfigurationContext::Instance()->get_vehicle_param().width / 2;
-  const double cur_lane_half_width =
-      virtual_lane_mgr->get_current_lane()->width() / 2;
-  const double buffer = 0.35;
-  const double lat_offset_value = cur_lane_half_width - ego_half_width - buffer;
-  const double v_ego =
-      session_->environmental_model().get_ego_state_manager()->ego_v();
-  double obj_a = 0.0;
-  if (target_lane_rear_node_) {
-    obj_a = target_lane_rear_node_->node_accel();
-  }
-  // 假设后车加速度大于0.7m/s2,则认为后车没有减速的意图
-  bool is_no_brake_attention_side_car = obj_a > 0.7;
-  bool is_lat_offset_when_neirghbor_car =
-      !target_lane_middle_node_ ||
-      (target_lane_middle_node_ && lat_close_boundary_offset_ > kEps);
-  // lat_close_boundary_offset_ > kEps表示已经在靠近车道边界线的过程中了
 
-  if (lat_offset_value > 0 && propose_state_frame_nums_ > 10 &&
-      is_lat_offset_when_neirghbor_car && !is_large_car_in_side_ &&
-      !is_no_brake_attention_side_car) {
-    lat_close_boundary_offset_ =
-        transition_info_.lane_change_direction == LEFT_CHANGE
-            ? lat_offset_value
-            : -lat_offset_value;
+  // 缓存环境模型引用，避免重复调用
+  const auto& env_model = session_->environmental_model();
+  const auto& virtual_lane_mgr = env_model.get_virtual_lane_manager();
+
+  // 获取车辆宽度的一半
+  const double ego_half_width =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().width /
+      2.0;
+
+  // 获取当前车道并检查其有效性
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  if (!current_lane) {
+      lat_close_boundary_offset_ = 0.0; // 如果当前车道不存在，设置偏移为0
+      return;
+  }
+
+  // 计算当前车道半宽
+  const double cur_lane_half_width = current_lane->width() / 2.0;
+
+  // 定义缓冲区和最小横向偏移值
+  constexpr double LAT_OFFSET_BUFFER = 0.35;
+  const double lat_offset_value =
+      cur_lane_half_width - ego_half_width - LAT_OFFSET_BUFFER;
+
+  // 获取自车速度
+  const double v_ego = env_model.get_ego_state_manager()->ego_v();
+
+  // 获取目标车道后节点的加速度，若不存在则默认为0.0
+  double target_rear_acceleration = 0.0;
+  if (target_lane_rear_node_) {
+      target_rear_acceleration = target_lane_rear_node_->node_accel();
+  }
+
+  // 获取固定车道的虚拟ID并获取参考路径
+  const int fix_lane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
+  const auto &ref_path =
+      env_model.get_reference_path_manager()->get_reference_path_by_lane(
+          fix_lane_virtual_id);
+  if (!ref_path) {
+      lat_close_boundary_offset_ = 0.0;  // 如果参考路径不存在，设置偏移为0
+      return;
+  }
+
+  // 初始化拥堵检测器并进行检测
+  CongestionDetector congestion_detector(&congestion_detection_config_,
+                                          ref_path);
+  CongestionResult cong_result = congestion_detector.DetectLaneCongestion();
+
+  // 定义连续通过的安全帧数阈值
+  constexpr int SAFETY_FRAME_THRESHOLD = 10;
+
+  // 判断是否满足安全条件并设置横向偏移值
+  if (cong_result.level == CongestionLevel::FREE_FLOW &&
+      lat_offset_value > 0.0 &&
+      propose_state_frame_nums_ > SAFETY_FRAME_THRESHOLD) {
+      lat_close_boundary_offset_ =
+          (transition_info_.lane_change_direction == LEFT_CHANGE)
+              ? lat_offset_value
+              : -lat_offset_value;
   } else {
-    lat_close_boundary_offset_ = 0;
+      lat_close_boundary_offset_ = 0.0;  // 不满足安全条件时，设置偏移为0
   }
 }
+
 
 void LaneChangeStateMachineManager::IsEgoOnSideLane() {
   const auto &virtual_lane_manager =
