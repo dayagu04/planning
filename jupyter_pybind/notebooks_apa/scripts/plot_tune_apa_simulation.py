@@ -720,6 +720,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
 
     traj_speed_profile = []
     if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
+      print('traj size = ', bag_loader.plan_msg['data']
+            [index_map['plan_msg_idx']].trajectory.trajectory_points_size)
+
       for i in range(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points_size):
         point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
 
@@ -738,6 +741,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
       non_optimizer_path_y = []
       non_optimizer_path_theta = []
       size = len(tuned_planning_output.trajectory.trajectory_points)
+      print('online size = ', size)
+
       for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
         id = size - i - 1
         if id < 0:

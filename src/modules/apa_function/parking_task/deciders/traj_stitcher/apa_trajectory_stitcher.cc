@@ -541,6 +541,10 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     trajectory_.SetGear(0);
   }
 
+  if (trajectory_.size() < 3) {
+    trajectory_.ExtendTraj(0.1);
+  }
+
   ILOG_INFO << "is overshoot = " << is_overshoot << ", gear = " << is_forward
             << ", traj back s = " << trajectory_.back().s();
 

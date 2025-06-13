@@ -52,6 +52,8 @@ class Trajectory : public std::vector<TrajectoryPoint> {
 
   const double GetStopS() const { return stop_decision_s_; }
 
+  void ExtendTraj(const double length);
+
   bool traj_elements_vec_ready_flag_ = false;
   std::vector<double> x_vec_{};
   std::vector<double> y_vec_{};

@@ -162,5 +162,46 @@ void Trajectory::SetGear(const int gear) {
   return;
 }
 
+void Trajectory::ExtendTraj(const double length) {
+  if (empty()) {
+    return;
+  }
+
+  planning_math::Vec2d end;
+  end.set_x(back().x());
+  end.set_y(back().y());
+  planning_math::Vec2d unit_line_vec;
+  if (gear_ == 2) {
+    planning_math::Vec2d::CreateUnitVec2d(back().theta());
+  } else {
+    planning_math::Vec2d::CreateUnitVec2d(-back().theta());
+  }
+
+  double s = 0.03;
+  double ds = 0.03;
+
+  TrajectoryPoint traj_point;
+  planning_math::Vec2d point;
+  while (s < length) {
+    point = end + s * unit_line_vec;
+
+    traj_point.set_absolute_time(back().absolute_time());
+    traj_point.set_s(s);
+    traj_point.set_vel(0);
+    traj_point.set_acc(-0.1);
+    traj_point.set_jerk(0);
+    traj_point.set_x(point.x());
+    traj_point.set_y(point.y());
+    traj_point.set_theta(back().theta());
+    traj_point.set_kappa(0);
+
+    emplace_back(traj_point);
+
+    s += ds;
+  }
+
+  return;
+}
+
 }  // namespace trajectory
 }  // namespace planning
