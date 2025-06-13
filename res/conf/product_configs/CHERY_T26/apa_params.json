@@ -379,7 +379,6 @@
   "min_cruise_speed" : 0.3,
   "speed_limit_by_kappa" : 0.6,
   "speed_limit_by_kappa_switch" : 0.4,
-  "speed_limit_by_obs_dist" : 0.4,
   "min_speed_limit_by_obs_dist" : 0.4,
   "min_path_dist_for_speed_optimizer" : 0.25,
   "min_path_dist_for_veh_starting" : 0.1,

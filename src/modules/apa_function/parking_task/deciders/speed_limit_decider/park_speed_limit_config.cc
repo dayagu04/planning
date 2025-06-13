@@ -25,7 +25,7 @@ void ParkSpeedLimitConfig::Init() {
   // obs distance related
   // v = speed_limit_by_obs_+ a0 * dist
   obs_dist_thresh_ = 0.5;
-  double speed_limit_lower_by_obs_ = speed_config.min_speed_limit_by_obs_dist;
+  speed_limit_lower_by_obs_ = speed_config.min_speed_limit_by_obs_dist;
   double max_speed = std::max(0.7, speed_limit_lower_by_obs_);
   first_order_param_by_obs_ =
       (max_speed - speed_limit_lower_by_obs_) / obs_dist_thresh_;
