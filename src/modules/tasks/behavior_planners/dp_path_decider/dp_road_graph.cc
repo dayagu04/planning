@@ -98,8 +98,11 @@ bool DPRoadGraph::ProcessEnvInfos() {
   if (agents.empty()) {
     return true;
   }
-  for (const auto& agent : agents) {
-    int id = agent->agent_id();
+  const auto& obstacles = current_reference_path_ptr_->get_obstacles();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  for(const auto& obstacle: obstacles){
+    const auto& id = obstacle->obstacle()->id();
+    const auto& agent = agent_mgr->GetAgent(id);
     //  continue
     if (agent == nullptr) {
       continue;
@@ -148,8 +151,8 @@ bool DPRoadGraph::ProcessEnvInfos() {
       obstacles_info_.emplace_back(
           std::move(static_obs_info));  // just log info
       static_obstacles_box_.emplace_back(obs_box);
-    } else if (agent->speed() < kMaxNudgingSpeed) {  // slow dynamic filter
-      // filtered backward dynamic obs
+    } else if (obstacle->frenet_velocity_s() < kMaxNudgingSpeed ) {  // slow dynamic filter
+                                        // filtered backward dynamic obs
       if (!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end ||
             agent_sl_boundary[2] < ego_frenet_boundary_.l_start) &&
           agent_sl_boundary[0] < ego_frenet_boundary_.s_start) {
@@ -158,7 +161,7 @@ bool DPRoadGraph::ProcessEnvInfos() {
 
       if (agent_sl_boundary[0] + vehicle_length_ <
               ego_frenet_boundary_.s_start &&
-          agent->speed() < ego_v_) {
+          obstacle->frenet_velocity_s() < ego_v_) {
         continue;
       }
 
