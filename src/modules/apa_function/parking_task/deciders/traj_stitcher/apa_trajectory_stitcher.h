@@ -107,6 +107,8 @@ class ApaTrajectoryStitcher {
 
   void GeneSpeedPointFromVehicleState(const SVPoint& init_point);
 
+  void SmoothLonDelay();
+
  private:
   SVPoint ego_lon_state_;
   pnc::geometry_lib::PathPoint stitch_path_point_;

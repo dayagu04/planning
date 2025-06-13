@@ -41,7 +41,8 @@ void ApaTrajectoryStitcher::Execute(
   size_t min_dist_neioghbour_id = 0;
   if (QueryNearestPoint(predict_pose, lateral_path, &min_dist_id,
                         &min_dist_neioghbour_id)) {
-    EvaluateStitchPath(predict_pose, lateral_path, min_dist_id, min_dist_neioghbour_id);
+    EvaluateStitchPath(predict_pose, lateral_path, min_dist_id,
+                       min_dist_neioghbour_id);
   } else {
     GenePathPointFromVehicleState(ego_pose);
   }
@@ -63,9 +64,8 @@ void ApaTrajectoryStitcher::Execute(
         &lon_stitch_point_);
   }
 
-  if (!lon_stitch_success ||
-      std::abs(lon_stitch_point_.vel() - ego_lon_point.v) > 0.2 ||
-      lon_stitch_point_.s() < 0.0 || lon_stitch_point_.vel() < 0.0) {
+  if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
+      lon_stitch_point_.vel() <= 0.01) {
     ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
               << " lon stitch v = " << lon_stitch_point_.vel()
               << ", a = " << lon_stitch_point_.acc()
@@ -73,10 +73,34 @@ void ApaTrajectoryStitcher::Execute(
     GeneSpeedPointFromVehicleState(ego_lon_point);
   }
 
+  SmoothLonDelay();
+
 #if DEBUG_TASK
   TaskDebug(lateral_path, history_trajectory);
 #endif
 
+  return;
+}
+
+void ApaTrajectoryStitcher::SmoothLonDelay() {
+  double v_error = lon_stitch_point_.vel() - ego_lon_state_.v;
+  double acc_error = lon_stitch_point_.acc() - ego_lon_state_.acc;
+
+  if (v_error > 0.1) {
+    lon_stitch_point_.set_vel(ego_lon_state_.v + 0.1);
+  } else if (v_error < -0.1) {
+    lon_stitch_point_.set_vel(ego_lon_state_.v - 0.1);
+  }
+
+  double v = lon_stitch_point_.vel();
+  v = std::max(0.0, v);
+  lon_stitch_point_.set_vel(v);
+
+  if (acc_error > 0.1) {
+    lon_stitch_point_.set_acc(ego_lon_state_.acc + 0.1);
+  } else if (acc_error < -0.1) {
+    lon_stitch_point_.set_acc(ego_lon_state_.acc - 0.1);
+  }
   return;
 }
 
@@ -106,6 +130,10 @@ void ApaTrajectoryStitcher::GeneSpeedPointFromVehicleState(
   double acc = init_point.acc;
   acc = std::max(acc, -0.3);
   acc = std::min(acc, 0.3);
+  if (init_point.v < 0.1) {
+    acc = 0.0;
+  }
+
   lon_stitch_point_.set_acc(acc);
   lon_stitch_point_.set_jerk(0);
 
