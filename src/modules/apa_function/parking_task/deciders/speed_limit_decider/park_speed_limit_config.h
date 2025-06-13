@@ -16,8 +16,10 @@ struct ParkSpeedLimitConfig {
   double kappa_thresh_;
   double speed_limit_by_kappa_;
 
+  // obs dist speed limit, use first order function.
   double obs_dist_thresh_;
-  double speed_limit_by_obs_;
+  double speed_limit_lower_by_obs_;
+  double first_order_param_by_obs_;
 
   void Init();
 };

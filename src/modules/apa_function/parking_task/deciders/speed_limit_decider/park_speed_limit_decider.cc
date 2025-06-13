@@ -55,7 +55,7 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     if (i + 1 < path_point_size) {
       const pnc::geometry_lib::PathPoint& next_point = path[i + 1];
 
-      // speed limit from path curvature
+      // speed limit from path curvature switch
       if (std::fabs(point.kappa - next_point.kappa) >
           config_.kappa_switch_in_path_point_) {
         speed_limit =
@@ -71,7 +71,9 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
 
     // speed limit from nudge obstacles
     if (point.dist_to_obs < config_.obs_dist_thresh_) {
-      speed_limit = std::min(speed_limit, config_.speed_limit_by_obs_);
+      double dist = std::max(0.0, point.dist_to_obs);
+      speed_limit = config_.speed_limit_lower_by_obs_ +
+                    config_.first_order_param_by_obs_ * dist;
 
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code = LonDecisionReason::CLOSE_TO_OBSTACLE;

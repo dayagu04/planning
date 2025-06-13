@@ -1001,8 +1001,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "default_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.min_cruise_speed, double,
                   "min_cruise_speed");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.obs_dist_for_speed_limit,
-                  double, "obs_dist_for_speed_limit");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.min_speed_limit_by_obs_dist,
+                  double, "min_speed_limit_by_obs_dist");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa, double,
                   "speed_limit_by_kappa");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa_switch,

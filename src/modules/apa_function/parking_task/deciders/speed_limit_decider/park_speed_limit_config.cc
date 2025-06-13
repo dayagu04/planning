@@ -15,7 +15,7 @@ void ParkSpeedLimitConfig::Init() {
   // update path point kappa gap
   // If front wheel change 0.8 ratio, add speed limit.
   double kappa = 1.0 / apa_param.GetParam().min_turn_radius;
-  kappa_switch_in_path_point_ = kappa * 0.85;
+  kappa_switch_in_path_point_ = kappa;
   speed_limit_by_kappa_switch_ = speed_config.speed_limit_by_kappa_switch;
 
   // kappa limit speed
@@ -23,11 +23,12 @@ void ParkSpeedLimitConfig::Init() {
   speed_limit_by_kappa_ = speed_config.speed_limit_by_kappa;
 
   // obs distance related
+  // v = speed_limit_by_obs_+ a0 * dist
   obs_dist_thresh_ = 0.5;
-  speed_limit_by_obs_ = speed_config.obs_dist_for_speed_limit;
-
-  // ILOG_INFO << "kappa switch thresh = " << kappa_switch_in_path_point_
-  //           << ",kappa thresh = " << kappa_thresh_;
+  double speed_limit_lower_by_obs_ = speed_config.min_speed_limit_by_obs_dist;
+  double max_speed = std::max(0.7, speed_limit_lower_by_obs_);
+  first_order_param_by_obs_ =
+      (max_speed - speed_limit_lower_by_obs_) / obs_dist_thresh_;
 
   return;
 }

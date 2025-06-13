@@ -69,7 +69,7 @@ struct ParkingSpeedConfig {
   double speed_limit_by_obs_dist;
 
   // If obs dist is smaller than this value, add speed limit.
-  double obs_dist_for_speed_limit;
+  double min_speed_limit_by_obs_dist;
 
   // speed limit
   double path_thresh_for_acc_bound = 0.4;
