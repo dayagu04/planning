@@ -1301,7 +1301,7 @@ bool LateralObstacleDecider::CheckSideObstacle(
     const auto ok = frenet_obstacle.get_polygon_at_time(0, reference_path_ptr,
                                                 obstacle_sl_polygon);
     const auto ego_sl_polygon = ego_frenet_state.polygon();
-    if (ok) {
+    if (ok && ego_sl_polygon.is_convex()) {
       Polygon2d care_overlap_polygon;
       bool b_overlap_with_care = false;
       b_overlap_with_care =

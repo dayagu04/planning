@@ -440,7 +440,6 @@ void ObstacleManager::split_points(
   constexpr double THRESHOLD = 2;
   constexpr double MAXDISTANCETHRESHOLD = 4;
   std::vector<planning_math::Vec2d> current_segment;
-  std::vector<planning_math::Vec2d> other_segment;
   if (frenet_coord != nullptr) {
     std::vector<std::pair<std::pair<double, double>, planning_math::Vec2d>> points_vec;
     points_vec.reserve(polygon_points_size);
@@ -503,9 +502,6 @@ void ObstacleManager::split_points(
 
   if (!current_segment.empty() && current_segment.size() > 2) {
     result.push_back(current_segment);
-  }
-  if (!other_segment.empty() && other_segment.size() > 2) {
-    result.push_back(other_segment);
   }
 }
 

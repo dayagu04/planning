@@ -1555,10 +1555,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, avoid_high_vel, "lat_motion_ilqr", "avoid_high_vel");
     ReadItem<double>(json, q_ref_theta_avoid_high_vel, "lat_motion_ilqr",
                      "q_ref_theta_avoid_high_vel");
-    ReadItem<double>(json, q_jerk_avoid_high_vel_close, "lat_motion_ilqr",
-                     "q_jerk_avoid_high_vel_close");
-    ReadItem<double>(json, q_jerk_avoid_high_vel_middle, "lat_motion_ilqr",
-                     "q_jerk_avoid_high_vel_middle");
+    ReadItem<double>(json, q_jerk_avoid_high_vel, "lat_motion_ilqr",
+                     "q_jerk_avoid_high_vel");
     ReadItem<double>(json, q_jerk_bound_avoid_high_vel, "lat_motion_ilqr",
                      "q_jerk_bound_avoid_high_vel");
     ReadItem<double>(json, q_ref_x_static_avoid, "lat_motion_ilqr",
@@ -1752,8 +1750,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_avoid = 15.0;
   double avoid_high_vel = 2.0;
   double q_ref_theta_avoid_high_vel = 15.0;
-  double q_jerk_avoid_high_vel_close = 2.0;
-  double q_jerk_avoid_high_vel_middle = 2.0;
+  double q_jerk_avoid_high_vel = 2.0;
   double q_jerk_bound_avoid_high_vel = 25.0;
 
   double q_ref_x_static_avoid = 20.0;
