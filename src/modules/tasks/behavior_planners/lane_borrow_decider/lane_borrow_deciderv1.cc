@@ -583,8 +583,9 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   right_borrow_ = true;
 
   // double lane_line_length = 0.0;
-  // const auto& left_lane_boundarys = current_lane_ptr_->get_left_lane_boundary();
-  // const auto& right_lane_boundarys =
+  // const auto& left_lane_boundarys =
+  // current_lane_ptr_->get_left_lane_boundary(); const auto&
+  // right_lane_boundarys =
   //     current_lane_ptr_->get_right_lane_boundary();
   // iflyauto::LaneBoundaryType left_lane_boundary_type;
   // iflyauto::LaneBoundaryType right_lane_boundary_type;
@@ -603,7 +604,8 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   //     break;
   //   }
   // }
-  // // If the lane marking is not left dashed/right solid or double dashed, return
+  // // If the lane marking is not left dashed/right solid or double dashed,
+  // return
   // // False.
   // if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
   //     left_lane_boundary_type !=
@@ -618,7 +620,8 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   // }
 
   // // todo: if left lane is reverse, then left_boorow is false
-  // if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+  // if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED
+  // &&
   //     right_lane_boundary_type !=
   //         iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
   //   right_borrow_ = false;
@@ -626,8 +629,12 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   // if (right_lane_ptr_ == nullptr) {
   //   right_borrow_ = false;
   // }
-  left_borrow_ = session_->planning_context().lateral_obstacle_decider_output().left_borrow;
-  right_borrow_ = session_->planning_context().lateral_obstacle_decider_output().right_borrow;
+  left_borrow_ = session_->planning_context()
+                     .lateral_obstacle_decider_output()
+                     .left_borrow;
+  right_borrow_ = session_->planning_context()
+                      .lateral_obstacle_decider_output()
+                      .right_borrow;
   // todo: consider ego car near/in stop line or crosswalk area
   if (!left_borrow_ && !right_borrow_) {
     lane_borrow_decider_output_.lane_borrow_failed_reason =

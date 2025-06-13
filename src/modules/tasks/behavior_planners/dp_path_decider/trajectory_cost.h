@@ -7,6 +7,7 @@
 #include "config/basic_type.h"
 #include "config/message_type.h"
 #include "dp_base.h"
+#include "environmental_model.h"
 #include "frenet_obstacle.h"
 #include "reference_path.h"
 #include "session.h"
@@ -16,7 +17,6 @@
 #include "src/modules/common/st_graph/path_border_segment.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "virtual_lane.h"
-#include "environmental_model.h"
 namespace planning {
 using namespace planning_math;
 class TrajectoryCost {
@@ -46,21 +46,18 @@ class TrajectoryCost {
     // v_cruise_ = current_lane_ptr_->get_ego_state_manager()->ego_v_cruise();
   };
   TrajectoryCost(
-      DPRoadGraphConfig config,
-      framework::Session *session,
-      const SLPoint &init_sl_point,
-      CarReferenceInfo &ref_path_curve,
+      DPRoadGraphConfig config, framework::Session *session,
+      const SLPoint &init_sl_point, CarReferenceInfo &ref_path_curve,
       std::vector<planning_math::Box2d> &flatted_dynamic_obstacles_box,
-      std::vector<planning_math::Box2d> &static_obstacles_box
-  )
+      std::vector<planning_math::Box2d> &static_obstacles_box)
       : config_(config),
         session_(session),
         flatted_dynamic_obstacles_box_(flatted_dynamic_obstacles_box),
         static_obstacles_box_(static_obstacles_box),
-        ref_path_curve_(ref_path_curve)
-  {
+        ref_path_curve_(ref_path_curve) {
     // lane ptr
-    const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+    const auto &virtual_lane_mgr =
+        session_->environmental_model().get_virtual_lane_manager();
     current_lane_ptr_ = virtual_lane_mgr->get_current_lane();
     left_lane_ptr_ = virtual_lane_mgr->get_left_lane();
     right_lane_ptr_ = virtual_lane_mgr->get_right_lane();
@@ -69,10 +66,12 @@ class TrajectoryCost {
 
   ComparableCost Calculate(const QuinticPolynomialCurve1d &curve,
                            const double start_s, const double end_s,
-                           int current_level, int total_level,LaneBorrowStatus lane_borrow_status);
+                           int current_level, int total_level,
+                           LaneBorrowStatus lane_borrow_status);
   ComparableCost CalculatePathCost(const QuinticPolynomialCurve1d &curve,
                                    const double start_s, const double end_s,
-                                   int current_level, int total_level,LaneBorrowStatus lane_borrow_status) const;
+                                   int current_level, int total_level,
+                                   LaneBorrowStatus lane_borrow_status) const;
   ComparableCost GetObsSLCost(const FrenetObstacleBoundary &frenet_obstacle_sl,
                               const double curr_s, const double curr_l) const;
   ComparableCost CalObsCartCost(const QuinticPolynomialCurve1d &curve,

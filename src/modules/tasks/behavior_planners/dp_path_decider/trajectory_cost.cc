@@ -15,14 +15,15 @@ namespace planning {
 ComparableCost TrajectoryCost::Calculate(const QuinticPolynomialCurve1d& curve,
                                          const double start_s,
                                          const double end_s, int current_level,
-                                         int total_level,LaneBorrowStatus lane_borrow_status) {
+                                         int total_level,
+                                         LaneBorrowStatus lane_borrow_status) {
   ComparableCost total_cost;
   // total_cost = CalculateStaticObsCost(curve, start_s, end_s);
   double time_stamp_1 = IflyTime::Now_ms();
   total_cost = CalObsCartCost(curve, start_s, end_s);
   double time_stamp_2 = IflyTime::Now_ms();
-  total_cost +=
-      CalculatePathCost(curve, start_s, end_s, current_level, total_level, lane_borrow_status);
+  total_cost += CalculatePathCost(curve, start_s, end_s, current_level,
+                                  total_level, lane_borrow_status);
   double time_stamp_3 = IflyTime::Now_ms();
   total_cost += CalculateStitchCost(curve, start_s, end_s);
   double time_stamp_4 = IflyTime::Now_ms();
@@ -36,7 +37,8 @@ ComparableCost TrajectoryCost::Calculate(const QuinticPolynomialCurve1d& curve,
 
 ComparableCost TrajectoryCost::CalculatePathCost(
     const QuinticPolynomialCurve1d& curve, const double start_s,
-    const double end_s, int current_level, int total_level,LaneBorrowStatus lane_borrow_status) const {
+    const double end_s, int current_level, int total_level,
+    LaneBorrowStatus lane_borrow_status) const {
   ComparableCost cost;
   double path_cost = 0.0;
   // lateral sample two lanes
@@ -66,25 +68,22 @@ ComparableCost TrajectoryCost::CalculatePathCost(
           vehicle_width * 0.5;
     }
     if (left_lane_ptr_ != nullptr) {
-      if (lane_borrow_status == kLaneBorrowCrossing)
-      {
+      if (lane_borrow_status == kLaneBorrowCrossing) {
         sample_left_boundary +=
-          left_lane_ptr_->width_by_s(path_s + start_s) *
-          1.2;
-      }else{
+            left_lane_ptr_->width_by_s(path_s + start_s) * 1.2;
+      } else {
         sample_left_boundary +=
-          left_lane_ptr_->width_by_s(path_s + start_s) *
-          0.6;  // larger than different from sample boundary
+            left_lane_ptr_->width_by_s(path_s + start_s) *
+            0.6;  // larger than different from sample boundary
       }
     }
     if (right_lane_ptr_ != nullptr) {
-      if (lane_borrow_status == kLaneBorrowCrossing)
-      {
+      if (lane_borrow_status == kLaneBorrowCrossing) {
         sample_right_boundary -=
-          right_lane_ptr_->width_by_s(path_s + start_s) * 1.2;
-      }else{
-      sample_right_boundary -=
-          right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
+            right_lane_ptr_->width_by_s(path_s + start_s) * 1.2;
+      } else {
+        sample_right_boundary -=
+            right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
       }
     }
     // if (left_lane_ptr_ != nullptr) {
