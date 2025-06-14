@@ -934,7 +934,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         const size_t num = response.first_seg_path.size();
         ILOG_INFO << " path num " << num;
 
-        constexpr float kHeadingStartDeg = 80.0f;
+        constexpr float kHeadingStartDeg = 85.0f;
         constexpr float kHeadingEndDeg = 89.9f;
         constexpr float kHeadingDiffThresh = 1e-3f;
         constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
@@ -957,7 +957,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
           if (is_park_out) {
             const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
-            if (heading_deg > kHeadingStartDeg) {
+            if (heading_deg > kHeadingStartDeg && i > 0) {
               float heading_diff =
                   path_pt.phi - response.first_seg_path[i - 1].phi;
               heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
@@ -975,7 +975,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
           }
         }
 
-        current_path_last_heading_ = local_path.back().heading;
+        if (local_path.size() > 0) {
+          current_path_last_heading_ = local_path.back().heading;
+        }
 
         PathOptimizationByCILRQ(local_path, &response_tf);
         ILOG_INFO << " current_path_point_global_vec num "
