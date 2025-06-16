@@ -1002,6 +1002,10 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json,
         std::vector<std::string>{"general_lateral_decider", "min_v_cruise"},
         min_v_cruise);
+    lc_min_v_cruise = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider", "lc_min_v_cruise"},
+        lc_min_v_cruise);
     lc_second_dist_thr = read_json_keys<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -1200,6 +1204,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> dynamic_lc_finished_ref_buffer{0.0, 0.05, 0.1, 0.2};
   bool not_use_gap_flag = true;
   double min_v_cruise = 5.0;
+  double lc_min_v_cruise = 5.0;
 
   std::vector<double> lateral_road_boader_collision_ttc_bp{0, 1.5, 3, 4.5, 5};
   std::vector<double> extra_collision_lateral_buffer{0.1, 0.0, 0.0, 0.0, 0.0};

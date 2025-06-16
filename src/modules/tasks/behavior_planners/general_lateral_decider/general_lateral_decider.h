@@ -230,6 +230,7 @@ class GeneralLateralDecider : public Task {
   double extra_lane_width_decrease_buffer_ = 0.0;
   double overlap_start_s_ = 0.0;
   double overlap_end_s_ = 0.0;
+  double last_ref_length_ = 0;
   bool is_lane_change_scene_ = false;
   bool is_blocked_obstacle_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =

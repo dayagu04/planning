@@ -200,6 +200,7 @@
   "general_lateral_decider": {
     "lateral_ref_traj_type":false,
     "min_v_cruise": 1.0,
+    "lc_min_v_cruise": 3.333,
     "lc_second_dist_thr": 2.0,
     "lc_finished_second_dist_thr": 0.5,
     "dynamic_lc_ref_buffer": [0.0, 0.1, 0.2, 0.35],
