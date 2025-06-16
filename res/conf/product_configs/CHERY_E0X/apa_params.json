@@ -374,7 +374,7 @@
   "max_replan_number": 25,
   "max_replan_number_inside_slot": 15,
 
-  "enable_apa_speed_plan" : true,
+  "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.4,
   "speed_limit_by_kappa" : 0.7,

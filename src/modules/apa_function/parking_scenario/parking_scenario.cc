@@ -227,7 +227,8 @@ void ParkingScenario::SetPlanningPath() {
   auto publish_traj = &(planning_output_.trajectory);
   publish_traj->available = true;
   publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
-  publish_traj->target_reference.target_velocity = frame_.vel_target;
+  publish_traj->target_reference.target_velocity =
+      apa_param.GetParam().speed_config.default_cruise_speed;
 
   if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
     size_t N = current_path_point_global_vec_.size();
