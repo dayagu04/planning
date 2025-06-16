@@ -79,8 +79,21 @@ void ApaSlotManager::Update(
           ego_info_under_slot_.slot_type = it->second.slot_type_;
           // forced release of self slot
           ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
-          slot.release_info_.release_state[RULE_BASED_RELEASE] =
-              SlotReleaseState::RELEASE;
+          const double dot_ego_slot = measure_data_ptr_->GetHeadingVec().dot(
+              slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
+          if (slot.slot_type_ == SlotType::PERPENDICULAR) {
+            //对于垂直车位，开口方向与自车方向不一致不释放车位
+            if (dot_ego_slot > 0.0) {
+              slot.release_info_.release_state[RULE_BASED_RELEASE] =
+                  SlotReleaseState::RELEASE;
+            } else {
+              slot.release_info_.release_state[RULE_BASED_RELEASE] =
+                  SlotReleaseState::NOT_RELEASE;
+            }
+          } else {
+            slot.release_info_.release_state[RULE_BASED_RELEASE] =
+                SlotReleaseState::RELEASE;
+          }
         } else {
           ILOG_WARN << "slot id = " << ego_info_under_slot_.id
                     << " not found in slots_map_";
