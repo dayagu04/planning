@@ -136,7 +136,8 @@ void StGraphInput::Update() {
   const auto& lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow = lane_borrow_output.is_in_lane_borrow_status;
-  ExtendProcessedPath(is_lane_keeping_, is_in_lane_borrow,
+  const auto lane_borrow_kd_path = lane_borrow_output.dp_path_coord;
+  ExtendProcessedPath(is_lane_keeping_, is_in_lane_borrow, lane_borrow_kd_path,
                       ego_center_line_coord, planned_kd_path);
   JSON_DEBUG_VALUE("lat_path_length", planned_kd_path->Length());
   JSON_DEBUG_VALUE("extend_path_length", processed_path_->Length());
@@ -201,11 +202,12 @@ void StGraphInput::FilterAgentsByDecisionType(
 
 void StGraphInput::ExtendProcessedPath(
     const bool is_lane_keeping, const bool is_lane_borrow,
+    const std::shared_ptr<planning_math::KDPath>& dp_path_coord,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path) {
   std::vector<planning_math::PathPoint> path_points;
   path_points.reserve(planned_path->path_points().size());
-  ForwardExtendPlannedPath(is_lane_keeping, is_lane_borrow, lane_fusion_ego_center_lane,
+  ForwardExtendPlannedPath(is_lane_keeping, lane_fusion_ego_center_lane,
                            planned_path, &path_points);
   if (!is_lane_keeping) {
     BackwardExtendPoints(planned_path, &path_points);
@@ -214,12 +216,16 @@ void StGraphInput::ExtendProcessedPath(
     return;
   }
   const bool need_reset_s = false;
-  processed_path_ = std::make_shared<planning_math::KDPath>(
-      std::move(path_points), need_reset_s);
+  if (is_lane_borrow) {
+    processed_path_ = dp_path_coord;
+  } else {
+    processed_path_ = std::make_shared<planning_math::KDPath>(
+        std::move(path_points), need_reset_s);
+  }
 }
 
 void StGraphInput::ForwardExtendPlannedPath(
-    const bool is_lane_keeping, const bool is_lane_borrow,
+    const bool is_lane_keeping,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path,
     std::vector<planning_math::PathPoint>* const ptr_path_points) {
@@ -233,11 +239,6 @@ void StGraphInput::ForwardExtendPlannedPath(
       init_v * plan_time_length +
       0.5 * ego_max_acc * plan_time_length * plan_time_length;
   desired_path_length = std::fmax(kMinLength, desired_path_length);
-
-  // ban path extend in lane borrow status
-  if (is_lane_borrow) {
-    desired_path_length = planned_path->Length();
-  }
 
   if (is_lane_keeping) {
     ForwardExtendPlannedPathWithEgoLane(lane_fusion_ego_center_lane,

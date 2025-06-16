@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <unordered_map>
+#include "agent/agent.h"
 #include "config/vehicle_param.h"
 #include "define/geometry.h"
 #include "dynamic_world/dynamic_world.h"
@@ -57,7 +58,9 @@ class LaneBorrowDecider : public Task {
   bool UpdateLaneBorrowDirection();
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
-  bool CheckDynamicCutin();
+  void CheckKeyObstaclesIntention(const agent::Agent* agent, bool& is_cut_in,
+                                  bool& is_cut_out);
+  bool UpdateDynamicBlockingObstacles();
   BorrowDirection GetBypassDirection(
       const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
 

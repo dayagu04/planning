@@ -12,7 +12,7 @@ from bokeh.resources import INLINE
 from google.protobuf.descriptor import FieldDescriptor
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250603/20250603-15-54-52/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-03-15-54-52_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_20260/trigger/20250610/20250610-16-11-12/data_collection_CHERY_E0Y_20260_EVENT_FILTER_2025-06-10-16-11-12_no_camera.bag.1749623912.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+#include "agent/agent_manager.h"
 #include "basic_types.pb.h"
 #include "behavior_planners/dp_path_decider/dp_road_graph.h"
 #include "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
@@ -28,7 +29,6 @@
 #include "utils/cartesian_coordinate_system.h"
 #include "utils/path_point.h"
 #include "utils/pose2d_utils.h"
-#include "agent/agent_manager.h"
 
 namespace {
 constexpr double kMinDisToStopLine = 50.0;
@@ -42,7 +42,9 @@ constexpr double kForwardOtherObsDistance = 20.0;
 constexpr double kObsLonDisBuffer = 2.0;
 constexpr double kMaxCentricOffset = 0.75;
 constexpr double kBackNeededDistance = 5.0;
-constexpr double kMaxConcernCollisionTime =5.0;
+constexpr double kMaxConcernCollisionTime = 5.0;
+constexpr double kPreCentricOffsetHigh = 0.75;
+constexpr double kPreCentricOffsetLow = 0.45;
 };  // namespace
 
 namespace planning {
@@ -55,12 +57,11 @@ bool LaneBorrowDecider::Execute() {
   return true;
 }
 
-bool LaneBorrowDecider::ProcessAllEnvInfos(){
-
-  if(!ProcessEnvInfos()){
+bool LaneBorrowDecider::ProcessAllEnvInfos() {
+  if (!ProcessEnvInfos()) {
     return false;
   }
-  if(!dp_path_decider_->ProcessEnvInfos()){
+  if (!dp_path_decider_->ProcessEnvInfos()) {
     return false;
   }
   LaneTypeDistanceInfo();
@@ -129,8 +130,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   return true;
 }
 
-bool LaneBorrowDecider::LaneBorrowPreCheck(){
-
+bool LaneBorrowDecider::LaneBorrowPreCheck() {
   if (!SelectStaticBlockingObstcales()) {
     return false;
   }
@@ -180,7 +180,7 @@ bool LaneBorrowDecider::LaneBorrowPreCheck(){
     }
   }
 
-  if(lane_borrow_status_ != kLaneBorrowCrossing){
+  if (lane_borrow_status_ != kLaneBorrowCrossing) {
     if (!CheckBackWardObs()) {
       return false;
     }
@@ -198,7 +198,7 @@ bool LaneBorrowDecider::LaneBorrowPreCheck(){
 
   return true;
 }
-bool LaneBorrowDecider::DPDecision(){
+bool LaneBorrowDecider::DPDecision() {
   if (lane_borrow_status_ != kNoLaneBorrow) {
     if (!is_first_frame_to_lane_borrow_) {
       if (!RunDP()) {
@@ -209,7 +209,6 @@ bool LaneBorrowDecider::DPDecision(){
     }
   }
 
-
   return true;
 }
 void LaneBorrowDecider::UpdateToDP() {
@@ -218,6 +217,7 @@ void LaneBorrowDecider::UpdateToDP() {
     static_blocked_obj_id_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
+    lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
     return;
   }
 
@@ -274,6 +274,10 @@ void LaneBorrowDecider::UpdateToDP() {
     static_blocked_obj_id_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
+    // if(lane_borrow_decider_output_.lane_borrow_failed_reason !=
+    // OBSERVE_TIME_CHECK_FAILED){
+    //   ClearLaneBorrowStatus();
+    // }
   }
 
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
@@ -293,26 +297,29 @@ bool LaneBorrowDecider::RunDP() {
   dp_path_decider_->SetDPCostParams(lane_borrow_status_);
   dp_path_decider_->SampleLanes(&lane_borrow_decider_output_);
   dp_path_decider_->DPSearchPath(lane_borrow_status_);
-    if(!dp_path_decider_->FinedReferencePath() && lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow){
-      dp_observe_frame_num_++;
-      if (dp_observe_frame_num_ < 5){
-        dp_path_decider_->LastFramePath();
-        // lane_borrow_decider_output_.lane_borrow_failed_reason =  TMP_DP_SEARCH_FAILED;
-      }else{
-        lane_borrow_decider_output_.lane_borrow_failed_reason =
+  if (!dp_path_decider_->FinedReferencePath() &&
+      lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow) {
+    dp_observe_frame_num_++;
+    if (dp_observe_frame_num_ < 5) {
+      dp_path_decider_->LastFramePath();
+      // lane_borrow_decider_output_.lane_borrow_failed_reason =
+      // TMP_DP_SEARCH_FAILED;
+    } else {
+      lane_borrow_decider_output_.lane_borrow_failed_reason =
           TRIGGER_BUT_DP_SEARCH_FAILED;
-        lane_borrow_decider_output_.is_in_lane_borrow_status = false;
-        return false;
-      }
-    }else if(!dp_path_decider_->FinedReferencePath() && lane_borrow_status_ == LaneBorrowStatus::kNoLaneBorrow){
-        lane_borrow_decider_output_.lane_borrow_failed_reason =
-          TRIGGER_BUT_DP_SEARCH_FAILED;
-        lane_borrow_decider_output_.is_in_lane_borrow_status = false;
-        return false;
-    }else{
-      dp_observe_frame_num_ = 0;
+      lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+      return false;
     }
-    dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
+  } else if (!dp_path_decider_->FinedReferencePath() &&
+             lane_borrow_status_ == LaneBorrowStatus::kNoLaneBorrow) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        TRIGGER_BUT_DP_SEARCH_FAILED;
+    lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+    return false;
+  } else {
+    dp_observe_frame_num_ = 0;
+  }
+  dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
   return true;
 }
 
@@ -415,7 +422,8 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowDriving() {
       continue;
     }
 
-    if (obstacle->frenet_obstacle_boundary().s_start > ego_frenet_boundary_.s_end) {
+    if (obstacle->frenet_obstacle_boundary().s_start >
+        ego_frenet_boundary_.s_end) {
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
       if (lat_obs_iter != lat_obstacle_decision.end() &&
           lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
@@ -444,7 +452,7 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowDriving() {
       // if (!obstacle->obstacle()->is_static()) {    //dp obs_speed selset
       //   continue;
       // }
-      if (obs_v > 4.2 && obs_v > 0.5 * ego_speed_) {  // dp  concern obs_v <     15kph
+      if (obs_v > 4.2) {  // dp  concern obs_v <     15kph
         continue;
       }
 
@@ -499,6 +507,15 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowCrossing() {
 
 // v2
 bool LaneBorrowDecider::CheckLaneBorrowCondition() {
+  if (lane_borrow_status_ != kNoLaneBorrow) {
+    if (!is_first_frame_to_lane_borrow_) {
+      if (!RunDP()) {
+        return false;
+      }
+    } else {
+      is_first_frame_to_lane_borrow_ = false;
+    }
+  }
 
   UpdateJunctionInfo();
 
@@ -507,6 +524,10 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   }
 
   if (!UpdateLaneBorrowDirection()) {
+    return false;
+  }
+
+  if (!UpdateDynamicBlockingObstacles()) {
     return false;
   }
 
@@ -545,21 +566,13 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
     if (!CheckLaneBorrowDircetion()) {
       return false;
     }
+  } else {
+    lane_borrow_decider_output_.borrow_direction = bypass_direction_;
   }
 
-  if(lane_borrow_status_ != kLaneBorrowCrossing){
+  if (lane_borrow_status_ != kLaneBorrowCrossing) {
     if (!CheckBackWardObs()) {
       return false;
-    }
-  }
-
-  if (lane_borrow_status_ != kNoLaneBorrow) {
-    if (!is_first_frame_to_lane_borrow_) {
-      if (!RunDP()) {
-        return false;
-      }
-    } else {
-      is_first_frame_to_lane_borrow_ = false;
     }
   }
 
@@ -801,7 +814,7 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
         frenet_obstacle_sl.l_start > left_width) {  // away from cur lane
       continue;
     } else {
-      if (obstacle->obstacle()->velocity() > 4.2 && obstacle->obstacle()->velocity() > 0.5 * ego_speed_) {
+      if (obstacle->obstacle()->velocity() > 4.2) {
         continue;
       }
     }
@@ -827,30 +840,111 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
   return true;
 }
 
-bool LaneBorrowDecider::CheckDynamicCutin(){
+bool LaneBorrowDecider::UpdateDynamicBlockingObstacles() {
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
-  if(static_blocked_obstacles_.empty()||static_blocked_obj_id_vec_.empty()){
-    lane_borrow_decider_output_.lane_borrow_failed_reason = NO_PASSABLE_OBSTACLE;
+  if (static_blocked_obstacles_.empty() || static_blocked_obj_id_vec_.empty()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        NO_PASSABLE_OBSTACLE;
     return false;
   }
   // 逆序 防止删除后跳过
-  for(int i = static_blocked_obstacles_.size()-1;i >= 0; --i){
+  for (int i = static_blocked_obstacles_.size() - 1; i >= 0; --i) {
     int blocked_obs_id = static_blocked_obj_id_vec_[i];
     const auto& agent = agent_mgr->GetAgent(blocked_obs_id);
-    bool cut_in = false;
-    //
-    //.....//
-    //
-    if(cut_in){
+    if (agent == nullptr) {
+      lane_borrow_decider_output_.lane_borrow_failed_reason = AGENT_MGR_FAILED;
+      return false;
+    }
+    bool is_cut_in = false;
+    bool is_cut_out = false;
+    if (agent->speed() < 4.2) {
+      CheckKeyObstaclesIntention(agent, is_cut_in, is_cut_out);
+    }
+    if (is_cut_in || is_cut_out) {
       static_blocked_obstacles_.erase(static_blocked_obstacles_.begin() + i);
       static_blocked_obj_id_vec_.erase(static_blocked_obj_id_vec_.begin() + i);
     }
   }
-   if(static_blocked_obstacles_.empty()||static_blocked_obj_id_vec_.empty()){
-    lane_borrow_decider_output_.lane_borrow_failed_reason = CUTIN_RISK;
+  if (static_blocked_obstacles_.empty() || static_blocked_obj_id_vec_.empty()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason = CUTINOUT_RISK;
     return false;
   }
   return true;
+}
+
+void LaneBorrowDecider::CheckKeyObstaclesIntention(const agent::Agent* agent,
+                                                   bool& is_cut_in,
+                                                   bool& is_cut_out) {
+  std::vector<planning_math::Vec2d> obs_corners;
+  const auto& obs_box = agent->box();
+  obs_corners = obs_box.GetAllCorners();
+  std::vector<double> agent_sl_boundary(4);
+  agent_sl_boundary.at(0) = std::numeric_limits<double>::lowest();
+  agent_sl_boundary.at(1) = std::numeric_limits<double>::max();
+  agent_sl_boundary.at(2) = std::numeric_limits<double>::lowest();
+  agent_sl_boundary.at(3) = std::numeric_limits<double>::max();
+  for (size_t i = 0; i < obs_corners.size(); ++i) {
+    double project_s = 0.0, project_l = 0.0;
+    current_reference_path_ptr_->get_frenet_coord()->XYToSL(
+        obs_corners[i].x(), obs_corners[i].y(), &project_s,
+        &project_l);  // 这是投影在路径上的 障碍物角点
+    agent_sl_boundary.at(3) = std::fmin(agent_sl_boundary.at(3), project_l);
+    agent_sl_boundary.at(2) = std::fmax(agent_sl_boundary.at(2), project_l);
+    agent_sl_boundary.at(1) = std::fmin(agent_sl_boundary.at(1), project_s);
+    agent_sl_boundary.at(0) = std::fmax(agent_sl_boundary.at(0), project_s);
+  }
+  double MinCentricOffset = 0.0;
+  const double obs_center_l =
+      0.5 * (agent_sl_boundary[2] + agent_sl_boundary[3]);
+  // 获取障碍物的预测轨迹
+  const auto& obs_trajectories = agent->trajectories();
+  if (!obs_trajectories.empty() && !obs_trajectories[0].empty()) {
+    for (size_t j = 0; j < obs_trajectories[0].size(); j = j + 3) {
+      const auto& point = obs_trajectories[0][j];
+      SLPoint obs_sl;
+      current_reference_path_ptr_->get_frenet_coord()->XYToSL(
+          point.x(), point.y(), &obs_sl.s, &obs_sl.l);
+      if (j <= 13) {  // 0 3 6 9 12 15 18 21 24   0-5s
+        MinCentricOffset = kPreCentricOffsetHigh;
+      } else {
+        MinCentricOffset = kPreCentricOffsetLow;
+      }
+      // 判断是否切入自车车道
+      // 判断是否切入自车车道
+      if (lane_borrow_status_ != kLaneBorrowCrossing) {
+        if (std::fabs(obs_sl.l) < MinCentricOffset &&
+            agent_sl_boundary[1] - ego_frenet_boundary_.s_end < 20) {
+          is_cut_in = true;
+          break;
+        }
+
+        if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW &&
+            obs_center_l - obs_sl.l > 0.5) {
+          is_cut_out = true;
+        } else if (lane_borrow_decider_output_.borrow_direction ==
+                       RIGHT_BORROW &&
+                   obs_center_l - obs_sl.l < -0.5) {
+          is_cut_out = true;
+        }
+
+      } else {
+        if (std::fabs(obs_center_l) < kPreCentricOffsetHigh &&
+            agent_sl_boundary[1] - ego_frenet_boundary_.s_end <
+                20) {  // status == crossing   center_obs
+          if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW &&
+              agent_sl_boundary[2] - obs_sl.l <
+                  -current_lane_ptr_->width() * 0.5) {
+            is_cut_in = true;
+          } else if (lane_borrow_decider_output_.borrow_direction ==
+                         RIGHT_BORROW &&
+                     agent_sl_boundary[3] - obs_sl.l >
+                         current_lane_ptr_->width() * 0.5) {
+            is_cut_in = true;
+          }
+        }
+      }
+    }
+  }
 }
 // v2
 bool LaneBorrowDecider::ObstacleDecision() {
@@ -886,6 +980,9 @@ bool LaneBorrowDecider::ObstacleDecision() {
   const auto& front_obstacle_sl =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary();
   const auto& id = static_blocked_obstacles_[0]->obstacle()->id();
+  const double front_obs_center_l =
+      0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
+  lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
   BorrowDirection front_obs_bypass_direction =
       GetBypassDirection(front_obstacle_sl, id);
   if (lane_borrow_status_ == LaneBorrowStatus::kLaneBorrowCrossing) {
@@ -1139,8 +1236,7 @@ Point2D LaneBorrowDecider::CartesianRotation(const Point2D& Cartesian_point,
       Cartesian_point.x * sin_theta + Cartesian_point.y * cos_theta + ego_y};
 };
 
-bool LaneBorrowDecider::CheckBackWardObs(){
-
+bool LaneBorrowDecider::CheckBackWardObs() {
   double left_right_bounds_l = 0.0;
   double left_left_bounds_l = 0.0;
 
@@ -1155,6 +1251,27 @@ bool LaneBorrowDecider::CheckBackWardObs(){
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
+  if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
+    left_right_bounds_l = current_left_lane_width;
+    const double neighbor_width =
+        left_lane_ptr_->width(vehicle_param.front_edge_to_rear_axle);
+    // neighbor lane width
+    neighbor_left_width = neighbor_width * 0.5;
+    neighbor_right_width = neighbor_width * 0.5;
+
+    // Calculate the total width that can be borrowed from the left lane
+    left_left_bounds_l =
+        current_left_lane_width + neighbor_right_width + neighbor_left_width;
+  } else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
+    right_left_bounds_l = -current_right_lane_width;
+    const double neighbor_width =
+        right_lane_ptr_->width(vehicle_param.front_edge_to_rear_axle);
+    neighbor_left_width = neighbor_width * 0.5;
+    neighbor_right_width = neighbor_width * 0.5;
+    right_right_bounds_l =
+        -current_right_lane_width - neighbor_left_width - neighbor_right_width;
+  }
+
   for (const auto& obstacle : obstacles) {
     int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
@@ -1171,51 +1288,60 @@ bool LaneBorrowDecider::CheckBackWardObs(){
 
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
-
-      if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW){
-        left_right_bounds_l = current_left_lane_width;
-        const double neighbor_width =
-            left_lane_ptr_->width(vehicle_param.front_edge_to_rear_axle);
-        // neighbor lane width
-        neighbor_left_width = neighbor_width * 0.5;
-        neighbor_right_width = neighbor_width * 0.5;
-
-        // Calculate the total width that can be borrowed from the left lane
-        left_left_bounds_l =
-            current_left_lane_width + neighbor_right_width + neighbor_left_width;
-        if(frenet_obstacle_sl.l_start > left_left_bounds_l || frenet_obstacle_sl.l_end < left_right_bounds_l){
+      if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
+        if (frenet_obstacle_sl.l_start > left_left_bounds_l ||
+            frenet_obstacle_sl.l_end < left_right_bounds_l) {
           continue;
         }
-      }else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
-        right_left_bounds_l = -current_right_lane_width;
-        const double neighbor_width =
-            right_lane_ptr_->width(vehicle_param.front_edge_to_rear_axle);
-        neighbor_left_width = neighbor_width * 0.5;
-        neighbor_right_width = neighbor_width * 0.5;
-        right_right_bounds_l =
-            -current_right_lane_width - neighbor_left_width - neighbor_right_width;
-        if(frenet_obstacle_sl.l_end < right_right_bounds_l || frenet_obstacle_sl.l_start > right_left_bounds_l){
+      } else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
+        if (frenet_obstacle_sl.l_end < right_right_bounds_l ||
+            frenet_obstacle_sl.l_start > right_left_bounds_l) {
           continue;
         }
       }
-
       double obstacle_v = obstacle->velocity();
       double relative_speed = ego_speed_ - obstacle_v;
       double dist = ego_frenet_boundary_.s_start - frenet_obstacle_sl.s_end;
-      if (std::abs(relative_speed) <= 0.3) {  // ego_v ≤ obs_v
-          continue;
-      } else if(ego_speed_ < obstacle_v){                 // ego_v < obs_v
+      if (std::abs(relative_speed) <= 0.3 &&
+          dist > 1.5 * vehicle_param.length) {  // ego_v ≤ obs_v
+        continue;
+      } else if (std::abs(relative_speed) <= 0.3 &&
+                 dist <= 1.5 * vehicle_param.length) {
+        lane_borrow_decider_output_.lane_borrow_failed_reason =
+            NEARBY_OBSTACLE_TOO_CLOSE;
+        lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+        return false;
+      } else if (ego_speed_ < obstacle_v) {     // ego_v < obs_v
         double TTC = dist / (-relative_speed);  // 分母取正
         if (TTC >= kMaxConcernCollisionTime) {
-            continue;
+          continue;
         } else {
-          lane_borrow_decider_output_.lane_borrow_failed_reason = BACKWARD_OBSTACLE_TOO_CLOSE;
-          lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+          lane_borrow_decider_output_.lane_borrow_failed_reason =
+              BACKWARD_OBSTACLE_TOO_CLOSE;
+          lane_borrow_decider_output_.failed_obs_id =
+              obstacle->obstacle()->id();
           return false;
         }
-      }else{
+      } else {
         continue;
       }
+    } else if (frenet_obstacle_sl.s_start <
+               ego_frenet_boundary_.s_end + vehicle_param.length) {
+      if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
+        if (frenet_obstacle_sl.l_start > left_left_bounds_l ||
+            frenet_obstacle_sl.l_end < left_right_bounds_l) {
+          continue;
+        }
+      } else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
+        if (frenet_obstacle_sl.l_end < right_right_bounds_l ||
+            frenet_obstacle_sl.l_start > right_left_bounds_l) {
+          continue;
+        }
+      }
+      lane_borrow_decider_output_.lane_borrow_failed_reason =
+          NEARBY_OBSTACLE_TOO_CLOSE;
+      lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+      return false;
     }
   }
   return true;
@@ -1287,6 +1413,8 @@ void LaneBorrowDecider::LogDebugInfo() {
   }
 
   lane_borrow_pb_info->set_intersection_state(intersection_state_);
+  lane_borrow_pb_info->set_safe_left_borrow(left_borrow_);
+  lane_borrow_pb_info->set_safe_right_borrow(right_borrow_);
 }
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning

@@ -49,14 +49,14 @@ class DPRoadGraph : public Task {
         min_cost_curve_ = curve;
       }
     }
-      void Reset(){
+    void Reset() {
       min_cost_prev_node_ = nullptr;
-      min_cost_ = ComparableCost{true, true,
-                             std::numeric_limits<double>::infinity(),
-                             std::numeric_limits<double>::infinity(),
-                             std::numeric_limits<double>::infinity()};
+      min_cost_ =
+          ComparableCost{true, true, std::numeric_limits<double>::infinity(),
+                         std::numeric_limits<double>::infinity(),
+                         std::numeric_limits<double>::infinity()};
       min_cost_curve_ = planning_math::QuinticPolynomialCurve1d();
-  }
+    }
   };
 
  public:
@@ -153,6 +153,8 @@ class DPRoadGraph : public Task {
   bool LastFramePath();
   void LogDebugInfo();
   void ClearDPInfo();
+  std::shared_ptr<planning_math::KDPath> ConstructLaneBorrowKDPath(
+      const std::vector<double>& x_vec, const std::vector<double>& y_vec);
 
   // inputs methods
   // Setters

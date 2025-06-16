@@ -22,8 +22,8 @@ namespace {
 constexpr double kMaxLateralRange = 5.0;
 constexpr double kMaxLongitRange = 100.0;
 constexpr double kMinLongitRange = 25.0;
-constexpr double kMaxNudgingSpeed = 4.2; //15 kph
-};  // namespace
+constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
+};                                        // namespace
 
 namespace planning {
 bool DPRoadGraph::Execute() {
@@ -133,7 +133,8 @@ bool DPRoadGraph::ProcessEnvInfos() {
     if (agent->is_static()) {
       // sl meaasge
       if (std::fabs(0.5 * (agent_sl_boundary[3] + agent_sl_boundary[2]) -
-                    ego_l_) > kMaxLateralRange) {  // tmp: should according to boundary
+                    ego_l_) >
+          kMaxLateralRange) {  // tmp: should according to boundary
         continue;
       }
       // ahead 100m after 15m static filtered
@@ -147,8 +148,8 @@ bool DPRoadGraph::ProcessEnvInfos() {
       obstacles_info_.emplace_back(
           std::move(static_obs_info));  // just log info
       static_obstacles_box_.emplace_back(obs_box);
-    } else if (agent->speed() < kMaxNudgingSpeed || agent->speed() <  0.5 * ego_v_) {  // slow dynamic filter
-                                        // filtered backward dynamic obs
+    } else if (agent->speed() < kMaxNudgingSpeed) {  // slow dynamic filter
+      // filtered backward dynamic obs
       if (!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end ||
             agent_sl_boundary[2] < ego_frenet_boundary_.l_start) &&
           agent_sl_boundary[0] < ego_frenet_boundary_.s_start) {
@@ -236,11 +237,9 @@ bool DPRoadGraph::DPSearchPath(const LaneBorrowStatus lane_borrow_status) {
   //     init_sl_point_, sample_left_boundary_, sample_right_boundary_, config_,
   //     ref_path_curve_, flatted_dynamic_obstacles_box_, static_obstacles_box_,
   //     left_lane_ptr_, right_lane_ptr_, current_lane_ptr_, ego_frenet_state_);
-    TrajectoryCost trajectory_cost(
-      config_,session_,init_sl_point_,
-      ref_path_curve_,
-      flatted_dynamic_obstacles_box_, static_obstacles_box_
-      );
+  TrajectoryCost trajectory_cost(
+      config_, session_, init_sl_point_, ref_path_curve_,
+      flatted_dynamic_obstacles_box_, static_obstacles_box_);
 
   trajectory_cost.SetCostParams(coeff_l_cost_, coeff_dl_cost_, coeff_ddl_cost_,
                                 path_resolution_, coeff_end_l_cost_,
@@ -296,10 +295,10 @@ bool DPRoadGraph::DPSearchPath(const LaneBorrowStatus lane_borrow_status) {
         planning_math::QuinticPolynomialCurve1d curve(
             prev_sl_point.l, init_dl, init_ddl, cur_point.l, 0.0, 0.0,
             cur_point.s - prev_sl_point.s);  // s=0 s=sf
-        const auto cost =
-            trajectory_cost.Calculate(curve, prev_sl_point.s, cur_point.s,
-                                      level, sampled_points_.size() - 1,lane_borrow_status) +
-            prev_dp_node.min_cost_;
+        const auto cost = trajectory_cost.Calculate(
+                              curve, prev_sl_point.s, cur_point.s, level,
+                              sampled_points_.size() - 1, lane_borrow_status) +
+                          prev_dp_node.min_cost_;
         cur_node.UpdateCost(cost, &prev_dp_node, curve);
         // record
         iter_num_++;
@@ -318,14 +317,16 @@ bool DPRoadGraph::DPSearchPath(const LaneBorrowStatus lane_borrow_status) {
   //   fake_head.UpdateCost(cur_dp_node.min_cost_, &cur_dp_node,
   //                        cur_dp_node.min_cost_curve_);
   // }
-   for( int i = graph_nodes.size() - 1; i >=0; --i){
-    for (const auto& cur_dp_node :graph_nodes[i]) {  // 实际只是选择到达最后一层中代价最小的一个节点
+  for (int i = graph_nodes.size() - 1; i >= 2; --i) {
+    for (const auto& cur_dp_node :
+         graph_nodes[i]) {  // 实际只是选择到达最后一层中代价最小的一个节点
       fake_head.UpdateCost(cur_dp_node.min_cost_, &cur_dp_node,
-                         cur_dp_node.min_cost_curve_);
+                           cur_dp_node.min_cost_curve_);
     }
-    if(fake_head.min_cost_.has_collision_ == false && fake_head.min_cost_.out_boundary_ == false){
+    if (fake_head.min_cost_.has_collision_ == false &&
+        fake_head.min_cost_.out_boundary_ == false) {
       break;
-    }else{
+    } else {
       fake_head.Reset();
     }
   }
@@ -411,7 +412,8 @@ bool DPRoadGraph::CartSpline(
   if (refined_paths_.size() < 2) {
     return false;
   }
-  last_frame_paths_ = refined_paths_;  // last paths is not  updated until CartSpline
+  last_frame_paths_ =
+      refined_paths_;  // last paths is not  updated until CartSpline
 
   for (const auto& path_point : refined_paths_) {
     double cur_s = path_point.s();
@@ -425,6 +427,8 @@ bool DPRoadGraph::CartSpline(
   ref_path_curve_.x_s_spline.set_points(s_vec, x_vec);
   ref_path_curve_.y_s_spline.set_points(s_vec, y_vec);
 
+  lane_borrow_decider_output->dp_path_coord =
+      ConstructLaneBorrowKDPath(x_vec, y_vec);
   lane_borrow_decider_output->dp_path_ref = ref_path_curve_;
   return true;
 }
@@ -529,18 +533,18 @@ bool DPRoadGraph::SampleLanes(
           -current_lane_ptr_->width_by_s(s_step) * 0.5 + vehicle_width_ * 0.5;
     }
     if (left_lane_ptr_ != nullptr) {
-      if (lane_borrow_decider_output->lane_borrow_state == kLaneBorrowCrossing)
-      {
+      if (lane_borrow_decider_output->lane_borrow_state ==
+          kLaneBorrowCrossing) {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
-      }else{
+      } else {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
       }
     }
     if (right_lane_ptr_ != nullptr) {
-      if (lane_borrow_decider_output->lane_borrow_state == kLaneBorrowCrossing)
-      {
+      if (lane_borrow_decider_output->lane_borrow_state ==
+          kLaneBorrowCrossing) {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
-      }else{
+      } else {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;
       }
     }
@@ -665,7 +669,7 @@ bool DPRoadGraph::LastFramePath() {
   return true;
 }
 
-void DPRoadGraph::ClearDPInfo(){
+void DPRoadGraph::ClearDPInfo() {
   obstacles_info_.clear();
   static_obstacles_box_.clear();
   flatted_dynamic_obstacles_box_.clear();
@@ -673,6 +677,31 @@ void DPRoadGraph::ClearDPInfo(){
   // sampled_points_.clear();
   dp_selected_points_.clear();
   min_cost_path_.clear();
+}
+std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
+    const std::vector<double>& x_vec, const std::vector<double>& y_vec) {
+  std::vector<planning_math::PathPoint> dp_path_points;
+  dp_path_points.reserve(x_vec.size());
+  for (int i = 0; i <= x_vec.size() - 1; ++i) {
+    if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
+      LOG_ERROR("skip NaN point");
+      continue;
+    }
+    planning_math::PathPoint path_point{x_vec[i], y_vec[i]};
+    dp_path_points.emplace_back(path_point);
+    if (!dp_path_points.empty()) {
+      auto& last_pt = dp_path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - path_point.x(),
+                               last_pt.y() - path_point.y())
+              .Length() < 1e-3) {
+        continue;
+      }
+    }
+  }
+  if (dp_path_points.size() <= 2) {
+    return nullptr;
+  }
+  return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));
 }
 
 void DPRoadGraph::LogDebugInfo() {
