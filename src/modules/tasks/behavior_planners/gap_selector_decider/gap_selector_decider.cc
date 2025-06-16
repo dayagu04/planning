@@ -307,6 +307,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
   auto &gap_selector_decider_output =
       session_->mutable_planning_context()
           ->mutable_gap_selector_decider_output();
+  gap_selector_decider_output.is_quitic_spline_change_to_center_line = false;
   bool is_lc_scene{false};
   bool is_lc_back_scene{false};
   bool is_lh_scene{false};
@@ -448,6 +449,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
     double lc_end_s, remain_lh_time = lh_total_time_ - lh_timer_;
     gap_selector_decider_output.gap_selector_trustworthy = true;
     if (remain_lh_time < 1.0) {
+      gap_selector_decider_output.is_quitic_spline_change_to_center_line = true;
       GenerateLHTrajectory(traj_points, avoid_lat_offset);
 
     } else {
