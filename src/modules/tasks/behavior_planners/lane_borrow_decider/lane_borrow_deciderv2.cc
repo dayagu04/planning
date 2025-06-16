@@ -1413,6 +1413,8 @@ void LaneBorrowDecider::LogDebugInfo() {
   }
 
   lane_borrow_pb_info->set_intersection_state(intersection_state_);
+  lane_borrow_pb_info->set_safe_left_borrow(left_borrow_);
+  lane_borrow_pb_info->set_safe_right_borrow(right_borrow_);
 }
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning
