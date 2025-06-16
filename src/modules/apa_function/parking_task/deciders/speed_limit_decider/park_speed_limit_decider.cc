@@ -50,16 +50,16 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
   for (size_t i = 0; i < path_point_size; ++i) {
     const double path_s = path.at(i).s;
     const pnc::geometry_lib::PathPoint& point = path[i];
-    speed_limit = config_.default_cruise_speed_;
+    speed_limit = config_.default_cruise_speed;
 
     if (i + 1 < path_point_size) {
       const pnc::geometry_lib::PathPoint& next_point = path[i + 1];
 
       // speed limit from path curvature switch
       if (std::fabs(point.kappa - next_point.kappa) >
-          config_.kappa_switch_in_path_point_) {
+          config_.kappa_switch_in_path_point) {
         speed_limit =
-            std::min(speed_limit, config_.speed_limit_by_kappa_switch_);
+            std::min(speed_limit, config_.speed_limit_by_kappa_switch);
 
         speed_limit_decision.decision_speed = speed_limit;
         speed_limit_decision.reason_code = LonDecisionReason::PATH_KAPPA_SWITCH;
@@ -70,10 +70,14 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     }
 
     // speed limit from nudge obstacles
-    if (point.dist_to_obs < config_.obs_dist_thresh_) {
+    if (point.dist_to_obs < config_.obs_dist_upper) {
       double dist = std::max(0.0, point.dist_to_obs);
-      speed_limit = config_.speed_limit_lower_by_obs_ +
-                    config_.first_order_param_by_obs_ * dist;
+      if (dist < config_.obs_dist_lower) {
+        speed_limit = config_.speed_limit_lower_by_obs;
+      } else {
+        speed_limit = config_.zero_order_param_by_obs +
+                      config_.first_order_param_by_obs * dist;
+      }
 
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code = LonDecisionReason::CLOSE_TO_OBSTACLE;
@@ -83,9 +87,9 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     }
 
     // speed limit from path kappa
-    if (point.kappa > config_.kappa_thresh_ ||
-        point.kappa < -config_.kappa_thresh_) {
-      speed_limit = std::min(speed_limit, config_.speed_limit_by_kappa_);
+    if (point.kappa > config_.kappa_thresh ||
+        point.kappa < -config_.kappa_thresh) {
+      speed_limit = std::min(speed_limit, config_.speed_limit_by_kappa);
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code = LonDecisionReason::PATH_KAPPA;
       speed_limit_decision.path_s = path_s;
@@ -103,7 +107,7 @@ void ParkSpeedLimitDecider::PublishDebugInfo(
     const std::vector<pnc::geometry_lib::PathPoint>& path) {
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
-  speed_debug->set_ref_cruise_speed(config_.default_cruise_speed_);
+  speed_debug->set_ref_cruise_speed(config_.default_cruise_speed);
 
   return;
 }
