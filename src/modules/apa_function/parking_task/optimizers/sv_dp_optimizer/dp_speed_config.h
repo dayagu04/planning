@@ -43,7 +43,7 @@ struct DpSpeedConfig {
 
   double s_interpolate_step;
 
-  void Init();
+  void Init(const double path_length);
 };
 }  // namespace apa_planner
 }  // namespace planning

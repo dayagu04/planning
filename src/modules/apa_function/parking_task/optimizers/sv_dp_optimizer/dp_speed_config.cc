@@ -1,10 +1,11 @@
 #include "dp_speed_config.h"
 
 #include "apa_param_config.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
-void DpSpeedConfig::Init() {
+void DpSpeedConfig::Init(const double path_length) {
   const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
 
   dp_cruise_speed = speed_config.default_cruise_speed;
@@ -21,7 +22,12 @@ void DpSpeedConfig::Init() {
   extreme_short_path_thresh = speed_config.min_path_dist_for_speed_optimizer;
 
   // acc cost
-  acceleration_limit = speed_config.acc_upper;
+  if (path_length > speed_config.path_thresh_for_acc_bound) {
+    acceleration_limit = speed_config.long_path_acc_upper;
+  } else {
+    acceleration_limit = speed_config.short_path_acc_upper;
+  }
+
   deceleration_limit = speed_config.acc_lower;
   advised_acceleration = 0.5;
   advised_deceleration = -0.2;
@@ -40,6 +46,20 @@ void DpSpeedConfig::Init() {
   enter_apa_speed_margin = 10.0;
 
   s_interpolate_step = 0.02;
+
+  // update resolution
+  if (path_length > long_path_thresh) {
+    unit_v = unit_v_for_long_path;
+    unit_s = unit_s_for_long_path;
+  } else if (path_length > extreme_short_path_thresh) {
+    unit_v = unit_v_for_short_path;
+    unit_s = unit_s_for_short_path;
+  } else {
+    unit_v = unit_v_for_extream_short_path;
+    unit_s = unit_s_for_extream_short_path;
+
+    ILOG_INFO << "need use jlt speed profile";
+  }
 
   return;
 }

@@ -1001,14 +1001,24 @@ void SyncParkingParameters(const bool is_simulation) {
                   "default_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.min_cruise_speed, double,
                   "min_cruise_speed");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.obs_dist_for_speed_limit,
-                  double, "obs_dist_for_speed_limit");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.min_speed_limit_by_obs_dist,
+                  double, "min_speed_limit_by_obs_dist");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa, double,
+                  "speed_limit_by_kappa");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa_switch,
+                  double, "speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_obs_dist,
+                  double, "speed_limit_by_obs_dist");
   JSON_READ_VALUE(
       apa_param.SetPram().speed_config.min_path_dist_for_speed_optimizer,
       double, "min_path_dist_for_speed_optimizer");
   JSON_READ_VALUE(
       apa_param.SetPram().speed_config.min_path_dist_for_veh_starting, double,
       "min_path_dist_for_veh_starting");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.optimizer_time_limit, double,
+                  "optimizer_time_limit");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.use_remain_dist, bool,
+                  "use_remain_dist");
 
   // hybrid a star params
   JSON_READ_VALUE(

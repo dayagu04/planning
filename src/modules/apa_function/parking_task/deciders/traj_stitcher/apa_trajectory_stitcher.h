@@ -27,10 +27,10 @@ class ApaTrajectoryStitcher {
    * [in]: ego_v, (-inf, +inf)
    */
   void Execute(const Pose2D& ego_pose,
-               const std::vector<pnc::geometry_lib::PathPoint>& path,
+               const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
                const double front_wheel_angle, const SVPoint& ego_lon_point,
                const double predict_horizon,
-               const trajectory::Trajectory& trajectory,
+               const trajectory::Trajectory& history_trajectory,
                const pnc::geometry_lib::PathSegGear gear);
 
   const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchPath() const;
@@ -106,6 +106,8 @@ class ApaTrajectoryStitcher {
                           const size_t min_dist_point_neighbor_id);
 
   void GeneSpeedPointFromVehicleState(const SVPoint& init_point);
+
+  void SmoothLonDelay();
 
  private:
   SVPoint ego_lon_state_;

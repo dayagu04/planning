@@ -36,7 +36,7 @@ class DpSpeedOptimizer : public ParkingTask {
               const SpeedDecisions* speed_decisions,
               const SpeedLimitProfile* speed_limit_profile);
 
-  bool Init() override;
+  bool Init(const double path_length);
 
   const SpeedData& SpeedProfile() const { return speed_data_; }
 

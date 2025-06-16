@@ -36,6 +36,23 @@ enum SpeedProfileType {
   SV_DP = 4;
 }
 
+enum StopSignType {
+  USS_POINT_CLOUD_COLLISION = 1;
+  PATH_TERMINAL = 2;
+  STATIC_OCC_COLLISION = 3;
+  DYNAMIC_OCC_COLLISION = 4;
+  GROUD_LINE_COLLISION = 5;
+  STATIC_POLYGON_OBJECT = 6;
+  DYNAMIC_POLYGON_OBJECT = 7;
+  LIMITER_COLLISION = 8;
+  SLOT_POSE_CHANGE = 10;
+}
+
+message ApaStopSign {
+  optional Pose2d stop_pose = 1;
+  optional StopSignType type = 2;
+}
+
 message ApaSpeedDebug {
   optional SVGraphSpeedConstraint dp_speed_constraint = 1;
   optional double ref_cruise_speed = 2;
@@ -44,4 +61,5 @@ message ApaSpeedDebug {
   repeated StPoint2D qp_profile = 5;
   repeated StPoint2D jlt_profile = 6;
   optional SpeedProfileType speed_type = 7;
+  repeated ApaStopSign stop_signs = 8;
 }

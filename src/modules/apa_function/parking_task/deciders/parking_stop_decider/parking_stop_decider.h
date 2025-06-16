@@ -13,6 +13,7 @@
 
 namespace planning {
 namespace apa_planner {
+
 // If bycle/car/human is passing, need add a stop decision.
 // If planning/prediction path is collided, need add a stop decision.
 // If path point is a end point, need add a stop decision.
@@ -40,12 +41,17 @@ class ParkingStopDecider : public ParkingTask {
    * relationship, ego need add caution decision in speed_limit_decider.
    */
   void Execute(const SVPoint& init_point,
-               const std::vector<pnc::geometry_lib::PathPoint>& path);
+               const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
+               const std::vector<pnc::geometry_lib::PathPoint>& control_path,
+               const pnc::geometry_lib::PathSegGear gear);
 
-  void AddStopDecisionByDistance(const double stop_s,
-                                 const LonDecisionReason decision_reason);
+  void AddStopDecisionByDistance(
+      const double stop_s, const LonDecisionReason decision_reason,
+      const std::vector<pnc::geometry_lib::PathPoint>& lateral_path);
 
   const ParkLonDecision& GetStopDecision() const { return stop_decision_; }
+
+  const double GetStopDecisionS();
 
  private:
   void AddStopDecisionByControlPath(
@@ -56,7 +62,8 @@ class ParkingStopDecider : public ParkingTask {
       const std::vector<pnc::geometry_lib::PathPoint>& path);
 
   void AddDecisionByObstacle(
-      const std::vector<pnc::geometry_lib::PathPoint>& path);
+      const std::vector<pnc::geometry_lib::PathPoint>& path,
+      const bool check_extend_path);
 
   void TaskDebug();
 
@@ -82,6 +89,11 @@ class ParkingStopDecider : public ParkingTask {
   void ComputeSTBoundary(std::vector<pnc::geometry_lib::PathPoint>& path,
                          ApaObstacle& obstacle);
 
+  void PathDebug(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
+  void RecordDebugInfo(
+      const std::vector<pnc::geometry_lib::PathPoint>& lateral_path);
+
  private:
   std::shared_ptr<apa_planner::CollisionDetectorInterface>
       col_det_interface_ptr_;
@@ -102,6 +114,8 @@ class ParkingStopDecider : public ParkingTask {
   SVPoint init_point_;
 
   ParkStopConfig config_;
+
+  pnc::geometry_lib::PathSegGear gear_;
 };
 }  // namespace apa_planner
 }  // namespace planning

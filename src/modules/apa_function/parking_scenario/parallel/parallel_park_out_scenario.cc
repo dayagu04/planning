@@ -888,6 +888,8 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   for (const auto& path_point : path_planner_output.path_point_vec) {
     global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
                      ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+    global_point.s = path_point.s;
+    global_point.kappa = path_point.kappa;
 
     current_path_point_global_vec_.emplace_back(global_point);
   }

@@ -200,7 +200,6 @@ class ParkingScenario {
       remain_dist_obs = 5.01;
       remain_dist_col_det = 5.01;
       remain_dist_slot_jump = 5.01;
-      vel_target = 1.168;
       car_already_move_dist = 0.0;
       current_path_last_point_heading = 0.0;
       spline_success = false;
@@ -265,7 +264,6 @@ class ParkingScenario {
     double current_path_length = 0.0;
     double headin_current_path_length = 0.0;
     double path_extended_dist = 1.0;
-    double vel_target = 1.168;
     double stuck_time = 0.0;
     // stuck by static obs
     double stuck_obs_time = 0.0;
@@ -409,7 +407,6 @@ class ParkingScenario {
   virtual void GenPlanningHmiOutput();
   // No speed planning method.
   virtual void SetPlanningPath();
-  void SetPlanningTraj();
 
   virtual const double CalRemainDistFromPath();
   virtual const double CalRemainDistFromObs(

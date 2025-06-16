@@ -494,22 +494,20 @@ static const int CopyVirtualWallForPlot(
   return 0;
 }
 
-const bool PlanOnce(py::bytes &func_statemachine_bytes,
-                    py::bytes &parking_slot_info_bytes,
-                    py::bytes &localization_info_bytes,
-                    py::bytes &vehicle_service_output_info_bytes,
-                    py::bytes &uss_wave_info_bytes,
-                    py::bytes &uss_perception_info_bytes,
-                    py::bytes &ground_line_bytes, py::bytes &fus_objs,
-                    py::bytes &fus_occ_obj_msg_bytes, int select_id,
-                    bool force_plan, bool is_path_optimization,
-                    bool is_cilqr_optimization, bool is_reset,
-                    bool is_complete_path, double sample_ds,
-                    std::vector<double> target_managed_slot_x_vec,
-                    std::vector<double> target_managed_slot_y_vec,
-                    std::vector<double> target_managed_limiter_x_vec,
-                    std::vector<double> target_managed_limiter_y_vec,
-                    const int path_plan_method, const int swap_start_goal) {
+const bool PlanOnce(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &ground_line_bytes, py::bytes &fus_objs,
+    py::bytes &fus_occ_obj_msg_bytes, py::bytes &control_output_bytes,
+    int select_id, bool force_plan, bool is_path_optimization,
+    bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
+    double sample_ds, std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec,
+    const int path_plan_method, const int swap_start_goal) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -580,6 +578,10 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
           uss_perception_info_bytes);
 
+  iflyauto::ControlOutput control_output_info =
+      BytesToStruct<iflyauto::ControlOutput, struct_msgs::ControlOutput>(
+          control_output_bytes);
+
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
@@ -589,6 +591,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   local_view.ground_line_perception = ground_line_info;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
+  local_view.control_output = control_output_info;
 
   double copy_data_time = IflyTime::Now_us();
   ILOG_INFO << " copy data time ms " << (copy_data_time - start_time) / 1000.0;

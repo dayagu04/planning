@@ -375,11 +375,15 @@
   "max_replan_number_inside_slot": 15,
 
   "enable_apa_speed_plan" : false,
-  "default_cruise_speed" : 0.9,
+  "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.4,
-  "obs_dist_for_speed_limit" : 0.4,
+  "speed_limit_by_kappa" : 0.7,
+  "speed_limit_by_kappa_switch" : 0.5,
+  "min_speed_limit_by_obs_dist" : 0.4,
   "min_path_dist_for_speed_optimizer" : 0.25,
   "min_path_dist_for_veh_starting" : 0.1,
+  "optimizer_time_limit" : 0.4,
+  "use_remain_dist" : true,
 
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 4.5,

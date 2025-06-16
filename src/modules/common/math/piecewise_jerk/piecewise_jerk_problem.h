@@ -87,7 +87,7 @@ class PiecewiseJerkProblem {
   void set_end_state_ref(const std::array<double, 3>& weight_end_state,
                          const std::array<double, 3>& end_state_ref);
 
-  virtual bool Optimize(const int max_iter);
+  virtual bool Optimize(const int max_iter, const double max_time);
 
   const std::vector<double>& opt_x() const { return x_; }
 
@@ -161,7 +161,7 @@ class PiecewiseJerkProblem {
   std::array<double, 3> weight_end_state_ = {{0.0, 0.0, 0.0}};
   std::array<double, 3> end_state_;
 
-  bool has_end_state_constriants_;
+  bool has_end_state_constriants_ = false;
 };
 
 }  // namespace planning

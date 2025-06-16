@@ -14,7 +14,9 @@ struct PiecewiseJerkSpeedQPConfig {
   // If path is short, qp is not valid because of discret time nodes.
   double enable_qp_by_path_length;
 
-  int optimizer_variable_num;
+  double time_resolution;
+  double time_horizon;
+  double optimizer_time_limit;
 
   void Init();
 };

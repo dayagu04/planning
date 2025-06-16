@@ -39,14 +39,12 @@ class UssObstacleAvoidance {
 
   struct RemainDistInfo {
     double remain_dist = 3.0;
-    double vel_target = 2.0;
     size_t car_index = 0;
     int uss_index = 0;
     bool is_available = false;
 
     void Reset() {
       remain_dist = 3.0;
-      vel_target = 2.0;
       car_index = 0;
       uss_index = 0;
       is_available = false;

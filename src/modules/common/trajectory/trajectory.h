@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "trajectory_point.h"
 #include "apa_debug_data.pb.h"
+#include "trajectory_point.h"
 
 namespace planning {
 namespace trajectory {
@@ -45,6 +45,15 @@ class Trajectory : public std::vector<TrajectoryPoint> {
 
   void Clear();
 
+  void SetStopS(const double s) {
+    stop_decision_s_ = s;
+    return;
+  }
+
+  const double GetStopS() const { return stop_decision_s_; }
+
+  void ExtendTraj(const double length);
+
   bool traj_elements_vec_ready_flag_ = false;
   std::vector<double> x_vec_{};
   std::vector<double> y_vec_{};
@@ -57,6 +66,8 @@ class Trajectory : public std::vector<TrajectoryPoint> {
   // 2: drive;
   // 3: parking;
   int gear_;
+
+  double stop_decision_s_;
 };
 
 }  // namespace trajectory

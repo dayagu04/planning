@@ -56,7 +56,7 @@ class ParkSpeedLimitDecider : public ParkingTask {
     return speed_limit_profile_;
   }
 
-  const double GetCruiseSpeed() const { return config_.default_cruise_speed_; }
+  const double GetCruiseSpeed() const { return config_.default_cruise_speed; }
 
   // TODO: compute caution decision by obstacle distance is not good. We need
   // use temporal-spatial information.

@@ -91,7 +91,7 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   return data;
 }
 
-bool PiecewiseJerkProblem::Optimize(const int max_iter) {
+bool PiecewiseJerkProblem::Optimize(const int max_iter, const double max_time) {
   OSQPData* data = FormulateProblem();
 
   OSQPSettings* settings = SolverDefaultSettings();
@@ -101,7 +101,7 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
   // settings->eps_dual_inf = 1e-3;
   // settings->eps_prim_inf = 1e-3;
   // second
-  // settings->time_limit = 0.1;
+  settings->time_limit = max_time;
 
   // DebugString();
 
@@ -277,7 +277,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
 
   // constraints on end state
   if (has_end_state_constriants_) {
-    double s_slack_bound = 0.01;
+    double s_slack_bound = 0.03;
     variables[n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
         end_state_[0] * scale_factor_[0] - s_slack_bound;
@@ -285,7 +285,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
         end_state_[0] * scale_factor_[0] + s_slack_bound;
     ++constraint_index;
 
-    double dx_slack_bound = 0.01;
+    double dx_slack_bound = 0.03;
     variables[2 * n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
         end_state_[1] * scale_factor_[1] - dx_slack_bound;
@@ -293,7 +293,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
         end_state_[1] * scale_factor_[1] + dx_slack_bound;
     ++constraint_index;
 
-    double ddx_slack_bound = 0.1;
+    double ddx_slack_bound = 0.15;
     variables[3 * n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
         end_state_[2] * scale_factor_[2] - ddx_slack_bound;

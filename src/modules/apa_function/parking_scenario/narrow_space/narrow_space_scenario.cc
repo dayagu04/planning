@@ -260,7 +260,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   frame_.remain_dist_path = CalRemainDistFromPath();
 
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs = CalRemainDistFromObs(0.31);
+  frame_.remain_dist_obs = CalRemainDistFromObs(0.3);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -1672,14 +1672,16 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   Eigen::Vector2d point_local;
   point_local = ego_info.g2l_tf.GetPos(path_end_global);
   double limiter_x = ego_info.target_pose.pos.x();
-  if (point_local[0] <= (limiter_x + 0.1)) {
+  if (point_local[0] <= (limiter_x + 0.02)) {
     return;
   }
 
-  // car pose has big distance with limiter, return
+  // car pose has big distance with limiter, return;
+  // If car is nearby with limiter, such as 0.3 meter, do not extend path to
+  // keep from speed change too much.
   double ego_x_diff = std::fabs(ego_info.terminal_err.pos.x());
   double ego_y_diff = std::fabs(ego_info.terminal_err.pos.y());
-  if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
+  if (ego_x_diff > 1.5 || ego_y_diff > 0.5 || ego_x_diff < 0.5) {
     return;
   }
 
@@ -1690,14 +1692,7 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
     return;
   }
 
-  double dist_to_goal = x_diff;
-
-  // If ego is around limiter（0.5 meter）, do not extend path to prevent car
-  // speed change too much.
-  if (dist_to_goal < 0.5) {
-    return;
-  }
-
+  double path_end_pt_to_limiter = x_diff;
   size_t path_point_size = current_path_point_global_vec_.size();
 
   Eigen::Vector2d the_last_but_one =
@@ -1710,21 +1705,22 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   }
   unit_line_vec.normalize();
 
-  double s = 0.1;
+  double s = 0.0;
   double ds = 0.1;
 
   Eigen::Vector2d point;
   pnc::geometry_lib::PathPoint global_point;
   double phi = current_path_point_global_vec_.back().heading;
-  while (s < dist_to_goal) {
+  while (s < path_end_pt_to_limiter) {
+    s += ds;
+    s = std::min(s, path_end_pt_to_limiter);
+
     point = path_end_global + s * unit_line_vec;
 
     global_point.Set(point, phi);
     global_point.kappa = 0.0;
 
     current_path_point_global_vec_.push_back(global_point);
-
-    s += ds;
   }
 
   return;

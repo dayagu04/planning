@@ -14,17 +14,19 @@ enum class LonDecisionReason {
   STATIC_POLYGON_OBJECT = 6,
   DYNAMIC_POLYGON_OBJECT = 7,
   LIMITER_COLLISION = 8,
-  // slot pose change too much, add stop decision for gear switch?
+  // slot pose change too much, add stop decision.
   SLOT_POSE_CHANGE = 10,
-  // If predicted tracking path collision with obstacle, add stop decision.
+  // If control path is collision with obstacle, add stop decision.
   CONTROL_PATH_COLLISION = 11,
-  // If distance < 0.3 meter, add a speed limit decision.
+  // If point distance is small with obstacles, add a speed limit decision.
   CLOSE_TO_OBSTACLE = 12,
   // path kappa change too much
-  PATH_KAPPA_CHANGE = 13,
+  PATH_KAPPA_SWITCH = 13,
   // lateral error is big
-  PATH_TRACKING_ERROR = 14,
+  PATH_CONTROL_ERROR = 14,
   PATH_KAPPA = 15,
+  // will be retired
+  REMAIN_DIST = 16,
 };
 
 enum class LonDecisionType {

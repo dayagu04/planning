@@ -82,6 +82,7 @@ const bool Trajectory::QueryNearestPointWithBuffer(
     const planning_math::Vec2d& position, const double buffer,
     TrajectoryPoint* point) const {
   if (empty()) {
+    ILOG_INFO << "empty";
     return false;
   }
 
@@ -98,6 +99,7 @@ const bool Trajectory::QueryNearestPointWithBuffer(
   }
 
   if (min_sqr_dist > 1.0) {
+    ILOG_INFO << "dist = " << min_sqr_dist;
     return false;
   }
 
@@ -136,14 +138,14 @@ const bool Trajectory::QueryNearestPointWithBuffer(
     return true;
   }
 
-  ILOG_INFO << "predecessor s = " << predecessor_s
-            << ",project s = " << projection_s;
+  // ILOG_INFO << "predecessor s = " << predecessor_s
+  //           << ",project s = " << projection_s;
 
   *point = InterpolateUsingLinearApproximation(
       data()[predecessor_id], data()[predecessor_id + 1], projection_s);
 
-  ILOG_INFO << "lon stitch v = " << point->vel() << ", a = " << point->acc()
-            << ", s = " << point->s();
+  // ILOG_INFO << "lon stitch v = " << point->vel() << ", a = " << point->acc()
+  //           << ", s = " << point->s();
 
   return true;
 }
@@ -157,6 +159,47 @@ void Trajectory::Clear() {
 
 void Trajectory::SetGear(const int gear) {
   gear_ = gear;
+  return;
+}
+
+void Trajectory::ExtendTraj(const double length) {
+  if (empty()) {
+    return;
+  }
+
+  planning_math::Vec2d end;
+  end.set_x(back().x());
+  end.set_y(back().y());
+  planning_math::Vec2d unit_line_vec;
+  if (gear_ == 2) {
+    unit_line_vec = planning_math::Vec2d::CreateUnitVec2d(back().theta());
+  } else {
+    unit_line_vec = planning_math::Vec2d::CreateUnitVec2d(-back().theta());
+  }
+
+  double s = 0.03;
+  double ds = 0.03;
+
+  TrajectoryPoint traj_point;
+  planning_math::Vec2d point;
+  while (s < length) {
+    point = end + s * unit_line_vec;
+
+    traj_point.set_absolute_time(back().absolute_time());
+    traj_point.set_s(s);
+    traj_point.set_vel(0);
+    traj_point.set_acc(-0.1);
+    traj_point.set_jerk(0);
+    traj_point.set_x(point.x());
+    traj_point.set_y(point.y());
+    traj_point.set_theta(back().theta());
+    traj_point.set_kappa(0);
+
+    emplace_back(traj_point);
+
+    s += ds;
+  }
+
   return;
 }
 
