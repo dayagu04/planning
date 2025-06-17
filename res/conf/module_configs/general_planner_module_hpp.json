@@ -328,6 +328,7 @@
     "min_v_cruise": 0.2,
     "min_ego_vel": 1.0,
     "max_steer_angle_dot": 360.0,
+    "max_steer_angle_dot_low_speed": 360.0,
     "acc_bound": 2.0,
     "jerk_bound": 0.6,
     "map_jerk_bound": [0.6, 0.55, 0.5, 0.25],

@@ -5,6 +5,10 @@
 #include "math_lib.h"
 #include "refline.h"
 
+static const double kCurvatureThreshold =
+    1 / 750;  // 750m raidus for big curvature
+static const double kRad2Deg = 57.3;
+
 namespace pnc {
 namespace lateral_planning {
 
@@ -31,14 +35,16 @@ void LateralMotionPlanningWeight::Init() {
   end_ratio_for_qjerk_ = 0.0;
   max_acc_ = 3.0;
   max_jerk_ = 1.5;
+  max_jerk_low_speed_ = 0.2;
   last_expected_average_acc_ = 0.0;
   last_jerk_bound_limit_ = 0.2;
   expected_average_acc_ = 0.0;
   expected_max_acc_ = 0.0;
   expected_min_acc_ = 0.0;
-  min_road_radius_ = 10000.0;
+  target_road_radius_ = 10000.0;
   min_q_jerk_ = 2.0;
   last_path_max_dist2ref_ = 0.0;
+  last_remotely_index_ = 20;
   is_lane_change_hold_ = false;
   is_lane_change_back_ = false;
   is_in_intersection_ = false;
@@ -197,7 +203,7 @@ void LateralMotionPlanningWeight::CalculateInitInfo(
   }
   init_ref_theta_error_ =
       (planning_input.init_state().theta() - planning_input.ref_theta_vec(0)) *
-      57.3;
+      kRad2Deg;
 }
 
 void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
@@ -231,62 +237,88 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
 
 void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
     double init_s, double ref_vel, double wheel_base, double steer_ratio,
+    const planning::CoarsePlanningInfo &coarse_planning_info,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     std::vector<double>& expected_steer_vec) {
+  const auto &k_s_spline =
+      coarse_planning_info.cart_ref_info.k_s_spline;
   expected_average_acc_ = 0.0;
   expected_max_acc_ = -10.0;
   expected_min_acc_ = 10.0;
-  min_road_radius_ = 10000.0;
+  target_road_radius_ = 10000.0;
   is_s_bend_ = false;
+  bool is_k_s_spline_valid = false;
+  if (!k_s_spline.get_x().empty() &&
+      !k_s_spline.get_y().empty()) {
+    is_k_s_spline_valid = true;
+  }
   bool is_left_bend = false;
   bool is_right_bend = false;
   size_t time = 0;
   size_t kappa_gap = 0;
+  double min_road_radius = 10000.0;
+  double max_road_radius = 1.0;
   double sum_kappa = 0;
   double ds = ref_vel * config_.delta_t;
   double kv2 = config_.curv_factor * ref_vel_ * ref_vel_;
+  max_jerk_low_speed_ =
+      (config_.max_steer_angle_dot_low_speed / steer_ratio / kRad2Deg) * kv2;
   weight_.expected_acc.clear();
   weight_.expected_acc.resize(26, 0.0);
   curvature_radius_vec_.clear();
   curvature_radius_vec_.resize(6, 10000.0);
+  double pt_kappa = 1e-6;
+  planning::ReferencePathPoint ref_point;
   for (size_t i = 0; i < weight_.point_num; ++i) {
-    planning::ReferencePathPoint ref_point;
-    if (reference_path->get_reference_point_by_lon(init_s, ref_point)) {
-      kappa_gap += 1;
-      sum_kappa += ref_point.path_point.kappa();
-      double expected_delta = std::atan(wheel_base * ref_point.path_point.kappa());  // rad
-      double expected_steer = steer_ratio * expected_delta * 57.3;  // deg
-      double expected_lat_acc = kv2 * expected_delta;
-      expected_steer_vec[i] = expected_steer;
-      weight_.expected_acc[i] = expected_lat_acc;
-      if (i < 16) {
-        expected_average_acc_ += expected_lat_acc;
-      }
-      if (i < 21) {
-        expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
-        expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
-      }
-      if (i % 5 == 0) {  // 0 1 2 3 4 5
-        double average_kappa = sum_kappa / kappa_gap;
-        if (std::fabs(average_kappa) > 1e-6) {
-          double average_radius = 1 / average_kappa;
-          if (average_radius > -750.0 && average_radius < -1e-6) {
-            is_left_bend = true;
-          } else if (average_radius < 750.0 && average_radius > 1e-6) {
-            is_right_bend = true;
-          }
-          curvature_radius_vec_[time] = average_radius;
-          min_road_radius_ = std::min(std::fabs(curvature_radius_vec_[time]), min_road_radius_);
-        }
-        time += 1;
-        sum_kappa = 0;
-        kappa_gap = 0;
+    if (is_k_s_spline_valid &&
+        reference_path->get_reference_point_by_lon(init_s, ref_point)) {
+      pt_kappa = k_s_spline(init_s);
+      if (ref_point.path_point.kappa() < 0) {
+        pt_kappa *= -1;
       }
     } else {
       if (i > 0) {
         expected_steer_vec[i] = expected_steer_vec[i - 1];
         weight_.expected_acc[i] = weight_.expected_acc[i - 1];
+        if (i < 16) {
+          expected_average_acc_ += weight_.expected_acc[i - 1];
+        }
       }
+      init_s += ds;
+      continue;
+    }
+    if (pt_kappa < -kCurvatureThreshold) {
+      is_left_bend = true;
+    } else if (pt_kappa > kCurvatureThreshold) {
+      is_right_bend = true;
+    }
+    kappa_gap += 1;
+    sum_kappa += pt_kappa;
+    double expected_delta = std::atan(wheel_base * pt_kappa);  // rad
+    double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
+    double expected_lat_acc = kv2 * expected_delta;
+    expected_steer_vec[i] = expected_steer;
+    weight_.expected_acc[i] = expected_lat_acc;
+    if (i < 16) {
+      expected_average_acc_ += expected_lat_acc;
+    }
+    if (i < 21) {
+      expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
+      expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
+    }
+    if (i % 5 == 0) {  // 0 1 2 3 4 5
+      double average_kappa = sum_kappa / kappa_gap;
+      if (std::fabs(average_kappa) > 1e-6) {
+        double average_radius = 1 / average_kappa;
+        curvature_radius_vec_[time] = average_radius;
+        if (time < 5) {
+          min_road_radius = std::min(std::fabs(curvature_radius_vec_[time]), min_road_radius);
+          max_road_radius = std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
+        }
+      }
+      time += 1;
+      sum_kappa = 0;
+      kappa_gap = 0;
     }
     init_s += ds;
   }
@@ -307,20 +339,45 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   if (is_left_bend && is_right_bend) {
     is_s_bend_ = true;
   }
-  // anchor: min road radius
-  double min_radius =
-      std::min(std::fabs(curvature_radius_vec_[3]), std::fabs(curvature_radius_vec_[4]));
-  if (min_radius < 400.0) {
-    if (std::fabs(curvature_radius_vec_[0]) < 100.0) {
-      min_radius = min_road_radius_;
-    } else if (std::fabs(curvature_radius_vec_[0]) < 400.0 ||
-               std::fabs(curvature_radius_vec_[1]) < 400.0) {
-      min_radius = std::fabs(curvature_radius_vec_[1]);
+  // anchor: target road radius
+  double end_radius =
+      std::fabs(curvature_radius_vec_[4]);
+  double far_radius =
+      std::fabs(curvature_radius_vec_[3]);
+  double mid_radius =
+      std::fabs(curvature_radius_vec_[2]);
+  double max_near_radius =
+      std::max(std::fabs(curvature_radius_vec_[1]),
+               std::fabs(curvature_radius_vec_[0]));
+  if (max_road_radius < 150.0 ||   // in large bend
+      max_near_radius >= 400.0) {  // ego not-in large bend
+    target_road_radius_ = max_near_radius;
+  } else {
+    if (end_radius - far_radius >= 100.0) {
+      target_road_radius_ =
+          std::max(0.5 * (end_radius + far_radius),
+                   max_near_radius);
     } else {
-      min_radius = std::fabs(curvature_radius_vec_[0]);
+      if (far_radius - mid_radius >= 100.0) {
+        target_road_radius_ =
+            std::max(0.5 * (far_radius + mid_radius),
+                     max_near_radius);
+      } else {
+        if (mid_radius - max_near_radius >= 50.0) {
+          target_road_radius_ =
+              0.5 * (mid_radius + max_near_radius);
+        } else {
+          if (far_radius - max_near_radius >= 100.0) {
+            target_road_radius_ =
+                0.5 * (far_radius + max_near_radius);
+          } else {
+            target_road_radius_ = max_near_radius;
+          }
+        }
+      }
     }
   }
-  min_road_radius_ = min_radius;
+  target_road_radius_ = std::min(target_road_radius_, 10000.0);
 }
 
 void LateralMotionPlanningWeight::CalculateLatAvoidDistance(
@@ -492,6 +549,12 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == RAMP) {
     jerk_bound = config_.jerk_bound_ramp;  // 1.0
   }
+  // tiny speed
+  if (ego_vel_ < 0.2 &&
+      lateral_motion_scene_ == LANE_KEEP &&
+      std::fabs(avoid_dist_) < 0.1) {
+    jerk_bound = max_jerk_low_speed_;
+  }
   jerk_bound = std::min(jerk_bound, max_jerk_);
   weight_.q_acc.clear();
   weight_.q_acc.resize(weight_.point_num, 0.1);
@@ -533,6 +596,12 @@ void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
   planning_input.set_q_jerk(std::max(origin_q_jerk, min_q_jerk_));
 
   if (ref_vel_ < 1.389) {  // 5 kph
+    planning_input.set_q_continuity(config_.q_continuity_low_speed);
+  }
+  // tiny speed
+  if (ego_vel_ < 0.2 &&
+      lateral_motion_scene_ == LANE_KEEP &&
+      std::fabs(avoid_dist_) < 0.1) {
     planning_input.set_q_continuity(config_.q_continuity_low_speed);
   }
 }
@@ -647,6 +716,12 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     jerk_bound = P2_emergency_jerk_bound;
   }
   jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
+  // tiny speed
+  if (ego_vel_ < 0.2 &&
+      lateral_motion_scene_ == LANE_KEEP &&
+      std::fabs(avoid_dist_) < 0.1) {
+    jerk_bound = max_jerk_low_speed_;
+  }
   jerk_bound =
       std::min(std::min(P0_emergency_jerk_bound, jerk_bound), max_jerk_);
   // use last jerk
@@ -740,7 +815,9 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   std::vector<double> fp_ratio_to_jerk{1.5, 1.2, 1.0};
   double q_jerk_ratio1 =
     planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_jerk);
-
+  if (lateral_dist < 0.1) {
+    q_jerk2 = q_jerk1;
+  }
   concerned_start_q_jerk_ = q_jerk_ratio1 * q_jerk1;
   planning_input.set_q_jerk(q_jerk_ratio1 * q_jerk2);
 
@@ -953,10 +1030,10 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     weight_.complete_follow = origin_complete_follow;
   }
 
-  std::vector<double> xp_road_radius{50.0, 150.0, 500.0, 1000.0, 2000.0};
+  std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 1000.0, 2000.0};
   double valid_perception_range =
       planning::interp(
-        min_road_radius_, xp_road_radius, config_.valid_perception_range);
+        target_road_radius_, xp_road_radius, config_.valid_perception_range);
   for (size_t i = weight_.proximal_index + 1; i < weight_.remotely_index; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
                         planning_input.ref_y_vec(i));
@@ -970,12 +1047,19 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
       }
     }
   }
+  // limit large diff
+  double remotely_index_diff =
+      last_remotely_index_ - weight_.remotely_index;
+  if (remotely_index_diff > 2) {
+    weight_.remotely_index = last_remotely_index_ - 2;
+  }
+  // consider avoid
   double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
   if (lateral_dist > 0.6) {
     size_t min_remotely_index = 15;
     weight_.remotely_index = std::max(min_remotely_index, weight_.remotely_index);
   }
-
+  // consider intersection and S bend
   if ((lateral_motion_scene_ == RAMP &&
        is_in_intersection_) ||
       is_s_bend_) {
@@ -1040,6 +1124,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(
       weight_.remotely_index);
+  last_remotely_index_ = weight_.remotely_index;
   // set low speed protection
   SetMinJerkWeightByVel(planning_input);
   // set large pos diff protection
