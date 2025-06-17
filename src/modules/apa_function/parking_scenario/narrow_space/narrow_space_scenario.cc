@@ -214,13 +214,15 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
       frame_.remain_dist_path < apa_param.GetParam().max_replan_remain_dist;
 
   const bool pos_condition =
-      (ego_info.cur_pose.pos.x() - ego_info.target_pose.pos.x()) > 0.5;
+      std::fabs(ego_info.cur_pose.pos.x() - ego_info.target_pose.pos.x()) < 0.5;
 
   switch (park_out_direction) {
     case ApaParkOutDirection::LEFT_FRONT:
       parking_finish = lat_condition && static_condition && remain_s_condition;
+      break;
     case ApaParkOutDirection::RIGHT_FRONT:
       parking_finish = lat_condition && static_condition && remain_s_condition;
+      break;
     case ApaParkOutDirection::FRONT:
       parking_finish = remain_s_condition && static_condition && pos_condition;
       break;
@@ -304,6 +306,11 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
   ILOG_INFO << "stuck_uss_time = " << frame_.stuck_obs_time
             << " ,is_replan = " << is_replan;
+
+  if (is_replan) {
+    dynamic_flag_head_out_ =
+        (frame_.replan_reason == ReplanReason::DYNAMIC) ? true : false;
+  }
 
   // check replan
   if (is_replan || update_thread_path) {
@@ -1544,7 +1551,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
 
     case ApaParkOutDirection::FRONT:
     default:
-      ego_info_under_slot.target_pose.pos << kInitialTargetX - 4, 0.0;
+      ego_info_under_slot.target_pose.pos << kInitialTargetX - 3, 0.0;
       ego_info_under_slot.target_pose.heading = 0.0;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 0);
       break;
@@ -2292,10 +2299,10 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
   constexpr double kHeadingThreshold = 0.05;
 
   bool heading_flag =
-      current_path_last_heading_ - ego_info_under_slot.target_pose.heading >
-      kHeadingThreshold;
+      std::fabs(current_path_last_heading_ -
+                ego_info_under_slot.target_pose.heading) < kHeadingThreshold;
 
-  if (dynamic_flag_head_out_ && !heading_flag) {
+  if (dynamic_flag_head_out_ && heading_flag) {
     // 如果上一次当前动态规划的heading 接近 目标heading，则无需再次重规划。
     return false;
   }
@@ -2304,7 +2311,6 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
                              occupied_ratio_flag && path_dist_flag &&
                              current_path_length_flag;
 
-  dynamic_flag_head_out_ = dynamic_replan_flag ? true : false;
   return dynamic_replan_flag;
 }
 
