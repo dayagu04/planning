@@ -240,6 +240,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
   lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
   planning_json = plan_debug_json_msg
   lat_behavior_common = plan_debug_msg.lat_behavior_common
+  print("emergency level: ",planning_json["lateral_emergency_level"])
   print("init curv: ",lat_motion_plan_input.init_state.curv)
   print("road curv: ",planning_json["road_radius"])
   print("far_kappa_radius", planning_json["far_kappa_radius"])

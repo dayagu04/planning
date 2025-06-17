@@ -15,7 +15,8 @@ LateralMotionPlanningWeight::LateralMotionPlanningWeight(
 }
 
 void LateralMotionPlanningWeight::Init() {
-  lateral_motion_scene_ = pnc::lateral_planning::LANE_KEEP;
+  lateral_motion_scene_ = LANE_KEEP;
+  emergency_level_ = NONE;
   lat_offset_ = 0.0;
   avoid_dist_ = 0.0;
   init_dis_to_ref_ = 0.0;
@@ -38,9 +39,9 @@ void LateralMotionPlanningWeight::Init() {
   min_road_radius_ = 10000.0;
   min_q_jerk_ = 2.0;
   last_path_max_dist2ref_ = 0.0;
+  is_lane_change_hold_ = false;
   is_lane_change_back_ = false;
   is_in_intersection_ = false;
-  is_emergency_ = false;
   is_search_success_ = false;
   is_s_bend_ = false;
   soft_bound_qratio_vec_.resize(26, 1.0);
@@ -463,8 +464,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
-  if (lateral_motion_scene_ == LANE_CHANGE ||
-      is_lane_change_back_) {
+  if (lateral_motion_scene_ == LANE_CHANGE) {
     jerk_bound = config_.jerk_bound_lane_change;  // 0.55,
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
@@ -521,15 +521,16 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     const planning::common::LateralPlanningOutput &last_planning_output,
     planning::common::LateralPlanningInput &planning_input) {
   // set upper limit
+  double extra_jerk_buffer = 0.1;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_emergency_jerk{1.0, 1.2, 0.8, 0.6};
-  double emergency_jerk_bound = planning::interp(ref_vel_, xp_v, fp_emergency_jerk);
+  std::vector<double> fp_emergency_jerk{1.0, 1.5, 1.2, 0.8};
+  double emergency_jerk_bound =
+      planning::interp(ref_vel_, xp_v, fp_emergency_jerk);
   double jerk_bound =  // 0.4 0.4 0.4 0.3
       planning::interp(ref_vel_, xp_v, config_.map_jerk_bound);
   if (lateral_motion_scene_ == AVOID) {
     jerk_bound = config_.jerk_bound_avoid;  // 0.4,
-  } else if (lateral_motion_scene_ == LANE_CHANGE ||
-      is_lane_change_back_) {
+  } else if (lateral_motion_scene_ == LANE_CHANGE) {
     jerk_bound = config_.jerk_bound_lane_change;  // 0.55,
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
@@ -537,11 +538,14 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     jerk_bound = config_.jerk_bound_ramp;  // 1.0
   }
   // emergency
-  if (reference_path != nullptr &&
-      !hard_lbound_l_s_spline_.get_x().empty() &&
+  bool is_bound_spline_valid = false;
+  if (!hard_lbound_l_s_spline_.get_x().empty() &&
       !hard_lbound_l_s_spline_.get_y().empty() &&
       !hard_ubound_l_s_spline_.get_x().empty() &&
       !hard_ubound_l_s_spline_.get_y().empty()) {
+    is_bound_spline_valid = true;
+  }
+  if (reference_path != nullptr) {
     double init_s =
         reference_path->get_frenet_ego_state()
                       .planning_init_point()
@@ -559,26 +563,30 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
           if (last_point_rel_s < 1e-6) {
             continue;
           }
-          double hard_lbound_l = hard_lbound_l_s_spline_(last_point_rel_s);
-          double hard_ubound_l = hard_ubound_l_s_spline_(last_point_rel_s);
-          if (frenet_last_sl.y < hard_lbound_l ||
-              frenet_last_sl.y > hard_ubound_l) {
-              is_emergency_ = true;
+          if (is_bound_spline_valid) {
+            double hard_lbound_l = hard_lbound_l_s_spline_(last_point_rel_s);
+            double hard_ubound_l = hard_ubound_l_s_spline_(last_point_rel_s);
+            if (frenet_last_sl.y < hard_lbound_l ||
+                frenet_last_sl.y > hard_ubound_l) {
+              emergency_level_ = P0;
               break;
+            }
           }
         }
       }
     } else {
-      is_emergency_ = false;
+      emergency_level_ = NONE;
     }
   } else {
-    is_emergency_ = false;
+    emergency_level_ = NONE;
   }
-  if (is_emergency_) {
-    jerk_bound = std::max(emergency_jerk_bound, jerk_bound);
+  if (emergency_level_ == P0) {
+    jerk_bound = emergency_jerk_bound;
+    extra_jerk_buffer = 1.0;
   }
   jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
-  jerk_bound = std::min(jerk_bound, max_jerk_);
+  jerk_bound =
+      std::min(std::min(emergency_jerk_bound, jerk_bound), max_jerk_);
   // use last jerk
   // when last big jerk exceed jerk bound , loosening jerk bound
   bool is_need_loosening_upper_jerk_bound = false;
@@ -592,10 +600,14 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       double extra_lower_jerk = last_jerk_i - weight_.jerk_lower_bound[i];
       if (extra_upper_jerk > -1e-3) {
         is_need_loosening_upper_jerk_bound = true;
-        new_jerk_ubound = std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + 0.1, new_jerk_ubound), jerk_bound);
+        new_jerk_ubound =
+          std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + extra_jerk_buffer,
+                            new_jerk_ubound), jerk_bound);
       } else if (extra_lower_jerk < 1e-3) {
         is_need_loosening_lower_jerk_bound = true;
-        new_jerk_lbound = std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - 0.1, new_jerk_lbound), -jerk_bound);
+        new_jerk_lbound =
+          std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - extra_jerk_buffer,
+                            new_jerk_lbound), -jerk_bound);
       }
     }
   }
@@ -610,7 +622,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     weight_.jerk_lower_bound.resize(weight_.point_num, -std::fabs(new_jerk_bound));
     planning_input.set_jerk_bound(std::fabs(new_jerk_bound));
   } else {
-    is_emergency_ = false;
+    emergency_level_ = NONE;
   }
   last_jerk_bound_limit_ = planning_input.jerk_bound();
   // when last positive or negative jerk is big, adding zero jerk bound protection for this time
@@ -819,7 +831,7 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double emergence_factor = 1.0;
   double intersection_factor = 1.0;
-  if (is_emergency_) {
+  if (emergency_level_ == P0) {
     emergence_factor = config_.emergence_avoid_factor;
   }
   if (is_in_intersection_) {

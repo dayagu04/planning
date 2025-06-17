@@ -361,7 +361,7 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
   double limit_jerk = max_wheel_angle_rate * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_max_jerk{limit_jerk, 1.538, 1.231, 0.8};
+  std::vector<double> fp_max_jerk{limit_jerk, 1.538, 1.476, 1.384};
   double max_jerk = planning::interp(ref_vel, xp_v, fp_max_jerk);
   max_jerk = std::min(limit_jerk, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
@@ -506,6 +506,11 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_input_.set_q_hard_corridor(0);
     planning_input_.set_complete_follow(true);
   }
+  // get emergency level
+  const auto lateral_emergency_level =
+      planning_weight_ptr_->GetEmergencyLevel();
+  JSON_DEBUG_VALUE("lateral_emergency_level",
+                   static_cast<int>(lateral_emergency_level));
   return true;
 }
 
