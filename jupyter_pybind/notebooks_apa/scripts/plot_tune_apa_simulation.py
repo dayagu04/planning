@@ -155,7 +155,7 @@ fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'pu
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=3, value=2, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.plan_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "plan_type",min=0, max=1, value=0, step=1)
     self.pybind_state_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "pybind_state",min=0, max=50, value=0, step=1)
@@ -218,6 +218,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     vehicle_type = 'CHERY_T26'
   elif vehicle_type == 2:
     vehicle_type = 'CHERY_E0X'
+  elif vehicle_type == 3:
+    vehicle_type = 'CHERY_M32T'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
   car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)
