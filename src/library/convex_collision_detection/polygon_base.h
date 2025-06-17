@@ -152,7 +152,7 @@ int InitPolygon(Polygon2D *polygon);
 
 int PolygonCopy(Polygon2D *des_poly, const Polygon2D *src_poly);
 
-int UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
+void UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
                        bool use_center_pose, bool radius_known, float radius);
 
 int GenerateRectPolygon(Polygon2D *polygon, float min_x, float min_y,
@@ -196,10 +196,11 @@ int ExtendVehBoxByLength(Polygon2D *poly, float h,
 int ExtendVehBoxByWidthLength(Polygon2D *poly, float left_w, float right_w,
                               float l, const Polygon2D *adc_local_polygon);
 
-int GeneratePolygonByPoints(Polygon2D *polygon, std::vector<Position2D> points);
+void GeneratePolygonByPoints(Polygon2D *polygon,
+                             const std::vector<Position2D> &points);
 
-int GeneratePolygonByPoints(Polygon2D *polygon,
-                            std::vector<ad_common::math::Vec2d> points);
+void GeneratePolygonByPoints(Polygon2D *polygon,
+                             const std::vector<ad_common::math::Vec2d> &points);
 
 int GeneratePolygonByAABB(Polygon2D *polygon, const cdl::AABB &box);
 

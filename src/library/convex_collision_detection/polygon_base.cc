@@ -48,13 +48,13 @@ int PolygonCopy(Polygon2D *des_poly, const Polygon2D *src_poly) {
   return 1;
 }
 
-int UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
-                       bool use_center_pose, bool radius_known, float radius) {
+void UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
+                        bool use_center_pose, bool radius_known, float radius) {
   int i;
   float tmp_dist;
 
   if (polygon == nullptr) {
-    return -1;
+    return;
   }
 
   switch (polygon->shape) {
@@ -124,7 +124,7 @@ int UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
       break;
   }
 
-  return 1;
+  return;
 }
 
 int GenerateLineSegmentPolygon(Polygon2D *polygon, const Position2D &start,
@@ -345,10 +345,10 @@ int GenerateUpLeftFrameBox(Polygon2D *polygon, float min_x, float min_y,
   return 1;
 }
 
-int GeneratePolygonByPoints(Polygon2D *polygon,
-                            std::vector<Position2D> points) {
+void GeneratePolygonByPoints(Polygon2D *polygon,
+                             const std::vector<Position2D> &points) {
   if (polygon == nullptr) {
-    return 0;
+    return;
   }
 
   polygon->vertex_num = static_cast<int>(points.size());
@@ -378,13 +378,13 @@ int GeneratePolygonByPoints(Polygon2D *polygon,
   // if not kown it, fill 0.
   polygon->min_tangent_radius = 0;
 
-  return 1;
+  return;
 }
 
-int GeneratePolygonByPoints(Polygon2D *polygon,
-                            std::vector<ad_common::math::Vec2d> points) {
+void GeneratePolygonByPoints(
+    Polygon2D *polygon, const std::vector<ad_common::math::Vec2d> &points) {
   if (polygon == nullptr) {
-    return 0;
+    return;
   }
 
   polygon->vertex_num = static_cast<int>(points.size());
@@ -413,7 +413,7 @@ int GeneratePolygonByPoints(Polygon2D *polygon,
   UpdatePolygonValue(polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
   polygon->min_tangent_radius = 0;
 
-  return 1;
+  return;
 }
 
 int GetRightUpCoordinatePolygonByParam(Polygon2D *box,
