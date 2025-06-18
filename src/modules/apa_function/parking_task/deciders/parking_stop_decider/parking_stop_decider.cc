@@ -38,7 +38,6 @@ void ParkingStopDecider::Execute(
   // todo: use lateral path and control path
   if (!apa_param.GetParam().speed_config.use_remain_dist) {
     AddDecisionByObstacle(control_path, false);
-    // AddDecisionByObstacle(lateral_path, true);
     RecordDebugInfo(lateral_path);
   }
 
@@ -376,6 +375,11 @@ void ParkingStopDecider::AddDecisionByObstacle(
 
   for (auto& obj : obs_manager_->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
+
+    // TODO: for now, not use prediction traj.
+    if (obstacle.GetObsAttributeType() == ApaObsAttributeType::FUSION_POLYGON) {
+      continue;
+    }
 
     ComputeSTBoundary(extend_path, obstacle);
 

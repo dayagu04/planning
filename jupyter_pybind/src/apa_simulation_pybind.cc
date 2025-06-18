@@ -632,6 +632,46 @@ std::vector<Eigen::VectorXd> GetJLTSpeedData() {
   return speed_profile;
 }
 
+std::vector<std::vector<Eigen::Vector2d>> GetODTraj() {
+  std::vector<std::vector<Eigen::Vector2d>> trajs;
+  trajs.clear();
+
+  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug = nullptr;
+  if (debug->has_apa_speed_debug()) {
+    speed_debug = debug->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    return trajs;
+  }
+
+  if (!speed_debug->has_predict_traj_set()) {
+    return trajs;
+  }
+
+  int size = speed_debug->predict_traj_set().trajs_size();
+  if (size <= 0) {
+    return trajs;
+  }
+
+  std::vector<Eigen::Vector2d> traj;
+  for (int i = 0; i < size; i++) {
+    const common::ParkPredictTraj &proto_traj =
+        speed_debug->mutable_predict_traj_set()->trajs(i);
+
+    traj.clear();
+    for (int j = 0; j < proto_traj.point_size(); j++) {
+      traj.emplace_back(
+          Eigen::Vector2d(proto_traj.point(j).x(), proto_traj.point(j).y()));
+    }
+
+    trajs.emplace_back(traj);
+  }
+
+  return trajs;
+}
+
 PYBIND11_MODULE(apa_simulation_py, m) {
   m.doc() = "m";
 
@@ -650,5 +690,6 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetStopSigns", &GetStopSigns)
+      .def("GetODTraj", &GetODTraj)
       .def("GetDynamicState", &GetDynamicState);
 }

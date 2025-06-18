@@ -17,6 +17,7 @@
 #include "src/library/convex_collision_detection/aabb2d.h"
 #include "src/library/convex_collision_detection/polygon_base.h"
 #include "utils/index_list.h"
+#include "trajectory/trajectory.h"
 
 namespace planning {
 namespace apa_planner {
@@ -198,21 +199,51 @@ class ApaObstacle final {
 
   void ClearDecision();
 
+  void SetSpeed(const double v) {
+    vel_ = v;
+    return;
+  }
+
+  void SetSpeedHeading(const Eigen::Vector2d& heading) {
+    vel_heading_ = heading;
+    return;
+  }
+
+  const Eigen::Vector2d& GetSpeedHeading() const { return vel_heading_; }
+
+  const double Speed() const { return vel_; }
+
+  void SetPose(const pnc::geometry_lib::PathPoint& pose) {
+    pose_global_ = pose;
+    return;
+  }
+
+  const pnc::geometry_lib::PathPoint& GetCenterPose() const {
+    return pose_global_;
+  }
+
+  void SetPredictTraj(const trajectory::Trajectory& traj) {
+    predict_traj_ = traj;
+    return;
+  }
+
+  const trajectory::Trajectory& GetPredictTraj() const { return predict_traj_; }
+
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
   ApaObsAttributeType obs_attribute_type_{ApaObsAttributeType::UNKNOWN};
   ApaObsScemanticType obs_scemantic_type_{ApaObsScemanticType::UNKNOWN};
   ApaObsMovementType obs_movement_type_{ApaObsMovementType::STATIC};
 
-  double obs_vel_{0.};
-  double obs_acc_{0.};
-  pnc::geometry_lib::PathPoint obs_pose_global_;
-  pnc::geometry_lib::PathPoint obs_pose_local_;
+  double vel_{0.};
+  Eigen::Vector2d vel_heading_;
+  double acc_{0.};
+  pnc::geometry_lib::PathPoint pose_global_;
+  pnc::geometry_lib::PathPoint pose_local_;
 
   double height_{0.};
 
-  std::vector<pnc::geometry_lib::PathPoint> obs_predict_traj_global_;
-  std::vector<pnc::geometry_lib::PathPoint> obs_predict_traj_local_;
+  trajectory::Trajectory predict_traj_;
 
   cdl::AABB box_local_;
   cdl::AABB box_global_;

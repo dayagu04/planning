@@ -53,6 +53,15 @@ message ApaStopSign {
   optional StopSignType type = 2;
 }
 
+message ParkPredictTraj {
+  repeated TrajectoryPoint point = 1;
+  optional int32 obs_id = 2;
+}
+
+message ParkPredictTrajSet {
+  repeated ParkPredictTraj trajs = 1;
+}
+
 message ApaSpeedDebug {
   optional SVGraphSpeedConstraint dp_speed_constraint = 1;
   optional double ref_cruise_speed = 2;
@@ -62,4 +71,5 @@ message ApaSpeedDebug {
   repeated StPoint2D jlt_profile = 6;
   optional SpeedProfileType speed_type = 7;
   repeated ApaStopSign stop_signs = 8;
+  optional ParkPredictTrajSet predict_traj_set = 9;
 }

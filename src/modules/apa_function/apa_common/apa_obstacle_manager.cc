@@ -157,8 +157,13 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
       const iflyauto::Obstacle& obs =
           local_view->fusion_objects_info.fusion_object[i].common_info;
-
       if (!IsConsideredODType(obs.type)) {
+        continue;
+      }
+
+      double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
+                               obs.velocity.y * obs.velocity.y);
+      if (speed < 0.02) {
         continue;
       }
 
@@ -172,14 +177,8 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       std::vector<Eigen::Vector2f> global_box;
       LocalPolygonToGlobal(local_box, center_pose, global_box);
 
-      std::vector<Eigen::Vector2d> box_points;
-      for (uint8 j = 0; j < global_box.size(); ++j) {
-        const Eigen::Vector2d fusion_pt(global_box[j].x(), global_box[j].y());
-        box_points.emplace_back(std::move(fusion_pt));
-      }
-
       ApaObstacle apa_obs;
-      apa_obs.SetPtClout2dGlobal(box_points);
+      apa_obs.Reset();
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
 
       Polygon2D polygon;
@@ -193,6 +192,21 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       if (apa_param.GetParam().enable_use_dynamic_obs &&
           IsDynamicObjectType(obs.type)) {
         apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
+      }
+
+      pnc::geometry_lib::PathPoint pose(
+          Eigen::Vector2d(obs.center_position.x, obs.center_position.y),
+          obs.heading_angle);
+      apa_obs.SetPose(pose);
+      apa_obs.SetSpeed(speed);
+
+      Eigen::Vector2d speed_dir(obs.velocity.y, obs.velocity.x);
+      double dot = speed_dir.dot(pose.heading_vec);
+      if (dot >= 0.0) {
+        apa_obs.SetSpeedHeading(pose.heading_vec);
+      } else {
+        apa_obs.SetSpeedHeading(
+            Eigen::Vector2d(-pose.heading_vec[0], -pose.heading_vec[1]));
       }
 
       apa_obs.SetId(obs_id_generate_);
@@ -354,15 +368,12 @@ void ApaObstacleManager::TransformCoordFromGlobalToLocal(
 
 const bool ApaObstacleManager::IsConsideredODType(
     const iflyauto::ObjectType type) {
-  if (type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
-      type == iflyauto::OBJECT_TYPE_ANIMAL ||
-      type == iflyauto::OBJECT_TYPE_CYCLE_RIDING ||
-      type == iflyauto::OBJECT_TYPE_MOTORCYCLE_RIDING ||
-      type == iflyauto::OBJECT_TYPE_TRICYCLE_RIDING) {
-    return true;
+  if (type >= iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+      type <= iflyauto::OBJECT_TYPE_OCC_NUM) {
+    return false;
   }
 
-  return false;
+  return true;
 }
 
 const bool ApaObstacleManager::IsDynamicObjectType(

@@ -57,10 +57,6 @@ class ApaObstacleManager final {
   void TransformCoordFromGlobalToLocal(
       const pnc::geometry_lib::GlobalToLocalTf &g2l_tf);
 
-  // suggestion: if object distance is more than 8 meter from ego, consider all
-  // object; if less than 8 meter, use human, bycicle .
-  // considered type: human, animal, bycicle.
-  // todo: consider more od type in the future.
   const bool IsConsideredODType(const iflyauto::ObjectType type);
 
   const bool IsDynamicObjectType(const iflyauto::ObjectType type);
