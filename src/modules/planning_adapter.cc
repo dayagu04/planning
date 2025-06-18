@@ -136,9 +136,9 @@ bool PlanningAdapter::Proc() {
     is_localization_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization(
-      local_view_ptr_->localization.meta.timestamp);// 2.10.0 localization adapt
+      local_view_ptr_->localization.msg_header.stamp);// 2.10.0 localization adapt
   input_topic_latency->set_localization(
-      get_latency(start_time, local_view_ptr_->localization.meta.timestamp));
+      get_latency(start_time, local_view_ptr_->localization.msg_header.stamp));
 
   // 老定位
   if (is_localization_estimate_msg_updated_) {
