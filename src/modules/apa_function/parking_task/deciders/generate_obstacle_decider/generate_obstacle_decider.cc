@@ -79,7 +79,8 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
     del_obs_bound.PrintInfo();
   } else if (request_.process_obs_method ==
              ProcessObsMethod::MOVE_OBS_OUT_SLOT) {
-    del_obs_bound.CalcBoundByPtVec(slot.GetSlotPolygon(4.0, true, 0.0, 0.0));
+    del_obs_bound.CalcBoundByPtVec(
+        slot.GetCustomSlotPolygon(4.0, 0.0, 0.0, 0.0, true));
     del_obs_bound.PrintInfo();
   }
 

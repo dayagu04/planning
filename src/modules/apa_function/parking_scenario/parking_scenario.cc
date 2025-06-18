@@ -312,7 +312,8 @@ const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
   const ApaSlot& slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot;
 
-  if ((slot.IsPointInExpandSlot(ego_pose.pos, true, lat_expand, lon_expand) &&
+  if ((slot.IsPointInCustomSlot(ego_pose.pos, lon_expand, lon_expand, lat_expand,
+                          lat_expand, true) &&
        std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
     return true;
   }

@@ -199,20 +199,17 @@ class ApaSlot final {
     release_info_.Clear();
   }
 
-  const std::vector<Eigen::Vector2d> GetSlotPolygon(
-      const double slot_entrance_width = 0.0, const bool base_on_slot = true,
-      const double lat_move_dist = 0.0, const double lon_move_dist = 0.0) const;
+  const std::vector<Eigen::Vector2d> GetCustomSlotPolygon(
+      const double slot_entrance_dist, const double slot_bottom_dist,
+      const double left_move_dist, const double right_move_dist,
+      const bool base_on_slot) const;
 
-  const bool IsPointInSlot(const Eigen::Vector2d& pt,
-                           const double slot_entrance_width,
-                           const bool base_on_slot = true,
-                           const double lat_move_dist = 0.0,
-                           const double lon_move_dist = 0.0) const;
-
-  const bool IsPointInExpandSlot(const Eigen::Vector2d& pt,
-                                 const bool base_on_slot = true,
-                                 const double lat_expand = 0.0,
-                                 const double lon_expand = 0.0) const;
+  const bool IsPointInCustomSlot(const Eigen::Vector2d& pt,
+                           const double slot_entrance_dist,
+                           const double slot_bottom_dist,
+                           const double left_move_dist,
+                           const double right_move_dist,
+                           const bool base_on_slot) const;
 
   void TransformCoordFromGlobalToLocal(
       const geometry_lib::GlobalToLocalTf& g2l_tf);
