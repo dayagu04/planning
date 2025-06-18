@@ -1,5 +1,4 @@
 #include "path_safe_checker.h"
-#include <Eigen/src/Core/Matrix.h>
 
 #include <cstddef>
 
@@ -104,7 +103,9 @@ void PathSafeChecker::ExcuteDistanceCheck(
   path_collision_idx_ = std::min(collision_index, path.size());
   is_path_collision_ = is_collision;
 
+#if DEBUG_PATH_CHECKER
   DebugCollisionInfo(path_end_id, collision_component, ego_pose, path);
+#endif
 
   return;
 }
@@ -170,7 +171,9 @@ void PathSafeChecker::ExcuteCollisionCheck(
   path_collision_idx_ = std::min(collision_index, path.size());
   is_path_collision_ = is_collision;
 
+#if DEBUG_PATH_CHECKER
   DebugCollisionInfo(path_end_id, collision_component, ego_pose, path);
+#endif
 
   return;
 }
@@ -486,7 +489,6 @@ void PathSafeChecker::DebugCollisionInfo(
     const size_t path_end_id, const VehCollisionPosition collision_component,
     const Pose2D& ego_pose,
     const std::vector<pnc::geometry_lib::PathPoint>& path) const {
-#if DEBUG_PATH_CHECKER
   ILOG_INFO << "path_collision_idx_= " << path_collision_idx_
             << " ,is_path_collision_= " << is_path_collision_
             << " ,path_nearest_idx_= " << path_nearest_idx_
@@ -508,7 +510,6 @@ void PathSafeChecker::DebugCollisionInfo(
     tmp.DebugString();
   }
 
-#endif
   return;
 }
 
@@ -517,7 +518,7 @@ const double PathSafeChecker::GetVehicleDistance(
     VehCollisionPosition* collision_info) {
   Polygon2D veh_global_polygon;
   bool is_collision = false;
-  double min_dist = 10;
+  double min_dist = 10.0;
 
   ULFLocalPolygonToGlobal(&veh_global_polygon, &foot_print->max_polygon, tf);
   is_collision = GetPolygonDistance(&veh_global_polygon, &min_dist);

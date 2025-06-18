@@ -2298,6 +2298,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
   if bag_loader.fus_objects_msg['enable'] == True and read_fus_obj_msg:
     pos_x, pos_y = [], []
     box_x_vec, box_y_vec = [], []
+    arrow_x_vec = []
+    arrow_y_vec = []
 
     for i in range(bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
@@ -2316,11 +2318,20 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       box_x_vec.append(box_x)
       box_y_vec.append(box_y)
 
+      arrow_x = []
+      arrow_y = []
+      arrow_x.append(center_x)
+      arrow_y.append(center_y)
+      arrow_x.append((box_x[0] + box_x[1]) / 2)
+      arrow_y.append((box_y[0] + box_y[1]) / 2)
+      arrow_x_vec.append(arrow_x)
+      arrow_y_vec.append(arrow_y)
+
       # plot text
       speed = obj.common_info.velocity.x *obj.common_info.velocity.x + obj.common_info.velocity.y*obj.common_info.velocity.y
       speed = math.sqrt(speed)
       speed = '%.1f'%speed
-      obs_text_vec.append(str(obj.common_info.type)+',v '+str(speed))
+      obs_text_vec.append(str(obj.common_info.type)+',v='+str(speed))
       obs_text_x_vec.append(center_x)
       obs_text_y_vec.append(center_y)
 
@@ -2330,6 +2341,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_fusion_obj_box'].data.update({
       'y': box_y_vec,
       'x': box_x_vec,
+    })
+    local_view_data['data_od_arrow'].data.update({
+      'y': arrow_y_vec,
+      'x': arrow_x_vec,
     })
 
   # plot occ+od type
@@ -2411,6 +2426,7 @@ def load_local_view_figure_parking():
 
   data_fusion_obj = ColumnDataSource(data = {'y':[], 'x':[]})
   data_fusion_obj_box = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_od_arrow = ColumnDataSource(data = {'y':[], 'x':[]})
   data_fusion_obj_semantic = ColumnDataSource(data = {'text':[], 'text_x':[], 'text_y':[]})
 
   data_ground_line_obj = ColumnDataSource(data = {'yn':[], 'xn':[]})
@@ -2497,6 +2513,7 @@ def load_local_view_figure_parking():
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
                      'data_fusion_obj':data_fusion_obj,\
                      'data_fusion_obj_box':data_fusion_obj_box,\
+                     'data_od_arrow':data_od_arrow,\
                      'data_fusion_obj_semantic':data_fusion_obj_semantic,\
                      'data_ground_line_obj' :data_ground_line_obj,\
                      }
@@ -2563,6 +2580,7 @@ def load_local_view_figure_parking():
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
   fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = True)
+  fig1.multi_line('y', 'x', source = data_od_arrow, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = True)
   fig1.text(x = 'text_y', y = 'text_x', text = 'text', source = data_fusion_obj_semantic, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'fusion_objects', visible = True)
 
   # car prediction traj

@@ -215,7 +215,7 @@
   "use_uss_pt_clound": false,
   "use_ground_line": true,
   "use_ground_line_wall_column": false,
-  "use_object_detect": true,
+  "use_object_detect": false,
   "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.1068,
   "obs_safe_dx": 0.0668,

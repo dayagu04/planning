@@ -21,7 +21,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250614/20250614-11-14-55/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-06-14-11-14-55_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250612/20250612-17-04-48/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-12-17-04-49_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -131,6 +131,7 @@ data_sim_car_predict_traj_path_car_box = ColumnDataSource(data = {'x_vec':[], 'y
 # this traj is not computed by optimizer, we fill it by zero speed
 non_optimizer_traj = ColumnDataSource(data={'x': [], 'y': [], 'heading': [], })
 stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
+data_od_traj = ColumnDataSource(data = {'y':[], 'x':[]})
 
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan')
@@ -149,6 +150,7 @@ fig1.line('y', 'x', source = data_sim_car_predict_traj_path, line_width = 6, lin
 fig1.patches('y_vec', 'x_vec', source = data_sim_car_predict_traj_path_car_box, fill_color = "#89FB89", fill_alpha = 0.0, line_color = "orange", line_width = 1, legend_label = 'sim_car_predict_traj_path', visible = False)
 fig1.line('y', 'x', source = non_optimizer_traj, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'non_optimizer_traj')
 fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
+fig1.multi_line('y', 'x', source = data_od_traj, line_width = 2, line_color = 'black', line_dash = 'dashed',legend_label = 'fusion_objects', visible = True)
 
 
 ### sliders config
@@ -781,6 +783,32 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     stop_signs.data.update({
         'x': stop_sign_lines_x,
         'y': stop_sign_lines_y,
+    })
+
+    # plot od
+    trajs_x = []
+    trajs_y = []
+    data_od_traj.data.update({
+        'x': trajs_x,
+        'y': trajs_y,
+    })
+
+    trajs = apa_simulation_py.GetODTraj()
+
+    for k in range(len(trajs)):
+      traj = trajs[k]
+      traj_x = []
+      traj_y = []
+      for i in range(len(traj)):
+        traj_x.append(traj[i][0])
+        traj_y.append(traj[i][1])
+
+      trajs_x.append(traj_x)
+      trajs_y.append(traj_y)
+
+    data_od_traj.data.update({
+        'x': trajs_x,
+        'y': trajs_y,
     })
 
   push_notebook()

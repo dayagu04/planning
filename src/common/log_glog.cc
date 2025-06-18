@@ -22,7 +22,15 @@ void SignalHandler(const char *data, int size) {
 #ifdef IFLY_LOG_PATH
   path_dir = "/asw/planning/glog/backtrace.log";
 #else
-  path_dir = "../runtime_service/planning_exec/glog/backtrace.log";
+  path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
+  bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");
+  if (create_path) {
+    printf("create /opt/usr/iflytek/cluster_b/gea/log success\n");
+    create_path = CreateLogDirectory(path_dir);
+  } else {
+    printf("create log path fail\n");
+  }
+  path_dir += "/backtrace.log";
 #endif
 
   std::ofstream file_stream(path_dir.c_str(), std::ios::app);

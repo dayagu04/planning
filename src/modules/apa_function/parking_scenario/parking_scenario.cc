@@ -29,6 +29,7 @@
 #include "speed/apa_speed_decision.h"
 #include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "traj_stitcher/apa_trajectory_stitcher.h"
+#include "rule_based_predictor/rule_based_predictor.h"
 
 namespace planning {
 namespace apa_planner {
@@ -574,6 +575,9 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   if (CheckPlanSkip()) {
     return;
   }
+
+  RuleBasedPredictor predictor;
+  predictor.Execute(apa_world_ptr_->GetObstacleManagerPtr());
 
   double acc = apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel() < 0.0) {

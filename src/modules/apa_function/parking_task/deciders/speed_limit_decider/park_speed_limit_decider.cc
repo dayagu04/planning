@@ -23,9 +23,9 @@ void ParkSpeedLimitDecider::Execute(
 
   config_.Init();
 
+  Pose2D ego_pose = measure_data_ptr_->GetPose();
   col_det_interface_ptr_->GetPathSafeCheckPtr()->Excute(
-      measure_data_ptr_->GetPose(), PathCheckRequest::DISTANCE_CHECK, 0.0, 0.0,
-      path);
+      ego_pose, PathCheckRequest::DISTANCE_CHECK, 0.0, 0.0, path);
 
   AddSpeedLimitDecisions(path, speed_decisions);
 

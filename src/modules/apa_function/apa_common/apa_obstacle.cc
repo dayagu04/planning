@@ -9,15 +9,14 @@ void ApaObstacle::Reset() {
   obs_attribute_type_ = ApaObsAttributeType::UNKNOWN;
   obs_movement_type_ = ApaObsMovementType::STATIC;
 
-  obs_vel_ = 0.;
-  obs_acc_ = 0.;
-  obs_pose_global_.Reset();
-  obs_pose_local_.Reset();
+  vel_ = 0.;
+  acc_ = 0.;
+  pose_global_.Reset();
+  pose_local_.Reset();
 
   height_ = 0.;
 
-  obs_predict_traj_global_.clear();
-  obs_predict_traj_local_.clear();
+  predict_traj_.clear();
 
   pt_clout_2d_global_.clear();
   pt_clout_2d_local_.clear();
