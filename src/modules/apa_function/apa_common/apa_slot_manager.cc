@@ -82,7 +82,7 @@ void ApaSlotManager::Update(
           const double dot_ego_slot = measure_data_ptr_->GetHeadingVec().dot(
               slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
           if (slot.slot_type_ == SlotType::PERPENDICULAR) {
-            //对于垂直车位，开口方向与自车方向不一致不释放车位
+            // 对于垂直车位，开口方向与自车方向不一致不释放车位
             if (dot_ego_slot > 0.0) {
               slot.release_info_.release_state[RULE_BASED_RELEASE] =
                   SlotReleaseState::RELEASE;
@@ -346,6 +346,17 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   const Eigen::Vector2d n =
       slot.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
+  // 构建车位可泊最低要求区域内box, 检查box内是否有障碍物 若有 不释放
+  // 主要是为了缓解融合误释放车位
+  Polygon2D polygon;
+  polygon.FillTangentCircleParams(
+      slot.GetCustomSlotPolygon(2.68, -2.0, -0.4, -0.4, false));
+  if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+          polygon, GJKColDetRequest(false))) {
+    ILOG_INFO << "slot min parking area is occupied";
+    return SlotReleaseVoterType::CLEAR;
+  }
+
   // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
   // 0.26米如果没有碰撞 直接释放
   // 0.20米如果没有碰撞 累加
@@ -408,8 +419,6 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   }
 
   // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
-  Polygon2D polygon;
-
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
       pM01 + 2.0 * n, pM01 + slot.slot_width_ * t + 2.0 * n,
       pM01 + slot.slot_width_ * t - 2.0 * n, pM01 - 2.0 * n});

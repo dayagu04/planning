@@ -220,9 +220,10 @@ void ApaSlot::PostProcessSlotPoint() {
   processed_corner_coord_global_.CalExtraCoord();
 }
 
-const std::vector<Eigen::Vector2d> ApaSlot::GetSlotPolygon(
-    const double slot_entrance_width, const bool base_on_slot,
-    const double lat_move_dist, const double lon_move_dist) const {
+const std::vector<Eigen::Vector2d> ApaSlot::GetCustomSlotPolygon(
+    const double slot_entrance_dist, const double slot_bottom_dist,
+    const double left_move_dist, const double right_move_dist,
+    const bool base_on_slot) const {
   Eigen::Vector2d pt0, pt1, pt2, pt3;
   Eigen::Vector2d pt_01_unit_vec, pt_23mid_01mid_vec_unit_vec;
   if (base_on_slot) {
@@ -245,79 +246,33 @@ const std::vector<Eigen::Vector2d> ApaSlot::GetSlotPolygon(
 
   std::vector<Eigen::Vector2d> pt_vec;
   if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
-    pt0 +=
-        (lat_move_dist * pt_01_unit_vec +
-         (lon_move_dist + slot_entrance_width) * pt_23mid_01mid_vec_unit_vec);
-    pt1 +=
-        (lat_move_dist * pt_01_unit_vec +
-         (lon_move_dist + slot_entrance_width) * pt_23mid_01mid_vec_unit_vec);
-    pt2 += (lat_move_dist * pt_01_unit_vec +
-            lon_move_dist * pt_23mid_01mid_vec_unit_vec);
-    pt3 += (lat_move_dist * pt_01_unit_vec +
-            lon_move_dist * pt_23mid_01mid_vec_unit_vec);
+    pt0 -= right_move_dist * pt_01_unit_vec;
+    pt0 += slot_entrance_dist * pt_23mid_01mid_vec_unit_vec;
 
-    pt_vec = std::vector<Eigen::Vector2d>{pt0, pt2, pt3, pt1};
+    pt1 += left_move_dist * pt_01_unit_vec;
+    pt1 += slot_entrance_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt2 -= right_move_dist * pt_01_unit_vec;
+    pt2 -= slot_bottom_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt3 += left_move_dist * pt_01_unit_vec;
+    pt3 -= slot_bottom_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt_vec = std::vector<Eigen::Vector2d>{pt0, pt1, pt3, pt2};
   }
   return pt_vec;
 }
 
-const bool ApaSlot::IsPointInSlot(const Eigen::Vector2d& pt,
-                                  const double slot_entrance_width,
-                                  const bool base_on_slot,
-                                  const double lat_move_dist,
-                                  const double lon_move_dist) const {
+const bool ApaSlot::IsPointInCustomSlot(const Eigen::Vector2d& pt,
+                                        const double slot_entrance_dist,
+                                        const double slot_bottom_dist,
+                                        const double left_move_dist,
+                                        const double right_move_dist,
+                                        const bool base_on_slot) const {
   return geometry_lib::IsPointInPolygon(
-      GetSlotPolygon(slot_entrance_width, base_on_slot, lat_move_dist,
-                     lon_move_dist),
+      GetCustomSlotPolygon(slot_entrance_dist, slot_bottom_dist, left_move_dist,
+                           right_move_dist, base_on_slot),
       pt);
-}
-
-const bool ApaSlot::IsPointInExpandSlot(const Eigen::Vector2d& pt,
-                                        const bool base_on_slot,
-                                        const double lat_expand,
-                                        const double lon_expand) const {
-  Eigen::Vector2d pt0, pt1, pt2, pt3;
-  Eigen::Vector2d pt_01_unit_vec, pt_23mid_01mid_vec_unit_vec;
-  if (base_on_slot) {
-    pt0 = origin_corner_coord_local_.pt_0;
-    pt1 = origin_corner_coord_local_.pt_1;
-    pt2 = origin_corner_coord_local_.pt_2;
-    pt3 = origin_corner_coord_local_.pt_3;
-    pt_01_unit_vec = origin_corner_coord_local_.pt_01_unit_vec;
-    pt_23mid_01mid_vec_unit_vec =
-        origin_corner_coord_local_.pt_23mid_01mid_unit_vec;
-  } else {
-    pt0 = origin_corner_coord_global_.pt_0;
-    pt1 = origin_corner_coord_global_.pt_1;
-    pt2 = origin_corner_coord_global_.pt_2;
-    pt3 = origin_corner_coord_global_.pt_3;
-    pt_01_unit_vec = origin_corner_coord_global_.pt_01_unit_vec;
-    pt_23mid_01mid_vec_unit_vec =
-        origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
-  }
-
-  if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
-    pt0 = pt0 - lat_expand * pt_01_unit_vec +
-          lon_expand * pt_23mid_01mid_vec_unit_vec;
-
-    pt1 = pt1 + lat_expand * pt_01_unit_vec +
-          lon_expand * pt_23mid_01mid_vec_unit_vec;
-
-    pt2 = pt2 - lat_expand * pt_01_unit_vec -
-          lon_expand * pt_23mid_01mid_vec_unit_vec;
-
-    pt3 = pt3 + lat_expand * pt_01_unit_vec -
-          lon_expand * pt_23mid_01mid_vec_unit_vec;
-
-    std::vector<Eigen::Vector2d> pt_vec{pt0, pt2, pt3, pt1};
-
-    if (geometry_lib::IsPointInPolygon(pt_vec, pt)) {
-      return true;
-    }
-    return false;
-  } else {
-    return false;
-  }
 }
 
 const std::string GetSlotTypeString(const SlotType type) {
