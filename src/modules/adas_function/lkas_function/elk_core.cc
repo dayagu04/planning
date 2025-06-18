@@ -266,7 +266,7 @@ uint16 ElkCore::UpdateElkLeftKickDownCode(void) {
 
   // Condition1
   if (vehicle_service_output_info_ptr->left_turn_light_state == true) {
-    elk_left_kickdown_code += uint16_bit[0];
+    // elk_left_kickdown_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
@@ -474,7 +474,7 @@ uint16 ElkCore::UpdateElkRightKickDownCode(void) {
 
   // Condition1
   if (vehicle_service_output_info_ptr->right_turn_light_state == true) {
-    elk_right_kickdown_code += uint16_bit[0];
+    // elk_right_kickdown_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
