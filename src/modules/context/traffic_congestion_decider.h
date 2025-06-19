@@ -8,6 +8,8 @@
 #include <Eigen/Dense>
 #include "ego_planning_config.h"
 #include "reference_path.h"
+#include "session.h"
+#include "dynamic_world/dynamic_agent_node.h"
 
 namespace planning {
 
@@ -15,7 +17,8 @@ namespace planning {
 class CongestionDetector {
 public:
     CongestionDetector(const CongestionDetectionConfig *config_builder,
-        const std::shared_ptr<ReferencePath> ref_path);
+        framework::Session *session,
+        const int fix_lane_id);
     ~ CongestionDetector() = default;
 
     void Init();
@@ -24,9 +27,12 @@ public:
     CongestionResult DetectLaneCongestion();
 
 private:
-    std::shared_ptr<ReferencePath> ref_path_;
+    // std::shared_ptr<ReferencePath> ref_path_;
+    framework::Session * session_;
 
-    std::vector<std::shared_ptr<FrenetObstacle>> obstacles_;
+    int fix_lane_id_;
+
+    std::vector<const planning_data::DynamicAgentNode*> agent_node_;
 
     CongestionDetectionConfig congestion_config_;
 

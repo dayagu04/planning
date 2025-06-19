@@ -3902,20 +3902,11 @@ struct CongestionDetectionConfig : public EgoPlanningConfig {
     ReadItem<double>(json, heavy_density,
                      "heavy_density");
     ReadItem<double>(json, jam_speed, "jam_speed");
-    ReadItem<double>(json, free_flow_speed, "free_flow_speed");
+    ReadItem<double>(json, speed_deviation, "speed_deviation");
   }
 
-  double heavy_density = 0.5;
-  double jam_speed = 5.5;
-  double free_flow_speed = 0.2;
-  double deviation_factor = 0.2;
-  double speed_deviation = 0.1;
-  double space_headway = 20.0;
-  double time_headway = 3.0;
-  double density_weight = 0.3;
-  double speed_weight = 0.3;
-  double speed_deviation_weight = 0.1;
-  double time_headway_weight = 0.1;
-  double space_headway_weight = 0.2;
+  double heavy_density = 60.0;
+  double jam_speed = 12.0;
+  double speed_deviation = 1000.0;
 };
 }  // namespace planning

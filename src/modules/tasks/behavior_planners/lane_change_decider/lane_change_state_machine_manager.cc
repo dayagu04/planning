@@ -105,7 +105,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
                                    transition_info_.lane_change_type);
 
         // 在propose阶段计算靠近车道线的横向偏移量
-        //  CalculateLatCloseValue();
+        CalculateLatCloseValue();
 
         if (is_propose_to_execution && is_dashed_line &&
             !is_propose_to_cancel) {
@@ -1760,6 +1760,16 @@ void LaneChangeStateMachineManager::PreProcess() {
   } else {
     is_large_car_in_side_ = false;
   }
+
+  const int fix_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
+  const auto &ref_path = session_->environmental_model()
+                             .get_reference_path_manager()
+                             ->get_reference_path_by_lane(fix_lane_virtual_id);
+
+  // 初始化拥堵检测器并进行检测
+  CongestionDetector congestion_detector(&congestion_detection_config_,
+                                          session_, fix_lane_virtual_id);
+  fix_lane_congestion_level_ = congestion_detector.DetectLaneCongestion();
 }
 
 bool LaneChangeStateMachineManager::IsLargeAgent(
@@ -1801,32 +1811,11 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
   // 获取自车速度
   const double v_ego = env_model.get_ego_state_manager()->ego_v();
 
-  // 获取目标车道后节点的加速度，若不存在则默认为0.0
-  double target_rear_acceleration = 0.0;
-  if (target_lane_rear_node_) {
-      target_rear_acceleration = target_lane_rear_node_->node_accel();
-  }
-
-  // 获取固定车道的虚拟ID并获取参考路径
-  const int fix_lane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
-  const auto &ref_path =
-      env_model.get_reference_path_manager()->get_reference_path_by_lane(
-          fix_lane_virtual_id);
-  if (!ref_path) {
-      lat_close_boundary_offset_ = 0.0;  // 如果参考路径不存在，设置偏移为0
-      return;
-  }
-
-  // 初始化拥堵检测器并进行检测
-  CongestionDetector congestion_detector(&congestion_detection_config_,
-                                          ref_path);
-  CongestionResult cong_result = congestion_detector.DetectLaneCongestion();
-
   // 定义连续通过的安全帧数阈值
   constexpr int SAFETY_FRAME_THRESHOLD = 10;
 
   // 判断是否满足安全条件并设置横向偏移值
-  if (cong_result.level == CongestionLevel::FREE_FLOW &&
+  if (fix_lane_congestion_level_.level == CongestionLevel::CONGESTION &&
       lat_offset_value > 0.0 &&
       propose_state_frame_nums_ > SAFETY_FRAME_THRESHOLD) {
       lat_close_boundary_offset_ =
@@ -1837,7 +1826,6 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
       lat_close_boundary_offset_ = 0.0;  // 不满足安全条件时，设置偏移为0
   }
 }
-
 
 void LaneChangeStateMachineManager::IsEgoOnSideLane() {
   const auto &virtual_lane_manager =

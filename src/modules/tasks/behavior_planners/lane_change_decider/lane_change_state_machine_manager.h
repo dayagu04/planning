@@ -264,5 +264,7 @@ class LaneChangeStateMachineManager {
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;
+
+  CongestionResult fix_lane_congestion_level_;
 };
 }  // namespace planning
