@@ -12,6 +12,8 @@ sys.path.append('../../../')
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241225/20241225-22-06-51/data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-12-25-22-06-52_no_camera.bag.215-250.split.1738898757.open-loop.hpp.plan"
 
 frame_dt = 0.1 # sec
+# JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
+global_var.set_value('car_type', 'CHERY_E0X')
 # global_var.set_value('g_is_display_enu', True)
 g_is_display_enu = global_var.get_value('g_is_display_enu')
 
