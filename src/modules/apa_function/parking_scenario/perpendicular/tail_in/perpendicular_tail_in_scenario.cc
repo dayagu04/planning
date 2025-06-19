@@ -269,7 +269,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   // trim or extend path according to limiter, only run once
   frame_.correct_path_for_limiter = false;
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-      !ego_info_under_slot.fix_slot) {
+      !ego_info_under_slot.fix_slot && frame_.is_last_path) {
     const geometry_lib::LineSegment limiter_line(
         Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
                         0.5 * ego_info_under_slot.slot.slot_width_),
@@ -1408,6 +1408,12 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
     current_path_point_global_vec_.emplace_back(path_point);
   }
+
+  const std::vector<double> lat_buffer_vec(x_vec.size(), 0.0);
+  JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", lat_buffer_vec, 3)
 
   // need extend by cal proj point
   Eigen::Vector2d extended_point;
