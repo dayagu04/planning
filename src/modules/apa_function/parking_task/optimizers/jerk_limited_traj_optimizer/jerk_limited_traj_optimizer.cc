@@ -61,7 +61,7 @@ void JerkLimitedTrajOptimizer::Execute(
   state_ = TaskExcuteState::SUCCESS;
 
 #if DEBUG_RESULT
-  TaskDebug();
+  // TaskDebug();
 #endif
 
   ILOG_INFO << "jlt optimizer time = " << IflyTime::Now_ms() - opt_start_time;

@@ -174,7 +174,8 @@ void Trajectory::ExtendTraj(const double length) {
   if (gear_ == 2) {
     unit_line_vec = planning_math::Vec2d::CreateUnitVec2d(back().theta());
   } else {
-    unit_line_vec = planning_math::Vec2d::CreateUnitVec2d(-back().theta());
+    unit_line_vec =
+        planning_math::Vec2d::CreateUnitVec2d(back().theta() + M_PI);
   }
 
   double s = 0.03;
