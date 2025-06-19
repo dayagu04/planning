@@ -477,7 +477,7 @@ void ParkingStopDecider::AddStopDecisionByDistance(
 
   stop_decision.reason_code = decision_reason;
   stop_decision.decision_type = LonDecisionType::STOP;
-  stop_decision.path_s = stop_s;
+  stop_decision.path_s = std::max(0.0, stop_s);
 
   if (stop_decision.path_s - stop_decision.lon_decision_buffer <
       stop_decision_.path_s - stop_decision_.lon_decision_buffer) {

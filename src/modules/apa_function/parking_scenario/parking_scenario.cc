@@ -610,7 +610,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
       current_path_point_global_vec_,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
-      ego_speed_point, 0.1, trajectory_,
+      ego_speed_point, 0.0, trajectory_,
       pnc::geometry_lib::GetGearType(frame_.gear_command));
 
   const SVPoint stitch_init_speed = traj_stitcher.GetStitchSpeed();

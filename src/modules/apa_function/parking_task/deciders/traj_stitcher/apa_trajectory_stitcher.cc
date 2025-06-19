@@ -574,7 +574,8 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
   }
 
   ILOG_INFO << "is overshoot = " << is_overshoot << ", gear = " << is_forward
-            << ", traj back s = " << trajectory_.back().s();
+            << ", traj back s = " << trajectory_.back().s()
+            << ", speed back s = " << speed_profile.back().s;
 
   return;
 }

@@ -13,7 +13,7 @@ namespace apa_planner {
 
 #define DEBUG_OPTIMIZER (0)
 #define DEBUG_SAMPLING (0)
-#define DEBUG_RESULT (0)
+#define DEBUG_RESULT (1)
 
 bool JerkLimitedTrajOptimizer::Init() {
   config_.Init();
@@ -37,10 +37,11 @@ void JerkLimitedTrajOptimizer::Execute(
   if (path.size() > 1) {
     total_s = path.back().s;
   }
-  const ParkLonDecision* stop_decision = GetCloseStopDecision(speed_decisions);
-  if (stop_decision != nullptr) {
+
+  stop_decision_ = GetCloseStopDecision(speed_decisions);
+  if (stop_decision_ != nullptr) {
     total_s = std::min(
-        total_s, stop_decision->path_s - stop_decision->lon_decision_buffer);
+        total_s, stop_decision_->path_s - stop_decision_->lon_decision_buffer);
   }
   ILOG_INFO << "total s = " << total_s;
 
@@ -58,6 +59,10 @@ void JerkLimitedTrajOptimizer::Execute(
 
   RecordDebugInfo();
   state_ = TaskExcuteState::SUCCESS;
+
+#if DEBUG_RESULT
+  TaskDebug();
+#endif
 
   ILOG_INFO << "jlt optimizer time = " << IflyTime::Now_ms() - opt_start_time;
 
@@ -239,10 +244,20 @@ void JerkLimitedTrajOptimizer::GenerateStoppingTraj(
   double dec;
   if (s_des <= 1e-2) {
     dec = -0.5;
+    // todo: use remain dist. will be retired.
+    if (stop_decision_ != nullptr &&
+        stop_decision_->reason_code == LonDecisionReason::REMAIN_DIST) {
+      dec = -1.0;
+    }
   } else {
     dec = -init_point.v * init_point.v / 2.0 / s_des;
     // limit dec
-    dec = std::max(-0.5, dec);
+    if (stop_decision_ != nullptr &&
+        stop_decision_->reason_code == LonDecisionReason::REMAIN_DIST) {
+      dec = std::max(-1.0, dec);
+    } else {
+      dec = std::max(-0.5, dec);
+    }
   }
 
   double total_time = 0.0;
@@ -252,15 +267,17 @@ void JerkLimitedTrajOptimizer::GenerateStoppingTraj(
     total_time = -init_point.v / dec;
   }
   total_time = std::min(total_time, 3.0);
-  total_time = std::max(total_time, 1.0);
+  total_time = std::max(total_time, config_.delta_time);
 
   double time = 0.0;
   double p;
   double v;
-  int point_size = std::ceil(total_time / config_.delta_time);
+  int point_size = std::ceil(total_time / config_.delta_time) + 1;
+
   for (int i = 0; i < point_size; i++) {
     p = init_point.v * time + 0.5 * dec * time * time;
     p = std::max(p, init_point.s);
+
     v = init_point.v + dec * time;
     v = std::max(0.0, v);
 
@@ -268,6 +285,9 @@ void JerkLimitedTrajOptimizer::GenerateStoppingTraj(
 
     time += config_.delta_time;
     time = std::min(time, total_time);
+    if (v <= 0.0) {
+      break;
+    }
   }
 
   // todo: if path is long, need speed up or cruise.
@@ -457,10 +477,6 @@ void JerkLimitedTrajOptimizer::RecordDebugInfo() {
   }
 
   speed_debug->set_speed_type(common::SpeedProfileType::JLT);
-
-#if DEBUG_RESULT
-  TaskDebug();
-#endif
 
   return;
 }

@@ -85,6 +85,8 @@ class JerkLimitedTrajOptimizer : public ParkingTask {
   JerkLimitedTrajConfig config_;
 
   JLTFailCode fail_code_;
+
+  const ParkLonDecision* stop_decision_;
 };
 }  // namespace apa_planner
 }  // namespace planning
