@@ -2274,6 +2274,11 @@ const bool NarrowSpaceScenario::CheckDynamicParkingIn() {
 }
 
 const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
+      ApaParkOutDirection::FRONT) {
+    // This direction does not require dynamic planning;
+    return false;
+  }
   const ApaParameters& param = apa_param.GetParam();
   const bool car_motion_flag =
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
