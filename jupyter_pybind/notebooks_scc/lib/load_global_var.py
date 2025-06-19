@@ -2,6 +2,7 @@
 def init():  # 初始化
   global global_dict
   global_dict = {
+    'car_type': 'CHERY_E0X',
     'scene_type': 'HIGHWAY',
     'is_bag_main': True,  # False: main分支之前的包   True: main分支之后的包
     'g_is_display_enu': False,  # True: local_view显示enu坐标系   False: local_view显示自车坐标系

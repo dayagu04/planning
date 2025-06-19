@@ -24,6 +24,8 @@ output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
+# JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
+global_var.set_value('car_type', 'CHERY_E0X')
 # global_var.set_value('g_is_display_enu', True)
 fig1, local_view_data = load_local_view_figure()
 fig1.height = 1500
@@ -240,6 +242,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
   lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
   planning_json = plan_debug_json_msg
   lat_behavior_common = plan_debug_msg.lat_behavior_common
+  print("emergency level: ",planning_json["lateral_emergency_level"])
   print("init curv: ",lat_motion_plan_input.init_state.curv)
   print("road curv: ",planning_json["road_radius"])
   print("far_kappa_radius", planning_json["far_kappa_radius"])

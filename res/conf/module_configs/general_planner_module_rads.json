@@ -176,6 +176,7 @@
   "general_lateral_decider": {
     "lateral_ref_traj_type":false,
     "min_v_cruise": 4.0,
+    "lc_min_v_cruise": 3.333,
     "lc_second_dist_thr": 2.0,
     "dynamic_ref_buffer": [0.0, 0.0, 0.15, 0.3],
     "not_use_gap_flag": true,

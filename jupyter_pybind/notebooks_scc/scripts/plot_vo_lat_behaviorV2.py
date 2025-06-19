@@ -20,6 +20,8 @@ output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
+# JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
+global_var.set_value('car_type', 'CHERY_E0X')
 global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"

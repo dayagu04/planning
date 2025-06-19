@@ -260,5 +260,6 @@ class LaneChangeStateMachineManager {
   TrajectoryPoints ego_trajs_future_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
+  bool is_high_priority_back_ = false;
 };
 }  // namespace planning

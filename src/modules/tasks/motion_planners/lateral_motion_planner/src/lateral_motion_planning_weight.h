@@ -20,6 +20,13 @@ enum LateralMotionSceneEnum {
   LANE_BORROW
 };
 
+enum EmergencyLevelEnum {
+  NONE = 0,
+  P0,
+  P1,
+  P2
+};
+
 struct PathWeight {  // temp
   size_t point_num = 26;
   size_t proximal_index = 5;
@@ -121,6 +128,7 @@ class LateralMotionPlanningWeight {
       std::vector<double>& expected_steer_vec);
 
   void CalculateJerkBoundByLastJerk(
+      const bool is_high_priority_back,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       const planning::common::LateralPlanningOutput &last_planning_output,
       planning::common::LateralPlanningInput &planning_input);
@@ -159,6 +167,10 @@ class LateralMotionPlanningWeight {
     is_lane_change_back_ = is_lane_change_back;
   }
 
+  void SetLCHoldFlag(const bool is_lane_change_hold) {
+    is_lane_change_hold_ = is_lane_change_hold;
+  }
+
   void SetIsInIntersection(const bool is_in_intersection) {
     is_in_intersection_ = is_in_intersection;
   }
@@ -187,6 +199,8 @@ class LateralMotionPlanningWeight {
   }
 
   const PathWeight& GetPathWeights() const { return weight_; }
+
+  const EmergencyLevelEnum& GetEmergencyLevel() const { return emergency_level_; }
 
  private:
   void SetAccJerkBoundAndWeight(
@@ -220,6 +234,7 @@ class LateralMotionPlanningWeight {
   planning::LateralMotionPlannerConfig config_;
   LateralMotionSceneEnum lateral_motion_scene_;
   PathWeight weight_;
+  EmergencyLevelEnum emergency_level_;
   double lat_offset_;
   double avoid_dist_;
   double init_dis_to_ref_;
@@ -242,9 +257,9 @@ class LateralMotionPlanningWeight {
   double min_q_jerk_;
   double last_path_max_dist2ref_;
   double last_jerk_bound_limit_;
+  bool is_lane_change_hold_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
-  bool is_emergency_;
   bool is_search_success_;
   bool is_s_bend_;
   std::vector<double> soft_bound_qratio_vec_;

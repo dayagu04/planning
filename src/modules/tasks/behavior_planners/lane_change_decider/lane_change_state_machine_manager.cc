@@ -182,17 +182,20 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           lc_lane_mgr_->set_fix_lane_to_target();
           lane_change_stage_info_.Reset();
           hold_state_frame_nums_ = 0;
+          is_high_priority_back_ = false;
         } else if (is_hold_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
           lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
           lane_change_stage_info_.Reset();
           hold_state_frame_nums_ = 0;
+          is_high_priority_back_ = false;
         } else if (is_hold_to_execution) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
           hold_state_frame_nums_ = 0;
+          is_high_priority_back_ = false;
         }
       }
       break;
@@ -426,6 +429,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   // NOTICE: some cancel needs to check whether lane change can be cancelled
   if (lane_change_stage_info_.lc_should_back) {
     lane_change_stage_info_.is_cancel_to_hold = true;
+    is_high_priority_back_ = true;
     return false;
   }
 
@@ -1080,6 +1084,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
 
   lane_change_decider_output.lc_hold_state_lat_offset =
       lc_hold_state_lat_offset_;
+
+  lane_change_decider_output.is_high_priority_back = is_high_priority_back_;
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode *const agent) {
@@ -1252,6 +1258,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   execution_state_frame_nums_ = 0;
   hold_state_frame_nums_ = 0;
   complete_state_frame_nums_ = 0;
+  is_high_priority_back_ = false;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,

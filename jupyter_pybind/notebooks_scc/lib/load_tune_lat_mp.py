@@ -23,7 +23,6 @@ from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool
 
-car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 
 def normalize_vector(v):
@@ -43,6 +42,8 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
   is_enu_to_car = global_var.get_value('is_enu_to_car')
   is_vis_map = global_var.get_value('is_vis_map')
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
+  car_type = global_var.get_value('car_type')
+  car_xb, car_yb = load_car_params_patch(car_type)
   # get msg
   road_msg = find_nearest(bag_loader.road_msg, bag_time)
   # vs_msg = find_nearest(bag_loader.vs_msg, bag_time)

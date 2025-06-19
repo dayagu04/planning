@@ -25,7 +25,6 @@ from bokeh.events import Tap
 from google.protobuf.json_format import MessageToJson
 import itertools
 
-car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
 Max_line_size = 200
 Road_boundary_max_line_size = 50
@@ -42,6 +41,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   is_vis_map = global_var.get_value('is_vis_map')
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
+  car_type = global_var.get_value('car_type')
+  car_xb, car_yb = load_car_params_patch(car_type)
   # get msg
   # bag_time = 1.2
   ### step 1: 时间戳对齐
@@ -2501,10 +2502,10 @@ def load_local_view_figure():
   fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
   fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
 
-  # f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
-  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
-  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
-  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
+  f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig_init_point = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
   fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')
