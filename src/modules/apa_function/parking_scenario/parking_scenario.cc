@@ -281,7 +281,7 @@ void ParkingScenario::SetPlanningPath() {
     }
 
     planning_output_.trajectory.target_reference.polynomial[0] =
-        trajectory_.GetStopS();
+        trajectory_.GetTerminalS();
   }
 
   // set plan gear cmd
@@ -675,7 +675,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   }
 
   trajectory_ = traj_stitcher.GetConstCombinedTraj();
-  trajectory_.SetStopS(stop_decider.GetStopDecisionS());
+  trajectory_.SetTerminalS(stop_decider.GetTerminalS());
 
   return;
 }

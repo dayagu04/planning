@@ -53,6 +53,8 @@ class ParkingStopDecider : public ParkingTask {
 
   const double GetStopDecisionS();
 
+  const double GetTerminalS();
+
  private:
   void AddStopDecisionByControlPath(
       const std::vector<pnc::geometry_lib::PathPoint>& path,
@@ -106,10 +108,11 @@ class ParkingStopDecider : public ParkingTask {
 
   std::shared_ptr<PathSafeChecker> path_safe_check_;
 
-  std::vector<PolygonFootPrint> little_buffer_path_polygons_;
+  std::vector<PolygonFootPrint> small_buffer_path_polygons_;
   std::vector<PolygonFootPrint> big_buffer_path_polygons_;
 
   const ApaObstacle* stop_obstacle_ = nullptr;
+  ParkLonDecision terminal_decision_;
   ParkLonDecision stop_decision_;
   SVPoint init_point_;
 

@@ -50,7 +50,13 @@ class Trajectory : public std::vector<TrajectoryPoint> {
     return;
   }
 
+  void SetTerminalS(const double s) {
+    terminal_s_ = s;
+    return;
+  }
+
   const double GetStopS() const { return stop_decision_s_; }
+  const double GetTerminalS() const { return terminal_s_; }
 
   void ExtendTraj(const double length);
 
@@ -68,6 +74,7 @@ class Trajectory : public std::vector<TrajectoryPoint> {
   int gear_;
 
   double stop_decision_s_;
+  double terminal_s_;
 };
 
 }  // namespace trajectory

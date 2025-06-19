@@ -166,7 +166,7 @@ bool ParkingStopDecider::GetPathCollisionByObstacle(int* collision_index,
 
   std::vector<PolygonFootPrint>* path_polygons;
   if (obs.GetObsMovementType() == ApaObsMovementType::STATIC) {
-    path_polygons = &little_buffer_path_polygons_;
+    path_polygons = &small_buffer_path_polygons_;
   } else {
     path_polygons = &big_buffer_path_polygons_;
   }
@@ -239,7 +239,7 @@ void ParkingStopDecider::GeneratePathFootPrint(
                             config_.lat_buffer_to_dynamic_agent,
                             &foot_print_big_buffer);
 
-  little_buffer_path_polygons_.clear();
+  small_buffer_path_polygons_.clear();
   big_buffer_path_polygons_.clear();
   PolygonFootPrint global_polygon;
   Pose2D global_pose;
@@ -253,7 +253,7 @@ void ParkingStopDecider::GeneratePathFootPrint(
     tf.SetBasePose(global_pose);
 
     FootPrintLocalToGlobal(tf, &foot_print_little_buffer, &global_polygon);
-    little_buffer_path_polygons_.emplace_back(global_polygon);
+    small_buffer_path_polygons_.emplace_back(global_polygon);
 
     FootPrintLocalToGlobal(tf, &foot_print_big_buffer, &global_polygon);
     big_buffer_path_polygons_.emplace_back(global_polygon);
@@ -415,6 +415,8 @@ void ParkingStopDecider::AddDecisionByPathTargetPoint(
   stop_decision_.path_s = point.s;
   stop_decision_.lon_decision_buffer = 0.0;
 
+  terminal_decision_ = stop_decision_;
+
   return;
 }
 
@@ -458,7 +460,8 @@ void ParkingStopDecider::TaskDebug() {
             << static_cast<int>(stop_decision_.reason_code)
             << ", lon buffer = " << stop_decision_.lon_decision_buffer
             << ", s = " << stop_decision_.path_s
-            << ", id = " << stop_decision_.perception_id;
+            << ", id = " << stop_decision_.perception_id
+            << ", terminal s = " << terminal_decision_.path_s;
 
   return;
 }
@@ -512,6 +515,10 @@ const double ParkingStopDecider::GetStopDecisionS() {
   }
 
   return total_s;
+}
+
+const double ParkingStopDecider::GetTerminalS() {
+  return terminal_decision_.path_s;
 }
 
 }  // namespace apa_planner
