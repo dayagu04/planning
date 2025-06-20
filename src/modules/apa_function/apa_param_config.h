@@ -86,6 +86,13 @@ struct ParkingSpeedConfig {
   bool use_remain_dist;
 };
 
+struct UssConfig {
+  bool use_uss_pt_clound = false;
+  bool use_uss_pt_for_path = false;
+  bool use_uss_pt_for_speed = true;
+  bool use_uss_pt_for_slot_release = false;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -307,7 +314,6 @@ struct ApaParameters {
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
   bool use_fus_occ_column = true;
-  bool use_uss_pt_clound = false;
   bool use_ground_line = true;
   bool use_ground_line_wall_column = true;
   bool use_object_detect = true;
@@ -480,6 +486,7 @@ struct ApaParameters {
 
   AstarParkingConfig astar_config;
   ParkingSpeedConfig speed_config;
+  UssConfig uss_config;
 };
 
 class ApaParametersSetting {

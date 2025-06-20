@@ -189,6 +189,11 @@ const bool GJKCollisionDetector::IsPolygonCollision(
     pt_clout = &obs.GetPtClout2dGlobal();
   }
 
+  if (!gjk_col_det_request.use_uss_pt &&
+      obs.GetObsAttributeType() == ApaObsAttributeType::USS_POINT_CLOUD) {
+    return false;
+  }
+
   gjk_interface_.PolygonCollisionByCircleCheck(&col_flag, obs_polygon, &polygon,
                                                0.01);
 

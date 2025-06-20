@@ -513,8 +513,14 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_column, bool,
                   "use_fus_occ_column");
 
-  JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
+  JSON_READ_VALUE(apa_param.SetPram().uss_config.use_uss_pt_clound, bool,
                   "use_uss_pt_clound");
+  JSON_READ_VALUE(apa_param.SetPram().uss_config.use_uss_pt_for_path, bool,
+                  "use_uss_pt_for_path");
+  JSON_READ_VALUE(apa_param.SetPram().uss_config.use_uss_pt_for_slot_release,
+                  bool, "use_uss_pt_for_slot_release");
+  JSON_READ_VALUE(apa_param.SetPram().uss_config.use_uss_pt_for_speed, bool,
+                  "use_uss_pt_for_speed");
 
   JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
 

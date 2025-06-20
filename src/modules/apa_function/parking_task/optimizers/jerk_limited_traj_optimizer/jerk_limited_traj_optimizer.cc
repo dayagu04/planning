@@ -242,21 +242,21 @@ void JerkLimitedTrajOptimizer::GenerateStoppingTraj(
 
   // path is none, need emergency brake.
   double dec;
-  if (s_des <= 1e-2) {
-    dec = -0.5;
-    // todo: use remain dist. will be retired.
-    if (stop_decision_ != nullptr &&
-        stop_decision_->reason_code == LonDecisionReason::REMAIN_DIST) {
-      dec = -1.0;
+  if (init_point.v < 0.5) {
+    if (s_des <= 1e-2) {
+      dec = -0.5;
+    } else {
+      dec = -init_point.v * init_point.v / 2.0 / s_des;
+      // limit dec
+      dec = std::max(-0.5, dec);
     }
   } else {
-    dec = -init_point.v * init_point.v / 2.0 / s_des;
-    // limit dec
-    if (stop_decision_ != nullptr &&
-        stop_decision_->reason_code == LonDecisionReason::REMAIN_DIST) {
-      dec = std::max(-1.0, dec);
+    if (s_des <= 1e-2) {
+      dec = -1.0;
     } else {
-      dec = std::max(-0.5, dec);
+      dec = -init_point.v * init_point.v / 2.0 / s_des;
+      // limit dec
+      dec = std::max(-1.0, dec);
     }
   }
 

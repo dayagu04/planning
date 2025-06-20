@@ -18,6 +18,7 @@ struct GJKColDetRequest {
   CarBodyType car_body_type = CarBodyType::NORMAL;
   ApaObsMovementType movement_type = ApaObsMovementType::ALL;
   ApaObsHeightType height_type = ApaObsHeightType::HIGH;
+  bool use_uss_pt = false;
 
   GJKColDetRequest() = default;
   ~GJKColDetRequest() = default;

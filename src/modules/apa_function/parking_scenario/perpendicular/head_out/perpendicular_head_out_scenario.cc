@@ -311,6 +311,12 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
   Eigen::Vector2d obs_pt_slot;
   size_t obs_count_in_slot = 0;
   for (const auto& pair : obstacles) {
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        pair.second.GetObsAttributeType() ==
+            ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
+
     for (const auto& obs : pair.second.GetPtClout2dLocal()) {
       obs_pt_slot = obs;
       SlotObsType obs_slot_type = CalSlotObsType(obs_pt_slot);
@@ -642,6 +648,12 @@ const bool PerpendicularHeadOutScenario::GenObstacles() {
 
   Eigen::Vector2d obs_pt_slot;
   for (const auto& pair : obstacles) {
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        pair.second.GetObsAttributeType() ==
+            ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
+
     for (const auto& obs : pair.second.GetPtClout2dLocal()) {
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs, ego_info_under_slot.cur_pose, 0.0168)) {
@@ -1038,7 +1050,6 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
-  JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
   JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)

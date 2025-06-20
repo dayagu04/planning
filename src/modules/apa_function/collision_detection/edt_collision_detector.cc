@@ -106,6 +106,12 @@ void EDTCollisionDetector::AddObsToOGM() {
         obs_ogm = car_with_mirror_obs_ogm_;
         break;
     }
+
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        obs.GetObsAttributeType() == ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
+
     const std::vector<Eigen::Vector2d> pt_clout_2d = obs.GetPtClout2dLocal();
     for (const Eigen::Vector2d &pt : pt_clout_2d) {
       index = GetIndexFromSlotPose(pt);

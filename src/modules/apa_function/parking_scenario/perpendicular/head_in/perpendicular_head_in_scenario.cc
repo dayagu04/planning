@@ -45,7 +45,7 @@ void PerpendicularHeadInScenario::Reset() {
 }
 
 const double PerpendicularHeadInScenario::CalRemainDistFromPath() {
-  double remain_dist = 5.01;
+  double remain_dist = 15.0;
 
   if (frame_.is_replan_first) {
     return remain_dist;
@@ -369,10 +369,6 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
     }
   }
 
-  // real time dynamic col det
-  frame_.remain_dist_col_det = frame_.remain_dist_path;
-  RealTimeDynamicColDet(ego_info_under_slot);
-
   // trim path according to limiter
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     const geometry_lib::LineSegment limiter_line(
@@ -473,6 +469,12 @@ const bool PerpendicularHeadInScenario::GenTlane() {
   for (const auto& pair : obstacles) {
     // ILOG_INFO << "obs type = " << pair.first << " , local obstacle size = "
     //           << pair.second.GetPtClout2dLocal().size();
+
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        pair.second.GetObsAttributeType() ==
+            ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
 
     for (const auto obstacle_point_slot_ : pair.second.GetPtClout2dLocal()) {
       Eigen::Vector2d obstacle_point_slot = obstacle_point_slot_;
@@ -901,6 +903,13 @@ const bool PerpendicularHeadInScenario::GenObstacles() {
   for (const auto& pair : obstacles) {
     // ILOG_INFO << "obs type = " << pair.first << " , local obstacle size = "
     //           << pair.second.GetPtClout2dLocal().size();
+
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        pair.second.GetObsAttributeType() ==
+            ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
+
     for (const auto& obs : pair.second.GetPtClout2dLocal()) {
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs, ego_info_under_slot.cur_pose, 0.0168)) {
@@ -1297,12 +1306,7 @@ const bool PerpendicularHeadInScenario::CheckFinished() {
     return true;
   }
 
-  // stucked by dynamic col det
-  const bool remain_dist_col_det_condition =
-      frame_.remain_dist_col_det < apa_param.GetParam().max_replan_remain_dist;
-
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_dist_col_det_condition &&
                    (ego_info_under_slot.terminal_err.pos.x() < 0.4001);
 
   return parking_finish;
@@ -1765,7 +1769,6 @@ void PerpendicularHeadInScenario::Log() const {
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
-  JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
   JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
@@ -1821,198 +1824,6 @@ void PerpendicularHeadInScenario::Log() const {
   } else {
     JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
     JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
-  }
-}
-
-void PerpendicularHeadInScenario::RealTimeDynamicColDet(
-    const EgoInfoUnderSlot& ego_slot_info) {
-  const ApaParameters& apa_param_ = apa_param.GetParam();
-  if (false && !current_plan_path_vec_.empty()) {
-    const double start_time = IflyTime::Now_ms();
-
-    // when dynamic col det, use small car lat inflation, try to avoid getting
-    // stuck as much as possible
-    CollisionDetector::Paramters params;
-    params.lat_inflation = apa_param_.car_lat_inflation_dynamic_plan;
-    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
-    // construct real time obs
-    GenTlane();
-    GenObstacles();
-
-    const double car_already_move_dist =
-        frame_.current_path_length - frame_.remain_dist_path;
-
-    // distance of vehicle motion in adjacent frames
-    const double dmove_dist =
-        car_already_move_dist - frame_.car_already_move_dist;
-
-    ILOG_INFO << "car real move dist = " << car_already_move_dist
-              << "  last frame car_already_move_dist = "
-              << frame_.car_already_move_dist
-              << "  this frame car_already_move_dist = " << dmove_dist;
-
-    frame_.car_already_move_dist = car_already_move_dist;
-
-    // trim path real time according to dmove_dist
-    double length = 0.0;
-    std::vector<size_t> trim_id_vec;
-    std::vector<size_t> lose_id_vec;
-    for (size_t i = 0; i < current_plan_path_vec_.size(); ++i) {
-      const pnc::geometry_lib::PathSegment& path_seg_global =
-          current_plan_path_vec_[i];
-      length += path_seg_global.Getlength();
-      if (length > dmove_dist) {
-        trim_id_vec.emplace_back(i);
-        break;
-      } else if (pnc::mathlib::IsDoubleEqual(length, dmove_dist)) {
-        lose_id_vec.emplace_back(i);
-        break;
-      } else if (length < dmove_dist) {
-        lose_id_vec.emplace_back(i);
-      }
-    }
-
-    // first lose and then trim
-    while (!lose_id_vec.empty()) {
-      current_plan_path_vec_.erase(current_plan_path_vec_.begin() +
-                                   lose_id_vec.front());
-      lose_id_vec.erase(lose_id_vec.begin());
-      for (size_t i = 0; i < lose_id_vec.size(); ++i) {
-        if (lose_id_vec[i] > 0) {
-          lose_id_vec[i]--;
-        }
-      }
-      for (size_t i = 0; i < trim_id_vec.size(); ++i) {
-        if (trim_id_vec[i] > 0) {
-          trim_id_vec[i]--;
-        }
-      }
-    }
-    while (!trim_id_vec.empty()) {
-      const size_t trim_id = trim_id_vec.front();
-      trim_id_vec.erase(trim_id_vec.begin());
-      for (size_t i = 0; i < trim_id_vec.size(); ++i) {
-        if (trim_id_vec[i] > 0) {
-          trim_id_vec[i]--;
-        }
-      }
-      for (size_t i = 0; i < current_plan_path_vec_.size(); ++i) {
-        if (i == trim_id) {
-          const double save_path = length - dmove_dist;
-          pnc::geometry_lib::CompletePathSeg(current_plan_path_vec_[i],
-                                             save_path, false);
-        }
-      }
-    }
-
-    // only for debug
-    std::vector<double> x_vec;
-    std::vector<double> y_vec;
-    std::vector<double> phi_vec;
-    std::vector<pnc::geometry_lib::PathPoint> pt_vec;
-    length = 0.0;
-    for (const pnc::geometry_lib::PathSegment& path_seg_global :
-         current_plan_path_vec_) {
-      length += path_seg_global.Getlength();
-      std::vector<pnc::geometry_lib::PathPoint> temp_pt_vec;
-      pnc::geometry_lib::SamplePointSetInPathSeg(temp_pt_vec, path_seg_global,
-                                                 0.02);
-      pt_vec.insert(pt_vec.end(), temp_pt_vec.begin(), temp_pt_vec.end());
-    }
-    ILOG_INFO << "current_plan_path_vec_ length  = " << length;
-
-    for (const pnc::geometry_lib::PathPoint& pt : pt_vec) {
-      x_vec.emplace_back(pt.pos.x());
-      y_vec.emplace_back(pt.pos.y());
-      phi_vec.emplace_back(pt.heading);
-    }
-
-    JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 3)
-    JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 3)
-    JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 3)
-
-    // the dist that car can move
-    double car_safe_move_dist = 0.0;
-    // col det to current plan path
-    // the start pt is ego pose
-    for (const pnc::geometry_lib::PathSegment& path_seg_global :
-         current_plan_path_vec_) {
-      // this path is global, need to transform to local to col det
-      CollisionDetector::CollisionResult col_res;
-      pnc::geometry_lib::PathSegment path_seg_local = path_seg_global;
-      if (path_seg_global.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-        path_seg_local.line_seg.pA =
-            ego_slot_info.g2l_tf.GetPos(path_seg_global.line_seg.pA);
-        path_seg_local.line_seg.pB =
-            ego_slot_info.g2l_tf.GetPos(path_seg_global.line_seg.pB);
-        path_seg_local.line_seg.heading =
-            ego_slot_info.g2l_tf.GetHeading(path_seg_global.line_seg.heading);
-
-        col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
-            path_seg_local.line_seg, path_seg_local.line_seg.heading);
-      } else if (path_seg_global.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-        path_seg_local.arc_seg.pA =
-            ego_slot_info.g2l_tf.GetPos(path_seg_global.GetArcSeg().pA);
-        path_seg_local.arc_seg.pB =
-            ego_slot_info.g2l_tf.GetPos(path_seg_global.GetArcSeg().pB);
-        path_seg_local.arc_seg.circle_info.center = ego_slot_info.g2l_tf.GetPos(
-            path_seg_global.GetArcSeg().circle_info.center);
-        path_seg_local.arc_seg.headingA = ego_slot_info.g2l_tf.GetHeading(
-            path_seg_global.GetArcSeg().headingA);
-        path_seg_local.arc_seg.headingB = ego_slot_info.g2l_tf.GetHeading(
-            path_seg_global.GetArcSeg().headingB);
-
-        col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
-            path_seg_local.arc_seg, path_seg_local.arc_seg.headingA);
-      }
-
-      // ILOG_INFO <<
-      //     "this path col det res: "
-      //     << "remain_obstacle_dist = " << col_res.remain_obstacle_dist
-      //     << "  remain_car_dist = " << col_res.remain_car_dist
-      //     << "  collision_point_local = "
-      //     << col_res.col_pt_obs_global.transpose()
-      //     << "  collision_point_global = "
-      //     <<
-      //     ego_slot_info.l2g_tf.GetPos(col_res.col_pt_obs_global).transpose()
-      //     << "  col_ego_pt slot = " <<
-      //     col_res.col_pt_ego_global.transpose()
-      //     << "  col_ego_pt global = "
-      //     <<
-      //     ego_slot_info.l2g_tf.GetPos(col_res.col_pt_ego_global).transpose()
-      //     << "  col_ego_pt car = " << col_res.col_pt_ego_local.transpose()
-      //     << "  car_line_order = " << col_res.car_line_order
-      //     << "  obs_type = " << static_cast<int>(col_res.obs_type));
-
-      const double single_path_remain_obstacle_dist =
-          col_res.remain_obstacle_dist - apa_param_.col_obs_safe_dist_strict;
-
-      const double single_path_remain_car_dist = col_res.remain_car_dist;
-
-      if (single_path_remain_obstacle_dist < single_path_remain_car_dist) {
-        // the path would col by obs
-        car_safe_move_dist += single_path_remain_obstacle_dist;
-        break;
-      } else {
-        // the path would not col by obs
-        car_safe_move_dist += single_path_remain_car_dist;
-      }
-    }
-
-    frame_.remain_dist_col_det = car_safe_move_dist;
-
-    frame_.remain_dist_col_det =
-        std::min(frame_.remain_dist_col_det, frame_.remain_dist_path);
-
-    params.Reset();
-    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
-
-    ILOG_INFO << "remain_dist_col_det = " << frame_.remain_dist_col_det;
-
-    ILOG_INFO << "dynamic_col_det_consume_time = "
-              << IflyTime::Now_ms() - start_time << " ms";
-    JSON_DEBUG_VALUE("dynamic_col_det_consume_time",
-                     IflyTime::Now_ms() - start_time)
   }
 }
 

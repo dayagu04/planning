@@ -23,7 +23,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   virtual void Log() const override;
   const bool UpdateEgoSlotInfo() override;
   const uint8_t PathPlanOnce() override;
-  void RealTimeDynamicColDet(const EgoInfoUnderSlot& ego_slot_info);
 
   // virtual func
   virtual const double CalRemainDistFromPath() override;

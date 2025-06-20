@@ -306,7 +306,13 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
     if (pair.second.GetObsMovementType() ==
-        apa_planner::ApaObsMovementType::MOTION) {
+            apa_planner::ApaObsMovementType::MOTION) {
+      continue;
+    }
+
+    if (!config.uss_config.use_uss_pt_for_path &&
+        pair.second.GetObsAttributeType() ==
+            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
       continue;
     }
 

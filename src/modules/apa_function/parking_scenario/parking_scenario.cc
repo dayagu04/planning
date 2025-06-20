@@ -348,7 +348,7 @@ const geometry_lib::PathPoint ParkingScenario::GetCarFrontPoseFromCarPose(
 }
 
 const double ParkingScenario::CalRemainDistFromPath() {
-  double remain_dist = 5.01;
+  double remain_dist = 15.0;
 
   if (frame_.is_replan_first) {
     return remain_dist;
@@ -403,6 +403,11 @@ const double ParkingScenario::CalRemainDistFromObs(
   // check static obs, it can be radical
   GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
                                        ApaObsMovementType::STATIC);
+  gjl_col_det_request.use_uss_pt = false;
+  if (apa_param.GetParam().uss_config.use_uss_pt_clound &&
+      apa_param.GetParam().uss_config.use_uss_pt_for_speed) {
+    gjl_col_det_request.use_uss_pt = true;
+  }
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       static_lat_buffer, 0.0, gjl_col_det_request);
@@ -414,6 +419,7 @@ const double ParkingScenario::CalRemainDistFromObs(
 
   // check dynamic obs, it should be conservative
   gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
+  gjl_col_det_request.use_uss_pt = false;
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_lat_buffer, 0.0, gjl_col_det_request);

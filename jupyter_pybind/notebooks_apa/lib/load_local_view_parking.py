@@ -1766,6 +1766,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     # size 150, version 2.9.0
     obj_count = 150
     for j in range(obj_count):
+      if points.priv_point_data_prop[j].point_valid == 0 :
+         continue
       x = points.priv_point_data_prop[j].point_x * 0.01
       y = points.priv_point_data_prop[j].point_y * 0.01
 

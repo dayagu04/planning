@@ -26,8 +26,7 @@ enum class PathCheckRequest {
   DISTANCE_CHECK = 2,
 };
 
-// check path safe for polygon obs and ogm obstacle by gjk.
-// todo: for lower check time, add EDT method to accelerate calculation.
+// check path safe for polygon obs and ogm obstacle by gjk for lon decision.
 class PathSafeChecker {
  public:
   PathSafeChecker(

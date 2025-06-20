@@ -212,7 +212,6 @@
   "believe_in_fus_obs": false,
   "use_fus_occ_obj": true,
   "use_fus_occ_column": true,
-  "use_uss_pt_clound": false,
   "use_ground_line": true,
   "use_ground_line_wall_column": false,
   "use_object_detect": false,
@@ -389,5 +388,10 @@
   "tail_in_slot_virtual_wall_x_offset" : 4.5,
   "tail_in_slot_virtual_wall_y_offset" : 1.5,
   "head_in_slot_virtual_wall_x_offset" : 0.1,
-  "head_in_slot_virtual_wall_y_offset" : 2.0
+  "head_in_slot_virtual_wall_y_offset" : 2.0,
+
+  "use_uss_pt_clound": false,
+  "use_uss_pt_for_path": false,
+  "use_uss_pt_for_speed": false,
+  "use_uss_pt_for_slot_release": false
 }

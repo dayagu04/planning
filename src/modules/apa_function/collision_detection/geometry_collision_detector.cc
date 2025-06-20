@@ -1,6 +1,7 @@
 #include "geometry_collision_detector.h"
 
 #include "geometry_math.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 namespace apa_planner {
@@ -111,6 +112,11 @@ void GeometryCollisionDetector::Update(
       default:
         car_line_vec = &car_with_mirror_line_vec;
         break;
+    }
+
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        obs.GetObsAttributeType() == ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
     }
 
     const std::vector<Eigen::Vector2d> &pt_clout_2d = obs.GetPtClout2dLocal();
@@ -224,6 +230,11 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
         break;
       default:
         car_line_vec = &car_with_mirror_line_vec;
+    }
+
+    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
+        obs.GetObsAttributeType() == ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
     }
 
     const std::vector<Eigen::Vector2d> pt_clout_2d = obs.GetPtClout2dLocal();
