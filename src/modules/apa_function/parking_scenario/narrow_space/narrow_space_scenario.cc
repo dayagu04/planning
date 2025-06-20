@@ -2309,7 +2309,9 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
 
   if (dynamic_flag_head_out_ && heading_flag) {
     // 如果上一次当前动态规划的heading 接近 目标heading，则无需再次重规划。
-    return false;
+    bool path_condition =
+        frame_.remain_dist_path > perception_blind_spot_distance ? true : false;
+    return path_condition;
   }
 
   bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
