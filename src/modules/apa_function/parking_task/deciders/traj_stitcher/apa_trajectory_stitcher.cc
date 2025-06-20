@@ -529,14 +529,15 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
 
   if (!is_overshoot && trajectory_.back().s() < path_data.back().s()) {
     double extend_total_s = path_data.back().s() - trajectory_.back().s();
-    double extend_point_size = std::ceil(extend_total_s / 0.1);
+    double delta_s = 0.03;
+    double extend_point_size = std::ceil(extend_total_s / delta_s);
     double cur_s;
 
     // if traj point speed is not computed in optimizer, default value is 0.0.
     // double extend_point_v = trajectory_.back().vel();
     double extend_point_v = 0;
     for (size_t i = 0; i < extend_point_size; i++) {
-      cur_s = trajectory_.back().s() + 0.1;
+      cur_s = trajectory_.back().s() + delta_s;
       cur_s = std::min(cur_s, path_data.back().s());
       path_point = path_data.Evaluate(cur_s);
 
