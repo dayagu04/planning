@@ -200,6 +200,10 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json,
                             "use_overtake_lane_change_request_instead_of_"
                             "active_lane_change_request");
+    enable_use_speed_limit_to_suppress_interactive_lane_change =
+        read_json_key<bool>(json,
+                            "enable_use_speed_limit_to_suppress_interactive_lane_change");
+
     minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
         read_json_key<double>(
             json,
@@ -241,6 +245,8 @@ struct EgoPlanningConfig : public Config {
   int active_lane_change_min_duration_threshold = 150;
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
+      true;
+  bool enable_use_speed_limit_to_suppress_interactive_lane_change =
       true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
   double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =

@@ -7,13 +7,18 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
+#include "display_state_types.h"
 #include "ego_planning_config.h"
 #include "lane_change_requests/emergence_avoid_lane_change_request.h"
 #include "lane_change_requests/overtake_lane_change_request.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 
 namespace planning {
+namespace {
+constexpr double kMaxSpeedTriggerInteractiveLaneChangeRequest = 33.333;
+constexpr double kMinSpeedTriggerInteractiveLaneChangeRequest = 11.111;
 
+}  // namespace
 // class: LaneChangeRequestManager
 LaneChangeRequestManager::LaneChangeRequestManager(
     framework::Session* session, const EgoPlanningConfigBuilder* config_builder,
@@ -73,6 +78,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const bool use_overtake_lane_change_request =
       config_
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
+  const bool enable_use_speed_limit_to_suppress_interactive_lane_change = 
+      config_.enable_use_speed_limit_to_suppress_interactive_lane_change;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
       config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
   const double odd_route_distance_threshold = 500.0;
@@ -100,6 +107,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const double default_distance_threshld_to_stop_line = 30.0;
   const double dis_to_stopline =
       session_->environmental_model().get_virtual_lane_manager()->GetEgoDistanceToStopline();
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
 
   if (cur_lane != nullptr && is_merge_region) {
     const auto& curr_reference_path = reference_path_mgr->get_reference_path_by_lane(
@@ -117,37 +126,58 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
-    int_request_.Update(lc_status);
-    int_request_cancel_reason_ = int_request_.request_cancel_reason();
-    ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
+    if(enable_use_speed_limit_to_suppress_interactive_lane_change) {
+      if ((ego_v < kMaxSpeedTriggerInteractiveLaneChangeRequest) && (ego_v > kMinSpeedTriggerInteractiveLaneChangeRequest)) {
+        int_request_.Update(lc_status);
+        int_request_cancel_reason_ = int_request_.request_cancel_reason();
+        ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
+      } else {
+        int_request_.Finish();
+        int_request_.set_request_cancel_reason(UNSUITABLE_VEL);
+        int_request_cancel_reason_ = int_request_.request_cancel_reason();
+      }
+    } else {
+      int_request_.Update(lc_status);
+      int_request_cancel_reason_ = int_request_.request_cancel_reason();
+      ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
+    }
   } else {
     int_request_.reset_int_cnt();
   }
   if (int_request_.request_type() == NO_CHANGE) {
-    if (enable_use_cone_change_request &&
-        request_source_ != EMERGENCE_AVOID_REQUEST &&
-        dis_to_stopline > default_distance_threshld_to_stop_line &&
-        intersection_state != planning::common::IN_INTERSECTION) {
-      cone_change_request_.Update(lc_status);
+    if (enable_use_cone_change_request && request_source_ != EMERGENCE_AVOID_REQUEST) {
+      if (dis_to_stopline > default_distance_threshld_to_stop_line &&
+          intersection_state != planning::common::IN_INTERSECTION) {
+        cone_change_request_.Update(lc_status);
+      } else {
+        cone_change_request_.Reset();
+        cone_change_request_.Finish();
+      }
     }
-    if (enable_use_emergency_avoidence_lc_request &&
-        request_source_ != CONE_REQUEST &&
-        dis_to_stopline > default_distance_threshld_to_stop_line &&
-        intersection_state != planning::common::IN_INTERSECTION) {
-      emergence_avoid_request_.Update(lc_status);
+    if (enable_use_emergency_avoidence_lc_request && request_source_ != CONE_REQUEST) {
+      if (dis_to_stopline > default_distance_threshld_to_stop_line &&
+          intersection_state != planning::common::IN_INTERSECTION) {
+        emergence_avoid_request_.Update(lc_status);
+      } else {
+        emergence_avoid_request_.Reset();
+        emergence_avoid_request_.Finish();
+      }
     }
     if (hd_map_valid) {
       map_request_.Update(lc_status, map_request_.tfinish());
     }
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
         origin_relative_id_zero_nums == 1 &&
-        ego_distance_to_boundary_merge >
-        distance_nearby_merge_point_to_surpress_merge_request &&
-        intersection_state != planning::common::IN_INTERSECTION &&
-        dis_to_stopline > default_distance_threshld_to_stop_line) {
-      merge_change_request_.Update(lc_status);
-      is_near_merge_region_ =
-          merge_change_request_.is_merge_lane_change_situation();
+        ego_distance_to_boundary_merge > distance_nearby_merge_point_to_surpress_merge_request) {
+      if (intersection_state != planning::common::IN_INTERSECTION &&
+          dis_to_stopline > default_distance_threshld_to_stop_line) {
+        merge_change_request_.Update(lc_status);
+        is_near_merge_region_ =
+            merge_change_request_.is_merge_lane_change_situation();
+      } else {
+        merge_change_request_.Reset();
+        merge_change_request_.Finish();
+      }
     }
     if (location_valid && use_overtake_lane_change_request) {
       // lcc功能抑制超车变道

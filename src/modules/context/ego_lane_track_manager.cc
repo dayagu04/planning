@@ -29,6 +29,7 @@
 #include "reference_path_manager.h"
 #include "stop_line.h"
 #include "task_basic_types.h"
+#include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
 #include "vehicle_config_context.h"
@@ -46,7 +47,7 @@ constexpr double kInitPosCostWeight = 2.0;
 constexpr double kCumuLateralDistanceCostWeight = 1.5;
 constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 0.5;
-constexpr double kLaneChangeOrderidDiffWeight = 0.5;
+constexpr double kLaneChangeOrderidDiffWeight = 1.0;
 
 constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kLaneLineSegmentLength = 5.0;
@@ -70,6 +71,8 @@ constexpr double kAverageKappaCostWeight = 2.0;
 constexpr double kAverageThetaDiffCostWeight = 6.0;
 constexpr double kEgoLateralDistanceCostWeight = 0.5;
 constexpr double kUseVirtualLaneProcessSplitCostThd = 1.0;
+constexpr int kDefaultLaneChangeOrderIdDiff = 1;
+
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
@@ -573,6 +576,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         virtual_id_mapped_lane) {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
   int origin_lane_virtual_id =
       lane_change_decider_output.origin_lane_virtual_id;
   int origin_lane_order_id = -1;
@@ -605,7 +609,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         origin_lane_order_id = virtual_id_lane.second->get_order_id();
       }
     }
-  } else { 
+  } else {
     return;
   }
 
@@ -615,7 +619,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
 
   const auto coarse_planning_info = session_->planning_context()
                                         .lane_change_decider_output()
-                                        .coarse_planning_info;                    
+                                        .coarse_planning_info;
   bool is_lc_change =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeHold) ||
@@ -626,8 +630,16 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
       is_lane_change ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
                      : kInitPosCostWeight;
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
-  double k_lane_change_order_id_diff_wegiht = 
-      (is_lane_change && origin_lane_order_id != -1 && !ego_in_split_region_) ? kLaneChangeOrderidDiffWeight : 0.0;
+  double k_lane_change_order_id_diff_wegiht =
+      (is_lc_change && origin_lane_order_id != -1) ? kLaneChangeOrderidDiffWeight : 0.0;
+  int k_lane_change_order_id_diff = 0;
+  if (is_lc_change) {
+    if (lc_request_direction == LEFT_CHANGE) {
+      k_lane_change_order_id_diff = 0;
+    } else if (lc_request_direction == RIGHT_CHANGE) {
+      k_lane_change_order_id_diff = kDefaultLaneChangeOrderIdDiff;
+    }
+  }
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
       order_ids.size() < 2) {
@@ -768,10 +780,10 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     }
 
     int lane_order_id = relative_id_lane->get_order_id();
-    order_id_diff_cost = std::fabs(lane_order_id - origin_lane_order_id);
+    order_id_diff_cost = std::fabs(std::fabs(lane_order_id - origin_lane_order_id) - k_lane_change_order_id_diff);
     total_cost = lateral_distance_cost_weight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
-                 k_init_pos_cost_weight * init_pose_cost + 
+                 k_init_pos_cost_weight * init_pose_cost +
                  k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
     std::vector<double> cost_list{cumu_lat_dis_cost, crosslane_cost,
                                   init_pose_cost, order_id_diff_cost,total_cost};
@@ -1782,7 +1794,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
       if (point_nums < kLeastDefaultPointNums) {
         lane_mapping_cost = default_lane_mapping_cost;
       } else {
-        lane_mapping_cost = 
+        lane_mapping_cost =
             std::fabs(total_lateral_offset / point_nums) + k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
       }
       return lane_mapping_cost;

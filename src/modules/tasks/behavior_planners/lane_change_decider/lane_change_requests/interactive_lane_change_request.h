@@ -17,7 +17,11 @@ class IntRequest : public LaneChangeRequest {
 
   IntCancelReasonType request_cancel_reason() {
     return request_cancel_reason_;
-  };
+  }
+
+  void set_request_cancel_reason(IntCancelReasonType request_cancel_reason) {
+    request_cancel_reason_ = request_cancel_reason;
+  }
 
   void reset_freeze_cnt() {
     left_cancel_freeze_cnt_ = 0;
