@@ -40,6 +40,7 @@
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
+#include "fixed_time_quintic_path.h"
 // #define DEBUG_GAP_SELECTOR FALSE
 #define __COLLECT_GAP_SELECTOR_DEBUG_INFO__
 
