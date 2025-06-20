@@ -705,7 +705,9 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
     return true;
   }
 
-  if (!apa_world_ptr_->GetSimuParam().sim_to_target && CheckDynamicUpdate()) {
+  if (!apa_world_ptr_->GetSimuParam().sim_to_target &&
+      !apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().fix_slot &&
+      CheckDynamicUpdate()) {
     ILOG_INFO << "replan by dynamic!";
     frame_.replan_reason = ReplanReason::DYNAMIC;
     return true;

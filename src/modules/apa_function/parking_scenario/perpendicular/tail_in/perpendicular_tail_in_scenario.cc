@@ -269,7 +269,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   // trim or extend path according to limiter, only run once
   frame_.correct_path_for_limiter = false;
   if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-      !ego_info_under_slot.fix_slot) {
+      !ego_info_under_slot.fix_slot && frame_.is_last_path) {
     const geometry_lib::LineSegment limiter_line(
         Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
                         0.5 * ego_info_under_slot.slot.slot_width_),
@@ -279,13 +279,20 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
         ego_info_under_slot.cur_pose.pos, limiter_line);
 
-    ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter;
+    double car_to_limiter_dis = param.car_to_limiter_dis;
+    if (ego_info_under_slot.slot_occupied_ratio_postprocess >
+        ego_info_under_slot.slot_occupied_ratio + 0.0168) {
+      car_to_limiter_dis = param.car_to_limiter_dis + 0.86;
+    }
 
-    if (dist_ego_limiter < param.car_to_limiter_dis &&
+    ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter
+              << "  car_to_limiter_dis = " << car_to_limiter_dis;
+
+    if (dist_ego_limiter < car_to_limiter_dis &&
         frame_.can_correct_path_for_limiter &&
-        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg <
+        std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
             param.finish_heading_err * 1.05 &&
-        std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+        std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
             param.finish_lat_err_strict * 1.05) {
       ILOG_INFO << "should correct path according limiter";
       ego_info_under_slot.fix_slot = true;
@@ -1280,11 +1287,16 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
   s_vec.reserve(traj_size);
   heading_vec.reserve(traj_size);
 
+  const auto& l2g_tf =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
+
+  const auto& g2l_tf =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf;
+
   const Eigen::Vector2d limiter_mid =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf.GetPos(
-          apa_world_ptr_->GetSlotManagerPtr()
-              ->GetEgoInfoUnderSlot()
-              .origin_target_pose.pos);
+      l2g_tf.GetPos(apa_world_ptr_->GetSlotManagerPtr()
+                        ->GetEgoInfoUnderSlot()
+                        .origin_target_pose.pos);
 
   // If the target pose is very close to the previously planned
   // endpoint, there is no need to run the following steps
@@ -1338,7 +1350,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     double init_length = 0.0;
     double extend_length = s_proj - s;
     if (current_plan_path_vec_.size() > 0 &&
-        std::fabs(current_plan_path_vec_.back().GetEndHeading()) * kRad2Deg <
+        std::fabs(
+            g2l_tf.GetHeading(current_plan_path_vec_.back().GetEndHeading())) *
+                kRad2Deg <
             1.08) {
       PathSegment& path_seg_global = current_plan_path_vec_.back();
       init_length = path_seg_global.Getlength();
@@ -1364,11 +1378,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
                        apa_param.GetParam().car_lat_inflation_normal,
                        apa_param.GetParam().col_obs_safe_dist_normal);
 
-      const double remain_dist =
-          std::max(init_length,
-                   std::min(col_res.remain_obs_dist -
-                                apa_param.GetParam().col_obs_safe_dist_normal,
-                            col_res.remain_car_dist));
+      const double remain_dist = std::max(init_length, col_res.remain_dist);
 
       extend_length = remain_dist - init_length;
 
@@ -1408,6 +1418,12 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
     current_path_point_global_vec_.emplace_back(path_point);
   }
+
+  const std::vector<double> lat_buffer_vec(x_vec.size(), 0.0);
+  JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", lat_buffer_vec, 3)
 
   // need extend by cal proj point
   Eigen::Vector2d extended_point;
