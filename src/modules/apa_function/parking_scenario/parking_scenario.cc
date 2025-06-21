@@ -26,10 +26,10 @@
 #include "planning_plan_c.h"
 #include "pose2d.h"
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
+#include "rule_based_predictor/rule_based_predictor.h"
 #include "speed/apa_speed_decision.h"
 #include "sv_dp_optimizer/dp_speed_optimizer.h"
 #include "traj_stitcher/apa_trajectory_stitcher.h"
-#include "rule_based_predictor/rule_based_predictor.h"
 
 namespace planning {
 namespace apa_planner {
@@ -295,6 +295,23 @@ void ParkingScenario::SetPlanningPath() {
   ILOG_INFO << "gear command in planning output = "
             << static_cast<int>(gear_command->gear_command_value);
 
+  // record all gear plan path pt
+  const size_t N = complete_path_point_global_vec_.size();
+  std::vector<double> x_vec(N, 0.0), y_vec(N, 0.0), heading_vec(N, 0.0),
+      lat_buffer_vec(N, 0.0), type_vec(N, 0.0);
+  for (size_t i = 0; i < N; ++i) {
+    const auto& global_point = complete_path_point_global_vec_[i];
+    x_vec[i] = global_point.pos.x();
+    y_vec[i] = global_point.pos.y();
+    heading_vec[i] = global_point.heading;
+    lat_buffer_vec[i] = global_point.lat_buffer;
+  }
+
+  JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", lat_buffer_vec, 3)
+
   return;
 }
 
@@ -312,8 +329,8 @@ const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
   const ApaSlot& slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot;
 
-  if ((slot.IsPointInCustomSlot(ego_pose.pos, lon_expand, lon_expand, lat_expand,
-                          lat_expand, true) &&
+  if ((slot.IsPointInCustomSlot(ego_pose.pos, lon_expand, lon_expand,
+                                lat_expand, lat_expand, true) &&
        std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
     return true;
   }

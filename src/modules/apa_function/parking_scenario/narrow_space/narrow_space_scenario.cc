@@ -1090,6 +1090,10 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
   debug_->mutable_refline_info()->Clear();
   bool sample_finish = false;
 
+  geometry_lib::PathPoint gl_pt;
+  complete_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.reserve(result.x.size());
+
   for (i = 0; i < result.x.size(); i++) {
     local_position.x = result.x[i];
     local_position.y = result.y[i];
@@ -1111,16 +1115,11 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
       point->set_l(1.0);
     }
 
-    path_x.emplace_back(global_position.x);
-    path_y.emplace_back(global_position.y);
-    path_theta.emplace_back(global_position.theta);
-    path_lat_buffer.emplace_back(0.0);
+    gl_pt.pos << global_position.x, global_position.y;
+    gl_pt.heading = global_position.theta;
+    gl_pt.lat_buffer = 0.0;
+    complete_path_point_global_vec_.emplace_back(gl_pt);
   }
-
-  JSON_DEBUG_VECTOR("plan_traj_x", path_x, 3);
-  JSON_DEBUG_VECTOR("plan_traj_y", path_y, 3);
-  JSON_DEBUG_VECTOR("plan_traj_heading", path_theta, 3);
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", path_lat_buffer, 3);
 
   // do not publish it.
   if (0) {
