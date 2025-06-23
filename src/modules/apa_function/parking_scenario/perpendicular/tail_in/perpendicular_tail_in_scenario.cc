@@ -827,39 +827,6 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
   perferred_geometry_path_vec_ = planner_output.perferred_geometry_path_vec;
 
-  // record all_gear_path_segment_vec
-  std::vector<double> x_vec;
-  std::vector<double> y_vec;
-  std::vector<double> heading_vec;
-  std::vector<double> lat_buffer_vec;
-  const size_t interval_number = 2;
-  x_vec.reserve(planner_output.all_gear_path_point_vec.size() /
-                    interval_number +
-                interval_number);
-  y_vec.reserve(planner_output.all_gear_path_point_vec.size() /
-                    interval_number +
-                interval_number);
-  heading_vec.reserve(planner_output.all_gear_path_point_vec.size() /
-                          interval_number +
-                      interval_number);
-  lat_buffer_vec.reserve(planner_output.all_gear_path_point_vec.size() /
-                             interval_number +
-                         interval_number);
-  for (size_t i = 0; i < complete_path_point_global_vec_.size(); ++i) {
-    if (i % interval_number == 0) {
-      x_vec.emplace_back(complete_path_point_global_vec_[i].pos.x());
-      y_vec.emplace_back(complete_path_point_global_vec_[i].pos.y());
-      heading_vec.emplace_back(complete_path_point_global_vec_[i].heading);
-      lat_buffer_vec.emplace_back(
-          complete_path_point_global_vec_[i].lat_buffer);
-    }
-  }
-
-  JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", lat_buffer_vec, 3)
-
   ILOG_INFO << "current_path_point_global_vec_.size() = "
             << current_path_point_global_vec_.size()
             << "  complete_path_point_global_vec_.size() = "
@@ -1418,12 +1385,6 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
     current_path_point_global_vec_.emplace_back(path_point);
   }
-
-  const std::vector<double> lat_buffer_vec(x_vec.size(), 0.0);
-  JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", lat_buffer_vec, 3)
 
   // need extend by cal proj point
   Eigen::Vector2d extended_point;
