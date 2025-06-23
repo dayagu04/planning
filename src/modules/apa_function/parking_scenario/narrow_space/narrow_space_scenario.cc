@@ -54,6 +54,7 @@ void NarrowSpaceScenario::Reset() {
 
   current_path_last_heading_ = 0.0;
   dynamic_flag_head_out_ = false;
+  count_frame_from_last_dynamic_ = 100;
 
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
@@ -314,6 +315,10 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     dynamic_flag_head_out_ =
         (frame_.replan_reason == ReplanReason::DYNAMIC) ? true : false;
   }
+  count_frame_from_last_dynamic_ =
+      (frame_.replan_reason == ReplanReason::DYNAMIC)
+          ? 0
+          : count_frame_from_last_dynamic_ + 1;
 
   // check replan
   if (is_replan || update_thread_path) {
@@ -2287,8 +2292,10 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
       (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
        3.68);
 
-  const bool occupied_ratio_flag = (ego_info_under_slot.slot_occupied_ratio <
-                                    param.pose_slot_occupied_ratio_3);
+  const bool occupied_ratio_flag =
+      (ego_info_under_slot.slot_occupied_ratio <
+       param.pose_slot_occupied_ratio_3) &&
+      (ego_info_under_slot.slot_occupied_ratio > 0.0);
 
   // check path remain dist
   const bool path_dist_flag = frame_.remain_dist_path > 1.5;
@@ -2304,18 +2311,25 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
       std::fabs(current_path_last_heading_ -
                 ego_info_under_slot.target_pose.heading) < kHeadingThreshold;
 
+  bool historical_condition = true;
   if (dynamic_flag_head_out_ && heading_flag) {
     // 如果上一次当前动态规划的heading 接近 目标heading，则无需再次重规划。
-    bool path_condition =
+    historical_condition =
         frame_.remain_dist_path > perception_blind_spot_distance ? true : false;
-    return path_condition;
   }
 
-  bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
-                             occupied_ratio_flag && path_dist_flag &&
-                             current_path_length_flag;
+  bool count_frame_condition =
+      count_frame_from_last_dynamic_ > 10 ? true : false;
 
-  return dynamic_replan_flag;
+  if (historical_condition) {
+    bool dynamic_replan_flag =
+        car_motion_flag && car_pos_flag && occupied_ratio_flag &&
+        path_dist_flag && current_path_length_flag && count_frame_condition;
+
+    return dynamic_replan_flag;
+  } else {
+    return historical_condition;
+  }
 }
 
 void NarrowSpaceScenario::FillPlanningReason(AstarRequest& cur_request) {

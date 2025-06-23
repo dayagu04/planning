@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "log_glog.h"
 #include "math/math_utils.h"
@@ -785,24 +786,28 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
 FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
     const Pose2D& pose, const bool is_circle_path) {
   // 60 degree
-  if (slot_box_.contain(pose) &&
-      std::fabs(IflyUnifyTheta(pose.theta - request_->goal_.theta, M_PI)) <
-          1.05) {
-    if (is_circle_path) {
+  const ParkingVehDirection& dir = request_->direction_request;
+  bool inside_slot = slot_box_.contain(pose);
+  bool need_theta_check = (dir == ParkingVehDirection::HEAD_IN ||
+                           dir == ParkingVehDirection::TAIL_IN);
+
+  // The parking out function does not require this condition
+  bool theta_close = std::fabs(IflyUnifyTheta(
+                         pose.theta - request_->goal_.theta, M_PI)) < 1.05;
+
+  if (inside_slot) {
+    if ((need_theta_check && theta_close) || !need_theta_check) {
       return &hierachy_circle_model_.footprint_model
-                  [HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER];
+                  [is_circle_path
+                       ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
+                       : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
     }
-
-    return &hierachy_circle_model_
-                .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
   }
 
-  if (is_circle_path) {
-    return &hierachy_circle_model_.footprint_model
-                [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER];
-  }
-  return &hierachy_circle_model_
-              .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+  return &hierachy_circle_model_.footprint_model
+              [is_circle_path
+                   ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
+                   : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
 }
 
 FootPrintCircleModel* NodeCollisionDetect::GetSlotOutsideCircleFootPrint() {
