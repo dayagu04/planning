@@ -834,6 +834,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double hybrid_ara_s_range = 20;
   double l_buffer_for_lat_decision = 2;
   double column_l_buffer_for_decision = 2;
+  double delta_t = 0.2;
+  double num_step = 25;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {

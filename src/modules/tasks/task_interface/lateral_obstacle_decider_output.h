@@ -44,6 +44,8 @@ struct LateralObstacleDeciderOutput {
   bool left_borrow = true;
   bool right_borrow = true;
   std::unordered_map<uint32_t, double> obstacle_intrusion_distance_thr;
+  TrajectoryPoints plan_history_traj;
+  bool is_plan_history_traj_valid = false;
 
   void Clear() {
     hybrid_ara_result.Clear();

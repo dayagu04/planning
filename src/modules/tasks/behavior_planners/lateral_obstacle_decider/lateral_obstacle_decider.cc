@@ -16,6 +16,7 @@
 #include "edt_manager.h"
 #include "task_interface/lateral_obstacle_decider_output.h"
 #include "obstacle_manager.h"
+#include "src/modules/tasks/behavior_planners/general_lateral_decider/general_lateral_decider_utils.h"
 
 namespace planning {
 
@@ -45,7 +46,13 @@ LateralObstacleDecider::LateralObstacleDecider(
                   .lat_obstacle_decision),
       obstacle_intrusion_distance_thr_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
-                  .obstacle_intrusion_distance_thr) {
+                  .obstacle_intrusion_distance_thr),
+      plan_history_traj_(session_->mutable_planning_context()
+                  ->mutable_lateral_obstacle_decider_output()
+                  .plan_history_traj),
+      is_plan_history_traj_valid_(session_->mutable_planning_context()
+                  ->mutable_lateral_obstacle_decider_output()
+                  .is_plan_history_traj_valid) {
   VehicleParam vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
@@ -64,6 +71,8 @@ bool LateralObstacleDecider::Execute() {
     return false;
   }
   obstacle_intrusion_distance_thr_.clear();
+  plan_history_traj_.clear();
+  is_plan_history_traj_valid_ = false;
 
   // UpdateLaneBorrowDirection();
 
@@ -84,7 +93,7 @@ bool LateralObstacleDecider::Execute() {
   ego_v_ = reference_path_ptr->get_frenet_ego_state().velocity();
   ego_v_s_ = reference_path_ptr->get_frenet_ego_state().velocity_s();
   ego_v_l_ = reference_path_ptr->get_frenet_ego_state().velocity_l();
-
+  ConstructPlanHistoryTraj(reference_path_ptr);
   if (session_->is_hpp_scene()) {
     const auto &reference_path_ptr = session_->planning_context()
                                          .lane_change_decider_output()
@@ -372,6 +381,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
 
   // 减去大车后视镜
   if (obstacle.is_oversize_vehicle()) {
+    lat_safety_buffer -= 0.2;
+  }
+
+  // 对向车减小0.2m
+  if (obstacle.is_reverse()) {
     lat_safety_buffer -= 0.2;
   }
 
@@ -855,6 +869,7 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
     std::shared_ptr<ReferencePath> reference_path, double lane_width) {
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
+  const auto &obstacle = *frenet_obstacle.obstacle();
   if (!frenet_obstacle.obstacle()->is_static() &&
       !(frenet_obstacle.d_s_rel() <= 0 && in_intersection_) &&
       frenet_obstacle.obstacle()->trajectory_valid()) {
@@ -875,6 +890,11 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
       lat_safety_buffer -= 0.2;
     }
 
+    // 对向车减小0.2m
+    if (obstacle.is_reverse()) {
+      lat_safety_buffer -= 0.2;
+    }
+
     // 滞回
     if (history.cut_in_or_cross) {
       lat_safety_buffer += 0.1;
@@ -884,7 +904,7 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
         ego_width_ + lat_safety_buffer - 0.5 * lane_width;
     constexpr double kAdditionL = 0.15;
     constexpr double kVelLThreshold = 0.15;
-    std::array<uint8_t, 6> timestamps{5, 4, 3, 2, 1, 0};
+    std::array<uint8_t, 6> timestamps{0, 1, 2, 3, 4, 5};
     double min_l = std::numeric_limits<double>::max();
     double max_l = std::numeric_limits<double>::lowest();
     for (auto &i : timestamps) {
@@ -895,6 +915,18 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
         carte_point.x = pt.x();
         carte_point.y = pt.y();
         if (frenet_coord->XYToSL(carte_point, frenet_point)) {
+          if (obstacle.is_reverse()) {
+            // 匀速递推
+            double ego_front_s = ego_head_s_ + i * ego_v_s_;
+            // 使用历史轨迹
+            // size_t index = static_cast<size_t>(i / config_.delta_t);
+            // if (index < plan_history_traj_.size()) {
+            //   ego_front_s = plan_history_traj_[index].s + ego_rear_axis_to_front_edge_;
+            // }
+            if (frenet_point.x <= ego_front_s) {
+              break;
+            }
+          }
           min_l = std::min(min_l, frenet_point.y);
           max_l = std::max(max_l, frenet_point.y);
         }
@@ -929,6 +961,81 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
   }
   history.cut_in_or_cross = false;
   return false;
+}
+
+void LateralObstacleDecider::ConstructPlanHistoryTraj(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr) {
+  const auto &frenet_coord =
+      reference_path_ptr->get_frenet_coord();
+  auto &last_traj_points = session_->mutable_planning_context()
+                               ->mutable_last_planning_result()
+                               .raw_traj_points;
+  TrajectoryPoints plan_history_traj_tmp;
+  for (size_t i = 0; i < last_traj_points.size(); ++i) {
+    // frenet info
+    Point2D frenet_pt{0.0, 0.0};
+    Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
+    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      last_traj_points[i].s = frenet_pt.x;
+      last_traj_points[i].l = frenet_pt.y;
+      plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+    } else {
+      LOG_DEBUG("plan_history_traj frenet error");
+    }
+  }
+  if (plan_history_traj_tmp.empty()) {
+    is_plan_history_traj_valid_ = false;
+    return;
+  }
+  auto ego_s = reference_path_ptr->get_frenet_ego_state().planning_init_point().frenet_state.s;
+  // auto ego_s = ego_frenet_state_.s();
+  if (ego_s <= plan_history_traj_tmp.front().s) {
+    for (double t = 0; t <= plan_history_traj_tmp.back().t;
+         t += config_.delta_t) {
+      TrajectoryPoint pt =
+          general_lateral_decider_utils::GetTrajectoryPointAtTime(
+              plan_history_traj_tmp, t);
+      pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
+      plan_history_traj_.emplace_back(std::move(pt));
+    }
+  } else if (ego_s >= plan_history_traj_tmp.back().s) {
+    // assert(false);
+  } else {
+    int index = 1;
+    while (index < plan_history_traj_tmp.size()) {
+      if (plan_history_traj_tmp[index].s >= ego_s) {
+        break;
+      }
+      index++;
+    }
+    const auto &traj_1 = plan_history_traj_tmp[index - 1];
+    const auto &traj_2 = plan_history_traj_tmp[index];
+    const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
+    const double weight1 = 1.0 - weight0;
+    const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
+    for (double t = base_t; t <= plan_history_traj_tmp.back().t;
+         t += config_.delta_t) {
+      TrajectoryPoint pt =
+          general_lateral_decider_utils::GetTrajectoryPointAtTime(
+              plan_history_traj_tmp, t);
+      plan_history_traj_.emplace_back(std::move(pt));
+    }
+    for (auto &traj : plan_history_traj_) {
+      traj.t -= base_t;
+    }
+    if (plan_history_traj_.size() == 0) {
+    } else {
+      for (int point_num = plan_history_traj_.size();
+           point_num < config_.num_step + 1; point_num++) {
+        TrajectoryPoint pt = plan_history_traj_.back();
+        // For now, only s and t are modified
+        pt.s += pt.v * config_.delta_t;
+        pt.t += config_.delta_t;
+        plan_history_traj_.emplace_back(std::move(pt));
+      }
+    }
+  }
+  is_plan_history_traj_valid_ = true;
 }
 
 void LateralObstacleDecider::UpdateIntersection() {
