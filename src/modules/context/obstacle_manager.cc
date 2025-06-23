@@ -845,7 +845,7 @@ void ObstacleManager::add_frenet_obstacle(
         frenet_point.y < (config_.frenet_obstacle_range_l_min + ego_l)) {
       auto iter = gs_care_obstacles_.Dict().find(obstacle_ptr->id());
       if (iter != gs_care_obstacles_.Dict().end()) {
-        LOG_ERROR("This unnormal obj need to consider in gs");
+        LOG_INFO("This unnormal obj need to consider in gs");
       } else {
         continue;
       }
