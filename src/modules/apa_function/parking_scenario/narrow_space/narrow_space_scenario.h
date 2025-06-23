@@ -162,6 +162,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   double current_path_last_heading_;
   bool dynamic_flag_head_out_;
+  size_t count_frame_from_last_dynamic_;
 
   // 一个车位泊车中，通道虚拟墙只能增长，不能缩减.
   // 如果根据车辆位置去缩减，导致2次规划之间路径差异太大.

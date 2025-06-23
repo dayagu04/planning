@@ -806,7 +806,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
        i++) {
     if (IsHeadOutRequest(request_.direction_request)) {
-      lat_buffer_outside = config_.safe_buffer.head_out_lat_safe_buffer_outside[i];
+      lat_buffer_outside =
+          config_.safe_buffer.head_out_lat_safe_buffer_outside[i];
       lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
     } else {
       lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
