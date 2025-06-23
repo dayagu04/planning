@@ -199,7 +199,7 @@ bool EnvironmentalModelManager::Run() {
   auto current_time_s = IflyTime::Now_s();
 
   if (!session_->environmental_model().GetVehicleDbwStatus()) {
-    LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
+    LOG_INFO("DBW_Disable, but EnvironmentalModelManager continue\n");
   }
 
   const auto &local_view = session_->environmental_model().get_local_view();
@@ -323,13 +323,13 @@ bool EnvironmentalModelManager::Run() {
   last_feed_time_[FEED_MAP_INFO] = local_view.static_map_info_recv_time;
   if (rads_mode && !virtual_lane_manager_ptr_->update(
                        local_view.function_state_machine_info)) {
-    LOG_ERROR("virtual_lane_manager update failed for rads\n");
+    LOG_INFO("virtual_lane_manager update failed for rads\n");
     return false;
   }
 
   if (!rads_mode) {
     if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
-      LOG_ERROR("virtual_lane_manager update failed\n");
+      LOG_INFO("virtual_lane_manager update failed\n");
       return false;
     } else {
       // 后面需要判断是否为地图

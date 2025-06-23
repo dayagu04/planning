@@ -402,7 +402,7 @@ bool PlanningAdapter::Proc() {
       // use last succ planning output when planning not succ
       // if never succeed, output will bi empty
       //   planning_output = last_planning_output_;
-      LOG_WARNING("planning failed, use last planning output\n");
+      LOG_INFO("planning failed, use last planning output\n");
     }
     // update msg_header & msg_meta
     auto &msg_header = planning_output.msg_header;

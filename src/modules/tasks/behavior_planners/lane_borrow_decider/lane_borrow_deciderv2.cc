@@ -134,7 +134,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
 
   if (lane_change_state_ != kLaneKeeping) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = LANE_CHANGE_STATE;
-    LOG_ERROR("It has lane change state!");
+    LOG_INFO("It has lane change state!");
     return false;
   }
 
