@@ -337,12 +337,14 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
           SetParkingStatus(PARKING_PLANNING);
         } else {
           SetParkingStatus(PARKING_FAILED);
+          frame_.plan_fail_reason = PATH_PLAN_FAILED;
         }
         break;
       case PathPlannerResult::PLAN_FAILED:
         if (frame_.replan_fail_time >
             apa_param.GetParam().max_replan_failed_time) {
           SetParkingStatus(PARKING_FAILED);
+          frame_.plan_fail_reason = PATH_PLAN_FAILED;
         }
         break;
       default:
