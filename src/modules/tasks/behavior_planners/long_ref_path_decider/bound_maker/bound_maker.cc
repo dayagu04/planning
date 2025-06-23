@@ -126,7 +126,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     if (upper_bound_infos_[i].agent_id == -1) {
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
       acc_upper_bound_[i] =
-          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+          std::fmax(init_lon_state_[2], acc_target.second);
       continue;
     }
 
@@ -149,11 +149,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
     acc_upper_bound_[i] =
         std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
-    // only allow acc upper bound over 1.0 in start state
-    if (start_stop_decider_output.ego_start_stop_info().state() !=
-        common::StartStopInfo::START) {
-      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
-    }
+
   }
 }
 
