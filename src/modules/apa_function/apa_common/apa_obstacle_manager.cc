@@ -209,6 +209,9 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
             Eigen::Vector2d(-pose.heading_vec[0], -pose.heading_vec[1]));
       }
 
+      apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
+      apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
+      apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
       apa_obs.SetId(obs_id_generate_);
       apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;

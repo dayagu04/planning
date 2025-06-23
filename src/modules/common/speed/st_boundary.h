@@ -74,6 +74,8 @@ class STBoundary {
   const std::vector<STPoint>& upper_points() const { return upper_points_; }
   const std::vector<STPoint>& lower_points() const { return lower_points_; }
 
+  void DebugString();
+
  private:
   bool IsValid(
       const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const;

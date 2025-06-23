@@ -40,8 +40,8 @@ void RuleBasedPredictor::Execute(
 void RuleBasedPredictor::Predict(ApaObstacle& obs) {
   trajectory::Trajectory predict_traj;
   trajectory::TrajectoryPoint traj_point;
-  double predict_time = 5.0;
-  double delta_time = 1.0;
+  double predict_time = 4.0;
+  double delta_time = 0.4;
   double max_dist = obs.Speed() * predict_time + 0.1;
   double delta_dist = obs.Speed() * delta_time;
 

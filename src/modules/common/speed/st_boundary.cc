@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "common.h"
 #include "math/math_utils.h"
+#include "src/common/log_glog.h"
 
 namespace planning {
 
@@ -306,6 +307,12 @@ bool STBoundary::GetTimestampBeginWithS(double lower_s, double& t) const {
     return true;
   }
   return false;
+}
+
+void STBoundary::DebugString() {
+  ILOG_INFO << "s = " << min_s_ << ", " << max_s_ << ", t = " << min_t_ << ", "
+            << max_t_;
+  return;
 }
 
 }  // namespace planning

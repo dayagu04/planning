@@ -96,6 +96,14 @@ class ParkingStopDecider : public ParkingTask {
   void RecordDebugInfo(
       const std::vector<pnc::geometry_lib::PathPoint>& lateral_path);
 
+  bool IsVehCollisionByOD(const PolygonFootPrint& foot_print,
+                          const Polygon2D& obs);
+
+  bool CheckCollisionByODObject(
+      const std::vector<PolygonFootPrint>& polygon_path,
+      const Polygon2D& obs_polygon, int* start_collision_index,
+      int* end_collision_index);
+
  private:
   std::shared_ptr<apa_planner::CollisionDetectorInterface>
       col_det_interface_ptr_;

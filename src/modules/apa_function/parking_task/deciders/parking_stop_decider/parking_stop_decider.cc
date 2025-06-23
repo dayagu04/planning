@@ -272,29 +272,67 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
 
   upper_points->clear();
   lower_points->clear();
-
   double end_s = path.back().s;
-  double max_time = 7.0;
 
   // For those with no predicted trajectories, just map the obstacle's
   // current position to ST-graph and always assume it's static.
-  int collision_index = 0;
-  bool is_collision = GetPathCollisionByObstacle(&collision_index, obstacle);
+  if (obstacle.GetObsAttributeType() != ApaObsAttributeType::FUSION_POLYGON) {
+    double max_time = 7.0;
+    int collision_index = 0;
+    bool is_collision = GetPathCollisionByObstacle(&collision_index, obstacle);
 
-  if (is_collision && collision_index >= 0 && collision_index < path.size()) {
-    collision_index -= 1;
-    collision_index = std::max(0, collision_index);
+    if (is_collision && collision_index >= 0 && collision_index < path.size()) {
+      collision_index -= 1;
+      collision_index = std::max(0, collision_index);
 
-    const auto& curr_point = path[collision_index];
-    double low_s = std::fmax(0.0, curr_point.s);
-    double high_s = end_s;
+      const auto& curr_point = path[collision_index];
+      double low_s = std::fmax(0.0, curr_point.s);
+      double high_s = end_s;
 
-    lower_points->emplace_back(low_s, 0.0);
-    lower_points->emplace_back(low_s, max_time);
-    upper_points->emplace_back(high_s, 0.0);
-    upper_points->emplace_back(high_s, max_time);
+      lower_points->emplace_back(low_s, 0.0);
+      lower_points->emplace_back(low_s, max_time);
+      upper_points->emplace_back(high_s, 0.0);
+      upper_points->emplace_back(high_s, max_time);
 
-    ILOG_INFO << "collision_index = " << collision_index << ", s = " << low_s;
+      ILOG_INFO << "collision_index = " << collision_index << ", s = " << low_s;
+    }
+  } else {
+    Polygon2D global_polygon = obstacle.GetPolygon2DGlobal();
+    const pnc::geometry_lib::PathPoint&  center=obstacle. GetCenterPose();
+    Transform2d tf(Pose2D(center.pos[0], center.pos[1], center.heading));
+    Polygon2D local_polygon;
+    GlobalPolygonToULFLocal(&global_polygon, tf, &local_polygon);
+
+    bool is_collision;
+    int first_collision_index;
+    int end_collision_index;
+
+    const trajectory::Trajectory& traj = obstacle.GetPredictTraj();
+
+    // 2. Go through every point of the predicted obstacle trajectory.
+    for (int i = 0; i < traj.size(); ++i) {
+      const trajectory::TrajectoryPoint& trajectory_point = traj[i];
+      double trajectory_point_time = trajectory_point.absolute_time();
+      if (trajectory_point_time  > 7.0) {
+        continue;
+      }
+
+      tf.SetBasePose(Pose2D(trajectory_point.x(), trajectory_point.y(),
+                            trajectory_point.theta()));
+      ULFLocalPolygonToGlobal(&global_polygon, &local_polygon, tf);
+
+      is_collision = CheckCollisionByODObject(
+          big_buffer_path_polygons_, global_polygon, &first_collision_index,
+          &end_collision_index);
+
+      if (is_collision) {
+        double low_s = std::fmax(0.0, path[first_collision_index].s);
+        double high_s = std::fmin(end_s, path[end_collision_index].s);
+
+        lower_points->emplace_back(low_s,  trajectory_point_time);
+        upper_points->emplace_back(high_s, trajectory_point_time);
+      }
+    }
   }
 
   return (lower_points->size() > 1 && upper_points->size() > 1);
@@ -308,6 +346,7 @@ void ParkingStopDecider::ComputeSTBoundary(
   std::vector<STPoint> lower_points;
   std::vector<STPoint> upper_points;
 
+  // compute od,occ,ground line st boundary.
   if (!GetOverlapBoundaryPoints(path, obstacle, &upper_points, &lower_points)) {
     obstacle.SetLonDecision(decision);
     return;
@@ -325,7 +364,7 @@ void ParkingStopDecider::ComputeSTBoundary(
     decision.lon_decision_buffer = config_.lon_buffer_to_dynamic_agent;
     decision.reason_code = LonDecisionReason::DYNAMIC_OCC_COLLISION;
   }
-  decision.path_s = lower_points.front().s();
+  decision.path_s = boundary.min_s();
   decision.perception_id = obstacle.GetId();
 
   // todo: generate emergency brake profile.
@@ -349,6 +388,10 @@ void ParkingStopDecider::ComputeSTBoundary(
   ILOG_INFO << "obs id = " << decision.perception_id
             << ",s = " << decision.path_s
             << ", type = " << static_cast<int>(obstacle.GetObsScemanticType());
+
+  if (obstacle.GetObsAttributeType() == ApaObsAttributeType::FUSION_POLYGON) {
+    boundary.DebugString();
+  }
 
   return;
 }
@@ -375,11 +418,6 @@ void ParkingStopDecider::AddDecisionByObstacle(
 
   for (auto& obj : obs_manager_->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
-
-    // TODO: for now, not use prediction traj.
-    if (obstacle.GetObsAttributeType() == ApaObsAttributeType::FUSION_POLYGON) {
-      continue;
-    }
 
     ComputeSTBoundary(extend_path, obstacle);
 
@@ -519,6 +557,45 @@ const double ParkingStopDecider::GetStopDecisionS() {
 
 const double ParkingStopDecider::GetTerminalS() {
   return terminal_decision_.path_s;
+}
+
+bool ParkingStopDecider::IsVehCollisionByOD(const PolygonFootPrint& foot_print,
+                                            const Polygon2D& obs) {
+  bool is_collision = false;
+  gjk_interface_.PolygonCollisionByCircleCheck(
+      &is_collision, &foot_print.max_polygon, &obs, 0.1);
+
+  return is_collision;
+}
+
+bool ParkingStopDecider::CheckCollisionByODObject(
+    const std::vector<PolygonFootPrint>& polygon_path,
+    const Polygon2D& obs_polygon, int* start_collision_index,
+    int* end_collision_index) {
+  *start_collision_index = -1;
+  *end_collision_index = -1;
+
+  bool is_collision = false;
+  bool find_collision = false;
+
+  int point_size = polygon_path.size();
+  for (int i = 0; i < point_size; i++) {
+    const PolygonFootPrint& point_polygon = polygon_path[i];
+    is_collision = IsVehCollisionByOD(point_polygon, obs_polygon);
+
+    if (is_collision) {
+      // find collision
+      if (!find_collision) {
+        find_collision = true;
+        *start_collision_index = i;
+      }
+
+      // check ego path
+      *end_collision_index = i;
+    }
+  }
+
+  return find_collision;
 }
 
 }  // namespace apa_planner
