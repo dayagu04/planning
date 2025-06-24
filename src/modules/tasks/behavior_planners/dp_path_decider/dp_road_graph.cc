@@ -100,7 +100,7 @@ bool DPRoadGraph::ProcessEnvInfos() {
   }
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
-  for(const auto& obstacle: obstacles){
+  for (const auto& obstacle : obstacles) {
     const auto& id = obstacle->obstacle()->id();
     const auto& agent = agent_mgr->GetAgent(id);
     //  continue
@@ -151,8 +151,9 @@ bool DPRoadGraph::ProcessEnvInfos() {
       obstacles_info_.emplace_back(
           std::move(static_obs_info));  // just log info
       static_obstacles_box_.emplace_back(obs_box);
-    } else if (obstacle->frenet_velocity_s() < kMaxNudgingSpeed ) {  // slow dynamic filter
-                                        // filtered backward dynamic obs
+    } else if (obstacle->frenet_velocity_s() <
+               kMaxNudgingSpeed) {  // slow dynamic filter
+                                    // filtered backward dynamic obs
       if (!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end ||
             agent_sl_boundary[2] < ego_frenet_boundary_.l_start) &&
           agent_sl_boundary[0] < ego_frenet_boundary_.s_start) {
@@ -455,10 +456,10 @@ bool DPRoadGraph::SetSampleParams(LaneBorrowStatus lane_borrow_status) {
         -current_lane_ptr_->width() * 0.5 + vehicle_width_ * 0.5;
   }
   if (left_lane_ptr_ != nullptr) {
-    sample_left_boundary_ += left_lane_ptr_->width() * 0.5;
+    sample_left_boundary_ += left_lane_ptr_->width();// unused
   }
   if (right_lane_ptr_ != nullptr) {
-    sample_right_boundary_ -= right_lane_ptr_->width() * 0.5;
+    sample_right_boundary_ -= right_lane_ptr_->width();// unused
   }
 
   LaneBorrowStatus lane_borrow_state;
@@ -535,20 +536,20 @@ bool DPRoadGraph::SampleLanes(
       sample_right_boundary =
           -current_lane_ptr_->width_by_s(s_step) * 0.5 + vehicle_width_ * 0.5;
     }
-    if (left_lane_ptr_ != nullptr) {
+    if (left_lane_ptr_ != nullptr) {// extend sample boundary
       if (lane_borrow_decider_output->lane_borrow_state ==
           kLaneBorrowCrossing) {
-        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
+        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.9;
       } else {
-        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
+        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.9;
       }
     }
     if (right_lane_ptr_ != nullptr) {
       if (lane_borrow_decider_output->lane_borrow_state ==
           kLaneBorrowCrossing) {
-        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
+        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.9;
       } else {
-        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;
+        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.9;
       }
     }
     // if (left_lane_ptr_ != nullptr) {
@@ -567,6 +568,21 @@ bool DPRoadGraph::SampleLanes(
     } else {
       // l_range_ = 1.0;
     }
+    // 考虑道路边缘和物理隔离
+    ReferencePathPoint refpath_pt{};
+    double distance_to_left_road_border = 100;
+    double distance_to_right_road_border = 100;
+    if (current_reference_path_ptr_ != nullptr &&
+        current_reference_path_ptr_->get_reference_point_by_lon(ego_s_,
+                                                                refpath_pt)) {
+      distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
+      distance_to_right_road_border = refpath_pt.distance_to_right_road_border;
+    }
+    sample_right_boundary =
+        std::max(sample_right_boundary, -distance_to_right_road_border);
+    sample_left_boundary =
+        std::min(sample_left_boundary, distance_to_left_road_border);
+
     // slice lateral range
     std::vector<double> samples_l;
     // 负方向采样

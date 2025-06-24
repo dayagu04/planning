@@ -20,7 +20,6 @@
 #include "trajectory_cost.h"
 #include "utils/cartesian_coordinate_system.h"
 #include "virtual_lane.h"
-#include "agent/agent_manager.h"
 namespace planning {
 class DPRoadGraph : public Task {
   /**

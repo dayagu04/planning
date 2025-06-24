@@ -35,7 +35,8 @@ enum LaneBorrowFailedReason {
   BORROWDIRECTION_DIFFERENT,
   TMP_DP_SEARCH_FAILED,
   CUTINOUT_RISK,
-  AGENT_MGR_FAILED
+  AGENT_MGR_FAILED,
+  CHANGE_TARGET_LANE
 };
 enum BorrowDirection { NO_BORROW = 0, LEFT_BORROW, RIGHT_BORROW };
 
@@ -47,6 +48,7 @@ struct LaneBorrowDeciderOutput {
   double right_bounds_l;
   BorrowDirection borrow_direction = NO_BORROW;  // 0--None, 1--left, 2--right
   bool is_in_lane_borrow_status = false;
+  bool is_change_target_lane = false;
   std::vector<int> blocked_obs_id;  // block objs and failed
   bool can_left_borrow = false;
   bool can_right_borrow = false;

@@ -58,6 +58,7 @@ class LaneBorrowDecider : public Task {
   bool UpdateLaneBorrowDirection();
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
+  bool IfChangeTargetLane();
   void CheckKeyObstaclesIntention(const agent::Agent* agent, bool& is_cut_in,
                                   bool& is_cut_out);
   bool UpdateDynamicBlockingObstacles();
@@ -73,8 +74,8 @@ class LaneBorrowDecider : public Task {
   bool CheckBackWardObs();
 
  private:
-  LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
 
+  LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double forward_solid_start_dis_{1000.0};
   double forward_solid_end_s_{1500.0};
 

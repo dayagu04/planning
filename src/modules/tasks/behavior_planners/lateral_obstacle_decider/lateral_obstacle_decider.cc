@@ -61,7 +61,7 @@ bool LateralObstacleDecider::Execute() {
     return false;
   }
 
-  UpdateLaneBorrowDirection();
+  // UpdateLaneBorrowDirection();
 
   UpdateIntersection();
 
@@ -295,7 +295,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double lat_safety_buffer = config_.lat_safety_buffer;
   double oversize_veh_addition_buffer = config_.oversize_veh_addition_buffer;
   double traffic_cone_thr = config_.traffic_cone_thr;
-  double static_obs_buffer = config_.small_static_obs_buffer;
+  double static_obs_buffer = config_.large_static_obs_buffer;
   double near_car_hysteresis = config_.near_car_hysteresis;
   double in_range_v = config_.in_range_v;
   double in_range_v_hysteresis = config_.in_range_v_hysteresis;
@@ -336,10 +336,10 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double d_min_cpath = frenet_obstacle.d_min_cpath();
   double d_max_cpath = frenet_obstacle.d_max_cpath();
 
-  // static obs lat_safety_buffer
-  if ((l > 0 && can_right_borrow) || (l < 0 && can_left_borrow)) {
-    static_obs_buffer = config_.large_static_obs_buffer;
-  }
+  // // static obs lat_safety_buffer
+  // if ((l > 0 && can_right_borrow) || (l < 0 && can_left_borrow)) {
+  //   static_obs_buffer = config_.large_static_obs_buffer;
+  // }
 
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
