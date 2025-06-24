@@ -724,9 +724,12 @@ const double StGraphInput::GetSuitableLateralBuffer(
     const auto agent_type = agent.type();
     if (agent_type == agent::AgentType::PEDESTRIAN) {
       return std::fmax(lat_buffer_, person_lat_buffer_);
-    } else if (agent_type == agent::AgentType::BICYCLE) {
+    } else if ((agent_type == agent::AgentType::BICYCLE) ||
+               (agent_type == agent::AgentType::CYCLE_RIDING) ||
+               (agent_type == agent::AgentType::MOTORCYCLE_RIDING)) {
       return std::fmax(lat_buffer_, bycicle_lat_buffer_);
-    } else if (agent_type == agent::AgentType::TRICYCLE) {
+    } else if (agent_type == agent::AgentType::TRICYCLE ||
+               (agent_type == agent::AgentType::TRICYCLE_RIDING)) {
       return std::fmax(lat_buffer_, tricycle_lat_buffer_);
     }
   }
