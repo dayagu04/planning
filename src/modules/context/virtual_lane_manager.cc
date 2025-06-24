@@ -771,7 +771,7 @@ bool VirtualLaneManager::update(
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
-    LOG_INFO("!!!current_lane is empty!!!");
+    LOG_DEBUG("!!!current_lane is empty!!!");
     ego_lane_track_manager_.Reset();
     return false;
   }
@@ -1007,7 +1007,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
-    LOG_INFO("!!!current_lane is empty!!!");
+    LOG_DEBUG("!!!current_lane is empty!!!");
     ego_lane_track_manager_.Reset();
     return false;
   }
