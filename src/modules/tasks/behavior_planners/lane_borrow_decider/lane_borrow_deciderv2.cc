@@ -1,4 +1,5 @@
 #include "lane_borrow_deciderv2.h"
+
 #include <Eigen/src/Core/Matrix.h>
 #include <math.h>
 #include "planning_hmi_c.h"
@@ -51,6 +52,9 @@ namespace planning {
 namespace lane_borrow_deciderV2 {
 
 bool LaneBorrowDecider::Execute() {
+  if (session_->environmental_model().is_mrc_mode()) {
+    return true;
+  }
   UpdateToDP();
   dp_path_decider_->LogDebugInfo();
   LogDebugInfo();
@@ -422,7 +426,7 @@ bool LaneBorrowDecider::CheckIfDPLaneBorrowCrossingToNoBorrow() {
 
 // v2 2-3
 bool LaneBorrowDecider::IsDPSafeForBackOriginLane() {
-  //静态区域最后障碍物的s和自车当前是s判断，如果超过阈值则说明自车正在回自车道
+  // 静态区域最后障碍物的s和自车当前是s判断，如果超过阈值则说明自车正在回自车道
   const auto& last_obstacle = static_blocked_obstacles_.back();
   const auto& stastic_last_obs = last_obstacle->frenet_obstacle_boundary();
   const auto& center_obs_s =
@@ -1106,8 +1110,8 @@ bool LaneBorrowDecider::ObstacleDecision() {
               });
   }
   const std::unordered_set<int> valid_obstacle_types = {
-      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE,      // 锥桶
-      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN,  // 临时指示牌
+      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE,          // 锥桶
+      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN,      // 临时指示牌
       iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER,  // 水马
       iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL};
   is_facility_ = false;
@@ -1385,8 +1389,8 @@ bool LaneBorrowDecider::EnoughSafetyDistance() {
   }
 }
 bool LaneBorrowDecider::CheckLaneBorrowDircetion() {
-  //拿静态区域的第一个obs_id 判断在path的左边还是右边
-  // const auto& id = static_blocked_obj_id_vec_[0];
+  // 拿静态区域的第一个obs_id 判断在path的左边还是右边
+  //  const auto& id = static_blocked_obj_id_vec_[0];
   const auto& front_obstacle_sl =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary();
   const auto& dp_path = dp_path_decider_->refined_paths();

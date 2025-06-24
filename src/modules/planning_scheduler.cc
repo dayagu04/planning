@@ -419,6 +419,11 @@ void PlanningScheduler::FillPlanningTrajectory(
   } else {
     turn_signal->turn_signal_value = iflyauto::TURN_SIGNAL_TYPE_RIGHT;
   }
+
+  if (session_.environmental_model().is_mrc_mode()) {
+    turn_signal->turn_signal_value = iflyauto::TURN_SIGNAL_TYPE_EMERGENCY_FLASH;
+  }
+
   // WB start:--------临时hack以下信号--------
   // 4.Light signal
   auto light_signal = &(planning_output->light_signal_command);

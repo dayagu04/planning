@@ -223,7 +223,7 @@ class EnvironmentalModel {
     dynamic_world_ = dynamic_world;
   }
 
-  void set_route_info (const std::shared_ptr<RouteInfo> route_info) {
+  void set_route_info(const std::shared_ptr<RouteInfo> route_info) {
     route_info_ = route_info;
   }
 
@@ -234,9 +234,7 @@ class EnvironmentalModel {
   const std::shared_ptr<EdtManager> &get_edt_manager() const {
     return edt_manager_;
   }
-  std::shared_ptr<EdtManager> &mutable_edt_manager() {
-    return edt_manager_;
-  }
+  std::shared_ptr<EdtManager> &mutable_edt_manager() { return edt_manager_; }
   void set_edt_manager(std::shared_ptr<EdtManager> edt_manager) {
     edt_manager_ = edt_manager;
   }
@@ -320,6 +318,9 @@ class EnvironmentalModel {
     return function_info_;
   }
 
+  void set_is_mrc_mode(bool mrc_mode) { is_mrc_mode_ = mrc_mode; }
+  bool is_mrc_mode() const { return is_mrc_mode_; }
+
  private:
   const LocalView *local_view_ = nullptr;
   bool vehicle_dbw_status_{false};
@@ -350,6 +351,7 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *hpp_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *rads_config_builder_ptr_ = nullptr;
   common::DrivingFunctionInfo function_info_;
+  bool is_mrc_mode_ = false;
 };
 
 }  // namespace planning

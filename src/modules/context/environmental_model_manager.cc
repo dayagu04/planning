@@ -292,6 +292,8 @@ bool EnvironmentalModelManager::Run() {
     environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
                                            function_state);
   }
+  environmental_model->set_is_mrc_mode(fsm_state ==
+                                       iflyauto::FunctionalState_MRC);
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
