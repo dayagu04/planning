@@ -1663,8 +1663,9 @@ const bool CalTwoArcWithLine(const PathPoint &pose, LineSegment &line,
         arc1.circle_info.radius = radius1;
         arc1.circle_info.center = center1;
 
-        // the mid of two arc center is tangent of arc1 and arc2
-        const Eigen::Vector2d arc1_arc2_tangent = (center1 + center2) * 0.5;
+        // calc two arc tangent
+        const Eigen::Vector2d arc1_arc2_tangent =
+            center1 + radius1 * (center2 - center1).normalized();
 
         arc1.pB = arc1_arc2_tangent;
 
