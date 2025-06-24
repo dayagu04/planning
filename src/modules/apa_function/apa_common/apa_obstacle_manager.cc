@@ -14,6 +14,7 @@
 #include "log_glog.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
 
 namespace planning {
 namespace apa_planner {
@@ -168,7 +169,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       }
 
       Pose2D center_pose(obs.center_position.x, obs.center_position.y,
-                  obs.heading_angle);
+                         obs.heading_angle);
 
       std::vector<Eigen::Vector2f> local_box;
       GenerateBoundingBox(obs.shape.length, obs.shape.width,
@@ -249,7 +250,8 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       Polygon2D polygon;
       cdl::AABB box = cdl::AABB();
       for (uint8 j = 0; j < points_3d_size; ++j) {
-        const Eigen::Vector2d gl_pt(gl.groundline_point[j].x, gl.groundline_point[j].y);
+        const Eigen::Vector2d gl_pt(gl.groundline_point[j].x,
+                                    gl.groundline_point[j].y);
         box.MergePoint(cdl::Vector2r(gl_pt.x(), gl_pt.y()));
         gl_pt_clout_2d.emplace_back(std::move(gl_pt));
       }
@@ -296,9 +298,6 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
   // 读取超声波障碍物点云
   if (apa_param.GetParam().uss_config.use_uss_pt_clound) {
-    Polygon2D polygon;
-    cdl::AABB box = cdl::AABB();
-
     const iflyauto::IFLYLocalization& localization_info =
         local_view->localization;
     Pose2D ego_pose;
@@ -307,39 +306,103 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     ego_pose.theta = localization_info.orientation.euler_boot.yaw;
     Transform2d tf;
     tf.SetBasePose(ego_pose);
-    Eigen::Vector2f global;
 
-    const iflyauto::UssPdcPrivPointType& obj_info =
-        local_view->uss_wave_info.priv_point_data;
-    std::vector<Eigen::Vector2d> uss_pt_clout_2d;
-    uss_pt_clout_2d.reserve(USS_WAVE_PDC_PRIV_POINT_NUM);
-    for (uint32 j = 0; j < USS_WAVE_PDC_PRIV_POINT_NUM; ++j) {
-      if (obj_info.priv_point_data_prop[j].point_valid == 0) {
-        continue;
+    if (apa_param.GetParam().uss_config.use_fusion) {
+      const apa_planner::ApaParameters& config = apa_param.GetParam();
+      Polygon2D ego_local;
+      GetUpLeftCoordinatePolygonByParam(
+          &ego_local,
+          config.rear_overhanging + config.uss_config.point_max_dist,
+          config.wheel_base + config.front_overhanging +
+              config.uss_config.point_max_dist,
+          config.car_width / 2.0 + config.uss_config.point_max_dist);
+
+      Polygon2D ego_global;
+      ULFLocalPolygonToGlobal(&ego_global, &ego_local, tf);
+      GJK2DInterface gjk_interface;
+      bool is_contain = false;
+
+      const uint8 uss_obs_size =
+          std::min(1, USS_PERCEPTION_OUTLINE_DATAORI_NUM);
+      for (uint8 i = 0; i < uss_obs_size; ++i) {
+        const iflyauto::ApaSlotOutlineCoordinateDataType& obj_info =
+            local_view->uss_percept_info.out_line_dataori[i];
+        const uint32 pt_cloud_size =
+            std::min(obj_info.obj_pt_cnt,
+                     static_cast<uint32>(USS_PERCEPTION_APA_SLOT_OBJ_MAX_NUM));
+        if (pt_cloud_size < 1) {
+          continue;
+        }
+        std::vector<Eigen::Vector2d> uss_pt_clout_2d;
+        uss_pt_clout_2d.reserve(pt_cloud_size);
+        Polygon2D polygon;
+        cdl::AABB box = cdl::AABB();
+        for (uint32 j = 0; j < pt_cloud_size; ++j) {
+          const Eigen::Vector2d uss_pt(obj_info.obj_pt_global[j].x,
+                                       obj_info.obj_pt_global[j].y);
+
+          gjk_interface.PolygonPointCollisionDetect(
+              &ego_global, Eigen::Vector2f(uss_pt[0], uss_pt[1]), &is_contain);
+          if (!is_contain) {
+            continue;
+          }
+
+          box.MergePoint(cdl::Vector2r(uss_pt.x(), uss_pt.y()));
+          uss_pt_clout_2d.emplace_back(std::move(uss_pt));
+        }
+
+        GeneratePolygonByAABB(&polygon, box);
+
+        ApaObstacle apa_obs;
+        apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
+        apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
+        apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
+        apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
+        apa_obs.SetBoxGlobal(box);
+        apa_obs.SetPolygonGlobal(polygon);
+        apa_obs.SetId(obs_id_generate_);
+        apa_obs.ClearDecision();
+        obstacles_[obs_id_generate_] = apa_obs;
+        obs_id_generate_++;
+      }
+    } else {
+      Polygon2D polygon;
+      cdl::AABB box = cdl::AABB();
+
+      Eigen::Vector2f global;
+
+      const iflyauto::UssPdcPrivPointType& obj_info =
+          local_view->uss_wave_info.priv_point_data;
+      std::vector<Eigen::Vector2d> uss_pt_clout_2d;
+      uss_pt_clout_2d.reserve(USS_WAVE_PDC_PRIV_POINT_NUM);
+      for (uint32 j = 0; j < USS_WAVE_PDC_PRIV_POINT_NUM; ++j) {
+        if (obj_info.priv_point_data_prop[j].point_valid == 0) {
+          continue;
+        }
+
+        tf.ULFLocalPointToGlobal(
+            global,
+            Eigen::Vector2f(obj_info.priv_point_data_prop[j].point_x * 0.01,
+                            obj_info.priv_point_data_prop[j].point_y * 0.01));
+
+        box.MergePoint(cdl::Vector2r(global.x(), global.y()));
+        uss_pt_clout_2d.emplace_back(Eigen::Vector2d(global.x(), global.y()));
       }
 
-      tf.ULFLocalPointToGlobal(
-          global,
-          Eigen::Vector2f(obj_info.priv_point_data_prop[j].point_x * 0.01,
-                          obj_info.priv_point_data_prop[j].point_y * 0.01));
+      GeneratePolygonByAABB(&polygon, box);
 
-      box.MergePoint(cdl::Vector2r(global.x(), global.y()));
-      uss_pt_clout_2d.emplace_back(Eigen::Vector2d(global.x(), global.y()));
+      ApaObstacle apa_obs;
+      apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
+      apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
+      apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
+      apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
+      apa_obs.SetBoxGlobal(box);
+      apa_obs.SetPolygonGlobal(polygon);
+      apa_obs.SetId(obs_id_generate_);
+      apa_obs.ClearDecision();
+      obstacles_[obs_id_generate_] = apa_obs;
+      obs_id_generate_++;
     }
-
-    GeneratePolygonByAABB(&polygon, box);
-
-    ApaObstacle apa_obs;
-    apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
-    apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
-    apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
-    apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
-    apa_obs.SetBoxGlobal(box);
-    apa_obs.SetPolygonGlobal(polygon);
-    apa_obs.SetId(obs_id_generate_);
-    apa_obs.ClearDecision();
-    obstacles_[obs_id_generate_] = apa_obs;
-    obs_id_generate_++;
   }
 
   // todo: 读取限位器信息

@@ -63,8 +63,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = False
-read_uss_per_msg = load_uss_wave_from_uss_percept_msg
+read_uss_per_msg = True
 # valeo uss point cloud type
 read_uss_wave_version = 2.9
 load_fusion_object_from_occupancy = True
@@ -1611,7 +1610,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
     uss_car_index = int(uss_car_index)
 
-  if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
+  if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and read_uss_per_msg:
     # load uss wave from uss_percept_msg
     #get cur pose and uss wave
     uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
@@ -1684,7 +1683,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'start_angle':[],
         'end_angle':[],
       })
-  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg and read_uss_wave_version == 2.8:
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not read_uss_per_msg and read_uss_wave_version == 2.8:
     # load uss wave from wave_msg
     #get cur pose and uss wave
     upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
@@ -1755,7 +1754,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'start_angle':[],
         'end_angle':[],
       })
-  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and read_uss_wave_version == 2.9:
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not read_uss_per_msg and read_uss_wave_version == 2.9:
     # load uss wave from wave_msg
     pts_x, pts_y = [], []
     veh_pose_x = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
@@ -2108,7 +2107,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     #   'corner_point_y': [parking_slot_y],
     # })
 
-  if bag_loader.uss_percept_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
+  if bag_loader.uss_percept_msg['enable'] == True and read_uss_per_msg:
     # load uss wave for uss_percept_msg
     #get cur pose and uss wave
     uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
@@ -2179,7 +2178,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         'start_angle':[],
         'end_angle':[],
       })
-  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg  and read_uss_wave_version == 2.8:
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not read_uss_per_msg  and read_uss_wave_version == 2.8:
     # load uss wave for wave_msg
     #get cur pose and uss wave
     upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
@@ -3964,7 +3963,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find loc_msg error')
       else:
-        if dataLoader.uss_percept_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
+        if dataLoader.uss_percept_msg['enable'] == True and read_uss_per_msg:
           flag, uss_percept_msg = findt(dataLoader.uss_percept_msg, uss_percept_timestamps[loc_i])
           if not flag:
             print('find uss_percept_msg error')
@@ -4028,7 +4027,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
               sector_y_min, sector_x_min = [sector_y[uss_index]], [sector_x[uss_index]]
               rs_min, start_angle_min, end_angle_min = [rs[uss_index]], [start_angle[uss_index]], [end_angle[uss_index]]
-        elif dataLoader.wave_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
+        elif dataLoader.wave_msg['enable'] == True and not read_uss_per_msg:
           flag, wave_msg = findt(dataLoader.wave_msg, wave_timestamps[loc_i])
           if not flag:
             print('find wave_msg error')

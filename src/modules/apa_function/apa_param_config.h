@@ -91,6 +91,9 @@ struct UssConfig {
   bool use_uss_pt_for_path = false;
   bool use_uss_pt_for_speed = true;
   bool use_uss_pt_for_slot_release = false;
+  bool use_fusion = true;
+  // If dist is bigger, ignore it.
+  double point_max_dist;
 };
 
 // todo
