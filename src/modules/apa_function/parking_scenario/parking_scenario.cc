@@ -639,9 +639,12 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   if (apa_param.GetParam().speed_config.use_remain_dist) {
     double stop_s =
         std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
-    stop_decider.AddStopDecisionByDistance(stop_s,
-                                           LonDecisionReason::REMAIN_DIST,
-                                           traj_stitcher.GetConstStitchPath());
+    stop_decider.AddStopDecisionByDistance(
+        stop_s,
+        frame_.remain_dist_obs < frame_.remain_dist_slot_jump
+            ? LonDecisionReason::REMAIN_DIST
+            : LonDecisionReason::SLOT_POSE_CHANGE,
+        traj_stitcher.GetConstStitchPath());
   }
 
   const ParkLonDecision stop_decision = stop_decider.GetStopDecision();

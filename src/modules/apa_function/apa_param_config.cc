@@ -521,6 +521,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   bool, "use_uss_pt_for_slot_release");
   JSON_READ_VALUE(apa_param.SetPram().uss_config.use_uss_pt_for_speed, bool,
                   "use_uss_pt_for_speed");
+  JSON_READ_VALUE(apa_param.SetPram().uss_config.point_max_dist, double,
+                  "point_max_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().use_ground_line, bool, "use_ground_line");
 
