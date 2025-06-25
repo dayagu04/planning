@@ -78,7 +78,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const bool use_overtake_lane_change_request =
       config_
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
-  const bool enable_use_speed_limit_to_suppress_interactive_lane_change = 
+  const bool enable_use_speed_limit_to_suppress_interactive_lane_change =
       config_.enable_use_speed_limit_to_suppress_interactive_lane_change;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
       config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
@@ -125,25 +125,15 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
 
   int state = lane_change_decider_output.curr_state;
+  
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
-    if(enable_use_speed_limit_to_suppress_interactive_lane_change) {
-      if ((ego_v < kMaxSpeedTriggerInteractiveLaneChangeRequest) && (ego_v > kMinSpeedTriggerInteractiveLaneChangeRequest)) {
-        int_request_.Update(lc_status);
-        int_request_cancel_reason_ = int_request_.request_cancel_reason();
-        ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
-      } else {
-        int_request_.Finish();
-        int_request_.set_request_cancel_reason(UNSUITABLE_VEL);
-        int_request_cancel_reason_ = int_request_.request_cancel_reason();
-      }
-    } else {
-      int_request_.Update(lc_status);
-      int_request_cancel_reason_ = int_request_.request_cancel_reason();
-      ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
-    }
+    int_request_.Update(lc_status);
+    int_request_cancel_reason_ = int_request_.request_cancel_reason();
+    ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
     int_request_.reset_int_cnt();
   }
+
   if (int_request_.request_type() == NO_CHANGE) {
     if (enable_use_cone_change_request && request_source_ != EMERGENCE_AVOID_REQUEST) {
       if (dis_to_stopline > default_distance_threshld_to_stop_line &&
