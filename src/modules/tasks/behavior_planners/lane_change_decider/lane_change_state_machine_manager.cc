@@ -151,8 +151,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_execution_to_hold) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeHold;
+          lc_lane_mgr_->set_fix_lane_to_origin();
           lc_hold_state_lat_offset_ = CalculateLCHoldStateLatOffset();
-          // lc_lane_mgr_->set_fix_lane_to_origin();
           execution_state_frame_nums_ = 0;
         }
       }
@@ -471,14 +471,19 @@ bool LaneChangeStateMachineManager::CheckIfHoldToExecution(
     const RequestSource &lane_change_type) {
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
+
   const bool has_target_lane =
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
+
   CheckLaneChangeValid(lane_change_direction);
+
   const double hold_to_execution_is_safe_time_out_threshold = 0.2;
+
   (void)TimeOut(lane_change_stage_info_.gap_insertable,
                 &lc_timer_.is_safe_hold_to_execution_count_,
                 &lc_timer_.is_safe_hold_to_execution_at_time_,
                 hold_to_execution_is_safe_time_out_threshold);
+
   return lane_change_stage_info_.gap_insertable && has_target_lane;
 }
 
@@ -641,14 +646,19 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
 LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
     RequestType direction) {
   assert(direction == LEFT_CHANGE || direction == RIGHT_CHANGE);
+
   LaneChangeStageInfo lc_state_info;
+
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
+
   const auto target_lane = virtual_lane_manager->get_lane_with_virtual_id(
       lc_req_mgr_->target_lane_virtual_id());
+
   if (target_lane == nullptr) {
     return lc_state_info;
   }
+
   lc_state_info.gap_insertable = true;
   lc_invalid_track_.reset();
 
@@ -751,14 +761,19 @@ void LaneChangeStateMachineManager::CheckLaneChangeBackValid(
 LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     RequestType direction) {
   assert(direction == LEFT_CHANGE || direction == RIGHT_CHANGE);
+
   LaneChangeStageInfo lc_state_info;
+
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
+
   const auto target_lane = virtual_lane_manager->get_lane_with_virtual_id(
       lc_req_mgr_->target_lane_virtual_id());
+
   if (target_lane == nullptr) {
     return lc_state_info;
   }
+
   lc_state_info.lc_should_back = false;
   lc_invalid_track_.reset();
 
@@ -1730,8 +1745,7 @@ void LaneChangeStateMachineManager::PreProcess() {
   int64_t ego_lane_front_node_id = planning_data::kInvalidId;
   if (direction == LEFT_CHANGE) {
     if (current_lc_state == kLaneChangeExecution ||
-        current_lc_state == kLaneChangeComplete ||
-        current_lc_state == kLaneChangeHold) {
+        current_lc_state == kLaneChangeComplete) {
       target_lane_front_node_id = dynamic_world->ego_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
     } else {
@@ -1742,8 +1756,7 @@ void LaneChangeStateMachineManager::PreProcess() {
     }
   } else {
     if (current_lc_state == kLaneChangeExecution ||
-        current_lc_state == kLaneChangeComplete ||
-        current_lc_state == kLaneChangeHold) {
+        current_lc_state == kLaneChangeComplete) {
       target_lane_front_node_id = dynamic_world->ego_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
     } else {
@@ -3086,22 +3099,25 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const{
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
 
-  const auto& cur_lane = virtual_lane_manager->get_current_lane();
+  const int fix_lane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
 
-  if (cur_lane == nullptr) {
+  const auto fix_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(fix_lane_virtual_id);
+
+  if (fix_lane == nullptr) {
     return lc_hold_state_lat_offset;
   }
 
-  const double cur_lane_width = cur_lane->width();
+  const double cur_lane_width = fix_lane->width();
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kEgoWidth = vehicle_param.width;
 
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    lc_hold_state_lat_offset = -(cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2);
+    lc_hold_state_lat_offset = cur_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
   } else {
-    lc_hold_state_lat_offset = cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
+    lc_hold_state_lat_offset = -cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
   }
 
   return lc_hold_state_lat_offset;
