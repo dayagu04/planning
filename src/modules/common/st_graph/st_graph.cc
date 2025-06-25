@@ -555,9 +555,12 @@ void STGraph::MakeDynamicAgentStBoundary(
       std::vector<double> agent_sl_boundary(4);
       std::vector<std::pair<int32_t, Vec2d>> considered_corners;
 
-      StGraphUtils::CalculateAgentSLBoundary(
-          ego_motion_simulation_path, obs_box, path_range, type,
-          &agent_sl_boundary, &considered_corners);
+      bool is_success = StGraphUtils::CalculateAgentSLBoundary(
+          ego_motion_simulation_path, obs_box, &agent_sl_boundary,
+          &considered_corners);
+      if (!is_success) {
+        continue;
+      }
       const double max_l = agent_sl_boundary[2];
       const double min_l = agent_sl_boundary[3];
       double lower_s = std::numeric_limits<double>::max();

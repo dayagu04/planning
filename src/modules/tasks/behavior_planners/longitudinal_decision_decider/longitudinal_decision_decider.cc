@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "agent/agent_decision.h"
+#include "common/utils/kd_path.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
@@ -28,7 +29,43 @@ namespace planning {
 
 namespace {
 double kEpsilon = 1e-6;
+bool CalculateAgentSLBoundary(
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const planning_math::Box2d &agent_box, double *const ptr_min_s,
+    double *const ptr_max_s, double *const ptr_min_l, double *const ptr_max_l) {
+  if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
+      nullptr == ptr_max_l) {
+    return false;
+  }
+  const auto &all_corners = agent_box.GetAllCorners();
+  for (const auto &corner : all_corners) {
+    planning::Point2D agent_sl{200.0, 100.0};
+    planning::Point2D corner_sl{corner.x(), corner.y()};
+    if (!planned_path->XYToSL(corner_sl, agent_sl)) {
+      return false;
+    }
+    *ptr_min_s = std::fmin(*ptr_min_s, agent_sl.x);
+    *ptr_max_s = std::fmax(*ptr_max_s, agent_sl.x);
+    *ptr_min_l = std::fmin(*ptr_min_l, agent_sl.y);
+    *ptr_max_l = std::fmax(*ptr_max_l, agent_sl.y);
+  }
+  // if (*ptr_min_s > 200.0 || *ptr_max_s < -200.0 || *ptr_min_l > 50.0 ||
+  //     *ptr_max_l < -50.0) {
+  //   return false;
+  // }
+  return true;
 }
+
+bool CalculateAgentSLBoundary(
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const planning::agent::Agent &agent, double *const ptr_min_s,
+    double *const ptr_max_s, double *const ptr_min_l, double *const ptr_max_l) {
+  const auto &agent_box = agent.box();
+  bool is_success = CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s,
+                                             ptr_max_s, ptr_min_l, ptr_max_l);
+  return is_success;
+}
+}  // namespace
 
 LongitudinalDecisionDecider::LongitudinalDecisionDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -63,6 +100,15 @@ bool LongitudinalDecisionDecider::Execute() {
   UpdateInvadeNeighborResults();
 
   UpdateLaneChangeNeighborResults();
+
+  UpdateInvadeNeighborResultsForEgoMotionSimPath();
+
+  const auto mutable_st_graph =
+      session_->mutable_planning_context()->st_graph();
+  if (!has_lon_decision_to_invade_agents_ &&
+      !has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_) {
+    mutable_st_graph->UpdateNeighborAgentResultsForEgoMotionSimPath();
+  }
 
   MakeDebugMessage();
   const auto end_timestamp = IflyTime::Now_ms();
@@ -523,13 +569,226 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
                    invade_neighbor_front_agent_id)
 }
 
+void LongitudinalDecisionDecider::
+    UpdateInvadeNeighborResultsForEgoMotionSimPath() {
+  has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_ = false;
+  LOG_DEBUG(
+      "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  if (lane_change_decider_output.curr_state !=
+      StateMachineLaneChangeStatus::kLaneKeeping) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "Not in lane keeping, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+  const auto &environmental_model = session_->environmental_model();
+  const auto &planning_context = session_->planning_context();
+  //  const auto &ego_state_mgr =
+  // environmental_model.get_ego_state_manager();
+  const auto &dynamic_world = environmental_model.get_dynamic_world();
+  const auto &virtual_lane_manager =
+      environmental_model.get_virtual_lane_manager();
+  const auto &ego_cur_lane = virtual_lane_manager->get_current_lane();
+  const auto &ego_state_manager = environmental_model.get_ego_state_manager();
+  const double planning_init_x =
+      ego_state_manager->planning_init_point().lat_init_state.x();
+  const double planning_init_y =
+      ego_state_manager->planning_init_point().lat_init_state.y();
+  const double planned_path_length = session_->planning_context()
+                                         .motion_planner_output()
+                                         .lateral_path_coord->Length();
+  const auto &agent_manager = environmental_model.get_agent_manager();
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto &blocked_obs_id_vec = lane_borrow_output.blocked_obs_id;
+  const std::set<int32_t> lane_borrow_blocked_obs_id_set(
+      blocked_obs_id_vec.begin(), blocked_obs_id_vec.end());
+  const auto ego_motion_sim_path =
+      planning_context.ego_motion_preplanner_output()
+          .ego_motion_simulation_result()
+          ->lat_lon_vehicle_motion_path_ptr;
+  if (!ego_cur_lane) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "no current lane, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+  if (!agent_manager) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "no agent manager, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+  if (lat_obstacle_decision.empty()) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "lateral obstacle decision empty, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+  // 在路口中不启用
+  planning::common::IntersectionState intersection_state =
+      virtual_lane_manager->GetIntersectionState();
+  if (intersection_state == planning::common::IN_INTERSECTION) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "in intersection, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+  if (dynamic_world == nullptr) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "no dynamic world, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+  const auto *agent_manger = dynamic_world->agent_manager();
+  if (agent_manger == nullptr) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "no agent manager, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+
+  auto *st_graph_helper = planning_context.st_graph_helper();
+  if (st_graph_helper == nullptr) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "no st graph helper, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+
+  if (ego_motion_sim_path == nullptr) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "no ego motion sim path, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+
+  // get closet invade neighbor gap's agents id
+  DetermineClosestInvadeNeighborGapInfo(
+      ego_cur_lane, planning_init_x, planning_init_y, planned_path_length,
+      lat_obstacle_decision, lane_borrow_blocked_obs_id_set, agent_manager,
+      st_graph_helper, ego_motion_sim_path);
+  const auto invade_neighbor_front_agent_id =
+      closest_neighbor_invade_gap_agents_id_.second;
+  const auto invade_neighbor_rear_agent_id =
+      closest_neighbor_invade_gap_agents_id_.first;
+  // <bool, bool> : <ignore invade-gap-rear-agent, ignore
+  // invade-gap-front-agent>
+  const std::pair<bool, bool> ignore_invade_gap_rear_agent_front_agent_pair =
+      IgnoreInvadeNeighborAgents(
+          agent_manager->GetAgent(invade_neighbor_rear_agent_id),
+          agent_manager->GetAgent(invade_neighbor_front_agent_id),
+          ego_motion_sim_path, true);
+  const bool ignore_front_invade_agent =
+      ignore_invade_gap_rear_agent_front_agent_pair.second;
+
+  std::unordered_map<int32_t, speed::STBoundary::DecisionType>
+      neighbor_agents_decision_table;
+  const auto &agent_id_st_boundaries_map =
+      st_graph_helper->GetAgentIdSTBoundariesMap();
+  const auto &neighbor_agent_id_st_boundraies_map =
+      st_graph_helper->GetNeighborAgentIdSTBoundariesMap();
+  if (invade_neighbor_front_agent_id != -1 &&
+      agent_id_st_boundaries_map.find(invade_neighbor_front_agent_id) ==
+          agent_id_st_boundaries_map.end() &&
+      neighbor_agent_id_st_boundraies_map.find(
+          invade_neighbor_front_agent_id) ==
+          neighbor_agent_id_st_boundraies_map.end() &&
+      !ignore_front_invade_agent) {
+    const auto front_invade_agent =
+        agent_manager->GetAgent(invade_neighbor_front_agent_id);
+    ConstructNeighborLaneStGraph(front_invade_agent);
+    neighbor_agents_decision_table[invade_neighbor_front_agent_id] =
+        speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
+  }
+
+  const auto mutable_st_graph =
+      session_->mutable_planning_context()->st_graph();
+  if (!neighbor_agents_decision_table.empty()) {
+    mutable_st_graph->UpdateNeighborAgentResults(
+        neighbor_agents_decision_table);
+    has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_ = true;
+  }
+  JSON_DEBUG_VALUE(
+      "lon_decision_to_invade_ego_motion_sim_path",
+      has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+  JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                   invade_neighbor_front_agent_id)
+}
+
 std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
     const agent::Agent *invade_gap_rear_agent,
     const agent::Agent *invade_gap_front_agent,
-    const std::shared_ptr<planning_math::KDPath> &planned_path) const {
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const bool use_ego_motion_sim_path) const {
   if (invade_gap_rear_agent == nullptr && invade_gap_front_agent == nullptr) {
-    JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
-                     std::numeric_limits<double>::max())
+    if (!use_ego_motion_sim_path) {
+      JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
+                       std::numeric_limits<double>::max())
+    } else {
+      JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent_ego_sim_path",
+                       std::numeric_limits<double>::max())
+    }
     return std::make_pair(true, true);
   }
   // ignore invade agents as default, then judge
@@ -555,8 +814,13 @@ std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
     const double front_agent_center_l = invade_gap_front_agent_sl.y;
     if (!access_to_front_agent_center_sl) {
       ignore_gap_rear_agent = true;
-      JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
-                       std::numeric_limits<double>::max())
+      if (!use_ego_motion_sim_path) {
+        JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
+                         std::numeric_limits<double>::max())
+      } else {
+        JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent_ego_sim_path",
+                         std::numeric_limits<double>::max())
+      }
     } else {
       const auto agent_center_matched_point =
           planned_path->GetPathPointByS(front_agent_center_s);
@@ -565,10 +829,19 @@ std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
           agent_center_matched_point.theta();
       const double agent_vel_frenet = invade_gap_front_agent->speed() *
                                       std::cos(agent_target_lane_heading_diff);
-      const double agent_relative_s_to_ego =
-          front_agent_center_s - 0.5 * invade_gap_front_agent->length() -
-          planning_init_s -
-          (ego_vehi_param.length - ego_vehi_param.rear_edge_to_rear_axle);
+      double agent_relative_s_to_ego = std::numeric_limits<double>::max();
+      if (!use_ego_motion_sim_path) {
+        agent_relative_s_to_ego =
+            front_agent_center_s - 0.5 * invade_gap_front_agent->length() -
+            planning_init_s -
+            (ego_vehi_param.length - ego_vehi_param.rear_edge_to_rear_axle);
+      } else {
+        // use ego motion sim path, so the planning init s is 0
+        agent_relative_s_to_ego =
+            front_agent_center_s - 0.5 * invade_gap_front_agent->length() -
+            (ego_vehi_param.length - ego_vehi_param.rear_edge_to_rear_axle);
+      }
+
       const auto &planning_init_point = session_->environmental_model()
                                             .get_ego_state_manager()
                                             ->planning_init_point();
@@ -584,15 +857,26 @@ std::pair<bool, bool> LongitudinalDecisionDecider::IgnoreInvadeNeighborAgents(
 
       double ego_ttc_to_front_agent =
           agent_relative_s_to_ego / vel_difference_to_agent;
-      JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent", ego_ttc_to_front_agent)
+      if (!use_ego_motion_sim_path) {
+        JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
+                         ego_ttc_to_front_agent)
+      } else {
+        JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent_ego_sim_path",
+                         ego_ttc_to_front_agent)
+      }
       if (ego_ttc_to_front_agent < config_.ignore_ego_ttc_to_agent_thrd &&
           ego_ttc_to_front_agent > 0.0) {
         ignore_gap_front_agent = false;
       }
     }
   } else {
-    JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
-                     std::numeric_limits<double>::max())
+    if (!use_ego_motion_sim_path) {
+      JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent",
+                       std::numeric_limits<double>::max())
+    } else {
+      JSON_DEBUG_VALUE("ego_ttc_to_front_invade_agent_ego_sim_path",
+                       std::numeric_limits<double>::max())
+    }
   }
   return ignore_invade_gap_rear_front_agents_pair;
 }
@@ -625,12 +909,10 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
   std::map<double, int32_t> invade_agents_s_id_map;
   invade_agents_s_id_map[planning_init_s] = 0;
   for (const auto [id, lat_decision_type] : lat_obstacle_decision) {
-    if (lat_decision_type != LatObstacleDecisionType::IGNORE ||
+    if (/*lat_decision_type != LatObstacleDecisionType::IGNORE ||*/
         agent_id_st_boundaries_map.find(id) !=
-            agent_id_st_boundaries_map
-                .end()) {  // no invade or already in st graph(like cipv)
-      LOG_DEBUG("agent (ID: %d) is not ignored or already in st graph, skip\n",
-                id);
+        agent_id_st_boundaries_map.end()) {  // already in st graph(like cipv)
+      LOG_DEBUG("agent (ID: %d) is already in st graph, skip\n", id);
       continue;
     }
     if (lane_borrow_blocked_obs_id_set.find(id) !=
@@ -644,20 +926,35 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
       continue;
     }
 
-    const auto invade_agent = agent_manager->GetAgent(id);
-    Point2D invade_agent_sl;
-    Point2D invade_agent_xy(invade_agent->x(), invade_agent->y());
-    if (!planned_path->XYToSL(invade_agent_xy,
-                              invade_agent_sl)) {  // far from ego in lon s
-      LOG_DEBUG("agent (ID: %d) is far from ego in lon s, skip\n", id);
+    // const auto invade_agent = agent_manager->GetAgent(id);
+    // Point2D invade_agent_sl;
+    // Point2D invade_agent_xy(invade_agent->x(), invade_agent->y());
+    double agent_min_s = std::numeric_limits<double>::max(),
+           agent_max_s = -10.0;
+    double agent_min_l = std::numeric_limits<double>::max(),
+           agent_max_l = -50.0;
+    if (!CalculateAgentSLBoundary(planned_path, *agent, &agent_min_s,
+                                  &agent_max_s, &agent_min_l, &agent_max_l)) {
+      LOG_DEBUG(
+          "agent (ID: %d) corners projects to planned_path failed , skip\n",
+          id);
       continue;
     }
-    const double invade_agent_s = invade_agent_sl.x;
-    const double invade_agent_l = invade_agent_sl.y;
+    // if (!planned_path->XYToSL(invade_agent_xy,
+    //                           invade_agent_sl)) {  // far from ego in lon s
+    //   LOG_DEBUG("agent (ID: %d) is far from ego in lon s, skip\n", id);
+    //   continue;
+    // }
+
     const static double lat_distance_thrd =
         config_.lat_distance_close_enough_to_planned_path_thrd;
+    // const double invade_agent_s = invade_agent_sl.x;
+    // const double invade_agent_l = invade_agent_sl.y;
+    // const double invade_agent_lat_distance_to_path =
+    //     std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
+    //     0.5 * ego_vehi_param.width;
     const double invade_agent_lat_distance_to_path =
-        std::fabs(invade_agent_l) - 0.5 * invade_agent->width() -
+        std::min(std::fabs(agent_min_l), std::fabs(agent_max_l)) -
         0.5 * ego_vehi_param.width;
     if (invade_agent_lat_distance_to_path >
         lat_distance_thrd) {  // far from ego in lat l
@@ -665,12 +962,13 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
                 invade_agent_lat_distance_to_path);
       continue;
     }
-    if (invade_agent->agent_decision().agent_decision_type() ==
+    if (agent->agent_decision().agent_decision_type() ==
         agent::AgentDecisionType::IGNORE) {
       LOG_DEBUG("agent (ID: %d) is ignored in agent decision, skip\n", id);
       continue;
     }
-    invade_agents_s_id_map[invade_agent_s] = id;
+    // invade_agents_s_id_map[invade_agent_s] = id;
+    invade_agents_s_id_map[agent_min_s] = id;
   }
   // no invade agents
   if (invade_agents_s_id_map.size() == 1) {

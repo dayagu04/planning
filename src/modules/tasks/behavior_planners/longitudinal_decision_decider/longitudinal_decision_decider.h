@@ -29,6 +29,8 @@ class LongitudinalDecisionDecider : public Task {
 
   void UpdateInvadeNeighborResults();
 
+  void UpdateInvadeNeighborResultsForEgoMotionSimPath();
+
   // only consider lane change execution stage
   void UpdateLaneChangeNeighborResults();
 
@@ -50,7 +52,8 @@ class LongitudinalDecisionDecider : public Task {
   std::pair<bool, bool> IgnoreInvadeNeighborAgents(
       const agent::Agent *invade_gap_rear_agent,
       const agent::Agent *invade_gap_front_agent,
-      const std::shared_ptr<planning_math::KDPath> &planned_path) const;
+      const std::shared_ptr<planning_math::KDPath> &planned_path,
+      const bool use_ego_motion_sim_path = false) const;
 
   void DetermineClosestInvadeNeighborGapInfo(
       const std::shared_ptr<VirtualLane> &ego_cur_lane,
@@ -88,6 +91,7 @@ class LongitudinalDecisionDecider : public Task {
   // first: lower agent id, second: upper agent id
   std::pair<int32_t, int32_t> closest_neighbor_invade_gap_agents_id_{-1, -1};
   bool has_lon_decision_to_invade_agents_{false};
+  bool has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_{false};
 };
 
 }  // namespace planning

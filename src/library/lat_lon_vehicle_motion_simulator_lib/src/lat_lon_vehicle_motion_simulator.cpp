@@ -11,6 +11,7 @@
 #include "log.h"
 #include "src/common/ifly_time.h"
 #include "utils/path_point.h"
+#include "vec2d.h"
 #include "vehicle_model_simulation.h"
 namespace planning {
 namespace simulator {
@@ -163,8 +164,16 @@ ErrorType LatLonVehicleMotionSimulator::Simulate(const double t) {
     simulation_result_->delta_vec[i] = delta_step_i;
     simulation_result_->kappa_vec[i] = 0.33 * sin(delta_step_i);
     simulation_result_->ld_actual_length_vec[i] = ld_actual_length_i;
-    path_points_vec.emplace_back(vehicle_state_i.x_, vehicle_state_i.y_);
+    // NOTE: make sure KDpath length is increased, otherwise the
+    // KDPath will get projection error but do not return false when use
+    // XYTOSL!!!
+    if (planning_math::Vec2d(vehicle_state_i.x_ - path_points_vec.back().x(),
+                             vehicle_state_i.y_ - path_points_vec.back().y())
+            .Length() > 1e-3) {
+      path_points_vec.emplace_back(vehicle_state_i.x_, vehicle_state_i.y_);
+    }
   }
+  path_points_vec.shrink_to_fit();
   simulation_result_->s_t_spline.set_points(simulation_result_->t_vec,
                                             simulation_result_->s_vec);
   simulation_result_->vel_t_spline.set_points(simulation_result_->t_vec,
