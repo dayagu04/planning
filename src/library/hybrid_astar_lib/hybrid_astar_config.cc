@@ -51,7 +51,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   single_shot_path_width_thresh = 0.10;
   perpendicular_slot_node_step = 0.4;
   perpendicular_slot_head_out_node_step = 0.3;
-  parallel_slot_node_step = 0.2;
+  parallel_slot_node_step = 0.3;
 
   max_search_time_ms = 5000;
   max_search_time_ms_for_no_gear_switch = 100;
