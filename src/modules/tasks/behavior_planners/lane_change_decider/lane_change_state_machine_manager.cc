@@ -404,6 +404,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
 
   execution_time_out = false;
   if (execution_time_out) {
+    lane_change_stage_info_.lc_back_reason = "time out";
     return true;
   }
 
@@ -414,6 +415,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
       transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST;
   if (is_target_lane_merge_to_origin_lane && !is_no_care_mrege) {
+    lane_change_stage_info_.lc_back_reason = "target lane is merge region";
     return true;
   }
 
@@ -423,6 +425,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   // check if driver cancel
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
   if (is_no_lc_request) {
+    lane_change_stage_info_.lc_back_reason = "no lc request";
     return true;
   }
 
