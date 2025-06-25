@@ -769,7 +769,7 @@ class LoadCyberbag:
   def get_msg_index(self, bag_time):
     ### step 1: 时间戳对齐
     abs_t = bag_time + smallest_abs_t
-    print("smallest_abs_t:", smallest_abs_t)
+    # print("smallest_abs_t:", smallest_abs_t)
     out = {}
     loc_msg_idx = 0
     if self.loc_msg['enable'] == True:
