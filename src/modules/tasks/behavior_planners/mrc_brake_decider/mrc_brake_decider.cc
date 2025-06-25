@@ -23,8 +23,8 @@ bool MRCBrakeDecider::Execute() {
   auto mrc_output = session_->mutable_planning_context()
       ->mutable_mrc_brake_decider_output();
 
-  //if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
-  if (iflyauto::FunctionalState_MRC == iflyauto::FunctionalState_MRC) {
+  if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
+  //if (iflyauto::FunctionalState_MRC == iflyauto::FunctionalState_MRC) {
     return MRCBrakeProcess();
   }
   has_set_virtual_obs_ = false;
@@ -51,7 +51,7 @@ bool MRCBrakeDecider::MRCBrakeProcess() {
     }
     mrc_agent_.set_agent_id(500000);
     mrc_agent_.set_type(agent::AgentType::VIRTUAL);
-    mrc_agent_.set_is_tfl_virtual_obs(true);
+    mrc_agent_.set_is_tfl_virtual_obs(false);
     const auto &reference_path_ptr = session_->planning_context()
                                   .lane_change_decider_output()
                                   .coarse_planning_info.reference_path;
@@ -126,7 +126,7 @@ SecondOrderTimeOptimalTrajectory MRCBrakeDecider::GenerateMRCBrakeCurve()
     acc_lower_bound = init_state.a;
   }
 
-  const double jerk_lower_bound = -2.5;
+  const double jerk_lower_bound = -2.0;
 
   state_limit.a_max = 1.0;
   state_limit.a_min = acc_lower_bound;

@@ -800,7 +800,7 @@
   },
   "speed_planning": {
     "mrc_brake_decider": {
-      "mrc_brake_deceleration": -1.0
+      "mrc_brake_deceleration": -1.2
     },
     "stop_destination_decider": {
       "stop_destination_virtual_agent_time_headway": 0.1
