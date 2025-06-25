@@ -59,9 +59,9 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
 
   // TODO: add cautin yield and cross agent decision first
   StGraphUtils::DetermineCautionYieldDecision(
-       st_graph_input_, st_graph_input->lane_change_status(),
-       st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
-       boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
+      st_graph_input_, st_graph_input->lane_change_status(),
+      st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
+      boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
   // StGraphUtils::SetCrossingAgentCautionYieldDecision(
   //     st_graph_input_, agent_id_st_boundaries_map_,
   //     boundary_id_st_boundaries_map_);
@@ -305,6 +305,9 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_ego_lane = st_graph_input_->ego_lane();
   const int32_t reserve_num = st_graph_input_->reserve_num();
   const auto planned_kd_path = st_graph_input_->processed_path();
+  const auto ego_motion_simulation_path =
+      st_graph_input_->ego_motion_simulation_result()
+          ->lat_lon_vehicle_motion_path_ptr;
   const auto path_border_querier = st_graph_input_->path_border_querier();
   auto mutable_agent_manager = st_graph_input_->mutable_agent_manager();
   const double expand_buffer =
@@ -373,7 +376,8 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   const auto& trajectories = agent.trajectories();
   // only consider 2s traj to reverse vru within ego_lane
-  const bool is_need_truncate_traj = agent.is_vru() && agent.is_reverse() && is_within_ego_lane;
+  const bool is_need_truncate_traj =
+      agent.is_vru() && agent.is_reverse() && is_within_ego_lane;
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
@@ -642,7 +646,8 @@ void STGraph::BackwardExtendStBoundaries() {
       }
       // const auto& trajectory =
       //     use_origin_trajectories ? trajectories[idx]
-      //                             : trajectories[idx - origin_trajectories_num];
+      //                             : trajectories[idx -
+      //                             origin_trajectories_num];
 
       const auto& trajectory = trajectories.front();
       if (trajectory.empty()) {

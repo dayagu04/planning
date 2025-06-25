@@ -24,14 +24,21 @@ enum RequestType { NO_CHANGE, LEFT_CHANGE, RIGHT_CHANGE };
 
 enum LooseBoundType { NONE_SIDE, LEFT_SIDE, RIGHT_SIDE, BOTH_SIDE };
 
-//匝道的方向
+enum class ErrorType {
+  kSuccess = 0,
+  kWrongStatus = 1,
+  kIllegalInput = 2,
+  kUnknown = 3
+};
+
+// 匝道的方向
 enum RampDirection {
   RAMP_NONE = 0,
   RAMP_ON_LEFT = 1,
   RAMP_ON_RIGHT = 2,
 };
 
-//分流的相对方向
+// 分流的相对方向
 enum SplitRelativeDirection {
   None = 0,
   ON_LEFT = 1,
@@ -43,7 +50,7 @@ struct LaneChangeGapInfo {
   int rear_node_id = -1;
 };
 struct RouteInfoOutput {
-  //for NOA output
+  // for NOA output
   int split_seg_forward_lane_nums = 0;
   int split_next_seg_forward_lane_nums = 0;
   int lc_nums_for_split = 0;

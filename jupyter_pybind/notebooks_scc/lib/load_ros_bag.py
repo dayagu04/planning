@@ -655,7 +655,7 @@ class LoadRosbag:
                          "cipv_vel_frenet",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
                          "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',"lane_borrow_agent_id", "lane_borrow_agent_v_limit",'coarse_planning_info_ref_line_s',"coarse_planning_info_ref_pnts_size","raw_virtual_lane_s","raw_virtual_lane_pnts_size",
                          "ramp_pass_sts","first_split_direction", "first_merge_direction","stop_destination_virtual_agent_pos_x","stop_destination_virtual_agent_pos_y","stop_destination_virtual_agent_theta","stop_destination_virtual_agent_id",
-                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length","gear_command", 'THW', "can_left_borrow","can_right_borrow","maintain_avoid", "lateral_emergency_level"]
+                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length","gear_command", 'THW', "can_left_borrow","can_right_borrow","maintain_avoid", "lateral_emergency_level", 'goal_point_x', 'goal_point_y', 'pp_init_x', 'pp_init_y']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
@@ -672,7 +672,8 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec", 'lateral_avoid_ids',
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec',
-                         'front_obj_future_v_vec', 'rear_obj_future_v_vec', 'ego_future_v_vec', 'expected_steer_vec', "lat_path_x", "lat_path_y", "ori_lat_path_x", "ori_lat_path_y"]
+                         'front_obj_future_v_vec', 'rear_obj_future_v_vec', 'ego_future_v_vec', 'expected_steer_vec', "lat_path_x", "lat_path_y", "ori_lat_path_x", "ori_lat_path_y",
+                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec']
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\

@@ -29,6 +29,7 @@ struct VehicleParameter {
 class VehicleSimulation {
  public:
   void Init(const VehicleState &state);
+  void set_dt_resolution(double dt) { dt_ = dt; }
   void Update(const VehicleControl &control, const VehicleParameter &param);
   VehicleState GetState() { return state_; }
 
@@ -39,6 +40,7 @@ class VehicleSimulation {
   VehicleState state_;
   VehicleControl control_;
   VehicleParameter param_;
+  double dt_ = 0.1;  // default time step
 };
 
 }  // namespace steerModel

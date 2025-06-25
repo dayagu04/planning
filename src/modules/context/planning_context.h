@@ -10,6 +10,7 @@
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
+#include "../tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
@@ -346,6 +347,14 @@ class PlanningContext {
     return start_stop_decider_output_;
   }
 
+  const EgoMotionPreplannerOutput &ego_motion_preplanner_output() const {
+    return ego_motion_preplanner_output_;
+  }
+
+  EgoMotionPreplannerOutput &mutable_ego_motion_preplanner_output() {
+    return ego_motion_preplanner_output_;
+  }
+
   const LongitudinalDecisionDeciderOutput &
   longitudinal_decision_decider_output() const {
     return longitudinal_decision_decider_output_;
@@ -530,6 +539,8 @@ class PlanningContext {
   StopDestinationDeciderOutput stop_destination_decider_output_;
   // LonRefPathDeciderOutput
   LonRefPathDeciderOutput lon_ref_path_decider_output_;
+
+  EgoMotionPreplannerOutput ego_motion_preplanner_output_;
 };
 
 }  // namespace planning

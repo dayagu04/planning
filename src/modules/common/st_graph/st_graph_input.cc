@@ -121,6 +121,9 @@ void StGraphInput::Update() {
   const auto& ego_center_line_coord = virtual_lane_manager_->get_current_lane()
                                           ->get_reference_path()
                                           ->get_frenet_coord();
+  ego_motion_simulation_result_ptr_ = session_->planning_context()
+                                          .ego_motion_preplanner_output()
+                                          .ego_motion_simulation_result();
   // decision_output_ = decision_output;
 
   const double path_extend_distance = planning_init_point_.vel() * kExtendTime;
@@ -464,7 +467,8 @@ const int32_t StGraphInput::reserve_num() const {
          1;
 }
 
-const std::vector<std::shared_ptr<agent::Agent>>& StGraphInput::filtered_agents() const {
+const std::vector<std::shared_ptr<agent::Agent>>&
+StGraphInput::filtered_agents() const {
   return filtered_agents_;
 }
 
