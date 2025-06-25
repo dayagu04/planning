@@ -104,32 +104,32 @@ void STGraph::MakeAgentStBoundaries() {
     }
   }
 
-  for (const auto agent : agents) {
-    if (nullptr == agent) {
-      continue;
-    }
-    const int32_t agent_id = agent->agent_id();
-    auto iter_static = static_close_pass_candicate_agent_ids_.find(agent_id);
-    auto iter_dynamic = dynamic_close_pass_candicate_agent_ids_.find(agent_id);
-    if (iter_static == static_close_pass_candicate_agent_ids_.end() &&
-        iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
-      continue;
-    }
-    const bool is_static = StGraphUtils::IsStaticAgent(*agent);
-    const bool reuse_for_close_pass = true;
-    // TODO:different buffer for vru,truck and normal agent
-    const double extra_lateral_buffer_for_close_pass =
-        agent->is_vru() ? 1.0 : 0.5;
-    if (is_static) {
-      MakeStaticAgentStBoundary(*agent, StBoundaryType::NORMAL,
-                                reuse_for_close_pass,
-                                extra_lateral_buffer_for_close_pass);
-    } else {
-      MakeDynamicAgentStBoundary(*agent, StBoundaryType::NORMAL,
-                                 reuse_for_close_pass,
-                                 extra_lateral_buffer_for_close_pass);
-    }
-  }
+  // for (const auto agent : agents) {
+  //   if (nullptr == agent) {
+  //     continue;
+  //   }
+  //   const int32_t agent_id = agent->agent_id();
+  //   auto iter_static = static_close_pass_candicate_agent_ids_.find(agent_id);
+  //   auto iter_dynamic = dynamic_close_pass_candicate_agent_ids_.find(agent_id);
+  //   if (iter_static == static_close_pass_candicate_agent_ids_.end() &&
+  //       iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
+  //     continue;
+  //   }
+  //   const bool is_static = StGraphUtils::IsStaticAgent(*agent);
+  //   const bool reuse_for_close_pass = true;
+  //   // TODO:different buffer for vru,truck and normal agent
+  //   const double extra_lateral_buffer_for_close_pass =
+  //       agent->is_vru() ? 1.0 : 0.5;
+  //   if (is_static) {
+  //     MakeStaticAgentStBoundary(*agent, StBoundaryType::NORMAL,
+  //                               reuse_for_close_pass,
+  //                               extra_lateral_buffer_for_close_pass);
+  //   } else {
+  //     MakeDynamicAgentStBoundary(*agent, StBoundaryType::NORMAL,
+  //                                reuse_for_close_pass,
+  //                                extra_lateral_buffer_for_close_pass);
+  //   }
+  // }
 
   // debug
 
@@ -318,8 +318,9 @@ void STGraph::MakeDynamicAgentStBoundary(
       st_graph_input_->planning_init_point_box();
   const bool is_rads_scene = st_graph_input_->is_rads_scene();
   if (nullptr == planned_kd_path || nullptr == path_border_querier ||
-      reserve_num <= 0 || nullptr == mutable_agent_manager ||
-      nullptr == ptr_virtual_lane_manager || nullptr == ptr_ego_lane ||
+      ego_motion_simulation_path == nullptr || reserve_num <= 0 ||
+      nullptr == mutable_agent_manager || nullptr == ptr_virtual_lane_manager ||
+      nullptr == ptr_ego_lane ||
       nullptr == mutable_agent_manager->mutable_agent(agent.agent_id())) {
     return;
   }
@@ -381,6 +382,7 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
+  std::vector<int64_t> st_boundaries_ego;
   const double time_horizon = time_range.second;
   double min_t = std::numeric_limits<double>::max();
   constexpr double kDynamicLowerT = 2.0;
@@ -458,22 +460,6 @@ void STGraph::MakeDynamicAgentStBoundary(
       }
     }
 
-    // if (StGraphUtils::CheckLonFarPositionSTBoundary(
-    //         agent, st_point_pairs, st_graph_input_, is_parallel,
-    //         ptr_ego_lane, ptr_obj_lane, ptr_virtual_lane_manager)) {
-    //   ignore_agent_ids_.push_back(agent.agent_id());
-    //   continue;
-    // }
-
-    // if (StGraphUtils::CheckLateralFarCutinAgent(agent, st_point_pairs,
-    //                                             st_graph_input_)) {
-    //   if (StGraphUtils::CheckLateralFarCutinAgentIsLonSafe(
-    //           agent, st_point_pairs, init_point, &st_graph_input_)) {
-    //     ignore_agent_ids_.push_back(agent.agent_id());
-    //     continue;
-    //   }
-    // }
-
     if (!st_point_pairs.empty()) {
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
@@ -492,6 +478,89 @@ void STGraph::MakeDynamicAgentStBoundary(
             std::make_pair(boundary_id, std::move(st_boundary)));
       }
     }
+  }
+
+  for (int i = 0; i < trajectories.size(); ++i) {
+    if (trajectories[i].empty()) {
+      continue;
+    }
+
+    const double agent_pred_end_time = trajectories[i].back().absolute_time();
+    std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
+    st_point_pairs.reserve(reserve_num);
+    const int64_t boundary_id =
+        (agent.agent_id() << 8) + i + agent.trajectories().size() + 1;
+    for (double relative_time = time_range.first; relative_time <= time_horizon;
+         relative_time += kTimeResolution) {
+      // find path_border_segments which have collison risk
+      trajectory::TrajectoryPoint point;
+      if (start_absolute_time + relative_time < agent_pred_end_time) {
+        if (is_need_truncate_traj) {
+          point = trajectories[i].Evaluate(std::fmin(
+              start_absolute_time + relative_time, kConsideredReverseVruTime));
+        } else {
+          point = trajectories[i].Evaluate(start_absolute_time + relative_time);
+        }
+      } else {
+        if (is_need_truncate_traj) {
+          point = trajectories[i].Evaluate(kConsideredReverseVruTime);
+        } else {
+          StGraphUtils::LinearExtendTrajectory(
+              trajectories[i], start_absolute_time + relative_time, &point);
+        }
+      }
+      double specific_lat_buffer = need_ajust_buffer_by_t
+                                       ? StGraphUtils::AdjustLateralBufferByT(
+                                             point, lat_buffer, ptr_obj_lane)
+                                       : lat_buffer;
+
+      specific_lat_buffer =
+          need_dynamic_buffer
+              ? StGraphUtils::CalculateLateralBufferForTimeRange(
+                    0.0, specific_lat_buffer, kDynamicLowerT, kDynamicUpperT,
+                    relative_time)
+              : specific_lat_buffer;
+
+      Box2d obs_box(Vec2d(point.x(), point.y()), point.theta(),
+                    agent.length() + 2.0 * lon_buffer,
+                    agent.width() + 2.0 * specific_lat_buffer);
+
+      // max_s min_s max_l min_l
+      std::vector<double> agent_sl_boundary(4);
+      std::vector<std::pair<int32_t, Vec2d>> considered_corners;
+
+      StGraphUtils::CalculateAgentSLBoundary(
+          ego_motion_simulation_path, obs_box, path_range, type, &agent_sl_boundary,
+          &considered_corners);
+      const double max_l = agent_sl_boundary[2];
+      const double min_l = agent_sl_boundary[3];
+      double lower_s = std::numeric_limits<double>::max();
+      double upper_s = std::numeric_limits<double>::lowest();
+      if (StGraphUtils::CalculateSRange(
+              ego_motion_simulation_path, *path_border_querier, obs_box, type, path_range,
+              agent_sl_boundary, considered_corners, planning_init_point_box,
+              &lower_s, &upper_s, is_rads_scene)) {
+        min_t = std::fmin(min_t, relative_time);
+        st_point_pairs.emplace_back(
+            STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
+                    point.vel(), point.acc(), min_l),
+            STPoint(upper_s, relative_time, agent.agent_id(), boundary_id,
+                    point.vel(), point.acc(), max_l));
+      }
+    }
+
+    if (!st_point_pairs.empty()) {
+      std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+      st_boundary->set_id(boundary_id);
+      st_boundaries_ego.emplace_back(boundary_id);
+      neighbor_boundary_id_st_boundaries_map_.insert(
+          std::make_pair(boundary_id, std::move(st_boundary)));
+    }
+  }
+
+  if (!st_boundaries_ego.empty()) {
+    neighbor_agent_id_st_boundaries_map_[agent.agent_id() + 10000] =
+        st_boundaries_ego;
   }
 
   if (!st_boundaries.empty()) {
