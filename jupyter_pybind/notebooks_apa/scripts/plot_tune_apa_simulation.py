@@ -21,13 +21,13 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250621/20250621-13-56-37/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-21-13-56-37_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250617/20250617-14-55-43/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-06-17-14-55-43_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
 last_plan_pose_ = []
-plot_speed_graph = False
+plot_speed_graph = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

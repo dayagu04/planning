@@ -470,12 +470,6 @@ const bool PerpendicularHeadInScenario::GenTlane() {
     // ILOG_INFO << "obs type = " << pair.first << " , local obstacle size = "
     //           << pair.second.GetPtClout2dLocal().size();
 
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     for (const auto obstacle_point_slot_ : pair.second.GetPtClout2dLocal()) {
       Eigen::Vector2d obstacle_point_slot = obstacle_point_slot_;
       obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
@@ -903,12 +897,6 @@ const bool PerpendicularHeadInScenario::GenObstacles() {
   for (const auto& pair : obstacles) {
     // ILOG_INFO << "obs type = " << pair.first << " , local obstacle size = "
     //           << pair.second.GetPtClout2dLocal().size();
-
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
 
     for (const auto& obs : pair.second.GetPtClout2dLocal()) {
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(

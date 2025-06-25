@@ -29,7 +29,7 @@ bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
 void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
                                                 const VehicleParam &veh_param,
                                                 EulerDistanceTransform *edt) {
-  float min_passage_width = 2.5;
+  float min_passage_width = 2.0;
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       float veh_x_upper = min_passage_width + request->slot_length -
@@ -43,12 +43,12 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
       x_check_upper_ = std::max(center_line_target_.x, veh_x_upper);
     }
   } else {
-    x_check_upper_ = center_line_target_.x + 0.6;
+    x_check_upper_ = center_line_target_.x;
   }
 
   x_check_lower_ = center_line_target_.x;
   x_step_ = 0.2;
-  x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
+  x_sample_num_ = std::ceil((x_check_upper_ - x_check_lower_) / x_step_) + 1;
 
   float dist = 10.0;
   if (IsHeadOutRequest(request->direction_request)) {
@@ -56,7 +56,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
     dist = GetDistToObsHeadOut(&center_line_target_, edt);
     ILOG_INFO << "center_line_target_ dist : " << dist;
   } else {
-    dist = GetDistToObs(&center_line_target_, edt);
+    dist = GetMinDistByXRange(&center_line_target_, edt);
   }
 
   PoseRegulateCandidate candidate;
@@ -75,7 +75,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
 #if DEBUG_DECIDER
   DebugString();
 
-  dist = GetDistToObs(&request->start_, edt);
+  dist = GetMinDistByXRange(&request->start_, edt);
   ILOG_INFO << "start point obs dist = " << dist;
 #endif
 
@@ -94,23 +94,14 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
   UpdateDefaultPoseInfo(request, veh_param, edt);
 
-  if (request->path_generate_method ==
-          AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
-      request->path_generate_method ==
-          AstarPathGenerateType::REEDS_SHEPP_SAMPLING) {
-    ILOG_INFO << "slot polynomial";
+  if (IsSamplingBasedPlanning(request->path_generate_method)) {
     return;
   }
 
-  if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
-    GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
-  }
-
-  // Parking out no need regulator.
   if (!IsParkingIn(request)) {
-    ILOG_INFO << "not park in";
+    if (IsHeadOutRequest(request->direction_request)) {
+      GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
+    }
     return;
   }
 
@@ -120,7 +111,6 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
 
   if (request->space_type == ParkSpaceType::VERTICAL) {
     GenerateCandidatesForVerticalSlot(edt, request, veh_param);
-    // GenerateCandidatesForVerticalSlot(edt, request, veh_param);
   } else {
     GenerateCandidatesForParallelSlot(edt, request, veh_param);
   }
@@ -194,7 +184,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     global_pose = center_line_target_;
     global_pose.y = y_offset;
 
-    dist = GetDistToObs(&global_pose, edt);
+    dist = GetMinDistByXRange(&global_pose, edt);
     if (dist > 0.06) {
       PoseRegulateCandidate candidate;
       candidate.lat_offset = y_offset;
@@ -265,8 +255,8 @@ void TargetPoseRegulator::Clear() {
   return;
 }
 
-const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
-                                              EulerDistanceTransform *edt) {
+const float TargetPoseRegulator::GetMinDistByXRange(
+    const Pose2D *global_pose, EulerDistanceTransform *edt) {
   Transform2d tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
@@ -424,7 +414,7 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
     global_pose = center_line_target_;
     global_pose.y = y_offset;
 
-    dist = GetDistToObs(&global_pose, edt);
+    dist = GetMinDistByXRange(&global_pose, edt);
     if (dist > 0.06f) {
       PoseRegulateCandidate candidate;
       candidate.lat_offset = y_offset;

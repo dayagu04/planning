@@ -291,9 +291,6 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   future_path_decider.Process(&ref_line_, vehicle_param_.min_turn_radius,
                               config_.node_step, &edt_, request_);
 
-  dp_heuristic_generator_.GenerateDpMap(
-      request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
-
   TargetPoseRegulator target_pose_regulator;
   target_pose_regulator.Process(&edt_, &request_, request_.start_, goal_state_,
                                 vehicle_param_);
@@ -331,6 +328,9 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   }
 
   target_regulator_goal_ = target_regulator_result.first;
+
+  dp_heuristic_generator_.GenerateDpMap(
+      GetGoalPoint().x, GetGoalPoint().y, map_bounds_, &obs_);
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
@@ -935,10 +935,7 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
     hybrid_astar_->UpdateCarBoxBySafeBuffer(
         lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
 
-    if (request_.path_generate_method ==
-            AstarPathGenerateType::SPIRAL_SAMPLING ||
-        request_.path_generate_method ==
-            AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
+    if (IsSamplingBasedPlanning(request_.path_generate_method)) {
       // parallel
       if (request_.space_type == ParkSpaceType::PARALLEL) {
         hybrid_astar_->SamplingByCubicPolyForParallelSlot(

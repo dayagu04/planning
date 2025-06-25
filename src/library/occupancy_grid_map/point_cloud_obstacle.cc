@@ -310,12 +310,6 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
       continue;
     }
 
-    if (!config.uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     obs.points.clear();
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 

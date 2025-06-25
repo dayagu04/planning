@@ -506,12 +506,6 @@ const bool ParallelParkInScenario::GenTlane() {
       continue;
     }
 
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     const auto obs_scement = pair.second.GetObsScemanticType();
 
     bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||

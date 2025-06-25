@@ -129,7 +129,12 @@ void ParkingScenarioManager::UpdateScenarioType() {
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
     } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
-      scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::GEOMETRY_BASED) {
+        scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
+      } else {
+        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      }
     }
   }
 

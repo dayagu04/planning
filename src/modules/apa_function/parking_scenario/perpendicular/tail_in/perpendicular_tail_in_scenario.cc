@@ -352,12 +352,6 @@ const bool PerpendicularTailInScenario::CalcPtInside() {
 
   Eigen::Vector2d obs_pt_slot;
   for (const auto& pair : obstacles) {
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     for (const auto& obs : pair.second.GetPtClout2dLocal()) {
       obs_pt_slot = obs;
       SlotObsType obs_slot_type = CalSlotObsType(obs_pt_slot);
@@ -2345,12 +2339,6 @@ void PerpendicularTailInScenario::Log() const {
         ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
       continue;
     }
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     for (const Eigen::Vector2d& pt : pair.second.GetPtClout2dLocal()) {
       const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(pt);
       obstaclesX.emplace_back(tmp_obstacle.x());

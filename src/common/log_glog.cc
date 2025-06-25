@@ -11,7 +11,7 @@
 #include "./cyber/logger/async_logger.h"
 
 namespace planning {
-#define BACKTRACE_LOG (0)
+#define BACKTRACE_LOG (1)
 
 planning::cyber::logger::AsyncLogger *async_logger_ = nullptr;
 static GlogFlag glog_flag_;

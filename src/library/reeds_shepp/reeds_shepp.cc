@@ -1052,9 +1052,8 @@ int TestSCS(RSPathParam *path, const Pose2D *start_pose,
     return 0;
   }
 
-  if (IsPointEqual(start_pose, goal_pose)) {
-    SetRSPathParam(path, ReedsSheppPathype[0], 0, 0, 0, 0, 0);
-  } else {
+  SetRSPathParam(path, ReedsSheppPathype[0], 0, 0, 0, 0, 0);
+  if (!IsPointEqual(start_pose, goal_pose)) {
     dx = goal_pose->x - start_pose->x;
     dy = goal_pose->y - start_pose->y;
     dtheta = goal_pose->theta - start_pose->theta;
@@ -1091,9 +1090,8 @@ int TestSCS(RSPathParam *path, const Pose2D *start_pose,
                        std::fabs(path->length[4]);
 
 #if 0
-    int i;
-    for (i = 0; i < MAX_RS_PATH_NUM; i++) {
-      printf("path.length[%d], %.3f\n", i, path->length[i]);
+    for (int i = 0; i < MAX_RS_PATH_NUM; i++) {
+      ILOG_INFO << "path.length = " << i << ", " << path->length[i];
     }
 #endif
 
