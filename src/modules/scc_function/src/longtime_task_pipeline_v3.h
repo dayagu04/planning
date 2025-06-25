@@ -35,6 +35,7 @@
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
+#include "tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/behavior_planners/truck_longitudinal_avoid_decider/truck_longitudinal_avoid_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
@@ -70,6 +71,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
       sample_poly_speed_adjust_decider_;
 
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
+  std::unique_ptr<MRCBrakeDecider> mrc_brake_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<ExpandStBoundariesDecider> expand_st_boundaries_decider_;
   std::unique_ptr<ClosestInPathVehicleDecider> closest_in_path_vehicle_decider_;

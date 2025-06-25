@@ -3586,6 +3586,18 @@ struct StopDestinationDeciderConfig : public EgoPlanningConfig {
   double stop_destination_extended_s_buffer = 2.0;
 };
 
+struct MRCBrakeDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<double>(json, mrc_brake_deceleration,
+                     "speed_planning", "mrc_brake_decider",
+                     "mrc_brake_deceleration");
+
+  }
+
+  double mrc_brake_deceleration = -2.0;
+};
+
 struct StGraphSearcherConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

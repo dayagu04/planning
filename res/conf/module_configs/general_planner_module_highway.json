@@ -799,6 +799,9 @@
     "enable_speed_adjust": true
   },
   "speed_planning": {
+    "mrc_brake_decider": {
+      "mrc_brake_deceleration": -1.0
+    },
     "stop_destination_decider": {
       "stop_destination_virtual_agent_time_headway": 0.1
     },

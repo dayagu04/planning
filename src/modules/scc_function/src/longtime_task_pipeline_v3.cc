@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
+#include "behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "ego_planning_config.h"
 #include "speed/st_graph_input.h"
 
@@ -39,6 +40,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   // long pipeline V3
   stop_destination_decider_ =
       std::make_unique<StopDestinationDecider>(config_builder, session);
+  mrc_brake_decider_ =
+      std::make_unique<MRCBrakeDecider>(config_builder, session);
   agent_longitudinal_decider_ =
       std::make_unique<AgentLongitudinalDecider>(config_builder, session);
   expand_st_boundaries_decider_ =
@@ -166,6 +169,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = stop_destination_decider_->Execute();
   if (!ok) {
     AddErrorInfo(stop_destination_decider_->Name());
+    return false;
+  }
+
+  ok = mrc_brake_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(mrc_brake_decider_->Name());
     return false;
   }
 

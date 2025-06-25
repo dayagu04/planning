@@ -11,6 +11,7 @@
 #include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
 #include "../tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner_output.h"
+#include "../tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
@@ -259,6 +260,14 @@ class PlanningContext {
     return stop_destination_decider_output_;
   }
 
+  const MRCBrakeDeciderOutput &mrc_brake_decider_output() const {
+    return mrc_brake_decider_output_;
+  }
+
+  MRCBrakeDeciderOutput* mutable_mrc_brake_decider_output() {
+    return &mrc_brake_decider_output_;
+  }
+
   const AdaptiveCruiseControlInfo &adaptive_cruise_control_result() const {
     return adaptive_cruise_control_result_;
   }
@@ -504,6 +513,7 @@ class PlanningContext {
 
   StartStopDeciderOutPut start_stop_decider_output_;
   StopDestinationDeciderOutput stop_destination_decider_output_;
+  MRCBrakeDeciderOutput mrc_brake_decider_output_;
   // LonRefPathDeciderOutput
   LonRefPathDeciderOutput lon_ref_path_decider_output_;
 
