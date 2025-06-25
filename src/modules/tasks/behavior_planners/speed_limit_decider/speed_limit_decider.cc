@@ -1,16 +1,23 @@
 #include "speed_limit_decider.h"
-#include <vector>
-#include <algorithm>
 
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "agent/agent.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
 #include "planning_context.h"
+#include "utils/kd_path.h"
 #include "vec2d.h"
 
 namespace planning {
 namespace {
+constexpr double kEpsilon = 1e-6;
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kLaneBorrowLimitedSpeed = 5.56;
 constexpr double kSpeedlimitScale = 0.6;
@@ -18,9 +25,17 @@ constexpr double kSSharpBendRadius = 300.0;
 constexpr double kSSharpBendCurvDis = 30.0;
 constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
-constexpr double kStaticAgentAvoidLimitedSpeed = 8.33;
-constexpr double kDynamicAgentAvoidLimitedSpeed = 5.56;
 constexpr double kMergePointDetectedDistance = 20.0;
+constexpr double kStaticAgentAvoidLimitedSpeedHigh = 5.56;
+constexpr double kStaticAgentAvoidLimitedSpeedLow = 2.78;
+constexpr double kDynamicAgentAvoidLimitedSpeedHigh = 5.56;
+constexpr double kDynamicAgentAvoidLimitedSpeedLow = 2.78;
+const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
+const std::vector<double> _L_SLOPE_V{0.35, 0.08};
+const std::vector<double> _P_SLOPE_BP{0., 40.0};
+const std::vector<double> _P_SLOPE_V{0.8, 0.2};
+constexpr double follow_time_gap = 1.0;
+constexpr double min_follow_distance_m = 3.5;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -90,6 +105,39 @@ bool LateralCollisionCheck(
   }
   return false;
 }
+
+double CalcDesiredVelocity(const double d_rel, const double d_des,
+                           const double v_lead, const double v_ego) {
+  // *** compute desired speed ***
+  double v_lead_clip = std::max(v_lead, 0.0);
+  const double max_runaway_speed = -2.0;
+  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
+  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
+  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
+  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
+
+  double v_rel = v_ego - v_lead;
+  double v_rel_des = 0.0;
+  double soft_brake_distance = 0.0;
+  if (d_rel < d_des) {
+    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
+    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
+    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = d_rel;
+  } else if (d_rel < d_des + x_linear_to_parabola) {
+    v_rel_des = (d_rel - d_des) * l_slope;
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = v_rel / l_slope + d_des;
+  } else {
+    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
+    soft_brake_distance =
+        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
+  }
+  // compute desired speed
+  double v_target = v_rel_des + v_lead;
+  return v_target;
+}
 }  // namespace
 
 SpeedLimitDecider::SpeedLimitDecider(
@@ -102,6 +150,7 @@ bool SpeedLimitDecider::Execute() {
   LOG_DEBUG("=======SpeedLimitDecider======= \n");
   const auto &environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  const auto plan_init_point = ego_state_mgr->planning_init_point();
   double v_cruise = ego_state_mgr->ego_v_cruise();
   v_target_ = v_cruise;
   v_target_type_ = SpeedLimitType::CRUISE;
@@ -127,8 +176,9 @@ bool SpeedLimitDecider::Execute() {
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
-  auto &ad_info =
-      session_->mutable_planning_context()->mutable_planning_hmi_info()->ad_info;
+  auto &ad_info = session_->mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->ad_info;
   if (SpeedLimitType::CURVATURE == v_target_type_) {
     ad_info.is_curva = true;
   } else {
@@ -137,25 +187,34 @@ bool SpeedLimitDecider::Execute() {
   return true;
 }
 
-bool SpeedLimitDecider::IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec) {
+bool SpeedLimitDecider::IsSSharpBend(
+    const std::vector<CurvInfo> &preview_curv_info_vec) {
   std::vector<std::pair<double, double>> pos_curv_list;
   std::vector<std::pair<double, double>> neg_curv_list;
   for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
-    if (preview_curv_info_vec[idx].curv_sign > 0 && (1.0 / preview_curv_info_vec[idx].curv) < kSSharpBendRadius) {
-      pos_curv_list.emplace_back(std::make_pair(preview_curv_info_vec[idx].s, preview_curv_info_vec[idx].curv));
+    if (preview_curv_info_vec[idx].curv_sign > 0 &&
+        (1.0 / preview_curv_info_vec[idx].curv) < kSSharpBendRadius) {
+      pos_curv_list.emplace_back(std::make_pair(
+          preview_curv_info_vec[idx].s, preview_curv_info_vec[idx].curv));
     }
-    if (preview_curv_info_vec[idx].curv_sign < 0 && (1.0 / preview_curv_info_vec[idx].curv) < kSSharpBendRadius) {
-      neg_curv_list.emplace_back(std::make_pair(preview_curv_info_vec[idx].s, preview_curv_info_vec[idx].curv));
+    if (preview_curv_info_vec[idx].curv_sign < 0 &&
+        (1.0 / preview_curv_info_vec[idx].curv) < kSSharpBendRadius) {
+      neg_curv_list.emplace_back(std::make_pair(
+          preview_curv_info_vec[idx].s, preview_curv_info_vec[idx].curv));
     }
   }
   if (pos_curv_list.empty() || neg_curv_list.empty()) {
     return false;
   }
 
-  auto comp_curv = [](std::pair<double, double>& a, std::pair<double, double>& b) {return a.second > b.second;};
+  auto comp_curv = [](std::pair<double, double> &a,
+                      std::pair<double, double> &b) {
+    return a.second > b.second;
+  };
   std::sort(pos_curv_list.begin(), pos_curv_list.end(), comp_curv);
   std::sort(neg_curv_list.begin(), neg_curv_list.end(), comp_curv);
-  if (std::fabs(pos_curv_list[0].first - neg_curv_list[0].first) < kSSharpBendCurvDis) {
+  if (std::fabs(pos_curv_list[0].first - neg_curv_list[0].first) <
+      kSSharpBendCurvDis) {
     return true;
   }
 
@@ -209,13 +268,13 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   std::vector<CurvInfo> preview_curv_info_vec;
   for (int idx = 0; idx * 2.0 < preview_x; idx++) {
     CurvInfo one_curv_info;
-    //calc curv abs and using average curv abs in curv window
+    // calc curv abs and using average curv abs in curv window
     std::vector<double> curv_window_vec;
-    for (int j = -3; j <= 3; j++ ) {
+    for (int j = -3; j <= 3; j++) {
       double curv;
       ReferencePathPoint refpath_pt;
       if (reference_path_ptr->get_reference_point_by_lon(
-        ego_start_s + idx * 2.0 + j * 2.0, refpath_pt)) {
+              ego_start_s + idx * 2.0 + j * 2.0, refpath_pt)) {
         curv = std::fabs(refpath_pt.path_point.kappa());
       } else {
         curv = 0.0001;
@@ -229,11 +288,11 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     double avg_curv = curv_sum / curv_window_vec.size();
     one_curv_info.curv = avg_curv;
 
-    //calc curv direction(-1 or 1, 0 for except)
+    // calc curv direction(-1 or 1, 0 for except)
     ReferencePathPoint refpath_pt;
-    if (reference_path_ptr->get_reference_point_by_lon(
-      ego_start_s + idx * 2.0, refpath_pt)) {
-      one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1: -1;
+    if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + idx * 2.0,
+                                                       refpath_pt)) {
+      one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
     } else {
       one_curv_info.curv_sign = 0;
     }
@@ -248,7 +307,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double avg_curv = curv_sum / curv_window_vec.size();
   double road_radius = 1 / std::max(avg_curv, 0.0001);*/
 
-  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   debug_info_pb->clear_dis_curv_list();
   for (int j = 0; j < preview_curv_info_vec.size(); j++) {
     planning::common::DoublePair *one_curv = debug_info_pb->add_dis_curv_list();
@@ -280,7 +339,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
             angle_steers, angle_steers_deg, v_limit_road);
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
-  JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1: 0);
+  JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
     v_target_type_ = SpeedLimitType::CURVATURE;
@@ -308,7 +367,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
   double pre_acc_dis = speed_limit_config_.pre_accelerate_distance_for_merge;
-  bool sdmap_has_curv = true;  //先不考虑匝道内小曲率的情况，后面补充
+  bool sdmap_has_curv = true;  // 先不考虑匝道内小曲率的情况，后面补充
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
@@ -568,6 +627,9 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
 
 void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   // get avoid agent id
+  const auto avoid_agents_info = session_->planning_context()
+                                     .lateral_obstacle_decider_output()
+                                     .obstacle_intrusion_distance_thr;
   const auto avoid_ids =
       session_->planning_context().lateral_offset_decider_output().avoid_ids;
 
@@ -584,15 +646,23 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     return;
   }
   const auto &current_lane = virtual_lane_manager->get_current_lane();
+  if (current_lane == nullptr) {
+    return;
+  }
+  const auto &current_lane_coord = current_lane->get_lane_frenet_coord();
+  if (current_lane_coord == nullptr) {
+    return;
+  }
 
-  std::vector<SpeedLimitAgent> speed_limit_agents;
   std::vector<const agent::Agent *> avoid_agents;
-  for (const int avoid_id : avoid_ids) {
-    const auto avoid_agent = agent_manager->GetAgent(avoid_id);
+  for (const auto avoid_agent_id : avoid_ids) {
+    const auto avoid_agent = agent_manager->GetAgent(avoid_agent_id);
     if (avoid_agent != nullptr) {
       avoid_agents.emplace_back(avoid_agent);
     }
   }
+
+  std::vector<SpeedLimitAgent> speed_limit_agents;
 
   // get lateral path
   const auto &planned_kd_path =
@@ -609,18 +679,38 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   const auto init_point = ego_state_mgr->planning_init_point();
 
   for (auto avoid_agent : avoid_agents) {
-    // check speed diff and ignore < 5 mps avoid agent
-    const double SpeedDiffThdInSpeedLimit =
-        avoid_agent->is_static() ? kStaticAgentAvoidLimitedSpeed
-                                 : kDynamicAgentAvoidLimitedSpeed;
-    const double speed_diff = v_ego - avoid_agent->speed();
-    if (speed_diff < SpeedDiffThdInSpeedLimit) {
-      continue;
-    }
+    const bool is_static = avoid_agent->is_static();
+    // const double speed_diff = v_ego - avoid_agent->speed();
+
+    // bool is_need_v_hold = false;
+    // double speed_buffer = 0.0;
+    // if (is_static) {
+    //   if (speed_diff >= kStaticAgentAvoidLimitedSpeedHigh) {
+    //     speed_buffer = kStaticAgentAvoidLimitedSpeedHigh;
+    //   } else if (speed_diff >= kStaticAgentAvoidLimitedSpeedLow) {
+    //     is_need_v_hold = true;
+    //   } else {
+    //     continue;
+    //   }
+    // } else {
+    //   if (speed_diff < kDynamicAgentAvoidLimitedSpeedLow) {
+    //     continue;
+    //   } else if (speed_diff < kDynamicAgentAvoidLimitedSpeedHigh) {
+    //     is_need_v_hold = true;
+    //   } else {
+    //     speed_buffer = kDynamicAgentAvoidLimitedSpeedHigh;
+    //   }
+    // }
 
     Point2D agent_point(avoid_agent->x(), avoid_agent->y());
     Point2D frenet_point;
-    if (!(planned_kd_path->XYToSL(agent_point, frenet_point))) {
+    if (!(current_lane_coord->XYToSL(agent_point, frenet_point))) {
+      continue;
+    }
+
+    double ego_s, ego_l = 0.0;
+    if (!(current_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s,
+                                     &ego_l))) {
       continue;
     }
 
@@ -629,37 +719,54 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     double min_l_by_lat_path = std::numeric_limits<double>::max();
     double max_l_by_lat_path = std::numeric_limits<double>::lowest();
     bool is_success = CalculateAgentSLBoundary(
-        planned_kd_path, *avoid_agent, &min_s_by_lat_path, &max_s_by_lat_path,
-        &min_l_by_lat_path, &max_l_by_lat_path);
+        current_lane_coord, *avoid_agent, &min_s_by_lat_path,
+        &max_s_by_lat_path, &min_l_by_lat_path, &max_l_by_lat_path);
     if (!is_success) {
       continue;
     }
 
-    double min_lat_l_by_lat_path = 0.0;
+    double min_lat_l = 0.0;
     if (frenet_point.y > planning_math::kMathEpsilon) {
-      min_lat_l_by_lat_path =
+      min_lat_l =
           (frenet_point.y * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
     } else if (frenet_point.y < planning_math::kMathEpsilon) {
-      min_lat_l_by_lat_path =
+      min_lat_l =
           (frenet_point.y * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
     } else {
       continue;
     }
 
     double agent_half_width = 0.5 * avoid_agent->width();
-    double lane_width = current_lane->width_by_s(min_s_by_lat_path);
+    double lane_half_width = 0.5 * current_lane->width_by_s(min_s_by_lat_path);
     // calc limit speed
-    std::array<double, 2> xp{agent_half_width, lane_width};
-    std::array<double, 2> fp{kSpeedlimitScale * v_ego, v_ego};
-    double v_limit = interp(fabs(min_lat_l_by_lat_path), xp, fp);
-    const double v_limit_lower =
-        std::fmin(SpeedDiffThdInSpeedLimit + avoid_agent->speed(), v_ego);
+    double s_desired =
+        std::max(init_point.v * follow_time_gap + min_follow_distance_m,
+                 min_follow_distance_m);
+    const auto &vehicle_param =
+        VehicleConfigurationContext::Instance()->get_vehicle_param();
+    double d_rel = min_s_by_lat_path - ego_s - 0.5 * vehicle_param.length;
+    double v_follow_desired =
+        CalcDesiredVelocity(d_rel, s_desired, avoid_agent->speed(), v_ego);
+    double invade_dis = avoid_agent->is_static() ? 0.8 : 0.4;
+    if (avoid_agents_info.find(avoid_agent->agent_id()) !=
+        avoid_agents_info.end()) {
+      invade_dis = avoid_agents_info.at(avoid_agent->agent_id());
+    }
+    std::array<double, 2> xp{lane_half_width - invade_dis,
+                             lane_half_width + 0.2};
+    std::array<double, 2> fp{v_follow_desired, v_ego};
+    double v_limit = interp(fabs(min_lat_l), xp, fp);
+    const double v_limit_lower = avoid_agent->is_static()
+                                     ? kStaticAgentAvoidLimitedSpeedHigh
+                                     : kDynamicAgentAvoidLimitedSpeedHigh;
     v_limit = std::max(v_limit, v_limit_lower);
 
     SpeedLimitAgent speed_limit_agent;
     speed_limit_agent.id = avoid_agent->agent_id();
-    speed_limit_agent.min_s = min_s_by_lat_path;
+    speed_limit_agent.min_s = min_s_by_lat_path - ego_s;
     speed_limit_agent.v_limit = v_limit;
+    speed_limit_agent.is_need_v_hold = false;
+    speed_limit_agent.v_follow_desired = v_follow_desired;
     speed_limit_agents.emplace_back(speed_limit_agent);
 
     // sort
@@ -670,16 +777,43 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   }
 
   if (speed_limit_agents.empty()) {
+    v_avoid_hold_ = 0.0;
     JSON_DEBUG_VALUE("avoid_agent_id", -1.0)
     JSON_DEBUG_VALUE("avoid_agent_v_limit", 100.0)
+    JSON_DEBUG_VALUE("aovid_agent_v_follow_desire", 100.0)
     return;
   }
-  for (const auto &speed_limit_agent : speed_limit_agents) {
-    if (speed_limit_agent.v_limit < v_target_) {
-      v_target_ = speed_limit_agent.v_limit;
-      v_target_type_ = SpeedLimitType::AVOID_AGENT;
-      JSON_DEBUG_VALUE("avoid_agent_id", speed_limit_agent.id)
-      JSON_DEBUG_VALUE("avoid_agent_v_limit", v_target_)
+
+  auto update_speed_limit = [&](double new_speed,
+                                const SpeedLimitAgent &agent) {
+    v_target_ = new_speed;
+    v_target_type_ = SpeedLimitType::AVOID_AGENT;
+    JSON_DEBUG_VALUE("avoid_agent_id", agent.id);
+    JSON_DEBUG_VALUE("avoid_agent_v_limit", v_target_);
+    JSON_DEBUG_VALUE("aovid_agent_v_follow_desire", agent.v_follow_desired);
+  };
+
+  // bool is_first_agent = true;
+  double v_avoid_tmp = 40.0;
+  for (const auto &agent : speed_limit_agents) {
+    // if (is_first_agent) {
+    //   if (agent.is_need_v_hold) {
+    //     if (v_avoid_hold_ < 0.1) {
+    //       v_avoid_hold_ = v_ego;
+    //     }
+    //     v_avoid_tmp = std::fmin(v_avoid_hold_, v_avoid_tmp);
+    //   } else {
+    //     v_avoid_tmp = agent.v_limit;
+    //     v_avoid_hold_ = 0.0;
+    //   }
+    //   if (v_avoid_tmp < v_target_) {
+    //     update_speed_limit(v_avoid_tmp, agent);
+    //   }
+    //   is_first_agent = false;
+    //   continue;
+    // }
+    if (agent.v_limit < v_target_) {
+      update_speed_limit(agent.v_limit, agent);
     }
   }
 }

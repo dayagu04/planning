@@ -3018,7 +3018,9 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
     check_and_add_avoid_id(soft_bounds_info[i].first, frenet_soft_bounds[i].first, false); // lower
     check_and_add_avoid_id(soft_bounds_info[i].second, frenet_soft_bounds[i].second, true);  // upper
   }
-  JSON_DEBUG_VECTOR("lateral_avoid_ids", lateral_offset_decider_output.avoid_ids, 0);
+  std::vector<double> avoid_ids_double(lateral_offset_decider_output.avoid_ids.begin(),
+      lateral_offset_decider_output.avoid_ids.end());
+  JSON_DEBUG_VECTOR("lateral_avoid_ids", avoid_ids_double, 0);
 }
 
 void GeneralLateralDecider::CalcLateralBehaviorOutput() {

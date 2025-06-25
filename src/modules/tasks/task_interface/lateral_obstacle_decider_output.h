@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "config/basic_type.h"
 #include "src/library/arastar_lib/hybrid_ara_data.h"
 #include "task_basic_types.h"
 
@@ -42,6 +43,7 @@ struct LateralObstacleDeciderOutput {
   bool in_intersection = false;
   bool left_borrow = true;
   bool right_borrow = true;
+  std::unordered_map<uint32_t, double> obstacle_intrusion_distance_thr;
 
   void Clear() {
     hybrid_ara_result.Clear();
