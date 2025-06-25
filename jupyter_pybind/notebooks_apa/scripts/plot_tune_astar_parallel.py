@@ -68,7 +68,7 @@ data_rs_lib_test = ColumnDataSource(data = {'plan_path_x':[],
 
 data_veh_circle = ColumnDataSource(data = {'car_circle_xn':[], 'car_circle_yn':[], 'car_circle_rn':[]})
 
-fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
+fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=1050, height=600, match_aspect = True, aspect_scale=1, x_range=(-15, 20), y_range=(-10, 10))
 fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5,legend_label = 'car',visible = True,fill_alpha = 0.2)
 # fig1.patch('car_xn', 'car_yn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car',visible = False)
 # fig1.patch('car_xn', 'car_yn', source = data_car_target_pos, fill_color = "blue", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target_pos')
@@ -168,16 +168,18 @@ astar_parallel_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
+    self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
+    self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=1, value=1, step=1)
+
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.1, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=0.0, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=1)
 
     self.is_left = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
-    self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
-    self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=1, value=0, step=1)
+
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
 
-    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-10.0, max=10.0, value=-0.7, step=0.05)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-10.0, max=10.0, value=0.0, step=0.05)
     self.left_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_virtual_wall_x",min=-30.0, max=20.0, value=-12.6, step=0.05)
     self.right_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_virtual_wall_x",min=0.0, max=20.0, value=7.5, step=0.05)
     self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=-10, max=20.0, value=0.7, step=0.1)
@@ -185,20 +187,25 @@ class LocalViewSlider:
     self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=-10, max=20.0, value=0.3, step=0.1)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=20, value=4.5, step=0.1)
 
-    self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
+    self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.2, step=0.01)
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
 
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
 
-    ipywidgets.interact(slider_callback, ego_x=self.ego_x_slider,
+    self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb_offset",min=-1, max=1, value=0.4, step=0.01)
+    
+    ipywidgets.interact(slider_callback,
+                        trigger_plan=self.trigger_plan,
+                        swap_start_goal=self.swap_start_goal,
+
+                        ego_x=self.ego_x_slider,
                         ego_y=self.ego_y_slider,
                         ego_heading=self.ego_heading_slider,
                         slot_pt0_x=self.slot_pt0_x_slider,
                         slot_pt0_y=self.slot_pt0_y_slider,
                         is_left=self.is_left,
-                        trigger_plan=self.trigger_plan,
-                        swap_start_goal=self.swap_start_goal,
+
                         slot_phi=self.slot_phi_slider,
                         slot_width=self.slot_width_slider,
                         slot_length=self.slot_length_slider,
@@ -209,11 +216,12 @@ class LocalViewSlider:
                         channel_width=self.channel_width_slider,
                         right_virtual_wall_x=self.right_virtual_wall_x_slider,
                         left_virtual_wall_x=self.left_virtual_wall_x_slider,
+                        curb_offset = self.curb_offset_slider,
                         )
 
 ## sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, trigger_plan,swap_start_goal, slot_phi, slot_width, slot_length, right_obj_dx,
-                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x):
+def slider_callback(trigger_plan,swap_start_goal, ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, slot_phi, slot_width, slot_length, right_obj_dx,
+                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x, curb_offset):
   kwargs = locals()
 
   # vehicle_type = 'CHERY_T26'
@@ -224,10 +232,11 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
   car_yn = []
 
   for i in range(len(car_xb)):
-      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y, ego_heading/57.3)
+      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y, math.radians(ego_heading))
       car_xn.append(tmp_x)
       car_yn.append(tmp_y)
-      print('y', car_yb[i])
+  print('y', car_yb)
+
   data_car.data.update({
     'car_xn': car_xn,
     'car_yn': car_yn,
@@ -262,8 +271,8 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
   slot_bound_x_vec.append([slot_pt1_x, slot_pt0_x])
   slot_bound_y_vec.append([slot_pt1_y, slot_pt0_y])
 
-  print("slot_bound_x_vec", slot_bound_x_vec)
-  print("slot_bound_y_vec", slot_bound_y_vec)
+  # print("slot_bound_x_vec", slot_bound_x_vec)
+  # print("slot_bound_y_vec", slot_bound_y_vec)
 
 
   data_slot.data.update({
@@ -276,9 +285,11 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
   obs_params = [right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy,
                 channel_width, right_virtual_wall_x, left_virtual_wall_x]
-
+  start_time = time.perf_counter()
   current_path_point_global_vec_ = astar_parallel_py.Update(
-      ego_pose, slot_pt, obs_params, trigger_plan,swap_start_goal)
+      ego_pose, slot_pt, obs_params, curb_offset,  trigger_plan,swap_start_goal)
+  end_time = time.perf_counter()
+  print("hybrid a star parallel cost time(ms) = ", (end_time - start_time) * 1000.0)
 
   # rs
   data_rs_path.data.update({
@@ -454,7 +465,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     'y': [pose[1]],
   })
 
-  print(len(current_path_point_global_vec_))
+  # print(len(current_path_point_global_vec_))
 
 
   data_full_astar_path.data.update({
@@ -634,7 +645,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     line_list_x_vec.append([line_list[i][0], line_list[i][2]])
     line_list_y_vec.append([line_list[i][1], line_list[i][3]])
 
-  print("=========")
+  # print("=========")
 
   data_virtual_wall.data.update({
     'x_vec': line_list_x_vec,

@@ -11,19 +11,18 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-
+#include "ad_common/math/math_utils.h"
 #include "apa_param_config.h"
-#include "apa_slot_manager.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
+#include "apa_slot_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "common.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
-#include "narrow_space_scenario.h"
 #include "log_glog.h"
 #include "math_lib.h"
+#include "narrow_space_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"
 #include "polygon_base.h"
 #include "pose2d.h"
@@ -34,11 +33,11 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/library/reeds_shepp/reeds_shepp_interface.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "transform2d.h"
 #include "vecf32.h"
 #include "virtual_wall_decider.h"
-#include "src/library/reeds_shepp/reeds_shepp_interface.h"
-#include "transform2d.h"
-#include "ad_common/math/math_utils.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -340,7 +339,6 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
 
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
   } else if (cross_ego_to_slot_heading < 0.0 &&
              cross_ego_to_slot_center > 0.0) {
@@ -358,7 +356,7 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
 int UpdateParkSpaceKeyPoints(
     const ApaParameters &parking_param, EgoInfoUnderSlot &slot_info,
     const std::vector<Eigen::Vector2d> &global_park_space_points,
-     double real_slot_length) {
+    double real_slot_length) {
   const double car_width_include_mirror =
       parking_param.car_width + 2.0 * parking_param.max_car_width;
 
@@ -389,9 +387,9 @@ void DebugLineSegment(ad_common::math::LineSegment2d &line) {
 int GenerateObstacleByJupyter(
     const ApaParameters &parking_param,
     const std::vector<Eigen::Vector2d> &global_park_space_points,
-    const std::vector<double> &obs_params, const Eigen::Vector2d &vec_01,
-    const Eigen::Vector2d &vec_02, const Eigen::Vector2d &unit_vec_02,
-    const Eigen::Vector2d &unit_vec_01,
+    const std::vector<double> &obs_params, const double curb_offset,
+    const Eigen::Vector2d &vec_01, const Eigen::Vector2d &vec_02,
+    const Eigen::Vector2d &unit_vec_02, const Eigen::Vector2d &unit_vec_01,
     EgoInfoUnderSlot &slot_info) {
   obs_global_points_.clear();
 
@@ -455,11 +453,11 @@ int GenerateObstacleByJupyter(
 
   // slot back wall
   Eigen::Vector2d bottom_wall_left =
-      global_park_space_points[3] + unit_vec_02 * 1.0;
+      global_park_space_points[3] + unit_vec_02 * curb_offset;
   bottom_wall_left[0] = left_wall1_upper[0];
 
   Eigen::Vector2d bottom_wall_right =
-      global_park_space_points[2] + unit_vec_02 * 1.0;
+      global_park_space_points[2] + unit_vec_02 * curb_offset;
   bottom_wall_right[0] = right_wall1_upper_[0];
 
   //
@@ -538,8 +536,8 @@ int GenerateObstacleByJupyter(
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
     std::vector<Eigen::Vector2d> global_park_space_points,
-    std::vector<double> obs_params, const bool trigger_plan,
-    const bool swap_start_goal) {
+    std::vector<double> obs_params, const double curb_offset,
+    const bool trigger_plan, const bool swap_start_goal) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   EgoInfoUnderSlot ego_slot_info;
@@ -663,8 +661,7 @@ std::vector<Eigen::Vector3d> Update(
                                ego_slot_info, frame);
 
   UpdateParkSpaceKeyPoints(parking_param, ego_slot_info,
-                           global_park_space_points,
-                           real_slot_length);
+                           global_park_space_points, real_slot_length);
 
   obs_global_points_.clear();
 
@@ -681,8 +678,8 @@ std::vector<Eigen::Vector3d> Update(
   }
 
   GenerateObstacleByJupyter(parking_param, global_park_space_points, obs_params,
-                            vec_01, vec_02, unit_vec_02, unit_vec_01,
-                            ego_slot_info);
+                            curb_offset, vec_01, vec_02, unit_vec_02,
+                            unit_vec_01, ego_slot_info);
 
   // start
   Eigen::Vector3d start;
