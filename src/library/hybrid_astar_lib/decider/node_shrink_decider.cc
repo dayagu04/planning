@@ -167,7 +167,8 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
                                                    const Node3d *child) {
   if (request.direction_request != ParkingVehDirection::HEAD_OUT_TO_LEFT &&
-      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_RIGHT &&
+      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
     return false;
   }
 

@@ -103,7 +103,8 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   }
 
   if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
     GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
   }
 
@@ -226,25 +227,29 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
   Pose2D global_pose;
   global_pose = center_line_target_;
-  const size_t max_candidate_num = 10;
+  constexpr size_t kMaxCandidateNum = 10;
+  constexpr float kYLowerMid = -0.1;
 
   PoseRegulateCandidate candidate;
-  for (size_t i = 0; i < max_candidate_num; i++) {
-    global_pose.x = 8.0;
-    if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
-      global_pose.y -= 1.0;
-      candidate.lat_offset = 0.0;
-      candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
-      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
-      candidate_info_.emplace_back(candidate);
-    } else if (request->direction_request ==
-               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
-      global_pose.y += 1.0;
-      candidate.lat_offset = 0.0;
-      candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
-      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
-      candidate_info_.emplace_back(candidate);
+  for (size_t i = 0; i < kMaxCandidateNum; i++) {
+    switch (request->direction_request) {
+      case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+        global_pose.x = 8.0;
+        global_pose.y -= 1.0;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+        global_pose.x = 8.0;
+        global_pose.y += 1.0;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+        global_pose.y = kYLowerMid + i * 0.02;
+        break;
+      default:
+        continue;
     }
+    candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
+    candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+    candidate_info_.emplace_back(candidate);
   }
 
 #if DEBUG_DECIDER
