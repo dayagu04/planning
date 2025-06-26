@@ -432,7 +432,7 @@ bool PlanningAdapter::Proc() {
   }
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
-  LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
+  LOG_DEBUG("The cost time of proc() is: [%f] ms\n", planning_cost_time);
   return true;
 }
 
