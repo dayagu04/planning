@@ -791,6 +791,8 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: Update "
         "neighbor agents decision table\n");
+  } else {
+    mutable_st_graph->UpdateNeighborAgentResultsForEgoMotionSimPath();
   }
   JSON_DEBUG_VALUE("gap_lon_decision_update",
                    !neighbor_agents_decision_table.empty())

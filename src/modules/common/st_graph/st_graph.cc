@@ -110,8 +110,9 @@ void STGraph::MakeAgentStBoundaries() {
   //   }
   //   const int32_t agent_id = agent->agent_id();
   //   auto iter_static = static_close_pass_candicate_agent_ids_.find(agent_id);
-  //   auto iter_dynamic = dynamic_close_pass_candicate_agent_ids_.find(agent_id);
-  //   if (iter_static == static_close_pass_candicate_agent_ids_.end() &&
+  //   auto iter_dynamic =
+  //   dynamic_close_pass_candicate_agent_ids_.find(agent_id); if (iter_static
+  //   == static_close_pass_candicate_agent_ids_.end() &&
   //       iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
   //     continue;
   //   }
@@ -502,6 +503,10 @@ void STGraph::MakeDynamicAgentStBoundary(
       continue;
     }
 
+    if (!is_lane_keeping) {
+      break;
+    }
+
     const double agent_pred_end_time = trajectories[i].back().absolute_time();
     std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
     st_point_pairs.reserve(reserve_num);
@@ -551,16 +556,16 @@ void STGraph::MakeDynamicAgentStBoundary(
       std::vector<std::pair<int32_t, Vec2d>> considered_corners;
 
       StGraphUtils::CalculateAgentSLBoundary(
-          ego_motion_simulation_path, obs_box, path_range, type, &agent_sl_boundary,
-          &considered_corners);
+          ego_motion_simulation_path, obs_box, path_range, type,
+          &agent_sl_boundary, &considered_corners);
       const double max_l = agent_sl_boundary[2];
       const double min_l = agent_sl_boundary[3];
       double lower_s = std::numeric_limits<double>::max();
       double upper_s = std::numeric_limits<double>::lowest();
       if (StGraphUtils::CalculateSRange(
-              ego_motion_simulation_path, *path_border_querier, obs_box, type, path_range,
-              agent_sl_boundary, considered_corners, planning_init_point_box,
-              &lower_s, &upper_s, is_rads_scene)) {
+              ego_motion_simulation_path, *path_border_querier, obs_box, type,
+              path_range, agent_sl_boundary, considered_corners,
+              planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
         min_t = std::fmin(min_t, relative_time);
         st_point_pairs.emplace_back(
             STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
@@ -1020,6 +1025,11 @@ bool STGraph::UpdateNeighborAgentResults(
     }
   }
 
+  const bool is_success = CalculateNeighborCorridor();
+  return is_success;
+}
+
+bool STGraph::UpdateNeighborAgentResultsForEgoMotionSimPath() {
   const bool is_success = CalculateNeighborCorridor();
   return is_success;
 }
