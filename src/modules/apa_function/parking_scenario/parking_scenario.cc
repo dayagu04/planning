@@ -629,7 +629,6 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       apa_world_ptr_->GetMeasureDataManagerPtr(),
       apa_world_ptr_->GetObstacleManagerPtr());
 
-  SpeedDecisions speed_decisions;
   stop_decider.Execute(
       stitch_init_speed, traj_stitcher.GetConstStitchPath(),
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
@@ -647,6 +646,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
         traj_stitcher.GetConstStitchPath());
   }
 
+  SpeedDecisions speed_decisions;
   const ParkLonDecision stop_decision = stop_decider.GetStopDecision();
   if (stop_decision.decision_type == LonDecisionType::STOP) {
     speed_decisions.decisions.emplace_back(stop_decision);

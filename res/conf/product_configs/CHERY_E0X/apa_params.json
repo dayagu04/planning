@@ -369,7 +369,7 @@
   "vertical_slot_passage_length_bound" : 18.0,
   "max_replan_number": 25,
   "max_replan_number_inside_slot": 15,
-  "parallel_passage_width" : 7.0,
+  "parallel_passage_width" : 5.5,
   "parallel_passage_length" :26.0,
 
   "enable_apa_speed_plan" : true,
@@ -389,7 +389,7 @@
   "head_in_slot_virtual_wall_x_offset" : 0.1,
   "head_in_slot_virtual_wall_y_offset" : 2.0,
 
-  "use_uss_pt_clound": true,
+  "use_uss_pt_clound": false,
   "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
   "use_uss_pt_for_slot_release": true,

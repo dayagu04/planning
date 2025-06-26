@@ -146,13 +146,11 @@ void HybridAStarInterface::UpdateOutput() {
   // vertical parking center ref line
   switch (request_.direction_request) {
     case ParkingVehDirection::HEAD_IN:
-      ILOG_INFO << "HEAD_IN";
       ref_line_.Process(request_.real_goal,
                         Pose2D(request_.real_goal.x - 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
     case ParkingVehDirection::TAIL_IN:
-      ILOG_INFO << "TAIL_IN";
       ref_line_.Process(request_.real_goal,
                         Pose2D(request_.real_goal.x + 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
@@ -987,7 +985,7 @@ const float HybridAStarInterface::GetLatBufferForInsideSlot(
     const float target_obs_dist, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
   float safe_buffer = 0.1;
-  // For searching a solution easily, safe buffer should samller than obstacle
+  // For searching a solution easily, safe buffer should smaller than obstacle
   // distance.
   float soft_buffer = 0.15;
 

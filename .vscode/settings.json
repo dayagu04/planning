@@ -76,9 +76,7 @@
     "*.txx": "cpp",
     "queue": "cpp",
     "stack": "cpp",
-    "tensor": "cpp",
-    "slist": "cpp",
-    "codecvt": "cpp"
+    "tensor": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
   "editor.quickSuggestions": {
@@ -87,5 +85,5 @@
     "strings": true
   },
   "editor.wordBasedSuggestions": "matchingDocuments",
-  "C_Cpp.intelliSenseEngine": "default"
+  "C_Cpp.intelliSenseEngine": "disabled"
 }
