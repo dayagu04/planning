@@ -225,7 +225,9 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
       parking_finish = lat_condition && static_condition && remain_s_condition;
       break;
     case ApaParkOutDirection::FRONT:
-      parking_finish = remain_s_condition && static_condition && pos_condition;
+      parking_finish =
+          (remain_s_condition && static_condition && pos_condition) ||
+          (ego_info.slot_occupied_ratio < 0.3 && static_condition);
       break;
 
     default:
@@ -1558,7 +1560,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
 
     case ApaParkOutDirection::FRONT:
     default:
-      ego_info_under_slot.target_pose.pos << kInitialTargetX - 3, 0.0;
+      ego_info_under_slot.target_pose.pos << kInitialTargetX - 2.5, 0.0;
       ego_info_under_slot.target_pose.heading = 0.0;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 0);
       break;
