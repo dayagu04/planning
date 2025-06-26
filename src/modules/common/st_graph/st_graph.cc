@@ -480,6 +480,23 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
   }
 
+  if (!st_boundaries.empty()) {
+    if (type == StBoundaryType::NEIGHBOR) {
+      neighbor_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
+    } else if (type == StBoundaryType::NORMAL) {
+      reuse_for_close_pass
+          ? close_pass_agent_id_st_boundaries_map_[agent.agent_id()] =
+                st_boundaries
+          : agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
+      is_in_st_graph = true && !reuse_for_close_pass;
+    } else if (type == StBoundaryType::EXPAND) {
+      expand_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
+    }
+  } else if (is_candicate_for_close_pass) {
+    // the agent has no original st boundary and is candicate for close pass
+    dynamic_close_pass_candicate_agent_ids_.insert(agent.agent_id());
+  }
+
   for (int i = 0; i < trajectories.size(); ++i) {
     if (trajectories[i].empty()) {
       continue;
@@ -489,7 +506,11 @@ void STGraph::MakeDynamicAgentStBoundary(
     std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
     st_point_pairs.reserve(reserve_num);
     const int64_t boundary_id =
-        (agent.agent_id() << 8) + i + agent.trajectories().size() + 1;
+        (agent.agent_id() << 8) + i + agent.trajectories().size();
+    if (boundary_id_st_boundaries_map_.find(boundary_id) !=
+        boundary_id_st_boundaries_map_.end()) {
+      continue;
+    }
     for (double relative_time = time_range.first; relative_time <= time_horizon;
          relative_time += kTimeResolution) {
       // find path_border_segments which have collison risk
@@ -552,6 +573,7 @@ void STGraph::MakeDynamicAgentStBoundary(
     if (!st_point_pairs.empty()) {
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
+      st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
       st_boundaries_ego.emplace_back(boundary_id);
       neighbor_boundary_id_st_boundaries_map_.insert(
           std::make_pair(boundary_id, std::move(st_boundary)));
@@ -559,25 +581,7 @@ void STGraph::MakeDynamicAgentStBoundary(
   }
 
   if (!st_boundaries_ego.empty()) {
-    neighbor_agent_id_st_boundaries_map_[agent.agent_id() + 10000] =
-        st_boundaries_ego;
-  }
-
-  if (!st_boundaries.empty()) {
-    if (type == StBoundaryType::NEIGHBOR) {
-      neighbor_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
-    } else if (type == StBoundaryType::NORMAL) {
-      reuse_for_close_pass
-          ? close_pass_agent_id_st_boundaries_map_[agent.agent_id()] =
-                st_boundaries
-          : agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
-      is_in_st_graph = true && !reuse_for_close_pass;
-    } else if (type == StBoundaryType::EXPAND) {
-      expand_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries;
-    }
-  } else if (is_candicate_for_close_pass) {
-    // the agent has no original st boundary and is candicate for close pass
-    dynamic_close_pass_candicate_agent_ids_.insert(agent.agent_id());
+    neighbor_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries_ego;
   }
 
   if (is_large_agent && !reuse_for_close_pass) {
