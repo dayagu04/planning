@@ -252,14 +252,18 @@ const double EDTCollisionDetector::GetObsDistByIndex(
 
 void EDTCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
                                             const double lon_buffer,
-                                            const double max_circle_buffer) {
+                                            const double max_circle_buffer,
+                                            const double mirror_lat_buffer) {
   lon_buffer_ = lon_buffer;
   if (!need_update_buffer_ && std::fabs(lat_buffer_ - lat_buffer) < 0.001 &&
-      std::fabs(max_circle_buffer_ - max_circle_buffer) < 0.001) {
+      std::fabs(max_circle_buffer_ - max_circle_buffer) < 0.001 &&
+      std::fabs(mirror_lat_buffer_ - mirror_lat_buffer) < 0.001) {
     return;
   }
   need_update_buffer_ = false;
   lat_buffer_ = lat_buffer;
+  mirror_lat_buffer_ = lat_buffer_;
+  // mirror_lat_buffer_ = mirror_lat_buffer;
   max_circle_buffer_ = max_circle_buffer;
 
   car_with_mirror_circles_list_buffer_.Reset();
@@ -314,7 +318,7 @@ void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
       circles[i].center_local.y() -= lat_buffer_;
     } else if (i == 2 || i == 5) {
       // left and right mirror, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += mirror_lat_buffer_;
     } else if (i == 6) {
       // front circle, increase radius
       circles[i].radius += lat_buffer_;
@@ -351,7 +355,7 @@ void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
       circles[i].center_local.y() -= lat_buffer_;
     } else if (i == 2 || i == 5) {
       // left and right mirror, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += mirror_lat_buffer_;
     } else if (i == 6) {
       // front circle, increase radius
       circles[i].radius += lat_buffer_;
@@ -384,7 +388,7 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
       circles[i].center_local.y() -= lat_buffer_;
     } else if (i == 2 || i == 5) {
       // left and right mirror, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += mirror_lat_buffer_;
     } else if (i == 6) {
       // front circle, increase radius
       circles[i].radius += lat_buffer_;
@@ -500,17 +504,17 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 const ColResult EDTCollisionDetector::Update(
     const geometry_lib::PathSegment &path_seg, const double lat_buffer,
     const double lon_buffer, const bool need_cal_obs_dist,
-    const double max_circle_buffer) {
+    const double max_circle_buffer, const double mirror_lat_buffer) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
   return Update(pt_vec, lat_buffer, lon_buffer, need_cal_obs_dist,
-                max_circle_buffer);
+                max_circle_buffer, mirror_lat_buffer);
 }
 
 const ColResult EDTCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint> &pt_vec, const double lat_buffer,
     const double lon_buffer, const bool need_cal_obs_dist,
-    const double max_circle_buffer) {
+    const double max_circle_buffer, const double mirror_lat_buffer) {
   // The input PathPoint s must be assigned a value
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -522,7 +526,8 @@ const ColResult EDTCollisionDetector::Update(
   col_res_.remain_car_dist = pt_vec.back().s;
   col_res_.remain_dist = pt_vec.back().s;
 
-  UpdateSafeBuffer(lat_buffer, lon_buffer, max_circle_buffer);
+  UpdateSafeBuffer(lat_buffer, lon_buffer, max_circle_buffer,
+                   mirror_lat_buffer);
 
   path_pt_vec_ = pt_vec;
   if (N > 1 && lon_buffer > 0.01) {

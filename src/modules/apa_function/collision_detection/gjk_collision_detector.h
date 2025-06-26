@@ -56,11 +56,13 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
 
   const ColResult Update(const geometry_lib::PathSegment& path_seg,
                          const double lat_buffer, const double lon_buffer,
-                         const GJKColDetRequest gjk_col_det_request);
+                         const GJKColDetRequest gjk_col_det_request,
+                         const double mirror_lat_buffer = 0.08);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint>& pt_vec,
                          const double lat_buffer, const double lon_buffer,
-                         const GJKColDetRequest gjk_col_det_request);
+                         const GJKColDetRequest gjk_col_det_request,
+                         const double mirror_lat_buffer = 0.08);
 
   const bool IsPolygonCollision(const Polygon2D& polygon,
                                 const GJKColDetRequest gjk_col_det_request);
