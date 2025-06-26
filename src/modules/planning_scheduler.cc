@@ -147,7 +147,7 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
 bool PlanningScheduler::RunOnce(
     iflyauto::PlanningOutput *const planning_output,
     iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  LOG_ERROR("PlanningScheduler::RunOnce \n");
+  LOG_DEBUG("PlanningScheduler::RunOnce \n");
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   const double start_timestamp = IflyTime::Now_ms();
