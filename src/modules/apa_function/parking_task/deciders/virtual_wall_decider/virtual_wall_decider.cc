@@ -14,6 +14,7 @@
 
 namespace planning {
 namespace apa_planner {
+
 void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
@@ -53,12 +54,11 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                                  const float head_out_passage_height) {
   start_ = ego_pose;
   end_ = end;
-
+  slot_type_ = slot_type;
+  slot_side_ = slot_side;
   GenerateVehPolygonInSlot(ego_pose);
   // vehicle boundary
   GetVehicleBound();
-  ULFLocalPolygonToGlobal(&blind_global_box_, &blind_local_box_, ego_pose);
-
   points.clear();
 
   if (slot_type == ParkSpaceType::VERTICAL ||
@@ -111,7 +111,6 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
 
 void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
                                              const Eigen::Vector2d& end,
-                                             const bool delete_blind_zone_point,
                                              std::vector<Position2D>* points) {
   const Eigen::Vector2d line = end - start;
   const Eigen::Vector2d unit_line_vec = line.normalized();
@@ -120,37 +119,157 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
   float s = 0.0;
   float ds = 0.4;
 
+  int size = std::ceil(len / ds) + 1;
+
   Eigen::Vector2d point;
-  while (s < len) {
+  for (size_t i = 0; i < size; i++) {
     point = start + s * unit_line_vec;
     s += ds;
+    s = std::min(s, len);
 
     if (IsVirtualWallPointCollision(Position2D(point.x(), point.y()))) {
-      continue;
-    }
-
-    // 如果盲区点在通道外面，不需要考虑盲区点
-    if (delete_blind_zone_point &&
-        !passage_bound_.Contain(Position2D(point.x(), point.y()))) {
       continue;
     }
 
     points->emplace_back(Position2D(point.x(), point.y()));
   }
 
-  do {
-    if (IsVirtualWallPointCollision(Position2D(point.x(), point.y()))) {
-      break;
-    }
+  return;
+}
 
-    // 如果盲区点在通道外面，不需要考虑盲区点
-    if (delete_blind_zone_point &&
-        !passage_bound_.Contain(Position2D(point.x(), point.y()))) {
-      break;
-    }
+void VirtualWallDecider::SamplingInVerticalBoundary(
+    const VirtualWallBoundary& slot_boundary,
+    const VirtualWallBoundary& passage_boundary,
+    std::vector<Position2D>& points) {
+  // sampling point
+  // slot right bound
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower),
+      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower), &points);
 
-    points->emplace_back(Position2D(end.x(), end.y()));
-  } while (0);
+  // slot left bound
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper), &points);
+
+  // passage lower right boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower),
+      Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+      &points);
+
+  // passage lower left boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
+      Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_upper),
+      &points);
+
+  // upper boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_upper),
+      Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_lower),
+      &points);
+
+  // right boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_lower),
+      Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+      &points);
+
+  // left boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_upper),
+      Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_upper),
+      &points);
+
+  // slot lower bound
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), &points);
+
+  return;
+}
+
+void VirtualWallDecider::SamplingInParallelBoundary(
+    const VirtualWallBoundary& slot_boundary,
+    const VirtualWallBoundary& passage_boundary,
+    std::vector<Position2D>& points) {
+  // sampling point
+  // slot right bound
+  if (slot_side_ == pnc::geometry_lib::SlotSide::SLOT_SIDE_RIGHT) {
+    SampleInLineSegment(
+        Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower),
+        Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower), &points);
+  }
+
+  // slot left bound
+  if (slot_side_ == pnc::geometry_lib::SlotSide::SLOT_SIDE_LEFT) {
+    SampleInLineSegment(
+        Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
+        Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper), &points);
+  }
+
+  // slot lower bound
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), &points);
+
+  // slot upper bound
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
+      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower), &points);
+
+  // lower boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_upper),
+      Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+      &points);
+
+  // upper boundary
+  SampleInLineSegment(
+      Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_lower),
+      Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_upper),
+      &points);
+
+  if (slot_side_ == pnc::geometry_lib::SlotSide::SLOT_SIDE_RIGHT) {
+    // left boundary
+    SampleInLineSegment(
+        Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_upper),
+        Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_upper),
+        &points);
+
+    // passage right lower boundary
+    SampleInLineSegment(
+        Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
+        Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+        &points);
+
+    // passage right upper boundary
+    SampleInLineSegment(
+        Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
+        Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_lower),
+        &points);
+  }
+
+  if (slot_side_ == pnc::geometry_lib::SlotSide::SLOT_SIDE_LEFT) {
+    // right boundary
+    SampleInLineSegment(
+        Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_lower),
+        Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+        &points);
+
+    // passage left lower boundary
+    SampleInLineSegment(
+        Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower),
+        Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+        &points);
+
+    // passage left upper boundary
+    SampleInLineSegment(
+        Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower),
+        Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_upper),
+        &points);
+  }
 
   return;
 }
@@ -188,199 +307,44 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   passage_bound_.Combine(tmp_passage_boundary);
 
   // sampling point
-  // slot right bound
-  SampleInLineSegment(
-      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower),
-      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower), false,
-      &points);
-
-  // slot left bound
-  SampleInLineSegment(
-      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
-      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper), false,
-      &points);
-
-  // passage lower right boundary
-  SampleInLineSegment(
-      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower),
-      Eigen::Vector2d(passage_bound_.x_lower, passage_bound_.y_lower), false,
-      &points);
-
-  // passage lower left boundary
-  SampleInLineSegment(
-      Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
-      Eigen::Vector2d(passage_bound_.x_lower, passage_bound_.y_upper), false,
-      &points);
-
-  // upper boundary
-  SampleInLineSegment(
-      Eigen::Vector2d(passage_bound_.x_upper, passage_bound_.y_upper),
-      Eigen::Vector2d(passage_bound_.x_upper, passage_bound_.y_lower), false,
-      &points);
-
-  // right boundary
-  SampleInLineSegment(
-      Eigen::Vector2d(passage_bound_.x_upper, passage_bound_.y_lower),
-      Eigen::Vector2d(passage_bound_.x_lower, passage_bound_.y_lower), false,
-      &points);
-
-  // left boundary
-  SampleInLineSegment(
-      Eigen::Vector2d(passage_bound_.x_upper, passage_bound_.y_upper),
-      Eigen::Vector2d(passage_bound_.x_lower, passage_bound_.y_upper), false,
-      &points);
-
-  // slot lower bound
-  SampleInLineSegment(
-      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
-      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), false,
-      &points);
-
-  // perception blind zone
-  int point_a_idx;
-  int point_b_idx;
-  for (int i = 0; i < blind_global_box_.vertex_num; i++) {
-    if (i == blind_global_box_.vertex_num - 1) {
-      point_a_idx = i;
-      point_b_idx = 0;
-
-    } else {
-      point_a_idx = i;
-      point_b_idx = i + 1;
-    }
-
-    SampleInLineSegment(
-        Eigen::Vector2d(blind_global_box_.vertexes[point_a_idx].x,
-                        blind_global_box_.vertexes[point_a_idx].y),
-        Eigen::Vector2d(blind_global_box_.vertexes[point_b_idx].x,
-                        blind_global_box_.vertexes[point_b_idx].y),
-
-        true, &points);
-  }
+  SamplingInVerticalBoundary(slot_boundary, passage_bound_, points);
 
   return;
 }
 
-#define PARALLEL_SLOT_X_OFFSET (7.0)
-#define PARALLEL_SLOT_Y_OFFSET (1.0)
+#define PARALLEL_SLOT_EXTRA_LEN (6.0)
 void VirtualWallDecider::RightSideParallelVirtualWall(
     std::vector<Position2D>& points, const float slot_width,
     const float slot_length, const Pose2D& ego_pose, const Pose2D& end) {
-  // width is the slot upper edge to a virtual wall
-  const float passage_width = 8;
-  const float passage_top_buffer = 8.0;
-  const float passage_bottom_buffer = 8.0;
+  // slot virtual wall
+  VirtualWallBoundary slot_boundary;
+  slot_boundary.y_lower = -slot_width / 2.0 - 1.0;
+  slot_boundary.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary.y_upper = slot_width / 2.0;
+  slot_boundary.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
 
-  // slot right wall
-  Eigen::Vector2d right_wall_upper =
-      Eigen::Vector2d(slot_length + PARALLEL_SLOT_X_OFFSET,
-                      -slot_width / 2.0 - PARALLEL_SLOT_Y_OFFSET);
-
-  Eigen::Vector2d right_wall_lower = Eigen::Vector2d(
-      -PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 - PARALLEL_SLOT_Y_OFFSET);
-
-  // slot bottom wall
-  Eigen::Vector2d slot_bottom_wall_left =
-      Eigen::Vector2d(-PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 - 1);
-
-  Eigen::Vector2d slot_bottom_wall_right =
-      Eigen::Vector2d(-PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 - 1);
-
-  // slot top wall
-  Eigen::Vector2d slot_top_wall_left = Eigen::Vector2d(
-      slot_length + PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 - 1);
-
-  Eigen::Vector2d slot_top_wall_right = Eigen::Vector2d(
-      slot_length + PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 - 1);
-
-  // ego aabb
-  cdl::AABB veh_aabb;
-  float veh_x_buffer = 5.0;
-  float veh_y_buffer = 4.0;
-
-  veh_aabb.max_[0] = ego_pose.x + slot_length + veh_x_buffer;
-  veh_aabb.max_[1] = ego_pose.y + slot_width / 2 +
-                     slot_length * std::fabs(std::sin(ego_pose.theta)) +
-                     veh_y_buffer;
-
-  veh_aabb.min_[0] = ego_pose.x - slot_length - veh_x_buffer;
-  veh_aabb.min_[1] = ego_pose.y - slot_width / 2 -
-                     slot_length * std::fabs(std::sin(ego_pose.theta)) -
-                     veh_y_buffer;
-
+  // passage virtual wall
+  // lower
+  auto& config = apa_param.GetParam().astar_config;
+  VirtualWallBoundary tmp_passage_boundary;
+  tmp_passage_boundary.x_lower =
+      -(config.parallel_passage_length / 2 - slot_length / 2);
   // passage up bound
-  Eigen::Vector2d passage_up_bound_left = Eigen::Vector2d(
-      slot_length + passage_top_buffer, slot_width / 2.0 + passage_width);
-  Eigen::Vector2d passage_up_bound_right =
-      Eigen::Vector2d(slot_length + passage_top_buffer, -slot_width / 2.0);
+  tmp_passage_boundary.x_upper =
+      (config.parallel_passage_length / 2 + slot_length / 2);
 
-  passage_up_bound_left[0] =
-      std::max(passage_up_bound_left[0], veh_aabb.max_[0]);
-  passage_up_bound_right[0] =
-      std::max(passage_up_bound_right[0], veh_aabb.max_[0]);
+  // passage left/right bound
+  tmp_passage_boundary.y_lower = slot_boundary.y_upper;
+  tmp_passage_boundary.y_upper =
+      slot_boundary.y_upper + config.parallel_passage_width;
+  tmp_passage_boundary.Combine(veh_boundary_);
 
-  passage_up_bound_left[1] =
-      std::max(passage_up_bound_left[1], veh_aabb.max_[1]);
+  // boundary只能增长，不能缩减.
+  // 否则车辆移动后，缩减后的boundary无法再生成一致的path.
+  passage_bound_.Combine(tmp_passage_boundary);
 
-  // passage bottom bound
-  Eigen::Vector2d passage_bottom_bound_left = Eigen::Vector2d(
-      -slot_length - passage_bottom_buffer, slot_width / 2.0 + passage_width);
-  Eigen::Vector2d passage_bottom_bound_right =
-      Eigen::Vector2d(-slot_length - passage_bottom_buffer, -slot_width / 2.0);
-
-  passage_bottom_bound_left[0] =
-      std::min(passage_bottom_bound_left[0], veh_aabb.min_[0]);
-  passage_bottom_bound_right[0] =
-      std::min(passage_bottom_bound_right[0], veh_aabb.min_[0]);
-
-  passage_bottom_bound_left[1] =
-      std::max(passage_bottom_bound_left[1], veh_aabb.max_[1]);
-
-  // passage left bound
-  Eigen::Vector2d passage_left_bound_upper = Eigen::Vector2d(
-      slot_length + passage_top_buffer, slot_width / 2.0 + passage_width);
-  Eigen::Vector2d passage_left_bound_lower = Eigen::Vector2d(
-      -slot_length - passage_bottom_buffer, slot_width / 2.0 + passage_width);
-
-  passage_left_bound_upper[0] =
-      std::max(passage_left_bound_upper[0], veh_aabb.max_[0]);
-  passage_left_bound_upper[1] =
-      std::max(passage_left_bound_upper[1], veh_aabb.max_[1]);
-  passage_left_bound_lower[0] =
-      std::min(passage_left_bound_lower[0], veh_aabb.min_[0]);
-  passage_left_bound_lower[1] =
-      std::max(passage_left_bound_lower[1], veh_aabb.max_[1]);
-
-  // passage right bound
-  Eigen::Vector2d passage_right_bound_pt1 =
-      Eigen::Vector2d(passage_up_bound_right[0], slot_top_wall_left[1]);
-  Eigen::Vector2d passage_right_bound_pt2 = slot_top_wall_left;
-
-  Eigen::Vector2d passage_right_bound_pt3 = slot_bottom_wall_left;
-  Eigen::Vector2d passage_right_bound_pt4 =
-      Eigen::Vector2d(passage_bottom_bound_left[0], slot_bottom_wall_left[1]);
-
-  // add points
-  SampleInLineSegment(right_wall_upper, right_wall_lower, false, &points);
-
-  SampleInLineSegment(slot_bottom_wall_left, slot_bottom_wall_right, false,
-                      &points);
-
-  SampleInLineSegment(slot_top_wall_left, slot_top_wall_right, false, &points);
-
-  SampleInLineSegment(passage_up_bound_left, passage_up_bound_right, false,
-                      &points);
-
-  SampleInLineSegment(passage_bottom_bound_left, passage_bottom_bound_right,
-                      false, &points);
-
-  SampleInLineSegment(passage_left_bound_upper, passage_left_bound_lower, false,
-                      &points);
-
-  SampleInLineSegment(passage_right_bound_pt1, passage_right_bound_pt2, false,
-                      &points);
-  SampleInLineSegment(passage_right_bound_pt3, passage_right_bound_pt4, false,
-                      &points);
+  // sampling point
+  SamplingInParallelBoundary(slot_boundary, passage_bound_, points);
 
   return;
 }
@@ -388,133 +352,41 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 void VirtualWallDecider::LeftSideParallelVirtualWall(
     std::vector<Position2D>& points, const float slot_width,
     const float slot_length, const Pose2D& ego_pose, const Pose2D& end) {
-  // width is the slot upper edge to a virtual wall
-  const float passage_width = 8;
-  const float passage_length_buffer = 15;
+  // slot virtual wall
+  VirtualWallBoundary slot_boundary;
+  slot_boundary.y_lower = -slot_width / 2.0;
+  slot_boundary.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary.y_upper = slot_width / 2.0 + 1.0;
+  slot_boundary.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
 
-  // slot left wall
-  Eigen::Vector2d slot_left_wall_upper =
-      Eigen::Vector2d(slot_length + PARALLEL_SLOT_X_OFFSET,
-                      slot_width / 2.0 + PARALLEL_SLOT_Y_OFFSET);
-
-  Eigen::Vector2d slot_left_wall_lower = Eigen::Vector2d(
-      -PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 + PARALLEL_SLOT_Y_OFFSET);
-
-  // slot bottom wall
-  Eigen::Vector2d slot_bottom_wall_left =
-      Eigen::Vector2d(-PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 + 1);
-
-  Eigen::Vector2d slot_bottom_wall_right =
-      Eigen::Vector2d(-PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 + 1);
-
-  // slot top wall
-  Eigen::Vector2d slot_top_wall_left = Eigen::Vector2d(
-      slot_length + PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 + 1);
-
-  Eigen::Vector2d slot_top_wall_right = Eigen::Vector2d(
-      slot_length + PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 + 1);
-
-  // ego aabb
-  cdl::AABB veh_aabb;
-  float veh_x_buffer = 5.0;
-  float veh_y_buffer = 4.0;
-
-  veh_aabb.max_[0] = ego_pose.x + slot_length + veh_x_buffer;
-  veh_aabb.max_[1] = ego_pose.y + slot_width / 2 +
-                     slot_length * std::fabs(std::sin(ego_pose.theta)) +
-                     veh_y_buffer;
-
-  veh_aabb.min_[0] = ego_pose.x - slot_length - veh_x_buffer;
-  veh_aabb.min_[1] = ego_pose.y - slot_width / 2 -
-                     slot_length * std::fabs(std::sin(ego_pose.theta)) -
-                     veh_y_buffer;
-
+  // passage virtual wall
+  // lower
+  auto& config = apa_param.GetParam().astar_config;
+  VirtualWallBoundary tmp_passage_boundary;
+  tmp_passage_boundary.x_lower =
+      -(config.parallel_passage_length / 2 - slot_length / 2);
   // passage up bound
-  Eigen::Vector2d passage_up_bound_left =
-      Eigen::Vector2d(slot_length + passage_length_buffer, slot_width / 2.0);
-  Eigen::Vector2d passage_up_bound_right = Eigen::Vector2d(
-      slot_length + passage_length_buffer, -slot_width / 2.0 - passage_width);
+  tmp_passage_boundary.x_upper =
+      config.parallel_passage_length / 2 + slot_length / 2;
 
-  passage_up_bound_left[0] =
-      std::max(passage_up_bound_left[0], veh_aabb.max_[0]);
-  passage_up_bound_right[0] =
-      std::max(passage_up_bound_right[0], veh_aabb.max_[0]);
+  // passage left/right bound
+  tmp_passage_boundary.y_lower =
+      slot_boundary.y_lower - config.parallel_passage_width;
+  tmp_passage_boundary.y_upper = slot_boundary.y_lower;
+  tmp_passage_boundary.Combine(veh_boundary_);
 
-  passage_up_bound_left[1] =
-      std::max(passage_up_bound_left[1], veh_aabb.max_[1]);
-  passage_up_bound_right[1] =
-      std::min(passage_up_bound_right[1], veh_aabb.min_[1]);
+  // boundary只能增长，不能缩减.
+  // 否则车辆移动后，缩减后的boundary无法再生成一致的path.
+  passage_bound_.Combine(tmp_passage_boundary);
 
-  // passage bottom bound
-  float passage_bottom_buffer = 6.0;
-  Eigen::Vector2d passage_bottom_bound_left =
-      Eigen::Vector2d(-slot_length - passage_bottom_buffer, slot_width / 2.0);
-  Eigen::Vector2d passage_bottom_bound_right = Eigen::Vector2d(
-      -slot_length - passage_bottom_buffer, -slot_width / 2.0 - passage_width);
-
-  passage_bottom_bound_left[0] =
-      std::min(passage_bottom_bound_left[0], veh_aabb.min_[0]);
-  passage_bottom_bound_right[0] =
-      std::min(passage_bottom_bound_right[0], veh_aabb.min_[0]);
-
-  passage_bottom_bound_left[1] =
-      std::max(passage_bottom_bound_left[1], veh_aabb.max_[1]);
-  passage_bottom_bound_right[1] =
-      std::min(passage_bottom_bound_right[1], veh_aabb.min_[1]);
-
-  // passage right bound
-  Eigen::Vector2d passage_right_bound_upper = Eigen::Vector2d(
-      slot_length + passage_length_buffer, -slot_width / 2.0 - passage_width);
-  Eigen::Vector2d passage_right_bound_lower = Eigen::Vector2d(
-      -slot_length - passage_length_buffer, -slot_width / 2.0 - passage_width);
-
-  passage_right_bound_upper[0] =
-      std::max(passage_right_bound_upper[0], veh_aabb.max_[0]);
-  passage_right_bound_upper[1] =
-      std::min(passage_right_bound_upper[1], veh_aabb.min_[1]);
-
-  passage_right_bound_lower[0] =
-      std::min(passage_right_bound_lower[0], veh_aabb.min_[0]);
-  passage_right_bound_lower[1] =
-      std::min(passage_right_bound_lower[1], veh_aabb.min_[1]);
-
-  // passage left bound
-  Eigen::Vector2d passage_left_bound_pt1 =
-      Eigen::Vector2d(passage_up_bound_left[0], slot_top_wall_right[1]);
-  Eigen::Vector2d passage_left_bound_pt2 = slot_top_wall_right;
-
-  Eigen::Vector2d passage_left_bound_pt3 = slot_bottom_wall_right;
-  Eigen::Vector2d passage_left_bound_pt4 =
-      Eigen::Vector2d(passage_bottom_bound_left[0], slot_bottom_wall_right[1]);
-
-  // add points
-  SampleInLineSegment(slot_left_wall_upper, slot_left_wall_lower, false,
-                      &points);
-
-  SampleInLineSegment(slot_bottom_wall_left, slot_bottom_wall_right, false,
-                      &points);
-
-  SampleInLineSegment(slot_top_wall_left, slot_top_wall_right, false, &points);
-
-  SampleInLineSegment(passage_up_bound_left, passage_up_bound_right, false,
-                      &points);
-
-  SampleInLineSegment(passage_bottom_bound_left, passage_bottom_bound_right,
-                      false, &points);
-
-  SampleInLineSegment(passage_right_bound_upper, passage_right_bound_lower,
-                      false, &points);
-  SampleInLineSegment(passage_left_bound_pt1, passage_left_bound_pt2, false,
-                      &points);
-  SampleInLineSegment(passage_left_bound_pt3, passage_left_bound_pt4, false,
-                      &points);
+  // sampling point
+  SamplingInParallelBoundary(slot_boundary, passage_bound_, points);
 
   return;
 }
 
 void VirtualWallDecider::Init(const Pose2D& ego_pose) {
   passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
-  GetUpLeftCoordinatePolygonByParam(&blind_local_box_, 20.0f, 20.0f, 20.0f);
 
   return;
 }
