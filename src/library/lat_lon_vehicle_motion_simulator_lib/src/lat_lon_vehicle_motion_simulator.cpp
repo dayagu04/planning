@@ -190,8 +190,10 @@ ErrorType LatLonVehicleMotionSimulator::Simulate(const double t) {
                                                 simulation_result_->delta_vec);
   simulation_result_->kappa_t_spline.set_points(simulation_result_->t_vec,
                                                 simulation_result_->kappa_vec);
-  simulation_result_->lat_lon_vehicle_motion_path_ptr =
-      std::make_shared<planning_math::KDPath>(std::move(path_points_vec));
+  if (path_points_vec.size() > 1) {
+    simulation_result_->lat_lon_vehicle_motion_path_ptr =
+        std::make_shared<planning_math::KDPath>(std::move(path_points_vec));
+  }
   const double pp_cost =
       std::accumulate(pp_cost_vec.begin(), pp_cost_vec.end(), 0.0);
   const double vehicle_sim_forward_cost = std::accumulate(

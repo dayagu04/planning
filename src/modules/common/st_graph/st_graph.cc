@@ -319,9 +319,8 @@ void STGraph::MakeDynamicAgentStBoundary(
       st_graph_input_->planning_init_point_box();
   const bool is_rads_scene = st_graph_input_->is_rads_scene();
   if (nullptr == planned_kd_path || nullptr == path_border_querier ||
-      ego_motion_simulation_path == nullptr || reserve_num <= 0 ||
-      nullptr == mutable_agent_manager || nullptr == ptr_virtual_lane_manager ||
-      nullptr == ptr_ego_lane ||
+      reserve_num <= 0 || nullptr == mutable_agent_manager ||
+      nullptr == ptr_virtual_lane_manager || nullptr == ptr_ego_lane ||
       nullptr == mutable_agent_manager->mutable_agent(agent.agent_id())) {
     return;
   }
@@ -499,6 +498,10 @@ void STGraph::MakeDynamicAgentStBoundary(
   }
 
   for (int i = 0; i < trajectories.size(); ++i) {
+    if (!ego_motion_simulation_path) {
+      break;
+    }
+
     if (trajectories[i].empty()) {
       continue;
     }
