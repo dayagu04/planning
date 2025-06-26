@@ -398,9 +398,14 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   const auto &environmental_model = session_->environmental_model();
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
+  const auto traffic_status = tfl_manager->GetTrafficStatus();
   double dis_tfl = tfl_manager->GetNearestTFLDis();
   if (dis_tfl < kTFLSpeedLimitDis) {
     v_limit_tfl_dis = 55 / 3.6;
+    if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
+      traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
+      v_limit_tfl_dis = 50 / 3.6;
+    }
   }
   if (v_limit_tfl_dis < v_target_) {
     v_target_ = v_limit_tfl_dis;
