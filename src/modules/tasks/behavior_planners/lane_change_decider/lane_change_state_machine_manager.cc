@@ -1083,8 +1083,7 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   } else {
     lane_change_decider_output.lateral_close_boundary_offset = 0;
   }
-  JSON_DEBUG_VALUE("lat_close_bound_offset",
-                   lane_change_decider_output.lateral_close_boundary_offset)
+
   if (lc_req_mgr_->request_source() == MAP_REQUEST) {
     const auto &virtual_lane_mgr =
         session_->environmental_model().get_virtual_lane_manager();
@@ -1352,6 +1351,12 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   JSON_DEBUG_VECTOR("front_obj_future_v_vec", front_obj_future_v_, 2);
   JSON_DEBUG_VECTOR("rear_obj_future_v_vec", rear_obj_future_v_, 2);
   JSON_DEBUG_VECTOR("ego_future_v_vec", ego_future_v_, 2);
+
+  JSON_DEBUG_VALUE("target_lane_congestion_level",int(fix_lane_congestion_level_.level));
+  JSON_DEBUG_VALUE("lat_offset_propose",
+                  lane_change_decider_output.lateral_close_boundary_offset);
+  JSON_DEBUG_VALUE("lat_offset_lc_hold",
+                  lane_change_decider_output.lc_hold_state_lat_offset);
 }
 
 void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
