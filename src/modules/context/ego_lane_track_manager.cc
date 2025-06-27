@@ -1342,8 +1342,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       }
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
         double total_cost = 0.0;
+        double average_heading_angle = 0.0;
         double average_heading_angle_cost = 0.0;
-        double heading_angle_cost = 0.0;
+        double heading_angle_total = 0.0;
         double average_kappa_cost = 0.0;
         double total_kappa_cost = 0.0;
         double lateral_dis_cost = 0.0;
@@ -1364,7 +1365,8 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
-        int theta_diff_iter_count = 0;
+        int theta_iter_count = 0;
+        int average_angle_count = 0;
         for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
              s += kLaneLineSegmentLength) {
           if (s > kDefaultMappingConsiderLaneLength + ego_s) {
@@ -1376,14 +1378,28 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           iter_count++;
 
           double heading_angle = frenet_coord->GetPathCurveHeading(s);
-          double theta_diff = NormalizeAngle(heading_angle - ego_heading_angle);
-          heading_angle_cost += std::fabs(theta_diff);
-          theta_diff_iter_count++;
+          double theta = NormalizeAngle(heading_angle);
+          heading_angle_total += std::fabs(theta);
+          theta_iter_count++;
         }
+
+        for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+             s += kLaneLineSegmentLength) {
+          if (s > kNearPreviewDistanceThd + ego_s) {
+            break;
+          }
+
+          double heading_angle = frenet_coord->GetPathCurveHeading(s);
+          double theta = NormalizeAngle(heading_angle);
+          average_heading_angle += std::fabs(theta);
+          average_angle_count++;
+        }
+
         iter_count = std::max(1, iter_count);
         average_kappa_cost = total_kappa_cost / iter_count;
-        theta_diff_iter_count = std::max(1, theta_diff_iter_count);
-        average_heading_angle_cost = heading_angle_cost / theta_diff_iter_count;
+        theta_iter_count = std::max(1, theta_iter_count);
+        average_angle_count = std::max(1, average_angle_count);
+        average_heading_angle_cost = std::fabs(heading_angle_total / theta_iter_count - average_heading_angle / average_angle_count);
         lateral_dis_cost = std::fabs(ego_l);
         total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
             kAverageKappaCostWeight * average_kappa_cost + lateral_dis_cost * kEgoLateralDistanceCostWeight;
