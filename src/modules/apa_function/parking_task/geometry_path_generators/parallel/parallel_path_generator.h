@@ -50,6 +50,19 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     LineArcMultiPlan,
     MultiPlanMethodCount,
   };
+  typedef enum {
+    COST_WEIGHT_GEAR_SWITCH,
+    COST_WEIGHT_GEAR_FIRST,
+    COST_WEIGHT_LENGTH,
+    COST_WEIGHT_FIRST_PATH_LENGTH,
+    COST_WEIGHT_SHORT_DIST,
+    COST_WEIGHT_ANGLE,
+    COST_WEIGHT_DIST_MAX_X,
+    COST_WEIGHT_DIST_MAX_Y,
+    // COST_WEIGHT_HEIGHT_MIN_Y,
+    // COST_WEIGHT_FIRST_SEGMENT_PATH,
+    COST_WEIGHT_MAX
+  } COST_WEIGHT;
 
   struct PlannerParams {
     bool is_left_side = false;
@@ -69,12 +82,19 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     Eigen::Vector2d v_ego_farest_front_corner = Eigen::Vector2d::Zero();
     Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
 
-    std::vector<double> lat_outside_slot_buffer_vec = {0.4, 0.4};
+    double lat_outside_slot_buffer = 0.3;
     std::vector<Eigen::Vector2d> front_corner_obs_vec;
     std::vector<Eigen::Vector2d> channel_obs_vec;
     std::vector<Eigen::Vector2d> virtual_channel_obs_vec;
     std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
     std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
+
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+        suc_rev_parking_out_vec;
+
+    std::vector<pnc::geometry_lib::PathPoint> ego_start_pose_space;
+
+    std::array<double, COST_WEIGHT::COST_WEIGHT_MAX> weights{0.0};
     void Reset() {
       is_left_side = true;
       slot_side_sgn = 1.0;
@@ -96,42 +116,79 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       channel_obs_vec.reserve(50);
       virtual_channel_obs_vec.clear();
       virtual_channel_obs_vec.reserve(50);
-      lat_outside_slot_buffer_vec = {0.4, 0.4};
+      lat_outside_slot_buffer = 0.3;
       min_outer_front_corner_radius = 5.5;
       min_inner_rear_corner_radius = 5.5;
       min_outer_front_corner_deta_y = 0.8;
       v_ego_farest_front_corner = Eigen::Vector2d::Zero();
       v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
+      weights.fill(0.0);
+      ego_start_pose_space.clear();
     }
   };
 
   struct GeometryPath {
     void Reset() {
+      //   max_x_mag = 0.0;
+      //   max_y_mag = 0.0;
+      preparing_line_heading_deg = 0.0;
       length = 0.0;
+      first_path_length = 0.0;
+      shortest_path_length = 0.0;
       gear_change_count = 0;
       park_out_heading_deg = 0.0;
       gear_cmd_vec.clear();
       gear_cmd_vec.reserve(10);
       path_segment_vec.clear();
       path_segment_vec.reserve(10);
+      path_length_vec.clear();
+      cost.fill(0.0);
+      cost_total = 0.0;
     }
 
+    void PrintDebugInfo() const {
+      ILOG_INFO << "total cost = " << cost_total;
+      ILOG_INFO << "gear shifts = \t\t" << cost[COST_WEIGHT_GEAR_SWITCH]
+                << ", length = \t\t" << cost[COST_WEIGHT_LENGTH]
+                << ", first_path_length = \t\t"
+                << cost[COST_WEIGHT_FIRST_PATH_LENGTH]
+                << ", shortest_path_length = \t\t"
+                << cost[COST_WEIGHT_SHORT_DIST]
+                << ", COST_WEIGHT_ANGLE = \t\t << " << cost[COST_WEIGHT_ANGLE]
+                << ", MAX_X = \t\t" << cost[COST_WEIGHT_DIST_MAX_X]
+                << ", MAX_Y = \t\t" << cost[COST_WEIGHT_DIST_MAX_Y];
+    }
+
+    // double max_x_mag = 0.0;
+    // double max_y_mag = 0.0;
+    size_t gear_change_count = 0;
     double length = 0.0;
     double first_path_length = 0.0;
-    size_t gear_change_count = 0;
+    double shortest_path_length = 0.0;
     double park_out_heading_deg = 0.0;
+    double preparing_line_heading_deg = 0.0;
+
     std::vector<uint8_t> gear_cmd_vec;
+    std::vector<double> path_length_vec;
     std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
+
+    double cost_total{0.0f};
+    std::array<double, COST_WEIGHT_MAX> cost{};
   };
 
   struct DebugInfo {
     std::vector<GeometryPath> debug_all_path_vec;
     std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
     std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
+    std::vector<pnc::geometry_lib::PathPoint> point_vec;
+    std::vector<std::vector<Eigen::Vector2d>> line_pt_vec;
+
     void Reset() {
       debug_arc_vec.clear();
       debug_all_path_vec.clear();
       tra_search_out_res.clear();
+      point_vec.clear();
+      line_pt_vec.clear();
     }
   };
 
@@ -142,11 +199,12 @@ class ParallelPathGenerator : public GeometryPathGenerator {
                                 &collision_detector_ptr) override;
 
   void CalcEgoParams();
-  void ExpandPInObstacles();
+  void ExpandObstacles();
   void AddPInVirtualObstacles();
   void DeletePInVirtualObstacles();
   void MoveChannelObstacles();
   void RecorverChannelObstacles();
+  const std::vector<Eigen::Vector2d> GetVirtualObs();
 
   const bool CheckTlaneAvailable() const;
 
@@ -162,14 +220,31 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
-  const std::vector<Eigen::Vector2d> GetVirtualObs() {
-    std::vector<Eigen::Vector2d> obs_vec;
-    obs_vec = calc_params_.virtual_channel_obs_vec;
-    for (const auto &obs_pt : calc_params_.front_corner_obs_vec) {
-      obs_vec.emplace_back(obs_pt);
-    }
-    return obs_vec;
-  }
+  const bool GenerateCandidatePath();
+  const bool StartNodeGenerator();
+
+  const bool SearchLineNode(
+      std::vector<pnc::geometry_lib::PathPoint> &node_space,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const double max_search_dist, const uint8_t ref_gear);
+
+  const bool SearchArcNode(
+      std::vector<pnc::geometry_lib::PathPoint> &node_space,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const double max_search_angle, const uint8_t ref_gear,
+      const uint8_t ref_steer,
+      const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3);
+
+  const bool SearchToTargetLineVecV2(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &start_pose, const double radius,
+      const double lon_buffer);
+
+  const bool SearchToTargetLineV2(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &prepare_line, const double radius,
+      const double lon_buffer);
 
   const bool PlanToPreparingLine(
       std::vector<pnc::geometry_lib::PathSegment> &ego_to_prepare_seg_vec,
@@ -197,6 +272,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const pnc::geometry_lib::LineSegment &line,
       const double park_out_target_heading);
 
+  const bool AddLastLine(pnc::geometry_lib::PathSegment &last_path_seg);
+
   // use dubins
   const bool OneStepDubinsPlan(const pnc::geometry_lib::PathPoint &start_pose,
                                const pnc::geometry_lib::PathPoint &target_pose,
@@ -206,7 +283,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
       const pnc::geometry_lib::PathPoint &start_pose,
       const pnc::geometry_lib::PathPoint &target_pose, const double radius,
-      const double buffer);
+      const double buffer,
+      const uint8_t ref_steer = pnc::geometry_lib::SEG_STEER_INVALID,
+      const bool force_steer_diff = false);
 
   const bool IsDubinsCollided(const double buffer = 0.0);
 
@@ -258,7 +337,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool SelectBestPathOutsideSlot(
       const std::vector<GeometryPath> &path_vec, size_t &best_path_idx);
 
-  const std::vector<double> GetMinDistOfEgoToObs();
+  const double CalcBufferViaDistOfEgoToObs();
 
   const bool GenAlignedPreparingLine(
       std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec,
@@ -405,7 +484,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
       const pnc::geometry_lib::PathPoint &start_pose,
       const pnc::geometry_lib::LineSegment &target_line, const uint8_t ref_gear,
-      const double radius, const double lon_buffer);
+      const double radius, const double lon_buffer,
+      const uint8_t ref_steer = pnc::geometry_lib::SEG_STEER_INVALID);
 
   const bool LineArcPlan(
       pnc::geometry_lib::Arc &arc,

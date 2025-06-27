@@ -103,7 +103,7 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
     if (t_lane_.is_inside_rigid) {
       ILOG_INFO << "rigid body in side slot!";
-      lat_buffer = 0.15;
+      lat_buffer = 0.1;
     }
     ILOG_INFO << "in slot!";
   } else {

@@ -39,7 +39,7 @@ static const double kLonBufferTrippleStep = 0.2;
 static const double kColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.3;
 static const double kColLargeLatBufferOutSlot = 0.3;
-static const double kColSmallLatBufferOutSlot = 0.1;
+static const double kColSmallLatBufferOutSlot = 0.15;
 static const double kSmallColBufferInSlot = 0.15;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
@@ -47,13 +47,13 @@ static const size_t kMaxPathNumsInSlot = 5;
 static const size_t kMaxMultiStepNums = 8;
 static const size_t kMaxParallelShiftNums = 6;
 
-static const double kChannelYMoveDist = 0.15;
+static const double kChannelYMoveDist = 0.1;
 static const double kCornerSafeBufferWithChannel = 0.15;
 static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
-static const double kMinTlaneAddedLength = 0.8;
+static const double kMinTlaneAddedLength = 0.75;
 static const double kNarrowChannelLastArcCrossLength = 1.38;
 
 static const double kLineStepLength = 0.16;
@@ -69,6 +69,18 @@ static const double kMaxSearchArcLength = 1.5;
 static const double kMinSearchArcStep = 0.2;
 static const int kMaxSearchArcStepNum = 3;
 
+static const double kSamplingLineStep = 0.3;
+static const double kSamplingArcAngleStep = 3.0 * kDeg2Rad;
+static const int kMaxPathSize = 5;
+static const double kGearSwitchPenalty = 7.0;
+static const double kGearFirstPenalty = 0.0;
+static const double kPathLengthPenalty = 1.0;
+static const double kPathLengthFristPenalty = 0.0;
+static const double kPathLengthShortPenalty = 0.0;
+static const double kParkingHeadingDegPenalty = 0.0;
+static const double kMaxXPenalty = 0.8;
+static const double kMaxYPenalty = 2.0;
+
 void ParallelPathGenerator::Reset() {
   output_.Reset();
   calc_params_.Reset();
@@ -78,12 +90,11 @@ void ParallelPathGenerator::Reset() {
 }
 
 void ParallelPathGenerator::Preprocess() {
-  ILOG_INFO << "channel_y in path planner = " << input_.tlane.channel_y;
   pnc::geometry_lib::PrintPose("start pose",
                                input_.ego_info_under_slot.cur_pose);
-  calc_params_.Reset();
-  debug_info_.debug_arc_vec.clear();
   output_.Reset();
+  debug_info_.Reset();
+  calc_params_.Reset();
 
   input_.ego_info_under_slot.cur_pose.heading =
       pnc::geometry_lib::NormalizeAngle(
@@ -91,33 +102,29 @@ void ParallelPathGenerator::Preprocess() {
 
   calc_params_.is_left_side =
       (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
-
-  calc_params_.slot_side_sgn =
-      (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) ? -1.0
-                                                                    : 1.0;
+  calc_params_.slot_side_sgn = calc_params_.is_left_side ? -1.0 : 1.0;
 
   const double target_heading = 0.0;
   calc_params_.target_pose.Set(input_.tlane.pt_terminal_pos, target_heading);
-  // target line
   calc_params_.target_line = pnc::geometry_lib::BuildLineSegByPose(
       input_.tlane.pt_terminal_pos, target_heading);
 
+  //  buffer init
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
 
-  ExpandPInObstacles();
+  ExpandObstacles();
+
   MoveChannelObstacles();
 
   CalcEgoParams();
 
   if (input_.ego_info_under_slot.slot_occupied_ratio < 0.01) {
-    calc_params_.lat_outside_slot_buffer_vec = GetMinDistOfEgoToObs();
+    calc_params_.lat_outside_slot_buffer = CalcBufferViaDistOfEgoToObs();
   }
 }
 
-void ParallelPathGenerator::ExpandPInObstacles() {
+void ParallelPathGenerator::ExpandObstacles() {
   const auto& obs_map = collision_detector_ptr_->GetObstaclesMap();
-
-  ILOG_INFO << "obs pin " << input_.tlane.obs_pt_inside.transpose();
 
   const Eigen::Vector2d coord_diff(
       -kVirtualObsDetaXMag, kVirtualObsDetaYMag * input_.tlane.slot_side_sgn);
@@ -125,15 +132,13 @@ void ParallelPathGenerator::ExpandPInObstacles() {
   std::vector<size_t> obs_type_vec = {CollisionDetector::TLANE_OBS,
                                       CollisionDetector::TLANE_BOUNDARY_OBS};
 
+  calc_params_.front_corner_obs_vec.clear();
   for (const auto obs_type : obs_type_vec) {
-    const auto obs_pair = obs_map.find(obs_type);
-
-    if (obs_pair == obs_map.end()) {
-      continue;
-    }
+    const auto obs_it = obs_map.find(obs_type);
+    if (obs_it == obs_map.end()) continue;
 
     // get nearby obstalces of pin
-    for (const auto& tlane_obs_pt : obs_pair->second) {
+    for (const auto& tlane_obs_pt : obs_it->second) {
       if (pnc::geometry_lib::CalTwoPointDistSquare(
               tlane_obs_pt, input_.tlane.obs_pt_inside) <= 0.25) {
         calc_params_.front_corner_obs_vec.emplace_back(tlane_obs_pt +
@@ -142,21 +147,15 @@ void ParallelPathGenerator::ExpandPInObstacles() {
     }
   }
 
-  // ILOG_INFO <<
-  //     "virtual tlane obs size = " <<
-  //     calc_params_.front_corner_obs_vec.size());
+  // channel obs expand
+  const auto channel_obs_iter = obs_map.find(CollisionDetector::CHANNEL_OBS);
+  if (channel_obs_iter != obs_map.end()) {
+    const Eigen::Vector2d channel_mov_vec(
+        0.0, -calc_params_.slot_side_sgn * kChannelYMoveDist);
 
-  // for (const auto& obs_pt : calc_params_.front_corner_obs_vec) {
-  //   ILOG_INFO <<obs_pt.transpose());
-  // }
+    calc_params_.channel_obs_vec = channel_obs_iter->second;
 
-  const Eigen::Vector2d channel_mov_vec(
-      0.0, -calc_params_.slot_side_sgn * kChannelYMoveDist);
-  // channel obs
-  const auto channel_obs_pair = obs_map.find(CollisionDetector::CHANNEL_OBS);
-  if (channel_obs_pair != obs_map.end()) {
-    calc_params_.channel_obs_vec = channel_obs_pair->second;
-    for (const auto& channel_obs_pt : channel_obs_pair->second) {
+    for (const auto& channel_obs_pt : channel_obs_iter->second) {
       calc_params_.virtual_channel_obs_vec.emplace_back(channel_obs_pt +
                                                         channel_mov_vec);
     }
@@ -190,6 +189,15 @@ void ParallelPathGenerator::RecorverChannelObstacles() {
                                         CollisionDetector::CHANNEL_OBS);
 }
 
+const std::vector<Eigen::Vector2d> ParallelPathGenerator::GetVirtualObs() {
+  std::vector<Eigen::Vector2d> obs_vec;
+  obs_vec = calc_params_.virtual_channel_obs_vec;
+  for (const auto& obs_pt : calc_params_.front_corner_obs_vec) {
+    obs_vec.emplace_back(obs_pt);
+  }
+  return obs_vec;
+}
+
 const bool ParallelPathGenerator::Update() {
   ILOG_INFO << "-----------------------------------------parallel path "
                "planner:---------------------------------------";
@@ -208,54 +216,43 @@ const bool ParallelPathGenerator::Update() {
     ILOG_INFO << "ego is out of slot";
     AddPInVirtualObstacles();
 
-    if (CalMinSafeCircle()) {
-      ILOG_INFO << "CalMinSafeCircle success!";
-    } else {
+    if (!CalMinSafeCircle()) {
       ILOG_INFO << "calc safe circle failed!";
       return false;
     }
-
-    const double start_plan_time = IflyTime::Now_ms();
+    ILOG_INFO << "CalMinSafeCircle success!";
+    const double safe_circle_end_time = IflyTime::Now_ms();
     ILOG_INFO << "calc safe circle cost time(ms) = "
-              << start_plan_time - start_time;
+              << safe_circle_end_time - start_time;
 
-    const bool success = OutsideSlotPlan();
-    DeletePInVirtualObstacles();
-    const double outside_plan_end_time = IflyTime::Now_ms();
-    ILOG_INFO << "OutsideSlotPlan cost time(ms) = "
-              << outside_plan_end_time - start_plan_time;
+    bool success = OutsideSlotPlan();
+    if (!success) {
+      ILOG_INFO << "OutsideSlotPlan failed!";
+      const double search_start_time = IflyTime::Now_ms();
+      success = GenerateCandidatePath();
+      const double search_end_time = IflyTime::Now_ms();
+      ILOG_INFO << "search cost time(ms) = "
+                << search_end_time - search_start_time;
+    }
+
     if (success) {
-      ILOG_INFO << "OutsideSlotPlan success!";
       if (calc_params_.park_out_path_in_slot.size() > 1) {
         calc_params_.park_out_path_in_slot.pop_back();
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
       }
 
-      if (output_.path_segment_vec.size() > 0) {
-        const auto& end_pose = output_.path_segment_vec.back().GetEndPose();
-        if (pnc::mathlib::IsDoubleEqual(end_pose.heading * kRad2Deg, 0.0) &&
-            (!pnc::mathlib::IsDoubleEqual(end_pose.pos.x(),
-                                          input_.tlane.pt_terminal_pos.x()))) {
-          const Eigen::Vector2d fixed_target_pos(
-              input_.tlane.pt_terminal_pos.x(), end_pose.pos.y());
-
-          const pnc::geometry_lib::LineSegment last_line(
-              end_pose.pos, fixed_target_pos, end_pose.heading);
-
-          const pnc::geometry_lib::PathSegment last_path_seg(
-              pnc::geometry_lib::CalLineSegGear(last_line), last_line);
-          AddPathSegToOutPut(last_path_seg);
-        }
+      pnc::geometry_lib::PathSegment last_path_seg;
+      if (AddLastLine(last_path_seg)) {
+        AddPathSegToOutPut(last_path_seg);
       }
-      return true;
-    } else {
-      ILOG_INFO << "OutsideSlotPlan failed!";
+
+      DeletePInVirtualObstacles();
+      return success;
     }
 
   } else {
     ILOG_INFO << "ego is in slot";
-
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
     // ego is in slot, search from ego pose to target pose, or just
     // correct heading
@@ -1033,9 +1030,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     // search min dist of ego corner to obs, which is used the minimal value
     // with
     // 0.36 as buffer
-    const double min_lat_buffer =
-        std::min(calc_params_.lat_outside_slot_buffer_vec[0],
-                 calc_params_.lat_outside_slot_buffer_vec[1]);
+    const double min_lat_buffer = calc_params_.lat_outside_slot_buffer;
     ILOG_INFO << "min_lat_buffer = " << min_lat_buffer;
 
     collision_detector_ptr_->SetParam(
@@ -1104,8 +1099,24 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   ego_to_prepare_seg_vec.clear();
   ego_to_prepare_seg_vec.reserve(6);
 
-  ILOG_INFO << "---------------------------------PlanToPreparingLine "
-               "---------------------------------";
+  const auto& apa_params = apa_param.GetParam();
+
+  // 1.5r
+  const double max_front_wheel_angle =
+      atan(apa_params.wheel_base / apa_params.min_turn_radius);
+
+  const double small_front_wheel_angle = max_front_wheel_angle / 3.0;
+  const double mid_front_wheel_angle = max_front_wheel_angle * 2.0 / 3.0;
+
+  const double mid_radius =
+      apa_params.wheel_base / tan(mid_front_wheel_angle);  // 1r
+
+  const double large_radius =
+      apa_params.wheel_base / tan(small_front_wheel_angle);
+
+  const std::vector<double> radius_vec = {apa_params.min_turn_radius + 0.3,
+                                          mid_radius, large_radius};
+
   pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
 
   pnc::geometry_lib::PathSegment line_seg;
@@ -1114,56 +1125,55 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
     return true;
   }
 
-  std::vector<GeometryPath> geo_path_vec;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   std::vector<std::vector<pnc::geometry_lib::PathSegment>> path_vec;
 
-  const uint8_t ref_gear = geometry_lib::SEG_GEAR_INVALID;
-  const uint8_t ref_steer = geometry_lib::SEG_STEER_INVALID;
-  const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3;
+  const uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+  const uint8_t ref_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+  const double ref_radius = radius_vec[0];
 
-  bool success = LineArcPlan(path_vec, ego_pose, prepare_line, ref_gear,
-                             ref_steer, ref_radius, kColBufferOutSlot);
-  if (success) {
-    success = AssempleGeometryPathVec(geo_path_vec, path_vec);
-
-    if (success) {
-      const auto min_gear_cnt = GetMinShiftTimeInGeometryPathVec(geo_path_vec);
-      if (min_gear_cnt > 0) {
-        success = false;
-      } else {
-        ILOG_INFO << "only line arc instead two arc";
-      }
+  bool success = false;
+  for (const double radius : radius_vec) {
+    if (LineArcPlan(path_vec, ego_pose, prepare_line, ref_gear, ref_steer,
+                    radius, kColBufferOutSlot)) {
+      success = true;
+      ILOG_INFO << "LineArcPlan success! size = " << path_vec.size();
+      break;
     }
   }
-  // const size_t line_arc_path_size = path_vec.size();
 
-  if (!success) {
-    TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, ref_radius,
-               kColBufferOutSlot);
-    ILOG_INFO << "two arc path = " << path_vec.size();
+  for (const double radius : radius_vec) {
+    if (TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, radius,
+                   kColBufferOutSlot)) {
+      success = true;
+      ILOG_INFO << "two arc success, total path size = " << path_vec.size();
+      break;
+    }
   }
 
   const pnc::geometry_lib::PathPoint target_pose(prepare_line.pA,
                                                  prepare_line.heading);
   std::vector<std::vector<pnc::geometry_lib::PathSegment>> tmp_path_vec;
   if (DubinsPlan(tmp_path_vec, ego_pose, target_pose, ref_radius,
-                 kColBufferOutSlot)) {
+                 kColBufferOutSlot, pnc::geometry_lib::SEG_STEER_INVALID,
+                 false)) {
     for (const auto& path : tmp_path_vec) {
       path_vec.emplace_back(path);
     }
   }
 
-  // search based
-  if (SearchToTargetLine(tmp_path_vec, ego_pose, prepare_line, ref_radius,
-                         kColBufferOutSlot)) {
-    ILOG_INFO << "SearchToTargetLine SUCCESS!";
-    ILOG_INFO << "SearchToTargetLine size = " << tmp_path_vec.size();
-    for (const auto& path : tmp_path_vec) {
-      path_vec.emplace_back(path);
+  if (path_vec.size() == 0) {
+    // search based
+    if (SearchToTargetLine(tmp_path_vec, ego_pose, prepare_line, ref_radius,
+                           kColBufferOutSlot)) {
+      ILOG_INFO << "SearchToTargetLine SUCCESS!";
+      ILOG_INFO << "SearchToTargetLine size = " << tmp_path_vec.size();
+      for (const auto& path : tmp_path_vec) {
+        path_vec.emplace_back(path);
+      }
+    } else {
+      ILOG_INFO << "SearchToTargetLine failed!";
     }
-  } else {
-    ILOG_INFO << "SearchToTargetLine failed!";
   }
 
   ILOG_INFO << "path_vec size = " << path_vec.size();
@@ -1171,13 +1181,8 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
     return false;
   }
 
-  for (size_t i = 0; i < path_vec.size(); i++) {
-    // for (size_t i = line_arc_path_size; i < path_vec.size(); i++) {
-    GeometryPath tmp_geo_path;
-    if (AssempleGeometryPath(tmp_geo_path, path_vec[i])) {
-      geo_path_vec.emplace_back(tmp_geo_path);
-    }
-  }
+  std::vector<GeometryPath> geo_path_vec;
+  AssempleGeometryPathVec(geo_path_vec, path_vec);
 
   // ILOG_INFO <<"geo_path_vec size = " << geo_path_vec.size());
   if (geo_path_vec.size() == 0) {
@@ -1193,7 +1198,7 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   return true;
 }
 
-const std::vector<double> ParallelPathGenerator::GetMinDistOfEgoToObs() {
+const double ParallelPathGenerator::CalcBufferViaDistOfEgoToObs() {
   const auto& car_vertex_x_vec = apa_param.GetParam().car_vertex_x_vec;
   const auto& car_vertex_y_vec = apa_param.GetParam().car_vertex_y_vec;
 
@@ -1209,7 +1214,7 @@ const std::vector<double> ParallelPathGenerator::GetMinDistOfEgoToObs() {
   l2g_tf.Init(input_.ego_info_under_slot.cur_pose.pos,
               input_.ego_info_under_slot.cur_pose.heading);
 
-  std::vector<double> min_real_dist_vec = {2.0, 2.0};
+  double min_real_dist = 2.0;
   for (const auto& pt_pair : collision_detector_ptr_->GetObstaclesMap()) {
     const bool is_left_corner =
         (pt_pair.first == CollisionDetector::CHANNEL_OBS &&
@@ -1217,42 +1222,24 @@ const std::vector<double> ParallelPathGenerator::GetMinDistOfEgoToObs() {
         (pt_pair.first != CollisionDetector::CHANNEL_OBS &&
          input_.tlane.slot_side_sgn < 0.0);
     const auto& corners = is_left_corner ? left_corner : right_corner;
-    pnc::geometry_lib::LineSegment car_line(l2g_tf.GetPos(corners[0]),
-                                            l2g_tf.GetPos(corners[1]));
+    const pnc::geometry_lib::LineSegment car_line(l2g_tf.GetPos(corners[0]),
+                                                  l2g_tf.GetPos(corners[1]));
 
     for (const auto& obs_pt : pt_pair.second) {
       const double real_dist =
           pnc::geometry_lib::CalPoint2LineSegDist(obs_pt, car_line);
 
-      if (is_left_corner) {
-        min_real_dist_vec[0] = std::min(min_real_dist_vec[0], real_dist);
-      } else {
-        min_real_dist_vec[1] = std::min(min_real_dist_vec[1], real_dist);
-      }
+      min_real_dist = std::min(min_real_dist, real_dist);
     }
   }
 
-  std::vector<double> min_buffer_vec = {kColLargeLatBufferOutSlot,
-                                        kColLargeLatBufferOutSlot};
+  double min_buffer =
+      pnc::mathlib::Clamp(min_real_dist - 0.3, kColSmallLatBufferOutSlot,
+                          kColLargeLatBufferOutSlot);
 
-  for (size_t i = 0; i < min_real_dist_vec.size(); i++) {
-    if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot) {
-      min_buffer_vec[i] =
-          mathlib::Clamp(min_real_dist_vec[i] - 0.4, kColSmallLatBufferOutSlot,
-                         kColLargeLatBufferOutSlot);
-    } else if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot + 0.5) {
-      min_buffer_vec[i] =
-          mathlib::Clamp(min_real_dist_vec[i] - 0.5, kColSmallLatBufferOutSlot,
-                         kColLargeLatBufferOutSlot);
-    }
-  }
-
-  ILOG_INFO << "left min_real_dist = " << min_real_dist_vec[0];
-  ILOG_INFO << "right min_real_dist = " << min_real_dist_vec[1];
-
-  ILOG_INFO << "left lat buffer = " << min_buffer_vec[0];
-  ILOG_INFO << "right lat buffer = " << min_buffer_vec[1];
-  return min_buffer_vec;
+  ILOG_INFO << "min_real_dist = " << min_real_dist;
+  ILOG_INFO << "min_buffer = " << min_buffer;
+  return min_buffer;
 }
 
 const bool ParallelPathGenerator::GenAlignedPreparingLine(
@@ -1303,65 +1290,60 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec,
     const bool is_ref_slot_line) {
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
+  const double slot_side_sgn = calc_params_.slot_side_sgn;
 
-  ILOG_INFO << " calc_params_.slot_side_sgn in GenParallelPreparingLineVec= "
-            << calc_params_.slot_side_sgn;
+  double pin_y = input_.tlane.obs_pt_inside.y();
 
   double tlane_outer_y =
-      std::fabs(input_.tlane.obs_pt_inside.y()) > half_slot_width
-          ? input_.tlane.obs_pt_inside.y()
-          : (half_slot_width + std::fabs(input_.tlane.obs_pt_inside.y())) *
-                0.5 * calc_params_.slot_side_sgn;
+      std::fabs(pin_y) > half_slot_width - 1e-5
+          ? pin_y
+          : (half_slot_width + std::fabs(pin_y)) * 0.5 * slot_side_sgn;
 
   double rac_tlane_bound =
       tlane_outer_y +
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
 
   if (is_ref_slot_line) {
-    tlane_outer_y =
-        std::max(input_.tlane.obs_pt_inside.y() * calc_params_.slot_side_sgn,
-                 half_slot_width) *
-        calc_params_.slot_side_sgn;
+    tlane_outer_y = std::max(input_.tlane.obs_pt_inside.y() * slot_side_sgn,
+                             half_slot_width) *
+                    slot_side_sgn;
     rac_tlane_bound =
-        tlane_outer_y + calc_params_.slot_side_sgn *
-                            (0.5 * apa_param.GetParam().car_width + 0.5);
+        tlane_outer_y +
+        slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
   }
 
-  const double rac_channel_bound =
+  double rac_channel_bound =
       input_.tlane.channel_y -
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.2);
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
 
-  if (calc_params_.slot_side_sgn * (rac_channel_bound - rac_tlane_bound) <
-      0.0) {
-    ILOG_ERROR << "rac_channel_bound - rac_tlane_bound "
-               << rac_channel_bound - rac_tlane_bound;
-    ILOG_ERROR << "SGN DIFFERENT!";
+  if (slot_side_sgn * (rac_channel_bound - rac_tlane_bound) < 0.0) {
+    ILOG_INFO << "rac_channel_bound - rac_tlane_bound "
+              << rac_channel_bound - rac_tlane_bound;
+    ILOG_INFO << "SGN DIFFERENT!";
     return false;
+  }
+
+  if (rac_channel_bound * slot_side_sgn > 10) {
+    rac_channel_bound = 10.0 * slot_side_sgn;
   }
 
   const double y_bound = std::fabs(rac_channel_bound - rac_tlane_bound);
 
-  double dy = 0.2;
+  const double channel_width =
+      std::fabs(input_.tlane.channel_y) - half_slot_width;
+
+  double dy = channel_width > 4.0 ? 0.1 : 0.05;
+
   int nums = static_cast<int>(y_bound / dy);
-  if (nums < 5) {
-    nums = 5;
-  }
+  nums = pnc::mathlib::Clamp(nums, 5, 16);
   dy = y_bound / nums;
-
-  if (std::fabs(input_.tlane.channel_y) < 4.0 + 1.2) {
-    dy = 0.07;
-  }
-
-  ILOG_INFO << "channel dy = " << dy;
-
-  const double start_y = rac_tlane_bound + 0.4 * calc_params_.slot_side_sgn;
-  double end_y = rac_channel_bound;
 
   pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, 0.0);
   prepare_pose.pos.y() = rac_tlane_bound;
   preparing_pose_vec.emplace_back(prepare_pose);
 
-  const auto y_vec = pnc::geometry_lib::Linspace(start_y, end_y, dy);
+  const auto y_vec =
+      pnc::geometry_lib::Linspace(rac_tlane_bound, rac_channel_bound, dy);
 
   for (const auto y : y_vec) {
     prepare_pose.pos.y() = y;
@@ -1373,21 +1355,49 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
 
 const bool ParallelPathGenerator::GenTiltedPreparingLine(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
+  const double slot_side_sgn = calc_params_.slot_side_sgn;
+  const double half_car_width = 0.5 * apa_param.GetParam().car_width;
+
+  const double channel_width =
+      std::fabs(input_.tlane.channel_y) - 0.5 * input_.tlane.slot_width;
+
   std::vector<double> heading_vec = {7.5, 10.0, 12.5};
+
+  if (channel_width < 3.6) {
+    heading_vec.emplace_back(25.0);
+    heading_vec.emplace_back(30.0);
+
+    heading_vec.emplace_back(35.0);
+
+    heading_vec.emplace_back(40.0);
+
+    heading_vec.emplace_back(45.0);
+  }
+
+  const double step = 0.2;
+  size_t max_num = 10;
 
   for (const auto& heading_deg : heading_vec) {
     const double heading_rad = heading_deg * kDeg2Rad;
+
     const auto v_preparing_line_heading =
-        geometry_lib::GenHeadingVec(heading_rad);
+        pnc::geometry_lib::GenHeadingVec(heading_rad);
 
     const Eigen::Vector2d v_preparing_line_norm(-v_preparing_line_heading.y(),
                                                 v_preparing_line_heading.x());
-    auto start_pos =
-        input_.tlane.pt_inside +
-        v_preparing_line_norm * (0.7 + 0.5 * apa_param.GetParam().car_width);
+    for (size_t i = 0; i < max_num; i++) {
+      auto start_pos = input_.tlane.pt_inside +
+                       v_preparing_line_norm * input_.tlane.slot_side_sgn *
+                           (0.3 + i * step + half_car_width);
 
-    preparing_pose_vec.emplace_back(
-        pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+      if (std::fabs(start_pos.y()) + 1 + 0.5 * apa_param.GetParam().car_width >
+          std::fabs(input_.tlane.channel_y)) {
+        break;
+      }
+
+      preparing_pose_vec.emplace_back(
+          pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+    }
   }
 
   return true;
@@ -1553,33 +1563,49 @@ const bool ParallelPathGenerator::DubinsPlan(
     std::vector<std::vector<pnc::geometry_lib::PathSegment>>& path_vec,
     const pnc::geometry_lib::PathPoint& start_pose,
     const pnc::geometry_lib::PathPoint& target_pose, const double radius,
-    const double buffer) {
+    const double buffer, const uint8_t ref_steer, const bool force_steer_diff) {
+  using namespace pnc::dubins_lib;
+
   path_vec.clear();
   bool success = false;
 
-  pnc::dubins_lib::DubinsLibrary::Input dubins_input;
+  DubinsLibrary::Input dubins_input;
   dubins_input.radius = radius;
   dubins_input.Set(start_pose.pos, target_pose.pos, start_pose.heading,
                    target_pose.heading);
   dubins_planner_.SetInput(dubins_input);
 
+  std::vector<uint8_t> type_vec;
+  switch (ref_steer) {
+    case pnc::geometry_lib::SEG_STEER_RIGHT:
+      type_vec = {DubinsLibrary::R_S_L};
+      if (!force_steer_diff) {
+        type_vec.emplace_back(DubinsLibrary::R_S_R);
+      }
+      break;
+
+    case pnc::geometry_lib::SEG_STEER_LEFT:
+      type_vec = {DubinsLibrary::L_S_R};
+      if (!force_steer_diff) {
+        type_vec.emplace_back(DubinsLibrary::L_S_L);
+      }
+      break;
+    default:
+      type_vec = {DubinsLibrary::L_S_R, DubinsLibrary::R_S_L};
+      if (!force_steer_diff) {
+        type_vec.emplace_back(DubinsLibrary::L_S_L);
+        type_vec.emplace_back(DubinsLibrary::R_S_R);
+      }
+      break;
+  }
+
   // try dubins method
   for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::CASE_COUNT; ++i) {
-    for (size_t j = 0; j < pnc::dubins_lib::DubinsLibrary::DUBINS_TYPE_COUNT;
-         ++j) {
+    for (const auto& j : type_vec) {
       if (!dubins_planner_.Solve(j, i)) {
         continue;
       }
-      const auto dubins_output_ptr = dubins_planner_.GetOutputPtr();
-
-      const double max_heading_mag_deg =
-          kRad2Deg * std::max(std::fabs(dubins_output_ptr->arc_AB.headingB),
-                              std::fabs(dubins_output_ptr->arc_CD.headingA));
-      if (max_heading_mag_deg > 45.0) {
-        continue;
-      }
-
-      if (IsDubinsCollided(buffer)) {
+      if (IsDubinsCollided(kColBufferOutSlot)) {
         continue;
       }
       std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
@@ -1836,9 +1862,10 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 
 // search from the inside parking space to outside
 const bool ParallelPathGenerator::CalMinSafeCircle() {
-  const auto time0 = IflyTime::Now_ms();
-
   const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.0;
+  ILOG_INFO << "is rigid body in side of slot = "
+            << input_.tlane.is_inside_rigid;
+  ILOG_INFO << "lat buffer in reversed trials = " << lat_buffer;
 
   collision_detector_ptr_->SetParam(
       CollisionDetector::Paramters(lat_buffer, false));
@@ -1847,78 +1874,25 @@ const bool ParallelPathGenerator::CalMinSafeCircle() {
   const bool success_tra =
       InverseSearchLoopInSlot(tra_search_out_res, calc_params_.target_pose);
   debug_info_.tra_search_out_res = tra_search_out_res;
-  const auto time1 = IflyTime::Now_ms();
 
   std::vector<pnc::geometry_lib::PathSegment> adv_search_out_res;
   const bool success_adv = AdvancedInversedTrialsInSlot(
       adv_search_out_res, calc_params_.target_pose);
-  const auto time2 = IflyTime::Now_ms();
 
   std::vector<pnc::geometry_lib::PathSegment> search_out_res;
-
-  if (!apa_param.GetParam().is_parallel_advanced_method) {
-    if (success_tra) {
-      search_out_res = tra_search_out_res;
-    } else {
-      return false;
-    }
-  }
-
   if (apa_param.GetParam().is_parallel_advanced_method) {
     if (success_adv) {
       search_out_res = adv_search_out_res;
     } else {
       return false;
     }
-  }
-
-  ILOG_INFO << "Traditional vs Advanced Method";
-  // heading
-  double tra_heading_deg = 0.0;
-  double opt_heading_deg = 0.0;
-
-  double tra_back_x = 999.9;
-  double adv_back_x = 999.9;
-
-  size_t tra_shifting_cnt = 0;
-  size_t adv_shifting_cnt = 0;
-
-  if (tra_search_out_res.size() > 0) {
-    tra_heading_deg = tra_search_out_res.back().GetStartHeading() * kRad2Deg;
-
-    tra_back_x = tra_search_out_res.front().GetEndPos().x();
-
-    tra_shifting_cnt = CalPathGearChangeCounts(tra_search_out_res);
-  }
-
-  if (adv_search_out_res.size() > 0) {
-    opt_heading_deg = adv_search_out_res.back().GetStartHeading() * kRad2Deg;
-
-    adv_back_x = adv_search_out_res.front().GetEndPos().x();
-    if (adv_search_out_res.size() >= 2) {
-      if (adv_search_out_res[0].seg_gear == adv_search_out_res[1].seg_gear &&
-          adv_search_out_res[0].seg_gear ==
-              pnc::geometry_lib::SEG_GEAR_REVERSE) {
-        adv_back_x = adv_search_out_res[1].GetEndPos().x();
-      }
+  } else {
+    if (success_tra) {
+      search_out_res = tra_search_out_res;
+    } else {
+      return false;
     }
-
-    adv_shifting_cnt = CalPathGearChangeCounts(adv_search_out_res);
   }
-
-  ILOG_INFO << "park out heading(deg) = " << tra_heading_deg << " vs "
-            << opt_heading_deg;
-
-  ILOG_INFO << "first backward limit x(m) = " << tra_back_x << " vs "
-            << adv_back_x;
-
-  ILOG_INFO << "gear change cnt " << tra_shifting_cnt << " vs "
-            << adv_shifting_cnt;
-
-  ILOG_INFO << "Time cost (ms) =" << time1 - time0 << " vs " << time2 - time1;
-
-  // ILOG_INFO <<"apa_param.GetParam().is_parallel_advanced_method = "
-  //             << apa_param.GetParam().is_parallel_advanced_method);
 
   if (search_out_res.size() == 0) {
     ILOG_INFO << "search_out_res size = 0";
@@ -1928,19 +1902,20 @@ const bool ParallelPathGenerator::CalMinSafeCircle() {
   ReduceRootPoseHeadingInSlot(search_out_res);
 
   // calc pose with ego had just cross pt_inside'y, which is used to
-  // connect  the prepare point
+  // connect the prepare point
 
-  CalcParkOutPose(search_out_res.back());
+  auto& search_out_seg = search_out_res.back();
+
+  CalcParkOutPose(search_out_seg);
+  calc_params_.park_out_pose = search_out_seg.GetEndPose();
+  calc_params_.safe_circle_root_pose = search_out_seg.GetStartPose();
+
   calc_params_.park_out_path_in_slot = search_out_res;
-  calc_params_.park_out_pose = search_out_res.back().GetEndPose();
-  calc_params_.safe_circle_root_pose = search_out_res.back().GetStartPose();
   calc_params_.valid_target_pt_vec.emplace_back(
       calc_params_.safe_circle_root_pose);
-  pnc::geometry_lib::PrintPose("corrected multi root pose",
-                               calc_params_.safe_circle_root_pose);
+
   pnc::geometry_lib::PrintPose("corrected park out pose",
                                calc_params_.park_out_pose);
-
   return true;
 }
 
@@ -2847,8 +2822,8 @@ const bool ParallelPathGenerator::MultiPlan() {
   ILOG_INFO << "multi-plan ref gear =" << static_cast<int>(current_gear);
   ILOG_INFO << "multi-plan ref arc = " << static_cast<int>(current_arc_steer);
 
-  // check pose and ego_info_under_slot.slot_occupied_ratio, if error is small,
-  // multi isn't suitable
+  // check pose and ego_info_under_slot.slot_occupied_ratio, if error is
+  // small, multi isn't suitable
   if (!CheckMultiPlanSuitable(current_pose)) {
     ILOG_INFO << "pose err is relatively small, skip multi plan, directly try "
                  "adjust plan\n";
@@ -3720,6 +3695,566 @@ const bool ParallelPathGenerator::CalcLineDirAllValidPose(
   return true;
 }
 
+const bool ParallelPathGenerator::GenerateCandidatePath() {
+  return StartNodeGenerator();
+}
+
+const bool ParallelPathGenerator::StartNodeGenerator() {
+  const int depth_max = 4;
+  const float search_dist_max = 2.0f;
+  const float srarch_angle_max = M_PI / 3.0;
+
+  int start_nodes_size = 0;
+  pnc::geometry_lib::PathSegSteer current_steer =
+      pnc::geometry_lib::SEG_STEER_STRAIGHT;
+
+  auto& node_space = calc_params_.ego_start_pose_space;
+
+  node_space.clear();
+  node_space.reserve(500);
+  input_.ego_info_under_slot.cur_pose.id = 0;
+  input_.ego_info_under_slot.cur_pose.depth = 0;
+  input_.ego_info_under_slot.cur_pose.parent_id = -1;
+  node_space.emplace_back(input_.ego_info_under_slot.cur_pose);
+
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.3, false));
+
+  const bool is_drive_line_success =
+      SearchLineNode(node_space, input_.ego_info_under_slot.cur_pose,
+                     search_dist_max, pnc::geometry_lib::SEG_GEAR_DRIVE);
+
+  const bool is_reverse_line_success =
+      SearchLineNode(node_space, input_.ego_info_under_slot.cur_pose,
+                     search_dist_max, pnc::geometry_lib::SEG_GEAR_REVERSE);
+  node_space.front().depth = 1;
+
+  size_t current_idx = 0;
+  const auto start_time = std::chrono::high_resolution_clock::now();
+
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>> path_vec;
+  while (current_idx < node_space.size()) {
+    const auto time1 = std::chrono::high_resolution_clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              time1 - start_time)
+                              .count();
+    if (duration > 200.0) {
+      break;
+    }
+
+    if (node_space.size() > 500) {
+      ILOG_INFO << "start_nodes_size override! " << node_space.size();
+      break;
+    }
+
+    const auto& parent_pose = node_space[current_idx];
+    current_idx++;
+
+    if (parent_pose.depth >= depth_max) {
+      ILOG_INFO << "current_depth override! " << parent_pose.depth
+                << " >= " << depth_max;
+      break;
+    }
+
+    if (pnc::geometry_lib::NormalizeAngle(parent_pose.heading) > M_PI_2 ||
+        pnc::geometry_lib::NormalizeAngle(parent_pose.heading) < -M_PI_2) {
+      continue;
+    }
+
+    ILOG_INFO << " ";
+    ILOG_INFO << "currently in depth = " << parent_pose.depth;
+    pnc::geometry_lib::PrintPose("parent_pose", parent_pose);
+
+    SearchToTargetLineVecV2(path_vec, parent_pose,
+                            apa_param.GetParam().min_turn_radius + 0.3,
+                            kColBufferOutSlot);
+
+    if (path_vec.size() > kMaxPathSize) {
+      ILOG_INFO << "path_vec big enough!" << path_vec.size();
+      break;
+    }
+
+    if (parent_pose.depth < 2) {
+      ILOG_INFO << "";
+      ILOG_INFO << "No.1 DRIVE LEFT ARC";
+      SearchArcNode(node_space, parent_pose, srarch_angle_max,
+                    pnc::geometry_lib::SEG_GEAR_DRIVE,
+                    pnc::geometry_lib::SEG_STEER_LEFT);
+
+      ILOG_INFO << "";
+      ILOG_INFO << "No.2 DRIVE RIGHT ARC";
+      SearchArcNode(node_space, parent_pose, srarch_angle_max,
+                    pnc::geometry_lib::SEG_GEAR_DRIVE,
+                    pnc::geometry_lib::SEG_STEER_RIGHT);
+
+      ILOG_INFO << "";
+      ILOG_INFO << "No.3 REVERSE LEFT ARC";
+      SearchArcNode(node_space, parent_pose, srarch_angle_max,
+                    pnc::geometry_lib::SEG_GEAR_REVERSE,
+                    pnc::geometry_lib::SEG_STEER_LEFT);
+      ILOG_INFO << "";
+      ILOG_INFO << "No.4 REVERSE RIGHT ARC";
+      SearchArcNode(node_space, parent_pose, srarch_angle_max,
+                    pnc::geometry_lib::SEG_GEAR_REVERSE,
+                    pnc::geometry_lib::SEG_STEER_RIGHT);
+      ILOG_INFO << "";
+    } else if (std::fabs(parent_pose.kappa) > 1e-5) {
+      const auto ref_steer = parent_pose.kappa > 0.0
+                                 ? pnc::geometry_lib::SEG_STEER_RIGHT
+                                 : pnc::geometry_lib::SEG_STEER_LEFT;
+      const auto ref_gear = parent_pose.is_drive
+                                ? pnc::geometry_lib::SEG_GEAR_REVERSE
+                                : pnc::geometry_lib::SEG_GEAR_DRIVE;
+      SearchArcNode(node_space, parent_pose, srarch_angle_max, ref_gear,
+                    ref_steer);
+      SearchArcNode(node_space, parent_pose, srarch_angle_max, ref_gear,
+                    ref_steer);
+    }
+  }
+
+  ILOG_INFO << "node_space size = " << node_space.size();
+  debug_info_.point_vec = node_space;
+  if (node_space.empty()) {
+    return false;
+  }
+
+  ILOG_INFO << "current_idx = " << current_idx;
+
+  if (path_vec.size() < kMaxPathSize) {
+    for (size_t i = current_idx + 1; i < node_space.size(); i++) {
+      SearchToTargetLineVecV2(path_vec, node_space[i],
+                              apa_param.GetParam().min_turn_radius + 0.3,
+                              kColBufferOutSlot);
+      const auto time1 = std::chrono::high_resolution_clock::now();
+      const auto duration =
+          std::chrono::duration_cast<std::chrono::milliseconds>(time1 -
+                                                                start_time)
+              .count();
+      if (duration > 200.0) {
+        break;
+      }
+      if (path_vec.size() > kMaxPathSize) {
+        break;
+      }
+    }
+  }
+  ILOG_INFO << "FINAL  path_vec size = " << path_vec.size();
+
+  if (path_vec.size() == 0) {
+    ILOG_INFO << "FINAL  path_vec size = " << path_vec.size();
+    return false;
+  }
+
+  ILOG_INFO
+      << "\n\n\n----------------------------------------------------------";
+  // for (size_t mm = 0; mm < path_vec.size(); mm++) {
+  //   ILOG_INFO << "\n";
+  //   ILOG_INFO "no. " << mm << " path ---------------";
+  //   pnc::geometry_lib::PrintSegmentsVecInfo(path_vec[mm]);
+  // }
+
+  std::vector<GeometryPath> geo_path_vec;
+  if (!AssempleGeometryPathVec(geo_path_vec, path_vec)) {
+    return false;
+  }
+
+  size_t best_path_idx = std::numeric_limits<size_t>::max();
+  if (!SelectBestPathOutsideSlot(geo_path_vec, best_path_idx)) {
+    return false;
+  }
+
+  ILOG_INFO << "best idx = " << best_path_idx;
+
+  AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
+  debug_info_.debug_all_path_vec = geo_path_vec;
+
+  return true;
+}
+
+const bool ParallelPathGenerator::SearchLineNode(
+    std::vector<pnc::geometry_lib::PathPoint>& node_space,
+    const pnc::geometry_lib::PathPoint& start_pose,
+    const double max_search_dist, const uint8_t ref_gear) {
+  ILOG_INFO << " ";
+  ILOG_INFO << " -----start line search ------";
+
+  if (ref_gear != pnc::geometry_lib::SEG_GEAR_DRIVE &&
+      ref_gear != pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    ILOG_INFO << "gear error in searchLineNode!";
+    return false;
+  }
+  pnc::geometry_lib::PrintGear("ref gear = ", ref_gear);
+
+  double max_search_dist_mag = std::fabs(max_search_dist);
+
+  pnc::geometry_lib::PathPoint child_pose;
+  child_pose.id = -1;
+  child_pose.parent_id = -1;
+
+  const double sig =
+      (ref_gear == pnc::geometry_lib::SEG_GEAR_DRIVE ? 1.0 : -1.0);
+  const bool is_drive = (ref_gear == pnc::geometry_lib::SEG_GEAR_DRIVE);
+
+  pnc::geometry_lib::LineSegment line(start_pose.pos, start_pose.heading,
+                                      max_search_dist_mag, ref_gear);
+
+  pnc::geometry_lib::PathSegment line_seg(ref_gear, line);
+
+  const auto col_res =
+      TrimPathByCollisionDetection(line_seg, kColBufferOutSlot);
+  if (col_res == PATH_COL_INVALID) {
+    pnc::geometry_lib::PrintGear("collided at start pose with gear == ",
+                                 ref_gear);
+    return false;
+  }
+
+  max_search_dist_mag = std::min(max_search_dist_mag, line_seg.Getlength());
+  max_search_dist_mag = std::min(max_search_dist_mag, 2.5);
+  ILOG_INFO << "max_search_dist_mag after trim = " << max_search_dist_mag;
+  if (kSamplingLineStep > max_search_dist_mag) {
+    ILOG_INFO << "trimed path too short!";
+    return false;
+  }
+
+  const Eigen::Vector2d heading_vec(std::cos(start_pose.heading),
+                                    std::sin(start_pose.heading));
+
+  int seg_num = static_cast<int>(max_search_dist_mag / kSamplingLineStep);
+  if (seg_num < 1) {
+    return false;
+  } else if (seg_num > 2) {
+    seg_num = 2;
+  }
+
+  const double step = max_search_dist_mag / seg_num;
+
+  child_pose.kappa = 0;
+  child_pose.is_drive = is_drive;
+  child_pose.depth = start_pose.depth + 1;
+  child_pose.parent_id = start_pose.id;
+  child_pose.heading = start_pose.heading;
+  child_pose.heading_vec = start_pose.heading_vec;
+
+  for (int i = 1; i <= seg_num; i++) {
+    const double offset = step * i;
+    child_pose.s = offset;
+    child_pose.pos = start_pose.pos + heading_vec * offset * sig;
+    child_pose.id = node_space.size();
+    node_space.emplace_back(child_pose);
+  }
+  ILOG_INFO << "after line search, node size = " << node_space.size();
+
+  return true;
+}
+
+const bool ParallelPathGenerator::SearchArcNode(
+    std::vector<pnc::geometry_lib::PathPoint>& node_space,
+    const pnc::geometry_lib::PathPoint& start_pose,
+    const double max_search_angle, const uint8_t ref_gear,
+    const uint8_t ref_steer, const double ref_radius) {
+  ILOG_INFO << " ";
+  ILOG_INFO << "----- SearchArcNode ------";
+
+  pnc::geometry_lib::Arc arc;
+  arc.pA = start_pose.pos;
+  arc.headingA = start_pose.heading;
+  arc.circle_info.radius = ref_radius;
+  if (!pnc::geometry_lib::CalcArcDirection(arc.is_anti_clockwise, ref_gear,
+                                           ref_steer)) {
+    return false;
+  }
+
+  ILOG_INFO << "parent pose = " << arc.pA.transpose()
+            << ", heading(deg) = " << arc.headingA * kRad2Deg;
+
+  pnc::geometry_lib::PrintGear("current search gear = ", ref_gear);
+  pnc::geometry_lib::PrintSteer("current search steer = ", ref_steer);
+
+  ILOG_INFO << "arc.is_anti_clockwise = " << arc.is_anti_clockwise;
+
+  double max_search_angle_rad_mag = std::fabs(max_search_angle);
+  if (!CompleteArcInfo(arc, max_search_angle_rad_mag * ref_radius, ref_steer)) {
+    return false;
+  }
+
+  ILOG_INFO << "arc pb = " << arc.pB.transpose()
+            << ", heading(deg) = " << arc.headingB * kRad2Deg;
+  ILOG_INFO << "arc length =" << arc.length;
+
+  pnc::geometry_lib::PathSegment arc_seg(ref_steer, ref_gear, arc);
+  const auto col_res = TrimPathByCollisionDetection(arc_seg, kColBufferOutSlot);
+  if (col_res == PATH_COL_INVALID) {
+    ILOG_INFO << "colided at start pose!";
+    return false;
+  }
+
+  ILOG_INFO << "max available length = " << arc_seg.Getlength();
+
+  max_search_angle_rad_mag =
+      std::min(max_search_angle_rad_mag,
+               arc_seg.Getlength() / arc_seg.GetArcSeg().circle_info.radius);
+
+  ILOG_INFO << "max available angle = " << max_search_angle_rad_mag * kRad2Deg;
+
+  if (max_search_angle_rad_mag < kSamplingArcAngleStep) {
+    ILOG_INFO << "max available angle too small";
+    return false;
+  }
+
+  int seg_num =
+      static_cast<int>(max_search_angle_rad_mag / kSamplingArcAngleStep);
+  if (seg_num < 1) {
+    return false;
+  } else if (seg_num > 2) {
+    seg_num = 2;
+  }
+
+  double d_angle = max_search_angle_rad_mag / seg_num;
+  const double ds = d_angle * ref_radius;
+  const double steer_sgn =
+      (ref_steer == pnc::geometry_lib::SEG_STEER_LEFT ? 1.0 : -1.0);
+  const double kappa = steer_sgn / ref_radius;
+
+  pnc::geometry_lib::PathPoint child_pose;
+  child_pose.kappa = kappa;
+  child_pose.parent_id = start_pose.id;
+  child_pose.pos = start_pose.pos;
+  child_pose.heading = start_pose.heading;
+  child_pose.depth = start_pose.depth + 1;
+
+  const double heading_sgn = arc.is_anti_clockwise ? 1.0 : -1.0;
+  const bool is_drive = ref_gear == pnc::geometry_lib::SEG_GEAR_DRIVE;
+
+  Eigen::Vector2d v_n = arc.pA - arc.circle_info.center;
+  const auto rot_m =
+      pnc::geometry_lib::GetRotm2dFromTheta(heading_sgn * d_angle);
+
+  for (int i = 1; i <= seg_num; i++) {
+    const double angle_offset = i * d_angle;
+
+    v_n = rot_m * v_n;
+    child_pose.pos = arc.circle_info.center + v_n;
+
+    child_pose.s = angle_offset * ref_radius;
+    child_pose.is_drive = is_drive;
+
+    child_pose.heading = pnc::geometry_lib::NormalizeAngle(
+        child_pose.heading + d_angle * heading_sgn);
+
+    child_pose.heading_vec << std::cos(child_pose.heading),
+        std::sin(child_pose.heading);
+
+    child_pose.id = node_space.size();
+    node_space.emplace_back(child_pose);
+  }
+
+  ILOG_INFO << "after arc search, node size = " << node_space.size();
+
+  return true;
+}
+
+const bool ParallelPathGenerator::SearchToTargetLineVecV2(
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>>& path_vec,
+    const pnc::geometry_lib::PathPoint& start_pose, const double radius,
+    const double lon_buffer) {
+  for (const auto& inv_park_out_path : calc_params_.suc_rev_parking_out_vec) {
+    ILOG_INFO << "\n";
+    const auto& preparation_pose = inv_park_out_path.front().GetStartPose();
+    pnc::geometry_lib::PrintPose("preparation pose", preparation_pose);
+
+    const auto preparation_line = pnc::geometry_lib::BuildLineSegByPose(
+        preparation_pose.pos, preparation_pose.heading);
+
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>> tmp_path_vec;
+    if (!SearchToTargetLineV2(tmp_path_vec, start_pose, preparation_line,
+                              radius, lon_buffer)) {
+      continue;
+    }
+
+    for (auto tmp_path_seg : tmp_path_vec) {
+      for (const auto& inv_path_seg : inv_park_out_path) {
+        tmp_path_seg.emplace_back(inv_path_seg);
+      }
+
+      path_vec.emplace_back(tmp_path_seg);
+    }
+  }
+  return true;
+}
+
+const bool ParallelPathGenerator::SearchToTargetLineV2(
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>>& path_vec,
+    const pnc::geometry_lib::PathPoint& ego_pose,
+    const pnc::geometry_lib::LineSegment& prepare_line, const double radius,
+    const double lon_buffer) {
+  // ILOG_INFO << "";
+  // ILOG_INFO << "----------- SearchToTargetLineV2 ---------------------";
+  // pnc::geometry_lib::PrintPose("ego transit pose", ego_pose);
+  // ILOG_INFO << "preparation line  pA = " << prepare_line.pA.transpose()
+  //           << ", heading(deg) = " << prepare_line.heading * kRad2Deg;
+
+  bool success = false;
+  const pnc::geometry_lib::PathPoint preparation_pose(prepare_line.pA,
+                                                      prepare_line.heading);
+  // Line
+  success = false;
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>> tmp_path_vec;
+  if (std::fabs(ego_pose.kappa) <= 1e-5) {
+    ILOG_INFO << "ego last step is line!";
+    tmp_path_vec.clear();
+    success =
+        TwoArcPath(tmp_path_vec, ego_pose, prepare_line,
+                   pnc::geometry_lib::SEG_GEAR_INVALID, radius, lon_buffer);
+
+    if (!success) {
+      // ILOG_INFO << "TwoArcPath failed, try dubins!";
+      tmp_path_vec.clear();
+      success =
+          DubinsPlan(tmp_path_vec, ego_pose, preparation_pose, radius,
+                     lon_buffer, pnc::geometry_lib::SEG_STEER_INVALID, true);
+      if (success) {
+        // ILOG_INFO << "DubinsPlan success!";
+      } else {
+        // ILOG_INFO << "DubinsPlan failed!";
+      }
+    } else {
+      // ILOG_INFO << "TwoArcPath success!";
+    }
+  } else {
+    ILOG_INFO << "ego last step is arc!";
+
+    const auto ref_steer = ego_pose.kappa > 0.0
+                               ? pnc::geometry_lib::SEG_STEER_RIGHT
+                               : pnc::geometry_lib::SEG_STEER_LEFT;
+    const auto ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    pnc::geometry_lib::PrintSteer("this time steer", ref_steer);
+    pnc::geometry_lib::PrintGear("this time gear", ref_gear);
+
+    success = LineArcPlan(tmp_path_vec, ego_pose, prepare_line, ref_gear,
+                          ref_steer, radius, lon_buffer);
+    if (!success) {
+      // ILOG_INFO << "LineArcPlan failed, try TwoArcPath!";
+      tmp_path_vec.clear();
+      success = TwoArcPath(tmp_path_vec, ego_pose, prepare_line, ref_gear,
+                           radius, lon_buffer, ref_steer);
+      if (success) {
+        // ILOG_INFO << "TwoArcPath success!";
+      } else {
+        // ILOG_INFO << "TwoArcPath failed!";
+      }
+    } else {
+      // ILOG_INFO << "LineArcPlan success!";
+    }
+
+    if (!success) {
+      // ILOG_INFO << "LineArcPlan && TwoArcPath both failed!";
+      tmp_path_vec.clear();
+      success = DubinsPlan(tmp_path_vec, ego_pose, preparation_pose, radius,
+                           lon_buffer, ref_steer, true);
+      if (success) {
+        // ILOG_INFO << "DubinsPlan success!";
+      } else {
+        // ILOG_INFO << "DubinsPlan failed!";
+      }
+    }
+  }
+  // ILOG_INFO "\n";
+  // ILOG_INFO << "transit pose to preparation pose path size = "
+  //           << tmp_path_vec.size();
+
+  if (success) {
+    ILOG_INFO << "";
+    ILOG_INFO << "backtracking!";
+
+    auto& node_space = calc_params_.ego_start_pose_space;
+
+    int parent_id = ego_pose.id;
+    std::vector<int> reversed_id_vec;
+    while (parent_id != -1) {
+      ILOG_INFO << " id " << parent_id;
+      pnc::geometry_lib::PrintPose("parent pose", node_space[parent_id]);
+      reversed_id_vec.emplace_back(parent_id);
+
+      parent_id = node_space[parent_id].parent_id;
+    }
+    ILOG_INFO << "point_vec size = " << reversed_id_vec.size();
+
+    std::vector<pnc::geometry_lib::PathSegment> search_start_path_vec;
+    std::reverse(reversed_id_vec.begin(), reversed_id_vec.end());
+
+    ILOG_INFO << "\nid from path size";
+    for (const auto& id : reversed_id_vec) {
+      ILOG_INFO << "id = " << id;
+    }
+
+    for (size_t i = 1; i < reversed_id_vec.size(); i++) {
+      const auto& pA = node_space[reversed_id_vec[i - 1]];
+      const auto& pB = node_space[reversed_id_vec[i]];
+
+      if (std::fabs(pB.kappa) < 1e-5) {
+        ILOG_INFO << "\nline!";
+
+        pnc::geometry_lib::LineSegment line(pA.pos, pB.pos, pB.heading);
+        const auto gear = pB.is_drive ? pnc::geometry_lib::SEG_GEAR_DRIVE
+                                      : pnc::geometry_lib::SEG_GEAR_REVERSE;
+        search_start_path_vec.emplace_back(
+            pnc::geometry_lib::PathSegment(gear, line));
+
+        ILOG_INFO << "pa = " << line.pA.transpose()
+                  << ", pB = " << line.pB.transpose()
+                  << "heading (deg)= " << pB.heading * kRad2Deg
+                  << "gear = " << static_cast<int>(gear);
+      } else {
+        ILOG_INFO << "\narc!";
+
+        const uint8_t gear = pB.is_drive ? pnc::geometry_lib::SEG_GEAR_DRIVE
+                                         : pnc::geometry_lib::SEG_GEAR_REVERSE;
+        const uint8_t steer = pB.kappa > 0.0
+                                  ? pnc::geometry_lib::SEG_STEER_LEFT
+                                  : pnc::geometry_lib::SEG_STEER_RIGHT;
+        pnc::geometry_lib::PrintGear("gear", gear);
+        pnc::geometry_lib::PrintSteer("steer", steer);
+
+        pnc::geometry_lib::Arc arc;
+        arc.pA = pA.pos;
+        arc.headingA = pA.heading;
+        arc.pB = pB.pos;
+        arc.headingB = pB.heading;
+
+        arc.circle_info.radius = 1.0 / std::fabs(pB.kappa);
+        arc.circle_info.center = pnc::geometry_lib::CalArcCenter(
+            arc.pB, arc.headingB, arc.circle_info.radius, steer);
+
+        arc.length = pB.s;
+        pnc::geometry_lib::CalcArcDirection(arc.is_anti_clockwise, gear, steer);
+        const pnc::geometry_lib::PathSegment arc_seg(steer, gear, arc);
+
+        search_start_path_vec.emplace_back(arc_seg);
+        pnc::geometry_lib::PrintSegmentInfo(arc_seg);
+      }
+    }
+    ILOG_INFO << "backtracking search_start_path_vec size = "
+              << search_start_path_vec.size();
+
+    ILOG_INFO << "\n";
+    ILOG_INFO << "\n";
+    ILOG_INFO << "\n";
+    ILOG_INFO << "successed transit pose to preparation line path size = "
+              << tmp_path_vec.size();
+
+    for (size_t k = 0; k < tmp_path_vec.size(); k++) {
+      pnc::geometry_lib::PrintSegmentsVecInfo(tmp_path_vec[k]);
+    }
+
+    for (const auto path : tmp_path_vec) {
+      auto total_path = search_start_path_vec;
+      total_path.insert(total_path.end(), path.begin(), path.end());
+      path_vec.emplace_back(total_path);
+    }
+  }
+
+  return success;
+}
+
 const bool ParallelPathGenerator::OneArcPlan(
     pnc::geometry_lib::Arc& arc,
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
@@ -3864,20 +4399,19 @@ const bool ParallelPathGenerator::TwoArcPath(
     std::vector<std::vector<pnc::geometry_lib::PathSegment>>& path_vec,
     const pnc::geometry_lib::PathPoint& start_pose,
     const pnc::geometry_lib::LineSegment& target_line, const uint8_t ref_gear,
-    const double radius, const double lon_buffer) {
+    const double radius, const double lon_buffer, const uint8_t ref_steer) {
   // if ref_gear == invalid or cound  that mins ref_gear is not limited!
 
   using namespace pnc::geometry_lib;
   std::vector<std::pair<Arc, Arc>> arc_pair_vec;
   auto tmp_target_line = target_line;
-  bool success = CalTwoArcWithLine(start_pose, tmp_target_line, radius, radius,
-                                   arc_pair_vec);
-
-  if (!success) {
+  if (!CalTwoArcWithLine(start_pose, tmp_target_line, radius, radius,
+                         arc_pair_vec)) {
     ILOG_INFO << "CalTwoArcWithLine failed!";
     return false;
   }
 
+  bool success = false;
   for (const auto& arc_pair : arc_pair_vec) {
     std::vector<PathSegment> path_seg_vec;
     path_seg_vec.reserve(3);
@@ -3886,18 +4420,22 @@ const bool ParallelPathGenerator::TwoArcPath(
     const Arc arc2 = arc_pair.second;
 
     if (arc1.pB.x() < kMinXInTBoundary ||
-        arc1.pB.x() < start_pose.pos.x() - 2.5 ||
+        arc1.pB.x() < start_pose.pos.x() - 4.0 ||
         arc2.pB.x() < kMinXInTBoundary ||
-        arc2.pB.x() < start_pose.pos.x() - 2.5) {
+        arc2.pB.x() < start_pose.pos.x() - 4.0) {
       continue;
     }
 
-    if (!mathlib::IsDoubleEqual(arc2.headingB * kRad2Deg,
-                                tmp_target_line.heading * kRad2Deg)) {
+    if (!pnc::mathlib::IsDoubleEqual(arc2.headingB * kRad2Deg,
+                                     tmp_target_line.heading * kRad2Deg)) {
       continue;
     }
 
     const PathSegment path_seg_1(CalArcSteer(arc1), CalArcGear(arc1), arc1);
+
+    if (IsValidArcSteer(ref_steer) && path_seg_1.seg_steer != ref_steer) {
+      continue;
+    }
 
     if (IsValidGear(ref_gear) && path_seg_1.seg_gear != ref_gear) {
       continue;
@@ -3935,8 +4473,8 @@ const bool ParallelPathGenerator::TwoArcPath(
     path_vec.emplace_back(path_seg_vec);
     success = true;
   }
-  // ILOG_INFO <<"path_vec size = " << path_vec.size());
 
+  ILOG_INFO << "path_vec size in two arc  = " << path_vec.size();
   return success;
 }
 
@@ -4370,9 +4908,9 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
   // ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
   // ILOG_INFO << "buffer = " << buffer;
 
-  // ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
-  // ILOG_INFO << "col_pt_obs in slot = " <<
-  // col_res.col_pt_obs_global.transpose();
+  // ILOG_INFO << "ego local col pt = " <<
+  // col_res.col_pt_ego_local.transpose(); ILOG_INFO << "col_pt_obs in slot =
+  // " << col_res.col_pt_obs_global.transpose();
 
   if (safe_remain_dist < 0.0) {
     // ILOG_INFO << "the distance between obstacle and ego is smaller than "
@@ -5032,6 +5570,34 @@ void ParallelPathGenerator::CalcEgoParams() {
 
   ILOG_INFO << " calc_params_.min_outer_front_corner_deta_y = "
             << calc_params_.min_outer_front_corner_deta_y;
+}
+
+const bool ParallelPathGenerator::AddLastLine(
+    pnc::geometry_lib::PathSegment& last_path_seg) {
+  if (output_.path_segment_vec.size() > 0) {
+    const auto& end_pose = output_.path_segment_vec.back().GetEndPose();
+
+    const bool is_heading_small =
+        pnc::mathlib::IsDoubleEqual(end_pose.heading * kRad2Deg, 0.0);
+
+    const bool is_x_diff_small = pnc::mathlib::IsDoubleEqual(
+        end_pose.pos.x(), input_.tlane.pt_terminal_pos.x());
+
+    if (is_heading_small && !is_x_diff_small) {
+      const Eigen::Vector2d fixed_target_pos(input_.tlane.pt_terminal_pos.x(),
+                                             end_pose.pos.y());
+
+      const pnc::geometry_lib::LineSegment last_line(
+          end_pose.pos, fixed_target_pos, end_pose.heading);
+
+      const pnc::geometry_lib::PathSegment tmp(
+          pnc::geometry_lib::CalLineSegGear(last_line), last_line);
+      last_path_seg = tmp;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 }  // namespace apa_planner

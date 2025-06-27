@@ -38,7 +38,7 @@ void ParallelOutPathGenerator::Preprocess() {
 
   ILOG_INFO << "tlane Pt in = " << input_.tlane.obs_pt_inside.transpose();
   ILOG_INFO << "tlane Pt out = " << input_.tlane.obs_pt_outside.transpose();
-  ExpandPInObstacles();
+  ExpandObstacles();
   MoveChannelObstacles();
   CalcEgoParams();
 
