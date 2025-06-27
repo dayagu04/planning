@@ -1045,6 +1045,9 @@ bool STGraph::CalculateNeighborCorridor() {
     return false;
   }
 
+  first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
+  first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
+
   const auto& time_range = st_graph_input_->time_range();
   for (size_t i = 0; i < neighbor_corridor_.size(); i++) {
     double t = time_range.first + i * kTimeResolution;
