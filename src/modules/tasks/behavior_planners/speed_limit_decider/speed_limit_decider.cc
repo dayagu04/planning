@@ -26,8 +26,8 @@ constexpr double kSSharpBendCurvDis = 30.0;
 constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
 constexpr double kMergePointDetectedDistance = 20.0;
-constexpr double kStaticAgentAvoidLimitedSpeedHigh = 5.56;
-constexpr double kStaticAgentAvoidLimitedSpeedLow = 2.78;
+constexpr double kStaticAgentAvoidLimitedSpeedHigh = 8.33;
+constexpr double kStaticAgentAvoidLimitedSpeedLow = 4.17;
 constexpr double kDynamicAgentAvoidLimitedSpeedHigh = 5.56;
 constexpr double kDynamicAgentAvoidLimitedSpeedLow = 2.78;
 const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
@@ -750,15 +750,26 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     double invade_dis = avoid_agent->is_static() ? 0.8 : 0.4;
     if (avoid_agents_info.find(avoid_agent->agent_id()) !=
         avoid_agents_info.end()) {
-      invade_dis = avoid_agents_info.at(avoid_agent->agent_id());
+      invade_dis = std::max(avoid_agents_info.at(avoid_agent->agent_id()), 0.0);
     }
     std::array<double, 2> xp{lane_half_width - invade_dis,
                              lane_half_width + 0.2};
     std::array<double, 2> fp{v_follow_desired, v_ego};
     double v_limit = interp(fabs(min_lat_l), xp, fp);
-    const double v_limit_lower = avoid_agent->is_static()
-                                     ? kStaticAgentAvoidLimitedSpeedHigh
-                                     : kDynamicAgentAvoidLimitedSpeedHigh;
+
+    std::array<double, 2> xp1{-0.2, invade_dis};
+    std::array<double, 2> fp1{kStaticAgentAvoidLimitedSpeedHigh,
+                              kStaticAgentAvoidLimitedSpeedLow};
+    std::array<double, 2> fp2{kDynamicAgentAvoidLimitedSpeedHigh,
+                              kDynamicAgentAvoidLimitedSpeedLow};
+    double v_limit_lower =
+        avoid_agent->is_static()
+            ? interp(lane_half_width - fabs(min_lat_l), xp1, fp1)
+            : interp(lane_half_width - fabs(min_lat_l), xp1, fp2);
+
+    // const double v_limit_lower = avoid_agent->is_static()
+    //                                  ? kStaticAgentAvoidLimitedSpeedHigh
+    //                                  : kDynamicAgentAvoidLimitedSpeedHigh;
     v_limit = std::max(v_limit, v_limit_lower);
 
     SpeedLimitAgent speed_limit_agent;
