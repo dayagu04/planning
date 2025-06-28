@@ -3130,6 +3130,9 @@ bool LaneChangeStateMachineManager::IsCancelToHold () {
 double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const{
   double lc_hold_state_lat_offset = 0.0;
 
+  const auto &ref_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
 
@@ -3142,16 +3145,76 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const{
     return lc_hold_state_lat_offset;
   }
 
-  const double cur_lane_width = fix_lane->width();
+  const int target_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
+
+  const auto &target_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+
+  if (target_lane == nullptr) {
+    return lc_hold_state_lat_offset;
+  }
+
+  const auto &target_ref_path =
+      ref_path_manager->get_reference_path_by_lane(target_lane_virtual_id);
+
+  if (target_ref_path == nullptr) {
+    return lc_hold_state_lat_offset;
+  }
+
+  const auto &fix_ref_path =
+      ref_path_manager->get_reference_path_by_lane(fix_lane_virtual_id);
+
+  if (fix_ref_path == nullptr) {
+    return lc_hold_state_lat_offset;
+  }
+
+  const auto &ego_corners = target_ref_path->get_frenet_ego_state().corners();
+
+  const double fix_lane_width = fix_lane->width();
+
+  const double target_lane_width = target_lane->width();
+
+  const double half_fix_lane_width = fix_lane_width / 2.0;
+
+  const double half_target_lane_width = target_lane_width / 2.0;
+
+  // 根据自车的横向位置侵入情况，判断自车lc_hold时的横向偏移量
+  // 1、第一种情况，后角点和前保险杠的中点都没有超过车道线，自车返回原车道
+  // 2、自车状态在第一种和complete状态之间，自车骑线行驶
+
+  const double l_front_left = ego_corners.l_front_left;
+  const double l_front_right = ego_corners.l_front_right;
+  const double l_front_middle = 0.5 * (l_front_left + l_front_right);
+  const double l_rear_left = ego_corners.l_rear_left;
+  const double l_rear_right = ego_corners.l_rear_right;
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kEgoWidth = vehicle_param.width;
 
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    lc_hold_state_lat_offset = cur_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
+    if (std::abs(l_front_middle) > half_target_lane_width &&
+        std::abs(l_rear_left) > half_target_lane_width) {
+      lc_hold_state_lat_offset = fix_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
+    } else {
+      const double lat_error =
+          std::abs(target_ref_path->get_frenet_ego_state().l()) -
+          half_target_lane_width;
+      lc_hold_state_lat_offset =
+          lat_error + fix_ref_path->get_frenet_ego_state().l();
+    }
+
   } else {
-    lc_hold_state_lat_offset = -cur_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
+    if (std::abs(l_front_middle) > half_target_lane_width &&
+        std::abs(l_rear_right) > half_target_lane_width) {
+      lc_hold_state_lat_offset = -fix_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
+    } else {
+      const double lat_error =
+          std::abs(target_ref_path->get_frenet_ego_state().l()) -
+          half_target_lane_width;
+      lc_hold_state_lat_offset =
+          -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
+    }
   }
 
   return lc_hold_state_lat_offset;
