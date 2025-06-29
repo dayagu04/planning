@@ -1194,9 +1194,10 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // enter slot
   if (ego_info_under_slot.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     double extend_lenth = 0.0;
-    if (current_path_length < apa_param.GetParam().min_path_length) {
+    if (current_path_length <= apa_param.GetParam().min_path_length) {
       extend_lenth = std::max(
-          apa_param.GetParam().min_path_length - current_path_length, 0.1);
+          2.0 * apa_param.GetParam().min_path_length - current_path_length,
+          0.1);
 
     } else {
       const double x_diff =
