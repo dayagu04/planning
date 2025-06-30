@@ -221,7 +221,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   // no consider obs target pose, real-time update
   TargetPoseDecider target_pose_decider(
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+      apa_world_ptr_->GetColDetInterfacePtr());
 
   TargetPoseDeciderRequest tar_pose_decider_request(
       std::vector<double>{0.15}, 0.3,
@@ -511,7 +511,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
   if (update_slot_move_dist) {
     // 重规划时根据障碍物计算终点位置
     TargetPoseDecider target_pose_decider(
-        apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+        apa_world_ptr_->GetColDetInterfacePtr());
 
     double max_lat_buffer = 0.15;
     if (!frame_.is_replan_first &&
@@ -1165,14 +1165,13 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
   GJKColDetRequest gjl_col_det_request(true, false);
 
-  bool end_pos_has_obs_condition =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-          ->GetGJKCollisionDetectorPtr()
-          ->Update(
-              std::vector<geometry_lib::PathPoint>{
-                  ego_info_under_slot.target_pose},
-              0.0, 0.0, gjl_col_det_request)
-          .col_flag;
+  bool end_pos_has_obs_condition = apa_world_ptr_->GetColDetInterfacePtr()
+                                       ->GetGJKCollisionDetectorPtr()
+                                       ->Update(
+                                           std::vector<geometry_lib::PathPoint>{
+                                               ego_info_under_slot.target_pose},
+                                           0.0, 0.0, gjl_col_det_request)
+                                       .col_flag;
 
   ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
 
@@ -1189,7 +1188,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
         ego_info_under_slot.target_pose.heading};
 
     end_pos_has_obs_condition =
-        apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+        apa_world_ptr_->GetColDetInterfacePtr()
             ->GetGJKCollisionDetectorPtr()
             ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
                      gjl_col_det_request)
@@ -1329,7 +1328,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
           apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
 
       ColResult col_res =
-          apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+          apa_world_ptr_->GetColDetInterfacePtr()
               ->GetGeometryCollisionDetectorPtr()
               ->Update(path_seg_global,
                        apa_param.GetParam().car_lat_inflation_normal,
@@ -2132,7 +2131,7 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
   // 检查优化后的路径是否很奇怪
 
   // 检查是否碰撞
-  if (apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+  if (apa_world_ptr_->GetColDetInterfacePtr()
           ->GetGJKCollisionDetectorPtr()
           ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
           .col_flag) {
@@ -2464,7 +2463,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
   const UssObstacleAvoidance::RemainDistInfo uss_info =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+      apa_world_ptr_->GetColDetInterfacePtr()
           ->GetUssObsAvoidancePtr()
           ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available)

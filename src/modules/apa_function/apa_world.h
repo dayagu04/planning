@@ -84,8 +84,8 @@ class ApaWorld {
     return collision_detector_ptr_;
   }
 
-  const std::shared_ptr<CollisionDetectorInterface>&
-  GetCollisionDetectorInterfacePtr() const {
+  const std::shared_ptr<CollisionDetectorInterface>& GetColDetInterfacePtr()
+      const {
     return col_det_interface_ptr_;
   }
 

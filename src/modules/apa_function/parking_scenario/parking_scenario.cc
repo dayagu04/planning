@@ -389,12 +389,10 @@ const double ParkingScenario::CalRemainDistFromObs(
   }
 
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-          ->GetUssObsAvoidancePtr();
+      apa_world_ptr_->GetColDetInterfacePtr()->GetUssObsAvoidancePtr();
 
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-          ->GetGJKCollisionDetectorPtr();
+      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKCollisionDetectorPtr();
 
   uss_obstacle_avoider_ptr->Update();
 
@@ -628,7 +626,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   // task: update stop decision
   std::shared_ptr<ParkingStopDecider> stop_decider =
       std::make_shared<ParkingStopDecider>(
-          apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+          apa_world_ptr_->GetColDetInterfacePtr(),
           apa_world_ptr_->GetMeasureDataManagerPtr(),
           apa_world_ptr_->GetObstacleManagerPtr());
 
@@ -658,11 +656,11 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   // task: update speed limit decision
   std::shared_ptr<ParkSpeedLimitDecider> speed_limit_decider =
       std::make_shared<ParkSpeedLimitDecider>(
-          apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+          apa_world_ptr_->GetColDetInterfacePtr(),
           apa_world_ptr_->GetMeasureDataManagerPtr(),
           apa_world_ptr_->GetObstacleManagerPtr());
   speed_limit_decider->Execute(traj_stitcher->GetMutableStitchPath(),
-                              &speed_decisions);
+                               &speed_decisions);
 
   // task: generate dp speed
   std::shared_ptr<DpSpeedOptimizer> dp_speed_optimizer =
@@ -677,8 +675,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       std::make_shared<PiecewiseJerkSpeedQPOptimizer>();
   const SpeedData& dp_speed = dp_speed_optimizer->SpeedProfile();
   qp_speed_optimizer->Execute(stitch_init_speed,
-                             &speed_limit_decider->GetSpeedLimitProfile(),
-                             dp_speed, &speed_decisions);
+                              &speed_limit_decider->GetSpeedLimitProfile(),
+                              dp_speed, &speed_decisions);
 
   // task: generate jlt speed
   if (dp_speed_optimizer->GetExcuteState() != TaskExcuteState::SUCCESS ||
@@ -686,7 +684,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     std::shared_ptr<JerkLimitedTrajOptimizer> jlt_optimizer =
         std::make_shared<JerkLimitedTrajOptimizer>();
     jlt_optimizer->Execute(stitch_init_speed, ego_speed_point,
-                          traj_stitcher->GetConstStitchPath(), &speed_decisions);
+                           traj_stitcher->GetConstStitchPath(),
+                           &speed_decisions);
     traj_stitcher->CombineTrajBasedOnTime(jlt_optimizer->GetSpeedData());
   } else {
     traj_stitcher->CombineTrajBasedOnTime(qp_speed_optimizer->GetSpeedData());
