@@ -35,6 +35,7 @@
   "plan_time": 0.1,
 
   "comment_2": "car params",
+  "has_intelligent_fold_mirror": false,
   "force_fold_mirror": false,
   "front_overhanging": 0.922,
   "rear_overhanging": 1.085,

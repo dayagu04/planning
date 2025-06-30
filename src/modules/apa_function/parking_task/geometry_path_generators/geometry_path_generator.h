@@ -91,6 +91,8 @@ struct GeometryPathInput {
 
   bool is_simulation = false;
 
+  bool need_fold_mirror = false;
+
   Tlane tlane;
 };
 

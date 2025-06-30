@@ -237,7 +237,11 @@ class ParkingScenario {
       slot_jump_lat_err = 0.0;
       slot_jump_lon_err = 0.0;
       slot_jump_heading_err = 0.0;
+
+      need_fold_mirror = true;
     }
+
+    bool need_fold_mirror = false;
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
 
@@ -334,6 +338,7 @@ class ParkingScenario {
     PLAN_COUNT_EXCEED_LIMIT,
     DYNAMIC_PATH_NOT_SUPERIOR,
     NO_TARGET_POSE,
+    FOLD_MIRROR_FAILED,
   };
 
  public:

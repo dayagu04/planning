@@ -110,6 +110,14 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  if (apa_param.GetParam().has_intelligent_fold_mirror &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
+    return;
+  }
+
   PathPlan();
 
   // check finish
@@ -623,6 +631,12 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
   input.is_simulation = simu_param.is_simulation;
 
+  if (param.has_intelligent_fold_mirror &&
+      apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag()) {
+    input.need_fold_mirror = true;
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+  }
+
   if (input.is_simulation) {
     apa_param.SetPram().use_average_obs_dist =
         apa_world_ptr_->GetSimuParam().use_average_obs_dist;
@@ -841,13 +855,20 @@ void PerpendicularTailInScenario::PathPlan() {
         apa_world_ptr_->GetSimuParam().process_obs_method);
   }
 
-  const bool exist_target_pose = GenTlane();
+  bool exist_target_pose = GenTlane();
   if (!frame_.replan_flag) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(ParkingStatus::PARKING_RUNNING);
     return;
   }
   SetParkingStatus(ParkingStatus::PARKING_PLANNING);
+
+  if (param.has_intelligent_fold_mirror && !exist_target_pose &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
+      !apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag()) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+    exist_target_pose = GenTlane();
+  }
 
   if (!exist_target_pose) {
     frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
@@ -1492,6 +1513,15 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
                    real_time_brake_info_vec[0].lat_buffer)
+
+  if (apa_param.GetParam().has_intelligent_fold_mirror && frame_.is_last_path &&
+      safe_remain_dist < param.moderate_brake_lon_dist &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      !frame_.need_fold_mirror &&
+      std::fabs(ego_info_under_slot.terminal_err.pos.y()) < 0.068 &&
+      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 2.68) {
+    frame_.need_fold_mirror = true;
+  }
 
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
             << "  lon_buffer = " << lon_buffer

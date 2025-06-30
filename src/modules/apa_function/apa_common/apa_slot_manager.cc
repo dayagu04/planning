@@ -113,6 +113,9 @@ void ApaSlotManager::Update(
   // 泊入
   if (state_machine_ptr->IsParkInStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
+      if (apa_param.GetParam().has_intelligent_fold_mirror) {
+        col_det_interface_ptr_->Init(true);
+      }
       ParkingLotCruiseProcess();
       if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) !=
           0) {

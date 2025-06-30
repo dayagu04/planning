@@ -52,6 +52,8 @@ class CollisionDetectorInterface {
   void Init(const bool fold_mirror_flag);
   void Reset();
 
+  const bool GetFoldMirrorFlag() const { return fold_mirror_flag_; }
+
  private:
   std::shared_ptr<GeometryCollisionDetector> geometry_col_det_ptr_;
   std::shared_ptr<GJKCollisionDetector> gjk_col_det_ptr_;

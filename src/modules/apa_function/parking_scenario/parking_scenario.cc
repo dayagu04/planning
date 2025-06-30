@@ -225,6 +225,17 @@ void ParkingScenario::SetPlanningPath() {
     frame_.remain_dist_col_det = 2.68;
   }
 
+  // set fold mirror
+  if (frame_.need_fold_mirror) {
+    planning_output_.rear_view_mirror_signal_command.available = true;
+    planning_output_.rear_view_mirror_signal_command.rear_view_mirror_value =
+        iflyauto::RearViewMirrorSignalType::REAR_VIEW_MIRROR_FOLD;
+  } else {
+    planning_output_.rear_view_mirror_signal_command.available = false;
+    planning_output_.rear_view_mirror_signal_command.rear_view_mirror_value =
+        iflyauto::RearViewMirrorSignalType::REAR_VIEW_MIRROR_UNFOLD;
+  }
+
   auto publish_traj = &(planning_output_.trajectory);
   publish_traj->available = true;
   publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
@@ -394,7 +405,9 @@ const double ParkingScenario::CalRemainDistFromObs(
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
       apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
 
-  uss_obstacle_avoider_ptr->Update();
+  if (apa_param.GetParam().enable_corner_uss_process) {
+    uss_obstacle_avoider_ptr->Update();
+  }
 
   double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -

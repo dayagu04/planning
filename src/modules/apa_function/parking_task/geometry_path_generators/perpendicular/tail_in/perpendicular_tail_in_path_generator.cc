@@ -3886,8 +3886,21 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
       if (geometry_lib::IsSameGear(seg_gear, line_gear)) {
         geometry_lib::PathSegment line_seg(seg_gear, line);
 
+        if (ref_gear == geometry_lib::SEG_GEAR_REVERSE &&
+            (start_pos.x() + apa_param.GetParam().lon_dist_mirror_to_rear_axle >
+             input_.ego_info_under_slot.slot.GetProcessedCornerCoordLocal()
+                 .pt_01_mid.x()) &&
+            input_.need_fold_mirror) {
+          col_det_interface_ptr_->Init(true);
+        }
+
         PathColDetRes res =
             TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
+
+        if (input_.need_fold_mirror &&
+            col_det_interface_ptr_->GetFoldMirrorFlag()) {
+          col_det_interface_ptr_->Init(false);
+        }
 
         if (ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
           if (line_seg.Getlength() < kMinSingleGearPathLength + 1e-3) {

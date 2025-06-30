@@ -125,9 +125,18 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.max_replan_number_inside_slot, int,
       "max_replan_number_inside_slot");
+
   // car params
+  JSON_READ_VALUE(apa_param.SetPram().has_intelligent_fold_mirror, bool,
+                  "has_intelligent_fold_mirror");
+
   JSON_READ_VALUE(apa_param.SetPram().force_fold_mirror, bool,
                   "force_fold_mirror");
+
+  if (apa_param.GetParam().force_fold_mirror) {
+    apa_param.SetPram().has_intelligent_fold_mirror = false;
+  }
+
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
 

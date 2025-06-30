@@ -148,6 +148,7 @@ struct ApaParameters {
   double plan_time = 0.1;
 
   // car params
+  bool has_intelligent_fold_mirror = false;
   bool force_fold_mirror = false;
   double front_overhanging = 0.924;
   // back edge to rear axis
