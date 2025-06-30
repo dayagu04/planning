@@ -2974,7 +2974,7 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
   // 因此，需要保证自车在每个时刻对未来至少要判断一定时间是安全的才合理，
   // 考虑到驾驶员的反应时间约为0.2s和自车执行器的响应时间0.7s，目前该值取2.0s。
 
-  reach_line_time = std::max(reach_line_time, 2.0);
+  reach_line_time = std::min(std::max(reach_line_time, 2.0), kEgoReachBoundaryTime);
 
   return reach_line_time;
 }
