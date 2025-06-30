@@ -191,7 +191,7 @@ class LaneChangeStateMachineManager {
   bool IsFilterAgent(
       const planning_data::DynamicAgentNode* agent_node,
       const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent);
+      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent, const bool is_front_agent);
   void StoreObjDebugPredictionInfo(
       const planning_data::DynamicAgentNode* agent_node,
       const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,

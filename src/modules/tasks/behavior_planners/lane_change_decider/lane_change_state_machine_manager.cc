@@ -2569,7 +2569,7 @@ TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
   const planning_data::DynamicAgentNode *temp_agent_node = agent_node;
 
   while (IsFilterAgent(temp_agent_node, target_lane_coor,
-                       &agent_prediction_trajs, is_ego_lane_agent)) {
+                       &agent_prediction_trajs, is_ego_lane_agent, is_front_agent)) {
     if (!agent_prediction_trajs.empty()) {
       agent_prediction_trajs.clear();
     }
@@ -2777,7 +2777,7 @@ bool LaneChangeStateMachineManager::CheckIfSafetyForPredictionTrajs(
 bool LaneChangeStateMachineManager::IsFilterAgent(
     const planning_data::DynamicAgentNode *agent_node,
     const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-    TrajectoryPoints *agent_prediction_trajs, const bool is_ego_lane_agent) {
+    TrajectoryPoints *agent_prediction_trajs, const bool is_ego_lane_agent, const bool is_front_agent) {
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
@@ -2786,6 +2786,8 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
   if (tar_lane == nullptr) {
     return false;
   }
+
+  const double ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
 
   const auto &agent_trajs = agent_node->node_trajectories();
   // 获取agent的预测轨迹点,目前只有一条预测轨迹点
@@ -2819,6 +2821,24 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
 
   // 对于横向位置只有半个车宽在自车道内的，根据预测信息判断是否会向本车道行驶
   // 如果该障碍物只有半个车宽在自车道内，且不向本车道行驶则过滤该障碍物
+  // 还需要考虑纵向的情况
+
+  const double default_lon_fix_time_dis = 1.0;
+
+  const double real_time_dis = (lc_safety_check_time_ / kEgoReachBoundaryTime) * default_lon_fix_time_dis;
+
+  const double half_agent_width = agent_node->node_width() * 0.5;
+  const double half_agent_length = agent_node->node_length() * 0.5;
+
+  const double relative_dis =
+      is_front_agent ? agent_node->node_back_edge_to_ego_front_edge_distance()
+                     : agent_node->node_front_edge_to_ego_back_edge_distance();
+
+  const double relative_v = is_front_agent
+                                ? ego_v - agent_prediction_trajs->at(0).v
+                                : agent_prediction_trajs->at(0).v - ego_v;
+
+
   if (is_ego_lane_agent) {
     const auto &cur_lane = virtual_lane_manager->get_current_lane();
     const auto &reference_path_manager =
@@ -2852,9 +2872,11 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
         cur_lane->width_by_s(obj_first_frenet_point.x);
     const double lat_consider_dis = cur_lane_width * 0.5;
 
-    if (std::abs(obj_first_frenet_point.y) > lat_consider_dis &&
-        std::abs(obj_back_frenet_point.y) > lat_consider_dis &&
-        obj_first_frenet_point.y * obj_back_frenet_point.y > 0) {
+    bool is_lat_safe = std::abs(obj_first_frenet_point.y) > lat_consider_dis &&
+                       std::abs(obj_back_frenet_point.y) > lat_consider_dis &&
+                       obj_first_frenet_point.y * obj_back_frenet_point.y > 0;
+
+    if (is_lat_safe) {
       return true;
     }
   } else {
@@ -2862,10 +2884,17 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
         tar_lane->width_by_s(agent_prediction_trajs->at(0).s);
     const double lat_consider_dis = tar_lane_width * 0.5;
 
-    if (std::abs(agent_prediction_trajs->at(0).l) > lat_consider_dis &&
-        std::abs(agent_prediction_trajs->back().l) > lat_consider_dis &&
-        agent_prediction_trajs->at(0).l * agent_prediction_trajs->back().l >
-            0) {
+    bool is_lat_safe = std::abs(agent_prediction_trajs->at(0).l) > lat_consider_dis &&
+                       std::abs(agent_prediction_trajs->back().l) > lat_consider_dis &&
+                       agent_prediction_trajs->at(0).l * agent_prediction_trajs->back().l > 0;
+
+    const double lon_safety_dis =
+        is_front_agent ? real_time_dis * ego_v
+                       : agent_prediction_trajs->at(0).v * real_time_dis;
+
+    bool is_lon_safe = lon_safety_dis < relative_dis;
+
+    if (is_lat_safe && is_lon_safe) {
       return true;
     }
   }
