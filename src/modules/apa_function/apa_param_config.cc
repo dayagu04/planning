@@ -502,9 +502,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_normal, double,
                   "car_lat_inflation_normal");
 
-  JSON_READ_VALUE(apa_param.SetPram().force_use_little_buffer_move_slot, bool,
-                  "force_use_little_buffer_move_slot");
-
   JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
                   "believe_in_fus_obs");
 
@@ -829,9 +826,6 @@ void SyncParkingParameters(const bool is_simulation) {
                   "use_geometry_path_head_out");
 
   // slot managent params
-  JSON_READ_VALUE(apa_param.SetPram().prohibit_move_slot, bool,
-                  "prohibit_move_slot");
-
   JSON_READ_VALUE(apa_param.SetPram().move_slot_with_little_buffer, bool,
                   "move_slot_with_little_buffer");
 

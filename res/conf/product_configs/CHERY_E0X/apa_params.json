@@ -311,7 +311,6 @@
   "is_parallel_advanced_method": true,
 
   "comment_16": "slot managent params",
-  "prohibit_move_slot": false,
   "believe_obs_ego_area": 3.068,
   "move_slot_with_little_buffer": true,
   "slot_update_in_or_out_occupied_ratio": 0.088,

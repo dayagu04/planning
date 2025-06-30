@@ -474,21 +474,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
+  const ApaParameters& param = apa_param.GetParam();
+
   const geometry_lib::PathPoint& ego_pose = ego_info_under_slot.cur_pose;
 
-  bool prohibit_move_slot = false;
-  if (apa_param.GetParam().prohibit_move_slot &&
-      !CheckEgoPoseInBelieveObsArea(
-          0.2, apa_param.GetParam().believe_obs_ego_area, 60)) {
-    ILOG_INFO << "prohibit move slot, and if have obs, move it";
-    prohibit_move_slot = true;
-    frame_.process_obs_method = ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS;
-  }
-
   bool move_slot_with_little_buffer = false;
-  if (apa_param.GetParam().move_slot_with_little_buffer &&
-      !CheckEgoPoseInBelieveObsArea(
-          0.2, apa_param.GetParam().believe_obs_ego_area, 60)) {
+  if (param.move_slot_with_little_buffer &&
+      !CheckEgoPoseInBelieveObsArea(0.2, param.believe_obs_ego_area, 60)) {
     ILOG_INFO << "move_slot_with_little_buffer";
     move_slot_with_little_buffer = true;
   }
@@ -512,7 +504,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
   }
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
-            << "  can not move slot = " << prohibit_move_slot
             << "  update_slot_move_dist = " << update_slot_move_dist
             << "  process_obs_method = "
             << static_cast<int>(frame_.process_obs_method);
@@ -537,8 +528,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
          lat_buffer -= step) {
       lat_buffer_vec.emplace_back(lat_buffer);
     }
-    if (apa_param.GetParam().force_use_little_buffer_move_slot ||
-        prohibit_move_slot || move_slot_with_little_buffer) {
+    if (move_slot_with_little_buffer) {
       ILOG_INFO << "force use little lat safe buffer";
       lat_buffer_vec.clear();
       for (int i = 3; i >= 0; --i) {
@@ -563,7 +553,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
     ego_info_under_slot.target_pose = res.target_pose_local;
 
-    if (frame_.replan_reason != ReplanReason::DYNAMIC && !prohibit_move_slot &&
+    if (frame_.replan_reason != ReplanReason::DYNAMIC &&
         !move_slot_with_little_buffer) {
       ego_info_under_slot.safe_lat_buffer = res.safe_lat_buffer;
     }
