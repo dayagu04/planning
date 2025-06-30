@@ -1166,7 +1166,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   GJKColDetRequest gjl_col_det_request(true, false);
 
   bool end_pos_has_obs_condition = apa_world_ptr_->GetColDetInterfacePtr()
-                                       ->GetGJKCollisionDetectorPtr()
+                                       ->GetGJKColDetPtr()
                                        ->Update(
                                            std::vector<geometry_lib::PathPoint>{
                                                ego_info_under_slot.target_pose},
@@ -1189,7 +1189,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
     end_pos_has_obs_condition =
         apa_world_ptr_->GetColDetInterfacePtr()
-            ->GetGJKCollisionDetectorPtr()
+            ->GetGJKColDetPtr()
             ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
                      gjl_col_det_request)
             .col_flag;
@@ -1329,7 +1329,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
       ColResult col_res =
           apa_world_ptr_->GetColDetInterfacePtr()
-              ->GetGeometryCollisionDetectorPtr()
+              ->GetGeometryColDetPtr()
               ->Update(path_seg_global,
                        apa_param.GetParam().car_lat_inflation_normal,
                        apa_param.GetParam().col_obs_safe_dist_normal);
@@ -2132,7 +2132,7 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
 
   // 检查是否碰撞
   if (apa_world_ptr_->GetColDetInterfacePtr()
-          ->GetGJKCollisionDetectorPtr()
+          ->GetGJKColDetPtr()
           ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
           .col_flag) {
     ILOG_INFO << "the optimal path is col";

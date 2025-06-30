@@ -130,7 +130,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   // 检查终点位置是否碰撞
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
-      col_det_interface_ptr_->GetGJKCollisionDetectorPtr();
+      col_det_interface_ptr_->GetGJKColDetPtr();
 
   // 生成纵向移动距离数组
   std::vector<double> lon_dist_vec;

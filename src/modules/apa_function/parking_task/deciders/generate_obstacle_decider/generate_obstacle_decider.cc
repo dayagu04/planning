@@ -62,8 +62,8 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
   if (request_.process_obs_method ==
       ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS) {
     del_obs_bound =
-        col_det_interface_ptr_->GetGJKCollisionDetectorPtr()
-            ->CalCarRectangleBound(ego_info_under_slot_.origin_target_pose);
+        col_det_interface_ptr_->GetGJKColDetPtr()->CalCarRectangleBound(
+            ego_info_under_slot_.origin_target_pose);
 
     del_obs_bound.min_y -= 0.12;
     del_obs_bound.max_y += 0.12;
@@ -104,7 +104,7 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
       // if obs is in expand car, lose it
       if (!param.believe_in_fus_obs &&
-          col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsObsInCar(
+          col_det_interface_ptr_->GetGJKColDetPtr()->IsObsInCar(
               ego_pose, param.car_lat_inflation_normal + 0.0168, obs)) {
         continue;
       }
@@ -137,8 +137,8 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
   std::vector<Eigen::Vector2d> tlane_obs_vec;
   tlane_obs_vec.reserve(tlane_obstacle_vec.size());
   for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
-    if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsObsInCar(
-            ego_pose, 0.3, obs_pos)) {
+    if (col_det_interface_ptr_->GetGJKColDetPtr()->IsObsInCar(ego_pose, 0.3,
+                                                              obs_pos)) {
       continue;
     }
     tlane_obs_vec.emplace_back(obs_pos);
@@ -166,9 +166,9 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
   bound.PrintInfo();
 
-  col_det_interface_ptr_->GetEDTCollisionDetectorPtr()->PreProcess(bound);
+  col_det_interface_ptr_->GetEDTColDetPtr()->PreProcess(bound);
 
-  col_det_interface_ptr_->GetEDTCollisionDetectorPtr()->UpdateObsClearZone(
+  col_det_interface_ptr_->GetEDTColDetPtr()->UpdateObsClearZone(
       std::vector<Eigen::Vector2d>{ego_pose.pos,
                                    ego_info_under_slot_.target_pose.pos});
 
@@ -207,8 +207,8 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
 
   // area_length and area length can be dynamic by ego pose
   geometry_lib::RectangleBound bound =
-      col_det_interface_ptr_->GetGJKCollisionDetectorPtr()
-          ->CalCarRectangleBound(ego_info_under_slot_.cur_pose);
+      col_det_interface_ptr_->GetGJKColDetPtr()->CalCarRectangleBound(
+          ego_info_under_slot_.cur_pose);
 
   virtual_tlane_.channel_width =
       std::max({virtual_tlane_.channel_width, param.channel_width,

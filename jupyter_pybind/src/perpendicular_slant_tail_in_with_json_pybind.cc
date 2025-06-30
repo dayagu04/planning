@@ -273,9 +273,7 @@ std::vector<Eigen::Vector2d> GetObsVec() {
 
 std::vector<std::vector<Eigen::Vector2d>> GetObsClearZone() {
   const std::vector<cdl::AABB>& box_vec =
-      g_apa_world_ptr->GetColDetInterfacePtr()
-          ->GetEDTCollisionDetectorPtr()
-          ->GetBoxVec();
+      g_apa_world_ptr->GetColDetInterfacePtr()->GetEDTColDetPtr()->GetBoxVec();
   const geometry_lib::LocalToGlobalTf& l2g_tf =
       g_apa_world_ptr->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
   std::vector<std::vector<Eigen::Vector2d>> rectangle_vec;

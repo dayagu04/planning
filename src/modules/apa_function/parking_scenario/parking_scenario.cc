@@ -392,7 +392,7 @@ const double ParkingScenario::CalRemainDistFromObs(
       apa_world_ptr_->GetColDetInterfacePtr()->GetUssObsAvoidancePtr();
 
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
-      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKCollisionDetectorPtr();
+      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
 
   uss_obstacle_avoider_ptr->Update();
 

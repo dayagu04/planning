@@ -351,7 +351,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   Polygon2D polygon;
   polygon.FillTangentCircleParams(
       slot.GetCustomSlotPolygon(2.68, -2.0, -0.4, -0.4, false));
-  if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+  if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false))) {
     ILOG_INFO << "slot min parking area is occupied";
     return SlotReleaseVoterType::CLEAR;
@@ -424,7 +424,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
       pM01 + slot.slot_width_ * t - 2.0 * n, pM01 - 2.0 * n});
 
   const bool left_empty =
-      !col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+      !col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false));
 
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
@@ -432,7 +432,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
       pM01 - slot.slot_width_ * t + 2.0 * n});
 
   const bool right_empty =
-      !col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+      !col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false));
 
   if (left_empty && right_empty) {
@@ -444,7 +444,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
       pt_0, pt_0 + channel_width * n, pt_1 + channel_width * n, pt_1});
 
-  if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()->IsPolygonCollision(
+  if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false))) {
     ILOG_INFO << "passage is occupied";
     return SlotReleaseVoterType::CLEAR;

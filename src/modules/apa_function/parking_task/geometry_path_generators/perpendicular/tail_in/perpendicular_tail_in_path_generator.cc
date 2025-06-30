@@ -79,7 +79,7 @@ const bool PerpendicularTailInPathGenerator::Update() {
   ILOG_INFO << "--------perpendicular path planner --------";
 
   // check start ego pose if collision
-  if (col_det_interface_ptr_->GetGJKCollisionDetectorPtr()
+  if (col_det_interface_ptr_->GetGJKColDetPtr()
           ->Update(
               std::vector<geometry_lib::PathPoint>{
                   input_.ego_info_under_slot.cur_pose},
@@ -744,7 +744,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
               geometry_lib::GenHeadingVec(pose.heading);
           for (uint8_t k = 0; k < count; ++k) {
             temp_pose.pos = pose.pos + ds * k * heading_vec;
-            if (!col_det_interface_ptr_->GetEDTCollisionDetectorPtr()
+            if (!col_det_interface_ptr_->GetEDTColDetPtr()
                      ->Update(std::vector<geometry_lib::PathPoint>{temp_pose},
                               calc_params_.strict_car_lat_inflation, 0.0)
                      .col_flag) {
@@ -1548,14 +1548,12 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
   path_seg.lat_buffer = lat_inflation;
   ColResult res;
 
-  const auto& edt_col_det_ptr =
-      col_det_interface_ptr_->GetEDTCollisionDetectorPtr();
+  const auto& edt_col_det_ptr = col_det_interface_ptr_->GetEDTColDetPtr();
 
-  const auto& gjk_col_det_ptr =
-      col_det_interface_ptr_->GetGJKCollisionDetectorPtr();
+  const auto& gjk_col_det_ptr = col_det_interface_ptr_->GetGJKColDetPtr();
 
   const auto& geometry_col_det_ptr =
-      col_det_interface_ptr_->GetGeometryCollisionDetectorPtr();
+      col_det_interface_ptr_->GetGeometryColDetPtr();
 
   bool init_pose_near_obs = false;
   if (edt_col_det_ptr
@@ -4087,10 +4085,9 @@ PerpendicularTailInPathGenerator::GetPoseTypeRelativeToSlot(
   const double slot_out_x = input_.ego_info_under_slot.slot.slot_length_ + 1.08;
   const double slot_in_x = input_.ego_info_under_slot.slot.slot_length_ - 1.6;
 
-  const double car_min_x =
-      col_det_interface_ptr_->GetGeometryCollisionDetectorPtr()
-          ->CalCarRectangleBound(pose)
-          .min_x;
+  const double car_min_x = col_det_interface_ptr_->GetGeometryColDetPtr()
+                               ->CalCarRectangleBound(pose)
+                               .min_x;
 
   if (car_min_x > slot_out_x) {
     return PoseTypeRelativeToSlot::OUT_SLOT;

@@ -17,14 +17,12 @@ CollisionDetectorInterface::CollisionDetectorInterface(
     const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr) {
   obs_manager_ptr_ = obs_manager_ptr;
 
-  geometry_collision_detector_ptr_ =
+  geometry_col_det_ptr_ =
       std::make_shared<GeometryCollisionDetector>(obs_manager_ptr);
 
-  gjk_collision_detector_ptr_ =
-      std::make_shared<GJKCollisionDetector>(obs_manager_ptr);
+  gjk_col_det_ptr_ = std::make_shared<GJKCollisionDetector>(obs_manager_ptr);
 
-  edt_collision_detector_ptr_ =
-      std::make_shared<EDTCollisionDetector>(obs_manager_ptr);
+  edt_col_det_ptr_ = std::make_shared<EDTCollisionDetector>(obs_manager_ptr);
 
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>(
       obs_manager_ptr, measure_data_ptr, predict_path_ptr);
@@ -39,17 +37,17 @@ void CollisionDetectorInterface::Init(const bool fold_mirror_flag) {
     return;
   }
   fold_mirror_flag_ = fold_mirror_flag;
-  geometry_collision_detector_ptr_->Init(fold_mirror_flag_);
-  gjk_collision_detector_ptr_->Init(fold_mirror_flag_);
-  edt_collision_detector_ptr_->Init(fold_mirror_flag_);
+  geometry_col_det_ptr_->Init(fold_mirror_flag_);
+  gjk_col_det_ptr_->Init(fold_mirror_flag_);
+  edt_col_det_ptr_->Init(fold_mirror_flag_);
   uss_obstacle_avoider_ptr_->Init();
   init_flag_ = true;
 }
 
 void CollisionDetectorInterface::Reset() {
-  geometry_collision_detector_ptr_->Reset();
-  gjk_collision_detector_ptr_->Reset();
-  edt_collision_detector_ptr_->Reset();
+  geometry_col_det_ptr_->Reset();
+  gjk_col_det_ptr_->Reset();
+  edt_col_det_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   init_flag_ = false;
   fold_mirror_flag_ = false;
