@@ -177,8 +177,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   PerpendicularTailInPathGenerator() {}
   PerpendicularTailInPathGenerator(
       const std::shared_ptr<CollisionDetectorInterface>
-          &collision_detector_interface_ptr) {
-    collision_detector_interface_ptr_ = collision_detector_interface_ptr;
+          &col_det_interface_ptr) {
+    col_det_interface_ptr_ = col_det_interface_ptr;
   }
   ~PerpendicularTailInPathGenerator() {}
 
@@ -189,8 +189,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   // for simulation
   const bool ItervativeUpdatePb(
       const GeometryPathInput &input,
-      const std::shared_ptr<CollisionDetectorInterface>
-          &collision_detector_interface_ptr);
+      const std::shared_ptr<CollisionDetectorInterface> &col_det_interface_ptr);
 
   const PlannerParams &GetCalcParams();
 

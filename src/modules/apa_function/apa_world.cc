@@ -32,13 +32,11 @@ void ApaWorld::Init() {
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
   lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
 
-  collision_detector_interface_ptr_ =
-      std::make_shared<CollisionDetectorInterface>(
-          obstacle_manager_ptr_, measure_data_ptr_, predict_path_ptr_);
+  col_det_interface_ptr_ = std::make_shared<CollisionDetectorInterface>(
+      obstacle_manager_ptr_, measure_data_ptr_, predict_path_ptr_);
 
   parking_task_interface_ptr_ = std::make_shared<ParkingTaskInterface>(
-      obstacle_manager_ptr_, collision_detector_interface_ptr_,
-      measure_data_ptr_);
+      obstacle_manager_ptr_, col_det_interface_ptr_, measure_data_ptr_);
 }
 
 void ApaWorld::Reset() {
@@ -50,7 +48,7 @@ void ApaWorld::Reset() {
   retired_slot_manager_ptr_->Reset();
   collision_detector_ptr_->Reset();
   lateral_path_optimizer_ptr_->Reset();
-  collision_detector_interface_ptr_->Reset();
+  col_det_interface_ptr_->Reset();
   parking_task_interface_ptr_->Reset();
   local_view_ptr_ = nullptr;
 }
@@ -71,12 +69,11 @@ const bool ApaWorld::Update() {
 
   obstacle_manager_ptr_->Update(local_view_ptr_);
 
-  collision_detector_interface_ptr_->Init(
-      measure_data_ptr_->GetFoldMirrorFlag());
+  col_det_interface_ptr_->Init(measure_data_ptr_->GetFoldMirrorFlag());
 
   slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,
                             measure_data_ptr_, obstacle_manager_ptr_,
-                            collision_detector_interface_ptr_);
+                            col_det_interface_ptr_);
 
   return true;
 }

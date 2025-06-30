@@ -86,7 +86,7 @@ class ApaWorld {
 
   const std::shared_ptr<CollisionDetectorInterface>&
   GetCollisionDetectorInterfacePtr() const {
-    return collision_detector_interface_ptr_;
+    return col_det_interface_ptr_;
   }
 
   const std::shared_ptr<ParkingTaskInterface>& GetParkingTaskInterfacePtr()
@@ -135,7 +135,7 @@ class ApaWorld {
   std::shared_ptr<SlotManager> retired_slot_manager_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
-  std::shared_ptr<CollisionDetectorInterface> collision_detector_interface_ptr_;
+  std::shared_ptr<CollisionDetectorInterface> col_det_interface_ptr_;
   std::shared_ptr<ParkingTaskInterface> parking_task_interface_ptr_;
 
   SimulationParam simu_param_;
