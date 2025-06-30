@@ -16,3 +16,4 @@ target/*.tar
 bags/
 src/modules/version.h
 build.sh
+.vscode/
