@@ -658,18 +658,18 @@ void LongitudinalDecisionDecider::
   // 在路口中不启用
   planning::common::IntersectionState intersection_state =
       virtual_lane_manager->GetIntersectionState();
-  if (intersection_state == planning::common::IN_INTERSECTION) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "in intersection, return\n");
-    JSON_DEBUG_VALUE(
-        "lon_decision_to_invade_ego_motion_sim_path",
-        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
-    int default_value = -1;
-    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
-                     default_value)
-    return;
-  }
+  // if (intersection_state == planning::common::IN_INTERSECTION) {
+  //   LOG_DEBUG(
+  //       "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+  //       "in intersection, return\n");
+  //   JSON_DEBUG_VALUE(
+  //       "lon_decision_to_invade_ego_motion_sim_path",
+  //       has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+  //   int default_value = -1;
+  //   JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+  //                    default_value)
+  //   return;
+  // }
   if (dynamic_world == nullptr) {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
