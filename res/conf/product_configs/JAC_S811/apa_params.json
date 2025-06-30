@@ -388,9 +388,10 @@
   "head_in_slot_virtual_wall_x_offset" : 4.0,
   "head_in_slot_virtual_wall_y_offset" : 1.8,
 
-  "use_uss_pt_clound": false,
-  "use_uss_pt_for_path": false,
+  "comment_19": "uss pt params",
+  "use_uss_pt_clound": true,
+  "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
-  "use_uss_pt_for_slot_release": false,
+  "use_uss_pt_for_slot_release": true,
   "point_max_dist" : 0.8
 }
