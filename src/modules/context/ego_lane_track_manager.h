@@ -216,6 +216,8 @@ class EgoLaneTrackManger {
   bool ego_in_split_region_ = false;
   std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
+  double enable_use_lane_mark_valid_timestamp_ = 0.0;
+  double split_select_count_ = 1500.0;
 };
 
 }  // namespace planning
