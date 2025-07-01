@@ -124,6 +124,8 @@ class StGraphInput {
 
   bool is_lane_keeping() const;
 
+  bool is_in_lane_borrow_status() const { return is_in_lane_borrow_status_; }
+
   const SecondOrderTimeOptimalTrajectory* max_acceleration_curve() const;
 
   bool enable_backward_extend_st_boundary() const;
@@ -158,6 +160,7 @@ class StGraphInput {
   //   std::shared_ptr<VirtualLane> ego_lane_;
   VehicleParam vehicle_param_;
   bool is_lane_keeping_;
+  bool is_in_lane_borrow_status_ = false;
   std::shared_ptr<agent::AgentManager> mutable_agent_manager_;
   std::shared_ptr<SecondOrderTimeOptimalTrajectory> max_acceleration_curve_ =
       nullptr;

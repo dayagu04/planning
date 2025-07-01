@@ -303,6 +303,8 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_virtual_lane_manager =
       st_graph_input_->ptr_virtual_lane_manager();
   const bool is_lane_keeping = st_graph_input_->is_lane_keeping();
+  const bool is_in_lane_borrow_status =
+      st_graph_input_->is_in_lane_borrow_status();
   const auto ptr_ego_lane = st_graph_input_->ego_lane();
   const int32_t reserve_num = st_graph_input_->reserve_num();
   const auto planned_kd_path = st_graph_input_->processed_path();
@@ -507,6 +509,10 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
 
     if (!is_lane_keeping) {
+      break;
+    }
+
+    if (is_in_lane_borrow_status) {
       break;
     }
 

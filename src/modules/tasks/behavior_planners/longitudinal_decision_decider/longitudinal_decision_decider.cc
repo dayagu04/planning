@@ -389,11 +389,24 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
       "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
   if (lane_change_decider_output.curr_state !=
       StateMachineLaneChangeStatus::kLaneKeeping) {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
         "Not in lane keeping, return\n");
+    JSON_DEBUG_VALUE("lon_decision_to_invade",
+                     has_lon_decision_to_invade_agents_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id", default_value)
+    return;
+  }
+
+  if (lane_borrow_output.is_in_lane_borrow_status) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "In lane borrow status, return\n");
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -417,8 +430,6 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
                                          .motion_planner_output()
                                          .lateral_path_coord->Length();
   const auto &agent_manager = environmental_model.get_agent_manager();
-  const auto &lane_borrow_output =
-      session_->planning_context().lane_borrow_decider_output();
   const auto &blocked_obs_id_vec = lane_borrow_output.blocked_obs_id;
   const std::set<int32_t> lane_borrow_blocked_obs_id_set(
       blocked_obs_id_vec.begin(), blocked_obs_id_vec.end());
@@ -576,11 +587,26 @@ void LongitudinalDecisionDecider::
       "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
   if (lane_change_decider_output.curr_state !=
       StateMachineLaneChangeStatus::kLaneKeeping) {
     LOG_DEBUG(
         "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
         "Not in lane keeping, return\n");
+    JSON_DEBUG_VALUE(
+        "lon_decision_to_invade_ego_motion_sim_path",
+        has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
+    int default_value = -1;
+    JSON_DEBUG_VALUE("invade_neighbor_front_agent_id_ego_motion_sim_path",
+                     default_value)
+    return;
+  }
+
+  if (lane_borrow_output.is_in_lane_borrow_status) {
+    LOG_DEBUG(
+        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
+        "In lane borrow status, return\n");
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -606,8 +632,6 @@ void LongitudinalDecisionDecider::
                                          .motion_planner_output()
                                          .lateral_path_coord->Length();
   const auto &agent_manager = environmental_model.get_agent_manager();
-  const auto &lane_borrow_output =
-      session_->planning_context().lane_borrow_decider_output();
   const auto &blocked_obs_id_vec = lane_borrow_output.blocked_obs_id;
   const std::set<int32_t> lane_borrow_blocked_obs_id_set(
       blocked_obs_id_vec.begin(), blocked_obs_id_vec.end());
