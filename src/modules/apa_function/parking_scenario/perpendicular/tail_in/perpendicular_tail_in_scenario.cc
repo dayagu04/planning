@@ -110,14 +110,6 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  if (apa_param.GetParam().has_intelligent_fold_mirror &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
-    return;
-  }
-
   PathPlan();
 
   // check finish
@@ -132,6 +124,14 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    return;
+  }
+
+  if (apa_param.GetParam().has_intelligent_fold_mirror &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
     return;
   }
 

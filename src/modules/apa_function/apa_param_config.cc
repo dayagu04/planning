@@ -127,6 +127,24 @@ void SyncParkingParameters(const bool is_simulation) {
       "max_replan_number_inside_slot");
 
   // car params
+  std::string car_type_string;
+  int car_type_int = 0;
+  JSON_READ_VALUE(car_type_string, std::string, "car_type");
+  if (car_type_string == "jac_s811") {
+    car_type_int = 0;
+  } else if (car_type_string == "cherry_t26") {
+    car_type_int = 1;
+  } else if (car_type_string == "cherry_e0x") {
+    car_type_int = 2;
+  } else if (car_type_string == "cherry_m32t") {
+    car_type_int = 3;
+  } else {
+    car_type_int = 0;
+  }
+  JSON_DEBUG_VALUE("car_type", car_type_int);
+  ILOG_INFO << "car_type_string = " << car_type_string
+            << "  car_type = " << car_type_int;
+
   JSON_READ_VALUE(apa_param.SetPram().has_intelligent_fold_mirror, bool,
                   "has_intelligent_fold_mirror");
 
