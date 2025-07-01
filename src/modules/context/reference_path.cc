@@ -73,6 +73,10 @@ void ReferencePath::update_refpath_points(
     coord_path_points.emplace_back(pt);
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
+  if (coord_path_points.size() < 2) {
+    LOG_ERROR("update_refpath_points: coord points size < 2");
+    return;
+  }
   frenet_coord_ =
       std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
 
