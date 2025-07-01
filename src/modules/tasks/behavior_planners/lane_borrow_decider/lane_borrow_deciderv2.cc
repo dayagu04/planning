@@ -111,6 +111,26 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   lane_change_state_ = session_->planning_context()
                            .lane_change_decider_output()
                            .coarse_planning_info.target_state;
+  const auto fix_lane_virtual_id = session_->planning_context()
+                                          .lane_change_decider_output()
+                                          .fix_lane_virtual_id;
+  const auto& target_lane_nodes =
+      session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(fix_lane_virtual_id);
+  double front_s = 150.0;
+  front_id_ = session_->environmental_model().get_dynamic_world()->ego_front_node_id();
+
+  for (const auto* target_lane_node : target_lane_nodes) {
+    double agent_s = target_lane_node->node_s();
+    if(agent_s < ego_sl_state_.s() + 1.0){
+      continue;
+    }
+    if(agent_s < front_s){
+      front_id_ =  target_lane_node->node_agent_id();
+      front_s = agent_s;
+    }
+  }
+
+
   if (lane_change_state_ != kLaneKeeping) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = LANE_CHANGE_STATE;
     LOG_ERROR("It has lane change state!");
@@ -125,6 +145,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
 
   distance_to_stop_line_ = virtual_lane_manager->GetEgoDistanceToStopline();
   distance_to_cross_walk_ = virtual_lane_manager->GetEgoDistanceToCrosswalk();
+
 
   return true;
 }
@@ -276,6 +297,7 @@ void LaneBorrowDecider::UpdateToDP() {
     static_blocked_obj_id_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
+    lane_borrow_decider_output_.failed_obs_id = 0;
     // if(lane_borrow_decider_output_.lane_borrow_failed_reason !=
     // OBSERVE_TIME_CHECK_FAILED){
     //   ClearLaneBorrowStatus();
@@ -572,6 +594,12 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
 
   if (lane_borrow_status_ != kLaneBorrowCrossing) {
     if (!CheckBackWardObs()) {
+      return false;
+    }
+  }
+  if(lane_borrow_status_ == kNoLaneBorrow){
+    if(!CheckLeadObs())
+    {
       return false;
     }
   }
@@ -1082,13 +1110,18 @@ bool LaneBorrowDecider::ObstacleDecision() {
 }
 BorrowDirection LaneBorrowDecider::GetBypassDirection(
     const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id) {
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  const auto& agent = agent_mgr->GetAgent(obs_id);
+  bool is_static = agent->speed() < 2.0 || agent->is_static();
+  double max_central_offset =  is_static ? kMaxCentricOffset : 0.95;
+
   const double obs_center_l =
       0.5 * (frenet_obstacle_sl.l_start + frenet_obstacle_sl.l_end);
   double scale = 1.0;
   if (lane_borrow_status_ != kNoLaneBorrow) {
     scale = 0.5;
   }
-  if (std::fabs(obs_center_l) <= scale * kMaxCentricOffset) {
+  if (std::fabs(obs_center_l) <= scale * max_central_offset) {
     if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {
       obs_direction_map_[obs_id].second += 1;
       return obs_direction_map_[obs_id].first;
@@ -1096,7 +1129,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
       obs_direction_map_[obs_id].first = NO_BORROW;
       return NO_BORROW;
     }
-  } else if (obs_center_l < -scale * kMaxCentricOffset) {
+  } else if (obs_center_l < -scale * max_central_offset) {
     obs_direction_map_[obs_id].first = LEFT_BORROW;
     obs_direction_map_[obs_id].second = 0;
     return LEFT_BORROW;
@@ -1460,6 +1493,16 @@ bool LaneBorrowDecider::IfChangeTargetLane() {
   }
 }
 // v2
+bool LaneBorrowDecider::CheckLeadObs(){
+
+  if(static_blocked_obj_id_vec_[0]== front_id_){
+    return true;
+  }else{
+    lane_borrow_decider_output_.lane_borrow_failed_reason = FRONT_OBS_NOT_BORROWING;
+    lane_borrow_decider_output_.failed_obs_id = front_id_;
+    return false;
+  }
+}
 void LaneBorrowDecider::LogDebugInfo() {
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
@@ -1515,6 +1558,8 @@ void LaneBorrowDecider::LogDebugInfo() {
   lane_borrow_pb_info->mutable_block_obs_area()->set_obs_end_s(obs_end_s_);
   lane_borrow_pb_info->set_safe_left_borrow(left_borrow_);
   lane_borrow_pb_info->set_safe_right_borrow(right_borrow_);
+  lane_borrow_pb_info->set_front_id(front_id_);
+  lane_borrow_pb_info->set_failed_obs_id(lane_borrow_decider_output_.failed_obs_id);
 
   lane_borrow_pb_info->set_lane_borrow_decider_status(
       static_cast<int>(lane_borrow_status_));

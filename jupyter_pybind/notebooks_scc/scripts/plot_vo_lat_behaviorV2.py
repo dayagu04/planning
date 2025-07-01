@@ -12,7 +12,7 @@ from bokeh.resources import INLINE
 from google.protobuf.descriptor import FieldDescriptor
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250625/20250625-16-31-36/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-25-16-31-36_no_camera.bag.1750930007.close-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250701/20250701-19-08-27/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-01-19-08-27_no_camera.bag.1751523395.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -25,7 +25,7 @@ global_var.set_value('car_type', 'CHERY_E0X')
 global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
-fig1.height = 900
+fig1.height = 1200
 # fig1.width = 700
 
 plan_debug_msg_idx = 0
@@ -54,8 +54,8 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-lane_borrow_info_table = DataTable(source=lane_borrow_info_data, columns=columns, width=350, height=1000)# table launch, data connect
-dp_path_info_table = DataTable(source=dp_path_info_data, columns=columns, width=350, height=1000)# table launch, data connect
+lane_borrow_info_table = DataTable(source=lane_borrow_info_data, columns=columns, width=350, height=500)# table launch, data connect
+dp_path_info_table = DataTable(source=dp_path_info_data, columns=columns, width=350, height=500)# table launch, data connect
 
 def extract_fields_with_names(proto, prefix="DP"):
     table_name = []
@@ -87,7 +87,7 @@ def update_lane_borrow_data(lane_borrow_common): # update function
   vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
             'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
               'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle',
-              'front_obs_center']
+              'front_obs_center','front_id','failed_obs_id']
   for name in vars:
       try:
         value = getattr(lane_borrow_common, name)
@@ -135,7 +135,10 @@ def slider_callback(bag_time):
 
 
 # +
-bkp.show(row(fig1, column(lane_borrow_info_table),column(dp_path_info_table)), notebook_handle=True) # table combine
+bkp.show(
+    row(fig1,column(dp_path_info_table, lane_borrow_info_table),),
+    notebook_handle=True
+) # table combine
 slider_class = LatBehaviorSlider(slider_callback)
 
 # slider_class = ObjText(obj_id_handler)

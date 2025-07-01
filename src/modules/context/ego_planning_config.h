@@ -512,6 +512,24 @@ struct DPRoadGraphConfig : public EgoPlanningConfig {
     coeff_stitch_cost2 = read_json_keys<double>(
         json, std::vector<std::string>{"dp_path_decider", "coeff_stitch_cost2"});
 
+    coeff_l_cost3 = read_json_keys<double>(
+        json,std::vector<std::string>{"dp_path_decider", "coeff_l_cost3"});
+    coeff_dl_cost3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_dl_cost3"});
+    coeff_ddl_cost3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_ddl_cost3"});
+    path_resolution3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "path_resolution3"});
+    coeff_end_l_cost3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_end_l_cost3"});
+    coeff_collision_cost3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_collision_cost3"});
+    collision_distance3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "collision_distance3"});
+    coeff_stitch_cost3 = read_json_keys<double>(
+        json, std::vector<std::string>{"dp_path_decider", "coeff_stitch_cost3"});
+
+
   }
    double coeff_l_cost = 6e6;
    double coeff_dl_cost = 8e3;
@@ -535,9 +553,21 @@ struct DPRoadGraphConfig : public EgoPlanningConfig {
     double path_resolution2 = 2.0;
     double coeff_end_l_cost2 = 1e6;
 
+    double coeff_l_cost3 = 6e6;
+    double coeff_dl_cost3 = 8e3;
+    double coeff_ddl_cost3 = 5e3;
+    double path_resolution3 = 2.0;
+    double coeff_end_l_cost3 = 1e6;
+
+
     double coeff_collision_cost2 = 1e6;
     double collision_distance2 = 0.8;
     double coeff_stitch_cost2 = 5e5;
+
+    double coeff_collision_cost3 = 1e6;
+    double collision_distance3 = 0.8;
+    double coeff_stitch_cost3 = 5e5;
+
 };
 
 struct DPSpeedGraphConfig: public EgoPlanningConfig {

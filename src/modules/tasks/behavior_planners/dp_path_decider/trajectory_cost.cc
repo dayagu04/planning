@@ -68,22 +68,22 @@ ComparableCost TrajectoryCost::CalculatePathCost(
           vehicle_width * 0.5;
     }
     if (left_lane_ptr_ != nullptr) {
-      if (lane_borrow_status == kLaneBorrowCrossing) {
+      if (lane_borrow_status == kLaneBorrowCrossing || current_level == 1) {
         sample_left_boundary +=
-            left_lane_ptr_->width_by_s(path_s + start_s) * 1.0;
+            left_lane_ptr_->width_by_s(path_s + start_s) * 1.1;
       } else {
         sample_left_boundary +=
             left_lane_ptr_->width_by_s(path_s + start_s)
-            * 1.0;  // larger than different from sample boundary
+            * 0.6;  // larger than different from sample boundary
       }
     }
     if (right_lane_ptr_ != nullptr) {
-      if (lane_borrow_status == kLaneBorrowCrossing) {
+      if (lane_borrow_status == kLaneBorrowCrossing || current_level == 1) {
         sample_right_boundary -=
-            right_lane_ptr_->width_by_s(path_s + start_s) * 1.0;
+            right_lane_ptr_->width_by_s(path_s + start_s) * 1.1;
       } else {
         sample_right_boundary -=
-            right_lane_ptr_->width_by_s(path_s + start_s) * 1.0;
+            right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
       }
     }
     // if (left_lane_ptr_ != nullptr) {
@@ -344,10 +344,18 @@ ComparableCost TrajectoryCost::CalObsCartCost(
                   vehicle_width + lateral_buffer);
     for (const auto& obs_box : static_obstacles_box_) {
       // bool has_overlap = BoxHasOverlap(ego_box,obs_box);
+      double dist_ignore = obs_box.half_length() + 13.0;
+      if(obs_box.DistanceTo(center) > dist_ignore){
+        continue;
+      }
       cost += GetBoxCost(ego_box, obs_box);
     }
     // used all prediction time
     for (const auto& obs_box : flatted_dynamic_obstacles_box_) {
+      double dist_ignore = obs_box.half_length() + 13.0;
+      if(obs_box.DistanceTo(center) > dist_ignore){
+        continue;
+      }
       cost += GetBoxCost(ego_box, obs_box);
     }
   }

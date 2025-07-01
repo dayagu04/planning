@@ -20,7 +20,7 @@
 #include "task_interface/lane_borrow_decider_output.h"
 namespace {
 constexpr double kMaxLateralRange = 5.0;
-constexpr double kMaxLongitRange = 100.0;
+constexpr double kMaxLongitRange = 70.0;
 constexpr double kMinLongitRange = 25.0;
 constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
 };                                        // namespace
@@ -140,8 +140,8 @@ bool DPRoadGraph::ProcessEnvInfos() {
           kMaxLateralRange) {  // tmp: should according to boundary
         continue;
       }
-      // ahead 100m after 15m static filtered
-      if (agent_sl_boundary[0] > kMaxLongitRange ||
+      // ahead 70m after 15m static filtered
+      if (agent_sl_boundary[0] > ego_s_ + kMaxLongitRange ||
           agent_sl_boundary[1] < kMinLongitRange) {  // tmp: should kvalue
         continue;
       }
@@ -488,8 +488,7 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
     coeff_collision_cost_ = config_.coeff_collision_cost;
     collision_distance_ = config_.collision_distance;
     coeff_stitch_cost_ = config_.coeff_stitch_cost;
-  } else if (lane_borrow_state == kLaneBorrowCrossing ||
-             lane_borrow_state == kLaneBorrowBackOriginLane) {
+  } else if (lane_borrow_state == kLaneBorrowCrossing ) {
     coeff_l_cost_ = config_.coeff_l_cost2;
     coeff_dl_cost_ = config_.coeff_dl_cost2;
     coeff_ddl_cost_ = config_.coeff_ddl_cost2;
@@ -498,6 +497,16 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
     coeff_collision_cost_ = config_.coeff_collision_cost2;
     collision_distance_ = config_.collision_distance2;
     coeff_stitch_cost_ = config_.coeff_stitch_cost2;
+  }
+  else if(lane_borrow_state == kLaneBorrowBackOriginLane){
+    coeff_l_cost_ = config_.coeff_l_cost3;
+    coeff_dl_cost_ = config_.coeff_dl_cost3;
+    coeff_ddl_cost_ = config_.coeff_ddl_cost3;
+    path_resolution_ = config_.path_resolution3;
+    coeff_end_l_cost_ = config_.coeff_end_l_cost3;
+    coeff_collision_cost_ = config_.coeff_collision_cost3;
+    collision_distance_ = config_.collision_distance3;
+    coeff_stitch_cost_ = config_.coeff_stitch_cost3;
   }
   return true;
 }
@@ -538,18 +547,18 @@ bool DPRoadGraph::SampleLanes(
     }
     if (left_lane_ptr_ != nullptr) {// extend sample boundary
       if (lane_borrow_decider_output->lane_borrow_state ==
-          kLaneBorrowCrossing) {
-        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.9;
+          kLaneBorrowCrossing || i ==0) {
+        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
       } else {
-        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.9;
+        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
       }
     }
     if (right_lane_ptr_ != nullptr) {
       if (lane_borrow_decider_output->lane_borrow_state ==
-          kLaneBorrowCrossing) {
-        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.9;
+          kLaneBorrowCrossing|| i == 0) {
+        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
       } else {
-        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.9;
+        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;
       }
     }
     // if (left_lane_ptr_ != nullptr) {
