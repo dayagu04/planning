@@ -57,6 +57,10 @@ static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
 static double kEps = 1e-5;
 
+static const double kLatBufferOutSlot = 0.2;
+static const double kLonBuffer1Rstep = 0.28;
+static const double kLatBuffer1Rstep = 0.0;
+
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
@@ -70,10 +74,6 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
     double& lat_buffer, double& safe_uss_remain_dist) const {
   const auto slot_mgr = apa_world_ptr_->GetSlotManagerPtr();
   const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
-
-  static const double kLatBufferOutSlot = 0.2;
-  static const double kLonBuffer1Rstep = 0.28;
-  static const double kLatBuffer1Rstep = 0.0;
 
   const auto& output = parallel_path_planner_.GetOutput();
 
@@ -174,9 +174,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer,
-                           apa_param.GetParam().parallel_dynamic_lon_buffer,
-                           apa_param.GetParam().parallel_dynamic_lat_buffer);
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
+                           dynaminc_lat_buffer);
 
   ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
@@ -210,6 +209,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   const double max_replan_path_dist = 0.15;
   const double uss_stuck_replan_wait_time = 1.5;
+
   CheckReplanParams replan_params(
       max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
       uss_stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
