@@ -7,6 +7,7 @@
 #include "fm_info_c.h"
 #include "ifly_time.h"
 #include "local_view.h"
+#include "map_data.pb.h"
 #include "planning_scheduler.h"
 
 namespace planning {
@@ -172,6 +173,29 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_sd_map_info_msg_updated_.store(true);
   }
 
+  void Feed_IflytekEhrSdpromapInfo(
+      const iflyauto::StructContainer &sdpro_map_info_msg) override {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    auto sdpro_mapdata = std::make_shared<iflymapdata::sdpro::MapData>();
+    sdpro_mapdata->ParseFromString(sdpro_map_info_msg.payload());
+    int link_size = sdpro_mapdata->link_info().links_size();
+    // for (int i = 0; i < link_size; i++) {
+    //   auto link = sdpro_mapdata->link_info().links(i);
+    //   int point_size = link.points().boot().points_size();
+    //   std::cout << "link id: " << link.id() << ", index:" << i << std::endl;
+    //   for (int j = 0; j < point_size; j++) {
+    //     auto point = link.points().boot().points(j);
+    //     std::cout << "point x: " << point.x() << std::endl;
+    //     std::cout << "point y: " << point.y() << std::endl;
+    //   }
+    // }
+    // std::cout << "link info:" << std::endl;
+    sdpro_map_info_msg_.CopyFrom(*sdpro_mapdata);
+    std::cout << "feed sdpro_map_info_msg_ end" << std::endl;
+    sdpro_map_info_msg_recv_time_ = IflyTime::Now_ms();
+    is_sdpro_map_info_msg_updated_.store(true);
+  }
+
   void Feed_IflytekCameraPerceptionTrafficSignRecognition(
       const iflyauto::CameraPerceptionTsrInfo& perception_tsr_msg) override {
     std::lock_guard<std::mutex> lock(perception_tsr_msg_mutex_);
@@ -313,8 +337,11 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::atomic<bool> is_map_info_msg_updated_{false};
 
   SdMapSwtx::SdMap sd_map_info_msg_;
+  iflymapdata::sdpro::MapData sdpro_map_info_msg_;
   int64_t sd_map_info_msg_recv_time_;
+  int64_t sdpro_map_info_msg_recv_time_;
   std::atomic<bool> is_sd_map_info_msg_updated_{false};
+  std::atomic<bool> is_sdpro_map_info_msg_updated_{false};
   iflyauto::CameraPerceptionTsrInfo perception_tsr_msg_;
   int64_t perception_tsr_msg_recv_time_;
   std::atomic<bool> is_perception_tsr_msg_updated_{false};

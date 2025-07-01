@@ -323,6 +323,17 @@ bool PlanningAdapter::Proc() {
   input_topic_latency->set_sd_map(get_latency(
       start_time, local_view_ptr_->sd_map_info.header().timestamp()));
 
+  if (is_sdpro_map_info_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->sdpro_map_info = sdpro_map_info_msg_;
+    local_view_ptr_->sdpro_map_info_recv_time = sdpro_map_info_msg_recv_time_;
+    is_sdpro_map_info_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_sdpro_map(
+      local_view_ptr_->sdpro_map_info.header().timestamp());
+  input_topic_latency->set_sdpro_map(get_latency(
+      start_time, local_view_ptr_->sdpro_map_info.header().timestamp()));
+
   // 1.13 receive parking_map
   //   if (is_parking_map_info_msg_updated_) {
   //     std::lock_guard<std::mutex> lock(parking_map_info_msg_mutex_);

@@ -158,6 +158,8 @@ class VirtualLane {
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
+  void set_current_tasks(const std::vector<int> &current_tasks)  {  current_tasks_ = current_tasks; };
+
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
@@ -169,6 +171,8 @@ class VirtualLane {
   bool is_nearing_split_mlc_task() const { return is_nearing_split_mlc_task_; }
   void ProcessEgoOnRoadMLC(const RouteInfoOutput &route_info_output);
   void ProcessEgoOnRampMLC(const RouteInfoOutput &route_info_output);
+
+  const std::vector<iflyauto::LaneNumMsg>& get_lane_nums() const { return lane_nums_; }
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -191,6 +195,8 @@ class VirtualLane {
   iflyauto::LaneBoundary right_lane_boundary_;
 
   iflyauto::LaneBoundary stop_line_;
+
+  std::vector<iflyauto::LaneNumMsg> lane_nums_;
 
   std::vector<std::string> center_line_points_track_id_;
   // todo:clren 后面改成map，适配多种reference_path

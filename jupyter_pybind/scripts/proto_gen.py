@@ -30,6 +30,8 @@ def proto_gen_py():
         os.system(command)
         command = f"protoc --python_out={new_dir} {'ifly_parking_map.proto'}"
         os.system(command)
+        command = f"protoc --python_out={new_dir} {'map_data.proto'}"
+        os.system(command)
     elif os.path.exists("../../../interface"):
       if "ehr_sdmap.proto" in os.listdir("../../../interface/src/proto/"):
         os.chdir("../../../interface/src/proto/")
@@ -40,6 +42,8 @@ def proto_gen_py():
         command = f"protoc --python_out={new_dir} {'ehr.proto'}"
         os.system(command)
         command = f"protoc --python_out={new_dir} {'ifly_parking_map.proto'}"
+        os.system(command)
+        command = f"protoc --python_out={new_dir} {'map_data.proto'}"
         os.system(command)
     return 0
 

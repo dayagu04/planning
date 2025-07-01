@@ -10,14 +10,15 @@ def init():  # 初始化
     'is_match_planning': True,  # True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
     'is_enu_to_car': True,
     'is_vis_map': False,
-    'is_vis_sdmap': True,
+    'is_vis_sdmap': False,
+    'is_vis_sdpromap': False,
     'is_vis_hpp': False,
     'is_vis_radar': False,
     'is_vis_rdg_line': True,
     'is_vis_rdg_obj': False,
     'is_vis_me_obj': False,
     'is_vis_lane_mark': True,
-    'is_vis_merge_point': True,
+    'is_vis_merge_point': False,
   }
 
 

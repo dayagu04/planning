@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "common_platform_type_soc.h"
 #include "define/geometry.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
@@ -36,6 +37,13 @@ enum RampDirection {
   RAMP_NONE = 0,
   RAMP_ON_LEFT = 1,
   RAMP_ON_RIGHT = 2,
+  RAMP_ON_MIDDLE = 3,
+};
+
+enum SplitDirection {
+  SPLIT_NONE = 0,
+  SPLIT_LEFT = 1,
+  SPLIT_RIGHT = 2,
 };
 
 // 拥堵等级枚举
@@ -62,10 +70,77 @@ enum SplitRelativeDirection {
   ON_RIGHT = 2,
 };
 
+enum EgoStatusOnRoute {
+  ON_MAIN  = 0,
+  NEARING_SPLIT = 1,
+  NEARING_MERGE = 2,
+  IN_EXCHANGE_AREAR_FRONT = 3,
+  IN_EXCHANGE_AREAR_REAR = 4,
+};
+
 struct LaneChangeGapInfo {
   int front_node_id = -1;
   int rear_node_id = -1;
 };
+
+struct FeasibleLaneInfo {
+  int total_lane_num = 0;
+  std::vector<int> feasible_lane_sequence;
+  FeasibleLaneInfo(int lane_num, std::vector<int> sequence)
+      : total_lane_num(lane_num), feasible_lane_sequence(sequence) {}
+};
+
+struct FPPoint {
+  uint64 link_id = -1;
+  double fp_distance_to_split_point = 0.0;
+  std::vector<uint64> lane_ids;
+
+  void reset () {
+    link_id = -1;
+    fp_distance_to_split_point = 0.0;
+    lane_ids.clear();
+  }
+
+  // FPPoint(int link_id, double fp_distance_to_split_point,
+  //         std::vector<int> lane_ids)
+  //     : link_id(link_id),
+  //       fp_distance_to_split_point(fp_distance_to_split_point),
+  //       lane_ids(lane_ids) {}
+};
+
+struct NOASplitRegionInfo {
+  bool is_valid = false;
+  bool is_ramp_split = false;//split场景专用
+  bool is_other_merge_to_road = false; //merge场景专用
+  uint64 split_link_id = -1;
+  double distance_to_split_point = NL_NMAX;
+  FPPoint end_fp_point;
+  FPPoint start_fp_point;
+  SplitDirection split_direction = SplitDirection::SPLIT_NONE;
+  std::vector<FeasibleLaneInfo> recommend_lane_num;
+
+  void reset() {
+    is_valid = false;
+    is_ramp_split = false;
+    is_other_merge_to_road = false;
+    split_link_id = -1;
+    distance_to_split_point = NL_NMAX;
+    end_fp_point.reset();
+    start_fp_point.reset();
+    split_direction = SplitDirection::SPLIT_NONE;
+    recommend_lane_num.clear();
+  }
+  //车道数从左开始数
+  //recommond_lane_num{交换区起点前的车道数，交换区内的车道数，交换区终点后route上的车道数，其他方向的车道数}
+};
+
+// struct EgoStatusOnRoute {
+//   bool is_nearing_split_region = false;
+//   bool is_nearing_merge_redion = false;
+//   bool
+// }
+
+
 struct RouteInfoOutput {
   // for NOA output
   int split_seg_forward_lane_nums = 0;
@@ -103,6 +178,7 @@ struct RouteInfoOutput {
   double accumulate_dis_ego_to_last_split_point = NL_NMAX;
   double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
   double distance_to_toll_station = NL_NMAX;
+  double distance_to_exchange_area_end_point = -NL_NMAX;
   double current_segment_passed_distance = 0.0;  // for xykuai
   std::pair<SplitRelativeDirection, double>
       first_split_dir_dis_info;  // for xykuai
@@ -115,6 +191,10 @@ struct RouteInfoOutput {
   RampDirection second_merge_direction = RampDirection::RAMP_NONE;
   RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
   RampDirection last_split_seg_dir = RAMP_NONE;
+  // NOASplitRegionInfo ramp_region_info;
+  std::vector<NOASplitRegionInfo> split_region_info_list;
+  EgoStatusOnRoute ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
+  std::vector<NOASplitRegionInfo> merge_region_info_list;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -167,6 +247,9 @@ struct RouteInfoOutput {
     lane_num_except_emergency = 0;
     merge_seg_forward_lane_nums = 0;
     merge_last_seg_forward_lane_nums = 0;
+    split_region_info_list.clear();
+    ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
+    merge_region_info_list.clear();
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

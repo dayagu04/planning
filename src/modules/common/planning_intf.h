@@ -17,6 +17,7 @@
 #include "fusion_parking_slot_c.h"
 #include "fusion_road_c.h"
 #include "ifly_localization_c.h"
+#include "map_data.pb.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
 #include "prediction_c.h"
@@ -35,8 +36,13 @@ class PlanningInterface : public ComponentInterface {
   virtual bool Init() = 0;
   virtual bool Proc() = 0;
 
-  virtual void Feed_IflytekEhrSdmapInfo(const SdMapSwtx::SdMap &data) = 0;
-  virtual void Feed_IflytekEhrStaticMap(const Map::StaticMap &data) = 0;
+  virtual void Feed_IflytekEhrSdmapInfo(
+      const SdMapSwtx::SdMap &data) = 0;
+
+  virtual void Feed_IflytekEhrSdpromapInfo(
+      const iflyauto::StructContainer &data) = 0;
+  virtual void Feed_IflytekEhrStaticMap(
+      const Map::StaticMap &data) = 0;
   virtual void Feed_IflytekLocalizationEgomotion(
       const iflyauto::IFLYLocalization &data) = 0;
   virtual void Feed_IflytekVehicleService(

@@ -107,8 +107,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
 
-        const bool is_dashed_line =
-            IsDashLineCurBoundary(transition_info_.lane_change_direction);
+        // const bool is_dashed_line =
+        //     IsDashLineCurBoundary(transition_info_.lane_change_direction);
 
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
@@ -118,7 +118,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         // CalculateLatCloseValue();
         lat_close_boundary_offset_ = 0.0;
 
-        if (is_propose_to_execution && is_dashed_line &&
+        if (is_propose_to_execution &&
             !is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
@@ -270,15 +270,13 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
 
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    const bool is_dashed_line = IsDashLineCurBoundary(*lane_change_direction);
+    // const bool is_dashed_line = IsDashLineCurBoundary(*lane_change_direction);
 
-    bool is_ego_in_perfect_pose = IsLatOffsetValid() && is_dashed_line;
+    bool is_ego_in_perfect_pose = IsLatOffsetValid();
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
 
-    if (*lane_change_type == INT_REQUEST && is_dashed_line) {
-      return true;
-    } else if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
-               *lane_change_type == CONE_REQUEST) {
+    if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
+        *lane_change_type == CONE_REQUEST) {
       return true;
     } else {
       return is_ego_in_perfect_pose;
@@ -3701,8 +3699,8 @@ bool LaneChangeStateMachineManager::IsHighPriorityCompleteMLC() const {
       session_->environmental_model().get_route_info();
 
   bool is_high_priority_complete_mlc =
-      cur_lane->is_nearing_ramp_mlc_task() &&
-      route_info_output->get_route_info_output().dis_to_ramp <
+      !cur_lane->get_current_tasks().empty() &&
+      route_info_output->get_route_info_output().distance_to_first_road_split <
           triggle_dis;
 
   return is_high_priority_complete_mlc;

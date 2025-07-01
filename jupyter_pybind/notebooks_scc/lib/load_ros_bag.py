@@ -8,6 +8,7 @@ from planning_debug_info_pb2 import *
 from control_debug_info_pb2 import *
 from ehr_pb2 import *
 from ehr_sdmap_pb2 import *
+from map_data_pb2 import *
 
 import numpy as np
 import time
@@ -107,6 +108,9 @@ class LoadRosbag:
 
     # ehr sd map msg
     self.ehr_sd_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # ehr sdpro map msg
+    self.ehr_sdpro_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     # fusion ground line msg
     self.fus_ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
@@ -631,7 +635,7 @@ class LoadRosbag:
                          'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                         'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', "lat_path_length", "extend_path_length", \
+                         'sdpromap_valid_','lane_change_cmd_','cur_state','lc_map_decision', "lat_path_length", "extend_path_length", \
                          "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","left_boundary_type","right_boundary_type", \
                          "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
                          "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
@@ -960,6 +964,28 @@ class LoadRosbag:
     except Exception as e:
       self.ehr_sd_map_msg['enable'] = False
       print('missing /iflytek/ehr/sdmap topic !!!')
+
+    # load ehr sdpro map msg
+    try:
+      ehr_sdpro_map_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdpromap_info"):
+        sdpromap = MapData()
+        sdpromap.ParseFromString(msg.debug_info)
+        ehr_sdpro_map_msg_dict[sdpromap.header.timestamp / 1e6] = sdpromap
+      ehr_sdpro_map_msg_dict = {key: val for key, val in sorted(ehr_sdpro_map_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ehr_sdpro_map_msg_dict.items():
+        self.ehr_sdpro_map_msg['t'].append(t)
+        self.ehr_sdpro_map_msg['data'].append(msg)
+        self.ehr_sdpro_map_msg['timestamp'].append(msg.header.timestamp)
+      self.ehr_sdpro_map_msg['t'] = [tmp - t0  for tmp in self.ehr_sdpro_map_msg['t']]
+      print('ehr_sdpro_map_msg time:',self.ehr_sdpro_map_msg['t'][-1])
+      if len(self.ehr_sdpro_map_msg['t']) > 0:
+        self.ehr_sdpro_map_msg['enable'] = True
+      else:
+        self.ehr_sdpro_map_msg['enable'] = False
+    except Exception as e:
+      self.ehr_sdpro_map_msg['enable'] = False
+      print('missing /iflytek/ehr/sdpromap topic !!!')
 
     # load fus_ground_line_msg
     try:

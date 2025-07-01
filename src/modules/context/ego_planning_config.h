@@ -593,6 +593,23 @@ struct DPSpeedGraphConfig: public EgoPlanningConfig {
 
 };
 
+struct MLCDeciderConfig: public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    default_pre_triggle_road_to_ramp_distance_threshold_value = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "default_pre_triggle_road_to_ramp_distance_threshold_value"});
+    default_pre_triggle_merge_to_road_distance_threshold_value = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "default_pre_triggle_merge_to_road_distance_threshold_value"});
+  }
+  double default_pre_triggle_road_to_ramp_distance_threshold_value = 3000.0;
+  double default_pre_triggle_merge_to_road_distance_threshold_value = 200;
+};
+
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

@@ -38,6 +38,10 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   for (int i = 0; i < lane.lane_sources_size; i++) {
     lane_sources_.emplace_back(lane.lane_sources[i]);
   }
+  lane_nums_.reserve(lane.lane_num_size);
+  for (int i = 0; i < lane.lane_num_size; i++) {
+    lane_nums_.emplace_back(lane.lane_num[i]);
+  }
   lane_merge_split_point_ = lane.lane_merge_split_point;
   left_lane_boundary_ = lane.left_lane_boundary;
   right_lane_boundary_ = lane.right_lane_boundary;

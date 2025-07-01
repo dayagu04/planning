@@ -10,24 +10,26 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
+from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250409/20250409-11-06-15/data_collection_CHERY_E0Y_18047_EVENT_FILTER_2025-04-09-11-06-15_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250723/20250723-01-19-03/data_collection_CHERY_M32T_40735_EVENT_FILTER_2025-07-23-01-19-03_no_camera.bag.1753256360.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(resources=INLINE)
 
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 global_var.set_value('g_is_display_enu', False)
+global_var.set_value('is_vis_sdpromap', True)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
-fig1.height = 1050
+fig1.height = 1150
 fig1.width = 900
 
-fig2, fig3, data_st = load_lc_path_figure()
+fig1, fig2, fig3, data_st, lat_data_vec, ori_lat_data_vec = load_lc_path_figure(fig1)
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -97,14 +99,14 @@ def update_lc_data (noa_info, plan_debug_json):
   #     names.append(name)
   #   except:
   #     pass
-  vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
+  vars_lc = ['sdpromap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
              "first_split_direction","first_merge_direction",'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
              'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',"cur_lane_is_continue",
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'current_segment_passed_distance', 'forward_lane_num',
              'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-             'ramp_pass_sts']
+             'ramp_pass_sts', 'target_lane_congestion_level','lat_offset_propose','lat_offset_lc_hold','ego_status_on_route']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))
@@ -120,7 +122,7 @@ def update_lc_data (noa_info, plan_debug_json):
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lc_path_figure (data_st,bag_loader, bag_time, local_view_data)
+  update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec,bag_loader, bag_time, local_view_data)
 
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
     plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
@@ -139,6 +141,7 @@ def slider_callback(bag_time):
   push_notebook()
 
 # +
+
 bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), column(fig2, fig3)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 

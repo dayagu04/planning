@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "geometry_math.h"
+#include "map_data.pb.h"
 #include "math_lib.h"
 #include "nlohmann_json.hpp"
 #include "proto_convert.h"
@@ -42,6 +43,7 @@ static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
 static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
+static constexpr auto TOPIC_SDPro_MAP = "/iflytek/ehr/sdpromap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_SPEED_BUMP = "/iflytek/fusion/speed_bump";
 // static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
@@ -468,6 +470,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
       // } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
       //   cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
+    } else if (msg.getTopic() == TOPIC_SDPro_MAP) {
+      cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_GROUND_LINE) {
       cache_with_ros_msg_and_header_time<struct_msgs::FusionGroundLineInfo>(
           msg);
@@ -591,6 +595,10 @@ void PlanningPlayer::StoreRosBag() {
       } else if (it_msg.first == TOPIC_SD_MAP) {
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
                                                         TOPIC_SD_MAP, bag);
+      } else if (it_msg.first == TOPIC_SDPro_MAP) {
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
+                                                        TOPIC_SDPro_MAP,
+                                                        bag);
         // } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
         //   write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
         //                                                   TOPIC_EHR_PARKING_MAP,
@@ -887,6 +895,29 @@ void PlanningPlayer::PlayOneFrame(
       sd_map->ParseFromString(sd_map_str);
       if (sd_map->header().timestamp() == input_time_list_sd_map_) {
         planning_adapter_->Feed_IflytekEhrSdmapInfo(*sd_map);
+        break;
+      }
+    }
+  }
+
+  double sdpro_map_timestamp = input_time_list.sdpro_map();
+  if (sdpro_map_timestamp < 1e-6) {
+    sdpro_map_timestamp = input_time_list.map();
+  }
+  if (input_time_list_sdpro_map_ != sdpro_map_timestamp) {
+    input_time_list_sdpro_map_ = sdpro_map_timestamp;
+    for (auto it = msg_cache_[TOPIC_SDPro_MAP].begin();
+         it != msg_cache_[TOPIC_SDPro_MAP].end(); it++) {
+      auto sdpro_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string sdpro_map_str(sdpro_map_msg_i->debug_info.begin(),
+                             sdpro_map_msg_i->debug_info.end());
+      const auto struct_ptr = std::make_shared<iflyauto::StructContainer>();
+      auto sdpro_map = std::make_shared<iflymapdata::sdpro::MapData>();
+      struct_ptr->mutable_payload()->assign(sdpro_map_str.c_str(), sdpro_map_str.size());
+      sdpro_map->ParseFromString(sdpro_map_str);
+      if (sdpro_map->header().timestamp() == input_time_list_sdpro_map_) {
+        planning_adapter_->Feed_IflytekEhrSdpromapInfo(*struct_ptr);
         break;
       }
     }

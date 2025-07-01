@@ -1,4 +1,6 @@
 #include "map_lane_change_request.h"
+#include <climits>
+#include <cmath>
 #include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
@@ -73,14 +75,47 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   }
 
   // 4、判断虚线长度是否满足变道条件
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  bool is_split_region = ego_lane_road_right_decider_output.is_split_region;
+  int split_lane_virtual_id =
+      ego_lane_road_right_decider_output.split_lane_virtual_id;
+
+  bool is_left_split = false;
+  bool is_right_split = false;
+  bool is_no_care_dash_length = false;
+
+  const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const auto& rlane = virtual_lane_mgr_->get_right_lane();
+  if (llane) {
+    if (llane->get_virtual_id() == split_lane_virtual_id) {
+      is_left_split = true;
+    }
+  }
+  if (rlane) {
+    if (rlane->get_virtual_id() == split_lane_virtual_id) {
+      is_right_split = true;
+    }
+  }
+
   const RequestType target_direction =
       lc_map_decision < 0 ? LEFT_CHANGE : RIGHT_CHANGE;
 
-  bool is_dash_enough = IsDashEnoughForRepeatSegments(
-      target_direction, current_lane->get_virtual_id(),
+  if (is_split_region) {
+    if (is_left_split && target_direction == LEFT_CHANGE) {
+      is_no_care_dash_length = true;
+    } else if (is_right_split && target_direction == RIGHT_CHANGE) {
+      is_no_care_dash_length = true;
+    }
+  }
+
+  if (!is_no_care_dash_length) {
+    bool is_dash_enough = IsDashEnoughForRepeatSegments(
+        target_direction, current_lane->get_virtual_id(),
       static_cast<StateMachineLaneChangeStatus>(lc_status));
-  if (!is_dash_enough) {
-    return false;
+    if (!is_dash_enough) {
+      return false;
+    }
   }
 
   // 5、判断目标车道是否有汇流箭头与当前变道请求冲突
@@ -141,14 +176,12 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
   if (lc_map_decision == 1) {
     lc_map_decision = is_ego_on_leftmost ? 2 : 1;
   }
-  double lc_end_dis;
-  if (route_info_output.is_on_ramp ||
-      route_info_output.lc_nums_for_split != 0) {
-    lc_end_dis =
-        route_info_output.distance_to_first_road_split - kTmpRampLength;
-  } else {
-    lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
-  }
+
+  double lc_end_dis =
+      !route_info_output.split_region_info_list.empty() ?
+      route_info_output.split_region_info_list[0].distance_to_split_point -
+      std::abs(route_info_output.split_region_info_list[0]
+                   .start_fp_point.fp_distance_to_split_point) : NL_NMAX;
 
   double v_limit =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();

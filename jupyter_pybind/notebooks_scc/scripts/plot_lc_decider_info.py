@@ -23,6 +23,7 @@ output_notebook(resources=INLINE)
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 global_var.set_value('g_is_display_enu', False)
+global_var.set_value('is_vis_sdpromap', True)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
 fig1.height = 1350
@@ -104,14 +105,14 @@ def update_lc_data (noa_info, plan_debug_json):
   #     names.append(name)
   #   except:
   #     pass
-  vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
+  vars_lc = ['sdpromap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
              "first_split_direction","first_merge_direction",'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
              'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',"cur_lane_is_continue",
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'current_segment_passed_distance', 'forward_lane_num',
              'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-             'ramp_pass_sts', 'target_lane_congestion_level','lat_offset_propose','lat_offset_lc_hold', "ego_press_line_ratio"]
+             'ramp_pass_sts', 'target_lane_congestion_level','lat_offset_propose','lat_offset_lc_hold', "ego_press_line_ratio",'ego_status_on_route']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))
@@ -147,6 +148,7 @@ def slider_callback(bag_time):
   push_notebook()
 
 # +
+
 bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), column(fig2, fig3)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 
