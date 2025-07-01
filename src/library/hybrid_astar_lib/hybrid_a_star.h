@@ -49,7 +49,8 @@ class HybridAStar {
                        const ParkObstacleList* obstacles,
                        EulerDistanceTransform* edt,
                        const ObstacleClearZone* clear_zone,
-                       ParkReferenceLine* ref_line, GridSearch* dp_map);
+                       ParkReferenceLine* ref_line,
+                       std::shared_ptr<GridSearch> dp_map);
 
   virtual ~HybridAStar() = default;
 
@@ -313,7 +314,7 @@ class HybridAStar {
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;
 
-  GridSearch* dp_heuristic_generator_;
+  std::shared_ptr<GridSearch> dp_heuristic_generator_;
 
   ParkReferenceLine* ref_line_;
 

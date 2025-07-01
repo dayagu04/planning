@@ -602,8 +602,9 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
-  RuleBasedPredictor predictor;
-  predictor.Execute(apa_world_ptr_->GetObstacleManagerPtr());
+  std::shared_ptr<RuleBasedPredictor> predictor =
+      std::make_shared<RuleBasedPredictor>();
+  predictor->Execute(apa_world_ptr_->GetObstacleManagerPtr());
 
   double acc = apa_world_ptr_->GetMeasureDataManagerPtr()->GetAcceleration();
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel() < 0.0) {
@@ -613,24 +614,26 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       0, std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()), acc);
 
   // task: update traj stitcher
-  ApaTrajectoryStitcher traj_stitcher;
-  traj_stitcher.Execute(
+  std::shared_ptr<ApaTrajectoryStitcher> traj_stitcher =
+      std::make_shared<ApaTrajectoryStitcher>();
+  traj_stitcher->Execute(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
       current_path_point_global_vec_,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
       ego_speed_point, 0.0, trajectory_,
       pnc::geometry_lib::GetGearType(frame_.gear_command));
 
-  const SVPoint stitch_init_speed = traj_stitcher.GetStitchSpeed();
+  const SVPoint stitch_init_speed = traj_stitcher->GetStitchSpeed();
 
   // task: update stop decision
-  ParkingStopDecider stop_decider(
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
-      apa_world_ptr_->GetMeasureDataManagerPtr(),
-      apa_world_ptr_->GetObstacleManagerPtr());
+  std::shared_ptr<ParkingStopDecider> stop_decider =
+      std::make_shared<ParkingStopDecider>(
+          apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+          apa_world_ptr_->GetMeasureDataManagerPtr(),
+          apa_world_ptr_->GetObstacleManagerPtr());
 
-  stop_decider.Execute(
-      stitch_init_speed, traj_stitcher.GetConstStitchPath(),
+  stop_decider->Execute(
+      stitch_init_speed, traj_stitcher->GetConstStitchPath(),
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       pnc::geometry_lib::GetGearType(frame_.gear_command));
 
@@ -638,55 +641,59 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   if (apa_param.GetParam().speed_config.use_remain_dist) {
     double stop_s =
         std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
-    stop_decider.AddStopDecisionByDistance(
+    stop_decider->AddStopDecisionByDistance(
         stop_s,
         frame_.remain_dist_obs < frame_.remain_dist_slot_jump
             ? LonDecisionReason::REMAIN_DIST
             : LonDecisionReason::SLOT_POSE_CHANGE,
-        traj_stitcher.GetConstStitchPath());
+        traj_stitcher->GetConstStitchPath());
   }
 
   SpeedDecisions speed_decisions;
-  const ParkLonDecision stop_decision = stop_decider.GetStopDecision();
+  const ParkLonDecision stop_decision = stop_decider->GetStopDecision();
   if (stop_decision.decision_type == LonDecisionType::STOP) {
     speed_decisions.decisions.emplace_back(stop_decision);
   }
 
   // task: update speed limit decision
-  ParkSpeedLimitDecider speed_limit_decider(
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
-      apa_world_ptr_->GetMeasureDataManagerPtr(),
-      apa_world_ptr_->GetObstacleManagerPtr());
-  speed_limit_decider.Execute(traj_stitcher.GetMutableStitchPath(),
+  std::shared_ptr<ParkSpeedLimitDecider> speed_limit_decider =
+      std::make_shared<ParkSpeedLimitDecider>(
+          apa_world_ptr_->GetCollisionDetectorInterfacePtr(),
+          apa_world_ptr_->GetMeasureDataManagerPtr(),
+          apa_world_ptr_->GetObstacleManagerPtr());
+  speed_limit_decider->Execute(traj_stitcher->GetMutableStitchPath(),
                               &speed_decisions);
 
   // task: generate dp speed
-  DpSpeedOptimizer dp_speed_optimizer;
-  dp_speed_optimizer.Excute(
-      traj_stitcher.GetConstStitchPath(),
+  std::shared_ptr<DpSpeedOptimizer> dp_speed_optimizer =
+      std::make_shared<DpSpeedOptimizer>();
+  dp_speed_optimizer->Excute(
+      traj_stitcher->GetConstStitchPath(),
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(), stitch_init_speed,
-      &speed_decisions, &speed_limit_decider.GetSpeedLimitProfile());
+      &speed_decisions, &speed_limit_decider->GetSpeedLimitProfile());
 
   // task: generate qp speed
-  PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
-  const SpeedData& dp_speed = dp_speed_optimizer.SpeedProfile();
-  qp_speed_optimizer.Execute(stitch_init_speed,
-                             &speed_limit_decider.GetSpeedLimitProfile(),
+  std::shared_ptr<PiecewiseJerkSpeedQPOptimizer> qp_speed_optimizer =
+      std::make_shared<PiecewiseJerkSpeedQPOptimizer>();
+  const SpeedData& dp_speed = dp_speed_optimizer->SpeedProfile();
+  qp_speed_optimizer->Execute(stitch_init_speed,
+                             &speed_limit_decider->GetSpeedLimitProfile(),
                              dp_speed, &speed_decisions);
 
   // task: generate jlt speed
-  if (dp_speed_optimizer.GetExcuteState() != TaskExcuteState::SUCCESS ||
-      qp_speed_optimizer.GetExcuteState() != TaskExcuteState::SUCCESS) {
-    JerkLimitedTrajOptimizer jlt_optimizer;
-    jlt_optimizer.Execute(stitch_init_speed, ego_speed_point,
-                          traj_stitcher.GetConstStitchPath(), &speed_decisions);
-    traj_stitcher.CombineTrajBasedOnTime(jlt_optimizer.GetSpeedData());
+  if (dp_speed_optimizer->GetExcuteState() != TaskExcuteState::SUCCESS ||
+      qp_speed_optimizer->GetExcuteState() != TaskExcuteState::SUCCESS) {
+    std::shared_ptr<JerkLimitedTrajOptimizer> jlt_optimizer =
+        std::make_shared<JerkLimitedTrajOptimizer>();
+    jlt_optimizer->Execute(stitch_init_speed, ego_speed_point,
+                          traj_stitcher->GetConstStitchPath(), &speed_decisions);
+    traj_stitcher->CombineTrajBasedOnTime(jlt_optimizer->GetSpeedData());
   } else {
-    traj_stitcher.CombineTrajBasedOnTime(qp_speed_optimizer.GetSpeedData());
+    traj_stitcher->CombineTrajBasedOnTime(qp_speed_optimizer->GetSpeedData());
   }
 
-  trajectory_ = traj_stitcher.GetConstCombinedTraj();
-  trajectory_.SetTerminalS(stop_decider.GetTerminalS());
+  trajectory_ = traj_stitcher->GetConstCombinedTraj();
+  trajectory_.SetTerminalS(stop_decider->GetTerminalS());
 
   return;
 }

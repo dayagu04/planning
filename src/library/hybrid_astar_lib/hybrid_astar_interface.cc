@@ -64,10 +64,10 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
         static_cast<float>(config_.safe_buffer.lat_safe_buffer_outside[0]));
   }
 
-  dp_heuristic_generator_.Init(config_);
+  dp_heuristic_generator_ = std::make_shared<GridSearch>(config_);
   hybrid_astar_ = std::make_shared<HybridAStar>(config_, vehicle_param_, &obs_,
                                                 &edt_, &clear_zone_, &ref_line_,
-                                                &dp_heuristic_generator_);
+                                                dp_heuristic_generator_);
   hybrid_astar_->Init();
 
   ILOG_INFO << "astar interface success";
@@ -138,7 +138,7 @@ void HybridAStarInterface::UpdateOutput() {
   // update clear zone. This zone not contain any obstacle.
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
 
-  dp_heuristic_generator_.GenerateDpMap(
+  dp_heuristic_generator_->GenerateDpMap(
       request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
 
   hybrid_astar_->Clear();
@@ -327,7 +327,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
   target_regulator_goal_ = target_regulator_result.first;
 
-  dp_heuristic_generator_.GenerateDpMap(
+  dp_heuristic_generator_->GenerateDpMap(
       GetGoalPoint().x, GetGoalPoint().y, map_bounds_, &obs_);
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {

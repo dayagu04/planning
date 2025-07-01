@@ -152,7 +152,7 @@ class HybridAStarInterface {
   MapBound map_bounds_;
 
   std::shared_ptr<HybridAStar> hybrid_astar_;
-  GridSearch dp_heuristic_generator_;
+  std::shared_ptr<GridSearch> dp_heuristic_generator_;
   // path = astar node path + rs path.
   HybridAStarResult *best_traj_;
   std::array<HybridAStarResult, 3> traj_candidates_;

@@ -49,7 +49,8 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const ParkObstacleList* obstacles,
                          EulerDistanceTransform* edt,
                          const ObstacleClearZone* clear_zone,
-                         ParkReferenceLine* ref_line, GridSearch* dp_map)
+                         ParkReferenceLine* ref_line,
+                         std::shared_ptr<GridSearch> dp_map)
     : config_(open_space_conf),
       vehicle_param_(veh_param),
       obstacles_(obstacles),
