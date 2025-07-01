@@ -132,7 +132,7 @@
   "detection_distance": 3.0,
   "safe_uss_remain_dist_in_slot": 0.30,
   "limited_safe_uss_remain_dist": 0.21,
-  "safe_uss_remain_dist_in_parallel_slot": 0.28,
+  "safe_uss_remain_dist_in_parallel_slot": 0.2,
   "safe_uss_remain_dist_out_slot": 0.35,
   "uss_stuck_replan_wait_time": 1.0,
   "uss_scan_angle_deg": 60.0,

@@ -412,7 +412,7 @@ const double ParkingScenario::CalRemainDistFromObs(
 
   double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-      static_lat_buffer;
+      static_lon_buffer;
 
   // check static obs, it can be radical
   GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,

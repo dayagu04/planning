@@ -59,7 +59,7 @@ static double kEps = 1e-5;
 
 static const double kLatBufferOutSlot = 0.2;
 static const double kLonBuffer1Rstep = 0.28;
-static const double kLatBuffer1Rstep = 0.0;
+static const double kLatBuffer1Rstep = 0.1;
 
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
@@ -98,7 +98,7 @@ void ParallelParkInScenario::CalBufferInDiffSteps(
 
   // in slot plan step
   if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
-    lat_buffer = 0.0;
+    lat_buffer = -0.1;
     safe_uss_remain_dist =
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
     if (t_lane_.is_inside_rigid) {
