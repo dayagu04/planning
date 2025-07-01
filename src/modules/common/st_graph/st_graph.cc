@@ -516,6 +516,10 @@ void STGraph::MakeDynamicAgentStBoundary(
       break;
     }
 
+    if (agent.is_static()) {
+      break;
+    }
+
     const double agent_pred_end_time = trajectories[i].back().absolute_time();
     std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
     st_point_pairs.reserve(reserve_num);
