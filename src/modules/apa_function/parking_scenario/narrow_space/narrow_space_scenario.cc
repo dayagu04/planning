@@ -1080,7 +1080,6 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
 
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
 
-  debug_->mutable_refline_info()->Clear();
   bool sample_finish = false;
 
   geometry_lib::PathPoint gl_pt;
@@ -1093,20 +1092,6 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     local_position.theta = result.phi[i];
 
     tf->ULFLocalPoseToGlobal(&global_position, local_position);
-
-    planning::common::TrajectoryPoint* point = debug_->add_refline_info();
-
-    point->set_x(global_position.x);
-    point->set_y(global_position.y);
-    point->set_heading_angle(global_position.theta);
-    point->set_s(result.accumulated_s[i]);
-
-    // todo, add hybrid astar msg. but now reuse TrajectoryPoint.
-    if (result.type[i] == AstarPathType::REEDS_SHEPP) {
-      point->set_l(-1.0);
-    } else {
-      point->set_l(1.0);
-    }
 
     gl_pt.pos << global_position.x, global_position.y;
     gl_pt.heading = global_position.theta;

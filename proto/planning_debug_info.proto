@@ -124,5 +124,7 @@ message PlanningDebugInfo {
   optional WeightMaker weight_maker = 36;
   optional HybridARAInfo hybrid_ara_info = 37;
   repeated DoublePair dis_curv_list = 38;
-  optional DPRoadInfo dp_road_info=39;
+  optional DPRoadInfo dp_road_info = 39;
+  repeated ApaPathPoint cur_path_points = 40;
+  repeated ApaPathPoint complete_path_points = 41;
 }

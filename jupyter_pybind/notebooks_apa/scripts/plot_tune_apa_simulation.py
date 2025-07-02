@@ -109,7 +109,11 @@ fig1.js_on_event(Tap, callback)
 # try before sliders
 apa_simulation_py.Init()
 
-data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
+data_planning_traj_tune = ColumnDataSource(data = {'plan_traj_x':[],
+                                              'plan_traj_y':[],
+                                              'plan_traj_heading':[],})
+
+data_planning_path_tune = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[],
                                               'plan_path_heading':[],})
 
@@ -134,7 +138,8 @@ stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
 data_od_traj = ColumnDataSource(data = {'x':[], 'y':[]})
 
 
-fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan')
+fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_traj_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan_traj')
+fig1.line('plan_path_y', 'plan_path_x', source = data_planning_path_tune, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_complete_planning_tune, line_width = 6, line_color = 'red', line_dash = 'dashed', line_alpha = 0.7, legend_label = 'sim_tuned_complete_plan', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
@@ -400,15 +405,10 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
                                     obs_x_vec, obs_y_vec, lat_path_optimizier_params)
-
-  data_planning_tune.data = {'plan_path_x': [],
-                             'plan_path_y': [],
-                             'plan_path_heading': []}
-
-  data_complete_planning_tune.data = {'plan_path_x': [],
-                          'plan_path_y': [],
-                          'plan_path_heading': []}
-
+  plan_traj_x = []
+  plan_traj_y = []
+  plan_traj_heading = []
+  plan_traj_lat_buffer = []
   plan_path_x = []
   plan_path_y = []
   plan_path_heading = []
@@ -471,21 +471,29 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
 
     # print("obstaclesX = ",data_planning_debug["obstaclesX"])
 
+    print("cur_path_points = ", len(tuned_planning_debug_info.cur_path_points))
+
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
-      plan_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
-      plan_path_y.append(tuned_planning_output.trajectory.trajectory_points[i].y)
-      plan_path_heading.append(tuned_planning_output.trajectory.trajectory_points[i].heading_yaw)
+      plan_traj_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
+      plan_traj_y.append(tuned_planning_output.trajectory.trajectory_points[i].y)
+      plan_traj_heading.append(tuned_planning_output.trajectory.trajectory_points[i].heading_yaw)
+      plan_traj_lat_buffer.append(0.0)
+
+    for i in range(len(tuned_planning_debug_info.cur_path_points)):
+      plan_path_x.append(tuned_planning_debug_info.cur_path_points[i].x)
+      plan_path_y.append(tuned_planning_debug_info.cur_path_points[i].y)
+      plan_path_heading.append(tuned_planning_debug_info.cur_path_points[i].heading)
       plan_path_lat_buffer.append(0.0)
 
-    if (len(plan_path_x) > 2):
+    if (len(plan_traj_x) > 2):
       half_car_width = 0.9
       i = 0
       gear_change = False
       gear_change_index = -1
-      while i <= len(plan_path_x) - 3:
-        pt0 = [plan_path_x[i], plan_path_y[i]]
-        pt1 = [plan_path_x[i+1], plan_path_y[i+1]]
-        pt2 = [plan_path_x[i+2], plan_path_y[i+2]]
+      while i <= len(plan_traj_x) - 3:
+        pt0 = [plan_traj_x[i], plan_traj_y[i]]
+        pt1 = [plan_traj_x[i+1], plan_traj_y[i+1]]
+        pt2 = [plan_traj_x[i+2], plan_traj_y[i+2]]
         A = np.array([pt0[0] - pt1[0], pt0[1] - pt1[1]])
         B = np.array([pt2[0] - pt1[0], pt2[1] - pt1[1]])
         # 计算点积
@@ -510,9 +518,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
       if gear_change == True:
         gear_change_index = i + 1
 
-      last_x = plan_path_x[gear_change_index]
-      last_y = plan_path_y[gear_change_index]
-      last_heading = plan_path_heading[gear_change_index]
+      last_x = plan_traj_x[gear_change_index]
+      last_y = plan_traj_y[gear_change_index]
+      last_heading = plan_traj_heading[gear_change_index]
       print("simu last_x, last_y, last_heading = ", last_x, last_y, last_heading * 57.3)
       last_plan_pose_.clear()
       last_plan_pose_.append(last_x)
@@ -533,60 +541,72 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
       line_xn = [x1, x2]
       line_yn = [y1, y2]
 
-    plan_traj_x_list = []
-    plan_traj_y_list = []
-    plan_traj_heading_list = []
-    plan_traj_lat_buffer_list = []
+    plan_path_x_list = []
+    plan_path_y_list = []
+    plan_path_heading_list = []
+    plan_path_lat_buffer_list = []
     if isinstance(plan_traj_x_vec, str) and len(plan_traj_x_vec) > 0:
-      plan_traj_x_list = [float(x) for x in plan_traj_x_vec.split(',')]
+      plan_path_x_list = [float(x) for x in plan_traj_x_vec.split(',')]
     elif not isinstance(plan_traj_x_vec, str):
-      plan_traj_x_list = plan_traj_x_vec
+      plan_path_x_list = plan_traj_x_vec
 
     if isinstance(plan_traj_y_vec, str) and len(plan_traj_y_vec) > 0:
-      plan_traj_y_list = [float(y) for y in plan_traj_y_vec.split(',')]
+      plan_path_y_list = [float(y) for y in plan_traj_y_vec.split(',')]
     elif not isinstance(plan_traj_y_vec, str):
-      plan_traj_y_list = plan_traj_y_vec
+      plan_path_y_list = plan_traj_y_vec
 
     if isinstance(plan_traj_heading_vec, str) and len(plan_traj_heading_vec) > 0:
-      plan_traj_heading_list = [float(heading) for heading in plan_traj_heading_vec.split(',')]
+      plan_path_heading_list = [float(heading) for heading in plan_traj_heading_vec.split(',')]
     elif not isinstance(plan_traj_heading_vec, str):
-      plan_traj_heading_list = plan_traj_heading_vec
+      plan_path_heading_list = plan_traj_heading_vec
 
     if isinstance(plan_traj_lat_buffer_vec, str) and len(plan_traj_lat_buffer_vec) > 0:
-      plan_traj_lat_buffer_list = [float(lat_buffer) for lat_buffer in plan_traj_lat_buffer_vec.split(',')]
+      plan_path_lat_buffer_list = [float(lat_buffer) for lat_buffer in plan_traj_lat_buffer_vec.split(',')]
     elif not isinstance(plan_traj_lat_buffer_vec, str):
-      plan_traj_lat_buffer_list = plan_traj_lat_buffer_vec
+      plan_path_lat_buffer_list = plan_traj_lat_buffer_vec
+
+    for i in range(len(tuned_planning_debug_info.complete_path_points)):
+      plan_path_x_list.append(tuned_planning_debug_info.complete_path_points[i].x)
+      plan_path_y_list.append(tuned_planning_debug_info.complete_path_points[i].y)
+      plan_path_heading_list.append(tuned_planning_debug_info.complete_path_points[i].heading)
+      plan_path_lat_buffer_list.append(0.0)
 
     # path ego car
-    if len(plan_traj_x_list) < 2:
-      for i in range(len(plan_path_x)):
+    if len(plan_path_x_list) < 2:
+      for i in range(len(plan_traj_x)):
         car_xn_temp = []
         car_yn_temp = []
         for j in range(len(car_xb)):
-          tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_path_x[i], plan_path_y[i], plan_path_heading[i])
+          tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_traj_heading[i])
           car_xn_temp.append(tmp_x)
           car_yn_temp.append(tmp_y)
-        if i % 1 == 0 or i == len(plan_path_x) - 1:
+        if i % 1 == 0 or i == len(plan_traj_x) - 1:
           car_box_x_vec.append(car_xn_temp)
           car_box_y_vec.append(car_yn_temp)
     else:
-      for i in range(len(plan_traj_x_list)):
+      for i in range(len(plan_path_x_list)):
         car_xn_temp = []
         car_yn_temp = []
-        complete_x_vec.append(plan_traj_x_list[i])
-        complete_y_vec.append(plan_traj_y_list[i])
-        car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_traj_lat_buffer_list[i])
+        complete_x_vec.append(plan_path_x_list[i])
+        complete_y_vec.append(plan_path_y_list[i])
+        car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_path_lat_buffer_list[i])
         for j in range(len(car_xb_temp)):
-          tmp_x, tmp_y = local2global(car_xb_temp[j], car_yb_temp[j], plan_traj_x_list[i], plan_traj_y_list[i], plan_traj_heading_list[i])
+          tmp_x, tmp_y = local2global(car_xb_temp[j], car_yb_temp[j], plan_path_x_list[i], plan_path_y_list[i], plan_path_heading_list[i])
           car_xn_temp.append(tmp_x)
           car_yn_temp.append(tmp_y)
-        if i % 2 == 0 or i == len(plan_traj_x_list) - 1 or i == gear_change_index:
+        if i % 2 == 0 or i == len(plan_path_x_list) - 1 or i == gear_change_index:
           car_box_x_vec.append(car_xn_temp)
           car_box_y_vec.append(car_yn_temp)
 
     print("tuned_gear_command = ", tuned_planning_output.gear_command)
 
-  data_planning_tune.data.update({
+  data_planning_traj_tune.data.update({
+    'plan_traj_x': plan_traj_x,
+    'plan_traj_y': plan_traj_y,
+    'plan_traj_heading': plan_traj_heading,
+  })
+
+  data_planning_path_tune.data.update({
     'plan_path_x': plan_path_x,
     'plan_path_y': plan_path_y,
     'plan_path_heading': plan_path_heading,

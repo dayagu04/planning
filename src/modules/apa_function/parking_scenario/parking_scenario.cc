@@ -8,6 +8,7 @@
 #include <string>
 
 #include "apa_context.h"
+#include "apa_debug_data.pb.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_utils.h"
@@ -307,6 +308,28 @@ void ParkingScenario::SetPlanningPath() {
   ILOG_INFO << "gear command in planning output = "
             << static_cast<int>(gear_command->gear_command_value);
 
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug_info->mutable_cur_path_points()->Clear();
+  debug_info->mutable_complete_path_points()->Clear();
+
+  for (const auto& pt : current_path_point_global_vec_) {
+    planning::common::ApaPathPoint* point = debug_info->add_cur_path_points();
+    point->set_x(pt.GetX());
+    point->set_y(pt.GetY());
+    point->set_heading(pt.GetHeading());
+    point->set_type(1);
+  }
+
+  for (const auto& pt : complete_path_point_global_vec_) {
+    planning::common::ApaPathPoint* point =
+        debug_info->add_complete_path_points();
+    point->set_x(pt.GetX());
+    point->set_y(pt.GetY());
+    point->set_heading(pt.GetHeading());
+    point->set_type(1);
+  }
+
+  // todo: If the visualization has been adapted, delete it
   // record all gear plan path pt
   const size_t N = complete_path_point_global_vec_.size();
   std::vector<double> x_vec(N, 0.0), y_vec(N, 0.0), heading_vec(N, 0.0),
