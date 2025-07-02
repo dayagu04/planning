@@ -22,6 +22,13 @@ class ParallelParkInScenario : public ParkingScenario {
 
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); };
+  virtual const bool UpdateEgoSlotInfo() override;
+  virtual const bool GenTlane() override;
+  virtual const uint8_t PathPlanOnce() override;
+  virtual const bool CheckFinished() override;
+  virtual const bool GenObstacles() override;
+  virtual void ExcutePathPlanningTask() override;
+  virtual void Log() const override;
 
   const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,
                                      const double slot_width,
@@ -29,21 +36,18 @@ class ParallelParkInScenario : public ParkingScenario {
   const double CalcSlotOccupiedRatio(
       const pnc::geometry_lib::PathPoint start_pose) const;
 
-  virtual const bool UpdateEgoSlotInfo() override;
-  virtual const bool GenTlane() override;
   void GenTBoundaryObstacles();
-  virtual const uint8_t PathPlanOnce() override;
-  const Tlane& GetTlane() { return t_lane_; }
 
-  virtual const bool CheckFinished() override;
+  const Tlane& GetTlane() { return t_lane_; }
 
  private:
   // virtual func
-  void CalBufferInDiffSteps(double& lat_buffer,
-                            double& safe_uss_remain_dist) const;
-  virtual const bool GenObstacles() override;
-  virtual void ExcutePathPlanningTask() override;
-  virtual void Log() const override;
+  void CalStaticBufferInDiffSteps(double& lat_buffer,
+                                  double& safe_uss_remain_dist) const;
+
+  void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
+                                   double& dynamic_lon_buffer) const;
+
   Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;

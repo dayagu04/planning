@@ -57,10 +57,6 @@ static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
 static double kEps = 1e-5;
 
-static const double kLatBufferOutSlot = 0.2;
-static const double kLonBuffer1Rstep = 0.28;
-static const double kLatBuffer1Rstep = 0.1;
-
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
@@ -68,64 +64,6 @@ void ParallelParkInScenario::Reset() {
   parallel_path_planner_.Reset();
 
   ParkingScenario::Reset();
-}
-
-void ParallelParkInScenario::CalBufferInDiffSteps(
-    double& lat_buffer, double& safe_uss_remain_dist) const {
-  const auto slot_mgr = apa_world_ptr_->GetSlotManagerPtr();
-  const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
-
-  const auto& output = parallel_path_planner_.GetOutput();
-
-  const auto& start_pose =
-      output.path_segment_vec[output.path_seg_index.first].GetStartPose();
-
-  const auto& end_pose =
-      output.path_segment_vec[output.path_seg_index.second].GetEndPose();
-
-  const bool is_start_pose_in_slot =
-      CalcSlotOccupiedRatio(start_pose) >= kEnterMultiPlanSlotRatio;
-
-  const bool is_end_pose_in_slot =
-      CalcSlotOccupiedRatio(end_pose) >= kEnterMultiPlanSlotRatio;
-
-  const bool is_ego_in_slot =
-      ego_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio;
-
-  ILOG_INFO << "is_start_pose_in_slot = " << is_start_pose_in_slot;
-  ILOG_INFO << "is_end_pose_in_slot = " << is_end_pose_in_slot;
-  ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
-
-  // in slot plan step
-  if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
-    lat_buffer = -0.1;
-    safe_uss_remain_dist =
-        apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
-    if (t_lane_.is_inside_rigid) {
-      ILOG_INFO << "rigid body in side slot!";
-      lat_buffer = 0.1;
-    }
-    ILOG_INFO << "in slot!";
-  } else {
-    // out slot
-    lat_buffer = kLatBufferOutSlot;
-    safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
-    if (output.gear_cmd_vec[output.path_seg_index.first] ==
-            geometry_lib::SEG_GEAR_REVERSE &&
-        !is_start_pose_in_slot && is_end_pose_in_slot) {
-      lat_buffer = kLatBuffer1Rstep;
-      safe_uss_remain_dist = kLonBuffer1Rstep;
-      if (t_lane_.is_inside_rigid) {
-        lat_buffer = 0.15;
-        safe_uss_remain_dist = 0.3;
-      }
-      ILOG_INFO << "in 1r step!";
-    } else {
-      ILOG_INFO << "outside slot not 1r step!";
-    }
-  }
-  ILOG_INFO << "lat_buffer = " << lat_buffer;
-  ILOG_INFO << "lon_buffer = " << safe_uss_remain_dist;
 }
 
 void ParallelParkInScenario::ExcutePathPlanningTask() {
@@ -148,35 +86,23 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  double lat_buffer = 0.0;
-  double safe_uss_remain_dist = 0.0;
-  CalBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
-  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
-  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
-
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
+  double lat_buffer = 0.0;
+  double safe_uss_remain_dist = 0.0;
+  CalStaticBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
+  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
+  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
+
   double dynaminc_lat_buffer = 0.0;
   double dynamic_lon_buffer = 0.0;
-
-  if (apa_world_ptr_->GetSlotManagerPtr()
-          ->GetEgoInfoUnderSlot()
-          .slot_occupied_ratio < kEnterMultiPlanSlotRatio) {
-    dynaminc_lat_buffer = apa_param.GetParam().parallel_dynamic_lat_buffer;
-    dynamic_lon_buffer = apa_param.GetParam().parallel_dynamic_lon_buffer;
-  } else {
-    dynaminc_lat_buffer =
-        apa_param.GetParam().parallel_dynamic_lat_buffer_in_slot;
-    dynamic_lon_buffer =
-        apa_param.GetParam().parallel_dynamic_lon_buffer_in_slot;
-  }
+  CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
 
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
       CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
                            dynaminc_lat_buffer);
-
   ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // update ego slot info
@@ -1644,6 +1570,82 @@ void ParallelParkInScenario::Log() const {
   } else {
     JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
     JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
+  }
+}
+
+void ParallelParkInScenario::CalStaticBufferInDiffSteps(
+    double& lat_buffer, double& safe_uss_remain_dist) const {
+  const auto slot_mgr = apa_world_ptr_->GetSlotManagerPtr();
+  const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
+
+  const auto& output = parallel_path_planner_.GetOutput();
+
+  const auto& start_pose =
+      output.path_segment_vec[output.path_seg_index.first].GetStartPose();
+
+  const auto& end_pose =
+      output.path_segment_vec[output.path_seg_index.second].GetEndPose();
+
+  const bool is_start_pose_in_slot =
+      CalcSlotOccupiedRatio(start_pose) >= kEnterMultiPlanSlotRatio;
+
+  const bool is_end_pose_in_slot =
+      CalcSlotOccupiedRatio(end_pose) >= kEnterMultiPlanSlotRatio;
+
+  const bool is_ego_in_slot =
+      ego_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio;
+
+  ILOG_INFO << "is_start_pose_in_slot = " << is_start_pose_in_slot;
+  ILOG_INFO << "is_end_pose_in_slot = " << is_end_pose_in_slot;
+  ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
+
+  // totally in slot
+  if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
+    ILOG_INFO << " totally in slot!";
+    safe_uss_remain_dist =
+        apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
+
+    lat_buffer =
+        t_lane_.is_inside_rigid
+            ? apa_param.GetParam().safe_lat_buffer_with_wall_in_parallel_slot
+            : apa_param.GetParam().safe_lat_buffer_in_parallel_slot;
+    return;
+  }
+
+  // out slot
+  lat_buffer = apa_param.GetParam().safe_lat_buffer_outside_parallel_slot;
+  safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
+
+  const bool is_reverse = output.gear_cmd_vec[output.path_seg_index.first] ==
+                          geometry_lib::SEG_GEAR_REVERSE;
+  // in 1r step
+  if (is_reverse && !is_start_pose_in_slot && is_end_pose_in_slot) {
+    ILOG_INFO << "in 1r step!";
+    lat_buffer =
+        t_lane_.is_inside_rigid
+            ? apa_param.GetParam().safe_lat_buffer_with_wall_in_parallel_slot
+            : apa_param.GetParam().safe_lat_buffer_in_1r_parallel_slot;
+
+    safe_uss_remain_dist =
+        apa_param.GetParam().safe_remain_dist_in_1r_parallel_slot;
+
+  } else {
+    ILOG_INFO << "outside slot not 1r step!";
+  }
+}
+
+void ParallelParkInScenario::CalDynamicBufferInDiffSteps(
+    double& dynaminc_lat_buffer, double& dynamic_lon_buffer) const {
+  if (apa_world_ptr_->GetSlotManagerPtr()
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio < kEnterMultiPlanSlotRatio) {
+    dynaminc_lat_buffer = apa_param.GetParam().parallel_dynamic_lat_buffer;
+    dynamic_lon_buffer = apa_param.GetParam().parallel_dynamic_lon_buffer;
+  } else {
+    dynaminc_lat_buffer =
+        apa_param.GetParam().parallel_dynamic_lat_buffer_in_slot;
+    dynamic_lon_buffer =
+        apa_param.GetParam().parallel_dynamic_lon_buffer_in_slot;
   }
 }
 

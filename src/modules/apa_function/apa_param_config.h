@@ -241,6 +241,11 @@ struct ApaParameters {
   double slight_brake_lon_dist = 0.91;
   double safe_uss_remain_dist_in_slot = 0.35;
   double limited_safe_uss_remain_dist = 0.2;
+  double safe_lat_buffer_outside_parallel_slot = 0.2;
+  double safe_lat_buffer_in_parallel_slot = 0.1;
+  double safe_lat_buffer_with_wall_in_parallel_slot = 0.1;
+  double safe_lat_buffer_in_1r_parallel_slot = 0.1;
+  double safe_remain_dist_in_1r_parallel_slot = 0.3;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;
   double safe_uss_remain_dist_out_slot = 0.55;
   double uss_stuck_replan_wait_time = 2.0;
