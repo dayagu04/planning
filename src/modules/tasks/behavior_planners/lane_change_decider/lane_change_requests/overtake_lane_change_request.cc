@@ -17,7 +17,6 @@
 #include "log.h"
 #include "planning_context.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
-#include "tasks/behavior_planners/lane_change_decider/lateral_behavior_object_selector.h"
 #include "tracked_object.h"
 #include "virtual_lane_manager.h"
 
@@ -115,7 +114,7 @@ void OvertakeRequest::Update(int lc_status) {
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
-  tracks_map_ = lateral_obstacle_->tracks_map();
+
 
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -189,7 +188,7 @@ void OvertakeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("enable_l_", enable_l_);
   JSON_DEBUG_VALUE("enable_r_", enable_r_);
 
-  updateLaneChangeSafety(left_reference_path_, right_reference_path_);
+  // updateLaneChangeSafety(left_reference_path_, right_reference_path_);
   JSON_DEBUG_VALUE("is_left_lane_change_safe_", is_left_lane_change_safe_);
   JSON_DEBUG_VALUE("is_right_lane_change_safe_", is_right_lane_change_safe_);
   setLaneChangeRequestByFrontSlowVehcile(lc_status);
@@ -579,28 +578,28 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       session_->environmental_model().get_ego_state_manager();
 
   *route_traffic_speed = 0.0;
-  const std::vector<TrackedObject>& front_tracks_l =
+  const auto& front_tracks_l =
       lane_tracks_manager_->front_tracks_l();
-  const std::vector<TrackedObject>& front_tracks_r =
+  const auto& front_tracks_r =
       lane_tracks_manager_->front_tracks_r();
 
-  std::vector<TrackedObject> side_front_obstacle_array;
+  std::vector<std::shared_ptr<FrenetObstacle>> side_front_obstacle_array;
   if (is_left) {
-    for (auto& tr : front_tracks_l) {
-      if (!(tr.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    for (const auto& tr : front_tracks_l) {
+      if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
         continue;
       }
-      if (tr.d_rel > kDefaultLeadOneConsiderRange) {
+      if (tr->d_s_rel() > kDefaultLeadOneConsiderRange) {
         continue;
       }
       side_front_obstacle_array.push_back(tr);
     }
   } else {
-    for (auto& tr : front_tracks_r) {
-      if (!(tr.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    for (const auto& tr : front_tracks_r) {
+      if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
         continue;
       }
-      if (tr.d_rel > kDefaultLeadOneConsiderRange) {
+      if (tr->d_s_rel() > kDefaultLeadOneConsiderRange) {
         continue;
       }
       side_front_obstacle_array.push_back(tr);
@@ -611,9 +610,9 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
   double second_vehicle_speed = std::numeric_limits<double>::max();
   for (const auto& front_obstacle : side_front_obstacle_array) {
     if (std::numeric_limits<double>::max() == first_vehicle_speed) {
-      first_vehicle_speed = front_obstacle.v;
+      first_vehicle_speed = front_obstacle->velocity();
     } else if (std::numeric_limits<double>::max() == second_vehicle_speed) {
-      second_vehicle_speed = front_obstacle.v;
+      second_vehicle_speed = front_obstacle->velocity();
       break;
     }
   }
@@ -706,38 +705,38 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   return is_overtake;
 }
 
-void OvertakeRequest::updateLaneChangeSafety(
-    const std::shared_ptr<ReferencePath>& left_ref_line,
-    const std::shared_ptr<ReferencePath>& right_ref_line) {
-  is_left_lane_change_safe_ = false;
-  is_right_lane_change_safe_ = false;
+// void OvertakeRequest::updateLaneChangeSafety(
+//     const std::shared_ptr<ReferencePath>& left_ref_line,
+//     const std::shared_ptr<ReferencePath>& right_ref_line) {
+//   is_left_lane_change_safe_ = false;
+//   is_right_lane_change_safe_ = false;
 
-  std::vector<int> risk_agent_id_for_lane_change;
-  const double safety_extra_forward_distance = 0.0;
-  const double safety_extra_backward_distance = kLaneChangeSafetyDistanceBuffer;
-  const double safety_forward_time = kLaneChangeSafetyForwardTime;
-  const double safety_backward_time = kLaneChangeSafetyBackwardTime;
-  const double safety_ratio = 1.0;
+//   std::vector<int> risk_agent_id_for_lane_change;
+//   const double safety_extra_forward_distance = 0.0;
+//   const double safety_extra_backward_distance = kLaneChangeSafetyDistanceBuffer;
+//   const double safety_forward_time = kLaneChangeSafetyForwardTime;
+//   const double safety_backward_time = kLaneChangeSafetyBackwardTime;
+//   const double safety_ratio = 1.0;
 
-  double front_required_space = 0.0;
-  double rear_required_space = 0.0;
-  if (enable_l_ && left_ref_line) {
-    is_left_lane_change_safe_ = checkLaneChangeSafety(
-        left_ref_line, safety_extra_forward_distance,
-        safety_extra_backward_distance, safety_forward_time,
-        safety_backward_time, true, safety_ratio, safety_ratio, true,
-        &risk_agent_id_for_lane_change, &front_required_space,
-        &rear_required_space);
-  }
-  if (enable_r_ && right_ref_line) {
-    is_right_lane_change_safe_ = checkLaneChangeSafety(
-        right_ref_line, safety_extra_forward_distance,
-        safety_extra_backward_distance, safety_forward_time,
-        safety_backward_time, true, safety_ratio, safety_ratio, true,
-        &risk_agent_id_for_lane_change, &front_required_space,
-        &rear_required_space);
-  }
-}
+//   double front_required_space = 0.0;
+//   double rear_required_space = 0.0;
+//   if (enable_l_ && left_ref_line) {
+//     is_left_lane_change_safe_ = checkLaneChangeSafety(
+//         left_ref_line, safety_extra_forward_distance,
+//         safety_extra_backward_distance, safety_forward_time,
+//         safety_backward_time, true, safety_ratio, safety_ratio, true,
+//         &risk_agent_id_for_lane_change, &front_required_space,
+//         &rear_required_space);
+//   }
+//   if (enable_r_ && right_ref_line) {
+//     is_right_lane_change_safe_ = checkLaneChangeSafety(
+//         right_ref_line, safety_extra_forward_distance,
+//         safety_extra_backward_distance, safety_forward_time,
+//         safety_backward_time, true, safety_ratio, safety_ratio, true,
+//         &risk_agent_id_for_lane_change, &front_required_space,
+//         &rear_required_space);
+//   }
+// }
 
 bool OvertakeRequest::checkLeftLaneChangeValid(
     const std::shared_ptr<ReferencePath>& ref_line, const bool is_left) {
@@ -768,7 +767,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
   if (!ref_line) {
     return false;
   }
-
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
   const auto& target_lane_coord_ptr = ref_line->get_frenet_coord();
   Point2D ego_frenet_point_in_left_lane;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
@@ -789,7 +788,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
       target_lane->get_reference_path()->get_lane_obstacles_ids();
   const std::vector<int>& front_potensial_objects =
       current_lane->get_reference_path()->get_lane_obstacles_ids();
-  const std::vector<TrackedObject>& front_tracks =
+  const std::vector<std::shared_ptr<planning::FrenetObstacle>>& front_tracks =
       lateral_obstacle_->front_tracks();
 
   // if (!left_potensial_objects.size()) {
@@ -807,52 +806,52 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
   //   }
   // }
 
-  std::vector<TrackedObject> left_front_target_tracks;
-  std::vector<TrackedObject> ego_front_target_tracks;
-  std::vector<TrackedObject> left_lane_cone_distribution_set;
-  std::vector<TrackedObject> current_lane_cone_distribution_set;
-  std::vector<TrackedObject> left_boundary_cone_distribution_set;
-  std::vector<TrackedObject> left_boundary_cone_distribution_ordered_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> left_front_target_tracks;
+  std::vector<std::shared_ptr<FrenetObstacle>> ego_front_target_tracks;
+  std::vector<std::shared_ptr<FrenetObstacle>> left_lane_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> current_lane_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> left_boundary_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> left_boundary_cone_distribution_ordered_set;
 
   for (auto& obstacle : front_tracks) {
     if (std::count(left_potensial_objects.begin(), left_potensial_objects.end(),
-                   obstacle.track_id) > 0) {
-      left_front_target_tracks.push_back(obstacle);
+                   obstacle->id()) > 0) {
+      left_front_target_tracks.emplace_back(obstacle);
     }
     if (std::count(front_potensial_objects.begin(),
-                   front_potensial_objects.end(), obstacle.track_id) > 0) {
-      ego_front_target_tracks.push_back(obstacle);
+                   front_potensial_objects.end(), obstacle->id()) > 0) {
+      ego_front_target_tracks.emplace_back(obstacle);
     }
   }
 
   for (const auto& obj : ego_front_target_tracks) {
-    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
-      if (std::fabs(obj.l) < kLaneConeRangeThres) {
-        current_lane_cone_distribution_set.push_back(obj);
+    if (obj->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      if (std::fabs(obj->frenet_l()) < kLaneConeRangeThres) {
+        current_lane_cone_distribution_set.emplace_back(obj);
       }
-      if ((obj.l > kLaneConeRangeThres) &&
-          std::fabs(obj.l - lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
-        left_boundary_cone_distribution_set.push_back(obj);
+      if ((obj->frenet_l() > kLaneConeRangeThres) &&
+          std::fabs(obj->frenet_l() - lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+        left_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
   }
   for (const auto& obj : left_front_target_tracks) {
-    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
-      if (std::fabs(obj.l - lane_width) < kLaneConeRangeThres) {
-        left_lane_cone_distribution_set.push_back(obj);
+    if (obj->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      if (std::fabs(obj->frenet_l() - lane_width) < kLaneConeRangeThres) {
+        left_lane_cone_distribution_set.emplace_back(obj);
       }
-      if ((obj.l < lane_width - kLaneConeRangeThres) &&
-          std::fabs(obj.l - lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
-        left_boundary_cone_distribution_set.push_back(obj);
+      if ((obj->frenet_l() < lane_width - kLaneConeRangeThres) &&
+          std::fabs(obj->frenet_l() - lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+        left_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
   }
   // 针对左侧车道边界的锥桶，安排距离自车由近及远排序
   for (const auto& tr : left_boundary_cone_distribution_set) {
-    if (tr.d_rel >= 0.0) {
+    if (tr->d_s_rel() >= 0.0) {
       auto it = left_boundary_cone_distribution_ordered_set.begin();
       while (it != left_boundary_cone_distribution_ordered_set.end() &&
-             it->d_rel < tr.d_rel) {
+             (*it)->d_s_rel() < tr->d_s_rel()) {
         ++it;
       }
 
@@ -869,14 +868,14 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
           kBoundaryConeNumThres &&
       current_lane_cone_distribution_set.size() >= kLaneConeNumThres &&
       left_lane_cone_distribution_set.size() == 0 &&
-      current_lane_cone_distribution_set[0].s >
-          left_boundary_cone_distribution_ordered_set[0].s) {
+      current_lane_cone_distribution_set[0]->frenet_s() >
+          left_boundary_cone_distribution_ordered_set[0]->frenet_s()) {
     return true;
   }
   if (current_lane_cone_distribution_set.size() >= kLaneConeNumThres &&
       left_lane_cone_distribution_set.size() >= kLaneConeNumThres) {
-    if (left_lane_cone_distribution_set[0].s -
-            current_lane_cone_distribution_set[0].s >
+    if (left_lane_cone_distribution_set[0]->frenet_s() -
+            current_lane_cone_distribution_set[0]->frenet_s() >
         kMinConeDistanceToLaneChange) {
       return true;
     } else {
@@ -896,7 +895,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
   if (!ref_line) {
     return false;
   }
-
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
   const auto& target_lane_coord_ptr = ref_line->get_frenet_coord();
   Point2D ego_frenet_point_in_right_lane;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
@@ -933,52 +932,55 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
   //   }
   // }
 
-  std::vector<TrackedObject> right_front_target_tracks;
-  std::vector<TrackedObject> ego_front_target_tracks;
-  std::vector<TrackedObject> right_lane_cone_distribution_set;
-  std::vector<TrackedObject> current_lane_cone_distribution_set;
-  std::vector<TrackedObject> right_boundary_cone_distribution_set;
-  std::vector<TrackedObject> right_boundary_cone_distribution_ordered_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> right_front_target_tracks;
+  std::vector<std::shared_ptr<FrenetObstacle>> ego_front_target_tracks;
+  std::vector<std::shared_ptr<FrenetObstacle>> right_lane_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> current_lane_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> right_boundary_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>> right_boundary_cone_distribution_ordered_set;
 
-  for (auto& obstacle : lateral_obstacle_->front_tracks()) {
+  const std::vector<std::shared_ptr<planning::FrenetObstacle>>& front_tracks =
+      lateral_obstacle_->front_tracks();
+
+  for (const auto& obstacle : front_tracks) {
     if (std::count(right_potensial_objects.begin(),
-                   right_potensial_objects.end(), obstacle.track_id) > 0) {
-      right_front_target_tracks.push_back(obstacle);
+                   right_potensial_objects.end(), obstacle->id()) > 0) {
+      right_front_target_tracks.emplace_back(obstacle);
     }
     if (std::count(front_potensial_objects.begin(),
-                   front_potensial_objects.end(), obstacle.track_id) > 0) {
-      ego_front_target_tracks.push_back(obstacle);
+                   front_potensial_objects.end(), obstacle->id()) > 0) {
+      ego_front_target_tracks.emplace_back(obstacle);
     }
   }
 
   for (const auto& obj : ego_front_target_tracks) {
-    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
-      if (std::fabs(obj.l) < kLaneConeRangeThres) {
-        current_lane_cone_distribution_set.push_back(obj);
+    if (obj->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      if (std::fabs(obj->frenet_l()) < kLaneConeRangeThres) {
+        current_lane_cone_distribution_set.emplace_back(obj);
       }
-      if ((obj.l < -kLaneConeRangeThres) &&
-          std::fabs(obj.l + lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
-        right_boundary_cone_distribution_set.push_back(obj);
+      if ((obj->frenet_l() < -kLaneConeRangeThres) &&
+          std::fabs(obj->frenet_l() + lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+        right_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
   }
   for (const auto& obj : right_front_target_tracks) {
-    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
-      if (std::fabs(obj.l + lane_width) < kLaneConeRangeThres) {
-        right_lane_cone_distribution_set.push_back(obj);
+    if (obj->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      if (std::fabs(obj->frenet_l() + lane_width) < kLaneConeRangeThres) {
+        right_lane_cone_distribution_set.emplace_back(obj);
       }
-      if ((obj.l > -lane_width + kLaneConeRangeThres) &&
-          std::fabs(obj.l + lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
-        right_boundary_cone_distribution_set.push_back(obj);
+      if ((obj->frenet_l() > -lane_width + kLaneConeRangeThres) &&
+          std::fabs(obj->frenet_l() + lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+        right_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
   }
   // 针对右侧车道边界的锥桶，安排距离自车由近及远排序
   for (const auto& tr : right_boundary_cone_distribution_set) {
-    if (tr.d_rel >= 0.0) {
+    if (tr->d_s_rel() >= 0.0) {
       auto it = right_boundary_cone_distribution_ordered_set.begin();
       while (it != right_boundary_cone_distribution_ordered_set.end() &&
-             it->d_rel < tr.d_rel) {
+             (*it)->d_s_rel() < tr->d_s_rel()) {
         ++it;
       }
 
@@ -995,14 +997,14 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
           kBoundaryConeNumThres &&
       current_lane_cone_distribution_set.size() >= kLaneConeNumThres &&
       right_lane_cone_distribution_set.size() == 0 &&
-      current_lane_cone_distribution_set[0].s >
-          right_boundary_cone_distribution_ordered_set[0].s) {
+      current_lane_cone_distribution_set[0]->frenet_s() >
+          right_boundary_cone_distribution_ordered_set[0]->frenet_s()) {
     return true;
   }
   if (current_lane_cone_distribution_set.size() >= kLaneConeNumThres &&
       right_lane_cone_distribution_set.size() >= kLaneConeNumThres) {
-    if (right_lane_cone_distribution_set[0].s -
-            current_lane_cone_distribution_set[0].s >
+    if (right_lane_cone_distribution_set[0]->frenet_s() -
+            current_lane_cone_distribution_set[0]->frenet_s() >
         kMinConeDistanceToLaneChange) {
       return true;
     } else {
@@ -1018,6 +1020,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
 }
 
 bool OvertakeRequest::checkLaneChangeValidBySuprsSignal(const bool is_left) {
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
   std::vector<int> target_side_objects_id_set;
   Point2D ego_pose{planning_init_point_.lat_init_state.x(),
                    planning_init_point_.lat_init_state.y()};
@@ -1035,17 +1038,17 @@ bool OvertakeRequest::checkLaneChangeValidBySuprsSignal(const bool is_left) {
   }
   bool has_moving_obs = false;
   for (const auto& id : target_side_objects_id_set) {
-    auto iter = tracks_map_.find(id);
-    if (iter == tracks_map_.end()) {
+    auto iter = tracks_map.find(id);
+    if (iter == tracks_map.end()) {
       continue;
     }
     const double dis =
-        std::hypot(tracks_map_[id].center_x, tracks_map_[id].center_y);
+        std::hypot(tracks_map.at(id)->obstacle()->x_center() - ego_pose.x, tracks_map.at(id)->obstacle()->y_center() - ego_pose.y);
     // 障碍物type为卡车或者轿车的需要抑制变道
-    if (tracks_map_[id].v > kStaticVehicleThreshold &&
+    if (tracks_map.at(id)->velocity() > kStaticVehicleThreshold &&
         dis < kSuppressionDistanceThres &&
-        (tracks_map_[id].type == iflyauto::OBJECT_TYPE_TRUCK ||
-         tracks_map_[id].type == iflyauto::OBJECT_TYPE_COUPE)) {
+        (tracks_map.at(id)->type() == iflyauto::OBJECT_TYPE_TRUCK ||
+         tracks_map.at(id)->type() == iflyauto::OBJECT_TYPE_COUPE)) {
       has_moving_obs = true;
       break;
     }
@@ -1086,7 +1089,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
   const double lateral_buffer =
       kLateralBufferInCheckLaneChangeSafety * lat_safety_ratio;
 
-  std::vector<TrackedObject> target_side_front_tracks;
+  std::vector<std::shared_ptr<FrenetObstacle>> target_side_front_tracks;
   if (is_left) {
     target_side_front_tracks = lane_tracks_manager_->front_tracks_l();
   } else {
@@ -1100,7 +1103,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
       ego_half_width, lateral_buffer, kLateralBufferInCheckLaneChangeSafety,
       false, &front_tracks_ids);
 
-  std::vector<TrackedObject> target_side_rear_tracks;
+  std::vector<std::shared_ptr<FrenetObstacle>> target_side_rear_tracks;
   if (is_left) {
     target_side_rear_tracks = lane_tracks_manager_->side_tracks_l();
   } else {
@@ -1112,22 +1115,22 @@ bool OvertakeRequest::checkLaneChangeSafety(
       kSearchRangeInCheckLaneChangeSafety, kSearchObsNumInCheckLaneChangeSafety,
       ego_half_width, lateral_buffer, kLateralBufferInCheckLaneChangeSafety,
       false, &rear_tracks_ids);
-
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
   auto front_track_iter = front_tracks_ids.empty()
-                              ? tracks_map_.end()
-                              : tracks_map_.find(front_tracks_ids.front());
+                              ? tracks_map.end()
+                              : tracks_map.find(front_tracks_ids.front());
   auto rear_track_iter = rear_tracks_ids.empty()
-                             ? tracks_map_.end()
-                             : tracks_map_.find(rear_tracks_ids.front());
-  const bool has_front_obs = front_track_iter != tracks_map_.end();
-  const bool has_rear_obs = rear_track_iter != tracks_map_.end();
+                             ? tracks_map.end()
+                             : tracks_map.find(rear_tracks_ids.front());
+  const bool has_front_obs = front_track_iter != tracks_map.end();
+  const bool has_rear_obs = rear_track_iter != tracks_map.end();
 
   int not_safety_agent_id = -1;
   if (has_front_obs && has_rear_obs) {
     const double front_to_ego_dis = std::hypot(
-        front_track_iter->second.center_x, front_track_iter->second.center_y);
-    const double rear_to_ego_dis = std::hypot(rear_track_iter->second.center_x,
-                                              rear_track_iter->second.center_y);
+        front_track_iter->second->obstacle()->x_center(), front_track_iter->second->obstacle()->y_center());
+    const double rear_to_ego_dis = std::hypot(rear_track_iter->second->obstacle()->x_center(),
+                                              rear_track_iter->second->obstacle()->y_center());
     not_safety_agent_id = front_to_ego_dis < rear_to_ego_dis
                               ? front_track_iter->first
                               : rear_track_iter->first;
@@ -1142,14 +1145,14 @@ bool OvertakeRequest::checkLaneChangeSafety(
         session_->environmental_model().get_ego_state_manager();
     double ego_fx = std::cos(ego_state->ego_pose_raw().theta);
     double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
-    const double long_dis = front_track_iter->second.d_rel;
+    const double long_dis = front_track_iter->second->d_s_rel();
     Point2D obs_cart_point{0.0, 0.0};
     obs_cart_point.x = ego_cart_point.x +
-                       front_track_iter->second.center_x * ego_fx -
-                       front_track_iter->second.center_y * ego_fy;
+                       front_track_iter->second->obstacle()->x_center() * ego_fx -
+                       front_track_iter->second->obstacle()->y_center() * ego_fy;
     obs_cart_point.y = ego_cart_point.y +
-                       front_track_iter->second.center_x * ego_fy +
-                       front_track_iter->second.center_y * ego_fx;
+                       front_track_iter->second->obstacle()->x_center() * ego_fy +
+                       front_track_iter->second->obstacle()->x_center() * ego_fx;
 
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
@@ -1164,9 +1167,9 @@ bool OvertakeRequest::checkLaneChangeSafety(
                           use_dynamic_safety_distance) +
         extra_front_distance_buffer;
     const bool front_safety_at_present = checkFrontSafetyAtPresent(
-        long_dis, ego_state->ego_v(), front_track_iter->second.v,
-        kDecInCheckLaneChangeSafety, front_track_iter->second.a, ego_front_edge,
-        0.5 * front_track_iter->second.length, front_safety_distance,
+        long_dis, ego_state->ego_v(), front_track_iter->second->velocity(),
+        kDecInCheckLaneChangeSafety, front_track_iter->second->obstacle()->acceleration(), ego_front_edge,
+        0.5 * front_track_iter->second->length(), front_safety_distance,
         lon_safety_ratio, &front_safety_threshold_at_present);
     if (!front_safety_at_present) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
@@ -1174,9 +1177,9 @@ bool OvertakeRequest::checkLaneChangeSafety(
       return false;
     }
     const double front_safety_at_future = checkFrontSafetyAtFuture(
-        long_dis, ego_state->ego_v(), front_track_iter->second.v,
-        kDecInCheckLaneChangeSafety, front_track_iter->second.a, ego_front_edge,
-        0.5 * front_track_iter->second.length, front_safety_distance,
+        long_dis, ego_state->ego_v(), front_track_iter->second->velocity(),
+        kDecInCheckLaneChangeSafety, front_track_iter->second->obstacle()->acceleration(), ego_front_edge,
+        0.5 * front_track_iter->second->length(), front_safety_distance,
         lon_safety_ratio, kConsiderTimestampInCheckLaneChangeSafety);
     if (!front_safety_at_future) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
@@ -1191,14 +1194,14 @@ bool OvertakeRequest::checkLaneChangeSafety(
         session_->environmental_model().get_ego_state_manager();
     double ego_fx = std::cos(ego_state->ego_pose_raw().theta);
     double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
-    const double long_dis = rear_track_iter->second.d_rel;
+    const double long_dis = rear_track_iter->second->d_s_rel();
     Point2D obs_cart_point{0.0, 0.0};
     obs_cart_point.x = ego_cart_point.x +
-                       rear_track_iter->second.center_x * ego_fx -
-                       rear_track_iter->second.center_y * ego_fy;
+                       rear_track_iter->second->obstacle()->x_center() * ego_fx -
+                       rear_track_iter->second->obstacle()->y_center() * ego_fy;
     obs_cart_point.y = ego_cart_point.y +
-                       rear_track_iter->second.center_x * ego_fy +
-                       rear_track_iter->second.center_y * ego_fx;
+                       rear_track_iter->second->obstacle()->x_center() * ego_fy +
+                       rear_track_iter->second->obstacle()->y_center() * ego_fx;
 
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
@@ -1210,13 +1213,13 @@ bool OvertakeRequest::checkLaneChangeSafety(
     const double rear_safety_distance =
         getSafetyDistance(kBackwardLaneChangeSafetyLongDistance,
                           kBackwardMaxLaneChangeSafetyLongDistance,
-                          rear_track_iter->second.v,
+                          rear_track_iter->second->velocity(),
                           use_dynamic_safety_distance) +
         extra_rear_distance_buffer;
     const bool rear_safety_at_present = checkRearSafetyAtPresent(
-        long_dis, ego_state->ego_v(), rear_track_iter->second.v,
-        kDecInCheckLaneChangeSafety, rear_track_iter->second.a, ego_rear_edge,
-        0.5 * rear_track_iter->second.length, rear_safety_distance,
+        long_dis, ego_state->ego_v(), rear_track_iter->second->velocity(),
+        kDecInCheckLaneChangeSafety, rear_track_iter->second->obstacle()->acceleration(), ego_rear_edge,
+        0.5 * rear_track_iter->second->length(), rear_safety_distance,
         safety_backward_time, lon_safety_ratio,
         &rear_safety_threshold_at_present);
     if (!rear_safety_at_present) {
@@ -1225,9 +1228,9 @@ bool OvertakeRequest::checkLaneChangeSafety(
       return false;
     }
     const double rear_safety_at_future = checkRearSafetyAtFuture(
-        long_dis, ego_state->ego_v(), rear_track_iter->second.v,
-        kDecInCheckLaneChangeSafety, rear_track_iter->second.a, ego_rear_edge,
-        0.5 * rear_track_iter->second.length, rear_safety_distance,
+        long_dis, ego_state->ego_v(), rear_track_iter->second->velocity(),
+        kDecInCheckLaneChangeSafety, rear_track_iter->second->obstacle()->acceleration(), ego_rear_edge,
+        0.5 * rear_track_iter->second->length(), rear_safety_distance,
         lon_safety_ratio,
         kConsiderTimestampInCheckLaneChangeSafety * lon_safety_ratio);
     if (!rear_safety_at_future) {
@@ -1242,7 +1245,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
 
 void OvertakeRequest::selectTargetObstacleIds(
     const std::shared_ptr<KDPath>& ref_line, const Point2D ego_cart_point,
-    const std::vector<TrackedObject> candidate_obs_info,
+    const std::vector<std::shared_ptr<FrenetObstacle>> candidate_obs_info,
     const double search_range, const int max_target_num,
     const double ego_half_width, const double l_buffer,
     const double max_l_buffer, const bool order_reverse,
@@ -1253,6 +1256,8 @@ void OvertakeRequest::selectTargetObstacleIds(
 
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
+
   double ego_fx = std::cos(ego_state->ego_pose_raw().theta);
   double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
 
@@ -1280,21 +1285,21 @@ void OvertakeRequest::selectTargetObstacleIds(
     }
   };
 
-  auto isTruck = [&](const TrackedObject& veh) -> bool {
-    return veh.type == iflyauto::OBJECT_TYPE_TRUCK &&
-           veh.length > kMinLengthForTruck && veh.width > kMinWidthForTruck;
+  auto isTruck = [&](const std::shared_ptr<FrenetObstacle>& veh) -> bool {
+    return veh->type() == iflyauto::OBJECT_TYPE_TRUCK &&
+           veh->length() > kMinLengthForTruck && veh->width() > kMinWidthForTruck;
   };
 
-  auto getHalfWidthOnLane = [&](const TrackedObject& veh,
+  auto getHalfWidthOnLane = [&](const std::shared_ptr<FrenetObstacle>& veh,
                                 double* half_width) -> bool {
     if (!half_width) {
       return false;
     }
     Point2D obs_cart_point{0.0, 0.0};
     obs_cart_point.x =
-        ego_cart_point.x + veh.center_x * ego_fx - veh.center_y * ego_fy;
+        ego_cart_point.x + veh->obstacle()->x_center() * ego_fx - veh->obstacle()->y_center() * ego_fy;
     obs_cart_point.y =
-        ego_cart_point.y + veh.center_x * ego_fy + veh.center_y * ego_fx;
+        ego_cart_point.y + veh->obstacle()->x_center() * ego_fy + veh->obstacle()->y_center() * ego_fx;
 
     Point2D new_frenet_point;
     double new_lane_theta = 0.0;
@@ -1302,39 +1307,41 @@ void OvertakeRequest::selectTargetObstacleIds(
       ILOG_DEBUG << "obs on ref lane failed!";
       return false;
     }
+
     new_lane_theta = ref_line->GetPathCurveHeading(new_frenet_point.x);
+    double veh_theta = veh->obstacle()->heading_angle() - ego_state->ego_pose().theta;
     const double delta_angle =
-        std::abs(NormalizeAngle(new_lane_theta) - NormalizeAngle(veh.theta));
-    *half_width = std::abs(std::cos(delta_angle)) * 0.5 * veh.width +
-                  std::abs(std::sin(delta_angle)) * 0.5 * veh.length;
+        std::abs(NormalizeAngle(new_lane_theta) - NormalizeAngle(veh_theta));
+    *half_width = std::abs(std::cos(delta_angle)) * 0.5 * veh->width() +
+                  std::abs(std::sin(delta_angle)) * 0.5 * veh->length();
     return true;
   };
 
   for (int i = begin_index; i != end_index; i += step) {
     auto obs_info = candidate_obs_info.at(i);
-    if (!(obs_info.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+    if (!(obs_info->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
-    const auto id = obs_info.track_id;
-    if (tracks_map_.find(id) == tracks_map_.end()) {
+    const auto id = obs_info->id();
+    if (tracks_map.find(id) == tracks_map.end()) {
       continue;
     }
     double veh_half_width = 1.0;
     if (!getHalfWidthOnLane(obs_info, &veh_half_width)) {
-      veh_half_width = 0.5 * obs_info.width;
+      veh_half_width = 0.5 * obs_info->width();
     }
     const bool is_truck = isTruck(obs_info);
     const double buffer = std::min(
         max_l_buffer, is_truck ? l_buffer + kExtraLatBufferForTruck : l_buffer);
     const bool is_select =
-        selectObsByLateralDistance(obs_info.l, veh_half_width, buffer) &&
+        selectObsByLateralDistance(obs_info->frenet_l(), veh_half_width, buffer) &&
         is_truck;
 
     if (!is_select) {
       continue;
     }
 
-    const double distance = std::hypot(obs_info.center_x, obs_info.center_y);
+    const double distance = std::hypot(obs_info->obstacle()->x_center(), obs_info->obstacle()->y_center());
     if (distance < search_range) {
       target_tracks_ids->emplace_back(id);
     }
@@ -1479,36 +1486,37 @@ double OvertakeRequest::getDrivingDistance(const double v, const double a,
 }
 
 bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
-  auto leading_vehicle_iter = tracks_map_.find(overtake_vehicle_id_);
-  if (leading_vehicle_iter != tracks_map_.end()) {
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
+  auto leading_vehicle_iter = tracks_map.find(overtake_vehicle_id_);
+  if (leading_vehicle_iter != tracks_map.end()) {
     const double overtake_lane_change_vehicle_speed =
-        leading_vehicle_iter->second.v;
+        leading_vehicle_iter->second->velocity();
     const double lateral_distance = planning_init_point_.frenet_state.r;
     double front_leading_vehivle_long_distance = kDefaultFrontObstacleDistance;
     const auto lane_tracks_manager =
         session_->environmental_model().get_lane_tracks_manager();
-    std::vector<TrackedObject> ego_front_vehicle_id_array;
+    std::vector<std::shared_ptr<planning::FrenetObstacle>> ego_front_vehicle_id_array;
     ego_front_vehicle_id_array = lane_tracks_manager->front_tracks_c();
-    double leading_vehicle_lateral_speed = leading_vehicle_iter->second.v_lat;
-    double leading_vehicle_lateral_dis = leading_vehicle_iter->second.l;
+    double leading_vehicle_lateral_speed = leading_vehicle_iter->second->frenet_velocity_l();
+    double leading_vehicle_lateral_dis = leading_vehicle_iter->second->frenet_l();
 
     if (ego_front_vehicle_id_array.size() >= 1) {
-      int ego_front_vehicle_id = ego_front_vehicle_id_array.at(0).track_id;
+      int ego_front_vehicle_id = ego_front_vehicle_id_array.at(0)->id();
       if (ego_front_vehicle_id != -1) {
         auto front_leading_vehicle_iter =
-            tracks_map_.find(ego_front_vehicle_id_array.at(0).track_id);
+            tracks_map.find(ego_front_vehicle_id_array.at(0)->id());
         if (overtake_vehicle_id_ == ego_front_vehicle_id) {
           if (ego_front_vehicle_id_array.size() == 1) {
-            front_leading_vehicle_iter = tracks_map_.end();
+            front_leading_vehicle_iter = tracks_map.end();
           } else {
             front_leading_vehicle_iter =
-                tracks_map_.find(ego_front_vehicle_id_array.at(1).track_id);
+                tracks_map.find(ego_front_vehicle_id_array.at(1)->id());
           }
         }
-        if (front_leading_vehicle_iter != tracks_map_.end()) {
+        if (front_leading_vehicle_iter != tracks_map.end()) {
           front_leading_vehivle_long_distance =
-              front_leading_vehicle_iter->second.d_rel;
-          ILOG_DEBUG << "ego vehicle front_leading_vehicle id:" << front_leading_vehicle_iter->second.track_id;
+              front_leading_vehicle_iter->second->d_s_rel();
+          ILOG_DEBUG << "ego vehicle front_leading_vehicle id:" << front_leading_vehicle_iter->second->id();
         }
       }
     }
@@ -1550,8 +1558,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
              << "Front Leading Vehicle Distance:" << front_leading_vehivle_long_distance;
       return true;
     }
-    std::vector<TrackedObject> ego_left_front_vehicle_array;
-    std::vector<TrackedObject> ego_right_front_vehicle_array;
+
     double ego_left_front_leading_vehicle_min_speed =
         kCancelOverTakeLnChgTargetLaneVehDftSpd;
     double ego_left_front_leading_vehivle_long_distance =
@@ -1560,26 +1567,26 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         kCancelOverTakeLnChgTargetLaneVehDftSpd;
     double ego_right_front_leading_vehivle_long_distance =
         kDefaultFrontObstacleDistance;
-    ego_left_front_vehicle_array = lane_tracks_manager_->front_tracks_l();
-    ego_right_front_vehicle_array = lane_tracks_manager_->front_tracks_r();
+    const auto &ego_left_front_vehicle_array = lane_tracks_manager_->front_tracks_l();
+    const auto &ego_right_front_vehicle_array = lane_tracks_manager_->front_tracks_r();
     if (ego_left_front_vehicle_array.size() >= 1) {
       int ego_left_front_vehicle_id =
-          ego_left_front_vehicle_array.at(0).track_id;
+          ego_left_front_vehicle_array.at(0)->id();
       auto left_front_leading_vehicle_iter =
-          tracks_map_.find(ego_left_front_vehicle_array.at(0).track_id);
+          tracks_map.find(ego_left_front_vehicle_array.at(0)->id());
       if (overtake_vehicle_id_ == ego_left_front_vehicle_id) {
         if (ego_left_front_vehicle_array.size() == 1) {
-          left_front_leading_vehicle_iter = tracks_map_.end();
+          left_front_leading_vehicle_iter = tracks_map.end();
         } else {
           left_front_leading_vehicle_iter =
-              tracks_map_.find(ego_left_front_vehicle_array.at(1).track_id);
+              tracks_map.find(ego_left_front_vehicle_array.at(1)->id());
         }
       }
-      if (left_front_leading_vehicle_iter != tracks_map_.end()) {
+      if (left_front_leading_vehicle_iter != tracks_map.end()) {
         ego_left_front_leading_vehicle_min_speed =
-            left_front_leading_vehicle_iter->second.v;
+            left_front_leading_vehicle_iter->second->velocity();
         ego_left_front_leading_vehivle_long_distance =
-            left_front_leading_vehicle_iter->second.d_rel;
+            left_front_leading_vehicle_iter->second->d_s_rel();
         ILOG_DEBUG << "ego_left_front_leading_vehivle_long_distance:" << ego_left_front_leading_vehivle_long_distance;
       }
     }
@@ -1622,22 +1629,22 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
 
     if (ego_right_front_vehicle_array.size() >= 1) {
       int ego_right_front_vehicle_id =
-          ego_right_front_vehicle_array.at(0).track_id;
+          ego_right_front_vehicle_array.at(0)->id();
       auto right_front_leading_vehicle_iter =
-          tracks_map_.find(ego_right_front_vehicle_array.at(0).track_id);
+          tracks_map.find(ego_right_front_vehicle_array.at(0)->id());
       if (overtake_vehicle_id_ == ego_right_front_vehicle_id) {
         if (1 == ego_right_front_vehicle_array.size()) {
-          right_front_leading_vehicle_iter = tracks_map_.end();
+          right_front_leading_vehicle_iter = tracks_map.end();
         } else {
           right_front_leading_vehicle_iter =
-              tracks_map_.find(ego_right_front_vehicle_array.at(1).track_id);
+              tracks_map.find(ego_right_front_vehicle_array.at(1)->id());
         }
       }
-      if (right_front_leading_vehicle_iter != tracks_map_.end()) {
+      if (right_front_leading_vehicle_iter != tracks_map.end()) {
         ego_right_front_leading_vehicle_min_speed =
-            right_front_leading_vehicle_iter->second.v;
+            right_front_leading_vehicle_iter->second->velocity();
         ego_right_front_leading_vehivle_long_distance =
-            right_front_leading_vehicle_iter->second.d_rel;
+            right_front_leading_vehicle_iter->second->d_s_rel();
         ILOG_DEBUG << "right front leading vehicle long distance:" << ego_right_front_leading_vehivle_long_distance;
       }
     }

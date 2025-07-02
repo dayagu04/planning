@@ -763,9 +763,9 @@ const IndexedList<int, Obstacle> &ObstacleManager::get_obstacles() const {
 void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
   auto &frenet_obstacles = reference_path.mutable_obstacles();
   auto &frenet_obstacles_map = reference_path.mutable_obstacles_map();
-  auto &obstacles_ids_in_lane_map =
-      reference_path.mutable_obstacles_in_lane_map();
-  obstacles_ids_in_lane_map.clear();
+  // auto &obstacles_ids_in_lane_map =
+  //     reference_path.mutable_obstacles_in_lane_map();
+  // obstacles_ids_in_lane_map.clear();
   frenet_obstacles.clear();
   frenet_obstacles_map.clear();
 
@@ -774,23 +774,23 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
                              groundline_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +
                              map_static_obstacles_.Items().size());
-    obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
-                                      groundline_obstacles_.Items().size() +
-                                      occupancy_obstacles_.Items().size() +
-                                      map_static_obstacles_.Items().size());
+    // obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
+    //                                   groundline_obstacles_.Items().size() +
+    //                                   occupancy_obstacles_.Items().size() +
+    //                                   map_static_obstacles_.Items().size());
     add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
-                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+                        frenet_obstacles_map);
     add_frenet_obstacle(groundline_obstacles_, reference_path, frenet_obstacles,
-                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+                        frenet_obstacles_map);
     add_frenet_obstacle(occupancy_obstacles_, reference_path, frenet_obstacles,
-                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+                        frenet_obstacles_map);
     add_frenet_obstacle(map_static_obstacles_, reference_path, frenet_obstacles,
-                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+                        frenet_obstacles_map);
   } else {
     frenet_obstacles.reserve(obstacles_.Items().size());
-    obstacles_ids_in_lane_map.reserve(obstacles_.Items().size());
+    // obstacles_ids_in_lane_map.reserve(obstacles_.Items().size());
     add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
-                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+                        frenet_obstacles_map);
   }
 }
 
@@ -798,8 +798,7 @@ void ObstacleManager::add_frenet_obstacle(
     IndexedList<int, Obstacle> &obstacles, ReferencePath &reference_path,
     std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
     std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
-        &frenet_obstacles_map,
-    std::vector<int> &obstacles_ids_in_lane_map) {
+        &frenet_obstacles_map) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
   constexpr double kCareDistance = 30.0;
   auto ego_s = reference_path.get_frenet_ego_state().s();
@@ -852,12 +851,12 @@ void ObstacleManager::add_frenet_obstacle(
 
     // judge the strict lane obstacles
     // TODO:@cailiu, this condition can be released, its strict!
-    const double half_width = obstacle_ptr->width() * 0.5;
-    const double lat_buffer = 0.8;
-    if (frenet_point.y + half_width < 1.5 + lat_buffer &&
-        frenet_point.y - half_width > -1.5 - lat_buffer) {
-      obstacles_ids_in_lane_map.emplace_back(obstacle_ptr->id());
-    }
+    // const double half_width = obstacle_ptr->width() * 0.5;
+    // const double lat_buffer = 0.8;
+    // if (frenet_point.y + half_width < 1.5 + lat_buffer &&
+    //     frenet_point.y - half_width > -1.5 - lat_buffer) {
+    //   obstacles_ids_in_lane_map.emplace_back(obstacle_ptr->id());
+    // }
   }
 }
 

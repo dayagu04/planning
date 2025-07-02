@@ -29,7 +29,7 @@ bool TrafficLightDecider::Execute() {
 
   const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
   if (lateral_obstacles->leadone() != nullptr &&
-      lateral_obstacles->leadone()->d_rel + 4.0 < dis_to_stopline) {
+      lateral_obstacles->leadone()->d_s_rel() + 4.0 < dis_to_stopline) {
     is_first_car_ = false;
   } else {
     is_first_car_ = true;
@@ -158,7 +158,7 @@ bool TrafficLightDecider::Execute() {
   if (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5) {
     const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
     if (lateral_obstacles->leadone() != nullptr &&
-        lateral_obstacles->leadone()->d_rel + 4.0 < dis_to_stopline) {
+        lateral_obstacles->leadone()->d_s_rel() + 4.0 < dis_to_stopline) {
       is_first_car_ = false;
     } else {
       is_first_car_ = true;

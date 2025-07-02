@@ -66,8 +66,8 @@ TaskPipelineRADS::TaskPipelineRADS(
       std::make_unique<SpeedLimitDecider>(config_builder, session);
   long_ref_path_decider_ =
       std::make_unique<LongRefPathDecider>(config_builder, session);
-  scc_lon_behavior_planner_ =
-      std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
+  // scc_lon_behavior_planner_ =
+  //     std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   start_stop_decider_ =
       std::make_unique<StartStopDecider>(config_builder, session);
   scc_longitudinal_motion_planner_ =

@@ -28,6 +28,7 @@
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "src/modules/adas_function/display_state_types.h"
+#include "geometry_math.h"
 
 namespace planning {
 namespace {
@@ -1035,8 +1036,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
       lane_change_stage_info_.should_premove;
   lane_change_decider_output.lc_request = lc_req_mgr_->request();
   lane_change_decider_output.lc_request_source = lc_req_mgr_->request_source();
-  lane_change_decider_output.act_request_source =
-      lc_req_mgr_->act_request_source();
+  // lane_change_decider_output.act_request_source =
+  //     lc_req_mgr_->act_request_source();
   lane_change_decider_output.lc_turn_light = lc_req_mgr_->turn_signal();
 
   lane_change_decider_output.lc_invalid_track = lc_invalid_track_;

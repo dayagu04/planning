@@ -40,6 +40,11 @@ class FrenetObstacle {
   }
   double rel_s() const { return rel_s_; }
   double d_s_rel() const { return d_s_rel_; };
+  double rel_v() const { return rel_v_; }
+  double tail_s_rel() const { return tail_s_rel_; };
+  double d_path() const { return d_path_; };
+  double y_rel() const { return y_rel_; };
+  double d_path_pos() const { return d_path_pos_; };
   double d_min_cpath() const { return d_min_cpath_; };
   double d_max_cpath() const { return d_max_cpath_; };
   Point2D s_min_l() const { return s_with_min_l_; }
@@ -104,7 +109,12 @@ class FrenetObstacle {
   double d_s_rel_;
   double d_min_cpath_;
   double d_max_cpath_;
+  double tail_s_rel_;
+  double d_path_;
+  double d_path_pos_;
+  double y_rel_;
 
+  double rel_v_;
   Point2D s_with_min_l_;  // x:l, y:s
   Point2D s_with_max_l_;
 

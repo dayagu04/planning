@@ -194,8 +194,8 @@ void GapSelectorDecider::Preprocessor() {
               gap_selector_state_machine_info_.target_lane_id, false);
 
   if (target_refline != nullptr) {
-    ids_obstacle_in_target_lane_ =
-        target_refline->mutable_obstacles_in_lane_map();
+    // ids_obstacle_in_target_lane_ =
+    //     target_refline->mutable_obstacles_in_lane_map();
     target_lane_width_ =
         virtual_lane_mgr
             ->get_lane_with_virtual_id(
@@ -226,8 +226,8 @@ void GapSelectorDecider::Preprocessor() {
               gap_selector_state_machine_info_.origin_lane_id, false);
   std::vector<int> origin_obstacles_in_lane_map;
   if (origin_refline != nullptr) {
-    ids_obstacle_in_origin_lane_ =
-        origin_refline->mutable_obstacles_in_lane_map();
+    // ids_obstacle_in_origin_lane_ =
+    //     origin_refline->mutable_obstacles_in_lane_map();
     origin_lane_coord_ptr_ = origin_refline->get_frenet_coord();
     origin_lane_width_ =
         virtual_lane_mgr

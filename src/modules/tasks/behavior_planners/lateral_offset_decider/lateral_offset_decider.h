@@ -1,7 +1,5 @@
 #pragma once
-#include "avoid_obstacle_maintainer.h"
 #include "avoid_obstacle_maintainer5V.h"
-#include "lateral_offset_calculator.h"
 #include "lateral_offset_calculatorV2.h"
 #include "session.h"
 #include "tasks/task.h"
@@ -28,8 +26,6 @@ class LateralOffsetDecider : public Task {
   void Reset();
   void GenerateOutput();
   LateralOffsetDeciderConfig config_;
-  AvoidObstacleMaintainer avoid_obstacle_maintainer_;
-  LateralOffsetCalculator lateral_offset_calculator_;
 
   AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
   LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;

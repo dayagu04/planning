@@ -17,8 +17,8 @@ LongtimeNoaTaskPipeline::LongtimeNoaTaskPipeline(
       std::make_unique<GeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
-  scc_lon_behavior_planner_ =
-      std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
+  // scc_lon_behavior_planner_ =
+  //     std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
   result_trajectory_generator_ =
@@ -62,11 +62,11 @@ bool LongtimeNoaTaskPipeline::Run() {
     return false;
   }
 
-  ok = scc_lon_behavior_planner_->Execute();
-  if (!ok) {
-    AddErrorInfo(scc_lon_behavior_planner_->Name());
-    return false;
-  }
+  // ok = scc_lon_behavior_planner_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(scc_lon_behavior_planner_->Name());
+  //   return false;
+  // }
 
   ok = scc_longitudinal_motion_planner_->Execute();
   if (!ok) {

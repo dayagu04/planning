@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "base_task_pipeline.h"
-#include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "ego_planning_config.h"
 #include "session.h"
 #include "st_graph/st_graph.h"
@@ -82,7 +81,7 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成
-  std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
+//   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
 
   // Motion Planners
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;

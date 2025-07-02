@@ -384,7 +384,7 @@ void TrackletMaintainer::recv_prediction_objects(
             tr.trajectory[i].relative_ego_std_dev_speed;
       }
 
-      objects.emplace_back(object);
+      objects.push_back(object);
       id_sets.insert(track_id);
       trajectory_idx++;
     }
@@ -526,7 +526,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
-    objects.emplace_back(origin);
+    objects.push_back(origin);
     id_sets.insert(p.id);
   }
   LOG_DEBUG("1map size= : [%lu] \n", fusion_object_history_map_.size());
@@ -958,11 +958,11 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
                   sgn_length * std::sin(item.theta - theta) * half_length +
                   sgn_width * std::cos(item.theta - theta) * half_width;
 
-      bbox_s.emplace_back(_s);
-      bbox_l.emplace_back(_l);
+      bbox_s.push_back(_s);
+      bbox_l.push_back(_l);
 
       if (_s >= s_ego_) {
-        bbox_l_pos.emplace_back(_l);
+        bbox_l_pos.push_back(_l);
       }
     }
   }
@@ -989,11 +989,11 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   std::vector<double> bbox_l_self_pos;
 
   for (auto value : bbox_l) {
-    bbox_l_self.emplace_back(value - l_ego_);
+    bbox_l_self.push_back(value - l_ego_);
   }
 
   for (auto value : bbox_l_pos) {
-    bbox_l_self_pos.emplace_back(value - l_ego_);
+    bbox_l_self_pos.push_back(value - l_ego_);
   }
 
   double min_l =
@@ -1191,10 +1191,10 @@ void TrackletMaintainer::calc_intersection_with_refline(
 
     double rel_x = dx * ego_fx + dy * ego_fy;
     double rel_y = dx * ego_lx + dy * ego_ly;
-    ego_x.emplace_back(rel_x);
-    ego_y.emplace_back(rel_y);
-    ego_speed.emplace_back(item.trajectory.speed[i]);
-    ego_yaw.emplace_back(item.trajectory.yaw[i] -
+    ego_x.push_back(rel_x);
+    ego_y.push_back(rel_y);
+    ego_speed.push_back(item.trajectory.speed[i]);
+    ego_yaw.push_back(item.trajectory.yaw[i] -
                       ego_state_->ego_pose_raw().theta);
   }
   if (ego_x.size() > 0) {

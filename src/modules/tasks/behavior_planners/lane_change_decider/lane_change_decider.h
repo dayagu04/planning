@@ -6,7 +6,6 @@
 #include "environmental_model.h"
 #include "lane_change_request_manager.h"
 #include "lane_change_state_machine_manager.h"
-#include "lateral_behavior_object_selector.h"
 #include "reference_path.h"
 #include "session.h"
 #include "tasks/task.h"

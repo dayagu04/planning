@@ -42,16 +42,16 @@ class LaneChangeRequestManager {
   IntCancelReasonType int_request_cancel_reason() const {
     return int_request_cancel_reason_;
   }
-  std::string act_request_source() {
-    return request_source_ == ACT_REQUEST ? act_request_.act_request_source()
-                                          : "none";
-  }
+  // std::string act_request_source() {
+  //   return request_source_ == ACT_REQUEST ? act_request_.act_request_source()
+  //                                         : "none";
+  // }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
   void set_target_lane_virtual_id(int target_lane_virtual_id) {
     target_lane_virtual_id_ = target_lane_virtual_id;
     map_request_.set_target_lane_virtual_id(target_lane_virtual_id);
     int_request_.set_target_lane_virtual_id(target_lane_virtual_id);
-    act_request_.set_target_lane_virtual_id(target_lane_virtual_id);
+    // act_request_.set_target_lane_virtual_id(target_lane_virtual_id);
   }
   RequestType turn_signal() const { return gen_turn_signal_; }
   bool AggressiveChange() const {
@@ -61,8 +61,6 @@ class LaneChangeRequestManager {
       return true;
     } else if (request_source_ == MAP_REQUEST) {
       return map_request_.AggressiveChange();
-    } else if (request_source_ == ACT_REQUEST) {
-      return act_request_.AggressiveChange();
     } else if (request_source_ == OVERTAKE_REQUEST) {
       return overtake_request_.AggressiveChange();
     } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
@@ -92,7 +90,6 @@ class LaneChangeRequestManager {
   int target_lane_virtual_id_ = -1;
   IntRequest int_request_;
   MapRequest map_request_;
-  ActRequest act_request_;
   OvertakeRequest overtake_request_;
   EmergenceAvoidRequest emergence_avoid_request_;
   ConeRequest cone_change_request_;

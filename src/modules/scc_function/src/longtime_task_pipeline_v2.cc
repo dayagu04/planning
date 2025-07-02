@@ -9,150 +9,150 @@ namespace planning {
 LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
-  ego_lane_road_right_decider_ =
-      std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
-  lane_change_decider_ =
-      std::make_unique<LaneChangeDecider>(config_builder, session);
-  speed_adjust_decider_ =
-      std::make_unique<SpeedAdjustDecider>(config_builder, session);
-  lane_borrow_deciderV1_ =
-      std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
-                                                                 session);
-  lane_borrow_deciderV2_ =
-      std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
-                                                                 session);
-  lateral_obstacle_decider_ =
-      std::make_unique<LateralObstacleDecider>(config_builder, session);
-  lateral_offset_decider_ =
-      std::make_unique<LateralOffsetDecider>(config_builder, session);
-  gap_selector_decider_ =
-      std::make_unique<GapSelectorDecider>(config_builder, session);
-  general_lateral_decider_ =
-      std::make_unique<GeneralLateralDecider>(config_builder, session);
-  traffic_light_decider_ =
-      std::make_unique<TrafficLightDecider>(config_builder, session);
-  lateral_motion_planner_ =
-      std::make_unique<LateralMotionPlanner>(config_builder, session);
-  agent_longitudinal_decider_ =
-      std::make_unique<AgentLongitudinalDecider>(config_builder, session);
-  scc_lon_behavior_planner_ =
-      std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
-  scc_longitudinal_motion_planner_ =
-      std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
-  result_trajectory_generator_ =
-      std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
-  cipv_lost_prohibit_acceleration_decider_ =
-      std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
-                                                            session);
-  sample_poly_speed_adjust_decider_ =
-      std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
-  auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
-  enable_lane_borrow_deciderV2_ =
-      lane_borrow_config.enable_lane_borrow_deciderV2;
+  // ego_lane_road_right_decider_ =
+  //     std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
+  // lane_change_decider_ =
+  //     std::make_unique<LaneChangeDecider>(config_builder, session);
+  // speed_adjust_decider_ =
+  //     std::make_unique<SpeedAdjustDecider>(config_builder, session);
+  // lane_borrow_deciderV1_ =
+  //     std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
+  //                                                                session);
+  // lane_borrow_deciderV2_ =
+  //     std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
+  //                                                                session);
+  // lateral_obstacle_decider_ =
+  //     std::make_unique<LateralObstacleDecider>(config_builder, session);
+  // lateral_offset_decider_ =
+  //     std::make_unique<LateralOffsetDecider>(config_builder, session);
+  // gap_selector_decider_ =
+  //     std::make_unique<GapSelectorDecider>(config_builder, session);
+  // general_lateral_decider_ =
+  //     std::make_unique<GeneralLateralDecider>(config_builder, session);
+  // traffic_light_decider_ =
+  //     std::make_unique<TrafficLightDecider>(config_builder, session);
+  // lateral_motion_planner_ =
+  //     std::make_unique<LateralMotionPlanner>(config_builder, session);
+  // agent_longitudinal_decider_ =
+  //     std::make_unique<AgentLongitudinalDecider>(config_builder, session);
+  // // scc_lon_behavior_planner_ =
+  // //     std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
+  // scc_longitudinal_motion_planner_ =
+  //     std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
+  // result_trajectory_generator_ =
+  //     std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
+  // cipv_lost_prohibit_acceleration_decider_ =
+  //     std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
+  //                                                           session);
+  // sample_poly_speed_adjust_decider_ =
+  //     std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
+  // auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
+  // enable_lane_borrow_deciderV2_ =
+  //     lane_borrow_config.enable_lane_borrow_deciderV2;
 }
 
 bool LongTimeTaskPipelineV2::Run() {
-  bool ok = traffic_light_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(traffic_light_decider_->Name());
-    return false;
-  }
+  // bool ok = traffic_light_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(traffic_light_decider_->Name());
+  //   return false;
+  // }
 
-  ok = ego_lane_road_right_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(ego_lane_road_right_decider_->Name());
-    return false;
-  }
+  // ok = ego_lane_road_right_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(ego_lane_road_right_decider_->Name());
+  //   return false;
+  // }
 
-  ok = lane_change_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(lane_change_decider_->Name());
-    return false;
-  }
+  // ok = lane_change_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(lane_change_decider_->Name());
+  //   return false;
+  // }
 
-  ok = speed_adjust_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(speed_adjust_decider_->Name());
-    return false;
-  }
+  // ok = speed_adjust_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(speed_adjust_decider_->Name());
+  //   return false;
+  // }
 
-  ok = lateral_obstacle_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(lateral_obstacle_decider_->Name());
-  }
-  ok = sample_poly_speed_adjust_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(speed_adjust_decider_->Name());
-    return false;
-  }
+  // ok = lateral_obstacle_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(lateral_obstacle_decider_->Name());
+  // }
+  // ok = sample_poly_speed_adjust_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(speed_adjust_decider_->Name());
+  //   return false;
+  // }
 
-  if (enable_lane_borrow_deciderV2_) {
-    ok = lane_borrow_deciderV2_->Execute();
-    if (!ok) {
-      AddErrorInfo(lane_borrow_deciderV2_->Name());
-      return false;
-    }
-  } else {
-    ok = lane_borrow_deciderV1_->Execute();
-    if (!ok) {
-      AddErrorInfo(lane_borrow_deciderV1_->Name());
-      return false;
-    }
-  }
+  // if (enable_lane_borrow_deciderV2_) {
+  //   ok = lane_borrow_deciderV2_->Execute();
+  //   if (!ok) {
+  //     AddErrorInfo(lane_borrow_deciderV2_->Name());
+  //     return false;
+  //   }
+  // } else {
+  //   ok = lane_borrow_deciderV1_->Execute();
+  //   if (!ok) {
+  //     AddErrorInfo(lane_borrow_deciderV1_->Name());
+  //     return false;
+  //   }
+  // }
 
-  ok = lateral_offset_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(lateral_offset_decider_->Name());
-    return false;
-  }
+  // ok = lateral_offset_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(lateral_offset_decider_->Name());
+  //   return false;
+  // }
 
-  ok = gap_selector_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(gap_selector_decider_->Name());
-    return false;
-  }
+  // ok = gap_selector_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(gap_selector_decider_->Name());
+  //   return false;
+  // }
 
-  ok = general_lateral_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(general_lateral_decider_->Name());
-    return false;
-  }
+  // ok = general_lateral_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(general_lateral_decider_->Name());
+  //   return false;
+  // }
 
-  ok = lateral_motion_planner_->Execute();
-  if (!ok) {
-    AddErrorInfo(lateral_motion_planner_->Name());
-    return false;
-  }
+  // ok = lateral_motion_planner_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(lateral_motion_planner_->Name());
+  //   return false;
+  // }
 
-  ok = agent_longitudinal_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(agent_longitudinal_decider_->Name());
-    return false;
-  }
+  // ok = agent_longitudinal_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(agent_longitudinal_decider_->Name());
+  //   return false;
+  // }
 
-  ok = cipv_lost_prohibit_acceleration_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(cipv_lost_prohibit_acceleration_decider_->Name());
-    return false;
-  }
+  // ok = cipv_lost_prohibit_acceleration_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(cipv_lost_prohibit_acceleration_decider_->Name());
+  //   return false;
+  // }
 
-  ok = scc_lon_behavior_planner_->Execute();
-  if (!ok) {
-    AddErrorInfo(scc_lon_behavior_planner_->Name());
-    return false;
-  }
+  // ok = scc_lon_behavior_planner_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(scc_lon_behavior_planner_->Name());
+  //   return false;
+  // }
 
-  ok = scc_longitudinal_motion_planner_->Execute();
-  if (!ok) {
-    AddErrorInfo(scc_longitudinal_motion_planner_->Name());
-    return false;
-  }
+  // ok = scc_longitudinal_motion_planner_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(scc_longitudinal_motion_planner_->Name());
+  //   return false;
+  // }
 
-  ok = result_trajectory_generator_->Execute();
-  if (!ok) {
-    AddErrorInfo(result_trajectory_generator_->Name());
-    return false;
-  }
+  // ok = result_trajectory_generator_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(result_trajectory_generator_->Name());
+  //   return false;
+  // }
 
   return true;
 }

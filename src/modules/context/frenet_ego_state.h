@@ -33,7 +33,7 @@ class FrenetEgoState {
     return planning_init_point_;
   }
   const AgentSLInfo &ego_init_sl_info() const { return ego_init_sl_info_; }
-
+  bool is_valid() const { return is_valid_; }
  private:
   double s_;
   double l_;
@@ -50,6 +50,7 @@ class FrenetEgoState {
   PlanningInitPoint planning_init_point_;
   bool planning_init_point_valid_ = false;
   AgentSLInfo ego_init_sl_info_;
+  bool is_valid_ = true;
 };
 
 }  // namespace planning

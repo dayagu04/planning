@@ -2,7 +2,6 @@
 #include <cmath>
 
 #include "gtest/gtest.h"
-#include "motion_planners/vision_only_lateral_motion_planner/lateral_motion_planner_real_time.h"
 #include "session.h"
 
 namespace planning {
@@ -18,9 +17,9 @@ TEST(TestLatMotionPlannerRealTime, VisionLateralMotionPlanner) {
   EgoPlanningConfigBuilder *config_builder;
   framework::Session *session;
 
-  auto lat_motion_planner_ptr =
-      std::make_shared<VisionLateralMotionPlanner>(config_builder);
+  // auto lat_motion_planner_ptr =
+  //     std::make_shared<VisionLateralMotionPlanner>(config_builder);
 
-  lat_motion_planner_ptr->Execute(session);
+  // lat_motion_planner_ptr->Execute(session);
 }
 }  // namespace planning

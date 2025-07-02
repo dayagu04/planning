@@ -703,7 +703,7 @@ void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
     std::map<std::pair<int, int>, HysteresisDecision> &hysteresis_map) {
   const auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  TrackedObject track_object;
+  std::shared_ptr<FrenetObstacle> track_object;
   double front_limit_lateral_distance_tmp =
       is_left ? kDefaultLimitLateralDistance : -kDefaultLimitLateralDistance;
   int debug_front_id = kDefaultLimitId;
@@ -717,12 +717,12 @@ void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
       }
 
       hysteresis_map[id_pair].SetIsValidByValue(
-          std::max(avoid_obstacle.min_l_to_ref - track_object.d_max_cpath,
-                   track_object.d_min_cpath - avoid_obstacle.max_l_to_ref));
+          std::max(avoid_obstacle.min_l_to_ref - track_object->d_max_cpath(),
+                   track_object->d_min_cpath() - avoid_obstacle.max_l_to_ref));
       double obstacle_lat_distance =
-          is_left ? track_object.d_min_cpath : track_object.d_max_cpath;
+          is_left ? track_object->d_min_cpath() : track_object->d_max_cpath();
       if (hysteresis_map[id_pair].IsValid()) {
-        if (track_object.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+        if (track_object->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
           obstacle_lat_distance = is_left ? obstacle_lat_distance + 0.7
                                           : obstacle_lat_distance - 0.7;
         }
@@ -759,7 +759,7 @@ void LateralOffsetCalculatorV2::CalcSideMaxOppositeOffset(
     const AvoidObstacleInfo &avoid_obstacle, bool is_left) {
   const auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  TrackedObject track_object;
+  std::shared_ptr<FrenetObstacle> track_object;
   double limit_lateral_distance_tmp =
       is_left ? kDefaultLimitLateralDistance : -kDefaultLimitLateralDistance;
   int debug_id = kDefaultLimitId;
@@ -767,7 +767,7 @@ void LateralOffsetCalculatorV2::CalcSideMaxOppositeOffset(
     bool is_found = lateral_obstacle->find_track(id, track_object);
     if (is_found) {
       double obstacle_lat_distance =
-          is_left ? track_object.d_min_cpath : track_object.d_max_cpath;
+          is_left ? track_object->d_min_cpath() : track_object->d_max_cpath();
       if (is_left) {
         if (limit_lateral_distance_tmp > obstacle_lat_distance) {
           limit_lateral_distance_tmp = obstacle_lat_distance;
@@ -798,7 +798,7 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
   const auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
 
-  const auto &obstacles = lateral_obstacle->all_tracks();
+  const auto &obstacles = lateral_obstacle->tracks_map();
 
   switch (type) {
     case HysteresisType::IsObstacleConsideredHysteresis: {
@@ -810,9 +810,10 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
            it != is_obstacle_considered_hysteresis_map.end();) {
         int obstacle_id = it->first;
         auto iter = std::find_if(
-            obstacles.begin(), obstacles.end(), [=](const TrackedObject &tr) {
+            obstacles.begin(), obstacles.end(), [=](const auto& pair) {
+              const auto& tr = pair.second;  // 获取值
               return lateral_offset_decider::IsCameraObstacle(tr) &&
-                     tr.track_id == obstacle_id;
+                     tr->id() == obstacle_id;
             });
 
         if (iter == obstacles.end()) {
@@ -834,9 +835,10 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
            it != is_in_consider_lateral_range_hysteresis_map.end();) {
         int obstacle_id = it->first;
         auto iter = std::find_if(
-            obstacles.begin(), obstacles.end(), [=](const TrackedObject &tr) {
+            obstacles.begin(), obstacles.end(), [=](const auto& pair) {
+              const auto& tr = pair.second;  // 获取值
               return lateral_offset_decider::IsCameraObstacle(tr) &&
-                     tr.track_id == obstacle_id;
+                     tr->id() == obstacle_id;
             });
 
         if (iter == obstacles.end()) {
@@ -864,9 +866,10 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
             int obstacle_id = it->first.second;
             auto iter = std::find_if(
                 obstacles.begin(), obstacles.end(),
-                [=](const TrackedObject &tr) {
+                [=](const auto& pair) {
+                  const auto& tr = pair.second;  // 获取值
                   return lateral_offset_decider::IsCameraObstacle(tr) &&
-                         tr.track_id == obstacle_id;
+                         tr->id() == obstacle_id;
                 });
 
             if (iter == obstacles.end()) {
@@ -914,33 +917,33 @@ void LateralOffsetCalculatorV2::PreacquireMaxOppositeOffsetIds() {
         continue;
       }
 
-      if (is_left ? tr.d_min_cpath >= 0 : tr.d_max_cpath <= 0) {
+      if (is_left ? tr->d_min_cpath() >= 0 : tr->d_max_cpath() <= 0) {
         continue;
       }
-      if (is_obstacle_considered_hysteresis_map.find(tr.track_id) ==
+      if (is_obstacle_considered_hysteresis_map.find(tr->id()) ==
           is_obstacle_considered_hysteresis_map.end()) {
         HysteresisDecision is_obstacle_considered_hysteresis(3, 3);
-        is_obstacle_considered_hysteresis_map[tr.track_id] =
+        is_obstacle_considered_hysteresis_map[tr->id()] =
             std::move(is_obstacle_considered_hysteresis);
       }
 
-      if (is_in_consider_lateral_range_hysteresis_map.find(tr.track_id) ==
+      if (is_in_consider_lateral_range_hysteresis_map.find(tr->id()) ==
           is_in_consider_lateral_range_hysteresis_map.end()) {
         HysteresisDecision is_in_consider_lateral_range_hysteresis(0.15, -0.15);
-        is_in_consider_lateral_range_hysteresis_map[tr.track_id] =
+        is_in_consider_lateral_range_hysteresis_map[tr->id()] =
             std::move(is_in_consider_lateral_range_hysteresis);
       }
 
       if (!lateral_offset_decider::IsFrontObstacleConsider(
               session_, tr, !is_left, avoid_info_,
               max_opposite_offset_hysteresis_maps_)) {
-        is_obstacle_considered_hysteresis_map[tr.track_id].SetInvalidCount();
+        is_obstacle_considered_hysteresis_map[tr->id()].SetInvalidCount();
       } else {
-        is_obstacle_considered_hysteresis_map[tr.track_id].SetValidByCount();
+        is_obstacle_considered_hysteresis_map[tr->id()].SetValidByCount();
       }
-      if (is_obstacle_considered_hysteresis_map[tr.track_id].IsValid()) {
-        is_left ? front_right_max_opposite_offset_ids_.emplace_back(tr.track_id)
-                : front_left_max_opposite_offset_ids_.emplace_back(tr.track_id);
+      if (is_obstacle_considered_hysteresis_map[tr->id()].IsValid()) {
+        is_left ? front_right_max_opposite_offset_ids_.emplace_back(tr->id())
+                : front_left_max_opposite_offset_ids_.emplace_back(tr->id());
       }
     }
 
@@ -951,33 +954,33 @@ void LateralOffsetCalculatorV2::PreacquireMaxOppositeOffsetIds() {
       if (!lateral_offset_decider::IsCameraObstacle(tr)) {
         continue;
       }
-      if (is_left ? tr.d_min_cpath >= 0 : tr.d_max_cpath <= 0) {
+      if (is_left ? tr->d_min_cpath() >= 0 : tr->d_max_cpath() <= 0) {
         continue;
       }
-      if (is_obstacle_considered_hysteresis_map.find(tr.track_id) ==
+      if (is_obstacle_considered_hysteresis_map.find(tr->id()) ==
           is_obstacle_considered_hysteresis_map.end()) {
         HysteresisDecision is_obstacle_considered_hysteresis(3, 3);
-        is_obstacle_considered_hysteresis_map[tr.track_id] =
+        is_obstacle_considered_hysteresis_map[tr->id()] =
             std::move(is_obstacle_considered_hysteresis);
       }
 
-      if (is_in_consider_lateral_range_hysteresis_map.find(tr.track_id) ==
+      if (is_in_consider_lateral_range_hysteresis_map.find(tr->id()) ==
           is_in_consider_lateral_range_hysteresis_map.end()) {
         HysteresisDecision is_in_consider_lateral_range_hysteresis(0.15, -0.15);
-        is_in_consider_lateral_range_hysteresis_map[tr.track_id] =
+        is_in_consider_lateral_range_hysteresis_map[tr->id()] =
             std::move(is_in_consider_lateral_range_hysteresis);
       }
 
       if (!lateral_offset_decider::IsSideObstacleConsider(
               session_, tr, !is_left, max_opposite_offset_hysteresis_maps_)) {
-        is_obstacle_considered_hysteresis_map[tr.track_id].SetInvalidCount();
+        is_obstacle_considered_hysteresis_map[tr->id()].SetInvalidCount();
       } else {
-        is_obstacle_considered_hysteresis_map[tr.track_id].SetValidByCount();
+        is_obstacle_considered_hysteresis_map[tr->id()].SetValidByCount();
       }
 
-      if (is_obstacle_considered_hysteresis_map[tr.track_id].IsValid()) {
-        is_left ? side_right_max_opposite_offset_ids_.emplace_back(tr.track_id)
-                : side_left_max_opposite_offset_ids_.emplace_back(tr.track_id);
+      if (is_obstacle_considered_hysteresis_map[tr->id()].IsValid()) {
+        is_left ? side_right_max_opposite_offset_ids_.emplace_back(tr->id())
+                : side_left_max_opposite_offset_ids_.emplace_back(tr->id());
       }
     }
   }
@@ -1002,9 +1005,9 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
   std::vector<int> front_ids;
   std::vector<int> side_ids;
 
-  TrackedObject except_obstacle;
+  std::shared_ptr<FrenetObstacle> except_obstacle;
   if (lateral_obstacle->find_track(except_id, except_obstacle)) {
-    except_lon_area = except_obstacle.d_rel;
+    except_lon_area = except_obstacle->d_s_rel();
   }
 
   auto &avoid_way_select_hysteresis_map =
@@ -1020,13 +1023,13 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
                 : side_left_max_opposite_offset_ids_;
 
     for (auto id : front_max_opposite_offset_ids) {
-      TrackedObject tr;
+      std::shared_ptr<FrenetObstacle> tr;
       bool is_found = lateral_obstacle->find_track(id, tr);
       if (!is_found) {
         continue;
       }
       if (id == except_id || id == avoid_obstacle.track_id ||
-          tr.d_rel >= except_lon_area) {
+          tr->d_s_rel() >= except_lon_area) {
         continue;
       }
 
@@ -1036,7 +1039,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
       if (!avoid_way_select_hysteresis_map.empty()) {
         if (avoid_obstacle.track_id ==
                 avoid_way_select_hysteresis_map.begin()->first.first &&
-            tr.track_id ==
+            tr->id() ==
                 avoid_way_select_hysteresis_map.begin()->first.second) {
           if (is_side_way) {
             avoid_way_select_hysteresis_map.begin()->second.SetValidByCount();
@@ -1056,7 +1059,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
             }
           }
           avoid_way_select_hysteresis_map[std::make_pair(
-              avoid_obstacle.track_id, tr.track_id)] =
+              avoid_obstacle.track_id, tr->id())] =
               std::move(avoid_way_select_hysteresis);
         }
       } else {
@@ -1072,16 +1075,16 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
           }
         }
         avoid_way_select_hysteresis_map[std::make_pair(avoid_obstacle.track_id,
-                                                       tr.track_id)] =
+                                                       tr->id())] =
             std::move(avoid_way_select_hysteresis);
       }
 
       is_side_way = avoid_way_select_hysteresis_map[std::make_pair(
                                                         avoid_obstacle.track_id,
-                                                        tr.track_id)]
+                                                        tr->id())]
                         .IsValid();
       if (!is_side_way) {
-        front_ids.emplace_back(tr.track_id);
+        front_ids.emplace_back(tr->id());
       }
     }
 

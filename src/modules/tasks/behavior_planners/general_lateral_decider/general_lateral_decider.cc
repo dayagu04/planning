@@ -3287,7 +3287,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   }
 
   // dist_intersect, attention again!!!
-  lateral_output.dist_intersect = 1000;
+  // lateral_output.dist_intersect = 1000;
 
   // intersect length, attention again!!!
   // if (virtual_lane_manager->get_intersection_info().intsect_length() !=
