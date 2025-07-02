@@ -52,8 +52,8 @@ class Transform2d {
   void ULFLocalPointToGlobal(Position2D *global_pose,
                              const Position2D &local_pose) const;
 
-  void ULFLocalPointToGlobal(Eigen::Vector2f &global_pose,
-                             const Eigen::Vector2f &local_pose);
+  void ULFLocalPointToGlobal(Eigen::Vector2d &global_pose,
+                             const Eigen::Vector2d &local_pose);
 
   static void GlobalPoseToULFLocal(Pose2D *local_pose,
                                    const Pose2D &global_pose,
@@ -65,24 +65,24 @@ class Transform2d {
 
   void SetBasePose(const Pose2D &base_pose);
 
-  void SetBasePose(const Pose2D &base_pose, const float sin_theta,
-                   const float cos_theta);
+  void SetBasePose(const Pose2D &base_pose, const double sin_theta,
+                   const double cos_theta);
 
   const Pose2D &GetConstBasePose() const { return base_pose_; }
 
   Pose2D *GetMutableBasePose() { return &base_pose_; }
 
-  const float GetSinTheta() const { return sin_theta_; }
+  const double GetSinTheta() const { return sin_theta_; }
 
-  const float GetCosTheta() const { return cos_theta_; }
+  const double GetCosTheta() const { return cos_theta_; }
 
   void GlobalPointToULFLocal(const Position2D &global_pos,
                              Position2D *local_pos) const;
 
  private:
   Pose2D base_pose_;
-  float sin_theta_;
-  float cos_theta_;
+  double sin_theta_;
+  double cos_theta_;
 };
 
 }  // namespace planning

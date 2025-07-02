@@ -203,7 +203,7 @@ const bool GJKCollisionDetector::IsPolygonCollision(
   if (col_flag) {
     for (const Eigen::Vector2d& pt : *pt_clout) {
       gjk_interface_.PolygonPointCollisionDetect(
-          &polygon, Eigen::Vector2f(pt[0], pt[1]), &col_flag);
+          &polygon, Eigen::Vector2d(pt[0], pt[1]), &col_flag);
       if (col_flag) {
         return true;
       }
@@ -221,7 +221,7 @@ const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
   TransformPolygonFootPrintLocalToGlobal(pose);
   bool col_flag = false;
   gjk_interface_.PolygonPointCollisionDetect(&polygon_foot_print_global_.body,
-                                             Eigen::Vector2f(obs.x(), obs.y()),
+                                             Eigen::Vector2d(obs.x(), obs.y()),
                                              &col_flag);
   if (col_flag) {
     return true;
@@ -229,14 +229,14 @@ const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
 
   gjk_interface_.PolygonPointCollisionDetect(
       &polygon_foot_print_global_.mirror_left,
-      Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
+      Eigen::Vector2d(obs.x(), obs.y()), &col_flag);
   if (col_flag) {
     return true;
   }
 
   gjk_interface_.PolygonPointCollisionDetect(
       &polygon_foot_print_global_.mirror_right,
-      Eigen::Vector2f(obs.x(), obs.y()), &col_flag);
+      Eigen::Vector2d(obs.x(), obs.y()), &col_flag);
   if (col_flag) {
     return true;
   }

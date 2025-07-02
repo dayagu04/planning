@@ -89,7 +89,7 @@ void OccupancyGridMap::AddLineSegment(const T &start, const T &end) {
   Pose2D local;
   OgmIndex index;
 
-  Eigen::Vector2f dir(end.x - start.x, end.y - start.y);
+  Eigen::Vector2d dir(end.x - start.x, end.y - start.y);
   float len = dir.norm();
   dir.normalize();
 

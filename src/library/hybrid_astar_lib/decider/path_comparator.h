@@ -45,13 +45,13 @@ class PathComparator : public AstarDecider {
   bool CheckVerticalSlotHeadIn(const Node3d *best_node,
                                const Node3d *node_challenger);
 
-  const float GetHeuristicPointDistance(const Pose2D &node);
+  const double GetHeuristicPointDistance(const Pose2D &node);
 
   const bool CheckHeuristicPointIsNice(const Pose2D &best_node,
                                        const Pose2D &node_challenger);
 
-  const bool CheckDistanceRequest(const float &best_node_s,
-                                  const float &node_challenger_s);
+  const bool CheckDistanceRequest(const double &best_node_s,
+                                  const double &node_challenger_s);
   bool CheckVerticalSlotHeadOut(const AstarRequest *request,
                                 const Node3d *best_node,
                                 const Node3d *node_challenger);

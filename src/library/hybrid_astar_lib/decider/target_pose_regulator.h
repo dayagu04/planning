@@ -18,14 +18,14 @@ namespace planning {
 struct PoseRegulateCandidate {
   Pose2D pose;
   // 位姿对应的车辆真实外壳到障碍物的距离.
-  float dist_to_obs;
-  float lat_offset;
+  double dist_to_obs;
+  double lat_offset;
 };
 
 struct TerminalCheckBoundary {
-  float upper;
-  float lower;
-  float step;
+  double upper;
+  double lower;
+  double step;
   int  number;
 };
 
@@ -46,9 +46,9 @@ class TargetPoseRegulator : public AstarDecider {
   void Clear();
 
   // Get most safe target pose
-  const std::pair<Pose2D, float> GetCandidatePose(const float lat_buffer) const;
+  const std::pair<Pose2D, double > GetCandidatePose(const double lat_buffer) const;
 
-  const float GetEgoObsDist() const { return ego_dist_to_obs_; }
+  const double GetEgoObsDist() const { return ego_dist_to_obs_; }
 
  private:
   const bool IsParkingIn(const AstarRequest *request);
@@ -66,10 +66,10 @@ class TargetPoseRegulator : public AstarDecider {
                                          const VehicleParam &veh_param);
 
   // check min dist by x range
-  const float GetMinDistByXRange(const Pose2D *global_pose,
+  const double GetMinDistByXRange(const Pose2D *global_pose,
                                  EulerDistanceTransform *edt);
 
-  const float GetDistToObsHeadOut(const Pose2D *global_pose,
+  const double GetDistToObsHeadOut(const Pose2D *global_pose,
                            EulerDistanceTransform *edt);
 
   void DebugString();
@@ -80,7 +80,7 @@ class TargetPoseRegulator : public AstarDecider {
 
   bool IsDefaultPoseSafeEnough();
 
-  const bool IsCandidatePoseSafe(const float lat_buffer) const;
+  const bool IsCandidatePoseSafe(const double lat_buffer) const;
 
   // 0: none,
   // -1: left;
@@ -96,9 +96,9 @@ class TargetPoseRegulator : public AstarDecider {
   TerminalCheckBoundary x_check_bounday_;
 
   // max dist to cross over slot inside line
-  float max_cross_over_line_dist_;
+  double max_cross_over_line_dist_;
 
-  float ego_dist_to_obs_;
+  double ego_dist_to_obs_;
 };
 
 }  // namespace planning

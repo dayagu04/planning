@@ -21,8 +21,8 @@ NodeCollisionDetect::NodeCollisionDetect(const ParkObstacleList* obstacles,
       XYbounds_(XYbounds),
       request_(request) {}
 
-const bool NodeCollisionDetect::IsPointBeyondBound(const float x,
-                                                   const float y) const {
+const bool NodeCollisionDetect::IsPointBeyondBound(const double x,
+                                                   const double y) const {
   if (x > XYbounds_->x_max || x < XYbounds_->x_min || y > XYbounds_->y_max ||
       y < XYbounds_->y_min) {
     return true;
@@ -232,7 +232,7 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     return false;
   }
 
-  node->SetDistToObs(0.0f);
+  node->SetDistToObs(0.0);
   const NodePath& path = node->GetNodePath();
 
   // The first {x, y, phi} is collision free unless they are start and end
@@ -256,8 +256,8 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
   FootPrintCircleModel* footprint_model =
       GetCircleFootPrintModel(path.points[0], is_circle_path);
 
-  float dist = 100.0;
-  float min_dist = 100.0;
+  double dist = 100.0;
+  double min_dist = 100.0;
 
   for (size_t i = check_start_index; i < node_step_size; ++i) {
     // check bound
@@ -816,13 +816,13 @@ FootPrintCircleModel* NodeCollisionDetect::GetSlotOutsideCircleFootPrint() {
 }
 
 void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
-    const float lat_buffer_outside, const float lat_buffer_inside,
-    const float lon_buffer, const VehicleParam& vehicle_param,
+    const double lat_buffer_outside, const double lat_buffer_inside,
+    const double lon_buffer, const VehicleParam& vehicle_param,
     const PlannerOpenSpaceConfig& config) {
   if (request_->direction_request == ParkingVehDirection::HEAD_IN) {
     slot_box_ = cdl::AABB(
         cdl::Vector2r(0.0f, -request_->slot_width / 2),
-        cdl::Vector2r(request_->slot_length + (float)vehicle_param.length,
+        cdl::Vector2r(request_->slot_length + (double )vehicle_param.length,
                       request_->slot_width / 2));
   } else {
     slot_box_ = cdl::AABB(
@@ -833,7 +833,7 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
   slot_box_.DebugString();
 
   // gear d
-  float safe_half_width =
+  double safe_half_width =
       (vehicle_param.max_width + lat_buffer_outside * 2 + 0.1) * 0.5;
 
   GetRightUpCoordinatePolygonByParam(
@@ -877,7 +877,7 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
       .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
       .UpdateSafeBuffer(lat_buffer_inside, lon_buffer, lat_buffer_inside);
 
-  float lat_buffer =
+  double lat_buffer =
       lat_buffer_outside + config.safe_buffer.circle_path_extra_buffer_outside;
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]

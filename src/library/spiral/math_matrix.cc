@@ -4,8 +4,8 @@
 namespace planning {
 #define MARK_UNUSED_LEFT_VAR(x) (void)(x)
 
-float fx_cubic(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t2;
+double fx_cubic(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t2;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -42,8 +42,8 @@ float fx_cubic(knot_cubic_t param) {
   return f;
 }
 
-float fy_cubic(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t2;
+double fy_cubic(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t2;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -80,8 +80,8 @@ float fy_cubic(knot_cubic_t param) {
   return f;
 }
 
-float ftheta_cubic(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double ftheta_cubic(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -93,8 +93,8 @@ float ftheta_cubic(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_dp0(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_dp0(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -125,8 +125,8 @@ float dx_cubic_dp0(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_dp1(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_dp1(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -169,8 +169,8 @@ float dx_cubic_dp1(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_dp2(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_dp2(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -213,8 +213,8 @@ float dx_cubic_dp2(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_dp3(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_dp3(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -256,11 +256,11 @@ float dx_cubic_dp3(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_dp4(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t5, t6, t7, t8, t9;
+double dx_cubic_dp4(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t5, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -325,8 +325,8 @@ float dx_cubic_dp4(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_dp0(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_dp0(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -357,8 +357,8 @@ float dy_cubic_dp0(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_dp1(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_dp1(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -401,8 +401,8 @@ float dy_cubic_dp1(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_dp2(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_dp2(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -445,8 +445,8 @@ float dy_cubic_dp2(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_dp3(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_dp3(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -488,11 +488,11 @@ float dy_cubic_dp3(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_dp4(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t5, t6, t7, t8, t9;
+double dy_cubic_dp4(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t5, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -557,20 +557,20 @@ float dy_cubic_dp4(knot_cubic_t param) {
   return f;
 }
 
-float dtheta_cubic_dp0(knot_cubic_t param) { return (param.sf / 8.0); }
+double dtheta_cubic_dp0(knot_cubic_t param) { return (param.sf / 8.0); }
 
-float dtheta_cubic_dp1(knot_cubic_t param) {
+double dtheta_cubic_dp1(knot_cubic_t param) {
   return (0.3e1 / 0.8e1 * param.sf);
 }
 
-float dtheta_cubic_dp2(knot_cubic_t param) {
+double dtheta_cubic_dp2(knot_cubic_t param) {
   return (0.3e1 / 0.8e1 * param.sf);
 }
 
-float dtheta_cubic_dp3(knot_cubic_t param) { return (param.sf / 8.0); }
+double dtheta_cubic_dp3(knot_cubic_t param) { return (param.sf / 8.0); }
 
-float dtheta_cubic_dp4(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, t1, t2;
+double dtheta_cubic_dp4(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, t1, t2;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -583,8 +583,8 @@ float dtheta_cubic_dp4(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d11(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_d11(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -627,8 +627,8 @@ float dx_cubic_d11(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d21(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_d21(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -671,8 +671,8 @@ float dx_cubic_d21(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d22(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_d22(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -715,8 +715,8 @@ float dx_cubic_d22(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d31(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_d31(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -759,8 +759,8 @@ float dx_cubic_d31(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d32(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_d32(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -803,8 +803,8 @@ float dx_cubic_d32(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d33(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dx_cubic_d33(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -846,12 +846,12 @@ float dx_cubic_d33(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d41(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
-  float t53, t54, t6, t7, t8, t9;
+double dx_cubic_d41(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
+  double t53, t54, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -931,12 +931,12 @@ float dx_cubic_d41(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d42(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
-  float t53, t54, t6, t7, t8, t9;
+double dx_cubic_d42(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
+  double t53, t54, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1015,12 +1015,12 @@ float dx_cubic_d42(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d43(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
-  float t53, t54, t6, t7, t8, t9;
+double dx_cubic_d43(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
+  double t53, t54, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1098,9 +1098,9 @@ float dx_cubic_d43(knot_cubic_t param) {
   return f;
 }
 
-float dx_cubic_d44(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t3, t4, t5, t6, t7, t8, t9;
+double dx_cubic_d44(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t3, t4, t5, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1171,8 +1171,8 @@ float dx_cubic_d44(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d11(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_d11(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1215,8 +1215,8 @@ float dy_cubic_d11(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d21(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_d21(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1259,8 +1259,8 @@ float dy_cubic_d21(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d22(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_d22(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1303,8 +1303,8 @@ float dy_cubic_d22(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d31(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_d31(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1347,8 +1347,8 @@ float dy_cubic_d31(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d32(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_d32(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1391,8 +1391,8 @@ float dy_cubic_d32(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d33(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4;
+double dy_cubic_d33(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1434,12 +1434,12 @@ float dy_cubic_d33(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d41(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t6;
-  float t7, t8, t9;
+double dy_cubic_d41(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t6;
+  double t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1517,12 +1517,12 @@ float dy_cubic_d41(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d42(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
-  float t53, t54, t6, t7, t8, t9;
+double dy_cubic_d42(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
+  double t53, t54, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1601,12 +1601,12 @@ float dy_cubic_d42(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d43(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
-  float t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
-  float t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
-  float t53, t54, t6, t7, t8, t9;
+double dy_cubic_d43(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29;
+  double t3, t30, t31, t32, t33, t34, t35, t36, t37, t38, t39, t4, t40;
+  double t41, t42, t43, t44, t45, t46, t47, t48, t49, t5, t50, t51, t52;
+  double t53, t54, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1684,9 +1684,9 @@ float dy_cubic_d43(knot_cubic_t param) {
   return f;
 }
 
-float dy_cubic_d44(knot_cubic_t param) {
-  float f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
-  float t18, t19, t2, t20, t3, t4, t5, t6, t7, t8, t9;
+double dy_cubic_d44(knot_cubic_t param) {
+  double f, p0, p1, p2, p3, p4, t1, t10, t11, t12, t13, t14, t15, t16, t17;
+  double t18, t19, t2, t20, t3, t4, t5, t6, t7, t8, t9;
 
   p0 = param.p0;
   p1 = param.p1;
@@ -1757,61 +1757,61 @@ float dy_cubic_d44(knot_cubic_t param) {
   return f;
 }
 
-float dtheta_cubic_d11(knot_cubic_t param) {
+double dtheta_cubic_d11(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);
 }
 
-float dtheta_cubic_d21(knot_cubic_t param) {
+double dtheta_cubic_d21(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);
 }
 
-float dtheta_cubic_d22(knot_cubic_t param) {
+double dtheta_cubic_d22(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);
 }
 
-float dtheta_cubic_d31(knot_cubic_t param) {
+double dtheta_cubic_d31(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);
 }
 
-float dtheta_cubic_d32(knot_cubic_t param) {
+double dtheta_cubic_d32(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);
 }
 
-float dtheta_cubic_d33(knot_cubic_t param) {
+double dtheta_cubic_d33(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);
 }
 
-float dtheta_cubic_d41(knot_cubic_t param) {
+double dtheta_cubic_d41(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.3e1 / 0.8e1);
 }
 
-float dtheta_cubic_d42(knot_cubic_t param) {
+double dtheta_cubic_d42(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.3e1 / 0.8e1);
 }
 
-float dtheta_cubic_d43(knot_cubic_t param) {
+double dtheta_cubic_d43(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.1e1 / 0.8e1);
 }
 
-float dtheta_cubic_d44(knot_cubic_t param) {
+double dtheta_cubic_d44(knot_cubic_t param) {
   /* Don't use param here, but provided for consistency */
   MARK_UNUSED_LEFT_VAR(param);
   return (0.0);

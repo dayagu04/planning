@@ -171,11 +171,11 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       Pose2D center_pose(obs.center_position.x, obs.center_position.y,
                          obs.heading_angle);
 
-      std::vector<Eigen::Vector2f> local_box;
+      std::vector<Eigen::Vector2d> local_box;
       GenerateBoundingBox(obs.shape.length, obs.shape.width,
-                          Eigen::Vector2f(0.0f, 0.0f), local_box);
+                          Eigen::Vector2d(0.0f, 0.0f), local_box);
 
-      std::vector<Eigen::Vector2f> global_box;
+      std::vector<Eigen::Vector2d> global_box;
       LocalPolygonToGlobal(local_box, center_pose, global_box);
 
       ApaObstacle apa_obs;
@@ -342,7 +342,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
                                        obj_info.obj_pt_global[j].y);
 
           gjk_interface.PolygonPointCollisionDetect(
-              &ego_global, Eigen::Vector2f(uss_pt[0], uss_pt[1]), &is_contain);
+              &ego_global, Eigen::Vector2d(uss_pt[0], uss_pt[1]), &is_contain);
           if (!is_contain) {
             continue;
           }
@@ -369,7 +369,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       Polygon2D polygon;
       cdl::AABB box = cdl::AABB();
 
-      Eigen::Vector2f global;
+      Eigen::Vector2d global;
 
       const iflyauto::UssPdcPrivPointType& obj_info =
           local_view->uss_wave_info.priv_point_data;
@@ -382,7 +382,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
 
         tf.ULFLocalPointToGlobal(
             global,
-            Eigen::Vector2f(obj_info.priv_point_data_prop[j].point_x * 0.01,
+            Eigen::Vector2d(obj_info.priv_point_data_prop[j].point_x * 0.01,
                             obj_info.priv_point_data_prop[j].point_y * 0.01));
 
         box.MergePoint(cdl::Vector2r(global.x(), global.y()));

@@ -36,7 +36,7 @@ class Node2d {
  public:
   Node2d() {}
 
-  Node2d(const float x, const float y, const float inv_xy_resolution,
+  Node2d(const double x, const double y, const double inv_xy_resolution,
          const MapBound& XYbounds) {
     // XYbounds with xmin, xmax, ymin, ymax
 
@@ -54,7 +54,7 @@ class Node2d {
   }
 
   Node2d(const int grid_x, const int grid_y, const MapBound& XYbounds,
-         const float xy_resolution) {
+         const double xy_resolution) {
     x_ = grid_x * xy_resolution + XYbounds.x_min;
     y_ = grid_y * xy_resolution + XYbounds.y_min;
 
@@ -68,7 +68,7 @@ class Node2d {
     }
   }
 
-  void Set(const float x, const float y, const float inv_xy_resolution,
+  void Set(const double x, const double y, const double inv_xy_resolution,
            const MapBound& XYbounds) {
     x_ = x;
     y_ = y;
@@ -86,33 +86,33 @@ class Node2d {
   }
 
   void CalcRealPositionByIndex(const int32_t grid_x, const int32_t grid_y,
-                               const std::vector<float>& XYbounds,
-                               const float xy_resolution) {
+                               const std::vector<double >& XYbounds,
+                               const double xy_resolution) {
     x_ = grid_x * xy_resolution + XYbounds[0];
     y_ = grid_y * xy_resolution + XYbounds[2];
 
     return;
   }
 
-  void SetCost(const float cost) { cost_ = cost; }
+  void SetCost(const double cost) { cost_ = cost; }
 
   // x index
   int GetGridX() const { return grid_index_.x; }
 
-  float GetX() const { return x_; }
+  double GetX() const { return x_; }
 
   int GetGridY() const { return grid_index_.y; }
 
-  float GetY() const { return y_; }
+  double GetY() const { return y_; }
 
-  float GetCost() const { return cost_; }
+  double GetCost() const { return cost_; }
 
   const Node2dIndex& GetGridIndex() const { return grid_index_; }
 
   const int GetGlobalID() const { return id_; }
 
-  static Node2dIndex CalcIndex(const float x, const float y,
-                               const float inv_xy_resolution,
+  static Node2dIndex CalcIndex(const double x, const double y,
+                               const double inv_xy_resolution,
                                const MapBound& XYbounds) {
     // XYbounds with xmin, xmax, ymin, ymax
     Node2dIndex grid_id;
@@ -122,8 +122,8 @@ class Node2d {
     return grid_id;
   }
 
-  static std::string CalcStringIndex(const float x, const float y,
-                                     const float xy_resolution,
+  static std::string CalcStringIndex(const double x, const double y,
+                                     const double xy_resolution,
                                      const MapBound& XYbounds) {
     // XYbounds with xmin, xmax, ymin, ymax
     int grid_x = std::round((x - XYbounds.x_min) / xy_resolution);
@@ -164,7 +164,7 @@ class Node2d {
     return;
   }
 
-  void DebugNodeString(const float xy_resolution) {
+  void DebugNodeString(const double xy_resolution) {
     ILOG_INFO << "id, x " << grid_index_.x << ", id y " << grid_index_.y
               << ", x " << x_ << ", y " << y_ << ", dist "
               << cost_ * xy_resolution << ", is collision "
@@ -213,11 +213,11 @@ class Node2d {
   }
 
  private:
-  float x_;
-  float y_;
+  double x_;
+  double y_;
 
   // cost is not real path length, is grid num
-  float cost_;
+  double cost_;
 
   // unique id
   int id_;

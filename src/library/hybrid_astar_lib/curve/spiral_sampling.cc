@@ -6,7 +6,7 @@ SpiralSampling::SpiralSampling(
     const MapBound* XYbounds, const ParkObstacleList* obstacles,
     const AstarRequest* request, EulerDistanceTransform* edt,
     const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-    const PlannerOpenSpaceConfig* config, const float min_radius,
+    const PlannerOpenSpaceConfig* config, const double min_radius,
     std::shared_ptr<NodeCollisionDetect> collision_detect)
     : CurveSampling(XYbounds, obstacles, request, edt, clear_zone, ref_line,
                     config, min_radius, collision_detect) {}
@@ -49,7 +49,7 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   //           << ", " << goal_spiral.theta << " ) ";
   bool constrain_start_k = true;
   bool constrain_goal_k = true;
-  const float spiral_step_length = 0.1;
+  const double spiral_step_length = 0.1;
   std::vector<AStarPathPoint> cubic_spiral_path;
   cubic_spiral_path.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
@@ -67,7 +67,7 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   }
 
   AStarPathPoint point;
-  float accumulated_s = 0.0;
+  double accumulated_s = 0.0;
   path.clear();
 
   for (auto& state : states) {
@@ -93,7 +93,7 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
 
 bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const float lon_min_sampling_length) {
+    const double lon_min_sampling_length) {
   // double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, by cubic spiral";
 
@@ -114,7 +114,7 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
   sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
 
-  const float sampling_step = 0.1;
+  const double sampling_step = 0.1;
   size_t max_sampling_num = 50;
 
   // ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
@@ -150,9 +150,9 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     //           << ",sampling_end.y " << sampling_end.y << ",last_state.theta"
     //           << last_state.phi << ", sampling_end.theta "
     //           << sampling_end.theta;
-    float end_point_error_x = last_state.x - sampling_end.x;
-    float end_point_error_y = last_state.y - sampling_end.y;
-    float end_point_error_theta = last_state.phi - sampling_end.theta;
+    double end_point_error_x = last_state.x - sampling_end.x;
+    double end_point_error_y = last_state.y - sampling_end.y;
+    double end_point_error_theta = last_state.phi - sampling_end.theta;
 
     if (std::fabs(end_point_error_x) >= 1e-2 ||
         std::fabs(end_point_error_y) >= 1e-2) {
@@ -209,7 +209,7 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     return false;
   }
 
-  float valid_dist = 0.0;
+  double valid_dist = 0.0;
   if (path_points_size > 0) {
     valid_dist = path.accumulated_s[path_points_size - 1];
   }

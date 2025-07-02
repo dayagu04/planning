@@ -27,8 +27,8 @@ int RSPathInterpolator::CopyRSPathKappaParam(RSPathKappaParam *dst_list,
 
 int RSPathInterpolator::CalcShortestRSPathKappa(
     RSPathKappaParam *kappa_list, const Pose2D *start_pose,
-    const Pose2D *goal_pose, float min_turn_radius,
-    const float inverse_radius, const RSPathRequestType request_type) {
+    const Pose2D *goal_pose, double min_turn_radius,
+    const double inverse_radius, const RSPathRequestType request_type) {
   bool is_same;
   RSPathParam *path;
   RSPathInfo *path_info = GetRSPathGlobalInfo();
@@ -77,8 +77,8 @@ int RSPathInterpolator::CalcShortestRSPathKappa(
 int RSPathInterpolator::CalcSCSPathKappa(RSPathKappaParam *kappa_list,
                                          const Pose2D *start_pose,
                                          const Pose2D *goal_pose,
-                                         float min_turn_radius,
-                                         const float inverse_radius,
+                                         double min_turn_radius,
+                                         const double inverse_radius,
                                          const RSPathRequestType request_type) {
   bool is_same;
   RSPathParam *path;
@@ -125,7 +125,7 @@ int RSPathInterpolator::CalcSCSPathKappa(RSPathKappaParam *kappa_list,
 
 int RSPathInterpolator::CalcRSPathKappa(RSPathKappaParam *kappa_list,
                                         const RSPathParam *path,
-                                        float inverse_radius) {
+                                        double inverse_radius) {
   int i;
 
   if (kappa_list == nullptr || path == nullptr) {
@@ -165,7 +165,7 @@ int RSPathInterpolator::CalcRSPathKappa(RSPathKappaParam *kappa_list,
 }
 
 int RSPathInterpolator::ShrinkRSPathByInvalidDist(RSPathKappaParam *kappa_list,
-                                                  float dist_thres) {
+                                                  double dist_thres) {
   int i, j;
 
   for (i = 0, j = 0; i < kappa_list->size; i++) {
@@ -187,7 +187,7 @@ int RSPathInterpolator::ShrinkRSPathByInvalidDist(RSPathKappaParam *kappa_list,
 int RSPathInterpolator::GetStraightLinePoint(RSPoint *goal_state,
                                              const RSPoint *start_state,
                                              AstarPathGear direction,
-                                             float length) {
+                                             double length) {
   if (direction == AstarPathGear::DRIVE) {
     goal_state->x = start_state->x + length * ifly_cos(start_state->theta);
     goal_state->y = start_state->y + length * ifly_sin(start_state->theta);
@@ -206,7 +206,7 @@ int RSPathInterpolator::GetStraightLinePoint(RSPoint *goal_state,
 int RSPathInterpolator::GetStraightLinePoint(RSPoint *goal_state,
                                              const RSPoint *start_state,
                                              AstarPathGear direction,
-                                             const float dist_to_start,
+                                             const double dist_to_start,
                                              const Pose2D *unit_vector) {
   goal_state->x = start_state->x + dist_to_start * unit_vector->x;
   goal_state->y = start_state->y + dist_to_start * unit_vector->y;
@@ -220,8 +220,8 @@ int RSPathInterpolator::GetStraightLinePoint(RSPoint *goal_state,
 
 int RSPathInterpolator::GetCirclePoint(RSPoint *goal_state,
                                        const RSPoint *start_state,
-                                       AstarPathGear direction, float length) {
-  float radius, theta;
+                                       AstarPathGear direction, double length) {
+  double radius, theta;
 
   radius = 1.0 / start_state->kappa;
   if (direction == AstarPathGear::DRIVE) {
@@ -246,7 +246,7 @@ int RSPathInterpolator::GetCirclePoint(RSPoint *goal_state,
 int RSPathInterpolator::InterpolateByKappa(RSPoint *next_point,
                                            const RSPoint *point,
                                            const AstarPathGear dir,
-                                           const float abs_len) {
+                                           const double abs_len) {
   if (!ifly_fequal(point->kappa, 0.0)) {
     GetCirclePoint(next_point, point, dir, abs_len);
   } else {
@@ -291,7 +291,7 @@ int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
                                           const RSPathKappaParam *path_list) {
   RSPoint *cur_point, *next_point;
   int i;
-  float abs_length, length, kappa;
+  double abs_length, length, kappa;
   AstarPathGear dir;
 
   // update first anchor point
@@ -349,7 +349,7 @@ int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
                                           const RSPath *path) {
   RSPoint *cur_point, *next_point;
   int i;
-  float abs_length, length, kappa;
+  double abs_length, length, kappa;
   AstarPathGear dir;
 
   // update first anchor point
@@ -403,10 +403,10 @@ int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
 
 int RSPathInterpolator::RSPathSegmentInterpolate(
     RSPathSegment *path, const RSPoint *start_pose,
-    const RSSegmentKappaParam *path_kappa, float inc_dist) {
+    const RSSegmentKappaParam *path_kappa, double inc_dist) {
   RSPoint *state_curr, *state_next;
   int j, state_num;
-  float abs_length, length, s_seg, integration_step;
+  double abs_length, length, s_seg, integration_step;
   bool is_last;
 
   // update first point
@@ -466,10 +466,10 @@ int RSPathInterpolator::RSPathSegmentInterpolate(
 
 int RSPathInterpolator::PathSegmentInterpolateByLine(
     RSPathSegment *path, const RSPoint *start_pose, const RSPoint *next_pose,
-    const float path_kappa, const float length, const float inc_dist) {
+    const double path_kappa, const double length, const double inc_dist) {
   RSPoint *state_next;
   int j, state_num;
-  float abs_length, acc_s;
+  double abs_length, acc_s;
   bool is_last;
 
   // update first point
@@ -526,12 +526,12 @@ int RSPathInterpolator::PathSegmentInterpolateByLine(
 }
 
 int RSPathInterpolator::PathSegmentInterpolateByArc(
-    RSPathSegment *path, const RSPoint *start_pose, const float path_kappa,
-    const float length, const float inc_dist, const float radius,
-    const float inv_radius) {
+    RSPathSegment *path, const RSPoint *start_pose, const double path_kappa,
+    const double length, const double inc_dist, const double radius,
+    const double inv_radius) {
   RSPoint *state_next;
   int j, state_num;
-  float abs_length, acc_s;
+  double abs_length, acc_s;
   bool is_last;
 
   AstarPathGear gear = GetGearBySignLen(length);
@@ -552,7 +552,7 @@ int RSPathInterpolator::PathSegmentInterpolateByArc(
 
   // get vehicle circle
   VehicleCircle veh_circle;
-  float min_radius;
+  double min_radius;
   if (path_kappa > 0.0) {
     min_radius = radius;
   } else {
@@ -561,7 +561,7 @@ int RSPathInterpolator::PathSegmentInterpolateByArc(
 
   GetVehCircleByPose(&veh_circle, start_pose, min_radius, gear);
 
-  float length_eps = 0.001;
+  double length_eps = 0.001;
   for (j = 0; j < state_num; j++) {
     if (is_last) {
       break;
@@ -593,7 +593,7 @@ int RSPathInterpolator::PathSegmentInterpolateByArc(
 }
 
 int RSPathInterpolator::GetVehCircleByPose(VehicleCircle *veh_circle,
-                                           const RSPoint *pose, float radius,
+                                           const RSPoint *pose, double radius,
                                            AstarPathGear gear) {
   veh_circle->radius = radius;
   veh_circle->gear = gear;
@@ -607,9 +607,9 @@ int RSPathInterpolator::GetVehCircleByPose(VehicleCircle *veh_circle,
 int RSPathInterpolator::InterpolateByArcOffset(RSPoint *pose,
                                                const VehicleCircle *veh_circle,
                                                const RSPoint *start_pose,
-                                               const float arc,
-                                               const float inverse_radius) {
-  float delta_theta, theta;
+                                               const double arc,
+                                               const double inverse_radius) {
+  double delta_theta, theta;
 
   delta_theta = arc * inverse_radius;
 
@@ -628,7 +628,7 @@ int RSPathInterpolator::InterpolateByArcOffset(RSPoint *pose,
   // update next point theta
   theta = start_pose->theta + delta_theta;
 
-  float radius = veh_circle->radius;
+  double radius = veh_circle->radius;
 
   pose->x = veh_circle->center.x + radius * std::sin(theta);
   pose->y = veh_circle->center.y - radius * std::cos(theta);

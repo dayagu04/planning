@@ -29,7 +29,7 @@ enum RSPathSteer {
 
 struct RSPoint : public Pose2D {
   // left turn is positive
-  float kappa;
+  double kappa;
 
   AstarPathGear dir;
 };
@@ -37,17 +37,17 @@ struct RSPoint : public Pose2D {
 #define MAX_RS_PATH_NUM (5)
 
 struct RSPathParam {
-  float t;
-  float u;
-  float v;
-  float w;
-  float x;
+  double t;
+  double u;
+  double v;
+  double w;
+  double x;
   // if < 0, gear is reverse
   // if > 0, gear if drive
   // if ==0, dist is 0
   // length is real dist.
-  float length[MAX_RS_PATH_NUM];
-  float total_length;
+  double length[MAX_RS_PATH_NUM];
+  double total_length;
   const RSPathSteer *type;
 
   void Clear() {
@@ -62,18 +62,18 @@ struct RSPathParam {
 // base coordinate is rs start point. start point local system is up-left.
 struct RSEndPoint {
   Pose2D pose;
-  float sin_theta;
-  float cos_theta;
+  double sin_theta;
+  double cos_theta;
 
-  float sin_minus_theta;
-  float cos_minus_theta;
+  double sin_minus_theta;
+  double cos_minus_theta;
 };
 
 struct RSSegmentKappaParam {
   /* signed arc length */
-  float length;
+  double length;
   // left is postive, kappa
-  float kappa;
+  double kappa;
 
   RSPathSteer steer_type;
 };
@@ -94,7 +94,7 @@ struct RSPathKappaParam {
 struct RSPathInfo {
   Pose2D start;
   Pose2D end;
-  float min_radius;
+  double min_radius;
   RSPathParam path;
 
   bool is_path_valid;
@@ -110,8 +110,8 @@ class RSPathGenerator {
 };
 
 int GetShortestRSPathParam(RSPathParam *path, const Pose2D *start_pose,
-                           const Pose2D *goal_pose, float min_turn_radius,
-                           float inverse_radius,
+                           const Pose2D *goal_pose, double min_turn_radius,
+                           double inverse_radius,
                            const RSPathRequestType request_type);
 
 RSPathInfo *GetRSPathGlobalInfo(void);
@@ -129,7 +129,7 @@ RSPathInfo *GetRSPathGlobalInfo(void);
  * \return 0 or error code.
  **/
 int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
-                           const Pose2D *goal_pose, float min_turn_radius,
+                           const Pose2D *goal_pose, double min_turn_radius,
                            AstarPathGear initial_pose_dir);
 
 /**
@@ -144,11 +144,11 @@ int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
  * \param[in]    min_turn_radius min turn radius of vehicle;
  * \return 0 or error code.
  **/
-int GetRSPathDist(float *distance, const Pose2D *start_pose,
-                  const Pose2D *goal_pose, float min_turn_radius);
+int GetRSPathDist(double *distance, const Pose2D *start_pose,
+                  const Pose2D *goal_pose, double min_turn_radius);
 
 int TestSCS(RSPathParam *path, const Pose2D *start_pose,
-            const Pose2D *goal_pose, float min_turn_radius,
-            float inverse_radius, const RSPathRequestType request_type);
+            const Pose2D *goal_pose, double min_turn_radius,
+            double inverse_radius, const RSPathRequestType request_type);
 
 }  // namespace planning

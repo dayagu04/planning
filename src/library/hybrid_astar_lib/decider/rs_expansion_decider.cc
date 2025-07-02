@@ -10,8 +10,8 @@
 namespace planning {
 
 void RSExpansionDecider::Process(
-    const float min_radius, const float slot_width, const float slot_length,
-    const Pose2D &ego_pose, const Pose2D &astar_end, const float veh_width,
+    const double min_radius, const double slot_width, const double slot_length,
+    const Pose2D &ego_pose, const Pose2D &astar_end, const double veh_width,
     const ParkSpaceType slot_type, const ParkingVehDirection park_dir) {
   rs_end_pose_ = astar_end;
   AstarDecider::Process(ego_pose, astar_end);
@@ -83,7 +83,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForTailIn(
   // use heuristic rule to do rs path expansion
   // use node heading to check.
   // if heading > 150 degree, shrink some rs expansion.
-  float heading = node->GetPhi();
+  double heading = node->GetPhi();
   if (std::fabs(heading) > ifly_deg2rad(150.0)) {
     return false;
   }
@@ -114,7 +114,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForHeadIn(
   // use heuristic rule to do rs path expansion
   // use node heading to check.
   // if heading < 30 degree, shrink some rs expansion.
-  float heading = node->GetPhi();
+  double heading = node->GetPhi();
   if (std::fabs(heading) < ifly_deg2rad(30.0)) {
     return false;
   }

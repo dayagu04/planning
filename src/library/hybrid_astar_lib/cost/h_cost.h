@@ -5,17 +5,17 @@
 namespace planning {
 
 struct NodeHeuristicCost {
-  float euler_dist;
+  double euler_dist;
   // dynamic_programing_cost: get distance for node without any collision.
-  float astar_dist;
-  float ref_line_heading_cost;
-  float rs_path_dist;
-  float rs_path_gear;
-  float rs_path_steer;
-  float expected_gear;
-  float expected_dist;
+  double astar_dist;
+  double ref_line_heading_cost;
+  double rs_path_dist;
+  double rs_path_gear;
+  double rs_path_steer;
+  double expected_gear;
+  double expected_dist;
 
-  float total_cost;
+  double total_cost;
 };
 
 }  // namespace planning

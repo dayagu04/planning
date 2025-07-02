@@ -517,7 +517,7 @@ void GJK2DInterface::Raycast(RaycastCollisionInfo *info,
 }
 
 void GJK2DInterface::PolygonPointCollisionDetect(const Polygon2D *polygon,
-                                                 const Eigen::Vector2f &point,
+                                                 const Eigen::Vector2d &point,
                                                  bool *is_collision) {
   cdl::real d, delta_d;
   d = polygon->center_pt.DistanceTo(point);

@@ -17,17 +17,17 @@ enum class PathShapeType {
 };
 
 struct NodeGCost {
-  float dist_cost;
-  float gear_cost;
-  float steer_change_cost;
-  float steer_cost;
-  float expected_gear_cost;
+  double dist_cost;
+  double gear_cost;
+  double steer_change_cost;
+  double steer_cost;
+  double expected_gear_cost;
 
   // 小于期望值，发生换档，那么产生一个cost
-  float expected_dist_cost;
-  float obs_dist_cost;
+  double expected_dist_cost;
+  double obs_dist_cost;
 
-  float total_cost;
+  double total_cost;
 };
 
 }  // namespace planning

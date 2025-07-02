@@ -68,8 +68,8 @@ const bool CubicKnotsToCoefficients(coefficient_cubic_t *coefficients,
  *  \param[in] coefficients The coeffcient representation of a cubic spiral.
  *  \param[in]            s The arc-length of a point along the cubic spiral.
  * */
-const bool FThetaCubicByS(float *theta,
-                          const coefficient_cubic_t *coefficients, float s);
+const bool FThetaCubicByS(double *theta,
+                          const coefficient_cubic_t *coefficients, double s);
 
 /**
  *  \brief Calculate the curvature according to a given coefficient vector and s
@@ -80,8 +80,8 @@ const bool FThetaCubicByS(float *theta,
  *                          curve.
  *  \param[in]            s The arc-length of a given point on the curve.
  **/
-const bool FKappaCubicS(float *kappa, const coefficient_cubic_t *coefficients,
-                        float s);
+const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
+                        double s);
 
 /**
  *  \brief Generate (x, y, theta, kappa) vector according to the coefficient
@@ -96,7 +96,7 @@ const bool FKappaCubicS(float *kappa, const coefficient_cubic_t *coefficients,
  **/
 const bool SampleCubicSpiralStatesByCoef(
     std::vector<spiral_path_point_t> &states, const coefficient_cubic_t *coeffs,
-    const spiral_path_point_t *start, float step_length);
+    const spiral_path_point_t *start, double step_length);
 
 /**
  *  \brief Generate (x, y, theta, kappa) state vector according to the knots
@@ -109,7 +109,7 @@ const bool SampleCubicSpiralStatesByCoef(
  **/
 const bool SampleCubicSpiralStatesBySol(
     std::vector<spiral_path_point_t> &states, const solution_cubic_t *solution,
-    float step_length);
+    double step_length);
 
 /**
  *  \brief Generate a motion list according to the coefficient representation of
@@ -124,7 +124,7 @@ const bool SampleCubicSpiralStatesBySol(
 // const bool SampleCubicSpiralMotionsByCoef(UOSSteerMotionList *motions,
 //                                           const coefficient_cubic_t *coeffs,
 //                                           const spiral_path_point_t *start,
-//                                           float step_length);
+//                                           double step_length);
 // /**
 //  *  \brief Generate a motion list according to the coefficient representation
 //  of
@@ -139,7 +139,7 @@ const bool SampleCubicSpiralStatesBySol(
 //  **/
 // const bool SampleCubicSpiralMotionsBySol(UOSSteerMotionList *motions,
 //                                          const solution_cubic_t *solution,
-//                                          float step_length);
+//                                          double step_length);
 
 /**
  *  \brief Given the shift distance and the original coefficient representation
@@ -154,8 +154,8 @@ const bool SampleCubicSpiralStatesBySol(
  *  \param[in] shift_distance The shifted distance in arclength i
  *  \param[in]         coeffs The original coefficients of the sprial.
  **/
-const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c,
-                                      float *d, float shift_distance,
+const bool TransformCubicSpiralCoeffs(double *a, double *b, double *c,
+                                      double *d, double shift_distance,
                                       const coefficient_cubic_t *coeffs);
 
 /**
@@ -166,7 +166,7 @@ const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c,
  *  \param[out] upper_bound The max signed curvature, positive value
  *  \return 0 -- Success; -1 -- Error
  **/
-const bool GetCurvatureBounds(float *lower_bound, float *upper_bound);
+const bool GetCurvatureBounds(double *lower_bound, double *upper_bound);
 /**
  *  \brief Cubic spiral path generation function based on gradient descent
  *         method.
@@ -276,27 +276,27 @@ const bool CubicSpiralBothkFreeSolve(solution_cubic_t *solution,
 // const bool CubicSpiralSolve(bool *solution_usable,
 //                             uos_steer_motion_list_t *motions,
 //                             const spiral_path_point_t *start,
-//                             const spiral_path_point_t *goal, float
+//                             const spiral_path_point_t *goal, double
 //                             step_length, bool constrain_start_k, bool
 //                             constrain_goal_k);
 
-inline float ThetaDiff(float theta1, float theta2) {
-  float diff = theta1 - theta2;
+inline double ThetaDiff(double theta1, double theta2) {
+  double diff = theta1 - theta2;
   if (diff > M_PI) diff -= 2 * M_PI;
   if (diff < -M_PI) diff += 2 * M_PI;
   return diff;
 }
 
-inline float UnifyTheta(float theta, float pi) {
-  float diff = fmod(theta, 2 * pi);
+inline double UnifyTheta(double theta, double pi) {
+  double diff = fmod(theta, 2 * pi);
   if (diff > pi) diff -= 2 * pi;
   if (diff < -pi) diff += 2 * pi;
   return diff;
 }
 
-inline bool Fgreater(float a, float b) { return a > b; }
+inline bool Fgreater(double a, double b) { return a > b; }
 
-inline bool Fless(float a, float b, float epsilon = 1e-6) {
+inline bool Fless(double a, double b, double epsilon = 1e-6) {
   return (a - b) < -epsilon;
 }
 }  // namespace planning

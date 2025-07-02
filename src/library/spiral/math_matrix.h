@@ -20,27 +20,27 @@ namespace planning {
  *   dkappa/dp1 = dkappa/dp2 = dkappa/dp4 = 0, dkappa/dp3 = 1
  * */
 
-float fx_cubic(knot_cubic_t param);
-float fy_cubic(knot_cubic_t param);
-float ftheta_cubic(knot_cubic_t param);
+double fx_cubic(knot_cubic_t param);
+double fy_cubic(knot_cubic_t param);
+double ftheta_cubic(knot_cubic_t param);
 
-float dx_cubic_dp0(knot_cubic_t param);
-float dx_cubic_dp1(knot_cubic_t param);
-float dx_cubic_dp2(knot_cubic_t param);
-float dx_cubic_dp3(knot_cubic_t param);
-float dx_cubic_dp4(knot_cubic_t param);
+double dx_cubic_dp0(knot_cubic_t param);
+double dx_cubic_dp1(knot_cubic_t param);
+double dx_cubic_dp2(knot_cubic_t param);
+double dx_cubic_dp3(knot_cubic_t param);
+double dx_cubic_dp4(knot_cubic_t param);
 
-float dy_cubic_dp0(knot_cubic_t param);
-float dy_cubic_dp1(knot_cubic_t param);
-float dy_cubic_dp2(knot_cubic_t param);
-float dy_cubic_dp3(knot_cubic_t param);
-float dy_cubic_dp4(knot_cubic_t param);
+double dy_cubic_dp0(knot_cubic_t param);
+double dy_cubic_dp1(knot_cubic_t param);
+double dy_cubic_dp2(knot_cubic_t param);
+double dy_cubic_dp3(knot_cubic_t param);
+double dy_cubic_dp4(knot_cubic_t param);
 
-float dtheta_cubic_dp0(knot_cubic_t param);
-float dtheta_cubic_dp1(knot_cubic_t param);
-float dtheta_cubic_dp2(knot_cubic_t param);
-float dtheta_cubic_dp3(knot_cubic_t param);
-float dtheta_cubic_dp4(knot_cubic_t param);
+double dtheta_cubic_dp0(knot_cubic_t param);
+double dtheta_cubic_dp1(knot_cubic_t param);
+double dtheta_cubic_dp2(knot_cubic_t param);
+double dtheta_cubic_dp3(knot_cubic_t param);
+double dtheta_cubic_dp4(knot_cubic_t param);
 
 /**
  *   Hessain matrix of final states that are represented by parameter names
@@ -63,37 +63,37 @@ float dtheta_cubic_dp4(knot_cubic_t param);
  *   Hessain matrix itself is symmetric, that is,
  *   (df(x))^2 / dp2dp1 = (df(x))^2 / dp1dp2
  * */
-float dx_cubic_d11(knot_cubic_t param);
-float dx_cubic_d21(knot_cubic_t param);
-float dx_cubic_d22(knot_cubic_t param);
-float dx_cubic_d31(knot_cubic_t param);
-float dx_cubic_d32(knot_cubic_t param);
-float dx_cubic_d33(knot_cubic_t param);
-float dx_cubic_d41(knot_cubic_t param);
-float dx_cubic_d42(knot_cubic_t param);
-float dx_cubic_d43(knot_cubic_t param);
-float dx_cubic_d44(knot_cubic_t param);
+double dx_cubic_d11(knot_cubic_t param);
+double dx_cubic_d21(knot_cubic_t param);
+double dx_cubic_d22(knot_cubic_t param);
+double dx_cubic_d31(knot_cubic_t param);
+double dx_cubic_d32(knot_cubic_t param);
+double dx_cubic_d33(knot_cubic_t param);
+double dx_cubic_d41(knot_cubic_t param);
+double dx_cubic_d42(knot_cubic_t param);
+double dx_cubic_d43(knot_cubic_t param);
+double dx_cubic_d44(knot_cubic_t param);
 
-float dy_cubic_d11(knot_cubic_t param);
-float dy_cubic_d21(knot_cubic_t param);
-float dy_cubic_d22(knot_cubic_t param);
-float dy_cubic_d31(knot_cubic_t param);
-float dy_cubic_d32(knot_cubic_t param);
-float dy_cubic_d33(knot_cubic_t param);
-float dy_cubic_d41(knot_cubic_t param);
-float dy_cubic_d42(knot_cubic_t param);
-float dy_cubic_d43(knot_cubic_t param);
-float dy_cubic_d44(knot_cubic_t param);
+double dy_cubic_d11(knot_cubic_t param);
+double dy_cubic_d21(knot_cubic_t param);
+double dy_cubic_d22(knot_cubic_t param);
+double dy_cubic_d31(knot_cubic_t param);
+double dy_cubic_d32(knot_cubic_t param);
+double dy_cubic_d33(knot_cubic_t param);
+double dy_cubic_d41(knot_cubic_t param);
+double dy_cubic_d42(knot_cubic_t param);
+double dy_cubic_d43(knot_cubic_t param);
+double dy_cubic_d44(knot_cubic_t param);
 
-float dtheta_cubic_d11(knot_cubic_t param);
-float dtheta_cubic_d21(knot_cubic_t param);
-float dtheta_cubic_d22(knot_cubic_t param);
-float dtheta_cubic_d31(knot_cubic_t param);
-float dtheta_cubic_d32(knot_cubic_t param);
-float dtheta_cubic_d33(knot_cubic_t param);
-float dtheta_cubic_d41(knot_cubic_t param);
-float dtheta_cubic_d42(knot_cubic_t param);
-float dtheta_cubic_d43(knot_cubic_t param);
-float dtheta_cubic_d44(knot_cubic_t param);
+double dtheta_cubic_d11(knot_cubic_t param);
+double dtheta_cubic_d21(knot_cubic_t param);
+double dtheta_cubic_d22(knot_cubic_t param);
+double dtheta_cubic_d31(knot_cubic_t param);
+double dtheta_cubic_d32(knot_cubic_t param);
+double dtheta_cubic_d33(knot_cubic_t param);
+double dtheta_cubic_d41(knot_cubic_t param);
+double dtheta_cubic_d42(knot_cubic_t param);
+double dtheta_cubic_d43(knot_cubic_t param);
+double dtheta_cubic_d44(knot_cubic_t param);
 }  // namespace planning
 #endif /* !_MATH_MATRIX_ */

@@ -6,7 +6,7 @@ CurveSampling::CurveSampling(
     const MapBound* XYbounds, const ParkObstacleList* obstacles,
     const AstarRequest* request, EulerDistanceTransform* edt,
     const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-    const PlannerOpenSpaceConfig* config, const float min_radius,
+    const PlannerOpenSpaceConfig* config, const double min_radius,
     std::shared_ptr<NodeCollisionDetect> collision_detect)
     : obstacles_(obstacles),
       edt_(edt),

@@ -14,7 +14,7 @@ class PolynomialCurveSampling : public CurveSampling {
       const MapBound* XYbounds, const ParkObstacleList* obstacles,
       const AstarRequest* request, EulerDistanceTransform* edt,
       const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-      const PlannerOpenSpaceConfig* config, const float min_radius,
+      const PlannerOpenSpaceConfig* config, const double min_radius,
       std::shared_ptr<NodeCollisionDetect> collision_detect);
 
   ~PolynomialCurveSampling() = default;
@@ -23,13 +23,13 @@ class PolynomialCurveSampling : public CurveSampling {
   bool SamplingByCubicPolyForVerticalSlot(HybridAStarResult* result,
                                           const Pose2D& start,
                                           const Pose2D& target,
-                                          const float lon_min_sampling_length);
+                                          const double lon_min_sampling_length);
 
   // use cubic path sampling to link start point and end point.
   bool SamplingByCubicPolyForParallelSlot(HybridAStarResult* result,
                                           const Pose2D& start,
                                           const Pose2D& end,
-                                          const float lon_min_sampling_length);
+                                          const double lon_min_sampling_length);
 
   bool SamplingByQunticPolynomial(Node3d* current_node,
                                   std::vector<AStarPathPoint>& path,
@@ -38,7 +38,7 @@ class PolynomialCurveSampling : public CurveSampling {
 
  private:
   void GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
-                               const Pose2D& start, const float start_kappa,
+                               const Pose2D& start, const double start_kappa,
                                const Pose2D& end);
 
  private:

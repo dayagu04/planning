@@ -21,11 +21,11 @@ void FuturePathDecider::Clear() {
   future_drive_dist_info_.dist_to_ref_line = 0.0;
   future_drive_dist_info_.gear_drive_path.clear();
 
-  float s = 0.0;
+  double s = 0.0;
   int32_t size = std::ceil(path_check_dist_ / point_resolution_);
   for (int32_t i = 0; i < size; i++) {
     future_drive_dist_info_.gear_drive_path.emplace_back(
-        Eigen::Vector2f(s, 10.0));
+        Eigen::Vector2d(s, 10.0));
     s += point_resolution_;
   }
 
@@ -34,7 +34,7 @@ void FuturePathDecider::Clear() {
   s = 0.0;
   for (int32_t i = 0; i < size; i++) {
     future_drive_dist_info_.gear_reverse_path.emplace_back(
-        Eigen::Vector2f(s, 10.0));
+        Eigen::Vector2d(s, 10.0));
     s += point_resolution_;
   }
 
@@ -42,8 +42,8 @@ void FuturePathDecider::Clear() {
 }
 
 void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
-                                const float min_turn_radius,
-                                const float sampling_lon_resolution,
+                                const double min_turn_radius,
+                                const double sampling_lon_resolution,
                                 EulerDistanceTransform *edt,
                                 AstarRequest &request) {
   if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
@@ -84,24 +84,25 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line) {
   // update dist to ref line
-  Vec2df32 ego_line_segment =
-      Vec2df32(ego_pose.x, ego_pose.y) - ref_line->GetStartPoint();
+  ad_common::math::Vec2d ego_line_segment =
+      ad_common::math::Vec2d(ego_pose.x, ego_pose.y) -
+      ref_line->GetStartPoint();
 
-  float vertical_dist = ref_line->UnitDirection().CrossProd(ego_line_segment);
+  double vertical_dist = ref_line->UnitDirection().CrossProd(ego_line_segment);
   future_drive_dist_info_.dist_to_ref_line = std::fabs(vertical_dist);
 
   // update gear drive safe dist
   Pose2D global_pose;
   Transform2d tf;
-  float sin_theta = std::sin(ego_pose.theta);
-  float cos_theta = std::cos(ego_pose.theta);
+  double sin_theta = std::sin(ego_pose.theta);
+  double cos_theta = std::cos(ego_pose.theta);
 
-  const Eigen::Vector2f line_seg_start =
-      Eigen::Vector2f(ego_pose.x, ego_pose.y);
-  const Eigen::Vector2f unit_line_vec = Eigen::Vector2f(cos_theta, sin_theta);
+  const Eigen::Vector2d line_seg_start =
+      Eigen::Vector2d(ego_pose.x, ego_pose.y);
+  const Eigen::Vector2d unit_line_vec = Eigen::Vector2d(cos_theta, sin_theta);
 
-  float s = 0.0;
-  Eigen::Vector2f point;
+  double s = 0.0;
+  Eigen::Vector2d point;
   float obs_dist;
   for (int32_t i = 0; i < future_drive_dist_info_.gear_drive_path.size(); i++) {
     point = line_seg_start + s * unit_line_vec;
@@ -192,7 +193,7 @@ void FuturePathDecider::UpdateFuturePathRequest(
 
   // advised path: drive to ref line.
   future_path_request->dist_request =
-      std::max(future_drive_dist_info_.dist_to_ref_line, 1.2f);
+      std::max(future_drive_dist_info_.dist_to_ref_line, 1.2);
 
   future_drive_dist_info_.advised_gear_drive_dist = SearchAdvisedDriveDist(
       path_inference_lat_buffer_, future_drive_dist_info_.gear_drive_path);
@@ -238,7 +239,7 @@ void FuturePathDecider::UpdateFuturePathRequest(
 
 // radius: if left turn, radius is positive
 void FuturePathDecider::GetVehCircleByPose(const Pose2D *pose,
-                                           const float radius,
+                                           const double radius,
                                            const AstarPathGear gear,
                                            VehicleCircle *veh_circle) {
   veh_circle->radius = radius;
@@ -251,7 +252,7 @@ void FuturePathDecider::GetVehCircleByPose(const Pose2D *pose,
 }
 
 void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
-                                        const float arc, const float radius,
+                                        const double arc, const double radius,
                                         const bool is_forward,
                                         std::vector<Pose2D> *path) {
   int path_point_num = std::ceil(arc / 0.1);
@@ -269,9 +270,9 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
 
   // interpolate
   Pose2D next_pose;
-  float inv_radius = std::fabs(1.0 / radius);
+  double inv_radius = std::fabs(1.0 / radius);
 
-  float acc_s = 0.0;
+  double acc_s = 0.0;
 
   path->clear();
   path->push_back(*start_point_pose);
@@ -290,10 +291,10 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
 
 void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
                                                const Pose2D *start_pose,
-                                               const float arc,
-                                               const float inverse_radius,
+                                               const double arc,
+                                               const double inverse_radius,
                                                Pose2D *pose) {
-  float delta_theta, theta;
+  double delta_theta, theta;
 
   delta_theta = arc * inverse_radius;
 
@@ -312,7 +313,7 @@ void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
   // update next point theta
   theta = start_pose->theta + delta_theta;
 
-  float radius = veh_circle->radius;
+  double radius = veh_circle->radius;
 
   pose->x = veh_circle->center.x + radius * std::sin(theta);
   pose->y = veh_circle->center.y - radius * std::cos(theta);
@@ -322,7 +323,7 @@ void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
 }
 
 void FuturePathDecider::GetStraightLinePoint(const Pose2D *start_state,
-                                             const float dist_to_start,
+                                             const double dist_to_start,
                                              const Pose2D *unit_vector,
                                              Pose2D *goal_state) {
   goal_state->x = start_state->x + dist_to_start * unit_vector->x;
@@ -334,18 +335,18 @@ void FuturePathDecider::GetStraightLinePoint(const Pose2D *start_state,
 }
 
 void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
-                                      const float length, const bool is_forward,
+                                      const double length, const bool is_forward,
                                       std::vector<Pose2D> *path) {
   int path_point_num = std::ceil(length / 0.1);
 
-  float inc_dist;
+  double inc_dist;
   if (is_forward) {
     inc_dist = 0.1;
   } else {
     inc_dist = -0.1;
   }
 
-  float acc_s = 0.0;
+  double acc_s = 0.0;
 
   // get unit vector
   Pose2D unit_vector;
@@ -369,7 +370,7 @@ void FuturePathDecider::GetPathByLine(const Pose2D *start_pose,
 
 // if left, radius is positive
 void FuturePathDecider::GetPathByRadius(const Pose2D *start_pose,
-                                        const float length, const float radius,
+                                        const double length, const double radius,
                                         const bool is_forward,
                                         std::vector<Pose2D> *path) {
   if (std::fabs(radius) > 100000.0) {
@@ -383,7 +384,7 @@ void FuturePathDecider::GetPathByRadius(const Pose2D *start_pose,
 }
 
 int32_t FuturePathDecider::SearchIdByS(
-    const float s, const std::vector<Eigen::Vector2f> &path) {
+    const double s, const std::vector<Eigen::Vector2d> &path) {
   if (path.empty()) {
     return -1;
   }
@@ -397,7 +398,7 @@ int32_t FuturePathDecider::SearchIdByS(
   int32_t search_end_id = guess_id + 3;
   search_end_id = std::min(search_end_id, path_end_id);
 
-  float min_dist = 1000.0;
+  double min_dist = 1000.0;
   int32_t min_dist_id = guess_id;
   for (int32_t i = search_start_id; i <= search_end_id; i++) {
     if (std::fabs(path[i][0] - s) < min_dist) {
@@ -413,8 +414,8 @@ int32_t FuturePathDecider::SearchIdByS(
   return min_dist_id;
 }
 
-const float FuturePathDecider::SearchAdvisedDriveDist(
-    const float safe_buffer, const std::vector<Eigen::Vector2f> &path) const {
+const double FuturePathDecider::SearchAdvisedDriveDist(
+    const double safe_buffer, const std::vector<Eigen::Vector2d> &path) const {
   if (path.empty()) {
     return 0.0f;
   }
@@ -433,7 +434,7 @@ const float FuturePathDecider::SearchAdvisedDriveDist(
 
 void FuturePathDecider::UpdatePathDistInfo(
     const std::vector<Pose2D> &path, const AstarPathGear gear,
-    EulerDistanceTransform *edt, std::vector<Eigen::Vector2f> &path_dist_info) {
+    EulerDistanceTransform *edt, std::vector<Eigen::Vector2d> &path_dist_info) {
   float obs_dist;
   Transform2d tf;
   for (size_t i = 0; i < path.size(); i++) {

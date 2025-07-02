@@ -15,7 +15,7 @@ class SpiralSampling : public CurveSampling {
       const MapBound* XYbounds, const ParkObstacleList* obstacles,
       const AstarRequest* request, EulerDistanceTransform* edt,
       const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-      const PlannerOpenSpaceConfig* config, const float min_radius,
+      const PlannerOpenSpaceConfig* config, const double min_radius,
       std::shared_ptr<NodeCollisionDetect> collision_detect);
 
   ~SpiralSampling() = default;
@@ -23,7 +23,7 @@ class SpiralSampling : public CurveSampling {
   // use cubic spiral path sampling to link start point and end point.
   bool SamplingByCubicSpiralForVerticalSlot(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
-      const float lon_min_sampling_length);
+      const double lon_min_sampling_length);
 
  private:
   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,

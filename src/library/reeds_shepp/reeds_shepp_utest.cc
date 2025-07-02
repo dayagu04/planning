@@ -11,7 +11,7 @@ using namespace planning;
 
 TEST(test_reeds_shepp, test_GetShortestRSPathParam) {
   int ret;
-  float error, min_radius;
+  double error, min_radius;
   Pose2D start_pose, goal_pose;
   RSPathParam path;
 
@@ -115,7 +115,7 @@ TEST(test_reeds_shepp, test_CalcRSPathKappa) {
   int ret;
   RSPathParam path;
   Pose2D start_pose, goal_pose;
-  float min_radius, error;
+  double min_radius, error;
   RSPathKappaParam control_list;
 
   error = 1e-5;
@@ -163,7 +163,7 @@ TEST(test_reeds_shepp, test_CalcRSPathKappa) {
 
 TEST(test_reeds_shepp, test_GetRSPathDist) {
   int ret;
-  float error, distance, min_radius;
+  double error, distance, min_radius;
   Pose2D start_pose, goal_pose;
 
   error = 1e-5;
@@ -204,7 +204,7 @@ TEST(test_reeds_shepp, test_GetRSPathDist) {
 
 TEST(test_reeds_shepp, test_CalcShortestRSPathKappa) {
   int ret;
-  float error, min_radius;
+  double error, min_radius;
   Pose2D start_pose, goal_pose;
   RSPathKappaParam control_list;
 
@@ -260,7 +260,7 @@ TEST(test_reeds_shepp, test_GetRSPathGearSwitchNum) {
   int ret;
   int gear_switch_num;
   Pose2D start_pose, goal_pose;
-  float min_radius;
+  double min_radius;
   AstarPathGear initial_pose_dir;
 
   start_pose.x = 1.0;
@@ -324,7 +324,7 @@ TEST(test_reeds_shepp, test_GetRSPathGearSwitchNum) {
 TEST(test_reeds_shepp, test_reeds_shepp_use_path_info_1) {
   int ret;
   int i;
-  float error, min_radius, distance;
+  double error, min_radius, distance;
   Pose2D start_pose, goal_pose;
   RSPathKappaParam control_list;
 
@@ -361,7 +361,7 @@ TEST(test_reeds_shepp, test_reeds_shepp_use_path_info_1) {
 TEST(test_reeds_shepp, test_reeds_shepp_use_path_info_2) {
   int ret;
   int i;
-  float error, min_radius, distance;
+  double error, min_radius, distance;
   Pose2D start_pose, goal_pose;
   RSPathKappaParam control_list;
 

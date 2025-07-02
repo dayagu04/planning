@@ -3,18 +3,18 @@
 namespace planning {
 
 typedef struct SpiralPathPoint {
-  float x;
-  float y;
-  float theta;
-  float kappa;           /* curvature of state */
+  double x;
+  double y;
+  double theta;
+  double kappa;           /* curvature of state */
 } spiral_path_point_t;
 
 typedef struct KnotCubic {
-  float p0; /* curvature at s = 0 */
-  float p1; /* curvature at s = 1/3 * sf */
-  float p2; /* curvature at s = 2/3 * sf */
-  float p3; /* curvature at s = sf */
-  float sf; /* the total arc-length of a cubic spiral path */
+  double p0; /* curvature at s = 0 */
+  double p1; /* curvature at s = 1/3 * sf */
+  double p2; /* curvature at s = 2/3 * sf */
+  double p3; /* curvature at s = sf */
+  double sf; /* the total arc-length of a cubic spiral path */
 } knot_cubic_t;
 
 typedef enum SolveStatus {
@@ -34,11 +34,11 @@ typedef struct CoefficientCubic {
   /**
    * \kappa = a + b*s + c*s^2 +d*s^3 , s \in [0, sf]
    * */
-  float a;
-  float b;
-  float c;
-  float d;
-  float sf;
+  double a;
+  double b;
+  double c;
+  double d;
+  double sf;
 } coefficient_cubic_t;
 
 }  // namespace planning

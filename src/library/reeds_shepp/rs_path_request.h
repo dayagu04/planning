@@ -26,16 +26,16 @@ struct RSPathRequest {
 
   // all path segment must bigger than segment_min_length.
   bool enable_segment_length_check;
-  float segment_min_length;
+  double segment_min_length;
 
   // first path must bigger than first_segment_min_length;
   bool enable_first_segment_len_check;
-  float first_segment_min_length;
+  double first_segment_min_length;
 
   Pose2D start;
   Pose2D end;
 
-  float min_radius;
+  double min_radius;
 };
 
 std::string GetRSRequestType(const RSPathRequestType type);

@@ -15,7 +15,6 @@
 
 namespace planning {
 
-// todo: use float to replace float.
 class HybridAStarInterface {
  public:
   HybridAStarInterface();
@@ -24,10 +23,10 @@ class HybridAStarInterface {
 
   // todo: need to unify same vehicle chassis params for on lane driving and
   // parking
-  int Init(const float back_edge_to_rear_axis, const float car_length,
-           const float car_width, const float steer_ratio,
-           const float wheel_base, const float min_turn_radius,
-           const float mirror_width);
+  int Init(const double back_edge_to_rear_axis, const double car_length,
+           const double car_width, const double steer_ratio,
+           const double wheel_base, const double min_turn_radius,
+           const double mirror_width);
 
   // for now, use slot coordinate. you can call this API in one thread.
   void GeneratePath(const Eigen::Vector3d& start, const Eigen::Vector3d& end,
@@ -39,9 +38,9 @@ class HybridAStarInterface {
 
   const AstarRequest& GetConstRequest() const { return request_; }
 
-  static void GetRSPathInFullPath(std::vector<float>& x,
-                                  std::vector<float>& y,
-                                  std::vector<float>& phi,
+  static void GetRSPathInFullPath(std::vector<double >& x,
+                                  std::vector<double >& y,
+                                  std::vector<double >& phi,
                                   const HybridAStarResult& result);
 
   const HybridAStarResult* GetConstFullLengthPath() const;
@@ -77,29 +76,29 @@ class HybridAStarInterface {
 
   // for debug
   void GetRSPathHeuristic(
-      std::vector<std::vector<Vec2df32>>& path_list);
+      std::vector<std::vector<ad_common::math::Vec2d>>& path_list);
 
   // for debug
   const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
 
   // for debug
-  const std::vector<Vec2df32>& GetPriorQueueNode();
-  const std::vector<Vec2df32>& GetDelNodeQueueNode();
+  const std::vector<ad_common::math::Vec2d>& GetPriorQueueNode();
+  const std::vector<ad_common::math::Vec2d>& GetDelNodeQueueNode();
   // for debug,retired
   void GetNodeListMessage(planning::common::AstarNodeList* list);
 
   // for debug
-  void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2f>>& list);
+  void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
   // for debug
-  void GetRSPathForDebug(std::vector<float>& x, std::vector<float>& y,
-                         std::vector<float>& phi);
+  void GetRSPathForDebug(std::vector<double >& x, std::vector<double >& y,
+                         std::vector<double >& phi);
 
   const ParkReferenceLine& GetConstRefLine() const;
 
   // for debug
-  void GetPolynomialPathForDebug(std::vector<float>& x, std::vector<float>& y,
-                                 std::vector<float>& phi);
+  void GetPolynomialPathForDebug(std::vector<double >& x, std::vector<double >& y,
+                                 std::vector<double >& phi);
 
   void UpdateEDTByObs(const ParkObstacleList& obs_list);
 
@@ -130,7 +129,7 @@ class HybridAStarInterface {
 
   // 基于搜索的路径生成API
   void PathSearchForScenarioRunning(const TargetPoseRegulator& regulator,
-                                    const float ego_obs_dist,
+                                    const double ego_obs_dist,
                                     const bool is_ego_overlap_with_slot);
 
   // todo: move it to safe buffer decider
@@ -138,8 +137,8 @@ class HybridAStarInterface {
   // Need to consider:
   // 1. distance from ego to obstacle;
   // 2. distance from target pose to obstacle;
-  const float GetLatBufferForInsideSlot(const float target_obs_dist,
-                                         const float ego_obs_dist,
+  const double GetLatBufferForInsideSlot(const double target_obs_dist,
+                                         const double ego_obs_dist,
                                          const bool is_ego_overlap_with_slot);
 
   void PathCandidateCompare();

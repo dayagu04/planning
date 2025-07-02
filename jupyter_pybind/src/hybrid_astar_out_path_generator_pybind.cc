@@ -66,7 +66,7 @@ std::vector<Eigen::Vector2d> obs_global_points_;
 ParkObstacleList hybrid_astar_obs_;
 std::vector<Eigen::Vector4d> obs_line_list_;
 
-std::vector<std::vector<Eigen::Vector2f>> real_time_node_list_;
+std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
 std::vector<Eigen::Vector2d> search_sequence_path_;
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
@@ -197,11 +197,11 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
       global_position = ego_slot_info.l2g_tf.GetPos(Eigen::Vector2d(
           real_time_node_list_[i][j].x(), real_time_node_list_[i][j].y()));
 
-      real_time_node_list_[i][j] = global_position.cast<float>();
+      real_time_node_list_[i][j] = global_position;
     }
   }
 
-  const std::vector<Vec2df32> &search_path =
+  const std::vector<ad_common::math::Vec2d> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   search_sequence_path_.clear();
@@ -234,7 +234,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   }
 
   ILOG_INFO << "rs path copy ";
-  std::vector<std::vector<Vec2df32>> path_list;
+  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
   hybrid_astar_interface_->GetRSPathHeuristic(path_list);
 
   rs_h_path_.clear();
@@ -955,7 +955,7 @@ const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
   return polynomial_path_;
 }
 
-const std::vector<std::vector<Eigen::Vector2f>> &GetAstarAllNodes() {
+const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
   return real_time_node_list_;
 }
 

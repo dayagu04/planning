@@ -14,7 +14,7 @@ namespace planning {
 
 void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
     ParkObstacleList& obs_list, const LocalView* local_view,
-    const float slot_length, const float slot_width,
+    const double slot_length, const double slot_width,
     const Pose2D& slot_base_pose, const Pose2D& ego_start,
     const bool enable_limiter_obs) {
   Transform2d slot_tf;
@@ -46,13 +46,13 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   // slot aabb
   cdl::AABB slot_box;
 
-  float slot_x_buffer = 1.0;
-  float slot_y_buffer = 0.05;
-  float safe_slot_width =
-      std::max(slot_width, static_cast<float>(config.max_car_width) + 0.1f) +
+  double slot_x_buffer = 1.0;
+  double slot_y_buffer = 0.05;
+  double safe_slot_width =
+      std::max(slot_width, static_cast<double>(config.max_car_width) + 0.1f) +
       slot_y_buffer;
-  float safe_slot_length =
-      std::max(slot_length, static_cast<float>(config.car_length)) +
+  double safe_slot_length =
+      std::max(slot_length, static_cast<double>(config.car_length)) +
       slot_x_buffer;
 
   slot_box.min_ = cdl::Vector2r(-0.5, -safe_slot_width / 2);
@@ -196,8 +196,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
         const iflyauto::ParkingFusionLimiter* limiter = &slot->limiters[j];
 
         SampleInLineSegment(
-            Eigen::Vector2f(limiter->end_points[0].x, limiter->end_points[0].y),
-            Eigen::Vector2f(limiter->end_points[1].x, limiter->end_points[1].y),
+            Eigen::Vector2d(limiter->end_points[0].x, limiter->end_points[0].y),
+            Eigen::Vector2d(limiter->end_points[1].x, limiter->end_points[1].y),
             &limiter_points);
 
         // ILOG_INFO << "limiter point size " << limiter_points.size();
@@ -253,11 +253,11 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
 }
 
 void PointCloudObstacleTransform::SampleInLineSegment(
-    const Eigen::Vector2f& start, const Eigen::Vector2f& end,
+    const Eigen::Vector2d& start, const Eigen::Vector2d& end,
     std::vector<Position2D>* points) {
   points->clear();
 
-  const Eigen::Vector2f line = end - start;
+  const Eigen::Vector2d line = end - start;
 
   if (std::sqrt(line.x() * line.x() + line.y() * line.y()) < 0.1) {
     points->emplace_back(Position2D(start.x(), start.y()));
@@ -265,13 +265,13 @@ void PointCloudObstacleTransform::SampleInLineSegment(
     return;
   }
 
-  const Eigen::Vector2f unit_line_vec = line.normalized();
-  float len = line.norm();
+  const Eigen::Vector2d unit_line_vec = line.normalized();
+  double len = line.norm();
 
-  float s = 0.0;
-  float ds = 0.1;
+  double s = 0.0;
+  double ds = 0.1;
 
-  Eigen::Vector2f point;
+  Eigen::Vector2d point;
   while (s < len) {
     point = start + s * unit_line_vec;
 
@@ -318,8 +318,8 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
         continue;
       }
 
-      position.x = static_cast<float>(pt.x());
-      position.y = static_cast<float>(pt.y());
+      position.x = static_cast<double>(pt.x());
+      position.y = static_cast<double>(pt.y());
       if (config.astar_config.enable_delete_occ_in_ego) {
         gjk_.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                          position);
@@ -348,48 +348,48 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
 }
 
 void PointCloudObstacleTransform::GetCompactCarPolygonByParam(
-    Polygon2D* box, const float lat_buffer, const float lon_buffer) {
+    Polygon2D* box, const double lat_buffer, const double lon_buffer) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   box->vertexes[0].x =
-      static_cast<float>(config.car_vertex_x_vec[2]) + lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[2]) + lon_buffer;
   box->vertexes[0].y =
-      static_cast<float>(config.car_vertex_y_vec[2]) + lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[2]) + lat_buffer;
 
   box->vertexes[1].x =
-      static_cast<float>(config.car_vertex_x_vec[0]) + lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[0]) + lon_buffer;
   box->vertexes[1].y =
-      static_cast<float>(config.car_vertex_y_vec[0]) + lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[0]) + lat_buffer;
 
   box->vertexes[2].x =
-      static_cast<float>(config.car_vertex_x_vec[15]) - lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[15]) - lon_buffer;
   box->vertexes[2].y =
-      static_cast<float>(config.car_vertex_y_vec[15]) + lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[15]) + lat_buffer;
 
   box->vertexes[3].x =
-      static_cast<float>(config.car_vertex_x_vec[13]) - lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[13]) - lon_buffer;
   box->vertexes[3].y =
-      static_cast<float>(config.car_vertex_y_vec[13]) + lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[13]) + lat_buffer;
 
   box->vertexes[4].x =
-      static_cast<float>(config.car_vertex_x_vec[12]) - lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[12]) - lon_buffer;
   box->vertexes[4].y =
-      static_cast<float>(config.car_vertex_y_vec[12]) - lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[12]) - lat_buffer;
 
   box->vertexes[5].x =
-      static_cast<float>(config.car_vertex_x_vec[10]) - lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[10]) - lon_buffer;
   box->vertexes[5].y =
-      static_cast<float>(config.car_vertex_y_vec[10]) - lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[10]) - lat_buffer;
 
   box->vertexes[6].x =
-      static_cast<float>(config.car_vertex_x_vec[5]) + lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[5]) + lon_buffer;
   box->vertexes[6].y =
-      static_cast<float>(config.car_vertex_y_vec[5]) - lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[5]) - lat_buffer;
 
   box->vertexes[7].x =
-      static_cast<float>(config.car_vertex_x_vec[3]) + lon_buffer;
+      static_cast<double>(config.car_vertex_x_vec[3]) + lon_buffer;
   box->vertexes[7].y =
-      static_cast<float>(config.car_vertex_y_vec[3]) - lat_buffer;
+      static_cast<double>(config.car_vertex_y_vec[3]) - lat_buffer;
 
   box->vertex_num = 8;
 

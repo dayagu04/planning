@@ -18,8 +18,8 @@ namespace apa_planner {
 void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
-  float veh_x_buffer = 0.3;
-  float veh_y_buffer = 0.4;
+  double veh_x_buffer = 0.3;
+  double veh_y_buffer = 0.4;
 
   GenerateUpLeftFrameBox(
       &ego_local_polygon, -config.rear_overhanging - veh_x_buffer,
@@ -45,13 +45,13 @@ const bool VirtualWallDecider::IsVirtualWallPointCollision(
 }
 
 void VirtualWallDecider::Process(std::vector<Position2D>& points,
-                                 const float slot_width,
-                                 const float slot_length,
+                                 const double slot_width,
+                                 const double slot_length,
                                  const Pose2D& ego_pose, const Pose2D& end,
                                  const ParkSpaceType slot_type,
                                  const pnc::geometry_lib::SlotSide slot_side,
                                  const ParkingVehDirection parking_type,
-                                 const float head_out_passage_height) {
+                                 const double head_out_passage_height) {
   start_ = ego_pose;
   end_ = end;
   slot_type_ = slot_type;
@@ -63,17 +63,17 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
 
   if (slot_type == ParkSpaceType::VERTICAL ||
       slot_type == ParkSpaceType::SLANTING) {
-    float virtual_wall_x_offset =
+    double virtual_wall_x_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
 
-    float virtual_wall_y_offset =
+    double virtual_wall_y_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;
 
-    float passage_half_length =
+    double passage_half_length =
         apa_param.GetParam().astar_config.vertical_slot_passage_length_bound /
         2;
 
-    float passage_height =
+    double passage_height =
         apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
 
     if (parking_type == ParkingVehDirection::HEAD_IN) {
@@ -114,10 +114,10 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
                                              std::vector<Position2D>* points) {
   const Eigen::Vector2d line = end - start;
   const Eigen::Vector2d unit_line_vec = line.normalized();
-  float len = line.norm();
+  double len = line.norm();
 
-  float s = 0.0;
-  float ds = 0.4;
+  double s = 0.0;
+  double ds = 0.4;
 
   int size = std::ceil(len / ds) + 1;
 
@@ -275,17 +275,17 @@ void VirtualWallDecider::SamplingInParallelBoundary(
 }
 
 void VirtualWallDecider::CalcVerticalVirtualWall(
-    std::vector<Position2D>& points, const float slot_width,
-    const float slot_length, const Pose2D& ego_pose, const Pose2D& end,
-    const float virtual_wall_x_offset, const float virtual_wall_y_offset,
-    const float passage_half_length, const float passage_height) {
+    std::vector<Position2D>& points, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
+    const double virtual_wall_x_offset, const double virtual_wall_y_offset,
+    const double passage_half_length, const double passage_height) {
   // slot virtual wall
   VirtualWallBoundary slot_boundary;
 
   slot_boundary.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
   slot_boundary.x_upper = slot_length - virtual_wall_x_offset;
   slot_boundary.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
-  float lower_bound_x = -1.0;
+  double lower_bound_x = -1.0;
   slot_boundary.x_lower = lower_bound_x;
 
   // passage virtual wall
@@ -294,7 +294,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   tmp_passage_boundary.x_lower = slot_length - virtual_wall_x_offset;
   // passage up bound
 
-  float passage_up_bound_x = slot_length + passage_height;
+  double passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
   // passage left/right bound
 
@@ -314,8 +314,8 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
 
 #define PARALLEL_SLOT_EXTRA_LEN (6.0)
 void VirtualWallDecider::RightSideParallelVirtualWall(
-    std::vector<Position2D>& points, const float slot_width,
-    const float slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    std::vector<Position2D>& points, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // slot virtual wall
   VirtualWallBoundary slot_boundary;
   slot_boundary.y_lower = -slot_width / 2.0 - 1.0;
@@ -350,8 +350,8 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 }
 
 void VirtualWallDecider::LeftSideParallelVirtualWall(
-    std::vector<Position2D>& points, const float slot_width,
-    const float slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    std::vector<Position2D>& points, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // slot virtual wall
   VirtualWallBoundary slot_boundary;
   slot_boundary.y_lower = -slot_width / 2.0;
@@ -392,10 +392,10 @@ void VirtualWallDecider::Init(const Pose2D& ego_pose) {
 }
 
 void VirtualWallDecider::GetVehicleBound() {
-  float veh_upper_x = start_.x;
-  float veh_lower_x = start_.x;
-  float veh_left_y = start_.y;
-  float veh_right_y = start_.y;
+  double veh_upper_x = start_.x;
+  double veh_lower_x = start_.x;
+  double veh_left_y = start_.y;
+  double veh_right_y = start_.y;
   for (int i = 0; i < ego_polygon_in_slot_.vertex_num; i++) {
     veh_upper_x = std::max(veh_upper_x, ego_polygon_in_slot_.vertexes[i].x);
     veh_lower_x = std::min(veh_lower_x, ego_polygon_in_slot_.vertexes[i].x);
@@ -404,7 +404,7 @@ void VirtualWallDecider::GetVehicleBound() {
     veh_right_y = std::min(veh_right_y, ego_polygon_in_slot_.vertexes[i].y);
   }
 
-  float veh_buffer = 0.5;
+  double veh_buffer = 0.5;
   veh_boundary_.x_upper = veh_upper_x + veh_buffer;
   veh_boundary_.x_lower = veh_lower_x - veh_buffer;
   veh_boundary_.y_upper = veh_left_y + veh_buffer;

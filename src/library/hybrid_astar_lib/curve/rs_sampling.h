@@ -15,7 +15,7 @@ class RSSampling : public CurveSampling {
                       const ObstacleClearZone* clear_zone,
                       ParkReferenceLine* ref_line,
                       const PlannerOpenSpaceConfig* config,
-                      const float min_radius,
+                      const double min_radius,
                       std::shared_ptr<NodeCollisionDetect> collision_detect);
 
   ~RSSampling() = default;
@@ -23,7 +23,7 @@ class RSSampling : public CurveSampling {
   // use rs path sampling to link start point and end point.
   bool PlanByRSPathSampling(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-      const float lon_min_sampling_length);
+      const double lon_min_sampling_length);
 
   bool SamplingByRSPath(Node3d* current_node, Node3d* polynomial_node);
 
@@ -32,8 +32,8 @@ class RSSampling : public CurveSampling {
  private:
   void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2D& start,
                                const Pose2D& end,
-                               const float lon_min_sampling_length,
-                               const float radius);
+                               const double lon_min_sampling_length,
+                               const double radius);
 
   const bool IsExpectedGearForRsPath(const RSPath& path);
 

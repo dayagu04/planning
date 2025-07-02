@@ -12,9 +12,9 @@ class RSExpansionDecider : public AstarDecider {
  public:
   RSExpansionDecider() = default;
 
-  void Process(const float min_radius, const float slot_width,
-               const float slot_length, const Pose2D &ego_pose,
-               const Pose2D &astar_end, const float veh_width,
+  void Process(const double min_radius, const double slot_width,
+               const double slot_length, const Pose2D &ego_pose,
+               const Pose2D &astar_end, const double veh_width,
                const ParkSpaceType slot_type,
                const ParkingVehDirection park_dir);
 
