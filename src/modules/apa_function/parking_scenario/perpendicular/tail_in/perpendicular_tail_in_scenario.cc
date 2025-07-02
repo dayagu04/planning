@@ -127,6 +127,14 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  if (apa_param.GetParam().has_intelligent_fold_mirror &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
+    return;
+  }
+
   // check planning status
   ILOG_INFO << "parking status = "
             << static_cast<int>(GetPlannerStates().planning_status);
@@ -221,7 +229,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   // no consider obs target pose, real-time update
   TargetPoseDecider target_pose_decider(
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+      apa_world_ptr_->GetColDetInterfacePtr());
 
   TargetPoseDeciderRequest tar_pose_decider_request(
       std::vector<double>{0.15}, 0.3,
@@ -474,21 +482,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
+  const ApaParameters& param = apa_param.GetParam();
+
   const geometry_lib::PathPoint& ego_pose = ego_info_under_slot.cur_pose;
 
-  bool prohibit_move_slot = false;
-  if (apa_param.GetParam().prohibit_move_slot &&
-      !CheckEgoPoseInBelieveObsArea(
-          0.2, apa_param.GetParam().believe_obs_ego_area, 60)) {
-    ILOG_INFO << "prohibit move slot, and if have obs, move it";
-    prohibit_move_slot = true;
-    frame_.process_obs_method = ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS;
-  }
-
   bool move_slot_with_little_buffer = false;
-  if (apa_param.GetParam().move_slot_with_little_buffer &&
-      !CheckEgoPoseInBelieveObsArea(
-          0.2, apa_param.GetParam().believe_obs_ego_area, 60)) {
+  if (param.move_slot_with_little_buffer &&
+      !CheckEgoPoseInBelieveObsArea(0.2, param.believe_obs_ego_area, 60)) {
     ILOG_INFO << "move_slot_with_little_buffer";
     move_slot_with_little_buffer = true;
   }
@@ -512,7 +512,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
   }
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
-            << "  can not move slot = " << prohibit_move_slot
             << "  update_slot_move_dist = " << update_slot_move_dist
             << "  process_obs_method = "
             << static_cast<int>(frame_.process_obs_method);
@@ -520,7 +519,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
   if (update_slot_move_dist) {
     // 重规划时根据障碍物计算终点位置
     TargetPoseDecider target_pose_decider(
-        apa_world_ptr_->GetCollisionDetectorInterfacePtr());
+        apa_world_ptr_->GetColDetInterfacePtr());
 
     double max_lat_buffer = 0.15;
     if (!frame_.is_replan_first &&
@@ -537,8 +536,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
          lat_buffer -= step) {
       lat_buffer_vec.emplace_back(lat_buffer);
     }
-    if (apa_param.GetParam().force_use_little_buffer_move_slot ||
-        prohibit_move_slot || move_slot_with_little_buffer) {
+    if (move_slot_with_little_buffer) {
       ILOG_INFO << "force use little lat safe buffer";
       lat_buffer_vec.clear();
       for (int i = 3; i >= 0; --i) {
@@ -563,7 +561,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
     ego_info_under_slot.target_pose = res.target_pose_local;
 
-    if (frame_.replan_reason != ReplanReason::DYNAMIC && !prohibit_move_slot &&
+    if (frame_.replan_reason != ReplanReason::DYNAMIC &&
         !move_slot_with_little_buffer) {
       ego_info_under_slot.safe_lat_buffer = res.safe_lat_buffer;
     }
@@ -632,6 +630,12 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   input.can_first_plan_again = frame_.can_first_plan_again;
 
   input.is_simulation = simu_param.is_simulation;
+
+  if (param.has_intelligent_fold_mirror &&
+      apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag()) {
+    input.need_fold_mirror = true;
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+  }
 
   if (input.is_simulation) {
     apa_param.SetPram().use_average_obs_dist =
@@ -851,13 +855,20 @@ void PerpendicularTailInScenario::PathPlan() {
         apa_world_ptr_->GetSimuParam().process_obs_method);
   }
 
-  const bool exist_target_pose = GenTlane();
+  bool exist_target_pose = GenTlane();
   if (!frame_.replan_flag) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(ParkingStatus::PARKING_RUNNING);
     return;
   }
   SetParkingStatus(ParkingStatus::PARKING_PLANNING);
+
+  if (param.has_intelligent_fold_mirror && !exist_target_pose &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
+      !apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag()) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+    exist_target_pose = GenTlane();
+  }
 
   if (!exist_target_pose) {
     frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
@@ -1175,14 +1186,13 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
   GJKColDetRequest gjl_col_det_request(true, false);
 
-  bool end_pos_has_obs_condition =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-          ->GetGJKCollisionDetectorPtr()
-          ->Update(
-              std::vector<geometry_lib::PathPoint>{
-                  ego_info_under_slot.target_pose},
-              0.0, 0.0, gjl_col_det_request)
-          .col_flag;
+  bool end_pos_has_obs_condition = apa_world_ptr_->GetColDetInterfacePtr()
+                                       ->GetGJKColDetPtr()
+                                       ->Update(
+                                           std::vector<geometry_lib::PathPoint>{
+                                               ego_info_under_slot.target_pose},
+                                           0.0, 0.0, gjl_col_det_request)
+                                       .col_flag;
 
   ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
 
@@ -1199,8 +1209,8 @@ const bool PerpendicularTailInScenario::CheckFinished() {
         ego_info_under_slot.target_pose.heading};
 
     end_pos_has_obs_condition =
-        apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-            ->GetGJKCollisionDetectorPtr()
+        apa_world_ptr_->GetColDetInterfacePtr()
+            ->GetGJKColDetPtr()
             ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
                      gjl_col_det_request)
             .col_flag;
@@ -1339,8 +1349,8 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
           apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
 
       ColResult col_res =
-          apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-              ->GetGeometryCollisionDetectorPtr()
+          apa_world_ptr_->GetColDetInterfacePtr()
+              ->GetGeometryColDetPtr()
               ->Update(path_seg_global,
                        apa_param.GetParam().car_lat_inflation_normal,
                        apa_param.GetParam().col_obs_safe_dist_normal);
@@ -1503,6 +1513,23 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
                    real_time_brake_info_vec[0].lat_buffer)
+
+  const geometry_lib::PathPoint& termial_err = ego_info_under_slot.terminal_err;
+  const Eigen::Vector2d cur_pos = ego_info_under_slot.cur_pose.pos +
+                                  param.lon_dist_mirror_to_rear_axle *
+                                      ego_info_under_slot.cur_pose.heading_vec;
+  const Eigen::Vector2d& slot_pt_01_mid =
+      ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
+
+  if (apa_param.GetParam().has_intelligent_fold_mirror && frame_.is_last_path &&
+      safe_remain_dist < param.slight_brake_lon_dist &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      !frame_.need_fold_mirror && cur_pos.x() < slot_pt_01_mid.x() + 2.68 &&
+      cur_pos.x() > slot_pt_01_mid.x() - 1.08 &&
+      std::fabs(termial_err.pos.y()) < 0.068 &&
+      std::fabs(termial_err.heading) * kRad2Deg < 2.68) {
+    frame_.need_fold_mirror = true;
+  }
 
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
             << "  lon_buffer = " << lon_buffer
@@ -2142,8 +2169,8 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
   // 检查优化后的路径是否很奇怪
 
   // 检查是否碰撞
-  if (apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-          ->GetGJKCollisionDetectorPtr()
+  if (apa_world_ptr_->GetColDetInterfacePtr()
+          ->GetGJKColDetPtr()
           ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
           .col_flag) {
     ILOG_INFO << "the optimal path is col";
@@ -2474,7 +2501,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
   const UssObstacleAvoidance::RemainDistInfo uss_info =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+      apa_world_ptr_->GetColDetInterfacePtr()
           ->GetUssObsAvoidancePtr()
           ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available)

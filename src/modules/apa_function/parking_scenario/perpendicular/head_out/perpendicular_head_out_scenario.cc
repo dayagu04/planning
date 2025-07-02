@@ -891,8 +891,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
 
   // stucked by directly behind uss
   const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
-          ->GetUssObsAvoidancePtr();
+      apa_world_ptr_->GetColDetInterfacePtr()->GetUssObsAvoidancePtr();
   const bool enter_slot_condition =
       ego_info_under_slot.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
@@ -1073,7 +1072,7 @@ void PerpendicularHeadOutScenario::Log() const {
   JSON_DEBUG_VALUE("path_length", path_plan_output.length)
 
   const UssObstacleAvoidance::RemainDistInfo uss_info =
-      apa_world_ptr_->GetCollisionDetectorInterfacePtr()
+      apa_world_ptr_->GetColDetInterfacePtr()
           ->GetUssObsAvoidancePtr()
           ->GetRemainDistInfo();
   JSON_DEBUG_VALUE("uss_available", uss_info.is_available)

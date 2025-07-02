@@ -84,7 +84,8 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
                                  const ApaObsHeightType &height_type);
 
   void UpdateSafeBuffer(const double lat_buffer, const double lon_buffer,
-                        const double max_circle_buffer = 0.5);
+                        const double max_circle_buffer = 0.5,
+                        const double mirror_lat_buffer = 0.08);
 
   void UpdateCarWithMirrorSafeBuffer();
   void UpdateCarWithOutMirrorSafeBuffer();
@@ -102,12 +103,14 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
                          const double lat_buffer, const double lon_buffer,
                          const bool need_cal_obs_dist = false,
-                         const double max_circle_buffer = 0.5);
+                         const double max_circle_buffer = 0.5,
+                         const double mirror_lat_buffer = 0.08);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint> &pt_vec,
                          const double lat_buffer, const double lon_buffer,
                          const bool need_cal_obs_dist = false,
-                         const double max_circle_buffer = 0.5);
+                         const double max_circle_buffer = 0.5,
+                         const double mirror_lat_buffer = 0.08);
 
  private:
   // origin and boundary of grid coordinate system

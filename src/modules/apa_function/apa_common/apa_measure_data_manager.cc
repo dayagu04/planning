@@ -97,8 +97,15 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
 
   acceleration_ = localization_info.acceleration.acceleration_body.ax;
 
-  // todo: need to get signal from vehicle service
-  fold_mirror_flag_ = apa_param.GetParam().force_fold_mirror;
+  if (apa_param.GetParam().force_fold_mirror) {
+    fold_mirror_flag_ = true;
+  } else if (apa_param.GetParam().has_intelligent_fold_mirror) {
+    // get signal from vehicle service
+    fold_mirror_flag_ = (vehicle_service_output_info.rearview_mirror_sts ==
+                         iflyauto::RearviewMirrorSts::Rearview_Mirror_Fold);
+  } else {
+    fold_mirror_flag_ = false;
+  }
 
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
   ILOG_INFO << "pos = " << pos_.transpose()

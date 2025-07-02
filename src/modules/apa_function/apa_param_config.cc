@@ -125,9 +125,36 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.max_replan_number_inside_slot, int,
       "max_replan_number_inside_slot");
+
   // car params
+  std::string car_type_string;
+  int car_type_int = 0;
+  JSON_READ_VALUE(car_type_string, std::string, "car_type");
+  if (car_type_string == "jac_s811") {
+    car_type_int = 0;
+  } else if (car_type_string == "cherry_t26") {
+    car_type_int = 1;
+  } else if (car_type_string == "cherry_e0x") {
+    car_type_int = 2;
+  } else if (car_type_string == "cherry_m32t") {
+    car_type_int = 3;
+  } else {
+    car_type_int = 0;
+  }
+  JSON_DEBUG_VALUE("car_type", car_type_int);
+  ILOG_INFO << "car_type_string = " << car_type_string
+            << "  car_type = " << car_type_int;
+
+  JSON_READ_VALUE(apa_param.SetPram().has_intelligent_fold_mirror, bool,
+                  "has_intelligent_fold_mirror");
+
   JSON_READ_VALUE(apa_param.SetPram().force_fold_mirror, bool,
                   "force_fold_mirror");
+
+  if (apa_param.GetParam().force_fold_mirror) {
+    apa_param.SetPram().has_intelligent_fold_mirror = false;
+  }
+
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
 
@@ -502,9 +529,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_normal, double,
                   "car_lat_inflation_normal");
 
-  JSON_READ_VALUE(apa_param.SetPram().force_use_little_buffer_move_slot, bool,
-                  "force_use_little_buffer_move_slot");
-
   JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
                   "believe_in_fus_obs");
 
@@ -829,9 +853,6 @@ void SyncParkingParameters(const bool is_simulation) {
                   "use_geometry_path_head_out");
 
   // slot managent params
-  JSON_READ_VALUE(apa_param.SetPram().prohibit_move_slot, bool,
-                  "prohibit_move_slot");
-
   JSON_READ_VALUE(apa_param.SetPram().move_slot_with_little_buffer, bool,
                   "move_slot_with_little_buffer");
 

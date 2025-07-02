@@ -35,6 +35,7 @@
   "plan_time": 0.1,
 
   "comment_2": "car params",
+  "has_intelligent_fold_mirror": false,
   "force_fold_mirror": false,
   "front_overhanging": 0.922,
   "rear_overhanging": 1.085,
@@ -208,7 +209,6 @@
   "max_obs_lon_invasion_slot_dist":-0.068,
   "max_obs_lon_invasion_slot_dist_dynamic_col": -0.068,
   "slot_entrance_obs_x": 2.468,
-  "force_use_little_buffer_move_slot": true,
   "believe_in_fus_obs":false,
   "use_fus_occ_obj": true,
   "use_fus_occ_column": true,
@@ -311,7 +311,6 @@
   "is_parallel_advanced_method": true,
 
   "comment_16": "slot managent params",
-  "prohibit_move_slot": false,
   "believe_obs_ego_area": 2.68,
   "move_slot_with_little_buffer": false,
   "slot_update_in_or_out_occupied_ratio": 0.088,
@@ -389,9 +388,10 @@
   "head_in_slot_virtual_wall_x_offset" : 4.0,
   "head_in_slot_virtual_wall_y_offset" : 1.8,
 
-  "use_uss_pt_clound": false,
-  "use_uss_pt_for_path": false,
+  "comment_19": "uss pt params",
+  "use_uss_pt_clound": true,
+  "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
-  "use_uss_pt_for_slot_release": false,
+  "use_uss_pt_for_slot_release": true,
   "point_max_dist" : 0.8
 }

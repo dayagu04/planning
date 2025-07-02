@@ -73,13 +73,13 @@ void PerpendicularTailInPathGenerator::Preprocess() {
 }
 
 const bool PerpendicularTailInPathGenerator::Update() {
-  if (collision_detector_interface_ptr_ == nullptr) {
+  if (col_det_interface_ptr_ == nullptr) {
     return false;
   }
   ILOG_INFO << "--------perpendicular path planner --------";
 
   // check start ego pose if collision
-  if (collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr()
+  if (col_det_interface_ptr_->GetGJKColDetPtr()
           ->Update(
               std::vector<geometry_lib::PathPoint>{
                   input_.ego_info_under_slot.cur_pose},
@@ -744,7 +744,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
               geometry_lib::GenHeadingVec(pose.heading);
           for (uint8_t k = 0; k < count; ++k) {
             temp_pose.pos = pose.pos + ds * k * heading_vec;
-            if (!collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()
+            if (!col_det_interface_ptr_->GetEDTColDetPtr()
                      ->Update(std::vector<geometry_lib::PathPoint>{temp_pose},
                               calc_params_.strict_car_lat_inflation, 0.0)
                      .col_flag) {
@@ -1548,14 +1548,12 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
   path_seg.lat_buffer = lat_inflation;
   ColResult res;
 
-  const auto& edt_col_det_ptr =
-      collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr();
+  const auto& edt_col_det_ptr = col_det_interface_ptr_->GetEDTColDetPtr();
 
-  const auto& gjk_col_det_ptr =
-      collision_detector_interface_ptr_->GetGJKCollisionDetectorPtr();
+  const auto& gjk_col_det_ptr = col_det_interface_ptr_->GetGJKColDetPtr();
 
   const auto& geometry_col_det_ptr =
-      collision_detector_interface_ptr_->GetGeometryCollisionDetectorPtr();
+      col_det_interface_ptr_->GetGeometryColDetPtr();
 
   bool init_pose_near_obs = false;
   if (edt_col_det_ptr
@@ -3888,8 +3886,21 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
       if (geometry_lib::IsSameGear(seg_gear, line_gear)) {
         geometry_lib::PathSegment line_seg(seg_gear, line);
 
+        if (ref_gear == geometry_lib::SEG_GEAR_REVERSE &&
+            (start_pos.x() + apa_param.GetParam().lon_dist_mirror_to_rear_axle >
+             input_.ego_info_under_slot.slot.GetProcessedCornerCoordLocal()
+                 .pt_01_mid.x()) &&
+            input_.need_fold_mirror) {
+          col_det_interface_ptr_->Init(true);
+        }
+
         PathColDetRes res =
             TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
+
+        if (input_.need_fold_mirror &&
+            col_det_interface_ptr_->GetFoldMirrorFlag()) {
+          col_det_interface_ptr_->Init(false);
+        }
 
         if (ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
           if (line_seg.Getlength() < kMinSingleGearPathLength + 1e-3) {
@@ -4087,10 +4098,9 @@ PerpendicularTailInPathGenerator::GetPoseTypeRelativeToSlot(
   const double slot_out_x = input_.ego_info_under_slot.slot.slot_length_ + 1.08;
   const double slot_in_x = input_.ego_info_under_slot.slot.slot_length_ - 1.6;
 
-  const double car_min_x =
-      collision_detector_interface_ptr_->GetGeometryCollisionDetectorPtr()
-          ->CalCarRectangleBound(pose)
-          .min_x;
+  const double car_min_x = col_det_interface_ptr_->GetGeometryColDetPtr()
+                               ->CalCarRectangleBound(pose)
+                               .min_x;
 
   if (car_min_x > slot_out_x) {
     return PoseTypeRelativeToSlot::OUT_SLOT;
@@ -4336,10 +4346,9 @@ const bool PerpendicularTailInPathGenerator::FindPtCanReverseToSlot(
 
 const bool PerpendicularTailInPathGenerator::ItervativeUpdatePb(
     const GeometryPathInput& input,
-    const std::shared_ptr<CollisionDetectorInterface>&
-        collision_detector_interface_ptr) {
+    const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr) {
   input_ = input;
-  collision_detector_interface_ptr_ = collision_detector_interface_ptr;
+  col_det_interface_ptr_ = col_det_interface_ptr;
   Preprocess();
   calc_params_.is_searching_stage = false;
   calc_params_.first_multi_plan = true;

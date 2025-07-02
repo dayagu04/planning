@@ -433,8 +433,8 @@ std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
 
   bool success = false;
   planning::apa_planner::GeometryPathInput ginput;
-  std::shared_ptr<CollisionDetectorInterface> collision_detector_interface_ptr;
-  success = pBase->ItervativeUpdatePb(ginput, collision_detector_interface_ptr);
+  std::shared_ptr<CollisionDetectorInterface> col_det_interface_ptr;
+  success = pBase->ItervativeUpdatePb(ginput, col_det_interface_ptr);
 
   current_path_point_global_vec_.clear();
 

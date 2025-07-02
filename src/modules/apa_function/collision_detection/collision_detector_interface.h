@@ -28,19 +28,17 @@ class CollisionDetectorInterface {
       const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr);
   ~CollisionDetectorInterface() {}
 
-  const std::shared_ptr<GeometryCollisionDetector>&
-  GetGeometryCollisionDetectorPtr() const {
-    return geometry_collision_detector_ptr_;
+  const std::shared_ptr<GeometryCollisionDetector>& GetGeometryColDetPtr()
+      const {
+    return geometry_col_det_ptr_;
   }
 
-  const std::shared_ptr<GJKCollisionDetector>& GetGJKCollisionDetectorPtr()
-      const {
-    return gjk_collision_detector_ptr_;
+  const std::shared_ptr<GJKCollisionDetector>& GetGJKColDetPtr() const {
+    return gjk_col_det_ptr_;
   }
 
-  const std::shared_ptr<EDTCollisionDetector>& GetEDTCollisionDetectorPtr()
-      const {
-    return edt_collision_detector_ptr_;
+  const std::shared_ptr<EDTCollisionDetector>& GetEDTColDetPtr() const {
+    return edt_col_det_ptr_;
   }
 
   const std::shared_ptr<UssObstacleAvoidance>& GetUssObsAvoidancePtr() const {
@@ -54,10 +52,12 @@ class CollisionDetectorInterface {
   void Init(const bool fold_mirror_flag);
   void Reset();
 
+  const bool GetFoldMirrorFlag() const { return fold_mirror_flag_; }
+
  private:
-  std::shared_ptr<GeometryCollisionDetector> geometry_collision_detector_ptr_;
-  std::shared_ptr<GJKCollisionDetector> gjk_collision_detector_ptr_;
-  std::shared_ptr<EDTCollisionDetector> edt_collision_detector_ptr_;
+  std::shared_ptr<GeometryCollisionDetector> geometry_col_det_ptr_;
+  std::shared_ptr<GJKCollisionDetector> gjk_col_det_ptr_;
+  std::shared_ptr<EDTCollisionDetector> edt_col_det_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<PathSafeChecker> path_safe_check_ptr_;
 
