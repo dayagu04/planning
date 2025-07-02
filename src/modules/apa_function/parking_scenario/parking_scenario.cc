@@ -49,6 +49,7 @@ void ParkingScenario::Reset() {
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
   frame_.Reset();
   current_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.clear();
   trajectory_.clear();
 
   return;
@@ -610,6 +611,10 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   // check planning status
   if (CheckPlanSkip()) {
+    return;
+  }
+
+  if (complete_path_point_global_vec_.empty()) {
     return;
   }
 

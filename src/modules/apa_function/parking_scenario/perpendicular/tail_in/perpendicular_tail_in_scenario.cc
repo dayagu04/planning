@@ -1514,12 +1514,20 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
                    real_time_brake_info_vec[0].lat_buffer)
 
+  const geometry_lib::PathPoint& termial_err = ego_info_under_slot.terminal_err;
+  const Eigen::Vector2d cur_pos = ego_info_under_slot.cur_pose.pos +
+                                  param.lon_dist_mirror_to_rear_axle *
+                                      ego_info_under_slot.cur_pose.heading_vec;
+  const Eigen::Vector2d& slot_pt_01_mid =
+      ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
+
   if (apa_param.GetParam().has_intelligent_fold_mirror && frame_.is_last_path &&
-      safe_remain_dist < param.moderate_brake_lon_dist &&
+      safe_remain_dist < param.slight_brake_lon_dist &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
-      !frame_.need_fold_mirror &&
-      std::fabs(ego_info_under_slot.terminal_err.pos.y()) < 0.068 &&
-      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 2.68) {
+      !frame_.need_fold_mirror && cur_pos.x() < slot_pt_01_mid.x() + 2.68 &&
+      cur_pos.x() > slot_pt_01_mid.x() - 1.08 &&
+      std::fabs(termial_err.pos.y()) < 0.068 &&
+      std::fabs(termial_err.heading) * kRad2Deg < 2.68) {
     frame_.need_fold_mirror = true;
   }
 
