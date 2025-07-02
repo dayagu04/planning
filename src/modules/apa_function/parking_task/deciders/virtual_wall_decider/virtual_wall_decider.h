@@ -94,10 +94,17 @@ class VirtualWallDecider : public ParkingTask {
 
   void SampleInLineSegment(const Eigen::Vector2d& start,
                            const Eigen::Vector2d& end,
-                           const bool delete_blind_zone_point,
                            std::vector<Position2D>* points);
 
   void GetVehicleBound();
+
+  void SamplingInVerticalBoundary(const VirtualWallBoundary& slot_boundary,
+                                  const VirtualWallBoundary& passage_boundary,
+                                  std::vector<Position2D>& points);
+
+  void SamplingInParallelBoundary(const VirtualWallBoundary& slot_boundary,
+                                  const VirtualWallBoundary& passage_boundary,
+                                  std::vector<Position2D>& points);
 
  private:
   std::string name_;
@@ -107,16 +114,14 @@ class VirtualWallDecider : public ParkingTask {
   Polygon2D ego_polygon_in_slot_;
   GJK2DInterface gjk_interface_;
 
-  // 感知存在盲区，规划认为盲区外存在障碍物. 车辆坐标系.
-  Polygon2D blind_local_box_;
-  // 车位坐标系
-  Polygon2D blind_global_box_;
-
   // 感知范围6x6meter，所以passage范围尽量设置小一些，否则path经常穿墙、穿车而过.
   VirtualWallBoundary passage_bound_;
 
   // vehicle boundary
   VirtualWallBoundary veh_boundary_;
+
+  ParkSpaceType slot_type_;
+  pnc::geometry_lib::SlotSide slot_side_;
 };
 }  // namespace apa_planner
 }  // namespace planning

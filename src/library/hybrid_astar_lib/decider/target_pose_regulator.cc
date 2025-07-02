@@ -29,34 +29,47 @@ bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
 void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
                                                 const VehicleParam &veh_param,
                                                 EulerDistanceTransform *edt) {
+  // For vertical slot, need to check safe in path, not only a terminal point.
   float min_passage_width = 2.5;
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       float veh_x_upper = min_passage_width + request->slot_length -
                           veh_param.front_edge_to_rear_axle;
-      x_check_upper_ = std::max(center_line_target_.x, veh_x_upper);
+      x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
       // todo: 使用新的方式，加速这里的计算. 采样的计算方式并不快.
       float veh_x_upper = min_passage_width + request->slot_length -
                           veh_param.rear_edge_to_rear_axle;
-      x_check_upper_ = std::max(center_line_target_.x, veh_x_upper);
+      x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
     }
-  } else {
-    x_check_upper_ = center_line_target_.x + 0.6;
-  }
 
-  x_check_lower_ = center_line_target_.x;
-  x_step_ = 0.2;
-  x_sample_num_ = std::ceil(x_check_upper_ - x_check_lower_) / x_step_;
+    x_check_bounday_.lower = center_line_target_.x;
+    x_check_bounday_.step = 0.2;
+  } else {
+    x_check_bounday_.upper =
+        request->slot_length - veh_param.front_edge_to_rear_axle;
+    x_check_bounday_.lower = veh_param.rear_edge_to_rear_axle;
+    x_check_bounday_.step = 0.1;
+
+  }
+  x_check_bounday_.number =
+      std::ceil((x_check_bounday_.upper - x_check_bounday_.lower) /
+                x_check_bounday_.step) +
+      1;
 
   float dist = 10.0;
+  Transform2d tf;
+  AstarPathGear gear = AstarPathGear::NONE;
   if (IsHeadOutRequest(request->direction_request)) {
     // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
     dist = GetDistToObsHeadOut(&center_line_target_, edt);
     ILOG_INFO << "center_line_target_ dist : " << dist;
+  } else if (request->space_type == ParkSpaceType::VERTICAL) {
+    dist = GetMinDistByXRange(&center_line_target_, edt);
   } else {
-    dist = GetDistToObs(&center_line_target_, edt);
+    tf.SetBasePose(center_line_target_);
+    edt->DistanceCheckForPoint(&dist, &tf, gear);
   }
 
   PoseRegulateCandidate candidate;
@@ -66,17 +79,12 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   candidate_info_.emplace_back(candidate);
 
   // update ego dist
-  Transform2d tf;
   tf.SetBasePose(request->start_);
-  AstarPathGear gear = AstarPathGear::NONE;
   edt->DistanceCheckForPoint(&dist, &tf, gear);
   ego_dist_to_obs_ = static_cast<float>(dist);
 
 #if DEBUG_DECIDER
   DebugString();
-
-  dist = GetDistToObs(&request->start_, edt);
-  ILOG_INFO << "start point obs dist = " << dist;
 #endif
 
   return;
@@ -94,23 +102,14 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
   UpdateDefaultPoseInfo(request, veh_param, edt);
 
-  if (request->path_generate_method ==
-          AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING ||
-      request->path_generate_method ==
-          AstarPathGenerateType::REEDS_SHEPP_SAMPLING) {
-    ILOG_INFO << "slot polynomial";
+  if (IsSamplingBasedPlanning(request->path_generate_method)) {
     return;
   }
 
-  if (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-      request->direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
-    GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
-  }
-
-  // Parking out no need regulator.
   if (!IsParkingIn(request)) {
-    ILOG_INFO << "not park in";
+    if (IsHeadOutRequest(request->direction_request)) {
+      GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
+    }
     return;
   }
 
@@ -120,7 +119,6 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
 
   if (request->space_type == ParkSpaceType::VERTICAL) {
     GenerateCandidatesForVerticalSlot(edt, request, veh_param);
-    // GenerateCandidatesForVerticalSlot(edt, request, veh_param);
   } else {
     GenerateCandidatesForParallelSlot(edt, request, veh_param);
   }
@@ -146,9 +144,6 @@ const bool TargetPoseRegulator::IsParkingIn(const AstarRequest *request) {
 void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
-  // 因为存在障碍物入侵情形，不管偏移范围设定多大，总会存在失败情况.
-  // 目前策略:不删除任何障碍物，只会将目标增加平移.
-  // 不要删除障碍物掩盖了上游问题.
   Pose2D global_pose;
   global_pose = center_line_target_;
 
@@ -194,7 +189,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     global_pose = center_line_target_;
     global_pose.y = y_offset;
 
-    dist = GetDistToObs(&global_pose, edt);
+    dist = GetMinDistByXRange(&global_pose, edt);
     if (dist > 0.06) {
       PoseRegulateCandidate candidate;
       candidate.lat_offset = y_offset;
@@ -265,25 +260,25 @@ void TargetPoseRegulator::Clear() {
   return;
 }
 
-const float TargetPoseRegulator::GetDistToObs(const Pose2D *global_pose,
-                                              EulerDistanceTransform *edt) {
+const float TargetPoseRegulator::GetMinDistByXRange(
+    const Pose2D *global_pose, EulerDistanceTransform *edt) {
   Transform2d tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
   float min_dist = 10.0;
   Pose2D pose = *global_pose;
+  pose.x = x_check_bounday_.lower;
 
-  for (int j = 0; j < x_sample_num_; j++) {
-    pose.x = x_check_lower_ + x_step_ * j;
+  for (int j = 0; j < x_check_bounday_.number; j++) {
     tf.SetBasePose(pose);
 
     edt->DistanceCheckForPoint(&dist, &tf, gear);
-
     min_dist = std::min(min_dist, dist);
 
     if (min_dist < 0.04) {
       break;
     }
+    pose.x += x_check_bounday_.step;
   }
 
   return min_dist;
@@ -382,26 +377,31 @@ void TargetPoseRegulator::DebugString() {
     candidate_info_[i].pose.DebugString();
   }
 
+  ILOG_INFO << "x bound, upper " << x_check_bounday_.upper << ", lower "
+            << x_check_bounday_.lower << ", num " << x_check_bounday_.number;
+
   return;
 }
 
 void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
-  // 因为存在障碍物入侵情形，不管偏移范围设定多大，总会存在失败情况.
-  // 目前策略:不删除任何障碍物，只会将目标增加平移.
-  // 不要删除障碍物掩盖了上游问题.
   Pose2D global_pose;
   AstarPathGear gear = AstarPathGear::NONE;
   global_pose = center_line_target_;
 
-  float y_upper = request->slot_width / 2 - veh_param.width / 2 + 0.2f;
-  y_upper = std::max(0.0f, y_upper);
-  float y_lower = -request->slot_width / 2 + veh_param.width / 2 - 0.2f;
-  y_lower = std::min(0.0f, y_lower);
+  TerminalCheckBoundary y_bounday;
+  y_bounday.upper =
+      request->slot_width / 2 - veh_param.width / 2 + max_cross_over_line_dist_;
+  y_bounday.upper = std::max(0.0f, y_bounday.upper);
+  y_bounday.lower = -request->slot_width / 2 + veh_param.width / 2 -
+                    max_cross_over_line_dist_;
+  y_bounday.lower = std::min(0.0f, y_bounday.lower);
 
-  float y_step = 0.03;
-  int y_sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
+  y_bounday.step = 0.03;
+  y_bounday.number =
+      std::ceil((y_bounday.upper - y_bounday.lower) / y_bounday.step) * 2;
+
   float y_offset = 0.0;
   float left_y_offset = 0.0;
   float right_y_offset = 0.0;
@@ -409,22 +409,22 @@ void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
   float dist;
   PoseRegulateCandidate candidate;
 
-  for (int i = 0; i < y_sampling_num; i++) {
+  for (int i = 0; i < y_bounday.number; i++) {
     // left
     if (i % 2 == 0) {
-      left_y_offset += y_step;
-      left_y_offset = std::min(left_y_offset, y_upper);
+      left_y_offset += y_bounday.step;
+      left_y_offset = std::min(left_y_offset, y_bounday.upper);
       y_offset = left_y_offset;
     } else {
-      right_y_offset -= y_step;
-      right_y_offset = std::max(right_y_offset, y_lower);
+      right_y_offset -= y_bounday.step;
+      right_y_offset = std::max(right_y_offset, y_bounday.lower);
       y_offset = right_y_offset;
     }
 
     global_pose = center_line_target_;
     global_pose.y = y_offset;
 
-    dist = GetDistToObs(&global_pose, edt);
+    dist = GetMinDistByXRange(&global_pose, edt);
     if (dist > 0.06f) {
       PoseRegulateCandidate candidate;
       candidate.lat_offset = y_offset;

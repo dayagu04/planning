@@ -716,11 +716,11 @@ std::vector<Eigen::Vector3d> Update(
     request.base_pose_ = Pose2D(0, 0, 0);
 
     request.space_type = ParkSpaceType::PARALLEL;
-    request.direction_request = ParkingVehDirection::NONE;
+    request.direction_request = ParkingVehDirection::TAIL_IN;
     request.rs_request = RSPathRequestType::NONE;
     request.slot_width = ego_slot_info.slot.GetWidth();
     request.slot_length = ego_slot_info.slot.GetLength();
-    request.history_gear = AstarPathGear::DRIVE;
+    request.history_gear = AstarPathGear::NONE;
     request.swap_start_goal = swap_start_goal;
 
     hybrid_astar_interface_->GeneratePath(start, end, request);

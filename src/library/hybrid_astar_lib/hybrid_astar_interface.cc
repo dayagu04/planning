@@ -64,10 +64,10 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
         static_cast<float>(config_.safe_buffer.lat_safe_buffer_outside[0]));
   }
 
-  dp_heuristic_generator_.Init(config_);
+  dp_heuristic_generator_ = std::make_shared<GridSearch>(config_);
   hybrid_astar_ = std::make_shared<HybridAStar>(config_, vehicle_param_, &obs_,
                                                 &edt_, &clear_zone_, &ref_line_,
-                                                &dp_heuristic_generator_);
+                                                dp_heuristic_generator_);
   hybrid_astar_->Init();
 
   ILOG_INFO << "astar interface success";
@@ -138,7 +138,7 @@ void HybridAStarInterface::UpdateOutput() {
   // update clear zone. This zone not contain any obstacle.
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
 
-  dp_heuristic_generator_.GenerateDpMap(
+  dp_heuristic_generator_->GenerateDpMap(
       request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
 
   hybrid_astar_->Clear();
@@ -146,13 +146,11 @@ void HybridAStarInterface::UpdateOutput() {
   // vertical parking center ref line
   switch (request_.direction_request) {
     case ParkingVehDirection::HEAD_IN:
-      ILOG_INFO << "HEAD_IN";
       ref_line_.Process(request_.real_goal,
                         Pose2D(request_.real_goal.x - 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
     case ParkingVehDirection::TAIL_IN:
-      ILOG_INFO << "TAIL_IN";
       ref_line_.Process(request_.real_goal,
                         Pose2D(request_.real_goal.x + 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
@@ -291,9 +289,6 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   future_path_decider.Process(&ref_line_, vehicle_param_.min_turn_radius,
                               config_.node_step, &edt_, request_);
 
-  dp_heuristic_generator_.GenerateDpMap(
-      request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
-
   TargetPoseRegulator target_pose_regulator;
   target_pose_regulator.Process(&edt_, &request_, request_.start_, goal_state_,
                                 vehicle_param_);
@@ -331,6 +326,9 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   }
 
   target_regulator_goal_ = target_regulator_result.first;
+
+  dp_heuristic_generator_->GenerateDpMap(
+      GetGoalPoint().x, GetGoalPoint().y, map_bounds_, &obs_);
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
@@ -935,10 +933,7 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
     hybrid_astar_->UpdateCarBoxBySafeBuffer(
         lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
 
-    if (request_.path_generate_method ==
-            AstarPathGenerateType::SPIRAL_SAMPLING ||
-        request_.path_generate_method ==
-            AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
+    if (IsSamplingBasedPlanning(request_.path_generate_method)) {
       // parallel
       if (request_.space_type == ParkSpaceType::PARALLEL) {
         hybrid_astar_->SamplingByCubicPolyForParallelSlot(
@@ -990,7 +985,7 @@ const float HybridAStarInterface::GetLatBufferForInsideSlot(
     const float target_obs_dist, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
   float safe_buffer = 0.1;
-  // For searching a solution easily, safe buffer should samller than obstacle
+  // For searching a solution easily, safe buffer should smaller than obstacle
   // distance.
   float soft_buffer = 0.15;
 

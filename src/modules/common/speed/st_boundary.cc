@@ -5,7 +5,7 @@
 #include "assert.h"
 #include "common.h"
 #include "math/math_utils.h"
-#include "src/common/log_glog.h"
+#include "log_glog.h"
 
 namespace planning {
 

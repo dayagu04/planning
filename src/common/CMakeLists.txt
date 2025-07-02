@@ -34,15 +34,12 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   Eigen3::Eigen
-  gflags
-  glog
   ilqr_lib
   rapidjson
   jlt_lib
   # autoplt
   mjson
   planning_proto
-  pthread
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

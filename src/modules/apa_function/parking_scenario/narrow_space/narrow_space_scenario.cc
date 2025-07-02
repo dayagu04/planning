@@ -167,20 +167,6 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
     return true;
   }
 
-  // 车辆不压线，车头基本摆正，就认定完成泊车
-  if (static_condition && remain_s_condition && lon_condition &&
-      heading_condition_2) {
-    Pose2D ego;
-    ego.x = ego_info.cur_pose.pos[0];
-    ego.y = ego_info.cur_pose.pos[1];
-    ego.theta = ego_info.cur_pose.heading;
-    if (!IsVehicleOverlapWithSlotLine(ego_info.slot.slot_length_,
-                                      ego_info.slot.slot_width_, ego)) {
-      ILOG_INFO << "vehicle is inside slot line, finish";
-      return true;
-    }
-  }
-
   return false;
 }
 
@@ -1413,21 +1399,15 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   }
   ILOG_INFO << "slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
-  // trim or extend path according to limiter, only run once
-  frame_.correct_path_for_limiter = false;
+
   if (((fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR &&
         frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE)) &&
       !ego_info_under_slot.fix_slot) {
-    const geometry_lib::LineSegment limiter_line(
-        ego_info_under_slot.virtual_limiter.first,
-        ego_info_under_slot.virtual_limiter.second);
-
-    const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
-        ego_info_under_slot.cur_pose.pos, limiter_line);
-
-    ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter;
-
-    if (dist_ego_limiter < param.car_to_limiter_dis) {
+    Eigen::Vector2d center = (ego_info_under_slot.virtual_limiter.first +
+                              ego_info_under_slot.virtual_limiter.second) /
+                             2.0;
+    double dist = (center - ego_info_under_slot.cur_pose.pos).norm();
+    if (dist < param.car_to_limiter_dis) {
       ILOG_INFO << "should correct path according limiter";
       ego_info_under_slot.fix_slot = true;
     }
@@ -2137,49 +2117,6 @@ void NarrowSpaceScenario::ScenarioTry() {
 void NarrowSpaceScenario::ThreadClear() {
   thread_.Clear();
   return;
-}
-
-const bool NarrowSpaceScenario::IsVehicleOverlapWithSlotLine(
-    const double slot_length, const double slot_width,
-    const Pose2D& ego_start) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
-  Polygon2D local_polygon;
-  Polygon2D ego_global_polygon;
-
-  double lat_buffer = 0.03;
-  GenerateUpLeftFrameBox(&local_polygon, -config.rear_overhanging,
-                         -config.car_width / 2 - lat_buffer,
-                         config.car_length - config.rear_overhanging,
-                         config.car_width / 2 + lat_buffer);
-  ULFLocalPolygonToGlobal(&ego_global_polygon, &local_polygon, ego_start);
-
-  // slot polygon
-  Polygon2D slot_left_line;
-  GenerateLineSegmentPolygon(&slot_left_line,
-                             Position2D(slot_length, slot_width / 2),
-                             Position2D(0, slot_width / 2));
-
-  Polygon2D slot_right_line;
-  GenerateLineSegmentPolygon(&slot_right_line,
-                             Position2D(slot_length, -slot_width / 2),
-                             Position2D(0, -slot_width / 2));
-
-  bool is_collision;
-  GJK2DInterface gjk;
-  gjk.PolygonCollisionByCircleCheck(&is_collision, &ego_global_polygon,
-                                    &slot_left_line, 0.1);
-  if (is_collision) {
-    ILOG_INFO << "collision";
-    return true;
-  }
-
-  gjk.PolygonCollisionByCircleCheck(&is_collision, &ego_global_polygon,
-                                    &slot_right_line, 0.1);
-  if (is_collision) {
-    ILOG_INFO << "collision";
-    return true;
-  }
-  return false;
 }
 
 const bool NarrowSpaceScenario::NeedBlindZonePlanning(

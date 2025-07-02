@@ -369,12 +369,6 @@ const bool ParallelParkOutScenario::GenTlane() {
         continue;
       }
 
-      if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-          pair.second.GetObsAttributeType() ==
-              ApaObsAttributeType::USS_POINT_CLOUD) {
-        continue;
-      }
-
       // outof total box range
       if (!pnc::mathlib::IsInBound(
               obs_pt_local.x(), -1.5,

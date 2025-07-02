@@ -22,9 +22,16 @@ struct PoseRegulateCandidate {
   float lat_offset;
 };
 
+struct TerminalCheckBoundary {
+  float upper;
+  float lower;
+  float step;
+  int  number;
+};
+
 // 目标pose调节器.
 // Todo: all target pose decisions should be moved to here.
-// 1. Move goal to outside a few meters in vertical/parallel slot scene.
+// 1. Move goal to outside a few meters in vertical slot scene.
 // 2. If origin goal is collided, move goal to left/right/top/bottom.
 class TargetPoseRegulator : public AstarDecider {
  public:
@@ -58,10 +65,9 @@ class TargetPoseRegulator : public AstarDecider {
                                          const AstarRequest *request,
                                          const VehicleParam &veh_param);
 
-  // 检查目标点直线入库路径，和障碍物距离
-  // return true: 直线路径没有障碍物
-  const float GetDistToObs(const Pose2D *global_pose,
-                           EulerDistanceTransform *edt);
+  // check min dist by x range
+  const float GetMinDistByXRange(const Pose2D *global_pose,
+                                 EulerDistanceTransform *edt);
 
   const float GetDistToObsHeadOut(const Pose2D *global_pose,
                            EulerDistanceTransform *edt);
@@ -87,10 +93,7 @@ class TargetPoseRegulator : public AstarDecider {
   std::vector<PoseRegulateCandidate> candidate_info_;
   const AstarRequest *request_;
 
-  float x_check_upper_;
-  float x_check_lower_;
-  float x_step_;
-  int x_sample_num_;
+  TerminalCheckBoundary x_check_bounday_;
 
   // max dist to cross over slot inside line
   float max_cross_over_line_dist_;

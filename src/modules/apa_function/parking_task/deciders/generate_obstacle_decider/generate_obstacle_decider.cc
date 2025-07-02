@@ -93,12 +93,6 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
       continue;
     }
 
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     std::vector<Eigen::Vector2d> obs_vec;
     obs_vec.reserve(pt_clout_2d.size());
 

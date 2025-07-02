@@ -104,11 +104,9 @@ int RSPathInterpolator::CalcSCSPathKappa(RSPathKappaParam *kappa_list,
     path->Clear();
     TestSCS(path, start_pose, goal_pose, min_turn_radius, inverse_radius,
             request_type);
-
     // ILOG_INFO << " rs param success ";
 
     CalcRSPathKappa(&path_info->kappa_param, path, inverse_radius);
-
     // ILOG_INFO << " rs kappa success ";
 
     path_info->is_path_valid = true;

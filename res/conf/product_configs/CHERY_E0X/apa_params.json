@@ -215,10 +215,7 @@
   "use_ground_line": true,
   "use_ground_line_wall_column": false,
   "use_object_detect": false,
-  "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.1068,
-  "obs_safe_dx": 0.0668,
-  "obs2slot_max_dist": 10.08,
   "min_dynamic_plan_proj_dt": 0.2,
   "max_dynamic_plan_proj_dt": 0.9,
   "max_lat_err": 0.086,
@@ -372,6 +369,8 @@
   "vertical_slot_passage_length_bound" : 18.0,
   "max_replan_number": 25,
   "max_replan_number_inside_slot": 15,
+  "parallel_passage_width" : 5.5,
+  "parallel_passage_length" :26.0,
 
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,
@@ -390,9 +389,9 @@
   "head_in_slot_virtual_wall_x_offset" : 0.1,
   "head_in_slot_virtual_wall_y_offset" : 2.0,
 
-  "use_uss_pt_clound": false,
-  "use_uss_pt_for_path": false,
+  "use_uss_pt_clound": true,
+  "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
-  "use_uss_pt_for_slot_release": false,
+  "use_uss_pt_for_slot_release": true,
   "point_max_dist" : 0.8
 }

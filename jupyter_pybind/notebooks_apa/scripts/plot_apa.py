@@ -14,7 +14,7 @@ sys.path.append('../../../')
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250621/20250621-14-16-17/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-21-14-16-18_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250625/20250625-16-20-16/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-06-25-16-20-16_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True

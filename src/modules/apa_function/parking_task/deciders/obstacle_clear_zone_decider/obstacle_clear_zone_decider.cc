@@ -123,11 +123,6 @@ const bool ObstacleClearZoneDecider::IsCollisionForBox(const cdl::AABB& box) {
 
   // now, the obs is pt cloud
   for (const auto& obs : obs_map) {
-    if (!apa_param.GetParam().uss_config.use_uss_pt_for_path &&
-        obs.second.GetObsAttributeType() == ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     for (const Eigen::Vector2d& pt : obs.second.GetPtClout2dLocal()) {
       if (box.contain(pt)) {
         return true;

@@ -54,6 +54,9 @@ struct AstarParkingConfig {
   float vertical_slot_passage_height_bound;
   float vertical_slot_passage_length_bound;
 
+  float parallel_passage_width;
+  float parallel_passage_length;
+
   // max replan number total
   int max_replan_number = 25;
   // max replan number inside slot
@@ -89,7 +92,7 @@ struct ParkingSpeedConfig {
 struct UssConfig {
   bool use_uss_pt_clound = false;
   bool use_uss_pt_for_path = false;
-  bool use_uss_pt_for_speed = true;
+  bool use_uss_pt_for_speed = false;
   bool use_uss_pt_for_slot_release = false;
   bool use_fusion = true;
   // If dist is bigger, ignore it.
@@ -320,10 +323,7 @@ struct ApaParameters {
   bool use_ground_line = true;
   bool use_ground_line_wall_column = true;
   bool use_object_detect = true;
-  double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
-  double obs_safe_dx = 0.1;
-  double obs2slot_max_dist = 4.68;
   double min_dynamic_plan_proj_dt = 0.2;
   double max_dynamic_plan_proj_dt = 0.8;
   double max_lat_err = 0.068;

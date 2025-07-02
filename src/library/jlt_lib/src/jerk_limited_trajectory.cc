@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "src/common/log.h"
-#include "src/common/log_glog.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace jlt {

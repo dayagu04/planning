@@ -664,9 +664,8 @@ int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
 void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
                              const Polygon2D *poly_local,
                              const Transform2d &tf) {
-  int i;
-
-  for (i = 0; i < poly_local->vertex_num; i++) {
+  for (int i = 0; i < std::min(poly_local->vertex_num, MAX_POLYGON_VERTEX_NUM);
+       i++) {
     tf.ULFLocalPointToGlobal(&poly_global->vertexes[i],
                              poly_local->vertexes[i]);
   }

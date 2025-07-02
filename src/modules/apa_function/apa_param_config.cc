@@ -532,15 +532,7 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().use_object_detect, bool,
                   "use_object_detect");
 
-  JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
-                  "tmp_virtual_obs_dy");
-
   JSON_READ_VALUE(apa_param.SetPram().tlane_safe_dx, double, "tlane_safe_dx");
-
-  JSON_READ_VALUE(apa_param.SetPram().obs_safe_dx, double, "obs_safe_dx");
-
-  JSON_READ_VALUE(apa_param.SetPram().obs2slot_max_dist, double,
-                  "obs2slot_max_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().parallel_obs2slot_max_dist, double,
                   "parallel_obs2slot_max_dist");
@@ -1002,6 +994,10 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.vertical_slot_passage_length_bound,
       float, "vertical_slot_passage_length_bound");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_passage_width,
+                  float, "parallel_passage_width");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_passage_length,
+                  float, "parallel_passage_length");
 
   JSON_READ_VALUE(apa_param.SetPram().speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");
