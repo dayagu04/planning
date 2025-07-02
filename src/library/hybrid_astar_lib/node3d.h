@@ -35,8 +35,8 @@ struct NodePath {
   size_t point_size = 0;
   // node points max number is 8. If this node is rs, please restore path in rs
   // path.
-  Pose2D points[NODE_PATH_MAX_POINT];
-  double path_dist;
+  Pose2f points[NODE_PATH_MAX_POINT];
+  float path_dist;
 
   void Clear() {
     point_size = 0;
@@ -46,21 +46,21 @@ struct NodePath {
 
   NodePath() = default;
 
-  NodePath(const double x, const double y, const double theta) {
+  NodePath(const float x, const float y, const float theta) {
     point_size = 1;
     points[0].x = x;
     points[0].y = y;
     points[0].theta = theta;
   }
 
-  NodePath(const Pose2D& pose) {
+  NodePath(const Pose2f& pose) {
     point_size = 1;
     points[0].x = pose.x;
     points[0].y = pose.y;
     points[0].theta = pose.theta;
   }
 
-  const Pose2D& GetEndPoint() const {
+  const Pose2f& GetEndPoint() const {
     if (point_size > 0) {
       return points[point_size - 1];
     } else {
@@ -88,9 +88,9 @@ class Node3d {
  public:
   Node3d() = default;
 
-  Node3d(const double x, const double y, const double phi);
+  Node3d(const float x, const float y, const float phi);
 
-  Node3d(const double x, const double y, const double phi,
+  Node3d(const float x, const float y, const float phi,
          const MapBound& XYbounds,
          const PlannerOpenSpaceConfig& open_space_conf);
 
@@ -99,19 +99,19 @@ class Node3d {
 
   int Set(const NodePath& path, const MapBound& XYbounds,
           const PlannerOpenSpaceConfig& open_space_conf,
-          const double node_path_dist);
+          const float node_path_dist);
 
   void SetGlobalID(const size_t id);
 
   static ad_common::math::Box2d GetBoundingBox(
-      const VehicleParam& vehicle_param, const double rear_overhanging,
-      const double x, const double y, const double phi);
+      const VehicleParam& vehicle_param, const float rear_overhanging,
+      const float x, const float y, const float phi);
 
-  double GetFCost() const { return f_cost_; }
+  float GetFCost() const { return f_cost_; }
 
-  double GetGCost() const { return traj_cost_; }
+  float GetGCost() const { return traj_cost_; }
 
-  double GetHeuCost() const { return heuristic_cost_; }
+  float GetHeuCost() const { return heuristic_cost_; }
 
   size_t GetGridX() const { return grid_index_.x; }
 
@@ -119,14 +119,14 @@ class Node3d {
 
   size_t GetGridPhi() const { return grid_index_.phi; }
 
-  const double GetX() const { return path_.GetEndPoint().x; }
+  const float GetX() const { return path_.GetEndPoint().x; }
 
-  const double GetY() const { return path_.GetEndPoint().y; }
+  const float GetY() const { return path_.GetEndPoint().y; }
 
-  const double GetPhi() const { return path_.GetEndPoint().theta; }
+  const float GetPhi() const { return path_.GetEndPoint().theta; }
 
   // Get end pose
-  const Pose2D& GetPose() const;
+  const Pose2f& GetPose() const;
 
   bool operator==(const Node3d& right) const;
 
@@ -138,9 +138,9 @@ class Node3d {
 
   const bool IsQunticPolynomialPath() const;
 
-  double GetSteer() const { return steering_; }
+  float GetSteer() const { return steering_; }
 
-  const double GetRadius() const { return radius_; }
+  const float GetRadius() const { return radius_; }
 
   Node3d* GetPreNode() const { return pre_node_; }
 
@@ -156,15 +156,15 @@ class Node3d {
 
   void SetNext(Node3d* next_node) { next_node_ = next_node; }
 
-  void SetGCost(double cost) { traj_cost_ = cost; }
+  void SetGCost(float cost) { traj_cost_ = cost; }
 
   void SetFCost() { f_cost_ = traj_cost_ + heuristic_cost_; }
 
-  void SetFCost(const double v) { f_cost_ = v; }
+  void SetFCost(const float v) { f_cost_ = v; }
 
-  void SetHeuCost(double cost) { heuristic_cost_ = cost; }
+  void SetHeuCost(float cost) { heuristic_cost_ = cost; }
 
-  const double GetNodePathDistance() const { return path_.path_dist; }
+  const float GetNodePathDistance() const { return path_.path_dist; }
 
   // void SetHeuCostDebug(const NodeHeuristicCost& cost) { h_cost_debug_ = cost;
   // }
@@ -173,15 +173,15 @@ class Node3d {
 
   void SetGearType(const AstarPathGear type) { gear_type_ = type; }
 
-  void SetDistToStart(const double dist) { dist_to_start_ = dist; }
+  void SetDistToStart(const float dist) { dist_to_start_ = dist; }
 
-  const double GetDistToStart() const { return dist_to_start_; }
+  const float GetDistToStart() const { return dist_to_start_; }
 
   const AstarPathGear& GetGearType() const { return gear_type_; }
 
-  void SetSteer(double steering) { steering_ = steering; }
+  void SetSteer(float steering) { steering_ = steering; }
 
-  void SetRadius(const double radius) { radius_ = radius; }
+  void SetRadius(const float radius) { radius_ = radius; }
 
   const AstarPathType GetPathType() const { return path_type_; }
 
@@ -229,17 +229,17 @@ class Node3d {
 
   void SetVisitedType(const AstarNodeVisitedType type);
 
-  static void CoordinateToGridIndex(const double x, const double y,
-                                    const double phi, NodeGridIndex* index,
+  static void CoordinateToGridIndex(const float x, const float y,
+                                    const float phi, NodeGridIndex* index,
                                     const MapBound& XYbounds,
                                     const PlannerOpenSpaceConfig& conf);
 
   // todo: move all heuristic_cost to this file
-  const double GetEulerDist(const Node3d* end) const;
+  const float GetEulerDist(const Node3d* end) const;
 
-  void SetDistToObs(const double dist);
+  void SetDistToObs(const float dist);
 
-  double GetDistToObs() const { return dist_to_obs_; }
+  float GetDistToObs() const { return dist_to_obs_; }
 
   void SetGearSwitchNum(const int number) {
     gear_switch_num_ = number;
@@ -259,16 +259,16 @@ class Node3d {
 
   void ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf);
 
-  void SetMultiMapIter(std::multimap<double , Node3d*>::iterator iter) {
+  void SetMultiMapIter(std::multimap<float, Node3d*>::iterator iter) {
     multimap_iter_ = iter;
     return;
   }
 
-  std::multimap<double , Node3d*>::iterator GetMultiMapIter() {
+  std::multimap<float, Node3d*>::iterator GetMultiMapIter() {
     return multimap_iter_;
   }
 
-  double DistToPose(const Pose2D& pose);
+  float DistToPose(const Pose2f& pose);
 
   Node3d* GearSwitchNode() const { return gear_switch_node_; }
 
@@ -294,15 +294,15 @@ class Node3d {
   // [0-0.15], cost: 1000;
   // [0.15-0.5],cost: (1/dist -2) * weight;
   // [0.5-1000], cost:0;
-  double dist_to_obs_;
+  float dist_to_obs_;
 
   // g cost
-  double traj_cost_ = 0.0;
+  float traj_cost_ = 0.0;
   // h cost
-  double heuristic_cost_ = 0.0;
+  float heuristic_cost_ = 0.0;
 
   // f cost
-  double f_cost_ = 0.0;
+  float f_cost_ = 0.0;
   // backward pass
   Node3d* pre_node_ = nullptr;
 
@@ -311,8 +311,8 @@ class Node3d {
 
   // front wheel angle, [-pi, +pi]
   // left is positive
-  double steering_ = 0.0;
-  double radius_;
+  float steering_ = 0.0;
+  float radius_;
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;
@@ -322,7 +322,7 @@ class Node3d {
   int gear_switch_num_;
 
   // is positive
-  double dist_to_start_;
+  float dist_to_start_;
 
   AstarPathType path_type_;
 
@@ -334,7 +334,7 @@ class Node3d {
   NodeCollisionType collision_type_;
   size_t collision_id_;
 
-  std::multimap<double , Node3d*>::iterator multimap_iter_;
+  std::multimap<float, Node3d*>::iterator multimap_iter_;
 
   // 第一次换档点.
   // 如果换档点在搜索节点，需要记录. 这里如果搜索节点和rs曲线连接处换档，也记录.

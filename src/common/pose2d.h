@@ -91,6 +91,85 @@ struct Pose2D {
   }
 };
 
+struct Position2f {
+  float x;
+  float y;
+
+  Position2f() = default;
+  Position2f(const float x_, const float y_) : x(x_), y(y_) {}
+
+  float DistanceTo(const Eigen::Vector2f &p) const {
+    return std::sqrt((x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]));
+  }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log) << "x = " << x << "  y = " << y;
+  }
+};
+
+// TODO: make it a template class.
+struct Pose2f {
+  float x = 0.0;
+  float y = 0.0;
+  /* theta of head against east (unit: r) [-pi,pi)*/
+  float theta = 0.0;
+
+  Pose2f() = default;
+  Pose2f(const float x_, const float y_, const float theta_)
+      : x(x_), y(y_), theta(theta_) {}
+
+  void SetPose(const float x_, const float y_, const float theta_) {
+    x = x_;
+    y = y_;
+    theta = theta_;
+  }
+
+  const float GetX() const { return x; }
+  const float GetY() const { return y; }
+  const float GetPhi() const { return theta; }
+
+  float DistanceTo(const Pose2f &p) const {
+    return std::sqrt((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y));
+  }
+
+  float DistanceTo(const Pose2f *p) const {
+    return std::sqrt((x - p->x) * (x - p->x) + (y - p->y) * (y - p->y));
+  }
+
+  float DistanceSquareTo(const Pose2f *p) const {
+    return (x - p->x) * (x - p->x) + (y - p->y) * (y - p->y);
+  }
+
+  float DistanceToOrigin() const { return std::sqrt(x * x + y * y); }
+
+  bool IsSame(const Pose2f &p) const {
+    if (ifly_fequal(x, p.x) && ifly_fequal(y, p.y)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool IsSame(const Pose2f *p) const {
+    if (ifly_fequal(x, p->x) && ifly_fequal(y, p->y)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  void DebugString() const {
+    ILOG_INFO << "x = " << x << " ,y = " << y << " ,theta = " << theta;
+    return;
+  }
+
+  float DistanceSquareTo(const Eigen::Vector2f &p) const {
+    return (x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]);
+  }
+
+  Pose2D ToPose2d() const { return Pose2D(x, y, theta); }
+};
+
 /* Calculate distance from two points */
 template <typename T>
 inline double CalcPointDist(T *p1, T *p2) {
@@ -111,17 +190,33 @@ inline double CalcPointDist(T *p1, T *p2) {
   (ifly_fequal((pt1)->x, (pt2)->x) && (ifly_fequal((pt1)->y, (pt2)->y)))
 
 /* Unify theta to [-base, -base + 2*M_PI) */
-double IflyUnifyTheta(double theta, double base);
+template <typename T>
+T IflyUnifyTheta(T theta, T base) {
+  if (((theta) + (base)) >= 0.0) {
+    return ifly_fmod((theta) + (base), M_PI * 2) - (base);
+  } else {
+    if (ifly_fequal(ifly_fmod(theta + base, M_PI * 2), 0.0)) {
+      return ifly_fmod((theta) + (base), M_PI * 2) - (base);
+    } else {
+      return ifly_fmod((theta) + (base), M_PI * 2) + M_PI * 2 - base;
+    }
+  }
+
+  return theta;
+}
 
 /* Get difference of two theta, unify it to [-PI, PI) */
-#define GetThetaDiff(theta1, theta2) IflyUnifyTheta((theta1) - (theta2), M_PI)
+inline double Getf64ThetaDiff(const double theta1, const double theta2) {
+  return IflyUnifyTheta(theta1 - theta2, M_PI);
+}
+
+inline float Getf32ThetaDiff(const float theta1, const float theta2) {
+  return IflyUnifyTheta(theta1 - theta2, M_PIf32);
+}
 
 /* Compare two angles (radian) are equal (unified to [0, 2*PI) */
 #define IsThetaEqual(theta1, theta2) \
   (ifly_fequal(IflyUnifyTheta((theta1) - (theta2), M_PI), 0.0))
-
-#define IflyThetaEqualWithinThres(theta1, theta2, thres) \
-  (!ifly_fgreater(std::fabs(GetThetaDiff((theta1), (theta2))), (thres)))
 
 /*
  * Get theta orientation (angle from east) of a line

@@ -8,7 +8,7 @@
 
 namespace planning {
 
-void OccupancyGridMap::Process(const Pose2D &ogm_pose,
+void OccupancyGridMap::Process(const Pose2f &ogm_pose,
                                const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
@@ -33,7 +33,7 @@ void OccupancyGridMap::Clear() {
 
 template <typename T>
 void OccupancyGridMap::AddSlotPoint(const T &point) {
-  Pose2D local;
+  Pose2f local;
 
   local.x = point.x - bound_.min_x;
   local.y = point.y - bound_.min_y;
@@ -49,8 +49,8 @@ void OccupancyGridMap::AddSlotPoint(const T &point) {
 }
 
 void OccupancyGridMap::AddSlotCoordinatePoint(
-    const Position2D &point) {
-  Pose2D local;
+    const Position2f &point) {
+  Pose2f local;
 
   local.x = point.x - bound_.min_x;
   local.y = point.y - bound_.min_y;
@@ -67,7 +67,7 @@ void OccupancyGridMap::AddSlotCoordinatePoint(
 
 void OccupancyGridMap::AddSlotCoordinatePoints(
     const std::vector<Position2D> &points) {
-  Pose2D local;
+  Pose2f local;
   OgmIndex index;
 
   for (size_t i = 0; i < points.size(); i++) {
@@ -86,17 +86,17 @@ void OccupancyGridMap::AddSlotCoordinatePoints(
 
 template <typename T>
 void OccupancyGridMap::AddLineSegment(const T &start, const T &end) {
-  Pose2D local;
+  Pose2f local;
   OgmIndex index;
 
-  Eigen::Vector2d dir(end.x - start.x, end.y - start.y);
+  Eigen::Vector2f dir(end.x - start.x, end.y - start.y);
   float len = dir.norm();
   dir.normalize();
 
   float s = 0.0;
   float ds = 0.2;
 
-  Position2D point;
+  Position2f point;
   while (s < len) {
     point.x = start.x + s * dir.x();
     point.y = start.y + s * dir.y();
@@ -125,7 +125,7 @@ void OccupancyGridMap::AddLineSegment(const T &start, const T &end) {
 
 void OccupancyGridMap::AddSlotCoordinatePointCloud(
     const std::vector<PointCloudObstacle> &point_cloud_list) {
-  Pose2D local;
+  Pose2f local;
   OgmIndex index;
 
   for (size_t i = 0; i < point_cloud_list.size(); i++) {

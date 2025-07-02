@@ -69,15 +69,15 @@ static const RSPathSteer ReedsSheppPathype[][5] = {
 
 RSPathRequestType re_request_type_;
 
-static int CartesianToPolar(double *r, double *theta, double x, double y) {
+static int CartesianToPolar(float *r, float *theta, float x, float y) {
   *r = std::sqrt(x * x + y * y);
   *theta = std::atan2(y, x);
 
   return 0;
 }
 
-static int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, double t,
-                          double u, double v, double w, double x) {
+static int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, float t,
+                          float u, float v, float w, float x) {
   path->type = type;
   path->t = t;
   path->u = u;
@@ -88,12 +88,12 @@ static int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, double t,
   return 0;
 }
 
-static int calculate_tauOmega(double *tau, double *omega, double u, double v,
-                              double xi, double eta, double phi) {
-  double delta, A, B, t1, t2;
-  double cos_theta, cos_u;
+static int calculate_tauOmega(float *tau, float *omega, float u, float v,
+                              float xi, float eta, float phi) {
+  float delta, A, B, t1, t2;
+  float cos_theta, cos_u;
 
-  delta = IflyUnifyTheta(u - v, M_PI);
+  delta = IflyUnifyTheta(u - v, M_PIf32);
   cos_theta = ifly_cos(delta);
   cos_u = ifly_cos(u);
 
@@ -101,18 +101,18 @@ static int calculate_tauOmega(double *tau, double *omega, double u, double v,
   B = cos_u - cos_theta - 1;
   t1 = std::atan2(eta * A - xi * B, xi * A + eta * B);
   t2 = 2 * (cos_theta - ifly_cos(v) - cos_u) + 3;
-  *tau = (ifly_fless(t2, 0)) ? IflyUnifyTheta(t1 + M_PI, M_PI)
-                             : IflyUnifyTheta(t1, M_PI);
-  *omega = IflyUnifyTheta(*tau - u + v - phi, M_PI);
+  *tau = (ifly_fless(t2, 0)) ? IflyUnifyTheta(t1 + M_PIf32, M_PIf32)
+                             : IflyUnifyTheta(t1, M_PIf32);
+  *omega = IflyUnifyTheta(*tau - u + v - phi, M_PIf32);
 
   return 0;
 }
 
 /* formula 8.1 */
 // CSC
-static bool LpSpLp(double *t, double *u, double *v, double x, double y,
-                   double phi, double sin_phi, double cos_phi) {
-  double t1;
+static bool LpSpLp(float *t, float *u, float *v, float x, float y,
+                   float phi, float sin_phi, float cos_phi) {
+  float t1;
 
   CartesianToPolar(u, &t1, x - sin_phi, y - 1 + cos_phi);
 
@@ -120,7 +120,7 @@ static bool LpSpLp(double *t, double *u, double *v, double x, double y,
     return false;
   } else {
     *t = t1;
-    *v = IflyUnifyTheta(phi - t1, M_PI);
+    *v = IflyUnifyTheta(phi - t1, M_PIf32);
     if (ifly_fless(*v, 0)) {
       return false;
     }
@@ -131,9 +131,9 @@ static bool LpSpLp(double *t, double *u, double *v, double x, double y,
 
 /* formula 8.2 */
 // CSC
-static bool LpSpRp(double *t, double *u, double *v, double x, double y,
-                   double phi, double sin_phi, double cos_phi) {
-  double t1, u1, theta;
+static bool LpSpRp(float *t, float *u, float *v, float x, float y,
+                   float phi, float sin_phi, float cos_phi) {
+  float t1, u1, theta;
 
   CartesianToPolar(&u1, &t1, x + sin_phi, y - 1 - cos_phi);
 
@@ -142,9 +142,9 @@ static bool LpSpRp(double *t, double *u, double *v, double x, double y,
     return false;
   } else {
     *u = ifly_sqrt(u1 - 4);
-    theta = std::atan2(2, *u);
-    t1 = IflyUnifyTheta(t1 + theta, M_PI);
-    *v = IflyUnifyTheta(t1 - phi, M_PI);
+    theta = std::atan2(2.0f, *u);
+    t1 = IflyUnifyTheta(t1 + theta, M_PIf32);
+    *v = IflyUnifyTheta(t1 - phi, M_PIf32);
     *t = t1;
     if (ifly_fless(*t, 0) || ifly_fless(*v, 0)) {
       return false;
@@ -154,17 +154,17 @@ static bool LpSpRp(double *t, double *u, double *v, double x, double y,
   return true;
 }
 
-bool SLS(double *t, double *u, double *v, const double x, const double y,
-         const double phi) {
-  double phi_mod = IflyUnifyTheta(phi, M_PI);
-  double xd = 0.0;
-  double epsilon = 1e-1;
+bool SLS(float *t, float *u, float *v, const float x, const float y,
+         const float phi) {
+  float phi_mod = IflyUnifyTheta(phi, M_PIf32);
+  float xd = 0.0;
+  float epsilon = 1e-1;
 
   // upper
   if (y > 0.0 && phi_mod > epsilon && phi_mod < M_PI) {
     xd = x - y / std::tan(phi_mod);
 
-    double tan_phi_2 = std::tan(phi_mod / 2.0);
+    float tan_phi_2 = std::tan(phi_mod / 2.0);
     *t = xd - tan_phi_2;
     *u = phi_mod;
     *v = std::sqrt((x - xd) * (x - xd) + y * y) - tan_phi_2;
@@ -175,7 +175,7 @@ bool SLS(double *t, double *u, double *v, const double x, const double y,
     // lower
     xd = x - y / std::tan(phi_mod);
 
-    double tan_phi_2 = std::tan(phi_mod / 2.0);
+    float tan_phi_2 = std::tan(phi_mod / 2.0);
     *t = xd - tan_phi_2;
     *u = phi_mod;
     *v = -std::sqrt((x - xd) * (x - xd) + y * y) - tan_phi_2;
@@ -187,12 +187,12 @@ bool SLS(double *t, double *u, double *v, const double x, const double y,
 }
 
 // todo: has some bugs for steer. fix it.
-int SCS(RSPathParam *path, double *Lmin, const RSEndPoint *end) {
+int SCS(RSPathParam *path, float *Lmin, const RSEndPoint *end) {
   bool pass;
-  double t = 0.0;
-  double u = 0.0;
-  double v = 0.0;
-  double L = 0.0;
+  float t = 0.0;
+  float u = 0.0;
+  float v = 0.0;
+  float L = 0.0;
 
   // heading is (0, pi),
   pass = SLS(&t, &u, &v, end->pose.x, end->pose.y, end->pose.theta);
@@ -227,9 +227,9 @@ int SCS(RSPathParam *path, double *Lmin, const RSEndPoint *end) {
   return 0;
 }
 
-static int CSC(RSPathParam *path, double *Lmin, RSEndPoint *end) {
+static int CSC(RSPathParam *path, float *Lmin, RSEndPoint *end) {
   bool pass;
-  double t, u, v, L;
+  float t, u, v, L;
 
   // 1
   pass = LpSpLp(&t, &u, &v, end->pose.x, end->pose.y, end->pose.theta,
@@ -316,9 +316,9 @@ static int CSC(RSPathParam *path, double *Lmin, RSEndPoint *end) {
 }
 
 /* formula 8.3, 8.4 */
-static bool LpRmL(double *t, double *u, double *v, double x, double y,
-                  double phi, double sin_phi, double cos_phi) {
-  double xi, eta, t1, u1, theta;
+static bool LpRmL(float *t, float *u, float *v, float x, float y,
+                  float phi, float sin_phi, float cos_phi) {
+  float xi, eta, t1, u1, theta;
 
   xi = x - sin_phi, eta = y - 1 + cos_phi;
   CartesianToPolar(&u1, &theta, xi, eta);
@@ -327,8 +327,8 @@ static bool LpRmL(double *t, double *u, double *v, double x, double y,
     return false;
   } else {
     u1 = -2 * std::asin(0.25 * u1);
-    t1 = IflyUnifyTheta(theta + 0.5 * u1 + M_PI, M_PI);
-    *v = IflyUnifyTheta(phi - t1 + u1, M_PI);
+    t1 = IflyUnifyTheta(theta + 0.5f * u1 + M_PIf32, M_PIf32);
+    *v = IflyUnifyTheta(phi - t1 + u1, M_PIf32);
     *u = u1;
     *t = t1;
     if (ifly_fless(*t, 0) || ifly_fgreater(*u, 0)) {
@@ -339,10 +339,10 @@ static bool LpRmL(double *t, double *u, double *v, double x, double y,
   return true;
 }
 
-static int CCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
+static int CCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  double t, u, v, L;
-  double xb, yb;
+  float t, u, v, L;
+  float xb, yb;
 
   // type 2
   pass = LpRmL(&t, &u, &v, point->pose.x, point->pose.y, point->pose.theta,
@@ -427,9 +427,9 @@ static int CCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
 
 /* formula 8.7 */
 // CC|CC
-static bool LpRupLumRm(double *t, double *u, double *v, double x, double y,
-                       double phi, double sin_phi, double cos_phi) {
-  double xi, eta, rho, u1;
+static bool LpRupLumRm(float *t, float *u, float *v, float x, float y,
+                       float phi, float sin_phi, float cos_phi) {
+  float xi, eta, rho, u1;
 
   xi = x + sin_phi;
   eta = y - 1 - cos_phi;
@@ -450,9 +450,9 @@ static bool LpRupLumRm(double *t, double *u, double *v, double x, double y,
 }
 
 /* formula 8.8 */
-static bool LpRumLumRp(double *t, double *u, double *v, double x, double y,
-                       double phi, double sin_phi, double cos_phi) {
-  double xi, eta, rho;
+static bool LpRumLumRp(float *t, float *u, float *v, float x, float y,
+                       float phi, float sin_phi, float cos_phi) {
+  float xi, eta, rho;
 
   xi = x + sin_phi;
   eta = y - 1 - cos_phi;
@@ -473,9 +473,9 @@ static bool LpRumLumRp(double *t, double *u, double *v, double x, double y,
   return true;
 }
 
-static int CCCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
+static int CCCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  double t, u, v, L;
+  float t, u, v, L;
 
   pass = LpRupLumRm(&t, &u, &v, point->pose.x, point->pose.y, point->pose.theta,
                     point->sin_theta, point->cos_theta);
@@ -561,9 +561,9 @@ static int CCCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
 }
 
 /* formula 8.9 */
-static bool LpRmSmLm(double *t, double *u, double *v, double x, double y,
-                     double phi, double sin_phi, double cos_phi) {
-  double xi, eta, rho, theta, r, t1;
+static bool LpRmSmLm(float *t, float *u, float *v, float x, float y,
+                     float phi, float sin_phi, float cos_phi) {
+  float xi, eta, rho, theta, r, t1;
 
   xi = x - sin_phi;
   eta = y - 1 + cos_phi;
@@ -574,8 +574,8 @@ static bool LpRmSmLm(double *t, double *u, double *v, double x, double y,
   } else {
     r = ifly_sqrt(rho * rho - 4);
     *u = 2 - r;
-    t1 = IflyUnifyTheta(theta + std::atan2(r, -2), M_PI);
-    *v = IflyUnifyTheta(phi - 0.5 * M_PI - t1, M_PI);
+    t1 = IflyUnifyTheta(theta + std::atan2(r, -2.0f), M_PIf32);
+    *v = IflyUnifyTheta(phi - 0.5f * M_PIf32 - t1, M_PIf32);
     *t = t1;
     if (ifly_fless(*t, 0) || ifly_fgreater(*u, 0) || ifly_fgreater(*v, 0)) {
       return false;
@@ -586,9 +586,9 @@ static bool LpRmSmLm(double *t, double *u, double *v, double x, double y,
 }
 
 /* formula 8.10 */
-static bool LpRmSmRm(double *t, double *u, double *v, double x, double y,
-                     double phi, double sin_phi, double cos_phi) {
-  double xi, eta, rho, theta;
+static bool LpRmSmRm(float *t, float *u, float *v, float x, float y,
+                     float phi, float sin_phi, float cos_phi) {
+  float xi, eta, rho, theta;
 
   xi = x + sin_phi;
   eta = y - 1 - cos_phi;
@@ -599,7 +599,7 @@ static bool LpRmSmRm(double *t, double *u, double *v, double x, double y,
   } else {
     *t = theta;
     *u = 2.0 - rho;
-    *v = IflyUnifyTheta(*t + 0.5 * M_PI - phi, M_PI);
+    *v = IflyUnifyTheta(*t + 0.5f * M_PIf32 - phi, M_PIf32);
     if (ifly_fless(*t, 0.0) || ifly_fgreater(*u, 0.0) ||
         ifly_fgreater(*v, 0.0)) {
       return false;
@@ -609,10 +609,10 @@ static bool LpRmSmRm(double *t, double *u, double *v, double x, double y,
   return true;
 }
 
-static int CCSC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
+static int CCSC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  double t, u, v, L;
-  double xb, yb;
+  float t, u, v, L;
+  float xb, yb;
 
   *Lmin = *Lmin - 0.5 * M_PI;
   pass = LpRmSmLm(&t, &u, &v, point->pose.x, point->pose.y, point->pose.theta,
@@ -766,9 +766,9 @@ static int CCSC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
 }
 
 /* formula 8.11 */
-static bool LpRmSLmRp(double *t, double *u, double *v, double x, double y,
-                      double phi, double sin_phi, double cos_phi) {
-  double xi, eta, rho, theta, u1;
+static bool LpRmSLmRp(float *t, float *u, float *v, float x, float y,
+                      float phi, float sin_phi, float cos_phi) {
+  float xi, eta, rho, theta, u1;
 
   xi = x + sin_phi;
   eta = y - 1.0 - cos_phi;
@@ -783,7 +783,7 @@ static bool LpRmSLmRp(double *t, double *u, double *v, double x, double y,
           std::atan2((4.0 - u1) * xi - 2.0 * eta, -2 * xi + (u1 - 4.0) * eta),
           M_PI);
 
-      *v = IflyUnifyTheta(*t - phi, M_PI);
+      *v = IflyUnifyTheta(*t - phi, M_PIf32);
       *u = u1;
 
       if (ifly_fless(*t, 0.0) || ifly_fless(*v, 0.0)) {
@@ -795,9 +795,9 @@ static bool LpRmSLmRp(double *t, double *u, double *v, double x, double y,
   return true;
 }
 
-static int CCSCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
+static int CCSCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  double t, u, v, L;
+  float t, u, v, L;
 
   if (re_request_type_ == RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE) {
     return 0;
@@ -849,11 +849,11 @@ static int CCSCC(RSPathParam *path, double *Lmin, RSEndPoint *point) {
   return 0;
 }
 
-int GetShortestRSPathParam(RSPathParam *path, const Pose2D *start_pose,
-                           const Pose2D *goal_pose, double min_turn_radius,
-                           double inverse_radius,
+int GetShortestRSPathParam(RSPathParam *path, const Pose2f *start_pose,
+                           const Pose2f *goal_pose, float min_turn_radius,
+                           float inverse_radius,
                            const RSPathRequestType request_type) {
-  double dx, dy, dtheta, cos_theta, sin_theta, x, y, Lmin;
+  float dx, dy, dtheta, cos_theta, sin_theta, x, y, Lmin;
 
   if (path == nullptr || start_pose == nullptr || goal_pose == nullptr) {
     return 0;
@@ -948,11 +948,11 @@ RSPathInfo *GetRSPathGlobalInfo(void) {
   return &cached_path_info;
 }
 
-int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
-                           const Pose2D *goal_pose, double min_turn_radius,
+int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2f *start_pose,
+                           const Pose2f *goal_pose, float min_turn_radius,
                            AstarPathGear initial_pose_dir) {
   int i, size;
-  double length[MAX_RS_PATH_NUM];
+  float length[MAX_RS_PATH_NUM];
   AstarPathGear dir[MAX_RS_PATH_NUM];
 
   RSPathParam *path;
@@ -1010,8 +1010,8 @@ int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
   return 0;
 }
 
-int GetRSPathDist(double *distance, const Pose2D *start_pose,
-                  const Pose2D *goal_pose, double min_turn_radius) {
+int GetRSPathDist(float *distance, const Pose2f *start_pose,
+                  const Pose2f *goal_pose, float min_turn_radius) {
   RSPathParam *path;
   RSPathInfo *path_info = GetRSPathGlobalInfo();
 
@@ -1043,10 +1043,10 @@ int GetRSPathDist(double *distance, const Pose2D *start_pose,
   return 0;
 }
 
-int TestSCS(RSPathParam *path, const Pose2D *start_pose,
-            const Pose2D *goal_pose, double min_turn_radius,
-            double inverse_radius, const RSPathRequestType request_type) {
-  double dx, dy, dtheta, cos_theta, sin_theta, x, y, Lmin;
+int TestSCS(RSPathParam *path, const Pose2f *start_pose,
+            const Pose2f *goal_pose, float min_turn_radius,
+            float inverse_radius, const RSPathRequestType request_type) {
+  float dx, dy, dtheta, cos_theta, sin_theta, x, y, Lmin;
 
   if (path == nullptr || start_pose == nullptr || goal_pose == nullptr) {
     return 0;

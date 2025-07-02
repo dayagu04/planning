@@ -12,15 +12,15 @@ class RSExpansionDecider : public AstarDecider {
  public:
   RSExpansionDecider() = default;
 
-  void Process(const double min_radius, const double slot_width,
-               const double slot_length, const Pose2D &ego_pose,
-               const Pose2D &astar_end, const double veh_width,
+  void Process(const float min_radius, const float slot_width,
+               const float slot_length, const Pose2f &ego_pose,
+               const Pose2f &astar_end, const float veh_width,
                const ParkSpaceType slot_type,
                const ParkingVehDirection park_dir);
 
-  void Process(const Pose2D &start, const Pose2D &end) override;
+  void Process(const Pose2f &start, const Pose2f &end) override;
 
-  const Pose2D &GetRSEndPose();
+  const Pose2f &GetRSEndPose();
 
   bool IsNeedRsExpansion(const Node3d *node, const AstarRequest *request) const;
 
@@ -40,7 +40,7 @@ class RSExpansionDecider : public AstarDecider {
   const bool NeedRsLinkByRequestDist(
     const Node3d *node, const AstarRequest *request) const;
 
-  Pose2D rs_end_pose_;
+  Pose2f rs_end_pose_;
 };
 
 }  // namespace planning

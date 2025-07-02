@@ -12,7 +12,7 @@ PolynomialCurveSampling::PolynomialCurveSampling(
     const MapBound* XYbounds, const ParkObstacleList* obstacles,
     const AstarRequest* request, EulerDistanceTransform* edt,
     const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-    const PlannerOpenSpaceConfig* config, const double min_radius,
+    const PlannerOpenSpaceConfig* config, const float min_radius,
     std::shared_ptr<NodeCollisionDetect> collision_detect)
     : CurveSampling(XYbounds, obstacles, request, edt, clear_zone, ref_line,
                     config, min_radius, collision_detect) {}
@@ -26,7 +26,7 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
     return false;
   }
 
-  double x_diff = current_node->GetX() - request_->real_goal.GetX();
+  float x_diff = current_node->GetX() - request_->real_goal.GetX();
   if (x_diff < 0.2) {
     *fail_type = PolynomialPathErrorCode::OUT_OF_X_BOUNDARY;
     return false;
@@ -37,9 +37,9 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
     return false;
   }
 
-  double heading_diff = IflyUnifyTheta(current_node->GetPhi(), M_PI) -
-                       IflyUnifyTheta(search_goal_.GetPhi(), M_PI);
-  heading_diff = IflyUnifyTheta(heading_diff, M_PI);
+  float heading_diff = IflyUnifyTheta(current_node->GetPhi(), M_PIf32) -
+                       IflyUnifyTheta(search_goal_.GetPhi(), M_PIf32);
+  heading_diff = IflyUnifyTheta(heading_diff, M_PIf32);
   if (heading_diff > ifly_deg2rad(60.0) || heading_diff < ifly_deg2rad(-60.0)) {
     *fail_type = PolynomialPathErrorCode::OUT_OF_HEADING_BOUNDARY;
     return false;
@@ -47,14 +47,14 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
 
   // init
   polynomial_node->Clear();
-  double min_straight_dist = 0.7;
-  double sample_range =
+  float min_straight_dist = 0.7;
+  float sample_range =
       search_goal_.GetX() - (request_->real_goal.GetX() + min_straight_dist);
   int sampline_numer = std::ceil(sample_range / 0.1);
   sampline_numer = std::max(1, sampline_numer);
   bool valid_path = false;
 
-  Pose2D end_pose = search_goal_;
+  Pose2f end_pose = search_goal_;
   for (int i = 0; i < sampline_numer; i++) {
     path.clear();
 
@@ -90,7 +90,7 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
 
   node_path.points[0].x = path.back().x;
   node_path.points[0].y = path.back().y;
-  node_path.points[0].theta = IflyUnifyTheta(path.back().phi, M_PI);
+  node_path.points[0].theta = IflyUnifyTheta(path.back().phi, M_PIf32);
 
   polynomial_node->Set(node_path, *XYbounds_, *config_, node_path.path_dist);
   polynomial_node->SetPathType(AstarPathType::QUNTIC_POLYNOMIAL);
@@ -106,20 +106,20 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
 }
 
 bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const double lon_min_sampling_length) {
+    HybridAStarResult* result, const Pose2f& start, const Pose2f& end,
+    const float lon_min_sampling_length) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, by cubic polynomial";
 
   // sampling for path end
   // sampling start point: move start point forward dist
   // (lon_min_sampling_length)
-  Pose2D sampling_end = start;
+  Pose2f sampling_end = start;
   sampling_end.y = 0.0;
   sampling_end.theta = 0.0;
   sampling_end.x = start.x + lon_min_sampling_length;
 
-  double sampling_step = 0.1;
+  float sampling_step = 0.1;
   size_t max_sampling_num = std::ceil((end.x - sampling_end.x) / sampling_step);
   ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
             << ", lon_min_sampling_length = " << lon_min_sampling_length
@@ -136,7 +136,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
   for (size_t k = 0; k < max_sampling_num; k++) {
     plan_num = k;
     sampling_end.x += sampling_step;
-    std::vector<double > coefficients_vec =
+    std::vector<float> coefficients_vec =
         cubic_polynomial_path_.GeneratePolynomialCoefficients(start,
                                                               sampling_end);
     ILOG_INFO << " coefficients_a : " << coefficients_vec[0]
@@ -190,12 +190,12 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
     // get path lengh
     path_points_size = path.x.size();
 
-    double accumulated_s = 0.0;
+    float accumulated_s = 0.0;
     path.accumulated_s.clear();
     auto last_x = path.x.front();
     auto last_y = path.y.front();
-    double x_diff;
-    double y_diff;
+    float x_diff;
+    float y_diff;
 
     for (size_t i = 0; i < path_points_size; ++i) {
       x_diff = path.x[i] - last_x;
@@ -243,7 +243,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
   }
 
   path_points_size = std::min(path_points_size, path.x.size());
-  double valid_dist = 0.0;
+  float valid_dist = 0.0;
   if (path_points_size > 0) {
     valid_dist = path.accumulated_s[path_points_size];
   }
@@ -273,8 +273,8 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
 }
 
 bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
-    const double lon_min_sampling_length) {
+    HybridAStarResult* result, const Pose2f& start, const Pose2f& target,
+    const float lon_min_sampling_length) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, by cubic polynomial";
 
@@ -289,8 +289,8 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
   y_sample_bound.min = start.y - 0.3;
   y_sample_bound.max = start.y + 0.3;
 
-  double x_sampling_step = 0.1;
-  double y_sampling_step = 0.05;
+  float x_sampling_step = 0.1;
+  float y_sampling_step = 0.05;
   int x_max_sampling_num =
       std::ceil((x_sample_bound.max - x_sample_bound.min) / x_sampling_step);
   int y_max_sampling_num =
@@ -308,7 +308,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
   best_path_cost.Clear();
 
   // sampling for path end
-  Pose2D sampling_end;
+  Pose2f sampling_end;
   PathComparator path_comparator;
   path_comparator.SetHeuristicPose(*request_);
 
@@ -329,12 +329,12 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
       start.DebugString();
       sampling_end.DebugString();
 
-      std::vector<double > coefficients_vec =
+      std::vector<float> coefficients_vec =
           cubic_polynomial_path_.GeneratePolynomialCoefficients(start,
-                                                               sampling_end);
+                                                                sampling_end);
 
-      cubic_polynomial_path_.GeneratePolynomialPath(cubic_path, coefficients_vec,
-                                                   0.05, start, sampling_end);
+      cubic_polynomial_path_.GeneratePolynomialPath(
+          cubic_path, coefficients_vec, 0.05, start, sampling_end);
 
       if (cubic_path.empty()) {
         ILOG_INFO << "cubic_path empty";
@@ -351,11 +351,11 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
       // get path lengh
       path_points_size = cubic_path.size();
 
-      double accumulated_s = 0.0;
+      float accumulated_s = 0.0;
       auto last_x = cubic_path.front().x;
       auto last_y = cubic_path.front().y;
-      double x_diff;
-      double y_diff;
+      float x_diff;
+      float y_diff;
 
       for (size_t i = 0; i < path_points_size; ++i) {
         x_diff = cubic_path[i].x - last_x;
@@ -434,25 +434,25 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
 }
 
 void PolynomialCurveSampling::GetQunticPolynomialPath(
-    std::vector<AStarPathPoint>& path, const Pose2D& start,
-    const double start_radius, const Pose2D& end) {
+    std::vector<AStarPathPoint>& path, const Pose2f& start,
+    const float start_radius, const Pose2f& end) {
   planning_math::QuinticPolynomialCurve1d curve;
 
   // attention: ref line is slot center line
   // polynomial start
-  double y0 = end.y;
-  double dy0 = 0.0;
-  double ddy0 = 0.0;
+  float y0 = end.y;
+  float dy0 = 0.0;
+  float ddy0 = 0.0;
 
   // polynomial end
-  double y1 = start.y;
-  double dy1;
+  float y1 = start.y;
+  float dy1;
   if (request_->direction_request == ParkingVehDirection::HEAD_IN) {
     dy1 = std::tan(start.theta + M_PI);
   } else {
     dy1 = std::tan(start.theta);
   }
-  double ddy1;
+  float ddy1;
   if (std::fabs(start_radius > 1000.0)) {
     ddy1 = 0.0;
   } else {
@@ -460,24 +460,24 @@ void PolynomialCurveSampling::GetQunticPolynomialPath(
   }
 
   // ref s
-  double total_ref_s = start.x - end.x;
+  float total_ref_s = start.x - end.x;
   curve.SetParam(y0, dy0, ddy0, y1, dy1, ddy1, total_ref_s);
 
   int point_num = std::ceil(total_ref_s / 0.05);
-  double ref_s = 0;
-  double kappa;
-  double max_kappa = 1.0 / min_radius_ + 1e-5;
+  float ref_s = 0;
+  float kappa;
+  float max_kappa = 1.0 / min_radius_ + 1e-5;
 
   // interpolate
   AStarPathPoint point;
   ref_s = total_ref_s;
-  double accumulated_s = 0;
-  double dist = 0;
-  double theta;
+  float accumulated_s = 0;
+  float dist = 0;
+  float theta;
 
   for (int i = 0; i <= point_num; i++) {
-    const double y = curve.Evaluate(0, ref_s);
-    const double dy = curve.Evaluate(1, ref_s);
+    const float y = curve.Evaluate(0, ref_s);
+    const float dy = curve.Evaluate(1, ref_s);
     theta = std::atan(dy);
     kappa = curve.EvaluateKappa(ref_s);
 
@@ -498,7 +498,7 @@ void PolynomialCurveSampling::GetQunticPolynomialPath(
       point.phi = theta;
       point.gear = AstarPathGear::REVERSE;
     } else {
-      point.phi = IflyUnifyTheta(theta + M_PI, M_PI);
+      point.phi = IflyUnifyTheta(theta + M_PIf32, M_PIf32);
       point.gear = AstarPathGear::DRIVE;
     }
 
@@ -524,7 +524,7 @@ void PolynomialCurveSampling::GetQunticPolynomialPath(
     path.push_back(point);
 
     ref_s -= 0.05;
-    ref_s = std::max(0.0, ref_s);
+    ref_s = std::max(0.0f, ref_s);
   }
 
   return;

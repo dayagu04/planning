@@ -4,13 +4,13 @@
 #include <memory>
 #include <vector>
 
-#include "src/library/convex_collision_detection/gjk2d_interface.h"
-#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "Eigen/Core"
 #include "hybrid_a_star.h"
 #include "node3d.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "target_pose_regulator.h"
 
 namespace planning {
@@ -23,10 +23,10 @@ class HybridAStarInterface {
 
   // todo: need to unify same vehicle chassis params for on lane driving and
   // parking
-  int Init(const double back_edge_to_rear_axis, const double car_length,
-           const double car_width, const double steer_ratio,
-           const double wheel_base, const double min_turn_radius,
-           const double mirror_width);
+  int Init(const float back_edge_to_rear_axis, const float car_length,
+           const float car_width, const float steer_ratio,
+           const float wheel_base, const float min_turn_radius,
+           const float mirror_width);
 
   // for now, use slot coordinate. you can call this API in one thread.
   void GeneratePath(const Eigen::Vector3d& start, const Eigen::Vector3d& end,
@@ -38,9 +38,8 @@ class HybridAStarInterface {
 
   const AstarRequest& GetConstRequest() const { return request_; }
 
-  static void GetRSPathInFullPath(std::vector<double >& x,
-                                  std::vector<double >& y,
-                                  std::vector<double >& phi,
+  static void GetRSPathInFullPath(std::vector<float>& x, std::vector<float>& y,
+                                  std::vector<float>& phi,
                                   const HybridAStarResult& result);
 
   const HybridAStarResult* GetConstFullLengthPath() const;
@@ -49,7 +48,7 @@ class HybridAStarInterface {
 
   static const AstarSearchState TransformFirstSegmentPath(
       std::vector<AStarPathPoint>& result, const HybridAStarResult& full_path,
-      const Pose2D& start);
+      const Pose2f& start);
 
   const int GetFallBackPath(std::vector<AStarPathPoint>& result);
 
@@ -59,11 +58,11 @@ class HybridAStarInterface {
 
   ParkObstacleList& GetMutableObstacleList();
 
-  const Pose2D GetAstarTargetPose() const { return target_regulator_goal_; }
+  const Pose2f GetAstarTargetPose() const { return target_regulator_goal_; }
 
   // multi-thread, input
   void UpdateInput(const ParkObstacleList& obs_list,
-                  const AstarRequest& request);
+                   const AstarRequest& request);
 
   // multi-thread, output
   void UpdateOutput();
@@ -75,15 +74,14 @@ class HybridAStarInterface {
   EulerDistanceTransform* GetMutableEDT() { return &edt_; }
 
   // for debug
-  void GetRSPathHeuristic(
-      std::vector<std::vector<ad_common::math::Vec2d>>& path_list);
+  void GetRSPathHeuristic(std::vector<std::vector<Vec2f>>& path_list);
 
   // for debug
   const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
 
   // for debug
-  const std::vector<ad_common::math::Vec2d>& GetPriorQueueNode();
-  const std::vector<ad_common::math::Vec2d>& GetDelNodeQueueNode();
+  const std::vector<Vec2f>& GetPriorQueueNode();
+  const std::vector<Vec2f>& GetDelNodeQueueNode();
   // for debug,retired
   void GetNodeListMessage(planning::common::AstarNodeList* list);
 
@@ -91,34 +89,31 @@ class HybridAStarInterface {
   void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
   // for debug
-  void GetRSPathForDebug(std::vector<double >& x, std::vector<double >& y,
-                         std::vector<double >& phi);
+  void GetRSPathForDebug(std::vector<float>& x, std::vector<float>& y,
+                         std::vector<float>& phi);
 
   const ParkReferenceLine& GetConstRefLine() const;
 
   // for debug
-  void GetPolynomialPathForDebug(std::vector<double >& x, std::vector<double >& y,
-                                 std::vector<double >& phi);
+  void GetPolynomialPathForDebug(std::vector<float>& x, std::vector<float>& y,
+                                 std::vector<float>& phi);
 
   void UpdateEDTByObs(const ParkObstacleList& obs_list);
 
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
  private:
-  // if ego pose is good, seleted real end is ok
-  const bool IsSelectedRealTargetPose() const;
-
   int UpdateEDT();
 
   void PathClear();
 
   void UpdateSearchBoundary();
 
-  void UpdateEDTBasePose(Pose2D& ogm_base_pose);
+  void UpdateEDTBasePose(Pose2f& ogm_base_pose);
 
-  const Pose2D& GetStartPoint();
+  const Pose2f& GetStartPoint();
 
-  const Pose2D& GetGoalPoint();
+  const Pose2f& GetGoalPoint();
 
   const bool IsEgoOverlapWithSlot();
 
@@ -129,7 +124,7 @@ class HybridAStarInterface {
 
   // 基于搜索的路径生成API
   void PathSearchForScenarioRunning(const TargetPoseRegulator& regulator,
-                                    const double ego_obs_dist,
+                                    const float ego_obs_dist,
                                     const bool is_ego_overlap_with_slot);
 
   // todo: move it to safe buffer decider
@@ -137,9 +132,9 @@ class HybridAStarInterface {
   // Need to consider:
   // 1. distance from ego to obstacle;
   // 2. distance from target pose to obstacle;
-  const double GetLatBufferForInsideSlot(const double target_obs_dist,
-                                         const double ego_obs_dist,
-                                         const bool is_ego_overlap_with_slot);
+  const float GetLatBufferForInsideSlot(const float target_obs_dist,
+                                        const float ego_obs_dist,
+                                        const bool is_ego_overlap_with_slot);
 
   void PathCandidateCompare();
 
@@ -153,15 +148,15 @@ class HybridAStarInterface {
   std::shared_ptr<HybridAStar> hybrid_astar_;
   std::shared_ptr<GridSearch> dp_heuristic_generator_;
   // path = astar node path + rs path.
-  HybridAStarResult *best_traj_;
+  HybridAStarResult* best_traj_;
   std::array<HybridAStarResult, 3> traj_candidates_;
 
-  Pose2D ego_state_;
+  Pose2f ego_state_;
   // 对于垂直、平行车位，goal_state位于车位中心线上.
   // 位姿调节器依赖这个pose重新计算搜索目标点.
-  Pose2D goal_state_;
+  Pose2f goal_state_;
   // 目标调节器会计算一个合适的目标
-  Pose2D target_regulator_goal_;
+  Pose2f target_regulator_goal_;
 
   AstarSearchState search_state_;
 

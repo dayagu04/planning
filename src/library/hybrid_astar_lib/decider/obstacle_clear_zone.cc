@@ -33,16 +33,16 @@ bool ObstacleClearZone::IsCollisionForBox(const cdl::AABB& box,
   return false;
 }
 
-bool ObstacleClearZone::GenerateBoundingBox(const Pose2D& start,
+bool ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
                                             const ParkObstacleList* obstacles) {
   box_.Reset(cdl::Vector2r(start.x, start.y));
 
   box_.ExtendX(0.5);
   box_.ExtendY(0.8);
 
-  double max_x_extend = 10;
-  double max_y_extend = 15;
-  double step = 0.2;
+  float max_x_extend = 10;
+  float max_y_extend = 15;
+  float step = 0.2;
 
   cdl::AABB max_box;
   max_box.min_[0] = start.x - max_x_extend;

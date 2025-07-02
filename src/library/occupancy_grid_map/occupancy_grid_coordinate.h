@@ -30,7 +30,7 @@ class OccupancyGridCoordinate {
  public:
   OccupancyGridCoordinate() = default;
 
-  virtual void Process(const Pose2D &ogm_pose,
+  virtual void Process(const Pose2f &ogm_pose,
                        const float _ogm_resolution = ogm_resolution);
 
   virtual void Process(const OccupancyGridBound &bound,
@@ -45,10 +45,10 @@ class OccupancyGridCoordinate {
   const float GetOgmResolutionInv() const { return ogm_resolution_inv_; }
 
   // ogm local pose to index
-  void OgmPoseToIndex(OgmIndex *index, const Pose2D &point);
+  void OgmPoseToIndex(OgmIndex *index, const Pose2f &point);
 
   // slot local pose to index
-  const bool SlotPoseToIndex(OgmIndex *index, const Pose2D &point);
+  const bool SlotPoseToIndex(OgmIndex *index, const Pose2f &point);
 
   const OccupancyGridBound &GetOGMBound() const { return bound_; }
 
@@ -61,10 +61,10 @@ class OccupancyGridCoordinate {
   //               |
   //  y <----------|
 
-  Transform2d ogm_tf_;
+  Transform2f ogm_tf_;
 
   // base pose in slot coordinate system
-  Pose2D ogm_base_pose_;
+  Pose2f ogm_base_pose_;
 
   // in slot system.
   OccupancyGridBound bound_;

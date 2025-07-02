@@ -13,7 +13,7 @@
 
 namespace planning {
 
-void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
+void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   ShrinkChildrenByHeadingForTailIn();
@@ -21,9 +21,9 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
   return;
 }
 
-void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
+void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end,
                                 const ParkingVehDirection park_dir,
-                                const Pose2D &limiter_pose,
+                                const Pose2f &limiter_pose,
                                 const MapBound &XYbounds) {
   AstarDecider::Process(start, end);
 
@@ -34,13 +34,13 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
     ShrinkChildrenByHeadingForHeadIn();
   }
 
-  constexpr double kXBoundLowerForHeadOut = 1.0;
+  constexpr float kXBoundLowerForHeadOut = 1.0f;
 
   switch (park_dir) {
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
     case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
     case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-      x_bound_.upper = 12.0;
+      x_bound_.upper = 12.0f;
       x_bound_.lower = kXBoundLowerForHeadOut;
       break;
     default:
@@ -52,12 +52,12 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
   return;
 }
 
-bool NodeShrinkDecider::IsLegalForHeading(const double heading) {
+bool NodeShrinkDecider::IsLegalForHeading(const float heading) {
   if (!heading_shrink_.limit_search_heading_) {
     return true;
   }
 
-  double normalize_heading = IflyUnifyTheta(heading, M_PI);
+  float normalize_heading = IflyUnifyTheta(heading, M_PIf32);
   normalize_heading = std::fabs(normalize_heading);
 
   if (normalize_heading < heading_shrink_.heading_low_bound_ ||
@@ -68,16 +68,16 @@ bool NodeShrinkDecider::IsLegalForHeading(const double heading) {
   return true;
 }
 
-bool NodeShrinkDecider::IsLegalForPos(const double x, const double y,
-                                      const double x_limit,
-                                      const double y_limit) {
+bool NodeShrinkDecider::IsLegalForPos(const float x, const float y,
+                                      const float x_limit,
+                                      const float y_limit) {
   if (std::fabs(y) < y_limit && x < x_limit) {
     return false;
   }
   return true;
 }
 
-bool NodeShrinkDecider::IsLegalByXBound(const double x) {
+bool NodeShrinkDecider::IsLegalByXBound(const float x) {
   if (x < x_bound_.lower || x > x_bound_.upper) {
     return false;
   }
@@ -88,38 +88,38 @@ void NodeShrinkDecider::ShrinkChildrenByHeadingForTailIn() {
   // heading shrink
 
   // 搜索时,heading 尽量不超过150度
-  double heading_check_bound = ifly_deg2rad(150.0);
-  double heading_buffer = ifly_deg2rad(20.0);
+  float heading_check_bound = ifly_deg2rad(150.0);
+  float heading_buffer = ifly_deg2rad(20.0);
 
   heading_shrink_.limit_search_heading_ = true;
 
-  heading_shrink_.heading_low_bound_ = 0.0;
+  heading_shrink_.heading_low_bound_ = 0.0f;
 
   heading_shrink_.heading_up_bound_ =
       std::max(heading_check_bound, std::fabs(start_.theta) + heading_buffer);
   heading_shrink_.heading_up_bound_ =
-      std::min(heading_shrink_.heading_up_bound_, M_PI);
+      std::min(heading_shrink_.heading_up_bound_, M_PIf32);
 
   return;
 }
 
 void NodeShrinkDecider::ShrinkChildrenByHeadingForHeadIn() {
   // heading shrink
-  double theta_diff = start_.theta - end_.theta;
-  theta_diff = IflyUnifyTheta(theta_diff, M_PI);
+  float theta_diff = start_.theta - end_.theta;
+  theta_diff = IflyUnifyTheta(theta_diff, M_PIf32);
 
   // 搜索时,heading 尽量大于30度. 且heading接近180度更好.
-  double heading_check_bound = ifly_deg2rad(30.0);
-  double heading_buffer = ifly_deg2rad(20.0);
+  float heading_check_bound = ifly_deg2rad(30.0);
+  float heading_buffer = ifly_deg2rad(20.0);
 
   heading_shrink_.limit_search_heading_ = true;
 
   heading_shrink_.heading_low_bound_ =
       std::min(heading_check_bound, std::fabs(start_.theta) - heading_buffer);
   heading_shrink_.heading_low_bound_ =
-      std::max(0.0, heading_shrink_.heading_low_bound_);
+      std::max(0.0f, heading_shrink_.heading_low_bound_);
 
-  heading_shrink_.heading_up_bound_ = M_PI;
+  heading_shrink_.heading_up_bound_ = M_PIf32;
 
   return;
 }
@@ -172,10 +172,10 @@ bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
     return false;
   }
 
-  constexpr double ANGLE_THRESHOLD_DEG = 15.0;
+  constexpr float ANGLE_THRESHOLD_DEG = 15.0f;
 
   // 计算角度并转换为度数
-  const double heading_deg = child->GetPhi() * 180.0 / static_cast<double >(M_PI);
+  const float heading_deg = child->GetPhi() * 180.0 / M_PIf32;
 
   // 检查是否为前进方向
   const bool is_forward = child->IsForward();
@@ -224,7 +224,7 @@ const bool NodeShrinkDecider::IsSameGridNodeContinuous(
     return false;
   }
 
-  double theta_diff = std::fabs(new_node->GetPhi() - old_node->GetPhi());
+  float theta_diff = std::fabs(new_node->GetPhi() - old_node->GetPhi());
   if (theta_diff > 0.0087f) {
     return false;
   }

@@ -16,20 +16,6 @@ void CvtPosGlobalToLocal(Position2D *local_pos, const Position2D *global_pos,
   return;
 }
 
-double IflyUnifyTheta(double theta, double base) {
-  if (((theta) + (base)) >= 0.0) {
-    return ifly_fmod((theta) + (base), M_PI * 2) - (base);
-  } else {
-    if (ifly_fequal(ifly_fmod(theta + base, M_PI * 2), 0.0)) {
-      return ifly_fmod((theta) + (base), M_PI * 2) - (base);
-    } else {
-      return ifly_fmod((theta) + (base), M_PI * 2) + M_PI * 2 - base;
-    }
-  }
-
-  return theta;
-}
-
 void CvtPosLocalToGlobal(Position2D *global_pos, const Position2D *local_pos,
                          const Pose2D *base_pose) {
   double lx, ly, theta;

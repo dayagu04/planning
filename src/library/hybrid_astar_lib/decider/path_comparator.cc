@@ -12,7 +12,7 @@ namespace planning {
 
 #define DEBUG_DECIDER (0)
 
-void PathComparator::Process(const Pose2D &start, const Pose2D &end) {
+void PathComparator::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   return;
@@ -91,22 +91,22 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
     }
   }
 
-  Pose2D gear_switch_pose_best;
+  Pose2f gear_switch_pose_best;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
   } else {
     gear_switch_pose_best = best_node->GetPose();
   }
-  double heading_error_best = std::fabs(gear_switch_pose_best.theta);
+  float heading_error_best = std::fabs(gear_switch_pose_best.theta);
 
-  Pose2D gear_switch_pose_challenger;
+  Pose2f gear_switch_pose_challenger;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
   } else {
     gear_switch_pose_challenger = node_challenger->GetPose();
   }
 
-  double heading_error_challenger = std::fabs(gear_switch_pose_challenger.theta);
+  float heading_error_challenger = std::fabs(gear_switch_pose_challenger.theta);
 
 #if DEBUG_DECIDER
   if (best_node->GetGearSwitchNum() <= 1) {
@@ -116,8 +116,8 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
-  double x_upper = 10.0;
-  double x_lower = 4.0;
+  float x_upper = 10.0;
+  float x_lower = 4.0;
   if (gear_switch_pose_challenger.x < x_lower ||
       gear_switch_pose_challenger.x > x_upper) {
     return false;
@@ -151,23 +151,23 @@ bool PathComparator::CheckVerticalSlotHeadOut(const AstarRequest *request,
     }
   }
 
-  Pose2D gear_switch_pose_best;
+  Pose2f gear_switch_pose_best;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
   } else {
     gear_switch_pose_best = best_node->GetPose();
   }
-  double heading_error_best =
+  float heading_error_best =
       std::fabs(gear_switch_pose_best.theta - request->real_goal.theta);
 
-  Pose2D gear_switch_pose_challenger;
+  Pose2f gear_switch_pose_challenger;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
   } else {
     gear_switch_pose_challenger = node_challenger->GetPose();
   }
 
-  double heading_error_challenger =
+  float heading_error_challenger =
       std::fabs(gear_switch_pose_challenger.theta - request->real_goal.theta);
 
 #if DEBUG_DECIDER
@@ -176,8 +176,8 @@ bool PathComparator::CheckVerticalSlotHeadOut(const AstarRequest *request,
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
-  double x_upper = 10.0;
-  double x_lower = 4.0;
+  float x_upper = 10.0;
+  float x_lower = 4.0;
   if (gear_switch_pose_challenger.x < x_lower ||
       gear_switch_pose_challenger.x > x_upper) {
     return false;
@@ -226,8 +226,8 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   }
 
   // best node pose
-  Pose2D gear_switch_pose_best;
-  double best_s;
+  Pose2f gear_switch_pose_best;
+  float best_s;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
     best_s = best_node->GearSwitchNode()->GetDistToStart();
@@ -235,13 +235,13 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
     gear_switch_pose_best = best_node->GetPose();
     best_s = best_node->GetDistToStart();
   }
-  double heading_error_best = ad_common::math::NormalizeAngle(
+  float heading_error_best = ad_common::math::NormalizeAngle(
       gear_switch_pose_best.theta - heuristic_pose_.theta);
   heading_error_best = std::fabs(heading_error_best);
 
   // challenger pose
-  Pose2D gear_switch_pose_challenger;
-  double challenger_s;
+  Pose2f gear_switch_pose_challenger;
+  float challenger_s;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
     challenger_s = node_challenger->GearSwitchNode()->GetDistToStart();
@@ -250,7 +250,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
     challenger_s = node_challenger->GetDistToStart();
   }
 
-  double heading_error_challenger = ad_common::math::NormalizeAngle(
+  float heading_error_challenger = ad_common::math::NormalizeAngle(
       gear_switch_pose_challenger.theta - heuristic_pose_.theta);
   heading_error_challenger = std::fabs(heading_error_challenger);
 
@@ -265,8 +265,8 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
 #endif
 
   // 在换档次数一致，换挡点的坐标建议在这个区间。不在这个区间的，说明借用空间太深.
-  double x_upper = 12.0;
-  double x_lower = 4.0;
+  float x_upper = 12.0;
+  float x_lower = 4.0;
   if (gear_switch_pose_challenger.x < x_lower ||
       gear_switch_pose_challenger.x > x_upper) {
     // ILOG_INFO << "boundary is big";
@@ -291,20 +291,20 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   return true;
 }
 
-const bool PathComparator::NodeCompare(const Pose2D &goal,
+const bool PathComparator::NodeCompare(const Pose2f &goal,
                                        const Node3d *best_node,
                                        const Node3d *node_challenger) {
-  double dist1 = std::fabs(goal.y - best_node->GetPose().y);
-  double dist2 = std::fabs(goal.y - node_challenger->GetPose().y);
+  float dist1 = std::fabs(goal.y - best_node->GetPose().y);
+  float dist2 = std::fabs(goal.y - node_challenger->GetPose().y);
 
   // 距离较近，比较heading
-  const double dist_bound = 0.05;
+  const float dist_bound = 0.05;
   if (dist2 < dist_bound && dist1 < dist_bound) {
-    double heading_error_challenger = ad_common::math::NormalizeAngle(
+    float heading_error_challenger = ad_common::math::NormalizeAngle(
         node_challenger->GetPose().theta - goal.theta);
     heading_error_challenger = std::fabs(heading_error_challenger);
 
-    double heading_error_best = ad_common::math::NormalizeAngle(
+    float heading_error_best = ad_common::math::NormalizeAngle(
         best_node->GetPose().theta - goal.theta);
     heading_error_best = std::fabs(heading_error_best);
     if (heading_error_challenger < heading_error_best) {
@@ -330,11 +330,10 @@ void PathComparator::SetHeuristicPose(const AstarRequest &request) {
   return;
 }
 
-const double PathComparator::GetHeuristicPointDistance(const Pose2D &node) {
-  ad_common::math::Vec2d line_base =
-      ad_common::math::Vec2d::CreateUnitVec2d(node.theta);
+const float PathComparator::GetHeuristicPointDistance(const Pose2f &node) {
+  Vec2f line_base = Vec2f::CreateUnitVec(node.theta);
 
-  ad_common::math::Vec2d line_project;
+  Vec2f line_project;
   line_project.set_x(heuristic_pose_.x - node.x);
   line_project.set_y(heuristic_pose_.y - node.y);
 
@@ -342,14 +341,14 @@ const double PathComparator::GetHeuristicPointDistance(const Pose2D &node) {
 }
 
 const bool PathComparator::CheckHeuristicPointIsNice(
-    const Pose2D &best_node, const Pose2D &node_challenger) {
+    const Pose2f &best_node, const Pose2f &node_challenger) {
   // check heuristic point projection.
-  const double challenger_dist = GetHeuristicPointDistance(node_challenger);
+  const float challenger_dist = GetHeuristicPointDistance(node_challenger);
   if (challenger_dist > 100.0) {
     return false;
   }
 
-  const double best_dist = GetHeuristicPointDistance(best_node);
+  const float best_dist = GetHeuristicPointDistance(best_node);
   if (challenger_dist > best_dist - 0.04) {
 #if DEBUG_DECIDER
     ILOG_INFO << "challenger dist = " << challenger_dist
@@ -362,7 +361,7 @@ const bool PathComparator::CheckHeuristicPointIsNice(
 }
 
 const bool PathComparator::CheckDistanceRequest(
-    const double &best_node_s, const double &node_challenger_s) {
+    const float &best_node_s, const float &node_challenger_s) {
   if (node_challenger_s > request_->first_action_request.dist_request &&
       best_node_s < request_->first_action_request.dist_request) {
     return true;

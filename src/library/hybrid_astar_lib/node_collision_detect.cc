@@ -21,8 +21,8 @@ NodeCollisionDetect::NodeCollisionDetect(const ParkObstacleList* obstacles,
       XYbounds_(XYbounds),
       request_(request) {}
 
-const bool NodeCollisionDetect::IsPointBeyondBound(const double x,
-                                                   const double y) const {
+const bool NodeCollisionDetect::IsPointBeyondBound(const float x,
+                                                   const float y) const {
   if (x > XYbounds_->x_max || x < XYbounds_->x_min || y > XYbounds_->y_max ||
       y < XYbounds_->y_min) {
     return true;
@@ -109,7 +109,9 @@ bool NodeCollisionDetect::ValidityCheckByConvex(Node3d* node) {
       return false;
     }
 
-    global_pose = path.points[i];
+    global_pose.x = path.points[i].x;
+    global_pose.y = path.points[i].y;
+    global_pose.theta = path.points[i].theta;
 
     RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
 
@@ -232,7 +234,7 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     return false;
   }
 
-  node->SetDistToObs(0.0);
+  node->SetDistToObs(0.0f);
   const NodePath& path = node->GetNodePath();
 
   // The first {x, y, phi} is collision free unless they are start and end
@@ -245,19 +247,16 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     check_start_index = 1;
   }
 
-  Polygon2D global_polygon;
-  Pose2D global_pose;
-  cdl::AABB path_point_aabb;
-  Transform2d tf;
+  Pose2f global_pose;
+  Transform2f tf;
   AstarPathGear node_gear = node->GetGearType();
   AstarPathGear point_gear;
-  Polygon2D* veh_local_polygon = GetVehPolygon(node_gear);
   bool is_circle_path = IsCirclePathBySteeringWheel(node->GetSteer());
   FootPrintCircleModel* footprint_model =
       GetCircleFootPrintModel(path.points[0], is_circle_path);
 
-  double dist = 100.0;
-  double min_dist = 100.0;
+  float dist = 100.0;
+  float min_dist = 100.0;
 
   for (size_t i = check_start_index; i < node_step_size; ++i) {
     // check bound
@@ -268,15 +267,6 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
 
     global_pose = path.points[i];
     tf.SetBasePose(global_pose);
-
-    RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon, &global_pose,
-                               tf.GetCosTheta(), tf.GetSinTheta());
-
-    GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
-      // ILOG_INFO << "clear";
-      continue;
-    }
 
     if (i == node_step_size - 1) {
       point_gear = node_gear;
@@ -426,13 +416,10 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
   // configuration of search problem
   size_t check_start_index = 0;
 
-  Polygon2D global_polygon;
-  Pose2D global_pose;
+  Pose2f global_pose;
   // bool is_collision;
-  cdl::AABB path_point_aabb;
-  Transform2d tf;
+  Transform2f tf;
 
-  Polygon2D* veh_local_polygon = nullptr;
   AstarPathGear point_gear;
   bool is_circle_path;
 
@@ -459,17 +446,6 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
       global_pose.theta = segment->points[i].theta;
 
       tf.SetBasePose(global_pose);
-
-      veh_local_polygon = GetVehPolygon(segment->gear);
-
-      RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon,
-                                 &global_pose, tf.GetCosTheta(),
-                                 tf.GetSinTheta());
-
-      GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-      if (clear_zone_->IsContain(path_point_aabb)) {
-        continue;
-      }
 
       if (i == point_size - 1) {
         point_gear = segment->gear;
@@ -500,14 +476,9 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
   size_t check_start_index = 0;
-
-  Polygon2D global_polygon;
-  Pose2D global_pose;
+  Pose2f global_pose;
   // bool is_collision;
-  cdl::AABB path_point_aabb;
-  Transform2d tf;
-
-  Polygon2D* veh_local_polygon = nullptr;
+  Transform2f tf;
   AstarPathGear point_gear;
 
   for (size_t i = check_start_index; i < point_size; ++i) {
@@ -522,18 +493,6 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
     global_pose.theta = path[i].phi;
 
     tf.SetBasePose(global_pose);
-
-    veh_local_polygon = GetVehPolygon(path[i].gear);
-    // ILOG_INFO << "gear " << PathGearDebugString(segment->gear);
-
-    RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon, &global_pose,
-                               tf.GetCosTheta(), tf.GetSinTheta());
-
-    GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
-      // ILOG_INFO << "clear";
-      continue;
-    }
 
     if (i == point_size - 1) {
       point_gear = path[i].gear;
@@ -647,13 +606,9 @@ size_t NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
     return path_end_id;
   }
 
-  Polygon2D polygon;
-  Pose2D global_pose;
-
+  Pose2f global_pose;
   size_t collision_index = 100000;
-  cdl::AABB path_point_aabb;
-  Polygon2D* veh_local_polygon = nullptr;
-  Transform2d tf;
+  Transform2f tf;
 
   for (size_t i = 0; i <= path_end_id; ++i) {
     // check bound
@@ -667,15 +622,6 @@ size_t NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
     global_pose.y = result->y[i];
     global_pose.theta = result->phi[i];
     tf.SetBasePose(global_pose);
-
-    veh_local_polygon = GetVehPolygon(result->gear[i]);
-    RULocalPolygonToGlobalFast(&polygon, veh_local_polygon, &global_pose,
-                               tf.GetCosTheta(), tf.GetSinTheta());
-
-    GetBoundingBoxByPolygon(&path_point_aabb, &polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
-      continue;
-    }
 
     if (edt_->IsCollisionForPoint(
             &tf, result->gear[i],
@@ -699,13 +645,9 @@ size_t NodeCollisionDetect::GetPathCollisionIDByEDT(
     return path_end_id;
   }
 
-  Polygon2D polygon;
-  Pose2D global_pose;
-
+  Pose2f global_pose;
   size_t collision_index = 100000;
-  cdl::AABB path_point_aabb;
-  Polygon2D* veh_local_polygon = nullptr;
-  Transform2d tf;
+  Transform2f tf;
 
   for (size_t i = 0; i <= path_end_id; ++i) {
     // check bound
@@ -719,15 +661,6 @@ size_t NodeCollisionDetect::GetPathCollisionIDByEDT(
     global_pose.y = poly_path[i].y;
     global_pose.theta = poly_path[i].phi;
     tf.SetBasePose(global_pose);
-
-    veh_local_polygon = GetVehPolygon(poly_path[i].gear);
-    RULocalPolygonToGlobalFast(&polygon, veh_local_polygon, &global_pose,
-                               tf.GetCosTheta(), tf.GetSinTheta());
-
-    GetBoundingBoxByPolygon(&path_point_aabb, &polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
-      continue;
-    }
 
     if (edt_->IsCollisionForPoint(
             &tf, poly_path[i].gear,
@@ -755,9 +688,9 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
     return;
   }
 
-  Pose2D global_pose;
+  Pose2f global_pose;
   // bool is_collision = false;
-  Transform2d tf;
+  Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
 
   float min_dist = 100;
@@ -784,7 +717,7 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
 }
 
 FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
-    const Pose2D& pose, const bool is_circle_path) {
+    const Pose2f& pose, const bool is_circle_path) {
   // 60 degree
   const ParkingVehDirection& dir = request_->direction_request;
   bool inside_slot = slot_box_.contain(pose);
@@ -793,7 +726,7 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
 
   // The parking out function does not require this condition
   bool theta_close = std::fabs(IflyUnifyTheta(
-                         pose.theta - request_->goal_.theta, M_PI)) < 1.05;
+                         pose.theta - request_->goal_.theta, M_PIf32)) < 1.05f;
 
   if (inside_slot) {
     if ((need_theta_check && theta_close) || !need_theta_check) {
@@ -816,24 +749,22 @@ FootPrintCircleModel* NodeCollisionDetect::GetSlotOutsideCircleFootPrint() {
 }
 
 void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
-    const double lat_buffer_outside, const double lat_buffer_inside,
-    const double lon_buffer, const VehicleParam& vehicle_param,
+    const float lat_buffer_outside, const float lat_buffer_inside,
+    const float lon_buffer, const VehicleParam& vehicle_param,
     const PlannerOpenSpaceConfig& config) {
   if (request_->direction_request == ParkingVehDirection::HEAD_IN) {
-    slot_box_ = cdl::AABB(
-        cdl::Vector2r(0.0f, -request_->slot_width / 2),
-        cdl::Vector2r(request_->slot_length + (double )vehicle_param.length,
-                      request_->slot_width / 2));
+    slot_box_ = cdl::AABB2f(
+        Eigen::Vector2f(0.0f, -request_->slot_width / 2),
+        Eigen::Vector2f(request_->slot_length + (float)vehicle_param.length,
+                        request_->slot_width / 2));
   } else {
-    slot_box_ = cdl::AABB(
-        cdl::Vector2r(0.0f, -request_->slot_width / 2),
-        cdl::Vector2r(request_->slot_length + 1.5, request_->slot_width / 2));
+    slot_box_ = cdl::AABB2f(
+        Eigen::Vector2f(0.0f, -request_->slot_width / 2),
+        Eigen::Vector2f(request_->slot_length + 1.5, request_->slot_width / 2));
   }
 
-  slot_box_.DebugString();
-
   // gear d
-  double safe_half_width =
+  float safe_half_width =
       (vehicle_param.max_width + lat_buffer_outside * 2 + 0.1) * 0.5;
 
   GetRightUpCoordinatePolygonByParam(
@@ -877,7 +808,7 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
       .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
       .UpdateSafeBuffer(lat_buffer_inside, lon_buffer, lat_buffer_inside);
 
-  double lat_buffer =
+  float lat_buffer =
       lat_buffer_outside + config.safe_buffer.circle_path_extra_buffer_outside;
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]

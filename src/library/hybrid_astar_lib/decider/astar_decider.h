@@ -13,12 +13,12 @@ class AstarDecider {
 
   const std::string &Name() const;
 
-  virtual void Process(const Pose2D &start, const Pose2D &end);
+  virtual void Process(const Pose2f &start, const Pose2f &end);
 
  protected:
   std::string name_;
-  Pose2D start_;
-  Pose2D end_;
+  Pose2f start_;
+  Pose2f end_;
 };
 
 }  // namespace planning

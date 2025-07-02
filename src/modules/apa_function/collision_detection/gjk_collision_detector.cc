@@ -221,8 +221,7 @@ const bool GJKCollisionDetector::IsObsInCar(const geometry_lib::PathPoint& pose,
   TransformPolygonFootPrintLocalToGlobal(pose);
   bool col_flag = false;
   gjk_interface_.PolygonPointCollisionDetect(&polygon_foot_print_global_.body,
-                                             Eigen::Vector2d(obs.x(), obs.y()),
-                                             &col_flag);
+                                             obs, &col_flag);
   if (col_flag) {
     return true;
   }

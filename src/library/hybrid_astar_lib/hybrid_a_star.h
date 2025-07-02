@@ -56,9 +56,9 @@ class HybridAStar {
 
   void Init();
 
-  void UpdateCarBoxBySafeBuffer(const double lat_buffer_outside,
-                                const double lat_buffer_inside,
-                                const double lon_buffer);
+  void UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
+                                const float lat_buffer_inside,
+                                const float lon_buffer);
 
   void SetRequest(const AstarRequest& request);
 
@@ -66,18 +66,18 @@ class HybridAStar {
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
    */
-  bool AstarSearch(const Pose2D& start, const Pose2D& end,
+  bool AstarSearch(const Pose2f& start, const Pose2f& end,
                    const MapBound& XYbounds, HybridAStarResult* result);
 
-  void GetRSPathForDebug(std::vector<double >& x, std::vector<double >& y,
-                         std::vector<double >& phi);
+  void GetRSPathForDebug(std::vector<float>& x, std::vector<float>& y,
+                         std::vector<float>& phi);
 
   // for debug
   const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
 
   // for debug
-  const std::vector<ad_common::math::Vec2d>& GetQueuePathForDebug();
-  const std::vector<ad_common::math::Vec2d>& GetDelQueuePathForDebug();
+  const std::vector<Vec2f>& GetQueuePathForDebug();
+  const std::vector<Vec2f>& GetDelQueuePathForDebug();
   // for debug
   const std::vector<RSPath>& GetRSPathHeuristic();
 
@@ -95,8 +95,8 @@ class HybridAStar {
 
   // If search success, return a path linked wtih goal point;
   // todo: unify this API with AstarSearch().
-  void OneShotPathAttempt(const MapBound& XYbounds, const Pose2D& start,
-                          const Pose2D& target, HybridAStarResult* result);
+  void OneShotPathAttempt(const MapBound& XYbounds, const Pose2f& start,
+                          const Pose2f& target, HybridAStarResult* result);
 
   // debug
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
@@ -104,24 +104,24 @@ class HybridAStar {
   // todo: move sampling based method out of astar class, we can move it to
   // interface.
   bool SamplingByCubicPolyForParallelSlot(HybridAStarResult* result,
-                                          const Pose2D& start,
-                                          const Pose2D& end,
-                                          const double lon_min_sampling_length) {
+                                          const Pose2f& start,
+                                          const Pose2f& end,
+                                          const float lon_min_sampling_length) {
     return polynomial_sampling_->SamplingByCubicPolyForParallelSlot(
         result, start, end, lon_min_sampling_length);
   }
 
   // use rs path sampling to link start point and end point.
-  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2D& start,
-                            const Pose2D& end,
-                            const double lon_min_sampling_length) {
+  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2f& start,
+                            const Pose2f& end,
+                            const float lon_min_sampling_length) {
     return rs_sampling_->PlanByRSPathSampling(result, start, end,
                                               lon_min_sampling_length);
   }
 
   bool SamplingByCubicSpiralForVerticalSlot(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
-      const double lon_min_sampling_length) {
+      HybridAStarResult* result, const Pose2f& start, const Pose2f& target,
+      const float lon_min_sampling_length) {
     return spiral_sampling_->SamplingByCubicSpiralForVerticalSlot(
         result, start, target, lon_min_sampling_length);
   }
@@ -140,9 +140,9 @@ class HybridAStar {
 
   void GetSingleShotNodeHeuCost(const Node3d* father_node, Node3d* next_node);
 
-  double CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
+  float CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
 
-  double CalcRSGCostToParentNode(Node3d* current_node, Node3d* rs_node,
+  float CalcRSGCostToParentNode(Node3d* current_node, Node3d* rs_node,
                                 const RSPath* rs_path);
 
   void GetSingleShotNodeGCost(Node3d* current_node, Node3d* next_node);
@@ -152,13 +152,13 @@ class HybridAStar {
   // wheel. so car is nonholonomic.
   // for human, freedom is x,y,theta, controllable variables are x speed, y
   // speed, rotate wheel, so human is holonomic.
-  double ObstacleHeuristicWithHolonomic(Node3d* next_node);
+  float ObstacleHeuristicWithHolonomic(Node3d* next_node);
 
-  double GenerateHeuristicCost(Node3d* next_node);
+  float GenerateHeuristicCost(Node3d* next_node);
 
-  double GenerateRefLineHeuristicCost(Node3d* next_node, const double dist_to_go);
+  float GenerateRefLineHeuristicCost(Node3d* next_node, const float dist_to_go);
 
-  double GenerateHeuristicCostByRsPath(Node3d* next_node,
+  float GenerateHeuristicCostByRsPath(Node3d* next_node,
                                       NodeHeuristicCost* cost);
 
   void ResetNodePool();
@@ -175,10 +175,10 @@ class HybridAStar {
                                          const AstarPathGear gear_request_info);
 
   bool IsAllPathSegmentLongEnough(const RSPath* reeds_shepp_to_end,
-                                  const double father_node_dist);
+                                  const float father_node_dist);
 
   bool IsRsPathFirstSegmentLongEnough(const RSPath* reeds_shepp_to_end,
-                                      const double father_node_dist);
+                                      const float father_node_dist);
 
   bool RsLastSegmentSatisfyRequest(const RSPath* reeds_shepp_to_end);
 
@@ -186,49 +186,49 @@ class HybridAStar {
                        const AstarPathGear gear_request_info);
 
   // radius:left is positve
-  void KineticsModel(const Pose2D* old_pose, const double radius, Pose2D* pose,
+  void KineticsModel(const Pose2f* old_pose, const float radius, Pose2f* pose,
                      const bool is_forward);
 
   // radius:left is positve
   // arc: is always positive
-  void GetPathByBicycleModel(NodePath* path, const double arc,
-                             const double radius, const bool is_forward);
+  void GetPathByBicycleModel(NodePath* path, const float arc,
+                             const float radius, const bool is_forward);
 
-  void GetPathByLine(NodePath* path, const double arc, const bool is_forward);
+  void GetPathByLine(NodePath* path, const float arc, const bool is_forward);
 
   // if left, radius is positive
-  void GetPathByCircle(NodePath* path, const double arc, const double radius,
+  void GetPathByCircle(NodePath* path, const float arc, const float radius,
                        const bool is_forward);
 
   // dist_to_start: if forward, dist_to_start is positive
-  int GetStraightLinePoint(Pose2D* goal_state, const Pose2D* start_state,
-                           const double dist_to_start,
-                           const Pose2D* unit_vector);
+  int GetStraightLinePoint(Pose2f* goal_state, const Pose2f* start_state,
+                           const float dist_to_start,
+                           const Pose2f* unit_vector);
 
   // radius: if left turn, radius is positive
-  int GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2D* pose,
-                         const double radius, const AstarPathGear gear);
+  int GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2f* pose,
+                         const float radius, const AstarPathGear gear);
 
   // arc is positive.
   // inverse_radius is positive
-  int InterpolateByArcOffset(Pose2D* pose, const VehicleCircle* veh_circle,
-                             const Pose2D* start_pose, const double arc,
-                             const double inverse_radius);
+  int InterpolateByArcOffset(Pose2f* pose, const VehicleCircle* veh_circle,
+                             const Pose2f* start_pose, const float arc,
+                             const float inverse_radius);
 
-  void UpdatePoseByPathPointInterval(const Pose2D* old_pose, const double radius,
-                                     const double interval, Pose2D* pose,
+  void UpdatePoseByPathPointInterval(const Pose2f* old_pose, const float radius,
+                                     const float interval, Pose2f* pose,
                                      const bool is_forward);
 
-  void UpdatePoseBySamplingNumber(const Pose2D* old_pose, const double radius,
-                                  const int number, Pose2D* pose,
+  void UpdatePoseBySamplingNumber(const Pose2f* old_pose, const float radius,
+                                  const int number, Pose2f* pose,
                                   const bool is_forward);
 
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
                         const bool need_anchor_point,
                         const RSPathRequestType rs_request,
-                        const double rs_radius);
+                        const float rs_radius);
 
-  double CalcSafeDistCost(Node3d* node);
+  float CalcSafeDistCost(Node3d* node);
 
   // for debug
   void DebugLineSegment(const ad_common::math::LineSegment2d& line) const;
@@ -247,21 +247,21 @@ class HybridAStar {
   void UpdatePathS(HybridAStarResult* path);
 
   // If expect gear is drive, check ego pose.
-  const bool IsNeedGearDriveSearch(const Pose2D& start);
+  const bool IsNeedGearDriveSearch(const Pose2f& start);
 
   // If expect gear is reverse, check ego pose.
-  const bool IsNeedGearReverseSearch(const Pose2D& start);
+  const bool IsNeedGearReverseSearch(const Pose2f& start);
 
   void DebugNodeList(const std::vector<Node3d*>& node_list);
 
-  void SetSamplingTarget(const Pose2D& pose);
+  void SetSamplingTarget(const Pose2f& pose);
 
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
-  double car_half_width_;
-  double min_radius_;
-  double inv_radius_;
+  float car_half_width_;
+  float min_radius_;
+  float inv_radius_;
 
   size_t next_node_num_ = 0;
   // front wheel angle, [-pi, +pi]
@@ -272,12 +272,12 @@ class HybridAStar {
   NodeShrinkDecider node_shrink_decider_;
 
   //  front wheel angle, not steering wheel angle
-  double max_steer_angle_ = 0.0;
+  float max_steer_angle_ = 0.0;
 
-  double node_path_dist_resolution_ = 0.0;
-  double kinetics_model_step_ = 0.05;
-  double xy_grid_resolution_ = 0.0;
-  double phi_grid_resolution_ = 0.0;
+  float node_path_dist_resolution_ = 0.0;
+  float kinetics_model_step_ = 0.05;
+  float xy_grid_resolution_ = 0.0;
+  float phi_grid_resolution_ = 0.0;
 
   // search bound
   // todo: map bound is large, unify map bound and search bound.
@@ -304,7 +304,7 @@ class HybridAStar {
 
   // std::priority_queue<QueuePoint, std::vector<QueuePoint>, QueueCompare>
   //     open_pq_;
-  std::multimap<double , Node3d*> open_pq_;
+  std::multimap<float, Node3d*> open_pq_;
 
   // open set + close set
   std::unordered_map<size_t, Node3d*> node_set_;
@@ -330,8 +330,8 @@ class HybridAStar {
 
   // just for debug, display all result in hmi/plot
   std::vector<DebugAstarSearchPoint> child_node_debug_;
-  std::vector<ad_common::math::Vec2d> queue_path_debug_;
-  std::vector<ad_common::math::Vec2d> delete_queue_path_debug_;
+  std::vector<Vec2f> queue_path_debug_;
+  std::vector<Vec2f> delete_queue_path_debug_;
   std::vector<RSPath> rs_path_h_cost_debug_;
 
   // for debug

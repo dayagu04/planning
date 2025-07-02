@@ -7,13 +7,13 @@
 #include "log_glog.h"
 namespace planning {
 static const size_t max_iterations = 100;
-static const double newton_tolerance = 1e-3;
+static const float newton_tolerance = 1e-3;
 
 const bool CvtCompactStateGlobalToLocal(
     spiral_path_point_t *local_state_target,
     const spiral_path_point_t *global_state_target,
     const spiral_path_point_t *base_state_reference) {
-  double dx, dy, theta;
+  float dx, dy, theta;
 
   if (local_state_target == NULL || global_state_target == NULL ||
       base_state_reference == NULL) {
@@ -38,7 +38,7 @@ const bool CvtCompactStateLocalToGlobal(
     spiral_path_point_t *global_state_target,
     const spiral_path_point_t *local_state_target,
     const spiral_path_point_t *base_state_reference) {
-  double theta;
+  float theta;
 
   if (global_state_target == NULL || local_state_target == NULL ||
       base_state_reference == NULL) {
@@ -87,9 +87,9 @@ const bool CubicKnotsToCoefficients(coefficient_cubic_t *coefficients,
   return true;
 }
 
-const bool FThetaCubicByS(double *theta,
-                          const coefficient_cubic_t *coefficients, double s) {
-  double s2, s3, s4;
+const bool FThetaCubicByS(float *theta,
+                          const coefficient_cubic_t *coefficients, float s) {
+  float s2, s3, s4;
 
   if (coefficients == NULL || theta == NULL) {
     ILOG_ERROR << "coefficients and theta should not be NULL!";
@@ -110,9 +110,9 @@ const bool FThetaCubicByS(double *theta,
   return true;
 }
 
-const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
-                        double s) {
-  double s2, s3;
+const bool FKappaCubicS(float *kappa, const coefficient_cubic_t *coefficients,
+                        float s) {
+  float s2, s3;
 
   if (coefficients == NULL || kappa == NULL) {
     ILOG_ERROR << "coefficients and kappa should not be NULL!";
@@ -135,16 +135,16 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 // const bool SampleCubicSpiralMotionsByCoef(UOSSteerMotionList *motions,
 //                                           const coefficient_cubic_t *coeffs,
 //                                           const spiral_path_point_t *start,
-//                                           double step_length) {
+//                                           float step_length) {
 //   /* The max size for points is
 //   MAX_SPIRAL_PATH_POINT_NUM x UOS_MAX_STEER_MOTION_NUM */
 //   int32_t max_point_num, total_point_number = 0;
 //   spiral_path_point_t local_state, global_state, key_state;
-//   double delta_x = 0, delta_y = 0, delta_x1 = 0, delta_y1 = 0, theta = 0;
-//   double theta1 = 0, s = 0, last_key_s = 0;
+//   float delta_x = 0, delta_y = 0, delta_x1 = 0, delta_y1 = 0, theta = 0;
+//   float theta1 = 0, s = 0, last_key_s = 0;
 //   int32_t i, m = 0, n = 0;
 //   bool ret = false;
-//   double curvature_lower_bound, curvature_upper_bound;
+//   float curvature_lower_bound, curvature_upper_bound;
 
 //   if (motions == NULL || coeffs == NULL || start == NULL) {
 //     ILOG_ERROR << "Input pointers should not be NULL!";
@@ -173,8 +173,8 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 //     return false;
 //   }
 
-//   motions->size = (int32_t)(ceil((double)total_point_number /
-//                                  (double)MAX_SPIRAL_PATH_POINT_NUM));
+//   motions->size = (int32_t)(ceil((float)total_point_number /
+//                                  (float)MAX_SPIRAL_PATH_POINT_NUM));
 
 //   if (total_point_number <= 1) {
 //     ILOG_ERROR << "total_point_number should be greater than 1!";
@@ -288,7 +288,7 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 
 // const bool SampleCubicSpiralMotionsBySol(UOSSteerMotionList *motions,
 //                                          const solution_cubic_t *solution,
-//                                          double step_length) {
+//                                          float step_length) {
 //   bool ret = false;
 //   coefficient_cubic_t coeffs;
 
@@ -319,14 +319,14 @@ const bool FKappaCubicS(double *kappa, const coefficient_cubic_t *coefficients,
 
 const bool SampleCubicSpiralStatesByCoef(
     std::vector<spiral_path_point_t> &states, const coefficient_cubic_t *coeffs,
-    const spiral_path_point_t *start, double step_length) {
+    const spiral_path_point_t *start, float step_length) {
   int32_t total_point_number;
   spiral_path_point_t local_state, global_state;
-  double delta_x = 0, delta_y = 0, delta_x1 = 0, delta_y1 = 0, theta = 0;
-  double theta1 = 0, s = 0;
+  float delta_x = 0, delta_y = 0, delta_x1 = 0, delta_y1 = 0, theta = 0;
+  float theta1 = 0, s = 0;
   int32_t i;
   bool ret = false;
-  double curvature_lower_bound, curvature_upper_bound;
+  float curvature_lower_bound, curvature_upper_bound;
 
   if (coeffs == NULL || start == NULL) {
     ILOG_ERROR << "coeffs and start should not be NULL!";
@@ -393,7 +393,7 @@ const bool SampleCubicSpiralStatesByCoef(
 
 const bool SampleCubicSpiralStatesBySol(
     std::vector<spiral_path_point_t> &states, const solution_cubic_t *solution,
-    double step_length) {
+    float step_length) {
   bool ret = false;
   coefficient_cubic_t coeffs;
 
@@ -414,8 +414,8 @@ const bool SampleCubicSpiralStatesBySol(
   return true;
 }
 
-const bool TransformCubicSpiralCoeffs(double *a, double *b, double *c,
-                                      double *d, double shift_distance,
+const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c,
+                                      float *d, float shift_distance,
                                       const coefficient_cubic_t *coeffs) {
   if (coeffs == NULL || a == NULL || b == NULL || c == NULL || d == NULL) {
     ILOG_ERROR << "a, b, c, d and coeffs can not be NULL!";
@@ -436,8 +436,8 @@ const bool TransformCubicSpiralCoeffs(double *a, double *b, double *c,
   return true;
 }
 
-extern const bool GetCurvatureBounds(double *lower_bound, double *upper_bound) {
-  double curvature = 0.2;
+extern const bool GetCurvatureBounds(float *lower_bound, float *upper_bound) {
+  float curvature = 0.2;
   // vehicle_params_t *veh_params = get_vehicle_params();
 
   // CHECK_LOG_RET(UOS_MOD_PLANNER_BASE,
@@ -460,19 +460,19 @@ const bool CubicSpiralStrictSolve(solution_cubic_t *solution,
                                   const spiral_path_point_t *goal) {
   bool ret = false;
   // planner_base_config_t *config;
-  double diff;
+  float diff;
   int32_t i;
   spiral_path_point_t local_goal;
   /*  matrix variables for gradient descent  */
-  Eigen::Matrix<double, 3, 1> state_final;
+  Eigen::Matrix<float, 3, 1> state_final;
   /*  Jacobian matrix for the newton method */
-  Eigen::Matrix<double, 3, 3> jacobi;
+  Eigen::Matrix<float, 3, 3> jacobi;
   /*  difference between the final goal state and intermediate state */
-  Eigen::Matrix<double, 3, 1> delta_state;
+  Eigen::Matrix<float, 3, 1> delta_state;
   /*  parameter difference that represents the update step */
-  Eigen::Matrix<double, 3, 1> delta_p;
+  Eigen::Matrix<float, 3, 1> delta_p;
   /*  the intermediate state  */
-  Eigen::Matrix<double, 3, 1> state_guess;
+  Eigen::Matrix<float, 3, 1> state_guess;
   knot_cubic_t guess;
 
   if (solution == NULL || start == NULL || goal == NULL) {
@@ -543,21 +543,21 @@ const bool CubicSpiralEndkFreeSolve(solution_cubic_t *solution,
                                     const spiral_path_point_t *goal) {
   bool ret = false;
   // planner_base_config_t *config;
-  double diff;
+  float diff;
   int32_t i;
   spiral_path_point_t local_goal;
   /*  matrix variables for gradient descent  */
-  Eigen::Matrix<double, 3, 1> state_final;
+  Eigen::Matrix<float, 3, 1> state_final;
   /*  Jacobian matrix for the newton method */
-  Eigen::Matrix<double, 3, 4> jacobi;
+  Eigen::Matrix<float, 3, 4> jacobi;
   /*  difference between the final goal state and intermediate state */
-  Eigen::Matrix<double, 3, 1> delta_state;
+  Eigen::Matrix<float, 3, 1> delta_state;
   /*  parameter difference that represents the update step */
-  Eigen::Matrix<double, 4, 1> delta_p;
+  Eigen::Matrix<float, 4, 1> delta_p;
   /*  the intermediate state  */
-  Eigen::Matrix<double, 3, 1> state_guess;
+  Eigen::Matrix<float, 3, 1> state_guess;
   /* svd setup */
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(
       3, 4, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
   if (solution == NULL || start == NULL || goal == NULL) {
@@ -639,21 +639,21 @@ const bool CubicSpiralStartkFreeSolve(solution_cubic_t *solution,
                                       const spiral_path_point_t *goal) {
   bool ret = false;
   // planner_base_config_t *config;
-  double diff;
+  float diff;
   int32_t i;
   spiral_path_point_t local_goal;
   /*  matrix variables for gradient descent  */
-  Eigen::Matrix<double, 3, 1> state_final;
+  Eigen::Matrix<float, 3, 1> state_final;
   /*  Jacobian matrix for the newton method */
-  Eigen::Matrix<double, 3, 4> jacobi;
+  Eigen::Matrix<float, 3, 4> jacobi;
   /*  difference between the final goal state and intermediate state */
-  Eigen::Matrix<double, 3, 1> delta_state;
+  Eigen::Matrix<float, 3, 1> delta_state;
   /*  parameter difference that represents the update step */
-  Eigen::Matrix<double, 4, 1> delta_p;
+  Eigen::Matrix<float, 4, 1> delta_p;
   /*  the intermediate state  */
-  Eigen::Matrix<double, 3, 1> state_guess;
+  Eigen::Matrix<float, 3, 1> state_guess;
   /* svd setup */
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(
       3, 4, Eigen::ComputeThinU | Eigen::ComputeThinV);
   knot_cubic_t guess;
 
@@ -732,21 +732,21 @@ const bool CubicSpiralBothkFreeSolve(solution_cubic_t *solution,
                                      const spiral_path_point_t *start,
                                      const spiral_path_point_t *goal) {
   bool ret = false;
-  double diff;
+  float diff;
   int32_t i;
   spiral_path_point_t local_goal;
   /*  matrix variables for gradient descent  */
-  Eigen::Matrix<double, 3, 1> state_final;
+  Eigen::Matrix<float, 3, 1> state_final;
   /*  Jacobian matrix for the newton method */
-  Eigen::Matrix<double, 3, 5> jacobi;
+  Eigen::Matrix<float, 3, 5> jacobi;
   /*  difference between the final goal state and intermediate state */
-  Eigen::Matrix<double, 3, 1> delta_state;
+  Eigen::Matrix<float, 3, 1> delta_state;
   /*  parameter difference that represents the update step */
-  Eigen::Matrix<double, 5, 1> delta_p;
+  Eigen::Matrix<float, 5, 1> delta_p;
   /*  the intermediate state  */
-  Eigen::Matrix<double, 3, 1> state_guess;
+  Eigen::Matrix<float, 3, 1> state_guess;
   /* svd setup */
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(
+  Eigen::JacobiSVD<Eigen::MatrixXf> svd(
       3, 5, Eigen::ComputeThinU | Eigen::ComputeThinV);
   knot_cubic_t guess;
 
@@ -830,7 +830,7 @@ const bool CubicSpiralBothkFreeSolve(solution_cubic_t *solution,
 // const bool CubicSpiralSolve(bool *solution_usable,
 //                             uos_steer_motion_list_t *motions,
 //                             const spiral_path_point_t *start,
-//                             const spiral_path_point_t *goal, double
+//                             const spiral_path_point_t *goal, float
 //                             step_length, bool constrain_start_k, bool
 //                             constrain_goal_k) {
 //   bool ret = false;

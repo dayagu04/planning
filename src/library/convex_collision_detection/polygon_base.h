@@ -79,8 +79,7 @@ struct Polygon2D {
     }
 
     for (size_t i = 0; i < vertex_num; ++i) {
-      vertexes[i] = Position2D(static_cast<double>(vertex_vec[i].x()),
-                               static_cast<double>(vertex_vec[i].y()));
+      vertexes[i] = Position2D(vertex_vec[i].x(), vertex_vec[i].y());
     }
 
     switch (shape) {
@@ -179,10 +178,9 @@ int GetRightUpCoordinatePolygonByParam(Polygon2D *box,
 int RULocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
                            const Pose2D *global_pose);
 
-int RULocalPolygonToGlobalFast(Polygon2D *poly_global,
+void RULocalPolygonToGlobalFast(Polygon2D *poly_global,
                                const Polygon2D *poly_local,
-                               const Pose2D *global_pose, const double cos_theta,
-                               const double sin_theta);
+                               const Transform2d &tf);
 
 int GlobalPolygonToRULocal(Polygon2D *poly_local, const Polygon2D *poly_global,
                            const Pose2D *global_pose);

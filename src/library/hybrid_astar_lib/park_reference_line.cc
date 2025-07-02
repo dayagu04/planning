@@ -3,17 +3,17 @@
 
 namespace planning {
 
-void ParkReferenceLine::Process(const Pose2D &start, const Pose2D &end) {
-  ad_common::math::Vec2d line_start = ad_common::math::Vec2d(start.x, start.y);
-  ad_common::math::Vec2d line_end = ad_common::math::Vec2d(end.x, end.y);
+void ParkReferenceLine::Process(const Pose2f &start, const Pose2f &end) {
+  Vec2f line_start = Vec2f(start.x, start.y);
+  Vec2f line_end = Vec2f(end.x, end.y);
 
-  ref_line_ = ad_common::math::LineSegment2d(line_start, line_end);
+  ref_line_ = LineSegmentf32 (line_start, line_end);
 
   return;
 }
 
-void ParkReferenceLine::GetPointByDist(ad_common::math::Vec2d *point,
-                                       const double dist) {
+void ParkReferenceLine::GetPointByDist(Vec2f *point,
+                                       const float dist) {
   *point = ref_line_.start() + dist * ref_line_.unit_direction();
 
   return;

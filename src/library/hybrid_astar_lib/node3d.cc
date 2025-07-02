@@ -14,11 +14,11 @@ using ad_common::math::Box2d;
 #define DEBUG_NODE3D (0)
 #define DEBUG_NODE_HCOST (0)
 
-Node3d::Node3d(const double x, const double y, const double phi) {
+Node3d::Node3d(const float x, const float y, const float phi) {
   path_.path_dist = 0;
   path_.point_size = 1;
-  double theta = IflyUnifyTheta(phi, M_PI);
-  path_.points[0] = Pose2D(x, y, theta);
+  float theta = IflyUnifyTheta(phi, M_PIf32);
+  path_.points[0] = Pose2f(x, y, theta);
 
   visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
@@ -31,7 +31,7 @@ Node3d::Node3d(const double x, const double y, const double phi) {
   gear_switch_node_ = nullptr;
 }
 
-Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
+Node3d::Node3d(float x, float y, float phi, const MapBound& XYbounds,
                const PlannerOpenSpaceConfig& open_space_conf) {
   grid_index_.x =
       std::round((x - XYbounds.x_min) * open_space_conf.xy_grid_resolution_inv);
@@ -39,7 +39,7 @@ Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
   grid_index_.y =
       std::round((y - XYbounds.y_min) * open_space_conf.xy_grid_resolution_inv);
 
-  double theta = IflyUnifyTheta(phi, M_PI);
+  float theta = IflyUnifyTheta(phi, M_PIf32);
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
@@ -70,7 +70,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
   grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
 
-  double theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
+  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PIf32);
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
@@ -90,7 +90,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
 
 int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
                 const PlannerOpenSpaceConfig& open_space_conf,
-                const double node_path_dist) {
+                const float node_path_dist) {
   path_ = path;
   path_.path_dist = node_path_dist;
 
@@ -100,7 +100,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
 
-  double theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
+  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PIf32);
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
@@ -137,7 +137,7 @@ void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {
     path_.point_size = collision_id_;
   }
 
-  double shink_dist =
+  float shink_dist =
       path_.path_dist - conf.node_path_dist_resolution * (path_.point_size - 1);
 
   path_.path_dist -= shink_dist;
@@ -147,11 +147,11 @@ void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {
 }
 
 Box2d Node3d::GetBoundingBox(const VehicleParam& vehicle_param,
-                             const double rear_overhanging, const double x,
-                             const double y, const double phi) {
-  double ego_length = vehicle_param.length;
-  double ego_width = vehicle_param.width;
-  double shift_distance = ego_length / 2.0 - rear_overhanging;
+                             const float rear_overhanging, const float x,
+                             const float y, const float phi) {
+  float ego_length = vehicle_param.length;
+  float ego_width = vehicle_param.width;
+  float shift_distance = ego_length / 2.0 - rear_overhanging;
   Box2d ego_box(
       {x + shift_distance * std::cos(phi), y + shift_distance * std::sin(phi)},
       phi, ego_length, ego_width);
@@ -334,8 +334,8 @@ void Node3d::SetCollisionType(const NodeCollisionType type) {
   collision_type_ = type;
 }
 
-void Node3d::CoordinateToGridIndex(const double x, const double y,
-                                   const double phi, NodeGridIndex* index,
+void Node3d::CoordinateToGridIndex(const float x, const float y,
+                                   const float phi, NodeGridIndex* index,
                                    const MapBound& XYbounds,
                                    const PlannerOpenSpaceConfig& conf) {
   index->x = std::round((x - XYbounds.x_min) * conf.xy_grid_resolution_inv);
@@ -343,10 +343,10 @@ void Node3d::CoordinateToGridIndex(const double x, const double y,
   index->phi = std::round((phi - (-M_PI)) * conf.phi_grid_resolution_inv);
 }
 
-const Pose2D& Node3d::GetPose() const { return path_.GetEndPoint(); }
+const Pose2f& Node3d::GetPose() const { return path_.GetEndPoint(); }
 
-const double Node3d::GetEulerDist(const Node3d* end) const {
-  double dist;
+const float Node3d::GetEulerDist(const Node3d* end) const {
+  float dist;
 
   dist = std::pow(path_.GetEndPoint().x - end->GetX(), 2) +
          std::pow(path_.GetEndPoint().y - end->GetY(), 2);
@@ -354,10 +354,10 @@ const double Node3d::GetEulerDist(const Node3d* end) const {
   return std::sqrt(dist);
 }
 
-void Node3d::SetDistToObs(const double dist) { dist_to_obs_ = dist; }
+void Node3d::SetDistToObs(const float dist) { dist_to_obs_ = dist; }
 
-double Node3d::DistToPose(const Pose2D& pose) {
-  double dist = path_.GetEndPoint().DistanceTo(pose);
+float Node3d::DistToPose(const Pose2f& pose) {
+  float dist = path_.GetEndPoint().DistanceTo(pose);
 
   return dist;
 }

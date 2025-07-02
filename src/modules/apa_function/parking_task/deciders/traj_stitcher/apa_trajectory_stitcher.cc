@@ -27,6 +27,13 @@ void ApaTrajectoryStitcher::Execute(
     const pnc::geometry_lib::PathSegGear gear) {
   ego_lon_state_ = ego_lon_point;
   gear_ = gear;
+  stitch_path_.clear();
+  trajectory_.clear();
+
+  if (lateral_path.empty()) {
+    return;
+  }
+
   double kappa = std::tan(front_wheel_angle) / apa_param.GetParam().wheel_base;
   double sign_v = std::abs(ego_lon_point.v);
   if (gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
@@ -259,8 +266,7 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr =
-        pose.DistanceSquareTo(Eigen::Vector2d(path[i].pos[0], path[i].pos[1]));
+    dist_sqr = pose.DistanceSquareTo(path[i].pos);
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
@@ -320,8 +326,7 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   double dist_sqr;
 
   for (size_t i = 0; i < path.size(); ++i) {
-    dist_sqr = ego_pose.DistanceSquareTo(
-        Eigen::Vector2d(path[i].pos[0], path[i].pos[1]));
+    dist_sqr = ego_pose.DistanceSquareTo(path[i].pos);
 
     if (dist_sqr < dist_sqr_min + 1e-3) {
       dist_sqr_min = dist_sqr;
@@ -336,10 +341,10 @@ bool ApaTrajectoryStitcher::QueryNearestPoint(
   } else if (index_min + 1 == path.size()) {
     neighbour_id = index_min - 1;
   } else {
-    double left_neighbour_dist = ego_pose.DistanceSquareTo(Eigen::Vector2d(
-        path[index_min - 1].pos[0], path[index_min - 1].pos[1]));
-    double right_neighbour_dist = ego_pose.DistanceSquareTo(Eigen::Vector2d(
-        path[index_min + 1].pos[0], path[index_min + 1].pos[1]));
+    double left_neighbour_dist =
+        ego_pose.DistanceSquareTo(path[index_min - 1].pos);
+    double right_neighbour_dist =
+        ego_pose.DistanceSquareTo(path[index_min + 1].pos);
     if (left_neighbour_dist < right_neighbour_dist) {
       neighbour_id = index_min - 1;
     } else {

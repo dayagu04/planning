@@ -829,9 +829,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.timestamp_ms = astar_start_time;
   cur_request.slot_id = ego_info.id;
 
-  cur_request.start_ = start;
+  cur_request.start_ = Pose2f(start.x, start.y, start.theta);
   cur_request.base_pose_ = slot_base_pose;
-  cur_request.real_goal = real_end;
+  cur_request.real_goal = Pose2f(real_end.x, real_end.y, real_end.theta);
 
   cur_request.slot_width = ego_info.slot.GetWidth();
   cur_request.slot_length = ego_info.slot.GetLength();
@@ -839,7 +839,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   frame_.current_gear = current_gear_ == AstarPathGear::DRIVE
                             ? geometry_lib::SEG_GEAR_REVERSE
                             : geometry_lib::SEG_GEAR_INVALID;
-  cur_request.goal_ = end;
+  cur_request.goal_ = Pose2f(end.x, end.y, end.theta);
   FillPlanningReason(cur_request);
 
   is_path_connected_to_goal_ = false;

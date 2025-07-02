@@ -334,8 +334,7 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
         pair.second.GetPtClout2dGlobal();
 
     for (size_t j = 0; j < points.size(); j++) {
-      gjk_interface_.PolygonPointCollisionDetect(
-          car, Eigen::Vector2d(points[j][0], points[j][1]), &is_collision);
+      gjk_interface_.PolygonPointCollisionDetect(car, points[j], &is_collision);
 
       if (is_collision) {
         // ILOG_INFO << "size = " << obstacle.points.size() << " j =" << j;

@@ -184,7 +184,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
     }
   }
 
-  const std::vector<ad_common::math::Vec2d> &search_path =
+  const std::vector<Vec2f> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   search_sequence_path_.clear();
@@ -217,7 +217,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   }
 
   ILOG_INFO << "rs path copy ";
-  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
+  std::vector<std::vector<Vec2f>> path_list;
   hybrid_astar_interface_->GetRSPathHeuristic(path_list);
 
   rs_h_path_.clear();
@@ -241,10 +241,10 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   }
 
   // get astar target pose
-  const Pose2D target_local = hybrid_astar_interface_->GetAstarTargetPose();
+  const Pose2f target_local = hybrid_astar_interface_->GetAstarTargetPose();
   Pose2D global_pose;
 
-  tf.ULFLocalPoseToGlobal(&global_pose, target_local);
+  tf.ULFLocalPoseToGlobal(&global_pose, target_local.ToPose2d());
 
   astar_end_pose_[0] = global_pose.x;
   astar_end_pose_[1] = global_pose.y;
@@ -267,14 +267,16 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
   planning::Position2D global_position2d;
-  tf.ULFLocalPointToGlobal(&global_position2d, circle->pos);
+  tf.ULFLocalPointToGlobal(&global_position2d,
+                           planning::Position2D(circle->pos.x, circle->pos.y));
 
   footprint_circle_model_.push_back(Eigen::Vector3d(
       global_position2d.x, global_position2d.y, circle->radius));
 
   for (int i = 0; i < circle_footprint.size; i++) {
     circle = &circle_footprint.circles[i];
-    tf.ULFLocalPointToGlobal(&global_position2d, circle->pos);
+    tf.ULFLocalPointToGlobal(&global_position2d,
+                             planning::Position2D(circle->pos.x, circle->pos.y));
 
     footprint_circle_model_.push_back(Eigen::Vector3d(
         global_position2d.x, global_position2d.y, circle->radius));
@@ -703,14 +705,14 @@ std::vector<Eigen::Vector3d> Update(
     request.path_generate_method =
         planning::AstarPathGenerateType::ASTAR_SEARCHING;
 
-    request.start_ = Pose2D(start[0], start[1], start[2]);
+    request.start_ = Pose2f(start[0], start[1], start[2]);
     request.start_.theta =
         ad_common::math::NormalizeAngle(request.start_.theta);
 
-    request.goal_ = Pose2D(end[0], end[1], end[2]);
+    request.goal_ = Pose2f(end[0], end[1], end[2]);
     request.goal_.theta = ad_common::math::NormalizeAngle(request.goal_.theta);
 
-    request.real_goal = Pose2D(ego_slot_info.target_pose.pos[0],
+    request.real_goal = Pose2f(ego_slot_info.target_pose.pos[0],
                                ego_slot_info.target_pose.pos[1],
                                ego_slot_info.target_pose.heading);
     request.base_pose_ = Pose2D(0, 0, 0);
@@ -735,14 +737,11 @@ std::vector<Eigen::Vector3d> Update(
 
     bool is_connected_to_goal;
 
-    Pose2D start_pose = Pose2D(start[0], start[1], start[2]);
-    Pose2D end_pose = request.real_goal;
-
     RSPathInterface rs_interface;
     RSPath rs_path;
     RSPathRequestType rs_request = RSPathRequestType::NONE;
-    rs_interface.GeneSCSPath(&rs_path, &is_connected_to_goal, &start_pose,
-                             &end_pose, parking_param.min_turn_radius,
+    rs_interface.GeneSCSPath(&rs_path, &is_connected_to_goal, &request.start_,
+                             &request.real_goal, parking_param.min_turn_radius,
                              rs_request);
 
     rs_path_alone_.clear();

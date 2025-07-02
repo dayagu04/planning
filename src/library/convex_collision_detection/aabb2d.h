@@ -183,4 +183,22 @@ class CDL_EXPORT AABB {
   }
 };  // class AABB
 
+// 2-dimension:x-y, float type
+class CDL_EXPORT AABB2f {
+ public:
+  /** The min point in the AABB */
+  Eigen::Vector2f min_;
+
+  /** The max point in the AABB */
+  Eigen::Vector2f max_;
+
+  /** Creating an AABB with zero size (low bound +inf, upper bound -inf)*/
+  AABB2f();
+
+  /** Creating an AABB with two endpoints a and b */
+  AABB2f(const Eigen::Vector2f &a, const Eigen::Vector2f &b);
+
+  bool contain(const planning::Pose2f &p) const;
+};
+
 }  // namespace cdl

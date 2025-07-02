@@ -21,7 +21,7 @@ class Vec2f {
   constexpr Vec2f() noexcept : Vec2f(0, 0) {}
 
   //! Creates a unit-vector with a given angle to the positive x semi-axis
-  static Vec2f CreateUnitVec2f(const float angle);
+  static Vec2f CreateUnitVec(const float angle);
 
   //! Getter for x component
   float x() const { return x_; }

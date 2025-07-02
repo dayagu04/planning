@@ -229,4 +229,25 @@ AABB AABB::translate(const AABB &aabb, const Vector2r &t) {
   res.max_ += t;
   return res;
 }
+
+AABB2f::AABB2f()
+    : min_(Eigen::Vector2f(std::numeric_limits<float>::max(),
+                    std::numeric_limits<float>::max())),
+      max_(Eigen::Vector2f(std::numeric_limits<float>::lowest(),
+                    std::numeric_limits<float>::lowest())) {}
+
+AABB2f::AABB2f(const Eigen::Vector2f &a, const Eigen::Vector2f &b)
+    : min_(a.cwiseMin(b)), max_(a.cwiseMax(b)) {}
+
+bool AABB2f::contain(const planning::Pose2f &p) const {
+  if (min_[0] > p.x || min_[1] > p.y) {
+    return false;
+  }
+
+  if (max_[0] < p.x || max_[1] < p.y) {
+    return false;
+  }
+
+  return true;
+}
 }  // namespace cdl

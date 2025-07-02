@@ -130,13 +130,13 @@ void DebugPathString(const HybridAStarResult* result) {
 }
 
 void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
-                                    const Pose2D& real_end) {
+                                    const Pose2f& real_end) {
   if (result == nullptr || result->x.size() < 1) {
     ILOG_INFO << "no path";
     return;
   }
 
-  Eigen::Vector2d astar_end_point;
+  Eigen::Vector2f astar_end_point;
   astar_end_point[0] = result->x.back();
   astar_end_point[1] = result->y.back();
 
@@ -145,23 +145,23 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
     return;
   }
 
-  double extend_dist = real_end.DistanceTo(
-      Pose2D(astar_end_point[0], astar_end_point[1], result->phi.back()));
+  float extend_dist = real_end.DistanceTo(
+      Pose2f(astar_end_point[0], astar_end_point[1], result->phi.back()));
   if (extend_dist < 0.1) {
     return;
   }
 
-  double phi = result->phi.back();
+  float phi = result->phi.back();
   AstarPathGear gear = result->gear.back();
-  double astar_end_s = result->accumulated_s.back();
+  float astar_end_s = result->accumulated_s.back();
   AstarPathType path_type = AstarPathType::LINE_SEGMENT;
 
-  Eigen::Vector2d unit_line_vec = Eigen::Vector2d(-1.0, 0.0);
+  Eigen::Vector2f unit_line_vec = Eigen::Vector2f(-1.0, 0.0);
 
-  double s = 0.1;
-  double ds = 0.1;
+  float s = 0.1;
+  float ds = 0.1;
 
-  Eigen::Vector2d point;
+  Eigen::Vector2f point;
   while (s < extend_dist) {
     point = astar_end_point + s * unit_line_vec;
     result->x.emplace_back(point[0]);
@@ -175,10 +175,10 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
     s += ds;
   }
 
-  double x_diff = real_end.x - result->x.back();
-  double dist_diff = std::sqrt(x_diff * x_diff);
+  float x_diff = real_end.x - result->x.back();
+  float dist_diff = std::sqrt(x_diff * x_diff);
   if (dist_diff > 1e-2) {
-    double last_s = result->accumulated_s.back();
+    float last_s = result->accumulated_s.back();
 
     // add end
     result->x.emplace_back(real_end.x);

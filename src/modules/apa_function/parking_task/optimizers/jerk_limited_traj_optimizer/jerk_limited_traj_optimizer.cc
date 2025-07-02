@@ -32,6 +32,10 @@ void JerkLimitedTrajOptimizer::Execute(
     const SpeedDecisions* speed_decisions) {
   Init();
 
+  if (path.empty()) {
+    return;
+  }
+
   // sanity check
   double total_s = 0.0;
   if (path.size() > 1) {

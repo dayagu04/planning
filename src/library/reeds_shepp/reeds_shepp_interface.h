@@ -18,19 +18,19 @@ class RSPathInterface {
    * much time.
    */
   void GeneShortestRSPath(RSPath *rs_path, bool *is_connected_to_goal,
-                          const Pose2D *start, const Pose2D *end,
-                          const double min_radius, const bool need_interpolate,
+                          const Pose2f *start, const Pose2f *end,
+                          const float min_radius, const bool need_interpolate,
                           const bool need_anchor_point,
                           const RSPathRequestType request_type,
-                          const double rs_path_sample_dist = 0.1);
+                          const float rs_path_sample_dist = 0.1);
 
-  void RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
-                         const double min_radius);
+  void RSPathInterpolate(RSPath *rs_path, const Pose2f *start,
+                         const float min_radius);
 
   // just test scs path
   void GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
-                   const Pose2D *start, const Pose2D *end,
-                   const double min_radius,
+                   const Pose2f *start, const Pose2f *end,
+                   const float min_radius,
                    const RSPathRequestType request_type);
 
   const RSAnchorPoints &GetAnchorPoint() { return rs_anchor_points_; }
@@ -40,7 +40,7 @@ class RSPathInterface {
     rs_anchor_points_ = rs_path_anchor_pts;
   }
 
-  void UpdateRSPathByAnchorPoint(RSPath *rs_path, const double min_radius);
+  void UpdateRSPathByAnchorPoint(RSPath *rs_path, const float min_radius);
 
  private:
   // RSPath rs_path_;

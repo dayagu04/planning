@@ -6,7 +6,7 @@ SpiralSampling::SpiralSampling(
     const MapBound* XYbounds, const ParkObstacleList* obstacles,
     const AstarRequest* request, EulerDistanceTransform* edt,
     const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-    const PlannerOpenSpaceConfig* config, const double min_radius,
+    const PlannerOpenSpaceConfig* config, const float min_radius,
     std::shared_ptr<NodeCollisionDetect> collision_detect)
     : CurveSampling(XYbounds, obstacles, request, edt, clear_zone, ref_line,
                     config, min_radius, collision_detect) {}
@@ -18,8 +18,8 @@ SpiralSampling::SpiralSampling(
  *
  **/
 const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-                                              const Pose2D& start,
-                                              const Pose2D& end,
+                                              const Pose2f& start,
+                                              const Pose2f& end,
                                               const AstarPathGear ref_gear) {
   // ILOG_INFO << "---- generate cubic spiral path ----";
 
@@ -39,8 +39,8 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   // *
   // Reverse gear requires changing the heading of the path point
   if (ref_gear == AstarPathGear::REVERSE) {
-    start_spiral.theta = IflyUnifyTheta(start.theta + M_PI, M_PI);
-    goal_spiral.theta = IflyUnifyTheta(goal_spiral.theta + M_PI, M_PI);
+    start_spiral.theta = IflyUnifyTheta(start.theta + M_PIf32, M_PIf32);
+    goal_spiral.theta = IflyUnifyTheta(goal_spiral.theta + M_PIf32, M_PIf32);
   }
 
   // ILOG_INFO << "start_spiral ( " << start_spiral.x << ", " << start_spiral.y
@@ -49,7 +49,7 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   //           << ", " << goal_spiral.theta << " ) ";
   bool constrain_start_k = true;
   bool constrain_goal_k = true;
-  const double spiral_step_length = 0.1;
+  const float spiral_step_length = 0.1;
   std::vector<AStarPathPoint> cubic_spiral_path;
   cubic_spiral_path.reserve(MAX_SPIRAL_PATH_POINT_NUM);
 
@@ -67,7 +67,7 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   }
 
   AStarPathPoint point;
-  double accumulated_s = 0.0;
+  float accumulated_s = 0.0;
   path.clear();
 
   for (auto& state : states) {
@@ -92,8 +92,8 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
 }
 
 bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const double lon_min_sampling_length) {
+    HybridAStarResult* result, const Pose2f& start, const Pose2f& end,
+    const float lon_min_sampling_length) {
   // double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, by cubic spiral";
 
@@ -108,13 +108,13 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
   // sampling for path end
   // sampling start point: move start point forward dist
   // (lon_min_sampling_length)
-  Pose2D sampling_start = start;
-  Pose2D sampling_end;
+  Pose2f sampling_start = start;
+  Pose2f sampling_end;
   sampling_end.y = 0.0;
   sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
 
-  const double sampling_step = 0.1;
+  const float sampling_step = 0.1;
   size_t max_sampling_num = 50;
 
   // ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
@@ -150,9 +150,9 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     //           << ",sampling_end.y " << sampling_end.y << ",last_state.theta"
     //           << last_state.phi << ", sampling_end.theta "
     //           << sampling_end.theta;
-    double end_point_error_x = last_state.x - sampling_end.x;
-    double end_point_error_y = last_state.y - sampling_end.y;
-    double end_point_error_theta = last_state.phi - sampling_end.theta;
+    float end_point_error_x = last_state.x - sampling_end.x;
+    float end_point_error_y = last_state.y - sampling_end.y;
+    float end_point_error_theta = last_state.phi - sampling_end.theta;
 
     if (std::fabs(end_point_error_x) >= 1e-2 ||
         std::fabs(end_point_error_y) >= 1e-2) {
@@ -209,7 +209,7 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     return false;
   }
 
-  double valid_dist = 0.0;
+  float valid_dist = 0.0;
   if (path_points_size > 0) {
     valid_dist = path.accumulated_s[path_points_size - 1];
   }

@@ -250,9 +250,9 @@ int GetPathFromHybridAstar() {
 
   // ILOG_INFO << "rs path size " << rs_path_.size();
 
-  const Pose2D target_local = thread_solver_->GetAstarTargetPose();
+  const Pose2f target_local = thread_solver_->GetAstarTargetPose();
 
-  tf.ULFLocalPoseToGlobal(&global_position, target_local);
+  tf.ULFLocalPoseToGlobal(&global_position, target_local.ToPose2d());
 
   astar_end_pose_[0] = global_position.x;
   astar_end_pose_[1] = global_position.y;
@@ -280,7 +280,7 @@ int GetPathFromHybridAstar() {
   ILOG_INFO << "pybind node size " << real_time_node_list_.size();
 
   static_rs_path_list_.clear();
-  std::vector<std::vector<ad_common::math::Vec2d>> path_list;
+  std::vector<std::vector<Vec2f>> path_list;
   thread_solver_->GetRSPathHeuristicInThread(path_list);
 
   for (i = 0; i < path_list.size(); i++) {
@@ -297,7 +297,7 @@ int GetPathFromHybridAstar() {
     static_rs_path_list_.emplace_back(path);
   }
 
-  std::vector<ad_common::math::Vec2d> rs_path;
+  std::vector<Vec2f> rs_path;
   thread_solver_->GetRSPathLinkInThread(rs_path);
   std::vector<Eigen::Vector2d> tmp_path;
   for (size_t j = 0; j < rs_path.size(); j++) {
@@ -320,7 +320,7 @@ int GetPathFromHybridAstar() {
   static_ref_line_.clear();
 
   // start
-  ad_common::math::Vec2d point;
+  Vec2f point;
   ref_line.GetPointByDist(&point, -5.0);
   local_position.x = point.x();
   local_position.y = point.y();
@@ -344,7 +344,7 @@ int GetPathFromHybridAstar() {
 
   // 为了调试搜索过程，plot it
   search_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &search_path =
+  const std::vector<Vec2f> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
   for (i = 0; i < search_path.size(); i++) {
@@ -358,7 +358,7 @@ int GetPathFromHybridAstar() {
   ILOG_INFO << "search_path size = " << search_path.size();
 
   deletenode_sequence_path_.clear();
-  const std::vector<ad_common::math::Vec2d> &delnode_path =
+  const std::vector<Vec2f> &delnode_path =
       hybrid_astar_interface_->GetDelNodeQueueNode();
 
   for (i = 0; i < delnode_path.size(); i++) {

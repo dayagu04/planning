@@ -18,12 +18,12 @@ class CurveSampling {
                 const AstarRequest* request, EulerDistanceTransform* edt,
                 const ObstacleClearZone* clear_zone,
                 ParkReferenceLine* ref_line,
-                const PlannerOpenSpaceConfig* config, const double min_radius,
+                const PlannerOpenSpaceConfig* config, const float min_radius,
                 std::shared_ptr<NodeCollisionDetect> collision_detect);
 
   virtual ~CurveSampling() = default;
 
-  void SetSearchGoal(const Pose2D& search_goal) {
+  void SetSearchGoal(const Pose2f& search_goal) {
     search_goal_ = search_goal;
     // search_goal_.DebugString();
     return;
@@ -44,11 +44,11 @@ class CurveSampling {
   const AstarRequest *request_;
 
   const PlannerOpenSpaceConfig* config_;
-  double min_radius_;
+  float min_radius_;
   std::shared_ptr<NodeCollisionDetect> collision_detect_;
 
   // target pose for astar search.
-  Pose2D search_goal_;
+  Pose2f search_goal_;
 };
 
 }  // namespace planning

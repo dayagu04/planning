@@ -11,7 +11,7 @@ RSSampling::RSSampling(const MapBound* XYbounds,
                        const ObstacleClearZone* clear_zone,
                        ParkReferenceLine* ref_line,
                        const PlannerOpenSpaceConfig* config,
-                       const double min_radius,
+                       const float min_radius,
                        std::shared_ptr<NodeCollisionDetect> collision_detect)
     : CurveSampling(XYbounds, obstacles, request, edt, clear_zone, ref_line,
                     config, min_radius, collision_detect) {}
@@ -61,11 +61,11 @@ void RSSampling::PathTransformByRSPath(const RSPath& rs_path,
   }
 
   // get path lengh
-  double accumulated_s = 0.0;
+  float accumulated_s = 0.0;
   auto last_x = result->x.front();
   auto last_y = result->y.front();
-  double x_diff;
-  double y_diff;
+  float x_diff;
+  float y_diff;
 
   for (size_t i = 0; i < result->x.size(); ++i) {
     x_diff = result->x[i] - last_x;
@@ -81,27 +81,27 @@ void RSSampling::PathTransformByRSPath(const RSPath& rs_path,
 }
 
 void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
-                                         const Pose2D& start, const Pose2D& end,
-                                         const double lon_min_sampling_length,
-                                         const double radius) {
+                                         const Pose2f& start, const Pose2f& end,
+                                         const float lon_min_sampling_length,
+                                         const float radius) {
   bool is_connected_to_goal;
   RSPathRequestType rs_request = RSPathRequestType::NONE;
 
   // sampling for path end
   // sampling start point: move start point forward dist
   // (lon_min_sampling_length)
-  Pose2D sampling_end = start;
+  Pose2f sampling_end = start;
   sampling_end.y = 0.0;
   sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
 
-  double sampling_step = 0.2;
-  double sampling_range = end.x - sampling_end.x;
+  float sampling_step = 0.2;
+  float sampling_range = end.x - sampling_end.x;
   size_t max_sampling_num = 0;
   if (sampling_range > 0.0) {
     max_sampling_num = std::ceil(sampling_range / sampling_step);
   }
-  double sampling_radius = radius;
+  float sampling_radius = radius;
 
   result->Clear();
   HybridAStarResult path;
@@ -171,7 +171,7 @@ void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
 
   best_path_valid_point_size =
       std::min(best_path_valid_point_size, best_path.x.size());
-  double valid_dist = 0.0;
+  float valid_dist = 0.0;
   if (best_path_valid_point_size > 0) {
     valid_dist = best_path.accumulated_s.back();
   }
@@ -199,9 +199,9 @@ void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
   return;
 }
 
-bool RSSampling::PlanByRSPathSampling(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const double lon_min_sampling_length) {
+bool RSSampling::PlanByRSPathSampling(HybridAStarResult* result,
+                                      const Pose2f& start, const Pose2f& end,
+                                      const float lon_min_sampling_length) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -211,14 +211,14 @@ bool RSSampling::PlanByRSPathSampling(
   result->Clear();
   std::vector<HybridAStarResult> candidates;
 
-  double max_radius = 85.0;
-  double min_radius = 8.0;
-  double radius_step = 5.0;
+  float max_radius = 85.0;
+  float min_radius = 8.0;
+  float radius_step = 5.0;
 
   int sampline_numer = std::ceil((max_radius - min_radius) / radius_step);
   HybridAStarResult path;
 
-  double radius = max_radius;
+  float radius = max_radius;
   for (int i = 0; i < sampline_numer; i++) {
     radius -= radius_step;
     radius = std::max(radius, min_radius);
@@ -246,7 +246,7 @@ bool RSSampling::PlanByRSPathSampling(
   // compare path candidates
   if (candidates.size() > 0) {
     size_t best_id = 0;
-    double best_length = 0.0;
+    float best_length = 0.0;
     for (size_t i = 0; i < candidates.size(); i++) {
       HybridAStarResult& tmp_path = candidates[i];
       if (tmp_path.accumulated_s.size() > 1 &&
@@ -274,7 +274,7 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
     return false;
   }
 
-  double x_diff = current_node->GetX() - request_->real_goal.GetX();
+  float x_diff = current_node->GetX() - request_->real_goal.GetX();
   if (x_diff < 0.2) {
     return false;
   }
@@ -283,30 +283,30 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
     return false;
   }
 
-  double heading_diff = IflyUnifyTheta(current_node->GetPhi(), M_PI) -
-                       IflyUnifyTheta(search_goal_.GetPhi(), M_PI);
-  heading_diff = IflyUnifyTheta(heading_diff, M_PI);
+  float heading_diff = IflyUnifyTheta(current_node->GetPhi(), M_PIf32) -
+                       IflyUnifyTheta(search_goal_.GetPhi(), M_PIf32);
+  heading_diff = IflyUnifyTheta(heading_diff, M_PIf32);
   if (heading_diff > ifly_deg2rad(60.0) || heading_diff < ifly_deg2rad(-60.0)) {
     return false;
   }
 
   // init
   rs_node_to_goal->Clear();
-  double min_straight_dist = 0.7;
+  float min_straight_dist = 0.7;
   if (request_->direction_request == ParkingVehDirection::TAIL_IN) {
     min_straight_dist = 0.7;
   } else if (request_->direction_request == ParkingVehDirection::HEAD_IN) {
     min_straight_dist = 0.3;
   }
 
-  double sample_range =
+  float sample_range =
       search_goal_.GetX() - (request_->real_goal.GetX() + min_straight_dist);
   int sampline_numer = std::ceil(sample_range / 0.1);
   sampline_numer = std::max(1, sampline_numer);
   bool valid_path = false;
   bool is_connected_to_goal = false;
 
-  Pose2D end_pose = search_goal_;
+  Pose2f end_pose = search_goal_;
   end_pose.x += 0.1;
 
   for (int q = 0; q < sampline_numer; q++) {
@@ -322,7 +322,6 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
 
     // check gear
     if (!IsExpectedGearForRsPath(rs_path_)) {
-
       continue;
     }
 
@@ -350,7 +349,7 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
 
   node_path.points[0].x = rs_end_point.x;
   node_path.points[0].y = rs_end_point.y;
-  node_path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PI);
+  node_path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
 
   rs_node_to_goal->Set(node_path, *XYbounds_, *config_, node_path.path_dist);
 

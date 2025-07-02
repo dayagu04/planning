@@ -71,7 +71,7 @@ const bool IsNeedZigZagPathToAdjustPose(const AstarRequest &request) {
     }
   }
 
-  double theta_error = request.start_.theta - request.real_goal.theta;
+  float theta_error = request.start_.theta - request.real_goal.theta;
   theta_error = ad_common::math::NormalizeAngle(theta_error);
   if (std::fabs(request.start_.y) < 2.0 &&
       std::fabs(theta_error) < ifly_deg2rad(10.0)) {

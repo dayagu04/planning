@@ -21,7 +21,7 @@ namespace planning {
 // x86, opencv version:3.2.0
 // todo
 
-void EulerDistanceTransform::Process(const Pose2D &ogm_pose,
+void EulerDistanceTransform::Process(const Pose2f &ogm_pose,
                                      const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
@@ -36,7 +36,7 @@ void EulerDistanceTransform::Process(const OccupancyGridBound &bound,
 }
 
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
-                                    const Pose2D &ogm_pose,
+                                    const Pose2f &ogm_pose,
                                     const float _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
@@ -133,7 +133,7 @@ void EulerDistanceTransform::CopyEDT(const EDTData &data) {
 }
 
 const bool EulerDistanceTransform::DistanceCheckForPoint(
-    float *min_dist, Transform2d *tf, const AstarPathGear gear) {
+    float *min_dist, Transform2f *tf, const AstarPathGear gear) {
   OgmIndex index;
 
   FootPrintCircle *circle;
@@ -235,15 +235,14 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
       break;
   }
 
-  const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
-
-  Transform2d tf(pose_2d);
+  const Pose2f pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
+  Transform2f tf(pose_2d);
 
   return DistanceCheckForPoint(min_dist, &tf, path_gear);
 }
 
 const bool EulerDistanceTransform::IsCollisionForPoint(
-    Transform2d *tf, const AstarPathGear gear,
+    Transform2f *tf, const AstarPathGear gear,
     FootPrintCircleModel *footprint_model) {
   FootPrintCircle *circle;
   FootPrintCircleList *global_circles =
@@ -310,7 +309,7 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
 }
 
 const bool EulerDistanceTransform::IsCollisionForPoint(
-    Transform2d *tf, const AstarPathGear gear) {
+    Transform2f *tf, const AstarPathGear gear) {
   return IsCollisionForPoint(tf, gear, &footprint_model_);
 }
 
@@ -320,9 +319,8 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
                                       ? AstarPathGear::DRIVE
                                       : AstarPathGear::REVERSE;
 
-  const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
-
-  Transform2d tf(pose_2d);
+  const Pose2f pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
+  Transform2f tf(pose_2d);
 
   return IsCollisionForPoint(&tf, path_gear);
 }

@@ -164,7 +164,7 @@ void EdtManager::AddPointClouds(
     Pose2D local;
     ego_base.GlobalPointToULFLocal(
         &local, Pose2D(point_clouds[i].x(), point_clouds[i].y(), 0));
-    ogm_.AddSlotCoordinatePoint(Position2D(local.x, local.y));
+    ogm_.AddSlotCoordinatePoint(Position2f(local.x, local.y));
   }
 }
 

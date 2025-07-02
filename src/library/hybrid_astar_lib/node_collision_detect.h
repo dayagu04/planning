@@ -26,9 +26,9 @@ class NodeCollisionDetect {
 
   ~NodeCollisionDetect() = default;
 
-  void UpdateFootPrintBySafeBuffer(const double lat_buffer_outside,
-                                   const double lat_buffer_inside,
-                                   const double lon_buffer,
+  void UpdateFootPrintBySafeBuffer(const float lat_buffer_outside,
+                                   const float lat_buffer_inside,
+                                   const float lon_buffer,
                                    const VehicleParam& vehicle_param,
                                    const PlannerOpenSpaceConfig& config);
 
@@ -63,16 +63,16 @@ class NodeCollisionDetect {
 
   void DebugEDTCheck(HybridAStarResult* path);
 
-  const bool IsPointBeyondBound(const double x, const double y) const;
+  const bool IsPointBeyondBound(const float x, const float y) const;
 
   // debug
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
  private:
-  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose,
+  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2f& pose,
                                                 const bool is_circle_path);
 
-  inline const bool IsCirclePathBySteeringWheel(const double front_wheel_angle) {
+  inline const bool IsCirclePathBySteeringWheel(const float front_wheel_angle) {
     if (front_wheel_angle > 0.2f || front_wheel_angle < -0.2f) {
       return true;
     }
@@ -80,7 +80,7 @@ class NodeCollisionDetect {
     return false;
   }
 
-  inline const bool IsCirclePathByKappa(const double kappa) {
+  inline const bool IsCirclePathByKappa(const float kappa) {
     if (kappa > 0.067f || kappa < -0.067f) {
       return true;
     }
@@ -106,7 +106,7 @@ class NodeCollisionDetect {
   HierarchyBufferCircleFootPrint hierachy_circle_model_;
 
   // 用于区分库内库外
-  cdl::AABB slot_box_;
+  cdl::AABB2f slot_box_;
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;

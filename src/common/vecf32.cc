@@ -6,7 +6,7 @@
 
 namespace planning {
 
-Vec2f Vec2f::CreateUnitVec2f(const float angle) {
+Vec2f Vec2f::CreateUnitVec(const float angle) {
   return Vec2f(cos(angle), sin(angle));
 }
 

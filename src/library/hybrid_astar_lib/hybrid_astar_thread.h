@@ -35,10 +35,10 @@ class HybridAStarThreadSolver {
 
   ~HybridAStarThreadSolver();
 
-  int Init(const double back_edge_to_rear_axis, const double car_length,
-           const double car_width, const double steer_ratio,
-           const double wheel_base, const double min_turn_radius,
-           const double mirror_width);
+  int Init(const float back_edge_to_rear_axis, const float car_length,
+           const float car_width, const float steer_ratio,
+           const float wheel_base, const float min_turn_radius,
+           const float mirror_width);
 
   void SetRequest(const ParkObstacleList& obs_list,
                   const AstarRequest& request);
@@ -78,14 +78,14 @@ class HybridAStarThreadSolver {
   // get result api
   // const int PublishSearchPath(HybridAStarResult* result,
   //                             std::vector<AStarPathPoint>& first_seg_path,
-  //                             Pose2D* base_pose);
+  //                             Pose2f* base_pose);
 
   // for debug
   const void GetFullLengthPathInThread(HybridAStarResult* result,
                                        Pose2D* base_pose);
 
   // for debug
-  const Pose2D GetAstarTargetPose();
+  const Pose2f GetAstarTargetPose();
 
   // for debug
   void GetNodeListMessageInThread(
@@ -93,10 +93,10 @@ class HybridAStarThreadSolver {
 
   // for debug
   void GetRSPathHeuristicInThread(
-      std::vector<std::vector<ad_common::math::Vec2d>>& path_list);
+      std::vector<std::vector<Vec2f>>& path_list);
 
   // for debug
-  void GetRSPathLinkInThread(std::vector<ad_common::math::Vec2d>& path);
+  void GetRSPathLinkInThread(std::vector<Vec2f>& path);
 
   // for debug
   void GetRefLine(ParkReferenceLine* ref_line);
@@ -124,7 +124,7 @@ class HybridAStarThreadSolver {
   // for debug
   std::vector<std::vector<Eigen::Vector2d>> all_child_node_list_;
   // for debug
-  std::vector<std::vector<ad_common::math::Vec2d>> rs_path_list_;
+  std::vector<std::vector<Vec2f>> rs_path_list_;
   // for debug
   std::shared_ptr<HybridAStarInterface> solver_interface_;
 };

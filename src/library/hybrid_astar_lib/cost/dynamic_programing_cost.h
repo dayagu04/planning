@@ -62,16 +62,16 @@ class GridSearch {
 
   ~GridSearch() = default;
 
-  bool GenerateDpMap(const double ex, const double ey, const MapBound& XYbounds,
+  bool GenerateDpMap(const float ex, const float ey, const MapBound& XYbounds,
                      const ParkObstacleList* obstacles);
 
-  double CheckDpMap(const double sx, const double sy);
+  float CheckDpMap(const float sx, const float sy);
 
   void Init(const PlannerOpenSpaceConfig& open_space_conf);
 
  private:
-  double EuclidDistance(const double x1, const double y1, const double x2,
-                        const double y2);
+  float EuclidDistance(const float x1, const float y1, const float x2,
+                        const float y2);
 
   void GenerateNextNodes(Node2dChildSet* next_nodes, Node2d* node);
 
@@ -79,11 +79,11 @@ class GridSearch {
 
   int32_t GenerateGlobalId();
 
-  const bool IsPointInMapBound(const double x, const double y);
+  const bool IsPointInMapBound(const float x, const float y);
 
   void ResetNodePool();
 
-  double GetNodeGCost(const size_t x_id, const size_t y_id) {
+  float GetNodeGCost(const size_t x_id, const size_t y_id) {
     return node_pool_[x_id][y_id].GetCost();
   }
 
@@ -99,13 +99,13 @@ class GridSearch {
 
   void ProjectObstacleToNodeMap();
 
-  bool NodePositionValid(const double x, const double y);
+  bool NodePositionValid(const float x, const float y);
 
  private:
-  double heuristic_grid_resolution_ = 0.0;
-  double inv_xy_resolution_ = 0.0;
-  double xy_grid_resolution_half_ = 0.0;
-  double safe_width_ = 0.0;
+  float heuristic_grid_resolution_ = 0.0;
+  float inv_xy_resolution_ = 0.0;
+  float xy_grid_resolution_half_ = 0.0;
+  float safe_width_ = 0.0;
 
   MapBound XYbounds_;
 

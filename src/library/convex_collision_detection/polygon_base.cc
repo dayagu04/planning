@@ -487,26 +487,21 @@ void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
   return;
 }
 
-int RULocalPolygonToGlobalFast(Polygon2D *poly_global,
+void RULocalPolygonToGlobalFast(Polygon2D *poly_global,
                                const Polygon2D *poly_local,
-                               const Pose2D *global_pose,
-                               const double cos_theta, const double sin_theta) {
-  int32_t i;
-
-  for (i = 0; i < poly_local->vertex_num; i++) {
-    CvtPosLocalToGlobalFast(&poly_global->vertexes[i], &poly_local->vertexes[i],
-                            global_pose, sin_theta, cos_theta);
+                               const Transform2d &tf) {
+  for (int i = 0; i < poly_local->vertex_num; i++) {
+    tf.RUFLocalPoseToGlobal(&poly_global->vertexes[i],
+                             poly_local->vertexes[i]);
   }
 
   poly_global->vertex_num = poly_local->vertex_num;
   poly_global->radius = poly_local->radius;
   poly_global->min_tangent_radius = poly_local->min_tangent_radius;
   poly_global->shape = poly_local->shape;
+  tf.RUFLocalPoseToGlobal(&poly_global->center_pt, poly_local->center_pt);
 
-  CvtPosLocalToGlobalFast(&poly_global->center_pt, &poly_local->center_pt,
-                          global_pose, sin_theta, cos_theta);
-
-  return 1;
+  return;
 }
 
 int GlobalPolygonToRULocal(Polygon2D *poly_local, const Polygon2D *poly_global,

@@ -18,7 +18,7 @@ class OccupancyGridMap : public OccupancyGridCoordinate {
 
   void Clear();
 
-  void Process(const Pose2D &ogm_pose,
+  void Process(const Pose2f &ogm_pose,
                const float _ogm_resolution = ogm_resolution) override;
 
   void Process(const OccupancyGridBound &bound,
@@ -27,7 +27,7 @@ class OccupancyGridMap : public OccupancyGridCoordinate {
   template <typename T>
   void AddSlotPoint(const T &point);
 
-  void AddSlotCoordinatePoint(const Position2D &points);
+  void AddSlotCoordinatePoint(const Position2f &points);
 
   void AddSlotCoordinatePoints(const std::vector<Position2D> &point);
 

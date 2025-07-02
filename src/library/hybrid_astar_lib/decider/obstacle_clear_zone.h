@@ -12,7 +12,7 @@ class ObstacleClearZone {
  public:
   ObstacleClearZone() = default;
 
-  bool GenerateBoundingBox(const Pose2D& start,
+  bool GenerateBoundingBox(const Pose2f& start,
                            const ParkObstacleList* obstacles);
 
   const bool IsContain(const cdl::AABB& box) const;
