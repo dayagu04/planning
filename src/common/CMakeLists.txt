@@ -10,12 +10,6 @@ else()
   message("UNENABLE_NANO_LOG")
 endif()
 
-# t26,s811
-if (ADAPTER STREQUAL "cyber")
-  add_definitions(-DIFLY_LOG_PATH)
-  message("cyber config")
-endif()
-
 file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
