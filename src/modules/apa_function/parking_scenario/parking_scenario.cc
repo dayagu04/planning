@@ -614,7 +614,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
-  if (complete_path_point_global_vec_.empty()) {
+  if (current_path_point_global_vec_.empty()) {
     return;
   }
 
