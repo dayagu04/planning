@@ -263,8 +263,8 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
     slot.release_info_.release_state[RULE_BASED_RELEASE] =
         SlotReleaseState::RELEASE;
-
     release_slot_count++;
+    ILOG_INFO << "RULE_BASED_RELEASE !";
   }
 
   ILOG_INFO << "apa lot cruise consume time = "
@@ -571,7 +571,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
 
   bool is_slot_occupied = true;
   const double lat_buffer = 0.1;
-  const double lon_buffer = 0.3;
+  const double lon_buffer = 0.25;
 
   for (const double lat_move_dist : lat_mov_dist_vec) {
     for (const double lon_move_dist : lon_mov_dist_vec) {
@@ -600,7 +600,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   if (is_slot_occupied) {
     return SlotReleaseVoterType::CLEAR;
   }
-  return SlotReleaseVoterType::ACCUMULATE;
+  return SlotReleaseVoterType::MAXIMUM;
 }
 
 const std::string GetSlotReleaseVoterTypeString(
