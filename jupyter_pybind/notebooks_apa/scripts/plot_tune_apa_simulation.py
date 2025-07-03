@@ -565,6 +565,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     elif not isinstance(plan_traj_lat_buffer_vec, str):
       plan_path_lat_buffer_list = plan_traj_lat_buffer_vec
 
+    plan_path_x_list, plan_path_y_list, plan_path_heading_list, plan_path_lat_buffer_list = [], [], [], []
     for i in range(len(tuned_planning_debug_info.complete_path_points)):
       plan_path_x_list.append(tuned_planning_debug_info.complete_path_points[i].x)
       plan_path_y_list.append(tuned_planning_debug_info.complete_path_points[i].y)
