@@ -50,7 +50,7 @@ bool ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
   max_box.min_[1] = start.y - max_y_extend;
   max_box.max_[1] = start.y + max_y_extend;
 
-  max_box.DebugString();
+  // max_box.DebugString();
 
   size_t max_x_number = std::ceil(max_x_extend / step);
   size_t max_y_number = std::ceil(max_y_extend / step);
@@ -178,7 +178,7 @@ bool ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
 
   box_ = tmp;
 
-  box_.DebugString();
+  // box_.DebugString();
 
   return true;
 }

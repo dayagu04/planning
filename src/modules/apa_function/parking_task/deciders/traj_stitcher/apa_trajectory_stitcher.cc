@@ -16,7 +16,7 @@
 namespace planning {
 namespace apa_planner {
 
-#define DEBUG_TASK (1)
+#define DEBUG_TASK (0)
 
 void ApaTrajectoryStitcher::Execute(
     const Pose2D& ego_pose,
@@ -579,9 +579,11 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     trajectory_.ExtendTraj(0.1);
   }
 
+#if DEBUG_TASK
   ILOG_INFO << "is overshoot = " << is_overshoot << ", gear = " << is_forward
             << ", traj back s = " << trajectory_.back().s()
             << ", speed back s = " << speed_profile.back().s;
+#endif
 
   return;
 }
