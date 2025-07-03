@@ -23,7 +23,7 @@ class CurveSampling {
 
   virtual ~CurveSampling() = default;
 
-  void SetSearchGoal(const Pose2D& search_goal) {
+  void SetSearchGoal(const Pose2f& search_goal) {
     search_goal_ = search_goal;
     // search_goal_.DebugString();
     return;
@@ -48,7 +48,7 @@ class CurveSampling {
   std::shared_ptr<NodeCollisionDetect> collision_detect_;
 
   // target pose for astar search.
-  Pose2D search_goal_;
+  Pose2f search_goal_;
 };
 
 }  // namespace planning

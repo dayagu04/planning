@@ -22,7 +22,7 @@ class RSSampling : public CurveSampling {
 
   // use rs path sampling to link start point and end point.
   bool PlanByRSPathSampling(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+      HybridAStarResult* result, const Pose2f& start, const Pose2f& end,
       const float lon_min_sampling_length);
 
   bool SamplingByRSPath(Node3d* current_node, Node3d* polynomial_node);
@@ -30,8 +30,8 @@ class RSSampling : public CurveSampling {
   const RSPath& GetConstRsPath() const { return rs_path_; }
 
  private:
-  void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2D& start,
-                               const Pose2D& end,
+  void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2f& start,
+                               const Pose2f& end,
                                const float lon_min_sampling_length,
                                const float radius);
 

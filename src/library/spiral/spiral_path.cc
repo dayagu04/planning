@@ -542,7 +542,6 @@ const bool CubicSpiralEndkFreeSolve(solution_cubic_t *solution,
                                     const spiral_path_point_t *start,
                                     const spiral_path_point_t *goal) {
   bool ret = false;
-  ;
   // planner_base_config_t *config;
   float diff;
   int32_t i;
@@ -639,7 +638,6 @@ const bool CubicSpiralStartkFreeSolve(solution_cubic_t *solution,
                                       const spiral_path_point_t *start,
                                       const spiral_path_point_t *goal) {
   bool ret = false;
-  ;
   // planner_base_config_t *config;
   float diff;
   int32_t i;
@@ -734,8 +732,6 @@ const bool CubicSpiralBothkFreeSolve(solution_cubic_t *solution,
                                      const spiral_path_point_t *start,
                                      const spiral_path_point_t *goal) {
   bool ret = false;
-  ;
-  // planner_base_config_t *config;
   float diff;
   int32_t i;
   spiral_path_point_t local_goal;

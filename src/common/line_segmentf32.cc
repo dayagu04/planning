@@ -18,18 +18,18 @@ bool IsWithin(float val, float bound1, float bound2) {
 
 
 LineSegmentf32::LineSegmentf32() {
-  unit_direction_ = Vec2df32(1, 0);
+  unit_direction_ = Vec2f(1, 0);
   InitMaxMin();
 }
 
-LineSegmentf32::LineSegmentf32(const Vec2df32 &start, const Vec2df32 &end)
+LineSegmentf32::LineSegmentf32(const Vec2f &start, const Vec2f &end)
     : start_(start), end_(end) {
   const float dx = end_.x() - start_.x();
   const float dy = end_.y() - start_.y();
   length_ = hypot(dx, dy);
   unit_direction_ =
-      (length_ <= kMathEpsilon32 ? Vec2df32(0, 0)
-                               : Vec2df32(dx / length_, dy / length_));
+      (length_ <= kMathEpsilon32 ? Vec2f(0, 0)
+                               : Vec2f(dx / length_, dy / length_));
   heading_ = unit_direction_.Angle();
 
   line_a_ = (end.y() - start.y());
@@ -52,7 +52,7 @@ float LineSegmentf32::length() const { return length_; }
 
 float LineSegmentf32::length_sqr() const { return length_ * length_; }
 
-float LineSegmentf32::RawDistanceTo(const Vec2df32 &point) const {
+float LineSegmentf32::RawDistanceTo(const Vec2f &point) const {
   if (length_ <= kMathEpsilon32) {
     return point.DistanceTo(start_);
   }
@@ -62,7 +62,7 @@ float LineSegmentf32::RawDistanceTo(const Vec2df32 &point) const {
   return x0 * unit_direction_.y() - y0 * unit_direction_.x();
 }
 
-float LineSegmentf32::DistanceTo(const Vec2df32 &point) const {
+float LineSegmentf32::DistanceTo(const Vec2f &point) const {
   if (length_ <= kMathEpsilon32) {
     return point.DistanceTo(start_);
   }
@@ -78,8 +78,8 @@ float LineSegmentf32::DistanceTo(const Vec2df32 &point) const {
   return std::abs(x0 * unit_direction_.y() - y0 * unit_direction_.x());
 }
 
-float LineSegmentf32::DistanceTo(const Vec2df32 &point,
-                                 Vec2df32 *const nearest_pt) const {
+float LineSegmentf32::DistanceTo(const Vec2f &point,
+                                 Vec2f *const nearest_pt) const {
   assert(nearest_pt != nullptr);
   if (length_ <= kMathEpsilon32) {
     *nearest_pt = start_;
@@ -100,7 +100,7 @@ float LineSegmentf32::DistanceTo(const Vec2df32 &point,
   return std::abs(x0 * unit_direction_.y() - y0 * unit_direction_.x());
 }
 
-float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point) const {
+float LineSegmentf32::DistanceSquareTo(const Vec2f &point) const {
   if (length_ <= kMathEpsilon32) {
     return point.DistanceSquareTo(start_);
   }
@@ -116,8 +116,8 @@ float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point) const {
   return std::pow(x0 * unit_direction_.y() - y0 * unit_direction_.x(), 2);
 }
 
-float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point,
-                                       Vec2df32 *const nearest_pt) const {
+float LineSegmentf32::DistanceSquareTo(const Vec2f &point,
+                                       Vec2f *const nearest_pt) const {
   assert(nearest_pt != nullptr);
   if (length_ <= kMathEpsilon32) {
     *nearest_pt = start_;
@@ -138,7 +138,7 @@ float LineSegmentf32::DistanceSquareTo(const Vec2df32 &point,
   return std::pow(x0 * unit_direction_.y() - y0 * unit_direction_.x(), 2);
 }
 
-bool LineSegmentf32::IsPointIn(const Vec2df32 &point) const {
+bool LineSegmentf32::IsPointIn(const Vec2f &point) const {
   if (length_ <= kMathEpsilon32) {
     return std::abs(point.x() - start_.x()) <= kMathEpsilon32 &&
            std::abs(point.y() - start_.y()) <= kMathEpsilon32;
@@ -151,21 +151,21 @@ bool LineSegmentf32::IsPointIn(const Vec2df32 &point) const {
          IsWithin(point.y(), start_.y(), end_.y());
 }
 
-float LineSegmentf32::ProjectOntoUnit(const Vec2df32 &point) const {
+float LineSegmentf32::ProjectOntoUnit(const Vec2f &point) const {
   return unit_direction_.InnerProd(point - start_);
 }
 
-float LineSegmentf32::ProductOntoUnit(const Vec2df32 &point) const {
+float LineSegmentf32::ProductOntoUnit(const Vec2f &point) const {
   return unit_direction_.CrossProd(point - start_);
 }
 
 bool LineSegmentf32::HasIntersect(const LineSegmentf32 &other_segment) const {
-  Vec2df32 point;
+  Vec2f point;
   return GetIntersect(other_segment, &point);
 }
 
 bool LineSegmentf32::GetIntersect(const LineSegmentf32 &other_segment,
-                                 Vec2df32 *const point) const {
+                                 Vec2f *const point) const {
   assert(point != nullptr);
   if (IsPointIn(other_segment.start())) {
     *point = other_segment.start();
@@ -199,14 +199,14 @@ bool LineSegmentf32::GetIntersect(const LineSegmentf32 &other_segment,
     return false;
   }
   const float ratio = cc4 / (cc4 - cc3);
-  *point = Vec2df32(start_.x() * ratio + end_.x() * (1.0 - ratio),
+  *point = Vec2f(start_.x() * ratio + end_.x() * (1.0 - ratio),
                  start_.y() * ratio + end_.y() * (1.0 - ratio));
   return true;
 }
 
 // return distance with perpendicular foot point.
-float LineSegmentf32::GetPerpendicularFoot(const Vec2df32 &point,
-                                           Vec2df32 *const foot_point) const {
+float LineSegmentf32::GetPerpendicularFoot(const Vec2f &point,
+                                           Vec2f *const foot_point) const {
   assert(foot_point != nullptr);
   if (length_ <= kMathEpsilon32) {
     *foot_point = start_;
@@ -226,7 +226,7 @@ void LineSegmentf32::InitMaxMin() {
   max_y_ = std::max(start_.y(), end_.y());
 }
 
-Vec2df32 LineSegmentf32::GetPoint(float s) const {
+Vec2f LineSegmentf32::GetPoint(float s) const {
   float ratio = s / length_;
   return start_ * (1 - ratio) + end_ * ratio;
 }

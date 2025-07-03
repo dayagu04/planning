@@ -13,7 +13,7 @@
 
 namespace planning {
 
-void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
+void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   ShrinkChildrenByHeadingForTailIn();
@@ -21,9 +21,9 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
   return;
 }
 
-void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
+void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end,
                                 const ParkingVehDirection park_dir,
-                                const Pose2D &limiter_pose,
+                                const Pose2f &limiter_pose,
                                 const MapBound &XYbounds) {
   AstarDecider::Process(start, end);
 
@@ -57,7 +57,7 @@ bool NodeShrinkDecider::IsLegalForHeading(const float heading) {
     return true;
   }
 
-  float normalize_heading = IflyUnifyTheta(heading, M_PI);
+  float normalize_heading = IflyUnifyTheta(heading, M_PIf32);
   normalize_heading = std::fabs(normalize_heading);
 
   if (normalize_heading < heading_shrink_.heading_low_bound_ ||
@@ -175,7 +175,7 @@ bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
   constexpr float ANGLE_THRESHOLD_DEG = 15.0f;
 
   // 计算角度并转换为度数
-  const float heading_deg = child->GetPhi() * 180.0f / static_cast<float>(M_PI);
+  const float heading_deg = child->GetPhi() * 180.0 / M_PIf32;
 
   // 检查是否为前进方向
   const bool is_forward = child->IsForward();

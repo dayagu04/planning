@@ -715,8 +715,8 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) {
                                     Pose2D(traversed_x[i], traversed_y[i], 0));
     double relative_theta = planning_math::NormalizeAngle(
         traversed_phi[i] - ego_base_.GetConstBasePose().GetPhi());
-    Transform2d tf;
-    tf.SetBasePose(Pose2D(local_point.x, local_point.y, relative_theta));
+    Transform2f tf;
+    tf.SetBasePose(Pose2f(local_point.x, local_point.y, relative_theta));
     if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
       return false;
     }

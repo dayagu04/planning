@@ -33,7 +33,7 @@ bool ObstacleClearZone::IsCollisionForBox(const cdl::AABB& box,
   return false;
 }
 
-bool ObstacleClearZone::GenerateBoundingBox(const Pose2D& start,
+bool ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
                                             const ParkObstacleList* obstacles) {
   box_.Reset(cdl::Vector2r(start.x, start.y));
 

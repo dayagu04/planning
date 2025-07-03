@@ -41,7 +41,8 @@ void DpSpeedOptimizer::Excute(
     const Pose2D& ego_pose, const SVPoint& init_point,
     const SpeedDecisions* speed_decisions,
     const SpeedLimitProfile* speed_limit_profile) {
-  if (speed_decisions == nullptr || speed_limit_profile == nullptr) {
+  if (speed_decisions == nullptr || speed_limit_profile == nullptr ||
+      path.empty()) {
     return;
   }
 

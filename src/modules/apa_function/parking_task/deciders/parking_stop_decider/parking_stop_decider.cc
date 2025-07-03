@@ -114,8 +114,8 @@ bool ParkingStopDecider::IsVehComponentCollision(const Polygon2D* polygon,
   const std::vector<Eigen::Vector2d>& points = obs.GetPtClout2dGlobal();
 
   for (size_t j = 0; j < points.size(); j++) {
-    gjk_interface_.PolygonPointCollisionDetect(
-        polygon, Eigen::Vector2f(points[j][0], points[j][1]), &is_collision);
+    gjk_interface_.PolygonPointCollisionDetect(polygon, points[j],
+                                               &is_collision);
 
     if (is_collision) {
       return true;

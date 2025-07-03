@@ -78,25 +78,25 @@ class HybridAStarThreadSolver {
   // get result api
   // const int PublishSearchPath(HybridAStarResult* result,
   //                             std::vector<AStarPathPoint>& first_seg_path,
-  //                             Pose2D* base_pose);
+  //                             Pose2f* base_pose);
 
   // for debug
   const void GetFullLengthPathInThread(HybridAStarResult* result,
                                        Pose2D* base_pose);
 
   // for debug
-  const Pose2D GetAstarTargetPose();
+  const Pose2f GetAstarTargetPose();
 
   // for debug
   void GetNodeListMessageInThread(
-      std::vector<std::vector<Eigen::Vector2f>>& list);
+      std::vector<std::vector<Eigen::Vector2d>>& list);
 
   // for debug
   void GetRSPathHeuristicInThread(
-      std::vector<std::vector<Vec2df32>>& path_list);
+      std::vector<std::vector<Vec2f>>& path_list);
 
   // for debug
-  void GetRSPathLinkInThread(std::vector<Vec2df32>& path);
+  void GetRSPathLinkInThread(std::vector<Vec2f>& path);
 
   // for debug
   void GetRefLine(ParkReferenceLine* ref_line);
@@ -122,9 +122,9 @@ class HybridAStarThreadSolver {
   std::thread thread_;
 
   // for debug
-  std::vector<std::vector<Eigen::Vector2f>> all_child_node_list_;
+  std::vector<std::vector<Eigen::Vector2d>> all_child_node_list_;
   // for debug
-  std::vector<std::vector<Vec2df32>> rs_path_list_;
+  std::vector<std::vector<Vec2f>> rs_path_list_;
   // for debug
   std::shared_ptr<HybridAStarInterface> solver_interface_;
 };

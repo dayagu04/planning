@@ -17,8 +17,8 @@ using ad_common::math::Box2d;
 Node3d::Node3d(const float x, const float y, const float phi) {
   path_.path_dist = 0;
   path_.point_size = 1;
-  float theta = IflyUnifyTheta(phi, M_PI);
-  path_.points[0] = Pose2D(x, y, theta);
+  float theta = IflyUnifyTheta(phi, M_PIf32);
+  path_.points[0] = Pose2f(x, y, theta);
 
   visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
@@ -39,7 +39,7 @@ Node3d::Node3d(float x, float y, float phi, const MapBound& XYbounds,
   grid_index_.y =
       std::round((y - XYbounds.y_min) * open_space_conf.xy_grid_resolution_inv);
 
-  float theta = IflyUnifyTheta(phi, M_PI);
+  float theta = IflyUnifyTheta(phi, M_PIf32);
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
@@ -70,7 +70,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
   grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
 
-  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
+  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PIf32);
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
@@ -100,7 +100,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
 
-  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
+  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PIf32);
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
@@ -343,7 +343,7 @@ void Node3d::CoordinateToGridIndex(const float x, const float y,
   index->phi = std::round((phi - (-M_PI)) * conf.phi_grid_resolution_inv);
 }
 
-const Pose2D& Node3d::GetPose() const { return path_.GetEndPoint(); }
+const Pose2f& Node3d::GetPose() const { return path_.GetEndPoint(); }
 
 const float Node3d::GetEulerDist(const Node3d* end) const {
   float dist;
@@ -356,7 +356,7 @@ const float Node3d::GetEulerDist(const Node3d* end) const {
 
 void Node3d::SetDistToObs(const float dist) { dist_to_obs_ = dist; }
 
-float Node3d::DistToPose(const Pose2D& pose) {
+float Node3d::DistToPose(const Pose2f& pose) {
   float dist = path_.GetEndPoint().DistanceTo(pose);
 
   return dist;

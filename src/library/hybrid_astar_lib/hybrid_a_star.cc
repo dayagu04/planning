@@ -81,8 +81,8 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
   double rs_start_time = IflyTime::Now_ms();
 #endif
 
-  const Pose2D& start_pose = current_node->GetPose();
-  const Pose2D& end_pose = rs_expansion_decider_.GetRSEndPose();
+  const Pose2f& start_pose = current_node->GetPose();
+  const Pose2f& end_pose = rs_expansion_decider_.GetRSEndPose();
 
   bool is_connected_to_goal;
   rs_path_interface_.GeneShortestRSPath(
@@ -90,7 +90,7 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
       need_rs_dense_point, need_anchor_point, rs_request);
 
 #if LOG_TIME_PROFILE
-  double rs_end_time = IflyTime::Now_ms();
+  float rs_end_time = IflyTime::Now_ms();
   rs_time_ms_ += rs_end_time - rs_start_time;
 #endif
 
@@ -199,7 +199,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   double rs_start_time = IflyTime::Now_ms();
 #endif
 
-  const Pose2D& start_pose = current_node->GetPose();
+  const Pose2f& start_pose = current_node->GetPose();
   rs_path_interface_.RSPathInterpolate(&rs_path_, &start_pose, rs_radius);
 
 #if LOG_TIME_PROFILE
@@ -216,7 +216,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
 
   path.points[0].x = rs_end_point.x;
   path.points[0].y = rs_end_point.y;
-  path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PI);
+  path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
 
   rs_node_to_goal->Set(path, XYbounds_, config_, path.path_dist);
   if (!NodeInSearchBound(rs_node_to_goal->GetIndex())) {
@@ -422,7 +422,7 @@ void HybridAStar::GetPathByBicycleModel(NodePath* path, const float arc,
 
   path->path_dist = 0;
 
-  Pose2D* old_point;
+  Pose2f* old_point;
   old_point = &path->points[0];
 
   for (int i = 0; i < path_point_num; ++i) {
@@ -460,8 +460,8 @@ void HybridAStar::GetPathByCircle(NodePath* path, const float arc,
   // interpolate
   path->path_dist = 0;
 
-  Pose2D* start_pose;
-  Pose2D* next_pose;
+  Pose2f* start_pose;
+  Pose2f* next_pose;
   start_pose = &path->points[0];
 
   float acc_s = 0.0;
@@ -500,12 +500,12 @@ void HybridAStar::GetPathByLine(NodePath* path, const float arc,
   float acc_s = 0.0;
 
   // get unit vector
-  Pose2D unit_vector;
+  Pose2f unit_vector;
   unit_vector.x = std::cos(path->points[0].GetPhi());
   unit_vector.y = std::sin(path->points[0].GetPhi());
 
-  Pose2D* start_pose = &path->points[0];
-  Pose2D* next_pose;
+  Pose2f* start_pose = &path->points[0];
+  Pose2f* next_pose;
 
   for (int j = 0; j < path_point_num; j++) {
     next_pose = &path->points[path->point_size];
@@ -593,7 +593,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   // check if the vehicle runs outside of XY boundary
-  const Pose2D& end_point = path.GetEndPoint();
+  const Pose2f& end_point = path.GetEndPoint();
   if (collision_detect_->IsPointBeyondBound(end_point.x, end_point.y)) {
     return NodeShrinkType::OUT_OF_BOUNDARY;
   }
@@ -611,7 +611,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   if (!heading_legal) {
 #if PLOT_DELETE_NODE
     delete_queue_path_debug_.emplace_back(
-        Vec2df32(new_node->GetX(), new_node->GetY()));
+        Vec2f(new_node->GetX(), new_node->GetY()));
 #endif
     // ILOG_INFO << "heading is illegal";
     new_node->ClearPath();
@@ -622,7 +622,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   if (!node_shrink_decider_.IsLegalByXBound(new_node->GetX())) {
 #if PLOT_DELETE_NODE
     delete_queue_path_debug_.emplace_back(
-        Vec2df32(new_node->GetX(), new_node->GetY()));
+        Vec2f(new_node->GetX(), new_node->GetY()));
 #endif
     // ILOG_INFO << "pos is illegal";
     new_node->ClearPath();
@@ -759,7 +759,7 @@ float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
 
 #if PLOT_RS_COST_PATH
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
-    const Pose2D& rs_start_pose = next_node->GetPose();
+    const Pose2f& rs_start_pose = next_node->GetPose();
     rs_path_interface_.RSPathInterpolate(&rs_path_, &rs_start_pose,
                                          vehicle_param_.min_turn_radius);
     rs_path_h_cost_debug_.emplace_back(rs_path_);
@@ -956,11 +956,8 @@ float HybridAStar::GenerateRefLineHeuristicCost(Node3d* next_node,
   float theta2 = ref_line_->GetHeading();
 
   float heading_cost_weight = 2.0;
-  float heading_cost = dist_to_go + std::fabs(GetThetaDiff(theta1, theta2)) *
+  float heading_cost = dist_to_go + std::fabs(Getf32ThetaDiff(theta1, theta2)) *
                                         heading_cost_weight;
-
-  // float heading_cost = std::fabs(GetThetaDiff(theta1, theta2)) *
-  //                       config_.ref_line_heading_penalty;
 
 #if DEBUG_REF_LINE_COST
   ILOG_INFO << "node heading = " << next_node->GetPhi() * 57.3
@@ -1100,7 +1097,7 @@ const bool HybridAStar::BackwardPassByNode(
 }
 
 void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
-                                     const Pose2D& start, const Pose2D& target,
+                                     const Pose2f& start, const Pose2f& target,
                                      HybridAStarResult* result) {
   result->Clear();
   if (request_.first_action_request.gear_request == AstarPathGear::DRIVE &&
@@ -1187,7 +1184,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   // check start
   double check_start_time = IflyTime::Now_ms();
   if (!collision_detect_->ValidityCheckByEDT(start_node_)) {
-    // double check
+    // second check
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
       ILOG_ERROR << "start_node in collision with obstacles "
@@ -1311,7 +1308,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
 #if PLOT_SEARCH_SEQUENCE
     queue_path_debug_.emplace_back(
-        Vec2df32(current_node->GetX(), current_node->GetY()));
+        Vec2f(current_node->GetX(), current_node->GetY()));
 #endif
 
     // check if an analystic curve could be connected from current
@@ -1554,7 +1551,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   return;
 }
 
-bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
+bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
                               const MapBound& XYbounds,
                               HybridAStarResult* result) {
   double astar_start_time = IflyTime::Now_ms();
@@ -1631,7 +1628,7 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
   // check start
   double check_start_time = IflyTime::Now_ms();
   if (!collision_detect_->ValidityCheckByEDT(start_node_)) {
-    // double check
+    // second check
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
       ILOG_ERROR << "start_node in collision with obstacles "
@@ -1748,7 +1745,7 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
 
 #if PLOT_SEARCH_SEQUENCE
     queue_path_debug_.emplace_back(
-        Vec2df32(current_node->GetX(), current_node->GetY()));
+        Vec2f(current_node->GetX(), current_node->GetY()));
 #endif
 
     current_time = IflyTime::Now_ms();
@@ -2130,7 +2127,7 @@ void HybridAStar::GetNodeListMessage(planning::common::AstarNodeList* list) {
 }
 
 void HybridAStar::GetNodeListMessage(
-    std::vector<std::vector<Eigen::Vector2f>>& list) {
+    std::vector<std::vector<Eigen::Vector2d>>& list) {
   for (auto i = node_set_.begin(); i != node_set_.end(); i++) {
     if (i->second->GetStepSize() < 2 || i->second->IsRsPath()) {
       continue;
@@ -2138,9 +2135,9 @@ void HybridAStar::GetNodeListMessage(
 
     const NodePath& path = i->second->GetNodePath();
 
-    std::vector<Eigen::Vector2f> node;
+    std::vector<Eigen::Vector2d> node;
     for (size_t m = 0; m < path.point_size; m++) {
-      node.emplace_back(Eigen::Vector2f(path.points[m].x, path.points[m].y));
+      node.emplace_back(Eigen::Vector2d(path.points[m].x, path.points[m].y));
     }
 
     list.emplace_back(node);
@@ -2184,11 +2181,11 @@ const std::vector<DebugAstarSearchPoint>& HybridAStar::GetChildNodeForDebug() {
   return child_node_debug_;
 }
 
-const std::vector<Vec2df32>& HybridAStar::GetQueuePathForDebug() {
+const std::vector<Vec2f>& HybridAStar::GetQueuePathForDebug() {
   return queue_path_debug_;
 }
 
-const std::vector<Vec2df32>& HybridAStar::GetDelQueuePathForDebug() {
+const std::vector<Vec2f>& HybridAStar::GetDelQueuePathForDebug() {
   return delete_queue_path_debug_;
 }
 
@@ -2196,8 +2193,8 @@ const std::vector<RSPath>& HybridAStar::GetRSPathHeuristic() {
   return rs_path_h_cost_debug_;
 }
 
-void HybridAStar::KineticsModel(const Pose2D* old_pose, const float radius,
-                                Pose2D* pose, const bool is_forward) {
+void HybridAStar::KineticsModel(const Pose2f* old_pose, const float radius,
+                                Pose2f* pose, const bool is_forward) {
   float dist = is_forward ? kinetics_model_step_ : -kinetics_model_step_;
   pose->x = old_pose->x + dist * std::cos(old_pose->theta);
   pose->y = old_pose->y + dist * std::sin(old_pose->theta);
@@ -2209,14 +2206,14 @@ void HybridAStar::KineticsModel(const Pose2D* old_pose, const float radius,
   return;
 }
 
-void HybridAStar::UpdatePoseByPathPointInterval(const Pose2D* old_pose,
+void HybridAStar::UpdatePoseByPathPointInterval(const Pose2f* old_pose,
                                                 const float radius,
                                                 const float interval,
-                                                Pose2D* pose,
+                                                Pose2f* pose,
                                                 const bool is_forward) {
   int number = std::ceil(interval / kinetics_model_step_);
-  Pose2D start = *old_pose;
-  Pose2D end;
+  Pose2f start = *old_pose;
+  Pose2f end;
 
   for (int i = 0; i < number; i++) {
     KineticsModel(&start, radius, &end, is_forward);
@@ -2229,11 +2226,11 @@ void HybridAStar::UpdatePoseByPathPointInterval(const Pose2D* old_pose,
   return;
 }
 
-void HybridAStar::UpdatePoseBySamplingNumber(const Pose2D* old_pose,
+void HybridAStar::UpdatePoseBySamplingNumber(const Pose2f* old_pose,
                                              const float radius,
-                                             const int number, Pose2D* pose,
+                                             const int number, Pose2f* pose,
                                              const bool is_forward) {
-  Pose2D start = *old_pose;
+  Pose2f start = *old_pose;
 
   for (int i = 0; i < number; i++) {
     KineticsModel(&start, radius, pose, is_forward);
@@ -2266,9 +2263,9 @@ const ParkReferenceLine* HybridAStar::GetConstRefLine() const {
   return ref_line_;
 }
 
-int HybridAStar::InterpolateByArcOffset(Pose2D* pose,
+int HybridAStar::InterpolateByArcOffset(Pose2f* pose,
                                         const VehicleCircle* veh_circle,
-                                        const Pose2D* start_pose,
+                                        const Pose2f* start_pose,
                                         const float arc,
                                         const float inverse_radius) {
   float delta_theta, theta;
@@ -2294,14 +2291,14 @@ int HybridAStar::InterpolateByArcOffset(Pose2D* pose,
 
   pose->x = veh_circle->center.x + radius * std::sin(theta);
   pose->y = veh_circle->center.y - radius * std::cos(theta);
-  pose->theta = IflyUnifyTheta(theta, M_PI);
+  pose->theta = IflyUnifyTheta(theta, M_PIf32);
 
   return 1;
 }
 
 // radius: if left turn, radius is positive
 int HybridAStar::GetVehCircleByPose(VehicleCircle* veh_circle,
-                                    const Pose2D* pose, const float radius,
+                                    const Pose2f* pose, const float radius,
                                     const AstarPathGear gear) {
   veh_circle->radius = radius;
   veh_circle->gear = gear;
@@ -2312,10 +2309,10 @@ int HybridAStar::GetVehCircleByPose(VehicleCircle* veh_circle,
   return 1;
 }
 
-int HybridAStar::GetStraightLinePoint(Pose2D* goal_state,
-                                      const Pose2D* start_state,
+int HybridAStar::GetStraightLinePoint(Pose2f* goal_state,
+                                      const Pose2f* start_state,
                                       const float dist_to_start,
-                                      const Pose2D* unit_vector) {
+                                      const Pose2f* unit_vector) {
   goal_state->x = start_state->x + dist_to_start * unit_vector->x;
   goal_state->y = start_state->y + dist_to_start * unit_vector->y;
 
@@ -2479,12 +2476,12 @@ void HybridAStar::UpdatePathS(HybridAStarResult* path) {
   return;
 }
 
-const bool HybridAStar::IsNeedGearDriveSearch(const Pose2D& start) {
+const bool HybridAStar::IsNeedGearDriveSearch(const Pose2f& start) {
   if (request_.direction_request != ParkingVehDirection::HEAD_IN) {
     return false;
   }
 
-  float heading = IflyUnifyTheta(start.GetPhi(), M_PI);
+  float heading = IflyUnifyTheta(start.GetPhi(), M_PIf32);
   if (std::fabs(heading) < (M_PI_2 - 0.001)) {
     ILOG_INFO << "start.GetPhi() =" << heading * 57.4;
     return false;
@@ -2503,7 +2500,7 @@ const bool HybridAStar::IsNeedGearDriveSearch(const Pose2D& start) {
   return true;
 }
 
-const bool HybridAStar::IsNeedGearReverseSearch(const Pose2D& start) {
+const bool HybridAStar::IsNeedGearReverseSearch(const Pose2f& start) {
   if (request_.direction_request != ParkingVehDirection::TAIL_IN) {
     return false;
   }
@@ -2518,7 +2515,7 @@ const bool HybridAStar::IsNeedGearReverseSearch(const Pose2D& start) {
     return false;
   }
 
-  float heading = IflyUnifyTheta(start.GetPhi(), M_PI);
+  float heading = IflyUnifyTheta(start.GetPhi(), M_PIf32);
   if (std::fabs(heading) > (M_PI_2 + 0.001)) {
     ILOG_INFO << "start.GetPhi() =" << heading * 57.4;
     return false;
@@ -2542,7 +2539,7 @@ void HybridAStar::DebugNodeList(const std::vector<Node3d*>& node_list) {
   return;
 }
 
-void HybridAStar::SetSamplingTarget(const Pose2D& pose) {
+void HybridAStar::SetSamplingTarget(const Pose2f& pose) {
   polynomial_sampling_->SetSearchGoal(pose);
   spiral_sampling_->SetSearchGoal(pose);
   rs_sampling_->SetSearchGoal(pose);

@@ -22,31 +22,31 @@ class LineSegmentf32 {
    * @param start The start point of the line segment.
    * @param end The end point of the line segment.
    */
-  LineSegmentf32(const Vec2df32 &start, const Vec2df32 &end);
+  LineSegmentf32(const Vec2f &start, const Vec2f &end);
 
   /**
    * @brief Get the start point.
    * @return The start point of the line segment.
    */
-  const Vec2df32 &start() const { return start_; }
+  const Vec2f &start() const { return start_; }
 
   /**
    * @brief Get the end point.
    * @return The end point of the line segment.
    */
-  const Vec2df32 &end() const { return end_; }
+  const Vec2f &end() const { return end_; }
 
   /**
    * @brief Get the unit direction from the start point to the end point.
    * @return The start point of the line segment.
    */
-  const Vec2df32 &unit_direction() const { return unit_direction_; }
+  const Vec2f &unit_direction() const { return unit_direction_; }
 
   /**
    * @brief Get the center of the line segment.
    * @return The center of the line segment.
    */
-  Vec2df32 center() const { return (start_ + end_) / 2.0; }
+  Vec2f center() const { return (start_ + end_) / 2.0; }
 
   /**
    * @brief Get the heading of the line segment.
@@ -95,7 +95,7 @@ class LineSegmentf32 {
    * @param point The point to compute the distance to.
    * @return The project distance which is positive or negative or zero.
    */
-  float RawDistanceTo(const Vec2df32 &point) const;
+  float RawDistanceTo(const Vec2f &point) const;
 
   /**
    * @brief Compute the shortest distance from a point on the line segment
@@ -103,7 +103,7 @@ class LineSegmentf32 {
    * @param point The point to compute the distance to.
    * @return The shortest distance from points on the line segment to point.
    */
-  float DistanceTo(const Vec2df32 &point) const;
+  float DistanceTo(const Vec2f &point) const;
 
   /**
    * @brief Compute the shortest distance from a point on the line segment
@@ -114,7 +114,7 @@ class LineSegmentf32 {
    * @return The shortest distance from points on the line segment
    *         to the input point.
    */
-  float DistanceTo(const Vec2df32 &point, Vec2df32 *const nearest_pt) const;
+  float DistanceTo(const Vec2f &point, Vec2f *const nearest_pt) const;
 
   /**
    * @brief Compute the square of the shortest distance from a point
@@ -123,7 +123,7 @@ class LineSegmentf32 {
    * @return The square of the shortest distance from points
    *         on the line segment to the input point.
    */
-  float DistanceSquareTo(const Vec2df32 &point) const;
+  float DistanceSquareTo(const Vec2f &point) const;
 
   /**
    * @brief Compute the square of the shortest distance from a point
@@ -135,14 +135,14 @@ class LineSegmentf32 {
    * @return The shortest distance from points on the line segment
    *         to the input point.
    */
-  float DistanceSquareTo(const Vec2df32 &point, Vec2df32 *const nearest_pt) const;
+  float DistanceSquareTo(const Vec2f &point, Vec2f *const nearest_pt) const;
 
   /**
    * @brief Check if a point is within the line segment.
    * @param point The point to check if it is within the line segment.
    * @return Whether the input point is within the line segment or not.
    */
-  bool IsPointIn(const Vec2df32 &point) const;
+  bool IsPointIn(const Vec2f &point) const;
 
   /**
    * @brief Check if the line segment has an intersect
@@ -162,7 +162,7 @@ class LineSegmentf32 {
    *         with the input other_segment.
    */
   bool GetIntersect(const LineSegmentf32 &other_segment,
-                    Vec2df32 *const point) const;
+                    Vec2f *const point) const;
   /**
    * @brief Compute the intersect with another straight line in 2-D if any.
    * @param other_segment The straight line to compute the intersect.
@@ -170,7 +170,7 @@ class LineSegmentf32 {
    * @return Whether the two straight lines have an intersect
    */
   bool GetStraightLineIntersect(const LineSegmentf32 &other_segment,
-                                Vec2df32 *const point) const;
+                                Vec2f *const point) const;
   /**
    * @brief Compute the projection of a vector onto the line segment.
    * @param point The end of the vector (starting from the start point of the
@@ -178,7 +178,7 @@ class LineSegmentf32 {
    * @return The projection of the vector, which is from the start point of
    *         the line segment to the input point, onto the unit direction.
    */
-  float ProjectOntoUnit(const Vec2df32 &point) const;
+  float ProjectOntoUnit(const Vec2f &point) const;
 
   /**
    * @brief Compute the cross product of a vector onto the line segment.
@@ -188,7 +188,7 @@ class LineSegmentf32 {
    *         the vector, which is from the start point of
    *         the line segment to the input point.
    */
-  float ProductOntoUnit(const Vec2df32 &point) const;
+  float ProductOntoUnit(const Vec2f &point) const;
 
   /**
    * @brief Compute perpendicular foot of a point in 2-D on the straight line
@@ -198,20 +198,20 @@ class LineSegmentf32 {
    *        the straight line expanded from the line segment.
    * @return The distance from the input point to the perpendicular foot.
    */
-  float GetPerpendicularFoot(const Vec2df32 &point,
-                              Vec2df32 *const foot_point) const;
+  float GetPerpendicularFoot(const Vec2f &point,
+                              Vec2f *const foot_point) const;
 
   float min_x() const { return min_x_; }
   float max_x() const { return max_x_; }
   float min_y() const { return min_y_; }
   float max_y() const { return max_y_; }
 
-  Vec2df32 GetPoint(float s) const;
+  Vec2f GetPoint(float s) const;
 
  private:
-  Vec2df32 start_;
-  Vec2df32 end_;
-  Vec2df32 unit_direction_;
+  Vec2f start_;
+  Vec2f end_;
+  Vec2f unit_direction_;
   float heading_ = 0.0;
   float length_ = 0.0;
 

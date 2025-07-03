@@ -141,13 +141,13 @@ class RSPathInterpolator {
    * \return 0 or error code.
    **/
   int CalcShortestRSPathKappa(RSPathKappaParam *kappa_list,
-                              const Pose2D *start_pose, const Pose2D *goal_pose,
+                              const Pose2f *start_pose, const Pose2f *goal_pose,
                               float min_turn_radius,
                               const float inverse_radius,
                               const RSPathRequestType request_type);
 
-  int CalcSCSPathKappa(RSPathKappaParam *kappa_list, const Pose2D *start_pose,
-                       const Pose2D *goal_pose, float min_turn_radius,
+  int CalcSCSPathKappa(RSPathKappaParam *kappa_list, const Pose2f *start_pose,
+                       const Pose2f *goal_pose, float min_turn_radius,
                        const float inverse_radius,
                        const RSPathRequestType request_type);
 
@@ -157,10 +157,10 @@ class RSPathInterpolator {
   int UpdateGearSwitchNum(RSPathKappaParam *kappa_list,
                           const AstarPathGear initial_pose_dir);
 
-  int UpdateAnchorPoint(RSAnchorPoints *point_set, const Pose2D *start_pose,
+  int UpdateAnchorPoint(RSAnchorPoints *point_set, const Pose2f *start_pose,
                         const RSPathKappaParam *path_list);
 
-  int UpdateAnchorPoint(RSAnchorPoints *point_set, const Pose2D *start_pose,
+  int UpdateAnchorPoint(RSAnchorPoints *point_set, const Pose2f *start_pose,
                         const RSPath *path);
 
   int RSPathSegmentInterpolate(RSPathSegment *path, const RSPoint *start_pose,
@@ -188,7 +188,7 @@ class RSPathInterpolator {
 
   int GetStraightLinePoint(RSPoint *goal_state, const RSPoint *start_state,
                            AstarPathGear direction, const float dist_to_start,
-                           const Pose2D *unit_vector);
+                           const Pose2f *unit_vector);
 
   int GetCirclePoint(RSPoint *goal_state, const RSPoint *start_state,
                      AstarPathGear direction, float length);

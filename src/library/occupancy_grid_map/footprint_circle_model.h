@@ -28,7 +28,7 @@ enum FootPrintCircleID : int8_t {
 };
 
 struct FootPrintCircle {
-  Position2D pos;
+  Position2f pos;
   float radius;
   float safe_buffer;
 };
@@ -59,10 +59,10 @@ class FootPrintCircleModel {
                         const float big_circle_safe_buffer = 0.35);
 
   void LocalToGlobalFast(FootPrintCircleList *global_circle,
-                         const Pose2D &veh_pose);
+                         const Pose2f &veh_pose);
 
   void LocalModelToGlobalModel(FootPrintCircleList *global_circle,
-                               const Pose2D &veh_pose);
+                               const Pose2f &veh_pose);
 
   const FootPrintCircleList GetLocalFootPrintCircleByGear(const bool is_drive);
 
@@ -71,9 +71,9 @@ class FootPrintCircleModel {
 
   const FootPrintCircleList GetLocalFootPrintCircle();
 
-  void LocalToGlobalByTF(FootPrintCircleList *global_circle, Transform2d *tf);
+  void LocalToGlobalByTF(FootPrintCircleList *global_circle, Transform2f *tf);
 
-  void LocalToGlobalByGear(FootPrintCircleList *global_circle, Transform2d *tf,
+  void LocalToGlobalByGear(FootPrintCircleList *global_circle, Transform2f *tf,
                            const AstarPathGear gear) const;
 
   FootPrintCircleList *GetMutableGlobalFPCircleByGear(const AstarPathGear gear);

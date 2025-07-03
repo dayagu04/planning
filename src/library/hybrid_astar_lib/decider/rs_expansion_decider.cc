@@ -11,7 +11,7 @@ namespace planning {
 
 void RSExpansionDecider::Process(
     const float min_radius, const float slot_width, const float slot_length,
-    const Pose2D &ego_pose, const Pose2D &astar_end, const float veh_width,
+    const Pose2f &ego_pose, const Pose2f &astar_end, const float veh_width,
     const ParkSpaceType slot_type, const ParkingVehDirection park_dir) {
   rs_end_pose_ = astar_end;
   AstarDecider::Process(ego_pose, astar_end);
@@ -27,7 +27,7 @@ void RSExpansionDecider::Process(
   return;
 }
 
-const Pose2D &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
+const Pose2f &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
 
 bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
                                            const AstarRequest *request) const {
@@ -56,7 +56,7 @@ bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
   return true;
 }
 
-void RSExpansionDecider::Process(const Pose2D &start, const Pose2D &end) {
+void RSExpansionDecider::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   return;

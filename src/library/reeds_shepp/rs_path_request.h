@@ -32,8 +32,8 @@ struct RSPathRequest {
   bool enable_first_segment_len_check;
   float first_segment_min_length;
 
-  Pose2D start;
-  Pose2D end;
+  Pose2f start;
+  Pose2f end;
 
   float min_radius;
 };

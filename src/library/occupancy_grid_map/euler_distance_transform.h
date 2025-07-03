@@ -16,10 +16,10 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   EulerDistanceTransform(){};
 
   // use default ROI bound to generate ogm.
-  void Process(const Pose2D &ogm_pose,
+  void Process(const Pose2f &ogm_pose,
                const float _ogm_resolution = ogm_resolution) override;
 
-  bool Excute(const OccupancyGridMap &map, const Pose2D &ogm_pose,
+  bool Excute(const OccupancyGridMap &map, const Pose2f &ogm_pose,
               const float _ogm_resolution = ogm_resolution);
 
   // use user ROI bound to generate ogm.
@@ -43,14 +43,14 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
    * gear设定为REVERSE，此时距离会考虑车尾膨胀;
    * gear设定为NONE，距离不会考虑车头车尾膨胀,只会考虑车身两侧膨胀;
    */
-  const bool DistanceCheckForPoint(float *min_dist, Transform2d *tf,
+  const bool DistanceCheckForPoint(float *min_dist, Transform2f *tf,
                                    const AstarPathGear gear);
 
   const bool DistanceCheckForPoint(float *min_dist,
                                    const pnc::geometry_lib::PathPoint &pose,
                                    const uint8_t gear);
 
-  const bool IsCollisionForPoint(Transform2d *tf, const AstarPathGear gear);
+  const bool IsCollisionForPoint(Transform2f *tf, const AstarPathGear gear);
 
   const bool IsCollisionForPoint(const pnc::geometry_lib::PathPoint &pose,
                                  const uint8_t gear);
@@ -81,7 +81,7 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   const float GetLatetalSafeBuffer() const { return latetal_safe_buffer_; }
 
-  const bool IsCollisionForPoint(Transform2d *tf, const AstarPathGear gear,
+  const bool IsCollisionForPoint(Transform2f *tf, const AstarPathGear gear,
                                  FootPrintCircleModel *footprint_model);
 
  private:

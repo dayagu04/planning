@@ -18,8 +18,8 @@ SpiralSampling::SpiralSampling(
  *
  **/
 const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-                                              const Pose2D& start,
-                                              const Pose2D& end,
+                                              const Pose2f& start,
+                                              const Pose2f& end,
                                               const AstarPathGear ref_gear) {
   // ILOG_INFO << "---- generate cubic spiral path ----";
 
@@ -39,8 +39,8 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
   // *
   // Reverse gear requires changing the heading of the path point
   if (ref_gear == AstarPathGear::REVERSE) {
-    start_spiral.theta = IflyUnifyTheta(start.theta + M_PI, M_PI);
-    goal_spiral.theta = IflyUnifyTheta(goal_spiral.theta + M_PI, M_PI);
+    start_spiral.theta = IflyUnifyTheta(start.theta + M_PIf32, M_PIf32);
+    goal_spiral.theta = IflyUnifyTheta(goal_spiral.theta + M_PIf32, M_PIf32);
   }
 
   // ILOG_INFO << "start_spiral ( " << start_spiral.x << ", " << start_spiral.y
@@ -92,7 +92,7 @@ const bool SpiralSampling::GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
 }
 
 bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+    HybridAStarResult* result, const Pose2f& start, const Pose2f& end,
     const float lon_min_sampling_length) {
   // double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, by cubic spiral";
@@ -108,8 +108,8 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
   // sampling for path end
   // sampling start point: move start point forward dist
   // (lon_min_sampling_length)
-  Pose2D sampling_start = start;
-  Pose2D sampling_end;
+  Pose2f sampling_start = start;
+  Pose2f sampling_end;
   sampling_end.y = 0.0;
   sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;

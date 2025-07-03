@@ -39,42 +39,42 @@ class FuturePathDecider : public AstarDecider {
                const float sampling_lon_resolution, EulerDistanceTransform *edt,
                AstarRequest &request);
 
-  void Process(const Pose2D &start, const Pose2D &end);
+  void Process(const Pose2f &start, const Pose2f &end);
 
   // if left, radius is positive
-  void GetPathByRadius(const Pose2D *start_pose, const float length,
+  void GetPathByRadius(const Pose2f *start_pose, const float length,
                        const float radius, const bool is_forward,
-                       std::vector<Pose2D> *path);
+                       std::vector<Pose2f> *path);
 
  private:
-  void CalcDriveDistByLineModel(const Pose2D &ego_pose,
+  void CalcDriveDistByLineModel(const Pose2f &ego_pose,
                                 EulerDistanceTransform *edt,
                                 const ParkReferenceLine *ref_line);
 
   void UpdateFuturePathRequest(ParkFirstActionRequest *future_path_request);
 
   // radius: if left turn, radius is positive
-  void GetVehCircleByPose(const Pose2D *pose, const float radius,
+  void GetVehCircleByPose(const Pose2f *pose, const float radius,
                           const AstarPathGear gear, VehicleCircle *veh_circle);
 
   // if left, radius is positive
-  void GetPathByCircle(const Pose2D *start_pose, const float arc,
+  void GetPathByCircle(const Pose2f *start_pose, const float arc,
                        const float radius, const bool is_forward,
-                       std::vector<Pose2D> *path);
+                       std::vector<Pose2f> *path);
 
-  void GetPathByLine(const Pose2D *start_pose, const float length,
-                     const bool is_forward, std::vector<Pose2D> *path);
+  void GetPathByLine(const Pose2f *start_pose, const float length,
+                     const bool is_forward, std::vector<Pose2f> *path);
 
-  void GetStraightLinePoint(const Pose2D *start_state,
+  void GetStraightLinePoint(const Pose2f *start_state,
                             const float dist_to_start,
-                            const Pose2D *unit_vector, Pose2D *goal_state);
+                            const Pose2f *unit_vector, Pose2f *goal_state);
   // arc is positive.
   // inverse_radius is positive
   void InterpolateByArcOffset(const VehicleCircle *veh_circle,
-                              const Pose2D *start_pose, const float arc,
-                              const float inverse_radius, Pose2D *pose);
+                              const Pose2f *start_pose, const float arc,
+                              const float inverse_radius, Pose2f *pose);
 
-  void CalcDriveDistByCircleModel(const Pose2D &ego_pose,
+  void CalcDriveDistByCircleModel(const Pose2f &ego_pose,
                                   EulerDistanceTransform *edt);
 
   void Clear();
@@ -84,7 +84,7 @@ class FuturePathDecider : public AstarDecider {
   const float SearchAdvisedDriveDist(
       const float safe_buffer, const std::vector<Eigen::Vector2f> &path) const;
 
-  void UpdatePathDistInfo(const std::vector<Pose2D> &path,
+  void UpdatePathDistInfo(const std::vector<Pose2f> &path,
                           const AstarPathGear gear, EulerDistanceTransform *edt,
                           std::vector<Eigen::Vector2f> &path_dist_info);
 

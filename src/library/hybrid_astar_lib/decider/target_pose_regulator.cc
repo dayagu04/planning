@@ -51,7 +51,6 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
         request->slot_length - veh_param.front_edge_to_rear_axle;
     x_check_bounday_.lower = veh_param.rear_edge_to_rear_axle;
     x_check_bounday_.step = 0.1;
-
   }
   x_check_bounday_.number =
       std::ceil((x_check_bounday_.upper - x_check_bounday_.lower) /
@@ -59,7 +58,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
       1;
 
   float dist = 10.0;
-  Transform2d tf;
+  Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   if (IsHeadOutRequest(request->direction_request)) {
     // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
@@ -81,7 +80,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   // update ego dist
   tf.SetBasePose(request->start_);
   edt->DistanceCheckForPoint(&dist, &tf, gear);
-  ego_dist_to_obs_ = static_cast<float>(dist);
+  ego_dist_to_obs_ = dist;
 
 #if DEBUG_DECIDER
   DebugString();
@@ -92,8 +91,8 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
 
 void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
                                   const AstarRequest *request,
-                                  const Pose2D &ego_pose,
-                                  const Pose2D &center_line_target,
+                                  const Pose2f &ego_pose,
+                                  const Pose2f &center_line_target,
                                   const VehicleParam &veh_param) {
   Clear();
   center_line_target_ = center_line_target;
@@ -126,7 +125,7 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   return;
 }
 
-void TargetPoseRegulator::Process(const Pose2D &start, const Pose2D &end) {
+void TargetPoseRegulator::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   return;
@@ -144,7 +143,7 @@ const bool TargetPoseRegulator::IsParkingIn(const AstarRequest *request) {
 void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
-  Pose2D global_pose;
+  Pose2f global_pose;
   global_pose = center_line_target_;
 
   float y_upper =
@@ -220,7 +219,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
-  Pose2D global_pose;
+  Pose2f global_pose;
   global_pose = center_line_target_;
   constexpr size_t kMaxCandidateNum = 10;
   constexpr float kYLowerMid = -0.1;
@@ -261,12 +260,12 @@ void TargetPoseRegulator::Clear() {
 }
 
 const float TargetPoseRegulator::GetMinDistByXRange(
-    const Pose2D *global_pose, EulerDistanceTransform *edt) {
-  Transform2d tf;
+    const Pose2f *global_pose, EulerDistanceTransform *edt) {
+  Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
   float min_dist = 10.0;
-  Pose2D pose = *global_pose;
+  Pose2f pose = *global_pose;
   pose.x = x_check_bounday_.lower;
 
   for (int j = 0; j < x_check_bounday_.number; j++) {
@@ -285,12 +284,12 @@ const float TargetPoseRegulator::GetMinDistByXRange(
 }
 
 const float TargetPoseRegulator::GetDistToObsHeadOut(
-    const Pose2D *global_pose, EulerDistanceTransform *edt) {
-  Transform2d tf;
+    const Pose2f *global_pose, EulerDistanceTransform *edt) {
+  Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
   float min_dist = 10.0;
-  Pose2D pose = *global_pose;
+  Pose2f pose = *global_pose;
   const size_t num = 10;
   const float y_step = 0.5;
   for (int j = 0; j < num; j++) {
@@ -338,7 +337,7 @@ const bool TargetPoseRegulator::IsCandidatePoseSafe(
   return false;
 }
 
-const std::pair<Pose2D, float> TargetPoseRegulator::GetCandidatePose(
+const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
     const float lat_buffer) const {
   if (candidate_info_.size() <= 0) {
     return std::make_pair(center_line_target_, 0.0);
@@ -386,7 +385,7 @@ void TargetPoseRegulator::DebugString() {
 void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
-  Pose2D global_pose;
+  Pose2f global_pose;
   AstarPathGear gear = AstarPathGear::NONE;
   global_pose = center_line_target_;
 

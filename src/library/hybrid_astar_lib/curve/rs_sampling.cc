@@ -81,7 +81,7 @@ void RSSampling::PathTransformByRSPath(const RSPath& rs_path,
 }
 
 void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
-                                         const Pose2D& start, const Pose2D& end,
+                                         const Pose2f& start, const Pose2f& end,
                                          const float lon_min_sampling_length,
                                          const float radius) {
   bool is_connected_to_goal;
@@ -90,7 +90,7 @@ void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
   // sampling for path end
   // sampling start point: move start point forward dist
   // (lon_min_sampling_length)
-  Pose2D sampling_end = start;
+  Pose2f sampling_end = start;
   sampling_end.y = 0.0;
   sampling_end.theta = end.theta;
   sampling_end.x = start.x + lon_min_sampling_length;
@@ -199,9 +199,9 @@ void RSSampling::RSPathCandidateByRadius(HybridAStarResult* result,
   return;
 }
 
-bool RSSampling::PlanByRSPathSampling(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const float lon_min_sampling_length) {
+bool RSSampling::PlanByRSPathSampling(HybridAStarResult* result,
+                                      const Pose2f& start, const Pose2f& end,
+                                      const float lon_min_sampling_length) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -283,9 +283,9 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
     return false;
   }
 
-  float heading_diff = IflyUnifyTheta(current_node->GetPhi(), M_PI) -
-                       IflyUnifyTheta(search_goal_.GetPhi(), M_PI);
-  heading_diff = IflyUnifyTheta(heading_diff, M_PI);
+  float heading_diff = IflyUnifyTheta(current_node->GetPhi(), M_PIf32) -
+                       IflyUnifyTheta(search_goal_.GetPhi(), M_PIf32);
+  heading_diff = IflyUnifyTheta(heading_diff, M_PIf32);
   if (heading_diff > ifly_deg2rad(60.0) || heading_diff < ifly_deg2rad(-60.0)) {
     return false;
   }
@@ -306,7 +306,7 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
   bool valid_path = false;
   bool is_connected_to_goal = false;
 
-  Pose2D end_pose = search_goal_;
+  Pose2f end_pose = search_goal_;
   end_pose.x += 0.1;
 
   for (int q = 0; q < sampline_numer; q++) {
@@ -322,7 +322,6 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
 
     // check gear
     if (!IsExpectedGearForRsPath(rs_path_)) {
-
       continue;
     }
 
@@ -350,7 +349,7 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
 
   node_path.points[0].x = rs_end_point.x;
   node_path.points[0].y = rs_end_point.y;
-  node_path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PI);
+  node_path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
 
   rs_node_to_goal->Set(node_path, *XYbounds_, *config_, node_path.path_dist);
 

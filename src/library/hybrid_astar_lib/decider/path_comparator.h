@@ -29,13 +29,13 @@ class PathComparator : public AstarDecider {
   bool Compare(const AstarRequest *request, const Node3d *best_node,
                const Node3d *node_challenger);
 
-  void Process(const Pose2D &start, const Pose2D &end) override;
+  void Process(const Pose2f &start, const Pose2f &end) override;
 
   const bool PolynomialPathBetter(const PolynomialPathCost &path,
                                   const PolynomialPathCost &base);
 
   // 比较准则：5厘米以外，距离越近越好；5厘米以内，heading越接近越好;
-  const bool NodeCompare(const Pose2D &goal, const Node3d *best_node,
+  const bool NodeCompare(const Pose2f &goal, const Node3d *best_node,
                          const Node3d *node_challenger);
 
  private:
@@ -45,10 +45,10 @@ class PathComparator : public AstarDecider {
   bool CheckVerticalSlotHeadIn(const Node3d *best_node,
                                const Node3d *node_challenger);
 
-  const float GetHeuristicPointDistance(const Pose2D &node);
+  const float GetHeuristicPointDistance(const Pose2f &node);
 
-  const bool CheckHeuristicPointIsNice(const Pose2D &best_node,
-                                       const Pose2D &node_challenger);
+  const bool CheckHeuristicPointIsNice(const Pose2f &best_node,
+                                       const Pose2f &node_challenger);
 
   const bool CheckDistanceRequest(const float &best_node_s,
                                   const float &node_challenger_s);
@@ -69,7 +69,7 @@ class PathComparator : public AstarDecider {
    *
    * this pose is an heuristic pose in slot such as o point.
    */
-  Pose2D heuristic_pose_;
+  Pose2f heuristic_pose_;
 
   const AstarRequest *request_;
 };

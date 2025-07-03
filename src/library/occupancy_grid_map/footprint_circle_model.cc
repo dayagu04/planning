@@ -29,7 +29,7 @@ void FootPrintCircleModel::UpdateSafeBuffer(
   // Perception object is invading, so this value is small, or else planning
   // is often failed.
   float min_lon_buffer = 0.01;
-  local_circles_.max_circle.pos = Position2D(circle_x[0], circle_y[0]);
+  local_circles_.max_circle.pos = Position2f(circle_x[0], circle_y[0]);
   local_circles_.max_circle.radius =
       (float)(circle_r[0] + big_circle_safe_buffer);
   local_circles_.max_circle.safe_buffer = big_circle_safe_buffer;
@@ -149,8 +149,8 @@ void FootPrintCircleModel::UpdateSafeBuffer(
 }
 
 void FootPrintCircleModel::LocalToGlobalFast(FootPrintCircleList *global_circle,
-                                             const Pose2D &veh_pose) {
-  Transform2d tf;
+                                             const Pose2f &veh_pose) {
+  Transform2f tf;
   tf.SetBasePose(veh_pose);
 
   // max circle
@@ -169,7 +169,7 @@ void FootPrintCircleModel::LocalToGlobalFast(FootPrintCircleList *global_circle,
 }
 
 void FootPrintCircleModel::LocalToGlobalByTF(FootPrintCircleList *global_circle,
-                                             Transform2d *tf) {
+                                             Transform2f *tf) {
   // max circle
   tf->ULFLocalPointToGlobal(&(global_circle->max_circle.pos),
                             local_circles_.max_circle.pos);
@@ -190,7 +190,7 @@ void FootPrintCircleModel::LocalToGlobalByTF(FootPrintCircleList *global_circle,
 }
 
 void FootPrintCircleModel::LocalToGlobalByGear(
-    FootPrintCircleList *global_circle, Transform2d *tf,
+    FootPrintCircleList *global_circle, Transform2f *tf,
     const AstarPathGear gear) const {
   const FootPrintCircleList *local;
 
@@ -219,8 +219,8 @@ void FootPrintCircleModel::LocalToGlobalByGear(
 }
 
 void FootPrintCircleModel::LocalModelToGlobalModel(
-    FootPrintCircleList *global_circle, const Pose2D &veh_pose) {
-  Transform2d tf;
+    FootPrintCircleList *global_circle, const Pose2f &veh_pose) {
+  Transform2f tf;
   tf.SetBasePose(veh_pose);
 
   // max circle

@@ -26,8 +26,8 @@ int RSPathInterpolator::CopyRSPathKappaParam(RSPathKappaParam *dst_list,
 }
 
 int RSPathInterpolator::CalcShortestRSPathKappa(
-    RSPathKappaParam *kappa_list, const Pose2D *start_pose,
-    const Pose2D *goal_pose, float min_turn_radius,
+    RSPathKappaParam *kappa_list, const Pose2f *start_pose,
+    const Pose2f *goal_pose, float min_turn_radius,
     const float inverse_radius, const RSPathRequestType request_type) {
   bool is_same;
   RSPathParam *path;
@@ -75,8 +75,8 @@ int RSPathInterpolator::CalcShortestRSPathKappa(
 }
 
 int RSPathInterpolator::CalcSCSPathKappa(RSPathKappaParam *kappa_list,
-                                         const Pose2D *start_pose,
-                                         const Pose2D *goal_pose,
+                                         const Pose2f *start_pose,
+                                         const Pose2f *goal_pose,
                                          float min_turn_radius,
                                          const float inverse_radius,
                                          const RSPathRequestType request_type) {
@@ -207,7 +207,7 @@ int RSPathInterpolator::GetStraightLinePoint(RSPoint *goal_state,
                                              const RSPoint *start_state,
                                              AstarPathGear direction,
                                              const float dist_to_start,
-                                             const Pose2D *unit_vector) {
+                                             const Pose2f *unit_vector) {
   goal_state->x = start_state->x + dist_to_start * unit_vector->x;
   goal_state->y = start_state->y + dist_to_start * unit_vector->y;
 
@@ -236,7 +236,7 @@ int RSPathInterpolator::GetCirclePoint(RSPoint *goal_state,
   goal_state->y = start_state->y +
                   radius * (ifly_cos(start_state->theta) - ifly_cos(theta));
 
-  goal_state->theta = IflyUnifyTheta(theta, M_PI);
+  goal_state->theta = IflyUnifyTheta(theta, M_PIf32);
   goal_state->kappa = start_state->kappa;
   goal_state->dir = direction;
 
@@ -287,7 +287,7 @@ int RSPathInterpolator::UpdateGearSwitchNum(
 }
 
 int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
-                                          const Pose2D *start_pose,
+                                          const Pose2f *start_pose,
                                           const RSPathKappaParam *path_list) {
   RSPoint *cur_point, *next_point;
   int i;
@@ -323,7 +323,7 @@ int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
 
   for (i = 0; i < point_set->size; i++) {
     point_set->points[i].theta =
-        IflyUnifyTheta(point_set->points[i].theta, M_PI);
+        IflyUnifyTheta(point_set->points[i].theta, M_PIf32);
   }
 
 #if 0
@@ -345,7 +345,7 @@ int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
 }
 
 int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
-                                          const Pose2D *start_pose,
+                                          const Pose2f *start_pose,
                                           const RSPath *path) {
   RSPoint *cur_point, *next_point;
   int i;
@@ -381,7 +381,7 @@ int RSPathInterpolator::UpdateAnchorPoint(RSAnchorPoints *point_set,
 
   for (i = 0; i < point_set->size; i++) {
     point_set->points[i].theta =
-        IflyUnifyTheta(point_set->points[i].theta, M_PI);
+        IflyUnifyTheta(point_set->points[i].theta, M_PIf32);
   }
 
 #if 0
@@ -458,7 +458,7 @@ int RSPathInterpolator::RSPathSegmentInterpolate(
 
   // normalize angle
   for (j = 0; j < path->size; j++) {
-    path->points[j].theta = IflyUnifyTheta(path->points[j].theta, M_PI);
+    path->points[j].theta = IflyUnifyTheta(path->points[j].theta, M_PIf32);
   }
 
   return 0;
@@ -475,7 +475,7 @@ int RSPathInterpolator::PathSegmentInterpolateByLine(
   // update first point
   path->points[0].x = start_pose->x;
   path->points[0].y = start_pose->y;
-  path->points[0].theta = IflyUnifyTheta(start_pose->theta, M_PI);
+  path->points[0].theta = IflyUnifyTheta(start_pose->theta, M_PIf32);
   path->points[0].dir = GetGearBySignLen(length);
   path->points[0].kappa = path_kappa;
   path->size = 1;
@@ -487,7 +487,7 @@ int RSPathInterpolator::PathSegmentInterpolateByLine(
   is_last = false;
 
   // get unit vector
-  Pose2D unit_vector;
+  Pose2f unit_vector;
   unit_vector.x = (next_pose->x - start_pose->x) / abs_length;
   unit_vector.y = (next_pose->y - start_pose->y) / abs_length;
 
@@ -632,7 +632,7 @@ int RSPathInterpolator::InterpolateByArcOffset(RSPoint *pose,
 
   pose->x = veh_circle->center.x + radius * std::sin(theta);
   pose->y = veh_circle->center.y - radius * std::cos(theta);
-  pose->theta = IflyUnifyTheta(theta, M_PI);
+  pose->theta = IflyUnifyTheta(theta, M_PIf32);
 
   return 1;
 }

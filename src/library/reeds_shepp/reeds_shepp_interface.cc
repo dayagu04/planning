@@ -8,8 +8,8 @@
 namespace planning {
 
 void RSPathInterface::GeneShortestRSPath(
-    RSPath *rs_path, bool *is_connected_to_goal, const Pose2D *start,
-    const Pose2D *end, const float min_radius, const bool need_interpolate,
+    RSPath *rs_path, bool *is_connected_to_goal, const Pose2f *start,
+    const Pose2f *end, const float min_radius, const bool need_interpolate,
     const bool need_anchor_point, const RSPathRequestType request_type,
     const float rs_path_sample_dist) {
   // init
@@ -99,7 +99,7 @@ void RSPathInterface::GeneShortestRSPath(
 }
 
 void RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
-                                 const Pose2D *start, const Pose2D *end,
+                                 const Pose2f *start, const Pose2f *end,
                                  const float min_radius,
                                  const RSPathRequestType request_type) {
   // init
@@ -174,7 +174,7 @@ void RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
   return;
 }
 
-void RSPathInterface::RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
+void RSPathInterface::RSPathInterpolate(RSPath *rs_path, const Pose2f *start,
                                        const float min_radius) {
   // update anchor
   rs_interpolate_.UpdateAnchorPoint(&rs_anchor_points_, start, rs_path);

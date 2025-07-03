@@ -22,12 +22,12 @@ class SpiralSampling : public CurveSampling {
 
   // use cubic spiral path sampling to link start point and end point.
   bool SamplingByCubicSpiralForVerticalSlot(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      HybridAStarResult* result, const Pose2f& start, const Pose2f& target,
       const float lon_min_sampling_length);
 
  private:
   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
-                                const Pose2D& start, const Pose2D& end,
+                                const Pose2f& start, const Pose2f& end,
                                 const AstarPathGear ref_gear);
 };
 

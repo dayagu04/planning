@@ -53,8 +53,8 @@ class PointCloudObstacleTransform {
 
   void GenerateLocalObstacleByLocalView(ParkObstacleList& obs_list,
                                         const LocalView* local_view,
-                                        const float slot_length,
-                                        const float slot_width,
+                                        const double slot_length,
+                                        const double slot_width,
                                         const Pose2D& slot_base_pose,
                                         const Pose2D& ego_start,
                                         const bool enable_limiter_obs);
@@ -65,12 +65,12 @@ class PointCloudObstacleTransform {
       const cdl::AABB& slot_box, const bool delete_slot_obs);
 
  private:
-  void SampleInLineSegment(const Eigen::Vector2f& start,
-                           const Eigen::Vector2f& end,
+  void SampleInLineSegment(const Eigen::Vector2d& start,
+                           const Eigen::Vector2d& end,
                            std::vector<Position2D>* points);
 
-  void GetCompactCarPolygonByParam(Polygon2D* box, const float lat_buffer,
-                                   const float lon_buffer);
+  void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
+                                   const double lon_buffer);
 
  private:
   GJK2DInterface gjk_;

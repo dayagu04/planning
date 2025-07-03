@@ -9,10 +9,10 @@
 namespace planning {
 namespace apa_planner {
 struct VirtualWallBoundary {
-  float x_upper;
-  float x_lower;
-  float y_upper;
-  float y_lower;
+  double x_upper;
+  double x_lower;
+  double y_upper;
+  double y_lower;
 
   VirtualWallBoundary() = default;
 
@@ -22,8 +22,8 @@ struct VirtualWallBoundary {
         y_upper(center.y),
         y_lower(center.y) {}
 
-  VirtualWallBoundary(const float x_upper_, const float x_lower_,
-                      const float y_upper_, const float y_lower_)
+  VirtualWallBoundary(const double x_upper_, const double x_lower_,
+                      const double y_upper_, const double y_lower_)
       : x_upper(x_upper_),
         x_lower(x_lower_),
         y_upper(y_upper_),
@@ -56,12 +56,12 @@ class VirtualWallDecider : public ParkingTask {
 
   void Init(const Pose2D& ego_pose);
 
-  void Process(std::vector<Position2D>& points, const float slot_width,
-               const float slot_length, const Pose2D& ego_pose,
+  void Process(std::vector<Position2D>& points, const double slot_width,
+               const double slot_length, const Pose2D& ego_pose,
                const Pose2D& end, const ParkSpaceType slot_type,
                const pnc::geometry_lib::SlotSide slot_side,
                const ParkingVehDirection parking_type,
-               const float passage_height);
+               const double passage_height);
 
   void Reset(const Pose2D& ego_pose) {
     passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
@@ -70,21 +70,21 @@ class VirtualWallDecider : public ParkingTask {
 
  private:
   void CalcVerticalVirtualWall(std::vector<Position2D>& points,
-                               const float slot_width, const float slot_length,
+                               const double slot_width, const double slot_length,
                                const Pose2D& ego_pose, const Pose2D& end,
-                               const float virtual_wall_x_offset,
-                               const float virtual_wall_y_offset,
-                               const float passage_half_length,
-                               const float passage_height);
+                               const double virtual_wall_x_offset,
+                               const double virtual_wall_y_offset,
+                               const double passage_half_length,
+                               const double passage_height);
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
-                                    const float slot_width,
-                                    const float slot_length,
+                                    const double slot_width,
+                                    const double slot_length,
                                     const Pose2D& ego_pose, const Pose2D& end);
 
   void LeftSideParallelVirtualWall(std::vector<Position2D>& points,
-                                   const float slot_width,
-                                   const float slot_length,
+                                   const double slot_width,
+                                   const double slot_length,
                                    const Pose2D& ego_pose, const Pose2D& end);
 
   // If virtual wall is collision with ego, remove virtual wall point.

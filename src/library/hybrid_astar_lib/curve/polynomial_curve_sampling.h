@@ -21,14 +21,14 @@ class PolynomialCurveSampling : public CurveSampling {
 
   // use cubic path sampling to link start point and end point.
   bool SamplingByCubicPolyForVerticalSlot(HybridAStarResult* result,
-                                          const Pose2D& start,
-                                          const Pose2D& target,
+                                          const Pose2f& start,
+                                          const Pose2f& target,
                                           const float lon_min_sampling_length);
 
   // use cubic path sampling to link start point and end point.
   bool SamplingByCubicPolyForParallelSlot(HybridAStarResult* result,
-                                          const Pose2D& start,
-                                          const Pose2D& end,
+                                          const Pose2f& start,
+                                          const Pose2f& end,
                                           const float lon_min_sampling_length);
 
   bool SamplingByQunticPolynomial(Node3d* current_node,
@@ -38,8 +38,8 @@ class PolynomialCurveSampling : public CurveSampling {
 
  private:
   void GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
-                               const Pose2D& start, const float start_kappa,
-                               const Pose2D& end);
+                               const Pose2f& start, const float start_kappa,
+                               const Pose2f& end);
 
  private:
   CubicPathInterface cubic_polynomial_path_;

@@ -130,7 +130,7 @@ void DebugPathString(const HybridAStarResult* result) {
 }
 
 void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
-                                    const Pose2D& real_end) {
+                                    const Pose2f& real_end) {
   if (result == nullptr || result->x.size() < 1) {
     ILOG_INFO << "no path";
     return;
@@ -146,7 +146,7 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
   }
 
   float extend_dist = real_end.DistanceTo(
-      Pose2D(astar_end_point[0], astar_end_point[1], result->phi.back()));
+      Pose2f(astar_end_point[0], astar_end_point[1], result->phi.back()));
   if (extend_dist < 0.1) {
     return;
   }

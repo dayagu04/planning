@@ -66,7 +66,7 @@ class HybridAStar {
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
    */
-  bool AstarSearch(const Pose2D& start, const Pose2D& end,
+  bool AstarSearch(const Pose2f& start, const Pose2f& end,
                    const MapBound& XYbounds, HybridAStarResult* result);
 
   void GetRSPathForDebug(std::vector<float>& x, std::vector<float>& y,
@@ -76,8 +76,8 @@ class HybridAStar {
   const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
 
   // for debug
-  const std::vector<Vec2df32>& GetQueuePathForDebug();
-  const std::vector<Vec2df32>& GetDelQueuePathForDebug();
+  const std::vector<Vec2f>& GetQueuePathForDebug();
+  const std::vector<Vec2f>& GetDelQueuePathForDebug();
   // for debug
   const std::vector<RSPath>& GetRSPathHeuristic();
 
@@ -85,7 +85,7 @@ class HybridAStar {
   void GetNodeListMessage(planning::common::AstarNodeList* list);
 
   // for debug
-  void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2f>>& list);
+  void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
   const ParkReferenceLine* GetConstRefLine() const;
 
@@ -95,8 +95,8 @@ class HybridAStar {
 
   // If search success, return a path linked wtih goal point;
   // todo: unify this API with AstarSearch().
-  void OneShotPathAttempt(const MapBound& XYbounds, const Pose2D& start,
-                          const Pose2D& target, HybridAStarResult* result);
+  void OneShotPathAttempt(const MapBound& XYbounds, const Pose2f& start,
+                          const Pose2f& target, HybridAStarResult* result);
 
   // debug
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
@@ -104,23 +104,23 @@ class HybridAStar {
   // todo: move sampling based method out of astar class, we can move it to
   // interface.
   bool SamplingByCubicPolyForParallelSlot(HybridAStarResult* result,
-                                          const Pose2D& start,
-                                          const Pose2D& end,
+                                          const Pose2f& start,
+                                          const Pose2f& end,
                                           const float lon_min_sampling_length) {
     return polynomial_sampling_->SamplingByCubicPolyForParallelSlot(
         result, start, end, lon_min_sampling_length);
   }
 
   // use rs path sampling to link start point and end point.
-  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2D& start,
-                            const Pose2D& end,
+  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2f& start,
+                            const Pose2f& end,
                             const float lon_min_sampling_length) {
     return rs_sampling_->PlanByRSPathSampling(result, start, end,
                                               lon_min_sampling_length);
   }
 
   bool SamplingByCubicSpiralForVerticalSlot(
-      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      HybridAStarResult* result, const Pose2f& start, const Pose2f& target,
       const float lon_min_sampling_length) {
     return spiral_sampling_->SamplingByCubicSpiralForVerticalSlot(
         result, start, target, lon_min_sampling_length);
@@ -186,7 +186,7 @@ class HybridAStar {
                        const AstarPathGear gear_request_info);
 
   // radius:left is positve
-  void KineticsModel(const Pose2D* old_pose, const float radius, Pose2D* pose,
+  void KineticsModel(const Pose2f* old_pose, const float radius, Pose2f* pose,
                      const bool is_forward);
 
   // radius:left is positve
@@ -201,26 +201,26 @@ class HybridAStar {
                        const bool is_forward);
 
   // dist_to_start: if forward, dist_to_start is positive
-  int GetStraightLinePoint(Pose2D* goal_state, const Pose2D* start_state,
+  int GetStraightLinePoint(Pose2f* goal_state, const Pose2f* start_state,
                            const float dist_to_start,
-                           const Pose2D* unit_vector);
+                           const Pose2f* unit_vector);
 
   // radius: if left turn, radius is positive
-  int GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2D* pose,
+  int GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2f* pose,
                          const float radius, const AstarPathGear gear);
 
   // arc is positive.
   // inverse_radius is positive
-  int InterpolateByArcOffset(Pose2D* pose, const VehicleCircle* veh_circle,
-                             const Pose2D* start_pose, const float arc,
+  int InterpolateByArcOffset(Pose2f* pose, const VehicleCircle* veh_circle,
+                             const Pose2f* start_pose, const float arc,
                              const float inverse_radius);
 
-  void UpdatePoseByPathPointInterval(const Pose2D* old_pose, const float radius,
-                                     const float interval, Pose2D* pose,
+  void UpdatePoseByPathPointInterval(const Pose2f* old_pose, const float radius,
+                                     const float interval, Pose2f* pose,
                                      const bool is_forward);
 
-  void UpdatePoseBySamplingNumber(const Pose2D* old_pose, const float radius,
-                                  const int number, Pose2D* pose,
+  void UpdatePoseBySamplingNumber(const Pose2f* old_pose, const float radius,
+                                  const int number, Pose2f* pose,
                                   const bool is_forward);
 
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
@@ -247,14 +247,14 @@ class HybridAStar {
   void UpdatePathS(HybridAStarResult* path);
 
   // If expect gear is drive, check ego pose.
-  const bool IsNeedGearDriveSearch(const Pose2D& start);
+  const bool IsNeedGearDriveSearch(const Pose2f& start);
 
   // If expect gear is reverse, check ego pose.
-  const bool IsNeedGearReverseSearch(const Pose2D& start);
+  const bool IsNeedGearReverseSearch(const Pose2f& start);
 
   void DebugNodeList(const std::vector<Node3d*>& node_list);
 
-  void SetSamplingTarget(const Pose2D& pose);
+  void SetSamplingTarget(const Pose2f& pose);
 
  private:
   PlannerOpenSpaceConfig config_;
@@ -330,8 +330,8 @@ class HybridAStar {
 
   // just for debug, display all result in hmi/plot
   std::vector<DebugAstarSearchPoint> child_node_debug_;
-  std::vector<Vec2df32> queue_path_debug_;
-  std::vector<Vec2df32> delete_queue_path_debug_;
+  std::vector<Vec2f> queue_path_debug_;
+  std::vector<Vec2f> delete_queue_path_debug_;
   std::vector<RSPath> rs_path_h_cost_debug_;
 
   // for debug

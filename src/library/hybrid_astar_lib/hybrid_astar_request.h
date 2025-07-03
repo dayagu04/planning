@@ -38,13 +38,13 @@ struct AstarRequest {
   // slot pose in global.
   Pose2D base_pose_;
   // local frame in slot
-  Pose2D start_;
+  Pose2f start_;
   // local frame in slot, this goal is astar end point. Astar goal maybe
   // different with real goal in slot.
-  Pose2D goal_;
+  Pose2f goal_;
 
   // real goal for park in, decide by slot limiter
-  Pose2D real_goal;
+  Pose2f real_goal;
 
   float slot_width;
   float slot_length;

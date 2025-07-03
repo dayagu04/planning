@@ -69,7 +69,7 @@ class NodeCollisionDetect {
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
  private:
-  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2D& pose,
+  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2f& pose,
                                                 const bool is_circle_path);
 
   inline const bool IsCirclePathBySteeringWheel(const float front_wheel_angle) {
@@ -106,7 +106,7 @@ class NodeCollisionDetect {
   HierarchyBufferCircleFootPrint hierachy_circle_model_;
 
   // 用于区分库内库外
-  cdl::AABB slot_box_;
+  cdl::AABB2f slot_box_;
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;

@@ -12,7 +12,7 @@ namespace planning {
 
 #define DEBUG_DECIDER (0)
 
-void PathComparator::Process(const Pose2D &start, const Pose2D &end) {
+void PathComparator::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   return;
@@ -91,7 +91,7 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
     }
   }
 
-  Pose2D gear_switch_pose_best;
+  Pose2f gear_switch_pose_best;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
   } else {
@@ -99,7 +99,7 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
   }
   float heading_error_best = std::fabs(gear_switch_pose_best.theta);
 
-  Pose2D gear_switch_pose_challenger;
+  Pose2f gear_switch_pose_challenger;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
   } else {
@@ -151,23 +151,23 @@ bool PathComparator::CheckVerticalSlotHeadOut(const AstarRequest *request,
     }
   }
 
-  Pose2D gear_switch_pose_best;
+  Pose2f gear_switch_pose_best;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
   } else {
     gear_switch_pose_best = best_node->GetPose();
   }
-  double heading_error_best =
+  float heading_error_best =
       std::fabs(gear_switch_pose_best.theta - request->real_goal.theta);
 
-  Pose2D gear_switch_pose_challenger;
+  Pose2f gear_switch_pose_challenger;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
   } else {
     gear_switch_pose_challenger = node_challenger->GetPose();
   }
 
-  double heading_error_challenger =
+  float heading_error_challenger =
       std::fabs(gear_switch_pose_challenger.theta - request->real_goal.theta);
 
 #if DEBUG_DECIDER
@@ -226,7 +226,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   }
 
   // best node pose
-  Pose2D gear_switch_pose_best;
+  Pose2f gear_switch_pose_best;
   float best_s;
   if (best_node->GearSwitchNode() != nullptr) {
     gear_switch_pose_best = best_node->GearSwitchNode()->GetPose();
@@ -240,7 +240,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   heading_error_best = std::fabs(heading_error_best);
 
   // challenger pose
-  Pose2D gear_switch_pose_challenger;
+  Pose2f gear_switch_pose_challenger;
   float challenger_s;
   if (node_challenger->GearSwitchNode() != nullptr) {
     gear_switch_pose_challenger = node_challenger->GearSwitchNode()->GetPose();
@@ -291,7 +291,7 @@ bool PathComparator::CheckVerticalSlotHeadIn(const Node3d *best_node,
   return true;
 }
 
-const bool PathComparator::NodeCompare(const Pose2D &goal,
+const bool PathComparator::NodeCompare(const Pose2f &goal,
                                        const Node3d *best_node,
                                        const Node3d *node_challenger) {
   float dist1 = std::fabs(goal.y - best_node->GetPose().y);
@@ -330,10 +330,10 @@ void PathComparator::SetHeuristicPose(const AstarRequest &request) {
   return;
 }
 
-const float PathComparator::GetHeuristicPointDistance(const Pose2D &node) {
-  Vec2df32 line_base = Vec2df32::CreateUnitVec2df32(node.theta);
+const float PathComparator::GetHeuristicPointDistance(const Pose2f &node) {
+  Vec2f line_base = Vec2f::CreateUnitVec(node.theta);
 
-  Vec2df32 line_project;
+  Vec2f line_project;
   line_project.set_x(heuristic_pose_.x - node.x);
   line_project.set_y(heuristic_pose_.y - node.y);
 
@@ -341,7 +341,7 @@ const float PathComparator::GetHeuristicPointDistance(const Pose2D &node) {
 }
 
 const bool PathComparator::CheckHeuristicPointIsNice(
-    const Pose2D &best_node, const Pose2D &node_challenger) {
+    const Pose2f &best_node, const Pose2f &node_challenger) {
   // check heuristic point projection.
   const float challenger_dist = GetHeuristicPointDistance(node_challenger);
   if (challenger_dist > 100.0) {

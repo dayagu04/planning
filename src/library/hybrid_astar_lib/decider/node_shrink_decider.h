@@ -26,10 +26,10 @@ class NodeShrinkDecider : public AstarDecider {
  public:
   NodeShrinkDecider() = default;
 
-  void Process(const Pose2D &start, const Pose2D &end) override;
+  void Process(const Pose2f &start, const Pose2f &end) override;
 
-  void Process(const Pose2D &start, const Pose2D &end,
-               const ParkingVehDirection park_dir, const Pose2D &limiter_pose,
+  void Process(const Pose2f &start, const Pose2f &end,
+               const ParkingVehDirection park_dir, const Pose2f &limiter_pose,
                const MapBound &XYbounds);
 
   bool IsLegalForHeading(const float heading);

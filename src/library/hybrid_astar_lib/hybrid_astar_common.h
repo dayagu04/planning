@@ -277,7 +277,7 @@ struct AstarSamplingAngle {
 };
 
 struct DebugAstarSearchPoint {
-  Position2D pos;
+  Position2f pos;
   bool safe;
   // If this point is first path end point, and is a gear switch point without
   // collision, true.
@@ -341,6 +341,6 @@ void DebugPathString(const HybridAStarResult* result);
 std::string GetNodeCurveDebugString(const AstarPathType type);
 
 void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
-                                    const Pose2D& real_end);
+                                    const Pose2f& real_end);
 
 }  // namespace planning

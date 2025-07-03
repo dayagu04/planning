@@ -14,19 +14,19 @@ class CubicPathInterface {
 
   void Init();
 
-  std::vector<float> GeneratePolynomialCoefficients(
-      const Pose2D& start_point, const Pose2D& target_point);
+  std::vector<float> GeneratePolynomialCoefficients(const Pose2f& start_point,
+                                                    const Pose2f& target_point);
 
   void GeneratePolynomialPath(std::vector<AStarPathPoint>& path,
                               const std::vector<float>& coefficients,
-                              const float step, const Pose2D& start_point,
-                              const Pose2D& target_point);
+                              const float step, const Pose2f& start_point,
+                              const Pose2f& target_point);
 
   std::vector<float> GetThetaVec();
   std::vector<float> GetCurvatureVec();
 
   const float GetMinCurvatureRadius() const;
-  const bool ArePosesEqual(const Pose2D& p1, const Pose2D& p2,
+  const bool ArePosesEqual(const Pose2f& p1, const Pose2f& p2,
                            float epsilon = 1e-9);
 
  private:

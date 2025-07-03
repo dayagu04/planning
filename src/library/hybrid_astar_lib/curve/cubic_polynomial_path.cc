@@ -16,7 +16,7 @@ void CubicPathInterface::Init() {
 };
 
 std::vector<float> CubicPathInterface::GeneratePolynomialCoefficients(
-    const Pose2D& start_point, const Pose2D& target_point) {
+    const Pose2f& start_point, const Pose2f& target_point) {
   // y(x) = ax^3 + bx^x2 + cx + d
   // y(x0) = y0; y(xt) = 0;
   // y'(x0) = tan(theta0); y'(xt) = 0;
@@ -49,8 +49,7 @@ std::vector<float> CubicPathInterface::GeneratePolynomialCoefficients(
         a_denominator;
   }
 
-  const float b =
-      (tan_theta0 - 3 * a * (x0_square - xt_square)) / x_diff * 0.5;
+  const float b = (tan_theta0 - 3 * a * (x0_square - xt_square)) / x_diff * 0.5;
   const float c = tan_theta0 - 3 * a * x0_square - 2 * b * x0;
   const float d = y0 - a * x0_cube - b * x0_square - c * x0;
 
@@ -64,7 +63,7 @@ std::vector<float> CubicPathInterface::GeneratePolynomialCoefficients(
 
 void CubicPathInterface::GeneratePolynomialPath(
     std::vector<AStarPathPoint>& path, const std::vector<float>& coefficients,
-    const float step, const Pose2D& start_point, const Pose2D& target_point) {
+    const float step, const Pose2f& start_point, const Pose2f& target_point) {
   curvature_vec_.clear();
   path.clear();
 
@@ -84,9 +83,9 @@ void CubicPathInterface::GeneratePolynomialPath(
   for (size_t i = 0; i < max_sampling_num; i++) {
     x = i * step + x0;
     const float y = coefficients[0] * pow(x, 3) + coefficients[1] * pow(x, 2) +
-                     coefficients[2] * x + coefficients[3];
+                    coefficients[2] * x + coefficients[3];
     const float y_dot = 3 * coefficients[0] * pow(x, 2) +
-                         2 * coefficients[1] * x + coefficients[2];
+                        2 * coefficients[1] * x + coefficients[2];
     const float y_sec_dot = 6 * coefficients[0] * x + 2 * coefficients[1];
 
     float curvature = y_sec_dot / pow(1 + y_dot * y_dot, 1.5);
@@ -120,7 +119,7 @@ const float CubicPathInterface::GetMinCurvatureRadius() const {
   }
 };
 
-const bool CubicPathInterface::ArePosesEqual(const Pose2D& p1, const Pose2D& p2,
+const bool CubicPathInterface::ArePosesEqual(const Pose2f& p1, const Pose2f& p2,
                                              float epsilon) {
   // 比较x, y和theta
   return std::fabs(p1.x - p2.x) < epsilon && std::fabs(p1.y - p2.y) < epsilon &&

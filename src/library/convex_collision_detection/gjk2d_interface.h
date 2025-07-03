@@ -227,7 +227,7 @@ class GJK2DInterface {
                                    const Position2D &point);
 
   void PolygonPointCollisionDetect(const Polygon2D *polygon,
-                                   const Eigen::Vector2f &point,
+                                   const Eigen::Vector2d &point,
                                    bool *is_collision);
 
   void PolygonDistanceByThresh(const Polygon2D *polygon,

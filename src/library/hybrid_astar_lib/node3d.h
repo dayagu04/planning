@@ -35,7 +35,7 @@ struct NodePath {
   size_t point_size = 0;
   // node points max number is 8. If this node is rs, please restore path in rs
   // path.
-  Pose2D points[NODE_PATH_MAX_POINT];
+  Pose2f points[NODE_PATH_MAX_POINT];
   float path_dist;
 
   void Clear() {
@@ -53,14 +53,14 @@ struct NodePath {
     points[0].theta = theta;
   }
 
-  NodePath(const Pose2D& pose) {
+  NodePath(const Pose2f& pose) {
     point_size = 1;
     points[0].x = pose.x;
     points[0].y = pose.y;
     points[0].theta = pose.theta;
   }
 
-  const Pose2D& GetEndPoint() const {
+  const Pose2f& GetEndPoint() const {
     if (point_size > 0) {
       return points[point_size - 1];
     } else {
@@ -126,7 +126,7 @@ class Node3d {
   const float GetPhi() const { return path_.GetEndPoint().theta; }
 
   // Get end pose
-  const Pose2D& GetPose() const;
+  const Pose2f& GetPose() const;
 
   bool operator==(const Node3d& right) const;
 
@@ -268,7 +268,7 @@ class Node3d {
     return multimap_iter_;
   }
 
-  float DistToPose(const Pose2D& pose);
+  float DistToPose(const Pose2f& pose);
 
   Node3d* GearSwitchNode() const { return gear_switch_node_; }
 

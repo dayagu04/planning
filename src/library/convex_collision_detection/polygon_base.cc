@@ -49,9 +49,9 @@ int PolygonCopy(Polygon2D *des_poly, const Polygon2D *src_poly) {
 }
 
 void UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
-                        bool use_center_pose, bool radius_known, float radius) {
+                        bool use_center_pose, bool radius_known, double radius) {
   int i;
-  float tmp_dist;
+  double tmp_dist;
 
   if (polygon == nullptr) {
     return;
@@ -98,8 +98,8 @@ void UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
         polygon->center_pt.x = center_pose->x;
         polygon->center_pt.y = center_pose->y;
       } else {
-        float x = 0.0;
-        float y = 0.0;
+        double x = 0.0;
+        double y = 0.0;
         for (i = 0; i < polygon->vertex_num; i++) {
           x += polygon->vertexes[i].x;
           y += polygon->vertexes[i].y;
@@ -148,8 +148,8 @@ int GenerateLineSegmentPolygon(Polygon2D *polygon, const Position2D &start,
   return 0;
 }
 
-int GenerateLineSegmentPolygon(Polygon2D *polygon, const Eigen::Vector2f &start,
-                               const Eigen::Vector2f &end) {
+int GenerateLineSegmentPolygon(Polygon2D *polygon, const Eigen::Vector2d &start,
+                               const Eigen::Vector2d &end) {
   if (polygon == nullptr) {
     return 0;
   }
@@ -177,9 +177,9 @@ int GeneratePolygonByAABB(Polygon2D *polygon, const cdl::AABB &box) {
     return 0;
   }
 
-  float x_diff = box.width();
-  float y_diff = box.height();
-  float point_error = 0.001;
+  double x_diff = box.width();
+  double y_diff = box.height();
+  double point_error = 0.001;
 
   // point
   if (x_diff < point_error && y_diff < point_error) {
@@ -232,8 +232,8 @@ int GeneratePolygonByAABB(Polygon2D *polygon, const cdl::AABB &box) {
 
     UpdatePolygonValue(polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
 
-    float height = box.height();
-    float width = box.width();
+    double height = box.height();
+    double width = box.width();
     polygon->min_tangent_radius = std::min(height / 2, width / 2);
   }
 
@@ -258,7 +258,7 @@ int GeneratePolygonByPoint(Polygon2D *polygon, const Position2D &point) {
   return 0;
 }
 
-int GeneratePolygonByPoint(Polygon2D *polygon, const Eigen::Vector2f &point) {
+int GeneratePolygonByPoint(Polygon2D *polygon, const Eigen::Vector2d &point) {
   if (polygon == nullptr) {
     return 0;
   }
@@ -277,8 +277,8 @@ int GeneratePolygonByPoint(Polygon2D *polygon, const Eigen::Vector2f &point) {
   return 0;
 }
 
-int GenerateRectPolygon(Polygon2D *polygon, float min_x, float min_y,
-                        float max_x, float max_y) {
+int GenerateRectPolygon(Polygon2D *polygon, double min_x, double min_y,
+                        double max_x, double max_y) {
   if (polygon == nullptr) {
     return 0;
   }
@@ -304,15 +304,15 @@ int GenerateRectPolygon(Polygon2D *polygon, float min_x, float min_y,
 
   UpdatePolygonValue(polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
 
-  float dy = max_y - min_y;
-  float dx = max_x - min_x;
+  double dy = max_y - min_y;
+  double dx = max_x - min_x;
   polygon->min_tangent_radius = std::min(dy / 2, dx / 2);
 
   return 1;
 }
 
-int GenerateUpLeftFrameBox(Polygon2D *polygon, float min_x, float min_y,
-                           float max_x, float max_y) {
+int GenerateUpLeftFrameBox(Polygon2D *polygon, double min_x, double min_y,
+                           double max_x, double max_y) {
   if (polygon == nullptr) {
     return 0;
   }
@@ -338,8 +338,8 @@ int GenerateUpLeftFrameBox(Polygon2D *polygon, float min_x, float min_y,
 
   UpdatePolygonValue(polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
 
-  float dy = max_y - min_y;
-  float dx = max_x - min_x;
+  double dy = max_y - min_y;
+  double dx = max_x - min_x;
   polygon->min_tangent_radius = std::min(dy / 2, dx / 2);
 
   return 1;
@@ -417,9 +417,9 @@ void GeneratePolygonByPoints(
 }
 
 int GetRightUpCoordinatePolygonByParam(Polygon2D *box,
-                                       const float back_overhanging,
-                                       const float front_edge_to_rear_axis,
-                                       const float half_width) {
+                                       const double back_overhanging,
+                                       const double front_edge_to_rear_axis,
+                                       const double half_width) {
   box->vertexes[0].x = half_width;
   box->vertexes[0].y = front_edge_to_rear_axis;
 
@@ -445,7 +445,7 @@ int GetRightUpCoordinatePolygonByParam(Polygon2D *box,
 int RULocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
                            const Pose2D *global_pose) {
   int32_t i;
-  float sin_theta, cos_theta;
+  double sin_theta, cos_theta;
 
   sin_theta = ifly_sin(global_pose->theta);
   cos_theta = ifly_cos(global_pose->theta);
@@ -487,26 +487,21 @@ void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
   return;
 }
 
-int RULocalPolygonToGlobalFast(Polygon2D *poly_global,
+void RULocalPolygonToGlobalFast(Polygon2D *poly_global,
                                const Polygon2D *poly_local,
-                               const Pose2D *global_pose,
-                               const float cos_theta, const float sin_theta) {
-  int32_t i;
-
-  for (i = 0; i < poly_local->vertex_num; i++) {
-    CvtPosLocalToGlobalFast(&poly_global->vertexes[i], &poly_local->vertexes[i],
-                            global_pose, sin_theta, cos_theta);
+                               const Transform2d &tf) {
+  for (int i = 0; i < poly_local->vertex_num; i++) {
+    tf.RUFLocalPoseToGlobal(&poly_global->vertexes[i],
+                             poly_local->vertexes[i]);
   }
 
   poly_global->vertex_num = poly_local->vertex_num;
   poly_global->radius = poly_local->radius;
   poly_global->min_tangent_radius = poly_local->min_tangent_radius;
   poly_global->shape = poly_local->shape;
+  tf.RUFLocalPoseToGlobal(&poly_global->center_pt, poly_local->center_pt);
 
-  CvtPosLocalToGlobalFast(&poly_global->center_pt, &poly_local->center_pt,
-                          global_pose, sin_theta, cos_theta);
-
-  return 1;
+  return;
 }
 
 int GlobalPolygonToRULocal(Polygon2D *poly_local, const Polygon2D *poly_global,
@@ -533,7 +528,7 @@ int GlobalPolygonToRULocal(Polygon2D *poly_local, const Polygon2D *poly_global,
 #define VEH_FRONT_LEFT (1)
 #define VEH_BACK_LEFT (2)
 #define VEH_BACK_RIGHT (3)
-int ExtendVehBoxByWidth(Polygon2D *poly, float w,
+int ExtendVehBoxByWidth(Polygon2D *poly, double w,
                         const Polygon2D *adc_local_polygon) {
   if (poly == NULL) {
     return 0;
@@ -550,7 +545,7 @@ int ExtendVehBoxByWidth(Polygon2D *poly, float w,
   return 0;
 }
 
-int ExtendVehBoxByLength(Polygon2D *poly, float h,
+int ExtendVehBoxByLength(Polygon2D *poly, double h,
                          const Polygon2D *adc_local_polygon) {
   if (poly == NULL) {
     return 0;
@@ -567,8 +562,8 @@ int ExtendVehBoxByLength(Polygon2D *poly, float h,
   return 0;
 }
 
-int ExtendVehBoxByWidthLength(Polygon2D *poly, float left_w, float right_w,
-                              float l, const Polygon2D *adc_local_polygon) {
+int ExtendVehBoxByWidthLength(Polygon2D *poly, double left_w, double right_w,
+                              double l, const Polygon2D *adc_local_polygon) {
   if (poly == NULL) {
     return 0;
   }
@@ -590,10 +585,10 @@ int ExtendVehBoxByWidthLength(Polygon2D *poly, float left_w, float right_w,
 }
 
 int GetBoundingBoxByPolygon(cdl::AABB *box, const Polygon2D *polygon) {
-  float min_x;
-  float min_y;
-  float max_x;
-  float max_y;
+  double min_x;
+  double min_y;
+  double max_x;
+  double max_y;
 
   min_x = polygon->vertexes[0].x;
   max_x = polygon->vertexes[0].x;
@@ -636,9 +631,9 @@ void PolygonDebugString(const Polygon2D *polygon, const std::string &name) {
 }
 
 int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
-                                      const float back_overhanging,
-                                      const float front_edge_to_rear_axis,
-                                      const float half_width) {
+                                      const double back_overhanging,
+                                      const double front_edge_to_rear_axis,
+                                      const double half_width) {
   box->vertexes[0].x = front_edge_to_rear_axis;
   box->vertexes[0].y = -half_width;
 
@@ -697,7 +692,7 @@ void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
   return;
 }
 
-void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
+void GetCompactPolygonByParam(const double lat_buffer, const double lon_buffer,
                               Polygon2D *polygon) {
   const apa_planner::ApaParameters &config = apa_param.GetParam();
   if (config.car_vertex_x_vec.size() != 20 ||
@@ -740,9 +735,9 @@ void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
   return;
 }
 
-void GenerateVehCompactPolygon(const float lateral_safe_buffer,
-                               const float lon_safe_buffer,
-                               const float aabb_buffer,
+void GenerateVehCompactPolygon(const double lateral_safe_buffer,
+                               const double lon_safe_buffer,
+                               const double aabb_buffer,
                                PolygonFootPrint *foot_print) {
   GetCompactPolygonByParam(lateral_safe_buffer, lon_safe_buffer,
                            &foot_print->body);
@@ -752,7 +747,7 @@ void GenerateVehCompactPolygon(const float lateral_safe_buffer,
   Position2D center;
   center.x = config.footprint_circle_x[6];
   center.y = config.footprint_circle_y[6] + lateral_safe_buffer;
-  float radius = std::fabs(config.footprint_circle_r[6]);
+  double radius = std::fabs(config.footprint_circle_r[6]);
   GenerateMirrorPolygon(0.3, radius * 2, center, &foot_print->mirror_left);
 
   // right mirror
@@ -768,7 +763,7 @@ void GenerateVehCompactPolygon(const float lateral_safe_buffer,
   return;
 }
 
-void GenerateMirrorPolygon(const float x_length, const float y_length,
+void GenerateMirrorPolygon(const double x_length, const double y_length,
                            const Position2D &center, Polygon2D *box) {
   box->vertexes[0].x = center.x + x_length / 2;
   box->vertexes[0].y = center.y - y_length / 2;
@@ -792,10 +787,10 @@ void GenerateMirrorPolygon(const float x_length, const float y_length,
   return;
 }
 
-void GenerateBoundingBox(const float x_length, const float y_length,
-                         const Eigen::Vector2f &center,
-                         std::vector<Eigen::Vector2f> &box) {
-  Eigen::Vector2f pt;
+void GenerateBoundingBox(const double x_length, const double y_length,
+                         const Eigen::Vector2d &center,
+                         std::vector<Eigen::Vector2d> &box) {
+  Eigen::Vector2d pt;
   pt[0] = center.x() + x_length / 2;
   pt[1] = center.y() - y_length / 2;
   box.emplace_back(pt);
@@ -815,13 +810,13 @@ void GenerateBoundingBox(const float x_length, const float y_length,
   return;
 }
 
-void LocalPolygonToGlobal(const std::vector<Eigen::Vector2f> &poly_local,
+void LocalPolygonToGlobal(const std::vector<Eigen::Vector2d> &poly_local,
                           const Pose2D &global_pose,
-                          std::vector<Eigen::Vector2f> &poly_global) {
+                          std::vector<Eigen::Vector2d> &poly_global) {
   Transform2d tf;
   tf.SetBasePose(global_pose);
 
-  Eigen::Vector2f point;
+  Eigen::Vector2d point;
   for (int i = 0; i < poly_local.size(); i++) {
     tf.ULFLocalPointToGlobal(point, poly_local[i]);
     poly_global.emplace_back(point);
@@ -830,7 +825,7 @@ void LocalPolygonToGlobal(const std::vector<Eigen::Vector2f> &poly_local,
   return;
 }
 
-void GeneratePolygonByPoints(const std::vector<Eigen::Vector2f> &points,
+void GeneratePolygonByPoints(const std::vector<Eigen::Vector2d> &points,
                              Polygon2D *polygon) {
   if (polygon == nullptr) {
     return;

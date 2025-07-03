@@ -27,7 +27,7 @@ enum RSPathSteer {
   RS_STEER_MAX
 };
 
-struct RSPoint : public Pose2D {
+struct RSPoint : public Pose2f {
   // left turn is positive
   float kappa;
 
@@ -61,7 +61,7 @@ struct RSPathParam {
 
 // base coordinate is rs start point. start point local system is up-left.
 struct RSEndPoint {
-  Pose2D pose;
+  Pose2f pose;
   float sin_theta;
   float cos_theta;
 
@@ -92,8 +92,8 @@ struct RSPathKappaParam {
 };
 
 struct RSPathInfo {
-  Pose2D start;
-  Pose2D end;
+  Pose2f start;
+  Pose2f end;
   float min_radius;
   RSPathParam path;
 
@@ -109,8 +109,8 @@ class RSPathGenerator {
  private:
 };
 
-int GetShortestRSPathParam(RSPathParam *path, const Pose2D *start_pose,
-                           const Pose2D *goal_pose, float min_turn_radius,
+int GetShortestRSPathParam(RSPathParam *path, const Pose2f *start_pose,
+                           const Pose2f *goal_pose, float min_turn_radius,
                            float inverse_radius,
                            const RSPathRequestType request_type);
 
@@ -128,8 +128,8 @@ RSPathInfo *GetRSPathGlobalInfo(void);
  * \param[in]      initial_pose_dir direction of initial pose;
  * \return 0 or error code.
  **/
-int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
-                           const Pose2D *goal_pose, float min_turn_radius,
+int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2f *start_pose,
+                           const Pose2f *goal_pose, float min_turn_radius,
                            AstarPathGear initial_pose_dir);
 
 /**
@@ -144,11 +144,11 @@ int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
  * \param[in]    min_turn_radius min turn radius of vehicle;
  * \return 0 or error code.
  **/
-int GetRSPathDist(float *distance, const Pose2D *start_pose,
-                  const Pose2D *goal_pose, float min_turn_radius);
+int GetRSPathDist(float *distance, const Pose2f *start_pose,
+                  const Pose2f *goal_pose, float min_turn_radius);
 
-int TestSCS(RSPathParam *path, const Pose2D *start_pose,
-            const Pose2D *goal_pose, float min_turn_radius,
+int TestSCS(RSPathParam *path, const Pose2f *start_pose,
+            const Pose2f *goal_pose, float min_turn_radius,
             float inverse_radius, const RSPathRequestType request_type);
 
 }  // namespace planning

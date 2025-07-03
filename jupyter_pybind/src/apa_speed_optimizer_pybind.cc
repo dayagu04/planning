@@ -166,8 +166,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   const ApaParameters &param = apa_param.GetParam();
 
-  planning::Pose2D start_pose(ego_pose[0], ego_pose[1], ego_pose[2]);
-  std::vector<planning::Pose2D> path;
+  planning::Pose2f start_pose(ego_pose[0], ego_pose[1], ego_pose[2]);
+  std::vector<planning::Pose2f> path;
 
   planning::FuturePathDecider future_path_decider;
 
@@ -241,8 +241,9 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   // generate dp speed
   DpSpeedOptimizer dp_speed_optimizer;
-  dp_speed_optimizer.Excute(path2, start_pose, init_point, &speed_decisions,
-                            &speed_limit);
+  dp_speed_optimizer.Excute(
+      path2, planning::Pose2D(start_pose.x, start_pose.y, start_pose.theta),
+      init_point, &speed_decisions, &speed_limit);
 
   dp_speed_profile_ = dp_speed_optimizer.SpeedProfile();
 

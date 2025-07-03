@@ -16,7 +16,7 @@
 namespace planning {
 
 struct PoseRegulateCandidate {
-  Pose2D pose;
+  Pose2f pose;
   // 位姿对应的车辆真实外壳到障碍物的距离.
   float dist_to_obs;
   float lat_offset;
@@ -26,7 +26,7 @@ struct TerminalCheckBoundary {
   float upper;
   float lower;
   float step;
-  int  number;
+  int number;
 };
 
 // 目标pose调节器.
@@ -38,15 +38,15 @@ class TargetPoseRegulator : public AstarDecider {
   TargetPoseRegulator() = default;
 
   void Process(EulerDistanceTransform *edt, const AstarRequest *request,
-               const Pose2D &ego_pose, const Pose2D &center_line_target,
+               const Pose2f &ego_pose, const Pose2f &center_line_target,
                const VehicleParam &veh_param);
 
-  void Process(const Pose2D &start, const Pose2D &end);
+  void Process(const Pose2f &start, const Pose2f &end);
 
   void Clear();
 
   // Get most safe target pose
-  const std::pair<Pose2D, float> GetCandidatePose(const float lat_buffer) const;
+  const std::pair<Pose2f, float> GetCandidatePose(const float lat_buffer) const;
 
   const float GetEgoObsDist() const { return ego_dist_to_obs_; }
 
@@ -66,11 +66,11 @@ class TargetPoseRegulator : public AstarDecider {
                                          const VehicleParam &veh_param);
 
   // check min dist by x range
-  const float GetMinDistByXRange(const Pose2D *global_pose,
+  const float GetMinDistByXRange(const Pose2f *global_pose,
                                  EulerDistanceTransform *edt);
 
-  const float GetDistToObsHeadOut(const Pose2D *global_pose,
-                           EulerDistanceTransform *edt);
+  const float GetDistToObsHeadOut(const Pose2f *global_pose,
+                                  EulerDistanceTransform *edt);
 
   void DebugString();
 
@@ -89,7 +89,7 @@ class TargetPoseRegulator : public AstarDecider {
 
  private:
   // decide by end straight distance
-  Pose2D center_line_target_;
+  Pose2f center_line_target_;
   std::vector<PoseRegulateCandidate> candidate_info_;
   const AstarRequest *request_;
 

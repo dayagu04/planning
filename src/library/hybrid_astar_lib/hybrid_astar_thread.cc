@@ -33,10 +33,12 @@ void HybridAStarThreadSolver::HybridAStarThreadFunction() {
   return;
 }
 
-int HybridAStarThreadSolver::Init(
-    const float back_edge_to_rear_axis, const float car_length,
-    const float car_width, const float steer_ratio, const float wheel_base,
-    const float min_turn_radius, const float mirror_width) {
+int HybridAStarThreadSolver::Init(const float back_edge_to_rear_axis,
+                                  const float car_length, const float car_width,
+                                  const float steer_ratio,
+                                  const float wheel_base,
+                                  const float min_turn_radius,
+                                  const float mirror_width) {
   solver_interface_ = std::make_shared<HybridAStarInterface>();
 
   request_response_state_.store(RequestResponseState::NONE);
@@ -131,7 +133,7 @@ const int HybridAStarThreadSolver::PublishResponse(AstarResponse* response) {
 
 // const int HybridAStarThreadSolver::PublishSearchPath(
 //     HybridAStarResult* result,
-//     std::vector<AStarPathPoint>& first_seg_path, Pose2D* base_pose) {
+//     std::vector<AStarPathPoint>& first_seg_path, Pose2f* base_pose) {
 //   std::lock_guard<std::mutex> lock(mutex_);
 //   if (!has_response_) {
 //     return 0;
@@ -189,14 +191,14 @@ const void HybridAStarThreadSolver::GetFullLengthPathInThread(
   return;
 }
 
-const Pose2D HybridAStarThreadSolver::GetAstarTargetPose() {
+const Pose2f HybridAStarThreadSolver::GetAstarTargetPose() {
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (solver_interface_ != nullptr) {
     return solver_interface_->GetAstarTargetPose();
   }
 
-  return Pose2D(0, 0, 0);
+  return Pose2f(0, 0, 0);
 }
 
 AstarRequest HybridAStarThreadSolver::GetAstarRequest() {
@@ -206,7 +208,7 @@ AstarRequest HybridAStarThreadSolver::GetAstarRequest() {
 }
 
 void HybridAStarThreadSolver::GetNodeListMessageInThread(
-    std::vector<std::vector<Eigen::Vector2f>>& list) {
+    std::vector<std::vector<Eigen::Vector2d>>& list) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (search_state_ != AstarSearchState::SUCCESS) {
     return;
@@ -220,7 +222,7 @@ void HybridAStarThreadSolver::GetNodeListMessageInThread(
 }
 
 void HybridAStarThreadSolver::GetRSPathHeuristicInThread(
-    std::vector<std::vector<Vec2df32>>& path_list) {
+    std::vector<std::vector<Vec2f>>& path_list) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (search_state_ != AstarSearchState::SUCCESS) {
     return;
@@ -231,8 +233,7 @@ void HybridAStarThreadSolver::GetRSPathHeuristicInThread(
   return;
 }
 
-void HybridAStarThreadSolver::GetRSPathLinkInThread(
-    std::vector<Vec2df32>& path) {
+void HybridAStarThreadSolver::GetRSPathLinkInThread(std::vector<Vec2f>& path) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (search_state_ != AstarSearchState::SUCCESS) {
     return;
@@ -246,7 +247,7 @@ void HybridAStarThreadSolver::GetRSPathLinkInThread(
 
   path.reserve(x.size());
   for (size_t i = 0; i < x.size(); i++) {
-    path.emplace_back(Vec2df32(x[i], y[i]));
+    path.emplace_back(Vec2f(x[i], y[i]));
   }
 
   return;
