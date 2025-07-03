@@ -37,6 +37,8 @@ class BoundMaker {
 
   double jerk_upper_bound(const double t) const;
 
+  double rss_bound(const double t) const;
+
   struct UpperBoundInfo {
     double s = 0.0;
     double t = 0.0;
@@ -58,6 +60,8 @@ class BoundMaker {
 
   void MakeJerkBound(const TargetMaker& target_maker);
 
+  void MakeRSSBound();
+
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string& lc_request);
 
@@ -76,6 +80,10 @@ class BoundMaker {
                            const double d_offset, const double v_offset);
 
   void GenerateUpperBoundInfo();
+
+  double CalcRSSDistance(double ego_speed, double ego_acc, double front_speed,
+                         double reaction_time, double min_brake,
+                         double max_brake) const;
 
   SecondOrderTimeOptimalTrajectory GenerateMaxAccelerationCurve() const;
   SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve() const;
@@ -97,6 +105,7 @@ class BoundMaker {
   std::vector<double> acc_lower_bound_;
   std::vector<double> jerk_upper_bound_;
   std::vector<double> jerk_lower_bound_;
+  std::vector<double> rss_upper_bound_;
 
   double acc_upper_bound_with_speed_ = 0.0;
 
