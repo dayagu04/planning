@@ -1586,6 +1586,123 @@ def load_obstacle_me(camera_msg,is_rdg):
 
   return obs_info_all
 
+def load_prediction_obstacle(prediction_msg, environment_model_info = None):
+  obs_info_all = dict()
+  obstacle_list = prediction_msg.prediction_obstacle_list
+  obs_num = len(obstacle_list)
+  num = 0
+  for i in range(obs_num):
+    source = 1
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+    obs_info_all[source] = obs_info
+    try:
+      frenet_vs, frenet_vl = 255, 255
+      lat_decision = "None"
+      is_static = ""
+      for obstacle in environment_model_info.obstacle:
+        if obstacle.id == obstacle_list[i].fusion_obstacle.common_info.id:
+          frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+          if (0 == obstacle.lat_decision):
+            lat_decision = "LEFT"
+          elif (1 == obstacle.lat_decision):
+            lat_decision = "RIGHT"
+          elif (2 == obstacle.lat_decision):
+            lat_decision = "IGNORE"
+          if obstacle.is_static:
+            is_static = "Static"
+          break
+    except:
+      pass
+    long_pos_rel = 0
+    long_pos_rel = obstacle_list[i].fusion_obstacle.common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].fusion_obstacle.common_info.relative_center_position.y
+    theta = obstacle_list[i].fusion_obstacle.common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width /2
+    half_length = obstacle_list[i].fusion_obstacle.common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+    # print(obs_x_rel)
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.x
+    lat_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.y
+    theta = obstacle_list[i].fusion_obstacle.common_info.heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
+    if frenet_vs == 255 and frenet_vl == 255:
+      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.common_info.id) + ')=' \
+          + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
+          + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
+          + lat_decision + '\n' + is_static)
+    else:
+      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.common_info.id) + ')=' \
+          + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
+          + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
+          +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
+          + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].fusion_obstacle.common_info.velocity.x, obstacle_list[i].fusion_obstacle.common_info.velocity.y), 2)))
+
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos_rel)
+    obs_info_all[source]['pos_y'].append(lat_pos_rel)
+
+  return obs_info_all
 
 def load_rdg_general_obstacle(camera_msg, loc_msg = None):
   obs_info_all = {
