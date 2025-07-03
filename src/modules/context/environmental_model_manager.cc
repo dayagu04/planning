@@ -480,13 +480,13 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       }
     }
 
-    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
-         i++) {
-      const auto &obj = local_view.fusion_objects_info.fusion_object[i];
-      transform_fusion_to_prediction_longtime(
-          obj, (double)local_view.fusion_objects_info.msg_header.stamp,
-          fusion_objs_info);
-    }
+    // for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+    //      i++) {
+    //   const auto &obj = local_view.fusion_objects_info.fusion_object[i];
+    //   transform_fusion_to_prediction_longtime(
+    //       obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+    //       fusion_objs_info);
+    // }
   } else {
     for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
          i++) {
@@ -1033,25 +1033,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }
 
-    // cur_prediction_trajectory.prob = prediction_traj.prob;
-    // cur_prediction_trajectory.intention =
-    // prediction_traj.obstacle_intent().type();
-    // cur_prediction_trajectory.source = prediction_traj.source;
-    // cur_prediction_trajectory.b_valid_sigma =
-    // prediction_traj.b_valid_sigma;
-    // cur_prediction_trajectory.prediction_interval =
-    // prediction_traj.prediction_interval;
-    // cur_prediction_trajectory.num_of_points =
-    // cur_prediction_trajectory.trajectory.size();
-    // cur_prediction_trajectory.const_vel_prob =
-    // prediction_traj.const_vel_prob;
-    // cur_prediction_trajectory.const_acc_prob =
-    // prediction_traj.const_acc_prob; cur_prediction_trajectory.still_prob =
-    // prediction_traj.still_prob; cur_prediction_trajectory.coord_turn_prob =
-    // prediction_traj.coord_turn_prob;
-    // cur_prediction_trajectory.b_minor_modal =
-    // prediction_traj.b_minor_modal;
-    cur_predicion_obj.trajectory_array.emplace_back(cur_prediction_trajectory);
+    cur_predicion_obj.trajectory_array.emplace_back(std::move(cur_prediction_trajectory));
     cur_predicion_obj.is_static = IsStatic(cur_predicion_obj);
     prediction_info.emplace_back(std::move(cur_predicion_obj));
   }

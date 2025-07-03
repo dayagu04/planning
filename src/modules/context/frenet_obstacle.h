@@ -71,6 +71,9 @@ class FrenetObstacle {
   bool get_polygon_at_time(const double relative_time,
                            const std::shared_ptr<ReferencePath>& reference_path,
                            planning_math::Polygon2d& obstacle_polygon) const;
+  // bool get_polygon_at_timev2(const double relative_time,
+  //                           const std::shared_ptr<ReferencePath> &reference_path,
+  //                           planning_math::Polygon2d &obstacle_polygon) const;
   bool get_polygon_at_time_tmp(
       const double relative_time,
       const std::shared_ptr<ReferencePath>& reference_path,

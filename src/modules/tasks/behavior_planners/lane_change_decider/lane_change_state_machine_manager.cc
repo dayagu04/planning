@@ -965,9 +965,9 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
   cart_ref_info.k_s_spline.set_points(
       cart_ref_info.s_vec, cart_ref_info.k_vec, pnc::mathlib::spline::linear);
 
-  JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
-  JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
-  JSON_DEBUG_VECTOR("raw_refline_s_vec", cart_ref_info.s_vec, 2)
+  // JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
+  // JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
+  // JSON_DEBUG_VECTOR("raw_refline_s_vec", cart_ref_info.s_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_k_vec", kappa_radius_vec, 2)
 
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),

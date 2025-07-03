@@ -133,9 +133,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     traj_max_lon_jerk =
         std::max(std::fabs(traj_points[i].jerk), traj_max_lon_jerk);
   }
-  JSON_DEBUG_VECTOR("traj_lat_acc_vec", lat_acc_vec, 3)
-  JSON_DEBUG_VECTOR("traj_lat_jerk_vec", lat_jerk_vec, 3)
-  JSON_DEBUG_VECTOR("traj_s_vec", s_vec, 3)
+  // JSON_DEBUG_VECTOR("traj_s_vec", s_vec, 3)
   s_t_spline.set_points(t_vec, s_vec);
   l_t_spline.set_points(t_vec, l_vec);
 
@@ -215,17 +213,17 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   //   dense_traj_points.emplace_back(std::move(traj_pt));
   // }
 
-  const auto N_ext = dense_traj_points.size();
-  std::vector<double> traj_x_vec(N_ext);
-  std::vector<double> traj_y_vec(N_ext);
+  // const auto N_ext = dense_traj_points.size();
+  // std::vector<double> traj_x_vec(N_ext);
+  // std::vector<double> traj_y_vec(N_ext);
 
-  for (size_t i = 0; i < N_ext; ++i) {
-    traj_x_vec[i] = dense_traj_points[i].x;
-    traj_y_vec[i] = dense_traj_points[i].y;
-  }
+  // for (size_t i = 0; i < N_ext; ++i) {
+  //   traj_x_vec[i] = dense_traj_points[i].x;
+  //   traj_y_vec[i] = dense_traj_points[i].y;
+  // }
 
-  JSON_DEBUG_VECTOR("traj_x_vec", traj_x_vec, 3)
-  JSON_DEBUG_VECTOR("traj_y_vec", traj_y_vec, 3)
+  // JSON_DEBUG_VECTOR("traj_x_vec", traj_x_vec, 3)
+  // JSON_DEBUG_VECTOR("traj_y_vec", traj_y_vec, 3)
 
   ego_planning_result.traj_points = dense_traj_points;
 
@@ -321,8 +319,8 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
     traj_y_vec[i] = dense_traj_points[i].y;
   }
 
-  JSON_DEBUG_VECTOR("traj_x_vec", traj_x_vec, 3)
-  JSON_DEBUG_VECTOR("traj_y_vec", traj_y_vec, 3)
+  // JSON_DEBUG_VECTOR("traj_x_vec", traj_x_vec, 3)
+  // JSON_DEBUG_VECTOR("traj_y_vec", traj_y_vec, 3)
 
   ego_planning_result.traj_points = dense_traj_points;
 

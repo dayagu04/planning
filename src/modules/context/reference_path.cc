@@ -2,12 +2,11 @@
 
 #include <cmath>
 #include <cstddef>
-
+#include "obstacle_manager.h"
 #include "ego_state_manager.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "math/math_utils.h"
-#include "obstacle_manager.h"
 #include "session.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
@@ -30,6 +29,7 @@ void ReferencePath::init() {
 
 void ReferencePath::update(planning::framework::Session *session) {
   session_ = session;
+  obstacles_frenet_infos_.clear();
   // Step 1) update ego state
   frenet_ego_state_.update(
       frenet_coord_,
@@ -40,9 +40,9 @@ void ReferencePath::update(planning::framework::Session *session) {
 }
 
 void ReferencePath::update_obstacles() {
-  auto obstacle_manager =
+  auto obstacle_manager_ =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  obstacle_manager->generate_frenet_obstacles(*this);
+  obstacle_manager_->generate_frenet_obstacles(*this);
 }
 
 void ReferencePath::update_refpath_points(
@@ -429,6 +429,51 @@ bool ReferencePath::transform_trajectory_point(TrajectoryPoint &traj_pt) const {
     traj_pt.frenet_valid = true;
   }
   return success;
+}
+
+bool ReferencePath::get_polygon_at_time(const int id,
+    const int relative_time,
+    planning_math::Polygon2d &obstacle_polygon) {
+  if (obstacles_frenet_infos_.find(id) != obstacles_frenet_infos_.end()) {
+    if (obstacles_frenet_infos_[id].find(relative_time) != obstacles_frenet_infos_[id].end()) {
+      obstacle_polygon = obstacles_frenet_infos_[id][relative_time];
+      return true;
+    }
+  }
+  auto obstacle_manager_ =
+      session_->mutable_environmental_model()->get_obstacle_manager();
+  const auto obstacle_ptr_ = obstacle_manager_->find_obstacle(id);
+  if (obstacle_ptr_ == nullptr) {
+    return false;
+  }
+
+  const auto &enu_polygon = obstacle_ptr_->get_bounding_box(
+      obstacle_ptr_->get_point_at_time(relative_time * 0.1));
+
+  std::vector<planning_math::Vec2d> frenet_points;
+  const auto &corners = enu_polygon.GetAllCorners();
+  for (auto &pt : corners) {
+    Point2D frenet_point, carte_point;
+    carte_point.x = pt.x();
+    carte_point.y = pt.y();
+    if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
+      LOG_DEBUG(
+          "Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f], "
+          "max_x: [%f], min_y: [%f], max_y: [%f] \n",
+          obstacle_ptr_->id(), enu_polygon.min_x(), enu_polygon.max_x(),
+          enu_polygon.min_y(), enu_polygon.max_y());
+      continue;
+    }
+    frenet_points.push_back(
+        planning_math::Vec2d(frenet_point.x, frenet_point.y));
+  }
+
+  bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
+                                                        &obstacle_polygon);
+  if (ok) {
+    obstacles_frenet_infos_[id][relative_time] = obstacle_polygon;
+  }
+  return ok;
 }
 
 }  // namespace planning
