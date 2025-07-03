@@ -63,5 +63,7 @@ const bool IsSearchBasedPlanning(const AstarPathGenerateType type);
 const bool IsNeedZigZagPathToAdjustPose(const AstarRequest &request);
 
 const bool IsHeadOutRequest(const ParkingVehDirection &direction);
+const bool IsTailOutRequest(const ParkingVehDirection &direction);
+const bool IsParkingOutRequest(const ParkingVehDirection &direction);
 
 }  // namespace planning

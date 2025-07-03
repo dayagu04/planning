@@ -88,6 +88,13 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
       passage_half_length = 18.0;
       virtual_wall_x_offset = 1.5;
       passage_height = head_out_passage_height;
+    } else if (parking_type == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
+               parking_type == ParkingVehDirection::TAIL_OUT_TO_RIGHT ||
+               parking_type == ParkingVehDirection::TAIL_OUT_TO_MIDDLE) {
+      passage_half_length = 18.0;
+      virtual_wall_x_offset = 1.5;
+      passage_height =
+          apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
     }
 
     CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,

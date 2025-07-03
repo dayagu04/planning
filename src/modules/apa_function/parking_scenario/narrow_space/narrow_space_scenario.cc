@@ -204,12 +204,13 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
 
   switch (park_out_direction) {
     case ApaParkOutDirection::LEFT_FRONT:
-      parking_finish = lat_condition && static_condition && remain_s_condition;
-      break;
     case ApaParkOutDirection::RIGHT_FRONT:
+    case ApaParkOutDirection::LEFT_REAR:
+    case ApaParkOutDirection::RIGHT_REAR:
       parking_finish = lat_condition && static_condition && remain_s_condition;
       break;
     case ApaParkOutDirection::FRONT:
+    case ApaParkOutDirection::REAR:
       parking_finish =
           (remain_s_condition && static_condition && pos_condition) ||
           (ego_info.slot_occupied_ratio < 0.3 && static_condition);
@@ -707,6 +708,18 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         parking_type = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
         break;
 
+      case ApaParkOutDirection::LEFT_REAR:
+        parking_type = ParkingVehDirection::TAIL_OUT_TO_LEFT;
+        break;
+
+      case ApaParkOutDirection::RIGHT_REAR:
+        parking_type = ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+        break;
+
+      case ApaParkOutDirection::REAR:
+        parking_type = ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
+        break;
+
       default:
         parking_type = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
         break;
@@ -789,7 +802,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.space_type = slot_type;
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
     if (frame_.replan_reason == FIRST_PLAN) {
-      cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
+      if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus()) {
+        cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
+      } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                     ->IsTailOutStatus()) {
+        cur_request.first_action_request.gear_request = AstarPathGear::REVERSE;
+      }
     }
 
     switch (
@@ -803,6 +821,17 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       case ApaParkOutDirection::RIGHT_FRONT:
         cur_request.direction_request = ParkingVehDirection::HEAD_OUT_TO_RIGHT;
         break;
+
+      case ApaParkOutDirection::LEFT_REAR:
+        cur_request.direction_request = ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+        break;
+      case ApaParkOutDirection::REAR:
+        cur_request.direction_request = ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
+        break;
+      case ApaParkOutDirection::RIGHT_REAR:
+        cur_request.direction_request = ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+        break;
+
       default:
         cur_request.direction_request = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
         break;
@@ -858,6 +887,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       case ParkingVehDirection::HEAD_OUT_TO_LEFT:
       case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
       case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+      case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
         cur_request.path_generate_method =
             planning::AstarPathGenerateType::ASTAR_SEARCHING;
         break;
@@ -950,10 +982,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
               path_pt.kappa);
           point.s = path_pt.accumulated_s;
 
-          const bool is_park_out =
-              apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus();
-
-          if (is_park_out) {
+          if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus()) {
             const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
             if (heading_deg > kHeadingStartDeg && i > 0) {
@@ -1469,7 +1498,8 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
   constexpr double kAlternateTargetX = 8.0;
   constexpr double kAlternateTargetY = 5.0;
   constexpr double kPositionThresholdX = 7.0;
-  constexpr double kHeadingThresholdRad = 70.0 * M_PI / 180.0;
+  constexpr double kHeadingThresholdRad0 = 65.0 * M_PI / 180.0;
+  constexpr double kHeadingThresholdRad1 = 130.0 * M_PI / 180.0;
 
   const double target_heading_rad_head_out =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_ *
@@ -1487,7 +1517,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       // 特殊位置要对目标点进行特殊调整
       if (ego_info_under_slot.cur_pose.pos.x() < kInitialTargetX &&
           std::abs(ego_info_under_slot.cur_pose.heading) >
-              kHeadingThresholdRad) {
+              kHeadingThresholdRad0) {
         ego_info_under_slot.target_pose.pos << kAlternateTargetX,
             kAlternateTargetY;
       }
@@ -1501,10 +1531,45 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       // 特殊位置要对目标点进行特殊调整
       if (ego_info_under_slot.cur_pose.pos.x() < kInitialTargetX &&
           std::abs(ego_info_under_slot.cur_pose.heading) >
-              kHeadingThresholdRad) {
+              kHeadingThresholdRad0) {
         ego_info_under_slot.target_pose.pos << kAlternateTargetX,
             -kAlternateTargetY;
       }
+      break;
+
+    case ApaParkOutDirection::LEFT_REAR:
+      ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+          kAlternateTargetY;
+      ego_info_under_slot.target_pose.heading = target_heading_rad_head_out;
+      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
+
+      // 特殊位置要对目标点进行特殊调整
+      if (std::abs(ego_info_under_slot.cur_pose.heading) <
+          kHeadingThresholdRad1) {
+        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+            kAlternateTargetY - 1.0;
+      }
+      break;
+
+    case ApaParkOutDirection::RIGHT_REAR:
+      ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+          -kAlternateTargetY;
+      ego_info_under_slot.target_pose.heading = -target_heading_rad_head_out;
+      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
+
+      // 特殊位置要对目标点进行特殊调整
+      if (std::abs(ego_info_under_slot.cur_pose.heading) <
+          kHeadingThresholdRad1) {
+        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+            -kAlternateTargetY + 1.0;
+      }
+      break;
+
+    case ApaParkOutDirection::REAR:
+      ego_info_under_slot.target_pose.pos << kInitialTargetX + 1.0, 0.0;
+      ego_info_under_slot.target_pose.heading = M_PI;
+      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
+
       break;
 
     case ApaParkOutDirection::FRONT:
@@ -1522,19 +1587,32 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
                                    ego_info_under_slot.target_pose.heading));
 
   // 固定车位,计算占库比
-  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
-          param.slot_occupied_ratio_max_lat_err &&
-      std::fabs(ego_info_under_slot.cur_pose.heading) <
-          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    constexpr double kTabX0 = 1.1;
-    const std::vector<double> x_tab = {
-        kTabX0, ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+  ego_info_under_slot.slot_occupied_ratio = 0.0;
 
-    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
-    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
-        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
-  } else {
-    ego_info_under_slot.slot_occupied_ratio = 0.0;
+  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+      param.slot_occupied_ratio_max_lat_err) {
+    double virtual_ego_pos_x = ego_info_under_slot.cur_pose.pos.x();
+    double heading_err_slot_occupied =
+        std::fabs(ego_info_under_slot.cur_pose.heading);
+
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsTailOutStatus()) {
+      heading_err_slot_occupied =
+          std::fabs(std::fabs(ego_info_under_slot.cur_pose.heading) - M_PI);
+      virtual_ego_pos_x = ego_info_under_slot.cur_pose.pos.x() -
+                          param.wheel_base * cos(heading_err_slot_occupied);
+    }
+
+    if (heading_err_slot_occupied <
+            param.slot_occupied_ratio_max_heading_err * kDeg2Rad &&
+        virtual_ego_pos_x < 6.5) {
+      const double x_tab_0 = 1.0;
+      const double x_tab_1 =
+          ego_info_under_slot.slot.slot_length_ + param.rear_overhanging;
+      const std::vector<double> x_tab = {x_tab_0, x_tab_1};
+      const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+      ego_info_under_slot.slot_occupied_ratio =
+          mathlib::Interp1(x_tab, occupied_ratio_tab, virtual_ego_pos_x);
+    }
   }
 
   ILOG_INFO << "slot_occupied_ratio = "
@@ -1607,6 +1685,9 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
 }
 
 void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
+    return;
+  }
   const ApaStateMachine fsm =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
   if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT &&

@@ -40,6 +40,9 @@ void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end,
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
     case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
     case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
       x_bound_.upper = 12.0f;
       x_bound_.lower = kXBoundLowerForHeadOut;
       break;

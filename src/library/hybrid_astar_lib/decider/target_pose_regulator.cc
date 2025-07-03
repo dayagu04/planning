@@ -60,7 +60,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   float dist = 10.0;
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
-  if (IsHeadOutRequest(request->direction_request)) {
+  if (IsParkingOutRequest(request->direction_request)) {
     // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
     dist = GetDistToObsHeadOut(&center_line_target_, edt);
     ILOG_INFO << "center_line_target_ dist : " << dist;
@@ -106,9 +106,7 @@ void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
   }
 
   if (!IsParkingIn(request)) {
-    if (IsHeadOutRequest(request->direction_request)) {
-      GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
-    }
+    GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
     return;
   }
 
@@ -228,14 +226,17 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   for (size_t i = 0; i < kMaxCandidateNum; i++) {
     switch (request->direction_request) {
       case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      case ParkingVehDirection::TAIL_OUT_TO_LEFT:
         global_pose.x = 8.0;
         global_pose.y -= 1.0;
         break;
       case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
         global_pose.x = 8.0;
         global_pose.y += 1.0;
         break;
       case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+      case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
         global_pose.y = kYLowerMid + i * 0.02;
         break;
       default:
@@ -293,10 +294,13 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
   const size_t num = 10;
   const float y_step = 0.5;
   for (int j = 0; j < num; j++) {
-    if (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT) {
+    if (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+        request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT) {
       pose.y = global_pose->y - y_step * j;
     } else if (request_->direction_request ==
-               ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+                   ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+               request_->direction_request ==
+                   ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
       pose.y = global_pose->y + y_step * j;
     } else {
       break;

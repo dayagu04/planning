@@ -2349,7 +2349,10 @@ void HybridAStar::SetRequest(const AstarRequest& request) {
     config_.node_step = config_.perpendicular_slot_node_step;
     if (request.direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
         request.direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-        request.direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+        request.direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+        request.direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
+        request.direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT ||
+        request.direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE) {
       config_.node_step = config_.perpendicular_slot_head_out_node_step;
     }
   }
