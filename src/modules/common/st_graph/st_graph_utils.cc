@@ -1,7 +1,9 @@
 #include "st_graph_utils.h"
+
 #include <cstdint>
 
 #include "common_c.h"
+#include "define/geometry.h"
 #include "math/box2d.h"
 #include "vehicle_config_context.h"
 
@@ -228,7 +230,8 @@ void StGraphUtils::DetermineCautionYieldDecision(
       auto& ptr_st_boundary = boundary_id_st_boundaries_map.at(st_boundary_id);
       bool is_lower_than_low_bound = false;
       for (int idx = 0; idx < ptr_st_boundary->lower_points().size(); idx++) {
-        if (ptr_st_boundary->lower_points()[idx].s() < kCautionYieldLowBoundThres) {
+        if (ptr_st_boundary->lower_points()[idx].s() <
+            kCautionYieldLowBoundThres) {
           is_lower_than_low_bound = true;
           break;
         }
@@ -763,6 +766,50 @@ void StGraphUtils::CalculateAgentSLBoundary(
   }
 }
 
+bool StGraphUtils::CalculateAgentSLBoundary(
+    const std::shared_ptr<KDPath>& planned_path, const Box2d& agent_box,
+    std::vector<double>* const agent_sl_boundary,
+    std::vector<std::pair<int32_t, planning_math::Vec2d>>* const
+        considered_corners) {
+  // max_s min_s max_l min_l
+  agent_sl_boundary->at(0) = std::numeric_limits<double>::lowest();
+  agent_sl_boundary->at(1) = std::numeric_limits<double>::max();
+  agent_sl_boundary->at(2) = std::numeric_limits<double>::lowest();
+  agent_sl_boundary->at(3) = std::numeric_limits<double>::max();
+
+  const auto& obs_corners = agent_box.GetAllCorners();
+  const double vehicle_width =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().width;
+  const double left_border_position = vehicle_width * 0.5;
+  const double right_border_position = -left_border_position;
+  for (size_t i = 0; i < obs_corners.size(); ++i) {
+    Point2D project_point{0.0, 0.0};
+    if (!planned_path->XYToSL({obs_corners[i].x(), obs_corners[i].y()},
+                              project_point)) {
+      continue;
+    };
+    agent_sl_boundary->at(3) =
+        std::fmin(agent_sl_boundary->at(3), project_point.y);
+    agent_sl_boundary->at(2) =
+        std::fmax(agent_sl_boundary->at(2), project_point.y);
+    agent_sl_boundary->at(1) =
+        std::fmin(agent_sl_boundary->at(1), project_point.x);
+    agent_sl_boundary->at(0) =
+        std::fmax(agent_sl_boundary->at(0), project_point.x);
+    if (project_point.y >= right_border_position &&
+        project_point.y <= left_border_position) {
+      considered_corners->emplace_back(i,
+                                       Vec2d(project_point.x, project_point.y));
+    }
+  }
+
+  if (agent_sl_boundary->at(1) > 200.0 || agent_sl_boundary->at(0) < -200.0 ||
+      agent_sl_boundary->at(3) > 50.0 || agent_sl_boundary->at(2) < -50.0) {
+    return false;
+  }
+  return true;
+}
+
 bool StGraphUtils::CalculateSRange(
     const std::shared_ptr<planning_math::KDPath>& kd_path,
     const PathBorderQuerier& path_border_querier,
@@ -783,11 +830,11 @@ bool StGraphUtils::CalculateSRange(
   const double left_border_position = vehicle_width * 0.5;
   const double right_border_position = -left_border_position;
   double front_edge_to_center = VehicleConfigurationContext::Instance()
-                                          ->get_vehicle_param()
-                                          .front_edge_to_rear_axle;
+                                    ->get_vehicle_param()
+                                    .front_edge_to_rear_axle;
   double back_edge_to_center = VehicleConfigurationContext::Instance()
-                                         ->get_vehicle_param()
-                                         .rear_edge_to_rear_axle;
+                                   ->get_vehicle_param()
+                                   .rear_edge_to_rear_axle;
   if (is_rads_scene) {
     front_edge_to_center = VehicleConfigurationContext::Instance()
                                ->get_vehicle_param()
@@ -808,7 +855,7 @@ bool StGraphUtils::CalculateSRange(
     *upper_s = std::fmax(0.0, std::fmin(*upper_s, path_range.second));
     return *lower_s > kMathEpsilon || *upper_s > kMathEpsilon;
   }
-  
+
   if (min_s > path_range.second || max_s < path_range.first) {
     return false;
   }

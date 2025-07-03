@@ -13,6 +13,7 @@
 #include "utils/kd_path.h"
 // #include "cp_common/trajectory/trajectory.h"
 #include "dynamic_world/dynamic_world.h"
+#include "vec2d.h"
 #include "virtual_lane_manager.h"
 // #include "planning_data.h"
 
@@ -112,6 +113,13 @@ class StGraphUtils {
       const std::shared_ptr<planning_math::KDPath>& kd_path,
       const planning_math::Box2d& obs_box,
       const std::pair<double, double>& path_range, const StBoundaryType type,
+      std::vector<double>* const agent_sl_boundary,
+      std::vector<std::pair<int32_t, planning_math::Vec2d>>* const
+          considered_corners);
+
+  static bool CalculateAgentSLBoundary(
+      const std::shared_ptr<planning_math::KDPath>& planned_path,
+      const planning_math::Box2d& agent_box,
       std::vector<double>* const agent_sl_boundary,
       std::vector<std::pair<int32_t, planning_math::Vec2d>>* const
           considered_corners);

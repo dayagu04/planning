@@ -789,6 +789,14 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ego_pos_compensation_y = plan_debug_json_msg['predicted_ego_y']
       merge_point_x = plan_debug_json_msg['merge_point_x']
       merge_point_y = plan_debug_json_msg['merge_point_y']
+      pp_goal_point_x = plan_debug_json_msg['goal_point_x']
+      pp_goal_point_y = plan_debug_json_msg['goal_point_y']
+      pp_init_point_x = plan_debug_json_msg['pp_init_x']
+      pp_init_point_y = plan_debug_json_msg['pp_init_y']
+      ego_motion_ref_sim_x_vec = plan_debug_json_msg['ego_ref_sim_x_vec']
+      ego_motion_ref_sim_y_vec = plan_debug_json_msg['ego_ref_sim_y_vec']
+      # print("ego_motion_ref_sim_x_vec: ", ego_motion_ref_sim_x_vec)
+      # print("ego_motion_ref_sim_y_vec: ", ego_motion_ref_sim_y_vec)
       lon_collision_object_position_x_vec = plan_debug_json_msg['lon_collision_object_position_x_vec']
       lon_collision_object_position_y_vec = plan_debug_json_msg['lon_collision_object_position_y_vec']
       macroeconomic_decider_merge_point_x = plan_debug_json_msg['macroeconomic_decider_merge_point_x']
@@ -804,11 +812,25 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       init_pos_point_y = []
       init_pos_line_x = []
       init_pos_line_y = []
+      pp_ld_x_vec = []
+      pp_ld_y_vec = []
+      pp_ld_x_vec_ = []
+      pp_ld_y_vec_ = []
       ego_pos_compensation_x_ = []
       ego_pos_compensation_y_ = []
       init_pos_point_theta = []
       lon_collision_object_position_x_vec_ = []
       lon_collision_object_position_y_vec_ = []
+      ego_motion_ref_sim_x_vec_ = []
+      ego_motion_ref_sim_y_vec_ = []
+
+      pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
+      print("pp_ld_length_vec: ", pp_ld_length_vec)
+
+      pp_ld_x_vec.append(pp_goal_point_x)
+      pp_ld_y_vec.append(pp_goal_point_y)
+      pp_ld_x_vec.append(pp_init_point_x)
+      pp_ld_y_vec.append(pp_init_point_y)
       if g_is_display_enu:
         init_pos_point_x.append(init_state_x)
         init_pos_point_y.append(init_state_y)
@@ -817,9 +839,15 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         ego_pos_compensation_y_.append(ego_pos_compensation_y)
         lon_collision_object_position_x_vec_ = lon_collision_object_position_x_vec
         lon_collision_object_position_y_vec_ = lon_collision_object_position_y_vec
+        ego_motion_ref_sim_x_vec_ = ego_motion_ref_sim_x_vec
+        ego_motion_ref_sim_y_vec_ = ego_motion_ref_sim_y_vec
+        pp_ld_x_vec_ = pp_ld_x_vec
+        pp_ld_y_vec_ = pp_ld_y_vec
       else:
         init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
         ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
+        ego_motion_ref_sim_x_vec_, ego_motion_ref_sim_y_vec_ = coord_tf.global_to_local(ego_motion_ref_sim_x_vec, ego_motion_ref_sim_y_vec)
+        pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
         lon_collision_object_position_x_vec_, lon_collision_object_position_y_vec_ = coord_tf.global_to_local(lon_collision_object_position_x_vec, lon_collision_object_position_y_vec)
         temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
         init_pos_point_theta.append(temp_theta)
@@ -863,9 +891,16 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       local_view_data['data_merge_point'].data.update({
         'merge_point_x': [merge_point_x],
         'merge_point_y': [merge_point_y]})
+      local_view_data['data_pure_pursuit'].data.update({
+        'ld_x_vec': pp_ld_x_vec_,
+        'ld_y_vec': pp_ld_y_vec_})
       local_view_data["data_lon_collision_object_position"].data.update({
         'lon_collision_object_position_x': lon_collision_object_position_x_vec_,
         'lon_collision_object_position_y': lon_collision_object_position_y_vec_,
+      })
+      local_view_data['data_ego_motion_sim_ref_traj'].data.update({
+        'ego_ref_sim_x_vec': ego_motion_ref_sim_x_vec_,
+        'ego_ref_sim_y_vec': ego_motion_ref_sim_y_vec_,
       })
       macroeconomic_decider_merge_point_x, macroeconomic_decider_merge_point_y = coord_tf.global_to_local([macroeconomic_decider_merge_point_x], [macroeconomic_decider_merge_point_y])
       macroeconomic_decider_merge_point_x = macroeconomic_decider_merge_point_x[0]
@@ -1827,6 +1862,10 @@ def load_local_view_figure():
   data_init_line = ColumnDataSource(data = {'init_pos_line_x':[], 'init_pos_line_y':[]})
   data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
+  data_pure_pursuit = ColumnDataSource(data = {'ld_x_vec':[],
+                                               'ld_y_vec':[]})
+  data_ego_motion_sim_ref_traj = ColumnDataSource(data = {'ego_ref_sim_x_vec':[],
+                                                          'ego_ref_sim_y_vec':[]})
   data_lon_collision_object_position = ColumnDataSource(data = {'lon_collision_object_position_x':[],
                                                                 'lon_collision_object_position_y':[]})
   data_stop_destination_virtual_obj = ColumnDataSource(data = {
@@ -2167,6 +2206,8 @@ def load_local_view_figure():
                                              'speed_bump_label':[]})
   data_rads_traj = ColumnDataSource(data = {'traj_y':[],
                                             'traj_x':[]})
+  data_ego_motion_sim_ref_traj = ColumnDataSource(data = {'ego_ref_sim_y_vec':[],
+                                                          'ego_ref_sim_x_vec':[]})
 
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -2380,6 +2421,8 @@ def load_local_view_figure():
                      'data_rads_traj':data_rads_traj,
                      'sampled_points_data_source_xy':sampled_points_data_source_xy,
                      'fined_path_xy':fined_path_xy,
+                     'data_ego_motion_sim_ref_traj' : data_ego_motion_sim_ref_traj,
+                     'data_pure_pursuit' : data_pure_pursuit,
                      }
 
   if is_vis_map:
@@ -2498,6 +2541,7 @@ def load_local_view_figure():
     fig1.patch('zebra_crossing_line_10_y', 'zebra_crossing_line_10_x', source = zebra_crossing_line_10, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
     fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
+  fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
   fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
   fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
   fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
@@ -2587,6 +2631,8 @@ def load_local_view_figure():
 
   fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path', visible = False)
   fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path', visible=False)
+  fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
+  fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')

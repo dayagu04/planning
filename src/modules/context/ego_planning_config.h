@@ -3339,6 +3339,40 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double stop_destination_to_ego_distance = 6.0;
 };
 
+struct EgoMotionPreplannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ReadItem<double>(json, ego_motion_simulate_dt_resolution,
+                     "ego_motion_preplanner",
+                     "ego_motion_simulate_dt_resolution");
+    ReadItem<double>(json, pure_pursuit_ld, "ego_motion_preplanner",
+                     "pure_pursuit_ld");
+    ReadItem<double>(json, idm_minimum_spacing, "ego_motion_preplanner",
+                     "idm_minimum_spacing");
+    ReadItem<double>(json, idm_desired_time_headway, "ego_motion_preplanner",
+                     "idm_desired_time_headway");
+    ReadItem<double>(json, idm_max_accel, "ego_motion_preplanner",
+                     "idm_max_accel");
+    ReadItem<double>(json, idm_comfortable_breaking_deceleration,
+                     "ego_motion_preplanner",
+                     "idm_comfortable_breaking_deceleration");
+    ReadItem<double>(json, idm_hard_breaking_deceleration,
+                     "ego_motion_preplanner", "idm_hard_breaking_deceleration");
+    ReadItem<double>(json, idm_exponent, "ego_motion_preplanner",
+                     "idm_exponent");
+  }
+
+  double ego_motion_simulate_dt_resolution = 0.1;
+  double pure_pursuit_ld = 6.0;
+  double idm_minimum_spacing = 2.0;
+  double idm_desired_time_headway = 1.5;
+  double idm_max_accel = 2.0;
+  double idm_comfortable_breaking_deceleration = 3.0;
+  double idm_hard_breaking_deceleration = 4.5;
+  double idm_exponent = 4.0;
+};
+
 struct SpeedPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

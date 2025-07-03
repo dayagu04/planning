@@ -76,6 +76,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
   enable_lane_borrow_deciderV2_ =
       lane_borrow_config.enable_lane_borrow_deciderV2;
+  ego_motion_preplanner_ =
+      std::make_unique<EgoMotionPreplanner>(config_builder, session);
 }
 
 bool LongTimeTaskPipelineV3::Run() {
@@ -143,6 +145,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = lateral_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_motion_planner_->Name());
+    return false;
+  }
+
+  ok = ego_motion_preplanner_->Execute();
+  if (!ok) {
+    AddErrorInfo(ego_motion_preplanner_->Name());
     return false;
   }
 

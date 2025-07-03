@@ -18,7 +18,7 @@ void VehicleSimulation::Rk4update(Eigen::VectorXd &state_dot,
   Eigen::VectorXd K3 = state_dot;
   Eigen::VectorXd K4 = state_dot;
 
-  double dt = 0.02;
+  double dt = dt_;
   CalStateDot(K1, state);
 
   Eigen::VectorXd X12 = state + K1 * dt / 2.0;

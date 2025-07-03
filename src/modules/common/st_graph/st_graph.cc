@@ -59,9 +59,9 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
 
   // TODO: add cautin yield and cross agent decision first
   StGraphUtils::DetermineCautionYieldDecision(
-       st_graph_input_, st_graph_input->lane_change_status(),
-       st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
-       boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
+      st_graph_input_, st_graph_input->lane_change_status(),
+      st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
+      boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
   // StGraphUtils::SetCrossingAgentCautionYieldDecision(
   //     st_graph_input_, agent_id_st_boundaries_map_,
   //     boundary_id_st_boundaries_map_);
@@ -104,32 +104,33 @@ void STGraph::MakeAgentStBoundaries() {
     }
   }
 
-  for (const auto agent : agents) {
-    if (nullptr == agent) {
-      continue;
-    }
-    const int32_t agent_id = agent->agent_id();
-    auto iter_static = static_close_pass_candicate_agent_ids_.find(agent_id);
-    auto iter_dynamic = dynamic_close_pass_candicate_agent_ids_.find(agent_id);
-    if (iter_static == static_close_pass_candicate_agent_ids_.end() &&
-        iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
-      continue;
-    }
-    const bool is_static = StGraphUtils::IsStaticAgent(*agent);
-    const bool reuse_for_close_pass = true;
-    // TODO:different buffer for vru,truck and normal agent
-    const double extra_lateral_buffer_for_close_pass =
-        agent->is_vru() ? 1.0 : 0.5;
-    if (is_static) {
-      MakeStaticAgentStBoundary(*agent, StBoundaryType::NORMAL,
-                                reuse_for_close_pass,
-                                extra_lateral_buffer_for_close_pass);
-    } else {
-      MakeDynamicAgentStBoundary(*agent, StBoundaryType::NORMAL,
-                                 reuse_for_close_pass,
-                                 extra_lateral_buffer_for_close_pass);
-    }
-  }
+  // for (const auto agent : agents) {
+  //   if (nullptr == agent) {
+  //     continue;
+  //   }
+  //   const int32_t agent_id = agent->agent_id();
+  //   auto iter_static = static_close_pass_candicate_agent_ids_.find(agent_id);
+  //   auto iter_dynamic =
+  //   dynamic_close_pass_candicate_agent_ids_.find(agent_id); if (iter_static
+  //   == static_close_pass_candicate_agent_ids_.end() &&
+  //       iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
+  //     continue;
+  //   }
+  //   const bool is_static = StGraphUtils::IsStaticAgent(*agent);
+  //   const bool reuse_for_close_pass = true;
+  //   // TODO:different buffer for vru,truck and normal agent
+  //   const double extra_lateral_buffer_for_close_pass =
+  //       agent->is_vru() ? 1.0 : 0.5;
+  //   if (is_static) {
+  //     MakeStaticAgentStBoundary(*agent, StBoundaryType::NORMAL,
+  //                               reuse_for_close_pass,
+  //                               extra_lateral_buffer_for_close_pass);
+  //   } else {
+  //     MakeDynamicAgentStBoundary(*agent, StBoundaryType::NORMAL,
+  //                                reuse_for_close_pass,
+  //                                extra_lateral_buffer_for_close_pass);
+  //   }
+  // }
 
   // debug
 
@@ -302,9 +303,14 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_virtual_lane_manager =
       st_graph_input_->ptr_virtual_lane_manager();
   const bool is_lane_keeping = st_graph_input_->is_lane_keeping();
+  const bool is_in_lane_borrow_status =
+      st_graph_input_->is_in_lane_borrow_status();
   const auto ptr_ego_lane = st_graph_input_->ego_lane();
   const int32_t reserve_num = st_graph_input_->reserve_num();
   const auto planned_kd_path = st_graph_input_->processed_path();
+  const auto ego_motion_simulation_path =
+      st_graph_input_->ego_motion_simulation_result()
+          ->lat_lon_vehicle_motion_path_ptr;
   const auto path_border_querier = st_graph_input_->path_border_querier();
   auto mutable_agent_manager = st_graph_input_->mutable_agent_manager();
   const double expand_buffer =
@@ -333,7 +339,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       small_expand_buffer, lat_buffer, &prev_st_count);
 
   // check whether need adjust buffer by t
-  bool need_ajust_buffer_by_t = false;
+  bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
   bool is_within_ego_lane = false;
   double nearest_s = 0.0;
@@ -347,7 +353,7 @@ void STGraph::MakeDynamicAgentStBoundary(
         nearest_l < half_ego_lane_width;
     is_parallel =
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
-    need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
+    need_adjust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
         init_point, ptr_virtual_lane_manager, ptr_ego_lane, ptr_obj_lane, agent,
         is_parallel, is_lane_keeping, is_rads_scene);
   }
@@ -373,10 +379,12 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   const auto& trajectories = agent.trajectories();
   // only consider 2s traj to reverse vru within ego_lane
-  const bool is_need_truncate_traj = agent.is_vru() && agent.is_reverse() && is_within_ego_lane;
+  const bool is_need_truncate_traj =
+      agent.is_vru() && agent.is_reverse() && is_within_ego_lane;
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
+  std::vector<int64_t> st_boundaries_ego;
   const double time_horizon = time_range.second;
   double min_t = std::numeric_limits<double>::max();
   constexpr double kDynamicLowerT = 2.0;
@@ -410,7 +418,7 @@ void STGraph::MakeDynamicAgentStBoundary(
               trajectories[i], start_absolute_time + relative_time, &point);
         }
       }
-      double specific_lat_buffer = need_ajust_buffer_by_t
+      double specific_lat_buffer = need_adjust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(
                                              point, lat_buffer, ptr_obj_lane)
                                        : lat_buffer;
@@ -454,22 +462,6 @@ void STGraph::MakeDynamicAgentStBoundary(
       }
     }
 
-    // if (StGraphUtils::CheckLonFarPositionSTBoundary(
-    //         agent, st_point_pairs, st_graph_input_, is_parallel,
-    //         ptr_ego_lane, ptr_obj_lane, ptr_virtual_lane_manager)) {
-    //   ignore_agent_ids_.push_back(agent.agent_id());
-    //   continue;
-    // }
-
-    // if (StGraphUtils::CheckLateralFarCutinAgent(agent, st_point_pairs,
-    //                                             st_graph_input_)) {
-    //   if (StGraphUtils::CheckLateralFarCutinAgentIsLonSafe(
-    //           agent, st_point_pairs, init_point, &st_graph_input_)) {
-    //     ignore_agent_ids_.push_back(agent.agent_id());
-    //     continue;
-    //   }
-    // }
-
     if (!st_point_pairs.empty()) {
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
@@ -505,6 +497,112 @@ void STGraph::MakeDynamicAgentStBoundary(
   } else if (is_candicate_for_close_pass) {
     // the agent has no original st boundary and is candicate for close pass
     dynamic_close_pass_candicate_agent_ids_.insert(agent.agent_id());
+  }
+
+  for (int i = 0; i < trajectories.size(); ++i) {
+    if (!ego_motion_simulation_path) {
+      break;
+    }
+
+    if (trajectories[i].empty()) {
+      continue;
+    }
+
+    if (!is_lane_keeping) {
+      break;
+    }
+
+    if (is_in_lane_borrow_status) {
+      break;
+    }
+
+    if (agent.is_static()) {
+      break;
+    }
+
+    const double agent_pred_end_time = trajectories[i].back().absolute_time();
+    std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
+    st_point_pairs.reserve(reserve_num);
+    const int64_t boundary_id =
+        (agent.agent_id() << 8) + i + agent.trajectories().size();
+    if (boundary_id_st_boundaries_map_.find(boundary_id) !=
+        boundary_id_st_boundaries_map_.end()) {
+      continue;
+    }
+    for (double relative_time = time_range.first; relative_time <= time_horizon;
+         relative_time += kTimeResolution) {
+      // find path_border_segments which have collison risk
+      trajectory::TrajectoryPoint point;
+      if (start_absolute_time + relative_time < agent_pred_end_time) {
+        if (is_need_truncate_traj) {
+          point = trajectories[i].Evaluate(std::fmin(
+              start_absolute_time + relative_time, kConsideredReverseVruTime));
+        } else {
+          point = trajectories[i].Evaluate(start_absolute_time + relative_time);
+        }
+      } else {
+        if (is_need_truncate_traj) {
+          point = trajectories[i].Evaluate(kConsideredReverseVruTime);
+        } else {
+          StGraphUtils::LinearExtendTrajectory(
+              trajectories[i], start_absolute_time + relative_time, &point);
+        }
+      }
+      double specific_lat_buffer = need_adjust_buffer_by_t
+                                       ? StGraphUtils::AdjustLateralBufferByT(
+                                             point, lat_buffer, ptr_obj_lane)
+                                       : lat_buffer;
+
+      specific_lat_buffer =
+          need_dynamic_buffer
+              ? StGraphUtils::CalculateLateralBufferForTimeRange(
+                    0.0, specific_lat_buffer, kDynamicLowerT, kDynamicUpperT,
+                    relative_time)
+              : specific_lat_buffer;
+
+      Box2d obs_box(Vec2d(point.x(), point.y()), point.theta(),
+                    agent.length() + 2.0 * lon_buffer,
+                    agent.width() + 2.0 * specific_lat_buffer);
+
+      // max_s min_s max_l min_l
+      std::vector<double> agent_sl_boundary(4);
+      std::vector<std::pair<int32_t, Vec2d>> considered_corners;
+
+      bool is_success = StGraphUtils::CalculateAgentSLBoundary(
+          ego_motion_simulation_path, obs_box, &agent_sl_boundary,
+          &considered_corners);
+      if (!is_success) {
+        continue;
+      }
+      const double max_l = agent_sl_boundary[2];
+      const double min_l = agent_sl_boundary[3];
+      double lower_s = std::numeric_limits<double>::max();
+      double upper_s = std::numeric_limits<double>::lowest();
+      if (StGraphUtils::CalculateSRange(
+              ego_motion_simulation_path, *path_border_querier, obs_box, type,
+              path_range, agent_sl_boundary, considered_corners,
+              planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
+        min_t = std::fmin(min_t, relative_time);
+        st_point_pairs.emplace_back(
+            STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
+                    point.vel(), point.acc(), min_l),
+            STPoint(upper_s, relative_time, agent.agent_id(), boundary_id,
+                    point.vel(), point.acc(), max_l));
+      }
+    }
+
+    if (!st_point_pairs.empty()) {
+      std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+      st_boundary->set_id(boundary_id);
+      st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
+      st_boundaries_ego.emplace_back(boundary_id);
+      neighbor_boundary_id_st_boundaries_map_.insert(
+          std::make_pair(boundary_id, std::move(st_boundary)));
+    }
+  }
+
+  if (!st_boundaries_ego.empty()) {
+    neighbor_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries_ego;
   }
 
   if (is_large_agent && !reuse_for_close_pass) {
@@ -642,7 +740,8 @@ void STGraph::BackwardExtendStBoundaries() {
       }
       // const auto& trajectory =
       //     use_origin_trajectories ? trajectories[idx]
-      //                             : trajectories[idx - origin_trajectories_num];
+      //                             : trajectories[idx -
+      //                             origin_trajectories_num];
 
       const auto& trajectory = trajectories.front();
       if (trajectory.empty()) {
@@ -684,7 +783,7 @@ void STGraph::BackwardExtendSingleStBoundary(
   double lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
 
   // check whether need adjust buffer by t
-  bool need_ajust_buffer_by_t = false;
+  bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
@@ -693,7 +792,7 @@ void STGraph::BackwardExtendSingleStBoundary(
   if (nullptr != ptr_obj_lane) {
     is_parallel =
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
-    need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
+    need_adjust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
         init_point, ptr_virtual_lane_manager, ptr_ego_lane, ptr_obj_lane, agent,
         is_parallel, is_lane_keeping, is_rads_scene);
   }
@@ -711,7 +810,7 @@ void STGraph::BackwardExtendSingleStBoundary(
       StGraphUtils::LinearExtendTrajectory(
           trajectory, start_absolute_time + relative_time, &point);
     }
-    double specific_lat_buffer = need_ajust_buffer_by_t
+    double specific_lat_buffer = need_adjust_buffer_by_t
                                      ? StGraphUtils::AdjustLateralBufferByT(
                                            point, lat_buffer, ptr_obj_lane)
                                      : lat_buffer;
@@ -946,10 +1045,18 @@ bool STGraph::UpdateNeighborAgentResults(
   return is_success;
 }
 
+bool STGraph::UpdateNeighborAgentResultsForEgoMotionSimPath() {
+  const bool is_success = CalculateNeighborCorridor();
+  return is_success;
+}
+
 bool STGraph::CalculateNeighborCorridor() {
   if (neighbor_boundary_id_st_boundaries_map_.empty()) {
     return false;
   }
+
+  first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
+  first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
 
   const auto& time_range = st_graph_input_->time_range();
   for (size_t i = 0; i < neighbor_corridor_.size(); i++) {

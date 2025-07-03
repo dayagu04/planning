@@ -6,6 +6,7 @@
 #include "agent/agent.h"
 #include "agent/agent_manager.h"
 #include "dynamic_world/dynamic_world.h"
+#include "lat_lon_vehicle_motion_simulator.h"
 #include "st_graph/path_border_querier.h"
 #include "trajectory/trajectory_point.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
@@ -123,6 +124,8 @@ class StGraphInput {
 
   bool is_lane_keeping() const;
 
+  bool is_in_lane_borrow_status() const { return is_in_lane_borrow_status_; }
+
   const SecondOrderTimeOptimalTrajectory* max_acceleration_curve() const;
 
   bool enable_backward_extend_st_boundary() const;
@@ -138,6 +141,12 @@ class StGraphInput {
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<EgoStateManager>& ego_state_manager);
 
+  const std::shared_ptr<
+      simulator::LatLonVehicleMotionSimulator::SimulationResult>
+  ego_motion_simulation_result() const {
+    return ego_motion_simulation_result_ptr_;
+  }
+
   void Reset();
 
  private:
@@ -148,9 +157,10 @@ class StGraphInput {
   // PlanningInitPoint planning_init_point_;
   // PlanningInitPoint time_aligned_ego_state_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
-//   std::shared_ptr<VirtualLane> ego_lane_;
+  //   std::shared_ptr<VirtualLane> ego_lane_;
   VehicleParam vehicle_param_;
   bool is_lane_keeping_;
+  bool is_in_lane_borrow_status_ = false;
   std::shared_ptr<agent::AgentManager> mutable_agent_manager_;
   std::shared_ptr<SecondOrderTimeOptimalTrajectory> max_acceleration_curve_ =
       nullptr;
@@ -184,6 +194,10 @@ class StGraphInput {
   bool enable_backward_extend_st_boundary_ = false;
   double backward_extend_time_s_ = 0.0;
   planning_math::Box2d planning_init_point_box_;
+
+  // ego motion preplanner simulation result
+  std::shared_ptr<simulator::LatLonVehicleMotionSimulator::SimulationResult>
+      ego_motion_simulation_result_ptr_;
 };
 }  // namespace speed
 }  // namespace planning

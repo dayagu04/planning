@@ -44,6 +44,8 @@ class STGraph {
       const std::unordered_map<int32_t, STBoundary::DecisionType>&
           neighbor_agent_decision_table);
 
+  bool UpdateNeighborAgentResultsForEgoMotionSimPath();
+
   /*******st_graph_helper functions*******/
   const std::shared_ptr<StGraphInput>& st_graph_input() const;
 

@@ -31,7 +31,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   ilqr_lib
   rapidjson
   jlt_lib
+  idm_lib
   # autoplt
+  pure_pursuit_lib
+  lat_lon_vehicle_motion_simulator_lib
   mjson
   planning_proto
 )
