@@ -5,6 +5,18 @@ package planning.common;
 import "basic_types.proto";
 import "st_graph_searcher.proto";
 
+message ApaPathPoint {
+  optional double x = 1;
+  optional double y = 2;
+  optional double heading = 3;
+  optional double s = 4;
+  optional double kappa = 5;
+  optional double t = 6;
+  optional double v = 7;
+  optional double a = 8;
+  optional double lat_buffer = 9;
+  optional int32 type = 10;
+}
 
 message AstarNode {
   repeated TrajectoryPoint path_point = 1;

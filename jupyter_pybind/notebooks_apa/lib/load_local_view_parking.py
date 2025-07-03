@@ -1102,7 +1102,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     if len(plan_x) > 0:
       print("last_x, last_y, last_heading = ", plan_x[-1], plan_y[-1], plan_heading[-1] * 57.3)
 
-    local_view_data['data_planning'].data.update({
+    local_view_data['data_planning_traj'].data.update({
         'plan_traj_y' : plan_y,
         'plan_traj_x' : plan_x,
     })
@@ -1174,6 +1174,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     plan_traj_y_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_y"]
     plan_traj_heading_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_heading"]
     plan_traj_lat_buffert_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_lat_buffer"]
+
+    plan_traj_x_vec, plan_traj_y_vec, plan_traj_heading_vec, plan_traj_lat_buffert_vec = [], [], [], []
+    complete_path_points = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].complete_path_points
+    for i in range(len(complete_path_points)):
+      plan_traj_x_vec.append(complete_path_points[i].x)
+      plan_traj_y_vec.append(complete_path_points[i].y)
+      plan_traj_heading_vec.append(complete_path_points[i].heading)
+      plan_traj_lat_buffert_vec.append(0.0)
+
     complete_x_vec, complete_y_vec = [], []
     if len(plan_traj_x_vec) < 21:
       for i in range(len(plan_x)):
@@ -1205,9 +1214,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       'y_vec': car_box_y_vec,
     })
 
-    local_view_data['data_complete_planning'].data.update({
-      'plan_traj_x': complete_x_vec,
-      'plan_traj_y': complete_y_vec,
+    local_view_data['data_complete_planning_path'].data.update({
+      'plan_path_x': complete_x_vec,
+      'plan_path_y': complete_y_vec,
     })
 
   # load control
@@ -1444,6 +1453,16 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
   uss_car_index = 0
   # load plan debug msg
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
+    cur_path = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].cur_path_points
+    plan_x, plan_y, plan_heading = [], [], []
+
+    for i in range(len(cur_path)):
+      plan_x.append(cur_path[i].x)
+      plan_y.append(cur_path[i].y)
+      plan_heading.append(cur_path[i].heading)
+
+    local_view_data['data_planning_path'].data.update({'plan_path_y' : plan_y,'plan_path_x' : plan_x,})
+
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     local_view_data['data_target_line'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     local_view_data['data_origin_pose'].data.update({'corner_point_x': [], 'corner_point_y': [],})
@@ -2393,11 +2412,10 @@ def load_local_view_figure_parking():
   data_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[]})
 
-  data_planning = ColumnDataSource(data = {'plan_traj_y':[],
-                                      'plan_traj_x':[],})
+  data_planning_traj = ColumnDataSource(data = {'plan_traj_y':[], 'plan_traj_x':[],})
+  data_planning_path = ColumnDataSource(data = {'plan_path_y':[], 'plan_path_x':[],})
 
-  data_complete_planning = ColumnDataSource(data = {'plan_traj_y':[],
-                                    'plan_traj_x':[],})
+  data_complete_planning_path = ColumnDataSource(data = {'plan_path_y':[], 'plan_path_x':[],})
 
   data_control = ColumnDataSource(data = {'mpc_dx':[],
                                           'mpc_dy':[],})
@@ -2478,8 +2496,9 @@ def load_local_view_figure_parking():
                      'data_car_prediction_traj': data_car_prediction_traj, \
                      'data_car_prediction_traj_box': data_car_prediction_traj_box, \
                      'data_text':data_text, \
-                     'data_planning':data_planning,\
-                     'data_complete_planning':data_complete_planning,\
+                     'data_planning_traj':data_planning_traj,\
+                     'data_planning_path':data_planning_path,\
+                     'data_complete_planning_path':data_complete_planning_path,\
                      'data_control':data_control,\
                      'data_ref_mpc_vec':data_ref_mpc_vec, \
                      'data_ref_vec':data_ref_vec, \
@@ -2535,8 +2554,9 @@ def load_local_view_figure_parking():
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='obs')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_complete_planning, line_width = 2.5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.6, legend_label = 'complete_planning', visible = False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_traj, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_traj')
+  fig1.line('plan_path_y', 'plan_path_x', source = data_planning_path, line_width = 2.5, line_color = 'yellow', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_path')
+  fig1.line('plan_path_y', 'plan_path_x', source = data_complete_planning_path, line_width = 2.5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.6, legend_label = 'complete_planning_path', visible = False)
   # fig1.circle('y', 'x', source = data_col_det_path, size=4, color='red', legend_label = 'col_det_path')
   # fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path', visible = False)
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc', visible = False)
@@ -3045,8 +3065,12 @@ uss_text_params = {
   'visible' : False
 }
 
-plan_params = {
-  'line_width' : 2.5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan'
+plan_traj_params = {
+  'line_width' : 2.5, 'line_color' : 'blue', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan_traj'
+}
+
+plan_path_params = {
+  'line_width' : 2.5, 'line_color' : 'yellow', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan_path'
 }
 
 complete_plan_params = {
@@ -3729,7 +3753,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           car_predict_traj_path3_generate.xys.append((car_box_y_vec, car_box_x_vec))
 
   # load planning traj
-    plan_generator = CommonGenerator()
+    plan_traj_generator = CommonGenerator()
+    plan_path_generator = CommonGenerator()
     complete_plan_generator = CommonGenerator()
     target_line_generator = CommonGenerator()
     target_pos_generator = CommonGenerator()
@@ -3737,10 +3762,12 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     car_box_generator = CommonGenerator()
     for plan_i, plan_timestamp in enumerate(plan_output_timestamps):
       flag, plan_msg = findt(dataLoader.plan_msg, plan_timestamp)
+      flag, plan_debug_msg = findt(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
       flag, plan_json = findt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
       if not flag:
         print('find plan error')
         plan_traj_x, plan_traj_y, plan_heading = [], [], []
+        plan_path_x, plan_path_y, plan_path_heading = [], [], []
         target_line_xn, target_line_yn = [], []
         target_pos_xn, target_pos_yn = [], []
         target_pt_x, target_pt_y = [], []
@@ -3749,6 +3776,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       else:
         trajectory = plan_msg.trajectory
         plan_traj_x, plan_traj_y, plan_heading = [], [], []
+        plan_path_x, plan_path_y, plan_path_heading = [], [], []
         target_line_xn, target_line_yn = [], []
         target_pos_xn, target_pos_yn = [], []
         target_pt_x, target_pt_y = [], []
@@ -3758,6 +3786,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           plan_traj_x.append(trajectory.trajectory_points[j].x)
           plan_traj_y.append(trajectory.trajectory_points[j].y)
           plan_heading.append(trajectory.trajectory_points[j].heading_yaw)
+
+        for j in range(len(plan_debug_msg.cur_path_points)):
+          plan_path_x.append(plan_debug_msg.cur_path_points[j].x)
+          plan_path_y.append(plan_debug_msg.cur_path_points[j].y)
+          plan_path_heading.append(plan_debug_msg.cur_path_points[j].heading)
 
         if (len(plan_traj_x) > 1):
           half_car_width = 0.9
@@ -3785,6 +3818,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           plan_traj_y_vec = plan_json["plan_traj_y"]
           plan_traj_heading_vec = plan_json["plan_traj_heading"]
           plan_traj_lat_buffer_vec = plan_json["plan_traj_lat_buffer"]
+
+          plan_traj_x_vec, plan_traj_y_vec, plan_traj_heading_vec, plan_traj_lat_buffert_vec = [], [], [], []
+          complete_path_points = plan_debug_msg.complete_path_points
+          for i in range(len(complete_path_points)):
+            plan_traj_x_vec.append(complete_path_points[i].x)
+            plan_traj_y_vec.append(complete_path_points[i].y)
+            plan_traj_heading_vec.append(complete_path_points[i].heading)
+            plan_traj_lat_buffert_vec.append(0.0)
+
           if len(plan_traj_x_vec) < 21:
             for i in range(len(plan_traj_x)):
               car_xn = []
@@ -3811,7 +3853,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                 car_box_x_vec.append(car_xn)
                 car_box_y_vec.append(car_yn)
 
-      plan_generator.xys.append((plan_traj_y, plan_traj_x))
+      plan_traj_generator.xys.append((plan_traj_y, plan_traj_x))
+      plan_path_generator.xys.append((plan_path_y, plan_path_x))
       target_line_generator.xys.append((target_line_yn,target_line_xn))
       target_pt_generator.xys.append((target_pt_y,target_pt_x))
       target_pos_generator.xys.append(([target_pos_yn],[target_pos_xn]))
@@ -3820,7 +3863,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
     target_pos_generator.ts = np.array(ctrl_debug_ts)
     target_pt_generator.ts = np.array(ctrl_debug_ts)
-    plan_generator.ts = np.array(ctrl_debug_ts)
+    plan_traj_generator.ts = np.array(ctrl_debug_ts)
+    plan_path_generator.ts = np.array(ctrl_debug_ts)
     target_line_generator.ts = np.array(ctrl_debug_ts)
     car_box_generator.ts = np.array(ctrl_debug_ts)
     complete_plan_generator.ts = np.array(ctrl_debug_ts)
@@ -4212,10 +4256,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
     # planning traj
     if dataLoader.plan_msg['enable'] == True:
-      plan_layer = CurveLayer(fig_local_view, plan_params)
-      layer_manager.AddLayer(plan_layer, 'plan_layer', plan_generator, 'plane_generator', 2)
+      plan_traj_layer = CurveLayer(fig_local_view, plan_traj_params)
+      layer_manager.AddLayer(plan_traj_layer, 'plan_traj_layer', plan_traj_generator, 'plan_traj_generator', 2)
+
+      plan_path_layer = CurveLayer(fig_local_view, plan_path_params)
+      layer_manager.AddLayer(plan_path_layer, 'plan_path_layer', plan_path_generator, 'plan_path_generator', 2)
+
+    if dataLoader.plan_debug_msg['enable'] == True:
       complete_plan_layer = CurveLayer(fig_local_view, complete_plan_params)
-      layer_manager.AddLayer(complete_plan_layer, 'complete_plan_layer', complete_plan_generator, 'complete_plane_generator', 2)
+      layer_manager.AddLayer(complete_plan_layer, 'complete_plan_layer', complete_plan_generator, 'complete_plan_generator', 2)
 
     # mpc
     if dataLoader.ctrl_msg['enable'] == True:

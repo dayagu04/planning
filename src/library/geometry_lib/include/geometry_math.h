@@ -284,6 +284,10 @@ struct PathPoint {
         << "pos = " << pos.transpose() << "  headingA = " << heading * kRad2Deg;
   }
 
+  const double GetX() const { return pos.x(); }
+  const double GetY() const { return pos.y(); }
+  const double GetHeading() const { return heading; }
+
   void Reset() {
     pos.setZero();
     heading_vec.setZero();

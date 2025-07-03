@@ -274,41 +274,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     ego_info_under_slot.slot_occupied_ratio_postprocess = 0.0;
   }
 
-  // trim or extend path according to limiter, only run once
-  frame_.correct_path_for_limiter = false;
-  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-      !ego_info_under_slot.fix_slot && frame_.is_last_path) {
-    const geometry_lib::LineSegment limiter_line(
-        Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
-                        0.5 * ego_info_under_slot.slot.slot_width_),
-        Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
-                        -0.5 * ego_info_under_slot.slot.slot_width_));
-
-    const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
-        ego_info_under_slot.cur_pose.pos, limiter_line);
-
-    double car_to_limiter_dis = param.car_to_limiter_dis;
-    if (ego_info_under_slot.slot_occupied_ratio_postprocess >
-        ego_info_under_slot.slot_occupied_ratio + 0.0168) {
-      car_to_limiter_dis = param.car_to_limiter_dis + 0.86;
-    }
-
-    ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter
-              << "  car_to_limiter_dis = " << car_to_limiter_dis;
-
-    if (dist_ego_limiter < car_to_limiter_dis &&
-        frame_.can_correct_path_for_limiter &&
-        std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
-            param.finish_heading_err * 1.05 &&
-        std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
-            param.finish_lat_err_strict * 1.05) {
-      ILOG_INFO << "should correct path according limiter";
-      ego_info_under_slot.fix_slot = true;
-      PostProcessPathAccordingLimiter();
-      // 记录根据限位器裁剪路径时刻
-      frame_.correct_path_for_limiter = true;
-    }
-  }
+  PostProcessPathAccordingLimiter();
 
   // fix slot
   if (ego_info_under_slot.slot_occupied_ratio_postprocess >
@@ -1238,77 +1204,98 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 }
 
 const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
+  frame_.correct_path_for_limiter = false;
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  const ApaParameters& param = apa_param.GetParam();
+
   size_t origin_traj_size = current_path_point_global_vec_.size();
 
-  if (origin_traj_size < 2) {
-    frame_.spline_success = false;
-    ILOG_INFO << "error: origin_traj_size = " << origin_traj_size;
+  if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
+          !frame_.is_last_path ||
+      ego_info_under_slot.fix_slot || !frame_.spline_success ||
+      origin_traj_size < 2) {
     return false;
   }
 
-  // cal proj point, need extend, add a point
-  // if need extend according limiter, need to add another point
-  const size_t traj_size = origin_traj_size + 2;
+  const geometry_lib::LineSegment limiter_line(
+      Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
+                      0.5 * ego_info_under_slot.slot.slot_width_),
+      Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
+                      -0.5 * ego_info_under_slot.slot.slot_width_));
 
-  std::vector<double> x_vec;
-  std::vector<double> y_vec;
-  std::vector<double> s_vec;
-  std::vector<double> heading_vec;
-  x_vec.clear();
-  y_vec.clear();
-  s_vec.clear();
-  heading_vec.clear();
+  const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
+      ego_info_under_slot.cur_pose.pos, limiter_line);
 
-  x_vec.reserve(traj_size);
-  y_vec.reserve(traj_size);
-  s_vec.reserve(traj_size);
-  heading_vec.reserve(traj_size);
+  double car_to_limiter_dis = param.car_to_limiter_dis;
+  if (ego_info_under_slot.slot_occupied_ratio_postprocess >
+      ego_info_under_slot.slot_occupied_ratio + 0.0168) {
+    car_to_limiter_dis = param.car_to_limiter_dis + 0.86;
+  }
 
-  const auto& l2g_tf =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().l2g_tf;
+  ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter
+            << "  car_to_limiter_dis = " << car_to_limiter_dis;
 
-  const auto& g2l_tf =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf;
+  if (!(dist_ego_limiter < car_to_limiter_dis &&
+        frame_.can_correct_path_for_limiter &&
+        std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
+            param.finish_heading_err * 1.05 &&
+        std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
+            param.finish_lat_err_strict * 1.05)) {
+    return false;
+  }
 
+  ILOG_INFO << "try extend or trim path by limiter";
+
+  std::vector<double> x_vec, y_vec, s_vec, heading_vec;
+  x_vec.reserve(origin_traj_size + 20);
+  y_vec.reserve(origin_traj_size + 20);
+  s_vec.reserve(origin_traj_size + 20);
+  heading_vec.reserve(origin_traj_size + 20);
+
+  const auto& l2g_tf = ego_info_under_slot.l2g_tf;
+  const auto& g2l_tf = ego_info_under_slot.g2l_tf;
   const Eigen::Vector2d limiter_mid =
-      l2g_tf.GetPos(apa_world_ptr_->GetSlotManagerPtr()
-                        ->GetEgoInfoUnderSlot()
-                        .origin_target_pose.pos);
+      l2g_tf.GetPos(ego_info_under_slot.origin_target_pose.pos);
+
+  geometry_lib::PathPoint pt = current_path_point_global_vec_.back();
 
   // If the target pose is very close to the previously planned
   // endpoint, there is no need to run the following steps
-  if ((limiter_mid - current_path_point_global_vec_.back().pos).norm() <
-      0.026) {
-    return true;
+  if ((limiter_mid - pt.pos).norm() < 0.026) {
+    return false;
   }
 
   double s_proj = 0.0;
-  bool success =
-      frame_.spline_success &&
-      geometry_lib::CalProjFromSplineByBisection(
-          0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
-          limiter_mid, frame_.x_s_spline, frame_.y_s_spline);
+  bool success = geometry_lib::CalProjFromSplineByBisection(
+      0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
+      limiter_mid, frame_.x_s_spline, frame_.y_s_spline);
+
   if (!success) {
     ILOG_INFO << "path is err";
     return false;
   }
-  if (s_proj < apa_world_ptr_->GetSimuParam().sample_ds * 1.5) {
+
+  if (s_proj < 0.068) {
     ILOG_INFO << "limiter s_proj is too small";
     return false;
   }
-  double ds = 0.0;
-  double s = 0.0;
-  for (size_t i = 0; i < current_path_point_global_vec_.size(); ++i) {
+
+  double ds = 0.0, s = 0.0;
+  for (size_t i = 0; i < origin_traj_size; ++i) {
     if (i > 0) {
-      ds = std::hypot(current_path_point_global_vec_[i].pos.x() -
-                          current_path_point_global_vec_[i - 1].pos.x(),
-                      current_path_point_global_vec_[i].pos.y() -
-                          current_path_point_global_vec_[i - 1].pos.y());
+      ds = std::hypot(current_path_point_global_vec_[i].GetX() -
+                          current_path_point_global_vec_[i - 1].GetX(),
+                      current_path_point_global_vec_[i].GetY() -
+                          current_path_point_global_vec_[i - 1].GetY());
       s += std::max(ds, 1e-3);
     }
+
     if (s > s_proj) {
       ILOG_INFO << "path shoule be shorten because of limiter";
-      if (s_proj - s_vec.back() > 0.036 && frame_.spline_success) {
+      if (s_proj - s_vec.back() > 0.036) {
         x_vec.emplace_back(frame_.x_s_spline(s_proj));
         y_vec.emplace_back(frame_.y_s_spline(s_proj));
         heading_vec.emplace_back(heading_vec.back());
@@ -1316,84 +1303,70 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
       }
       break;
     }
-    x_vec.emplace_back(current_path_point_global_vec_[i].pos.x());
-    y_vec.emplace_back(current_path_point_global_vec_[i].pos.y());
-    heading_vec.emplace_back(current_path_point_global_vec_[i].heading);
+
+    x_vec.emplace_back(current_path_point_global_vec_[i].GetX());
+    y_vec.emplace_back(current_path_point_global_vec_[i].GetY());
+    heading_vec.emplace_back(current_path_point_global_vec_[i].GetHeading());
     s_vec.emplace_back(s);
   }
+
   if (s < s_proj) {
     ILOG_INFO << "path shoule be extended because of limiter";
-    using namespace pnc::geometry_lib;
-    double init_length = 0.0;
-    double extend_length = s_proj - s;
-    if (current_plan_path_vec_.size() > 0 &&
-        std::fabs(
-            g2l_tf.GetHeading(current_plan_path_vec_.back().GetEndHeading())) *
-                kRad2Deg <
-            1.08) {
-      PathSegment& path_seg_global = current_plan_path_vec_.back();
-      init_length = path_seg_global.Getlength();
-      if (path_seg_global.seg_type == SEG_TYPE_LINE) {
-        CompleteLineInfo(path_seg_global.line_seg, init_length + extend_length);
-      } else if (path_seg_global.seg_type == SEG_TYPE_ARC) {
-        CompleteArcInfo(path_seg_global.arc_seg, init_length + extend_length,
-                        path_seg_global.arc_seg.is_anti_clockwise);
-      }
-      ILOG_INFO << "init_length = " << init_length
-                << "  extend_length = " << extend_length
-                << "  cur_path_length = " << path_seg_global.Getlength()
-                << "  s_proj = " << s_proj << "  s = " << s;
-
-      // this path is global, need to transform to local to col det
-      path_seg_global.GlobalToLocal(
-          apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
-
-      ColResult col_res =
-          apa_world_ptr_->GetColDetInterfacePtr()
-              ->GetGeometryColDetPtr()
-              ->Update(path_seg_global,
-                       apa_param.GetParam().car_lat_inflation_normal,
-                       apa_param.GetParam().col_obs_safe_dist_normal);
-
-      const double remain_dist = std::max(init_length, col_res.remain_dist);
-
-      extend_length = remain_dist - init_length;
-
-      pnc::geometry_lib::CompletePathSeg(path_seg_global, remain_dist);
-
-      ILOG_INFO << "length = " << path_seg_global.Getlength()
-                << "  remain_dist = " << remain_dist
-                << "  extend_length = " << extend_length;
+    if (std::fabs(g2l_tf.GetHeading(pt.GetHeading())) * kRad2Deg > 1.08) {
+      ILOG_INFO << "ego heading is big, not allow extend path";
+      return false;
     }
+
+    double extend_length = s_proj - s;
+    double temp_s = 0.0, temp_ds = 0.05;
+    pt.s = temp_s;
+    // reverse gear
+    const Eigen::Vector2d unit_heading_vec =
+        geometry_lib::GenHeadingVec(pt.GetHeading()) * -1.0;
+    std::vector<geometry_lib::PathPoint> extend_pt_vec{pt};
+    do {
+      temp_s += temp_ds;
+      if (temp_s >= extend_length) {
+        temp_s = extend_length;
+      }
+      pt.pos += unit_heading_vec * temp_ds;
+      pt.s += temp_ds;
+      extend_pt_vec.emplace_back(pt);
+    } while (s < extend_length);
+
+    const ColResult col_res =
+        apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
+            extend_pt_vec, apa_param.GetParam().car_lat_inflation_normal,
+            apa_param.GetParam().col_obs_safe_dist_normal,
+            GJKColDetRequest(false));
+
+    if (col_res.remain_dist < 0.02) {
+      ILOG_INFO << "consider obs extend_length is small, not allow extend "
+                   "length, value = "
+                << col_res.remain_dist;
+      return false;
+    }
+
+    extend_length = col_res.remain_dist;
+    ILOG_INFO << "origin extend_length = " << extend_length
+              << "  consider obs extend_length = " << col_res.remain_dist;
+
     const double total_length = s + extend_length;
-    while (s <= total_length) {
+    while (s < total_length - 1e-3) {
       if (x_vec.size() > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
         break;
       }
-      s += apa_world_ptr_->GetSimuParam().sample_ds;
+      s += temp_ds;
       x_vec.emplace_back(frame_.x_s_spline(s));
       y_vec.emplace_back(frame_.y_s_spline(s));
       heading_vec.emplace_back(heading_vec.back());
       s_vec.emplace_back(s);
     }
-    // x_vec.emplace_back(frame_.x_s_spline(s_proj));
-    // y_vec.emplace_back(frame_.y_s_spline(s_proj));
-    // heading_vec.emplace_back(heading_vec.back());
-    // s_vec.emplace_back(s_proj);
   }
-  frame_.current_path_length = s_vec.back();
+
   const size_t N = x_vec.size();
   if (N < 2) {
-    frame_.spline_success = false;
-    ILOG_INFO << "error: no enough point = " << x_vec.size();
     return false;
-  }
-  current_path_point_global_vec_.clear();
-  current_path_point_global_vec_.reserve(N);
-  pnc::geometry_lib::PathPoint path_point;
-  for (size_t i = 0; i < N; ++i) {
-    path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
-    current_path_point_global_vec_.emplace_back(path_point);
   }
 
   // need extend by cal proj point
@@ -1404,10 +1377,19 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
       frame_.path_extended_dist);
 
   if (!success) {
-    frame_.spline_success = false;
-    ILOG_INFO << "limit need extend fit line by spline error!";
     return false;
   }
+
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(N);
+  pnc::geometry_lib::PathPoint path_point;
+  for (size_t i = 0; i < N; ++i) {
+    path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
+    current_path_point_global_vec_.emplace_back(path_point);
+  }
+  complete_path_point_global_vec_ = current_path_point_global_vec_;
+
+  frame_.current_path_length = s_vec.back();
 
   x_vec.emplace_back(extended_point.x());
   y_vec.emplace_back(extended_point.y());
@@ -1418,6 +1400,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
   frame_.y_s_spline.set_points(s_vec, y_vec);
 
   frame_.spline_success = true;
+
+  ego_info_under_slot.fix_slot = true;
+  frame_.correct_path_for_limiter = true;
 
   return true;
 }
@@ -2347,9 +2332,6 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
 }
 
 void PerpendicularTailInScenario::Log() const {
-  JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
-  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
-
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
@@ -2452,6 +2434,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
 
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
+  JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
