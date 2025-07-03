@@ -113,7 +113,8 @@ void ApaSlotManager::Update(
   // 泊入
   if (state_machine_ptr->IsParkInStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
-      if (apa_param.GetParam().has_intelligent_fold_mirror) {
+      if (!measure_data_ptr_->GetFoldMirrorFlag() &&
+          apa_param.GetParam().has_intelligent_fold_mirror) {
         col_det_interface_ptr_->Init(true);
       }
       ParkingLotCruiseProcess();
@@ -382,7 +383,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   TargetPoseDeciderResult res =
       tar_pose_decider.CalcTargetPose(slot, tar_pose_decider_request);
 
-  if (!res.exist_target_pose) {
+  if (res.target_pose_type == TargetPoseType::FAIL) {
     ILOG_INFO << "slot is occupied";
     return SlotReleaseVoterType::CLEAR;
   }

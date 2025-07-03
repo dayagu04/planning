@@ -88,7 +88,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
       geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
 
   if (!consider_obs_) {
-    result_.exist_target_pose = true;
+    result_.target_pose_type = TargetPoseType::NORMAL;
     result_.target_pose_local = tar_pose_local;
     result_.target_pose_global = tar_pose_global;
     return result_;
@@ -149,6 +149,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_dist_vec.emplace_back(-lat_move_dist);
   }
 
+  bool exist_target_pose = false;
+
   GJKColDetRequest gjl_col_det_request(base_on_slot_, false,
                                        CarBodyType::EXPAND_MIRROR_TO_FRONT);
   geometry_lib::PathPoint tmp_pose;
@@ -173,7 +175,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
         if (!gjl_det_ptr
                  ->Update(tmp_pose_vec, lat_buffer, 0.0, gjl_col_det_request)
                  .col_flag) {
-          result_.exist_target_pose = true;
+          exist_target_pose = true;
           result_.safe_lon_move_dist = lon_move_dist;
           result_.safe_lat_move_dist = lat_move_dist;
           result_.safe_lat_buffer = lat_buffer;
@@ -189,29 +191,37 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
                     result_.target_pose_global, g2l_tf);
           }
 
-          ILOG_INFO << "exist_target_pose = " << result_.exist_target_pose
+          ILOG_INFO << "exist_target_pose = " << exist_target_pose
                     << "  safe_lon_move_dist = " << result_.safe_lon_move_dist
                     << "  safe_lat_move_dist = " << result_.safe_lat_move_dist
                     << "  safe_lat_buffer = " << result_.safe_lat_buffer;
           break;
         }
       }
-      if (result_.exist_target_pose) {
+      if (exist_target_pose) {
         break;
       }
     }
-    if (result_.exist_target_pose) {
+    if (exist_target_pose) {
       break;
     }
   }
 
-  if (result_.exist_target_pose) {
+  if (exist_target_pose) {
     dx = slot_.processed_corner_coord_local_.pt_01_mid.x() -
          (result_.target_pose_local.pos.x() + param.wheel_base +
           param.front_overhanging);
     if (dx < -front_exceed_line_dx) {
-      result_.exist_target_pose = false;
+      exist_target_pose = false;
     }
+  }
+
+  if (!exist_target_pose) {
+    result_.target_pose_type = TargetPoseType::FAIL;
+  } else if (col_det_interface_ptr_->GetFoldMirrorFlag()) {
+    result_.target_pose_type = TargetPoseType::FOLD_MIRROR;
+  } else {
+    result_.target_pose_type = TargetPoseType::NORMAL;
   }
 
   return result_;
