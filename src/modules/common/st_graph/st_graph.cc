@@ -339,7 +339,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       small_expand_buffer, lat_buffer, &prev_st_count);
 
   // check whether need adjust buffer by t
-  bool need_ajust_buffer_by_t = false;
+  bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
   bool is_within_ego_lane = false;
   double nearest_s = 0.0;
@@ -353,7 +353,7 @@ void STGraph::MakeDynamicAgentStBoundary(
         nearest_l < half_ego_lane_width;
     is_parallel =
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
-    need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
+    need_adjust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
         init_point, ptr_virtual_lane_manager, ptr_ego_lane, ptr_obj_lane, agent,
         is_parallel, is_lane_keeping, is_rads_scene);
   }
@@ -418,7 +418,7 @@ void STGraph::MakeDynamicAgentStBoundary(
               trajectories[i], start_absolute_time + relative_time, &point);
         }
       }
-      double specific_lat_buffer = need_ajust_buffer_by_t
+      double specific_lat_buffer = need_adjust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(
                                              point, lat_buffer, ptr_obj_lane)
                                        : lat_buffer;
@@ -548,7 +548,7 @@ void STGraph::MakeDynamicAgentStBoundary(
               trajectories[i], start_absolute_time + relative_time, &point);
         }
       }
-      double specific_lat_buffer = need_ajust_buffer_by_t
+      double specific_lat_buffer = need_adjust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(
                                              point, lat_buffer, ptr_obj_lane)
                                        : lat_buffer;
@@ -783,7 +783,7 @@ void STGraph::BackwardExtendSingleStBoundary(
   double lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
 
   // check whether need adjust buffer by t
-  bool need_ajust_buffer_by_t = false;
+  bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
@@ -792,7 +792,7 @@ void STGraph::BackwardExtendSingleStBoundary(
   if (nullptr != ptr_obj_lane) {
     is_parallel =
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
-    need_ajust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
+    need_adjust_buffer_by_t = StGraphUtils::CheckAdjustLateralBufferByT(
         init_point, ptr_virtual_lane_manager, ptr_ego_lane, ptr_obj_lane, agent,
         is_parallel, is_lane_keeping, is_rads_scene);
   }
@@ -810,7 +810,7 @@ void STGraph::BackwardExtendSingleStBoundary(
       StGraphUtils::LinearExtendTrajectory(
           trajectory, start_absolute_time + relative_time, &point);
     }
-    double specific_lat_buffer = need_ajust_buffer_by_t
+    double specific_lat_buffer = need_adjust_buffer_by_t
                                      ? StGraphUtils::AdjustLateralBufferByT(
                                            point, lat_buffer, ptr_obj_lane)
                                      : lat_buffer;

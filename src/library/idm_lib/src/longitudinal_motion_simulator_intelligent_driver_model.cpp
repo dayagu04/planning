@@ -128,12 +128,9 @@ void LonMotionSimulatorIntelligentDriverModel::Linear(const InternalState &x,
   double acc = 0.0;
   GetIIdmDesiredAcceleration(param_, cur_state, &acc);
 
-  std::cout << "acc = " << acc << std::endl;
   double average_acc = dt == 0.0 ? 0.0 : cur_state.vel / dt;
   acc = std::max(
       acc, -std::min(param_.kHardBrakingDeceleration, cur_state.vel / dt));
-
-  std::cout << "acc = " << acc << std::endl;
 
   (*x_out)[0] = x[0] + cur_state.vel * dt + 0.5 * acc * dt * dt;
   (*x_out)[1] = cur_state.vel + acc * dt;
