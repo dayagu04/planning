@@ -3047,7 +3047,7 @@ def load_lat_common(plan_debug, planning_json):
   avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                         "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
                         "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","maintain_avoid", "lateral_avoid_ids"]
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","maintain_avoid", "lateral_avoid_ids", "left_road_extra_buffer","right_road_extra_buffer"]
   for key in avoid_debug_key:
     try:
       data_dict2[key] = planning_json[key]
@@ -3070,7 +3070,7 @@ def load_avoid(plan_debug, planning_json):
   avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                         "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
                         "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","maintain_avoid","lateral_avoid_ids"]
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","maintain_avoid","lateral_avoid_ids","left_road_extra_buffer","right_road_extra_buffer"]
   for key in avoid_debug_key:
     try:
       data_dict2[key] = planning_json[key]

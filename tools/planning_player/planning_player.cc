@@ -49,6 +49,10 @@ static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
+static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
+static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO = "/iflytek/camera_perception/lane_lines_debug_info";
+static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO = "/iflytek/camera_perception/lane_topo_debug_info";
+static constexpr auto TOPIC_OBJECTS = "/iflytek/camera_perception/objects";
 
 // apa topics
 static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
@@ -470,6 +474,14 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
     } else if (msg.getTopic() == TOPIC_SPEED_BUMP) {
       cache_with_ros_msg_and_header_time<struct_msgs::FusionDecelerInfo>(msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
+      new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_LANE_LINE) {
+      new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_LANE_LINE_DEBUG_INFO) {
+      new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_LANE_TOPO_DEBUG_INFO) {
+      new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_OBJECTS) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
     } else if (msg.getTopic() == TOPIC_TRAFFIC_SIGN) {
       cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionTsrInfo>(

@@ -1346,8 +1346,8 @@ bool EnvironmentalModelManager::IsStatic(
   }
 
   bool is_static =
-      (prediction_object.speed < static_speed &&
-       (prediction_trajectory_length < max_static_prediction_length)) ||
+      prediction_object.speed < static_speed ||
+      prediction_trajectory_length < max_static_prediction_length ||
       prediction_object.is_traffic_facilities;
   return is_static;
 }

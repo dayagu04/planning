@@ -1164,6 +1164,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, nudge_extra_buffer_reverse_obstacle,
                      "general_lateral_decider",
                      "nudge_extra_buffer_reverse_obstacle");
+    ReadItem<double>(json, extra_road_buffer_in_big_curvature,
+                     "general_lateral_decider",
+                     "extra_road_buffer_in_big_curvature");
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -1255,6 +1258,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   int obstacle_predlonoverlap_up_total_count = 0;
   int obstacle_predlonoverlap_down_total_count = 0;
   double nudge_extra_buffer_reverse_obstacle = 0.1;
+  double extra_road_buffer_in_big_curvature = 0.0;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

@@ -361,7 +361,7 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
   double limit_jerk = max_wheel_angle_rate * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_max_jerk{limit_jerk, 1.538, 1.476, 1.384};
+  std::vector<double> fp_max_jerk{limit_jerk, 1.8, 1.5, 1.4};
   double max_jerk = planning::interp(ref_vel, xp_v, fp_max_jerk);
   max_jerk = std::min(limit_jerk, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
@@ -376,13 +376,13 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  // const auto &soft_bounds = general_lateral_decider_output.soft_bounds;
+  const auto &soft_bounds = general_lateral_decider_output.soft_bounds;
   const auto &hard_bounds = general_lateral_decider_output.hard_bounds;
   const auto &soft_bounds_info = general_lateral_decider_output.soft_bounds_info;
   const auto &hard_bounds_info = general_lateral_decider_output.hard_bounds_info;
   planning_weight_ptr_->CalculateLatAvoidBoundPriority(
       soft_bounds_frenet_point, hard_bounds_frenet_point,
-      hard_bounds,
+      soft_bounds, hard_bounds,
       soft_bounds_info, hard_bounds_info);
 
   if (session_->is_hpp_scene()) {

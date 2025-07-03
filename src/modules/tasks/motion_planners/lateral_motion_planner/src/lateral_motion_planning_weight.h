@@ -118,6 +118,7 @@ class LateralMotionPlanningWeight {
   void CalculateLatAvoidBoundPriority(
       const std::vector<std::pair<double, double>> &soft_bounds,
       const std::vector<std::pair<double, double>> &hard_bounds,
+      const std::vector<planning::WeightedBounds> soft_bounds_vec,
       const std::vector<planning::WeightedBounds> hard_bounds_vec,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &soft_bounds_info,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &hard_bounds_info);
@@ -265,6 +266,8 @@ class LateralMotionPlanningWeight {
   std::vector<double> soft_bound_qratio_vec_;
   std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;
+  pnc::mathlib::spline soft_lbound_l_s_spline_;
+  pnc::mathlib::spline soft_ubound_l_s_spline_;
   pnc::mathlib::spline hard_lbound_l_s_spline_;
   pnc::mathlib::spline hard_ubound_l_s_spline_;
 };

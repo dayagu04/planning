@@ -338,22 +338,31 @@ void LateralMotionPlanningWeight::CalculateLatAvoidDistance(
 void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
     const std::vector<std::pair<double, double>> &soft_bounds,
     const std::vector<std::pair<double, double>> &hard_bounds,
+    const std::vector<planning::WeightedBounds> soft_bounds_vec,
     const std::vector<planning::WeightedBounds> hard_bounds_vec,
     const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>& soft_bounds_info,
     const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>& hard_bounds_info) {
-  std::vector<double> hard_lbound_s_vector;
-  std::vector<double> hard_ubound_s_vector;
+  std::vector<double> bound_s_vector;
+  std::vector<double> soft_lbound_l_vector;
+  std::vector<double> soft_ubound_l_vector;
   std::vector<double> hard_lbound_l_vector;
   std::vector<double> hard_ubound_l_vector;
   size_t bounds_size =
       std::min(soft_bounds_info.size(), hard_bounds_info.size());
-  if (bounds_size < weight_.point_num) {
+  if (bounds_size < weight_.point_num ||
+      ref_vel_ <= 1e-2) {
     soft_bound_qratio_vec_.clear();
     hard_bound_qratio_vec_.clear();
     soft_bound_qratio_vec_.resize(26, 1.0);
     hard_bound_qratio_vec_.resize(26, 1.0);
-    hard_lbound_l_s_spline_.set_points(hard_lbound_s_vector, hard_lbound_l_vector);
-    hard_ubound_l_s_spline_.set_points(hard_ubound_s_vector, hard_ubound_l_vector);
+    soft_lbound_l_s_spline_.get_x().clear();
+    soft_lbound_l_s_spline_.get_y().clear();
+    soft_ubound_l_s_spline_.get_x().clear();
+    soft_ubound_l_s_spline_.get_y().clear();
+    hard_lbound_l_s_spline_.get_x().clear();
+    hard_lbound_l_s_spline_.get_y().clear();
+    hard_ubound_l_s_spline_.get_x().clear();
+    hard_ubound_l_s_spline_.get_y().clear();
     return;
   }
   bool is_update_soft_lbound = false;
@@ -371,8 +380,9 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
   int last_hard_ubound_id = hard_bounds_info[1].second.id;
   double init_s = 0.0;
   double ds = ref_vel_ * weight_.dt;
-  hard_lbound_s_vector.emplace_back(init_s);
-  hard_ubound_s_vector.emplace_back(init_s);
+  bound_s_vector.emplace_back(init_s);
+  soft_lbound_l_vector.emplace_back(soft_bounds[0].first);
+  soft_ubound_l_vector.emplace_back(soft_bounds[0].second);
   hard_lbound_l_vector.emplace_back(hard_bounds[0].first);
   hard_ubound_l_vector.emplace_back(hard_bounds[0].second);
   for (size_t i = 1; i < soft_bounds_info.size(); ++i) {
@@ -445,27 +455,37 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
     hard_bound_qratio_vec_[i] = std::max(q_hard_bound_ratio, 1.0);
     //
     init_s += ds;
+    bound_s_vector.emplace_back(init_s);
     // only ROAD_BORDER
+    for (auto &soft_bound : soft_bounds_vec[i]) {
+      if (soft_bound.bound_info.type == planning::BoundType::ROAD_BORDER) {
+        soft_lbound_l_vector.emplace_back(soft_bound.lower);
+        soft_ubound_l_vector.emplace_back(soft_bound.upper);
+      }
+    }
     for (auto &hard_bound : hard_bounds_vec[i]) {
       if (hard_bound.bound_info.type == planning::BoundType::ROAD_BORDER) {
-        hard_lbound_s_vector.emplace_back(init_s);
         hard_lbound_l_vector.emplace_back(hard_bound.lower);
-        hard_ubound_s_vector.emplace_back(init_s);
         hard_ubound_l_vector.emplace_back(hard_bound.upper);
       }
     }
   }
+  soft_lbound_l_s_spline_.set_points(
+    bound_s_vector, soft_lbound_l_vector, pnc::mathlib::spline::linear);
+  soft_ubound_l_s_spline_.set_points(
+    bound_s_vector, soft_ubound_l_vector, pnc::mathlib::spline::linear);
   hard_lbound_l_s_spline_.set_points(
-    hard_lbound_s_vector, hard_lbound_l_vector, pnc::mathlib::spline::linear);
+    bound_s_vector, hard_lbound_l_vector, pnc::mathlib::spline::linear);
   hard_ubound_l_s_spline_.set_points(
-    hard_ubound_s_vector, hard_ubound_l_vector, pnc::mathlib::spline::linear);
+    bound_s_vector, hard_ubound_l_vector, pnc::mathlib::spline::linear);
 }
 
 void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
-  if (lateral_motion_scene_ == LANE_CHANGE) {
+  if (lateral_motion_scene_ == LANE_CHANGE ||
+      lateral_motion_scene_ == LANE_BORROW) {
     jerk_bound = config_.jerk_bound_lane_change;  // 0.55,
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
@@ -524,15 +544,22 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     planning::common::LateralPlanningInput &planning_input) {
   // set upper limit
   double extra_jerk_buffer = 0.1;
-  std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
-  std::vector<double> fp_emergency_jerk{1.0, 1.5, 1.2, 0.8};
-  double emergency_jerk_bound =
-      planning::interp(ref_vel_, xp_v, fp_emergency_jerk);
+  std::vector<double> xp_v{4.167, 8.333, 16.667, 25.0};
+  std::vector<double> fp_P0_emergency_jerk{1.2, 1.5, 1.4, 1.0};
+  std::vector<double> fp_P1_emergency_jerk{1.0, 1.3, 1.2, 0.8};
+  std::vector<double> fp_P2_emergency_jerk{0.8, 1.1, 1.0, 0.6};
+  double P0_emergency_jerk_bound =
+      planning::interp(ref_vel_, xp_v, fp_P0_emergency_jerk);
+  double P1_emergency_jerk_bound =
+      planning::interp(ref_vel_, xp_v, fp_P1_emergency_jerk);
+  double P2_emergency_jerk_bound =
+      planning::interp(ref_vel_, xp_v, fp_P2_emergency_jerk);
   double jerk_bound =  // 0.4 0.4 0.4 0.3
       planning::interp(ref_vel_, xp_v, config_.map_jerk_bound);
   if (lateral_motion_scene_ == AVOID) {
     jerk_bound = config_.jerk_bound_avoid;  // 0.4,
-  } else if (lateral_motion_scene_ == LANE_CHANGE) {
+  } else if (lateral_motion_scene_ == LANE_CHANGE ||
+             lateral_motion_scene_ == LANE_BORROW) {
     jerk_bound = config_.jerk_bound_lane_change;  // 0.55,
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
@@ -540,13 +567,21 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     jerk_bound = config_.jerk_bound_ramp;  // 1.0
   }
   // emergency
-  bool is_bound_spline_valid = false;
+  bool is_soft_bound_spline_valid = false;
+  if (!soft_lbound_l_s_spline_.get_x().empty() &&
+      !soft_lbound_l_s_spline_.get_y().empty() &&
+      !soft_ubound_l_s_spline_.get_x().empty() &&
+      !soft_ubound_l_s_spline_.get_y().empty()) {
+    is_soft_bound_spline_valid = true;
+  }
+  bool is_hard_bound_spline_valid = false;
   if (!hard_lbound_l_s_spline_.get_x().empty() &&
       !hard_lbound_l_s_spline_.get_y().empty() &&
       !hard_ubound_l_s_spline_.get_x().empty() &&
       !hard_ubound_l_s_spline_.get_y().empty()) {
-    is_bound_spline_valid = true;
+    is_hard_bound_spline_valid = true;
   }
+  double violate_bound_max_dist = 0;
   if (reference_path != nullptr) {
     double init_s =
         reference_path->get_frenet_ego_state()
@@ -565,7 +600,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
           if (last_point_rel_s < 1e-6) {
             continue;
           }
-          if (is_bound_spline_valid) {
+          if (is_hard_bound_spline_valid) {
             double hard_lbound_l = hard_lbound_l_s_spline_(last_point_rel_s);
             double hard_ubound_l = hard_ubound_l_s_spline_(last_point_rel_s);
             if (frenet_last_sl.y < hard_lbound_l ||
@@ -574,25 +609,46 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
               break;
             }
           }
+          if (is_soft_bound_spline_valid) {
+            double soft_lbound_l = soft_lbound_l_s_spline_(last_point_rel_s);
+            double soft_ubound_l = soft_ubound_l_s_spline_(last_point_rel_s);
+            if (frenet_last_sl.y < soft_lbound_l ||
+                frenet_last_sl.y > soft_ubound_l) {
+              violate_bound_max_dist =
+                  std::max(std::max(soft_lbound_l - frenet_last_sl.y,
+                    frenet_last_sl.y - soft_ubound_l), violate_bound_max_dist);
+              emergency_level_ = P1;
+            }
+          }
         }
       }
-    } else {
-      emergency_level_ = NONE;
     }
-  } else {
-    emergency_level_ = NONE;
   }
   if (is_high_priority_back &&
       is_lane_change_hold_) {
     emergency_level_ = P0;
   }
   if (emergency_level_ == P0) {
-    jerk_bound = emergency_jerk_bound;
+    jerk_bound = P0_emergency_jerk_bound;
     extra_jerk_buffer = 1.0;
+  } else if (emergency_level_ == P1) {
+    std::vector<double> xp_violate_dist{0.05, 0.15, 0.3, 0.5};
+    // std::vector<double> fp_extra_p1_jerk_bound{0.05, 0.1, 0.5, 0.8};
+    std::vector<double> fp_p1_jerk_buffer{0.1, 0.2, 0.5, 0.7};
+    extra_jerk_buffer =
+        planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p1_jerk_buffer);
+    jerk_bound = P1_emergency_jerk_bound;
+  } else if (emergency_level_ == P2) {
+    std::vector<double> xp_violate_dist{0.05, 0.15, 0.3, 0.5};
+    // std::vector<double> fp_extra_p1_jerk_bound{0.05, 0.1, 0.4, 0.6};
+    std::vector<double> fp_p2_jerk_buffer{0.1, 0.1, 0.3, 0.5};
+    extra_jerk_buffer =
+        planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p2_jerk_buffer);
+    jerk_bound = P2_emergency_jerk_bound;
   }
   jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
   jerk_bound =
-      std::min(std::min(emergency_jerk_bound, jerk_bound), max_jerk_);
+      std::min(std::min(P0_emergency_jerk_bound, jerk_bound), max_jerk_);
   // use last jerk
   // when last big jerk exceed jerk bound , loosening jerk bound
   bool is_need_loosening_upper_jerk_bound = false;
@@ -838,6 +894,10 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
   double emergence_factor = 1.0;
   double intersection_factor = 1.0;
   if (emergency_level_ == P0) {
+    emergence_factor = 2.0 * config_.emergence_avoid_factor;
+  } else if (emergency_level_ == P1) {
+    emergence_factor = 1.5 * config_.emergence_avoid_factor;
+  } else if (emergency_level_ == P2) {
     emergence_factor = config_.emergence_avoid_factor;
   }
   if (is_in_intersection_) {
