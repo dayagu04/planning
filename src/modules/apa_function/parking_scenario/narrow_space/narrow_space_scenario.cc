@@ -779,9 +779,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         apa_world_ptr_->GetObstacleManagerPtr(), obs, start, slot_box, false);
   }
 
-  double search_start_time = IflyTime::Now_ms();
-  ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;
-
   // set input
   AstarRequest cur_request;
   cur_request.path_generate_method =
@@ -837,8 +834,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.slot_length = ego_info.slot.GetLength();
   cur_request.history_gear = current_gear_;
   frame_.current_gear = current_gear_ == AstarPathGear::DRIVE
-                            ? geometry_lib::SEG_GEAR_REVERSE
-                            : geometry_lib::SEG_GEAR_INVALID;
+                            ? geometry_lib::SEG_GEAR_DRIVE
+                            : geometry_lib::SEG_GEAR_REVERSE;
   cur_request.goal_ = Pose2f(end.x, end.y, end.theta);
   FillPlanningReason(cur_request);
 
@@ -881,13 +878,13 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
     thread_.PublishResponse(&response);
-    ILOG_INFO << "publish path";
+    // ILOG_INFO << "publish path";
 
     bool is_nice = false;
 
     is_nice = IsResponseNice(cur_request, response);
     if (!is_nice) {
-      thread_.Clear();
+      ThreadClear();
       thread_state_ = RequestResponseState::NONE;
     }
   }
@@ -1020,30 +1017,23 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       ILOG_INFO << "path planning fail number = " << path_planning_fail_num_;
     }
 
-    // update gear
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    if (response.first_seg_path.size() > 1) {
-      if (response.first_seg_path[0].gear == AstarPathGear::DRIVE) {
+    // if planning success, update gear
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
+        response.first_seg_path.size() > 1) {
+      current_gear_ = response.first_seg_path[0].gear;
+      if (current_gear_ == AstarPathGear::DRIVE) {
         frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
       }
-
-      if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
-        current_gear_ = response.first_seg_path[0].gear;
-      }
-
-      thread_.Clear();
     }
 
+    ThreadClear();
     frame_.gear_command = frame_.current_gear;
-    ILOG_INFO << "first path gear = " << static_cast<int>(frame_.gear_command);
+    ILOG_INFO << "path gear = " << static_cast<int>(frame_.gear_command);
   } else if (thread_state_ == RequestResponseState::NONE ||
              thread_state_ == RequestResponseState::HAS_PUBLISHED_RESPONSE) {
     // send request
     thread_.SetRequest(obs, cur_request);
     res = PathPlannerResult::WAIT_PATH;
-
-    // publish fallback path
-    // GenerateFallBackPath();
 
     ILOG_INFO << "set input";
   } else if (thread_state_ == RequestResponseState::HAS_REQUEST) {
@@ -1188,11 +1178,9 @@ const int NarrowSpaceScenario::LocalPathToGlobal(
 const bool NarrowSpaceScenario::UpdateThreadPath() {
   thread_.GetThreadState(&thread_state_);
 
-  ILOG_INFO << "thread state " << static_cast<int>(thread_state_);
+  // ILOG_INFO << "thread state " << static_cast<int>(thread_state_);
 
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
-    ILOG_INFO << "fetch path";
-
     return true;
   }
 
@@ -1283,8 +1271,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
             measures_ptr->GetHeadingVec(),
             ego_info_under_slot.origin_pose_global.heading_vec);
 
-    // 这个初始参考挡位对迭代式路径规划已经没有什么意义
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
       ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
     } else if (cross_ego_to_slot_heading < 0.0 &&
@@ -1466,7 +1452,6 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
 
   if (frame_.is_replan_first) {
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
     if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
         ApaParkOutDirection::RIGHT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;

@@ -58,7 +58,7 @@ void DpSpeedConfig::Init(const double path_length) {
     unit_v = unit_v_for_extream_short_path;
     unit_s = unit_s_for_extream_short_path;
 
-    ILOG_INFO << "need use jlt speed profile";
+    // ILOG_INFO << "need use jlt speed profile";
   }
 
   return;

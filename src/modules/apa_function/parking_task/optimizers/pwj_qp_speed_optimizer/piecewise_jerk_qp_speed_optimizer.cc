@@ -90,7 +90,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   qp_speed_data_ = dp_speed_data;
 
   if (speed_limit_profile == nullptr || dp_speed_data.size() < 2) {
-    ILOG_INFO << "speed data is null";
+    // ILOG_INFO << "speed data is null";
     return;
   }
 
