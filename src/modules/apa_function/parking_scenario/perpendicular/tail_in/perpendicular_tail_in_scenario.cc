@@ -22,6 +22,7 @@
 #include "math_lib.h"
 #include "parking_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"
+#include "target_pose_decider/target_pose_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -520,7 +521,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
             ->CalcTargetPose(ego_info_under_slot.slot,
                              tar_pose_decider_request);
 
-    if (!res.exist_target_pose) {
+    if (res.target_pose_type == TargetPoseType::FAIL) {
       ILOG_ERROR << "can not find target pose";
       return false;
     }
@@ -531,6 +532,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
         !move_slot_with_little_buffer) {
       ego_info_under_slot.safe_lat_buffer = res.safe_lat_buffer;
     }
+
+    ego_info_under_slot.tar_pose_result = res;
 
     // 记录每次重规划移动距离
     ego_info_under_slot.lon_move_dist_every_replan = res.safe_lon_move_dist;
@@ -597,10 +600,11 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
   input.is_simulation = simu_param.is_simulation;
 
-  if (param.has_intelligent_fold_mirror &&
-      apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag()) {
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+  if (ego_info_under_slot.tar_pose_result.target_pose_type ==
+      TargetPoseType::FOLD_MIRROR) {
+    ILOG_INFO << "tyr path plan with fold mirror";
     input.need_fold_mirror = true;
-    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
   }
 
   if (input.is_simulation) {
@@ -830,7 +834,6 @@ void PerpendicularTailInScenario::PathPlan() {
   SetParkingStatus(ParkingStatus::PARKING_PLANNING);
 
   if (param.has_intelligent_fold_mirror && !exist_target_pose &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
       !apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag()) {
     apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
     exist_target_pose = GenTlane();

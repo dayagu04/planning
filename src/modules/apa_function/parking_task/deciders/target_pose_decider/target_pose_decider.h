@@ -29,8 +29,14 @@ struct TargetPoseDeciderRequest {
   ~TargetPoseDeciderRequest() {}
 };
 
+enum class TargetPoseType {
+  FAIL,
+  NORMAL,
+  FOLD_MIRROR,
+};
+
 struct TargetPoseDeciderResult {
-  bool exist_target_pose = false;
+  TargetPoseType target_pose_type = TargetPoseType::FAIL;
   geometry_lib::PathPoint target_pose_local;
   geometry_lib::PathPoint target_pose_global;
   double safe_lat_move_dist = 0.0;
@@ -38,7 +44,7 @@ struct TargetPoseDeciderResult {
   double safe_lat_buffer = 0.0;
 
   void Reset() {
-    exist_target_pose = false;
+    target_pose_type = TargetPoseType::FAIL;
     target_pose_local.Reset();
     target_pose_global.Reset();
     safe_lat_move_dist = 0.0;

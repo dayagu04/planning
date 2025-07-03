@@ -13,6 +13,7 @@
 #include "collision_detection/collision_detector_interface.h"
 #include "geometry_math.h"
 #include "local_view.h"
+#include "target_pose_decider/target_pose_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -108,6 +109,8 @@ struct EgoInfoUnderSlot {
 
   // 存在目标终点的安全buffer
   double safe_lat_buffer = 0.15;
+
+  TargetPoseDeciderResult tar_pose_result;
 
   Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
 

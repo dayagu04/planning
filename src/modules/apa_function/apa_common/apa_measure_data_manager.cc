@@ -99,12 +99,10 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
 
   if (apa_param.GetParam().force_fold_mirror) {
     fold_mirror_flag_ = true;
-  } else if (apa_param.GetParam().has_intelligent_fold_mirror) {
+  } else {
     // get signal from vehicle service
     fold_mirror_flag_ = (vehicle_service_output_info.rearview_mirror_sts ==
                          iflyauto::RearviewMirrorSts::Rearview_Mirror_Fold);
-  } else {
-    fold_mirror_flag_ = false;
   }
 
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
@@ -135,6 +133,7 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
                    car_static_timer_by_vel_normal_)
   JSON_DEBUG_VALUE("static_flag", static_flag_)
   JSON_DEBUG_VALUE("fold_mirror_flag", fold_mirror_flag_)
+  JSON_DEBUG_VALUE("force_fold_mirror", apa_param.GetParam().force_fold_mirror)
 }
 
 }  // namespace apa_planner
