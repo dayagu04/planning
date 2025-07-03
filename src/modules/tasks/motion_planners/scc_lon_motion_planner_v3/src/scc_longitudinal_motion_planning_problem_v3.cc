@@ -21,14 +21,14 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   // STEP 0: set solver config parmeters
   iLqrSolverConfig solver_config;
   solver_config.horizon = 25;
-  solver_config.state_size = STATE_SIZE;
-  solver_config.input_size = INPUT_SIZE;
+  solver_config.state_size = 4;
+  solver_config.input_size = 1;
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = false;
   solver_config.du_tol = 0.005;
   solver_config.max_iter = 15;
   solver_config.lambda_min = 1e-5;
-  init_state_.resize(STATE_SIZE);
+  init_state_.resize(4);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();
   ilqr_core_ptr_->Init(std::make_shared<SccLongitudinalMotionPlanningModelV3>(),
@@ -50,12 +50,20 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   //                                                                 // sv bound
   //                                                                 cost
   ilqr_core_ptr_->AddCost(
+      std::make_shared<LonDJerkCostTerm>());  // longitudinal djerk cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonHardPosBoundCostTerm>());  // longitudinal hard pos
+                                                     // bound cost
+  ilqr_core_ptr_->AddCost(
       std::make_shared<LonVelBoundCostTerm>());  // longitudinal vel bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonAccBoundCostTerm>());  // longitudinal acc bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonJerkBoundCostTerm>());  // longitudinal jerk bound
                                                   // cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonDJerkBoundCostTerm>());  // longitudinal djerk bound
+                                                   // cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonStopPointCost>());  // longitudinal stop point cost
   ilqr_core_ptr_->AddCost(
@@ -71,6 +79,7 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   planning_output_.mutable_vel_vec()->Resize(N, 0.0);
   planning_output_.mutable_acc_vec()->Resize(N, 0.0);
   planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
+  planning_output_.mutable_djerk_vec()->Resize(N, 0.0);
 }
 
 uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
@@ -104,21 +113,8 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[ACC_MIN] = planning_input.acc_min_vec(i);
     cost_config_vec.at(i)[JERK_MAX] = planning_input.jerk_max_vec(i);
     cost_config_vec.at(i)[JERK_MIN] = planning_input.jerk_min_vec(i);
-
-    // bounds: s-v bounds
-    // cost_config_vec.at(i)[SV_BOUND_S_0] = planning_input.sv_bound_s_0(i);
-    // cost_config_vec.at(i)[SV_BOUND_S_1] = planning_input.sv_bound_s_1(i);
-    // cost_config_vec.at(i)[SV_BOUND_S_2] = planning_input.sv_bound_s_2(i);
-    // cost_config_vec.at(i)[SV_BOUND_S_3] = planning_input.sv_bound_s_3(i);
-    // cost_config_vec.at(i)[SV_BOUND_S_4] = planning_input.sv_bound_s_4(i);
-    // cost_config_vec.at(i)[SV_BOUND_S_5] = planning_input.sv_bound_s_5(i);
-    // cost_config_vec.at(i)[SV_BOUND_V_MAX_0] = planning_input.sv_bound_v_0(i);
-    // cost_config_vec.at(i)[SV_BOUND_V_MAX_1] = planning_input.sv_bound_v_1(i);
-    // cost_config_vec.at(i)[SV_BOUND_V_MAX_2] = planning_input.sv_bound_v_2(i);
-    // cost_config_vec.at(i)[SV_BOUND_V_MAX_3] = planning_input.sv_bound_v_3(i);
-    // cost_config_vec.at(i)[SV_BOUND_V_MAX_4] = planning_input.sv_bound_v_4(i);
-    // cost_config_vec.at(i)[SV_BOUND_V_MAX_5] = planning_input.sv_bound_v_5(i);
-
+    cost_config_vec.at(i)[DJERK_MAX] = planning_input.djerk_max_vec(i);
+    cost_config_vec.at(i)[DJERK_MIN] = planning_input.djerk_min_vec(i);
     // weights
     cost_config_vec.at(i)[W_REF_POS] =
         planning_input.s_weights(i);  // dynamic weight
@@ -134,11 +130,11 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[W_JERK_BOUND] = planning_input.q_jerk_bound();
     cost_config_vec.at(i)[W_S_STOP] = planning_input.q_stop_s();
     cost_config_vec.at(i)[W_HARD_POS_BOUND] = planning_input.q_hard_pos_bound();
-    cost_config_vec.at(i)[W_SV_BOUND] = planning_input.q_sv_bound();
+    // cost_config_vec.at(i)[W_SV_BOUND] = planning_input.q_sv_bound();
+    cost_config_vec.at(i)[W_DJERK] = planning_input.q_djerk();
 
     if (i <= 2) {
       cost_config_vec.at(i)[W_HARD_POS_BOUND] = 0.0;
-      cost_config_vec.at(i)[W_SV_BOUND] = 0.0;
     }
 
     cost_config_vec.at(i)[W_NON_NEGATIVE_VEL] = 2000.0;
@@ -156,7 +152,8 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
 
   // solve the ilqr problem
   init_state_ << planning_input.init_state().s(),
-      planning_input.init_state().v(), planning_input.init_state().a();
+      planning_input.init_state().v(), planning_input.init_state().a(),
+      planning_input.init_state().j();
   ilqr_core_ptr_->Solve(init_state_);
 
   // assemble planning result
@@ -175,15 +172,17 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
         state_result->at(i)[pnc::scc_longitudinal_planning_v3::StateId::VEL];
     auto a =
         state_result->at(i)[pnc::scc_longitudinal_planning_v3::StateId::ACC];
+    auto j =
+        state_result->at(i)[pnc::scc_longitudinal_planning_v3::StateId::JERK];
 
-    double j = 0.0;
+    double djerk = 0.0;
 
     if (i < N - 1) {
-      j = control_result->at(
-          i)[pnc::scc_longitudinal_planning_v3::ControlId::JERK];
+      djerk = control_result->at(
+          i)[pnc::scc_longitudinal_planning_v3::ControlId::DJERK];
     } else {
-      j = control_result->at(
-          i - 1)[pnc::scc_longitudinal_planning_v3::ControlId::JERK];
+      djerk = control_result->at(
+          i - 1)[pnc::scc_longitudinal_planning_v3::ControlId::DJERK];
     }
 
     // post process for longitudinal motion planning, ensure non-negative vel
@@ -193,12 +192,14 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
       v = 0.0;
       a = 0.0;
       j = 0.0;
+      djerk = 0.0;
     }
 
     planning_output_.mutable_pos_vec()->Set(i, s);
     planning_output_.mutable_vel_vec()->Set(i, v);
     planning_output_.mutable_acc_vec()->Set(i, a);
     planning_output_.mutable_jerk_vec()->Set(i, j);
+    planning_output_.mutable_djerk_vec()->Set(i, djerk);
   }
 
   // load solver and iteration info

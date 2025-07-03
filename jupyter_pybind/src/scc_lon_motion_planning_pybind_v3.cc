@@ -21,7 +21,7 @@ constexpr double plan_time = 5.0;
 constexpr double dt = 0.2;
 constexpr double max_s_weight_time = 3.0;
 constexpr double front_lower_weight = 0.5;
-constexpr double max_s_weight = 2.0;
+constexpr double max_s_weight = 3.0;
 constexpr double back_upper_weight = 1.5;
 constexpr double kUrgentWeightStartTime = 0.0;
 constexpr double kAddUrgentWeightEndTime = 1.5;
@@ -125,9 +125,9 @@ std::vector<double> MakeVWeight(double default_v_weight, double cruise_v_weight,
   return v_weights;
 }
 
-int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
+int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk, double q_djerk,
                    double q_hard_pos_bound, double q_vel_bound,
-                   double q_acc_bound, double q_jerk_bound, double q_stop_s,
+                   double q_acc_bound, double q_jerk_bound, double q_djerk_bound, double q_stop_s,
                    double default_s_weight, double follow_s_weight,
                    double overtake_s_weight, double neighbor_s_weight,
                    std::vector<int32_t> target_type_vec, bool is_urgent,
@@ -139,10 +139,12 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
   planning_input.set_q_ref_pos(const_s);
   planning_input.set_q_acc(q_acc);
   planning_input.set_q_jerk(q_jerk);
+  planning_input.set_q_jerk(q_djerk);
   planning_input.set_q_hard_pos_bound(q_hard_pos_bound);
   planning_input.set_q_vel_bound(q_vel_bound);
   planning_input.set_q_acc_bound(q_acc_bound);
   planning_input.set_q_jerk_bound(q_jerk_bound);
+  planning_input.set_q_jerk_bound(q_djerk_bound);
   planning_input.set_q_stop_s(q_stop_s);
 
   auto s_weights = MakeSWeight(

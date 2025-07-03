@@ -765,6 +765,7 @@ bool EgoStateManager::LongitudinalStitch() {
     lon_init_state.set_v(
         std::max(motion_planner_output.v_t_spline(planning_loop_dt), 0.0));
     lon_init_state.set_a(motion_planner_output.a_t_spline(planning_loop_dt));
+    lon_init_state.set_j(motion_planner_output.j_t_spline(planning_loop_dt));
     return true;
   } else {
     return false;

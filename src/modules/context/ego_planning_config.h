@@ -2573,6 +2573,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_vel, "long_motion_ilqr", "q_ref_vel");
     ReadItem<double>(json, q_acc, "long_motion_ilqr", "q_acc");
     ReadItem<double>(json, q_jerk, "long_motion_ilqr", "q_jerk");
+    ReadItem<double>(json, q_djerk, "long_motion_ilqr", "q_djerk");
     ReadItem<double>(json, q_soft_pos_bound, "long_motion_ilqr",
                      "q_soft_pos_bound");
     ReadItem<double>(json, q_hard_pos_bound, "long_motion_ilqr",
@@ -2598,8 +2599,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_soft_pos_bound_startmode");
     ReadItem<double>(json, q_hard_pos_bound_startmode, "long_motion_ilqr",
                      "q_hard_pos_bound_startmode");
-    ReadItem<double>(json, q_sv_bound_startmode, "long_motion_ilqr",
-                     "q_sv_bound_startmode");
+    ReadItem<double>(json, q_djerk_startmode, "long_motion_ilqr",
+                     "q_djerk_startmode");
     ReadItem<double>(json, q_vel_bound_startmode, "long_motion_ilqr",
                      "q_vel_bound_startmode");
     ReadItem<double>(json, q_acc_bound_startmode, "long_motion_ilqr",
@@ -2648,6 +2649,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_vel = 0.05;
   double q_acc = 10.0;
   double q_jerk = 5.0;
+  double q_djerk = 5.0;
 
   double q_soft_pos_bound = 5.0;
   double q_hard_pos_bound = 1000.0;
@@ -2656,6 +2658,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 400.0;
   double q_acc_bound_v3 = 3200.0;
   double q_jerk_bound = 100.0;
+  double q_djerk_bound = 100.0;
   double q_stop_s = 2000.0;
 
   // only in start mode
@@ -2663,6 +2666,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_vel_startmode = 0.05;
   double q_acc_startmode = 10.0;
   double q_jerk_startmode = 5.0;
+  double q_djerk_startmode = 20.0;
 
   double q_soft_pos_bound_startmode = 5.0;
   double q_hard_pos_bound_startmode = 1000.0;
@@ -3719,6 +3723,30 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "speed_planning", "neighbor_target",
                        "neighbor_target_neighbor_limit_velocity");
     }
+
+    // weight maker
+    {
+      ReadItem<double>(json, weight_maker_config.s_weight, "speed_planning",
+                       "weight_maker", "s_weight");
+      ReadItem<double>(json, weight_maker_config.start_s_weight,
+                       "speed_planning", "weight_maker", "start_s_weight");
+      ReadItem<double>(json, weight_maker_config.follow_s_weight,
+                       "speed_planning", "weight_maker", "follow_s_weight");
+      ReadItem<double>(json, weight_maker_config.overtake_s_weight,
+                       "speed_planning", "weight_maker", "overtake_s_weight");
+      ReadItem<double>(json, weight_maker_config.neighbor_s_weight,
+                       "speed_planning", "weight_maker", "neighbor_s_weight");
+      ReadItem<double>(json, weight_maker_config.end_s_weight, "speed_planning",
+                       "weight_maker", "end_s_weight");
+      ReadItem<double>(json, weight_maker_config.max_s_weight_time,
+                       "speed_planning", "weight_maker", "max_s_weight_time");
+      ReadItem<double>(json, weight_maker_config.front_lower_weight,
+                       "speed_planning", "weight_maker", "front_lower_weight");
+      ReadItem<double>(json, weight_maker_config.back_upper_weight,
+                       "speed_planning", "weight_maker", "back_upper_weight");
+      ReadItem<double>(json, weight_maker_config.max_s_weight, "speed_planning",
+                       "weight_maker", "max_s_weight");
+    }
   }
 
   double planning_time = 5.0;
@@ -3845,19 +3873,20 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   // weight maker
   struct WeightConfig {
-    double s_weight = 1.0;
+    double s_weight = 2.0;
+    double start_s_weight = 5.0;
     double v_weight = 0.0;
     double a_weight = 10.0;
     double jerk_weight = 100.0;
     double cruise_v_weight = 20.0;
-    double follow_s_weight = 1.0;
+    double follow_s_weight = 2.0;
     double overtake_s_weight = 1.0;
     double neighbor_s_weight = 1.0;
     double end_s_weight = 40.0;
     double max_s_weight_time = 3.0;
     double front_lower_weight = 0.5;
     double back_upper_weight = 1.5;
-    double max_s_weight = 2.0;
+    double max_s_weight = 3.0;
     double s_speed_upper_weight_v = 8.33;
     double s_speed_lower_weight_v = 2.78;
     double s_speed_upper_weight = 2.0;
