@@ -151,25 +151,33 @@ void HybridAStarInterface::UpdateOutput() {
                         Pose2f(request_.real_goal.x - 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
+
     case ParkingVehDirection::TAIL_IN:
       ref_line_.Process(request_.real_goal,
                         Pose2f(request_.real_goal.x + 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
+
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-      ILOG_INFO << "TAIL_OUT_TO_LEFT";
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      ILOG_INFO << "OUT_TO_LEFT";
       ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
                                                    request_.real_goal.y + 10.0,
                                                    request_.real_goal.theta));
       break;
+
     case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-      ILOG_INFO << "TAIL_OUT_TO_RIGHT";
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      ILOG_INFO << "OUT_TO_RIGHT";
       ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
                                                    request_.real_goal.y - 10.0,
                                                    request_.real_goal.theta));
       break;
+
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
     default:
-      ILOG_INFO << "Unknown Direction : HEAD_OUT_TO_MIDDLE";
+      ILOG_INFO << "Unknown Direction : OUT_TO_MIDDLE";
       ref_line_.Process(request_.real_goal,
                         Pose2f(request_.real_goal.x + 5.0, request_.real_goal.y,
                                request_.real_goal.theta));
@@ -259,26 +267,34 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                         Pose2f(request_.real_goal.x - 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
+
     case ParkingVehDirection::TAIL_IN:
       ILOG_INFO << "TAIL_IN";
       ref_line_.Process(request_.real_goal,
                         Pose2f(request_.real_goal.x + 10.0,
                                request_.real_goal.y, request_.real_goal.theta));
       break;
+
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-      ILOG_INFO << "TAIL_OUT_TO_LEFT";
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      ILOG_INFO << "OUT_TO_LEFT";
       ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
                                                    request_.real_goal.y + 10.0,
                                                    request_.real_goal.theta));
       break;
+
     case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-      ILOG_INFO << "TAIL_OUT_TO_RIGHT";
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      ILOG_INFO << "OUT_TO_RIGHT";
       ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
                                                    request_.real_goal.y - 10.0,
                                                    request_.real_goal.theta));
       break;
+
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
     default:
-      ILOG_INFO << "Unknown Direction : HEAD_OUT_TO_MIDDLE";
+      ILOG_INFO << "Unknown Direction : OUT_TO_MIDDLE";
       ref_line_.Process(request_.real_goal,
                         Pose2f(request_.real_goal.x + 5.0, request_.real_goal.y,
                                request_.real_goal.theta));
@@ -786,7 +802,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   // If target slot is not wide enough, return.
   if (target_regulator_result.second < advised_lat_buffer_inside &&
-      !IsHeadOutRequest(request_.direction_request)) {
+      !IsParkingOutRequest(request_.direction_request)) {
     ILOG_INFO << "goal dist = " << target_regulator_result.second
               << ", lat buffer inside = " << advised_lat_buffer_inside;
     search_state_ = AstarSearchState::FAILURE;
@@ -795,7 +811,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
        i++) {
-    if (IsHeadOutRequest(request_.direction_request)) {
+    if (IsParkingOutRequest(request_.direction_request)) {
       lat_buffer_outside =
           config_.safe_buffer.head_out_lat_safe_buffer_outside[i];
       lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
@@ -834,7 +850,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                  &traj_candidates_[i]);
 
-      if (!IsHeadOutRequest(request_.direction_request)) {
+      if (!IsParkingOutRequest(request_.direction_request)) {
         ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
                                        request_.real_goal);
       }

@@ -162,7 +162,7 @@ const bool ApaStateMachineManager::IsParkingStatus() const {
   if (state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
       state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
       state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
-      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
     return true;
   }
 
@@ -174,6 +174,24 @@ const bool ApaStateMachineManager::IsParkOutStatus() const {
       state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
       state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
       state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ApaStateMachineManager::IsHeadOutStatus() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ApaStateMachineManager::IsTailOutStatus() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
       state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
     return true;
   }

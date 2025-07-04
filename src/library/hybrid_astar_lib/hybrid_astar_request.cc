@@ -91,4 +91,26 @@ const bool IsHeadOutRequest(const ParkingVehDirection &direction) {
   return false;
 }
 
+const bool IsTailOutRequest(const ParkingVehDirection &direction) {
+  if (direction == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
+      direction == ParkingVehDirection::TAIL_OUT_TO_MIDDLE ||
+      direction == ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsParkingOutRequest(const ParkingVehDirection &direction) {
+  if (direction == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+      direction == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+      direction == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+      direction == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
+      direction == ParkingVehDirection::TAIL_OUT_TO_MIDDLE ||
+      direction == ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+    return true;
+  }
+
+  return false;
+}
 }  // namespace planning

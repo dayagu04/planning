@@ -81,8 +81,9 @@ void ApaSlotManager::Update(
           ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
           const double dot_ego_slot = measure_data_ptr_->GetHeadingVec().dot(
               slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
-          if (slot.slot_type_ == SlotType::PERPENDICULAR) {
-            // 对于垂直车位，开口方向与自车方向不一致不释放车位
+          if (slot.slot_type_ == SlotType::PERPENDICULAR &&
+              state_machine_ptr_->IsHeadOutStatus()) {
+            // 对于垂直车头泊出，开口方向与自车方向不一致不释放车位
             if (dot_ego_slot > 0.0) {
               slot.release_info_.release_state[RULE_BASED_RELEASE] =
                   SlotReleaseState::RELEASE;

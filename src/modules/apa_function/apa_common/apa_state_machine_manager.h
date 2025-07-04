@@ -58,6 +58,10 @@ class ApaStateMachineManager final {
 
   const bool IsParkOutStatus() const;
 
+  const bool IsHeadOutStatus() const;
+
+  const bool IsTailOutStatus() const;
+
   const bool IsParkInStatus() const;
 
   void Reset() {
