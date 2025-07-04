@@ -3886,21 +3886,53 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
       if (geometry_lib::IsSameGear(seg_gear, line_gear)) {
         geometry_lib::PathSegment line_seg(seg_gear, line);
 
-        if (ref_gear == geometry_lib::SEG_GEAR_REVERSE &&
-            (start_pos.x() + apa_param.GetParam().lon_dist_mirror_to_rear_axle >
-             input_.ego_info_under_slot.slot.GetProcessedCornerCoordLocal()
-                 .pt_01_mid.x()) &&
-            input_.need_fold_mirror) {
-          col_det_interface_ptr_->Init(true);
-        }
+        const double slot_x =
+            input_.ego_info_under_slot.slot.GetProcessedCornerCoordLocal()
+                .pt_01_mid.x();
 
-        PathColDetRes res =
-            TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
+        const double mirror_x =
+            start_pos.x() + apa_param.GetParam().lon_dist_mirror_to_rear_axle;
+
+        const double lower_x = 0.86, upper_x = 2.68, redundant_x = 0.2;
+
+        PathColDetRes res;
 
         if (input_.need_fold_mirror &&
-            col_det_interface_ptr_->GetFoldMirrorFlag()) {
-          col_det_interface_ptr_->Init(false);
+            ref_gear == geometry_lib::SEG_GEAR_REVERSE &&
+            mirror_x > slot_x - lower_x) {
+          if (mirror_x > slot_x + upper_x) {
+            const double length = mirror_x - slot_x - upper_x + redundant_x;
+            geometry_lib::PathSegment line_seg_up(
+                seg_gear, geometry_lib::LineSegment(start_pos, pose.heading,
+                                                    length, seg_gear));
+
+            res = TrimPathByObs(line_seg_up, lat_buffer, 0.0, enable_log);
+
+            if (res != PathColDetRes::NORMAL) {
+              return false;
+            }
+
+            geometry_lib::PathSegment line_seg_down(
+                seg_gear,
+                geometry_lib::LineSegment(line_seg_up.GetEndPos(),
+                                          line_seg.GetEndPos(), pose.heading));
+
+            col_det_interface_ptr_->Init(true);
+            res = TrimPathByObs(line_seg_down, lat_buffer, lon_buffer,
+                                enable_log);
+
+            line_seg.line_seg.SetPoints(line_seg_up.GetStartPos(),
+                                        line_seg_down.GetEndPos());
+
+          } else {
+            col_det_interface_ptr_->Init(true);
+            res = TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
+          }
+        } else {
+          res = TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
         }
+
+        col_det_interface_ptr_->Init(false);
 
         if (ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
           if (line_seg.Getlength() < kMinSingleGearPathLength + 1e-3) {

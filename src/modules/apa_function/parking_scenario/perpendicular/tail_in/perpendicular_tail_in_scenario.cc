@@ -129,6 +129,7 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   }
 
   if (apa_param.GetParam().has_intelligent_fold_mirror &&
+      frame_.need_fold_mirror &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     SetParkingStatus(PARKING_FAILED);
@@ -603,7 +604,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
   if (ego_info_under_slot.tar_pose_result.target_pose_type ==
       TargetPoseType::FOLD_MIRROR) {
-    ILOG_INFO << "tyr path plan with fold mirror";
+    ILOG_INFO << "try path plan with fold mirror";
     input.need_fold_mirror = true;
   }
 
@@ -1337,6 +1338,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
       extend_pt_vec.emplace_back(pt);
     } while (s < extend_length);
 
+    ILOG_INFO << "extend path according limiter with fold mirror = "
+              << apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag();
+
     const ColResult col_res =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
             extend_pt_vec, apa_param.GetParam().car_lat_inflation_normal,
@@ -1512,8 +1516,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   if (apa_param.GetParam().has_intelligent_fold_mirror && frame_.is_last_path &&
       safe_remain_dist < param.slight_brake_lon_dist &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
-      !frame_.need_fold_mirror && cur_pos.x() < slot_pt_01_mid.x() + 2.68 &&
-      cur_pos.x() > slot_pt_01_mid.x() - 1.08 &&
+      !frame_.need_fold_mirror && cur_pos.x() < slot_pt_01_mid.x() + 3.08 &&
+      cur_pos.x() > slot_pt_01_mid.x() - 0.468 &&
       std::fabs(termial_err.pos.y()) < 0.068 &&
       std::fabs(termial_err.heading) * kRad2Deg < 2.68) {
     frame_.need_fold_mirror = true;
@@ -2296,10 +2300,20 @@ PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
+  const ApaParameters& param = apa_param.GetParam();
+
+  if (frame_.need_fold_mirror) {
+    return false;
+  }
+
+  if (param.has_intelligent_fold_mirror &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    return false;
+  }
+
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
-  const ApaParameters& param = apa_param.GetParam();
   const bool gear_case =
       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
 
