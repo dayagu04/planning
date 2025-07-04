@@ -17,6 +17,8 @@ class StGraphHelper {
 
   const std::pair<double, double> GetTimeRange() const;
 
+  const int32 GetFirstNeighborYieldAgentId() const;
+
   // void AddStGraphDataToProto(
   //     proto::PlanningDebugMessage* const planning_debug_msg) const;
 

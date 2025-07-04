@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -17,6 +18,7 @@
 #include "speed/st_point.h"
 #include "st_boundary.h"
 #include "st_graph.pb.h"
+#include "st_graph/st_point.h"
 #include "st_graph_input.h"
 
 namespace planning {
@@ -24,6 +26,11 @@ namespace speed {
 
 class STGraph {
  public:
+  struct NeighborCorridorYieldInfo {
+    int32_t first_yield_index = std::numeric_limits<int32_t>::max();
+    int32_t first_yield_agent_id = agent::AgentDefaultInfo::kNoAgentId;
+    STPoint first_yield_st_point = STPoint::HighestSTPoint();
+  };
   STGraph() = default;
 
   ~STGraph() = default;
@@ -63,6 +70,8 @@ class STGraph {
 
   const std::unordered_map<int32_t, std::vector<int64_t>>&
   neighbor_agent_id_st_boundaries_map() const;
+
+  const int32_t first_neighbor_yield_agent_id() const;
 
   const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
   expand_boundary_id_st_boundaries_map() const;
@@ -107,6 +116,8 @@ class STGraph {
 
   void ConstructDefaultStPassCorridor();
 
+  void ResetNeighborCorridor();
+
   bool CalculateStPassCorridor();
   bool CalculateNeighborCorridor();
 
@@ -147,8 +158,12 @@ class STGraph {
   std::vector<std::pair<STPoint, STPoint>> neighbor_corridor_;
   int32_t first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
   int32_t first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
+  int32_t first_neighbor_yield_agent_id_ = agent::AgentDefaultInfo::kNoAgentId;
   std::vector<int32_t> caution_yield_agent_ids_;
   std::vector<int32_t> ignore_agent_ids_;
+  // <double, NeighborCorridorYieldInfo> : <yield_st_point.s(),
+  // NeighborCorridorYieldInfo>
+  std::map<double, NeighborCorridorYieldInfo> neighbor_corridor_yield_info_map_;
 
   // bellow is for close-pass st boundary
   std::unordered_set<int32_t> static_close_pass_candicate_agent_ids_;

@@ -28,6 +28,8 @@
 #include "planning_context.h"
 #include "speed/st_point.h"
 #include "st_boundary.h"
+#include "st_graph/st_graph_input.h"
+#include "st_graph/st_point.h"
 #include "st_graph_utils.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
@@ -91,6 +93,7 @@ bool STGraph::InsertAgent(const agent::Agent& agent,
 
 void STGraph::MakeAgentStBoundaries() {
   ignore_agent_ids_.clear();
+  neighbor_corridor_yield_info_map_.clear();
   const auto& agents = st_graph_input_->filtered_agents();
   for (const auto agent : agents) {
     if (nullptr == agent) {
@@ -696,6 +699,31 @@ void STGraph::ConstructDefaultStPassCorridor() {
   }
 }
 
+void STGraph::ResetNeighborCorridor() {
+  const auto& time_range = st_graph_input_->time_range();
+  int32_t total_size =
+      int32_t((time_range.second - time_range.first) / kTimeResolution) + 1;
+  STPoint init_upper_point;
+  init_upper_point.set_agent_id(kNoAgentId);
+  init_upper_point.set_s(std::numeric_limits<double>::max());
+  init_upper_point.set_velocity(std::numeric_limits<double>::max());
+  init_upper_point.set_acceleration(std::numeric_limits<double>::max());
+
+  STPoint init_lower_point;
+  init_lower_point.set_agent_id(kNoAgentId);
+  init_lower_point.set_s(std::numeric_limits<double>::lowest());
+  init_lower_point.set_velocity(std::numeric_limits<double>::lowest());
+  init_lower_point.set_acceleration(std::numeric_limits<double>::lowest());
+
+  auto default_value = std::vector<std::pair<STPoint, STPoint>>(
+      total_size, std::make_pair(init_upper_point, init_lower_point));
+  neighbor_corridor_.swap(default_value);
+
+  first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
+  first_neighbor_yield_agent_id_ = agent::AgentDefaultInfo::kNoAgentId;
+  first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
+}
+
 void STGraph::BackwardExtendStBoundaries() {
   const auto& agents = st_graph_input_->filtered_agents();
   for (const auto& agent : agents) {
@@ -958,6 +986,10 @@ STGraph::neighbor_agent_id_st_boundaries_map() const {
   return neighbor_agent_id_st_boundaries_map_;
 }
 
+const int32_t STGraph::first_neighbor_yield_agent_id() const {
+  return first_neighbor_yield_agent_id_;
+}
+
 const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
 STGraph::expand_boundary_id_st_boundaries_map() const {
   return expand_boundary_id_st_boundaries_map_;
@@ -1055,9 +1087,9 @@ bool STGraph::CalculateNeighborCorridor() {
     return false;
   }
 
-  first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
-  first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
+  ResetNeighborCorridor();
 
+  NeighborCorridorYieldInfo neighbor_corridor_yield_info;
   const auto& time_range = st_graph_input_->time_range();
   for (size_t i = 0; i < neighbor_corridor_.size(); i++) {
     double t = time_range.first + i * kTimeResolution;
@@ -1095,8 +1127,11 @@ bool STGraph::CalculateNeighborCorridor() {
     }
     if (find_upper) {
       neighbor_corridor_[i].first = upper_point;
-      if (i < first_neighbor_yield_index_) {
-        first_neighbor_yield_index_ = i;
+      if (i < neighbor_corridor_yield_info.first_yield_index) {
+        neighbor_corridor_yield_info.first_yield_index = i;
+        neighbor_corridor_yield_info.first_yield_agent_id =
+            upper_point.agent_id();
+        neighbor_corridor_yield_info.first_yield_st_point = upper_point;
       }
     }
     if (find_lower) {
@@ -1105,6 +1140,26 @@ bool STGraph::CalculateNeighborCorridor() {
         first_neighbor_overtake_index_ = i;
       }
     }
+  }
+
+  if (neighbor_corridor_yield_info.first_yield_agent_id !=
+      agent::AgentDefaultInfo::kNoAgentId) {
+    const auto& first_yield_st_point =
+        neighbor_corridor_yield_info.first_yield_st_point;
+    neighbor_corridor_yield_info_map_[first_yield_st_point.s()] =
+        neighbor_corridor_yield_info;
+  }
+
+  // refresh final yield index and agent id
+  if (!neighbor_corridor_yield_info_map_.empty()) {
+    const auto [closet_s_to_ego, neighbor_corridor_yield_info] =
+        *neighbor_corridor_yield_info_map_.begin();
+    neighbor_corridor_[neighbor_corridor_yield_info.first_yield_index].first =
+        neighbor_corridor_yield_info.first_yield_st_point;
+    first_neighbor_yield_index_ =
+        neighbor_corridor_yield_info.first_yield_index;
+    first_neighbor_yield_agent_id_ =
+        neighbor_corridor_yield_info.first_yield_agent_id;
   }
 
   return true;
