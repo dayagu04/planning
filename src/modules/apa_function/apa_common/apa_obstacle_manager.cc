@@ -405,7 +405,53 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     }
   }
 
-  // todo: 读取限位器信息
+  // limiters
+  if (apa_param.GetParam().enable_side_pass_limiter) {
+    std::vector<Eigen::Vector2d> limiter_points;
+    limiter_points.clear();
+    const iflyauto::ParkingFusionInfo* slot_list =
+        &local_view->parking_fusion_info;
+    for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
+      const iflyauto::ParkingFusionSlot* slot =
+          &slot_list->parking_fusion_slot_lists[i];
+
+      if (slot_list->select_slot_id == slot->id) {
+        continue;
+      }
+
+      for (uint8 j = 0; j < slot->limiters_size; j++) {
+        const iflyauto::ParkingFusionLimiter* limiter = &slot->limiters[j];
+
+        pnc::geometry_lib::SampleInLineSegment(
+            Eigen::Vector2d(limiter->end_points[0].x, limiter->end_points[0].y),
+            Eigen::Vector2d(limiter->end_points[1].x, limiter->end_points[1].y),
+            0.4, limiter_points);
+      }
+    }
+
+    Polygon2D polygon;
+    cdl::AABB box = cdl::AABB();
+    for (int j = 0; j < limiter_points.size(); ++j) {
+      box.MergePoint(
+          cdl::Vector2r(limiter_points[j].x(), limiter_points[j].y()));
+    }
+    GeneratePolygonByAABB(&polygon, box);
+
+    ApaObstacle apa_obs;
+    apa_obs.SetObsScemanticType(ApaObsScemanticType::LIMITER);
+    apa_obs.SetPtClout2dGlobal(limiter_points);
+    apa_obs.SetObsAttributeType(ApaObsAttributeType::SLOT_LIMITER);
+    apa_obs.SetObsHeightType(ApaObsHeightType::LOW);
+    apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
+    apa_obs.SetBoxGlobal(box);
+    apa_obs.SetPolygonGlobal(polygon);
+    apa_obs.SetId(obs_id_generate_);
+    apa_obs.ClearDecision();
+    obstacles_[obs_id_generate_] = apa_obs;
+    obs_id_generate_++;
+  }
+
+  return;
 }
 
 void ApaObstacleManager::SetObstacle(const size_t id,

@@ -1242,6 +1242,10 @@ const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
 
 const PathSegGear GetGearType(const uint8_t gear);
 
+void SampleInLineSegment(const Eigen::Vector2d &start,
+                         const Eigen::Vector2d &end, const double sample_dist,
+                         std::vector<Eigen::Vector2d> &points);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 
