@@ -1520,6 +1520,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       cur_pos.x() > slot_pt_01_mid.x() - 0.468 &&
       std::fabs(termial_err.pos.y()) < 0.068 &&
       std::fabs(termial_err.heading) * kRad2Deg < 2.68) {
+    ILOG_INFO << "need send fold mirror msg";
     frame_.need_fold_mirror = true;
   }
 
@@ -2351,6 +2352,10 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
 void PerpendicularTailInScenario::Log() const {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  JSON_DEBUG_VALUE(
+      "target_pose_type",
+      static_cast<int>(ego_info_under_slot.tar_pose_result.target_pose_type))
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 

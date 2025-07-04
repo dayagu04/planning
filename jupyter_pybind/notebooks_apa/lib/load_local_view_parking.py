@@ -294,6 +294,7 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading", "is_path_lateral_optimized",
+                          "apa_state_machine", "target_pose_type", "apa_out_direction", "fold_mirror_flag",
                          "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_move_slot_dist", "replan_count", "geometry_path_release", "pre_plan_case",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
@@ -973,6 +974,34 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     while bag_loader.uss_percept_msg['abs_t'][uss_percept_msg_idx] <= abs_t and uss_percept_msg_idx < (len(bag_loader.uss_percept_msg['abs_t'])-1):
         uss_percept_msg_idx = uss_percept_msg_idx + 1
   local_view_data['data_index']['uss_percept_msg_idx'] = uss_percept_msg_idx
+
+  vehicle_type = CHERY_E0X
+  if bag_loader.plan_debug_msg['enable'] == True:
+    car_type_int = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["car_type"]
+    if car_type_int == 0:
+      vehicle_type = JAC_S811
+    elif car_type_int == 1:
+      vehicle_type = CHERY_T26
+    elif car_type_int == 2:
+      vehicle_type = CHERY_E0X
+    elif car_type_int == 3:
+      vehicle_type = CHERY_M32T
+    elif car_type_int == 4:
+      vehicle_type = BESTUNE_E541
+    else:
+      vehicle_type = CHERY_E0X
+
+  fold_mirror_flag = False
+  if bag_loader.plan_debug_msg['enable'] == True:
+    fold_mirror_flag = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['fold_mirror_flag']
+
+  vs_fold_mirror = 0
+  if bag_loader.vs_msg['enable'] == True:
+    vs_fold_mirror = bag_loader.vs_msg['data'][vs_msg_idx].rearview_mirror_sts
+
+  print("vehicle_type = ", vehicle_type, "  fold_mirror_flag = ", fold_mirror_flag, " vs_fold_mirror = ", vs_fold_mirror)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, 0.0, fold_mirror_flag)
+  car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
 
   ### step 2: load positioning information
   cur_pos_xn0 = 0
@@ -2555,7 +2584,7 @@ def load_local_view_figure_parking():
   fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='obs')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_traj, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_traj')
-  fig1.line('plan_path_y', 'plan_path_x', source = data_planning_path, line_width = 2.5, line_color = 'yellow', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan_path')
+  fig1.line('plan_path_y', 'plan_path_x', source = data_planning_path, line_width = 2.5, line_color = 'orange', line_dash = 'solid', line_alpha = 1.0, legend_label = 'plan_path')
   fig1.line('plan_path_y', 'plan_path_x', source = data_complete_planning_path, line_width = 2.5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.6, legend_label = 'complete_planning_path', visible = False)
   # fig1.circle('y', 'x', source = data_col_det_path, size=4, color='red', legend_label = 'col_det_path')
   # fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path', visible = False)
@@ -3070,7 +3099,7 @@ plan_traj_params = {
 }
 
 plan_path_params = {
-  'line_width' : 2.5, 'line_color' : 'yellow', 'line_dash' : 'solid', 'line_alpha' : 0.6, 'legend_label' : 'plan_path'
+  'line_width' : 2.5, 'line_color' : 'orange', 'line_dash' : 'solid', 'line_alpha' : 1.0, 'legend_label' : 'plan_path'
 }
 
 complete_plan_params = {

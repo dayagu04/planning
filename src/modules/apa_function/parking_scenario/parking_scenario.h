@@ -238,7 +238,7 @@ class ParkingScenario {
       slot_jump_lon_err = 0.0;
       slot_jump_heading_err = 0.0;
 
-      need_fold_mirror = true;
+      need_fold_mirror = false;
     }
 
     bool need_fold_mirror = false;
