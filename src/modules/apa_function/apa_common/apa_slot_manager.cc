@@ -233,6 +233,7 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
     if (slot.release_info_.release_state[FUSION_RELEASE] ==
         SlotReleaseState::NOT_RELEASE) {
+      ILOG_INFO << "NOT_RELEASE reason: fusion not release";
       continue;
     }
 
@@ -245,12 +246,16 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
     if (release_slot_count > kMaxSlotReleaseCount) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
+      ILOG_INFO << "NOT_RELEASE reason: over max released size "
+                << kMaxSlotReleaseCount;
       continue;
     }
 
     if (dist_id.first > 10.68) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
+      ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over " << 10.68
+                << " m!";
       continue;
     }
 
