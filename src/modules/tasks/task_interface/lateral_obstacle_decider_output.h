@@ -31,6 +31,10 @@ struct LateralObstacleHistoryInfo {
   double rear_expand_len = 0.0;
   bool maintain_avoid = false;
   bool is_behind_ego = false;
+  int emergency_avoid_count = 0;
+  bool emergency_avoid = false;
+  bool lon_overtake_avoid = false;
+
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
@@ -38,6 +42,8 @@ enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
 struct LateralObstacleDeciderOutput {
   ara_star::HybridARAStarResult hybrid_ara_result;
   std::unordered_map<uint32_t, LatObstacleDecisionType> lat_obstacle_decision;
+  std::unordered_map<uint32_t, bool> is_emergency_avoid_release;
+  std::unordered_map<uint32_t, bool> is_crossing_map;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
   std::vector<int> obstacles_id_behind_ego;
@@ -48,6 +54,8 @@ struct LateralObstacleDeciderOutput {
   std::unordered_map<uint32_t, double> obstacle_intrusion_distance_thr;
   TrajectoryPoints plan_history_traj;
   bool is_plan_history_traj_valid = false;
+  TrajectoryPoints uniform_plan_history_traj;
+  bool is_uniform_plan_history_traj_valid = false;
 
   void Clear() {
     hybrid_ara_result.Clear();

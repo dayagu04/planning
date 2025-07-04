@@ -74,11 +74,22 @@ bool LateralObstacleDecider::Execute() {
   auto &is_plan_history_traj_valid = session_->mutable_planning_context()
                           ->mutable_lateral_obstacle_decider_output()
                           .is_plan_history_traj_valid;
+  auto &is_emergency_avoid_release = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_emergency_avoid_release;
+  auto &uniform_plan_history_traj = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .uniform_plan_history_traj;
+  auto &is_uniform_plan_history_traj_valid = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_uniform_plan_history_traj_valid;
   obstacle_intrusion_distance_thr_.clear();
+  obstacles_id_behind_ego_.clear();
   plan_history_traj.clear();
   is_plan_history_traj_valid = false;
-
-  obstacles_id_behind_ego_.clear();
+  is_emergency_avoid_release.clear();
+  uniform_plan_history_traj.clear();
+  is_uniform_plan_history_traj_valid= false;
   // UpdateLaneBorrowDirection();
 
   UpdateIntersection();
@@ -99,6 +110,7 @@ bool LateralObstacleDecider::Execute() {
   ego_v_s_ = reference_path_ptr->get_frenet_ego_state().velocity_s();
   ego_v_l_ = reference_path_ptr->get_frenet_ego_state().velocity_l();
   ConstructPlanHistoryTraj(reference_path_ptr);
+  ConstructUniformPlanHistoryTraj(reference_path_ptr);
   if (session_->is_hpp_scene()) {
     const auto &reference_path_ptr = session_->planning_context()
                                          .lane_change_decider_output()
@@ -180,6 +192,8 @@ bool LateralObstacleDecider::Execute() {
     // determine is_avd_car
     std::vector<double> avd_car_id;
     std::vector<double> maintain_avoid;
+    std::vector<double> emergency_avoid;
+    std::vector<double> lon_overtake_avoid;
     avd_car_id.reserve(10);
     maintain_avoid.reserve(10);
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
@@ -275,14 +289,167 @@ bool LateralObstacleDecider::Execute() {
       if (history.maintain_avoid) {
         maintain_avoid.emplace_back(obs->id());
       }
+      CheckLateralEmergencyAvoidObstacle(*frenet_obs, lane_width, reference_path_ptr);
+      if (history.emergency_avoid) {
+        emergency_avoid.emplace_back(obs->id());
+      }
+      if (history.lon_overtake_avoid) {
+        lon_overtake_avoid.emplace_back(obs->id());
+      }
     }
-
+    JSON_DEBUG_VECTOR("emergency_avoid_obstacle_ids", emergency_avoid, 0);
+    JSON_DEBUG_VECTOR("lon_overtake_avoid", lon_overtake_avoid, 0);
     JSON_DEBUG_VECTOR("maintain_avoid", maintain_avoid, 0);
     JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
     JSON_DEBUG_VALUE("can_left_borrow", left_borrow_);
     JSON_DEBUG_VALUE("can_right_borrow", right_borrow_);
   }
   return true;
+}
+
+void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &frenet_obstacle, double lane_width,
+    const std::shared_ptr<ReferencePath> reference_path) {
+  auto &is_emergency_avoid_release = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_emergency_avoid_release;
+  auto &is_crossing_map = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_crossing_map;
+  const auto lon_ref_path_decider_output =
+      session_->planning_context()
+               .lon_ref_path_decider_output();
+  auto &frenet_coord = reference_path->get_frenet_coord();
+  const Obstacle &obstacle = *frenet_obstacle.obstacle();
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[obstacle.id()];
+  double s = frenet_obstacle.frenet_s();
+  double l = frenet_obstacle.frenet_l();
+  double v_s = frenet_obstacle.frenet_velocity_s();
+  double v_l = frenet_obstacle.frenet_velocity_l();
+  double v_lat = frenet_obstacle.frenet_velocity_lateral();
+  double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
+  double d_s_rel = frenet_obstacle.d_s_rel();
+  double d_min_cpath = frenet_obstacle.d_min_cpath();
+  double d_max_cpath = frenet_obstacle.d_max_cpath();
+  double lon_ttc = 0;
+  int max_emergency_avoid_count = 6;
+  int emergency_avoid_count_thr = config_.emergency_avoid_count_thr;
+
+  if (config_.is_use_last_lon_information) {
+    // 上一帧纵向释放的紧急障碍物id
+    const auto last_lon_emergency_avoid_obstacle_id = lon_ref_path_decider_output.danger_agent_info.agents_id_set;
+    if (last_lon_emergency_avoid_obstacle_id.count(obstacle.id())) {
+      if (!history.emergency_avoid) {
+        // 前方障碍物
+        if (history.front_car || history.side_car) {
+          // ttc条件
+          // 因为这是纵向制动减速的障碍物，按照匀速递推的ttc会更加考虑该障碍物
+          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
+          bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+              (lon_ttc < config_.emegency_avoid_ttc_upper &&
+              d_s_rel < config_.emegency_avoid_front_area);
+          // 横向距离条件
+          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + lane_width / 2)) ||
+            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - lane_width / 2));
+          // 是否为正前方障碍物（如果纵向跟停的时候不会释放，可以先注释）
+          bool is_straight_ahead = d_max_cpath > 0 && d_min_cpath < 0;
+          // 过滤横穿的障碍物（VRU预测轨迹不准需要进一步优化）
+          const auto cossing_map_iter = is_crossing_map.find(obstacle.id());
+          bool is_cross_lane = (cossing_map_iter != is_crossing_map.end() &&
+              cossing_map_iter->second);
+          bool is_emergency_avoid = is_lon_ttc_critical && is_in_lateral_range && !is_straight_ahead && !is_cross_lane;
+          if (is_emergency_avoid) {
+            history.emergency_avoid_count = std::min(history.emergency_avoid_count + 1, max_emergency_avoid_count);
+          } else{
+            history.emergency_avoid_count = std::max(history.emergency_avoid_count - 1, 0);
+          }
+          history.emergency_avoid = history.emergency_avoid_count > emergency_avoid_count_thr;
+          is_emergency_avoid_release[obstacle.id()] = history.emergency_avoid ? true : false;
+        } else {
+          // 后方障碍物，纵向因为后方障碍物导致的急刹需要与纵向侧后方障碍物过滤保持一致先不添加
+        }
+      } else {
+        // 如果已经触发了紧急避让，判定何时取消紧急避让
+        // 超越紧急避让障碍物
+        bool is_overtake_emergency_obstacle = history.rear_car;
+        // 自车是否刹停
+        bool is_near_static = std::fabs(ego_v_) < 0.1;
+        // 自车速度是否低于障碍物速度：
+        bool is_slow_obstacle = ego_v_ < v_s;
+        history.emergency_avoid = !(is_overtake_emergency_obstacle || is_near_static || is_slow_obstacle);
+        is_emergency_avoid_release[obstacle.id()] = history.emergency_avoid ? true : false;
+      }
+    }
+
+    // 纵向overtake、忽略的障碍物id
+    // const auto last_lon_overtake_obstacle_id = mutable_lon_ref_path_decider_output.danger_agent_info.agents_id_set;
+    std::unordered_set<int32_t> last_lon_overtake_obstacle_id;
+    if (last_lon_overtake_obstacle_id.count(obstacle.id())) {
+      if (!history.lon_overtake_avoid) {
+        // 前方障碍物
+        if (history.front_car || history.side_car) {
+          // ttc条件
+          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
+          bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+              (lon_ttc < config_.emegency_avoid_ttc_upper &&
+              d_s_rel < config_.emegency_avoid_front_area);
+          // 横向距离条件
+          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + lane_width / 2)) ||
+            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - lane_width / 2));
+          // 横向是否ignore
+          bool is_lateral_ignore = output_[obstacle.id()] == LatObstacleDecisionType::IGNORE;
+          bool lon_overtake_avoid = is_lon_ttc_critical && is_in_lateral_range && is_lateral_ignore;
+          history.lon_overtake_avoid = lon_overtake_avoid;
+        } else {
+          // 后方障碍物，纵向正常overtake,横向先不管
+        }
+      } else {
+        // 如果已经触发了overtake
+        bool is_overtake_emergency_obstacle = history.rear_car;
+        history.lon_overtake_avoid = !is_overtake_emergency_obstacle;
+      }
+    }
+  } else {
+    if (!history.emergency_avoid) {
+      if (history.front_car) {
+        // 根据纵向ttc和制动力筛选避让障碍物
+        lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
+        bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+            (lon_ttc < config_.emegency_avoid_ttc_upper &&
+            d_s_rel < config_.emegency_avoid_front_area);
+        // 横向距离条件
+        bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + lane_width / 2)) ||
+          ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - lane_width / 2));
+        const auto cossing_map_iter = is_crossing_map.find(obstacle.id());
+        bool is_cross_lane = (cossing_map_iter != is_crossing_map.end() &&
+            cossing_map_iter->second);
+        // bool is_cross_lane = false;
+        // 横向是否ignore
+        bool is_lateral_ignore = output_[obstacle.id()] == LatObstacleDecisionType::IGNORE;
+        // 纵向以一定的制动力减速还来不及的障碍物
+        bool is_lon_over_obstacle = CheckEgoOvertakeObstacle(frenet_obstacle, reference_path);
+        bool is_emergency_avoid = is_lon_ttc_critical && is_in_lateral_range &&
+            is_lateral_ignore && is_lon_over_obstacle && !is_cross_lane;
+        if (is_emergency_avoid) {
+          history.emergency_avoid_count = std::min(history.emergency_avoid_count + 1, max_emergency_avoid_count);
+        } else{
+          history.emergency_avoid_count = std::max(history.emergency_avoid_count - 1, 0);
+        }
+        history.emergency_avoid = history.emergency_avoid_count > emergency_avoid_count_thr;
+      } else {
+        // 过滤侧、后方障碍物
+      }
+    } else {
+      // 如果已经触发了紧急避让，判定何时取消紧急避让
+      // 超越紧急避让障碍物
+      bool is_overtake_emergency_obstacle = history.rear_car;
+      // 自车是否刹停
+      bool is_near_static = std::fabs(ego_v_) < 0.1;
+      // 自车速度是否低于障碍物速度
+      bool is_slow_obstacle = ego_v_ < v_s;
+      history.emergency_avoid = !(is_overtake_emergency_obstacle || is_near_static || is_slow_obstacle);
+    }
+  }
 }
 
 void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
@@ -308,6 +475,41 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
   } else {
     history.maintain_avoid = false;
   }
+}
+
+bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
+    const std::shared_ptr<ReferencePath> reference_path) {
+  const Obstacle &obstacle = *frenet_obstacle.obstacle();
+  const auto &frenet_coord = reference_path->get_frenet_coord();
+  // 纵向以一定的制动力减速还来不及的障碍物
+  const double desired_stopped_distance_to_obstacle = 3.0;
+  const double break_a = 2.5;
+  double ego_end_s = 0;
+  double obstacke_start_s = 0.0;
+  bool is_lon_over_obstacle = false;
+  std::array<double, 6> timestamps{0, 1, 2, 3, 4, 5};
+  for (auto &i : timestamps) {
+    auto enu_polygon = frenet_obstacle.obstacle()->get_polygon_at_point(
+        frenet_obstacle.obstacle()->get_point_at_time(i));
+    for (auto &pt : enu_polygon.points()) {
+      Point2D frenet_point, carte_point;
+      carte_point.x = pt.x();
+      carte_point.y = pt.y();
+      if (frenet_coord->XYToSL(carte_point, frenet_point)) {
+        obstacke_start_s = frenet_point.x < obstacke_start_s ? frenet_point.x : obstacke_start_s;
+      }
+    }
+    if ((std::fabs(ego_v_) / break_a) < i) {
+      ego_end_s = 0.5 * ego_v_ * ego_v_ / break_a;
+    } else {
+      ego_end_s = std::fabs(ego_v_) * i - 0.5 * break_a * i * i;
+    }
+    is_lon_over_obstacle = (ego_head_s_ + ego_end_s) > obstacke_start_s - desired_stopped_distance_to_obstacle;
+    if (is_lon_over_obstacle) {
+      break;
+    }
+  }
+  return is_lon_over_obstacle;
 }
 
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
@@ -1081,6 +1283,41 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
     }
   }
   is_plan_history_traj_valid = true;
+}
+
+void LateralObstacleDecider::ConstructUniformPlanHistoryTraj(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr) {
+  auto &plan_history_traj = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .plan_history_traj;
+  auto &is_plan_history_traj_valid = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_plan_history_traj_valid;
+  auto &uniform_plan_history_traj = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .uniform_plan_history_traj;
+  auto &is_uniform_plan_history_traj_valid = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_uniform_plan_history_traj_valid;
+  if (is_plan_history_traj_valid) {
+    // 把s信息变成匀速
+    if (!plan_history_traj.empty()) {
+      is_uniform_plan_history_traj_valid = true;
+      const double delta_s = (plan_history_traj.back().s - plan_history_traj.front().s) /
+          (plan_history_traj.back().t - plan_history_traj.front().t);
+      for (size_t i = 0; i < plan_history_traj.size(); i++) {
+        TrajectoryPoint pt = plan_history_traj[i];
+        pt.s = plan_history_traj[0].s +
+            delta_s * (pt.t - plan_history_traj[0].t);
+        uniform_plan_history_traj.emplace_back(std::move(pt));
+      }
+    } else {
+      is_uniform_plan_history_traj_valid = false;
+      return;
+    }
+  } else {
+    is_uniform_plan_history_traj_valid = false;
+  }
 }
 
 void LateralObstacleDecider::UpdateIntersection() {

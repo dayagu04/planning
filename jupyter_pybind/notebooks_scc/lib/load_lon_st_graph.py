@@ -226,6 +226,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
+                              "lon_danger_agent_ids", \
                               "agents_headway_id", "agents_headway_value", \
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", "v_target_for_dangerous_obs", "dangerous_obs_id",\

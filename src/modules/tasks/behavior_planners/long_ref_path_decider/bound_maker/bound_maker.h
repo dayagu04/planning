@@ -104,6 +104,7 @@ class BoundMaker {
   double CalcRSSDistance(double ego_speed, double ego_acc, double front_speed,
                          double reaction_time, double min_brake,
                          double max_brake) const;
+  void JudgeDangerAgentByMaxDecelCurve(const TargetMaker& target_maker);
 
   SecondOrderTimeOptimalTrajectory GenerateMaxAccelerationCurve() const;
   SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve() const;

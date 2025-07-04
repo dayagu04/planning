@@ -15,7 +15,7 @@ def init():  # 初始化
     'is_vis_hpp': False,
     'is_vis_radar': False,
     'is_vis_rdg_line': True,
-    'is_vis_rdg_obj': False,
+    'is_vis_rdg_obj': True,
     'is_vis_me_obj': False,
     'is_vis_lane_mark': True,
     'is_vis_merge_point': False,

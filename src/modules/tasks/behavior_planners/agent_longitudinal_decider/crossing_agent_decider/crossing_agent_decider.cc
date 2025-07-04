@@ -85,6 +85,9 @@ bool CrossingAgentDecider::Execute() {
 
 bool CrossingAgentDecider::MakeYieldToVRUDecision(
     const agent::Agent* const agent) {
+  auto &is_crossing_map = session_->mutable_planning_context()
+                                          ->mutable_lateral_obstacle_decider_output()
+                                          .is_crossing_map;
   if (agent == nullptr) {
     return false;
   }
@@ -239,6 +242,7 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
                                      is_vru_prediction_satisfied_for_virtual)) {
     is_vru_crossing = true;
   }
+  is_crossing_map[agent->agent_id()] = is_vru_crossing;
 
   if (is_vru_crossing ||
       vru_id_reverse_crossing_map_.count(
@@ -395,6 +399,9 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
 
 bool CrossingAgentDecider::MakeYieldToVehicleDecision(
     const agent::Agent* const agent) {
+  auto &is_crossing_map = session_->mutable_planning_context()
+                                          ->mutable_lateral_obstacle_decider_output()
+                                          .is_crossing_map;
   if (agent == nullptr) {
     return false;
   }
@@ -518,6 +525,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(
       vehicle_id_reverse_crossing_map_.erase(agent->agent_id());
     }
   }
+  is_crossing_map[agent->agent_id()] = is_vehicle_prediction_crossing;
 
   if (is_vehicle_prediction_crossing ||
       vehicle_id_reverse_crossing_map_.count(agent->agent_id())) {

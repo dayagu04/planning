@@ -211,6 +211,18 @@ class GeneralLateralDecider : public Task {
     int num_rear_extended_points,
     int num_front_extended_points,
     bool is_lower, int bound_size);
+  void GenerateEmergencyObstacleDecision(
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      ObstacleDecision &obstacle_decision);
+  double CalEmergencyNudgeLatBufDis(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    double limit_overlap_min_y, double limit_overlap_max_y,
+    double pred_ts, double extra_lane_type_decrease_buffer,
+    bool is_same_side_obstacle_during_lane_change,
+    double &updated_overlap_min_y, double &updated_overlap_max_y);
+  bool CheckLateralEmergencyAvoidSpace(bool is_nudge_left,
+    const std::shared_ptr<FrenetObstacle> obstacle);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -219,6 +231,7 @@ class GeneralLateralDecider : public Task {
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
   TrajectoryPoints plan_history_traj_;
+  TrajectoryPoints uniform_plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
   std::unordered_map<int,HysteresisDecision> is_exceed_obstacle_hysteresis_map_;
   bool is_agent_current_pred_lonoverlap_ = false;
@@ -253,6 +266,10 @@ class GeneralLateralDecider : public Task {
   LatDeciderLaneChangeInfo lat_lane_change_info_ =
       LatDeciderLaneChangeInfo::NONE;
   planning::common::LateralBehaviorDebugInfo lat_debug_info_;
+  double emergency_avoid_lateral_distance_thr_ = 0.0;
+  bool is_potential_dangerous_obstacle_ = false;
+  HysteresisDecision has_enough_speed_emergency_avoid_hysteresis_;
+  bool enable_emergency_avoid_ = false;
 };
 
 }  // namespace planning
