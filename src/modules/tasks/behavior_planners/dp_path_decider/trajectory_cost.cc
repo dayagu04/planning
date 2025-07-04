@@ -73,8 +73,8 @@ ComparableCost TrajectoryCost::CalculatePathCost(
             left_lane_ptr_->width_by_s(path_s + start_s) * 1.1;
       } else {
         sample_left_boundary +=
-            left_lane_ptr_->width_by_s(path_s + start_s)
-            * 0.6;  // larger than different from sample boundary
+            left_lane_ptr_->width_by_s(path_s + start_s) *
+            0.6;  // larger than different from sample boundary
       }
     }
     if (right_lane_ptr_ != nullptr) {
@@ -345,7 +345,7 @@ ComparableCost TrajectoryCost::CalObsCartCost(
     for (const auto& obs_box : static_obstacles_box_) {
       // bool has_overlap = BoxHasOverlap(ego_box,obs_box);
       double dist_ignore = obs_box.half_length() + 13.0;
-      if(obs_box.DistanceTo(center) > dist_ignore){
+      if (obs_box.DistanceTo(center) > dist_ignore) {
         continue;
       }
       cost += GetBoxCost(ego_box, obs_box);
@@ -353,7 +353,7 @@ ComparableCost TrajectoryCost::CalObsCartCost(
     // used all prediction time
     for (const auto& obs_box : flatted_dynamic_obstacles_box_) {
       double dist_ignore = obs_box.half_length() + 13.0;
-      if(obs_box.DistanceTo(center) > dist_ignore){
+      if (obs_box.DistanceTo(center) > dist_ignore) {
         continue;
       }
       cost += GetBoxCost(ego_box, obs_box);

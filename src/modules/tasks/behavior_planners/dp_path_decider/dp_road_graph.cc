@@ -456,10 +456,10 @@ bool DPRoadGraph::SetSampleParams(LaneBorrowStatus lane_borrow_status) {
         -current_lane_ptr_->width() * 0.5 + vehicle_width_ * 0.5;
   }
   if (left_lane_ptr_ != nullptr) {
-    sample_left_boundary_ += left_lane_ptr_->width();// unused
+    sample_left_boundary_ += left_lane_ptr_->width();  // unused
   }
   if (right_lane_ptr_ != nullptr) {
-    sample_right_boundary_ -= right_lane_ptr_->width();// unused
+    sample_right_boundary_ -= right_lane_ptr_->width();  // unused
   }
 
   LaneBorrowStatus lane_borrow_state;
@@ -488,7 +488,7 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
     coeff_collision_cost_ = config_.coeff_collision_cost;
     collision_distance_ = config_.collision_distance;
     coeff_stitch_cost_ = config_.coeff_stitch_cost;
-  } else if (lane_borrow_state == kLaneBorrowCrossing ) {
+  } else if (lane_borrow_state == kLaneBorrowCrossing) {
     coeff_l_cost_ = config_.coeff_l_cost2;
     coeff_dl_cost_ = config_.coeff_dl_cost2;
     coeff_ddl_cost_ = config_.coeff_ddl_cost2;
@@ -497,8 +497,7 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
     coeff_collision_cost_ = config_.coeff_collision_cost2;
     collision_distance_ = config_.collision_distance2;
     coeff_stitch_cost_ = config_.coeff_stitch_cost2;
-  }
-  else if(lane_borrow_state == kLaneBorrowBackOriginLane){
+  } else if (lane_borrow_state == kLaneBorrowBackOriginLane) {
     coeff_l_cost_ = config_.coeff_l_cost3;
     coeff_dl_cost_ = config_.coeff_dl_cost3;
     coeff_ddl_cost_ = config_.coeff_ddl_cost3;
@@ -545,9 +544,10 @@ bool DPRoadGraph::SampleLanes(
       sample_right_boundary =
           -current_lane_ptr_->width_by_s(s_step) * 0.5 + vehicle_width_ * 0.5;
     }
-    if (left_lane_ptr_ != nullptr) {// extend sample boundary
+    if (left_lane_ptr_ != nullptr) {  // extend sample boundary
       if (lane_borrow_decider_output->lane_borrow_state ==
-          kLaneBorrowCrossing || i ==0) {
+              kLaneBorrowCrossing ||
+          i == 0) {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
       } else {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
@@ -555,7 +555,8 @@ bool DPRoadGraph::SampleLanes(
     }
     if (right_lane_ptr_ != nullptr) {
       if (lane_borrow_decider_output->lane_borrow_state ==
-          kLaneBorrowCrossing|| i == 0) {
+              kLaneBorrowCrossing ||
+          i == 0) {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
       } else {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;

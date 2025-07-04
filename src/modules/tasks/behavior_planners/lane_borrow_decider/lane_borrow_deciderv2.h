@@ -73,9 +73,9 @@ class LaneBorrowDecider : public Task {
 
   void ClearLaneBorrowStatus();
   bool CheckBackWardObs();
+  bool IsNeedResetObserve(LaneBorrowFailedReason reason);
 
  private:
-
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double forward_solid_start_dis_{1000.0};
   double forward_solid_end_s_{1500.0};

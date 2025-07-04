@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250702/20250702-15-43-44/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-02-15-43-44_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250701/20250701-19-08-27/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-01-19-08-27_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
@@ -35,7 +35,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250702/20250702-15-43-44/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-02-15-43-44_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250701/20250701-19-08-27/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-01-19-08-27_no_camera.bag",
                 "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留
