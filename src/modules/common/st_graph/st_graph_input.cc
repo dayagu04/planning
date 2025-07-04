@@ -7,6 +7,7 @@
 #include "environmental_model.h"
 #include "planning_context.h"
 #include "st_graph_utils.h"
+#include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 
@@ -154,7 +155,7 @@ void StGraphInput::Update() {
         processed_path_->path_points().back().s() + path_extend_distance;
   }
 
-  MakePathBorderQuerier(planned_kd_path);
+  MakePathBorderQuerier(processed_path_);
 
   max_acceleration_curve_ =
       GenerateMaxAccelerationCurve(planning_init_point_, ego_state_manager);
@@ -213,8 +214,9 @@ void StGraphInput::ExtendProcessedPath(
     const std::shared_ptr<planning_math::KDPath>& planned_path) {
   std::vector<planning_math::PathPoint> path_points;
   path_points.reserve(planned_path->path_points().size());
-  ForwardExtendPlannedPath(is_lane_keeping, lane_fusion_ego_center_lane,
-                           planned_path, &path_points);
+  ForwardExtendPlannedPath(is_lane_keeping, is_lane_borrow, dp_path_coord,
+                           lane_fusion_ego_center_lane, planned_path,
+                           &path_points);
   if (!is_lane_keeping) {
     BackwardExtendPoints(planned_path, &path_points);
   }
@@ -222,16 +224,13 @@ void StGraphInput::ExtendProcessedPath(
     return;
   }
   const bool need_reset_s = false;
-  if (is_lane_borrow) {
-    processed_path_ = dp_path_coord;
-  } else {
-    processed_path_ = std::make_shared<planning_math::KDPath>(
-        std::move(path_points), need_reset_s);
-  }
+  processed_path_ = std::make_shared<planning_math::KDPath>(
+      std::move(path_points), need_reset_s);
 }
 
 void StGraphInput::ForwardExtendPlannedPath(
-    const bool is_lane_keeping,
+    const bool is_lane_keeping, const bool is_lane_borrow,
+    const std::shared_ptr<planning_math::KDPath>& dp_path_coord,
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_path,
     std::vector<planning_math::PathPoint>* const ptr_path_points) {
@@ -247,9 +246,18 @@ void StGraphInput::ForwardExtendPlannedPath(
   desired_path_length = std::fmax(kMinLength, desired_path_length);
 
   if (is_lane_keeping) {
-    ForwardExtendPlannedPathWithEgoLane(lane_fusion_ego_center_lane,
-                                        planned_path, desired_path_length,
-                                        ptr_path_points);
+    std::shared_ptr<planning_math::KDPath> tmp_path_coord;
+    if (is_lane_borrow) {
+      tmp_path_coord =
+          ForwardExtendPlannedPathWithDpPath(dp_path_coord, planned_path);
+      ForwardExtendPlannedPathWithEgoLane(lane_fusion_ego_center_lane,
+                                          tmp_path_coord, desired_path_length,
+                                          ptr_path_points);
+    } else {
+      ForwardExtendPlannedPathWithEgoLane(lane_fusion_ego_center_lane,
+                                          planned_path, desired_path_length,
+                                          ptr_path_points);
+    }
   } else {
     ForwardLinearlyExtendPlannedPath(planned_path, desired_path_length,
                                      ptr_path_points);
@@ -368,6 +376,61 @@ void StGraphInput::ForwardLinearlyExtendPlannedPath(
                                      0.0, 0.0, 0.0);
   ptr_path_points->emplace_back(end_point);
   return;
+}
+
+std::shared_ptr<planning_math::KDPath>
+StGraphInput::ForwardExtendPlannedPathWithDpPath(
+    const std::shared_ptr<planning_math::KDPath>& dp_path_coord,
+    const std::shared_ptr<planning_math::KDPath>& planned_path) {
+  if (planned_path->path_points().empty()) {
+    return dp_path_coord;
+  }
+  if (dp_path_coord->path_points().empty()) {
+    return planned_path;
+  }
+  if (dp_path_coord->Length() < planned_path->Length()) {
+    return planned_path;
+  }
+
+  const auto& planned_path_last_point = planned_path->path_points().back();
+  double project_s = 0.0;
+  double project_l = 0.0;
+  if (!dp_path_coord->XYToSL(planned_path_last_point.x(),
+                             planned_path_last_point.y(), &project_s,
+                             &project_l)) {
+    return planned_path;
+  }
+
+  const double dp_path_length = dp_path_coord->Length();
+  const double remain_length = dp_path_length - planned_path->Length();
+
+  std::vector<planning_math::PathPoint> ptr_path_points;
+  if (project_s > dp_path_length - 3.0) {
+    return planned_path;
+  } else {
+    ptr_path_points = planned_path->path_points();
+    const std::vector<planning_math::PathPoint>& dp_path_points =
+        dp_path_coord->path_points();
+
+    auto it = dp_path_coord->QueryLowerBound(dp_path_points, project_s + 1.0);
+    if (it == dp_path_points.end()) {
+      --it;
+    }
+    double sum_s = 0.0;
+    for (; it != dp_path_points.end(); ++it) {
+      const double dx = it->x() - ptr_path_points.back().x();
+      const double dy = it->y() - ptr_path_points.back().y();
+      const double ds = std::sqrt(dx * dx + dy * dy);
+      sum_s += ds;
+      planning_math::PathPoint tmp = *it;
+      tmp.set_s(ptr_path_points.back().s() + ds);
+      ptr_path_points.emplace_back(tmp);
+      if (sum_s > remain_length) {
+        break;
+      }
+    }
+  }
+  return std::make_shared<planning::KDPath>(std::move(ptr_path_points));
 }
 
 void StGraphInput::BackwardExtendPoints(

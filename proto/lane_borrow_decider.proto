@@ -33,4 +33,6 @@ message LaneBorrowDeciderInfo {
   optional BorrowTurnCircle borrow_turn_circle = 14;
   optional double front_obs_center = 15;
   optional int32 dp_observe_frame_num = 16;
+  optional int64 front_id = 17;
+  optional int64 failed_obs_id = 18;
 };

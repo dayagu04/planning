@@ -68,9 +68,9 @@ ComparableCost TrajectoryCost::CalculatePathCost(
           vehicle_width * 0.5;
     }
     if (left_lane_ptr_ != nullptr) {
-      if (lane_borrow_status == kLaneBorrowCrossing) {
+      if (lane_borrow_status == kLaneBorrowCrossing || current_level == 1) {
         sample_left_boundary +=
-            left_lane_ptr_->width_by_s(path_s + start_s) * 1.2;
+            left_lane_ptr_->width_by_s(path_s + start_s) * 1.1;
       } else {
         sample_left_boundary +=
             left_lane_ptr_->width_by_s(path_s + start_s) *
@@ -78,9 +78,9 @@ ComparableCost TrajectoryCost::CalculatePathCost(
       }
     }
     if (right_lane_ptr_ != nullptr) {
-      if (lane_borrow_status == kLaneBorrowCrossing) {
+      if (lane_borrow_status == kLaneBorrowCrossing || current_level == 1) {
         sample_right_boundary -=
-            right_lane_ptr_->width_by_s(path_s + start_s) * 1.2;
+            right_lane_ptr_->width_by_s(path_s + start_s) * 1.1;
       } else {
         sample_right_boundary -=
             right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
@@ -95,6 +95,20 @@ ComparableCost TrajectoryCost::CalculatePathCost(
     //   sample_right_boundary -=
     //       right_lane_ptr_->width_by_s(path_s + start_s) * 0.6;
     // }
+    // 考虑道路边缘和物理隔离
+    ReferencePathPoint refpath_pt{};
+    double distance_to_left_road_border = 100;
+    double distance_to_right_road_border = 100;
+    if (current_reference_path_ptr_ != nullptr &&
+        current_reference_path_ptr_->get_reference_point_by_lon(
+            ego_frenet_state_.s(), refpath_pt)) {
+      distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
+      distance_to_right_road_border = refpath_pt.distance_to_right_road_border;
+    }
+    sample_right_boundary =
+        std::max(sample_right_boundary, -distance_to_right_road_border);
+    sample_left_boundary =
+        std::min(sample_left_boundary, distance_to_left_road_border);
 
     if (frenet_l < sample_right_boundary || frenet_l > sample_left_boundary) {
       cost.out_boundary_ = true;
@@ -330,10 +344,18 @@ ComparableCost TrajectoryCost::CalObsCartCost(
                   vehicle_width + lateral_buffer);
     for (const auto& obs_box : static_obstacles_box_) {
       // bool has_overlap = BoxHasOverlap(ego_box,obs_box);
+      double dist_ignore = obs_box.half_length() + 13.0;
+      if (obs_box.DistanceTo(center) > dist_ignore) {
+        continue;
+      }
       cost += GetBoxCost(ego_box, obs_box);
     }
     // used all prediction time
     for (const auto& obs_box : flatted_dynamic_obstacles_box_) {
+      double dist_ignore = obs_box.half_length() + 13.0;
+      if (obs_box.DistanceTo(center) > dist_ignore) {
+        continue;
+      }
       cost += GetBoxCost(ego_box, obs_box);
     }
   }

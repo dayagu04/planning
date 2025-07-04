@@ -20,7 +20,7 @@
 #include "task_interface/lane_borrow_decider_output.h"
 namespace {
 constexpr double kMaxLateralRange = 5.0;
-constexpr double kMaxLongitRange = 100.0;
+constexpr double kMaxLongitRange = 70.0;
 constexpr double kMinLongitRange = 25.0;
 constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
 };                                        // namespace
@@ -98,8 +98,11 @@ bool DPRoadGraph::ProcessEnvInfos() {
   if (agents.empty()) {
     return true;
   }
-  for (const auto& agent : agents) {
-    int id = agent->agent_id();
+  const auto& obstacles = current_reference_path_ptr_->get_obstacles();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  for (const auto& obstacle : obstacles) {
+    const auto& id = obstacle->obstacle()->id();
+    const auto& agent = agent_mgr->GetAgent(id);
     //  continue
     if (agent == nullptr) {
       continue;
@@ -137,8 +140,8 @@ bool DPRoadGraph::ProcessEnvInfos() {
           kMaxLateralRange) {  // tmp: should according to boundary
         continue;
       }
-      // ahead 100m after 15m static filtered
-      if (agent_sl_boundary[0] > kMaxLongitRange ||
+      // ahead 70m after 15m static filtered
+      if (agent_sl_boundary[0] > ego_s_ + kMaxLongitRange ||
           agent_sl_boundary[1] < kMinLongitRange) {  // tmp: should kvalue
         continue;
       }
@@ -148,8 +151,9 @@ bool DPRoadGraph::ProcessEnvInfos() {
       obstacles_info_.emplace_back(
           std::move(static_obs_info));  // just log info
       static_obstacles_box_.emplace_back(obs_box);
-    } else if (agent->speed() < kMaxNudgingSpeed) {  // slow dynamic filter
-      // filtered backward dynamic obs
+    } else if (obstacle->frenet_velocity_s() <
+               kMaxNudgingSpeed) {  // slow dynamic filter
+                                    // filtered backward dynamic obs
       if (!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end ||
             agent_sl_boundary[2] < ego_frenet_boundary_.l_start) &&
           agent_sl_boundary[0] < ego_frenet_boundary_.s_start) {
@@ -158,7 +162,7 @@ bool DPRoadGraph::ProcessEnvInfos() {
 
       if (agent_sl_boundary[0] + vehicle_length_ <
               ego_frenet_boundary_.s_start &&
-          agent->speed() < ego_v_) {
+          obstacle->frenet_velocity_s() < ego_v_) {
         continue;
       }
 
@@ -452,10 +456,10 @@ bool DPRoadGraph::SetSampleParams(LaneBorrowStatus lane_borrow_status) {
         -current_lane_ptr_->width() * 0.5 + vehicle_width_ * 0.5;
   }
   if (left_lane_ptr_ != nullptr) {
-    sample_left_boundary_ += left_lane_ptr_->width() * 0.5;
+    sample_left_boundary_ += left_lane_ptr_->width();  // unused
   }
   if (right_lane_ptr_ != nullptr) {
-    sample_right_boundary_ -= right_lane_ptr_->width() * 0.5;
+    sample_right_boundary_ -= right_lane_ptr_->width();  // unused
   }
 
   LaneBorrowStatus lane_borrow_state;
@@ -484,8 +488,7 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
     coeff_collision_cost_ = config_.coeff_collision_cost;
     collision_distance_ = config_.collision_distance;
     coeff_stitch_cost_ = config_.coeff_stitch_cost;
-  } else if (lane_borrow_state == kLaneBorrowCrossing ||
-             lane_borrow_state == kLaneBorrowBackOriginLane) {
+  } else if (lane_borrow_state == kLaneBorrowCrossing) {
     coeff_l_cost_ = config_.coeff_l_cost2;
     coeff_dl_cost_ = config_.coeff_dl_cost2;
     coeff_ddl_cost_ = config_.coeff_ddl_cost2;
@@ -494,6 +497,15 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
     coeff_collision_cost_ = config_.coeff_collision_cost2;
     collision_distance_ = config_.collision_distance2;
     coeff_stitch_cost_ = config_.coeff_stitch_cost2;
+  } else if (lane_borrow_state == kLaneBorrowBackOriginLane) {
+    coeff_l_cost_ = config_.coeff_l_cost3;
+    coeff_dl_cost_ = config_.coeff_dl_cost3;
+    coeff_ddl_cost_ = config_.coeff_ddl_cost3;
+    path_resolution_ = config_.path_resolution3;
+    coeff_end_l_cost_ = config_.coeff_end_l_cost3;
+    coeff_collision_cost_ = config_.coeff_collision_cost3;
+    collision_distance_ = config_.collision_distance3;
+    coeff_stitch_cost_ = config_.coeff_stitch_cost3;
   }
   return true;
 }
@@ -532,9 +544,10 @@ bool DPRoadGraph::SampleLanes(
       sample_right_boundary =
           -current_lane_ptr_->width_by_s(s_step) * 0.5 + vehicle_width_ * 0.5;
     }
-    if (left_lane_ptr_ != nullptr) {
+    if (left_lane_ptr_ != nullptr) {  // extend sample boundary
       if (lane_borrow_decider_output->lane_borrow_state ==
-          kLaneBorrowCrossing) {
+              kLaneBorrowCrossing ||
+          i == 0) {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
       } else {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
@@ -542,7 +555,8 @@ bool DPRoadGraph::SampleLanes(
     }
     if (right_lane_ptr_ != nullptr) {
       if (lane_borrow_decider_output->lane_borrow_state ==
-          kLaneBorrowCrossing) {
+              kLaneBorrowCrossing ||
+          i == 0) {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
       } else {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;
@@ -564,6 +578,21 @@ bool DPRoadGraph::SampleLanes(
     } else {
       // l_range_ = 1.0;
     }
+    // 考虑道路边缘和物理隔离
+    ReferencePathPoint refpath_pt{};
+    double distance_to_left_road_border = 100;
+    double distance_to_right_road_border = 100;
+    if (current_reference_path_ptr_ != nullptr &&
+        current_reference_path_ptr_->get_reference_point_by_lon(ego_s_,
+                                                                refpath_pt)) {
+      distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
+      distance_to_right_road_border = refpath_pt.distance_to_right_road_border;
+    }
+    sample_right_boundary =
+        std::max(sample_right_boundary, -distance_to_right_road_border);
+    sample_left_boundary =
+        std::min(sample_left_boundary, distance_to_left_road_border);
+
     // slice lateral range
     std::vector<double> samples_l;
     // 负方向采样

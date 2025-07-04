@@ -585,6 +585,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   const bool is_in_lane_borrow_status = session_->planning_context()
                                             .lane_borrow_decider_output()
                                             .is_in_lane_borrow_status;
+  const bool is_change_target_lane = session_->planning_context()
+                                            .lane_borrow_decider_output()
+                                            .is_change_target_lane;
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;
@@ -645,9 +648,15 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
       order_ids.size() < 2) {
     lateral_distance_cost_weight = 0.28;
   }
+
   if (is_in_lane_borrow_status) {
     k_init_pos_cost_weight = 0.0;
   }
+  if(is_change_target_lane){
+    k_init_pos_cost_weight = 8.0;
+    lateral_distance_cost_weight = 0.01;
+  }
+
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
   for (auto& relative_id_lane : relative_id_lanes) {

@@ -46,7 +46,8 @@ class StGraphInput {
       const std::shared_ptr<planning_math::KDPath>& planned_path);
 
   void ForwardExtendPlannedPath(
-      const bool is_lane_keeping,
+      const bool is_lane_keeping, const bool is_lane_borrow,
+      const std::shared_ptr<planning_math::KDPath>& dp_path_coord,
       const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       std::vector<planning_math::PathPoint>* const ptr_path_points);
@@ -56,6 +57,10 @@ class StGraphInput {
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       const double desired_path_length,
       std::vector<planning_math::PathPoint>* const ptr_path_points);
+
+  std::shared_ptr<planning_math::KDPath> ForwardExtendPlannedPathWithDpPath(
+      const std::shared_ptr<planning_math::KDPath>& dp_path_coord,
+      const std::shared_ptr<planning_math::KDPath>& planned_path);
 
   void ForwardLinearlyExtendPlannedPath(
       const std::shared_ptr<planning_math::KDPath>& planned_path,

@@ -58,8 +58,10 @@ class LaneBorrowDecider : public Task {
   bool UpdateLaneBorrowDirection();
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
+  bool IfChangeTargetLane();
   void CheckKeyObstaclesIntention(const agent::Agent* agent, bool& is_cut_in,
                                   bool& is_cut_out);
+  bool CheckLeadObs();
   bool UpdateDynamicBlockingObstacles();
   BorrowDirection GetBypassDirection(
       const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
@@ -71,10 +73,10 @@ class LaneBorrowDecider : public Task {
 
   void ClearLaneBorrowStatus();
   bool CheckBackWardObs();
+  bool IsNeedResetObserve(LaneBorrowFailedReason reason);
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
-
   double forward_solid_start_dis_{1000.0};
   double forward_solid_end_s_{1500.0};
 
@@ -98,6 +100,7 @@ class LaneBorrowDecider : public Task {
   std::pair<double, double> ego_sl_;  // s, l
   FrenetEgoState ego_sl_state_;
   double ego_speed_;
+  int64_t front_id_{0};
 
   FrenetBoundary ego_frenet_boundary_;
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
