@@ -209,7 +209,7 @@ perpendicular_slant_tail_in_with_json_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=4, value=2, step=1)
     self.trigger_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "trigger_plan",min=0, max=1, value=0, step=1)
     self.use_average_obs_dist_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_average_obs_dist",min=0, max=1, value=0, step=1)
     self.force_mid_process_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_mid_process_plan",min=0, max=2, value=0, step=1)
@@ -300,6 +300,8 @@ def slider_callback(trigger_plan, data_json_id, selected_id, process_obs_method,
     vehicle_type = CHERY_T26
   elif vehicle_type == 2:
     vehicle_type = CHERY_E0X
+  elif vehicle_type == 3:
+    vehicle_type = CHERY_M32T
 
   # 读取json
   folder_path  = "../scenario/geometry_tail_in/"
