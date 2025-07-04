@@ -329,26 +329,6 @@ void ParkingScenario::SetPlanningPath() {
     point->set_type(1);
   }
 
-  // todo: If the visualization has been adapted, delete it
-  // record all gear plan path pt
-  const size_t N = complete_path_point_global_vec_.size();
-  std::vector<double> x_vec(N, 0.0), y_vec(N, 0.0), heading_vec(N, 0.0),
-      lat_buffer_vec(N, 0.0), type_vec(N, 0.0);
-  for (size_t i = 0; i < N; ++i) {
-    const auto& global_point = complete_path_point_global_vec_[i];
-    x_vec[i] = global_point.pos.x();
-    y_vec[i] = global_point.pos.y();
-    heading_vec[i] = global_point.heading;
-    lat_buffer_vec[i] = global_point.lat_buffer;
-    type_vec[i] = 0.0;
-  }
-
-  JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", lat_buffer_vec, 3)
-  JSON_DEBUG_VECTOR("plan_traj_type", type_vec, 3)
-
   return;
 }
 
