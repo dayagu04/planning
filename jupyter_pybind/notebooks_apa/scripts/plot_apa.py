@@ -14,7 +14,7 @@ sys.path.append('../../../')
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250626/20250626-16-40-27/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-26-16-40-28_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_51444/trigger/20250702/20250702-11-01-03/park_in_data_collection_CHERY_M32T_51444_ALL_FILTER_2025-07-02-11-01-03_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -116,7 +116,7 @@ def get_next_filename(folder):
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
+    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=10, value=2, step=1)
     self.car_inflation = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.15, value=0.0, step=0.01)
     self.save_data = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "save_data",min=0, max=1, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
