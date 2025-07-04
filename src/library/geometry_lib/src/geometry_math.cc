@@ -3554,5 +3554,32 @@ const PathSegGear GetGearType(const uint8_t gear) {
   return PathSegGear::SEG_GEAR_INVALID;
 }
 
+void SampleInLineSegment(const Eigen::Vector2d &start,
+                         const Eigen::Vector2d &end, const double sample_dist,
+                         std::vector<Eigen::Vector2d> &points) {
+  const Eigen::Vector2d line = end - start;
+  double len = line.norm();
+  if (len < sample_dist) {
+    points.emplace_back(start);
+    points.emplace_back(end);
+    return;
+  }
+
+  const Eigen::Vector2d unit_line_vec = line.normalized();
+  int size = std::ceil(len / sample_dist) + 1;
+
+  double s = 0.0;
+  Eigen::Vector2d point;
+  for (size_t i = 0; i < size; i++) {
+    point = start + s * unit_line_vec;
+    s += sample_dist;
+    s = std::min(s, len);
+
+    points.emplace_back(point);
+  }
+
+  return;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

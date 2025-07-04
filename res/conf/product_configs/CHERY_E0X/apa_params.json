@@ -221,6 +221,7 @@
   "use_ground_line": true,
   "use_ground_line_wall_column": false,
   "use_object_detect": false,
+  "enable_side_pass_limiter": true,
   "tlane_safe_dx": 0.1068,
   "min_dynamic_plan_proj_dt": 0.2,
   "max_dynamic_plan_proj_dt": 0.9,
@@ -391,8 +392,8 @@
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 4.5,
   "tail_in_slot_virtual_wall_y_offset" : 1.5,
-  "head_in_slot_virtual_wall_x_offset" : 0.1,
-  "head_in_slot_virtual_wall_y_offset" : 2.0,
+  "head_in_slot_virtual_wall_x_offset" : 3.0,
+  "head_in_slot_virtual_wall_y_offset" : 2.5,
 
   "comment_19": "uss pt params",
   "use_uss_pt_clound": true,

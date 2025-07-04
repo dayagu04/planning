@@ -571,6 +571,7 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().use_object_detect, bool,
                   "use_object_detect");
+  JSON_READ_VALUE(apa_param.SetPram().enable_side_pass_limiter, bool, "enable_side_pass_limiter");
 
   JSON_READ_VALUE(apa_param.SetPram().tlane_safe_dx, double, "tlane_safe_dx");
 
