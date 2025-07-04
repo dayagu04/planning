@@ -252,8 +252,10 @@ bool EnvironmentalModelManager::Run() {
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
   bool rads_mode = fsm_state == iflyauto::FunctionalState_RADS_TRACING ||
                    fsm_state == iflyauto::FunctionalState_RADS_SUSPEND;
+
+  bool mrc_mode = fsm_state == iflyauto::FunctionalState_MRC;
   bool dbw_status =
-      acc_mode || scc_mode || noa_mode || hpp_mode_cruise || rads_mode;
+      acc_mode || scc_mode || noa_mode || hpp_mode_cruise || rads_mode || mrc_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
 
@@ -292,8 +294,7 @@ bool EnvironmentalModelManager::Run() {
     environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
                                            function_state);
   }
-  environmental_model->set_is_mrc_mode(fsm_state ==
-                                       iflyauto::FunctionalState_MRC);
+  environmental_model->set_is_mrc_mode(mrc_mode);
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);

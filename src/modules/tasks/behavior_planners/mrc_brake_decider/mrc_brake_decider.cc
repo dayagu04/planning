@@ -23,8 +23,8 @@ bool MRCBrakeDecider::Execute() {
   auto mrc_output = session_->mutable_planning_context()
       ->mutable_mrc_brake_decider_output();
 
-  if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
-  //if (iflyauto::FunctionalState_MRC == iflyauto::FunctionalState_MRC) {
+  //if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
+  if (iflyauto::FunctionalState_MRC == iflyauto::FunctionalState_MRC) {
     return MRCBrakeProcess();
   }
   has_set_virtual_obs_ = false;
@@ -56,18 +56,19 @@ bool MRCBrakeDecider::MRCBrakeProcess() {
                                   .lane_change_decider_output()
                                   .coarse_planning_info.reference_path;
     if (reference_path_ptr == nullptr) {
-      return false;
+      return true;
     }
     const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
     double ego_start_s = frenet_ego_state.s();
 
     ReferencePathPoint refpath_pt;
+    double obs_set_dis = std::min(reference_path_ptr->get_points().back().path_point.s() - 0.5, ego_start_s + virtual_obs_dis);
     if (reference_path_ptr->get_reference_point_by_lon(
-      ego_start_s + virtual_obs_dis, refpath_pt)) {
+      obs_set_dis, refpath_pt)) {
       mrc_agent_.set_x(refpath_pt.path_point.x());  //几何中心
       mrc_agent_.set_y(refpath_pt.path_point.y());
     } else {
-      return false;
+      return true;
     }
 
     mrc_agent_.set_length(5.0);
