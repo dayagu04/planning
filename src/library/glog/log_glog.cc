@@ -19,13 +19,13 @@ static GlogFlag glog_flag_;
 #if BACKTRACE_LOG
 void SignalHandler(const char *data, int size) {
   std::string path_dir;
-#ifdef IFLY_LOG_PATH
+#ifdef IFLY_GLOG_PATH
   path_dir = "/asw/planning/glog/backtrace.log";
 #else
-  path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
-  bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");
+  path_dir = "/opt/usr/log/app_log/planning";
+  bool create_path = CreateLogDirectory("/opt/usr/log/app_log");
   if (create_path) {
-    printf("create /opt/usr/iflytek/cluster_b/gea/log success\n");
+    printf("create /opt/usr/log/app_log success\n");
     create_path = CreateLogDirectory(path_dir);
   } else {
     printf("create log path fail\n");
@@ -68,14 +68,14 @@ const bool CreateLogDirectory(const std::string &path) {
 void InitGlog(const char *file) {
   std::string path_dir;
 
-#ifdef IFLY_LOG_PATH
+#ifdef IFLY_GLOG_PATH
   path_dir = "/asw/planning/glog";
   bool create_path = CreateLogDirectory(path_dir);
 #else
-  path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
-  bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");
+  path_dir = "/opt/usr/log/app_log/planning";
+  bool create_path = CreateLogDirectory("/opt/usr/log/app_log");
   if (create_path) {
-    printf("create /opt/usr/iflytek/cluster_b/gea/log success\n");
+    printf("create /opt/usr/log/app_log success\n");
     create_path = CreateLogDirectory(path_dir);
   } else {
     printf("create log path fail\n");

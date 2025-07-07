@@ -29,29 +29,29 @@ SCRIPTS_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 export CYBER_TIME=`date +"%Y%m%d_%H"`
 echo $CYBER_TIME
 
-export IFLY_LOG_PATH="/asw/planning/glog"
+export IFLY_GLOG_PATH="/asw/planning/glog"
 
 cd ${SCRIPTS_PATH}
 
 echo $SCRIPTS_PATH
 
 
-if [ -d "$IFLY_LOG_PATH" ]; then
+if [ -d "$IFLY_GLOG_PATH" ]; then
   ### 如果 $DIR 存在，请执行操作 ###
-  echo "log directory in ${IFLY_LOG_PATH}..."
+  echo "log directory in ${IFLY_GLOG_PATH}..."
 else
-  mkdir ${IFLY_LOG_PATH}
+  mkdir ${IFLY_GLOG_PATH}
   exit 1
 fi
 
-cd ${IFLY_LOG_PATH}
+cd ${IFLY_GLOG_PATH}
 
 mkdir $CYBER_TIME
 
 cd ${SCRIPTS_PATH}
 
-# export GLOG_log_dir=${IFLY_LOG_PATH}/${CYBER_TIME}
-export GLOG_log_dir=${IFLY_LOG_PATH}
+# export GLOG_log_dir=${IFLY_GLOG_PATH}/${CYBER_TIME}
+export GLOG_log_dir=${IFLY_GLOG_PATH}
 
 echo $GLOG_log_dir
 

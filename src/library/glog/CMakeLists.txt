@@ -6,7 +6,7 @@ file(GLOB ifly_glog_file
 )
 
 if (ADAPTER STREQUAL "cyber")
-  add_definitions(-DIFLY_LOG_PATH)
+  add_definitions(-DIFLY_GLOG_PATH)
   message("cyber config")
 endif()
 
