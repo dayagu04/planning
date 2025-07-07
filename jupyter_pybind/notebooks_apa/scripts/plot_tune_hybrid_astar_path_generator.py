@@ -223,6 +223,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_d
 
   # vehicle_type = 'CHERY_T26'
   vehicle_type = 'CHERY_E0X'
+  # vehicle_type = 'CHERY_M32T'
   lat_buffer = 0.0
   car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, lat_buffer)
 
@@ -728,31 +729,32 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_d
         'car_circle_rn': car_circle_rn
     })
 
-  for i in range(len(footprint_model_global)):
-    x = ego_pose[0]
-    y = ego_pose[1]
-    heading = ego_pose[2]
+  else:
+    for i in range(len(footprint_model_global)):
+      x = ego_pose[0]
+      y = ego_pose[1]
+      heading = ego_pose[2]
 
-    car_circle_xn.append(footprint_model_global[i][0])
-    car_circle_yn.append(footprint_model_global[i][1])
-    car_circle_rn.append(footprint_model_global[i][2])
+      car_circle_xn.append(footprint_model_global[i][0])
+      car_circle_yn.append(footprint_model_global[i][1])
+      car_circle_rn.append(footprint_model_global[i][2])
 
-  # astar current gear path target
-  pose = hybrid_astar_py.GetCurrentGearPathEnd()
-  footprint_model_local = hybrid_astar_py.GetFootPrintModelLocal()
-  for i in range(len(footprint_model_local)):
-    tmp_x, tmp_y = local2global(
-        footprint_model_local[i][0], footprint_model_local[i][1], pose[0], pose[1], pose[2])
+    # astar current gear path target
+    pose = hybrid_astar_py.GetCurrentGearPathEnd()
+    footprint_model_local = hybrid_astar_py.GetFootPrintModelLocal()
+    for i in range(len(footprint_model_local)):
+      tmp_x, tmp_y = local2global(
+          footprint_model_local[i][0], footprint_model_local[i][1], pose[0], pose[1], pose[2])
 
-    car_circle_xn.append(tmp_x)
-    car_circle_yn.append(tmp_y)
-    car_circle_rn.append(footprint_model_local[i][2])
+      car_circle_xn.append(tmp_x)
+      car_circle_yn.append(tmp_y)
+      car_circle_rn.append(footprint_model_local[i][2])
 
-  data_veh_circle.data.update({
-    'car_circle_xn': car_circle_xn,
-    'car_circle_yn': car_circle_yn,
-    'car_circle_rn': car_circle_rn,
-  })
+    data_veh_circle.data.update({
+      'car_circle_xn': car_circle_xn,
+      'car_circle_yn': car_circle_yn,
+      'car_circle_rn': car_circle_rn,
+    })
 
   push_notebook()
 
