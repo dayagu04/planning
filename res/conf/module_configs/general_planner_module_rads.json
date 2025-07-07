@@ -727,6 +727,90 @@
   "maximum_speed_adjustment":4.0,
   "sample_t_upper":5.0,
   "sample_t_lower":1.0
+},
+"potential_dangerous_agent": {
+  "risk_free_lateral_distance": 8.0,
+  "risk_free_longitudinal_distance": 30.0,
+  "enable_potential_dangerous_agent_decider": true,
+  "default_rss_params": {
+    "response_time": 0.2,
+    "longitudinal_acc_max": 1.7,
+    "longitudinal_brake_min": 3.0,
+    "longitudinal_brake_max": 4.2,
+    "lateral_acc_max": 2.0,
+    "lateral_brake_min": 2.55,
+    "lateral_brake_max": 1.0,
+    "lateral_miu": 0.32
+  },
+  "default_rss_params_reckless": {
+    "response_time": 0.2,
+    "longitudinal_acc_max": 1.2,
+    "longitudinal_brake_min": 3.0,
+    "longitudinal_brake_max": 5.0,
+    "lateral_acc_max": 1.1,
+    "lateral_brake_min": 2.5,
+    "lateral_brake_max": 1.0,
+    "lateral_miu": 0.32
+  },
+  "vru_rss_params": {
+    "response_time": 0.4,
+    "longitudinal_acc_max": 2.3,
+    "longitudinal_brake_min": 1.5,
+    "longitudinal_brake_max": 5.0,
+    "lateral_acc_max": 2.6,
+    "lateral_brake_min": 1.75,
+    "lateral_brake_max": 1.10,
+    "lateral_miu": 0.32
+  },
+  "vru_rss_params_reckless": {
+    "response_time": 0.2,
+    "longitudinal_acc_max": 1.7,
+    "longitudinal_brake_min": 3.0,
+    "longitudinal_brake_max": 5.0,
+    "lateral_acc_max": 1.1,
+    "lateral_brake_min": 2.05,
+    "lateral_brake_max": 1.10,
+    "lateral_miu": 0.22
+  },
+  "normal_size_vehicle_rss_params": {
+    "response_time": 0.2,
+    "longitudinal_acc_max": 1.7,
+    "longitudinal_brake_min": 3.0,
+    "longitudinal_brake_max": 4.2,
+    "lateral_acc_max": 2.0,
+    "lateral_brake_min": 2.55,
+    "lateral_brake_max": 1.0,
+    "lateral_miu": 0.32
+  },
+  "normal_size_vehicle_rss_params_reckless": {
+    "response_time": 0.2,
+    "longitudinal_acc_max": 0.8,
+    "longitudinal_brake_min": 3.0,
+    "longitudinal_brake_max": 4.0,
+    "lateral_acc_max": 1.1,
+    "lateral_brake_min": 2.5,
+    "lateral_brake_max": 1.0,
+    "lateral_miu": 0.32
+  },
+  "oversize_vehicle_rss_params": {
+    "response_time": 0.3,
+    "longitudinal_acc_max": 1.75,
+    "longitudinal_brake_min": 2.40,
+    "longitudinal_brake_max": 2.9,
+    "lateral_acc_max": 2.0,
+    "lateral_brake_min": 1.9,
+    "lateral_brake_max": 2.0,
+    "lateral_miu": 0.5
+  },
+  "oversize_vehicle_rss_params_reckless": {
+    "response_time": 0.1,
+    "longitudinal_acc_max": 0.85,
+    "longitudinal_brake_min": 3.1,
+    "longitudinal_brake_max": 2.6,
+    "lateral_acc_max": 1.1,
+    "lateral_brake_min": 2.5,
+    "lateral_brake_max": 1.1,
+    "lateral_miu": 0.8
+  }
 }
 }
-

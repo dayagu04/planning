@@ -461,6 +461,230 @@ struct SpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double min_jerk_limit_lower = -2.5;
   double min_dec_filter_speed_in_deceleration_scene = 30.0;
 };
+struct PotentialDangerousAgentDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    ReadItem<double>(json, risk_free_lateral_distance,
+                     "potential_dangerous_agent", "risk_free_lateral_distance");
+    ReadItem<double>(json, risk_free_longitudinal_distance,
+                     "potential_dangerous_agent",
+                     "risk_free_longitudinal_distance");
+    ReadItem<bool>(json, enable_potential_dangerous_agent_decider,
+                   "potential_dangerous_agent",
+                   "enable_potential_dangerous_agent_decider");
+
+    ReadItem<double>(json, default_rss_params.response_time,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "response_time");
+    ReadItem<double>(json, default_rss_params.longitudinal_acc_max,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "longitudinal_acc_max");
+    ReadItem<double>(json, default_rss_params.longitudinal_brake_min,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "longitudinal_brake_min");
+    ReadItem<double>(json, default_rss_params.lateral_acc_max,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "lateral_acc_max");
+    ReadItem<double>(json, default_rss_params.lateral_brake_min,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "lateral_brake_min");
+    ReadItem<double>(json, default_rss_params.lateral_brake_max,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "lateral_brake_max");
+    ReadItem<double>(json, default_rss_params.lateral_miu,
+                     "potential_dangerous_agent", "default_rss_params",
+                     "lateral_miu");
+
+    ReadItem<double>(json, default_rss_params_reckless.response_time,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "response_time");
+    ReadItem<double>(json, default_rss_params_reckless.longitudinal_acc_max,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "longitudinal_acc_max");
+    ReadItem<double>(json, default_rss_params_reckless.longitudinal_brake_min,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "longitudinal_brake_min");
+    ReadItem<double>(json, default_rss_params_reckless.lateral_acc_max,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "lateral_acc_max");
+    ReadItem<double>(json, default_rss_params_reckless.lateral_brake_min,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "lateral_brake_min");
+    ReadItem<double>(json, default_rss_params_reckless.lateral_brake_max,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "lateral_brake_max");
+    ReadItem<double>(json, default_rss_params_reckless.lateral_miu,
+                     "potential_dangerous_agent", "default_rss_params_reckless",
+                     "lateral_miu");
+
+    ReadItem<double>(json, vru_rss_params.response_time,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "response_time");
+    ReadItem<double>(json, vru_rss_params.longitudinal_acc_max,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "longitudinal_acc_max");
+    ReadItem<double>(json, vru_rss_params.longitudinal_brake_min,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "longitudinal_brake_min");
+    ReadItem<double>(json, vru_rss_params.lateral_acc_max,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "lateral_acc_max");
+    ReadItem<double>(json, vru_rss_params.lateral_brake_min,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "lateral_brake_min");
+    ReadItem<double>(json, vru_rss_params.lateral_brake_max,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "lateral_brake_max");
+    ReadItem<double>(json, vru_rss_params.lateral_miu,
+                     "potential_dangerous_agent", "vru_rss_params",
+                     "lateral_miu");
+
+    ReadItem<double>(json, vru_rss_params_reckless.response_time,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "response_time");
+    ReadItem<double>(json, vru_rss_params_reckless.longitudinal_acc_max,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "longitudinal_acc_max");
+    ReadItem<double>(json, vru_rss_params_reckless.longitudinal_brake_min,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "longitudinal_brake_min");
+    ReadItem<double>(json, vru_rss_params_reckless.lateral_acc_max,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "lateral_acc_max");
+    ReadItem<double>(json, vru_rss_params_reckless.lateral_brake_min,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "lateral_brake_min");
+    ReadItem<double>(json, vru_rss_params_reckless.lateral_brake_max,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "lateral_brake_max");
+    ReadItem<double>(json, vru_rss_params_reckless.lateral_miu,
+                     "potential_dangerous_agent", "vru_rss_params_reckless",
+                     "lateral_miu");
+
+    ReadItem<double>(json, normal_size_vehicle_rss_params.response_time,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "response_time");
+    ReadItem<double>(json, normal_size_vehicle_rss_params.longitudinal_acc_max,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "longitudinal_acc_max");
+    ReadItem<double>(
+        json, normal_size_vehicle_rss_params.longitudinal_brake_min,
+        "potential_dangerous_agent", "normal_size_vehicle_rss_params",
+        "longitudinal_brake_min");
+    ReadItem<double>(json, normal_size_vehicle_rss_params.lateral_acc_max,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "lateral_acc_max");
+    ReadItem<double>(json, normal_size_vehicle_rss_params.lateral_brake_min,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "lateral_brake_min");
+    ReadItem<double>(json, normal_size_vehicle_rss_params.lateral_brake_max,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "lateral_brake_max");
+    ReadItem<double>(json, normal_size_vehicle_rss_params.lateral_miu,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "lateral_miu");
+
+    ReadItem<double>(
+        json, normal_size_vehicle_rss_params_reckless.response_time,
+        "potential_dangerous_agent", "normal_size_vehicle_rss_params_reckless",
+        "response_time");
+    ReadItem<double>(
+        json, normal_size_vehicle_rss_params_reckless.longitudinal_acc_max,
+        "potential_dangerous_agent", "normal_size_vehicle_rss_params_reckless",
+        "longitudinal_acc_max");
+    ReadItem<double>(
+        json, normal_size_vehicle_rss_params_reckless.longitudinal_brake_min,
+        "potential_dangerous_agent", "normal_size_vehicle_rss_params_reckless",
+        "longitudinal_brake_min");
+    ReadItem<double>(
+        json, normal_size_vehicle_rss_params_reckless.lateral_acc_max,
+        "potential_dangerous_agent", "normal_size_vehicle_rss_params_reckless",
+        "lateral_acc_max");
+    ReadItem<double>(
+        json, normal_size_vehicle_rss_params_reckless.lateral_brake_min,
+        "potential_dangerous_agent", "normal_size_vehicle_rss_params_reckless",
+        "lateral_brake_min");
+    ReadItem<double>(json,
+                     normal_size_vehicle_rss_params_reckless.lateral_brake_max,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params", "lateral_brake_max");
+    ReadItem<double>(json, normal_size_vehicle_rss_params_reckless.lateral_miu,
+                     "potential_dangerous_agent",
+                     "normal_size_vehicle_rss_params_reckless", "lateral_miu");
+
+    ReadItem<double>(json, oversize_vehicle_rss_params.response_time,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "response_time");
+    ReadItem<double>(json, oversize_vehicle_rss_params.longitudinal_acc_max,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "longitudinal_acc_max");
+    ReadItem<double>(json, oversize_vehicle_rss_params.longitudinal_brake_min,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "longitudinal_brake_min");
+    ReadItem<double>(json, oversize_vehicle_rss_params.lateral_acc_max,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "lateral_acc_max");
+    ReadItem<double>(json, oversize_vehicle_rss_params.lateral_brake_min,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "lateral_brake_min");
+    ReadItem<double>(json, oversize_vehicle_rss_params.lateral_brake_max,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "lateral_brake_max");
+    ReadItem<double>(json, oversize_vehicle_rss_params.lateral_miu,
+                     "potential_dangerous_agent", "oversize_vehicle_rss_params",
+                     "lateral_miu");
+
+    ReadItem<double>(json, oversize_vehicle_rss_params_reckless.response_time,
+                     "potential_dangerous_agent",
+                     "oversize_vehicle_rss_params_reckless", "response_time");
+    ReadItem<double>(
+        json, oversize_vehicle_rss_params_reckless.longitudinal_acc_max,
+        "potential_dangerous_agent", "oversize_vehicle_rss_params_reckless",
+        "longitudinal_acc_max");
+    ReadItem<double>(
+        json, oversize_vehicle_rss_params_reckless.longitudinal_brake_min,
+        "potential_dangerous_agent", "oversize_vehicle_rss_params_reckless",
+        "longitudinal_brake_min");
+    ReadItem<double>(json, oversize_vehicle_rss_params_reckless.lateral_acc_max,
+                     "potential_dangerous_agent",
+                     "oversize_vehicle_rss_params_reckless", "lateral_acc_max");
+    ReadItem<double>(
+        json, oversize_vehicle_rss_params_reckless.lateral_brake_min,
+        "potential_dangerous_agent", "oversize_vehicle_rss_params_reckless",
+        "lateral_brake_min");
+    ReadItem<double>(
+        json, oversize_vehicle_rss_params_reckless.lateral_brake_max,
+        "potential_dangerous_agent", "oversize_vehicle_rss_params_reckless",
+        "lateral_brake_max");
+    ReadItem<double>(json, oversize_vehicle_rss_params_reckless.lateral_miu,
+                     "potential_dangerous_agent",
+                     "oversize_vehicle_rss_params_reckless", "lateral_miu");
+  }
+
+  double risk_free_lateral_distance = 10.0;
+  double risk_free_longitudinal_distance = 50;
+  bool enable_potential_dangerous_agent_decider = true;
+
+  struct RSSModelConfig {
+    double response_time = 0.2;
+    double longitudinal_acc_max = 1.2;
+    double longitudinal_brake_min = 2.0;
+    double longitudinal_brake_max = 4.0;
+    double lateral_acc_max = 5.0;
+    double lateral_brake_min = 0.6;
+    double lateral_brake_max = 1.0;
+    double lateral_miu = 1.0;
+  };
+  RSSModelConfig default_rss_params;
+  RSSModelConfig default_rss_params_reckless;
+  RSSModelConfig vru_rss_params;
+  RSSModelConfig vru_rss_params_reckless;
+  RSSModelConfig normal_size_vehicle_rss_params;
+  RSSModelConfig normal_size_vehicle_rss_params_reckless;
+  RSSModelConfig oversize_vehicle_rss_params;
+  RSSModelConfig oversize_vehicle_rss_params_reckless;
+};
 
 struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -2946,9 +3170,9 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double a_max_comfort_brake =
       -2.5;  // maximum comfortable braking deceleration of the ego
   double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
-  double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
+  double lane_keep_cutinp_threshold = 0.2;    // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
-  double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
+  double corridor_width = 1.5;   // 通道半个宽度，用于判断cut in车辆是否侵入
   double cruise_set_acc = 1.5;   // 巡航车速增加速率 0.8m/s2
   double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
 
@@ -3106,9 +3330,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double a_max_comfort_brake =
       -2.5;  // maximum comfortable braking deceleration of the ego
   double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
-  double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
+  double lane_keep_cutinp_threshold = 0.2;    // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
-  double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
+  double corridor_width = 1.5;   // 通道半个宽度，用于判断cut in车辆是否侵入
   double cruise_set_acc = 1.5;   // 巡航车速增加速率 0.8m/s2
   double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
 

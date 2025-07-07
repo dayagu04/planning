@@ -1,0 +1,43 @@
+syntax = "proto2";
+
+package planning.common;
+
+message PotentialDangerousAgent {
+  optional int32 id = 1;
+  optional double longitudinal_distance = 2;
+  optional double lateral_distance = 3;
+  optional double longitudinal_moderate_safe_distance = 4;
+  optional double lateral_moderate_safe_distance = 5;
+  optional double longitudinal_reckless_safe_distance = 6;
+  optional double lateral_reckless_safe_distance = 7;
+  optional double lateral_vel = 8;
+  optional double longitudinal_vel = 9;
+  optional int32 obstacle_rel_pos_type = 10;
+  optional int32 risk_level = 11;
+  optional int32 recommended_lateral_maneuver = 12;
+  optional int32 recommended_longitudinal_maneuver = 13;
+  optional double s = 14;
+  optional double l = 15;
+  optional double ds = 16;
+  optional double dl = 17;
+  optional int32 agent_type = 18;
+  optional int32 agent_pos_type = 19;
+}
+
+message EgoSLInfo {
+  optional double s = 1;
+  optional double l = 2;
+  optional double ds = 3;
+  optional double dl = 4;
+  optional double dds = 5;
+  optional double ddl = 6;
+};
+
+message PotentialDangerousAgentDeciderInfo {
+  repeated PotentialDangerousAgent potential_dangerous_agent = 1;
+  optional double risk_free_lateral_distance = 2;
+  optional double risk_free_longitudinal_distance = 3;
+  optional double ego_lateral_vel = 4;
+  optional double ego_longitudinal_vel = 5;
+  optional EgoSLInfo ego_sl_info = 6;
+}
