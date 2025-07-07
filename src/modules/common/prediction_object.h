@@ -100,6 +100,8 @@ struct PredictionObject {
   std::vector<Point3d> bottom_polygon_points;
   std::vector<Point3d> top_polygon_points;
   bool trajectory_valid{false};
+  bool is_dangerous{false};
+  float32 dangerous_confidence{0.0};
 
   std::vector<PredictionTrajectory> trajectory_array;
 };

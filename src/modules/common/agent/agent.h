@@ -90,6 +90,12 @@ class Agent {
   const double height() const;
   void set_height(const double height);
 
+  const bool is_dangerous() const;
+  void set_is_dangerous(const bool is_dangerous);
+
+  const float32 dangerous_confidence() const;
+  void set_dangerous_confidence(const float32 dangerous_confidence);
+
   const double x() const;
   void set_x(const double x);
 
@@ -275,6 +281,9 @@ class Agent {
   bool is_cutout_ = false;
 
   bool is_crossing_ = false;
+
+  bool is_dangerous_ = false;
+  float32 dangerous_confidence_ = 0.0;
 
   double timestamp_s_ = 0.0;
   uint64_t timestamp_us_ = 0;

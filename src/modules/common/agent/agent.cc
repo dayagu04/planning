@@ -24,7 +24,8 @@ constexpr double kPredictionHorizon = 5.0;
 }  // namespace
 Agent::Agent(const Agent& agent)
     : agent_id_(agent.agent_id()),
-      box_(agent.box().center(), agent.box().heading(), agent.box().length(), agent.box().width()),
+      box_(agent.box().center(), agent.box().heading(), agent.box().length(),
+           agent.box().width()),
       is_static_(agent.is_static()) {
   x_ = agent.x();
   y_ = agent.y();
@@ -43,6 +44,8 @@ Agent::Agent(const Agent& agent)
   is_vru_ = agent.is_vru();
   is_tfl_virtual_obs_ = agent.is_tfl_virtual_obs();
   is_lane_borrow_virtual_obs_ = agent.is_lane_borrow_virtual_obs();
+  is_dangerous_ = agent.is_dangerous();
+  dangerous_confidence_ = agent.dangerous_confidence();
   time_range_ = agent.time_range();
 
   // 当前默认trajectories_中只存一条轨迹
@@ -73,6 +76,8 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   fusion_source_ = prediction_object.fusion_source;
   timestamp_us_ = prediction_object.timestamp_us;
   timestamp_s_ = prediction_object.timestamp_us / 1e6;
+  is_dangerous_ = prediction_object.is_dangerous;
+  dangerous_confidence_ = prediction_object.dangerous_confidence;
 
   // is_sod_ = prediction_object.is_traffic_facilities; // 当前dynamic
   // world中不会绑定锥桶至车道上,导致换道状态机检查出错
@@ -155,9 +160,22 @@ const double Agent::accel_fusion() const { return accel_fusion_; }
 void Agent::set_accel_fusion(const double accel_fusion) {
   accel_fusion_ = accel_fusion;
 }
+const bool Agent::is_dangerous() const { return is_dangerous_; }
+void Agent::set_is_dangerous(const bool is_dangerous) {
+  is_dangerous_ = is_dangerous;
+}
+
+const float32 Agent::dangerous_confidence() const {
+  return dangerous_confidence_;
+}
+void Agent::set_dangerous_confidence(const float32 dangerous_confidence) {
+  dangerous_confidence_ = dangerous_confidence;
+}
 
 const planning_math::Box2d& Agent::box() const { return box_; }
-void Agent::set_box(const planning_math::Box2d& box) { box_.set_box(box.center(), box.heading(), box.length(),  box.width()); }
+void Agent::set_box(const planning_math::Box2d& box) {
+  box_.set_box(box.center(), box.heading(), box.length(), box.width());
+}
 
 const unsigned int Agent::fusion_source() const { return fusion_source_; };
 void Agent::set_fusion_source(const unsigned int fusion_source) {
