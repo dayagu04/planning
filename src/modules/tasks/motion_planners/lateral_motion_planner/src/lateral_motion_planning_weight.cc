@@ -169,8 +169,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       break;
     }
     case LateralMotionScene::LANE_BORROW: {
-      // end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
-      // end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
+      end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
+      end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
       planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
       planning_input.set_q_ref_y(config_.q_ref_y_lane_change);
       planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
