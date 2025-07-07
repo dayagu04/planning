@@ -77,7 +77,7 @@ enum class ApaObsMovementType : uint8_t {
 
 class ApaObstacle final {
  public:
-  ApaObstacle() {}
+  ApaObstacle() { Reset(); }
   ~ApaObstacle() {}
 
   void SetId(const size_t id) { obs_id_ = id; }

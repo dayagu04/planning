@@ -27,6 +27,8 @@ void ApaObstacle::Reset() {
   obs_id_ = 0;
   st_boundary_ = STBoundary();
   lon_decision_.Clear();
+  polygon_global_.Clear();
+  polygon_local_.Clear();
 }
 
 void ApaObstacle::TransformCoordFromGlobalToLocal(

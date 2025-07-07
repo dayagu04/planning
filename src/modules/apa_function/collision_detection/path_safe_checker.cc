@@ -562,6 +562,10 @@ const bool PathSafeChecker::GetPolygonDistance(const Polygon2D* polygon,
 
   for (const auto& pair : obs_manager_->GetObstacles()) {
     // envelop box check
+    if (!(pair.second.GetPolygon2DGlobal().IsValid())) {
+      continue;
+    }
+
     gjk_interface_.PolygonDistanceByThresh(
         &is_collision, &dist, polygon, &pair.second.GetPolygon2DGlobal(), 1.0);
 

@@ -49,7 +49,7 @@ struct Polygon2D {
     }
   }
 
-  const bool IsValid() {
+  const bool IsValid() const {
     if (vertex_num > MAX_POLYGON_VERTEX_NUM || vertex_num < 1) {
       return false;
     }
@@ -125,6 +125,11 @@ struct Polygon2D {
       default:
         break;
     }
+  }
+
+  void Clear() {
+    vertex_num = 0;
+    return;
   }
 };
 
