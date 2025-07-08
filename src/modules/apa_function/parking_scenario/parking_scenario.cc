@@ -317,6 +317,8 @@ void ParkingScenario::SetPlanningPath() {
     point->set_x(pt.GetX());
     point->set_y(pt.GetY());
     point->set_heading(pt.GetHeading());
+    point->set_kappa(pt.kappa);
+    point->set_lat_buffer(pt.lat_buffer);
     point->set_type(1);
   }
 
@@ -326,6 +328,8 @@ void ParkingScenario::SetPlanningPath() {
     point->set_x(pt.GetX());
     point->set_y(pt.GetY());
     point->set_heading(pt.GetHeading());
+    point->set_kappa(pt.kappa);
+    point->set_lat_buffer(pt.lat_buffer);
     point->set_type(1);
   }
 
