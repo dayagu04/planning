@@ -11,6 +11,8 @@
 #include "./cyber/logger/async_logger.h"
 
 namespace planning {
+#ifndef ENABLE_MDC_AP_LOG
+
 #define BACKTRACE_LOG (0)
 
 planning::cyber::logger::AsyncLogger *async_logger_ = nullptr;
@@ -139,4 +141,6 @@ const void ResetGLogFile() {
 
   return;
 }
+#endif
+
 }  // namespace planning
