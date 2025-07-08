@@ -215,7 +215,11 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
   // 在泊入寻库阶段通过简单的规则判断车位是否应该释放
   const double time_start = IflyTime::Now_ms();
 
-  const bool is_ego_collision = IsEgoCloseToObs();
+  // const bool is_ego_collision = IsEgoCloseToObs();
+
+  is_ego_col_vertical_ = IsEgoCloseToObs();
+  is_ego_col_parallel_ = IsEgoCloseToObs(0.01, 0.01, 0.0);
+
   uint8_t release_slot_count = 0;
 
   // 按距离自车近远顺序进行遍历
@@ -232,11 +236,11 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
       continue;
     }
 
-    if (is_ego_collision) {
-      slot.release_info_.release_state[RULE_BASED_RELEASE] =
-          SlotReleaseState::NOT_RELEASE;
-      continue;
-    }
+    // if (is_ego_collision) {
+    //   slot.release_info_.release_state[RULE_BASED_RELEASE] =
+    //       SlotReleaseState::NOT_RELEASE;
+    //   continue;
+    // }
 
     if (release_slot_count > kMaxSlotReleaseCount) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
@@ -269,22 +273,15 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
   return;
 }
 
-const bool ApaSlotManager::IsEgoCloseToObs() {
+const bool ApaSlotManager::IsEgoCloseToObs(const double body_lat_buffer,
+                                           const double mirror_lat_buffer,
+                                           const double lon_buffer) {
   const Pose2D ego =
       Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
              measure_data_ptr_->GetHeading());
 
-  double lat_buffer = 0.0;
-  double lon_buffer = 0.0;
-  if (state_machine_ptr_->IsParkOutStatus()) {
-    lat_buffer = 0.05;
-    lon_buffer = 0.03;
-  } else {
-    lat_buffer = 0.268;
-    lon_buffer = 0.1;
-  }
   return col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
-      ego, lat_buffer, lon_buffer);
+      ego, body_lat_buffer, lon_buffer);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
@@ -344,6 +341,10 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
 
 const SlotReleaseVoterType
 ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
+  if (is_ego_col_vertical_) {
+    return SlotReleaseVoterType::CLEAR;
+  }
+
   const ApaParameters& param = apa_param.GetParam();
   const Eigen::Vector2d pM01 = slot.processed_corner_coord_global_.pt_01_mid;
   const Eigen::Vector2d pM23 = slot.processed_corner_coord_global_.pt_23_mid;
@@ -460,6 +461,9 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
 
 const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const ApaSlot& slot) {
+  if (is_ego_col_parallel_) {
+    return SlotReleaseVoterType::CLEAR;
+  }
   const auto& v_ego_heading = measure_data_ptr_->GetHeadingVec();
 
   SlotCoord corrected_global_slot = slot.processed_corner_coord_global_;
@@ -605,6 +609,9 @@ const std::string GetSlotReleaseVoterTypeString(
   switch (release_voter_type) {
     case SlotReleaseVoterType::ACCUMULATE:
       type = "ACCUMULATE";
+      break;
+    case SlotReleaseVoterType::HOLD:
+      type = "HOLD";
       break;
     case SlotReleaseVoterType::SUBTRACT:
       type = "SUBTRACT";

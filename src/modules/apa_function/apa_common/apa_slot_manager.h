@@ -221,7 +221,9 @@ class ApaSlotManager final {
  private:
   void ParkingLotCruiseProcess();
 
-  const bool IsEgoCloseToObs();
+  const bool IsEgoCloseToObs(const double body_lat_buffer = 0.268,
+                             const double mirror_lat_buffer = 0.268,
+                             const double lon_buffer = 0.1);
 
   const bool IsSlotCoarseRelease(const ApaSlot& slot);
 
@@ -244,6 +246,10 @@ class ApaSlotManager final {
   std::shared_ptr<CollisionDetectorInterface> col_det_interface_ptr_;
 
   EgoInfoUnderSlot ego_info_under_slot_;
+
+  // temp use
+  bool is_ego_col_vertical_ = false;
+  bool is_ego_col_parallel_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning
