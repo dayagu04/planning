@@ -1052,6 +1052,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
       current_gear_ = response.first_seg_path[0].gear;
       if (current_gear_ == AstarPathGear::DRIVE) {
         frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      } else if (current_gear_ == AstarPathGear::REVERSE) {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
       }
     }
 
