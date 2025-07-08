@@ -1,16 +1,16 @@
-/**
- * @log
- */
+#pragma once
 
-#ifndef __PLANNING_COMMON_GLOG_H__
-#define __PLANNING_COMMON_GLOG_H__
-
-#include <string>
-#include <vector>
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
 
+#ifdef ENABLE_MDC_AP_LOG
+#include "iflyauto_log.h"
+#endif
+
 namespace planning {
+
+#define ILOG_LEFT_BRACKET "["
+#define ILOG_RIGHT_BRACKET "]"
 
 class FilePath {
  public:
@@ -22,8 +22,7 @@ class FilePath {
   }
 };
 
-#define ILOG_LEFT_BRACKET "["
-#define ILOG_RIGHT_BRACKET "]"
+#ifndef ENABLE_MDC_AP_LOG
 
 #ifndef ILOG_MODULE_NAME
 #define ILOG_MODULE_NAME planning::FilePath::GetName().c_str()
@@ -154,6 +153,21 @@ const bool CreateLogDirectory(const std::string& path);
 
 const void ResetGLogFile();
 
-}  // namespace planning
+#else
 
-#endif  // __PLANNING_COMMON_GLOG_H__
+void InitGlog(const char* file);
+
+void StopGlog();
+
+const void ResetGLogFile();
+
+#define ILOG_DEBUG ILOGD
+#define ILOG_INFO ILOGI
+#define ILOG_WARN ILOGW
+#define ILOG_ERROR ILOGE
+#define ILOG_FATAL ILOGF
+#define ILOG_INFO_IF(cond) !(cond) ? (void)0 : ILOG_INFO
+
+#endif
+
+}  // namespace planning
