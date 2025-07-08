@@ -1413,12 +1413,12 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   }
 
   BoundType bound_type = BoundType::AGENT;
-  // // judge maintain_avoid_direction
-  // if (lat_obs_position_iter != lat_obstacle_position.end() &&
-  //     lat_obs_position_iter->second.maintain_avoid) {
-  //   is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
-  //   bound_type = BoundType::ADJACENT_AGENT;
-  // }
+  // judge maintain_avoid_direction
+  if (lat_obs_position_iter != lat_obstacle_position.end() &&
+      lat_obs_position_iter->second.maintain_avoid) {
+    is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+    bound_type = BoundType::ADJACENT_AGENT;
+  }
 
   // lane borrow
   const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
@@ -1430,6 +1430,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
       // 向右借道
       is_nudge_left = true;
     }
+    bound_type = BoundType::AGENT;
   }
   bool is_cross_obj{false};
   bool has_lat_decision{false};
