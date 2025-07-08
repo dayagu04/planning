@@ -141,6 +141,15 @@ const void ResetGLogFile() {
 
   return;
 }
+
+#else
+
+void InitGlog(const char *file) { return; }
+
+void StopGlog() { return; }
+
+const void ResetGLogFile() { return; }
+
 #endif
 
 }  // namespace planning

@@ -1,13 +1,16 @@
 #pragma once
 
-#include <string>
-#include <vector>
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
 
+#ifdef ENABLE_MDC_AP_LOG
+#include "iflyauto_log.h"
+#endif
+
 namespace planning {
 
-#ifndef ENABLE_MDC_AP_LOG
+#define ILOG_LEFT_BRACKET "["
+#define ILOG_RIGHT_BRACKET "]"
 
 class FilePath {
  public:
@@ -19,8 +22,7 @@ class FilePath {
   }
 };
 
-#define ILOG_LEFT_BRACKET "["
-#define ILOG_RIGHT_BRACKET "]"
+#ifndef ENABLE_MDC_AP_LOG
 
 #ifndef ILOG_MODULE_NAME
 #define ILOG_MODULE_NAME planning::FilePath::GetName().c_str()
@@ -153,19 +155,11 @@ const void ResetGLogFile();
 
 #else
 
-#include "iflyauto_log.h"
+void InitGlog(const char* file);
 
-#define InitGlog(var) \
-  do {                \
-  } while (0)
+void StopGlog();
 
-#define StopGlog() \
-  do {             \
-  } while (0)
-
-#define ResetGLogFile() \
-  do {                  \
-  } while (0)
+const void ResetGLogFile();
 
 #define ILOG_DEBUG ILOGD
 #define ILOG_INFO ILOGI
@@ -175,4 +169,5 @@ const void ResetGLogFile();
 #define ILOG_INFO_IF(cond) !(cond) ? (void)0 : ILOG_INFO
 
 #endif
+
 }  // namespace planning

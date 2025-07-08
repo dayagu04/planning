@@ -5,12 +5,13 @@ file(GLOB ifly_glog_file
     "cyber/logger/*.cc"
 )
 
-if (ADAPTER STREQUAL "cyber")
+set(MDC_AP_LOG_FLAG True)
+
+if (PLATFORM STREQUAL "X86")
   add_definitions(-DIFLY_GLOG_PATH)
   message("cyber config")
 else()
-  set(MDC_AP_LOG_FLAG True)
-  if (CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PLATFORM STREQUAL "X86" AND MDC_AP_LOG_FLAG)
+  if (MDC_AP_LOG_FLAG)
     add_definitions(-DENABLE_MDC_AP_LOG)
     message("use huawei ap log")
   else()
@@ -23,13 +24,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
-  glog
-  gflags
-  pthread
-  )
-
-if (ENABLE_MDC_AP_LOG)
+if (NOT PLATFORM STREQUAL "X86" AND MDC_AP_LOG_FLAG)
   target_link_libraries(${PROJECT_NAME} PUBLIC
     iflyauto_log
   )
@@ -37,3 +32,9 @@ if (ENABLE_MDC_AP_LOG)
 else()
   message("unlink mdc ap log")
 endif()
+
+target_link_libraries(${PROJECT_NAME} PUBLIC
+  glog
+  gflags
+  pthread
+  )
