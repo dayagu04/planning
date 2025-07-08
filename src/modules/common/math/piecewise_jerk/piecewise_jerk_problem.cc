@@ -11,8 +11,6 @@ namespace planning {
 
 constexpr double kMaxVariableRange = 1.0e10;
 
-#define DEBUG_PWJ (0)
-
 PiecewiseJerkProblem::PiecewiseJerkProblem(
     const size_t num_of_knots, const double delta_s,
     const std::array<double, 3>& x_init) {
@@ -98,8 +96,14 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
 
   OSQPSettings* settings = SolverDefaultSettings();
   settings->max_iter = max_iter;
+  settings->eps_abs = 1e-5;
+  settings->eps_rel = 1e-5;
+  // settings->eps_dual_inf = 1e-3;
+  // settings->eps_prim_inf = 1e-3;
+  // second
+  // settings->time_limit = 0.1;
 
-  DebugString();
+  // DebugString();
 
   OSQPWorkspace* osqp_work = nullptr;
   osqp_work = osqp_setup(data, settings);
@@ -107,9 +111,12 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
 
   osqp_solve(osqp_work);
 
+  ILOG_INFO << "osqp iter = " << osqp_work->info->iter;
+
   auto status = osqp_work->info->status_val;
 
-  if (status < 0 || (status != 1 && status != 2)) {
+  if (status < 0 || (status != 1 && status != 2) ||
+      osqp_work->solution == nullptr) {
     ILOG_ERROR << "failed optimization status: " << status << ", "
                << osqp_work->info->status;
 
@@ -117,12 +124,6 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
     FreeData(data);
     c_free(settings);
 
-    return false;
-  } else if (osqp_work->solution == nullptr) {
-    ILOG_ERROR << "The solution from OSQP is nullptr";
-    osqp_cleanup(osqp_work);
-    FreeData(data);
-    c_free(settings);
     return false;
   }
 
@@ -158,7 +159,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
 
   // check end state constraints
   int end_state_constraint_num = 0;
-  if (has_end_state_ref_) {
+  if (has_end_state_constriants_) {
     end_state_constraint_num = 3;
   }
 
@@ -275,27 +276,29 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   ++constraint_index;
 
   // constraints on end state
-  if (has_end_state_ref_) {
+  if (has_end_state_constriants_) {
     double s_slack_bound = 0.01;
     variables[n - 1].emplace_back(constraint_index, 1.0);
-    lower_bounds->at(constraint_index) = end_state_ref_[0] * scale_factor_[0];
+    lower_bounds->at(constraint_index) =
+        end_state_[0] * scale_factor_[0] - s_slack_bound;
     upper_bounds->at(constraint_index) =
-        end_state_ref_[0] * scale_factor_[0] + s_slack_bound;
+        end_state_[0] * scale_factor_[0] + s_slack_bound;
     ++constraint_index;
 
-    double dx_slack_bound = 0.001;
+    double dx_slack_bound = 0.01;
     variables[2 * n - 1].emplace_back(constraint_index, 1.0);
-    lower_bounds->at(constraint_index) = end_state_ref_[1] * scale_factor_[1];
+    lower_bounds->at(constraint_index) =
+        end_state_[1] * scale_factor_[1] - dx_slack_bound;
     upper_bounds->at(constraint_index) =
-        end_state_ref_[1] * scale_factor_[1] + dx_slack_bound;
+        end_state_[1] * scale_factor_[1] + dx_slack_bound;
     ++constraint_index;
 
     double ddx_slack_bound = 0.1;
     variables[3 * n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
-        end_state_ref_[2] * scale_factor_[2] - ddx_slack_bound;
+        end_state_[2] * scale_factor_[2] - ddx_slack_bound;
     upper_bounds->at(constraint_index) =
-        end_state_ref_[2] * scale_factor_[2] + ddx_slack_bound;
+        end_state_[2] * scale_factor_[2] + ddx_slack_bound;
     ++constraint_index;
   }
 
@@ -399,8 +402,16 @@ void PiecewiseJerkProblem::set_end_state_ref(
     const std::array<double, 3>& weight_end_state,
     const std::array<double, 3>& end_state_ref) {
   weight_end_state_ = weight_end_state;
-  end_state_ref_ = end_state_ref;
+  end_state_ = end_state_ref;
   has_end_state_ref_ = true;
+
+  return;
+}
+
+void PiecewiseJerkProblem::set_end_state_constriants(
+    const std::array<double, 3>& end_state_ref) {
+  end_state_ = end_state_ref;
+  has_end_state_constriants_ = true;
 
   return;
 }
@@ -422,7 +433,6 @@ void PiecewiseJerkProblem::FreeData(OSQPData* data) {
 }
 
 void PiecewiseJerkProblem::DebugString() {
-#if DEBUG_PWJ
   ILOG_INFO << "size = " << num_of_knots_;
   ILOG_INFO << "init0, s = " << x_init_[0];
   ILOG_INFO << "init1, v = " << x_init_[1];
@@ -452,7 +462,6 @@ void PiecewiseJerkProblem::DebugString() {
   ILOG_INFO << "lower, upper = " << dddx_bound_.first << ", "
             << dddx_bound_.second;
 
-#endif
   return;
 }
 

@@ -12,6 +12,8 @@
 #include "config/message_type.h"
 #include "geometry_math.h"
 #include "pose2d.h"
+#include "speed/apa_speed_decision.h"
+#include "speed/st_boundary.h"
 #include "src/library/convex_collision_detection/aabb2d.h"
 #include "src/library/convex_collision_detection/polygon_base.h"
 #include "utils/index_list.h"
@@ -78,6 +80,8 @@ class ApaObstacle final {
   ~ApaObstacle() {}
 
   void SetId(const size_t id) { obs_id_ = id; }
+
+  const size_t GetId() const { return obs_id_; }
 
   void SetPtClout2dGlobal(const std::vector<Eigen::Vector2d>& pt_clout_2d) {
     pt_clout_2d_global_ = pt_clout_2d;
@@ -178,6 +182,22 @@ class ApaObstacle final {
 
   void GenerateLocalBoundingbox(cdl::AABB* box) const;
 
+  const STBoundary& PathSTBoundary() const;
+
+  void SetPathSTBoundary(const STBoundary& boundary);
+
+  void EraseStBoundary();
+
+  /**
+   * return the merged longitudinal decision
+   * Longitudinal decision is one of {Stop, Follow, Overtake, Ignore}
+   **/
+  const ParkLonDecision& LongitudinalDecision() const;
+
+  void SetLonDecision(const ParkLonDecision& decision);
+
+  void ClearDecision();
+
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
   ApaObsAttributeType obs_attribute_type_{ApaObsAttributeType::UNKNOWN};
@@ -206,6 +226,10 @@ class ApaObstacle final {
   std::vector<Eigen::Vector3d> pt_clout_3d_local_;
 
   size_t obs_id_{0};
+
+  STBoundary st_boundary_;
+
+  ParkLonDecision lon_decision_;
 };
 }  // namespace apa_planner
 }  // namespace planning

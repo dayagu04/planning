@@ -15,7 +15,7 @@ from jupyter_pybind.python_proto import common_pb2
 from jupyter_pybind import hybrid_astar_py
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
-output_notebook()
+output_notebook(INLINE)
 
 search_path_display_num = 15
 

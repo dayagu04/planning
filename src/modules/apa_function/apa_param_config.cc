@@ -195,6 +195,18 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().terminal_parallel_y_offset_with_curb,
                   double, "terminal_parallel_y_offset_with_curb");
 
+  JSON_READ_VALUE(apa_param.SetPram().terminal_parallel_y_offset_with_wall,
+                  double, "terminal_parallel_y_offset_with_wall");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_max_ego_x_offset_with_invasion,
+                  double, "parallel_max_ego_x_offset_with_invasion");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_ego_ac_x_offset_with_limiter,
+                  double, "parallel_ego_ac_x_offset_with_limiter");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_terminal_x_offset_with_obs,
+                  double, "parallel_terminal_x_offset_with_obs");
+
   // check finish params
   JSON_READ_VALUE(apa_param.SetPram().finish_lat_err, double, "finish_lat_err");
 
@@ -279,7 +291,28 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().detection_distance, double,
                   "detection_distance");
 
-  JSON_READ_VALUE(apa_param.SetPram().lat_inflation, double, "lat_inflation");
+  JSON_READ_VALUE(apa_param.SetPram().stop_lat_inflation, double,
+                  "stop_lat_inflation");
+
+  JSON_READ_VALUE(apa_param.SetPram().heavy_brake_lat_inflation, double,
+                  "heavy_brake_lat_inflation");
+
+  JSON_READ_VALUE(apa_param.SetPram().moderate_brake_lat_inflation, double,
+                  "moderate_brake_lat_inflation");
+
+  JSON_READ_VALUE(apa_param.SetPram().slight_brake_lat_inflation, double,
+                  "slight_brake_lat_inflation");
+
+  JSON_READ_VALUE(apa_param.SetPram().stop_lon_dist, double, "stop_lon_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().heavy_brake_lon_dist, double,
+                  "heavy_brake_lon_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().moderate_brake_lon_dist, double,
+                  "moderate_brake_lon_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().slight_brake_lon_dist, double,
+                  "slight_brake_lon_dist");
 
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_slot, double,
                   "safe_uss_remain_dist_in_slot");
@@ -386,6 +419,12 @@ void SyncParkingParameters(const bool is_simulation) {
                   "enable_use_dynamic_obs");
 
   JSON_READ_VALUE(apa_param.SetPram().safe_threshold, double, "safe_threshold");
+
+  JSON_READ_VALUE(apa_param.SetPram().virtual_head_out_obs_y_pos, double,
+                  "virtual_head_out_obs_y_pos");
+
+  JSON_READ_VALUE(apa_param.SetPram().virtual_head_out_obs_x_pos, double,
+                  "virtual_head_out_obs_x_pos");
 
   JSON_READ_VALUE(apa_param.SetPram().virtual_obs_left_y_pos, double,
                   "virtual_obs_left_y_pos");
@@ -593,6 +632,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lon_buffer, double,
                   "parallel_dynamic_lon_buffer");
 
+  JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lat_buffer_in_slot,
+                  double, "parallel_dynamic_lat_buffer_in_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_dynamic_lon_buffer_in_slot,
+                  double, "parallel_dynamic_lon_buffer_in_slot");
+
   // slot update params when parking
   JSON_READ_VALUE(apa_param.SetPram().fix_slot_occupied_ratio, double,
                   "fix_slot_occupied_ratio");
@@ -763,7 +808,7 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");
 
-  int path_generator_type = 0;
+  int path_generator_type = 1;
   JSON_READ_VALUE(path_generator_type, int, "path_generator_type");
   switch (path_generator_type) {
     case 0:
@@ -779,6 +824,9 @@ void SyncParkingParameters(const bool is_simulation) {
   }
   ILOG_INFO << "path_generator_type "
             << static_cast<int>(apa_param.GetParam().path_generator_type);
+
+  JSON_READ_VALUE(apa_param.SetPram().use_geometry_path_head_out, bool,
+                  "use_geometry_path_head_out");
 
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().prohibit_move_slot, bool,
@@ -865,8 +913,11 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().min_parallel_vis_slot_release_long_dist_slot2mirror,
       double, "min_parallel_vis_slot_release_long_dist_slot2mirror");
 
-  JSON_READ_VALUE(apa_param.SetPram().easy_slot_release_channel_width, double,
-                  "easy_slot_release_channel_width");
+  JSON_READ_VALUE(apa_param.SetPram().one_side_empty_slot_release_channel_width,
+                  double, "one_side_empty_slot_release_channel_width");
+
+  JSON_READ_VALUE(apa_param.SetPram().two_side_empty_slot_release_channel_width,
+                  double, "two_side_empty_slot_release_channel_width");
 
   JSON_READ_VALUE(apa_param.SetPram().believe_obs_ego_area, double,
                   "believe_obs_ego_area");
@@ -952,6 +1003,12 @@ void SyncParkingParameters(const bool is_simulation) {
                   "min_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.obs_dist_for_speed_limit,
                   double, "obs_dist_for_speed_limit");
+  JSON_READ_VALUE(
+      apa_param.SetPram().speed_config.min_path_dist_for_speed_optimizer,
+      double, "min_path_dist_for_speed_optimizer");
+  JSON_READ_VALUE(
+      apa_param.SetPram().speed_config.min_path_dist_for_veh_starting, double,
+      "min_path_dist_for_veh_starting");
 
   // hybrid a star params
   JSON_READ_VALUE(

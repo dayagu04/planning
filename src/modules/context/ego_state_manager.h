@@ -38,8 +38,9 @@ class EgoStateManager {
     LON_TINY_SPEED_REPLAN = 8,
     LAT_LON_REPLAN = 16,
     LAT_REPLAN = 32,
+    LON_REPLAN = 64,
     LAT_lON_REST =
-        64,  // lateral and longitudinal states reset when stitch fails
+        128,  // lateral and longitudinal states reset when stitch fails
   };
 
   void SetConfig(const EgoPlanningConfigBuilder *config_builder);

@@ -36,10 +36,6 @@ void ParallelParkOutScenario::Reset() {
   tlane_.Reset();
   obs_pt_local_vec_.clear();
   parallel_out_path_planner_.Reset();
-  current_path_point_global_vec_.clear();
-
-  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
-  memset(&planning_output_, 0, sizeof(planning_output_));
 
   ParkingScenario::Reset();
 }
@@ -83,7 +79,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, 0.0);
+      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {

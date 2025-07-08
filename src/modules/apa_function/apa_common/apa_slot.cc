@@ -76,12 +76,12 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
     slot_length_ = (processed_corner_coord_global_.pt_1 -
                     processed_corner_coord_global_.pt_0)
                        .norm();
-    const geometry_lib::LineSegment line_01(
+    const pnc::geometry_lib::LineSegment line_01(
         processed_corner_coord_global_.pt_1,
         processed_corner_coord_global_.pt_0);
-    slot_width_ = std::min(geometry_lib::CalPoint2LineDist(
+    slot_width_ = std::min(pnc::geometry_lib::CalPoint2LineDist(
                                processed_corner_coord_global_.pt_2, line_01),
-                           geometry_lib::CalPoint2LineDist(
+                           pnc::geometry_lib::CalPoint2LineDist(
                                processed_corner_coord_global_.pt_3, line_01));
   }
 

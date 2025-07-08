@@ -67,7 +67,7 @@ void ContinuityCostTerm::GetGradientHessian(
 double LatAccCostTerm::GetCost(const ilqr_solver::State &x,
                                const ilqr_solver::Control & /*u*/) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(EGO_VEL)));
+                             Square(cost_config_ptr_->at(REF_VEL)));
   const double &delta = x[DELTA] - cost_config_ptr_->at(EXPECTEDE_DELTA);
 
   const double cost =
@@ -81,7 +81,7 @@ void LatAccCostTerm::GetGradientHessian(
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(EGO_VEL)));
+                             Square(cost_config_ptr_->at(REF_VEL)));
   const double &delta = x[DELTA] - cost_config_ptr_->at(EXPECTEDE_DELTA);
 
   lx(DELTA) += cost_config_ptr_->at(W_ACC) * k2v4 * delta;
@@ -91,7 +91,7 @@ void LatAccCostTerm::GetGradientHessian(
 double LatJerkCostTerm::GetCost(const ilqr_solver::State &x,
                                 const ilqr_solver::Control &u) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(EGO_VEL)));
+                             Square(cost_config_ptr_->at(REF_VEL)));
   const double &omega = u[OMEGA];
 
   const double cost =
@@ -105,7 +105,7 @@ void LatJerkCostTerm::GetGradientHessian(
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT &luu) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(EGO_VEL)));
+                             Square(cost_config_ptr_->at(REF_VEL)));
   const double &omega = u[OMEGA];
 
   lu(OMEGA) = cost_config_ptr_->at(W_JERK) * k2v4 * omega;
@@ -116,7 +116,7 @@ double LatAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                     const ilqr_solver::Control & /*u*/) {
   double cost = 0.;
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(EGO_VEL));
+                      SSquare(cost_config_ptr_->at(REF_VEL));
 
   if (x[DELTA] > cost_config_ptr_->at(DELTA_UPPER_BOUND)) {
     cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
@@ -134,7 +134,7 @@ void LatAccBoundCostTerm::GetGradientHessian(
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(EGO_VEL));
+                      SSquare(cost_config_ptr_->at(REF_VEL));
 
   if (x[DELTA] > cost_config_ptr_->at(DELTA_UPPER_BOUND)) {
     lx(DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
@@ -151,7 +151,7 @@ double LatJerkBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                      const ilqr_solver::Control &u) {
   double cost = 0.;
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(EGO_VEL));
+                      SSquare(cost_config_ptr_->at(REF_VEL));
   if (u[OMEGA] > cost_config_ptr_->at(OMEGA_UPPER_BOUND)) {
     cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
            Square(u[OMEGA] - cost_config_ptr_->at(OMEGA_UPPER_BOUND));
@@ -170,7 +170,7 @@ void LatJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
                                               ilqr_solver::LxuMT & /*lxu*/,
                                               ilqr_solver::LuuMT &luu) {
   const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(EGO_VEL));
+                      SSquare(cost_config_ptr_->at(REF_VEL));
   if (u[OMEGA] > cost_config_ptr_->at(OMEGA_UPPER_BOUND)) {
     lu(OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
                  (u[OMEGA] - cost_config_ptr_->at(OMEGA_UPPER_BOUND));

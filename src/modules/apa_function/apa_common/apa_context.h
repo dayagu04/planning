@@ -59,10 +59,46 @@ enum PathPlannerResult {
 };
 
 enum class ProcessObsMethod : uint8_t {
-  DO_NOTHING,
-  MOVE_OBS_OUT_SLOT,
-  MOVE_OBS_OUT_CAR_SAFE_POS,
+  DO_NOTHING = 0,
+  MOVE_OBS_OUT_SLOT = 1,
+  MOVE_OBS_OUT_CAR_SAFE_POS = 2,
   COUNT,
+};
+
+enum class RealTimeBrakeType : uint8_t {
+  STOP,
+  HEAVY_BRAKE,
+  MODERATE_BRAKE,
+  SLIGHT_BRAKE,
+  COUNT,
+};
+
+struct RealTimeBrakeInfo {
+  RealTimeBrakeType brake_type = RealTimeBrakeType::STOP;
+  double lat_buffer = 0.0;
+  double min_lon_dist = 0.0;
+
+  RealTimeBrakeInfo() = default;
+  RealTimeBrakeInfo(const RealTimeBrakeType brake_type, const double lat_buffer,
+                    const double min_lon_dist)
+      : brake_type(brake_type),
+        lat_buffer(lat_buffer),
+        min_lon_dist(min_lon_dist) {}
+  void Set(const RealTimeBrakeType brake_type, const double lat_buffer,
+           const double min_lon_dist) {
+    this->brake_type = brake_type;
+    this->lat_buffer = lat_buffer;
+    this->min_lon_dist = min_lon_dist;
+  }
+  ~RealTimeBrakeInfo() = default;
+};
+
+enum class TaskExcuteState {
+  NONE = 0,
+  FAIL = 1,
+  TIME_OUT = 2,
+  MAX_ITERATION = 3,
+  SUCCESS = 4,
 };
 
 void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);

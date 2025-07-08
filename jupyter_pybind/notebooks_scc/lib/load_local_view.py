@@ -180,7 +180,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         loc_msg = loc_msg_tmp
       else:
         print('match loc fail')
-      
+
       prediction_msg_tmp = find(bag_loader.prediction_msg, prediction_timestamp)
       if prediction_msg_tmp != None:
         prediction_msg = prediction_msg_tmp
@@ -279,12 +279,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ego_xn.append(pos_xn_i)
       ego_yn.append(pos_yn_i)
 
-    local_view_data['data_ego'].data.update({
-      'ego_xb': ego_xb,
-      'ego_yb': ego_yb,
-      'ego_xn': ego_xn,
-      'ego_yn': ego_yn,
-    })
+    # local_view_data['data_ego'].data.update({
+    #   'ego_xb': ego_xb,
+    #   'ego_yb': ego_yb,
+    #   'ego_xn': ego_xn,
+    #   'ego_yn': ego_yn,
+    # })
 
     if g_is_display_enu:
       # car pos in global coordinates
@@ -1050,7 +1050,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
       break
 
-  # only plot stop_destination_virtual_obj in cartesian coordinate        
+  # only plot stop_destination_virtual_obj in cartesian coordinate
   local_view_data['data_stop_destination_virtual_obj'].data.update({
     'agent_vertices_y': [],
     'agent_vertices_x': [],
@@ -1688,6 +1688,34 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'ground_mark_label' : ground_mark_info['ground_mark_label'],
       })
 
+  # dp
+  rel_sampled_x_values = []
+  rel_sampled_y_values = []
+  if hasattr(plan_debug_msg.dp_road_info, 'sample_lanes_info'):
+      sampled_xs = plan_debug_msg.dp_road_info.sample_lanes_info.sampled_xs
+      sampled_ys = plan_debug_msg.dp_road_info.sample_lanes_info.sampled_ys
+      for x, y in zip(sampled_xs, sampled_ys):
+          rel_x, rel_y = coord_tf.global_to_local(x, y)
+          rel_sampled_x_values.append(rel_x)
+          rel_sampled_y_values.append(rel_y)
+      local_view_data['sampled_points_data_source_xy'].data.update({
+          'x': rel_sampled_y_values,
+          'y': rel_sampled_x_values
+      })
+
+  rel_fined_path_x_values = []
+  rel_fined_path_y_values = []
+  if hasattr(plan_debug_msg.dp_road_info, 'dp_result_path'):
+      fined_xs = plan_debug_msg.dp_road_info.dp_result_path.fined_xs
+      fined_ys = plan_debug_msg.dp_road_info.dp_result_path.fined_ys
+      for x, y in zip(fined_xs, fined_ys):
+          rel_x, rel_y = coord_tf.global_to_local(x, y)
+          rel_fined_path_x_values.append(rel_x)
+          rel_fined_path_y_values.append(rel_y)
+      local_view_data['fined_path_xy'].data.update({
+          'x': rel_fined_path_y_values,
+          'y': rel_fined_path_x_values
+      })
   return local_view_data
 
 def update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data):
@@ -2168,7 +2196,8 @@ def load_local_view_figure():
               'ctrl_debug_msg':None,
               'ctrl_debug_json_msg':None,
   }
-
+  sampled_points_data_source_xy = ColumnDataSource(data={'x': [], 'y': []})
+  fined_path_xy = ColumnDataSource(data={'x': [], 'y': []})
   local_view_data = {'data_car':data_car, \
                      'data_car_traj':data_car_traj, \
                      'data_car_traj_raw':data_car_traj_raw, \
@@ -2348,7 +2377,10 @@ def load_local_view_figure():
                      'zebra_crossing_line_10':zebra_crossing_line_10,\
                      'zebra_crossing_line_11':zebra_crossing_line_11,\
                      'data_rads_traj':data_rads_traj,
+                     'sampled_points_data_source_xy':sampled_points_data_source_xy,
+                     'fined_path_xy':fined_path_xy,
                      }
+
   if is_vis_map:
     for i in range(len(ehr_data_lanes)):
       key = 'ehr_data_lane_' + str(i)
@@ -2422,7 +2454,8 @@ def load_local_view_figure():
   fig1.line('line_topo_17_y', 'line_topo_17_x', source = data_lane_topo_17, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
   fig1.line('line_topo_18_y', 'line_topo_18_x', source = data_lane_topo_18, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
   fig1.line('line_topo_19_y', 'line_topo_19_x', source = data_lane_topo_19, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
-
+  fig1.circle_dot('x', 'y', source = sampled_points_data_source_xy, size=4, color='red', legend_label = "samped lanes xy")
+  fig1.line('x', 'y', source = fined_path_xy, line_width=3, line_color='orange', line_dash = 'dashed',legend_label = "fined path")
   if is_vis_rdg_line:
     f41 = fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
     fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
@@ -2468,10 +2501,10 @@ def load_local_view_figure():
   fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
   fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
 
-  f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
+  # f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
+  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
+  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
+  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig_init_point = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
   fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')

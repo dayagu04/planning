@@ -57,6 +57,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto&  reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
+  const auto& virtual_lane_manager =
+        session_->environmental_model().get_virtual_lane_manager();
+  const auto& intersection_state = virtual_lane_manager->GetIntersectionState();
   auto mrc_condition = session_->mutable_planning_context()->mrc_condition();
   const bool location_valid = session_->environmental_model().location_valid();
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
@@ -94,6 +97,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
                                     .ego_lane_road_right_decider_output()
                                     .is_merge_region;
   double ego_distance_to_boundary_merge = 100.0;
+  const double default_distance_threshld_to_stop_line = 30.0;
+  const double dis_to_stopline =
+      session_->environmental_model().get_virtual_lane_manager()->GetEgoDistanceToStopline();
+
   if (cur_lane != nullptr && is_merge_region) {
     const auto& curr_reference_path = reference_path_mgr->get_reference_path_by_lane(
         cur_lane->get_virtual_id(), false);
@@ -103,7 +110,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       if (!refline->XYToSL(boundary_merge_point, boundary_merge_frenet_point)) {
         LOG_DEBUG("LaneChangeRequestManager::fail to get ego position on current lane");
       }
-      ego_distance_to_boundary_merge = 
+      ego_distance_to_boundary_merge =
           boundary_merge_frenet_point.x - curr_reference_path->get_frenet_ego_state().s();
     }
   }
@@ -118,11 +125,15 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
   if (int_request_.request_type() == NO_CHANGE) {
     if (enable_use_cone_change_request &&
-        request_source_ != EMERGENCE_AVOID_REQUEST) {
+        request_source_ != EMERGENCE_AVOID_REQUEST &&
+        dis_to_stopline > default_distance_threshld_to_stop_line &&
+        intersection_state != planning::common::IN_INTERSECTION) {
       cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request &&
-        request_source_ != CONE_REQUEST) {
+        request_source_ != CONE_REQUEST &&
+        dis_to_stopline > default_distance_threshld_to_stop_line &&
+        intersection_state != planning::common::IN_INTERSECTION) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
@@ -131,7 +142,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
         origin_relative_id_zero_nums == 1 &&
         ego_distance_to_boundary_merge >
-        distance_nearby_merge_point_to_surpress_merge_request) {
+        distance_nearby_merge_point_to_surpress_merge_request &&
+        intersection_state != planning::common::IN_INTERSECTION &&
+        dis_to_stopline > default_distance_threshld_to_stop_line) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
           merge_change_request_.is_merge_lane_change_situation();
@@ -331,7 +344,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
   GenerateHMIInfo();
 
-  LOG_WARNING(
+  LOG_DEBUG(
       "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
       lc_status, gen_turn_signal_);
   // JSON_DEBUG_VALUE("cur_state", lc_status)
@@ -340,16 +353,16 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
 void LaneChangeRequestManager::GenerateHMIInfo() {
   if (request_ == NO_CHANGE) {
-    LOG_WARNING("[LCRequestManager::update] request: None \n");
+    LOG_DEBUG("[LCRequestManager::update] request: None \n");
     // MDEBUG_JSON_ADD_ITEM(request_shape, "========", LaneChangeRequestManager)
   } else if (request_ == LEFT_CHANGE) {
-    LOG_WARNING(
+    LOG_DEBUG(
         "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
-    LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
+    LOG_DEBUG("[LCRequestManager::update] source: %d \n", request_source_);
   } else {
-    LOG_WARNING(
+    LOG_DEBUG(
         "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
-    LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
+    LOG_DEBUG("[LCRequestManager::update] source: %d \n", request_source_);
   }
 
   // auto ad_info = &(session_->mutable_planning_context()

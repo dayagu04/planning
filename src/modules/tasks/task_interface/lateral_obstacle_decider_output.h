@@ -12,19 +12,23 @@ namespace planning {
 
 struct LateralObstacleHistoryInfo {
   bool lane_borrow = false;
+  bool can_avoid = false;
+  int can_avoid_count = 0;
   bool can_not_avoid = false;
   double ncar_count = 0;
   bool ncar_count_in = false;
   bool is_avd_car = false;
+  bool last_is_avd_car = false;
   double close_time = 0;
   double last_recv_time = 0;
   bool front_car = false;
   bool side_car = false;
   bool rear_car = false;
-  bool intersection = false;
-  int intersection_count = 0;
+  bool cut_in_or_cross = false;
+  int cut_in_or_cross_count = 0;
   double front_expand_len = 0.0;
   double rear_expand_len = 0.0;
+  bool maintain_avoid = false;
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
@@ -36,7 +40,8 @@ struct LateralObstacleDeciderOutput {
       lateral_obstacle_history_info;
   SearchResult search_result = SearchResult::NO_SEARCH;
   bool in_intersection = false;
-
+  bool left_borrow = true;
+  bool right_borrow = true;
 
   void Clear() {
     hybrid_ara_result.Clear();

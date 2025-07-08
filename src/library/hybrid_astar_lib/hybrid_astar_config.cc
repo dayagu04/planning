@@ -50,6 +50,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   single_shot_path_width_thresh = 0.10;
   perpendicular_slot_node_step = 0.4;
+  perpendicular_slot_head_out_node_step = 0.3;
   parallel_slot_node_step = 0.3;
 
   max_search_time_ms = 5000;
@@ -62,6 +63,10 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.lat_safe_buffer_outside[1] = 0.2;
   safe_buffer.lat_safe_buffer_outside[2] = 0.1;
   safe_buffer.circle_path_extra_buffer_outside = 0.10;
+
+  safe_buffer.head_out_lat_safe_buffer_outside[0] = 0.5;
+  safe_buffer.head_out_lat_safe_buffer_outside[1] = 0.2;
+  safe_buffer.head_out_lat_safe_buffer_outside[2] = 0.1;
 
   safe_buffer.lat_safe_buffer_inside[0] = 0.2;
   safe_buffer.lat_safe_buffer_inside[1] = 0.15;

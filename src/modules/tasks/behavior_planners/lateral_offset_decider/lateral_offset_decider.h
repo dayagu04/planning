@@ -21,6 +21,10 @@ class LateralOffsetDecider : public Task {
  private:
   void SmoothLateralOffset(double in_lat_offset);
   void SaveDebugInfo();
+  void CheckAvoidObstaclesDecision();
+  bool IsObstacleDecisionSwitch(
+      LatObstacleDecisionType last_decision,
+      LatObstacleDecisionType current_decision);
   void Reset();
   void GenerateOutput();
   LateralOffsetDeciderConfig config_;
@@ -29,6 +33,11 @@ class LateralOffsetDecider : public Task {
 
   AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
   LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;
+
+  LatObstacleDecisionType last_first_obstacle_decision_ = LatObstacleDecisionType::IGNORE;
+  LatObstacleDecisionType last_second_obstacle_decision_ = LatObstacleDecisionType::IGNORE;
+  uint last_first_obstacle_id_ = 0;
+  uint last_second_obstacle_id_ = 0;
 
   double lateral_offset_ = 0.0;
 };

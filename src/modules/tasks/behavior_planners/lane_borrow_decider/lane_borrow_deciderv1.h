@@ -18,7 +18,7 @@
 #include "tasks/task.h"
 #include "virtual_lane.h"
 namespace planning {
-
+namespace lane_borrow_deciderV1 {
 class LaneBorrowDecider : public Task {
  public:
   LaneBorrowDecider(const EgoPlanningConfigBuilder* config_builder,
@@ -107,5 +107,5 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDeciderConfig config_;
   bool if_left_turn_center_{false};
 };
-
+}  // namespace lane_borrow_deciderV1
 }  // namespace planning

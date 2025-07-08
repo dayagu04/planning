@@ -3540,5 +3540,18 @@ const PathPoint TransformPoseFromLocalToGlobal(const PathPoint &pose_local,
   return pose_global;
 }
 
+const PathSegGear GetGearType(const uint8_t gear) {
+  switch (gear) {
+    case PathSegGear::SEG_GEAR_DRIVE:
+      return PathSegGear::SEG_GEAR_DRIVE;
+    case PathSegGear::SEG_GEAR_REVERSE:
+      return PathSegGear::SEG_GEAR_REVERSE;
+    default:
+      return PathSegGear::SEG_GEAR_INVALID;
+  }
+
+  return PathSegGear::SEG_GEAR_INVALID;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

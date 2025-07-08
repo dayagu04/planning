@@ -36,6 +36,9 @@ class PathSafeChecker {
   }
   ~PathSafeChecker() {}
 
+  /**
+   * [in]: ego_pose, requst, lat_buffer, lon_buffer, path
+   */
   void Excute(const Pose2D& ego_pose, const PathCheckRequest requst,
               const double lat_buffer, const double lon_buffer,
               std::vector<pnc::geometry_lib::PathPoint>& path);
@@ -57,12 +60,6 @@ class PathSafeChecker {
 
   const bool IsPolygonCollision(const Polygon2D* car);
 
-  void SetObstacle(
-      const std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager) {
-    obs_manager_ = obs_manager;
-    return;
-  }
-
   const double GetEgoPathProjectS() const { return ego_project_s_; }
 
  private:
@@ -82,11 +79,6 @@ class PathSafeChecker {
   void GenerateVehBox(const double lateral_safe_buffer,
                       const double lon_safe_buffer,
                       const double max_bbox_lat_buffer);
-
-  // Compact car body for accurate safe check.
-  void GenerateVehCompactPolygon(const double lateral_safe_buffer,
-                                 const double lon_safe_buffer,
-                                 const double max_bbox_lat_buffer);
 
   void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
                                    const double lon_buffer);
@@ -113,6 +105,12 @@ class PathSafeChecker {
   void GenerateEgoS(const size_t nearest_id,
                     const std::vector<pnc::geometry_lib::PathPoint>& path,
                     const Pose2D& pose);
+
+  void SetObstacle(
+      const std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager) {
+    obs_manager_ = obs_manager;
+    return;
+  }
 
  private:
   std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager_;

@@ -49,8 +49,7 @@ class HybridAStar {
                        const ParkObstacleList* obstacles,
                        EulerDistanceTransform* edt,
                        const ObstacleClearZone* clear_zone,
-                       ParkReferenceLine* ref_line,
-                       GridSearch *dp_map);
+                       ParkReferenceLine* ref_line, GridSearch* dp_map);
 
   virtual ~HybridAStar() = default;
 

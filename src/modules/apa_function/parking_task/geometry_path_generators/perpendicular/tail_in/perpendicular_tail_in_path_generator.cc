@@ -732,12 +732,21 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
               geometry_lib::GenHeadingVec(pose.heading);
           for (uint8_t k = 0; k < count; ++k) {
             temp_pose.pos = pose.pos + ds * k * heading_vec;
-            inner_inner_tang_pose_vec.emplace_back(temp_pose);
-            number++;
+            if (!collision_detector_interface_ptr_->GetEDTCollisionDetectorPtr()
+                     ->Update(std::vector<geometry_lib::PathPoint>{temp_pose},
+                              calc_params_.strict_car_lat_inflation, 0.0)
+                     .col_flag) {
+              inner_inner_tang_pose_vec.emplace_back(temp_pose);
+              number++;
+            }
           }
-          inner_tang_pose_vec.emplace_back(inner_inner_tang_pose_vec);
+          if (inner_inner_tang_pose_vec.size() > 0) {
+            inner_tang_pose_vec.emplace_back(inner_inner_tang_pose_vec);
+          }
         }
-        tang_pose_vec.emplace_back(inner_tang_pose_vec);
+        if (inner_tang_pose_vec.size() > 0) {
+          tang_pose_vec.emplace_back(inner_tang_pose_vec);
+        }
       }
     }
   }
@@ -2370,13 +2379,12 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
 
   optimal_geometry_path = success_geometry_path_vec[optimal_path_index];
 
-  // 路径超过目标终点直接失败
-  for (const auto& seg : optimal_geometry_path.path_segment_vec) {
-    if (seg.GetStartPos().x() <
-        input_.ego_info_under_slot.target_pose.pos.x() - 0.068) {
-      ILOG_INFO << "path is exceed target pose, return false";
-      return false;
-    }
+  // 当前挡位路径超过目标终点直接失败
+  if (optimal_geometry_path.cur_gear_path_segments_vec.size() > 0 &&
+      optimal_geometry_path.cur_gear_path_segments_vec.back().GetEndPos().x() <
+          input_.ego_info_under_slot.target_pose.pos.x() - 0.068) {
+    ILOG_INFO << "cur gear path is exceed target pose, return false";
+    return false;
   }
 
   if (input_.is_replan_dynamic && optimal_geometry_path.gear_change_count > 0 &&

@@ -666,6 +666,7 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
+    return;
   }
 
   auto fusion_occ_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
@@ -696,6 +697,7 @@ void PlanningPlayer::PlayOneFrame(
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
+      return;
     }
   }
 
@@ -1146,7 +1148,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+        auto loc_header_time_i = loc_msg_i->meta.timestamp; // 2.10.0 localization adapt
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -1196,7 +1198,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+        auto loc_header_time_i = loc_msg_i->meta.timestamp;// 2.10.0 localization adapt
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -2023,8 +2025,10 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
       bool find_function_state_machine = false;
       struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
-      uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
-
+      uint8_t functional_state = func_state_machine_ros_msg.current_state;
+      if (is_close_loop) {
+        functional_state = iflyauto::FunctionalState_MANUAL;
+      }
       auto cached_func_state_machine_ros_msg =
           find_ros_msg_with_header_time_upper_bound<
               struct_msgs::FuncStateMachine>(TOPIC_FUNC_STATE_MACHINE,

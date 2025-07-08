@@ -41,6 +41,8 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual void Log() const override;
   virtual const bool CheckFinished() override;
 
+  void PathPlan();
+
   const bool PostProcessPathAccordingRemainDist(const double remain_dist);
   const bool CheckShouldStopWhenSlotJumpsMuch();
   const bool CheckDynamicPlanPathOptimal();
@@ -50,6 +52,14 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   const double CalRealTimeBrakeDist();
   const bool CalcPtInside();
   const bool CheckCanDelObsInSlot();
+
+  void CalcProjPtForDynamicPlan(
+      geometry_lib::PathPoint& proj_pt,
+      std::vector<geometry_lib::PathPoint>& splicing_pt_vec);
+
+  void SwitchProcessObsMethod();
+
+  void CalRemainDistBySlotJump();
 
   virtual const bool PostProcessPathAccordingLimiter() override;
 

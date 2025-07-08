@@ -1,28 +1,17 @@
 #include "jerk_limited_trajectory.h"
+
 #include <math.h>
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+
 #include "src/common/log.h"
-namespace {
-
-constexpr double kEpsilon = 1e-10;
-}
-
-/* Jerk limited trajectry algorithm provides two systems to solve problem
- *  (1) Second-order system: bringing system from an arbitrary initial state to
- * a velocity setpoint (2) Third-order system: bringing system from an arbitrary
- * initial state to a position setpoint
- *
- * Note:
- *  (1) The vaule of v_min, a_min, j_min must be negative.
- *  (2) The vaule of v_max, a_max, j_max must be positive.
- *  (3) When JltType is SOLVE_RELATIVE_POS, the algorithm can compute a
- * trajectory to reach end state in a relative coordinate.
- */
+#include "src/common/log_glog.h"
 
 namespace planning {
 namespace jlt {
+constexpr double kEpsilon = 1e-10;
 
 bool JerkLimitedTrajectory::Update(const PointState &init_point_state,
                                    const StateLimitParam &state_limit,
@@ -32,34 +21,30 @@ bool JerkLimitedTrajectory::Update(const PointState &init_point_state,
   bool is_input_limit_valid = false;
 
   switch (jlt_type) {
-    case JltType::SOLVE_VEL: {
+    case JltType::SOLVE_VEL:
       is_solve_velocity_ = true;
       is_input_limit_valid =
           (state_limit_.v_desire >= 0.0 && state_limit_.a_min < 0.0 &&
            state_limit_.a_max > 0.0 && state_limit_.j_min < 0.0 &&
            state_limit_.j_max > 0.0);
       if (!is_input_limit_valid) {
-        LOG_ERROR("Invalid jlt input\n");
         return false;
       }
       velocity_param_ = VelocityTargetSolver(state_limit_, init_point_state_,
                                              state_limit_.v_desire);
       break;
-    }
-    case JltType::SOLVE_POS: {
+    case JltType::SOLVE_POS:
       is_solve_position_ = true;
       is_input_limit_valid =
           (state_limit_.v_min < 0.0 && state_limit_.v_max > 0.0 &&
            state_limit_.a_min < 0.0 && state_limit_.a_max > 0.0 &&
            state_limit_.j_min < 0.0 && state_limit_.j_max > 0.0);
       if (!is_input_limit_valid) {
-        LOG_ERROR("Invalid jlt input\n");
         return false;
       }
       position_param_ = PositionTargetSolver(state_limit_, init_point_state_,
                                              state_limit_.p_desire);
       break;
-    }
     default:
       return false;
   }
@@ -105,29 +90,35 @@ bool JerkLimitedTrajectory::Update(const PointState &init_point_state,
 
 VelocityParam JerkLimitedTrajectory::VelocityTargetSolver(
     const StateLimitParam &state_limit, const PointState &point_state,
-    const double &v_des) {
+    const double v_des) {
   double v_end = 0.0;
-  double a_cruise = 0.0;
-  int dir_a = 1;
+  double acc_cruise = 0.0;
+  int acc_cruise_dir = 1;
   double a_0 = point_state.a;
   double v_0 = point_state.v;
 
+  // step 1
   if (a_0 >= 0) {
     v_end = v_0 + a_0 * std::fabs(a_0 / state_limit.j_min) / 2;
   } else {
     v_end = v_0 + a_0 * std::fabs(a_0 / state_limit.j_max) / 2;
   }
 
-  ((v_des - v_end) > 0) ? dir_a = 1
-                        : (((v_des - v_end) < 0) ? dir_a = -1 : dir_a = 0);
+  ((v_des - v_end) > 0)
+      ? acc_cruise_dir = 1
+      : (((v_des - v_end) < 0) ? acc_cruise_dir = -1 : acc_cruise_dir = 0);
 
-  (dir_a == 1) ? a_cruise = state_limit.a_max
-               : ((dir_a == -1) ? a_cruise = state_limit.a_min : a_cruise = 0);
+  // step 2
+  (acc_cruise_dir == 1)
+      ? acc_cruise = state_limit.a_max
+      : ((acc_cruise_dir == -1) ? acc_cruise = state_limit.a_min
+                                : acc_cruise = 0);
 
+  // step 3:
   VelocityParam velocity_param;
-  double delt_a = a_cruise - a_0;
+  double delt_a = acc_cruise - a_0;
   double t1 = 0.0;
-  double delt_v_1 = 0.0;
+  double v_1 = 0.0;
   if (delt_a >= 0) {
     t1 = delt_a / state_limit.j_max;
     velocity_param.j1 = state_limit.j_max;
@@ -136,38 +127,41 @@ VelocityParam JerkLimitedTrajectory::VelocityTargetSolver(
     velocity_param.j1 = state_limit.j_min;
   }
   double t1_square = t1 * t1;
-  delt_v_1 = v_0 + a_0 * t1 + velocity_param.j1 * t1_square / 2;
+  v_1 = v_0 + a_0 * t1 + velocity_param.j1 * t1_square / 2;
 
   double t3 = 0.0;
-  if (-a_cruise >= 0) {
-    t3 = -a_cruise / state_limit.j_max;
+  if (-acc_cruise >= 0) {
+    t3 = -acc_cruise / state_limit.j_max;
     velocity_param.j3 = state_limit.j_max;
   } else {
-    t3 = -a_cruise / state_limit.j_min;
+    t3 = -acc_cruise / state_limit.j_min;
     velocity_param.j3 = state_limit.j_min;
   }
 
   double t3_square = t3 * t3;
+  // delt_v_3: v diff in time 3 phase. you can plot a figure then you will see.
   double delt_v_3 =
-      (a_cruise * t3 + velocity_param.j3 * t3_square / 2);  // 符号待定
-  double delt_v_2 = v_des - delt_v_1 - delt_v_3;
+      acc_cruise * t3 + velocity_param.j3 * t3_square / 2;  // 符号待定
+  // delt_v_2: v diff in time 2 phase.
+  double delt_v_2 = v_des - v_1 - delt_v_3;
 
   double t2 = 0.0;
-  if (dir_a == 0) {
+  if (acc_cruise_dir == 0) {
     t2 = 0.0;
   } else {
-    t2 = delt_v_2 / a_cruise;
+    t2 = delt_v_2 / acc_cruise;
   }
 
+  // step 4
   double a_0_square = a_0 * a_0;
   if (t2 < 0) {
-    if (dir_a == 1) {
+    if (acc_cruise_dir == 1) {
       double a_n = sqrt((2 * (v_des - v_0) + a_0_square / state_limit.j_max) /
                         (1.0 / state_limit.j_max - 1.0 / state_limit.j_min));
       t1 = (a_n - a_0) / state_limit.j_max;
       t2 = 0.0;
       t3 = -a_n / state_limit.j_min;
-    } else if (dir_a == -1) {
+    } else if (acc_cruise_dir == -1) {
       double a_n = -sqrt((2 * (v_des - v_0) + a_0_square / state_limit.j_min) /
                          (1.0 / state_limit.j_min - 1.0 / state_limit.j_max));
       t1 = (a_n - a_0) / state_limit.j_min;
@@ -184,7 +178,7 @@ VelocityParam JerkLimitedTrajectory::VelocityTargetSolver(
 }
 
 PointState JerkLimitedTrajectory::UpdateTrajectory(
-    const PointState &init_point_state, const double &t,
+    const PointState &init_point_state, const double t,
     const VelocityParam &velocity_param) {
   if (t < 0) {
     return init_point_state;
@@ -221,9 +215,9 @@ PointState JerkLimitedTrajectory::UpdateTrajectory(
   return result_state;
 }
 
-PointState JerkLimitedTrajectory::UpdatePoint(const double &x, const double &v,
-                                              const double &a, const double &j,
-                                              const double &t) {
+PointState JerkLimitedTrajectory::UpdatePoint(const double x, const double v,
+                                              const double a, const double j,
+                                              const double t) {
   PointState ps;
   double t_square = t * t;
   double t_cube = t * t * t;
@@ -236,7 +230,7 @@ PointState JerkLimitedTrajectory::UpdatePoint(const double &x, const double &v,
 
 PositionParam JerkLimitedTrajectory::PositionTargetSolver(
     const StateLimitParam &state_limit, const PointState &init_state,
-    const double &p_des) {
+    const double p_des) {
   PositionParam position_param;
   VelocityParam vel_sp;
   PointState point_state_sp;
@@ -322,14 +316,14 @@ PositionParam JerkLimitedTrajectory::PositionTargetSolver(
     }
   }
   position_param.velocity_param_a = velocity_param_a;
-  position_param.curise_time = t_cruise;
+  position_param.cruise_time = t_cruise;
   position_param.curise_velocity = v_cruise;
   return position_param;
 }
 
 PointState JerkLimitedTrajectory::UpdateFinalTrajectory(
     const PointState &init_state, const PositionParam &position_param,
-    const double &t) {
+    const double t) {
   if (t <= 0.0) {
     return init_state;
   }
@@ -340,26 +334,26 @@ PointState JerkLimitedTrajectory::UpdateFinalTrajectory(
     point_state_result =
         UpdateTrajectory(init_state, t, position_param.velocity_param_a);
   } else if (t >= position_param.switch_time &&
-             t < (position_param.switch_time + position_param.curise_time)) {
+             t < (position_param.switch_time + position_param.cruise_time)) {
     point_state_result =
         UpdateTrajectory(init_state, position_param.velocity_param_a.T3,
                          position_param.velocity_param_a);
     point_state_result.p =
         point_state_result.p + position_param.curise_velocity *
                                    (t - position_param.velocity_param_a.T3);
-  } else if (t >= (position_param.switch_time + position_param.curise_time)) {
-    if (position_param.curise_time > 0) {
+  } else if (t >= (position_param.switch_time + position_param.cruise_time)) {
+    if (position_param.cruise_time > 0) {
       point_state_result =
           UpdateTrajectory(init_state, position_param.switch_time,
                            position_param.velocity_param_a);
       double p_c = point_state_result.p +
-                   position_param.curise_velocity * position_param.curise_time;
+                   position_param.curise_velocity * position_param.cruise_time;
       point_state_result.p = p_c;
       point_state_result.v = position_param.curise_velocity;
       point_state_result.a = 0;
       point_state_result = UpdateTrajectory(
           point_state_result,
-          t - (position_param.switch_time + position_param.curise_time),
+          t - (position_param.switch_time + position_param.cruise_time),
           position_param.velocity_param_b);
     } else {
       point_state_result =
@@ -367,7 +361,7 @@ PointState JerkLimitedTrajectory::UpdateFinalTrajectory(
                            position_param.velocity_param_a);
       point_state_result = UpdateTrajectory(
           point_state_result,
-          t - (position_param.switch_time + position_param.curise_time),
+          t - (position_param.switch_time + position_param.cruise_time),
           position_param.velocity_param_b);
     }
   }
@@ -464,15 +458,16 @@ double JerkLimitedTrajectory::Evaluate(const int order, const double param) {
         return 0.0;
     }
   }
+
+  return 0.0;
 }
 
 double JerkLimitedTrajectory::ParamLength() const {
   if (is_solve_velocity_) {
     return velocity_param_.T3;
-  } else {
-    return position_param_.velocity_param_a.T3 + position_param_.curise_time +
-           position_param_.velocity_param_b.T3;
   }
+  return position_param_.velocity_param_a.T3 + position_param_.cruise_time +
+         position_param_.velocity_param_b.T3;
 }
 
 bool JerkLimitedTrajectory::GenerateCurve(const double delta_t) {
@@ -480,12 +475,15 @@ bool JerkLimitedTrajectory::GenerateCurve(const double delta_t) {
   if (total_time < 1e-3) {
     return false;
   }
+
+  int size = std::round(total_time / delta_t);
+  s_curve_.reserve(size + 1);
+  v_curve_.reserve(size + 1);
+  a_curve_.reserve(size + 1);
+  j_curve_.reserve(size + 1);
+
   double time_stamp = 0.0;
-  s_curve_.reserve(total_time / delta_t + 1);
-  v_curve_.reserve(total_time / delta_t + 1);
-  a_curve_.reserve(total_time / delta_t + 1);
-  j_curve_.reserve(total_time / delta_t + 1);
-  for (int i = 0; i < total_time / delta_t; ++i) {
+  for (int i = 0; i < size; ++i) {
     double s = Evaluate(0, time_stamp);
     double v = Evaluate(1, time_stamp);
     double a = Evaluate(2, time_stamp);
@@ -495,12 +493,19 @@ bool JerkLimitedTrajectory::GenerateCurve(const double delta_t) {
     a_curve_.emplace_back(a);
     j_curve_.emplace_back(j);
     time_stamp = time_stamp + delta_t;
-    // std::cout << "position = " << s_curve_[i] << " "
-    //           << "velocity = " << v_curve_[i] << " "
-    //           << "acc = " << a_curve_[i] << " "
-    //           << "jerk = " << j_curve_[i] << std::endl;
   }
+
   return true;
+}
+
+void JerkLimitedTrajectory::DebugString() const {
+  for (int i = 0; i < s_curve_.size(); ++i) {
+    ILOG_INFO << "position = " << s_curve_[i] << " "
+              << "velocity = " << v_curve_[i] << " "
+              << "acc = " << a_curve_[i] << " "
+              << "jerk = " << j_curve_[i];
+  }
+  return;
 }
 
 }  // namespace jlt

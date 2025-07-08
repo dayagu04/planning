@@ -5,8 +5,7 @@
 namespace planning {
 namespace apa_planner {
 void DpSpeedConfig::Init() {
-  const apa_planner::ParkingSpeedConfig& speed_config =
-      apa_param.GetParam().speed_config;
+  const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
 
   dp_cruise_speed = speed_config.default_cruise_speed;
   unit_v_for_long_path = 0.1;
@@ -15,8 +14,11 @@ void DpSpeedConfig::Init() {
   unit_v_for_short_path = 0.05;
   unit_s_for_short_path = 0.1;
 
-  short_path_thresh = 1.5;
-  extreme_short_path_thresh = 0.4;
+  unit_v_for_extream_short_path = 0.03;
+  unit_s_for_extream_short_path = 0.02;
+
+  long_path_thresh = 1.5;
+  extreme_short_path_thresh = speed_config.min_path_dist_for_speed_optimizer;
 
   // acc cost
   acceleration_limit = speed_config.acc_upper;
@@ -38,8 +40,6 @@ void DpSpeedConfig::Init() {
   enter_apa_speed_margin = 10.0;
 
   s_interpolate_step = 0.02;
-
-  enable_dp_by_path_length = 0.6;
 
   return;
 }

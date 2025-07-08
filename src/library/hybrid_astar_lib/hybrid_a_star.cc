@@ -553,8 +553,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   // gear check
-  if (gear_request_info == AstarPathGear::REVERSE &&
-      traveled_distance > 0.0) {
+  if (gear_request_info == AstarPathGear::REVERSE && traveled_distance > 0.0) {
     return NodeShrinkType::UNEXPECTED_GEAR;
   } else if (gear_request_info == AstarPathGear::DRIVE &&
              traveled_distance < 0.0) {
@@ -1346,7 +1345,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     explored_rs_path_num++;
 
     for (size_t i = 0; i < next_node_num_; ++i) {
-          NextNodeGenerator(&new_node, current_node, i, full_path_gear_request);
+      NextNodeGenerator(&new_node, current_node, i, full_path_gear_request);
       explored_node_num++;
 
       if (!new_node.IsNodeValid()) {
@@ -1655,6 +1654,7 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return false;
   }
+
   astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
@@ -1673,13 +1673,9 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
     ILOG_INFO << "end_node in collision with obstacles "
               << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
-    astar_end_node_->DebugString();
-    result->fail_type = AstarFailType::GOAL_COLLISION;
-    return false;
+    check_end_time = IflyTime::Now_ms();
+    collision_check_time_ms_ += check_end_time - check_start_time;
   }
-
-  check_end_time = IflyTime::Now_ms();
-  collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
   node_shrink_decider_.Process(start, end, request_.direction_request,
@@ -1824,6 +1820,11 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
 
       // boundary check failure handle
       if (!new_node.IsNodeValid()) {
+        continue;
+      }
+
+      if (node_shrink_decider_.IsShrinkByHeadOutDirection(request_,
+                                                          &new_node)) {
         continue;
       }
 
@@ -1998,11 +1999,11 @@ bool HybridAStar::AstarSearch(const Pose2D& start, const Pose2D& end,
   }
 
   ILOG_INFO << "explored node num is " << explored_node_num
-            << " ,rs path size is: " << explored_rs_path_num
-            << " ,h cost rs num " << h_cost_rs_path_num
-            << " ,node pool size:" << node_pool_.PoolSize()
-            << ",open_pq.size: " << open_pq_.size()
-            << ",RS success number=" << rs_path_success_num;
+            << " , rs path size is : " << explored_rs_path_num
+            << " , h cost rs num: " << h_cost_rs_path_num
+            << " , node pool size: " << node_pool_.PoolSize()
+            << " , open_pq.size: " << open_pq_.size()
+            << " , RS success number = " << rs_path_success_num;
 
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
@@ -2348,6 +2349,11 @@ void HybridAStar::SetRequest(const AstarRequest& request) {
     config_.node_step = config_.parallel_slot_node_step;
   } else {
     config_.node_step = config_.perpendicular_slot_node_step;
+    if (request.direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+        request.direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+        request.direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+      config_.node_step = config_.perpendicular_slot_head_out_node_step;
+    }
   }
 
   SetSamplingTarget(request.goal_);

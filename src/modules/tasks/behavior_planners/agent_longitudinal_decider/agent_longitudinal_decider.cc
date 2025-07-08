@@ -1523,7 +1523,7 @@ bool AgentLongitudinalDecider::IsReverseAgent(
     ego_lane_coord->XYToSL(end_point.x(), end_point.y(), &end_s, &end_l);
     is_prediction_reverse = end_s < agent_s;
   }
-  return is_perception_reverse || is_prediction_reverse;
+  return is_perception_reverse && is_prediction_reverse;
 }
 
 bool AgentLongitudinalDecider::IsIgnoredLowSpeedReverseAgent(

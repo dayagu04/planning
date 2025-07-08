@@ -808,7 +808,7 @@ bool StGraphUtils::CalculateSRange(
     *upper_s = std::fmax(0.0, std::fmin(*upper_s, path_range.second));
     return *lower_s > kMathEpsilon || *upper_s > kMathEpsilon;
   }
-
+  
   if (min_s > path_range.second || max_s < path_range.first) {
     return false;
   }

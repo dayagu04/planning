@@ -36,7 +36,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kLonBufferTrippleStep = 0.2;
 // static const double kLatBufferTrippleStep = 0.05;
-static const double kColBufferInSlot = 0.22;
+static const double kColBufferInSlot = 0.25;
 static const double kColBufferOutSlot = 0.3;
 static const double kColLargeLatBufferOutSlot = 0.3;
 static const double kColSmallLatBufferOutSlot = 0.1;
@@ -1838,7 +1838,10 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 const bool ParallelPathGenerator::CalMinSafeCircle() {
   const auto time0 = IflyTime::Now_ms();
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
+  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.0;
+
+  collision_detector_ptr_->SetParam(
+      CollisionDetector::Paramters(lat_buffer, false));
 
   std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
   const bool success_tra =
@@ -1850,6 +1853,24 @@ const bool ParallelPathGenerator::CalMinSafeCircle() {
   const bool success_adv = AdvancedInversedTrialsInSlot(
       adv_search_out_res, calc_params_.target_pose);
   const auto time2 = IflyTime::Now_ms();
+
+  std::vector<pnc::geometry_lib::PathSegment> search_out_res;
+
+  if (!apa_param.GetParam().is_parallel_advanced_method) {
+    if (success_tra) {
+      search_out_res = tra_search_out_res;
+    } else {
+      return false;
+    }
+  }
+
+  if (apa_param.GetParam().is_parallel_advanced_method) {
+    if (success_adv) {
+      search_out_res = adv_search_out_res;
+    } else {
+      return false;
+    }
+  }
 
   ILOG_INFO << "Traditional vs Advanced Method";
   // heading
@@ -1898,24 +1919,6 @@ const bool ParallelPathGenerator::CalMinSafeCircle() {
 
   // ILOG_INFO <<"apa_param.GetParam().is_parallel_advanced_method = "
   //             << apa_param.GetParam().is_parallel_advanced_method);
-
-  std::vector<pnc::geometry_lib::PathSegment> search_out_res;
-
-  if (!apa_param.GetParam().is_parallel_advanced_method) {
-    if (success_tra) {
-      search_out_res = tra_search_out_res;
-    } else {
-      return false;
-    }
-  }
-
-  if (apa_param.GetParam().is_parallel_advanced_method) {
-    if (success_adv) {
-      search_out_res = adv_search_out_res;
-    } else {
-      return false;
-    }
-  }
 
   if (search_out_res.size() == 0) {
     ILOG_INFO << "search_out_res size = 0";
@@ -3360,9 +3363,9 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
     last_line.pA = current_pose.pos;
     last_line.heading = current_pose.heading;
 
-    if (CheckLonToTarget(current_pose)) {
-      return true;
-    }
+    // if (CheckLonToTarget(current_pose)) {
+    //   return true;
+    // }
 
     if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
       AddPathSegToOutPut(pnc::geometry_lib::PathSegment(

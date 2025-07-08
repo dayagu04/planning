@@ -7,6 +7,8 @@ constexpr double MAX_T_EXCEED_AVD_CAR = 6.0;
 constexpr double kSafeDistance = 1.0;
 constexpr double kDefaultLimitLateralDistance = 10.0;
 constexpr int kDefaultLimitId = -1000;
+constexpr int kDefaultSafeDistance = -1000;
+
 namespace planning {
 enum AvoidObstacleFlag {
   INVALID = kDefaultLimitId,
@@ -118,7 +120,7 @@ struct AvoidObstacleInfo {
   double curr_time;              //单位s
   double t_exceed_avd_obstacle;  //单位s
   double allow_max_opposite_offset;
-  uint track_id;
+  uint track_id = 0;
   int type;
   int update_flag = AvoidObstacleUpdateFlag::Update;
   double length;
@@ -140,8 +142,6 @@ struct AvoidInfo {
   void Reset() {
     normal_left_avoid_threshold = 0.0;
     normal_right_avoid_threshold = 0.0;
-    static_left_avoid_threshold = 0.0;
-    static_right_avoid_threshold = 0.0;
     desire_lat_offset = 0.0;
     lat_offset = 0.0;
     avoid_way = AvoidWay::None;
@@ -154,8 +154,6 @@ struct AvoidInfo {
   void operator=(const AvoidInfo &avoid_info) {
     normal_left_avoid_threshold = avoid_info.normal_left_avoid_threshold;
     normal_right_avoid_threshold = avoid_info.normal_right_avoid_threshold;
-    static_left_avoid_threshold = avoid_info.static_left_avoid_threshold;
-    static_right_avoid_threshold = avoid_info.static_right_avoid_threshold;
     desire_lat_offset = avoid_info.desire_lat_offset;
     lat_offset = avoid_info.lat_offset;
     avoid_way = avoid_info.avoid_way;
@@ -169,17 +167,15 @@ struct AvoidInfo {
     is_use_ego_position = avoid_info.is_use_ego_position;
   }
 
-  double normal_left_avoid_threshold = -1000;
-  double normal_right_avoid_threshold = -1000;
-  double static_left_avoid_threshold = -1000;
-  double static_right_avoid_threshold = -1000;
+  double normal_left_avoid_threshold = kDefaultSafeDistance;
+  double normal_right_avoid_threshold = kDefaultSafeDistance;
   double desire_lat_offset = 0.0;
   double lat_offset = 0.0;
   AvoidWay avoid_way = AvoidWay::None;
   bool is_use_ego_position = false;
-  double allow_front_max_opposite_offset = 0;
+  double allow_front_max_opposite_offset = 0.0;
   int allow_front_max_opposite_offset_id = kDefaultLimitId;
-  double allow_side_max_opposite_offset = 0;
+  double allow_side_max_opposite_offset = 0.0;
   int allow_side_max_opposite_offset_id = kDefaultLimitId;
 };
 

@@ -25,9 +25,11 @@ class LateralObstacleDecider : public Task {
  private:
   bool IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle,
                               double lane_width, bool rightest_lane,
-                              double farthest_distance);
-  void LateralObstacleDecision(FrenetObstacle &frenet_obstacle,
-                               double lane_width);
+                              double farthest_distance, bool can_left_borrow,
+                              bool can_right_borrow);
+  void LateralObstacleDecision(
+      FrenetObstacle &frenet_obstacle, double lane_width,
+      const std::shared_ptr<ReferencePath> reference_path_ptr);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
@@ -37,20 +39,29 @@ class LateralObstacleDecider : public Task {
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
-  bool CalculateIntersection(FrenetObstacle &frenet_obstacle,
+  bool CalculateCutInAndCross(FrenetObstacle &frenet_obstacle,
                              std::shared_ptr<ReferencePath> reference_path,
                              double lane_width);
-
+  void UpdateLaneBorrowDirection();
+  void UpdateIntersection();
+  void HoldLatOffset(FrenetObstacle &frenet_obstacle);
+  bool CheckSideObstacle(
+        const std::shared_ptr<ReferencePath> &reference_path_ptr,
+        FrenetObstacle &frenet_obstacle);
+  void CheckObstaclesIsReverse();
+  
  private:
   planning::framework::Session *session_;
   LateralObstacleDeciderConfig config_;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       &lateral_obstacle_history_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
+  std::unordered_map<uint32_t, LatObstacleDecisionType> last_output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
   SearchResult &search_result_;
   // ego info
   double ego_rear_axis_to_front_edge_;
+  double ego_rear_axle_to_center_;
   double ego_length_;
   double ego_width_;
   double ego_head_s_ = 0;
@@ -61,6 +72,8 @@ class LateralObstacleDecider : public Task {
   double ego_rear_edge_to_rear_axle_ = 0;
   bool &in_intersection_;
   int intersection_count_ = 0;
+  bool &left_borrow_;
+  bool &right_borrow_;
 };
 
 }  // namespace planning

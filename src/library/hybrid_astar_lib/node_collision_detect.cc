@@ -1,6 +1,10 @@
 #include "node_collision_detect.h"
+
 #include <cmath>
+
+#include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
+#include "log_glog.h"
 #include "math/math_utils.h"
 #include "obstacle.h"
 
@@ -782,24 +786,28 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
 FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
     const Pose2D& pose, const bool is_circle_path) {
   // 60 degree
-  if (slot_box_.contain(pose) &&
-      std::fabs(IflyUnifyTheta(pose.theta - request_->goal_.theta, M_PI)) <
-          1.05) {
-    if (is_circle_path) {
+  const ParkingVehDirection& dir = request_->direction_request;
+  bool inside_slot = slot_box_.contain(pose);
+  bool need_theta_check = (dir == ParkingVehDirection::HEAD_IN ||
+                           dir == ParkingVehDirection::TAIL_IN);
+
+  // The parking out function does not require this condition
+  bool theta_close = std::fabs(IflyUnifyTheta(
+                         pose.theta - request_->goal_.theta, M_PI)) < 1.05;
+
+  if (inside_slot) {
+    if ((need_theta_check && theta_close) || !need_theta_check) {
       return &hierachy_circle_model_.footprint_model
-                  [HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER];
+                  [is_circle_path
+                       ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
+                       : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
     }
-
-    return &hierachy_circle_model_
-                .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
   }
 
-  if (is_circle_path) {
-    return &hierachy_circle_model_.footprint_model
-                [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER];
-  }
-  return &hierachy_circle_model_
-              .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+  return &hierachy_circle_model_.footprint_model
+              [is_circle_path
+                   ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
+                   : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
 }
 
 FootPrintCircleModel* NodeCollisionDetect::GetSlotOutsideCircleFootPrint() {
@@ -837,24 +845,23 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
 
   // gear r
   GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_reverse_,
-      vehicle_param.rear_edge_to_rear_axle + lon_buffer,
+      &veh_box_gear_reverse_, vehicle_param.rear_edge_to_rear_axle + lon_buffer,
       vehicle_param.wheel_base + vehicle_param.front_overhanging +
           config.safe_buffer.lon_min_safe_buffer,
       safe_half_width);
 
   // gear none
-  GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_none_,
-      vehicle_param.rear_edge_to_rear_axle +
-          config.safe_buffer.lon_min_safe_buffer,
-      vehicle_param.wheel_base + vehicle_param.front_overhanging +
-          config.safe_buffer.lon_min_safe_buffer,
-      safe_half_width);
+  GetRightUpCoordinatePolygonByParam(&veh_box_gear_none_,
+                                     vehicle_param.rear_edge_to_rear_axle +
+                                         config.safe_buffer.lon_min_safe_buffer,
+                                     vehicle_param.wheel_base +
+                                         vehicle_param.front_overhanging +
+                                         config.safe_buffer.lon_min_safe_buffer,
+                                     safe_half_width);
 
   GenerateVehCompactPolygon(lat_buffer_inside,
                             config.safe_buffer.lon_min_safe_buffer,
-                            &cvx_hull_foot_print_);
+                            lat_buffer_inside, &cvx_hull_foot_print_);
 
   // PolygonDebugString(&veh_box_gear_drive_, "drive");
   // PolygonDebugString(&veh_box_gear_reverse_, "reverse");

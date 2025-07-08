@@ -2,13 +2,7 @@
 
 namespace planning {
 namespace apa_planner {
-class DpSpeedConfig {
- public:
-  DpSpeedConfig() = default;
-
-  void Init();
-
- public:
+struct DpSpeedConfig {
   double dp_cruise_speed;
   double enter_apa_speed_margin;
 
@@ -27,10 +21,13 @@ class DpSpeedConfig {
   double unit_v_for_short_path;
   double unit_s_for_short_path;
 
+  double unit_v_for_extream_short_path;
+  double unit_s_for_extream_short_path;
+
   double unit_v;
   double unit_s;
 
-  double short_path_thresh;
+  double long_path_thresh;
   double extreme_short_path_thresh;
 
   double stopover_penalty;
@@ -46,8 +43,7 @@ class DpSpeedConfig {
 
   double s_interpolate_step;
 
-  // If path is short, qp is not valid because of discret time nodes.
-  double enable_dp_by_path_length;
+  void Init();
 };
 }  // namespace apa_planner
 }  // namespace planning

@@ -17,15 +17,9 @@ namespace apa_planner {
 void PerpendicularHeadOutScenario::Reset() {
   frame_.Reset();
   perpendicular_path_planner_.Reset();
-  current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
   path_trim_flag_ = false;
   end_position_correction_flag_ = false;
-
-  // reset planning output
-  memset(&planning_output_, 0, sizeof(planning_output_));
-
-  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   ParkingScenario::Reset();
 }
@@ -679,7 +673,7 @@ const bool PerpendicularHeadOutScenario::GenObstacles() {
 
   OccupancyGridBound bound(
       obs_tlane.min_x - bound_threshold, obs_tlane.min_y - bound_threshold,
-      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + +bound_threshold);
+      obs_tlane.max_x + bound_threshold, obs_tlane.max_y + bound_threshold);
 
   bound.PrintInfo();
 
@@ -1214,8 +1208,7 @@ const bool PerpendicularHeadOutScenario ::CheckSecurityCurrentpath() {
   return !path_trim_flag_ &&
          apa_world_ptr_->GetSlotManagerPtr()
                  ->GetEgoInfoUnderSlot()
-                 .slot_occupied_ratio < 0.15 &&
-         fabs(frame_.current_path_last_point_heading * kRad2Deg) > 80;
+                 .slot_occupied_ratio < 0.15;
 }
 
 const bool PerpendicularHeadOutScenario ::CheckRationalityEndpointPosition() {

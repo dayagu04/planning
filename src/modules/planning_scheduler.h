@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "adas_function.h"
 #include "apa_function/apa_function.h"
 #include "common/define/debug_output.h"
 #include "common/local_view.h"
@@ -9,8 +10,6 @@
 #include "config_context.h"
 #include "environmental_model_manager.h"
 #include "hpp_function/hpp_function.h"
-#include "ihc_function/intelligent_headlight_control.h"
-#include "lkas_function/lane_keep_assist_manager.h"
 #include "noa_function/noa_function.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
@@ -147,6 +146,7 @@ class PlanningScheduler {
   std::unique_ptr<BaseFunction> scc_function_ = nullptr;
   std::unique_ptr<BaseFunction> apa_function_ = nullptr;
   std::unique_ptr<BaseFunction> rads_function_;
+  std::unique_ptr<BaseFunction> adas_function_ = nullptr;
 
   planner::EnvironmentalModelManager environmental_model_manager_;
 

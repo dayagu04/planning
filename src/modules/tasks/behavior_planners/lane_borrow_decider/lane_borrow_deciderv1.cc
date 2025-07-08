@@ -51,7 +51,7 @@ constexpr double kBackNeededDistance = 5.0;
 };  // namespace
 
 namespace planning {
-
+namespace lane_borrow_deciderV1 {
 bool LaneBorrowDecider::Execute() {
   Update();
 
@@ -120,7 +120,11 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
 }
 
 void LaneBorrowDecider::Update() {
-  if (!ProcessEnvInfos()) {
+  if (!ProcessEnvInfos()) {  // environmental update failed
+    lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+    static_blocked_obj_id_vec_.clear();
+    lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
+    lane_borrow_decider_output_.borrow_direction = NO_BORROW;
     return;
   }
 
@@ -174,6 +178,9 @@ void LaneBorrowDecider::Update() {
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
   }
 
+  lane_borrow_decider_output_.can_left_borrow = left_borrow_;
+  lane_borrow_decider_output_.can_right_borrow = right_borrow_;
+
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
       lane_borrow_decider_output_;
 
@@ -207,7 +214,8 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
-  if (!last_static_blocked_obj_id_vec_.empty() && !static_blocked_obj_id_vec_.empty() &&
+  if (!last_static_blocked_obj_id_vec_.empty() &&
+      !static_blocked_obj_id_vec_.empty() &&
       last_static_blocked_obj_id_vec_[0] == static_blocked_obj_id_vec_[0]) {
     return false;
   }
@@ -525,20 +533,21 @@ bool LaneBorrowDecider::ObstacleDecision() {
     return false;
   }
 
-  double left_width =
-      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
-  double right_width =
-      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
+  // double left_width =
+  //     current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
+  // double right_width =
+  //     current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
 
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  if (obs_left_l_ + vehicle_param.width + kLatPassableBuffer < left_width ||
-      obs_right_l_ - vehicle_param.width - kLatPassableBuffer > -right_width) {
-    lane_borrow_decider_output_.lane_borrow_failed_reason = SELF_LANE_ENOUGH;
-    return false;
-  }
-  obs_left_l_ += kObsLatBuffer;
-  obs_right_l_ -= kObsLatBuffer;
+  // const auto& vehicle_param =
+  //     VehicleConfigurationContext::Instance()->get_vehicle_param();
+  // if (obs_left_l_ + vehicle_param.width + kLatPassableBuffer < left_width ||
+  //     obs_right_l_ - vehicle_param.width - kLatPassableBuffer > -right_width)
+  //     {
+  //   lane_borrow_decider_output_.lane_borrow_failed_reason = SELF_LANE_ENOUGH;
+  //   return false;
+  // }
+  // obs_left_l_ += kObsLatBuffer;
+  // obs_right_l_ -= kObsLatBuffer;
   return true;
 }
 
@@ -573,51 +582,52 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
   left_borrow_ = true;
   right_borrow_ = true;
 
-  double lane_line_length = 0.0;
-  const auto& left_lane_boundarys = current_lane_ptr_->get_left_lane_boundary();
-  const auto& right_lane_boundarys =
-      current_lane_ptr_->get_right_lane_boundary();
-  iflyauto::LaneBoundaryType left_lane_boundary_type;
-  iflyauto::LaneBoundaryType right_lane_boundary_type;
+  // double lane_line_length = 0.0;
+  // const auto& left_lane_boundarys = current_lane_ptr_->get_left_lane_boundary();
+  // const auto& right_lane_boundarys =
+  //     current_lane_ptr_->get_right_lane_boundary();
+  // iflyauto::LaneBoundaryType left_lane_boundary_type;
+  // iflyauto::LaneBoundaryType right_lane_boundary_type;
 
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // # Accumulate lane segment lengths.
-  // Record current segment type and break loop when exceeding vehicle
-  // wheelbase.
-  const auto& lane_points = current_lane_ptr_->lane_points();
-  for (int i = 0; i < lane_points.size(); i++) {
-    lane_line_length = lane_points[i].s;
-    if (lane_line_length > ego_frenet_boundary_.s_end) {
-      left_lane_boundary_type = lane_points[i].left_lane_border_type;
-      right_lane_boundary_type = lane_points[i].right_lane_border_type;
-      break;
-    }
-  }
-  // If the lane marking is not left dashed/right solid or double dashed, return
-  // False.
-  if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-      left_lane_boundary_type !=
-          iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
-      left_lane_boundary_type !=
-          iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
-    left_borrow_ = false;
-  }
+  // const auto& vehicle_param =
+  //     VehicleConfigurationContext::Instance()->get_vehicle_param();
+  // // # Accumulate lane segment lengths.
+  // // Record current segment type and break loop when exceeding vehicle
+  // // wheelbase.
+  // const auto& lane_points = current_lane_ptr_->lane_points();
+  // for (int i = 0; i < lane_points.size(); i++) {
+  //   lane_line_length = lane_points[i].s;
+  //   if (lane_line_length > ego_frenet_boundary_.s_end) {
+  //     left_lane_boundary_type = lane_points[i].left_lane_border_type;
+  //     right_lane_boundary_type = lane_points[i].right_lane_border_type;
+  //     break;
+  //   }
+  // }
+  // // If the lane marking is not left dashed/right solid or double dashed, return
+  // // False.
+  // if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+  //     left_lane_boundary_type !=
+  //         iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
+  //     left_lane_boundary_type !=
+  //         iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
+  //   left_borrow_ = false;
+  // }
 
-  if (left_lane_ptr_ == nullptr) {
-    left_borrow_ = false;
-  }
+  // if (left_lane_ptr_ == nullptr) {
+  //   left_borrow_ = false;
+  // }
 
-  // todo: if left lane is reverse, then left_boorow is false
-  if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-      right_lane_boundary_type !=
-          iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
-    right_borrow_ = false;
-  }
-  if (right_lane_ptr_ == nullptr) {
-    right_borrow_ = false;
-  }
-
+  // // todo: if left lane is reverse, then left_boorow is false
+  // if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+  //     right_lane_boundary_type !=
+  //         iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
+  //   right_borrow_ = false;
+  // }
+  // if (right_lane_ptr_ == nullptr) {
+  //   right_borrow_ = false;
+  // }
+  left_borrow_ = session_->planning_context().lateral_obstacle_decider_output().left_borrow;
+  right_borrow_ = session_->planning_context().lateral_obstacle_decider_output().right_borrow;
   // todo: consider ego car near/in stop line or crosswalk area
   if (!left_borrow_ && !right_borrow_) {
     lane_borrow_decider_output_.lane_borrow_failed_reason =
@@ -1309,5 +1319,5 @@ void LaneBorrowDecider::LogDebugInfo() {
 
   lane_borrow_pb_info->set_intersection_state(intersection_state_);
 }
-
+}  // namespace lane_borrow_deciderV1
 }  // namespace planning

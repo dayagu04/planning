@@ -32,6 +32,7 @@ struct AstarParkingConfig {
   // move target point in slot to another point for easy tracking
   double vertical_tail_in_end_straight_dist = 1.0;
   double vertical_head_in_end_straight_dist = 0.8;
+  double vertical_head_out_end_straight_dist = 1.0;
   double parallel_slot_end_straight_dist = 0.0;
   bool enable_delete_occ_in_slot;
   bool enable_delete_occ_in_ego;
@@ -71,6 +72,9 @@ struct ParkingSpeedConfig {
   double acc_lower = -2.0;
   double jerk_upper = 7.0;
   double jerk_lower = -7.0;
+
+  double min_path_dist_for_speed_optimizer;
+  double min_path_dist_for_veh_starting;
 };
 
 // todo
@@ -163,7 +167,11 @@ struct ApaParameters {
   double terminal_target_heading = 0.0;
   double terminal_target_x_to_limiter = 0.15;
   double terminal_parallel_y_offset = 0.0;
-  double terminal_parallel_y_offset_with_curb = 0.45;
+  double terminal_parallel_y_offset_with_curb = 0.2;
+  double terminal_parallel_y_offset_with_wall = 0.45;
+  double parallel_max_ego_x_offset_with_invasion = 0.5;
+  double parallel_ego_ac_x_offset_with_limiter = 0.3;
+  double parallel_terminal_x_offset_with_obs = 0.35;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -200,7 +208,14 @@ struct ApaParameters {
   bool is_uss_dist_from_perception = false;
   double min_uss_origin_dist = 0.3;
   double detection_distance = 2.5;
-  double lat_inflation = 0.1;
+  double stop_lat_inflation = 0.06;
+  double heavy_brake_lat_inflation = 0.1;
+  double moderate_brake_lat_inflation = 0.14;
+  double slight_brake_lat_inflation = 0.18;
+  double stop_lon_dist = -0.1;
+  double heavy_brake_lon_dist = 0.41;
+  double moderate_brake_lon_dist = 0.66;
+  double slight_brake_lon_dist = 0.91;
   double safe_uss_remain_dist_in_slot = 0.35;
   double limited_safe_uss_remain_dist = 0.2;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;
@@ -248,6 +263,8 @@ struct ApaParameters {
   double occupied_pt_inside_dy = 0.0;
   bool enable_use_dynamic_obs = true;
   double safe_threshold = 0.2;
+  double virtual_head_out_obs_y_pos = 0.68;
+  double virtual_head_out_obs_x_pos = 2.68;
   double virtual_obs_left_y_pos = 2.5;
   double virtual_obs_left_x_pos = 2.68;
   double virtual_obs_right_y_pos = 6.68;
@@ -324,6 +341,8 @@ struct ApaParameters {
   double dynamic_plan_interval_time = 0.4;
   double parallel_dynamic_lat_buffer = 0.4;
   double parallel_dynamic_lon_buffer = 1.68;
+  double parallel_dynamic_lat_buffer_in_slot = 0.2;
+  double parallel_dynamic_lon_buffer_in_slot = 0.8;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;
@@ -386,6 +405,7 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
+  bool use_geometry_path_head_out = false;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
@@ -423,7 +443,8 @@ struct ApaParameters {
   double min_slot_release_long_dist_slot2mirror = 3.86;
   double min_parallel_vis_slot_release_long_dist_slot2mirror = 1.87;
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
-  double easy_slot_release_channel_width = 7.68;
+  double one_side_empty_slot_release_channel_width = 7.68;
+  double two_side_empty_slot_release_channel_width = 7.68;
 
   double believe_obs_ego_area = 2.68;
   double limiter_length = 0.0;

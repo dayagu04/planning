@@ -6,7 +6,6 @@
 #include "behavior_planners/speed_search_decider/speed_adjust_decider.h"
 
 namespace planning {
-
 LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
@@ -16,8 +15,12 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
       std::make_unique<LaneChangeDecider>(config_builder, session);
   speed_adjust_decider_ =
       std::make_unique<SpeedAdjustDecider>(config_builder, session);
-  lane_borrow_decider_ =
-      std::make_unique<LaneBorrowDecider>(config_builder, session);
+  lane_borrow_deciderV1_ =
+      std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
+                                                                 session);
+  lane_borrow_deciderV2_ =
+      std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
+                                                                 session);
   lateral_obstacle_decider_ =
       std::make_unique<LateralObstacleDecider>(config_builder, session);
   lateral_offset_decider_ =
@@ -43,6 +46,9 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
                                                             session);
   sample_poly_speed_adjust_decider_ =
       std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
+  auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
+  enable_lane_borrow_deciderV2_ =
+      lane_borrow_config.enable_lane_borrow_deciderV2;
 }
 
 bool LongTimeTaskPipelineV2::Run() {
@@ -80,10 +86,18 @@ bool LongTimeTaskPipelineV2::Run() {
     return false;
   }
 
-  ok = lane_borrow_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(lane_borrow_decider_->Name());
-    return false;
+  if (enable_lane_borrow_deciderV2_) {
+    ok = lane_borrow_deciderV2_->Execute();
+    if (!ok) {
+      AddErrorInfo(lane_borrow_deciderV2_->Name());
+      return false;
+    }
+  } else {
+    ok = lane_borrow_deciderV1_->Execute();
+    if (!ok) {
+      AddErrorInfo(lane_borrow_deciderV1_->Name());
+      return false;
+    }
   }
 
   ok = lateral_offset_decider_->Execute();

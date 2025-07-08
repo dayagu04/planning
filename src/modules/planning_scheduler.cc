@@ -9,11 +9,8 @@
 #include <memory>
 
 #include "adas_function/adaptive_cruise_control.h"
-#include "adas_function/ihc_function/intelligent_headlight_control.h"
-#include "adas_function/lkas_function/lane_keep_assist_manager.h"
 #include "adas_function/mrc_condition.h"
 #include "adas_function/start_stop_enable.h"
-#include "adas_function/tsr_function/traffic_sign_recognition.h"
 #include "apa_function/util/apa_utils.h"
 #include "basic_types.pb.h"
 #include "common/config_context.h"
@@ -82,6 +79,7 @@ void PlanningScheduler::Init(
   scc_function_ = std::make_unique<SccFunction>(&session_);
   apa_function_ = std::make_unique<ApaFunction>(&session_);
   rads_function_ = std::make_unique<RadsFunction>(&session_);
+  adas_function_ = std::make_unique<AdasFunction>(&session_);
 }
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
@@ -149,7 +147,7 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
 bool PlanningScheduler::RunOnce(
     iflyauto::PlanningOutput *const planning_output,
     iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  LOG_ERROR("PlanningScheduler::RunOnce \n");
+  LOG_DEBUG("PlanningScheduler::RunOnce \n");
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   const double start_timestamp = IflyTime::Now_ms();
@@ -179,6 +177,15 @@ bool PlanningScheduler::RunOnce(
     }
   }
 
+    // adas_function step
+  bool adas_function_sucess = false;
+  adas_function_sucess = adas_function_->Plan();
+  if (!adas_function_sucess) {
+    LOG_DEBUG("adas runonce failed !!!! \n");
+    // return false;  //
+    // TODO:这里有问题。会导致不运行FillPlanningTrajectory和FillPlanningHmiInfo。任何情况下都需要给输出赋值。
+  }
+
   bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
   if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
     planning_success = ExcuteParkingFunction(function_type, planning_output);
@@ -202,13 +209,16 @@ uint64_t PlanningScheduler::FaultCode() {
 void PlanningScheduler::FillPlanningTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 获取LDP&&ELK功能干预状态
-  auto lkas_info =
-      session_.mutable_planning_context()->lane_keep_assit_function();
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool lkas_intervention_flag;
-  if ((lkas_info->get_ldp_left_intervention_flag_info() == true) ||
-      (lkas_info->get_ldp_right_intervention_flag_info() == true) ||
-      (lkas_info->get_elk_left_intervention_flag_info() == true) ||
-      (lkas_info->get_elk_right_intervention_flag_info() == true)) {
+  if ((GetContext.get_output_info()
+           ->ldp_output_info_.ldp_left_intervention_flag_ == true) ||
+      (GetContext.get_output_info()
+           ->ldp_output_info_.ldp_right_intervention_flag_ == true) ||
+      (GetContext.get_output_info()
+           ->elk_output_info_.elk_left_intervention_flag_ == true) ||
+      (GetContext.get_output_info()
+           ->elk_output_info_.elk_right_intervention_flag_ == true)) {
     lkas_intervention_flag = true;
   } else {
     lkas_intervention_flag = false;
@@ -247,19 +257,38 @@ void PlanningScheduler::FillPlanningTrajectory(
 
   if (location_valid) {
     trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
-    for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
-      auto path_point = &trajectory->trajectory_points[i];
-      path_point->x = planning_result.traj_points[i].x;
-      path_point->y = planning_result.traj_points[i].y;
-      path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
-      path_point->curvature = planning_result.traj_points[i].curvature;
-      path_point->t = planning_result.traj_points[i].t;
-      path_point->v = planning_result.traj_points[i].v;
-      path_point->a = planning_result.traj_points[i].a;
-      path_point->distance = planning_result.traj_points[i].s;
-      path_point->jerk = planning_result.traj_points[i].jerk;
-      ++(trajectory->trajectory_points_size);
+    auto lkas_trajectory = GetContext.get_lka_trajectory_info();
+    if (lkas_intervention_flag) {
+      for (size_t i = 0; i < PLANNING_TRAJ_POINTS_MAX_NUM; i++) {
+        auto path_point = &trajectory->trajectory_points[i];
+        path_point->x = lkas_trajectory->trajectory_points[i].x;
+        path_point->y = lkas_trajectory->trajectory_points[i].y;
+        path_point->heading_yaw =
+            lkas_trajectory->trajectory_points[i].heading_yaw;
+        path_point->curvature = lkas_trajectory->trajectory_points[i].curvature;
+        path_point->t = lkas_trajectory->trajectory_points[i].t;
+        path_point->v = lkas_trajectory->trajectory_points[i].v;
+        path_point->a = lkas_trajectory->trajectory_points[i].a;
+        path_point->distance = lkas_trajectory->trajectory_points[i].distance;
+        path_point->jerk = lkas_trajectory->trajectory_points[i].jerk;
+        ++(trajectory->trajectory_points_size);
+      }
+    } else {
+      for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+        auto path_point = &trajectory->trajectory_points[i];
+        path_point->x = planning_result.traj_points[i].x;
+        path_point->y = planning_result.traj_points[i].y;
+        path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
+        path_point->curvature = planning_result.traj_points[i].curvature;
+        path_point->t = planning_result.traj_points[i].t;
+        path_point->v = planning_result.traj_points[i].v;
+        path_point->a = planning_result.traj_points[i].a;
+        path_point->distance = planning_result.traj_points[i].s;
+        path_point->jerk = planning_result.traj_points[i].jerk;
+        ++(trajectory->trajectory_points_size);
+      }
     }
+
     // 设置参考线为default
     auto target_ref = &trajectory->target_reference;
     // add polynomial
@@ -496,48 +525,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.planning_context().lateral_offset_decider_output();
 
   planning_hmi_info->msg_header.stamp = IflyTime::Now_us();
-  // HMI for ldw
-  const auto &lkas_info =
-      session_.mutable_planning_context()->lane_keep_assit_function();
-  planning_hmi_info->ldw_output_info.ldw_state =
-      lkas_info->get_ldw_state_info();
-  planning_hmi_info->ldw_output_info.ldw_left_warning =
-      lkas_info->get_ldw_left_warning_info();
-  planning_hmi_info->ldw_output_info.ldw_right_warning =
-      lkas_info->get_ldw_right_warning_info();
-  // HMI for ldp
-  planning_hmi_info->ldp_output_info.ldp_state =
-      lkas_info->get_ldp_state_info();
-  planning_hmi_info->ldp_output_info.ldp_left_intervention_flag =
-      lkas_info->get_ldp_left_intervention_flag_info();
-  planning_hmi_info->ldp_output_info.ldp_right_intervention_flag =
-      lkas_info->get_ldp_right_intervention_flag_info();
-  // HMI for elk
-  planning_hmi_info->elk_output_info.elk_state =
-      lkas_info->get_elk_state_info();
-  planning_hmi_info->elk_output_info.elk_left_intervention_flag =
-      lkas_info->get_elk_left_intervention_flag_info();
-  planning_hmi_info->elk_output_info.elk_right_intervention_flag =
-      lkas_info->get_elk_right_intervention_flag_info();
-  // HMI for tsr
-  const auto &tsr_info =
-      session_.mutable_planning_context()->traffic_sign_recognition_function();
-  planning_hmi_info->tsr_output_info.tsr_state = tsr_info->get_tsr_state_info();
-  planning_hmi_info->tsr_output_info.tsr_warning =
-      tsr_info->get_tsr_warning_info();
-  planning_hmi_info->tsr_output_info.tsr_speed_limit =
-      tsr_info->get_tsr_speed_limit_info();
-  // HMI for ihc
-  const auto &ihc_info = session_.mutable_planning_context()
-                             ->intelligent_headlight_control_function();
-  planning_hmi_info->ihc_output_info.ihc_state = ihc_info->get_ihc_state_info();
-  planning_hmi_info->ihc_output_info.ihc_request =
-      ihc_info->get_ihc_request_info();
-  planning_hmi_info->ihc_output_info.ihc_request_status =
-      ihc_info->get_ihc_request_status_info();
-
   // HMI for alc
   auto alc_output_pb = &(planning_hmi_info->alc_output_info);
+
   iflyauto::strcpy_array(alc_output_pb->lc_request,
                          lateral_output.lc_request.c_str());
 
@@ -546,10 +536,53 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   iflyauto::strcpy_array(alc_output_pb->lc_invalid_reason,
                          lane_change_decider_output.lc_invalid_reason.c_str());
+
   iflyauto::strcpy_array(
       alc_output_pb->lc_back_reason,
       lane_change_decider_output.lc_back_invalid_reason.c_str());
 
+  /*new adas*/
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  planning_hmi_info->ldw_output_info.ldw_state =
+      GetContext.get_output_info()->ldw_output_info_.ldw_state_;
+  planning_hmi_info->ldw_output_info.ldw_left_warning =
+      GetContext.get_output_info()->ldw_output_info_.ldw_left_warning_;
+  planning_hmi_info->ldw_output_info.ldw_right_warning =
+      GetContext.get_output_info()->ldw_output_info_.ldw_right_warning_;
+  // HMI for ldp
+  planning_hmi_info->ldp_output_info.ldp_state =
+      GetContext.get_output_info()->ldp_output_info_.ldp_state_;
+  planning_hmi_info->ldp_output_info.ldp_left_intervention_flag =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_left_intervention_flag_;
+  planning_hmi_info->ldp_output_info.ldp_right_intervention_flag =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_right_intervention_flag_;
+  // HMI for elk
+  planning_hmi_info->elk_output_info.elk_state =
+      GetContext.get_output_info()->elk_output_info_.elk_state_;
+  planning_hmi_info->elk_output_info.elk_left_intervention_flag =
+      GetContext.get_output_info()
+          ->elk_output_info_.elk_left_intervention_flag_;
+  planning_hmi_info->elk_output_info.elk_right_intervention_flag =
+      GetContext.get_output_info()
+          ->elk_output_info_.elk_right_intervention_flag_;
+
+  // HMI for ihc
+
+  // planning_hmi_info->ihc_output_info.ihc_state =
+  // GetContext.get_output_info()->tsr_output_info_.tsr_state_;
+  // planning_hmi_info->ihc_output_info.ihc_request =
+  //     ihc_info->get_ihc_request_info();
+  // planning_hmi_info->ihc_output_info.ihc_request_status =
+  //     ihc_info->get_ihc_request_status_info();
+  // HMI for tsr
+  planning_hmi_info->tsr_output_info.tsr_state =
+      GetContext.get_output_info()->tsr_output_info_.tsr_state_;
+  planning_hmi_info->tsr_output_info.tsr_warning =
+      GetContext.get_output_info()->tsr_output_info_.tsr_warning_;
+  planning_hmi_info->tsr_output_info.tsr_speed_limit =
+      GetContext.get_output_info()->tsr_output_info_.tsr_speed_limit_;
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
   const auto &cipv_info =
@@ -679,6 +712,10 @@ void PlanningScheduler::FillPlanningHmiInfo(
     }
   }
 
+  JSON_DEBUG_VALUE("planning_hmi_ldw_state", (int)planning_hmi_info->ldw_output_info.ldw_state);
+  JSON_DEBUG_VALUE("planning_hmi_ldp_state", (int)planning_hmi_info->ldp_output_info.ldp_state);
+  JSON_DEBUG_VALUE("planning_hmi_elk_state", (int)planning_hmi_info->elk_output_info.elk_state);
+
   return;
 }
 
@@ -744,21 +781,6 @@ void PlanningScheduler::InitSccFunction() {
   auto mrc_condition =
       std::make_shared<MrcCondition>(config_builder, &session_);
   session_.mutable_planning_context()->set_mrc_condition(mrc_condition);
-
-  auto lane_keep_assit = std::make_shared<LaneKeepAssistManager>(&session_);
-  session_.mutable_planning_context()->set_lane_keep_assit_function(
-      lane_keep_assit);
-
-  auto intelligent_headlight_control =
-      std::make_shared<IntelligentHeadlightControl>(&session_);
-  session_.mutable_planning_context()
-      ->set_intelligent_headlight_control_function(
-          intelligent_headlight_control);
-
-  auto traffic_sign_recognition =
-      std::make_shared<TrafficSignRecognition>(&session_);
-  session_.mutable_planning_context()->set_traffic_sign_recognition_function(
-      traffic_sign_recognition);
 }
 
 void PlanningScheduler::interpolate_with_last_trajectory_points() {

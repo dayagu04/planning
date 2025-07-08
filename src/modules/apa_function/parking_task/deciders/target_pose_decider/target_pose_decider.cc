@@ -50,22 +50,32 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
 
     // avoid limit error
-    if (virtual_tar_x > slot_.processed_corner_coord_local_.pt_01_mid.x() -
-                            param.wheel_base - 0.168) {
+    if (virtual_tar_x >
+        slot_.processed_corner_coord_local_.pt_01_mid.x() - 0.68) {
       slot_.limiter_.valid = false;
     }
   }
   if (!slot_.limiter_.valid) {
     virtual_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() +
                     param.terminal_target_x;
+
+    // park in the middle of the slot
+    const double mid_ego_x =
+        (slot_.processed_corner_coord_local_.pt_01_mid.x() -
+         slot_.processed_corner_coord_local_.pt_23_mid.x()) *
+            0.5 -
+        (0.5 * param.car_length - param.rear_overhanging);
+
+    virtual_tar_x = std::max(virtual_tar_x, mid_ego_x);
   }
 
   // If the limiter is too far back or the slot is too long,  can combine the
   // front corner information of slot
-  virtual_tar_x = std::max(virtual_tar_x,
-                           slot_.processed_corner_coord_local_.pt_01_mid.x() -
-                               param.limiter_length - param.wheel_base -
-                               param.front_overhanging);
+  // virtual_tar_x = std::max(virtual_tar_x,
+  //                          slot_.processed_corner_coord_local_.pt_01_mid.x()
+  //                          -
+  //                              param.limiter_length - param.wheel_base -
+  //                              param.front_overhanging);
 
   geometry_lib::PathPoint tar_pose_local;
   geometry_lib::PathPoint tar_pose_global;
@@ -192,6 +202,15 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     }
     if (result_.exist_target_pose) {
       break;
+    }
+  }
+
+  if (result_.exist_target_pose) {
+    dx = slot_.processed_corner_coord_local_.pt_01_mid.x() -
+         (result_.target_pose_local.pos.x() + param.wheel_base +
+          param.front_overhanging);
+    if (dx < -front_exceed_line_dx) {
+      result_.exist_target_pose = false;
     }
   }
 

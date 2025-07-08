@@ -7,6 +7,7 @@
 #include "apa_obstacle.h"
 #include "apa_obstacle_manager.h"
 #include "math_lib.h"
+#include "obstacle_clear_zone_decider/obstacle_clear_zone_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -103,11 +104,14 @@ class BaseCollisionDetector {
   BaseCollisionDetector() {}
   virtual ~BaseCollisionDetector() = default;
   void Init(const bool fold_mirror_flag);
-  void SetObsManager(const std::shared_ptr<ApaObstacleManager> &obs_manager) {
-    obs_manager_ = obs_manager;
+  void SetObsManager(const std::shared_ptr<ApaObstacleManager> &obs_manager_ptr) {
+    obs_manager_ptr_ = obs_manager_ptr;
   };
   void SetSampleDs(const double sample_ds) { sample_ds_ = sample_ds; }
   void UpdateSafeBuffer(const double lat_buffer, const double lon_buffer);
+
+  void UpdateObsClearZone(const std::vector<Eigen::Vector2d> &pt_vec);
+  const bool IsPoseInClearZone(const geometry_lib::PathPoint &pose);
 
   const geometry_lib::RectangleBound CalCarRectangleBound(
       const geometry_lib::PathPoint &current_pose);
@@ -115,6 +119,10 @@ class BaseCollisionDetector {
   static const bool CheckObsMovementTypeFeasible(
       const ApaObsMovementType obs_type,
       const ApaObsMovementType obs_type_request);
+
+  const std::vector<cdl::AABB> &GetBoxVec() const {
+    return obs_clear_zone_decider_.GetBoxVec();
+  }
 
  protected:
   // 需要的原始自车参数顶点坐标 基于自车坐标系 逆时针旋转
@@ -154,7 +162,9 @@ class BaseCollisionDetector {
   double lon_buffer_{0.};
   std::vector<geometry_lib::PathPoint> path_pt_vec_;
 
-  std::shared_ptr<ApaObstacleManager> obs_manager_;
+  std::shared_ptr<ApaObstacleManager> obs_manager_ptr_;
+
+  ObstacleClearZoneDecider obs_clear_zone_decider_;
 
   ColResult col_res_;
 

@@ -225,7 +225,9 @@ void Polygon2d::BuildFromPoints() {
     }
   }
 
-  // Compute aabox.
+  // Compute aabox and center_point.
+  double s = 0;
+  double l = 0;
   min_x_ = points_[0].x();
   max_x_ = points_[0].x();
   min_y_ = points_[0].y();
@@ -235,7 +237,11 @@ void Polygon2d::BuildFromPoints() {
     max_x_ = std::max(max_x_, point.x());
     min_y_ = std::min(min_y_, point.y());
     max_y_ = std::max(max_y_, point.y());
+    s += point.x();
+    l += point.y();
   }
+  center_point_.set_x(s / num_points_);
+  center_point_.set_y(l / num_points_);
 }
 
 bool Polygon2d::ComputeConvexHull(const std::vector<Vec2d> &points,
@@ -638,7 +644,9 @@ void Polygon2d::RotateAndTranslate(const Vec2d &rotate_center,
     line_segments_.emplace_back(points_[i], points_[Next(i)]);
   }
 
-  // update aabox.
+  // update aabox and center_point.
+  double s = 0;
+  double l = 0;
   min_x_ = points_[0].x();
   max_x_ = points_[0].x();
   min_y_ = points_[0].y();
@@ -648,7 +656,11 @@ void Polygon2d::RotateAndTranslate(const Vec2d &rotate_center,
     max_x_ = std::max(max_x_, point.x());
     min_y_ = std::min(min_y_, point.y());
     max_y_ = std::max(max_y_, point.y());
+    s += point.x();
+    l += point.y();
   }
+  center_point_.set_x(s / num_points_);
+  center_point_.set_y(l / num_points_);
 }
 
 }  // namespace planning_math

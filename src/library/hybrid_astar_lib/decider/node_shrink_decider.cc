@@ -1,9 +1,12 @@
 #include "node_shrink_decider.h"
+
 #include <algorithm>
 #include <cmath>
 
 #include "astar_decider.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
+#include "log_glog.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "utils_math.h"
@@ -31,8 +34,20 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
     ShrinkChildrenByHeadingForHeadIn();
   }
 
-  x_bound_.upper = XYbounds.x_max;
-  x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
+  constexpr float kXBoundLowerForHeadOut = 1.0f;
+
+  switch (park_dir) {
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      x_bound_.upper = 12.0f;
+      x_bound_.lower = kXBoundLowerForHeadOut;
+      break;
+    default:
+      x_bound_.upper = XYbounds.x_max;
+      x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
+      break;
+  }
 
   return;
 }
@@ -148,6 +163,33 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
   return false;
 }
+
+bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
+                                                   const Node3d *child) {
+  if (request.direction_request != ParkingVehDirection::HEAD_OUT_TO_LEFT &&
+      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+    return false;
+  }
+
+  constexpr float ANGLE_THRESHOLD_DEG = 15.0f;
+
+  // 计算角度并转换为度数
+  const float heading_deg = child->GetPhi() * 180.0f / static_cast<float>(M_PI);
+
+  // 检查是否为前进方向
+  const bool is_forward = child->IsForward();
+
+  switch (request.direction_request) {
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      return is_forward && heading_deg < -ANGLE_THRESHOLD_DEG;
+
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      return is_forward && heading_deg > ANGLE_THRESHOLD_DEG;
+
+    default:
+      return false;
+  }
+};
 
 const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
                                              const Node3d *old_node) const {

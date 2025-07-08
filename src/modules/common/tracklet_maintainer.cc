@@ -1950,7 +1950,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double lat_safety_buffer = config.lat_safety_buffer;
   double oversize_veh_addition_buffer = config.oversize_veh_addition_buffer;
   double traffic_cone_thr = config.traffic_cone_thr;
-  double static_obs_buffer = config.static_obs_buffer;
+  double static_obs_buffer = config.large_static_obs_buffer;
   double near_car_hysteresis = config.near_car_hysteresis;
   double in_range_v = config.in_range_v;
   double in_range_v_hysteresis = config.in_range_v_hysteresis;
@@ -2089,31 +2089,31 @@ bool TrackletMaintainer::is_potential_avoiding_car(
             (borrow_bicycle_lane && item.d_max_cpath > 0 &&
              item.d_min_cpath < 0 && item.v_lead < 0.5);
 
-        double d_max_cpath_recursion = item.d_max_cpath;
-        double d_min_cpath_recursion = item.d_min_cpath;
+        double d_max_cpath_updated = item.d_max_cpath;
+        double d_min_cpath_updated= item.d_min_cpath;
         std::array<double, 3> x_v_lat{-0.6, -0.4, -0.2};
         std::array<double, 3> f_times{10, 5, 1};
         double times = interp(item.v_lat, x_v_lat, f_times);
         if (item.d_max_cpath < 0) {
-          d_max_cpath_recursion = item.d_max_cpath - item.v_lat * 0.1 * times;
+          d_max_cpath_updated = item.d_max_cpath - item.v_lat * 0.1 * times;
         } else if (item.d_min_cpath > 0) {
-          d_min_cpath_recursion = item.d_min_cpath + item.v_lat * 0.1 * times;
+          d_min_cpath_updated= item.d_min_cpath + item.v_lat * 0.1 * times;
         }
 
         bool can_avoid =
-            (d_min_cpath_recursion >
+            (d_min_cpath_updated>
              std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
                       1.8)) ||
-            (d_max_cpath_recursion <
+            (d_max_cpath_updated <
              std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
                       -1.8)) ||
             (dist_rblane > 0 &&
              //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
              //    borrow_bicycle_lane && item.v_lead < 0.2) ||
              item.is_static &&
-             ((d_min_cpath_recursion >
+             ((d_min_cpath_updated>
                (ego_car_width + static_obs_buffer) - lane_width / 2) ||
-              (d_max_cpath_recursion <
+              (d_max_cpath_updated <
                lane_width / 2 - (ego_car_width + static_obs_buffer))));
 
         if (is_need_avoid && !can_avoid) {

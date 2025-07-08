@@ -20,7 +20,7 @@ ParkingTaskInterface::ParkingTaskInterface(
       obs_manager_ptr, col_det_interface_ptr);
 
   parking_stop_decider_ptr_ = std::make_shared<ParkingStopDecider>(
-      col_det_interface_ptr, measure_data_ptr);
+      col_det_interface_ptr, measure_data_ptr, obs_manager_ptr);
 
   geometry_perpendicular_tail_in_path_generator_ptr_ =
       std::make_shared<PerpendicularTailInPathGenerator>(col_det_interface_ptr);

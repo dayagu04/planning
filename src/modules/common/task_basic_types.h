@@ -52,6 +52,7 @@ enum class BoundType {
   PARKING_SPACE,
   TRAFFIC_LIGHT,
   DESTINATION,
+  LOW_PRIORITY_AGENT,
 };
 
 struct BoundInfo {

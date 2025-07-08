@@ -2,10 +2,12 @@
 #define __HYBRID_ASTAR_PARK_H__
 
 #include <cstddef>
+
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
 #include "narrow_space_decider.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "src/modules/apa_function/parking_scenario/perpendicular/head_out/perpendicular_head_out_scenario.h"
 #include "virtual_wall_decider.h"
 
 namespace planning {
@@ -13,8 +15,7 @@ namespace apa_planner {
 
 // TODO: 默认几何规划无解的场景，就是狭窄场景，调用hybrid astar即可.
 // 后续需要在普通场景中，调用A star.
-// 后续需要普通场景优先调用A星时，再删除narrow space
-// 场景. 直接在正常场景中调用混合A星算法.
+// 后续需要普通场景优先调用A星时，再删除narrow space场景,直接在正常场景中调用混合A星算法
 class NarrowSpaceScenario : public ParkingScenario {
  public:
   NarrowSpaceScenario() = default;
@@ -46,6 +47,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckParallelSlotFinished();
 
+  const bool CheckHeadOutFinished();
+
   virtual void ExcutePathPlanningTask() override;
 
   virtual void Log() const override;
@@ -55,6 +58,9 @@ class NarrowSpaceScenario : public ParkingScenario {
   virtual const bool GenObstacles() override;
 
   virtual const uint8_t PathPlanOnce() override;
+
+  const PerpendicularHeadOutScenario::SlotObsType CalSlotObsType(
+      const Eigen::Vector2d& obs_slot);
 
   const std::string GetPlanReason(const uint8_t type);
 
@@ -97,6 +103,12 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool UpdateVerticalSlotInfo();
 
+  const bool UpdateVerticalOutSlotInfo();
+
+  const bool CheckSegCompleted();
+
+  const bool CheckUssStucked();
+
   void PathShrinkBySlotLimiter();
 
   void PathExpansionBySlotLimiter();
@@ -127,6 +139,10 @@ class NarrowSpaceScenario : public ParkingScenario {
   // check path replan by slot pose change
   const bool CheckDynamicUpdate() override;
 
+  const bool CheckDynamicHeadOut();
+
+  const bool CheckDynamicParkingIn();
+
   void FillPlanningReason(AstarRequest& cur_request);
 
   void FillGearRequest(const bool is_scenario_try, AstarRequest& cur_request);
@@ -143,6 +159,10 @@ class NarrowSpaceScenario : public ParkingScenario {
   // offset to slot center.
   double lateral_offset_;
   double lon_offset_;
+
+  double current_path_last_heading_;
+  bool dynamic_flag_head_out_;
+  size_t count_frame_from_last_dynamic_;
 
   // 一个车位泊车中，通道虚拟墙只能增长，不能缩减.
   // 如果根据车辆位置去缩减，导致2次规划之间路径差异太大.

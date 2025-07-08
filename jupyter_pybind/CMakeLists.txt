@@ -196,7 +196,14 @@ target_link_libraries(sample_poly_speed_adjust_decider_py PRIVATE
   modules_context
   modules_tasks
   legacy_c_interface)
-
+  pybind11_add_module(dp_path_decider_py MODULE src/dp_road_pybind.cc)
+  target_link_libraries(dp_path_decider_py PRIVATE
+    autoplt
+    modules
+    modules_common
+    modules_context
+    modules_tasks
+    legacy_c_interface)
 pybind11_add_module(gap_selector_py MODULE src/gap_selector_pybind.cc)
 target_link_libraries(gap_selector_py PRIVATE
   autoplt
@@ -208,6 +215,22 @@ target_link_libraries(gap_selector_py PRIVATE
 
 pybind11_add_module(hybrid_astar_py MODULE src/hybrid_astar_path_generator_pybind.cc)
 target_link_libraries(hybrid_astar_py PRIVATE
+  autoplt
+  ad_common
+  modules
+  modules_apa_function
+  modules_common
+  modules_context
+  modules_tasks
+  hybrid_astar_lib
+  reeds_shepp
+  occupancy_grid_map
+  ${OpenCV_LIBRARIES}
+  spiral
+  )
+
+pybind11_add_module(hybrid_astar_out_py MODULE src/hybrid_astar_out_path_generator_pybind.cc)
+target_link_libraries(hybrid_astar_out_py PRIVATE
   autoplt
   ad_common
   modules
@@ -295,8 +318,8 @@ target_link_libraries(spiral_py PRIVATE
 )
 
 
-pybind11_add_module(dp_speed_optimizer_py MODULE src/dp_speed_optimizer_pybind.cc)
-target_link_libraries(dp_speed_optimizer_py PRIVATE
+pybind11_add_module(apa_speed_optimizer_py MODULE src/apa_speed_optimizer_pybind.cc)
+target_link_libraries(apa_speed_optimizer_py PRIVATE
   autoplt
   ad_common
   modules

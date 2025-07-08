@@ -464,8 +464,9 @@ int RULocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
   return 1;
 }
 
-int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
-                            const Pose2D &global_pose) {
+void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
+                             const Polygon2D *poly_local,
+                             const Pose2D &global_pose) {
   int i;
 
   Transform2d tf;
@@ -483,7 +484,7 @@ int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
 
   tf.ULFLocalPointToGlobal(&poly_global->center_pt, poly_local->center_pt);
 
-  return 0;
+  return;
 }
 
 int RULocalPolygonToGlobalFast(Polygon2D *poly_global,
@@ -660,8 +661,9 @@ int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
   return 0;
 }
 
-int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
-                            const Transform2d &tf) {
+void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
+                             const Polygon2D *poly_local,
+                             const Transform2d &tf) {
   int i;
 
   for (i = 0; i < poly_local->vertex_num; i++) {
@@ -676,7 +678,7 @@ int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
 
   tf.ULFLocalPointToGlobal(&poly_global->center_pt, poly_local->center_pt);
 
-  return 0;
+  return;
 }
 
 void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
@@ -741,6 +743,7 @@ void GetCompactPolygonByParam(const float lat_buffer, const float lon_buffer,
 
 void GenerateVehCompactPolygon(const float lateral_safe_buffer,
                                const float lon_safe_buffer,
+                               const float aabb_buffer,
                                PolygonFootPrint *foot_print) {
   GetCompactPolygonByParam(lateral_safe_buffer, lon_safe_buffer,
                            &foot_print->body);
@@ -761,7 +764,7 @@ void GenerateVehCompactPolygon(const float lateral_safe_buffer,
   GetUpLeftCoordinatePolygonByParam(
       &foot_print->max_polygon, config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + lateral_safe_buffer);
+      config.max_car_width / 2.0 + aabb_buffer);
 
   return;
 }
@@ -860,6 +863,23 @@ void GeneratePolygonByPoints(const std::vector<Eigen::Vector2f> &points,
   UpdatePolygonValue(polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
   polygon->min_tangent_radius = 0;
 
+  return;
+}
+
+void FootPrintLocalToGlobal(const Transform2d &tf,
+                            const PolygonFootPrint *local_foot_print,
+                            PolygonFootPrint *global_foot_print) {
+  ULFLocalPolygonToGlobal(&global_foot_print->max_polygon,
+                          &local_foot_print->max_polygon, tf);
+
+  ULFLocalPolygonToGlobal(&global_foot_print->body, &local_foot_print->body,
+                          tf);
+
+  ULFLocalPolygonToGlobal(&global_foot_print->mirror_left,
+                          &local_foot_print->mirror_left, tf);
+
+  ULFLocalPolygonToGlobal(&global_foot_print->mirror_right,
+                          &local_foot_print->mirror_right, tf);
   return;
 }
 

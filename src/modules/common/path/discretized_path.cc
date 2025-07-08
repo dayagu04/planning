@@ -1,9 +1,13 @@
 #include "path/discretized_path.h"
 
 #include <algorithm>
+#include <cmath>
+
 #include "assert.h"
 #include "math/line_segment2d.h"
 #include "math/linear_interpolation.h"
+#include "math/vec2d.h"
+#include "utils/path_point.h"
 
 namespace planning {
 using namespace planning_math;
@@ -19,7 +23,10 @@ double DiscretizedPath::Length() const {
 }
 
 PathPoint DiscretizedPath::Evaluate(const double path_s) const {
-  assert(!empty());
+  if (empty()) {
+    return PathPoint();
+  }
+
   auto it_lower = QueryLowerBound(path_s);
   if (it_lower == begin()) {
     return front();
@@ -88,7 +95,10 @@ std::vector<PathPoint>::const_iterator DiscretizedPath::QueryLowerBound(
 }
 
 PathPoint DiscretizedPath::EvaluateReverse(const double path_s) const {
-  assert(!empty());
+  if (empty()) {
+    return PathPoint();
+  }
+
   auto it_upper = QueryUpperBound(path_s);
   if (it_upper == begin()) {
     return front();
@@ -98,6 +108,35 @@ PathPoint DiscretizedPath::EvaluateReverse(const double path_s) const {
   }
   return planning_math::InterpolateUsingLinearApproximation(*(it_upper - 1),
                                                             *it_upper, path_s);
+}
+
+planning_math::PathPoint DiscretizedPath::EvaluateOvershootPoint(
+    const double path_s, const bool is_forward_gear) const {
+  if (empty()) {
+    return planning_math::PathPoint();
+  }
+
+  double theta = back().theta();
+  if (!is_forward_gear) {
+    theta += M_PI;
+  }
+
+  planning_math::Vec2d base_vector =
+      planning_math::Vec2d::CreateUnitVec2d(theta);
+  planning_math::Vec2d end = back();
+
+  planning_math::Vec2d evaluate_point =
+      end + base_vector * (path_s - back().s());
+
+  planning_math::PathPoint point;
+  point.set_s(path_s);
+  point.set_x(evaluate_point.x());
+  point.set_y(evaluate_point.y());
+  point.set_theta(back().theta());
+  point.set_kappa(0);
+  point.set_dkappa(0);
+
+  return point;
 }
 
 std::vector<PathPoint>::const_iterator DiscretizedPath::QueryUpperBound(

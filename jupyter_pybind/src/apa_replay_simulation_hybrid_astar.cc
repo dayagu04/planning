@@ -1,4 +1,5 @@
 #include <bits/stdint-intn.h>
+#include <math.h>
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -28,6 +29,7 @@
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
 #include "ifly_localization_c.h"
@@ -68,11 +70,11 @@
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "transform2d.h"
-#include "struct_msgs/UssPdcIccSendDataType.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -140,6 +142,9 @@ int Init() {
 
   global_astar_path_.clear();
 
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug_->Clear();
+
   return 0;
 }
 
@@ -160,6 +165,8 @@ void UpdateFootprintCircle(const AstarPathGear gear,
   if (model == nullptr) {
     return;
   }
+
+  model->Init(0.1, 0.1, 0.1);
 
   const FootPrintCircleList circle_footprint =
       model->GetLocalFootPrintCircleByGear(gear);
@@ -196,6 +203,7 @@ int GetPathFromHybridAstar() {
   bool success = false;
   static_rs_path_.clear();
   polynomial_path_.clear();
+  global_astar_path_.clear();
 
   HybridAStarResult result;
 
@@ -210,22 +218,20 @@ int GetPathFromHybridAstar() {
   Pose2D local_position;
   Pose2D global_position;
 
-  if (result.x.size() > 1) {
-    global_astar_path_.clear();
+  if (result.x.size() > 0) {
     for (i = 0; i < result.x.size(); i++) {
       local_position.x = result.x[i];
       local_position.y = result.y[i];
       local_position.theta = result.phi[i];
 
       tf.ULFLocalPoseToGlobal(&global_position, local_position);
-
       global_astar_path_.emplace_back(Eigen::Vector3d(
           global_position.x, global_position.y, global_position.theta));
 
       global_path_s_.emplace_back(result.accumulated_s[i]);
 
       if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
-        static_rs_path_.emplace_back(Eigen::Vector3d(
+        static_rs_path_.push_back(Eigen::Vector3d(
             global_position.x, global_position.y, global_position.theta));
       }
 

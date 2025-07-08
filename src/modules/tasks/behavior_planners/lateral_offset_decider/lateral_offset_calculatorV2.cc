@@ -152,7 +152,8 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   const double ego_width = vehicle_param.max_width;
 
   const double road_avoid_threshold =
-      lane_width_ * 0.5 - config_.nudge_buffer_road_boundary - ego_width * 0.5;
+      std::min(lane_width_ * 0.5 - config_.nudge_buffer_road_boundary - ego_width * 0.5,
+      config_.nudge_lat_offset_threshold);
   const double lane_avoid_threshold =
       std::min(lane_width_ * 0.5 - config_.nudge_buffer_lane_boundary - ego_width * 0.5,
                config_.nudge_lat_offset_threshold);
@@ -401,7 +402,10 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
       // TODO(clren)
       // keep
       avoid_info_.avoid_way = AvoidWay::Center;
-      lateral_offset = ego_frenet_state_.l();
+      lateral_offset =
+          ego_frenet_state_.l() < 0
+              ? std::max(ego_frenet_state_.l(), - avoid_info_.normal_right_avoid_threshold)
+              : std::min(ego_frenet_state_.l(), avoid_info_.normal_left_avoid_threshold);
       avoid_info_.is_use_ego_position = true;
     }
   } else {
@@ -559,7 +563,6 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.max_width * 0.5;
-
   double nearest_l_to_ref =
       fabs(avoid_way == AvoidWay::Left ? avoid_obstacle.min_l_to_ref
                                        : avoid_obstacle.max_l_to_ref);
@@ -568,12 +571,9 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
   if (config_.nudge_value_way) {
     lat_offset = coeff * (lane_width_ - half_ego_width - nearest_l_to_ref) +
                  lat_compensate;
-    if (config_.use_obstacle_prediction_model_in_planning) {
-      lat_offset -= 0.1;
-    }
   } else {
     if (avoid_obstacle.is_passive) {
-      base_distance = 1.0;
+      base_distance -= 0.1;
     }
 
     if (lateral_offset_decider::IsTruck(avoid_obstacle)) {
@@ -582,11 +582,6 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
       base_distance += 0.1;
     } else if (lateral_offset_decider::IsCone(avoid_obstacle)) {
       base_distance = 0.7;
-    }
-
-    if (config_.use_obstacle_prediction_model_in_planning &&
-        !lateral_offset_decider::IsCone(avoid_obstacle)) {
-      base_distance -= 0.1;
     }
 
     const double pred_ts =
@@ -1248,6 +1243,29 @@ void LateralOffsetCalculatorV2::Reset() {
   avoid_id_ = -1;
   SaveDebugInfo();
   // TODO(clren)
+}
+
+void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
+  avoid_info_.Reset();
+  avoid_id_ = -1;
+
+  // 定义需要重置的Hysteresis类型
+  std::vector<HysteresisType> types_to_reset = {
+    HysteresisType::EnoughSpaceHysteresis,
+    HysteresisType::AvoidWaySelect,
+    HysteresisType::IsObstacleConsideredHysteresis,
+    HysteresisType::IsInConsiderLateralRangeHysteresis
+  };
+  for (const auto& type : types_to_reset) {
+    auto it = max_opposite_offset_hysteresis_maps_.find(type);
+    if (it != max_opposite_offset_hysteresis_maps_.end()) {
+      std::visit([](auto& map) {
+          map.clear();
+      }, it->second);
+    }
+  }
+  SaveDebugInfo();
+  // TODO(huwang5)
 }
 
 void LateralOffsetCalculatorV2::SaveDebugInfo() {

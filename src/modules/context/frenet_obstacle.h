@@ -49,7 +49,6 @@ class FrenetObstacle {
   const Obstacle* obstacle() const { return obstacle_ptr_; }
   double velocity() const { return obstacle_ptr_->velocity(); }
   const bool b_frenet_valid() const { return b_frenet_valid_; }
-
   const bool b_frenet_polygon_sequence_invalid() const {
     return b_frenet_polygon_sequence_invalid_;
   }

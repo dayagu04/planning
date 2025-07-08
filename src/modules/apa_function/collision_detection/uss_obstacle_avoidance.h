@@ -34,7 +34,7 @@ class UssObstacleAvoidance {
         apa_param.GetParam().arc_line_shift_steer_angle_deg;
     double c1 = apa_param.GetParam().c1;
     double detection_distance = apa_param.GetParam().detection_distance;
-    double lat_inflation = apa_param.GetParam().lat_inflation;
+    double lat_inflation = apa_param.GetParam().stop_lat_inflation;
   };
 
   struct RemainDistInfo {

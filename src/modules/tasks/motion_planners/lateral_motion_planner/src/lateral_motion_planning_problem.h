@@ -20,7 +20,7 @@ class LateralMotionPlanningProblem {
   uint8_t Update(const double end_ratio_for_qxy,
                  const double end_ratio_for_qtheta,
                  const double end_ratio_for_qjerk,
-                 const double concerned_start_q_jerk, const double ego_vel,
+                 const double concerned_start_q_jerk,
                  const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
                  planning::common::LateralPlanningInput &planning_input);
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <array>
+#include <vector>
 
 namespace planning {
 
@@ -11,6 +11,7 @@ struct OpenSpaceSafeBuffer {
   // If vehicle is outside slot, need more safe buffer than inside slot;
   // If vehicle's path is circle, need more safe buffer than straight path;
   std::array<float, 3> lat_safe_buffer_outside;
+  std::array<float, 3> head_out_lat_safe_buffer_outside;
   float circle_path_extra_buffer_outside;
 
   // 车位内部的横向安全buffer，需要设定小一些
@@ -54,6 +55,7 @@ struct PlannerOpenSpaceConfig {
   int next_node_num = 10;
   float node_step;
   float perpendicular_slot_node_step;
+  float perpendicular_slot_head_out_node_step;
   float parallel_slot_node_step;
 
   float xy_grid_resolution_inv;

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include "config/basic_type.h"
 #include "lane_borrow_decider.pb.h"
 namespace planning {
 
@@ -25,7 +26,13 @@ enum LaneBorrowFailedReason {
   CLOSE_TO_JUNCTION,
   NEARBY_OBSTACLE_TOO_CLOSE,
   STATIC_AREA_TOO_CLOSE,
-  CENTER_OBSTACLE
+  CENTER_OBSTACLE,
+  TRIGGER_BUT_DP_SEARCH_FAILED,
+  CURRENT_LANE_LOSS,
+  DP_NO_DIRECTION,
+  BORROWDIRECTION_DIFFERENT,
+  TMP_DP_SEARCH_FAILED,
+  CUTIN_RISK
 };
 enum BorrowDirection { NO_BORROW = 0, LEFT_BORROW, RIGHT_BORROW };
 
@@ -38,6 +45,10 @@ struct LaneBorrowDeciderOutput {
   BorrowDirection borrow_direction = NO_BORROW;  // 0--None, 1--left, 2--right
   bool is_in_lane_borrow_status = false;
   std::vector<int> blocked_obs_id;  // block objs and failed
+  bool can_left_borrow = false;
+  bool can_right_borrow = false;
+  CarReferenceInfo dp_path_ref;
+  LaneBorrowStatus lane_borrow_state;
 };
 
 }  // namespace planning

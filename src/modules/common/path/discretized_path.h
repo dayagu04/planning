@@ -21,6 +21,9 @@ class DiscretizedPath : public std::vector<planning_math::PathPoint> {
 
   planning_math::PathPoint EvaluateReverse(const double path_s) const;
 
+  planning_math::PathPoint EvaluateOvershootPoint(
+      const double path_s, const bool is_forward_gear) const;
+
   double QueryMatchedS(const planning_math::PathPoint& path_point) const;
 
  protected:

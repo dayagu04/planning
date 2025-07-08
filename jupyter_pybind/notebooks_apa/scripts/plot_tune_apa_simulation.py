@@ -21,7 +21,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20250507/20250507-16-17-27/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2025-05-07-16-17-27_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20250604/20250604-21-22-36/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2025-06-04-21-22-37_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -45,8 +45,8 @@ fig1, local_view_data = load_local_view_figure_parking()
 
 if plot_speed_graph:
   # plot speed
-  velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
-  pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
+  load_lon_global_data_figure(bag_loader)
+  pans, lon_plan_data = create_lon_plan_figure(fig1)
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
@@ -147,7 +147,7 @@ fig1.patches('y_vec', 'x_vec', source = data_sim_car_predict_traj_path_car_box, 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=3, value=2, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.plan_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "plan_type",min=0, max=1, value=0, step=1)
     self.pybind_state_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "pybind_state",min=0, max=50, value=0, step=1)
@@ -210,6 +210,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     vehicle_type = 'CHERY_T26'
   elif vehicle_type == 2:
     vehicle_type = 'CHERY_E0X'
+  elif vehicle_type == 3:
+    vehicle_type = 'CHERY_M32T'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
   car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)

@@ -173,8 +173,10 @@ class ParkingScenario {
       dynamic_plan_time = 0.0;
       replan_fail_time = 0.0;
       remain_dist_path = 5.01;
+      remain_dist_path_last = 5.01;
       remain_dist_obs = 5.01;
       remain_dist_col_det = 5.01;
+      remain_dist_slot_jump = 5.01;
       vel_target = 1.168;
       car_already_move_dist = 0.0;
       current_path_last_point_heading = 0.0;
@@ -244,10 +246,12 @@ class ParkingScenario {
     double replan_fail_time = 0.0;
     // remain dist for path
     double remain_dist_path = 5.01;
+    double remain_dist_path_last = 5.01;
     // remain dist for obs
     double remain_dist_obs = 5.01;
     // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
+    double remain_dist_slot_jump = 5.01;
     double car_already_move_dist = 0.0;
     double current_path_last_point_heading = 0.0;
     pnc::mathlib::spline x_s_spline;
@@ -294,6 +298,7 @@ class ParkingScenario {
     PATH_PLAN_FAILED,
     PLAN_COUNT_EXCEED_LIMIT,
     DYNAMIC_PATH_NOT_SUPERIOR,
+    NO_TARGET_POSE,
   };
 
  public:
@@ -363,16 +368,18 @@ class ParkingScenario {
   virtual const bool CheckPaused() const;
   virtual const bool CheckPlanSkip() const;
   virtual void SetParkingStatus(uint8_t status);
-  virtual void GenPlanningOutput();
+  virtual void PublishPlanningTraj();
   virtual void GenPlanningHmiOutput();
-  virtual void GenPlanningPath();
+  // No speed planning method.
+  virtual void SetPlanningPath();
+  void SetPlanningTraj();
+
   virtual const double CalRemainDistFromPath();
   virtual const double CalRemainDistFromObs(
-      const double safe_dist = 0.3,
-      const double lat_buffer = apa_param.GetParam().lat_inflation,
-      const double extra_buffer_when_reversing = 0.068,
-      const double dynamic_lat_buffer = 0.368,
-      const double dynamic_lon_buffer = 1.168);
+      const double static_lon_buffer = 0.3,
+      const double static_lat_buffer = apa_param.GetParam().stop_lat_inflation,
+      const double dynamic_lon_buffer = 1.168,
+      const double dynamic_lat_buffer = 0.368);
   virtual const bool PostProcessPath();
 
   // check if need replan
@@ -430,6 +437,8 @@ class ParkingScenario {
 
   // only debug for choosing the best path
   std::vector<pnc::geometry_lib::GeometryPath> perferred_geometry_path_vec_;
+
+  trajectory::Trajectory trajectory_;
 };
 
 }  // namespace apa_planner

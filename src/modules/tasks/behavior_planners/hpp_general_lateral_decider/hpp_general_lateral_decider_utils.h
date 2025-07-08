@@ -7,13 +7,14 @@
 #include "obstacle.h"
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
+#include "obstacle_manager.h"
 
 using namespace planning::planning_math;
 namespace planning {
 namespace hpp_general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
-                                iflyauto::ObjectType type,
+                                const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 HppGeneralLateralDeciderConfig &config);
 
@@ -35,7 +36,7 @@ TrajectoryPoint GetTrajectoryPointAtTime(
 
 bool IsVRU(iflyauto::ObjectType type);
 bool IsCone(iflyauto::ObjectType type);
-bool IsTruck(iflyauto::ObjectType type);
+bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle);
 
 ObstacleBorderInfo GetNearestObstacleBorder(
     const planning_math::Polygon2d &care_polygon, double care_area_s_start,
