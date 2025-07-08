@@ -176,13 +176,13 @@ bool TrafficLightDecider::Execute() {
   if (cur_fsm_state == iflyauto::FunctionalState_ACC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_SCC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY) {
-    auto &ad_info =
-        session_->mutable_planning_context()->mutable_planning_hmi_info()->ad_info;
+    auto &tla_output_info =
+        session_->mutable_planning_context()->mutable_planning_hmi_info()->tla_output_info;
     if (IsRunningRedTFL()) {
-      ad_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
+      tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
     }
     if (IsStayingStillGreenTFL()) {
-      ad_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
+      tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
     }
 
   }
