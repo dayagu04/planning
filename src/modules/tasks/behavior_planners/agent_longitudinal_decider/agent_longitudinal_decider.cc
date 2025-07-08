@@ -604,7 +604,7 @@ void AgentLongitudinalDecider::DeciderCutOutAgent(
   cut_out_agent_count_[cipv_id] =
       is_cut_out ? ++cut_out_agent_count_[cipv_id] : 0;
 
-  constexpr int32_t kSteadyCutOutCheckCount = 3;
+  constexpr int32_t kSteadyCutOutCheckCount = 2;
   constexpr int32_t kSteadyCutOutKeepCount = 4;
   if (cut_out_agent_count_[cipv_id] >= kSteadyCutOutCheckCount) {
     steady_cut_out_agent_count_[cipv_id] = kSteadyCutOutKeepCount;
@@ -691,7 +691,8 @@ bool AgentLongitudinalDecider::CheckCutOutAgent(const agent::Agent& agent) {
                                   &relative_point_l_in_lane)) {
     return false;
   }
-  const double kLateralDiff = is_vru ? agent.width() : 3.0;
+  // const double kLateralDiff = is_vru ? agent.width() : 3.0;
+  const double kLateralDiff = agent.width();
   constexpr double kLongitudinalDiff = 20.0;
   const bool lateral_diff_meet =
       std::fabs(agent_l_in_lane - end_point_l_in_lane) > kLateralDiff;

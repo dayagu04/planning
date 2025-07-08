@@ -3025,7 +3025,7 @@ struct STGraphConfig : public EgoPlanningConfig {
   double bycicle_lon_buffer_m = 0.4;
   double tricycle_lat_buffer_m = 0.4;
   double tricycle_lon_buffer_m = 0.4;
-  double backward_extend_time_s = 2.0;
+  double backward_extend_time_s = 3.0;
   double reverse_vehicle_lat_buffer_m = 0.2;
 };
 
