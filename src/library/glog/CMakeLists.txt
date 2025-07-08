@@ -28,3 +28,12 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   gflags
   pthread
   )
+
+if (ENABLE_MDC_AP_LOG)
+  target_link_libraries(${PROJECT_NAME} PUBLIC
+    iflyauto_log
+  )
+  message("link mdc ap log")
+else()
+  message("unlink mdc ap log")
+endif()
