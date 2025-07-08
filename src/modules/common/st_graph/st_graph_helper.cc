@@ -357,5 +357,9 @@ bool StGraphHelper::IsTimeInRange(double t) const {
   return !(t < time_range.first || t > time_range.second);
 }
 
+const int32 StGraphHelper::GetFirstNeighborYieldAgentId() const {
+  return st_graph_.first_neighbor_yield_agent_id();
+}
+
 }  // namespace speed
 }  // namespace planning
