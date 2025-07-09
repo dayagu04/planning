@@ -20,6 +20,7 @@ constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
 constexpr double kStaticAgentAvoidLimitedSpeed = 8.33;
 constexpr double kDynamicAgentAvoidLimitedSpeed = 5.56;
+constexpr double kMergePointDetectedDistance = 20.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -194,6 +195,15 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
+  if (reference_path_ptr == nullptr) {
+    JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
+    JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
+    auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+    speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns,
+                                           SpeedLimitType::CURVATURE);
+    return;
+  }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
   std::vector<CurvInfo> preview_curv_info_vec;
@@ -307,6 +317,35 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       } else {
         v_target_ramp = speed_limit_config_.straight_ramp_v_limit;
       }
+    } else {
+      ReferencePathPoint detect_merge_front_pnt;
+      double ego_s;
+      const auto &current_lane = virtual_lane_manager->get_current_lane();
+      if (current_lane != nullptr && current_lane->get_reference_path() != nullptr) {
+        ego_s = current_lane->get_reference_path()->get_frenet_ego_state().s();
+      } else {
+        ego_s = -100.0;
+      }
+      if (ego_s > 0 && current_lane->get_reference_path()->get_reference_point_by_lon(
+          ego_s + dis_to_merge + kMergePointDetectedDistance, detect_merge_front_pnt)) {
+        double nearest_s = 0;
+        double nearest_l = 0;
+        double search_distance = 50.0;
+        double max_heading_diff = PI / 4;
+        double detected_heading_angle = detect_merge_front_pnt.path_point.theta();
+        ad_common::math::Vec2d detected_point(detect_merge_front_pnt.path_point.x(), detect_merge_front_pnt.path_point.y());
+        if (environmental_model.get_route_info()->get_sdmap_valid()) {
+          const auto &sd_map = environmental_model.get_route_info()->get_sd_map();
+          const auto segment = sd_map.GetNearestRoadWithHeading(
+            detected_point, search_distance, detected_heading_angle, max_heading_diff,
+            nearest_s, nearest_l);
+          if (segment != nullptr && segment ->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY
+             && segment ->priority() != SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+              v_target_ramp = speed_limit_config_.v_limit_ramp;
+          }
+        }
+      }
+
     }
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
@@ -359,9 +398,14 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   const auto &environmental_model = session_->environmental_model();
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
+  const auto traffic_status = tfl_manager->GetTrafficStatus();
   double dis_tfl = tfl_manager->GetNearestTFLDis();
   if (dis_tfl < kTFLSpeedLimitDis) {
     v_limit_tfl_dis = 55 / 3.6;
+    if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
+      traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
+      v_limit_tfl_dis = 50 / 3.6;
+    }
   }
   if (v_limit_tfl_dis < v_target_) {
     v_target_ = v_limit_tfl_dis;

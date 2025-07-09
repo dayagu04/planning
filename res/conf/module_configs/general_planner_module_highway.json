@@ -730,6 +730,25 @@
         "jerk_negative_upper": -1.0,
         "jerk_negative_speed_upper": 25.0
       },
+      "avoid_agent_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -2.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -2.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+
       "low_speed_follow_acc_traj_table": {
         "traj_table": [
           10.0, 21.0, 35.0
@@ -787,6 +806,24 @@
         "neighbor_target_neighbor_yield_distance": 10.0,
         "neighbor_target_neighbor_overtake_distance": 10.0,
         "neighbor_target_neighbor_limit_velocity": 5.0
+    },
+    "bound_maker": {
+      "cruise_acc_bound_table": {
+        "vel_table": [
+          0.0, 5.0, 10.0, 20.0, 40.0
+        ],
+        "acc_table": [
+          1.5, 0.85, 0.6, 0.5, 0.3
+        ]
+      },
+      "cruise_dec_bound_table": {
+        "vel_table": [
+          0.0, 5.0, 10.0, 20.0, 40.0
+        ],
+        "acc_table": [
+          -2.0, -2.0, -2.0, -2.0, -0.3
+        ]
+      }
     }
 },
 

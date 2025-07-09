@@ -194,6 +194,9 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   const auto &reference_path_ptr = session_->planning_context()
                                 .lane_change_decider_output()
                                 .coarse_planning_info.reference_path;
+  if (reference_path_ptr == nullptr) {
+    return false;
+  }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
   double virtual_obs_dis = std::min(dis_to_stopline + 3.5, dis_to_crosswalk + 1.5);

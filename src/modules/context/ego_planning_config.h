@@ -3542,6 +3542,71 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "kappa_kinematic_param", "jerk_negative_speed_upper");
     }
 
+    {
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_positive_upper");
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_positive_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_positive_speed_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_positive_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_positive_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_positive_speed_upper");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_negative_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_negative_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_negative_speed_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_negative_upper");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.acc_negative_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "acc_negative_speed_upper");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_positive_upper");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_positive_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_positive_speed_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_positive_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_positive_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_positive_speed_upper");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_negative_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_negative_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_negative_speed_lower");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_negative_upper");
+
+      ReadItem<double>(json, avoid_agent_kinematic_param.jerk_negative_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "avoid_agent_kinematic_param", "jerk_negative_speed_upper");
+    }
+
     //  kappa_speed_limit_table
     {
       read_json_vec(json,
@@ -3586,6 +3651,31 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                                              "low_speed_follow_jerk_traj_table",
                                              "jerk_table"},
                     low_speed_follow_jerk_traj_table.jerk_table);
+    }
+
+    // loading cruise acc bound config values
+    {
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "bound_maker",
+                                             "cruise_acc_bound_table",
+                                             "vel_table"},
+                                             cruise_acc_bound_table.vel_table);
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "bound_maker",
+                                             "cruise_acc_bound_table",
+                                             "acc_table"},
+                                             cruise_acc_bound_table.acc_table);
+
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "bound_maker",
+                                             "cruise_dec_bound_table",
+                                             "vel_table"},
+                                             cruise_dec_bound_table.vel_table);
+      read_json_vec(json,
+                    std::vector<std::string>{"speed_planning", "bound_maker",
+                                             "cruise_dec_bound_table",
+                                             "acc_table"},
+                                             cruise_dec_bound_table.acc_table);
     }
 
     ReadItem<double>(json, lane_change_upper_speed_limit_kph, "speed_planning",
@@ -3728,8 +3818,19 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     std::vector<double> jerk_table{2.50, 2.20, 2.00};
   };
 
+  struct CruiseACCBoundTable {
+    std::vector<double> vel_table{0.0, 5.0, 10.0, 20.0, 40.0};
+    std::vector<double> acc_table{1.0, 0.85, 0.6, 0.5, 0.3};
+  };
+
+  struct CruiseDECBoundTable {
+    std::vector<double> vel_table{0.0, 5.0, 10.0, 20.0, 40.0};
+    std::vector<double> acc_table{-1.5, -1.5, -1.5, -1.0, -0.3};
+  };
+
   KinematicParam comfort_kinematic_param;
   KinematicParam kappa_kinematic_param;
+  KinematicParam avoid_agent_kinematic_param;
 
   SpeedPlanningBound speed_planning_bound;
 
@@ -3738,6 +3839,9 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   LowSpeedFollowAccTrajTable low_speed_follow_acc_traj_table;
   LowSpeedFollowJerkTrajTable low_speed_follow_jerk_traj_table;
+
+  CruiseACCBoundTable cruise_acc_bound_table;
+  CruiseDECBoundTable cruise_dec_bound_table;
 
   // weight maker
   struct WeightConfig {

@@ -110,8 +110,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   acc_upper_bound_.resize(plan_points_num_);
   acc_lower_bound_.resize(plan_points_num_);
   // cruise acc target
-  acc_target.first = interp(v_ego, _A_CRUISE_MIN_BP, _A_CRUISE_MIN_V);
-  acc_target.second = interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+  acc_target.first = interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table, speed_planning_config_.cruise_dec_bound_table.acc_table);
+  acc_target.second = interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table, speed_planning_config_.cruise_acc_bound_table.acc_table);
 
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   const auto& agent_headway_decider_output =
@@ -126,7 +126,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     if (upper_bound_infos_[i].agent_id == -1) {
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
       acc_upper_bound_[i] =
-          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+          std::fmax(init_lon_state_[2], acc_target.second);
       continue;
     }
 
@@ -149,11 +149,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
     acc_upper_bound_[i] =
         std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
-    // only allow acc upper bound over 1.0 in start state
-    if (start_stop_decider_output.ego_start_stop_info().state() !=
-        common::StartStopInfo::START) {
-      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
-    }
+
   }
 }
 

@@ -22,9 +22,10 @@ constexpr int32_t kVirtualVRUObstacleBaseId = 10000;
 constexpr double kVirtualVRUObstacleLength = 5.0;
 constexpr double kVirtualVRUObstacleWidth = 2.0;
 constexpr double kVRUDangerWidthToReference = 1.5;
+constexpr double kVRUReversePredMinLThred = 1.9;
 constexpr double kEgoPassVRUSafeLength = 3.0;
 const int32_t kNumNots = 25;
-const double kStepTime = 0.1;
+const double kStepTime = 0.2;
 }  // namespace
 
 CrossingAgentDecider::CrossingAgentDecider(
@@ -207,6 +208,7 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
   double vru_danger_zone_pred_point_rel_time =
       std::numeric_limits<double>::max();
   double vru_danger_zone_pred_point_s = std::numeric_limits<double>::max();
+  bool is_vru_entering_danger_zone = false;
   const auto& first_point = agent->trajectories().front().at(0);
   const double trajectory_start_time = first_point.absolute_time();
   for (int32_t i = 0; i <= kNumNots; ++i) {
@@ -221,12 +223,14 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
     if (std::fabs(pred_point_l) < kVRUDangerWidthToReference) {
       vru_danger_zone_pred_point_rel_time = releative_t;
       vru_danger_zone_pred_point_s = pred_point_s;
+      is_vru_entering_danger_zone = true;
       break;
     }
   }
 
-  if (v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_current_s + kEgoPassVRUSafeLength &&
-      v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength) {
+  if (!is_vru_entering_danger_zone || (is_vru_entering_danger_zone && 
+      v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_current_s + kEgoPassVRUSafeLength &&
+      v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength)) {
     return false;
   }
 
@@ -638,6 +642,11 @@ bool CrossingAgentDecider::CalcDesiredVirtualObsS(
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto& init_point = ego_state_mgr->planning_init_point();
 
+  double ego_s, ego_l;
+  if (!ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    return false;
+  }
+
   if (agent->trajectories().empty()) {
     return false;
   }
@@ -648,7 +657,7 @@ bool CrossingAgentDecider::CalcDesiredVirtualObsS(
   const double trajectory_start_time =
       vru_pred_trajectory.front().absolute_time();
   double intersection_point_s = -1.0;
-  double min_pred_l = std::numeric_limits<double>::max();
+  double min_pred_l = kVRUReversePredMinLThred;
   for (int32_t i = 0; i <= kNumNots; ++i) {
     double releative_t = i * kStepTime;
     double absolute_t = trajectory_start_time + releative_t;
@@ -667,7 +676,7 @@ bool CrossingAgentDecider::CalcDesiredVirtualObsS(
   }
   const double ego_preview_distance =
       std::fmax(1.0, init_point.v) * kDesiredDistancePreviewTimeThd;
-  if (intersection_point_s < ego_preview_distance) {
+  if (intersection_point_s < ego_preview_distance + ego_s) {
     return false;
   }
 
