@@ -1502,6 +1502,12 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   // Step 5) calculate soft_bound, hard_bound
   Polygon2d obstacle_sl_polygon;
   bool ok = false;
+  bool is_care_reverse_ignore_obj = false;
+  // if (obstacle->obstacle()->is_reverse() && !is_in_lane_borrow_status) {
+  //   // 对向ignore的障碍物按当前位置避让, s用预测，l按照当前位置
+  //   is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+  //   is_care_reverse_ignore_obj = true;
+  // }
   ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
 
   if (!ok) {
@@ -1553,7 +1559,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
         obstacle, in_intersection,
         is_nudge_left, overlap_min_y, overlap_max_y,
         is_side_obstacle, extra_lane_type_decrease_buffer,
-        is_update_hard_bound, lane_width);
+        is_update_hard_bound, lane_width, is_care_reverse_ignore_obj);
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -1588,7 +1594,7 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
     const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
     bool is_nudge_left, double overlap_min_y, double overlap_max_y,
     bool is_side_obstacle, double extra_lane_type_decrease_buffer,
-    bool is_update_hard_bound, double lane_width) {
+    bool is_update_hard_bound, double lane_width, bool is_care_reverse_ignore_obj) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lane_borrow_decider_output =
@@ -1620,6 +1626,17 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
         lat_buf_dis = std::fmin(lat_buf_dis, config_.side_obstacle_lat_buffer_limit);
       }
     }
+  }
+  if (is_care_reverse_ignore_obj) {
+    double intrusion_distance = DBL_MAX;
+    if (obstacle->d_max_cpath() < 0) {
+      intrusion_distance =  lane_width * 0.5 - std::fabs(obstacle->d_max_cpath());
+    } else if (obstacle->d_min_cpath() > 0) {
+      intrusion_distance =  lane_width * 0.5 - obstacle->d_min_cpath();
+    }
+    double extra_reverse_obj_decrease_buffer = interp(intrusion_distance, config_.reverse_obstacle_intrusion_distance_bp,
+                                config_.extra_reverse_obstacle_decrease_buffer);
+    lat_buf_dis = std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, 0.);
   }
   return lat_buf_dis;
 }
@@ -2033,8 +2050,19 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   Polygon2d trusted_predicted_sl_polygon;
   bool has_trusted_predicted_polygon = false;
-  has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
-  int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
+  bool is_care_reverse_ignore_obj = false;
+  if (obstacle->obstacle()->is_reverse() && !is_in_lane_borrow_status) {
+    // 对向ignore的障碍物按当前位置避让, s用预测，l按照当前位置
+    is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+    has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
+        0, trusted_predicted_sl_polygon);
+    bound_type = BoundType::REVERSE_AGENT;
+    is_care_reverse_ignore_obj = true;
+  } else {
+    has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
+        int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
+  }
+
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
@@ -2100,6 +2128,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         pred_ts, extra_lane_type_decrease_buffer,
         is_same_side_obstacle_during_lane_change,
         is_update_hard_bound,
+        is_care_reverse_ignore_obj,
         overlap_min_y, overlap_max_y);
 
     // todo: high speed vehicle
@@ -2218,7 +2247,16 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
     bool is_update_hard_bound,
+    bool is_care_reverse_ignore_obj,
     double &updated_overlap_min_y, double &updated_overlap_max_y) {
+  const auto &coarse_planning_info = session_->planning_context()
+                                          .lane_change_decider_output()
+                                          .coarse_planning_info;
+  const auto lane_width =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
+          ->width();
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow_status =
@@ -2246,6 +2284,16 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                 extra_lane_type_decrease_buffer,
                             0.);
+  } else if (is_care_reverse_ignore_obj) {
+    double intrusion_distance = DBL_MAX;
+    if (obstacle->d_max_cpath() < 0) {
+      intrusion_distance =  lane_width * 0.5 - std::fabs(obstacle->d_max_cpath());
+    } else if (obstacle->d_min_cpath() > 0) {
+      intrusion_distance =  lane_width * 0.5 - obstacle->d_min_cpath();
+    }
+    double extra_reverse_obj_decrease_buffer = interp(intrusion_distance, config_.reverse_obstacle_intrusion_distance_bp,
+                                config_.extra_reverse_obstacle_decrease_buffer);
+    lat_buf_dis = std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, 0.);
   }
   // Step 3: 更新历史 overlap 用于下一次比较
   double extra_pred_ts_decrease_buffer = interp(pred_ts, config_.obstacle_pred_ts_bp,
@@ -2506,16 +2554,18 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     } else {
       const auto lat_obs_position_iter =
           lat_obstacle_position.find(obstacle->id());
-      if (lat_obs_position_iter != lat_obstacle_position.end()) {
-        if (lat_obs_position_iter->second.side_car) {
-          return true;
-        }
-      }
       if (lat_obs_position_iter != lat_obstacle_position.end() &&
-          lat_obs_position_iter->second.maintain_avoid) {
+          (lat_obs_position_iter->second.side_car ||
+          lat_obs_position_iter->second.maintain_avoid)) {
         return true;
       }
     }
+  }
+  if (obstacle->obstacle()->is_reverse() &&
+      (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
+      (!obstacle->is_static())) {
+    // 对向静止的ignore先不考虑
+    return true;
   }
   return false;
 }
@@ -2567,6 +2617,7 @@ void GeneralLateralDecider::ExtractBoundary(
     hard_bounds_info[i] = hard_bound_info;
   }
 
+  // 第一次处理REVERSE_AGENT之外的bound
   for (int i = 0; i < soft_bounds_.size(); i++) {
     std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
@@ -2667,6 +2718,7 @@ void GeneralLateralDecider::PostProcessBound(
     std::pair<double, double> &bound_output,
     std::pair<BoundInfo, BoundInfo> &bound_info) {
   // empty
+  const auto &obs_vec = reference_path_ptr_->get_obstacles();
   const size_t bounds_size = bounds_input.size();
   if (bounds_size == 0) {
     return;
@@ -2720,6 +2772,17 @@ void GeneralLateralDecider::PostProcessBound(
          (lower_type != BoundType::LOW_PRIORITY_AGENT) &&
          (lower_type != BoundType::REAR_AGENT) &&
          (lower_type != BoundType::ADJACENT_AGENT))) {
+      lower_index += 1;
+      continue;
+    }
+    // 先不处理REVERSE_AGENT类型bound
+    if ((upper_bounds[upper_index].weight > 0.0) &&
+        (upper_type == BoundType::REVERSE_AGENT)) {
+      upper_index += 1;
+      continue;
+    }
+    if ((lower_bounds[lower_index].weight > 0.0) &&
+        (lower_type == BoundType::REVERSE_AGENT)) {
       lower_index += 1;
       continue;
     }
@@ -2905,6 +2968,196 @@ void GeneralLateralDecider::PostProcessBound(
       }
     }
   }
+
+  lower_index = 0;
+  upper_index = 0;
+  use_lower_init_protect = false;
+  use_upper_init_protect = false;
+  while ((lower_index < bounds_size) && (upper_index < bounds_size)) {
+    BoundInfo lower_info = lower_bound_info;
+    BoundInfo upper_info = upper_bound_info;
+    // 仅处理REVERSE_AGENT类型bound
+    double lower = lower_bound;
+    double upper = upper_bound;
+    if ((upper_bounds[upper_index].weight > 0.0) &&
+        (upper_bounds[upper_index].bound_info.type == BoundType::REVERSE_AGENT)) {
+      upper_info = upper_bounds[upper_index].bound_info;
+      upper = upper_bounds[upper_index].upper;
+    }
+    if ((lower_bounds[lower_index].weight > 0.0) &&
+        (lower_bounds[lower_index].bound_info.type == BoundType::REVERSE_AGENT)) {
+      lower_info = lower_bounds[lower_index].bound_info;
+      lower = lower_bounds[lower_index].lower;
+    }
+    BoundType lower_type = lower_info.type;
+    BoundType upper_type = upper_info.type;
+    const int lower_priority =
+        general_lateral_decider_utils::GetBoundTypePriority(lower_type);
+    const int upper_priority =
+        general_lateral_decider_utils::GetBoundTypePriority(upper_type);
+    const double lower_weight = general_lateral_decider_utils::GetBoundWeight(
+        lower_type, config_.map_bound_weight);
+    const double upper_weight = general_lateral_decider_utils::GetBoundWeight(
+        upper_type, config_.map_bound_weight);
+    // start compare
+    if (upper >= lower) {  // <==> (upper_bound >= lower_bound)
+      // end condition 2.upper > upper bound >= lower boud > lower
+      if (((upper > upper_bound) && (lower < lower_bound)) ||
+          (upper_bound == lower_bound)) {
+        upper_index += 1;
+        lower_index += 1;
+        continue;
+      }
+
+      // upper_bound
+      if (upper < upper_bound) {
+        upper_bound_info = upper_info;
+        if (use_upper_init_protect) {
+          upper_bound = std::min(upper, planning_init_point_l);
+        } else {
+          upper_bound = upper;
+        }
+        if (upper_type == BoundType::ADJACENT_AGENT || upper_type == BoundType::REAR_AGENT ||
+            upper_type == BoundType::LOW_PRIORITY_AGENT) {
+          if (upper_bound < planning_init_point_l) {
+            upper_bound = planning_init_point_l;
+            use_upper_init_protect = true;
+          }
+        }
+      } else if (upper == upper_bound) {
+        if ((upper_type == BoundType::ADJACENT_AGENT || upper_type == BoundType::REAR_AGENT ||
+             upper_type == BoundType::LOW_PRIORITY_AGENT) && (upper_index == 0)) {
+          if (upper_bound < planning_init_point_l) {
+            upper_bound_info = upper_info;
+            upper_bound = planning_init_point_l;
+            use_upper_init_protect = true;
+          }
+        }
+      }
+      // lower_bound
+      if (lower > lower_bound) {
+        lower_bound_info = lower_info;
+        if (use_lower_init_protect) {
+          lower_bound = std::max(lower, planning_init_point_l);
+        } else {
+          lower_bound = lower;
+        }
+        if (lower_type == BoundType::ADJACENT_AGENT || lower_type == BoundType::REAR_AGENT ||
+            lower_type == BoundType::LOW_PRIORITY_AGENT) {
+          if (lower_bound > planning_init_point_l) {
+            lower_bound = planning_init_point_l;
+            use_lower_init_protect = true;
+          }
+        }
+      } else if (lower == lower_bound) {
+        if ((lower_type == BoundType::ADJACENT_AGENT || lower_type == BoundType::REAR_AGENT ||
+             lower_type == BoundType::LOW_PRIORITY_AGENT) && (lower_index == 0)) {
+          if (lower_bound > planning_init_point_l) {
+            lower_bound_info = lower_info;
+            lower_bound = planning_init_point_l;
+            use_lower_init_protect = true;
+          }
+        }
+      }
+      // continue upper & lower
+      upper_index += 1;
+      lower_index += 1;
+    } else {
+      upper_bound_info = upper_info;
+      lower_bound_info = lower_info;
+      if (upper_priority > lower_priority) {
+        if (use_upper_init_protect) {
+          upper_bound = std::min(upper, planning_init_point_l);
+        } else {
+          upper_bound = upper;
+        }
+        if (use_lower_init_protect) {
+          lower_bound = std::max(lower, planning_init_point_l);
+        } else {
+          lower_bound = upper;
+        }
+        // 处理REVERSE_AGENT特殊情况
+        for (const auto &obj : obs_vec) {
+          if (obj->id() == upper_bound_info.id) {
+            upper_bound = std::max(obj->d_min_cpath() - config_.reverse_obstacle_base_buffer, upper_bound);
+            lower_bound = upper_bound;
+          }
+        }
+        // continue lower
+        lower_index += 1;
+      } else if (upper_priority < lower_priority) {
+        if (use_upper_init_protect) {
+          upper_bound = std::min(upper, planning_init_point_l);
+        } else {
+          upper_bound = lower;
+        }
+        if (use_lower_init_protect) {
+          lower_bound = std::max(lower, planning_init_point_l);
+        } else {
+          lower_bound = lower;
+        }
+        // 处理REVERSE_AGENT特殊情况
+        for (const auto &obj : obs_vec) {
+          if (obj->id() == lower_bound_info.id) {
+            lower_bound = std::min(obj->d_max_cpath() + config_.reverse_obstacle_base_buffer, lower_bound);
+            upper_bound = lower_bound;
+          }
+        }
+        // continue upper
+        upper_index += 1;
+      } else {
+        // double mid_bound = std::min(
+        //     std::max(upper + (std::max(lower - upper, 0.0) *
+        //                       (lower_weight / (upper_weight +
+        //                       lower_weight))),
+        //              lower_bound), upper_bound);
+        double mid_bound =
+            upper + (std::max(lower - upper, 0.0) *
+                     (lower_weight / (upper_weight + lower_weight)));
+        if (use_upper_init_protect) {
+          mid_bound = std::min(mid_bound, planning_init_point_l);
+        }
+        if (use_lower_init_protect) {
+          mid_bound = std::max(mid_bound, planning_init_point_l);
+        }
+        upper_bound = mid_bound;
+        lower_bound = mid_bound;
+        if (mid_bound < planning_init_point_l) {
+          if (upper_type == BoundType::ADJACENT_AGENT || upper_type == BoundType::REAR_AGENT ||
+              upper_type == BoundType::LOW_PRIORITY_AGENT) {
+            upper_bound = planning_init_point_l;
+            lower_bound = std::min(lower, planning_init_point_l);
+            use_upper_init_protect = true;
+            upper_index += 1;
+          } else {
+            upper_index += 1;
+            lower_index += 1;
+            // end condition 3.not ADJACENT_AGENT
+            continue;
+          }
+        } else if (mid_bound > planning_init_point_l) {
+          if (lower_type == BoundType::ADJACENT_AGENT || lower_type == BoundType::REAR_AGENT ||
+              lower_type == BoundType::LOW_PRIORITY_AGENT) {
+            upper_bound = std::max(upper, planning_init_point_l);
+            lower_bound = planning_init_point_l;
+            use_lower_init_protect = true;
+            lower_index += 1;
+          } else {
+          upper_index += 1;
+          lower_index += 1;
+            // end condition 3.not ADJACENT_AGENT
+            continue;
+          }
+        } else {
+          upper_index += 1;
+          lower_index += 1;
+          // end condition 4.not across init point
+          continue;
+        }
+      }
+    }
+  }
+
   bound_output.first = lower_bound;
   bound_output.second = upper_bound;
   bound_info.first = lower_bound_info;
@@ -3159,7 +3412,8 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
       return;
     }
     if ((bound_info.type == BoundType::DYNAMIC_AGENT ||
-         bound_info.type == BoundType::AGENT) &&
+         bound_info.type == BoundType::AGENT ||
+         bound_info.type == BoundType::REVERSE_AGENT) &&
          bound_info.id != -100) {
       bool is_avoid_car = is_upper ?
           (bound_value < planning_init_point_l ||

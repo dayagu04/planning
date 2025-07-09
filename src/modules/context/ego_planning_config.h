@@ -1612,6 +1612,19 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, hard_buffer2dynamic_agent,
                      "general_lateral_decider",
                      "hard_buffer2dynamic_agent");
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "reverse_obstacle_intrusion_distance_bp"},
+        reverse_obstacle_intrusion_distance_bp);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "extra_reverse_obstacle_decrease_buffer"},
+        extra_reverse_obstacle_decrease_buffer);
+    ReadItem<double>(json, reverse_obstacle_base_buffer,
+                     "general_lateral_decider",
+                     "reverse_obstacle_base_buffer");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1702,6 +1715,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   int obstacle_predlonoverlap_down_total_count = 0;
   double nudge_extra_buffer_reverse_obstacle = 0.1;
   double extra_road_buffer_in_big_curvature = 0.0;
+  std::vector<double> reverse_obstacle_intrusion_distance_bp = {0, 1, 2, 3, 4, 5};
+  std::vector<double> extra_reverse_obstacle_decrease_buffer = {0, 0.05, 0.1, 0.15, 0.2, 0.25};
+  double reverse_obstacle_base_buffer = 0.5;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

@@ -193,7 +193,8 @@ class GeneralLateralDecider : public Task {
     const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
     bool is_nudge_left, double overlap_min_y, double overlap_max_y,
     bool is_side_obstacle, double extra_lane_type_decrease_buffer,
-    bool is_update_hard_bound, double lane_width);
+    bool is_update_hard_bound, double lane_width,
+    bool is_care_reverse_ignore_obj);
   double CalDynamicNudgeLatBufDis(
     const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
     bool is_nudge_left, double overlap_min_y, double overlap_max_y,
@@ -201,6 +202,7 @@ class GeneralLateralDecider : public Task {
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
     bool is_update_hard_bound,
+    bool is_care_reverse_ignore_obj,
     double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);

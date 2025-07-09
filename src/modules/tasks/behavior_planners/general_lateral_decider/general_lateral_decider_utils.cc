@@ -133,6 +133,9 @@ int GetBoundTypePriority(BoundType type) {
       return 3;
     case BoundType::LOW_PRIORITY_AGENT:
       return 3;
+    case BoundType::REVERSE_AGENT:
+      return 2;
+
     //  the same level
     // case BoundType::PURNE_VEHICLE_WIDTH:
     //   return 4;
