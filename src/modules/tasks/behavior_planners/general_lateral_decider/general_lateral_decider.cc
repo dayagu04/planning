@@ -684,11 +684,6 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           cart_init_point);
       s_ref = projection_spline.GetOutput().s_proj;
     }
-    const double max_ref_length = std::max(
-        std::min(cart_ref_info.s_vec.back(),frenet_coord->Length()) - s_ref - 0.01,
-        0.0);
-    double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
-    double delta_s = avg_cruise_v * config_.delta_t;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
     std::vector<double> s_vec(traj_points.size());
@@ -709,11 +704,24 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       }
       x_s_spline.set_points(s_vec, x_vec);
       y_s_spline.set_points(s_vec, y_vec);
+      Eigen::Vector2d spatio_init_point(planning_init_point.lat_init_state.x(),
+                                        planning_init_point.lat_init_state.y());
+      pnc::spline::Projection spatio_projection_spline;
+      spatio_projection_spline.CalProjectionPoint(
+          x_s_spline, y_s_spline,
+          s_vec.front(), s_vec.back(),
+          spatio_init_point);
+      s_ref = spatio_projection_spline.GetOutput().s_proj;
     } else {
       s_vec = cart_ref_info.s_vec;
       x_s_spline = cart_ref_info.x_s_spline;
       y_s_spline = cart_ref_info.y_s_spline;
     }
+    const double max_ref_length = std::max(
+        std::min(s_vec.back(), frenet_coord->Length()) - s_ref - 0.01,
+        0.0);
+    double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
+    double delta_s = avg_cruise_v * config_.delta_t;
     traj_points.clear();
     TrajectoryPoint point;
     // constexpr double kEps = 1e-4;
