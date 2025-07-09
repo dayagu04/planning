@@ -10,6 +10,7 @@
 namespace adas_function {
 
 extern uint16 uint16_bit[16];
+extern uint32 uint32_bit[32];
 
 /*二维矩形结构体定义
 坐标系:

@@ -12,6 +12,7 @@
 #include "vehicle_service_c.h"
 #include "func_state_machine_c.h"
 
+// using namespace iflyauto;
 namespace adas_function {
 namespace context {
 
@@ -20,16 +21,26 @@ struct Parameters {
 
   // 车辆参数
   std::string car_type = "Unknow";
-  double wheel_base = 2.72;  // 轴距，单位：m
+  double wheel_base = 2.72;    // 轴距，单位：m
   double steer_ratio = 15.04;  // 转向传动比，即方向盘转角/前轮转角
-  double ego_length = 4.605;                    // 本车车长，单位：m
-  double ego_width = 1.89;                      // 本车车宽，单位：m
+  double ego_length = 4.605;   // 本车车长，单位：m
+  double ego_width = 1.89;     // 本车车宽，单位：m
   double origin_2_front_bumper = 0.950 + 2.72;  // 后轴中心到前保的距离 单位：m
-  double origin_2_rear_bumper = 0.950;  // 后轴中心到后保的距离 单位：m
+  double origin_2_rear_bumper = 0.950;          // 后轴中心到后保的距离 单位：m
 
   // LKAS_Function 参数
-  std::vector<double> ldp_vel_vector = {40.0, 60.0, 80.0, 100.0, 120.0,140.0};
-  std::vector<double> ldp_tlc_vector = {1.0, 1.0, 0.9,0.8,0.7,0.7};
+  std::vector<double> lka_vel_vector = {40.0, 60.0, 80.0, 100.0, 120.0, 140.0};
+  std::vector<double> lka_tlc_vector = {1.0, 1.0, 0.9, 0.8, 0.7, 0.7};
+
+  // 根据曲率查表tlc的参数
+  std::vector<double> lka_c2_vector = {0.00025, 0.000333, 0.0005, 0.001,
+                                       0.0025};  // R2000,R1500,R1000,R500,R200
+  std::vector<double> lka_dec_tlc_by_c2_vector = {0.0, 0.05, 0.15, 0.25, 0.35};
+
+  // 根据道宽查表tlc的参数
+  std::vector<double> lka_lane_width_vector = {2.50, 2.75, 3.00, 3.25, 3.50};
+  std::vector<double> lka_tlc_dec_by_lane_width_vector = {0.80, 0.60, 0.40,
+                                                          0.10, 0.00};
   double safe_departure_ttc = 3.0;
   double ldw_enable_speed = 27.555;
   double ldw_tlc_thrd = 0.0;
@@ -70,9 +81,54 @@ struct Parameters {
   int hmi_elk_state = 0;
   int hmi_tsr_state = 0;
   int hmi_tsr_speed_limit = 0;
+  uint32 ldp_fault_code_maskcode = 0;
+  uint32 ldp_enable_code_maskcode = 0;
+  uint32 ldp_disable_code_maskcode = 0;
+  uint32 ldp_left_suppression_code_maskcode = 0;
+  uint32 ldp_left_kickdown_code_maskcode = 0;
+  uint32 ldp_right_suppression_code_maskcode = 0;
+  uint32 ldp_right_kickdown_code_maskcode = 0;
+  uint32 ldw_enable_code_maskcode = 0;
+  uint32 ldw_disable_code_maskcode = 0;
+  uint32 ldw_fault_code_maskcode = 0;
+  uint32 ldw_left_suppression_code_maskcode = 0;
+  uint32 ldw_left_kickdown_code_maskcode = 0;
+  uint32 ldw_right_suppression_code_maskcode = 0;
+  uint32 ldw_right_kickdown_code_maskcode = 0;
+  uint32 elk_fault_code_maskcode = 0;
+  uint32 elk_enable_code_maskcode = 0;
+  uint32 elk_disable_code_maskcode = 0;
+  uint32 elk_left_suppression_code_maskcode = 0;
+  uint32 elk_left_kickdown_code_maskcode = 0;
+  uint32 elk_right_suppression_code_maskcode = 0;
+  uint32 elk_right_kickdown_code_maskcode = 0;
+  // 打断纠偏的横向速度持续时间，单位：S
+  double ldp_kickdown_lat_v_dur = 3.0;
+  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_suppression_driver_hand_trq = 2.0;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_kickdown_samedir_hand_trq = 2.3;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_kickdown_oppodir_hand_trq = 2.5;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_kickdown_abs_hand_trq = 1.5;
+  // 打断纠偏的手力矩绝对值持续时间，单位：S
+  double LDP_kickdown_hand_trq_dur = 0.5;
+  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_suppression_driver_hand_trq = 2.0;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_kickdown_samedir_hand_trq = 2.3;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_kickdown_oppodir_hand_trq = 2.5;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_kickdown_abs_hand_trq = 1.5;
+  // 打断纠偏的手力矩绝对值持续时间，单位：S
+  double ELK_kickdown_hand_trq_dur = 0.5;
 };
 
 struct StateInfo {
+  double current_time_us = 0.0;  // 当前时间
+
   double vehicle_speed = 0.0;          // 本车实际车速 单位:m/s
   double display_vehicle_speed = 0.0;  // 本车实际车速 单位:m/s
   double yaw_rate = 0.0;               // 本车横摆角速度 单位:rad/s
@@ -99,7 +155,7 @@ struct StateInfo {
   // 驾驶员手力矩，单位 Nm
   double driver_hand_trq = 0.0;
 
-  // 左、右偏离车道线速度 单位 m/s
+  // 左、右偏离车道线速度 单位 m/s 左正右负
   double veh_left_departure_speed = 0.0;
   double veh_right_departure_speed = 0.0;
 
@@ -111,11 +167,26 @@ struct StateInfo {
   // 实际制动踏板开度百分比 范围:[0-100] 不是所有车均有此信号
   double brake_pedal_pos = 0.0;
   bool brake_pedal_pressed = false;
-  //enu2car 变换矩阵
+  // enu2car 变换矩阵
   Eigen::Vector2d current_pos_i;
   Eigen::Matrix2d rotm2d = Eigen::Matrix2d::Identity();
-  //偏离加速度
+  // 偏离加速度
   double lat_departure_acc = 0.0;
+  double accelerator_pedal_pos_rate = 0.0;  // 油门踏板速率 %/s
+
+  // 定义当前挡位值
+  iflyauto::ShiftLeverStateEnum shift_lever_state =
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
+
+  // vehicle_service模块节点通讯丢失
+  // 1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool vehicle_service_node_valid = true;
+  // 车道线融合模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool road_info_node_valid = true;
+  // 定位模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool localization_info_node_valid = true;
 };
 
 enum Enum_LineType {
@@ -140,10 +211,10 @@ struct LineInfo {
   // 0:未知 1:虚线 2:实线 3~10:其他类型
   iflyauto::LaneBoundaryType boundary_type;  // 感知提供的结果
 
-  double c0;  // 车道线方程系数c0 y=c0+c1*x+c2*x*x +c3*x*x*x
-  double c1;  // 车道线方程系数c1
-  double c2;  // 车道线方程系数c3
-  double c3;  // 车道线方程系数c3
+  double c0;                    // 车道线方程系数c0 y=c0+c1*x+c2*x*x +c3*x*x*x
+  double c1;                    // 车道线方程系数c1
+  double c2;                    // 车道线方程系数c3
+  double c3;                    // 车道线方程系数c3
   std::vector<double> dx_vec_;  // 存储车道线散点 x坐标值
   std::vector<double> dy_vec_;  // 存储车道线散点 y坐标值
   std::vector<double> s_vec_;   // 存储车道线散点 起始点s值为0
@@ -190,8 +261,12 @@ struct LaneInfo {
   bool lane_changed_flag;
   bool left_sideway_exist_flag;
   bool right_sideway_exist_flag;
-  bool left_safe_departure_permission_flag = false;
-  bool right_safe_departure_permission_flag = false;
+  // bool left_safe_departure_permission_flag = false;
+  // bool right_safe_departure_permission_flag = false;
+  bool left_parallel_car_flag = false;
+  bool right_parallel_car_flag = false;
+  bool right_front_car_flag = false;
+  bool left_front_car_flag = false;
 };
 
 struct RoadInfo {

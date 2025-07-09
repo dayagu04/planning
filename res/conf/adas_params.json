@@ -1,6 +1,7 @@
 {
   "car_type": "jac_s811",
   "mark_date": "20241114",
+  "lkas_version":"20250708",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,
@@ -8,16 +9,16 @@
     "ego_width": 1.89,
     "origin_2_front_bumper": 3.67,
     "origin_2_rear_bumper": 0.950
-    },
+  },
   "chery_e0x": {
-      "wheel_base": 3.0,
-      "steer_ratio": 13.04,
-      "ego_length": 4.955,
-      "ego_width": 1.975,
-      "origin_2_front_bumper": 4.05,
-      "origin_2_rear_bumper": 0.925
-    },
-  "chery_m32t": {
+    "wheel_base": 3.0,
+    "steer_ratio": 13.04,
+    "ego_length": 4.955,
+    "ego_width": 1.975,
+    "origin_2_front_bumper": 4.05,
+    "origin_2_rear_bumper": 0.925
+  },
+"chery_m32t": {
         "wheel_base": 2.8,
         "steer_ratio": 13.04,
         "ego_length": 4.78,
@@ -33,8 +34,36 @@
   "sideway_exist_gap_thrd": 0.8,
   "safe_departure_ttc": 3.0,
   "lane_line_width": 0.15,
-  "ldp_vel_vector": [40.0, 60.0, 80.0, 100.0, 120.0, 140.0],
-  "ldp_tlc_vector": [1.0,  1.0,  1.0,  0.9,   0.8,   0.8],
+  "lka_vel_vector": [
+    40.0,
+    60.0,
+    80.0,
+    100.0,
+    120.0,
+    140.0
+  ],
+  "lka_tlc_vector": [
+    1.0,
+    1.0,
+    1.0,
+    0.9,
+    0.8,
+    0.8
+  ],
+  "lka_C2_vector": [
+    0.00025,
+    0.000333,
+    0.0005,
+    0.001,
+    0.0025
+  ],
+  "lka_dec_tlc_by_c2_vector": [
+    0.00,
+    0.05,
+    0.15,
+    0.25,
+    0.35
+  ],
   "ldw_enable_speed": 27.555,
   "ldw_tlc_thrd": 1.0,
   "ldp_tlc_thrd": 1.0,
@@ -63,22 +92,22 @@
   "hmi_tsr_state": 0,
   "hmi_tsr_speed_limit": 0,
   "ldp_fault_code_maskcode": 4294967231,
-  "ldp_enable_code_maskcode": 4294950911,
-  "ldp_disable_code_maskcode": 4294950911,
+  "ldp_enable_code_maskcode": 4294967295,
+  "ldp_disable_code_maskcode": 4294967295,
   "ldp_left_suppression_code_maskcode": 4294967295,
   "ldp_left_kickdown_code_maskcode": 4294967295,
   "ldp_right_suppression_code_maskcode": 4294967295,
   "ldp_right_kickdown_code_maskcode": 4294967295,
-  "ldw_enable_code_maskcode": 4294950911,
-  "ldw_disable_code_maskcode": 4294950911,
+  "ldw_enable_code_maskcode": 4294967295,
+  "ldw_disable_code_maskcode": 4294967295,
   "ldw_fault_code_maskcode": 4294967231,
   "ldw_left_suppression_code_maskcode": 4294967295,
   "ldw_left_kickdown_code_maskcode": 4294967295,
   "ldw_right_suppression_code_maskcode": 4294967295,
   "ldw_right_kickdown_code_maskcode": 4294967295,
   "elk_fault_code_maskcode": 4294967231,
-  "elk_enable_code_maskcode": 4294950911,
-  "elk_disable_code_maskcode": 4294950911,
+  "elk_enable_code_maskcode": 4294967295,
+  "elk_disable_code_maskcode": 4294967295,
   "elk_left_suppression_code_maskcode": 4294967295,
   "elk_left_kickdown_code_maskcode": 4294967295,
   "elk_right_suppression_code_maskcode": 4294967295,

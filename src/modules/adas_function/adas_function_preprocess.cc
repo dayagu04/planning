@@ -44,7 +44,7 @@ void Preprocess::SyncParameters(void) {
   if ((int)json_car_type.find("jac_s811") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("jac_s811");
   } else if ((int)json_car_type.find("chery_e0x") != -1) {
-    json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
+json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
   } else if ((int)json_car_type.find("chery_m32t") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_m32t");
   }else{
@@ -145,6 +145,96 @@ void Preprocess::SyncParameters(void) {
                        "lane_line_width");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_main_switch, bool,
                        "ihc_main_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
+                       std::vector<double>, "lka_vel_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_tlc_vector,
+                       std::vector<double>, "lka_tlc_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_c2_vector,
+                       std::vector<double>, "lka_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_dec_tlc_by_c2_vector,
+                       std::vector<double>, "lka_dec_tlc_by_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_fault_code_maskcode, int,
+                       "ldp_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_enable_code_maskcode,
+                       int, "ldp_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_disable_code_maskcode,
+                       int, "ldp_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_left_suppression_code_maskcode, int,
+      "ldp_left_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_left_kickdown_code_maskcode, int,
+      "ldp_left_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_right_suppression_code_maskcode, int,
+      "ldp_right_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_right_kickdown_code_maskcode, int,
+      "ldp_right_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_enable_code_maskcode,
+                       int, "ldw_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_disable_code_maskcode,
+                       int, "ldw_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_fault_code_maskcode, int,
+                       "ldw_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_left_suppression_code_maskcode, int,
+      "ldw_left_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_left_kickdown_code_maskcode, int,
+      "ldw_left_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_right_suppression_code_maskcode, int,
+      "ldw_right_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_right_kickdown_code_maskcode, int,
+      "ldw_right_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_fault_code_maskcode, int,
+                       "elk_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_enable_code_maskcode,
+                       int, "elk_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_disable_code_maskcode,
+                       int, "elk_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_left_suppression_code_maskcode, int,
+      "elk_left_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_left_kickdown_code_maskcode, int,
+      "elk_left_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_right_suppression_code_maskcode, int,
+      "elk_right_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_right_kickdown_code_maskcode, int,
+      "elk_right_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_kickdown_lat_v_dur,
+                       double, "ldp_kickdown_lat_v_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_suppression_driver_hand_trq, double,
+      "suppression_driver_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_kickdown_samedir_hand_trq, double,
+      "kickdown_samedir_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_kickdown_oppodir_hand_trq, double,
+      "kickdown_oppodir_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->LDP_kickdown_abs_hand_trq,
+                       double, "kickdown_abs_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->LDP_kickdown_hand_trq_dur,
+                       double, "kickdown_hand_trq_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_suppression_driver_hand_trq, double,
+      "suppression_driver_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_kickdown_samedir_hand_trq, double,
+      "kickdown_samedir_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_kickdown_oppodir_hand_trq, double,
+      "kickdown_oppodir_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ELK_kickdown_abs_hand_trq,
+                       double, "kickdown_abs_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ELK_kickdown_hand_trq_dur,
+                       double, "kickdown_hand_trq_dur");
 
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
@@ -157,6 +247,15 @@ void Preprocess::UpdateStateInfo(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+#if defined(CYBER_ENV)
+  GetContext.mutable_state_info()->current_time_us = IflyTime::Now_us();
+#elif defined(AP_ENV)
+  GetContext.mutable_state_info()->current_time_us = IflyTime::Now_us();
+#else
+  GetContext.mutable_state_info()->current_time_us =
+      vehicle_service_output_info_ptr->msg_header.stamp;
+#endif
+
   GetContext.mutable_state_info()->ctrl_output_steering_angle =
       GetContext.mutable_session()
           ->environmental_model()
@@ -256,13 +355,54 @@ void Preprocess::UpdateStateInfo(void) {
   } else {
     GetContext.mutable_state_info()->brake_pedal_pressed = false;
   }
+  // 挡位信号//中间的（iflyauto::ShiftLeverStateEnum）是强制转换后面的格式
+  if (vehicle_service_output_info_ptr->shift_lever_state_available) {
+    GetContext.mutable_state_info()->shift_lever_state =
+        (iflyauto::ShiftLeverStateEnum)
+            vehicle_service_output_info_ptr->shift_lever_state;
+  } else {
+    GetContext.mutable_state_info()->shift_lever_state =
+        iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
+  }
 
+  // vehicle_service模块节点通讯丢失判断
+
+  if ((GetContext.mutable_state_info()->current_time_us -
+       vehicle_service_output_info_ptr->msg_header.stamp) > 500000) {
+    GetContext.mutable_state_info()->vehicle_service_node_valid = false;
+  } else {
+    GetContext.mutable_state_info()->vehicle_service_node_valid = true;
+  }
+  // lat acc
   if (vehicle_service_output_info_ptr->lat_acceleration_available) {
     GetContext.mutable_state_info()->lat_departure_acc =
         vehicle_service_output_info_ptr->lat_acceleration;
   } else {
     GetContext.mutable_state_info()->lat_departure_acc = 0.0;
   }
+  // 车道线融合模块节点通讯丢失
+  auto road_info_ptr = &GetContext.mutable_session()
+                            ->mutable_environmental_model()
+                            ->get_local_view()
+                            .road_info;
+  if ((GetContext.mutable_state_info()->current_time_us -
+       road_info_ptr->msg_header.stamp) > 500000) {
+    GetContext.mutable_state_info()->road_info_node_valid = false;
+  } else {
+    GetContext.mutable_state_info()->road_info_node_valid = true;
+  }
+  // 定位模块节点通讯丢失
+  auto localization_info_ptr = &GetContext.mutable_session()
+                                    ->mutable_environmental_model()
+                                    ->get_local_view()
+                                    .localization;
+  if ((GetContext.mutable_state_info()->current_time_us -
+       localization_info_ptr->msg_header.stamp) > 500000) {
+    GetContext.mutable_state_info()->localization_info_node_valid = false;
+  } else {
+    GetContext.mutable_state_info()->localization_info_node_valid = true;
+  }
+
   /*计算车辆左前、右前两个角点至车道线合路沿的距离*/
   // 公共部分：左前角点/右前角点坐标：
   // 计算tlc秒后,后轴中心的坐标值、计算角点位置
@@ -423,7 +563,7 @@ void Preprocess::UpdateStateInfo(void) {
   GetContext.mutable_state_info()->driver_hand_trq =
       vehicle_service_output_info_ptr->driver_hand_torque;
 
-  // 车辆偏离车道线速度
+  // 车辆偏离车道线速度 左正右负
   GetContext.mutable_state_info()->veh_left_departure_speed =
       -1.0 * GetContext.get_state_info()->vehicle_speed *
       GetContext.get_road_info()->current_lane.left_line.c1;
@@ -471,6 +611,11 @@ void Preprocess::UpdateStateInfo(void) {
       GetContext.get_road_info()->current_lane.right_line.valid;
   last_right_line_distance_ =
       GetContext.get_state_info()->fr_wheel_distance_to_line;
+
+  GetContext.mutable_state_info()->accelerator_pedal_pos_rate =
+      (vehicle_service_output_info_ptr->accelerator_pedal_pos -
+       GetContext.get_last_cycle_info()->accelerator_pedal_pos) /
+      GetContext.get_param()->dt;
 }
 
 void Preprocess::SetLineInfoDefault(
@@ -1272,7 +1417,7 @@ void Preprocess::SidewayExistJudge(void) {
     auto relative_id_zero_nums =
         ptr_virtual_lane_manager->origin_relative_id_zero_nums();
     if (relative_id_zero_nums == 1 || relative_id_zero_nums == 0) {
-      no_sideway_exist_time_counts += 0.1;
+      no_sideway_exist_time_counts += GetContext.get_param()->dt;
     } else {
       no_sideway_exist_time_counts = 0.0;
     }
@@ -1282,13 +1427,15 @@ void Preprocess::SidewayExistJudge(void) {
           false;
       GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
           false;
-      no_sideway_exist_time_counts = 1.0;
+      no_sideway_exist_time_counts = 1.0;  // 防止溢出
     } else {
-      if ((ptr_virtual_lane_manager->get_left_lane() == nullptr) && (relative_id_zero_nums > 1)) {
+      if ((ptr_virtual_lane_manager->get_left_lane() == nullptr) &&
+          (relative_id_zero_nums > 1)) {
         GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag =
             true;
       }
-      if ((ptr_virtual_lane_manager->get_right_lane() == nullptr)&& (relative_id_zero_nums > 1)) {
+      if ((ptr_virtual_lane_manager->get_right_lane() == nullptr) &&
+          (relative_id_zero_nums > 1)) {
         GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
             true;
       }
@@ -1807,13 +1954,62 @@ void Preprocess::SingleAreaObjSelect() {
 void Preprocess::SafeDeparturePermissionJudge(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   if (GetContext.get_param()->force_no_safe_departure_switch == true) {
-    GetContext.mutable_road_info()
-        ->current_lane.left_safe_departure_permission_flag = false;
-    GetContext.mutable_road_info()
-        ->current_lane.right_safe_departure_permission_flag = false;
+    GetContext.mutable_road_info()->current_lane.left_parallel_car_flag = false;
+    GetContext.mutable_road_info()->current_lane.right_parallel_car_flag =
+        false;
+    GetContext.mutable_road_info()->current_lane.right_front_car_flag = false;
+    GetContext.mutable_road_info()->current_lane.left_front_car_flag = false;
     return;
   }
 
+  bool is_left_car_too_close = false;
+  bool is_right_car_too_close = false;
+  // 判断是否有横向碰撞的风险
+  // 定义旁侧大车中心距离本车道线距离
+  double distance_left_sidecar_to_lane =
+      GetContext.get_objs_info()
+          ->objs_selected.fl_objs.vehicle_info.relative_position_y -
+      GetContext.get_road_info()->current_lane.left_line.c0 -
+      0.5 *
+          GetContext.get_objs_info()->objs_selected.fl_objs.vehicle_info.width;
+  if ((GetContext.get_objs_info()->objs_selected.fl_objs.vehicle_info_valid) &&
+      (distance_left_sidecar_to_lane <= 0.3)) {
+    is_left_car_too_close = true;
+  } else {
+    is_left_car_too_close = false;
+  }
+
+  double distance_right_sidecar_to_lane =
+      GetContext.get_road_info()->current_lane.right_line.c0 -
+      (GetContext.get_objs_info()
+           ->objs_selected.fr_objs.vehicle_info.relative_position_y +
+       0.5 * GetContext.get_objs_info()
+                 ->objs_selected.fr_objs.vehicle_info.width);
+
+  if ((GetContext.get_objs_info()->objs_selected.fr_objs.vehicle_info_valid) &&
+      (distance_right_sidecar_to_lane <= 0.3)) {
+    is_right_car_too_close = true;
+  } else {
+    is_right_car_too_close = false;
+  }
+  // 定义旁侧有大车
+  if (GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info_valid &&
+      GetContext.get_road_info()->current_lane.left_roadedge.valid == false) {
+    // 右侧有车并行,且左侧没路沿，允许向左安全偏离
+    GetContext.mutable_road_info()->current_lane.right_parallel_car_flag = true;
+  } else {
+    GetContext.mutable_road_info()->current_lane.right_parallel_car_flag =
+        false;
+  }
+
+  if (GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info_valid &&
+      GetContext.get_road_info()->current_lane.right_roadedge.valid == false) {
+    // 左侧有车并行且右侧无路沿，允许向右安全偏离
+    GetContext.mutable_road_info()->current_lane.left_parallel_car_flag = true;
+  } else {
+    GetContext.mutable_road_info()->current_lane.left_parallel_car_flag = false;
+  }
+  // 定义侧前方有车
   double fl_obj_ttc = 10.0;
   double fm_obj_ttc = 10.0;
   double fr_obj_ttc = 10.0;
@@ -1833,55 +2029,91 @@ void Preprocess::SafeDeparturePermissionJudge(void) {
   }
   left_obj_ttc = std::min(fm_obj_ttc, fl_obj_ttc);
   right_obj_ttc = std::min(fm_obj_ttc, fr_obj_ttc);
-  if (GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info_valid) {
-    // 右侧有车并行,且左侧没路沿，允许向左安全偏离
-    if (GetContext.get_road_info()->current_lane.left_roadedge.valid == false) {
-      GetContext.mutable_road_info()
-          ->current_lane.left_safe_departure_permission_flag = true;
-    }
+  // 右前方有车
+  if ((right_obj_ttc < GetContext.get_param()->safe_departure_ttc) &&
+      is_right_car_too_close == true &&
+      (GetContext.get_road_info()->current_lane.left_roadedge.valid == false)) {
+    // 右侧车道或者正前方有碰撞风险，有车允许向左安全偏离
+    GetContext.mutable_road_info()->current_lane.right_front_car_flag = true;
   } else {
-    if (GetContext.get_road_info()
-            ->current_lane.left_safe_departure_permission_flag == false) {
-      if ((right_obj_ttc < GetContext.get_param()->safe_departure_ttc) &&
-          (GetContext.get_road_info()->current_lane.left_roadedge.valid ==
-           false)) {
-        // 右侧车道或者正前方有碰撞风险，有车允许向左安全偏离
-        GetContext.mutable_road_info()
-            ->current_lane.left_safe_departure_permission_flag = true;
-      }
-    } else {
-      if (right_obj_ttc > (GetContext.get_param()->safe_departure_ttc + 0.25)) {
-        // 滞回
-        GetContext.mutable_road_info()
-            ->current_lane.left_safe_departure_permission_flag = false;
-      }
+    if ((right_obj_ttc > (GetContext.get_param()->safe_departure_ttc + 0.25)) &&
+        (is_right_car_too_close == false)) {
+      // 滞回
+      GetContext.mutable_road_info()->current_lane.right_front_car_flag = false;
     }
   }
-  if (GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info_valid) {
-    // 左侧有车并行且右侧无路沿，允许向右安全偏离
-    if (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
-        false) {
-      GetContext.mutable_road_info()
-          ->current_lane.right_safe_departure_permission_flag = true;
-    }
+  // 左前方有车
+
+  if ((left_obj_ttc < GetContext.get_param()->safe_departure_ttc) &&
+      is_left_car_too_close == true &&
+      (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+       false)) {
+    // 左侧车道或者正前方有碰撞风险，有车允许向右安全偏离
+    GetContext.mutable_road_info()->current_lane.left_front_car_flag = true;
   } else {
-    if (GetContext.get_road_info()
-            ->current_lane.right_safe_departure_permission_flag == false) {
-      if ((left_obj_ttc < GetContext.get_param()->safe_departure_ttc) &&
-          (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
-           false)) {
-        // 左侧车道或者正前方有碰撞风险，有车允许向右安全偏离
-        GetContext.mutable_road_info()
-            ->current_lane.right_safe_departure_permission_flag = true;
-      }
-    } else {
-      if (left_obj_ttc > (GetContext.get_param()->safe_departure_ttc + 0.25)) {
-        // 滞回
-        GetContext.mutable_road_info()
-            ->current_lane.right_safe_departure_permission_flag = false;
-      }
+    if ((left_obj_ttc > (GetContext.get_param()->safe_departure_ttc + 0.25)) &&
+        (is_left_car_too_close == false)) {
+      // 滞回
+      GetContext.mutable_road_info()->current_lane.left_front_car_flag = false;
     }
   }
+
+  // if (GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info_valid) {
+  //   // 右侧有车并行,且左侧没路沿，允许向左安全偏离
+  //   if (GetContext.get_road_info()->current_lane.left_roadedge.valid ==
+  //   false) {
+  //     GetContext.mutable_road_info()
+  //         ->current_lane.left_safe_departure_permission_flag = true;
+  //   }
+  // } else {
+  //   if (GetContext.get_road_info()
+  //           ->current_lane.left_safe_departure_permission_flag == false) {
+  //     if ((right_obj_ttc < GetContext.get_param()->safe_departure_ttc &&
+  //          is_right_car_too_close == true) &&
+  //         (GetContext.get_road_info()->current_lane.left_roadedge.valid ==
+  //          false)) {
+  //       // 右侧车道或者正前方有碰撞风险，有车允许向左安全偏离
+  //       GetContext.mutable_road_info()
+  //           ->current_lane.left_safe_departure_permission_flag = true;
+  //     }
+  //   } else {
+  //     if ((right_obj_ttc >
+  //          (GetContext.get_param()->safe_departure_ttc + 0.25)) &&
+  //         (is_right_car_too_close == false)) {
+  //       // 滞回
+  //       GetContext.mutable_road_info()
+  //           ->current_lane.left_safe_departure_permission_flag = false;
+  //     }
+  //   }
+  // }
+  // if (GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info_valid) {
+  //   // 左侧有车并行且右侧无路沿，允许向右安全偏离
+  //   if (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+  //       false) {
+  //     GetContext.mutable_road_info()
+  //         ->current_lane.right_safe_departure_permission_flag = true;
+  //   }
+  // } else {
+  //   if (GetContext.get_road_info()
+  //           ->current_lane.right_safe_departure_permission_flag == false) {
+  //     if ((left_obj_ttc < GetContext.get_param()->safe_departure_ttc &&
+  //          is_left_car_too_close == true) &&
+  //         (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+  //          false)) {
+  //       // 左侧车道或者正前方有碰撞风险，有车允许向右安全偏离
+  //       GetContext.mutable_road_info()
+  //           ->current_lane.right_safe_departure_permission_flag = true;
+  //     }
+  //   } else {
+  //     if ((left_obj_ttc >
+  //          (GetContext.get_param()->safe_departure_ttc + 0.25)) &&
+  //         (is_left_car_too_close == false)) {
+  //       // 滞回
+  //       GetContext.mutable_road_info()
+  //           ->current_lane.right_safe_departure_permission_flag = false;
+  //     }
+  //   }
+  // }
   return;
 }
 

@@ -51,11 +51,18 @@ void AdasFunction::StoreInfoForNextCycle(void) {
           ->mutable_environmental_model()
           ->get_local_view()
           .vehicle_service_output_info.right_turn_light_state;
+
   GetContext.mutable_last_cycle_info()->yaw_rad =
       GetContext.mutable_session()
           ->mutable_environmental_model()
           ->get_local_view()
           .localization_estimate.pose.euler_angles.yaw;
+
+  GetContext.mutable_last_cycle_info()->accelerator_pedal_pos =
+      GetContext.mutable_session()
+          ->mutable_environmental_model()
+          ->get_local_view()
+          .vehicle_service_output_info.accelerator_pedal_pos;
 }
 
 bool AdasFunction::Plan() {
@@ -502,12 +509,25 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE(
       "road_right_sideway_exist_flag",
       GetContext.get_road_info()->current_lane.right_sideway_exist_flag);
-  JSON_DEBUG_VALUE("road_left_departure_permission_flag",
-                   GetContext.get_road_info()
-                       ->current_lane.left_safe_departure_permission_flag);
-  JSON_DEBUG_VALUE("road_right_departure_permission_flag",
-                   GetContext.get_road_info()
-                       ->current_lane.right_safe_departure_permission_flag);
+//   JSON_DEBUG_VALUE("road_left_departure_permission_flag",
+//                    GetContext.get_road_info()
+//                        ->current_lane.left_safe_departure_permission_flag);
+//   JSON_DEBUG_VALUE("road_right_departure_permission_flag",
+//                    GetContext.get_road_info()
+//                        ->current_lane.right_safe_departure_permission_flag);
+  JSON_DEBUG_VALUE(
+      "road_left_parallel_car_flag",
+      GetContext.get_road_info()->current_lane.left_parallel_car_flag);
+  JSON_DEBUG_VALUE(
+      "road_right_parallel_car_flag",
+      GetContext.get_road_info()->current_lane.right_parallel_car_flag);
+  JSON_DEBUG_VALUE(
+      "road_right_front_car_flag",
+      GetContext.get_road_info()->current_lane.right_front_car_flag);
+  JSON_DEBUG_VALUE(
+      "road_left_front_car_flag",
+      GetContext.get_road_info()->current_lane.left_front_car_flag);
+
   /*left*/
   JSON_DEBUG_VALUE(
       "road_left_line_boundary_type",
