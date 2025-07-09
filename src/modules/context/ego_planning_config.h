@@ -3282,6 +3282,8 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
   double ignore_agent_ttc_to_ego_thrd = 3.0;
   double ignore_ego_ttc_to_agent_thrd = 3.0;
   double lat_distance_close_enough_to_planned_path_thrd = 0.5;
+  double ego_predeceleration_distance_to_front_agent_threshold = 3.5;
+  double close_to_same_velocity_difference_buffer = 1.5;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {
