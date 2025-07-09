@@ -9,7 +9,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_20260/trigger/20250613/20250613-16-15-30/data_collection_CHERY_E0Y_20260_EVENT_FILTER_2025-06-13-16-15-30_no_camera.bag.1750837792.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250701/20250701-18-55-44/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-01-18-55-44_no_camera.bag.1751436399.open-loop.scc.plan"
 
 frame_dt = 0.1 # sec
 
@@ -25,6 +25,7 @@ global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 
 velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig= load_lon_global_figure(bag_loader)
+load_measure_distance_tool(fig1)
 
 # load lateral planning (behavior and motion)
 pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig)
@@ -33,12 +34,18 @@ pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
-    ipywidgets.interact(slider_callback, bag_time = self.time_slider)
+    self.prediction_obstacle_id = ipywidgets.Text(description='predict_id:')
+    self.obstacle_polygon_id = ipywidgets.Text(description='polygon_id:')
+
+    ipywidgets.interact(slider_callback, bag_time = self.time_slider,
+                                         prediction_obstacle_id = self.prediction_obstacle_id,
+                                         obstacle_polygon_id = self.obstacle_polygon_id)
 
 
 ### sliders callback
-def slider_callback(bag_time):
+def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   kwargs = locals()
+  update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 

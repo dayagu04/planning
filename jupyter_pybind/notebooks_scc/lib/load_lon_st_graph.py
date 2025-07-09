@@ -191,7 +191,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
-                          'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
+                          'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition", 'ban_acceleration', "efficiency_score",
                           "cipv_vel_frenet","traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
                           "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path',
@@ -616,8 +616,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   init_state = lon_motion_plan_input.init_state
   ref_pos_vec = lon_motion_plan_input.ref_pos_vec
   ref_vel_vec = lon_motion_plan_input.ref_vel_vec
-  # soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
-  # soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
+  hard_pos_max_vec = lon_motion_plan_input.hard_pos_max_vec
+  hard_pos_min_vec = lon_motion_plan_input.hard_pos_min_vec
+  soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
+  soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec
@@ -663,8 +665,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'ref_pos_vec_origin': s_ref_vec,
     'ref_pos_vec': ref_pos_vec,
     'ref_vel_vec': ref_vel_vec,
-    # 'soft_pos_max_vec': soft_pos_max_vec,
-    # 'soft_pos_min_vec': soft_pos_min_vec,
+    'hard_pos_max_vec': hard_pos_max_vec,
+    'hard_pos_min_vec': hard_pos_min_vec,
+    'soft_pos_max_vec': soft_pos_max_vec,
+    'soft_pos_min_vec': soft_pos_min_vec,
     'vel_max_vec': vel_max_vec,
     'vel_min_vec': vel_min_vec,
     'acc_max_vec': acc_max_vec,
@@ -1217,8 +1221,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                   'ref_pos_vec_origin': [],
                                                   'ref_pos_vec':[],
                                                   'ref_vel_vec':[],
-                                                  # 'soft_pos_max_vec':[],
-                                                  # 'soft_pos_min_vec':[],
+                                                  'hard_pos_max_vec': [],
+                                                  'hard_pos_min_vec': [],
+                                                  'soft_pos_max_vec':[],
+                                                  'soft_pos_min_vec':[],
                                                   'vel_max_vec':[],
                                                   'vel_min_vec':[],
                                                   'acc_max_vec':[],
@@ -1319,16 +1325,16 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   # fig7 j-t
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
 
-  f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
-  # fig2.line('t', 's_soft_ub', source = data_st, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
-  # fig2.line('t', 's_soft_lb', source = data_st, line_width = 3, line_color = '#FFA500', line_dash = 'solid', legend_label = 's_soft_lb')
+  # f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
+  f2 = fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
+  fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 3, line_color = '#FFA500', line_dash = 'solid', legend_label = 's_soft_lb')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
-  fig2.line('t', 'obs_low', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_lb')
-  fig2.line('t', 'obs_high', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
-  fig2.triangle('t', 'obs_low', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
-  fig2.inverted_triangle ('t', 'obs_high', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
+  fig2.line('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_lb')
+  fig2.line('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
+  fig2.triangle('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
+  fig2.inverted_triangle ('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
 
   # 添加障碍物s-t bound
   for obs_id in data_obs_st.keys():
@@ -1429,10 +1435,14 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig4.line('time_vec', 'ref_pos_vec_origin', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
   fig4.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
 
-  # fig4.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_lb')
+  fig4.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_bound')
   # fig4.triangle ('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_lb')
-  # fig4.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_ub')
+  fig4.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_bound')
   # fig4.inverted_triangle ('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_ub')
+  fig4.line('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_hard_bound')
+  fig4.triangle ('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_hard_bound')
+  fig4.line('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_hard_bound')
+  fig4.inverted_triangle ('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_hard_bound')
 
   # vel
   f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')

@@ -43,11 +43,11 @@ constexpr double kFarPreviewTime = 6.0;
 constexpr double kNearPreviewTime = 2.0;
 constexpr double kSpeedLower = 6.0;
 constexpr double kSpeedUpper = 20.0;
-constexpr double kAccMinLower = -0.7;
-constexpr double kAccMinUpper = -0.3;
+constexpr double kAccMinLower = -1.5;
+constexpr double kAccMinUpper = -1.0;
 constexpr double kAccMax = 1.5;
-constexpr double kJerkMin = -1.0;
-constexpr double kJerkMax = 0.5;
+constexpr double kJerkMin = -2.0;
+constexpr double kJerkMax = 2.0;
 constexpr double AccMinThreshold = -3.0;
 constexpr double kSafeTimeGap = 1.4;
 constexpr double kMinFollowDistance = 3.0;
@@ -212,7 +212,8 @@ void FollowTarget::GenerateFollowTarget() {
 
   // 3) judge headway sref or jlt sref ?
   if (far_slow_follow_trajectory != nullptr) {
-    enable_far_slow_jlt = JudgeSrefValid(far_slow_follow_trajectory);
+    // enable_far_slow_jlt = JudgeSrefValid(far_slow_follow_trajectory);
+    enable_far_slow_jlt = true;
   }
 
   // 4) store enable_farslow_jlt_count in planning_context
@@ -259,15 +260,15 @@ void FollowTarget::GenerateFollowTarget() {
     target_value.set_target_type(upper_bound_infos_[i].target_type);
 
     double s_value = target_value.s_target_val();
-    if (enable_stable_jlt) {
-      target_value.set_s_target_val(stable_follow_trajectory->Evaluate(0, t));
-      target_value.set_target_type(upper_bound_infos_[i].target_type);
-      JSON_DEBUG_VALUE("has_stable_follow_target", 1.0)
-    }
+    // if (enable_stable_jlt) {
+    //   target_value.set_s_target_val(stable_follow_trajectory->Evaluate(0, t));
+    //   target_value.set_target_type(upper_bound_infos_[i].target_type);
+    //   JSON_DEBUG_VALUE("has_stable_follow_target", 1.0)
+    // }
 
     if (enable_far_slow_jlt) {
       s_value = std::fmin(far_slow_follow_trajectory->Evaluate(0, t), s_value);
-      target_value.set_s_target_val(s_value);
+      target_value.set_s_target_val(std::min(s_value, s_target_value));
       target_value.set_target_type(upper_bound_infos_[i].target_type);
       JSON_DEBUG_VALUE("has_farslow_follow_target", 1.0)
     }

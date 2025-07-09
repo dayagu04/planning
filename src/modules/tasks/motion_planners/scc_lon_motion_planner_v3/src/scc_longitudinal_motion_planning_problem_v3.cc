@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #include "math_lib.h"
 #include "scc_longitudinal_motion_planning_cost_v3.h"
@@ -40,13 +41,10 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
       std::make_shared<LonAccCostTerm>());  // longitudinal acc cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonJerkCostTerm>());  // longitudinal jerk cost
-                                             //   ilqr_core_ptr_->AddCost(
-  //       std::make_shared<LonSoftPosBoundCostTerm>());  // longitudinal soft
-  //       pos
-  //                                                      //  bound cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<LonHardPosBoundCostTerm>());  // longitudinal hard pos
-                                                     // bound cost
+      std::make_shared<LonSoftPosBoundCostTerm>());  // longitudinal soft bound cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonHardPosBoundCostTerm>());  // longitudinal hard pos bound cost
   //   ilqr_core_ptr_->AddCost(std::make_shared<LonSVBoundCost>());  //
   //   longitudinal
   //                                                                 // sv bound
@@ -83,6 +81,12 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
   std::vector<IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
 
+  std::vector<double> weights_soft_s_bound;
+  weights_soft_s_bound.resize(N, 0.0);
+  for (size_t t = 0; t < 15; ++t) {
+    weights_soft_s_bound[t] = planning_input.q_soft_pos_bound();
+    ;
+  }
   for (size_t i = 0; i < N; ++i) {
     // reference
     cost_config_vec.at(i)[REF_POS] = planning_input.ref_pos_vec(i);
@@ -90,8 +94,8 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[S_STOP] = planning_input.s_stop();
 
     // bounds
-    // cost_config_vec.at(i)[SOFT_POS_MAX] = planning_input.soft_pos_max_vec(i);
-    // cost_config_vec.at(i)[SOFT_POS_MIN] = planning_input.soft_pos_min_vec(i);
+    cost_config_vec.at(i)[SOFT_POS_MAX] = planning_input.soft_pos_max_vec(i);
+    cost_config_vec.at(i)[SOFT_POS_MIN] = planning_input.soft_pos_min_vec(i);
     cost_config_vec.at(i)[HARD_POS_MAX] = planning_input.hard_pos_max_vec(i);
     cost_config_vec.at(i)[HARD_POS_MIN] = planning_input.hard_pos_min_vec(i);
     cost_config_vec.at(i)[VEL_MAX] = planning_input.vel_max_vec(i);
@@ -124,7 +128,7 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
     cost_config_vec.at(i)[W_SNAP] = planning_input.q_snap();
-    cost_config_vec.at(i)[W_POS_BOUND] = planning_input.q_soft_pos_bound();
+    cost_config_vec.at(i)[W_POS_BOUND] = weights_soft_s_bound[i];
     cost_config_vec.at(i)[W_VEL_BOUND] = planning_input.q_vel_bound();
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();
     cost_config_vec.at(i)[W_JERK_BOUND] = planning_input.q_jerk_bound();

@@ -58,6 +58,9 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
   // 4. jerk bound
   MakeJerkBound(target_maker);
 
+  // 5. RSS safety bound
+  MakeRSSBound();
+
   return common::Status::OK();
 }
 
@@ -120,6 +123,10 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       agent_headway_decider_output.agents_headway_Info();
   const auto start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
+  const auto cipv_info = session_->planning_context().cipv_decider_output();
+  const auto& ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
 
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -290,6 +297,10 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   }
   mutable_follow_target_data->CopyFrom(max_decel_target_pb_);
 
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  const auto start_stop_decider_output =
+      session_->planning_context().start_stop_decider_output();
+
   // Hack: add jerk bound if s_target is safety
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   bool is_need_comfortable_decel = true;
@@ -298,6 +309,13 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     const double s_safe = max_deceleration_curve.Evaluate(0, t);
     const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
     const double agent_s = corridor_upper_point.s();
+    const int32_t agent_id = corridor_upper_point.agent_id();
+    double agent_acc = corridor_upper_point.acceleration();
+    const auto agent = agent_mgr->GetAgent(agent_id);
+    if (agent != nullptr) {
+      agent_acc = agent->accel();
+    }
+    const bool is_cipv_sharp_decel = i < 14 && agent_acc < -2.0;
     // const double vel = virtual_acc_curve->Evaluate(1, t);
     const double brake_buffer = init_lon_state_[1] * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
@@ -305,19 +323,43 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
         target_value.target_type() == TargetType::kNeighborYield ||
         target_value.target_type() == TargetType::kCautionYield) {
       // check s_target by s_safe
-      if (agent_s - brake_buffer < s_safe) {
+      if (agent_s - brake_buffer < s_safe || is_cipv_sharp_decel) {
         is_need_comfortable_decel = false;
         break;
       }
     }
-    const auto& agent_id = upper_bound_infos_[i].agent_id;
+
     if (agent_id == -1) {
       continue;
     }
   }
-  if (is_need_comfortable_decel) {
+  if (is_need_comfortable_decel &&
+      start_stop_decider_output.ego_start_stop_info().state() ==
+          common::StartStopInfo::CRUISE) {
     jerk_lower_bound_ =
         std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
+  }
+}
+
+void BoundMaker::MakeRSSBound() {
+  const auto& ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+  double acc_ego = ego_state_mgr->ego_acc();
+  rss_upper_bound_ = std::vector<double>(plan_points_num_, 200.0);
+
+  for (int32_t i = 0; i < plan_points_num_; ++i) {
+    const double bound_v = upper_bound_infos_[i].v;
+    const double reaction_time = 0.5;
+    const double ego_acc_lower =
+        planning_math::LerpWithLimit(-4.0, IsoAccLimitSpeedLower, -3.0,
+                                     IsoAccLimitSpeedUpper, init_lon_state_[1]);
+    const double agent_max_brake_acc = 2.0;
+    const double rss_bound =
+        CalcRSSDistance(v_ego, acc_ego, bound_v, reaction_time, -ego_acc_lower,
+                        agent_max_brake_acc);
+    rss_upper_bound_[i] =
+        std::max(s_upper_bound_[i] - std::max(rss_bound, 3.5), 3.5);
   }
 }
 
@@ -550,6 +592,34 @@ double BoundMaker::CalcDesiredVelocity(const double d_rel, const double d_des,
   return v_target;
 }
 
+double BoundMaker::CalcRSSDistance(double ego_speed, double ego_acc,
+                                   double front_speed, double reaction_time,
+                                   double min_brake, double max_brake) const {
+  double relative_v = front_speed - ego_speed;
+  const double closing_speed = (relative_v < 0.0) ? -relative_v : 0.0;
+
+  // 1. 反应时间内行驶的距离
+  double distance_during_reaction =
+      ego_speed * reaction_time + 0.5 * ego_acc * reaction_time * reaction_time;
+  double vel_during_reaction = ego_speed + ego_acc * reaction_time;
+
+  // 2. 自车制动距离
+  double ego_braking_distance =
+      (vel_during_reaction * vel_during_reaction) / (2 * min_brake);
+
+  // 3. 前车制动距离（仅当自车比前车快时）
+  double lead_brake_compensation = 0.0;
+  if (relative_v < 0.0) {
+    lead_brake_compensation = (front_speed * front_speed) / (2 * max_brake);
+  }
+
+  // 4. 速度相关安全余量
+  const double approach_margin = 0.1 * closing_speed * reaction_time;
+
+  return distance_during_reaction + ego_braking_distance -
+         lead_brake_compensation + approach_margin;
+}
+
 double BoundMaker::s_lower_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
   return s_lower_bound_[index];
@@ -587,6 +657,11 @@ double BoundMaker::jerk_lower_bound(const double t) const {
 double BoundMaker::jerk_upper_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
   return jerk_upper_bound_[index];
+}
+
+double BoundMaker::rss_bound(const double t) const {
+  int32_t index = static_cast<int32_t>(std::round(t / dt_));
+  return rss_upper_bound_[index];
 }
 
 }  // namespace planning

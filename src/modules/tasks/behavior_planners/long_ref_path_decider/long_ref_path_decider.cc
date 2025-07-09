@@ -66,7 +66,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
   lon_behavior_output_.s_refs.resize(plan_points_num_);
   lon_behavior_output_.ds_refs.resize(plan_points_num_);
   lon_behavior_output_.hard_bounds_v3.resize(plan_points_num_);
-  lon_behavior_output_.soft_bounds.resize(plan_points_num_);
+  lon_behavior_output_.soft_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.lead_bounds.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_v.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_a.resize(plan_points_num_);
@@ -101,6 +101,15 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // binwang33: hard_bounds不需要再采用vector形式
     // lon_behavior_output_.hard_bounds[0].emplace_back(s_hard_bound);
     lon_behavior_output_.hard_bounds_v3[i] = s_hard_bound;
+
+    WeightedBound s_soft_bound;
+    s_soft_bound.lower = 0.0;
+    s_soft_bound.upper = bound_maker_->rss_bound(t);
+    s_soft_bound.weight = 10;
+    s_soft_bound.bound_info.id =
+        st_corridor_upper_bound.agent_id();  // hack: 后续在bound_maker_中查询
+    s_soft_bound.bound_info.type = BoundType::DEFAULT;
+    lon_behavior_output_.soft_bounds_v3[i] = s_soft_bound;
 
     // 5.update v bounds
     // TBD: 缺少一个s-v bound，用于实现精准限速
