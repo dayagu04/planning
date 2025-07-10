@@ -101,7 +101,13 @@ class VirtualLane {
     ego_lateral_offset_ = ego_lateral_offset;
   };
 
+  void set_ego_longit_s(double ego_longit_s) {
+    ego_longit_s_ = ego_longit_s;
+  };
+
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
+
+  double get_ego_longit_s() const { return ego_longit_s_; };
 
   void set_lane_frenet_coord(
       std::shared_ptr<planning_math::KDPath> frenet_coord) {
@@ -171,7 +177,8 @@ class VirtualLane {
 
   int virtual_id_ = 0;
   int relative_id_ = 0;
-  float ego_lateral_offset_ = 0;
+  float ego_lateral_offset_ = 0.0;
+  float ego_longit_s_ = 0.0;
   double width_ = 2.8;
   std::shared_ptr<planning_math::KDPath> lane_frenet_coord_;
   LaneStatusEx lane_status_;

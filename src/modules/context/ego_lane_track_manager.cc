@@ -1342,8 +1342,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       }
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
         double total_cost = 0.0;
+        double average_heading_angle = 0.0;
         double average_heading_angle_cost = 0.0;
-        double heading_angle_cost = 0.0;
+        double heading_angle_total = 0.0;
         double average_kappa_cost = 0.0;
         double total_kappa_cost = 0.0;
         double lateral_dis_cost = 0.0;
@@ -1364,7 +1365,8 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
-        int theta_diff_iter_count = 0;
+        int theta_iter_count = 0;
+        int average_angle_count = 0;
         for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
              s += kLaneLineSegmentLength) {
           if (s > kDefaultMappingConsiderLaneLength + ego_s) {
@@ -1376,14 +1378,28 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           iter_count++;
 
           double heading_angle = frenet_coord->GetPathCurveHeading(s);
-          double theta_diff = NormalizeAngle(heading_angle - ego_heading_angle);
-          heading_angle_cost += std::fabs(theta_diff);
-          theta_diff_iter_count++;
+          double theta = NormalizeAngle(heading_angle);
+          heading_angle_total += std::fabs(theta);
+          theta_iter_count++;
         }
+
+        for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+             s += kLaneLineSegmentLength) {
+          if (s > kNearPreviewDistanceThd + ego_s) {
+            break;
+          }
+
+          double heading_angle = frenet_coord->GetPathCurveHeading(s);
+          double theta = NormalizeAngle(heading_angle);
+          average_heading_angle += std::fabs(theta);
+          average_angle_count++;
+        }
+
         iter_count = std::max(1, iter_count);
         average_kappa_cost = total_kappa_cost / iter_count;
-        theta_diff_iter_count = std::max(1, theta_diff_iter_count);
-        average_heading_angle_cost = heading_angle_cost / theta_diff_iter_count;
+        theta_iter_count = std::max(1, theta_iter_count);
+        average_angle_count = std::max(1, average_angle_count);
+        average_heading_angle_cost = std::fabs(heading_angle_total / theta_iter_count - average_heading_angle / average_angle_count);
         lateral_dis_cost = std::fabs(ego_l);
         total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
             kAverageKappaCostWeight * average_kappa_cost + lateral_dis_cost * kEgoLateralDistanceCostWeight;
@@ -1617,6 +1633,7 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
   for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane != nullptr) {
       double ego_lateral_offset = 0.0;
+      double ego_longit_s = 0.0;
       auto& lane_points = relative_id_lane->lane_points();
       if (lane_points.size() < 3) {
         continue;
@@ -1656,8 +1673,10 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
 
         if (!frenet_coord->XYToSL(ego_cart_point, ego_cart_point_frenet)) {
           ego_lateral_offset = 0.0;
+          ego_longit_s = 0.0;
         } else {
           ego_lateral_offset = ego_cart_point_frenet.y;
+          ego_longit_s = ego_cart_point_frenet.x;
         }
       } else {
         for (const auto& point : lane_points) {
@@ -1688,11 +1707,14 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
 
         if (!frenet_coord->XYToSL(ego_cart_point, ego_cart_point_frenet)) {
           ego_lateral_offset = 0.0;
+          ego_longit_s = 0.0;
         } else {
           ego_lateral_offset = ego_cart_point_frenet.y;
+          ego_longit_s = ego_cart_point_frenet.x;
         }
       }
       relative_id_lane->set_ego_lateral_offset(ego_lateral_offset);
+      relative_id_lane->set_ego_longit_s(ego_longit_s);
     }
   }
 }
@@ -2357,71 +2379,41 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
   if (base_lane == nullptr) {
     return;
   }
-  bool left_boundary_exist_virtual_type = false;
-  double left_lane_line_length = 0.0;
-  int left_current_segment_count = 0;
-  double left_ego_s = 0.0, left_ego_l = 0.0;
+
   // 判断左侧车道线类型
-  const auto& left_lane_boundarys = base_lane->get_left_lane_boundary();
-  std::shared_ptr<planning_math::KDPath> left_base_boundary_path =
-      MakeBoundaryPath(left_lane_boundarys);
-  if (left_base_boundary_path != nullptr) {
-    if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
-                                         &left_ego_l)) {
-      return;
+  bool left_boundary_exist_virtual_type = false;
+  double ego_s = base_lane->get_ego_longit_s();
+  for (const auto& point: base_lane->lane_points()) {
+    if (point.s < ego_s + kLaneLineSegmentLength) {
+      continue;
     }
-  } else {
-    return;
-  }
-  for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-    left_lane_line_length += left_lane_boundarys.type_segments[i].length;
-    if (left_lane_line_length > left_ego_s) {
-      left_current_segment_count = i;
-      break;
-    }
-  }
-  for (int i = left_current_segment_count;
-       i < left_lane_boundarys.type_segments_size; i++) {
-    if (left_lane_boundarys.type_segments[i].type ==
+    if (point.left_lane_border_type ==
         iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
       left_boundary_exist_virtual_type = true;
       break;
     } else {
       continue;
     }
+    if (point.s > ego_s + kDefaultMappingConsiderLaneLength) {
+      break;
+    }
   }
 
   // 判断右侧车道线类型
   bool right_boundary_exist_virtual_type = false;
-  double right_lane_line_length = 0.0;
-  int right_current_segment_count = 0;
-  double right_ego_s = 0.0, right_ego_l = 0.0;
-  const auto& right_lane_boundarys = base_lane->get_right_lane_boundary();
-  std::shared_ptr<planning_math::KDPath> right_base_boundary_path =
-      MakeBoundaryPath(right_lane_boundarys);
-  if (right_base_boundary_path != nullptr) {
-    if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
-                                          &right_ego_l)) {
-      return;
+  for (const auto& point: base_lane->lane_points()) {
+    if (point.s < ego_s + kLaneLineSegmentLength) {
+      continue;
     }
-  } else {
-    return;
-  }
-  for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-    right_lane_line_length += right_lane_boundarys.type_segments[i].length;
-    if (right_lane_line_length > right_ego_s) {
-      right_current_segment_count = i;
-      break;
-    }
-  }
-  for (int i = right_current_segment_count;
-       i < right_lane_boundarys.type_segments_size; i++) {
-    if (right_lane_boundarys.type_segments[i].type ==
+    if (point.right_lane_border_type ==
         iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
       right_boundary_exist_virtual_type = true;
       break;
     } else {
       continue;
+    }
+    if (point.s > ego_s + kDefaultMappingConsiderLaneLength) {
+      break;
     }
   }
 
