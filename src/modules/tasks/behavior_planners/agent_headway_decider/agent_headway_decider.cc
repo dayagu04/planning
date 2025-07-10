@@ -132,7 +132,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double v_ego = ego_state_manager->ego_v();
     const double v_relative = agent->speed() - v_ego;
     if (v_relative > kHighSpeedDiffThd) {
-      headway_step = 0.5 * headway_step;
+      headway_step = 0.5 * config_.headway_step;
     }
 
     // first appear
