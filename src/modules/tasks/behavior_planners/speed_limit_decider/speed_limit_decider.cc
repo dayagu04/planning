@@ -911,7 +911,6 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     return;
   }
 
-  // get lane borrow agent
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   if (agent_manager == nullptr) {
@@ -933,10 +932,21 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   }
 
   std::vector<const agent::Agent *> avoid_agents;
+  bool is_triggered_vru_in_avoid_agent = false;
   for (const auto avoid_agent_id : avoid_ids) {
+    if (avoid_agent_id == triggered_vru_.id) {
+      is_triggered_vru_in_avoid_agent = true;
+    }
     const auto avoid_agent = agent_manager->GetAgent(avoid_agent_id);
     if (avoid_agent != nullptr) {
       avoid_agents.emplace_back(avoid_agent);
+    }
+  }
+
+  if (triggered_vru_.id != -1 && !is_triggered_vru_in_avoid_agent) {
+    const auto avoid_vru = agent_manager->GetAgent(triggered_vru_.id);
+    if (avoid_vru != nullptr) {
+      avoid_agents.emplace_back(avoid_vru);
     }
   }
 
@@ -959,6 +969,9 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   for (auto avoid_agent : avoid_agents) {
     const bool is_static = avoid_agent->is_static();
     const double avoid_agent_v = avoid_agent->speed();
+    const bool is_triggered_vru =
+        avoid_agent->agent_id() == triggered_vru_.id ? true : false;
+    // const double speed_diff = v_ego - avoid_agent->speed();
 
     // bool is_need_v_hold = false;
     // double speed_buffer = 0.0;
@@ -1030,6 +1043,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         avoid_agents_info.end()) {
       invade_dis = std::max(avoid_agents_info.at(avoid_agent->agent_id()), 0.0);
     }
+    invade_dis = is_triggered_vru ? 0.2 : invade_dis;
     std::array<double, 2> xp{lane_half_width - invade_dis,
                              lane_half_width + 0.2};
     std::array<double, 2> fp{v_follow_desired, v_ego};
@@ -1044,13 +1058,14 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         avoid_agent->is_static()
             ? interp(lane_half_width - fabs(min_lat_l), xp1, fp1)
             : interp(lane_half_width - fabs(min_lat_l), xp1, fp2);
-
+    v_limit_lower = is_triggered_vru ? 1.0 : v_limit_lower;
     // const double v_limit_lower = avoid_agent->is_static()
     //                                  ? kStaticAgentAvoidLimitedSpeedHigh
     //                                  : kDynamicAgentAvoidLimitedSpeedHigh;
-    double v_limit_lower_tmp = avoid_agent_v + 2.0;
+    double v_limit_lower_tmp = is_triggered_vru ? 1.0 : avoid_agent_v + 2.0;
     v_limit = std::max(v_limit, v_limit_lower);
     v_limit = std::max(v_limit, v_limit_lower_tmp);
+    v_limit = std::min(v_limit, init_point.v);
 
     SpeedLimitAgent speed_limit_agent;
     speed_limit_agent.id = avoid_agent->agent_id();
@@ -1345,8 +1360,6 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
   } else {
     vru_round_triggered_ = false;
   }
-
-
 }
 
 bool SpeedLimitDecider::HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map) {
