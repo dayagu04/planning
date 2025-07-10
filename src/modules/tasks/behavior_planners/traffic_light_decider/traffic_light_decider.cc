@@ -72,9 +72,10 @@ bool TrafficLightDecider::Execute() {
       if (dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
-                              std::max(2.0 - yellow_light_timer_, 0.0) >
-                          dis_to_stopline)) {
+        if (IsSmallFrontIntersection() && !IsIntersectionMatchTFL()) {
+          can_pass_ = true;
+        } else if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
+                  std::max(2.0 - yellow_light_timer_, 0.0) > dis_to_stopline)) {
           can_pass_ = true;
         } else {
           can_pass_ = false;
