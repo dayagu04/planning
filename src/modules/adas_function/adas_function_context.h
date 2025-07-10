@@ -33,6 +33,10 @@ class AdasFunctionContext {
   ObjectsInfo *mutable_objs_info() { return &objs_info_; }
   const ObjectsInfo *const get_objs_info() { return &objs_info_; }
 
+  // 标识牌信息
+  TsrInfo *mutable_tsr_info() { return &tsr_info_; }
+  const TsrInfo *const get_tsr_info() { return &tsr_info_; }
+
   iflyauto::Trajectory *mutable_lka_trajectory_info() {
     return &lks_trajectory_;
   }
@@ -61,6 +65,8 @@ class AdasFunctionContext {
   RoadInfo road_info_;
 
   LastCycleInfo last_cycle_info_;
+
+  TsrInfo tsr_info_;
 
   AdasOutputInfo output_info_;
 

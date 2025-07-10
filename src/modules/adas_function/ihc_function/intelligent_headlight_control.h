@@ -2,13 +2,16 @@
 #define _IHC_STEP_H_
 
 #include "Platform_Types.h"
+#include "adas_function_context.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "obstacle_manager.h"
 #include "planning_hmi_c.h"
 #include "virtual_lane_manager.h"
 
-namespace planning {
+using namespace planning;
+namespace adas_function {
+namespace ihc_core {
 #define IHC_StateMachine_IN_ACTIVE 1   // IHC一级主状态
 #define IHC_StateMachine_IN_FAULT 2    // IHC一级主状态
 #define IHC_StateMachine_IN_OFF 3      // IHC一级主状态
@@ -39,6 +42,9 @@ struct IHCSys {
 
 class IntelligentHeadlightControl {
  public:
+  IntelligentHeadlightControl() : session_(nullptr) {
+    // 默认构造函数
+  }
   IntelligentHeadlightControl(planning::framework::Session *session) {
     session_ = session;
   }
@@ -79,6 +85,7 @@ class IntelligentHeadlightControl {
         break;
     }
   }
+  bool json_switch_ihc_main_switch();
 
  private:
   planning::framework::Session *session_;
@@ -90,5 +97,6 @@ class IntelligentHeadlightControl {
                                                    // 0:Unavailable 1:Off
                                                    // 2:Standby 3:Active
 };
-}
+}  // namespace ihc_core
+}  // namespace adas_function
 #endif

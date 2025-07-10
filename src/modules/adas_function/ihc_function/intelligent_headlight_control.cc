@@ -1,6 +1,8 @@
 #include "intelligent_headlight_control.h"
 
-namespace planning {
+using namespace planning;
+namespace adas_function {
+namespace ihc_core {
 
 void IntelligentHeadlightControl::RunOnce() {
   // 更新输入信息
@@ -22,6 +24,9 @@ void IntelligentHeadlightControl::RunOnce() {
   }
   set_ihc_output_info();
 
+  // 从配置文件中读取ihc_main_switch值, 测试用
+  json_switch_ihc_main_switch();
+
   JSON_DEBUG_VALUE("ihc_function::ihc_enable_code",
                    ihc_sys_.state.ihc_enable_code);
   JSON_DEBUG_VALUE("ihc_function::ihc_disable_code",
@@ -38,6 +43,15 @@ void IntelligentHeadlightControl::RunOnce() {
                    ihc_sys_.input.auto_light_state);
 }
 void IntelligentHeadlightControl::Update() {
+  // 检查 session_ 是否有效
+  if (session_ == nullptr) {
+    // 如果session为空，使用默认值
+    ihc_sys_.input.ihc_main_switch = false;
+    ihc_sys_.input.vehicle_speed_display_kph = 0.0F;
+    ihc_sys_.input.auto_light_state = false;
+    return;
+  }
+
   // 获取IHC开关状态
   ihc_sys_.input.ihc_main_switch =
       session_->environmental_model()
@@ -182,6 +196,11 @@ uint8 IntelligentHeadlightControl::IHCStateMachine() {
 bool IntelligentHeadlightControl::IHCRequest() {
   bool ihc_request_temp = true;
 
+  // 检查 session_ 是否有效
+  if (session_ == nullptr) {
+    return false;  // 如果session为空，返回false（禁止远光灯）
+  }
+
   // 如果本车道、左车道、右车道检测到移动物体,则禁止请求远光灯
   // 坐标系:本车后轴中心 左正右负
   float32 x_min = 0.0F;    // 检测区域:x最小值 单位:m
@@ -255,4 +274,26 @@ bool IntelligentHeadlightControl::IHCRequest() {
   return ihc_request_temp;
 }
 
-}  // namespace planning
+bool IntelligentHeadlightControl::json_switch_ihc_main_switch() {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+
+  // 读取配置文件中的 ihc_main_switch 值
+  bool ihc_switch = GetContext.get_param()->ihc_main_switch;
+  
+  if (ihc_switch) {
+    // 如果为1，设置为true
+    GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
+    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_status_ = true;
+    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ = true;
+  } else {
+    // 如果为0，设置为false 
+    GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
+    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_status_ = true;
+    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ = false;
+  }
+  
+  return ihc_switch;
+}
+
+}  // namespace ihc_core
+}  // namespace adas_function

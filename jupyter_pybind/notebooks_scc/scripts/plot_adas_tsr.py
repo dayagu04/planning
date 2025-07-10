@@ -10,7 +10,8 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_48160/trigger/20241213/20241213-16-22-18/data_collection_CHERY_E0Y_48160_EVENT_MANUAL_2024-12-13-16-22-18_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250702/20250702-11-13-07/data_collection_CHERY_M32T_50813_EVENT_FILTER_2025-07-02-11-13-07_no_camera.bag.1751979479.open-loop.noa.plan"
+frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -77,6 +78,7 @@ lka_json_value_list = [#new_ldw debug info:
                          "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_", "tsr_speed_limit_",
                          "tsr_speed_limit_valid_","tsr_warning_image_","tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_",
                          "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_",
+                         "tsr_output_supp_sign_info_",
                         ]
 
 adas_json_value_list =  [ #adas_debug info
@@ -128,28 +130,17 @@ adas_json_list_dict['time'] = lka_t_tsr_debug
 # figures
 # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_vector, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref', visible=True)
 # fig1.line('dy_mpc_vec', 'dx_mpc_vec', source = data_vector, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'mpc', visible=True)
-fig1.line('road_left_roadedge_all_dy_vec_', 'road_left_roadedge_all_dx_vec_', source = data_vector, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'left_roadedge', visible=True)
-fig1.line('road_right_roadedge_all_dy_vec_', 'road_right_roadedge_all_dx_vec_', source = data_vector, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'right_roadedge', visible=True)
-fig1.patch('car_yn', 'car_xn', source = data_car_preview, fill_color = "red", fill_alpha = 0.25, line_color = "black", line_width = 1, legend_label = 'preview_eog_pose', visible = True)
-fig1.patch('obj_yn', 'obj_xn', source = data_fl_obj_selected, fill_color = "green", fill_alpha = 0.2, line_color = "black", line_width = 1, legend_label = 'fl_obj', visible = True)
-fig1.patch('obj_yn', 'obj_xn', source = data_ml_obj_selected, fill_color = "green", fill_alpha = 0.5, line_color = "black", line_width = 1, legend_label = 'ml_obj', visible = True)
-fig1.patch('obj_yn', 'obj_xn', source = data_rl_obj_selected, fill_color = "green", fill_alpha = 0.9, line_color = "black", line_width = 1, legend_label = 'rl_obj', visible = True)
+# fig1.line('road_left_roadedge_all_dy_vec_', 'road_left_roadedge_all_dx_vec_', source = data_vector, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'left_roadedge', visible=True)
+# fig1.line('road_right_roadedge_all_dy_vec_', 'road_right_roadedge_all_dx_vec_', source = data_vector, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'right_roadedge', visible=True)
+# fig1.width = 600
+# fig1.height = 1380
 
-fig1.patch('obj_yn', 'obj_xn', source = data_fm_obj_selected, fill_color = "purple", fill_alpha = 0.2, line_color = "black", line_width = 1, legend_label = 'fm_obj', visible = True)
-fig1.patch('obj_yn', 'obj_xn', source = data_rm_obj_selected, fill_color = "purple", fill_alpha = 0.75, line_color = "black", line_width = 1, legend_label = 'rm_obj', visible = True)
-
-fig1.patch('obj_yn', 'obj_xn', source = data_fr_obj_selected, fill_color = "blue", fill_alpha = 0.2, line_color = "black", line_width = 1, legend_label = 'fr_obj', visible = True)
-fig1.patch('obj_yn', 'obj_xn', source = data_mr_obj_selected, fill_color = "blue", fill_alpha = 0.5, line_color = "black", line_width = 1, legend_label = 'mr_obj', visible = True)
-fig1.patch('obj_yn', 'obj_xn', source = data_rr_obj_selected, fill_color = "blue", fill_alpha = 0.9, line_color = "black", line_width = 1, legend_label = 'rr_obj', visible = True)
-fig1.width = 600
-fig1.height = 1380
-
-source = ColumnDataSource(data=dict(x=[], y=[]))
-fig1.circle('x', 'y', size=6, source=source, color='red', legend_label='measure tool')
-line_source = ColumnDataSource(data=dict(x=[], y=[]))
-fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
-text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
-fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
+# source = ColumnDataSource(data=dict(x=[], y=[]))
+# fig1.circle('x', 'y', size=6, source=source, color='red', legend_label='measure tool')
+# line_source = ColumnDataSource(data=dict(x=[], y=[]))
+# fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
+# text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+# fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
 callback_code = """
     var x = cb_obj.x;
     var y = cb_obj.y;
@@ -192,8 +183,8 @@ callback_code = """
     }
     text_source.change.emit();
 """
-callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
-fig1.js_on_event(Tap, callback)
+# callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+# fig1.js_on_event(Tap, callback)
 #f
 # fig_control_1 = bkp.figure(x_axis_label='time', y_axis_label='steering angle',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=200)
 
@@ -231,7 +222,7 @@ fig_dynamic_state.line('time', 'tsr_warning_voice_', source = lkas_json_list_dic
 
 f_path_info = fig_path_info.line('time', 'tsr_speed_limit_change_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'speed_limit_change_flag')
 fig_path_info.line('time', 'tsr_accumulated_path_length_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'accumulated_path_length')
-
+fig_path_info.line('time', 'tsr_output_supp_sign_info_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'output_supp_sign_info')
 
 hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('tsr_state_', '@tsr_state_'),('tsr_main_switch_', '@tsr_main_switch_'), ('tsr_enable_code_', '@tsr_enable_code_'),
                                                        ('tsr_disable_code_', '@tsr_disable_code_'), ('tsr_fault_code_', '@tsr_fault_code_')], mode='vline')
@@ -450,5 +441,5 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1, column(fig_machine, fig_vehicle_state, fig_dynamic_state,fig_path_info)), notebook_handle=True)
+bkp.show(row(column(fig_machine, fig_vehicle_state, fig_dynamic_state,fig_path_info)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

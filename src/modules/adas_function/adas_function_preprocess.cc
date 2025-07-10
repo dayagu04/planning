@@ -110,8 +110,8 @@ void Preprocess::SyncParameters(void) {
                        "ldp_main_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_main_switch, bool,
                        "elk_main_switch");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_main_switch, bool,
-                       "tsr_main_switch");
+  // ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_main_switch, bool,
+  //                      "tsr_main_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_tlc_thrd, double,
                        "elk_tlc_thrd");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_tlc_thrd,
@@ -143,10 +143,99 @@ void Preprocess::SyncParameters(void) {
                        double, "tsr_reset_path_length");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lane_line_width, double,
                        "lane_line_width");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_vel_vector,
-                       std::vector<double>, "ldp_vel_vector");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_tlc_vector,
-                       std::vector<double>, "ldp_tlc_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
+                       std::vector<double>, "lka_vel_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_tlc_vector,
+                       std::vector<double>, "lka_tlc_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_c2_vector,
+                       std::vector<double>, "lka_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_dec_tlc_by_c2_vector,
+                       std::vector<double>, "lka_dec_tlc_by_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_fault_code_maskcode, int,
+                       "ldp_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_enable_code_maskcode,
+                       int, "ldp_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_disable_code_maskcode,
+                       int, "ldp_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_left_suppression_code_maskcode, int,
+      "ldp_left_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_left_kickdown_code_maskcode, int,
+      "ldp_left_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_right_suppression_code_maskcode, int,
+      "ldp_right_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_right_kickdown_code_maskcode, int,
+      "ldp_right_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_enable_code_maskcode,
+                       int, "ldw_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_disable_code_maskcode,
+                       int, "ldw_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_fault_code_maskcode, int,
+                       "ldw_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_left_suppression_code_maskcode, int,
+      "ldw_left_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_left_kickdown_code_maskcode, int,
+      "ldw_left_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_right_suppression_code_maskcode, int,
+      "ldw_right_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_right_kickdown_code_maskcode, int,
+      "ldw_right_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_fault_code_maskcode, int,
+                       "elk_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_enable_code_maskcode,
+                       int, "elk_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_disable_code_maskcode,
+                       int, "elk_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_left_suppression_code_maskcode, int,
+      "elk_left_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_left_kickdown_code_maskcode, int,
+      "elk_left_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_right_suppression_code_maskcode, int,
+      "elk_right_suppression_code_maskcode");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_right_kickdown_code_maskcode, int,
+      "elk_right_kickdown_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_kickdown_lat_v_dur,
+                       double, "ldp_kickdown_lat_v_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_suppression_driver_hand_trq, double,
+      "suppression_driver_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_kickdown_samedir_hand_trq, double,
+      "kickdown_samedir_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_kickdown_oppodir_hand_trq, double,
+      "kickdown_oppodir_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->LDP_kickdown_abs_hand_trq,
+                       double, "kickdown_abs_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->LDP_kickdown_hand_trq_dur,
+                       double, "kickdown_hand_trq_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_suppression_driver_hand_trq, double,
+      "suppression_driver_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_kickdown_samedir_hand_trq, double,
+      "kickdown_samedir_hand_trq");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_kickdown_oppodir_hand_trq, double,
+      "kickdown_oppodir_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ELK_kickdown_abs_hand_trq,
+                       double, "kickdown_abs_hand_trq");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ELK_kickdown_hand_trq_dur,
+                       double, "kickdown_hand_trq_dur");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_main_switch, bool,
+                       "ihc_main_switch");
+
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }
@@ -1310,6 +1399,97 @@ void Preprocess::UpdateObjsInfo(void) {
   return;
 }
 
+// 从 iflyauto 到 adas_function::context 的转换函数（严格一对一映射）
+adas_function::context::SuppSignType Preprocess::convertToAdasSuppSign(iflyauto::SuppSignType sign) {
+    using Ifly = iflyauto::SuppSignType;
+    using Ctx = adas_function::context::SuppSignType;
+    
+    // 建立严格的一对一映射（名称相同但值不同）
+    static const std::unordered_map<Ifly, Ctx> mapping = {
+        {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SUPP_SIGN_TYPE_UNKNOWN},
+        {Ifly::SUPP_SIGN_TYPE_NO_ENTRY, Ctx::SUPP_SIGN_TYPE_NO_ENTRY},
+        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING, Ctx::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING},
+        {Ifly::SUPP_SIGN_TYPE_NO_PARKING, Ctx::SUPP_SIGN_TYPE_NO_PARKING},
+        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING, Ctx::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING},
+        {Ifly::SUPP_SIGN_TYPE_NO_OVERTAKING, Ctx::SUPP_SIGN_TYPE_NO_OVERTAKING},
+        {Ifly::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING, Ctx::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING},
+        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT, Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT},
+        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT, Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT},
+        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_U, Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_U},
+        {Ifly::SUPP_SIGN_TYPE_STOP_SIGN, Ctx::SUPP_SIGN_TYPE_STOP_SIGN},
+        {Ifly::SUPP_SIGN_TYPE_YIELD_SIGN, Ctx::SUPP_SIGN_TYPE_YIELD_SIGN},
+        {Ifly::SUPP_SIGN_TYPE_NO_PASSING, Ctx::SUPP_SIGN_TYPE_NO_PASSING},
+    };
+    
+    auto it = mapping.find(sign);
+    return it != mapping.end() ? it->second : Ctx::SUPP_SIGN_TYPE_UNKNOWN;
+}
+
+// 从 iflyauto::SuppSignType 到 adas_function::context::SpeedSignType 的转换函数
+adas_function::context::SpeedSignType Preprocess::convertToAdasSpeedSign(iflyauto::SuppSignType sign) {
+    using Ifly = iflyauto::SuppSignType;
+    using Ctx = adas_function::context::SpeedSignType;
+    
+    static const std::unordered_map<Ifly, Ctx> mapping = {
+        {Ifly::SUPP_SIGN_TYPE_MAXIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MAXIMUM_SPEED},
+        {Ifly::SUPP_SIGN_TYPE_MINIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MINIMUM_SPEED},
+        {Ifly::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT, Ctx::SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT},
+        {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SPEED_SIGN_TYPE_UNKNOWN},
+        // 其他标志映射为 UNKNOWN
+    };
+    
+    auto it = mapping.find(sign);
+    return it != mapping.end() ? it->second : Ctx::SPEED_SIGN_TYPE_UNKNOWN;
+}
+
+// 预处理把辅助标识牌和限速标识牌分开，分别储存类型,并保存到tsr_info中
+void Preprocess::UpdateTsrInfo(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  // 获取感知模块的TSR信息
+  const auto &perception_tsr_info = &GetContext.get_session()
+                                       ->environmental_model()
+                                       .get_local_view()
+                                       .perception_tsr_info;
+  // 处理后的信息初始化
+  auto &speed_sign_info_vector = GetContext.mutable_tsr_info()->speed_sign_info_vector;
+  auto &supp_sign_info_vector = GetContext.mutable_tsr_info()->supp_sign_info_vector;
+  speed_sign_info_vector.clear();
+  supp_sign_info_vector.clear();
+  
+  // 处理感知到的辅助标志牌信息, 只处理已知类型
+  if (perception_tsr_info->supp_signs_size > 0) {
+    for (int i = 0; i < perception_tsr_info->supp_signs_size; i++) {
+      const auto &supp_sign = perception_tsr_info->supp_signs[i];
+      // 如果是感知速度标识类型
+      if (supp_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED ||
+          supp_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MINIMUM_SPEED ||
+          supp_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT) {
+        adas_function::context::SpeedSignInfo speed_sign_info;
+        speed_sign_info.id = supp_sign.id;
+        speed_sign_info.isp_timestamp = perception_tsr_info->isp_timestamp;
+        // 转换为adasTsr定义
+        speed_sign_info.speed_sign_type = convertToAdasSpeedSign(supp_sign.supp_sign_type);
+        speed_sign_info.supp_sign_x = supp_sign.supp_sign_x;
+        speed_sign_info.supp_sign_y = supp_sign.supp_sign_y;
+        speed_sign_info.supp_sign_z = supp_sign.supp_sign_z;
+        speed_sign_info.speed_limit = supp_sign.speed_limit;
+        speed_sign_info_vector.emplace_back(speed_sign_info);
+      } else {
+        // 其他类型
+        adas_function::context::SuppSignInfo supp_sign_info;
+        supp_sign_info.id = supp_sign.id;
+        supp_sign_info.isp_timestamp = perception_tsr_info->isp_timestamp;
+        supp_sign_info.supp_sign_type = convertToAdasSuppSign(supp_sign.supp_sign_type);
+        supp_sign_info.supp_sign_x = supp_sign.supp_sign_x;
+        supp_sign_info.supp_sign_y = supp_sign.supp_sign_y;
+        supp_sign_info.supp_sign_z = supp_sign.supp_sign_z;
+        supp_sign_info_vector.emplace_back(supp_sign_info);
+      }
+    }
+  }
+  return;
+}
+
 void Preprocess::ObjInLaneJudge() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   const auto &fusion_objs = GetContext.get_session()
@@ -1850,6 +2030,9 @@ void Preprocess::RunOnce(void) {
 
   // 更新objs_info_
   UpdateObjsInfo();
+
+  // 更新tsr_info_
+  UpdateTsrInfo();
 
   count_++;
   ILOG_DEBUG << "Preprocess::RunOnce count=" << count_;

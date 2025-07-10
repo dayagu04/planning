@@ -25,6 +25,8 @@ class Preprocess {
 
   void UpdateObjsInfo(void);
 
+  void UpdateTsrInfo(void);
+
   void RunOnce(void);
 
   double count_ = 0;
@@ -42,6 +44,9 @@ class Preprocess {
   void SidewayExistJudge(void);
   void SafeDeparturePermissionJudge(void);
   double ObjCalculateTTC(const context::FusionObjExtractInfo &obj);
+  // 从感知iflyautoTsr定义转adasTsr定义
+  adas_function::context::SuppSignType convertToAdasSuppSign(iflyauto::SuppSignType sign);
+  adas_function::context::SpeedSignType convertToAdasSpeedSign(iflyauto::SuppSignType sign);
   bool last_left_line_valid_flag_ = false;
   bool last_right_line_valid_flag_ = false;
   double last_left_line_distance_ = 0.0;

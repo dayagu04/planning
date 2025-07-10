@@ -2,7 +2,10 @@
 #define TSR_CORE_H_
 
 #include "adas_function_context.h"
+#include "adas_function_struct.h"
+#include "camera_perception_tsr_c.h"
 #include "debug_info_log.h"
+#include "func_state_machine_c.h"
 
 using namespace planning;
 namespace adas_function {
@@ -32,8 +35,9 @@ class TsrCore {
  private:
   TsrParameters tsr_param_;
 
-  bool tsr_main_switch_ = false;  // TSR功能开关状态 0:Off  1:On
-  bool UpdateTsrMainSwitch(void);
+  iflyauto::NotificationMainSwitch tsr_main_switch_ =
+      iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
+  iflyauto::NotificationMainSwitch UpdateTsrMainSwitch(void);
 
   uint16 tsr_enable_code_ = 255;
   uint16 UpdateTsrEnableCode(void);
@@ -50,13 +54,59 @@ class TsrCore {
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);
   bool tsr_speed_limit_valid_ =false;
+
+  // 限速标识牌信息 (视觉信息)
   uint32 tsr_speed_limit_ = 0;  // 限速值 单位:kph
   bool tsr_speed_limit_change_flag_ = false;
   bool speed_limit_exist_in_view_flag_ = false;
   uint32 speed_limit_exist_in_view_ = 0;
   double accumulated_path_length_ = 0.0;
+
+  // 新道路标志位, 需要清掉视觉限速信息
+  bool new_road_flag_ = false;
+  // 视觉限速抑制标志位
+  bool speed_limit_suppression_flag_ = false;
+  // 限速标识牌列表
+  std::vector<adas_function::context::SpeedSignInfo> speed_limit_sign_info_vector_;
+  // 解除限速列表
+  std::vector<adas_function::context::SpeedSignInfo> end_of_speed_sign_info_vector_;
+
+  // 当前道路限速信息 (道路信息)
+  bool current_map_speed_limit_valid_ = false;
+  double current_map_speed_limit_ = 0.0;
+  void UpdateMapSpeedLimit(void);
+  // 更新限速标识牌信息
   void UpdateTsrSpeedLimit(void);
 
+  // 新版更新限速信息
+  void UpdateTsrSpeedLimitNew(void);
+
+  // 辅助标识牌列表
+  std::vector<adas_function::context::SuppSignInfo> supp_sign_info_vector_;
+  // 实时辅助标识牌
+  iflyauto::SuppSignType realtime_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+  // 输出辅助标识牌
+  iflyauto::SuppSignType output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+  // 辅助标识牌有效标志位
+  bool supp_sign_valid_flag_ = false;
+  // 辅助标识变化标志位
+  bool supp_sign_change_flag_ = false;
+  // 辅助标识牌抑制显示标志位
+  bool supp_sign_in_suppression_flag_ = false;
+  // 辅助标识牌保持时间
+  double supp_sign_hold_time_ = 0.0;
+
+  // 更新辅助标识牌信息
+  void UpdateTsrSuppInfo(void);
+  // 最高优先级选择函数
+  adas_function::context::SuppSignInfo selectHighestPrioritySign(const std::vector<adas_function::context::SuppSignInfo>& signs);
+  // adasTsr定义转hmi接口iflyautoTsr定义
+  iflyauto::SuppSignType convertToIflySuppSign(adas_function::context::SuppSignType sign);
+  iflyauto::SuppSignType convertToIflySpeedSign(adas_function::context::SpeedSignType sign);
+  
+  // 获取限速标识牌中的最高限速值
+  uint32 GetHighestSpeedLimit(void);
+  
   bool tsr_warning_image_ = false;  // 视觉提醒
   bool tsr_warning_voice_ = false;  // 声音提醒
   bool overspeed_status_ = false;  // false:未处于超速状态 true:处于超速状态
@@ -65,6 +115,9 @@ class TsrCore {
   // 输出ldw计算结果
   void SetTsrOutputInfo();
   void CalculatePathLengthAccumulated();
+  void CalculateDurationTime(void);
+  // TSR实时信息重置
+  void ResetRealTimeTsrInfo(void);
 };
 
 }  // namespace tsr_core

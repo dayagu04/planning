@@ -573,12 +573,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   // HMI for ihc
 
-  // planning_hmi_info->ihc_output_info.ihc_state =
-  // GetContext.get_output_info()->tsr_output_info_.tsr_state_;
-  // planning_hmi_info->ihc_output_info.ihc_request =
-  //     ihc_info->get_ihc_request_info();
-  // planning_hmi_info->ihc_output_info.ihc_request_status =
-  //     ihc_info->get_ihc_request_status_info();
+  planning_hmi_info->ihc_output_info.ihc_state =
+      GetContext.get_output_info()->ihc_output_info_.ihc_state_;
+  planning_hmi_info->ihc_output_info.ihc_request =
+      GetContext.get_output_info()->ihc_output_info_.ihc_request_;
+  planning_hmi_info->ihc_output_info.ihc_request_status =
+      GetContext.get_output_info()->ihc_output_info_.ihc_request_status_;
   // HMI for tsr
   planning_hmi_info->tsr_output_info.tsr_state =
       GetContext.get_output_info()->tsr_output_info_.tsr_state_;
@@ -586,6 +586,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
       GetContext.get_output_info()->tsr_output_info_.tsr_warning_;
   planning_hmi_info->tsr_output_info.tsr_speed_limit =
       GetContext.get_output_info()->tsr_output_info_.tsr_speed_limit_;
+  planning_hmi_info->tsr_output_info.tsr_supp_sign_type =
+      GetContext.get_output_info()->tsr_output_info_.supp_sign_type;
+  
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
   const auto &cipv_info =

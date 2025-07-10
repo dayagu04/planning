@@ -47,6 +47,8 @@ class AdasFunction : public BaseFunction {
   std::shared_ptr<adas_function::elk_core::ElkCore> elk_core_ptr_;
   // TsrCore
   std::shared_ptr<adas_function::tsr_core::TsrCore> tsr_core_ptr_;
+  // IhcCore
+  std::shared_ptr<adas_function::ihc_core::IntelligentHeadlightControl> ihc_core_ptr_;
 };
 
 }  // namespace planning

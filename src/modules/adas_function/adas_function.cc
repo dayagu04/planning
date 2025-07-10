@@ -33,6 +33,8 @@ void AdasFunction::Init(void) {
   elk_core_ptr_ = std::make_shared<adas_function::elk_core::ElkCore>();
   // srCore
   tsr_core_ptr_ = std::make_shared<adas_function::tsr_core::TsrCore>();
+  // IhcCore
+  ihc_core_ptr_ = std::make_shared<adas_function::ihc_core::IntelligentHeadlightControl>();
 }
 
 void AdasFunction::StoreInfoForNextCycle(void) {
@@ -89,6 +91,10 @@ bool AdasFunction::Plan() {
   elk_core_ptr_->RunOnce();
   // TsrCore
   tsr_core_ptr_->RunOnce();
+
+  // IhcCore
+  ihc_core_ptr_->RunOnce();
+
   // run lkas_function
   double start_time_lkas = IflyTime::Now_ms();
   if (GetContext.get_param()->hmi_test_switch == true) {
