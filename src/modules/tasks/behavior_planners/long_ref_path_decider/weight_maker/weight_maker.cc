@@ -57,6 +57,8 @@ common::Status WeightMaker::Run(const TargetMaker& target_maker) {
 void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
   const double default_s_weight =
       speed_planning_config_.weight_maker_config.s_weight;
+  const double start_s_weight =
+      speed_planning_config_.weight_maker_config.s_weight;
   const double follow_s_weight =
       speed_planning_config_.weight_maker_config.follow_s_weight;
   const double overtake_s_weight =
@@ -163,6 +165,8 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     }
   }
 
+  auto start_stop_info =
+      session_->planning_context().start_stop_result().state();
   s_weight_ = std::vector<double>(plan_points_num_, default_s_weight);
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
@@ -173,8 +177,14 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     //           << std::endl;
     if (target_value.target_type() == TargetType::kCruiseSpeed) {
       s_weight_[i] = default_s_weight;
+      if (start_stop_info == common::StartStopInfo::START) {
+        s_weight_[i] = 5.0;
+      }
     } else if (target_value.target_type() == TargetType::kFollow) {
       s_weight_[i] = follow_s_weight;
+      if (start_stop_info == common::StartStopInfo::START) {
+        s_weight_[i] = 5.0;
+      }
     } else if (target_value.target_type() == TargetType::kOvertake) {
       s_weight_[i] = overtake_s_weight;
     } else if (target_value.target_type() == TargetType::kNeighbor ||

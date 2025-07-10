@@ -34,7 +34,8 @@ constexpr double kMinCheckLength = 30.0;
 constexpr double kMaxCheckTime = 3.0;
 constexpr double kKphToMps = 1.0 / 3.6;
 constexpr double kLowSpeedFollowCIPVTrajLength = 35.0;
-constexpr double kLowSpeedFollowCIPVDis = 13.5;
+constexpr double kLowSpeedFollowCIPVDis = 10.0;
+constexpr double kLowSpeedFollowTflCIPVDis = 5.0;
 //constexpr double kLowSpeedFollowTrajLengthThres = 10.0;
 //constexpr double kLowSpeedFollowJerkPosBoundHigh = 1.0;
 //constexpr double kLowSpeedFollowJerkPosBoundLow = 0.5;
@@ -255,8 +256,11 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
     return false;
   }
   double cipv_traj_length = last_traj_pt_s - first_traj_pt_s;
+  const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
+  const double low_speed_follow_Cipv_dis =
+      is_tfl_virtual_agent ? kLowSpeedFollowTflCIPVDis : kLowSpeedFollowCIPVDis;
   if (cipv_traj_length < kLowSpeedFollowCIPVTrajLength &&
-      cipv_relative_s < kLowSpeedFollowCIPVDis) {
+      cipv_relative_s < low_speed_follow_Cipv_dis) {
     if (cipv_traj_length < config_.low_speed_follow_accel_release_traj_len &&
         ego_v > config_.low_speed_follow_speed_thred_mps) {
       *acc = 0.0;

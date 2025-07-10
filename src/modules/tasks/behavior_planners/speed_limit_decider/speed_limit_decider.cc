@@ -633,6 +633,12 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   const auto avoid_ids =
       session_->planning_context().lateral_offset_decider_output().avoid_ids;
 
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  if (lane_borrow_output.is_in_lane_borrow_status) {
+    return;
+  }
+
   // get lane borrow agent
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();

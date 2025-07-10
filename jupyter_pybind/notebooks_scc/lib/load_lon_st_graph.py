@@ -626,6 +626,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   acc_min_vec = lon_motion_plan_input.acc_min_vec
   jerk_max_vec = lon_motion_plan_input.jerk_max_vec
   jerk_min_vec = lon_motion_plan_input.jerk_min_vec
+  djerk_max_vec = lon_motion_plan_input.djerk_max_vec
+  djerk_min_vec = lon_motion_plan_input.djerk_min_vec
   s_stop = lon_motion_plan_input.s_stop
 
   # time_vec = []
@@ -637,6 +639,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   vel_vec = lon_motion_plan_output.vel_vec
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
+  djerk_vec = lon_motion_plan_output.djerk_vec
 
   weight_maker_replay_info = plan_debug_info.weight_maker.weight_maker_replay_info
   ## print(weight_maker_replay_info)
@@ -651,8 +654,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   cost_size = motion_solver_info.cost_size
   cost_vec = motion_solver_info.cost_vec
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
-  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", "LonSVBoundCost", \
-               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "LonStopPointCost", "NonNegativeVelCost"]
+  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonDJerkCost","LonSoftPosBoundCost", "LonHardPosBoundCost",\
+               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "LonDJerkBoundCost", "LonStopPointCost", "NonNegativeVelCost"]
   print(cost_list)
   for i, sub_list in enumerate(lists):
     if i == 0:
@@ -675,10 +678,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'acc_min_vec': acc_min_vec,
     'jerk_max_vec': jerk_max_vec,
     'jerk_min_vec': jerk_min_vec,
+    'djerk_max_vec': djerk_max_vec,
+    'djerk_min_vec': djerk_min_vec,
     'pos_vec': pos_vec,
     'vel_vec': vel_vec,
     'acc_vec': acc_vec,
     'jerk_vec': jerk_vec,
+    'djerk_vec': djerk_vec,
   })
 
   if bag_loader.loc_msg['enable'] == True:
@@ -1231,10 +1237,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                   'acc_min_vec':[],
                                                   'jerk_max_vec':[],
                                                   'jerk_min_vec':[],
+                                                  'djerk_max_vec':[],
+                                                  'djerk_min_vec':[],
                                                   'pos_vec':[],
                                                   'vel_vec':[],
                                                   'acc_vec':[],
                                                   'jerk_vec':[],
+                                                  'djerk_vec':[],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -1324,6 +1333,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig6 = bkp.figure(x_axis_label='time', y_axis_label='acc',x_range = fig5.x_range, width=600, height=200)
   # fig7 j-t
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
+  # fig8 j-t
+  fig8 = bkp.figure(x_axis_label='time', y_axis_label='djerk',x_range = fig6.x_range, width=600, height=200)
 
   # f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
   f2 = fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'yellow', line_dash = 'solid', legend_label = 's_soft_ub')
@@ -1401,34 +1412,34 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.legend.click_policy = 'hide'
 
   # fig8 bar chart
-  fig8 = bkp.figure(x_axis_label='time', y_axis_label='cost', width=600, height=400, title="Cost Over Time")
+  # fig8 = bkp.figure(x_axis_label='time', y_axis_label='cost', width=600, height=400, title="Cost Over Time")
 
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_yield', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="blue", legend_label="Cost Yield")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_overtake', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="red", legend_label="Cost Overtake")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_vel', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="green", legend_label="Cost Velocity")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_accel', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="orange", legend_label="Cost Acceleration")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_accel_sign_changed', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="purple", legend_label="Cost Accel Sign Change")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_jerk', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="brown", legend_label="Cost Jerk")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_length', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="pink", legend_label="Cost Length")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_total_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5 ,color="cyan", legend_label="Total Cost")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_g_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="magenta", legend_label="G Cost")
-  fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_h_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="grey", legend_label="H Cost")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_yield', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="blue", legend_label="Cost Yield")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_overtake', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="red", legend_label="Cost Overtake")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_vel', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="green", legend_label="Cost Velocity")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_accel', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="orange", legend_label="Cost Acceleration")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_accel_sign_changed', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="purple", legend_label="Cost Accel Sign Change")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_jerk', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="brown", legend_label="Cost Jerk")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_cost_length', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="pink", legend_label="Cost Length")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_total_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5 ,color="cyan", legend_label="Total Cost")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_g_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="magenta", legend_label="G Cost")
+  # fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_h_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="grey", legend_label="H Cost")
 
-  hover8 = HoverTool(tooltips=[('time', '@st_path_final_nodes_time'),
-                               ('Cost Yield', '@st_path_final_nodes_cost_yield'),
-                               ('Cost Overtake', '@st_path_final_nodes_cost_overtake'),
-                               ('Cost Velocity', '@st_path_final_nodes_cost_vel'),
-                               ('Cost Acceleration', '@st_path_final_nodes_cost_accel'),
-                               ('Cost Accel Sign Change', '@st_path_final_nodes_cost_accel_sign_changed'),
-                               ('Cost Jerk', '@st_path_final_nodes_cost_jerk'),
-                               ('Cost Length', '@st_path_final_nodes_cost_length'),
-                               ('Total Cost', '@st_path_final_nodes_total_cost'),
-                               ('G Cost', '@st_path_final_nodes_g_cost'),
-                               ('H Cost', '@st_path_final_nodes_h_cost')])
-  fig8.add_tools(hover8)
+  # hover8 = HoverTool(tooltips=[('time', '@st_path_final_nodes_time'),
+  #                              ('Cost Yield', '@st_path_final_nodes_cost_yield'),
+  #                              ('Cost Overtake', '@st_path_final_nodes_cost_overtake'),
+  #                              ('Cost Velocity', '@st_path_final_nodes_cost_vel'),
+  #                              ('Cost Acceleration', '@st_path_final_nodes_cost_accel'),
+  #                              ('Cost Accel Sign Change', '@st_path_final_nodes_cost_accel_sign_changed'),
+  #                              ('Cost Jerk', '@st_path_final_nodes_cost_jerk'),
+  #                              ('Cost Length', '@st_path_final_nodes_cost_length'),
+  #                              ('Total Cost', '@st_path_final_nodes_total_cost'),
+  #                              ('G Cost', '@st_path_final_nodes_g_cost'),
+  #                              ('H Cost', '@st_path_final_nodes_h_cost')])
+  # fig8.add_tools(hover8)
 
-  fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
-  fig8.legend.click_policy = 'hide'
+  # fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
+  # fig8.legend.click_policy = 'hide'
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
@@ -1467,15 +1478,25 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
 
+  # djerk
+  f8 = fig8.line('time_vec', 'djerk_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dj_plan')
+  fig8.line('time_vec', 'djerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'dj_lb')
+  fig8.triangle ('time_vec', 'djerk_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'dj_lb')
+  fig8.line('time_vec', 'djerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'dj_ub')
+  fig8.inverted_triangle ('time_vec', 'djerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'dj_ub')
+
+
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('s_plan', '@pos_vec')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
+  hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@djerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
 
   fig4.add_tools(hover4)
   fig5.add_tools(hover5)
   fig6.add_tools(hover6)
   fig7.add_tools(hover7)
+  fig8.add_tools(hover8)
 
   fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
   fig2.legend.click_policy = 'hide'
@@ -1494,6 +1515,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
   fig7.legend.click_policy = 'hide'
+
+  fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
+  fig8.legend.click_policy = 'hide'
 
   tab_st_search = DataTable(source=data_st_search_text, columns=st_search_columns, width=500, height=600)
 
