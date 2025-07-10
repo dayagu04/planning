@@ -19,6 +19,8 @@ class TrafficLightDecider : public Task {
   // 1. if
   bool Execute();
 
+  const bool& GetIsSmallFrontIntersection() { return is_small_front_intersection_;}
+
  private:
   // add virtual agent to agent manager
   bool AddVirtualObstacle();
@@ -42,5 +44,6 @@ class TrafficLightDecider : public Task {
   double green_light_timer_ = 0.0;
   double green_blink_timer_ = 0.0;
   double yellow_light_timer_ = 0.0;
+  bool is_small_front_intersection_ = false;
 };
 }  // namespace planning

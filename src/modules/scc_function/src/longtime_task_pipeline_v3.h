@@ -14,6 +14,7 @@
 #include "st_graph/st_graph_helper.h"
 #include "st_graph/st_graph_input.h"
 #include "st_graph/st_graph_utils.h"
+#include "tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_union_planner.h"
 #include "tasks/behavior_planners/agent_headway_decider/agent_headway_decider.h"
 #include "tasks/behavior_planners/agent_longitudinal_decider/agent_longitudinal_decider.h"
 #include "tasks/behavior_planners/cipv_lost_prohibit_acceleration_decider/cipv_lost_prohibit_acceleration_decider.h"
@@ -55,6 +56,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
 
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
+  std::unique_ptr<SpatioTemporalPlanner> spatio_temporal_planner_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;

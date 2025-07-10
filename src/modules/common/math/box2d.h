@@ -47,11 +47,17 @@ class Box2d {
 
   /**
    * @brief Constructor which takes the heading-axis and the width of the box
+   * @param corners the corners
+   */
+  Box2d(const LineSegment2d &axis, const double width);
+
+  /**
+   * @brief Constructor which takes the corners of the box
    * @param axis The heading-axis
    * @param width The width of the box, which is taken perpendicularly
    * to the heading direction.
    */
-  Box2d(const LineSegment2d &axis, const double width);
+  Box2d(const std::vector<Vec2d> &corners);
 
   /**
    * @brief Constructor which takes an AABox2d (axes-aligned box).
@@ -153,6 +159,8 @@ class Box2d {
    * @param corners The vector where the corners are listed
    */
   std::vector<Vec2d> GetAllCorners() const;
+
+  void SetAllCorners(const std::vector<Vec2d> &corners);
 
   std::vector<LineSegment2d> GetAllEdges() const;
 

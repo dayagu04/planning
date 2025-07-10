@@ -41,6 +41,10 @@ LateralObstacleDecider::LateralObstacleDecider(
           session_->mutable_planning_context()
               ->mutable_lateral_obstacle_decider_output()
               .lateral_obstacle_history_info),
+      obstacles_id_behind_ego_(
+          session_->mutable_planning_context()
+              ->mutable_lateral_obstacle_decider_output()
+              .obstacles_id_behind_ego),
       output_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
                   .lat_obstacle_decision),
@@ -74,6 +78,7 @@ bool LateralObstacleDecider::Execute() {
   plan_history_traj.clear();
   is_plan_history_traj_valid = false;
 
+  obstacles_id_behind_ego_.clear();
   // UpdateLaneBorrowDirection();
 
   UpdateIntersection();
@@ -179,6 +184,7 @@ bool LateralObstacleDecider::Execute() {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
+      history.is_behind_ego = false;
 
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
@@ -817,6 +823,8 @@ void LateralObstacleDecider::LateralObstacleDecision(
         output_[id] = LatObstacleDecisionType::RIGHT;
       } else {
         output_[id] = LatObstacleDecisionType::IGNORE;
+        history.is_behind_ego = true;
+        obstacles_id_behind_ego_.emplace_back(id);
       }
     } else {
       const double l_offset_thr = 0.2;
@@ -839,6 +847,8 @@ void LateralObstacleDecider::LateralObstacleDecision(
         bool lat_overlap_for_rear_obs = (start_l < end_l - kLatOverlapBuffer);
         if (lat_overlap_for_rear_obs) {
           output_[id] = LatObstacleDecisionType::IGNORE;
+          history.is_behind_ego = true;
+          obstacles_id_behind_ego_.emplace_back(id);
         } else if (ego_l < l) {
           output_[id] = LatObstacleDecisionType::RIGHT;
         } else {
@@ -846,6 +856,8 @@ void LateralObstacleDecider::LateralObstacleDecision(
         }
       } else {
         output_[id] = LatObstacleDecisionType::IGNORE;
+        history.is_behind_ego = true;
+        obstacles_id_behind_ego_.emplace_back(id);
       }
     }
   }

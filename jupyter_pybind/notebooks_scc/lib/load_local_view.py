@@ -1819,7 +1819,6 @@ def load_local_view_figure():
   is_vis_me_obj = global_var.get_value('is_vis_me_obj')
   is_vis_lane_mark = global_var.get_value('is_vis_lane_mark')
   is_vis_merge_point = global_var.get_value('is_vis_merge_point')
-
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})

@@ -183,6 +183,10 @@ class LateralMotionPlanningWeight {
     is_search_success_ = is_search_success;
   }
 
+  void SetIsUseSpatioPlannerResult(const bool is_use_spatio_planner_result) {
+    is_use_spatio_planner_result_ = is_use_spatio_planner_result;
+  }
+
   void SetMotionPlanConcernedEndIndex(
       const bool origin_complete_follow, const bool is_divide_lane_into_two,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
@@ -269,6 +273,7 @@ class LateralMotionPlanningWeight {
   bool is_in_intersection_;
   bool is_search_success_;
   bool is_s_bend_;
+  bool is_use_spatio_planner_result_;
   std::vector<double> soft_bound_qratio_vec_;
   std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;

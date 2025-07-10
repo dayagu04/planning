@@ -314,3 +314,11 @@ target_link_libraries(apa_speed_optimizer_py PRIVATE
   modules_tasks
   hybrid_astar_lib
   )
+  
+pybind11_add_module(spatio_temporal_union_planning_py MODULE src/spatio_temporal_union_plan_pybind.cc)
+target_link_libraries(spatio_temporal_union_planning_py PRIVATE
+  autoplt
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)

@@ -33,6 +33,8 @@ import "hybrid_ara_star.proto";
 import "lane_borrow_decider.proto";
 import "apa_debug_data.proto";
 import "dp_road_graph.proto";
+import "spatio_temporal_union_plan.proto";
+import "spatio_temporal_union_dp_input.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -127,4 +129,6 @@ message PlanningDebugInfo {
   optional DPRoadInfo dp_road_info = 39;
   repeated ApaPathPoint cur_path_points = 40;
   repeated ApaPathPoint complete_path_points = 41;
+  optional SpatioTemporalUnionPlan spatio_temporal_union_plan = 42;
+  optional SpationTemporalUnionDpInput spatio_temporal_union_plan_input = 43;
 }

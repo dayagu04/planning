@@ -76,7 +76,10 @@
     "*.txx": "cpp",
     "queue": "cpp",
     "stack": "cpp",
-    "tensor": "cpp"
+    "tensor": "cpp",
+    "slist": "cpp",
+    "codecvt": "cpp",
+    "alignedvector3": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
   "editor.quickSuggestions": {

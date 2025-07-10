@@ -52,6 +52,7 @@ void LateralMotionPlanningWeight::Init() {
   is_in_intersection_ = false;
   is_search_success_ = false;
   is_s_bend_ = false;
+  is_use_spatio_planner_result_ = false;
   soft_bound_qratio_vec_.resize(26, 1.0);
   hard_bound_qratio_vec_.resize(26, 1.0);
   curvature_radius_vec_.resize(6, 10000.0);
@@ -596,6 +597,10 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     jerk_bound = // 1.0 0.8 0.6 0.5
       planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
   }
+  if (is_use_spatio_planner_result_) {
+    jerk_bound = config_.jerk_bound_spatio;
+  }
+
   // tiny speed
   if (ego_vel_ < 0.2 &&
       lateral_motion_scene_ == LANE_KEEP &&
@@ -647,6 +652,9 @@ void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
   planning_input.set_q_jerk(std::max(origin_q_jerk, min_q_jerk_));
 
   if (ref_vel_ < 1.389) {  // 5 kph
+    if (is_use_spatio_planner_result_) {
+      planning_input.set_q_acc(config_.q_acc_spatio);
+    }
     planning_input.set_q_continuity(config_.q_continuity_low_speed);
   }
   // tiny speed

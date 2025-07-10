@@ -75,6 +75,28 @@ void Box2d::set_box(const Vec2d& center, const double heading, const double leng
   InitCorners();
 }
 
+Box2d::Box2d(const std::vector<Vec2d> &corners){
+  SetAllCorners(corners);
+}
+
+void Box2d::SetAllCorners(const std::vector<Vec2d> &corners) {
+  const double dx1 = cos_heading_ * half_length_;
+  const double dy1 = sin_heading_ * half_length_;
+  const double dx2 = sin_heading_ * half_width_;
+  const double dy2 = -cos_heading_ * half_width_;
+  corners_.clear();
+  for (const auto& corner : corners) {
+    corners_.emplace_back(corner);
+  }
+
+  for (auto &corner : corners_) {
+    max_x_ = std::fmax(corner.x(), max_x_);
+    min_x_ = std::fmin(corner.x(), min_x_);
+    max_y_ = std::fmax(corner.y(), max_y_);
+    min_y_ = std::fmin(corner.y(), min_y_);
+  }
+}
+
 void Box2d::InitCorners() {
   const double dx1 = cos_heading_ * half_length_;
   const double dy1 = sin_heading_ * half_length_;
