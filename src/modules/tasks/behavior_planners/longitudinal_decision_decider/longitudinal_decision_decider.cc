@@ -982,7 +982,8 @@ void LongitudinalDecisionDecider::CalculateInvadeNeighborAgentsDecisionInfo(
   invade_neighbor_agents_decision_info_.current_front_agent_decision =
       front_agent_decision;
   invade_neighbor_agents_decision_info_.last_front_agent_decision =
-      front_agent_decision;
+      ignore_gap_front_agent ? speed::STBoundary::DecisionType::UNKNOWN
+                             : front_agent_decision;
 }
 
 void LongitudinalDecisionDecider::RestInvadeNeighborAgentsDecisionInfo() {
