@@ -1862,7 +1862,7 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 
 // search from the inside parking space to outside
 const bool ParallelPathGenerator::CalMinSafeCircle() {
-  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.0;
+  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.05;
   ILOG_INFO << "is rigid body in side of slot = "
             << input_.tlane.is_inside_rigid;
   ILOG_INFO << "lat buffer in reversed trials = " << lat_buffer;

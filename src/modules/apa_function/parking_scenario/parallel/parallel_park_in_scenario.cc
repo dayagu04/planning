@@ -1135,7 +1135,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
         extend_lenth = apa_param.GetParam().min_path_length + 0.1 - x_diff;
       } else if (heading_deg_diff_mag > 10.0 &&
                  frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-        extend_lenth = 0.1;
+        extend_lenth = 0.2;
       } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         extend_lenth = 0.0;
       }
