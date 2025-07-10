@@ -41,6 +41,14 @@ const std::vector<double> _P_SLOPE_BP{0., 40.0};
 const std::vector<double> _P_SLOPE_V{0.8, 0.2};
 constexpr double follow_time_gap = 1.0;
 constexpr double min_follow_distance_m = 3.5;
+constexpr double kEnterVruRoundEgoVelThr = 15 / 3.6;
+constexpr double kEnterVruRoundDistanceThr = 50.0;
+constexpr double kEnterVruRoundTtcThr = 4.5;
+constexpr int32_t kTriggerVruRoundcounterThr = 5;
+constexpr double kExitVruRoundLateralBufferThr = 1.0;
+constexpr double kExitVruRoundDistanceThr = 80.0;
+constexpr double kLowSpeedVruVelThr = 30 / 3.6;
+constexpr double kVRURoundDecelRatio = 0.7;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -143,6 +151,31 @@ double CalcDesiredVelocity(const double d_rel, const double d_des,
   double v_target = v_rel_des + v_lead;
   return v_target;
 }
+bool IsPointOutsideLaneByLeftRightThred(
+  const std::shared_ptr<VirtualLane>& ego_lane, const planning_math::Vec2d& point,
+  const double distance_to_left_boundary_threshold,
+  const double distance_to_right_boundary_threshold) {
+  bool is_outside_lane = false;
+  double match_s = 0.0;
+  double match_l = 0.0;
+  const auto& ego_reference_path = ego_lane->get_reference_path();
+  if (ego_reference_path == nullptr) {
+    return true;
+  }
+  const auto& ego_lane_coord = ego_reference_path ->get_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return true;
+  }
+
+  if (!ego_lane_coord->XYToSL(point.x(), point.y(), &match_s, &match_l)) {
+    return true;
+  }
+  double lane_width = ego_lane->width_by_s(match_s);
+  is_outside_lane = (match_l > lane_width / 2.0 + distance_to_left_boundary_threshold) ||
+                    (match_l < -lane_width / 2.0 - distance_to_right_boundary_threshold);
+  return is_outside_lane;
+}
+
 }  // namespace
 
 SpeedLimitDecider::SpeedLimitDecider(
@@ -177,6 +210,8 @@ bool SpeedLimitDecider::Execute() {
   CalculateLaneBorrowSpeedLimit();
   // 8. speed limit from tfl distance
   CalculateSpeedLimitFromTFLDis();
+
+  CalculateVRURoundSpeedLimit();
   // 9. speed limit from avoid agent
   CalculateAvoidAgentSpeedLimit();
 
@@ -1182,6 +1217,159 @@ void SpeedLimitDecider::CalculateFunctionFadingAwaySpeedLimit() {
       std::min(vel_slope_filter_function_fading_away_.GetOutput(), v_target_);
   last_vel_function_fading_away_ = v_target_;
   JSON_DEBUG_VALUE("v_target_func_fade_away", v_target_)
+}
+void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
+  LOG_DEBUG("----calc_speed_limit_for_vru_round--- \n");
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  const auto& agents_set = agent_manager->GetAgentSet();
+  if (agents.empty()) {
+    vru_round_map_.clear();
+    return;
+  }
+
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+  const auto &current_lane = virtual_lane_manager->get_current_lane();
+  if (current_lane == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+
+  const auto &planned_kd_path =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (planned_kd_path == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
+  const double rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+
+  const auto ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+  const auto init_point = ego_state_mgr->planning_init_point();
+
+  /* if (init_point.v < kEnterVruRoundEgoVelThr) {
+    vru_round_map_.clear();
+    return;
+  } */
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    vru_round_map_.clear();
+    return ;
+  }
+  const double ego_back_s = ego_s - rear_edge_to_rear_axle;
+  const double ego_front_s = ego_s + front_edge_to_rear_axle;
+
+  historical_vru_round_map_ = vru_round_map_;
+  for (const auto& agent : agents) {
+    if (agent->type() != agent::AgentType::PEDESTRIAN &&
+        agent->type() != agent::AgentType::CYCLE_RIDING &&
+        agent->type() != agent::AgentType::MOTORCYCLE_RIDING &&
+        agent->type() != agent::AgentType::TRICYCLE_RIDING) {
+      continue;
+    }
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    bool is_longotidinal_satisfied = false;
+    if (!planned_kd_path->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      return;
+    }
+    double agent_to_ego_distance = agent_s - ego_front_s - agent->length() * 0.5;
+
+    planning_math::Vec2d agent_pose(agent->x(), agent->y());
+    bool is_lateral_buffer_satisfied = false;
+    is_lateral_buffer_satisfied = !IsPointOutsideLaneByLeftRightThred(current_lane,
+          agent_pose, kExitVruRoundLateralBufferThr, kExitVruRoundLateralBufferThr);
+    double agent_speed = agent->is_reverse() ? -agent->speed() : agent->speed();
+    double ttc =
+        (agent_s) / std::max(init_point.v - agent_speed, std::numeric_limits<double>::min());
+    if (ttc < kEnterVruRoundTtcThr && agent_s > std::numeric_limits<double>::min()) {
+      is_longotidinal_satisfied = true;
+    }
+
+    if (agent->speed() < kLowSpeedVruVelThr &&
+        is_longotidinal_satisfied && is_lateral_buffer_satisfied) {
+      if (vru_round_map_.find(agent->agent_id()) != vru_round_map_.end()) {
+        vru_round_map_[agent->agent_id()].distance_to_ego = agent_to_ego_distance;
+        vru_round_map_[agent->agent_id()].ttc = ttc;
+        vru_round_map_[agent->agent_id()].id = agent->agent_id();
+        vru_round_map_[agent->agent_id()].last_is_satisfied_round =
+            vru_round_map_[agent->agent_id()].is_satisfied_round;
+        vru_round_map_[agent->agent_id()].is_satisfied_round = true;
+        vru_round_map_[agent->agent_id()].enter_counter++;
+        vru_round_map_[agent->agent_id()].is_trigger =
+            vru_round_map_[agent->agent_id()].enter_counter >= kTriggerVruRoundcounterThr ? true
+                                                                                          : false;
+
+      } else {
+        vru_round_map_[agent->agent_id()].distance_to_ego = agent_to_ego_distance;
+        vru_round_map_[agent->agent_id()].ttc = ttc;
+        vru_round_map_[agent->agent_id()].id = agent->agent_id();
+        vru_round_map_[agent->agent_id()].is_satisfied_round = true;
+        vru_round_map_[agent->agent_id()].last_is_satisfied_round = true;
+        vru_round_map_[agent->agent_id()].enter_counter = 1;
+        vru_round_map_[agent->agent_id()].is_trigger = false;
+      }
+    } else {
+      // erase unsatisfied vru
+      vru_round_map_.erase(agent->agent_id());
+    }
+  }
+  for (const auto& historical_vru : historical_vru_round_map_) {
+    if (agents_set.find(historical_vru.first) == agents_set.end()) {
+      vru_round_map_.erase(historical_vru.first);
+    }
+  }
+
+  if (HasTriggeredVRU(vru_round_map_)) {
+    if (triggered_vru_.enter_counter == kTriggerVruRoundcounterThr) {
+      vru_round_triggered_ = true;
+    }
+    JSON_DEBUG_VALUE("vru_round_triggered_id", triggered_vru_.id);
+
+  } else {
+    vru_round_triggered_ = false;
+  }
+
+
+}
+
+bool SpeedLimitDecider::HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map) {
+  triggered_vru_.id = -1;
+  triggered_vru_.is_trigger = false;
+  if (vru_round_map_.empty()) {
+    return false;
+  }
+  int32_t triggered_vru_id = -1;
+  double min_distance = std::numeric_limits<double>::max();
+  for (const auto& vru : vru_round_map_) {
+    if (vru.second.is_trigger && vru.second.distance_to_ego < min_distance) {
+      min_distance = vru.second.distance_to_ego;
+      triggered_vru_id = vru.first;
+    }
+  }
+
+  if (triggered_vru_id != -1 && min_distance < kEnterVruRoundDistanceThr) {
+    triggered_vru_ = vru_round_map_[triggered_vru_id];
+    return true;
+  } else {
+    return false;
+  }
 }
 
 }  // namespace planning

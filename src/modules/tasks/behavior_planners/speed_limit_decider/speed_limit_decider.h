@@ -15,6 +15,20 @@ struct CurvInfo {
   double s;
   double curv;
 };
+
+struct VRURoundInfo {
+  int32_t id = -1;
+  double distance_to_ego = -1.0;
+  bool is_satisfied_round = false;
+  bool last_is_satisfied_round = false;
+  double ttc = 100;
+  int32_t enter_counter = 0;
+  bool is_trigger = false;
+  bool is_lost = false;
+  bool last_is_lost = false;
+  bool is_distance_exit = false;
+  bool last_is_distance_exit = false;
+};
 class SpeedLimitDecider : public Task {
  public:
   SpeedLimitDecider(const EgoPlanningConfigBuilder *config_builder,
@@ -54,8 +68,11 @@ class SpeedLimitDecider : public Task {
   void CalculateAvoidAgentSpeedLimit();
 
   void CalculateFunctionFadingAwaySpeedLimit();
+  void CalculateVRURoundSpeedLimit();
 
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
+
+  bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map);
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
@@ -84,6 +101,12 @@ class SpeedLimitDecider : public Task {
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
+  
+  std::map<int32_t, VRURoundInfo> vru_round_map_;
+  std::map<int32_t, VRURoundInfo> historical_vru_round_map_;
+  VRURoundInfo triggered_vru_;
+  bool vru_round_triggered_ = false;
+
 };
 
 }  // namespace planning
