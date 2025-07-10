@@ -53,7 +53,7 @@ static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
-static const double kMinTlaneAddedLength = 0.75;
+static const double kMinTlaneAddedLength = 0.65;
 static const double kNarrowChannelLastArcCrossLength = 1.38;
 
 static const double kLineStepLength = 0.16;
