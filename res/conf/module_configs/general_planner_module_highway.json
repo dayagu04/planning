@@ -302,7 +302,8 @@
     "request_count_threshold": 2,
     "map_int_cancel_freeze_cnt": 20,
     "model_int_cancel_freeze_cnt": 50,
-    "disallow_cancel_int_lc_lateral_thr": 1.2
+    "disallow_cancel_int_lc_lateral_thr": 1.2,
+    "enable_speed_interal_surpress": false
   },
   "confirm_mode": {
     "enable_confirm_mode": false,
@@ -898,7 +899,11 @@
   "total_time" : 5.0,
   "matrix_dimension_s" : 2.0,
   "matrix_dimension_t" : 0.5
+},
+"lane_congestion_decider":{
+  "heavy_density" : 60,
+  "jam_speed" : 12,
+  "speed_deviation" : 1000
 }
-
 }
 

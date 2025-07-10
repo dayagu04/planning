@@ -38,7 +38,24 @@ enum RampDirection {
   RAMP_ON_RIGHT = 2,
 };
 
-// 分流的相对方向
+// 拥堵等级枚举
+enum CongestionLevel {
+    FREE_FLOW = 0,          // 自由流（畅通）
+    CONGESTION = 1,         // 拥堵
+    JAM = 2,                 // 堵塞
+};
+
+// 拥堵状态检测结果
+struct CongestionResult {
+    CongestionLevel level;         // 拥堵等级
+    double density;                // 密度（辆/公里）
+    double avg_speed;              // 平均速度（m/s）
+    double speed_deviation;        // 速度标准差（m/s）
+    double avg_time_headway;       // 平均车头时距（秒）
+    double avg_space_headway;      // 不安全车头时距比例
+};
+
+//分流的相对方向
 enum SplitRelativeDirection {
   None = 0,
   ON_LEFT = 1,

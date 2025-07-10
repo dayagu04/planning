@@ -10,6 +10,11 @@
 #include "planning_context.h"
 
 namespace planning {
+
+namespace {
+  constexpr double kMaxSpeedTriggerILCReq = 33.333;
+  constexpr double kMinSpeedTriggerILCReq = 11.111;
+}
 // class: IntRequest
 IntRequest::IntRequest(
     planning::framework::Session* session,
@@ -33,6 +38,18 @@ void IntRequest::Update(int lc_status) {
     LOG_DEBUG("IntRequest::Update: ego not in lane keeping!");
     return;
   }
+
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+
+  bool is_triggle_speed_surpress_ilc =
+      ego_v < kMinSpeedTriggerILCReq || ego_v > kMaxSpeedTriggerILCReq;
+
+  if (int_request_config_.enable_speed_interal_surpress &&
+      request_type_ == NO_CHANGE && is_triggle_speed_surpress_ilc) {
+    return;
+  }
+
   // ego_blinker 0-lane follow, 1-left, 2-right
   request_cancel_reason_ = NO_CANCEL;
   ilc_virtual_req_ = NO_CHANGE;
@@ -91,12 +108,16 @@ void IntRequest::Update(int lc_status) {
       request_type_ != LEFT_CHANGE && is_lever_status_valid_) {
     counter_right_ = 0;
     counter_left_++;
-    // 实线禁止换道
-    if (left_boundary_type ==
-        iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+
+    // 判断虚线长度是否满足变道条件
+    const RequestType target_direction = LEFT_CHANGE;
+    bool is_dash_enough = IsDashEnoughForRepeatSegments(
+        target_direction, current_lane_virtual_id);
+    if (!is_dash_enough) {
       request_cancel_reason_ = SOLID_LC;
-      ilc_virtual_req_ = LEFT_CHANGE;
-      counter_left_ = 0;
+      ilc_virtual_req_ = RIGHT_CHANGE;
+      counter_right_ = 0;
+      return;
     }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
@@ -155,11 +176,16 @@ void IntRequest::Update(int lc_status) {
              request_type_ != RIGHT_CHANGE && is_lever_status_valid_) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
-    if (right_boundary_type ==
-        iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+
+    // 判断虚线长度是否满足变道条件
+    const RequestType target_direction = RIGHT_CHANGE;
+    bool is_dash_enough = IsDashEnoughForRepeatSegments(
+        target_direction, current_lane_virtual_id);
+    if (!is_dash_enough) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = RIGHT_CHANGE;
       counter_right_ = 0;
+      return;
     }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;

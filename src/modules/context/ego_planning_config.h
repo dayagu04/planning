@@ -673,6 +673,8 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
     ReadItem<bool>(json, enable_int_request_function, "int_request",
                    "enable_int_request_function");
     enable_hnp_function = read_json_key<bool>(json, "enable_hnp_functions");
+    ReadItem<bool>(json, enable_speed_interal_surpress, "int_request",
+                   "enable_speed_interal_surpress");
   }
 
   int ready_remain_time = 2;
@@ -693,6 +695,7 @@ struct ScenarioDisplayStateConfig : public EgoPlanningConfig {
   bool enalbe_display_function = false;
   bool enable_int_request_function = false;
   bool enable_confirm_mode = false;
+  bool enable_speed_interal_surpress = true;
 };
 struct GapSelectorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -3893,5 +3896,20 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double s_speed_lower_weight = 1.0;
   };
   WeightConfig weight_maker_config;
+};
+
+struct CongestionDetectionConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ReadItem<double>(json, heavy_density,
+                     "heavy_density");
+    ReadItem<double>(json, jam_speed, "jam_speed");
+    ReadItem<double>(json, speed_deviation, "speed_deviation");
+  }
+
+  double heavy_density = 60.0;
+  double jam_speed = 12.0;
+  double speed_deviation = 1000.0;
 };
 }  // namespace planning

@@ -514,9 +514,10 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
 void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
-  const auto &coarse_planning_info = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto &coarse_planning_info =
+      lane_change_decider_output.coarse_planning_info;
   const std::shared_ptr<VirtualLane> flane =
       session_->environmental_model()
           .get_virtual_lane_manager()
@@ -714,10 +715,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     }
   } else {
     // fusion is unsteady, lane keep weight need decay in end of ref
-    general_lateral_decider_output.complete_follow = false;
+    general_lateral_decider_output.complete_follow =
+        false;  // fusion is unsteady, lane keep weight need decay in end of
+                // ref
     general_lateral_decider_output.lane_change_scene = false;
     if (!lane_borrow_decider_output.is_in_lane_borrow_status) {
-      HandleAvoidScene(traj_points, 0.0);
+      if (is_LC_PROPOSE) {
+        HandleAvoidScene(traj_points,
+            lane_change_decider_output.lateral_close_boundary_offset);
+      } else {
+        HandleAvoidScene(traj_points, 0.0);
+      }
     }
   }
 }

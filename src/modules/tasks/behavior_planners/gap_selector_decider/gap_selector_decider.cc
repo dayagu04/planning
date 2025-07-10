@@ -431,8 +431,9 @@ GapSelectorStatus GapSelectorDecider::Update() {
     double lc_end_s, remain_lc_time = lc_total_time_ - lc_timer_;
     RefineLCTime(&lc_end_s, &remain_lc_time, avoid_lat_offset);
 
-    FixedTimeQuinticPathPlan(avoid_lat_offset, lc_end_s, remain_lc_time,
-                             traj_points);
+    QuinticPathPlanner quintic_path_planner(config_, session_);
+    quintic_path_planner.Plan(avoid_lat_offset, lc_end_s, remain_lc_time,
+                              traj_points);
 
     // bool is_left =
     //     coarse_planning_info.target_state == ROAD_LC_LCHANGE ? true : false;
@@ -454,7 +455,8 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
     } else {
       RefineLCTime(&lc_end_s, &remain_lh_time, avoid_lat_offset);
-      FixedTimeQuinticPathPlan(avoid_lat_offset, lc_end_s, remain_lh_time,
+      QuinticPathPlanner quintic_path_planner(config_, session_);
+      quintic_path_planner.Plan(avoid_lat_offset, lc_end_s, remain_lh_time,
                               traj_points);
     }
   } else if (is_lc_back_scene) {
@@ -469,8 +471,12 @@ GapSelectorStatus GapSelectorDecider::Update() {
             lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
       }
 
-      FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
+      // FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
+      //                           traj_points);
+      QuinticPathPlanner quintic_path_planner(config_, session_);
+      quintic_path_planner.Plan(lb_target_l, lb_end_s, remain_lb_time,
                                 traj_points);
+                                
       gap_selector_decider_output.gap_selector_trustworthy =
           remain_lb_time < 1.0 ? false : true;
     }
