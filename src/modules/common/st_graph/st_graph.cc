@@ -82,6 +82,13 @@ bool STGraph::InsertAgent(const agent::Agent& agent,
   if (agent.agent_id() < 0) {
     return false;
   }
+
+  if (neighbor_agent_id_st_boundaries_map_.find(agent.agent_id()) !=
+      neighbor_agent_id_st_boundaries_map_.end()) {
+    // already exist, do not insert again
+    return false;
+  }
+
   const bool is_static = StGraphUtils::IsStaticAgent(agent);
   if (is_static) {
     MakeStaticAgentStBoundary(agent, type);
@@ -597,7 +604,7 @@ void STGraph::MakeDynamicAgentStBoundary(
     if (!st_point_pairs.empty()) {
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
-      st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
+      // st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
       st_boundaries_ego.emplace_back(boundary_id);
       neighbor_boundary_id_st_boundaries_map_.insert(
           std::make_pair(boundary_id, std::move(st_boundary)));

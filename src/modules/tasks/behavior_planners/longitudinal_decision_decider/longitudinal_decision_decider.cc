@@ -97,12 +97,11 @@ bool LongitudinalDecisionDecider::Execute() {
   }
   DetermineKinematicBoundForCruiseScenario();
 
-  // put agents that do not yield in lateral intrusion into the ST graph
+  UpdateInvadeNeighborResultsForEgoMotionSimPath();
+
   UpdateInvadeNeighborResults();
 
   UpdateLaneChangeNeighborResults();
-
-  UpdateInvadeNeighborResultsForEgoMotionSimPath();
 
   const auto mutable_st_graph =
       session_->mutable_planning_context()->st_graph();
@@ -572,9 +571,9 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   if (invade_neighbor_front_agent_id != -1 &&
       agent_id_st_boundaries_map.find(invade_neighbor_front_agent_id) ==
           agent_id_st_boundaries_map.end() &&
-      neighbor_agent_id_st_boundraies_map.find(
+      /*neighbor_agent_id_st_boundraies_map.find(
           invade_neighbor_front_agent_id) ==
-          neighbor_agent_id_st_boundraies_map.end() &&
+          neighbor_agent_id_st_boundraies_map.end() &&*/
       !ignore_front_invade_agent) {
     const auto front_invade_agent =
         agent_manager->GetAgent(invade_neighbor_front_agent_id);
@@ -788,7 +787,7 @@ void LongitudinalDecisionDecider::
   DetermineClosestInvadeNeighborGapInfo(
       ego_cur_lane, planning_init_x, planning_init_y, planned_path_length,
       lat_obstacle_decision, lane_borrow_blocked_obs_id_set, agent_manager,
-      st_graph_helper, ego_motion_sim_path);
+      st_graph_helper, ego_motion_sim_path, true);
   const auto invade_neighbor_front_agent_id =
       closest_neighbor_invade_gap_agents_id_.second;
   const auto invade_neighbor_rear_agent_id =
@@ -816,9 +815,9 @@ void LongitudinalDecisionDecider::
   if (invade_neighbor_front_agent_id != -1 &&
       agent_id_st_boundaries_map.find(invade_neighbor_front_agent_id) ==
           agent_id_st_boundaries_map.end() &&
-      neighbor_agent_id_st_boundraies_map.find(
+      /*neighbor_agent_id_st_boundraies_map.find(
           invade_neighbor_front_agent_id) ==
-          neighbor_agent_id_st_boundraies_map.end() &&
+          neighbor_agent_id_st_boundraies_map.end() &&*/
       !ignore_front_invade_agent) {
     const auto front_invade_agent =
         agent_manager->GetAgent(invade_neighbor_front_agent_id);
@@ -1118,7 +1117,8 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
     const std::shared_ptr<agent::AgentManager> &agent_manager,
     const speed::StGraphHelper *st_graph_helper,
-    const std::shared_ptr<planning_math::KDPath> &planned_path) {
+    const std::shared_ptr<planning_math::KDPath> &planned_path,
+    const bool use_ego_motion_sim_path) {
   closest_neighbor_invade_gap_agents_id_ = std::pair<int32_t, int32_t>(-1, -1);
   const auto &ego_cur_lane_frenet_coord = ego_cur_lane->get_lane_frenet_coord();
   const auto &ego_vehi_param =
@@ -1133,6 +1133,31 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
       st_graph_helper->GetAgentIdSTBoundariesMap();
   std::map<double, int32_t> invade_agents_s_id_map;
   invade_agents_s_id_map[planning_init_s] = 0;
+
+  // already on ego motion sim path, need consider
+  if (use_ego_motion_sim_path) {
+    const auto &st_graph = session_->planning_context().st_graph_helper();
+    const auto &neighbor_agent_id_st_boundaries_map =
+        st_graph->GetNeighborAgentIdSTBoundariesMap();
+    for (const auto &[neighbor_agent_id, st_boundary] :
+         neighbor_agent_id_st_boundaries_map) {
+      double agent_min_s = std::numeric_limits<double>::max(),
+             agent_max_s = -10.0;
+      double agent_min_l = std::numeric_limits<double>::max(),
+             agent_max_l = -50.0;
+      const auto agent = agent_manager->GetAgent(neighbor_agent_id);
+      if (!CalculateAgentSLBoundary(planned_path, *agent, &agent_min_s,
+                                    &agent_max_s, &agent_min_l, &agent_max_l)) {
+        LOG_DEBUG(
+            "agent (ID: %d) corners projects to ego motion sim path failed , "
+            "skip\n",
+            neighbor_agent_id);
+        continue;
+      }
+      invade_agents_s_id_map[agent_min_s] = neighbor_agent_id;
+    }
+  }
+
   for (const auto [id, lat_decision_type] : lat_obstacle_decision) {
     if (/*lat_decision_type != LatObstacleDecisionType::IGNORE ||*/
         agent_id_st_boundaries_map.find(id) !=

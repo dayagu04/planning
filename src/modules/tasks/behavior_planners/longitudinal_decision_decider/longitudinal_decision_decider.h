@@ -85,7 +85,8 @@ class LongitudinalDecisionDecider : public Task {
       const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
       const std::shared_ptr<agent::AgentManager> &agent_manager,
       const speed::StGraphHelper *st_graph_helper,
-      const std::shared_ptr<planning_math::KDPath> &planned_path);
+      const std::shared_ptr<planning_math::KDPath> &planned_path,
+      const bool use_ego_motion_sim_path = false);
 
  private:
   LongitudinalDecisionDeciderConfig config_;
