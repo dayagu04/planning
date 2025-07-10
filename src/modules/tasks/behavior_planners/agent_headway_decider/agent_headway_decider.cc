@@ -18,7 +18,7 @@ constexpr double user_time_gap = 1.5;
 constexpr double lane_change_decrease_time_gap = 0.8;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double k_first_appear_time_gap = 1.0;
-constexpr double kHighSpeedDiffThd = 2.78;
+constexpr double kHighSpeedDiffThd = -0.5;
 constexpr double kTflVirtualAgentHW = 1.5;
 }  // namespace
 
@@ -132,7 +132,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double v_ego = ego_state_manager->ego_v();
     const double v_relative = agent->speed() - v_ego;
     if (v_relative > kHighSpeedDiffThd) {
-      headway_step = 0.5 * headway_step;
+      headway_step = 0.5 * config_.headway_step;
     }
 
     // first appear

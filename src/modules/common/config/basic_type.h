@@ -742,7 +742,7 @@ struct LateralOffsetDeciderOutput {
   bool is_valid = false;
   double lateral_offset = 0.0;
   bool enable_bound = false;
-  std::vector<double> avoid_ids;
+  std::vector<uint32_t> avoid_ids;
 
   // hmi
   int avoid_id = -1;

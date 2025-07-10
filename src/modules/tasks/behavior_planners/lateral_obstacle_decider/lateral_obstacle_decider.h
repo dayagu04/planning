@@ -49,7 +49,7 @@ class LateralObstacleDecider : public Task {
         const std::shared_ptr<ReferencePath> &reference_path_ptr,
         FrenetObstacle &frenet_obstacle);
   void CheckObstaclesIsReverse();
-  
+
  private:
   planning::framework::Session *session_;
   LateralObstacleDeciderConfig config_;
@@ -74,6 +74,7 @@ class LateralObstacleDecider : public Task {
   int intersection_count_ = 0;
   bool &left_borrow_;
   bool &right_borrow_;
+  std::unordered_map<uint32_t, double> &obstacle_intrusion_distance_thr_;
 };
 
 }  // namespace planning

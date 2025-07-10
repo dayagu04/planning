@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstdint>
+
+#include "agent/agent.h"
 #include "ego_planning_config.h"
 #include "speed_limit_decider_output.h"
 #include "tasks/task.h"
-#include "virtual_lane_manager.h"
 #include "traffic_light_decision_manager.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 struct CurvInfo {
@@ -26,6 +28,8 @@ class SpeedLimitDecider : public Task {
     double min_s;
     double v_limit;
     bool is_collison;
+    bool is_need_v_hold;
+    double v_follow_desired;
   };
 
  private:
@@ -60,6 +64,7 @@ class SpeedLimitDecider : public Task {
   SpeedLimitConfig speed_limit_config_;  // all configs
   double v_target_;                      // final v target
   SpeedLimitType v_target_type_;         // final v target type
+  double v_avoid_hold_ = 0.0;
 
   // used in intersection speed limit
   planning::common::IntersectionState last_intersection_state_ =

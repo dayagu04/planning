@@ -3288,7 +3288,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double dt = 0.2;
   double cutin_headway_threshold = 1.0;
   double smallest_headway_threshold = 1.2;
-  double headway_step = 0.1;
+  double headway_step = 0.05;
   std::vector<double> ego_vel_table = {0.0, 3.33, 16.67, 26.67, 36.67};
   std::vector<double> ego_normal_thw_table_level_1 = {1.05, 1.14, 1.25, 1.5,
                                                       2.0};

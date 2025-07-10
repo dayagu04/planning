@@ -42,7 +42,10 @@ LateralObstacleDecider::LateralObstacleDecider(
               .lateral_obstacle_history_info),
       output_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
-                  .lat_obstacle_decision) {
+                  .lat_obstacle_decision),
+      obstacle_intrusion_distance_thr_(session_->mutable_planning_context()
+                  ->mutable_lateral_obstacle_decider_output()
+                  .obstacle_intrusion_distance_thr) {
   VehicleParam vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
@@ -60,6 +63,7 @@ bool LateralObstacleDecider::Execute() {
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+  obstacle_intrusion_distance_thr_.clear();
 
   // UpdateLaneBorrowDirection();
 
@@ -414,6 +418,12 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double decre_buffer_for_lane_width =
       interp(lane_width, x_lat_buffer, f_lat_buffer);
   lat_safety_buffer -= decre_buffer_for_lane_width;
+
+  if (obstacle.is_static()) {
+    obstacle_intrusion_distance_thr_[id] = std::max(lane_width - ego_width_ - static_obs_buffer, 0.0);
+  } else {
+    obstacle_intrusion_distance_thr_[id] = std::max(lane_width - ego_width_ - lat_safety_buffer, 0.0);
+  }
 
   double lat_safety_buffer_for_lateral_obstacle_decision = 0;
   double static_obs_buffer_for_lateral_obstacle_decision = 0;
