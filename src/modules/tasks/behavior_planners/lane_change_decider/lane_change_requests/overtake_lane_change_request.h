@@ -27,15 +27,15 @@ class OvertakeRequest : public LaneChangeRequest {
  private:
   void setLaneChangeRequestByFrontSlowVehcile(int lc_status);
 
-  bool isSatisfyOvertakeCountUpdateCondition(
-      const TrackedObject* leading_vehicle, const double ego_speed,
-      const double reference_speed, const double leading_vehicle_dist,
-      const bool rain_mode);
+  bool isSatisfyOvertakeCountUpdateCondition(const agent::Agent* leading_agent,
+                                             const double ego_speed,
+                                             const double reference_speed,
+                                             const double leading_vehicle_dist,
+                                             const bool rain_mode);
   bool isSatisfyOvertakeCountMaintainCondition(
-      const TrackedObject* leading_vehicle, const double reference_speed,
+      const agent::Agent* leading_agent, const double reference_speed,
       const double leading_vehicle_dist, const bool rain_mode);
-
-  void updateOvertakeCount(const TrackedObject* leading_vehicle,
+  void updateOvertakeCount(const agent::Agent* leading_agent,
                            const double ego_speed, const double reference_speed,
                            const int max_count_thres);
 
