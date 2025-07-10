@@ -969,12 +969,6 @@ void PerpendicularTailInScenario::PathPlan() {
             << "  lon_move_dist_every_replan = "
             << ego_info_under_slot.lon_move_dist_every_replan;
 
-  JSON_DEBUG_VALUE("move_slot_dist",
-                   ego_info_under_slot.lat_move_dist_replan_success)
-
-  JSON_DEBUG_VALUE("replan_move_slot_dist",
-                   ego_info_under_slot.lat_move_dist_every_replan)
-
   return;
 }
 
@@ -2356,6 +2350,18 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE(
       "target_pose_type",
       static_cast<int>(ego_info_under_slot.tar_pose_result.target_pose_type))
+
+  JSON_DEBUG_VALUE("move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_every_replan)
+
+  JSON_DEBUG_VALUE("lon_move_slot_dist",
+                   ego_info_under_slot.lon_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_lon_move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_every_replan)
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 

@@ -275,6 +275,7 @@ struct PathPoint {
   int depth = 0;
   int id = -1;
   int parent_id = -1;
+  int type = 0;
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
   // Distance from obstacle to vehicle safe buffer border
   double dist_to_obs = 26.8;
@@ -301,6 +302,7 @@ struct PathPoint {
     is_drive = true;
     id = -1;
     parent_id = -1;
+    type = 0;
   }
 
   void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
