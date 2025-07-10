@@ -44,6 +44,7 @@ void LateralMotionPlanningWeight::Init() {
   target_road_radius_ = 10000.0;
   min_q_jerk_ = 2.0;
   last_path_max_dist2ref_ = 0.0;
+  last_max_omega_ = 0.0;
   last_remotely_index_ = 20;
   is_lane_change_hold_ = false;
   is_lane_change_back_ = false;
@@ -210,27 +211,54 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     planning::common::LateralPlanningInput &planning_input) {
   last_path_max_dist2ref_ = 0.0;
-  double min_x_size =
-      std::min(planning_input.last_x_vec_size(), planning_input.ref_x_vec_size());
-  double min_y_size =
-      std::min(planning_input.last_y_vec_size(), planning_input.ref_y_vec_size());
-  double min_size =
-      std::min(min_x_size, min_y_size);;
-  if (reference_path != nullptr &&
-      min_size > 0) {
-    const auto &frenet_coord = reference_path->get_frenet_coord();
-    for (size_t i = 0; i < min_size; ++i) {
-      planning::Point2D cart_last_xy(planning_input.last_x_vec(i),
-                          planning_input.last_y_vec(i));
-      planning::Point2D frenet_last_xy;
-      planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
-                          planning_input.ref_y_vec(i));
-      planning::Point2D frenet_ref_xy;
-      if (frenet_coord->XYToSL(cart_last_xy, frenet_last_xy) &&
-          frenet_coord->XYToSL(cart_ref_xy, frenet_ref_xy)) {
-        last_path_max_dist2ref_ =
-            std::max(std::fabs(frenet_last_xy.y - frenet_ref_xy.y), last_path_max_dist2ref_);
+  double min_ref_size =
+      std::min(planning_input.ref_x_vec_size(),
+               planning_input.ref_y_vec_size());
+  double min_last_path_size =
+      std::min(planning_input.last_x_vec_size(),
+               planning_input.last_y_vec_size());
+  if (reference_path == nullptr ||
+      min_ref_size == 0 ||
+      min_last_path_size == 0) {
+    return;
+  }
+  const auto &frenet_coord = reference_path->get_frenet_coord();
+  std::vector<double> ref_s_vec;
+  std::vector<double> ref_l_vec;
+  ref_s_vec.reserve(min_ref_size);
+  ref_l_vec.reserve(min_ref_size);
+  double ref_last_s = 0;
+  for (size_t i = 0; i < min_ref_size; ++i) {
+    planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
+                                  planning_input.ref_y_vec(i));
+    planning::Point2D frenet_ref_xy;
+    if (frenet_coord->XYToSL(cart_ref_xy, frenet_ref_xy)) {
+      if (i > 0 &&
+          frenet_ref_xy.x <= ref_last_s) {
+        continue;
       }
+      ref_last_s = frenet_ref_xy.x;
+      ref_s_vec.emplace_back(frenet_ref_xy.x);
+      ref_l_vec.emplace_back(frenet_ref_xy.y);
+    }
+  }
+  if (ref_s_vec.size() < 3) {
+    return;
+  }
+  pnc::mathlib::spline ref_l_s_spline;
+  ref_l_s_spline.set_points(ref_s_vec, ref_l_vec);
+  for (size_t j = 0; j < min_last_path_size; ++j) {
+    planning::Point2D cart_last_xy(planning_input.last_x_vec(j),
+                                   planning_input.last_y_vec(j));
+    planning::Point2D frenet_last_xy;
+    if (frenet_coord->XYToSL(cart_last_xy, frenet_last_xy)) {
+      if (frenet_last_xy.x < ref_s_vec.front() ||
+          frenet_last_xy.x > ref_s_vec.back()) {
+        continue;
+      }
+      double ref_rel_l = ref_l_s_spline(frenet_last_xy.x);
+      last_path_max_dist2ref_ =
+          std::max(std::fabs(frenet_last_xy.y - ref_rel_l), last_path_max_dist2ref_);
     }
   }
 }
@@ -614,6 +642,14 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     const planning::common::LateralPlanningOutput &last_planning_output,
     planning::common::LateralPlanningInput &planning_input) {
+  const auto &last_omega_vec = last_planning_output.omega_vec();
+  last_max_omega_ = 0;
+  for (size_t omega_i = 0; omega_i < last_omega_vec.size(); ++omega_i) {
+    last_max_omega_ = std::max(std::fabs(last_omega_vec[omega_i]), last_max_omega_);
+  }
+  double last_omega_to_jerk =
+      std::min(last_max_omega_, last_jerk_bound_limit_) *
+      config_.curv_factor * ref_vel_ * ref_vel_;
   // set upper limit
   double extra_jerk_buffer = 0.1;
   std::vector<double> xp_v{4.167, 8.333, 16.667, 25.0};
@@ -704,8 +740,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   if (!is_in_function) {
     emergency_level_ = NONE;
   }
+  double emergency_jerk_bound = P2_emergency_jerk_bound;
   if (emergency_level_ == P0) {
     jerk_bound = P0_emergency_jerk_bound;
+    emergency_jerk_bound = P0_emergency_jerk_bound;
     extra_jerk_buffer = 1.0;
   } else if (emergency_level_ == P1) {
     std::vector<double> xp_violate_dist{0.05, 0.15, 0.3, 0.5};
@@ -714,6 +752,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     extra_jerk_buffer =
         planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p1_jerk_buffer);
     jerk_bound = P1_emergency_jerk_bound;
+    emergency_jerk_bound = P0_emergency_jerk_bound;
   } else if (emergency_level_ == P2) {
     std::vector<double> xp_violate_dist{0.05, 0.15, 0.3, 0.5};
     // std::vector<double> fp_extra_p1_jerk_bound{0.05, 0.1, 0.4, 0.6};
@@ -721,14 +760,17 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     extra_jerk_buffer =
         planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p2_jerk_buffer);
     jerk_bound = P2_emergency_jerk_bound;
+    emergency_jerk_bound = P1_emergency_jerk_bound;
   }
   // consider 20 frame
   if (enter_lccnoa_time > 1e-6 &&
       enter_lccnoa_time < 1.0) {
+    emergency_jerk_bound = P2_emergency_jerk_bound;
     extra_jerk_buffer =
         std::min(0.05, extra_jerk_buffer);
   }
-  jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
+  // jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
+  jerk_bound = std::max(last_omega_to_jerk, jerk_bound);
   // tiny speed
   if (ego_vel_ < 0.2 &&
       lateral_motion_scene_ == LANE_KEEP &&
@@ -736,7 +778,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     jerk_bound = max_jerk_low_speed_;
   }
   jerk_bound =
-      std::min(std::min(P0_emergency_jerk_bound, jerk_bound), max_jerk_);
+      std::min(std::min(emergency_jerk_bound, jerk_bound), max_jerk_);
   // use last jerk
   // when last big jerk exceed jerk bound , loosening jerk bound
   bool is_need_loosening_upper_jerk_bound = false;
@@ -763,11 +805,18 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       }
     }
   }
+  if (std::fabs(planning_input.jerk_bound()) > emergency_jerk_bound) {
+    is_need_loosening_upper_jerk_bound = true;
+    is_need_loosening_lower_jerk_bound = true;
+    new_jerk_ubound = emergency_jerk_bound;
+    new_jerk_lbound = -emergency_jerk_bound;
+  }
   if (is_need_loosening_upper_jerk_bound ||
       is_need_loosening_lower_jerk_bound) {
     double new_jerk_bound =
         std::max(std::fabs(new_jerk_ubound), std::fabs(new_jerk_lbound));
-    new_jerk_bound = std::min(new_jerk_bound, max_jerk_);
+    new_jerk_bound =
+        std::min(std::min(emergency_jerk_bound, new_jerk_bound), max_jerk_);
     weight_.jerk_upper_bound.clear();
     weight_.jerk_upper_bound.resize(weight_.point_num, std::fabs(new_jerk_bound));
     weight_.jerk_lower_bound.clear();
@@ -776,7 +825,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   } else {
     emergency_level_ = NONE;
   }
-  last_jerk_bound_limit_ = planning_input.jerk_bound();
+  // last_jerk_bound_limit_ = planning_input.jerk_bound();
+  last_jerk_bound_limit_ =
+      planning_input.jerk_bound() / (config_.curv_factor * ref_vel_ * ref_vel_);
   // when last positive or negative jerk is big, adding zero jerk bound protection for this time
   if (lateral_motion_scene_ == LANE_KEEP) {  // not big curvature
     if (last_planning_output.jerk_vec_size() >= 2) {
@@ -1068,10 +1119,8 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     }
   }
   // limit large diff
-  double remotely_index_diff =
-      last_remotely_index_ - weight_.remotely_index;
-  if (remotely_index_diff > 2) {
-    weight_.remotely_index = last_remotely_index_ - 2;
+  if (last_remotely_index_ > weight_.remotely_index + 2) {
+    weight_.remotely_index = std::max(last_remotely_index_ - 2, weight_.proximal_index);
   }
   // consider avoid
   double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
