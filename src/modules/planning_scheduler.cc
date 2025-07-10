@@ -195,6 +195,10 @@ bool PlanningScheduler::RunOnce(
       function_type == common::RADS) {
     planning_success = ExcuteNavigationFunction(
         function_type, start_timestamp, planning_output, planning_hmi_info);
+    // can not active lcc/noa function if planning failed
+    if (!planning_success) {
+      planning_hmi_info->ad_info.is_avaliable = false;
+    }
   }
 
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
@@ -592,6 +596,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   // HMI for ad_info
   const auto &ad_info = session_.planning_context().planning_hmi_info().ad_info;
+  // available
+  planning_hmi_info->ad_info.is_avaliable = ad_info.is_avaliable;
   planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
   planning_hmi_info->ad_info.lane_change_direction =
       ad_info.lane_change_direction;
@@ -1053,7 +1059,10 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
   ClearParkingInfo(planning_output);
-
+  // can not active lcc/noa function if current planning failed
+  if (!planning_success) {
+    planning_hmi_info->ad_info.is_avaliable = false;
+  }
   return true;
 }
 

@@ -710,7 +710,7 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec", 'lateral_avoid_ids',
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec',
                          'front_obj_future_v_vec', 'rear_obj_future_v_vec', 'ego_future_v_vec', 'expected_steer_vec', "lat_path_x", "lat_path_y", "ori_lat_path_x", "ori_lat_path_y",
-                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec']
+                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'traj_lat_acc_vec', 'traj_lat_jerk_vec']
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
