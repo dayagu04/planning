@@ -67,7 +67,7 @@ const bool ApaWorld::Update() {
   predict_path_ptr_->Update(local_view_ptr_, planning_output_ptr_,
                             measure_data_ptr_);
 
-  obstacle_manager_ptr_->Update(local_view_ptr_);
+  obstacle_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_);
 
   col_det_interface_ptr_->Init(measure_data_ptr_->GetFoldMirrorFlag());
 

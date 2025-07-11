@@ -11,6 +11,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "session.h"
+#include "apa_state_machine_manager.h"
 
 namespace planning {
 namespace apa_planner {
@@ -22,7 +23,8 @@ class ApaObstacleManager final {
   ApaObstacleManager() {}
   ~ApaObstacleManager() {}
 
-  void Update(const LocalView *local_view);
+  void Update(const LocalView *local_view,
+              const std::shared_ptr<ApaStateMachineManager> &state_machine_ptr);
 
   void Reset() {
     obs_id_generate_ = 0;
@@ -65,6 +67,8 @@ class ApaObstacleManager final {
   size_t obs_id_generate_{0};
   std::unordered_map<size_t, ApaObstacle> obstacles_;
   std::vector<double> uss_dis_vec_;
+
+  std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
 };
 
 typedef IndexedList<int, ApaObstacle> IndexedParkObstacles;
