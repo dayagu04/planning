@@ -439,7 +439,8 @@ const bool ParallelParkInScenario::GenTlane() {
     const auto obs_scement = pair.second.GetObsScemanticType();
 
     bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
-                     obs_scement == ApaObsScemanticType::COLUMN);
+                     obs_scement == ApaObsScemanticType::COLUMN||
+                     obs_scement == ApaObsScemanticType::CAR);
 
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
       if ((obs_pt_local - slot_center).norm() > 25.0) {
