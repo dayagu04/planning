@@ -187,12 +187,12 @@ class LoadRosbag:
       try:
         loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"): # 2.10.0 adapt localization timestamp
-          loc_msg_dict[msg.meta.timestamp / 1e6] = msg
+          loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
         loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in loc_msg_dict.items():
           self.loc_msg['t'].append(t)
           self.loc_msg['data'].append(msg)
-          self.loc_msg['timestamp'].append(msg.meta.timestamp)
+          self.loc_msg['timestamp'].append(msg.msg_header.stamp)
         t0 = self.loc_msg['t'][0]
         print("T0 in loc msg:",t0)
         self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
