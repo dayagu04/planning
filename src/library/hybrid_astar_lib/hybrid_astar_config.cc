@@ -30,11 +30,9 @@ void PlannerOpenSpaceConfig::InitConfig() {
   traj_forward_penalty = 1.0;
   traj_reverse_penalty = 1.0;
   gear_switch_penalty = 10.0;
-  // gear_switch_penalty = 4.0;
   traj_steer_penalty = 0.0;
   traj_steer_change_penalty = 4.0;
-  // traj_steer_change_penalty = 0.0;
-  zigzag_penalty = 0.0;
+  zigzag_penalty = 0.1;
 
   expect_gear_penalty = 7.0;
   expect_dist_penalty = 7.0;

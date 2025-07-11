@@ -23,7 +23,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_81859/trigger/20250829/20250829-11-57-14/park_in_data_collection_CHERY_M32T_81859_ALL_FILTER_2025-08-29-11-57-14_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_81859/trigger/20250902/20250902-20-20-36/park_in_data_collection_CHERY_M32T_81859_ALL_FILTER_2025-09-02-20-20-36_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -351,6 +351,8 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
     print('speed type',
           plan_debug_msg.apa_speed_debug.speed_type)
+    print('path time',
+          plan_debug_msg.apa_path_debug.path_search_time)
 
     # update value
     data_record_rs_path.data.update({

@@ -140,6 +140,12 @@ class Node3d {
 
   float GetSteer() const { return steering_; }
 
+  float GetSteerChange(const float next_steer) const {
+    return steering_ - next_steer;
+  }
+
+  const bool IsSteerOpposite(const float next) const;
+
   const float GetRadius() const { return radius_; }
 
   Node3d* GetPreNode() const { return pre_node_; }

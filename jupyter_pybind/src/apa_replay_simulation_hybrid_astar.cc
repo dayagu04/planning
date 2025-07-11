@@ -600,28 +600,6 @@ py::bytes GetPlanningDebugInfo() {
   return ProtoToBytes(apa_interface_ptr->GetPlanningDebugInfo());
 }
 
-void DynamicsUpdate(py::bytes &planning_output_bytes, double dt) {
-  iflyauto::PlanningOutput planning_output =
-      BytesToStruct<iflyauto::PlanningOutput, struct_msgs::PlanningOutput>(
-          planning_output_bytes);
-
-  perfect_control_ptr->Update(planning_output, dt);
-}
-
-std::vector<double> GetDynamicState() {
-  const auto &state = perfect_control_ptr->GetState();
-
-  std::vector<double> res = {state.pos.x(), state.pos.y(), state.heading,
-                             state.vel};
-
-  return res;
-}
-
-void DynamicsSwitchBuf(double x, double y, double heading) {
-  perfect_control_ptr->SetState(
-      PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
-}
-
 const std::vector<Eigen::Vector3d> &GetReedsShapePath() {
   return static_rs_path_;
 }
@@ -901,8 +879,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.def("Init", &Init)
       .def("PlanOnce", &PlanOnce)
       .def("GetPlanningOutput", &GetPlanningOutput)
-      .def("DynamicsUpdate", &DynamicsUpdate)
-      .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
       .def("GetReedsShapePath", &GetReedsShapePath)
       .def("GetAstarPath", &GetAstarPath)
       .def("GetVirtualWall", &GetVirtualWall)
@@ -924,6 +900,5 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetPolynomialPath", &GetPolynomialPath)
-      .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
-      .def("GetDynamicState", &GetDynamicState);
+      .def("GetPlanningDebugInfo", &GetPlanningDebugInfo);
 }

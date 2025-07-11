@@ -397,4 +397,6 @@ void DebugMapBoundString(const MapBound& box);
 
 const cdl::AABB2f TransformMapBound(const MapBound& box);
 
+bool IsCurveBasedNode(const AstarPathType type);
+
 }  // namespace planning

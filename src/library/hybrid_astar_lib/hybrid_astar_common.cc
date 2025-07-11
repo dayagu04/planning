@@ -254,4 +254,15 @@ const cdl::AABB2f TransformMapBound(const MapBound& box) {
   return bound;
 }
 
+bool IsCurveBasedNode(const AstarPathType type) {
+  if (type == AstarPathType::REEDS_SHEPP || type == AstarPathType::DUBINS ||
+      type == AstarPathType::CUBIC_POLYNOMIAL ||
+      type == AstarPathType::QUNTIC_POLYNOMIAL ||
+      type == AstarPathType::SPIRAL) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace planning
