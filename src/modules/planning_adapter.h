@@ -180,6 +180,14 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_perception_tsr_msg_updated_.store(true);
   }
 
+  void Feed_IflytekCameraPerceptionScene(
+      const iflyauto::CameraPerceptionScene& perception_scene_msg) override {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    perception_scene_msg_ = perception_scene_msg;
+    perception_scene_msg_recv_time_ = IflyTime::Now_ms();
+    is_perception_scene_msg_updated_.store(true);
+  }
+
   void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput&)>&
           planning_writer) override {
@@ -310,6 +318,10 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   iflyauto::CameraPerceptionTsrInfo perception_tsr_msg_;
   int64_t perception_tsr_msg_recv_time_;
   std::atomic<bool> is_perception_tsr_msg_updated_{false};
+
+  iflyauto::CameraPerceptionScene perception_scene_msg_;
+  int64_t perception_scene_msg_recv_time_;
+  std::atomic<bool> is_perception_scene_msg_updated_{false};
 
   std::function<void(const iflyauto::PlanningOutput&)> planning_writer_ =
       nullptr;

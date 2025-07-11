@@ -76,6 +76,9 @@ struct LocalView {
   iflyauto::CameraPerceptionTsrInfo perception_tsr_info;
   double perception_tsr_info_recv_time = 0.0;
 
+  iflyauto::CameraPerceptionScene perception_scene_info;
+  double perception_scene_info_recv_time = 0.0;
+
   // IFLYParkingMap::ParkingInfo parking_map_info;
   // double parking_map_info_recv_time = 0.0;
 

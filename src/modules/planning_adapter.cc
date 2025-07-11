@@ -136,7 +136,8 @@ bool PlanningAdapter::Proc() {
     is_localization_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization(
-      local_view_ptr_->localization.msg_header.stamp);// 2.10.0 localization adapt
+      local_view_ptr_->localization.msg_header
+          .stamp);  // 2.10.0 localization adapt
   input_topic_latency->set_localization(
       get_latency(start_time, local_view_ptr_->localization.msg_header.stamp));
 
@@ -346,6 +347,15 @@ bool PlanningAdapter::Proc() {
       local_view_ptr_->perception_tsr_info.msg_header.stamp);
   input_topic_latency->set_perception_tsr(get_latency(
       start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
+
+  // xlwei5 not done
+  if (is_perception_scene_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->perception_scene_info = perception_scene_msg_;
+    local_view_ptr_->perception_scene_info_recv_time =
+        perception_scene_msg_recv_time_;
+    is_perception_scene_msg_updated_.store(false);
+  }
 
   if (is_fusion_speed_bump_msg_updated_) {
     std::lock_guard<std::mutex> lock(fusion_speed_bump_msg_mutex_);

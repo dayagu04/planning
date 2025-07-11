@@ -1,8 +1,10 @@
 
 #pragma once
 #include <functional>
-#include "component_intf.h"
+
 #include "camera_perception_tsr_c.h"
+#include "camera_perception_scene_c.h"
+#include "component_intf.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
@@ -23,8 +25,6 @@
 #include "uss_wave_info_c.h"
 #include "vehicle_service_c.h"
 
-
-
 namespace iflyauto {
 namespace interface {
 class PlanningInterface : public ComponentInterface {
@@ -35,22 +35,19 @@ class PlanningInterface : public ComponentInterface {
   virtual bool Init() = 0;
   virtual bool Proc() = 0;
 
-  virtual void Feed_IflytekEhrSdmapInfo(
-      const SdMapSwtx::SdMap &data) = 0;
-  virtual void Feed_IflytekEhrStaticMap(
-      const Map::StaticMap &data) = 0;
+  virtual void Feed_IflytekEhrSdmapInfo(const SdMapSwtx::SdMap &data) = 0;
+  virtual void Feed_IflytekEhrStaticMap(const Map::StaticMap &data) = 0;
   virtual void Feed_IflytekLocalizationEgomotion(
       const iflyauto::IFLYLocalization &data) = 0;
   virtual void Feed_IflytekVehicleService(
       const iflyauto::VehicleServiceOutputInfo &data) = 0;
   virtual void Feed_IflytekUssUsswaveInfo(
-      const iflyauto::UssPdcIccSendDataType& uss_wave_info_msg) = 0;
+      const iflyauto::UssPdcIccSendDataType &uss_wave_info_msg) = 0;
   virtual void Feed_IflytekFusionUssPerceptionInfo(
-      const iflyauto::UssPerceptInfo& uss_percept_info_msg) = 0;
+      const iflyauto::UssPerceptInfo &uss_percept_info_msg) = 0;
   virtual void Feed_IflytekFsmSocState(
       const iflyauto::FuncStateMachine &data) = 0;
-  virtual void Feed_IflytekFusionRoadFusion(
-      const iflyauto::RoadInfo &data) = 0;
+  virtual void Feed_IflytekFusionRoadFusion(const iflyauto::RoadInfo &data) = 0;
   virtual void Feed_IflytekFusionParkingSlot(
       const iflyauto::ParkingFusionInfo &data) = 0;
   virtual void Feed_IflytekFusionGroundLine(
@@ -62,6 +59,8 @@ class PlanningInterface : public ComponentInterface {
 
   virtual void Feed_IflytekCameraPerceptionTrafficSignRecognition(
       const iflyauto::CameraPerceptionTsrInfo &data) = 0;
+  virtual void Feed_IflytekCameraPerceptionScene(
+      const iflyauto::CameraPerceptionScene &data) = 0;
   virtual void Feed_IflytekFusionObjects(
       const iflyauto::FusionObjectsInfo &data) = 0;
   virtual void Feed_IflytekFusionOccupancyObjects(
@@ -72,13 +71,13 @@ class PlanningInterface : public ComponentInterface {
   virtual void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput &)> &writer) = 0;
   virtual void RegWriter_IflytekPlanningHmi(
-      const std::function<void(const iflyauto::PlanningHMIOutputInfoStr &)> &writer) = 0;
+      const std::function<void(const iflyauto::PlanningHMIOutputInfoStr &)>
+          &writer) = 0;
   virtual void RegWriter_IflytekPlanningDebugInfo(
       const std::function<void(const iflyauto::StructContainer &)> &writer) = 0;
 
   virtual void RegFmWriter_IflytekAlarmInfoPlanning(
       const std::function<void(const iflyauto::FmInfo &)> &fm_writer) = 0;
-
 };
 }  // namespace interface
 }  // namespace iflyauto
