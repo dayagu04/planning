@@ -123,8 +123,7 @@ void ParallelPathGenerator::Preprocess() {
     calc_params_.lat_outside_slot_buffer = CalcBufferViaDistOfEgoToObs();
   }
 
-  if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >=
-      apa_param.GetParam().car_length + 0.8) {
+  if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >= 6.1) {
     calc_params_.lon_buffer_rev_trials = kColBufferInSlot;
   } else {
     calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
@@ -246,7 +245,10 @@ const bool ParallelPathGenerator::Update() {
     if (success) {
       ILOG_INFO << "calc_params_.park_out_path_in_slot.size() = "
                 << calc_params_.park_out_path_in_slot.size();
-      if (calc_params_.park_out_path_in_slot.size() > 1 && std::fabs(calc_params_.park_out_path_in_slot.back().GetStartHeading() * kRad2Deg) >0.2 ) {
+      if (calc_params_.park_out_path_in_slot.size() > 1 &&
+          std::fabs(
+              calc_params_.park_out_path_in_slot.back().GetStartHeading() *
+              kRad2Deg) > 0.2) {
         calc_params_.park_out_path_in_slot.pop_back();
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
