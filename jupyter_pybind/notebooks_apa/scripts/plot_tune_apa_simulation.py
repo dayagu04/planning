@@ -21,7 +21,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y-9:  18049
 # e0y-10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250626/20250626-10-45-08/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-26-10-45-08_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250709/20250709-18-51-10/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-09-18-51-11_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True

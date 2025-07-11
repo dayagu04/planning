@@ -57,7 +57,7 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
 
       // speed limit from path curvature switch
       if (std::fabs(point.kappa - next_point.kappa) >
-          config_.kappa_switch_in_path_point) {
+          config_.kappa_switch_thresh) {
         speed_limit =
             std::min(speed_limit, config_.speed_limit_by_kappa_switch);
 
@@ -89,7 +89,7 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     // speed limit from path kappa
     if (point.kappa > config_.kappa_thresh ||
         point.kappa < -config_.kappa_thresh) {
-      speed_limit = std::min(speed_limit, config_.speed_limit_by_kappa);
+      speed_limit = std::min(speed_limit, config_.speed_limit_lower_by_kappa);
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code = LonDecisionReason::PATH_KAPPA;
       speed_limit_decision.path_s = path_s;

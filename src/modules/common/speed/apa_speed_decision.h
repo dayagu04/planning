@@ -85,7 +85,7 @@ enum class RoadScenario {
   POTHOLE,
 };
 
-enum class SpeedMode {
+enum class AccelerationMode {
   // [0, 0.5]
   SOFT_ACCELERATE,
   HARD_ACCELERATE,
@@ -96,6 +96,15 @@ enum class SpeedMode {
   // (-2.0, -inf)
   EMERGENCY_BRAKE,
   CRUISE,
+};
+
+enum class SpeedMode {
+  // 5 km/h
+  FAST,
+  // 4 km/h
+  MIDDLE,
+  // 3 km/h
+  SLOW
 };
 
 const ParkLonDecision* GetCloseStopDecision(

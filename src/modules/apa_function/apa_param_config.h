@@ -63,16 +63,24 @@ struct AstarParkingConfig {
   int max_replan_number_inside_slot = 15;
 };
 
+struct ParkingSpeedBound {
+  double lower;
+  double upper;
+};
+
 struct ParkingSpeedConfig {
   bool enable_apa_speed_plan;
   double default_cruise_speed;
   double min_cruise_speed;
-  double speed_limit_by_kappa;
-  double speed_limit_by_kappa_switch;
-  double speed_limit_by_obs_dist;
+  int apa_speed_mode;
+  double fast_cruise_speed;
+  double middle_cruise_speed;
+  double slow_cruise_speed;
 
   // If obs dist is smaller than this value, add speed limit.
-  double min_speed_limit_by_obs_dist;
+  ParkingSpeedBound speed_limit_by_obs_dist;
+  ParkingSpeedBound speed_limit_by_kappa;
+  ParkingSpeedBound speed_limit_by_kappa_switch;
 
   // speed limit
   double path_thresh_for_acc_bound = 0.4;

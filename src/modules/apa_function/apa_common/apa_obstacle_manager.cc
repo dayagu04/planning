@@ -18,12 +18,16 @@
 
 namespace planning {
 namespace apa_planner {
-void ApaObstacleManager::Update(const LocalView* local_view) {
+void ApaObstacleManager::Update(
+    const LocalView* local_view,
+    const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr) {
   Reset();
   if (local_view == nullptr) {
     ILOG_ERROR << "Update ApaObstacleManager, local_view_ptr is nullptr";
     return;
   }
+
+  state_machine_ptr_ = state_machine_ptr;
 
   ILOG_INFO << "Update ApaObstacleManager";
 
@@ -406,7 +410,8 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
   }
 
   // limiters
-  if (apa_param.GetParam().enable_side_pass_limiter) {
+  if (apa_param.GetParam().enable_side_pass_limiter &&
+      state_machine_ptr_->IsParkingStatus()) {
     std::vector<Eigen::Vector2d> limiter_points;
     limiter_points.clear();
     const iflyauto::ParkingFusionInfo* slot_list =
