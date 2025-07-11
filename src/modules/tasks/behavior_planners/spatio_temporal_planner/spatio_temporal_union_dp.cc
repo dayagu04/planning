@@ -1311,7 +1311,7 @@ double SpatioTemporalUnionDp::CalculatePathCost(
     const double ddl =
         ComputeSecondDerivative(lateral_curve_coef, acc, v0, curve_t);
     path_cost += ddl * ddl * lat_path_weight_params.path_ddl_cost();
-    path_cost += CalculateStitchingCost(current_point, current_t, spatio_temporal_union_plan_input);
+    // path_cost += CalculateStitchingCost(current_point, current_t, spatio_temporal_union_plan_input);
   }
   path_cost *= kPathCostComputeSampleTime;
 
