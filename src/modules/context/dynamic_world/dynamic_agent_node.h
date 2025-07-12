@@ -78,6 +78,7 @@ class DynamicAgentNode {
   bool is_VRU_type() const;
   bool is_cone_type() const;
   bool is_vehicle_type() const;
+  bool is_static_type() const;
 
   const int64_t front_node_id() const;
   void set_front_node_id(const int64_t& forward_node_id);

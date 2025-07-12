@@ -398,5 +398,8 @@ bool DynamicAgentNode::is_vehicle_type() const {
   return agent_->is_vehicle_type();
 }
 
+bool DynamicAgentNode::is_static_type() const {
+  return agent_->is_static();
+}
 }  // namespace planning_data
 }  // namespace planning
