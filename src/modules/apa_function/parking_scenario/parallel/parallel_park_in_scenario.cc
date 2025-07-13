@@ -438,9 +438,9 @@ const bool ParallelParkInScenario::GenTlane() {
 
     const auto obs_scement = pair.second.GetObsScemanticType();
 
-    bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
-                     obs_scement == ApaObsScemanticType::COLUMN||
-                     obs_scement == ApaObsScemanticType::CAR);
+    const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
+                           obs_scement == ApaObsScemanticType::COLUMN ||
+                           obs_scement == ApaObsScemanticType::CAR);
 
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
       if ((obs_pt_local - slot_center).norm() > 25.0) {
@@ -485,7 +485,8 @@ const bool ParallelParkInScenario::GenTlane() {
         continue;
       }
 
-      if (mathlib::IsInBound(obs_pt_local.x(), 0.0, t_lane_.slot_length) &&
+      if (mathlib::IsInBound(obs_pt_local.x(), 0.4,
+                             t_lane_.slot_length - 0.4) &&
           obs_pt_local.y() * side_sgn < -0.25 * t_lane_.slot_width &&
           is_rigid) {
         t_lane_.is_inside_rigid = true;
@@ -518,8 +519,7 @@ const bool ParallelParkInScenario::GenTlane() {
             slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
             slot_length + kFrontDetaXMagWhenFrontVacant) &&
         pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(),
-            -kFrontObsLineYMagIdentification * side_sgn,
+            obstacle_point_slot.y(), -0.4 * side_sgn,
             (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
 
     if (front_obs_condition) {

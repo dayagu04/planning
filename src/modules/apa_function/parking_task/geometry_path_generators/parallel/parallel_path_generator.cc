@@ -37,7 +37,7 @@ static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kLonBufferTrippleStep = 0.2;   // tripple step
 static const double kColBufferInSlot = 0.25;       // in slot
-static const double kColSmallBufferInSlot = 0.15;  // in slot
+static const double kColSmallBufferInSlot = 0.16;  // in slot
 
 static const double kColBufferOutSlot = 0.3;           // out slot
 static const double kColLargeLatBufferOutSlot = 0.3;   // out slot
@@ -123,7 +123,7 @@ void ParallelPathGenerator::Preprocess() {
     calc_params_.lat_outside_slot_buffer = CalcBufferViaDistOfEgoToObs();
   }
 
-  if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >= 6.1) {
+  if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >= 6.2) {
     calc_params_.lon_buffer_rev_trials = kColBufferInSlot;
   } else {
     calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
@@ -1877,7 +1877,7 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 
 // search from the inside parking space to outside
 const bool ParallelPathGenerator::CalMinSafeCircle() {
-  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.05;
+  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.025;
   ILOG_INFO << "is rigid body in side of slot = "
             << input_.tlane.is_inside_rigid;
   ILOG_INFO << "lat buffer in reversed trials = " << lat_buffer;
