@@ -945,7 +945,7 @@ void PerpendicularTailInScenario::PathPlan() {
       frame_.dynamic_replan_fail_count = 0;
     } else {
       ILOG_INFO << "static replan success, update path";
-      frame_.can_correct_path_for_limiter = true;
+      ego_info_under_slot.fix_limiter = false;
     }
 
     if (PostProcessPath()) {
@@ -959,21 +959,6 @@ void PerpendicularTailInScenario::PathPlan() {
       ILOG_INFO << "postprocess path failed!";
     }
   }
-
-  ILOG_INFO << "lat_move_dist_replan_success = "
-            << ego_info_under_slot.lat_move_dist_replan_success
-            << "  lon_move_dist_replan_success = "
-            << ego_info_under_slot.lon_move_dist_replan_success
-            << "  lat_move_dist_every_replan = "
-            << ego_info_under_slot.lat_move_dist_every_replan
-            << "  lon_move_dist_every_replan = "
-            << ego_info_under_slot.lon_move_dist_every_replan;
-
-  JSON_DEBUG_VALUE("move_slot_dist",
-                   ego_info_under_slot.lat_move_dist_replan_success)
-
-  JSON_DEBUG_VALUE("replan_move_slot_dist",
-                   ego_info_under_slot.lat_move_dist_every_replan)
 
   return;
 }
@@ -1219,7 +1204,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
           !frame_.is_last_path ||
-      ego_info_under_slot.fix_slot || !frame_.spline_success ||
+      ego_info_under_slot.fix_limiter || !frame_.spline_success ||
       origin_traj_size < 2) {
     return false;
   }
@@ -1243,7 +1228,6 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
             << "  car_to_limiter_dis = " << car_to_limiter_dis;
 
   if (!(dist_ego_limiter < car_to_limiter_dis &&
-        frame_.can_correct_path_for_limiter &&
         std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
             param.finish_heading_err * 1.05 &&
         std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
@@ -1331,19 +1315,20 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     do {
       temp_s += temp_ds;
       if (temp_s >= extend_length) {
+        temp_ds = std::max(extend_length - extend_pt_vec.back().s, 0.01);
         temp_s = extend_length;
       }
       pt.pos += unit_heading_vec * temp_ds;
       pt.s += temp_ds;
       extend_pt_vec.emplace_back(pt);
-    } while (s < extend_length);
+    } while (temp_s < extend_length - 1e-5);
 
     ILOG_INFO << "extend path according limiter with fold mirror = "
               << apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag();
 
     const ColResult col_res =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
-            extend_pt_vec, apa_param.GetParam().car_lat_inflation_normal,
+            extend_pt_vec, apa_param.GetParam().stop_lat_inflation + 2e-3,
             apa_param.GetParam().col_obs_safe_dist_normal,
             GJKColDetRequest(false));
 
@@ -1408,7 +1393,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   frame_.spline_success = true;
 
-  ego_info_under_slot.fix_slot = true;
+  ego_info_under_slot.fix_limiter = true;
   frame_.correct_path_for_limiter = true;
 
   return true;
@@ -1532,8 +1517,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 }
 
 const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
-  const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   const double ego_stop_dist = 1.0;
 
@@ -1618,7 +1603,8 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   }
 
   frame_.ego_stop_when_slot_jumps_much = true;
-  frame_.can_correct_path_for_limiter = false;
+
+  ego_info_under_slot.fix_limiter = true;
 
   ILOG_INFO << "the slot jumps too much, ego should stop, trim path, and then "
                "plan reverse path";
@@ -2356,6 +2342,27 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE(
       "target_pose_type",
       static_cast<int>(ego_info_under_slot.tar_pose_result.target_pose_type))
+
+  JSON_DEBUG_VALUE("move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_every_replan)
+
+  JSON_DEBUG_VALUE("lon_move_slot_dist",
+                   ego_info_under_slot.lon_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_lon_move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_every_replan)
+
+  ILOG_INFO << "lat_move_dist_replan_success = "
+            << ego_info_under_slot.lat_move_dist_replan_success
+            << "  lon_move_dist_replan_success = "
+            << ego_info_under_slot.lon_move_dist_replan_success
+            << "  lat_move_dist_every_replan = "
+            << ego_info_under_slot.lat_move_dist_every_replan
+            << "  lon_move_dist_every_replan = "
+            << ego_info_under_slot.lon_move_dist_every_replan;
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
