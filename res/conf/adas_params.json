@@ -162,9 +162,11 @@
   "kickdown_abs_hand_trq": 1.5,
   "kickdown_hand_trq_dur": 0.5,
   "supp_CoolingTime_handtrq_thr": 0.5,
-  "ihc_main_switch": false,
-  "ihc_enable_code_maskcode": 4294950911,
-  "ihc_disable_code_maskcode": 4294950911,
-  "ihc_fault_code_maskcode": 4294967231,
+  "ihc_use_json_switch": false,
+  "ihc_use_json_code": true,
+  "ihc_main_switch": true,
+  "ihc_enable_code_maskcode": 31,
+  "ihc_disable_code_maskcode": 0,
+  "ihc_fault_code_maskcode": 0,
   "meb_request_status_const": 0
 }

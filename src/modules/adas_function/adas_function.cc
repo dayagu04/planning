@@ -35,8 +35,7 @@ void AdasFunction::Init(void) {
   // srCore
   tsr_core_ptr_ = std::make_shared<adas_function::tsr_core::TsrCore>();
   // IhcCore
-  ihc_core_ptr_ =
-      std::make_shared<adas_function::ihc_core::IntelligentHeadlightControl>();
+  ihc_core_ptr_ = std::make_shared<adas_function::ihc_core::IhcCore>();
 }
 
 void AdasFunction::StoreInfoForNextCycle(void) {

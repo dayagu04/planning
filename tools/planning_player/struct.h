@@ -28,6 +28,7 @@
 #include "proto_msgs/StaticMap.h"
 #include "sensor_interface/DebugInfo.h"
 #include "struct_msgs/CameraPerceptionTsrInfo.h"
+#include "struct_msgs/CameraPerceptionScene.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionDecelerInfo.h"
@@ -56,6 +57,7 @@
 // struct schema
 #include "interface/type_convert/struct_convert/camera_perception_parking_slot_c.h"
 #include "interface/type_convert/struct_convert/camera_perception_tsr_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_scene_c.h"
 #include "interface/type_convert/struct_convert/common_c.h"
 #include "interface/type_convert/struct_convert/control_command_c.h"
 #include "interface/type_convert/struct_convert/func_state_machine_c.h"

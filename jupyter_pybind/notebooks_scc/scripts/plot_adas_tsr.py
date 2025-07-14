@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250702/20250702-11-13-07/data_collection_CHERY_M32T_50813_EVENT_FILTER_2025-07-02-11-13-07_no_camera.bag.1751979479.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/user/thzhang5/20250805/data_collection_CHERY_M32T_40737_ALL_MANUAL_2025-08-05-16-51-00_no_camera.bag.1754464369.open-loop.scc.plan"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -75,10 +75,10 @@ lka_json_value_list = [#new_ldw debug info:
                          "elk_right_intervention_by_line","elk_right_intervention_by_roadedge","elk_roadedge_offset",
                          "elk_left_has_risk","elk_right_has_risk","elk_fl_risk_code","elk_ml_risk_code","elk_rl_risk_code","elk_fr_risk_code","elk_mr_risk_code","elk_rr_risk_code",
                          #tsr debug info
-                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_", "tsr_speed_limit_",
-                         "tsr_speed_limit_valid_","tsr_warning_image_","tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_",
+                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_", "tsr_speed_limit_", "current_map_speed_limit_", "speed_limit_suppression_flag_",
+                         "end_of_speed_sign_display_flag_", "tsr_speed_limit_valid_","tsr_warning_image_","tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_",
                          "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_",
-                         "tsr_output_supp_sign_info_",
+                         "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_",
                         ]
 
 adas_json_value_list =  [ #adas_debug info
@@ -191,58 +191,62 @@ callback_code = """
 fig_machine = bkp.figure(x_axis_label='time', y_axis_label='tsr state_machine',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=200)
 fig_machine.yaxis.axis_label_text_font_style = 'bold'
 
-fig_vehicle_state = bkp.figure(x_axis_label='time', y_axis_label='vehicle state',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=260)
-fig_vehicle_state.yaxis.axis_label_text_font_style = 'bold'
+fig_display_info = bkp.figure(x_axis_label='time', y_axis_label='vehicle state',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=260)
+fig_display_info.yaxis.axis_label_text_font_style = 'bold'
 
-fig_dynamic_state = bkp.figure(x_axis_label='time', y_axis_label='dynamic state',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=200)
+fig_dynamic_state = bkp.figure(x_axis_label='time', y_axis_label='dynamic state',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=300)
 fig_dynamic_state.yaxis.axis_label_text_font_style = 'bold'
 
 fig_path_info = bkp.figure(x_axis_label='time', y_axis_label='path info',x_range = [lka_t_tsr_debug[0], lka_t_tsr_debug[-1]], width=700, height=280)
 fig_path_info.yaxis.axis_label_text_font_style = 'bold'
 
-
+# 状态机
 f_machine = fig_machine.line('time', 'tsr_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'tsr_state')
 fig_machine.line('time', 'tsr_main_switch_', source = lkas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'tsr_main_switch')
 fig_machine.line('time', 'tsr_enable_code_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'tsr_enable_code')
 fig_machine.line('time', 'tsr_disable_code_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tsr_disable_code')
 fig_machine.line('time', 'tsr_fault_code_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'tsr_fault_code')
 
-f_vehicle_state = fig_vehicle_state.line('time', 'state_dispaly_vehicle_speed', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'display_vehicle_speed')
-fig_vehicle_state.line('time', 'tsr_speed_limit_valid_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'speed_limit_valid')
-fig_vehicle_state.line('time', 'tsr_speed_limit_', source = lkas_json_list_dict, line_width = 3, line_color = 'red', line_dash = 'solid', legend_label = 'speed_limit')
-fig_vehicle_state.line('time', 'tsr_speed_limit_exist_in_view_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'speed_limit_exist_in_view_flag')
-fig_vehicle_state.line('time', 'tsr_speed_limit_exist_in_view_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'speed_limit_exist_in_view_')
-# fig_vehicle_state.line('time', 'tsr_accumulated_path_length_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'accumulated_path_length')
+# 车机显示信息
+f_display_info = fig_display_info.line('time', 'state_dispaly_vehicle_speed', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'display_vehicle_speed')
+fig_display_info.line('time', 'tsr_speed_limit_valid_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'speed_limit_valid')
+fig_display_info.line('time', 'tsr_speed_limit_', source = lkas_json_list_dict, line_width = 3, line_color = 'red', line_dash = 'solid', legend_label = 'speed_limit')
+fig_display_info.line('time', 'current_map_speed_limit_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'current_map_speed_limit')
+fig_display_info.line('time', 'tsr_output_supp_sign_info_', source = lkas_json_list_dict, line_width = 1, line_color = 'gray', line_dash = 'solid', legend_label = 'output_supp_sign_info')
+fig_display_info.line('time', 'tsr_overspeed_status_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'overspeed_status')
+fig_display_info.line('time', 'tsr_warning_image_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'warning_image')
+fig_display_info.line('time', 'tsr_warning_voice_', source = lkas_json_list_dict, line_width = 1, line_color = 'navy', line_dash = 'solid', legend_label = 'warning_voice')
 
+# 动态状态
 f_dynamic_state = fig_dynamic_state.line('time', 'tsr_speed_limit_valid_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'speed_limit_valid')
-fig_dynamic_state.line('time', 'tsr_overspeed_status_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'overspeed_status')
-fig_dynamic_state.line('time', 'tsr_overspeed_duration_time_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'overspeed_duration_time')
-fig_dynamic_state.line('time', 'tsr_warning_image_', source = lkas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'warning_image')
-fig_dynamic_state.line('time', 'tsr_warning_voice_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'warning_voice')
+fig_dynamic_state.line('time', 'speed_limit_suppression_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'yellow', line_dash = 'solid', legend_label = 'speed_limit_suppression_flag')
+fig_dynamic_state.line('time', 'end_of_speed_sign_display_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'pink', line_dash = 'solid', legend_label = 'end_of_speed_sign_display_flag')
+fig_dynamic_state.line('time', 'supp_sign_in_suppression_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'gray', line_dash = 'solid', legend_label = 'supp_sign_in_suppression_flag')
+fig_dynamic_state.line('time', 'tsr_speed_limit_exist_in_view_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'speed_limit_exist_in_view_flag')
+fig_dynamic_state.line('time', 'tsr_speed_limit_exist_in_view_', source = lkas_json_list_dict, line_width = 1, line_color = 'navy', line_dash = 'solid', legend_label = 'speed_limit_exist_in_view_')
+fig_dynamic_state.line('time', 'tsr_speed_limit_change_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'speed_limit_change_flag')
 
-f_path_info = fig_path_info.line('time', 'tsr_speed_limit_change_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'speed_limit_change_flag')
-fig_path_info.line('time', 'tsr_accumulated_path_length_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'accumulated_path_length')
-fig_path_info.line('time', 'tsr_output_supp_sign_info_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'output_supp_sign_info')
+f_path_info = fig_path_info.line('time', 'tsr_accumulated_path_length_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'accumulated_path_length')
+fig_path_info.line('time', 'tsr_overspeed_duration_time_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'overspeed_duration_time')
 
 hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('tsr_state_', '@tsr_state_'),('tsr_main_switch_', '@tsr_main_switch_'), ('tsr_enable_code_', '@tsr_enable_code_'),
                                                        ('tsr_disable_code_', '@tsr_disable_code_'), ('tsr_fault_code_', '@tsr_fault_code_')], mode='vline')
-hover_vehicle_state = HoverTool(renderers=[f_vehicle_state], tooltips=[('time', '@time'), ('state_vehicle_speed', '@state_vehicle_speed'), ('tsr_speed_limit_valid_', '@tsr_speed_limit_valid_'), ('tsr_speed_limit_', '@tsr_speed_limit_')], mode='vline')
+hover_vehicle_state = HoverTool(renderers=[f_display_info], tooltips=[('time', '@time'), ('state_vehicle_speed', '@state_vehicle_speed'), ('tsr_speed_limit_valid_', '@tsr_speed_limit_valid_'), ('tsr_speed_limit_', '@tsr_speed_limit_'), ('current_map_speed_limit_', '@current_map_speed_limit_')], mode='vline')
 hover_dynamic_state = HoverTool(renderers=[f_dynamic_state], tooltips=[('time', '@time'), ('tsr_speed_limit_valid_', '@tsr_speed_limit_valid_'), ('tsr_overspeed_status_', '@tsr_overspeed_status_'), ('tsr_overspeed_duration_time_', '@tsr_overspeed_duration_time_'),
                                                ('tsr_warning_image_', '@tsr_warning_image_'),('tsr_warning_voice_', '@tsr_warning_voice_')], mode='vline')
 hover_path_info = HoverTool(renderers=[f_path_info], tooltips=[('time', '@time'), ('tsr_speed_limit_change_flag_', '@tsr_speed_limit_change_flag_'),('tsr_accumulated_path_length_', '@tsr_accumulated_path_length_')], mode='vline')
 
 fig_machine.add_tools(hover_machine)
-fig_vehicle_state.add_tools(hover_vehicle_state)
+fig_display_info.add_tools(hover_vehicle_state)
 fig_dynamic_state.add_tools(hover_dynamic_state)
 fig_path_info.add_tools(hover_path_info)
 
 fig_machine.toolbar.active_scroll = fig_machine.select_one(WheelZoomTool)
-fig_vehicle_state.toolbar.active_scroll = fig_vehicle_state.select_one(WheelZoomTool)
+fig_display_info.toolbar.active_scroll = fig_display_info.select_one(WheelZoomTool)
 fig_dynamic_state.toolbar.active_scroll = fig_dynamic_state.select_one(WheelZoomTool)
 fig_path_info.toolbar.active_scroll = fig_path_info.select_one(WheelZoomTool)
-
 fig_machine.legend.click_policy = 'hide'
-fig_vehicle_state.legend.click_policy = 'hide'
+fig_display_info.legend.click_policy = 'hide'
 fig_dynamic_state.legend.click_policy = 'hide'
 fig_path_info.legend.click_policy = 'hide'
 ### sliders config
@@ -441,5 +445,5 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(column(fig_machine, fig_vehicle_state, fig_dynamic_state,fig_path_info)), notebook_handle=True)
+bkp.show(row(column(fig_machine, fig_display_info, fig_dynamic_state,fig_path_info)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

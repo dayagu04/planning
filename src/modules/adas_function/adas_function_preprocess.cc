@@ -110,8 +110,9 @@ void Preprocess::SyncParameters(void) {
                        "ldp_main_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_main_switch, bool,
                        "elk_main_switch");
-  // ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_main_switch, bool,
-  //                      "tsr_main_switch");
+  int tsr_main_switch_temp = 0;
+  ADAS_JSON_READ_VALUE(tsr_main_switch_temp, int, "tsr_main_switch");
+  GetContext.mutable_param()->tsr_main_switch = static_cast<iflyauto::NotificationMainSwitch>(tsr_main_switch_temp);
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_tlc_thrd, double,
                        "elk_tlc_thrd");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_tlc_thrd,
@@ -144,8 +145,18 @@ void Preprocess::SyncParameters(void) {
                        double, "tsr_reset_path_length");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lane_line_width, double,
                        "lane_line_width");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_use_json_switch, bool,
+                       "ihc_use_json_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_use_json_code, bool,
+                       "ihc_use_json_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_main_switch, bool,
                        "ihc_main_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_enable_code_maskcode, int,
+                       "ihc_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_disable_code_maskcode, int,
+                       "ihc_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code_maskcode, int,
+                       "ihc_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
                        std::vector<double>, "lka_vel_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_tlc_vector,
@@ -1561,59 +1572,6 @@ void Preprocess::UpdateObjsInfo(void) {
   return;
 }
 
-// 从 iflyauto 到 adas_function::context 的转换函数（严格一对一映射）
-adas_function::context::SuppSignType Preprocess::convertToAdasSuppSign(
-    iflyauto::SuppSignType sign) {
-  using Ifly = iflyauto::SuppSignType;
-  using Ctx = adas_function::context::SuppSignType;
-
-  // 建立严格的一对一映射（名称相同但值不同）
-  static const std::unordered_map<Ifly, Ctx> mapping = {
-      {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SUPP_SIGN_TYPE_UNKNOWN},
-      {Ifly::SUPP_SIGN_TYPE_NO_ENTRY, Ctx::SUPP_SIGN_TYPE_NO_ENTRY},
-      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING,
-       Ctx::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING},
-      {Ifly::SUPP_SIGN_TYPE_NO_PARKING, Ctx::SUPP_SIGN_TYPE_NO_PARKING},
-      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,
-       Ctx::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING},
-      {Ifly::SUPP_SIGN_TYPE_NO_OVERTAKING, Ctx::SUPP_SIGN_TYPE_NO_OVERTAKING},
-      {Ifly::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING,
-       Ctx::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING},
-      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT,
-       Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT},
-      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT,
-       Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT},
-      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_U,
-       Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_U},
-      {Ifly::SUPP_SIGN_TYPE_STOP_SIGN, Ctx::SUPP_SIGN_TYPE_STOP_SIGN},
-      {Ifly::SUPP_SIGN_TYPE_YIELD_SIGN, Ctx::SUPP_SIGN_TYPE_YIELD_SIGN},
-      {Ifly::SUPP_SIGN_TYPE_NO_PASSING, Ctx::SUPP_SIGN_TYPE_NO_PASSING},
-  };
-
-  auto it = mapping.find(sign);
-  return it != mapping.end() ? it->second : Ctx::SUPP_SIGN_TYPE_UNKNOWN;
-}
-
-// 从 iflyauto::SuppSignType 到 adas_function::context::SpeedSignType
-// 的转换函数
-adas_function::context::SpeedSignType Preprocess::convertToAdasSpeedSign(
-    iflyauto::SuppSignType sign) {
-  using Ifly = iflyauto::SuppSignType;
-  using Ctx = adas_function::context::SpeedSignType;
-
-  static const std::unordered_map<Ifly, Ctx> mapping = {
-      {Ifly::SUPP_SIGN_TYPE_MAXIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MAXIMUM_SPEED},
-      {Ifly::SUPP_SIGN_TYPE_MINIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MINIMUM_SPEED},
-      {Ifly::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT,
-       Ctx::SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT},
-      {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SPEED_SIGN_TYPE_UNKNOWN},
-      // 其他标志映射为 UNKNOWN
-  };
-
-  auto it = mapping.find(sign);
-  return it != mapping.end() ? it->second : Ctx::SPEED_SIGN_TYPE_UNKNOWN;
-}
-
 // 预处理把辅助标识牌和限速标识牌分开，分别储存类型,并保存到tsr_info中
 void Preprocess::UpdateTsrInfo(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
@@ -1645,8 +1603,7 @@ void Preprocess::UpdateTsrInfo(void) {
         speed_sign_info.id = supp_sign.id;
         speed_sign_info.isp_timestamp = perception_tsr_info->isp_timestamp;
         // 转换为adasTsr定义
-        speed_sign_info.speed_sign_type =
-            convertToAdasSpeedSign(supp_sign.supp_sign_type);
+        speed_sign_info.speed_sign_type = supp_sign.supp_sign_type;
         speed_sign_info.supp_sign_x = supp_sign.supp_sign_x;
         speed_sign_info.supp_sign_y = supp_sign.supp_sign_y;
         speed_sign_info.supp_sign_z = supp_sign.supp_sign_z;
@@ -1657,8 +1614,7 @@ void Preprocess::UpdateTsrInfo(void) {
         adas_function::context::SuppSignInfo supp_sign_info;
         supp_sign_info.id = supp_sign.id;
         supp_sign_info.isp_timestamp = perception_tsr_info->isp_timestamp;
-        supp_sign_info.supp_sign_type =
-            convertToAdasSuppSign(supp_sign.supp_sign_type);
+        supp_sign_info.supp_sign_type = supp_sign.supp_sign_type;
         supp_sign_info.supp_sign_x = supp_sign.supp_sign_x;
         supp_sign_info.supp_sign_y = supp_sign.supp_sign_y;
         supp_sign_info.supp_sign_z = supp_sign.supp_sign_z;

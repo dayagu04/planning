@@ -418,7 +418,11 @@ void PlanningScheduler::FillPlanningTrajectory(
   // 4.Light signal
   auto light_signal = &(planning_output->light_signal_command);
   light_signal->available = true;
-  light_signal->light_signal_value = iflyauto::LIGHT_SIGNAL_TYPE_NONE;
+  if (GetContext.get_output_info()->ihc_output_info_.ihc_request_ == true) {
+    light_signal->light_signal_value = iflyauto::LIGHT_SIGNAL_TYPE_HIGH_BEAM;
+  } else {
+    light_signal->light_signal_value = iflyauto::LIGHT_SIGNAL_TYPE_NONE;
+  }
 
   // 5.Horn signal
   auto horn_signal_command = &(planning_output->horn_signal_command);
@@ -584,6 +588,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
       GetContext.get_output_info()->tsr_output_info_.tsr_state_;
   planning_hmi_info->tsr_output_info.tsr_warning =
       GetContext.get_output_info()->tsr_output_info_.tsr_warning_;
+  planning_hmi_info->tsr_output_info.tsr_speed_unlimit_warning =
+      GetContext.get_output_info()->tsr_output_info_.isli_display_type_;
   planning_hmi_info->tsr_output_info.tsr_speed_limit =
       GetContext.get_output_info()->tsr_output_info_.tsr_speed_limit_;
   planning_hmi_info->tsr_output_info.tsr_supp_sign_type =

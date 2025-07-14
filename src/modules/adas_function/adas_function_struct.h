@@ -12,7 +12,7 @@
 #include "spline.h"
 #include "transform_lib.h"
 #include "vehicle_service_c.h"
-// #include <vector>
+#include "camera_perception_tsr_c.h"
 
 // using namespace iflyauto;
 namespace adas_function {
@@ -75,6 +75,8 @@ struct Parameters {
   bool elk_main_switch = false;
   iflyauto::NotificationMainSwitch tsr_main_switch =
       iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
+  bool ihc_use_json_switch = false;
+  bool ihc_use_json_code = false;
   bool ihc_main_switch = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
@@ -147,6 +149,12 @@ struct Parameters {
   double ELK_supp_CoolingTime_handtrq_thr = 0.5;
   // test value
   int meb_request_status_const = 0;
+  // IHC使能码掩码
+  uint16 ihc_enable_code_maskcode = 31;
+  // IHC禁用码掩码
+  uint16 ihc_disable_code_maskcode = 0;
+  // IHC故障码掩码
+  uint16 ihc_fault_code_maskcode = 0;
 };
 
 struct StateInfo {
@@ -313,18 +321,11 @@ struct LastCycleInfo {
   double accelerator_pedal_pos = 0.0;  // 实际加速踏板开度百分比 范围:[0-100]
 };
 
-typedef enum {
-  SPEED_SIGN_TYPE_MAXIMUM_SPEED = 0,
-  SPEED_SIGN_TYPE_MINIMUM_SPEED = 1,
-  SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT = 2,
-  SPEED_SIGN_TYPE_UNKNOWN = 3,
-} _ENUM_PACKED_ SpeedSignType;
-
 // 限速标识牌信息，包括限速，解除限速
 struct SpeedSignInfo {
-  uint64 isp_timestamp;  // 图像曝光中间时刻时间戳    (微秒)
-  uint8_t id;            // 跟踪id号
-  SpeedSignType speed_sign_type;  // 限速标志牌类型
+  uint64 isp_timestamp;           // 图像曝光中间时刻时间戳    (微秒)
+  uint8_t id;                     // 跟踪id号
+  iflyauto::SuppSignType speed_sign_type;  // 限速标志牌类型
   // 是否为匝道限速牌
   bool ramp_flag = false;
   double supp_sign_x;  // 限速标志牌纵向距离 (m)
@@ -335,28 +336,11 @@ struct SpeedSignInfo {
                     // 仅在标识牌类型为【MAXIMUM_SPEED】、【MINIMUM_SPEED】、【END_OF_SPEED_LIMIT】时对该字段赋值,否则该字段默认赋值为0
 };
 
-// 按照优先级定义
-typedef enum {
-  SUPP_SIGN_TYPE_YIELD_SIGN = 0,                  // 让行标识
-  SUPP_SIGN_TYPE_STOP_SIGN = 1,                   // 停车标识
-  SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING = 2,  // 禁止长时间停车
-  SUPP_SIGN_TYPE_NO_PARKING = 3,                  // 禁止停车
-  SUPP_SIGN_TYPE_NO_OVERTAKING = 4,               // 禁止超车
-  SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING = 5,        // 解除禁止超车
-  SUPP_SIGN_TYPE_NO_ENTRY = 6,                    // 禁止驶入
-  SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING = 7,     // 禁止机动车驶入
-  SUPP_SIGN_TYPE_PROHIBIT_TURN_U = 8,             // 禁止掉头
-  SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT = 9,         // 禁止右转
-  SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT = 10,         // 禁止左转
-  SUPP_SIGN_TYPE_NO_PASSING = 11,                 // 禁止通行
-  SUPP_SIGN_TYPE_UNKNOWN = 12,                    // 未知类型
-} _ENUM_PACKED_ SuppSignType;
-
 // 辅助标识牌信息
 struct SuppSignInfo {
   uint64 isp_timestamp;         // 图像曝光中间时刻时间戳    (微秒)
   uint8_t id;                   // 跟踪id号
-  SuppSignType supp_sign_type;  // 辅助标志牌类型
+  iflyauto::SuppSignType supp_sign_type;  // 辅助标志牌类型
   double supp_sign_x;           // 辅助标志牌纵向距离 (m)
   double supp_sign_y;           // 辅助标志牌横向距离 (m)
   double supp_sign_z;           // 辅助标志牌高度     (m)
@@ -407,6 +391,7 @@ Intervention) 5:Active(Right Intervention) */
 struct TSROutputInfo {
   iflyauto::TSRFunctionFSMWorkState tsr_state_;  // TSR功能状态
   uint32 tsr_speed_limit_;  // TSR识别到的限速标识牌    (公里/小时)
+  boolean isli_display_type_ = false;  // 限速标识类型 (true:显示解除限速 / false:显示限速)
   boolean tsr_warning_;  // TSR超速报警标志位 (true:Warning / false:No Warning)
 
   iflyauto::SuppSignType

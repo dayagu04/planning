@@ -6,12 +6,12 @@
 #include "adas_function_struct.h"
 #include "base_function.h"
 #include "base_task_pipeline.h"
-#include "ihc_function/intelligent_headlight_control.h"
 #include "lkas_function/elk_core.h"
 #include "lkas_function/ldp_core.h"
 #include "lkas_function/ldw_core.h"
 #include "session.h"
 #include "tsr_function/tsr_core.h"
+#include "ihc_function/ihc_core.h"
 
 namespace planning {
 
@@ -48,8 +48,7 @@ class AdasFunction : public BaseFunction {
   // TsrCore
   std::shared_ptr<adas_function::tsr_core::TsrCore> tsr_core_ptr_;
   // IhcCore
-  std::shared_ptr<adas_function::ihc_core::IntelligentHeadlightControl>
-      ihc_core_ptr_;
+  std::shared_ptr<adas_function::ihc_core::IhcCore> ihc_core_ptr_;
 };
 
 }  // namespace planning

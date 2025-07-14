@@ -51,6 +51,7 @@ static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
+static constexpr auto TOPIC_PERCEPTION_SCENE = "/iflytek/camera_perception/scene";
 static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
 static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO = "/iflytek/camera_perception/lane_lines_debug_info";
 static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO = "/iflytek/camera_perception/lane_topo_debug_info";
@@ -490,6 +491,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
     } else if (msg.getTopic() == TOPIC_TRAFFIC_SIGN) {
       cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionTsrInfo>(
           msg);
+    } else if (msg.getTopic() == TOPIC_PERCEPTION_SCENE) {
+      cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionScene>(
+          msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.getTopic() << std::endl;
     }
@@ -612,6 +616,9 @@ void PlanningPlayer::StoreRosBag() {
       } else if (it_msg.first == TOPIC_TRAFFIC_SIGN) {
         write_ros_msg<struct_msgs::CameraPerceptionTsrInfo::Ptr>(
             it_msg.second, TOPIC_TRAFFIC_SIGN, bag);
+      } else if (it_msg.first == TOPIC_PERCEPTION_SCENE) {
+        write_ros_msg<struct_msgs::CameraPerceptionScene::Ptr>(
+            it_msg.second, TOPIC_PERCEPTION_SCENE, bag);
       } else if (it_msg.first == TOPIC_USS_WAVE_INFO) {
         write_ros_msg<struct_msgs::UssPdcIccSendDataType::Ptr>(
             it_msg.second, TOPIC_USS_WAVE_INFO, bag);
@@ -834,6 +841,20 @@ void PlanningPlayer::PlayOneFrame(
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/camera_perception/traffic_sign_recognition"
               << std::endl;
+  }
+
+  // TODO: thzhang5 0718 perception_scene
+  auto perception_scene_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs::CameraPerceptionScene>(
+          TOPIC_PERCEPTION_SCENE, input_time_list.perception_scene());
+  if (perception_scene_ros_msg) {
+    iflyauto::CameraPerceptionScene perception_scene_msg{};
+    convert(perception_scene_msg, *perception_scene_ros_msg,
+            ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->Feed_IflytekCameraPerceptionScene(perception_scene_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/camera_perception/scene" << std::endl;
   }
 
   auto uss_wave_ros_msg =

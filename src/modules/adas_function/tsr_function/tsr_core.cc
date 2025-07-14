@@ -14,11 +14,11 @@ iflyauto::NotificationMainSwitch TsrCore::UpdateTsrMainSwitch(void) {
                                      ->mutable_environmental_model()
                                      ->get_local_view()
                                      .function_state_machine_info;
-  if (GetContext.get_param()->tsr_main_switch == 2) {
+  if (GetContext.get_param()->tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY) {
     return iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY;
-  } else if (GetContext.get_param()->tsr_main_switch == 3) {
+  } else if (GetContext.get_param()->tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_AND_AUDIO) {
     return iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_AND_AUDIO;
-  } else if (GetContext.get_param()->tsr_main_switch == 1) {
+  } else if (GetContext.get_param()->tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF) {
     return iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF;
   }
   return function_state_machine_info_ptr->switch_sts.tsr_main_switch;
@@ -196,62 +196,6 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
   return tsr_state;
 }
 
-// 辅助标识牌优先级选择函数
-adas_function::context::SuppSignInfo TsrCore::selectHighestPrioritySign(const std::vector<adas_function::context::SuppSignInfo>& signs) {
-    adas_function::context::SuppSignInfo supplementary_sign_info;
-    if (signs.empty()) {
-        return supplementary_sign_info;
-    }
-    
-    return *std::min_element(signs.begin(), signs.end(), 
-        [](adas_function::context::SuppSignInfo a, adas_function::context::SuppSignInfo b) {
-            return static_cast<int>(a.supp_sign_type) < static_cast<int>(b.supp_sign_type);
-        }
-    );
-}
-
-// 从 adas_function::context::SpeedSignType 到 iflyauto::SuppSignType 的转换函数
-iflyauto::SuppSignType TsrCore::convertToIflySpeedSign(adas_function::context::SpeedSignType sign) {
-    using Ifly = iflyauto::SuppSignType;
-    using Ctx = adas_function::context::SpeedSignType;
-    
-    static const std::unordered_map<Ctx, Ifly> mapping = {
-        {Ctx::SPEED_SIGN_TYPE_MAXIMUM_SPEED, Ifly::SUPP_SIGN_TYPE_MAXIMUM_SPEED},
-        {Ctx::SPEED_SIGN_TYPE_MINIMUM_SPEED, Ifly::SUPP_SIGN_TYPE_MINIMUM_SPEED},
-        {Ctx::SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT, Ifly::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT},
-        {Ctx::SPEED_SIGN_TYPE_UNKNOWN, Ifly::SUPP_SIGN_TYPE_UNKNOWN},
-    };
-    
-    auto it = mapping.find(sign);
-    return it != mapping.end() ? it->second : Ifly::SUPP_SIGN_TYPE_UNKNOWN;
-}
-
-// 从 adas_function::context 到 iflyauto 的转换函数
-iflyauto::SuppSignType TsrCore::convertToIflySuppSign(adas_function::context::SuppSignType sign) {
-    using Ifly = iflyauto::SuppSignType;
-    using Ctx = adas_function::context::SuppSignType;
-    
-    // 反向映射
-    static const std::unordered_map<Ctx, Ifly> mapping = {
-        {Ctx::SUPP_SIGN_TYPE_YIELD_SIGN, Ifly::SUPP_SIGN_TYPE_YIELD_SIGN},
-        {Ctx::SUPP_SIGN_TYPE_STOP_SIGN, Ifly::SUPP_SIGN_TYPE_STOP_SIGN},
-        {Ctx::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING, Ifly::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING},
-        {Ctx::SUPP_SIGN_TYPE_NO_PARKING, Ifly::SUPP_SIGN_TYPE_NO_PARKING},
-        {Ctx::SUPP_SIGN_TYPE_NO_OVERTAKING, Ifly::SUPP_SIGN_TYPE_NO_OVERTAKING},
-        {Ctx::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING, Ifly::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING},
-        {Ctx::SUPP_SIGN_TYPE_NO_ENTRY, Ifly::SUPP_SIGN_TYPE_NO_ENTRY},
-        {Ctx::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING, Ifly::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING},
-        {Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_U, Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_U},
-        {Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT, Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT},
-        {Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT, Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT},
-        {Ctx::SUPP_SIGN_TYPE_NO_PASSING, Ifly::SUPP_SIGN_TYPE_NO_PASSING},
-        {Ctx::SUPP_SIGN_TYPE_UNKNOWN, Ifly::SUPP_SIGN_TYPE_UNKNOWN},
-    };
-    
-    auto it = mapping.find(sign);
-    return it != mapping.end() ? it->second : Ifly::SUPP_SIGN_TYPE_UNKNOWN;
-}
-
 // 更新辅助标识牌信息, 不包含限速标识牌
 void TsrCore::UpdateTsrSuppInfo(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
@@ -275,19 +219,85 @@ void TsrCore::UpdateTsrSuppInfo(void) {
     // 道路标识信息
     auto tsr_info_ptr = GetContext.get_tsr_info();
     auto &supp_sign_info_vector = tsr_info_ptr->supp_sign_info_vector;
+    // 重置辅助标识牌代码
+    supp_sign_code_ = 0;
+    
     for (auto &supp_sign_info : supp_sign_info_vector) {
       // 判断是否有辅助标识牌在范围内(前15,左10)
       if (supp_sign_info.supp_sign_y <= 0.0 && supp_sign_info.supp_sign_y >= -10.0 && supp_sign_info.supp_sign_x >= 0.0 && supp_sign_info.supp_sign_x <= 15.0) {
-        supp_sign_info_vector_.emplace_back(supp_sign_info);
+        // 根据标识牌类型设置对应的位
+        switch (supp_sign_info.supp_sign_type) {
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN:
+            supp_sign_code_ |= (1 << 0);  // bit 0
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN:
+            supp_sign_code_ |= (1 << 1);  // bit 1
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING:
+            supp_sign_code_ |= (1 << 2);  // bit 2
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING:
+            supp_sign_code_ |= (1 << 3);  // bit 3
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING:
+            supp_sign_code_ |= (1 << 4);  // bit 4
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_OVERTAKING:
+            supp_sign_code_ |= (1 << 5);  // bit 5
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING:
+            supp_sign_code_ |= (1 << 6);  // bit 6
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_ENTRY:
+            supp_sign_code_ |= (1 << 7);  // bit 7
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING:
+            supp_sign_code_ |= (1 << 8);  // bit 8
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_U:
+            supp_sign_code_ |= (1 << 9);  // bit 9
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT:
+            supp_sign_code_ |= (1 << 10);  // bit 10
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT:
+            supp_sign_code_ |= (1 << 11); // bit 11
+            break;
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PASSING:
+            supp_sign_code_ |= (1 << 12); // bit 12
+            break;
+          default:
+            // 其他类型不处理
+            break;
+        }
       }
     }
   }
   // 候选辅助标识牌信息排序
-  if (supp_sign_info_vector_.size() > 0) {
-    auto highest_priority_sign = selectHighestPrioritySign(supp_sign_info_vector_);
-    if (highest_priority_sign.supp_sign_type != adas_function::context::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN) {
-      // 实时辅助标识牌类型
-      realtime_supp_sign_info_ = convertToIflySuppSign(highest_priority_sign.supp_sign_type);
+  if (supp_sign_code_ > 0) {
+    // 根据优先级定义标识牌类型对应的位数组（从低位到高位）
+    static const iflyauto::SuppSignType supp_sign_priority_array[] = {
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN,                 // bit 0
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN,                  // bit 1
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING,                // bit 2
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,  // bit 3
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING,                 // bit 4
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_OVERTAKING,              // bit 5
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING,       // bit 6
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_ENTRY,                   // bit 7
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING,     // bit 8
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_U,            // bit 9
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT,        // bit 10
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT,         // bit 11
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PASSING,                 // bit 12
+    };
+    
+    // 查找第一个从低到高位数为1的位子所对应的标识牌类型
+    for (int i = 0; i < 13; i++) {
+      if (supp_sign_code_ & (1 << i)) {
+        realtime_supp_sign_info_ = supp_sign_priority_array[i];
+        break;
+      }
     }
   }
   
@@ -316,23 +326,97 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                 ->environmental_model()
                                 .get_local_view()
                                 .perception_tsr_info;
+  // 车辆状态信息
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
+  // sd_map信息，获取限速
+  if (GetContext.get_session()->environmental_model()
+                                .get_route_info()
+                                ->get_sdmap_valid()) {
+    const auto &sd_map_info_ptr = GetContext.get_session()
+                                  ->environmental_model()
+                                  .get_route_info()
+                                  ->get_sd_map();
+    
+    // 获取当前道路限速值
+    // ego_motion信息
+    auto localization_info = GetContext.mutable_session()->mutable_environmental_model()->
+                              get_ego_state_manager(); // enu实际上是boot
+    ad_common::math::Vec2d current_point;
+    current_point.set_x(localization_info->location_enu().position.x);
+    current_point.set_y(localization_info->location_enu().position.y); // enu实际上是boot
+    const double search_distance = 50.0;
+    const double max_heading_diff = PI / 4;
+    double nearest_s = 0;
+    double nearest_l = 0;
+    const double ego_heading_angle = localization_info->heading_angle();
+    const auto current_segment = sd_map_info_ptr.GetNearestRoadWithHeading(
+        current_point, search_distance, ego_heading_angle, max_heading_diff,
+        nearest_s, nearest_l);
+    if (!current_segment) {
+      current_map_speed_limit_valid_ = false;
+      current_map_speed_limit_ = 0;
+      LOG_WARNING("current_segment is invalid!!!");
+    } else {
+      current_map_speed_limit_ = current_segment->speed_limit();
+      current_map_speed_limit_valid_ = true;
+    }
+  } else {
+    current_map_speed_limit_valid_ = false;
+    current_map_speed_limit_ = 0;
+    LOG_WARNING("sd_map is invalid!!!");
+  }
+
+  // 判断限速标识牌是否需要抑制显示
+  if (speed_limit_suppression_flag_ == false && std::abs(vehicle_service_output_info_ptr->yaw_rate) > 10 * M_PI / 180.0) {
+    speed_limit_suppression_flag_ = true;
+  } else if (speed_limit_suppression_flag_ == true && std::abs(vehicle_service_output_info_ptr->yaw_rate) < 3 * M_PI / 180.0) {
+    speed_limit_suppression_flag_ = false;
+    // 完成转弯, 则进入新道路
+    new_road_flag_ = true;
+  }
+  if (speed_limit_suppression_flag_ == true) {
+    // 抑制限速结果变更
+    return;
+  }
+
   auto supp_signs_array = peception_tsr_info.supp_signs;
   int supp_signs_array_size = peception_tsr_info.supp_signs_size;
-  bool sign_vald = false;
+  bool sign_vald = false; // 是否实时感知到限速牌
   uint32 lane_speed_limit_value = tsr_speed_limit_;
   uint32 tsr_speed_limit_last = tsr_speed_limit_;
+  bool end_of_speed_sign_vald = false; // 是否实时感知到解除限速牌
   for (int i = 0; i < supp_signs_array_size; i++) {
     auto single_sign = supp_signs_array[i];
-    if (single_sign.supp_sign_type != iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED) {
+    // 只取限速相关标识牌
+    if (single_sign.supp_sign_type != iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED && 
+        single_sign.supp_sign_type != iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT) {
       continue;
     } else {
-      if (sign_vald == false) {
-        lane_speed_limit_value = single_sign.speed_limit;
-        sign_vald = true;
-        continue;
-      } else {
-        if (single_sign.speed_limit > lane_speed_limit_value) {
+      if (single_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED) {
+        // 限速标识,取最大限速值
+        if (sign_vald == false) {
           lane_speed_limit_value = single_sign.speed_limit;
+          sign_vald = true;
+          continue;
+        } else {
+          if (single_sign.speed_limit > lane_speed_limit_value) {
+            lane_speed_limit_value = single_sign.speed_limit;
+          }
+        }
+      }
+      if (single_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT) {
+        // 解除限速标识, 取最大解除限速值
+        if (end_of_speed_sign_vald == false) {
+          end_of_speed_sign_value_ = single_sign.speed_limit;
+          end_of_speed_sign_vald = true;
+          continue;
+        } else {
+          if (single_sign.speed_limit > lane_speed_limit_value) {
+            lane_speed_limit_value = single_sign.speed_limit;
+          }
         }
       }
     }
@@ -340,10 +424,9 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   bool speed_limit_exist_in_view_flag_last = speed_limit_exist_in_view_flag_;
   uint32 speed_limit_exist_in_view_last = speed_limit_exist_in_view_;
   if (sign_vald == true) {
+    // 还未驶过限速标识
     speed_limit_exist_in_view_flag_ = true;
     speed_limit_exist_in_view_ = lane_speed_limit_value;
-    // tsr_speed_limit_ = lane_speed_limit_value;
-    // tsr_speed_limit_valid_ = true;
   } else {
     speed_limit_exist_in_view_flag_ = false;
     speed_limit_exist_in_view_ = 0;
@@ -355,6 +438,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     if (tsr_speed_limit_valid_ == false) {
       tsr_speed_limit_ = speed_limit_exist_in_view_last;
     } else {
+      // 如果视觉限速信息还存在，且有新的限速感知，则采用新的限速感知
       if (speed_limit_exist_in_view_last != tsr_speed_limit_) {
         tsr_speed_limit_ = speed_limit_exist_in_view_last;
       }
@@ -372,17 +456,52 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   if (tsr_speed_limit_valid_ == false) {
+    // 没有视觉限速有效值
     tsr_speed_limit_ = 0;
-  }
-  if (tsr_speed_limit_valid_ == true) {
+  } else {
     if (tsr_speed_limit_last != tsr_speed_limit_) {
       tsr_speed_limit_change_flag_ = true;
     }
   }
-  if (accumulated_path_length_ >
-      GetContext.get_param()->tsr_reset_path_length) {
+
+  if (end_of_speed_sign_vald == false && end_of_speed_sign_value_ > 0.0) {
+    // 驶过解除限速标识，
+    // 1. 清除小于解除限速牌的限速值
+    // 2. 显示解除显示标识
+    if (tsr_speed_limit_valid_ == true && tsr_speed_limit_ <= end_of_speed_sign_value_) {
+      tsr_speed_limit_valid_ = false;
+      tsr_speed_limit_ = 0;
+      end_of_speed_sign_display_flag_ = true;
+      end_of_speed_sign_display_time_ = 0.0;
+    }
+  }
+
+  if (new_road_flag_ == true) {
+    // 进入新道路, 则清掉视觉限速信息与视觉解除限速信息
+    speed_limit_exist_in_view_flag_ = false;
+    speed_limit_exist_in_view_ = 0;
     tsr_speed_limit_valid_ = false;
     tsr_speed_limit_ = 0;
+    end_of_speed_sign_vald = false;
+    end_of_speed_sign_value_ = 0;
+    end_of_speed_sign_display_time_ = 0.0;
+    end_of_speed_sign_display_flag_ = false;
+    new_road_flag_ = false;
+  }
+
+  if (accumulated_path_length_ >
+      GetContext.get_param()->tsr_reset_path_length) {
+    // 行驶距离过长，则清掉视觉限速信息
+    tsr_speed_limit_valid_ = false;
+    tsr_speed_limit_ = 0;
+  }
+
+  if (tsr_speed_limit_valid_ == false && end_of_speed_sign_display_flag_ == false) {
+    // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
+    if (current_map_speed_limit_valid_ == true) {
+      tsr_speed_limit_ = current_map_speed_limit_;
+      tsr_speed_limit_valid_ = true;
+    }
   }
   return;
 }
@@ -420,7 +539,7 @@ void TsrCore::UpdateTsrSpeedLimitNew(void) {
   // TODO: thzhang5 0630 yawrate可以写为配置参数
   if (speed_limit_suppression_flag_ == false && std::abs(vehicle_service_output_info_ptr->yaw_rate) > 10 * M_PI / 180.0) {
     speed_limit_suppression_flag_ = true;
-  } else if (speed_limit_suppression_flag_ == true && std::abs(vehicle_service_output_info_ptr->yaw_rate) < 1 * M_PI / 180.0) {
+  } else if (speed_limit_suppression_flag_ == true && std::abs(vehicle_service_output_info_ptr->yaw_rate) < 3 * M_PI / 180.0) {
     speed_limit_suppression_flag_ = false;
     // 完成转弯, 则进入新道路
     new_road_flag_ = true;
@@ -437,40 +556,40 @@ void TsrCore::UpdateTsrSpeedLimitNew(void) {
     // 自车实际车速, m/s->km/h
     double vehicle_speed_display = vehicle_service_output_info_ptr->vehicle_speed_display * 3.6;
     speed_limit_sign_info_vector_.clear();
-    end_of_speed_sign_info_vector_.clear();
+    end_of_speed_sign_info_vector_.clear(); // 解除限速标识
     auto tsr_info_ptr = GetContext.get_tsr_info();
     auto &speed_sign_info_vector = tsr_info_ptr->speed_sign_info_vector;
     // 限速和解除限速信息分别存储
     for (auto &speed_sign_info : speed_sign_info_vector) {
-      if (speed_sign_info.speed_sign_type == adas_function::context::SpeedSignType::SPEED_SIGN_TYPE_MAXIMUM_SPEED) {
+      if (speed_sign_info.speed_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED) {
         // 远处限速感知不一定准确, 只取前方50m内的限速信息
         if (speed_sign_info.supp_sign_x >= 0.0 && speed_sign_info.supp_sign_x <= 50.0) {
-          // 判断是否是匝道限速牌, 速度与实车速度差距过大, 或者车辆打右转灯, 且横向距离小于8m
-          if (vehicle_speed_display - speed_sign_info.speed_limit > 20.0) {
-            // 速度与实车速度差距过大, 不更新限速信息
-            continue;
-          }
-          else if (vehicle_service_output_info_ptr->right_turn_light_state == true) {
-            // 车辆打右转灯, 且横向距离小于8m, 不更新限速信息
-            if (speed_sign_info.supp_sign_y < 0.0 && speed_sign_info.supp_sign_y > -8.0) {
+          // 判断是否是匝道限速牌
+          if (speed_sign_info.ramp_flag == true) {
+            // 速度与实车速度差距过大, 或者车辆打右转灯, 且横向距离小于8m, 不更新限速信息
+            if (std::abs(vehicle_speed_display - speed_sign_info.speed_limit) > 20.0) {
               continue;
             }
-          }
-          if (speed_sign_info.ramp_flag == true) {
-            // 匝道限速牌, 不更新限速信息 (如果感知有的话)
-            continue;
+            else if (vehicle_service_output_info_ptr->right_turn_light_state == true) {
+              // 车辆打右转灯, 且横向距离小于8m, 不更新限速信息
+              if (speed_sign_info.supp_sign_y < 0.0 && speed_sign_info.supp_sign_y > -8.0) {
+                continue;
+              }
+            }
+          } else {
+            // 非匝道限速牌, 更新限速信息
           }
           speed_limit_sign_info_vector_.emplace_back(speed_sign_info);
         }
       }
-      if (speed_sign_info.speed_sign_type == adas_function::context::SpeedSignType::SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT) {
+      if (speed_sign_info.speed_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT) {
         // 解除限速信息, 只取前方50m内的解除限速信息
         if (speed_sign_info.supp_sign_x >= 0.0 && speed_sign_info.supp_sign_x <= 15.0) {
           end_of_speed_sign_info_vector_.emplace_back(speed_sign_info);
         }
       }
     }
-    // 如果当前限速和解除限速速度一致, 且道路限速信息有效,则取道路限速信息
+    // 如果当前限速和解除限速速度一致, 且地图限速信息有效,则取地图限速信息
     for (auto &end_of_speed_sign_info : end_of_speed_sign_info_vector_) {
       if (current_map_speed_limit_valid_ == true && speed_limit_exist_in_view_ == end_of_speed_sign_info.speed_limit) {
         tsr_speed_limit_ = current_map_speed_limit_;
@@ -605,11 +724,10 @@ void TsrCore::CalculatePathLengthAccumulated() {
         accumulated_path_length_ +
         GetContext.get_state_info()->vehicle_speed * GetContext.get_param()->dt;
   }
-  // accumulated_path_length_ = accumulated_path_length_;
   return;
 }
 
-// 计算当前显示的辅助标识牌的时间是否大于2s
+// 计算当前显示的辅助标识牌与解除限速牌的时间是否大于2s
 void TsrCore::CalculateDurationTime(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   // 如果输出辅助路标发生变化, 则重置辅助标识牌保持时间计数器
@@ -619,31 +737,34 @@ void TsrCore::CalculateDurationTime(void) {
   } else {
     supp_sign_hold_time_ += GetContext.get_param()->dt;
   }
+  if (end_of_speed_sign_display_flag_ == true) {
+    end_of_speed_sign_display_time_ += GetContext.get_param()->dt;
+  } else {
+    end_of_speed_sign_display_time_ = 0.0;
+  }
   return;
 }
 
 void TsrCore::SetTsrOutputInfo() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ = tsr_state_;
-  if (tsr_state_ == iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE) 
-  // if (1)
-  {
+  // 辅助标识牌抑制显示时，不输出辅助标识牌
+  if (supp_sign_in_suppression_flag_ == false) {
+    GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type = output_supp_sign_info_;
+  } else {
+    GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+  }
+  if (tsr_state_ == iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE) {
     // 如果没有有效的限速信息, 则不输出限速信息
-    if (tsr_speed_limit_valid_ == false && current_map_speed_limit_ > 0) {
-      GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = current_map_speed_limit_;
+    if (end_of_speed_sign_display_flag_) {
+      GetContext.mutable_output_info()->tsr_output_info_.isli_display_type_ = true; // 显示解除限速
+      GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = end_of_speed_sign_value_;
     } else {
-      // 输出感知限速信息
+      GetContext.mutable_output_info()->tsr_output_info_.isli_display_type_ = false; // 显示限速
       GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = tsr_speed_limit_;
     }
     GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ =
         tsr_warning_image_;
-    // 辅助标识牌抑制显示时，不输出辅助标识牌
-    if (supp_sign_in_suppression_flag_ == false) {
-      GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type = output_supp_sign_info_;
-      std::cout << "output_supp_sign_info_ ========== " << (int)output_supp_sign_info_ << std::endl;
-    } else {
-      GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
-    }
   } else {
     GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ = false;
     GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = 0;
@@ -653,8 +774,6 @@ void TsrCore::SetTsrOutputInfo() {
 }
 
 void TsrCore::ResetRealTimeTsrInfo(void) {
-  supp_sign_info_vector_.clear();
-  
   // 如果没有检测到实时辅助标识牌，且当前有输出，且持续时间超过2s，则清空输出
   if (realtime_supp_sign_info_ == iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN && 
       supp_sign_valid_flag_ == true && 
@@ -662,6 +781,10 @@ void TsrCore::ResetRealTimeTsrInfo(void) {
     output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
     supp_sign_valid_flag_ = false;
     supp_sign_hold_time_ = 0.0;
+  }
+  if (end_of_speed_sign_display_flag_ == true && end_of_speed_sign_display_time_ > 2.0) {
+    end_of_speed_sign_display_flag_ = false;
+    end_of_speed_sign_display_time_ = 0.0;
   }
   return;
 }
@@ -684,6 +807,7 @@ void TsrCore::RunOnce(void) {
 
   // 更新实时辅助标识牌信息
   UpdateTsrSuppInfo();
+  // UpdateTsrSpeedLimitNew();
 
   // 更新tsr_speed_limit_
   UpdateTsrSpeedLimit();
@@ -707,6 +831,9 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("tsr_fault_code_", tsr_fault_code_);
   JSON_DEBUG_VALUE("tsr_state_", (int)tsr_state_);
   JSON_DEBUG_VALUE("tsr_speed_limit_", tsr_speed_limit_);
+  JSON_DEBUG_VALUE("end_of_speed_sign_display_flag_", end_of_speed_sign_display_flag_);
+  JSON_DEBUG_VALUE("current_map_speed_limit_", current_map_speed_limit_);
+  JSON_DEBUG_VALUE("speed_limit_suppression_flag_", speed_limit_suppression_flag_);
 
   JSON_DEBUG_VALUE("tsr_speed_limit_valid_", tsr_speed_limit_valid_);
   JSON_DEBUG_VALUE("tsr_warning_image_", tsr_warning_image_);
@@ -721,6 +848,7 @@ void TsrCore::RunOnce(void) {
                    speed_limit_exist_in_view_);
   JSON_DEBUG_VALUE("tsr_accumulated_path_length_", accumulated_path_length_);
   JSON_DEBUG_VALUE("tsr_output_supp_sign_info_", (int)output_supp_sign_info_);
+  JSON_DEBUG_VALUE("supp_sign_in_suppression_flag_", supp_sign_in_suppression_flag_);
 
   // reset info
   ResetRealTimeTsrInfo();

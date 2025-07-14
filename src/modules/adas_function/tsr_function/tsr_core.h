@@ -61,6 +61,12 @@ class TsrCore {
   bool speed_limit_exist_in_view_flag_ = false;
   uint32 speed_limit_exist_in_view_ = 0;
   double accumulated_path_length_ = 0.0;
+  // 解除限速标识牌信息 (视觉信息)
+  uint32 end_of_speed_sign_value_ = 0; // 解除限速牌值
+  double end_of_speed_sign_display_time_ = 0.0; // 解除限速牌显示时间 单位:s
+  bool end_of_speed_sign_display_flag_ = false; // 解除限速牌显示标志位
+  // 当前道路限速信息 (道路信息)
+  bool current_map_speed_limit_valid_ = false;
 
   // 新道路标志位, 需要清掉视觉限速信息
   bool new_road_flag_ = false;
@@ -71,8 +77,6 @@ class TsrCore {
   // 解除限速列表
   std::vector<adas_function::context::SpeedSignInfo> end_of_speed_sign_info_vector_;
 
-  // 当前道路限速信息 (道路信息)
-  bool current_map_speed_limit_valid_ = false;
   double current_map_speed_limit_ = 0.0;
   void UpdateMapSpeedLimit(void);
   // 更新限速标识牌信息
@@ -81,9 +85,7 @@ class TsrCore {
   // 新版更新限速信息
   void UpdateTsrSpeedLimitNew(void);
 
-  // 辅助标识牌列表
-  std::vector<adas_function::context::SuppSignInfo> supp_sign_info_vector_;
-  // 实时辅助标识牌
+  // 实时辅助标识牌, 不一定输出
   iflyauto::SuppSignType realtime_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
   // 输出辅助标识牌
   iflyauto::SuppSignType output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
@@ -98,12 +100,8 @@ class TsrCore {
 
   // 更新辅助标识牌信息
   void UpdateTsrSuppInfo(void);
-  // 最高优先级选择函数
-  adas_function::context::SuppSignInfo selectHighestPrioritySign(const std::vector<adas_function::context::SuppSignInfo>& signs);
-  // adasTsr定义转hmi接口iflyautoTsr定义
-  iflyauto::SuppSignType convertToIflySuppSign(adas_function::context::SuppSignType sign);
-  iflyauto::SuppSignType convertToIflySpeedSign(adas_function::context::SpeedSignType sign);
-  
+  // 辅助标识牌置位, 用于输出优先级最高的标识牌
+  uint16_t supp_sign_code_ = 0;
   // 获取限速标识牌中的最高限速值
   uint32 GetHighestSpeedLimit(void);
   
