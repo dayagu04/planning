@@ -76,6 +76,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     Eigen::Vector2d v_target_line = Eigen::Vector2d::Zero();
     Eigen::Vector2d v_prepare_line = Eigen::Vector2d::Zero();
 
+    double lon_buffer_rev_trials = 0.25;
+
     double min_outer_front_corner_radius = 5.5;
     double min_inner_rear_corner_radius = 5.5;
     double min_outer_front_corner_deta_y = 0.8;
@@ -116,6 +118,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       channel_obs_vec.reserve(50);
       virtual_channel_obs_vec.clear();
       virtual_channel_obs_vec.reserve(50);
+      lon_buffer_rev_trials = 0.25;
       lat_outside_slot_buffer = 0.3;
       min_outer_front_corner_radius = 5.5;
       min_inner_rear_corner_radius = 5.5;
