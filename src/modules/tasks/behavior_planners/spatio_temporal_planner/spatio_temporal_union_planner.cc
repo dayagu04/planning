@@ -249,9 +249,9 @@ void SpatioTemporalPlanner::UpdateIntersection() {
                                     .get_virtual_lane_manager()
                                     ->GetEgoDistanceToCrosswalk();
   bool current_intersection_state =
-      intersection_state == common::IntersectionState::IN_INTERSECTION ||
-      distance_to_stopline <= kDistanceThresholdApproachToStopline ||
-      distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
+      intersection_state == common::IntersectionState::IN_INTERSECTION;
+      // distance_to_stopline <= kDistanceThresholdApproachToStopline ||
+      // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
   if (current_intersection_state) {
     intersection_count_ = kEgoInIntersectionCount;
   } else {

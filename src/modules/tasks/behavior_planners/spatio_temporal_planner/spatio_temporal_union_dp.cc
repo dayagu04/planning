@@ -1363,7 +1363,7 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
   auto t_begin = IflyTime::Now_us();
   int count = 1;
   double time_gap = kDynamicObstacleCostSampleTime;
-  if (pre_point.point().t() > kDynamicObsConsiderTime) {
+  if (cur_point.point().t() > kDynamicObsConsiderTime) {
     time_gap = kDynamicObstacleCostLaterSampleTime;
   }
 
