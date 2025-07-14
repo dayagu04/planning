@@ -67,7 +67,7 @@ constexpr double kDefaultMaxDisBetweenObs = 100.0;
 constexpr double kDefaultMaxDeceleration = -4.4;
 constexpr double kDefaultMaxAcceleration = 2.5;
 constexpr double kDefaultRearObsGenerateCostDistance= 3.0;
-constexpr double kDefaultHalfSamplingRange= 0.95;
+constexpr double kDefaultHalfSamplingRange= 0.90;
 constexpr int kDefaultTrajectoryPointSize = 26;
 constexpr double kConsiderDynamicObstacleCostTimeLength = 4.0;
 

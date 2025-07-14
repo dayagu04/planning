@@ -163,7 +163,7 @@ void SLTGridMapAdapter::RunOnce() {
       LOG_DEBUG("lead_agent on reference path failed!");
     }
     if (lead_agent->is_static()) {
-      ego_front_consider_obstacle_distance_ = 
+      ego_front_consider_obstacle_distance_ =
           std::min(ego_front_consider_obstacle_distance_, lead_frenet_point.x - ego_frenet_state_.s());
     }
   }
@@ -267,18 +267,15 @@ void SLTGridMapAdapter::StateTransformForInputData() {
       // states
       State traj_state;
       traj_state.time_stamp = k * kAgentPredTrajTimeInterval;
-      double trajectory_point_x =
-          agent_trajectory.Evaluate(traj_state.time_stamp).x();
-      double trajectory_point_y =
-          agent_trajectory.Evaluate(traj_state.time_stamp).y();
-      traj_state.vec_position.set_x(trajectory_point_x);
-      traj_state.vec_position.set_y(trajectory_point_y);
+      auto traj_point = agent_trajectory.Evaluate(traj_state.time_stamp);
+      traj_state.vec_position.set_x(traj_point.x());
+      traj_state.vec_position.set_y(traj_point.y());
       traj_state.angle =
-          agent_trajectory.Evaluate(traj_state.time_stamp).theta();
+          traj_point.theta();
       traj_state.velocity =
-          agent_trajectory.Evaluate(traj_state.time_stamp).vel();
+          traj_point.vel();
       traj_state.acceleration =
-          agent_trajectory.Evaluate(traj_state.time_stamp).acc();
+          traj_point.acc();
       agent_trajs_state.push_back(traj_state);
 
       // vertices

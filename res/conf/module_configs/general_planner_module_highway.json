@@ -310,7 +310,7 @@
       "path_l_cost_param_k": 1.60,
       "path_out_lane_cost": 1e8,
       "path_end_l_cost": 1.0e2,
-      "path_l_stitching_cost_param": 6.8e3,
+      "path_l_stitching_cost_param": 0.0e3,
       "stitching_cost_time_decay_factor": 0.2
     },
     "default_speed_config": {

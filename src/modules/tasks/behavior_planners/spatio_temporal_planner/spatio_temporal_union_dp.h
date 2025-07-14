@@ -253,7 +253,7 @@ class SpatioTemporalUnionDp {
   const std::vector<double> _AY_MAX_CURV_V{2.2, 1.6, 1.1, 0.9, 0.8};
 
   const std::array<double, 8> lateral_sampling_length_interval_{
-      0.3, 0.3, 0.2, 0.15, 0.15, 0.2, 0.3, 0.3};
+      0.3, 0.3, 0.15, 0.15, 0.15, 0.15, 0.3, 0.3};
 
   double l0_ = 1.50;
   double b_ = 0.40;
