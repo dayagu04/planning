@@ -214,7 +214,6 @@ class ParkingScenario {
       replan_reason = NOT_REPLAN;
       plan_fail_reason = NOT_FAILED;
       correct_path_for_limiter = false;
-      can_correct_path_for_limiter = true;
       dynamic_plan_fail_flag = false;
       gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
@@ -298,7 +297,6 @@ class ParkingScenario {
     uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
 
     bool correct_path_for_limiter = false;
-    bool can_correct_path_for_limiter = true;
     bool dynamic_plan_fail_flag = false;
     bool dynamic_plan_path_superior = false;
 

@@ -118,6 +118,8 @@ struct EgoInfoUnderSlot {
 
   bool fix_slot = false;
 
+  bool fix_limiter = false;
+
   std::pair<Eigen::Vector2d, Eigen::Vector2d> virtual_limiter;
 
   TLane obs_tlane;
@@ -161,6 +163,8 @@ struct EgoInfoUnderSlot {
     slot.Reset();
 
     fix_slot = false;
+
+    fix_limiter = false;
 
     obs_tlane.Reset();
     history_slot_id = 0;
