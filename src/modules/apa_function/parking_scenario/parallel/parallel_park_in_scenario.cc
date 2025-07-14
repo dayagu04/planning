@@ -82,6 +82,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     SetParkingStatus(PARKING_PAUSED);
     if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
       SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
     }
     return;
   }
@@ -109,6 +110,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   if (!UpdateEgoSlotInfo()) {
     ILOG_INFO << "update ego slot info failed";
     SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
     return;
   }
 
@@ -116,6 +118,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   if (!GenTlane()) {
     SetParkingStatus(PARKING_FAILED);
     ILOG_INFO << "GenTlane failed!";
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
     return;
   }
 
@@ -130,15 +133,16 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   if (CheckStuckFailed()) {
     ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 
   const double max_replan_path_dist = 0.15;
-  const double uss_stuck_replan_wait_time = 1.5;
+  const double stuck_replan_wait_time = 1.5;
 
   CheckReplanParams replan_params(
       max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
-      uss_stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
+      stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
       0.168, apa_param.GetParam().stuck_replan_time);
   // check replan
   if (!CheckReplan(replan_params)) {
@@ -434,8 +438,9 @@ const bool ParallelParkInScenario::GenTlane() {
 
     const auto obs_scement = pair.second.GetObsScemanticType();
 
-    bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
-                     obs_scement == ApaObsScemanticType::COLUMN);
+    const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
+                           obs_scement == ApaObsScemanticType::COLUMN ||
+                           obs_scement == ApaObsScemanticType::CAR);
 
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
       if ((obs_pt_local - slot_center).norm() > 25.0) {
@@ -480,7 +485,8 @@ const bool ParallelParkInScenario::GenTlane() {
         continue;
       }
 
-      if (mathlib::IsInBound(obs_pt_local.x(), 0.0, t_lane_.slot_length) &&
+      if (mathlib::IsInBound(obs_pt_local.x(), 0.4,
+                             t_lane_.slot_length - 0.4) &&
           obs_pt_local.y() * side_sgn < -0.25 * t_lane_.slot_width &&
           is_rigid) {
         t_lane_.is_inside_rigid = true;
@@ -513,8 +519,7 @@ const bool ParallelParkInScenario::GenTlane() {
             slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
             slot_length + kFrontDetaXMagWhenFrontVacant) &&
         pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(),
-            -kFrontObsLineYMagIdentification * side_sgn,
+            obstacle_point_slot.y(), -0.4 * side_sgn,
             (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
 
     if (front_obs_condition) {
@@ -1082,14 +1087,16 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
   uint8_t plan_result = 0;
-  if (path_plan_success) {
-    plan_result = PathPlannerResult::PLAN_UPDATE;
-    ILOG_INFO << "path plan success!";
-  } else {
-    plan_result = PathPlannerResult::PLAN_FAILED;
+  if (!path_plan_success) {
     ILOG_INFO << "path plan fail!";
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
     return PathPlannerResult::PLAN_FAILED;
   }
+
+  ILOG_INFO << "path plan success!";
+  plan_result = PathPlannerResult::PLAN_UPDATE;
+  frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
 
   parallel_path_planner_.SetCurrentPathSegIndex();
 

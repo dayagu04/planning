@@ -218,7 +218,7 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
   // const bool is_ego_collision = IsEgoCloseToObs();
 
   is_ego_col_vertical_ = IsEgoCloseToObs();
-  is_ego_col_parallel_ = IsEgoCloseToObs(0.01, 0.01, 0.0);
+  is_ego_col_parallel_ = IsEgoCloseToObs(0.1, 0.01, 0.1);
 
   uint8_t release_slot_count = 0;
 

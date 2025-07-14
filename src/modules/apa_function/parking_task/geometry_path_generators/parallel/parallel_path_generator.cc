@@ -31,16 +31,17 @@
 namespace planning {
 namespace apa_planner {
 
+// for park out
 static const double kMaxParkOutFirstArcHeading = 66.0;
 static const double kMaxParkOutRootHeading = 25.0;
 
-static const double kLonBufferTrippleStep = 0.2;
-// static const double kLatBufferTrippleStep = 0.05;
-static const double kColBufferInSlot = 0.25;
-static const double kColBufferOutSlot = 0.3;
-static const double kColLargeLatBufferOutSlot = 0.3;
-static const double kColSmallLatBufferOutSlot = 0.15;
-static const double kSmallColBufferInSlot = 0.15;
+static const double kLonBufferTrippleStep = 0.2;   // tripple step
+static const double kColBufferInSlot = 0.25;       // in slot
+static const double kColSmallBufferInSlot = 0.16;  // in slot
+
+static const double kColBufferOutSlot = 0.3;           // out slot
+static const double kColLargeLatBufferOutSlot = 0.3;   // out slot
+static const double kColSmallLatBufferOutSlot = 0.15;  // outslot
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
 static const size_t kMaxPathNumsInSlot = 5;
@@ -53,7 +54,7 @@ static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
-static const double kMinTlaneAddedLength = 0.75;
+static const double kMinTlaneAddedLength = 0.65;
 static const double kNarrowChannelLastArcCrossLength = 1.38;
 
 static const double kLineStepLength = 0.16;
@@ -120,6 +121,12 @@ void ParallelPathGenerator::Preprocess() {
 
   if (input_.ego_info_under_slot.slot_occupied_ratio < 0.01) {
     calc_params_.lat_outside_slot_buffer = CalcBufferViaDistOfEgoToObs();
+  }
+
+  if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >= 6.2) {
+    calc_params_.lon_buffer_rev_trials = kColBufferInSlot;
+  } else {
+    calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
   }
 }
 
@@ -236,7 +243,12 @@ const bool ParallelPathGenerator::Update() {
     }
 
     if (success) {
-      if (calc_params_.park_out_path_in_slot.size() > 1) {
+      ILOG_INFO << "calc_params_.park_out_path_in_slot.size() = "
+                << calc_params_.park_out_path_in_slot.size();
+      if (calc_params_.park_out_path_in_slot.size() > 1 &&
+          std::fabs(
+              calc_params_.park_out_path_in_slot.back().GetStartHeading() *
+              kRad2Deg) > 0.2) {
         calc_params_.park_out_path_in_slot.pop_back();
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
@@ -244,9 +256,10 @@ const bool ParallelPathGenerator::Update() {
 
       pnc::geometry_lib::PathSegment last_path_seg;
       if (AddLastLine(last_path_seg)) {
+        ILOG_INFO << "AddLastLine!";
         AddPathSegToOutPut(last_path_seg);
       }
-
+      ILOG_INFO << "don't AddLastLine!";
       DeletePInVirtualObstacles();
       return success;
     }
@@ -973,6 +986,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       if (ego_line_geo_path.gear_change_count == 0) {
         debug_info_.debug_all_path_vec.emplace_back(ego_line_geo_path);
         AddPathSegToOutPut(ego_line_geo_path.path_segment_vec);
+        ILOG_INFO << "ego line path vec -----------------------------";
+        geometry_lib::PrintSegmentsVecInfo(ego_line_geo_path.path_segment_vec);
         ILOG_INFO << "no need change gear in preparing step!";
         return true;
       }
@@ -1862,7 +1877,7 @@ const bool ParallelPathGenerator::CheckEgoInSlot() const {
 
 // search from the inside parking space to outside
 const bool ParallelPathGenerator::CalMinSafeCircle() {
-  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.05;
+  const double lat_buffer = input_.tlane.is_inside_rigid ? 0.15 : 0.025;
   ILOG_INFO << "is rigid body in side of slot = "
             << input_.tlane.is_inside_rigid;
   ILOG_INFO << "lat buffer in reversed trials = " << lat_buffer;
@@ -1959,7 +1974,8 @@ const bool ParallelPathGenerator::ReduceRootPoseHeadingInSlot(
     const uint8_t forward_steer = search_out_res.back().seg_steer;
 
     if (!CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
-                              forward_steer, kColBufferInSlot)) {
+                              forward_steer,
+                              calc_params_.lon_buffer_rev_trials)) {
       return false;
     }
 
@@ -2063,7 +2079,7 @@ const bool ParallelPathGenerator::InverseSearchLoopInSlot(
                                  : pnc::geometry_lib::SEG_STEER_LEFT);
 
   if (CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
-                           forward_steer, kColBufferInSlot)) {
+                           forward_steer, calc_params_.lon_buffer_rev_trials)) {
     if (CheckParkOutCornerSafeWithObsPin(forward_arc)) {
       search_out_res.emplace_back(pnc::geometry_lib::PathSegment(
           forward_steer, pnc::geometry_lib::SEG_GEAR_DRIVE, forward_arc));
@@ -2078,7 +2094,7 @@ const bool ParallelPathGenerator::InverseSearchLoopInSlot(
   first_line_step.heading = terminal_pose.heading;
   if (!CalcLineStepLimitPose(first_line_step,
                              pnc::geometry_lib::SEG_GEAR_REVERSE,
-                             kColBufferInSlot)) {
+                             calc_params_.lon_buffer_rev_trials)) {
     ILOG_INFO << "CalcLineStepLimitPose error!";
     return false;
   }
@@ -2105,7 +2121,8 @@ const bool ParallelPathGenerator::InverseSearchLoopInSlot(
     forward_arc.circle_info.radius = radius;
 
     if (!CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
-                              forward_steer, kColBufferInSlot)) {
+                              forward_steer,
+                              calc_params_.lon_buffer_rev_trials)) {
       ILOG_INFO << "calc forward arc limit error!";
       break;
     }
@@ -2129,7 +2146,8 @@ const bool ParallelPathGenerator::InverseSearchLoopInSlot(
     backward_arc.circle_info.radius = radius;
 
     if (!CalcArcStepLimitPose(backward_arc, pnc::geometry_lib::SEG_GEAR_REVERSE,
-                              backward_steer, kColBufferInSlot)) {
+                              backward_steer,
+                              calc_params_.lon_buffer_rev_trials)) {
       ILOG_INFO << "calc backward arc limit error!";
       break;
     }
@@ -2375,7 +2393,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
                                  : pnc::geometry_lib::SEG_STEER_LEFT);
 
   if (CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
-                           forward_steer, kColBufferInSlot)) {
+                           forward_steer, calc_params_.lon_buffer_rev_trials)) {
     if (CheckParkOutCornerSafeWithObsPin(forward_arc)) {
       gear_vec.erase(gear_vec.begin());
       ILOG_INFO << "ego can park out at first, no need use backward loop!";
@@ -2384,7 +2402,8 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
 
   auto first_line = GetEgoHeadingLine(target_pose.pos, target_pose.heading);
   for (const auto& gear : gear_vec) {
-    if (!CalcLineStepLimitPose(first_line, gear, kColBufferInSlot)) {
+    if (!CalcLineStepLimitPose(first_line, gear,
+                               calc_params_.lon_buffer_rev_trials)) {
       ILOG_INFO << "gear = " << gear << " failed!";
       continue;
     }
@@ -2397,7 +2416,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
     ILOG_INFO << "Line limit = " << first_line.pB.transpose();
 
     double line_length = (first_line.pB - target_pose.pos).norm();
-    if (line_length < 0.2) {
+    if (line_length < 0.1) {
       ILOG_INFO << "line_length" << line_length
                 << "smaller than min line length! gear == "
                 << static_cast<int>(gear);
@@ -2477,7 +2496,8 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
 
   bool success = false;
   for (size_t i = 0; i <= kMaxPathNumsInSlot + 1; i += 1) {
-    if (!CalcArcStepLimitPose(arc, ref_gear, ref_steer, kColBufferInSlot)) {
+    if (!CalcArcStepLimitPose(arc, ref_gear, ref_steer,
+                              calc_params_.lon_buffer_rev_trials)) {
       // ILOG_INFO <<"calc arc limit error!");
       break;
     }
@@ -2985,7 +3005,8 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
   uint8_t col_res = PATH_COL_COUNT;
   for (size_t i = 0; i < tmp_path_seg_vec.size(); i++) {
     auto& tmp_path_seg = tmp_path_seg_vec[i];
-    col_res = TrimPathByCollisionDetection(tmp_path_seg, kColBufferInSlot);
+    col_res = TrimPathByCollisionDetection(tmp_path_seg,
+                                           calc_params_.lon_buffer_rev_trials);
 
     if (col_res == PATH_COL_NORMAL) {
       path_seg_vec.emplace_back(tmp_path_seg);
@@ -3011,7 +3032,7 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
     for (size_t i = 0; i < tmp_path_seg_vec.size(); i++) {
       auto& tmp_path_seg = tmp_path_seg_vec[i];
       col_res =
-          TrimPathByCollisionDetection(tmp_path_seg, kSmallColBufferInSlot);
+          TrimPathByCollisionDetection(tmp_path_seg, kColSmallBufferInSlot);
 
       if (col_res == PATH_COL_NORMAL) {
         path_seg_vec.emplace_back(tmp_path_seg);
@@ -3300,7 +3321,8 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
   bool success = OneArcPlan(tmp_path_seg_vec, current_pose, current_gear);
 
   if (success) {
-    if (!CheckPathSegCollided(tmp_path_seg_vec.back(), kColBufferInSlot)) {
+    if (!CheckPathSegCollided(tmp_path_seg_vec.back(),
+                              calc_params_.lon_buffer_rev_trials)) {
       ILOG_INFO << "only one arc success!";
       AddPathSegVecToOutput(tmp_path_seg_vec);
       return true;
@@ -3365,7 +3387,8 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
       if (STurnParallelPlan(s_turn_vec, current_pose, calc_params_.target_line,
                             current_gear, ratio,
                             apa_param.GetParam().min_turn_radius)) {
-        if (!CheckPathSegVecCollided(s_turn_vec, kColBufferInSlot)) {
+        if (!CheckPathSegVecCollided(s_turn_vec,
+                                     calc_params_.lon_buffer_rev_trials)) {
           s_turn_success = true;
           parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
                                          s_turn_vec.begin(), s_turn_vec.end());
@@ -3383,7 +3406,8 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
         if (STurnParallelPlan(s_turn_vec, current_pose,
                               calc_params_.target_line, current_gear, ratio,
                               apa_param.GetParam().min_turn_radius)) {
-          if (!CheckPathSegVecCollided(s_turn_vec, kColBufferInSlot)) {
+          if (!CheckPathSegVecCollided(s_turn_vec,
+                                       calc_params_.lon_buffer_rev_trials)) {
             s_turn_success = true;
             parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
                                            s_turn_vec.begin(),
@@ -4841,8 +4865,8 @@ const bool ParallelPathGenerator::CalSinglePathInAdjust(
 
   // collision detection
   for (auto& tmp_path_seg : tmp_path_seg_vec) {
-    const uint8_t path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg, kColBufferInSlot);
+    const uint8_t path_col_det_res = TrimPathByCollisionDetection(
+        tmp_path_seg, calc_params_.lon_buffer_rev_trials);
 
     if (path_col_det_res == PATH_COL_NORMAL) {
       path_seg_vec.emplace_back(tmp_path_seg);
@@ -5576,12 +5600,19 @@ const bool ParallelPathGenerator::AddLastLine(
     pnc::geometry_lib::PathSegment& last_path_seg) {
   if (output_.path_segment_vec.size() > 0) {
     const auto& end_pose = output_.path_segment_vec.back().GetEndPose();
+    pnc::geometry_lib::PrintPose("end_pose", end_pose);
 
     const bool is_heading_small =
         pnc::mathlib::IsDoubleEqual(end_pose.heading * kRad2Deg, 0.0);
+    ILOG_INFO << "is_heading_small = " << is_heading_small;
+
+    ILOG_INFO << "input_.tlane.pt_terminal_pos.x() = "
+              << input_.tlane.pt_terminal_pos.x();
 
     const bool is_x_diff_small = pnc::mathlib::IsDoubleEqual(
         end_pose.pos.x(), input_.tlane.pt_terminal_pos.x());
+
+    ILOG_INFO << "is_x_diff_small = " << is_x_diff_small;
 
     if (is_heading_small && !is_x_diff_small) {
       const Eigen::Vector2d fixed_target_pos(input_.tlane.pt_terminal_pos.x(),
