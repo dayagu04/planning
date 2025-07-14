@@ -597,10 +597,9 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     jerk_bound = // 1.0 0.8 0.6 0.5
       planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
   }
-  if (is_use_spatio_planner_result_) {
-    jerk_bound = config_.jerk_bound_spatio;
-  }
-
+  // if (is_use_spatio_planner_result_) {
+  //   jerk_bound = config_.jerk_bound_spatio;
+  // }
   // tiny speed
   if (ego_vel_ < 0.2 &&
       lateral_motion_scene_ == LANE_KEEP &&

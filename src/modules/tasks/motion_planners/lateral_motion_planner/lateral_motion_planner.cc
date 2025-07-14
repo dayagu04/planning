@@ -437,9 +437,8 @@ bool LateralMotionPlanner::AssembleInput() {
       intersection_state ==
       planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
-  if (!config_.enable_use_spatio_temporal_planning &&
-      (is_approach_intersection || is_in_intersection) &&
-       is_ref_consistent) {
+  if (is_use_spatio_planner_result ||
+      (is_approach_intersection || is_in_intersection)) {
     planning_weight_ptr_->SetIsInIntersection(true);
   } else {
     planning_weight_ptr_->SetIsInIntersection(false);
@@ -493,10 +492,10 @@ bool LateralMotionPlanner::AssembleInput() {
   } else if (session_->environmental_model()
                      .get_lateral_obstacle()
                      ->is_static_avoid_scene() &&
-            !config_.enable_use_spatio_temporal_planning) {
+            !is_use_spatio_planner_result) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::STATIC_AVOID, planning_input_);
-  } else if (!config_.enable_use_spatio_temporal_planning &&
+  } else if (!is_use_spatio_planner_result &&
              (lateral_offset_decider_output.is_valid ||
               (avoid_back_status &&
                ((ref_vel > config_.avoid_high_vel) ||
