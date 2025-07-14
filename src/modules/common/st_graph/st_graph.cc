@@ -319,9 +319,11 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_ego_lane = st_graph_input_->ego_lane();
   const int32_t reserve_num = st_graph_input_->reserve_num();
   const auto planned_kd_path = st_graph_input_->processed_path();
-  const auto ego_motion_simulation_path =
+  const std::shared_ptr<planning_math::KDPath> ego_motion_simulation_path =
       st_graph_input_->ego_motion_simulation_result()
-          ->lat_lon_vehicle_motion_path_ptr;
+          ? st_graph_input_->ego_motion_simulation_result()
+                ->lat_lon_vehicle_motion_path_ptr
+          : nullptr;
   const auto path_border_querier = st_graph_input_->path_border_querier();
   auto mutable_agent_manager = st_graph_input_->mutable_agent_manager();
   const double expand_buffer =
