@@ -37,6 +37,7 @@ Agent::Agent(const Agent& agent)
 
     is_vru_ = agent.is_vru();
     is_tfl_virtual_obs_ = agent.is_tfl_virtual_obs();
+    is_lane_borrow_virtual_obs_ = agent.is_lane_borrow_virtual_obs();
     time_range_ = agent.time_range();
 
     // 当前默认trajectories_中只存一条轨迹
@@ -324,6 +325,16 @@ const bool Agent::is_stop_destination_virtual_obs() const {
 void Agent::set_is_stop_destination_virtual_obs(
     const bool is_stop_destination_virtual_obs) {
   is_stop_destination_virtual_obs_ = is_stop_destination_virtual_obs;
+}
+
+
+const bool Agent::is_lane_borrow_virtual_obs() const {
+  return is_lane_borrow_virtual_obs_;
+}
+
+void Agent::set_is_lane_borrow_virtual_obs(
+    const bool is_lane_borrow_virtual_obs) {
+  is_lane_borrow_virtual_obs_ = is_lane_borrow_virtual_obs;
 }
 
 const double Agent::d_rel() const { return d_rel_; }

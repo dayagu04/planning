@@ -43,7 +43,7 @@ bool ResultTrajectoryGenerator::Execute() {
   // session_->environmental_model().location_valid();
   bool res = false;
   res = TrajectoryGenerator();
-
+  UpdateTurnSignal();
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("TrajectoryGeneratorCostTime", end_time - start_time);
   return res;
@@ -61,7 +61,6 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   // const auto &num_point = traj_points.size();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline l_t_spline;
 
@@ -125,7 +124,8 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     lat_jerk_vec[i] = tp_lat_jerk;
     traj_max_lat_jerk = std::max(std::fabs(tp_lat_jerk), traj_max_lat_jerk);
     traj_max_lon_acc = std::max(std::fabs(traj_points[i].a), traj_max_lon_acc);
-    traj_max_lon_jerk = std::max(std::fabs(traj_points[i].jerk), traj_max_lon_jerk);
+    traj_max_lon_jerk =
+        std::max(std::fabs(traj_points[i].jerk), traj_max_lon_jerk);
   }
   JSON_DEBUG_VECTOR("traj_lat_acc_vec", lat_acc_vec, 3)
   JSON_DEBUG_VECTOR("traj_lat_jerk_vec", lat_jerk_vec, 3)
@@ -318,6 +318,48 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
   ego_planning_result.traj_points = dense_traj_points;
 
   return true;
+}
+
+void ResultTrajectoryGenerator::UpdateTurnSignal() {
+  auto &planning_result =
+      session_->mutable_planning_context()->mutable_planning_result();
+  planning_result.turn_signal = RequestType::NO_CHANGE;
+  const auto &lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
+  bool turn_signal_on_from_lane_borrow =
+      lane_borrow_decider_output.lane_borrow_state ==
+          LaneBorrowStatus::kLaneBorrowDriving ||
+      lane_borrow_decider_output.lane_borrow_state ==
+          LaneBorrowStatus::kLaneBorrowCrossing;
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  bool turn_signal_from_ramp_direction =
+      lane_change_decider_output.dir_turn_signal_road_to_ramp !=
+      RampDirection::RAMP_NONE;
+  bool turn_signal_from_lane_change =
+      lane_change_decider_output.lc_request != 0;
+  if (turn_signal_from_lane_change) {
+    planning_result.turn_signal = lane_change_decider_output.lc_request == 1
+                                      ? RequestType::LEFT_CHANGE
+                                      : RequestType::RIGHT_CHANGE;
+    return;
+  }
+  if (turn_signal_from_ramp_direction) {
+    planning_result.turn_signal =
+        lane_change_decider_output.dir_turn_signal_road_to_ramp ==
+                RampDirection::RAMP_ON_LEFT
+            ? RequestType::LEFT_CHANGE
+            : RequestType::RIGHT_CHANGE;
+    return;
+  }
+
+  if (turn_signal_on_from_lane_borrow) {
+    planning_result.turn_signal = lane_borrow_decider_output.borrow_direction ==
+                                          BorrowDirection::LEFT_BORROW
+                                      ? RequestType::LEFT_CHANGE
+                                      : RequestType::RIGHT_CHANGE;
+    return;
+  }
 }
 
 }  // namespace planning

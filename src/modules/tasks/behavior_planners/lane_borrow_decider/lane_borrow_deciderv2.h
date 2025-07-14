@@ -65,7 +65,8 @@ class LaneBorrowDecider : public Task {
   bool UpdateDynamicBlockingObstacles();
   BorrowDirection GetBypassDirection(
       const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
-
+  BorrowDirection GetPredBypassDirection(
+      const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
   bool CheckLaneBorrowDircetion();
   bool CrossingPositionJudgment();
   Point2D CartesianRotation(const Point2D& Cartesian_point,
@@ -74,7 +75,9 @@ class LaneBorrowDecider : public Task {
   void ClearLaneBorrowStatus();
   bool CheckBackWardObs();
   bool IsNeedResetObserve(LaneBorrowFailedReason reason);
-
+  void CheckBlockingObstaclesIntention(int32 obs_id, bool& is_borrow);
+  Box2d PredictBoxPosition(const agent::Agent* agent, double delta_t);
+  FrenetObstacleBoundary GetSLboundaryFromAgent(const Box2d& obs_box);
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double forward_solid_start_dis_{1000.0};
@@ -121,6 +124,8 @@ class LaneBorrowDecider : public Task {
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
   LaneBorrowDeciderConfig config_;
   std::unique_ptr<DPRoadGraph> dp_path_decider_;
+  iflyauto::LaneBoundaryType left_lane_boundary_type_;
+  iflyauto::LaneBoundaryType right_lane_boundary_type_;
 };
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning

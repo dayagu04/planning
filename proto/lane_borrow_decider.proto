@@ -35,4 +35,6 @@ message LaneBorrowDeciderInfo {
   optional int32 dp_observe_frame_num = 16;
   optional int64 front_id = 17;
   optional int64 failed_obs_id = 18;
+  optional double distance_to_stop_line = 19;
+  optional double distance_to_cross_walk = 20;
 };
