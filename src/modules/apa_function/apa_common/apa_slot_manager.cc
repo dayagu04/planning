@@ -158,6 +158,11 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
 
+  if (state_machine_ptr->IsSeachingStatus()) {
+    ego_info_under_slot_.fix_slot = false;
+    ego_info_under_slot_.fix_limiter = false;
+  }
+
   if (slots_map_.count(ego_info_under_slot_.id) != 0 &&
       !ego_info_under_slot_.fix_slot) {
     ILOG_INFO << "Update selected slot";
