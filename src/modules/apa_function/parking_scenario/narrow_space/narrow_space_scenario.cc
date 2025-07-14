@@ -965,7 +965,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         const size_t num = response.first_seg_path.size();
         ILOG_INFO << " path num " << num;
 
-        constexpr float kHeadingStartDeg = 85.0f;
+        constexpr float kHeadHeadingStartDeg = 85.0f;
+        constexpr float kTailHeadingStartDeg = 95.0f;
         constexpr float kHeadingEndDeg = 89.9f;
         constexpr float kHeadingDiffThresh = 1e-3f;
         constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
@@ -985,7 +986,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
           if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus()) {
             const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
-            if (heading_deg > kHeadingStartDeg && i > 0) {
+            if (heading_deg > kHeadHeadingStartDeg && i > 0) {
               float heading_diff =
                   path_pt.phi - response.first_seg_path[i - 1].phi;
               heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
@@ -998,6 +999,22 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
               sample_finish = true;
             }
 
+          } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                         ->IsTailOutStatus()) {
+            const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
+
+            if (heading_deg < kHeadHeadingStartDeg && i > 0) {
+              float heading_diff =
+                  path_pt.phi - response.first_seg_path[i - 1].phi;
+              heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
+            }
+
+            if (heading_deg >= kHeadingEndDeg && !sample_finish &&
+                heading_flag) {
+              local_path.emplace_back(point);
+            } else {
+              sample_finish = true;
+            }
           } else {
             local_path.emplace_back(point);
           }
@@ -1500,7 +1517,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
   constexpr double kAlternateTargetX = 8.0;
   constexpr double kAlternateTargetY = 5.0;
   constexpr double kPositionThresholdX = 7.0;
-  constexpr double kHeadingThresholdRad0 = 65.0 * M_PI / 180.0;
+  constexpr double kHeadingThresholdRad0 = 60.0 * M_PI / 180.0;
   constexpr double kHeadingThresholdRad1 = 130.0 * M_PI / 180.0;
 
   const double target_heading_rad_head_out =
@@ -1616,6 +1633,8 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
           mathlib::Interp1(x_tab, occupied_ratio_tab, virtual_ego_pos_x);
     }
   }
+
+  ego_info_under_slot.fix_slot = false;
 
   ILOG_INFO << "slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
