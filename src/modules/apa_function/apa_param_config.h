@@ -342,7 +342,7 @@ struct ApaParameters {
   double max_dynamic_plan_proj_dt = 0.8;
   double max_lat_err = 0.068;
   double max_phi_err = 2.68;
-  bool dynamic_col_det_enable = false;
+  bool enable_multi_height_col_det = false;
   double car_lat_inflation_strict = 0.1;
   double max_obs_lat_invasion_slot_dist = -0.026;
   double max_obs_lat_invasion_slot_dist_dynamic_col = -0.026;

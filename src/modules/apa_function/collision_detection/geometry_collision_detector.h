@@ -14,7 +14,8 @@ class GeometryCollisionDetector final : public BaseCollisionDetector {
   ~GeometryCollisionDetector(){};
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
-                         const double lat_buffer, const double lon_buffer,
+                         const double body_lat_buffer, const double lon_buffer,
+                         const bool special_process_mirror = false,
                          const double mirror_lat_buffer = 0.08);
 
   void Reset();

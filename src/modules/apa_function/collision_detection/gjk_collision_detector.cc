@@ -14,19 +14,20 @@ namespace planning {
 namespace apa_planner {
 
 const ColResult GJKCollisionDetector::Update(
-    const geometry_lib::PathSegment& path_seg, const double lat_buffer,
+    const geometry_lib::PathSegment& path_seg, const double body_lat_buffer,
     const double lon_buffer, const GJKColDetRequest gjk_col_det_request,
-    const double mirror_lat_buffer) {
+    const bool special_process_mirror, const double mirror_lat_buffer) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
-  return Update(pt_vec, lat_buffer, lon_buffer, gjk_col_det_request,
-                mirror_lat_buffer);
+  return Update(pt_vec, body_lat_buffer, lon_buffer, gjk_col_det_request,
+                special_process_mirror, mirror_lat_buffer);
 }
 
 const ColResult GJKCollisionDetector::Update(
-    const std::vector<geometry_lib::PathPoint>& pt_vec, const double lat_buffer,
-    const double lon_buffer, const GJKColDetRequest gjk_col_det_request,
-    const double mirror_lat_buffer) {
+    const std::vector<geometry_lib::PathPoint>& pt_vec,
+    const double body_lat_buffer, const double lon_buffer,
+    const GJKColDetRequest gjk_col_det_request,
+    const bool special_process_mirror, const double mirror_lat_buffer) {
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -38,7 +39,8 @@ const ColResult GJKCollisionDetector::Update(
   col_res_.remain_car_dist = pt_vec.back().s;
   col_res_.remain_dist = pt_vec.back().s;
 
-  UpdateSafeBuffer(lat_buffer, lon_buffer, mirror_lat_buffer);
+  UpdateSafeBuffer(body_lat_buffer, lon_buffer, special_process_mirror,
+                   mirror_lat_buffer);
   GenCarPolygon();
 
   path_pt_vec_ = pt_vec;

@@ -1,4 +1,5 @@
 #include "apa_obstacle_manager.h"
+
 #include <bits/stdint-intn.h>
 
 #include <algorithm>
@@ -146,6 +147,9 @@ void ApaObstacleManager::Update(
       apa_obs.SetObsScemanticType(scemantic_type);
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
+      if (!apa_param.GetParam().enable_multi_height_col_det) {
+        apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+      }
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
@@ -216,6 +220,9 @@ void ApaObstacleManager::Update(
 
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
       apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
+      if (!apa_param.GetParam().enable_multi_height_col_det) {
+        apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+      }
       apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
       apa_obs.SetId(obs_id_generate_);
       apa_obs.ClearDecision();
@@ -291,6 +298,9 @@ void ApaObstacleManager::Update(
       apa_obs.SetObsScemanticType(scemantic_type);
       apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
+      if (!apa_param.GetParam().enable_multi_height_col_det) {
+        apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+      }
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
@@ -361,6 +371,9 @@ void ApaObstacleManager::Update(
         apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
         apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
         apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
+        if (!apa_param.GetParam().enable_multi_height_col_det) {
+          apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+        }
         apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
         apa_obs.SetBoxGlobal(box);
         apa_obs.SetPolygonGlobal(polygon);
@@ -399,6 +412,9 @@ void ApaObstacleManager::Update(
       apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
       apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
+      if (!apa_param.GetParam().enable_multi_height_col_det) {
+        apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+      }
       apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
@@ -447,6 +463,9 @@ void ApaObstacleManager::Update(
     apa_obs.SetPtClout2dGlobal(limiter_points);
     apa_obs.SetObsAttributeType(ApaObsAttributeType::SLOT_LIMITER);
     apa_obs.SetObsHeightType(ApaObsHeightType::LOW);
+    if (!apa_param.GetParam().enable_multi_height_col_det) {
+      apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+    }
     apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
     apa_obs.SetBoxGlobal(box);
     apa_obs.SetPolygonGlobal(polygon);

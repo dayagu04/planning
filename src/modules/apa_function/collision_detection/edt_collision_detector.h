@@ -83,8 +83,9 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   const double GetObsDistByIndex(const OGMIndex &id,
                                  const ApaObsHeightType &height_type);
 
-  void UpdateSafeBuffer(const double lat_buffer, const double lon_buffer,
+  void UpdateSafeBuffer(const double body_lat_buffer, const double lon_buffer,
                         const double max_circle_buffer = 0.5,
+                        const bool special_process_mirror = false,
                         const double mirror_lat_buffer = 0.08);
 
   void UpdateCarWithMirrorSafeBuffer();
@@ -101,15 +102,17 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
                                  const double safe_dist = 0.5);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
-                         const double lat_buffer, const double lon_buffer,
+                         const double body_lat_buffer, const double lon_buffer,
                          const bool need_cal_obs_dist = false,
                          const double max_circle_buffer = 0.5,
+                         const bool special_process_mirror = false,
                          const double mirror_lat_buffer = 0.08);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint> &pt_vec,
-                         const double lat_buffer, const double lon_buffer,
+                         const double body_lat_buffer, const double lon_buffer,
                          const bool need_cal_obs_dist = false,
                          const double max_circle_buffer = 0.5,
+                         const bool special_process_mirror = false,
                          const double mirror_lat_buffer = 0.08);
 
  private:
@@ -138,8 +141,6 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   CarFootPrintCircleList car_without_mirror_circles_list_with_buffer_;
   CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
 
-  double lon_buffer_ = 0.3;
-  double lat_buffer_ = 0.1;
   double max_circle_buffer_ = 0.5;
 };
 
