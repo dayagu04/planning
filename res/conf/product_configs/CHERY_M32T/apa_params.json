@@ -264,7 +264,7 @@
 
   "comment_15": "path planner params",
   "use_average_obs_dist": false,
-  "min_turn_radius": 5.75,
+  "min_turn_radius": 5.4,
   "safe_circle_radius": 5.98,
   "max_radius_in_slot": 12.66,
   "min_radius_out_slot": 7.8,
