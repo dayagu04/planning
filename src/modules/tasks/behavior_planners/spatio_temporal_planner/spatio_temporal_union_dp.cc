@@ -37,7 +37,7 @@ constexpr double kDynamicObsWeight = 1e-4;
 constexpr double kDynamicObsConsiderTime = 3.0;
 constexpr double kPathCostComputeSampleTime = 0.5;
 constexpr double kDynamicObstacleCostSampleTime = 0.2;
-constexpr double kDynamicObstacleCostLaterSampleTime = 0.5;
+constexpr double kDynamicObstacleCostLaterSampleTime = 0.4;
 constexpr double kPlanningUpperSpeedLimit = 16.67;
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kVirtualAgentBuffer = 2.0;
@@ -47,7 +47,7 @@ constexpr double kEgoStaticThreshold = 0.1;
 constexpr double kDeltaTime = 0.2;
 constexpr double kEpsilon = std::numeric_limits<double>::epsilon();
 constexpr double kDefaultlLinearInterpolationDistance = 20.0;
-constexpr double kDefaultConsiderObstacleTajsTime = 2.6;
+constexpr double kDefaultConsiderObstacleTajsTime = 3.0;
 constexpr double kConsiderLaneLineMinLength = 50.0;
 constexpr double kDefaultTrajsTimeLength = 5.0;
 constexpr double kSpeedRangeBuffer = 0.20;
@@ -70,6 +70,7 @@ constexpr double kDefaultRearObsGenerateCostDistance= 3.0;
 constexpr double kDefaultHalfSamplingRange= 0.90;
 constexpr int kDefaultTrajectoryPointSize = 26;
 constexpr double kConsiderDynamicObstacleCostTimeLength = 4.0;
+constexpr double kSigmoidChangeRateCoefficient = 2.0;
 
 
 }
@@ -1497,7 +1498,7 @@ double SpatioTemporalUnionDp::GetLateralCostBetweenObsBoxes(
 
   obstacle_cost +=
       dp_dynamic_agent_weight_params.obstacle_collision_cost_without_lateral_overlap() *
-      Sigmoid(dp_dynamic_agent_weight_params.obstacle_lateral_collision_distance() - lateral_dis_to_ego);
+      Sigmoid(dp_dynamic_agent_weight_params.obstacle_lateral_collision_distance() - kSigmoidChangeRateCoefficient * lateral_dis_to_ego);
 
   return obstacle_cost;
 }

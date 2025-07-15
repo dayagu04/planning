@@ -16,7 +16,7 @@ sys.path.append('../../../')
 # bag_path = "/data_cold/abu_zone/datasets/aeb_data/chery_e0y_04228/trigger/20250421/20250421-18-01-07/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-04-21-18-01-07_no_camera.bag.1745391461.close-loop.scc.plan"
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250528/20250528-15-20-42/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-05-28-15-20-42_no_camera.bag.1749003160.close-loop.scc.plan"
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250605/20250605-15-24-23/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-05-15-24-23_no_camera.bag"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50818/trigger/20250710/20250710-16-52-22/data_collection_CHERY_M32T_50818_EVENT_FILTER_2025-07-10-16-52-22_no_camera.bag.1752476718.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50818/trigger/20250710/20250710-16-52-22/data_collection_CHERY_M32T_50818_EVENT_FILTER_2025-07-10-16-52-22_no_camera.bag.22-35.split.1752545491.close-loop.scc.plan"
 
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 # -
