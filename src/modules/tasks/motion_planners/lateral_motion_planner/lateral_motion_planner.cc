@@ -366,11 +366,16 @@ bool LateralMotionPlanner::AssembleInput() {
   max_jerk = std::min(limit_jerk, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
+  const auto &coarse_planning_info =
+      session_->planning_context()
+              .lane_change_decider_output()
+              .coarse_planning_info;
   std::vector<double> expected_steer_vec;
   expected_steer_vec.resize(26, 0.0);
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
       planning_init_point.frenet_state.s, ref_vel,
-      vehicle_param.wheel_base, steer_ratio, reference_path_ptr,
+      vehicle_param.wheel_base, steer_ratio,
+      coarse_planning_info, reference_path_ptr,
       expected_steer_vec);
   JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec, 2)
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
