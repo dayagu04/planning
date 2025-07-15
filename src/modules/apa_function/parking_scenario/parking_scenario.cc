@@ -711,9 +711,11 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     jlt_optimizer->Execute(stitch_init_speed, ego_speed_point,
                            traj_stitcher->GetConstStitchPath(),
                            &speed_decisions);
-    traj_stitcher->CombineTrajBasedOnTime(jlt_optimizer->GetSpeedData());
+    traj_stitcher->CombineTrajBasedOnTime(jlt_optimizer->GetSpeedData(),
+                                          trajectory_);
   } else {
-    traj_stitcher->CombineTrajBasedOnTime(qp_speed_optimizer->GetSpeedData());
+    traj_stitcher->CombineTrajBasedOnTime(qp_speed_optimizer->GetSpeedData(),
+                                          trajectory_);
   }
 
   trajectory_ = traj_stitcher->GetConstCombinedTraj();

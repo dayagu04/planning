@@ -29,6 +29,7 @@ void ApaTrajectoryStitcher::Execute(
   gear_ = gear;
   stitch_path_.clear();
   trajectory_.clear();
+  config_.Init();
 
   if (lateral_path.empty()) {
     return;
@@ -73,10 +74,10 @@ void ApaTrajectoryStitcher::Execute(
 
   if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
       lon_stitch_point_.vel() <= 0.01) {
-    ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
-              << " lon stitch v = " << lon_stitch_point_.vel()
-              << ", a = " << lon_stitch_point_.acc()
-              << ", s = " << lon_stitch_point_.s();
+    // ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
+    //           << " lon stitch v = " << lon_stitch_point_.vel()
+    //           << ", a = " << lon_stitch_point_.acc()
+    //           << ", s = " << lon_stitch_point_.s();
     GeneSpeedPointFromVehicleState(ego_lon_point);
   }
 
@@ -116,6 +117,15 @@ void ApaTrajectoryStitcher::GenePathPointFromVehicleState(
   ClearSticthPoint();
   stitch_path_point_ = pnc::geometry_lib::PathPoint(
       Eigen::Vector2d(ego_pose.x, ego_pose.y), ego_pose.theta);
+  stitch_path_.push_back(stitch_path_point_);
+
+  return;
+}
+
+void ApaTrajectoryStitcher::GenePathPointFromPath(
+    const pnc::geometry_lib::PathPoint& point) {
+  ClearSticthPoint();
+  stitch_path_point_ = point;
   stitch_path_.push_back(stitch_path_point_);
 
   return;
@@ -253,7 +263,6 @@ void ApaTrajectoryStitcher::GetCirclePoint(const VehicleCircle* veh_circle,
   return;
 }
 
-// todo: consider gear
 bool ApaTrajectoryStitcher::QueryNearestPoint(
     const Pose2D& pose, const std::vector<pnc::geometry_lib::PathPoint>& path,
     size_t* index) const {
@@ -385,6 +394,8 @@ void ApaTrajectoryStitcher::EvaluateStitchPath(
   ad_common::math::Vec2d evaluate_point;
   double base_vector_length = base_vector.Length();
   int next_stitch_id;
+
+  // todo: process small length
   if (base_vector_length < 1e-5) {
     evaluate_point = successor;
     next_stitch_id = successor_point_id;
@@ -395,14 +406,20 @@ void ApaTrajectoryStitcher::EvaluateStitchPath(
 
     // evaluate stitch point
     double dot = predecessor_to_ego.InnerProd(base_vector);
-    evaluate_point = predecessor + base_vector * dot;
 
-    if (dot < 0.0) {
-      next_stitch_id = predecessor_point_id;
-    } else if (dot > base_vector_length) {
+    if (successor_point_id == path.size() - 1 && dot > base_vector_length) {
+      evaluate_point = successor;
       next_stitch_id = successor_point_id + 1;
     } else {
-      next_stitch_id = successor_point_id;
+      evaluate_point = predecessor + base_vector * dot;
+
+      if (dot < -0.01) {
+        next_stitch_id = predecessor_point_id;
+      } else if (dot > base_vector_length - 0.01) {
+        next_stitch_id = successor_point_id + 1;
+      } else {
+        next_stitch_id = successor_point_id;
+      }
     }
   }
 
@@ -415,8 +432,8 @@ void ApaTrajectoryStitcher::EvaluateStitchPath(
   stitch_path_.clear();
   stitch_path_.emplace_back(stitch_path_point_);
 
-  ILOG_INFO << "path size = " << path.size()
-            << ", next stitch id = " << next_stitch_id;
+  // ILOG_INFO << "path size = " << path.size()
+  //           << ", next stitch id = " << next_stitch_id;
   for (size_t i = next_stitch_id; i < path.size(); i++) {
     stitch_path_.emplace_back(path[i]);
   }
@@ -475,9 +492,8 @@ const pnc::geometry_lib::PathPoint& ApaTrajectoryStitcher::GetStitchPathPoint()
 }
 
 void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
-    const SpeedData& speed_profile) {
-  trajectory_.Clear();
-
+    const SpeedData& speed_profile,
+    const trajectory::Trajectory& history_trajectory) {
   // sanity check
   if (speed_profile.empty()) {
     ILOG_INFO << "speed profile is empty";
@@ -499,15 +515,14 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
   const SpeedPoint* speed_point = nullptr;
   trajectory::TrajectoryPoint traj_point;
   bool is_forward = (gear_ == pnc::geometry_lib::SEG_GEAR_DRIVE ? true : false);
-  bool is_overshoot;
+  bool is_traj_overshoot = false;
   for (size_t i = 0; i < speed_profile.size(); i++) {
     speed_point = &speed_profile[i];
 
     if (speed_point->s > path_data.back().s()) {
-      is_overshoot = true;
-      path_point = path_data.EvaluateOvershootPoint(speed_point->s, is_forward);
+      is_traj_overshoot = true;
+      break;
     } else {
-      is_overshoot = false;
       path_point = path_data.Evaluate(speed_point->s);
     }
 
@@ -532,14 +547,15 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     trajectory_.push_back(traj_point);
   }
 
-  if (!is_overshoot && trajectory_.back().s() < path_data.back().s()) {
+  // copy path to trajectory.
+  if (!is_traj_overshoot && trajectory_.size() > 0 &&
+      trajectory_.back().s() < path_data.back().s()) {
     double extend_total_s = path_data.back().s() - trajectory_.back().s();
     double delta_s = 0.03;
     double extend_point_size = std::ceil(extend_total_s / delta_s);
     double cur_s;
 
     // if traj point speed is not computed in optimizer, default value is 0.0.
-    // double extend_point_v = trajectory_.back().vel();
     double extend_point_v = 0;
     for (size_t i = 0; i < extend_point_size; i++) {
       cur_s = trajectory_.back().s() + delta_s;
@@ -575,20 +591,47 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     trajectory_.SetGear(0);
   }
 
-  if (trajectory_.size() < 3) {
-    trajectory_.ExtendTraj(0.1);
+  // If traj is empty, use lon stitch point.
+  if (trajectory_.empty()) {
+    ILOG_INFO << "traj empty";
+    traj_point = lon_stitch_point_;
+    traj_point.set_acc(-0.3);
+    traj_point.set_vel(0.0);
+    trajectory_.push_back(traj_point);
   }
 
+  // todo: open loop control.
+  if (config_.enable_openloop_control && is_traj_overshoot &&
+      trajectory_.back().s() < config_.min_dist_for_open_loop_control) {
+    for (size_t i = 0; i < trajectory_.size(); i++) {
+      if (path_data.back().s() - trajectory_[i].s() <
+          config_.min_dist_for_open_loop_control) {
+        trajectory_[i].set_vel(0.0);
+        trajectory_[i].set_acc(-0.1);
+      }
+    }
+  }
+
+  // If traj is short, stitch history traj.
+  CopyHistoryTraj(history_trajectory);
+
 #if DEBUG_TASK
-  ILOG_INFO << "is overshoot = " << is_overshoot << ", gear = " << is_forward
+  ILOG_INFO << "is_traj_overshoot = " << is_traj_overshoot
+            << ", gear = " << is_forward
             << ", traj back s = " << trajectory_.back().s()
-            << ", speed back s = " << speed_profile.back().s;
+            << ", speed back s = " << speed_profile.back().s
+            << ", size = " << trajectory_.size();
+
+  // just debug short traj.
+  if (trajectory_.back().s() < config_.traj_min_dist) {
+    for (size_t i = 0; i < trajectory_.size(); i++) {
+      ILOG_INFO << trajectory_[i].DebugString();
+    }
+  }
 #endif
 
   return;
 }
-
-void ApaTrajectoryStitcher::CombineTrajBasedOnPath() { return; }
 
 void ApaTrajectoryStitcher::TaskDebug(
     const std::vector<pnc::geometry_lib::PathPoint>& path,
@@ -626,6 +669,55 @@ const SVPoint ApaTrajectoryStitcher::GetStitchSpeed() const {
   point.acc = lon_stitch_point_.acc();
 
   return point;
+}
+
+void ApaTrajectoryStitcher::CopyHistoryTraj(
+    const trajectory::Trajectory& history_trajectory) {
+  if (trajectory_.back().s() > config_.traj_min_dist - 1e-3 ||
+      history_trajectory.empty()) {
+    return;
+  }
+
+  double cur_traj_s = trajectory_.back().s();
+  double interpolate_traj_s = config_.traj_min_dist - cur_traj_s;
+
+  int project_id = history_trajectory.QueryNearestPoint(
+      planning_math::Vec2d(trajectory_.front().x(), trajectory_.front().y()));
+  if (project_id < 0) {
+    return;
+  }
+
+  int interpolate_end_id = project_id - 1;
+  interpolate_end_id = std::max(interpolate_end_id, 0);
+  double project_s = history_trajectory[interpolate_end_id].s();
+  int interpolate_start_id = 0;
+
+  for (int i = interpolate_end_id; i >= 0; i--) {
+    if (project_s - history_trajectory[i].s() > interpolate_traj_s) {
+      interpolate_start_id = i;
+      break;
+    }
+  }
+
+  trajectory::Trajectory tmp_traj;
+  trajectory::TrajectoryPoint traj_point;
+  for (int i = interpolate_start_id; i <= interpolate_end_id; i++) {
+    traj_point = history_trajectory[i];
+
+    traj_point.set_absolute_time(0);
+    traj_point.set_s(-common::DistanceXY(traj_point, trajectory_.front()));
+    traj_point.set_vel(0);
+    traj_point.set_acc(-0.1);
+    traj_point.set_jerk(0);
+
+    tmp_traj.push_back(traj_point);
+  }
+
+  if (!tmp_traj.empty()) {
+    trajectory_.insert(trajectory_.begin(), tmp_traj.begin(), tmp_traj.end());
+  }
+
+  return;
 }
 
 }  // namespace apa_planner

@@ -62,11 +62,15 @@ size_t Trajectory::QueryLowerBoundPointByS(const double s) const {
   return std::distance(begin(), it_lower);
 }
 
-size_t Trajectory::QueryNearestPoint(
+int Trajectory::QueryNearestPoint(
     const planning_math::Vec2d& position) const {
+  if (empty()) {
+    return -1;
+  }
+
   double min_sqr_dist = std::numeric_limits<double>::max();
-  size_t min_index = 0;
-  for (size_t i = 0; i < size(); ++i) {
+  int min_index = 0;
+  for (int i = 0; i < size(); ++i) {
     const planning_math::Vec2d curr_point(data()[i].x(), data()[i].y());
 
     const double curr_sqr_dist_m = curr_point.DistanceSquareTo(position);

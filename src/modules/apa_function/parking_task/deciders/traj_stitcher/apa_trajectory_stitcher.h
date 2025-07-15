@@ -8,6 +8,7 @@
 #include "speed/speed_data.h"
 #include "src/library/reeds_shepp/rs_path_interpolate.h"
 #include "trajectory/trajectory.h"
+#include "trajectory_stitch_config.h"
 
 namespace planning {
 namespace apa_planner {
@@ -48,11 +49,8 @@ class ApaTrajectoryStitcher {
   const pnc::geometry_lib::PathPoint* GetStitchPathPointPtr();
 
   // based on time to compute path point.
-  void CombineTrajBasedOnTime(const SpeedData& speed_profile);
-
-  // based on path point to compute time.
-  // TODO: complete it.
-  void CombineTrajBasedOnPath();
+  void CombineTrajBasedOnTime(const SpeedData& speed_profile,
+                              const trajectory::Trajectory& history_trajectory);
 
   void TaskDebug(const std::vector<pnc::geometry_lib::PathPoint>& path,
                  const trajectory::Trajectory& trajectory);
@@ -60,7 +58,7 @@ class ApaTrajectoryStitcher {
   const SVPoint GetStitchSpeed() const;
 
  private:
-  // If vehicle speed is zero, use vehicle state to generate stitch point.
+  // If vehicle is overshooting, use vehicle state to generate stitch point.
   void GenePathPointFromVehicleState(const Pose2D& ego_pose);
 
   // If history traj is null, and vehicle speed is not zero, need to generate
@@ -109,14 +107,25 @@ class ApaTrajectoryStitcher {
 
   void SmoothLonDelay();
 
+  // If vehicle is overshooting, use history path end state to generate stitch
+  // point.
+  void GenePathPointFromPath(const pnc::geometry_lib::PathPoint& point);
+
+  // If current traj is short, copy history traj.
+  void CopyHistoryTraj(const trajectory::Trajectory& history_trajectory);
+
  private:
   SVPoint ego_lon_state_;
   pnc::geometry_lib::PathPoint stitch_path_point_;
+  // future path, maybe collision with obstacles.
   std::vector<pnc::geometry_lib::PathPoint> stitch_path_;
 
   trajectory::TrajectoryPoint lon_stitch_point_;
+  // future traj, no collision with obstacles.
   trajectory::Trajectory trajectory_;
   pnc::geometry_lib::PathSegGear gear_;
+
+  TrajectoryStitchConfig config_;
 };
 }  // namespace apa_planner
 }  // namespace planning
