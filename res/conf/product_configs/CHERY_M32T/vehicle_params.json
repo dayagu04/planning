@@ -4,7 +4,7 @@
   "rear_edge_to_rear_axle": 1.03,
   "rear_axle_to_center": 1.353,
   "length": 4.78,
-  "width": 1.89,
+  "width": 2.008,
   "max_width": 2.188,
   "height": 1.725,
   "min_turn_radius": 5.7,
@@ -15,7 +15,7 @@
   "max_steer_angle": 8.54,
   "max_steer_angle_rate": 7.853,
   "min_steer_angle_rate":0.0,
-  "steer_ratio": 13.6,
+  "steer_ratio": 15.88,
   "wheel_base": 2.8,
   "max_front_wheel_angle": 0.628,
   "front_overhanging": 0.95
