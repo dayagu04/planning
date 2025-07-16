@@ -39,7 +39,7 @@ static double kInsertLineLonBuffer = 0.4;
 static double kFrontDetaXMagWhenFrontVacant = 3.0;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.8;
 static double kRearDetaXMagWhenBothSidesVacant = 0.5;
-static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.2;
+static double kRearDetaXMagWhenFrontOccupiedRearVacant = 2;
 static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.8;
 static double kFrontObsLineYMagIdentification = 0.6;
@@ -458,14 +458,13 @@ const bool ParallelParkInScenario::GenTlane() {
       if (obs_pt_local.y() * side_sgn >
               apa_param.GetParam().parallel_channel_y_mag ||
           obs_pt_local.y() * side_sgn <
-              (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset)) {
+              (-0.5 * slot_width - apa_param.GetParam().curb_offset)) {
         // total_box_y_fail_cnt++;
         continue;
       }
 
       // remote front T-boundary obs
-      if (obs_pt_local.x() >
-              t_lane_.slot_length + kFrontDetaXMagWhenFrontVacant &&
+      if (obs_pt_local.x() > slot_length + kFrontDetaXMagWhenFrontVacant &&
           obs_pt_local.y() * side_sgn < -0.3 * side_sgn) {
         // front_box_fail_cnt++;
         continue;
@@ -485,10 +484,13 @@ const bool ParallelParkInScenario::GenTlane() {
         continue;
       }
 
-      if (mathlib::IsInBound(obs_pt_local.x(), 0.4,
-                             t_lane_.slot_length - 0.4) &&
-          obs_pt_local.y() * side_sgn < -0.25 * t_lane_.slot_width &&
+      if (mathlib::IsInBound(obs_pt_local.x(), 0.8, slot_length - 0.8) &&
+          obs_pt_local.y() * side_sgn < -0.25 * slot_width * side_sgn &&
+          obs_pt_local.y() * side_sgn >
+              -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
+                  side_sgn &&
           is_rigid) {
+        ILOG_INFO << "rigid obs = " << obs_pt_local.transpose();
         t_lane_.is_inside_rigid = true;
       }
 
