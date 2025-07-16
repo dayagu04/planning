@@ -17,7 +17,7 @@ bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
 bag_path = "/data_cold/abu_zone/cailiu2/0802/165_66a1bb682933546a92b11980_66a77fb17af211090bc13d38.bag.PP"
 
 frame_dt = 0.1 # sec
-steer_ratio = 13.0 # e0y
+steer_ratio = 15.88 # e0y
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook(resources=INLINE)
@@ -80,23 +80,27 @@ data_steer = ColumnDataSource(data ={
   'plan_steer_deg':[],
   'plan_steer_dot_deg':[],
   'ego_steer_deg':[],
-  'ego_steer_dot_deg':[]
+  'ego_steer_dot_deg':[],
+  'ego_yaw_rate_to_steer_deg': []
 })
 steer_time = []
 plan_steer_deg = []
 plan_steer_dot_deg = []
 ego_steer_deg = []
 ego_steer_dot_deg = []
+ego_yaw_rate_to_steer_deg = []
 for t in np.arange(0.0, max_time, frame_dt):
   steer_time.append(t)
   plan_debug_msg_idx = get_plan_debug_msg_idx(bag_loader, t)
   lateral_motion_planning_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
   if (len(lateral_motion_planning_output.delta_vec) > 0):
-    plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * 13 * 57.3)
-    plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * 13 * 57.3)
+    plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * steer_ratio * 57.3)
+    plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * steer_ratio * 57.3)
   else:
     plan_steer_deg.append(0.0)
     plan_steer_dot_deg.append(0.0)
+  ego_yaw_rate_to_delta = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["ego_delta"]
+  ego_yaw_rate_to_steer_deg.append(ego_yaw_rate_to_delta * steer_ratio * 57.3)
   vs_msg_idx = get_vs_msg_idx(bag_loader, t)
   vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
   ego_steer_deg.append(vs_msg.steering_wheel_angle * 57.3)
@@ -108,9 +112,11 @@ data_steer.data.update({
   'plan_steer_dot_deg': plan_steer_dot_deg,
   'ego_steer_deg': ego_steer_deg,
   'ego_steer_dot_deg': ego_steer_dot_deg,
+  'ego_yaw_rate_to_steer_deg': ego_yaw_rate_to_steer_deg
 })
 f8 = fig8.line('time', 'plan_steer_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_deg')
 fig8.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_deg')
+fig8.line('time', 'ego_yaw_rate_to_steer_deg', source = data_steer, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'ego_real_steer_deg')
 f9 = fig9.line('time', 'plan_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_dot_deg')
 fig9.line('time', 'ego_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_dot_deg')
 f10_1 = fig10.line('center_line_s', 'center_line_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'kappa radius')
@@ -118,7 +124,7 @@ fig10.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_da
 refline_kappa_radius = ColumnDataSource(data = {'refline_s':[], 'refline_curvature':[]})
 f10_2 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
 fig10.line('center_line_s', 'center_line_confidence', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'road confidence')
-hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
+hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg'), ('ego_real_steer_deg', '@ego_yaw_rate_to_steer_deg')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
 hover10_1 = HoverTool(renderers=[f10_1], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
 hover10_2 = HoverTool(renderers=[f10_2], tooltips=[('s', '@refline_s'), ('radius', '@refline_curvature')], mode='vline')
@@ -466,3 +472,5 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
 
 bkp.show(row(fig1, column(fig7, row(tab2, tab3)), column(fig2, fig3, fig4, fig5, fig6, fig8, fig9, fig10)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
+
+

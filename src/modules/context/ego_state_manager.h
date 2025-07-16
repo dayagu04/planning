@@ -178,6 +178,7 @@ class EgoStateManager {
   double ego_acc_last_ = 0;
   double ego_hmi_v_;
   double ego_steer_angle_ = 0;
+  double ego_delta_ = 0;
   uint ego_blinker_ = 0;
   bool ego_auto_light_state_;
   float driver_hand_torque_;

@@ -257,6 +257,19 @@ bool EgoStateManager::update(
   steer_ratio_ = vehicle_param.steer_ratio;
   max_steer_angle_ = vehicle_param.max_steer_angle;
   max_delta_ = vehicle_param.max_front_wheel_angle;
+  ego_delta_ = ego_steer_angle_ / steer_ratio_;
+  if (ego_v_ > 1.0) {
+    double ego_yaw_rate_to_delta =
+        (ego_yaw_rate_ * vehicle_param.wheel_base) / ego_v_;
+    std::vector<double> xp_ego_vel{1.0, 2.778};
+    std::vector<double> fp_delta_coeff{0.0, 1.0};
+    double delta_coeff =
+        planning::interp(ego_v_, xp_ego_vel, fp_delta_coeff);
+    ego_delta_ =
+        delta_coeff * ego_yaw_rate_to_delta +
+        (1.0 - delta_coeff) * ego_delta_;
+  }
+  JSON_DEBUG_VALUE("ego_delta", ego_delta_);
   planning_math::Vec2d center(
       ego_pose_.x +
           std::cos(ego_pose_.theta) * vehicle_param.rear_axle_to_center,
@@ -462,6 +475,9 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   cur_vehicle_state_process_.linear_acceleration = ego_state->ego_acc();
   cur_vehicle_state_process_.delta =
       ego_state->ego_steer_angle() / steer_ratio_;
+  if (config_.use_yaw_rate_to_delta) {
+    cur_vehicle_state_process_.delta = ego_delta_;
+  }
   cur_vehicle_state_process_.heading = ego_state->heading_angle();
   cur_vehicle_state_process_.kappa =
       curve_factor * cur_vehicle_state_process_.delta;

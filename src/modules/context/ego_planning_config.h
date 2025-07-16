@@ -2868,6 +2868,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                           hpp_replan_lat_err_threshold_value);
     read_json_vec<double>(json, "hpp_replan_lon_err_threshold_value",
                           hpp_replan_lon_err_threshold_value);
+    ReadItem<bool>(json, use_yaw_rate_to_delta, "use_yaw_rate_to_delta");
   }
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
@@ -2894,6 +2895,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
 
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
+  bool use_yaw_rate_to_delta = false;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

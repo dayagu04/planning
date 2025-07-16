@@ -55,6 +55,7 @@
   "enable_delta_stitch_in_replan": true,
   "enable_ego_state_compensation": true,
   "enable_constanct_velocity_in_predicted_vehicle_state": true,
+  "use_yaw_rate_to_delta": false,
   "replan_longitudinal_distance_threshold_speed": [11.111, 22.222],
   "replan_longitudinal_distance_threshold_value": [1.0, 2.0],
   "max_replan_dist_err" : 1.5,
