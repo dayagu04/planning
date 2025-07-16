@@ -173,6 +173,8 @@ bool SpeedLimitDecider::Execute() {
   // 9. speed limit from avoid agent
   CalculateAvoidAgentSpeedLimit();
 
+  CalculateSpeedLimitForDangerousObstacle();
+
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
@@ -514,6 +516,59 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimitIntoMap(v_target_intersection,
                                            SpeedLimitType::INTERSECTION);
+}
+
+void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
+  LOG_DEBUG("----calc_speed_limit_for_dangerous_obstacle--- \n");
+  const auto &environmental_model = session_->environmental_model();
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  const auto init_point = ego_state_mgr->planning_init_point();
+  double v_ego = ego_state_mgr->ego_v();
+  double v_target_for_dangerous_obs = 40.0;
+  const auto &dangerous_obs_decision_output =
+      session_->planning_context().potential_dangerous_agent_decider_output();
+  const auto dangerous_obs_vec = dangerous_obs_decision_output.dangerous_agent_info;
+  if (dangerous_obs_vec.empty() || dangerous_obs_vec[0].recommended_maneuver.
+      longitudinal_maneuver == LongitudinalManeuver::IGNORE) {
+    v_limit_for_dangerous_obstacle_ = 0.0;
+    return;
+  }
+  /* const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+  const auto dangerous_agent = agent_manager->GetAgent(dangerous_obs_vec[0].id);
+  if (dangerous_agent == nullptr) {
+    return;
+  } */
+  if (dangerous_obs_vec[0].recommended_maneuver.
+    longitudinal_maneuver == LongitudinalManeuver::SLIGHTLY_BRAKE) {
+    if (init_point.v < kDangerousObstacleMinSpeedLimit) {
+      if (v_limit_for_dangerous_obstacle_ < planning_math::kMathEpsilon) {
+          v_limit_for_dangerous_obstacle_ = init_point.v;
+      }
+      v_target_for_dangerous_obs = v_limit_for_dangerous_obstacle_;
+    } else {
+      if (v_limit_for_dangerous_obstacle_ < planning_math::kMathEpsilon) {
+        v_limit_for_dangerous_obstacle_ = kDangerousObstacleMinSpeedLimit;
+      }
+      v_target_for_dangerous_obs = v_limit_for_dangerous_obstacle_;
+    }
+
+  }
+  if (v_target_for_dangerous_obs < v_target_) {
+    v_target_ = v_target_for_dangerous_obs;
+    v_target_type_ = SpeedLimitType::DANGEROUS_OBSTACLE;
+  }
+  JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+  JSON_DEBUG_VALUE("dangerous_obs_id", dangerous_obs_vec[0].id);
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_for_dangerous_obs,
+                                           SpeedLimitType::DANGEROUS_OBSTACLE);
+
+
 }
 
 void SpeedLimitDecider::CalculatePerceptVisibSpeedLimit() {}

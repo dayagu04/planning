@@ -149,6 +149,8 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::LANE_BORROW:
     case SpeedLimitType::AVOID_AGENT:
       kinematic_param = config_.avoid_agent_kinematic_param;
+    case SpeedLimitType::DANGEROUS_OBSTACLE:
+      kinematic_param = config_.kappa_kinematic_param;
       break;
     default:
       break;

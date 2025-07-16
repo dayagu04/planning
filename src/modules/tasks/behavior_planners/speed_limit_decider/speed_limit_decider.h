@@ -49,6 +49,8 @@ class SpeedLimitDecider : public Task {
 
   void CalculateSpeedLimitFromTFLDis();
 
+  void CalculateSpeedLimitForDangerousObstacle();
+
   void CalculateAvoidAgentSpeedLimit();
 
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
@@ -72,6 +74,8 @@ class SpeedLimitDecider : public Task {
   planning::common::IntersectionState current_intersection_state_ =
       planning::common::UNKNOWN;
   double v_limit_with_intersection_ = 0.0;
+
+  double v_limit_for_dangerous_obstacle_ = 0.0;
 };
 
 }  // namespace planning
