@@ -119,8 +119,8 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
     planning::planning_math::PathPoint temp_path_point;
     temp_path_point.set_x(ref_points_vec[c].x());
     temp_path_point.set_y(ref_points_vec[c].y());
-    ILOG_INFO << "\n temp_path_point.x " << ref_points_vec[c].x()
-              << "  temp_path_point.y " << ref_points_vec[c].y();
+    // ILOG_INFO << "\n temp_path_point.x " << ref_points_vec[c].x()
+    //           << "  temp_path_point.y " << ref_points_vec[c].y();
     path_points.emplace_back(temp_path_point);
   }
   // std::cout << "path_points: \n" << path_points.size() << std::endl;
@@ -143,7 +143,7 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
   const int num_agent = 8;
   std::vector<AgentFrenetSpatioTemporalInFo> surround_agents_trajs;
   auto agents_time_and_corners = spatio_temporal_union_input.agent_time_corners();
-  ILOG_INFO << "\n agents_time_and_corners: " << agents_time_and_corners.size() ;
+  // ILOG_INFO << "\n agents_time_and_corners: " << agents_time_and_corners.size() ;
 
   surround_agents_trajs.clear();
   for (size_t i = 0; i < agents_time_and_corners.size(); ++i) {
@@ -198,12 +198,14 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
   }
 
   const int half_lateral_sample_nums = 4;
+  bool last_enable_using_st_plan = true;
 
   // ILOG_INFO << " target_lane_coord.min_x " << target_lane_coord.min_x()
   //           << " target_lane_coord.min_y " << target_lane_coord.min_y()
   //           << " target_lane_coord.max_x " << target_lane_coord.max_x()
   //           << " target_lane_coord.max_y" << target_lane_coord.max_y();
-  pBase->Update(traj_points, surround_agents_trajs, spatio_temporal_union_input, target_s, target_lane_coord, half_lateral_sample_nums);
+  pBase->Update(
+      traj_points, surround_agents_trajs, spatio_temporal_union_input, target_s, target_lane_coord, half_lateral_sample_nums, last_enable_using_st_plan);
   return 0;
 }
 

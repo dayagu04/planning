@@ -69,8 +69,8 @@ constexpr double kDefaultMaxAcceleration = 2.5;
 constexpr double kDefaultRearObsGenerateCostDistance= 3.0;
 constexpr double kDefaultHalfSamplingRange= 0.90;
 constexpr int kDefaultTrajectoryPointSize = 26;
-constexpr double kConsiderDynamicObstacleCostTimeLength = 4.0;
-constexpr double kSigmoidChangeRateCoefficient = 2.0;
+constexpr double kConsiderDynamicObstacleCostTimeLength = 3.0;
+constexpr double kSigmoidChangeRateCoefficient = 2.5;
 
 
 }
@@ -773,7 +773,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         double path_cost_c2 =
             CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, spatio_temporal_union_plan_input);
         auto pathcost = IflyTime::Now_us();
-        LOG_DEBUG("c2 CalculatePathCost: %f\n", pathcost - overlap_2);
+        // LOG_DEBUG("c2 CalculatePathCost: %f\n", pathcost - overlap_2);
 
         // 计算自车与动态障碍物之间的cost
         double distance_c2 = kDefaultMaxDisBetweenObs;
@@ -1312,7 +1312,7 @@ double SpatioTemporalUnionDp::CalculatePathCost(
     const double ddl =
         ComputeSecondDerivative(lateral_curve_coef, acc, v0, curve_t);
     path_cost += ddl * ddl * lat_path_weight_params.path_ddl_cost();
-    // path_cost += CalculateStitchingCost(current_point, current_t, spatio_temporal_union_plan_input);
+    path_cost += CalculateStitchingCost(current_point, current_t, spatio_temporal_union_plan_input);
   }
   path_cost *= kPathCostComputeSampleTime;
 

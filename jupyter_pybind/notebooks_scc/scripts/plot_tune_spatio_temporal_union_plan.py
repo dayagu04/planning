@@ -18,7 +18,7 @@ from jupyter_pybind import spatio_temporal_union_planning_py
 # +
 # bag path and frame dt
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250624/20250624-14-34-41/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-24-14-34-41_no_camera.bag.1751002868.close-loop.scc.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250707/20250707-20-32-53/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-07-07-20-32-53_no_camera.bag.1751945294.close-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50818/trigger/20250717/20250717-11-54-17/data_collection_CHERY_M32T_50818_EVENT_FILTER_2025-07-17-11-54-17_no_camera.bag.1752740613.open-loop.scc.plan"
 
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250120/20250120-16-05-39/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2025-01-20-16-05-39_no_camera.bag.22-35.split.1742284603.close-loop.noa.plan"
 frame_dt = 0.1 # sec
@@ -67,11 +67,11 @@ class LocalViewSlider:
     self.path_l_cost_param_l0_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_cost_param_l0",min=0.0, max=5.0, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_l_cost_param_l0, step=0.2)
     self.path_l_cost_param_b_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_cost_param_b",min=0.0, max=5.0, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_l_cost_param_b, step=0.2)
     self.path_l_cost_param_k_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_cost_param_k",min=0.0, max=5.0, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_l_cost_param_k, step=0.2)
-    self.path_l_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_cost",min=0.0, max=1e4, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_l_cost, step=100)
-    self.path_dl_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_dl_cost",min=0.0, max=1e3, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_dl_cost, step=10)
-    self.path_ddl_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_ddl_cost",min=0.0, max=1e3, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_ddl_cost, step=10)
+    self.path_l_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_cost",min=0.0, max=1e5, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_l_cost, step=100)
+    self.path_dl_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_dl_cost",min=0.0, max=1e5, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_dl_cost, step=10)
+    self.path_ddl_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_ddl_cost",min=0.0, max=1e5, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_ddl_cost, step=10)
     self.path_end_l_cost_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_end_l_cost",min=0.0, max=1e3, value=spatio_temporal_union_plan_input.lat_path_weight_params.path_end_l_cost, step=10)
-    self.path_l_stitching_cost_param_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_stitching_cost_param",min=0.0, max=1e4, value=spatio_temporal_union_plan_input.stitching_cost_params.path_l_stitching_cost_param, step=10)
+    self.path_l_stitching_cost_param_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "path_l_stitching_cost_param",min=0.0, max=1e5, value=spatio_temporal_union_plan_input.stitching_cost_params.path_l_stitching_cost_param, step=10)
     self.stitching_cost_time_decay_factor_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "stitching_cost_time_decay_factor",min=0.0, max=1.0, value=spatio_temporal_union_plan_input.stitching_cost_params.stitching_cost_time_decay_factor, step=0.1)
 
     self.obstacle_ignore_distance_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "obstacle_ignore_distance",min=0.0, max=50.0, value=spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params.obstacle_ignore_distance, step=0.5)
@@ -157,7 +157,7 @@ def slider_callback(bag_time, unit_t, dense_unit_s, sparse_unit_s, unit_l, dense
   loc_msg = local_view_data['data_msg']['loc_msg']
   plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
   spatio_temporal_union_plan_input = plan_debug_msg.spatio_temporal_union_plan_input
-  print("spatio_temporal_union_plan_input: ", spatio_temporal_union_plan_input)
+  # print("spatio_temporal_union_plan_input: ", spatio_temporal_union_plan_input)
   if len(spatio_temporal_union_plan_input.ref_points_vec) > 0:
     # print("spatio_temporal_union_plan_input.ref_points_vec x:", spatio_temporal_union_plan_input.ref_points_vec[0].x)
     # print("spatio_temporal_union_plan_input.ref_points_vec y:", spatio_temporal_union_plan_input.ref_points_vec[0].y)
