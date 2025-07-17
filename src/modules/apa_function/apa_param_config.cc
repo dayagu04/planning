@@ -1043,14 +1043,14 @@ void SyncParkingParameters(const bool is_simulation) {
                   "default_cruise_speed");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.min_cruise_speed, double,
                   "min_cruise_speed");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.min_speed_limit_by_obs_dist,
-                  double, "min_speed_limit_by_obs_dist");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa, double,
-                  "speed_limit_by_kappa");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa_switch,
-                  double, "speed_limit_by_kappa_switch");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_obs_dist,
-                  double, "speed_limit_by_obs_dist");
+  JSON_READ_VALUE(
+      apa_param.SetPram().speed_config.speed_limit_by_obs_dist.lower, double,
+      "speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.speed_limit_by_kappa.lower,
+                  double, "speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(
+      apa_param.SetPram().speed_config.speed_limit_by_kappa_switch.lower,
+      double, "speed_limit_by_kappa_switch");
   JSON_READ_VALUE(
       apa_param.SetPram().speed_config.min_path_dist_for_speed_optimizer,
       double, "min_path_dist_for_speed_optimizer");
@@ -1061,6 +1061,28 @@ void SyncParkingParameters(const bool is_simulation) {
                   "optimizer_time_limit");
   JSON_READ_VALUE(apa_param.SetPram().speed_config.use_remain_dist, bool,
                   "use_remain_dist");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.apa_speed_mode, int,
+                  "apa_speed_mode");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.fast_cruise_speed, double,
+                  "fast_cruise_speed");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.middle_cruise_speed, double,
+                  "middle_cruise_speed");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.slow_cruise_speed, double,
+                  "slow_cruise_speed");
+
+  double cruise_speed;
+  if (apa_param.GetParam().speed_config.apa_speed_mode == 0) {
+    cruise_speed = apa_param.GetParam().speed_config.fast_cruise_speed;
+  } else if (apa_param.GetParam().speed_config.apa_speed_mode == 1) {
+    cruise_speed = apa_param.GetParam().speed_config.middle_cruise_speed;
+  } else {
+    cruise_speed = apa_param.GetParam().speed_config.slow_cruise_speed;
+  }
+  apa_param.SetPram().speed_config.default_cruise_speed = cruise_speed;
+  apa_param.SetPram().speed_config.speed_limit_by_obs_dist.upper = cruise_speed;
+  apa_param.SetPram().speed_config.speed_limit_by_kappa.upper = cruise_speed;
+  apa_param.SetPram().speed_config.speed_limit_by_kappa_switch.upper =
+      cruise_speed;
 
   // hybrid a star params
   JSON_READ_VALUE(

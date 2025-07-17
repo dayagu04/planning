@@ -1748,6 +1748,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "path_backward_appended_length");
     ReadItem<double>(json, max_steer_angle_dot, "lat_motion_ilqr",
                      "max_steer_angle_dot");
+    ReadItem<double>(json, max_steer_angle_dot_low_speed, "lat_motion_ilqr",
+                     "max_steer_angle_dot_low_speed");
   }
 
   bool warm_start_enable = true;
@@ -1756,6 +1758,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
   double max_steer_angle_dot = 200.0;
+  double max_steer_angle_dot_low_speed = 10.0;
 
   double acc_bound = 1.5;
   double jerk_bound = 1.0;
@@ -2706,10 +2709,25 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
     /* read config from json */
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
+    ReadItem<double>(json, curv_factor, "result_trajectory_generator",
+                     "curv_factor");
+    ReadItem<double>(json, lat_acc_thr, "result_trajectory_generator",
+                     "lat_acc_thr");
+    ReadItem<double>(json, lat_jerk_thr, "result_trajectory_generator",
+                     "lat_jerk_thr");
+    ReadItem<double>(json, lon_acc_thr, "result_trajectory_generator",
+                     "lon_acc_thr");
+    ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
+                     "lon_jerk_thr");
   }
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
+  double curv_factor = 0.35;
+  double lat_acc_thr = 3.0;
+  double lat_jerk_thr = 0.3;
+  double lon_acc_thr = 3.0;
+  double lon_jerk_thr = 0.3;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {
@@ -3267,6 +3285,8 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
   double ignore_agent_ttc_to_ego_thrd = 3.0;
   double ignore_ego_ttc_to_agent_thrd = 3.0;
   double lat_distance_close_enough_to_planned_path_thrd = 0.5;
+  double ego_predeceleration_distance_to_front_agent_threshold = 3.5;
+  double close_to_same_velocity_difference_buffer = 1.5;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {

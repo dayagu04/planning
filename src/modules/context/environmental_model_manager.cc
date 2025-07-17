@@ -199,7 +199,7 @@ bool EnvironmentalModelManager::Run() {
   auto current_time_s = IflyTime::Now_s();
 
   if (!session_->environmental_model().GetVehicleDbwStatus()) {
-    LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
+    LOG_DEBUG("DBW_Disable, but EnvironmentalModelManager continue\n");
   }
 
   const auto &local_view = session_->environmental_model().get_local_view();
@@ -323,13 +323,13 @@ bool EnvironmentalModelManager::Run() {
   last_feed_time_[FEED_MAP_INFO] = local_view.static_map_info_recv_time;
   if (rads_mode && !virtual_lane_manager_ptr_->update(
                        local_view.function_state_machine_info)) {
-    LOG_ERROR("virtual_lane_manager update failed for rads\n");
+    LOG_DEBUG("virtual_lane_manager update failed for rads\n");
     return false;
   }
 
   if (!rads_mode) {
     if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
-      LOG_ERROR("virtual_lane_manager update failed\n");
+      LOG_DEBUG("virtual_lane_manager update failed\n");
       return false;
     } else {
       // 后面需要判断是否为地图
@@ -464,7 +464,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
                                      ->mutable_input_topic_timestamp();
     auto timestamp = 0 != input_topic_timestamp->localization_estimate()
                          ? local_view.localization_estimate.header.timestamp
-                         : local_view.localization.msg_header.stamp;
+                         : local_view.localization.meta.timestamp;
     if (!session_->is_hpp_scene()) {
       truncate_prediction_info(local_view.prediction_result, timestamp,
         prediction_obj_id_set);
@@ -555,7 +555,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         new_local ? localization.position.position_boot.z
                   : localization_estimate.pose.local_position.z);
     vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
-        localization.msg_header.stamp);
+        localization.meta.timestamp);
     // auto enu_orientation = localization_estimate.pose.orientation;
     // auto enu_orientation = localization.orientation.quaternion_boot;
     vehicle_status.mutable_location()

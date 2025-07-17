@@ -136,7 +136,7 @@ bool PlanningAdapter::Proc() {
     is_localization_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization(
-      local_view_ptr_->localization.msg_header.stamp);
+      local_view_ptr_->localization.msg_header.stamp);// 2.10.0 localization adapt
   input_topic_latency->set_localization(
       get_latency(start_time, local_view_ptr_->localization.msg_header.stamp));
 
@@ -402,7 +402,7 @@ bool PlanningAdapter::Proc() {
       // use last succ planning output when planning not succ
       // if never succeed, output will bi empty
       //   planning_output = last_planning_output_;
-      LOG_WARNING("planning failed, use last planning output\n");
+      LOG_DEBUG("planning failed, use last planning output\n");
     }
     // update msg_header & msg_meta
     auto &msg_header = planning_output.msg_header;
@@ -432,7 +432,7 @@ bool PlanningAdapter::Proc() {
   }
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
-  LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
+  LOG_DEBUG("The cost time of proc() is: [%f] ms\n", planning_cost_time);
   return true;
 }
 

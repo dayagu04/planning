@@ -125,6 +125,7 @@ class LateralMotionPlanningWeight {
 
   void CalculateExpectedLatAccAndSteerAngle(
       double init_s, double ref_vel, double wheel_base, double steer_ratio,
+      const planning::CoarsePlanningInfo &coarse_planning_info,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       std::vector<double>& expected_steer_vec);
 
@@ -250,14 +251,16 @@ class LateralMotionPlanningWeight {
   double end_ratio_for_qjerk_;
   double max_acc_;
   double max_jerk_;
+  double max_jerk_low_speed_;
   double last_expected_average_acc_;
   double expected_average_acc_;
   double expected_max_acc_;
   double expected_min_acc_;
-  double min_road_radius_;
+  double target_road_radius_;
   double min_q_jerk_;
   double last_path_max_dist2ref_;
   double last_jerk_bound_limit_;
+  double last_remotely_index_;
   bool is_lane_change_hold_;
   bool is_lane_change_back_;
   bool is_in_intersection_;

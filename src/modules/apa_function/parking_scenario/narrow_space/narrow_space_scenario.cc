@@ -1634,6 +1634,8 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
     }
   }
 
+  ego_info_under_slot.fix_slot = false;
+
   ILOG_INFO << "slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
 

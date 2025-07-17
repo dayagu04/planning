@@ -31,6 +31,13 @@ class STGraph {
     int32_t first_yield_agent_id = agent::AgentDefaultInfo::kNoAgentId;
     STPoint first_yield_st_point = STPoint::HighestSTPoint();
   };
+
+  struct NeighborCorridorOvertakeInfo {
+    int32_t first_overtake_index = std::numeric_limits<int32_t>::max();
+    int32_t first_overtake_agent_id = agent::AgentDefaultInfo::kNoAgentId;
+    STPoint first_overtake_st_point = STPoint::LowestSTPoint();
+  };
+
   STGraph() = default;
 
   ~STGraph() = default;
@@ -159,11 +166,15 @@ class STGraph {
   int32_t first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
   int32_t first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
   int32_t first_neighbor_yield_agent_id_ = agent::AgentDefaultInfo::kNoAgentId;
+  int32_t first_neighbor_overtake_agent_id_ =
+      agent::AgentDefaultInfo::kNoAgentId;
   std::vector<int32_t> caution_yield_agent_ids_;
   std::vector<int32_t> ignore_agent_ids_;
   // <double, NeighborCorridorYieldInfo> : <yield_st_point.s(),
   // NeighborCorridorYieldInfo>
   std::map<double, NeighborCorridorYieldInfo> neighbor_corridor_yield_info_map_;
+  std::map<double, NeighborCorridorOvertakeInfo>
+      neighbor_corridor_overtake_info_map_;
 
   // bellow is for close-pass st boundary
   std::unordered_set<int32_t> static_close_pass_candicate_agent_ids_;

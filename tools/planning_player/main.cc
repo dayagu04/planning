@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::array<std::string, 3> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811"};
+  std::array<std::string, 4> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811", "CHERY_M32T"};
   if (std::find(car_type.begin(), car_type.end(), car) == car_type.end()) {
     std::cerr << "Error car type!!!" << std::endl;
     return -1;

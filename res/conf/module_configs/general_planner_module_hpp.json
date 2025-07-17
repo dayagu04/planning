@@ -328,6 +328,7 @@
     "min_v_cruise": 0.2,
     "min_ego_vel": 1.0,
     "max_steer_angle_dot": 360.0,
+    "max_steer_angle_dot_low_speed": 360.0,
     "acc_bound": 2.0,
     "jerk_bound": 0.6,
     "map_jerk_bound": [0.6, 0.55, 0.5, 0.25],
@@ -473,7 +474,12 @@
     "soft_bound_corridor_t": 0.3
   },
   "result_trajectory_generator": {
-    "enable_lat_traj": false
+    "enable_lat_traj": false,
+    "curv_factor": 0.33,
+    "lat_acc_thr": 3.0,
+    "lat_jerk_thr": 0.3,
+    "lon_acc_thr": 2.0,
+    "lon_jerk_thr": 1.5
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

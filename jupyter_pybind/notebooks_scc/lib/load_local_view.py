@@ -280,12 +280,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ego_xn.append(pos_xn_i)
       ego_yn.append(pos_yn_i)
 
-    # local_view_data['data_ego'].data.update({
-    #   'ego_xb': ego_xb,
-    #   'ego_yb': ego_yb,
-    #   'ego_xn': ego_xn,
-    #   'ego_yn': ego_yn,
-    # })
+    local_view_data['data_ego'].data.update({
+      'ego_xb': ego_xb,
+      'ego_yb': ego_yb,
+      'ego_xn': ego_xn,
+      'ego_yn': ego_yn,
+    })
 
     if g_is_display_enu:
       # car pos in global coordinates

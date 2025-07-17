@@ -29,6 +29,12 @@ class TrafficLightDecider : public Task {
   // small intersection is matchable with tfl or not
   bool IsIntersectionMatchTFL();
 
+  // have a risk of running a red light or not when human drive
+  bool IsRunningRedTFL();
+
+  // have a risk of staying still when green light on or not when human drive
+  bool IsStayingStillGreenTFL();
+
   TrafficLightDeciderConfig config_;
   bool is_first_car_ = false;
   // bool is_pass_stopline_ = false;

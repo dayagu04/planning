@@ -405,7 +405,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   PncTrajectoryPoint reinit_point;
   if (!replan_type_.empty()) {
     if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
-      enable_delta_stitch_in_replan_ = false;
+      enable_delta_stitch_in_replan_ = true;
       reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
           cur_vehicle_state);
       LateralInitStateReset(reinit_point);
@@ -474,7 +474,7 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   auto cur_time_us = IflyTime::Now_us();
   const auto &local_view = session_->environmental_model().get_local_view();
   const auto &localization_timestamp_us =
-      local_view.localization.msg_header.stamp;
+      local_view.localization.meta.timestamp;
 
   uint64_t localization_latency_ms =
       localization_timestamp_us == 0

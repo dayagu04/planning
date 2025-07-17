@@ -82,6 +82,13 @@ bool STGraph::InsertAgent(const agent::Agent& agent,
   if (agent.agent_id() < 0) {
     return false;
   }
+
+  if (neighbor_agent_id_st_boundaries_map_.find(agent.agent_id()) !=
+      neighbor_agent_id_st_boundaries_map_.end()) {
+    // already exist, do not insert again
+    return false;
+  }
+
   const bool is_static = StGraphUtils::IsStaticAgent(agent);
   if (is_static) {
     MakeStaticAgentStBoundary(agent, type);
@@ -94,6 +101,7 @@ bool STGraph::InsertAgent(const agent::Agent& agent,
 void STGraph::MakeAgentStBoundaries() {
   ignore_agent_ids_.clear();
   neighbor_corridor_yield_info_map_.clear();
+  neighbor_corridor_overtake_info_map_.clear();
   const auto& agents = st_graph_input_->filtered_agents();
   for (const auto agent : agents) {
     if (nullptr == agent) {
@@ -311,9 +319,11 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_ego_lane = st_graph_input_->ego_lane();
   const int32_t reserve_num = st_graph_input_->reserve_num();
   const auto planned_kd_path = st_graph_input_->processed_path();
-  const auto ego_motion_simulation_path =
+  const std::shared_ptr<planning_math::KDPath> ego_motion_simulation_path =
       st_graph_input_->ego_motion_simulation_result()
-          ->lat_lon_vehicle_motion_path_ptr;
+          ? st_graph_input_->ego_motion_simulation_result()
+                ->lat_lon_vehicle_motion_path_ptr
+          : nullptr;
   const auto path_border_querier = st_graph_input_->path_border_querier();
   auto mutable_agent_manager = st_graph_input_->mutable_agent_manager();
   const double expand_buffer =
@@ -597,7 +607,7 @@ void STGraph::MakeDynamicAgentStBoundary(
     if (!st_point_pairs.empty()) {
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
-      st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
+      // st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
       st_boundaries_ego.emplace_back(boundary_id);
       neighbor_boundary_id_st_boundaries_map_.insert(
           std::make_pair(boundary_id, std::move(st_boundary)));
@@ -722,6 +732,7 @@ void STGraph::ResetNeighborCorridor() {
   first_neighbor_yield_index_ = std::numeric_limits<int32_t>::max();
   first_neighbor_yield_agent_id_ = agent::AgentDefaultInfo::kNoAgentId;
   first_neighbor_overtake_index_ = std::numeric_limits<int32_t>::max();
+  first_neighbor_overtake_agent_id_ = agent::AgentDefaultInfo::kNoAgentId;
 }
 
 void STGraph::BackwardExtendStBoundaries() {
@@ -1090,6 +1101,7 @@ bool STGraph::CalculateNeighborCorridor() {
   ResetNeighborCorridor();
 
   NeighborCorridorYieldInfo neighbor_corridor_yield_info;
+  NeighborCorridorOvertakeInfo neighbor_corridor_overtake_info;
   const auto& time_range = st_graph_input_->time_range();
   for (size_t i = 0; i < neighbor_corridor_.size(); i++) {
     double t = time_range.first + i * kTimeResolution;
@@ -1136,8 +1148,11 @@ bool STGraph::CalculateNeighborCorridor() {
     }
     if (find_lower) {
       neighbor_corridor_[i].second = lower_point;
-      if (i < first_neighbor_overtake_index_) {
-        first_neighbor_overtake_index_ = i;
+      if (i < neighbor_corridor_overtake_info.first_overtake_index) {
+        neighbor_corridor_overtake_info.first_overtake_index = i;
+        neighbor_corridor_overtake_info.first_overtake_agent_id =
+            lower_point.agent_id();
+        neighbor_corridor_overtake_info.first_overtake_st_point = lower_point;
       }
     }
   }
@@ -1150,7 +1165,15 @@ bool STGraph::CalculateNeighborCorridor() {
         neighbor_corridor_yield_info;
   }
 
-  // refresh final yield index and agent id
+  if (neighbor_corridor_overtake_info.first_overtake_agent_id !=
+      agent::AgentDefaultInfo::kNoAgentId) {
+    const auto& first_overtake_st_point =
+        neighbor_corridor_overtake_info.first_overtake_st_point;
+    neighbor_corridor_overtake_info_map_[first_overtake_st_point.s()] =
+        neighbor_corridor_overtake_info;
+  }
+
+  // refresh final yield or overtake index and agent id
   if (!neighbor_corridor_yield_info_map_.empty()) {
     const auto [closet_s_to_ego, neighbor_corridor_yield_info] =
         *neighbor_corridor_yield_info_map_.begin();
@@ -1160,6 +1183,17 @@ bool STGraph::CalculateNeighborCorridor() {
         neighbor_corridor_yield_info.first_yield_index;
     first_neighbor_yield_agent_id_ =
         neighbor_corridor_yield_info.first_yield_agent_id;
+  }
+
+  if (!neighbor_corridor_overtake_info_map_.empty()) {
+    const auto [closet_s_to_ego, neighbor_corridor_overtake_info] =
+        *neighbor_corridor_overtake_info_map_.begin();
+    neighbor_corridor_[neighbor_corridor_overtake_info.first_overtake_index]
+        .first = neighbor_corridor_overtake_info.first_overtake_st_point;
+    first_neighbor_overtake_index_ =
+        neighbor_corridor_overtake_info.first_overtake_index;
+    first_neighbor_overtake_agent_id_ =
+        neighbor_corridor_overtake_info.first_overtake_agent_id;
   }
 
   return true;

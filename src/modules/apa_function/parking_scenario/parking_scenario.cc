@@ -319,7 +319,7 @@ void ParkingScenario::SetPlanningPath() {
     point->set_heading(pt.GetHeading());
     point->set_kappa(pt.kappa);
     point->set_lat_buffer(pt.lat_buffer);
-    point->set_type(1);
+    point->set_type(pt.type);
   }
 
   for (const auto& pt : complete_path_point_global_vec_) {
@@ -330,7 +330,7 @@ void ParkingScenario::SetPlanningPath() {
     point->set_heading(pt.GetHeading());
     point->set_kappa(pt.kappa);
     point->set_lat_buffer(pt.lat_buffer);
-    point->set_type(1);
+    point->set_type(pt.type);
   }
 
   return;
