@@ -23,11 +23,12 @@ bool MRCBrakeDecider::Execute() {
   auto mrc_output = session_->mutable_planning_context()
       ->mutable_mrc_brake_decider_output();
 
-  //if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
-  if (iflyauto::FunctionalState_MRC == iflyauto::FunctionalState_MRC) {
+  if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
+  //if (iflyauto::FunctionalState_MRC == iflyauto::FunctionalState_MRC) {
     return MRCBrakeProcess();
   }
   has_set_virtual_obs_ = false;
+  JSON_DEBUG_VALUE("mrc_state_meets", has_set_virtual_obs_)
   mrc_output->SetMRCVirtualObsFlag(has_set_virtual_obs_);
   return true;
 
@@ -37,7 +38,7 @@ bool MRCBrakeDecider::MRCBrakeProcess() {
   const auto &environmental_model = session_->environmental_model();
   double dis_to_stopline = environmental_model.get_virtual_lane_manager()
                                ->GetEgoDistanceToStopline();
-
+  JSON_DEBUG_VALUE("previous_mrc_virtual_obs", has_set_virtual_obs_)
   if (has_set_virtual_obs_ == false) {
     mrc_brake_curv_ = GenerateMRCBrakeCurve();
     double s_mrc_brake_stop = mrc_brake_curv_.Evaluate(0, 30.0);
@@ -97,6 +98,8 @@ bool MRCBrakeDecider::MRCBrakeProcess() {
   std::unordered_map<int32_t, planning::agent::Agent> agent_table;
   agent_table.insert({mrc_agent_.agent_id(), mrc_agent_});
   agent_manager->Append(agent_table);
+
+  JSON_DEBUG_VALUE("current_mrc_virtual_obs", has_set_virtual_obs_)
 
   auto mrc_output = session_->mutable_planning_context()
       ->mutable_mrc_brake_decider_output();
