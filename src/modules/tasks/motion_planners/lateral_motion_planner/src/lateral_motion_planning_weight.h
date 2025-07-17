@@ -130,7 +130,8 @@ class LateralMotionPlanningWeight {
       std::vector<double>& expected_steer_vec);
 
   void CalculateJerkBoundByLastJerk(
-      const bool is_high_priority_back,
+      const bool is_high_priority_back, const bool is_in_function,
+      const double enter_lccnoa_time,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       const planning::common::LateralPlanningOutput &last_planning_output,
       planning::common::LateralPlanningInput &planning_input);

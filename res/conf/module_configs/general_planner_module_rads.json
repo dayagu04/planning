@@ -310,6 +310,7 @@
     "enable_navi_time_distance_control": false
   },
   "lat_motion_ilqr": {
+    "pass_acc_mode": false,
     "warm_start_enable": true,
     "curv_factor": 0.33,
     "delta_t": 0.2,
@@ -531,6 +532,7 @@
   },
 
   "result_trajectory_generator": {
+    "use_dynamic_lat_jerk_thr": false,
     "enable_lat_traj": false,
     "curv_factor": 0.33,
     "lat_acc_thr": 3.0,

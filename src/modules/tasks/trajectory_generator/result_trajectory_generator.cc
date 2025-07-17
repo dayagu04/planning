@@ -86,6 +86,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   const auto &frenet_coord = reference_path_ptr->get_frenet_coord();
+  const double tp_init_s = traj_points.front().s;
   for (size_t i = 0; i < traj_points.size(); i++) {
     if (config_.is_pwj_planning) {
       Point2D frenet_pt{traj_points[i].s, traj_points[i].l};
@@ -104,17 +105,21 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     t_vec[i] = traj_points[i].t;
     s_vec[i] = traj_points[i].s;
     l_vec[i] = traj_points[i].l;
-    curvature_vec[i] = traj_points[i].curvature;
-    dkappa_vec[i] = traj_points[i].dkappa;
+    double tp_curvature =
+        motion_planner_output.curv_s_spline(traj_points[i].s - tp_init_s);
+    curvature_vec[i] = tp_curvature;
+    double tp_dcurvature =
+        motion_planner_output.d_curv_s_spline(traj_points[i].s - tp_init_s);
+    dkappa_vec[i] = tp_dcurvature;
     ddkappa_vec[i] = traj_points[i].ddkappa;
     double tp_delta =
-        motion_planner_output.delta_s_spline(traj_points[i].s);
+        motion_planner_output.delta_s_spline(traj_points[i].s - tp_init_s);
     double tp_lat_acc =
         config_.curv_factor * traj_points[i].v * traj_points[i].v * tp_delta;
     lat_acc_vec[i] = tp_lat_acc;
     traj_max_lat_acc = std::max(std::fabs(tp_lat_acc), traj_max_lat_acc);
     double tp_omega =
-        motion_planner_output.omega_s_spline(traj_points[i].s);
+        motion_planner_output.omega_s_spline(traj_points[i].s - tp_init_s);
     double tp_lat_jerk =
         config_.curv_factor * traj_points[i].v * traj_points[i].v * tp_omega;
     lat_jerk_vec[i] = tp_lat_jerk;
@@ -131,13 +136,23 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   curvature_t_spline.set_points(t_vec, curvature_vec);
   dkappa_t_spline.set_points(t_vec, dkappa_vec);
   ddkappa_t_spline.set_points(t_vec, ddkappa_vec);
-
+  double lat_jerk_thr = config_.lat_jerk_thr;
+  // dynamic lat jerk thr
+  if (config_.use_dynamic_lat_jerk_thr) {
+    const auto &lateral_motion_planning_input =
+        DebugInfoManager::GetInstance()
+            .GetDebugInfoPb()
+            ->lateral_motion_planning_input();
+    lat_jerk_thr =
+        lateral_motion_planning_input.jerk_bound();
+  }
+  // judge condition
   auto &ad_info =
       session_->mutable_planning_context()
               ->mutable_planning_hmi_info()
               ->ad_info;
   if ((traj_max_lat_acc > config_.lat_acc_thr) ||
-      (traj_max_lat_jerk > config_.lat_jerk_thr) ||
+      (traj_max_lat_jerk > lat_jerk_thr) ||
       (traj_max_lon_acc > config_.lon_acc_thr) ||
       (traj_max_lon_jerk > config_.lon_jerk_thr)) {
     ad_info.is_avaliable = false;
