@@ -145,9 +145,8 @@ bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
     return true;  // 返回true,代表判断出弯道，不加速，有异常就不加速
   }
   std::vector<std::pair<double, double>> curv_list;
-  //fengwang31:现在GetCurvatureList这个接口没了，暂时注释掉
-  // curv_list = sd_map.GetCurvatureList(current_segment->id(), nearest_s,
-  //                                     config_.search_sdmap_curv_dis);
+  curv_list = sd_map.GetCurvatureList(current_segment->id(), nearest_s,
+                                      config_.search_sdmap_curv_dis);
   double min_curv_radius = 10000.0;
   bool has_curv = true;
   for (int i = 0; i < curv_list.size(); i++) {
