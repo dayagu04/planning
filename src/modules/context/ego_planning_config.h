@@ -1548,6 +1548,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"},
         map_jerk_bound, map_jerk_bound);
+    ReadItem<double>(json, jerk_bound_inactivated_limit, "lat_motion_ilqr",
+                     "jerk_bound_inactivated_limit");
     ReadItem<double>(json, jerk_bound_avoid, "lat_motion_ilqr",
                      "jerk_bound_avoid");
     ReadItem<double>(json, acc_bound_lane_change, "lat_motion_ilqr",
@@ -1731,8 +1733,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "jerk_bound_split");
     ReadItem<bool>(json, ramp_valid, "lat_motion_ilqr", "ramp_valid");
     ReadItem<double>(json, acc_bound_ramp, "lat_motion_ilqr", "acc_bound_ramp");
-    ReadItem<double>(json, jerk_bound_ramp, "lat_motion_ilqr",
-                     "jerk_bound_ramp");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound_ramp"},
+        map_jerk_bound_ramp, map_jerk_bound_ramp);
     ReadItem<double>(json, q_ref_x_ramp, "lat_motion_ilqr", "q_ref_x_ramp");
     ReadItem<double>(json, q_ref_y_ramp, "lat_motion_ilqr", "q_ref_y_ramp");
     ReadItem<double>(json, q_ref_theta_ramp, "lat_motion_ilqr",
@@ -1766,6 +1769,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double acc_bound = 1.5;
   double jerk_bound = 1.0;
   std::vector<double> map_jerk_bound{0.4, 0.35, 0.3, 0.25};
+  double jerk_bound_inactivated_limit = 1.0;
   double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
@@ -1851,7 +1855,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   bool ramp_valid = false;
   double acc_bound_ramp = 3.0;
-  double jerk_bound_ramp = 1.0;
+  std::vector<double> map_jerk_bound_ramp{1.0, 0.8, 0.6, 0.5};
   double q_ref_x_ramp = 400.0;
   double q_ref_y_ramp = 400.0;
   double q_ref_theta_ramp = 5000.0;
@@ -2720,6 +2724,8 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                      "lat_acc_thr");
     ReadItem<double>(json, lat_jerk_thr, "result_trajectory_generator",
                      "lat_jerk_thr");
+    ReadItem<double>(json, ramp_lat_jerk_thr, "result_trajectory_generator",
+                     "ramp_lat_jerk_thr");
     ReadItem<double>(json, lon_acc_thr, "result_trajectory_generator",
                      "lon_acc_thr");
     ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
@@ -2732,6 +2738,7 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   double curv_factor = 0.35;
   double lat_acc_thr = 3.0;
   double lat_jerk_thr = 0.3;
+  double ramp_lat_jerk_thr = 0.65;
   double lon_acc_thr = 3.0;
   double lon_jerk_thr = 0.3;
 };

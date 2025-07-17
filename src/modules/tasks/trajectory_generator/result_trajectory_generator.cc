@@ -137,6 +137,13 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   dkappa_t_spline.set_points(t_vec, dkappa_vec);
   ddkappa_t_spline.set_points(t_vec, ddkappa_vec);
   double lat_jerk_thr = config_.lat_jerk_thr;
+  const bool &ramp_scene =
+    session_->planning_context()
+            .general_lateral_decider_output()
+            .ramp_scene;
+  if (ramp_scene) {
+    lat_jerk_thr = config_.ramp_lat_jerk_thr;
+  }
   // dynamic lat jerk thr
   if (config_.use_dynamic_lat_jerk_thr) {
     const auto &lateral_motion_planning_input =

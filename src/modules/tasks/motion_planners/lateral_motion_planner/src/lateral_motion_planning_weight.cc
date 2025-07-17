@@ -577,7 +577,9 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
   } else if (lateral_motion_scene_ == RAMP) {
-    jerk_bound = config_.jerk_bound_ramp;  // 1.0
+    std::vector<double> xp_road_radius{250.0, 400.0, 600.0, 750.0};
+    jerk_bound = // 1.0 0.8 0.6 0.5
+      planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
   }
   // tiny speed
   if (ego_vel_ < 0.2 &&
@@ -672,7 +674,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
   } else if (lateral_motion_scene_ == RAMP) {
-    jerk_bound = config_.jerk_bound_ramp;  // 1.0
+    std::vector<double> xp_road_radius{250.0, 400.0, 600.0, 750.0};
+    jerk_bound = // 1.0 0.8 0.6 0.5
+      planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
   }
   // emergency
   bool is_soft_bound_spline_valid = false;
@@ -762,12 +766,15 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     jerk_bound = P2_emergency_jerk_bound;
     emergency_jerk_bound = P1_emergency_jerk_bound;
   }
+  if (!is_in_function) {
+    emergency_jerk_bound = config_.jerk_bound_inactivated_limit;
+  }
   // consider 20 frame
   if (enter_lccnoa_time > 1e-6 &&
-      enter_lccnoa_time < 1.0) {
+      enter_lccnoa_time < 2.0) {
     emergency_jerk_bound = P2_emergency_jerk_bound;
     extra_jerk_buffer =
-        std::min(0.05, extra_jerk_buffer);
+        std::min(0.025, extra_jerk_buffer);
   }
   // jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
   jerk_bound = std::max(last_omega_to_jerk, jerk_bound);
