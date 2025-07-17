@@ -525,44 +525,81 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
   const auto init_point = ego_state_mgr->planning_init_point();
   double v_ego = ego_state_mgr->ego_v();
   double v_target_for_dangerous_obs = 40.0;
-  const auto &dangerous_obs_decision_output =
-      session_->planning_context().potential_dangerous_agent_decider_output();
-  const auto dangerous_obs_vec = dangerous_obs_decision_output.dangerous_agent_info;
-  if (dangerous_obs_vec.empty() || dangerous_obs_vec[0].recommended_maneuver.
-      longitudinal_maneuver == LongitudinalManeuver::IGNORE) {
-    v_limit_for_dangerous_obstacle_ = 0.0;
-    return;
-  }
-  /* const auto agent_manager =
+  const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   if (agent_manager == nullptr) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
     return;
   }
-  const auto dangerous_agent = agent_manager->GetAgent(dangerous_obs_vec[0].id);
-  if (dangerous_agent == nullptr) {
-    return;
-  } */
-  if (dangerous_obs_vec[0].recommended_maneuver.
-    longitudinal_maneuver == LongitudinalManeuver::SLIGHTLY_BRAKE) {
-    if (init_point.v < kDangerousObstacleMinSpeedLimit) {
-      if (v_limit_for_dangerous_obstacle_ < planning_math::kMathEpsilon) {
-          v_limit_for_dangerous_obstacle_ = init_point.v;
-      }
-      v_target_for_dangerous_obs = v_limit_for_dangerous_obstacle_;
-    } else {
-      if (v_limit_for_dangerous_obstacle_ < planning_math::kMathEpsilon) {
-        v_limit_for_dangerous_obstacle_ = kDangerousObstacleMinSpeedLimit;
-      }
-      v_target_for_dangerous_obs = v_limit_for_dangerous_obstacle_;
+  std::vector<const agent::Agent *> danger_agents;
+  const auto &all_current_agents = agent_manager->GetAllCurrentAgents();
+  for (const auto agt_ptr: all_current_agents) {
+    if (agt_ptr->is_dangerous() == true) {
+      danger_agents.emplace_back(agt_ptr.get());
     }
-
   }
+  if (danger_agents.empty()) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
+  bool all_agents_static = true;
+  for (const auto agt_ptr: danger_agents) {
+    if (!agt_ptr->is_static()) {
+      all_agents_static = false;
+      break;
+    }
+  }
+  if (all_agents_static) {
+    if (danger_agents.size() == 1) {
+      v_target_for_dangerous_obs =  speed_limit_config_.v_limit_one_still_danger_obs;
+    } else {
+      v_target_for_dangerous_obs = speed_limit_config_.v_limit_more_still_danger_obs;
+    }
+  } else {
+    if (danger_agents.size() == 1) {
+      v_target_for_dangerous_obs = danger_agents[0]->speed() + speed_limit_config_.v_rel_limit_for_dynamic_danger_obs;
+    } else {
+    //average vel of dangerous_obs by distance weight
+      std::vector<double> dis_vec;
+      std::vector<double> vel_vec;
+      std::vector<double> weight_vec;
+      std::vector<double> weight_numerator_vec;
+      double weight_denominator = 0.0;
+      auto compare_danger_obs_by_dis = [&](const agent::Agent * agt_ptr_1, const agent::Agent * agt_ptr_2) {
+        return std::fabs(agt_ptr_1->d_rel()) < std::fabs(agt_ptr_2->d_rel());
+      };
+      std::sort(danger_agents.begin(), danger_agents.end(), compare_danger_obs_by_dis);
+      int used_num = danger_agents.size() > 4? 4: danger_agents.size();
+      for (int i = 0; i < used_num; i++) {
+        vel_vec.emplace_back(danger_agents[i]->speed());
+        dis_vec.emplace_back(std::fabs(danger_agents[i]->d_rel()));
+      }
+      for (int i = 0; i < used_num; i++) {
+        double base = 1.0;
+        for (int j = 0; j < used_num; j++) {
+          if (j == i) {
+            continue;
+          } else {
+            base = base * dis_vec[j];
+          }
+        }
+        weight_denominator = weight_denominator + base;
+        weight_numerator_vec.emplace_back(base);
+      }
+      double avg_vel = 0.0;
+      for (int i = 0; i < used_num; i++) {
+        avg_vel = avg_vel + (weight_numerator_vec[i] / weight_denominator) * vel_vec[i];
+      }
+      v_target_for_dangerous_obs = avg_vel + speed_limit_config_.v_rel_limit_for_dynamic_danger_obs;
+
+    }
+  }
+
   if (v_target_for_dangerous_obs < v_target_) {
     v_target_ = v_target_for_dangerous_obs;
     v_target_type_ = SpeedLimitType::DANGEROUS_OBSTACLE;
   }
   JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
-  JSON_DEBUG_VALUE("dangerous_obs_id", dangerous_obs_vec[0].id);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimitIntoMap(v_target_for_dangerous_obs,

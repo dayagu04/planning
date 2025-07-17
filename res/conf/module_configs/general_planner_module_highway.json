@@ -697,7 +697,10 @@
     "acc_to_ramp": -0.7,
     "pre_accelerate_distance_for_merge": 150.0,
     "straight_ramp_v_limit": 19.44,
-    "v_intersection_min_limit": 11.11
+    "v_intersection_min_limit": 11.11,
+    "v_limit_one_still_danger_obs": 12.5,
+    "v_limit_more_still_danger_obs": 11.11,
+    "v_rel_limit_for_dynamic_danger_obs": 4.17
   },
 
   "result_trajectory_generator": {
