@@ -1043,7 +1043,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         avoid_agents_info.end()) {
       invade_dis = std::max(avoid_agents_info.at(avoid_agent->agent_id()), 0.0);
     }
-    invade_dis = is_triggered_vru ? 0.2 : invade_dis;
+    // invade_dis = is_triggered_vru ? 0.2 : invade_dis;
     std::array<double, 2> xp{lane_half_width - invade_dis,
                              lane_half_width + 0.2};
     std::array<double, 2> fp{v_follow_desired, v_ego};
@@ -1058,11 +1058,12 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         avoid_agent->is_static()
             ? interp(lane_half_width - fabs(min_lat_l), xp1, fp1)
             : interp(lane_half_width - fabs(min_lat_l), xp1, fp2);
-    v_limit_lower = is_triggered_vru ? 1.0 : v_limit_lower;
+    // v_limit_lower = is_triggered_vru ? 1.0 : v_limit_lower;
     // const double v_limit_lower = avoid_agent->is_static()
     //                                  ? kStaticAgentAvoidLimitedSpeedHigh
     //                                  : kDynamicAgentAvoidLimitedSpeedHigh;
-    double v_limit_lower_tmp = is_triggered_vru ? 1.0 : avoid_agent_v + 2.0;
+    // double v_limit_lower_tmp = is_triggered_vru ? 1.0 : avoid_agent_v + 2.0;
+    double v_limit_lower_tmp = avoid_agent_v + 2.0;
     v_limit = std::max(v_limit, v_limit_lower);
     v_limit = std::max(v_limit, v_limit_lower_tmp);
     v_limit = std::min(v_limit, init_point.v);
