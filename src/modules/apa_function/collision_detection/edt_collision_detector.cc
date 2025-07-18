@@ -309,7 +309,7 @@ void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
     } else {
       // other circle in car
       // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += body_lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
     }
   }
 }
@@ -348,7 +348,7 @@ void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
     } else {
       // other circle in car
       // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += body_lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
     }
   }
 }
@@ -382,7 +382,7 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
     } else {
       // other circle in car
       // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += body_lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
     }
   }
 }
