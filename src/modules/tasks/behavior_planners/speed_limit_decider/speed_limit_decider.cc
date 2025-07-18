@@ -572,7 +572,7 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
       int used_num = danger_agents.size() > 4? 4: danger_agents.size();
       for (int i = 0; i < used_num; i++) {
         vel_vec.emplace_back(danger_agents[i]->speed());
-        dis_vec.emplace_back(std::fabs(danger_agents[i]->d_rel()));
+        dis_vec.emplace_back(std::max(std::fabs(danger_agents[i]->d_rel()), 0.1));
       }
       for (int i = 0; i < used_num; i++) {
         double base = 1.0;
