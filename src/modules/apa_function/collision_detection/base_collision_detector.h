@@ -109,7 +109,8 @@ class BaseCollisionDetector {
     obs_manager_ptr_ = obs_manager_ptr;
   };
   void SetSampleDs(const double sample_ds) { sample_ds_ = sample_ds; }
-  void UpdateSafeBuffer(const double lat_buffer, const double lon_buffer,
+  void UpdateSafeBuffer(const double body_lat_buffer, const double lon_buffer,
+                        const bool special_process_mirror = false,
                         const double mirror_lat_buffer = 0.08);
 
   void UpdateObsClearZone(const std::vector<Eigen::Vector2d> &pt_vec);
@@ -160,9 +161,10 @@ class BaseCollisionDetector {
   CarFootPrintCircleList car_without_mirror_circles_list_;
   CarFootPrintCircleList car_chassis_circles_list_;
 
-  double lat_buffer_{0.};
-  double lon_buffer_{0.};
+  double body_lat_buffer_{0.};
   double mirror_lat_buffer_{0.};
+  double lon_buffer_{0.};
+
   std::vector<geometry_lib::PathPoint> path_pt_vec_;
 
   std::shared_ptr<ApaObstacleManager> obs_manager_ptr_;

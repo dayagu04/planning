@@ -9,8 +9,9 @@ namespace apa_planner {
 void GeometryCollisionDetector::Reset() {}
 
 const ColResult GeometryCollisionDetector::Update(
-    const geometry_lib::PathSegment &path_seg, const double lat_buffer,
-    const double lon_buffer, const double mirror_lat_buffer) {
+    const geometry_lib::PathSegment &path_seg, const double body_lat_buffer,
+    const double lon_buffer, const bool special_process_mirror,
+    const double mirror_lat_buffer) {
   col_res_.Reset();
   if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty()) {
     return col_res_;
@@ -19,7 +20,8 @@ const ColResult GeometryCollisionDetector::Update(
   col_res_.remain_car_dist = path_seg.Getlength();
   col_res_.remain_dist = path_seg.Getlength();
 
-  UpdateSafeBuffer(lat_buffer, lon_buffer, mirror_lat_buffer);
+  UpdateSafeBuffer(body_lat_buffer, lon_buffer, special_process_mirror,
+                   mirror_lat_buffer);
 
   CalPathSegBound(path_seg);
 

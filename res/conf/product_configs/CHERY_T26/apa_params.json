@@ -226,7 +226,7 @@
   "max_dynamic_plan_proj_dt": 0.8,
   "max_lat_err": 0.086,
   "max_phi_err": 2.68,
-  "dynamic_col_det_enable": true,
+  "enable_multi_height_col_det": false,
   "parallel_obs2slot_max_dist": 16.66,
   "parallel_channel_y_mag": 7.9,
   "parallel_channel_x_mag": 20.0,

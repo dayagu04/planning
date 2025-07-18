@@ -115,8 +115,8 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   mirror_to_rear_overhanging_polygon_vertex_.emplace_back(
       right_mirror_rectangle_vertex_[0]);
 
+  // 填充包络圆
   car_with_mirror_circles_list_.Reset();
-  car_with_mirror_circles_list_.height_type = ApaObsHeightType::HIGH;
   std::vector<float> circle_x, circle_y, circle_r;
   if (fold_mirror_flag) {
     circle_x = param.fold_mirror_footprint_circle_x;
@@ -142,8 +142,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   }
 
   car_without_mirror_circles_list_.Reset();
-  // todo: use right circle and height type
-  car_without_mirror_circles_list_.height_type = ApaObsHeightType::HIGH;
   circle_x = param.fold_mirror_footprint_circle_x;
   circle_y = param.fold_mirror_footprint_circle_y;
   circle_r = param.fold_mirror_footprint_circle_r;
@@ -163,8 +161,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   }
 
   car_chassis_circles_list_.Reset();
-  // todo: use right circle and height type
-  car_chassis_circles_list_.height_type = ApaObsHeightType::HIGH;
   circle_x = param.fold_mirror_footprint_circle_x;
   circle_y = param.fold_mirror_footprint_circle_y;
   circle_r = param.fold_mirror_footprint_circle_r;
@@ -184,18 +180,23 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   need_update_buffer_ = true;
 }
 
-void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
+void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
                                              const double lon_buffer,
+                                             const bool special_process_mirror,
                                              const double mirror_lat_buffer) {
   lon_buffer_ = lon_buffer;
-  if (!need_update_buffer_ && mathlib::IsDoubleEqual(lat_buffer, lat_buffer_) &&
-      mathlib::IsDoubleEqual(mirror_lat_buffer, mirror_lat_buffer_)) {
+  const float real_mirror_lat_buffer =
+      special_process_mirror ? mirror_lat_buffer : body_lat_buffer;
+
+  if (!need_update_buffer_ &&
+      mathlib::IsDoubleEqual(body_lat_buffer, body_lat_buffer_) &&
+      mathlib::IsDoubleEqual(real_mirror_lat_buffer, mirror_lat_buffer_)) {
     return;
   }
+
   need_update_buffer_ = false;
-  lat_buffer_ = lat_buffer;
-  mirror_lat_buffer_ = lat_buffer_;
-  // mirror_lat_buffer_ = mirror_lat_buffer;
+  body_lat_buffer_ = body_lat_buffer;
+  mirror_lat_buffer_ = real_mirror_lat_buffer;
   Eigen::Vector2d vertex;
 
   const ApaParameters& param = apa_param.GetParam();
@@ -211,7 +212,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
       vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
                                   : pt.y() - mirror_lat_buffer_;
     } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer_ : pt.y() - lat_buffer_;
+      vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
+                                  : pt.y() - body_lat_buffer_;
     }
 
     car_with_mirror_polygon_vertex_with_buffer_.emplace_back(vertex);
@@ -223,7 +225,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
       car_without_mirror_polygon_vertex_.size());
   for (const Eigen::Vector2d& pt : car_without_mirror_polygon_vertex_) {
     vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer_ : pt.y() - lat_buffer_;
+    vertex.y() =
+        (pt.y() > 0.0) ? pt.y() + body_lat_buffer_ : pt.y() - body_lat_buffer_;
     car_without_mirror_polygon_vertex_with_buffer_.emplace_back(vertex);
   }
 
@@ -232,7 +235,10 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
   left_mirror_rectangle_vertex_with_buffer_.reserve(
       left_mirror_rectangle_vertex_.size());
   for (const Eigen::Vector2d& pt : left_mirror_rectangle_vertex_) {
-    vertex << pt.x(), pt.y() + mirror_lat_buffer_;
+    vertex << pt.x(), pt.y();
+    if (std::fabs(pt.y()) > param.car_width * 0.5) {
+      vertex.y() += mirror_lat_buffer_;
+    }
     left_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
 
@@ -241,7 +247,10 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
   right_mirror_rectangle_vertex_with_buffer_.reserve(
       right_mirror_rectangle_vertex_.size());
   for (const Eigen::Vector2d& pt : right_mirror_rectangle_vertex_) {
-    vertex << pt.x(), pt.y() - mirror_lat_buffer_;
+    vertex << pt.x(), pt.y();
+    if (std::fabs(pt.y()) > param.car_width * 0.5) {
+      vertex.y() -= mirror_lat_buffer_;
+    }
     right_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
 
@@ -250,7 +259,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
   chassis_vertex_with_buffer_.reserve(chassis_vertex_.size());
   for (const Eigen::Vector2d& pt : chassis_vertex_) {
     vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer_ : pt.y() - lat_buffer_;
+    vertex.y() =
+        (pt.y() > 0.0) ? pt.y() + body_lat_buffer_ : pt.y() - body_lat_buffer_;
     chassis_vertex_with_buffer_.emplace_back(vertex);
   }
 
@@ -264,7 +274,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
       vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
                                   : pt.y() - mirror_lat_buffer_;
     } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer_ : pt.y() - lat_buffer_;
+      vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
+                                  : pt.y() - body_lat_buffer_;
     }
     car_with_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
@@ -281,7 +292,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
       vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
                                   : pt.y() - mirror_lat_buffer_;
     } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer_ : pt.y() - lat_buffer_;
+      vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
+                                  : pt.y() - body_lat_buffer_;
     }
     mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
         .emplace_back(vertex);
@@ -297,7 +309,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
       vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
                                   : pt.y() - mirror_lat_buffer_;
     } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + lat_buffer_ : pt.y() - lat_buffer_;
+      vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
+                                  : pt.y() - body_lat_buffer_;
     }
     mirror_to_rear_overhanging_polygon_vertex_with_buffer_.emplace_back(vertex);
   }

@@ -20,7 +20,6 @@ namespace planning {
 namespace apa_planner {
 
 #define write_debug_file (0)
-#define have_different_height_car_circle (0)
 
 void EDTCollisionDetector::PreProcess() {
   AddObsToOGM();
@@ -156,51 +155,52 @@ void EDTCollisionDetector::CalcObsDistArray() {
   // CV_8UC1 represent uint8 single channel matrix, which is a grayscale image
   cv::Mat car_with_mirror_map_matrix(max_bound_x, max_bound_y, CV_8UC1,
                                      cv::Scalar(200));
-  TransformObsOGMToMatrix(&car_with_mirror_map_matrix,
-                          car_with_mirror_obs_ogm_);
+  cv::Mat car_without_mirror_map_matrix(max_bound_x, max_bound_y, CV_8UC1,
+                                        cv::Scalar(200));
+  cv::Mat car_chassis_map_matrix(max_bound_x, max_bound_y, CV_8UC1,
+                                 cv::Scalar(200));
 
   // Calculate the nearest distance from each pixel to other zero pixels
-  cv::Mat car_with_mirror_edt_matrix;
+  cv::Mat car_with_mirror_edt_matrix, car_without_mirror_edt_matrix,
+      car_chassis_edt_matrix;
+
+  TransformObsOGMToMatrix(&car_with_mirror_map_matrix,
+                          car_with_mirror_obs_ogm_);
   cv::distanceTransform(car_with_mirror_map_matrix, car_with_mirror_edt_matrix,
                         CV_DIST_L2, CV_DIST_MASK_PRECISE);
 
-#if have_different_height_car_circle
-  cv::Mat car_without_mirror_map_matrix(max_bound_x, max_bound_y, CV_8UC1,
-                                        cv::Scalar(200));
-  TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
-                          car_without_mirror_obs_ogm_);
-  cv::Mat car_without_mirror_edt_matrix;
-  cv::distanceTransform(car_without_mirror_map_matrix,
-                        car_without_mirror_edt_matrix, CV_DIST_L2,
-                        CV_DIST_MASK_PRECISE);
+  if (apa_param.GetParam().enable_multi_height_col_det) {
+    TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
+                            car_without_mirror_obs_ogm_);
+    cv::distanceTransform(car_without_mirror_map_matrix,
+                          car_without_mirror_edt_matrix, CV_DIST_L2,
+                          CV_DIST_MASK_PRECISE);
 
-  cv::Mat car_chassis_map_matrix(max_bound_x, max_bound_y, CV_8UC1,
-                                 cv::Scalar(200));
-  TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
-  cv::Mat car_chassis_edt_matrix;
-  cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
-                        CV_DIST_L2, CV_DIST_MASK_PRECISE);
-#endif
+    TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
+    cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
+                          CV_DIST_L2, CV_DIST_MASK_PRECISE);
+  }
 
   // only protect, avoid crash caused by excessive boundary values
   const int max_row_num = std::min(max_bound_x, edt_ogm_grid_x_max);
   const int max_col_num = std::min(max_bound_y, edt_ogm_grid_y_max);
   for (int row = 0; row < max_row_num; ++row) {
-    float *car_with_mirror_data = car_with_mirror_edt_matrix.ptr<float>(row);
-#if have_different_height_car_circle
-    float *car_without_mirror_data =
-        car_without_mirror_edt_matrix.ptr<float>(row);
-    float *car_chassis_data = car_chassis_edt_matrix.ptr<float>(row);
-#endif
+    float *car_with_mirror_data, *car_without_mirror_data, *car_chassis_data;
+    car_with_mirror_data = car_with_mirror_edt_matrix.ptr<float>(row);
+    if (apa_param.GetParam().enable_multi_height_col_det) {
+      car_without_mirror_data = car_without_mirror_edt_matrix.ptr<float>(row);
+      car_chassis_data = car_chassis_edt_matrix.ptr<float>(row);
+    }
+
     for (int col = 0; col < max_col_num; ++col) {
       car_with_mirror_ogm_obs_data_.dist[row][col] =
           car_with_mirror_data[col] * float(resolution_);
-#if have_different_height_car_circle
-      car_without_mirror_ogm_obs_data_.dist[row][col] =
-          car_without_mirror_data[col] * float(resolution_);
-      car_chassis_ogm_obs_data_.dist[row][col] =
-          car_chassis_data[col] * float(resolution_);
-#endif
+      if (apa_param.GetParam().enable_multi_height_col_det) {
+        car_without_mirror_ogm_obs_data_.dist[row][col] =
+            car_without_mirror_data[col] * float(resolution_);
+        car_chassis_ogm_obs_data_.dist[row][col] =
+            car_chassis_data[col] * float(resolution_);
+      }
     }
   }
 
@@ -213,22 +213,24 @@ void EDTCollisionDetector::CalcObsDistArray() {
               car_with_mirror_map_matrix);
   cv::imwrite("/asw/planning/glog/car_with_mirror_edt.png",
               car_with_mirror_edt_matrix);
-#if have_different_height_car_circle
-  cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 0);
-  cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 1);
-  cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 0);
-  cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 1);
-  cv::imwrite("/asw/planning/glog/car_without_mirror_ogm.png",
-              car_without_mirror_map_matrix);
-  cv::imwrite("/asw/planning/glog/car_without_mirror_edt.png",
-              car_without_mirror_edt_matrix);
-  cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 0);
-  cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 1);
-  cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 0);
-  cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 1);
-  cv::imwrite("/asw/planning/glog/car_chassis_ogm.png", car_chassis_map_matrix);
-  cv::imwrite("/asw/planning/glog/car_chassis_edt.png", car_chassis_edt_matrix);
-#endif
+  if (apa_param.GetParam().enable_multi_height_col_det) {
+    cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 0);
+    cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 1);
+    cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 0);
+    cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 1);
+    cv::imwrite("/asw/planning/glog/car_without_mirror_ogm.png",
+                car_without_mirror_map_matrix);
+    cv::imwrite("/asw/planning/glog/car_without_mirror_edt.png",
+                car_without_mirror_edt_matrix);
+    cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 0);
+    cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 1);
+    cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 0);
+    cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 1);
+    cv::imwrite("/asw/planning/glog/car_chassis_ogm.png",
+                car_chassis_map_matrix);
+    cv::imwrite("/asw/planning/glog/car_chassis_edt.png",
+                car_chassis_edt_matrix);
+  }
 #endif
 }
 
@@ -250,89 +252,64 @@ const double EDTCollisionDetector::GetObsDistByIndex(
   return 0.0;
 }
 
-void EDTCollisionDetector::UpdateSafeBuffer(const double lat_buffer,
+void EDTCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
                                             const double lon_buffer,
                                             const double max_circle_buffer,
+                                            const bool special_process_mirror,
                                             const double mirror_lat_buffer) {
   lon_buffer_ = lon_buffer;
-  if (!need_update_buffer_ && std::fabs(lat_buffer_ - lat_buffer) < 0.001 &&
+  const float real_mirror_lat_buffer =
+      special_process_mirror ? mirror_lat_buffer : body_lat_buffer;
+
+  if (!need_update_buffer_ &&
+      std::fabs(body_lat_buffer_ - body_lat_buffer) < 0.001 &&
       std::fabs(max_circle_buffer_ - max_circle_buffer) < 0.001 &&
-      std::fabs(mirror_lat_buffer_ - mirror_lat_buffer) < 0.001) {
+      std::fabs(mirror_lat_buffer_ - real_mirror_lat_buffer) < 0.001) {
     return;
   }
+
   need_update_buffer_ = false;
-  lat_buffer_ = lat_buffer;
-  mirror_lat_buffer_ = lat_buffer_;
-  // mirror_lat_buffer_ = mirror_lat_buffer;
+  body_lat_buffer_ = body_lat_buffer;
+  mirror_lat_buffer_ = real_mirror_lat_buffer;
   max_circle_buffer_ = max_circle_buffer;
 
-  car_with_mirror_circles_list_buffer_.Reset();
-  car_with_mirror_circles_list_buffer_ = car_with_mirror_circles_list_;
-  car_with_mirror_circles_list_buffer_.max_circle.radius += max_circle_buffer_;
-  CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
-  for (size_t i = 0; i < car_with_mirror_circles_list_buffer_.count; ++i) {
-    if (i == 0 || i == 4) {
-      // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += lat_buffer_;
-    } else if (i == 1 || i == 3) {
-      // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= lat_buffer_;
-    } else if (i == 2 || i == 5) {
-      // left and right mirror, increase radius
-      circles[i].radius += lat_buffer_;
-    } else if (i == 6) {
-      // front circle, increase radius
-      circles[i].radius += lat_buffer_;
-      // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= lat_buffer_;
-    } else if (i == 9) {
-      // rear circle, increase radius
-      circles[i].radius += lat_buffer_;
-      // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
-    } else {
-      // other circle in car
-      // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
-    }
-  }
-
   UpdateCarWithMirrorSafeBuffer();
-#if have_different_height_car_circle
-  UpdateCarWithOutMirrorSafeBuffer();
-  UpdateCarChassisSafeBuffer();
-#endif
+  if (apa_param.GetParam().enable_multi_height_col_det) {
+    UpdateCarWithOutMirrorSafeBuffer();
+    UpdateCarChassisSafeBuffer();
+  }
 }
 
 void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
   car_with_mirror_circles_list_buffer_.Reset();
   car_with_mirror_circles_list_buffer_ = car_with_mirror_circles_list_;
   car_with_mirror_circles_list_buffer_.max_circle.radius += max_circle_buffer_;
+  car_with_mirror_circles_list_buffer_.height_type = ApaObsHeightType::HIGH;
   CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
   for (size_t i = 0; i < car_with_mirror_circles_list_buffer_.count; ++i) {
     if (i == 0 || i == 4) {
       // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += lat_buffer_;
+      circles[i].center_local.y() += body_lat_buffer_;
     } else if (i == 1 || i == 3) {
       // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= lat_buffer_;
+      circles[i].center_local.y() -= body_lat_buffer_;
     } else if (i == 2 || i == 5) {
       // left and right mirror, increase radius
       circles[i].radius += mirror_lat_buffer_;
     } else if (i == 6) {
       // front circle, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
       // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= lat_buffer_;
+      circles[i].center_local.x() -= body_lat_buffer_;
     } else if (i == 9) {
       // rear circle, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
       // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
+      circles[i].center_local.x() += body_lat_buffer_;
     } else {
       // other circle in car
       // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
+      circles[i].center_local.x() += body_lat_buffer_;
     }
   }
 }
@@ -345,31 +322,33 @@ void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
       max_circle_buffer_;
   CarFootPrintCircle *circles =
       car_without_mirror_circles_list_with_buffer_.circles;
+  car_without_mirror_circles_list_with_buffer_.height_type =
+      ApaObsHeightType::MID;
   for (size_t i = 0; i < car_without_mirror_circles_list_with_buffer_.count;
        ++i) {
     if (i == 0 || i == 4) {
       // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += lat_buffer_;
+      circles[i].center_local.y() += body_lat_buffer_;
     } else if (i == 1 || i == 3) {
       // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= lat_buffer_;
+      circles[i].center_local.y() -= body_lat_buffer_;
     } else if (i == 2 || i == 5) {
       // left and right mirror, increase radius
       circles[i].radius += mirror_lat_buffer_;
     } else if (i == 6) {
       // front circle, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
       // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= lat_buffer_;
+      circles[i].center_local.x() -= body_lat_buffer_;
     } else if (i == 9) {
       // rear circle, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
       // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
+      circles[i].center_local.x() += body_lat_buffer_;
     } else {
       // other circle in car
       // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
+      circles[i].center_local.x() += body_lat_buffer_;
     }
   }
 }
@@ -378,31 +357,32 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
   car_chassis_circles_list_with_buffer_.Reset();
   car_chassis_circles_list_with_buffer_ = car_chassis_circles_list_;
   car_chassis_circles_list_with_buffer_.max_circle.radius += max_circle_buffer_;
+  car_chassis_circles_list_with_buffer_.height_type = ApaObsHeightType::LOW;
   CarFootPrintCircle *circles = car_chassis_circles_list_with_buffer_.circles;
   for (size_t i = 0; i < car_chassis_circles_list_with_buffer_.count; ++i) {
     if (i == 0 || i == 4) {
       // left front circle, left rear circle, move toward left
-      circles[i].center_local.y() += lat_buffer_;
+      circles[i].center_local.y() += body_lat_buffer_;
     } else if (i == 1 || i == 3) {
       // right front circle, right rear circle, move toward right
-      circles[i].center_local.y() -= lat_buffer_;
+      circles[i].center_local.y() -= body_lat_buffer_;
     } else if (i == 2 || i == 5) {
       // left and right mirror, increase radius
       circles[i].radius += mirror_lat_buffer_;
     } else if (i == 6) {
       // front circle, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
       // move toward down, still tangent to the front lane of the car
-      circles[i].center_local.x() -= lat_buffer_;
+      circles[i].center_local.x() -= body_lat_buffer_;
     } else if (i == 9) {
       // rear circle, increase radius
-      circles[i].radius += lat_buffer_;
+      circles[i].radius += body_lat_buffer_;
       // move toward up, still tangent to the rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
+      circles[i].center_local.x() += body_lat_buffer_;
     } else {
       // other circle in car
       // generally it willn't exceed front and rear lane of the car
-      circles[i].center_local.x() += lat_buffer_;
+      circles[i].center_local.x() += body_lat_buffer_;
     }
   }
 }
@@ -502,19 +482,21 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 }
 
 const ColResult EDTCollisionDetector::Update(
-    const geometry_lib::PathSegment &path_seg, const double lat_buffer,
+    const geometry_lib::PathSegment &path_seg, const double body_lat_buffer,
     const double lon_buffer, const bool need_cal_obs_dist,
-    const double max_circle_buffer, const double mirror_lat_buffer) {
+    const double max_circle_buffer, const bool special_process_mirror,
+    const double mirror_lat_buffer) {
   std::vector<geometry_lib::PathPoint> pt_vec;
   geometry_lib::SamplePointSetInPathSeg(pt_vec, path_seg, sample_ds_);
-  return Update(pt_vec, lat_buffer, lon_buffer, need_cal_obs_dist,
-                max_circle_buffer, mirror_lat_buffer);
+  return Update(pt_vec, body_lat_buffer, lon_buffer, need_cal_obs_dist,
+                max_circle_buffer, special_process_mirror, mirror_lat_buffer);
 }
 
 const ColResult EDTCollisionDetector::Update(
-    const std::vector<geometry_lib::PathPoint> &pt_vec, const double lat_buffer,
-    const double lon_buffer, const bool need_cal_obs_dist,
-    const double max_circle_buffer, const double mirror_lat_buffer) {
+    const std::vector<geometry_lib::PathPoint> &pt_vec,
+    const double body_lat_buffer, const double lon_buffer,
+    const bool need_cal_obs_dist, const double max_circle_buffer,
+    const bool special_process_mirror, const double mirror_lat_buffer) {
   // The input PathPoint s must be assigned a value
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -526,8 +508,8 @@ const ColResult EDTCollisionDetector::Update(
   col_res_.remain_car_dist = pt_vec.back().s;
   col_res_.remain_dist = pt_vec.back().s;
 
-  UpdateSafeBuffer(lat_buffer, lon_buffer, max_circle_buffer,
-                   mirror_lat_buffer);
+  UpdateSafeBuffer(body_lat_buffer, lon_buffer, max_circle_buffer,
+                   special_process_mirror, mirror_lat_buffer);
 
   path_pt_vec_ = pt_vec;
   if (N > 1 && lon_buffer > 0.01) {
@@ -574,29 +556,29 @@ const ColResult EDTCollisionDetector::Update(
         break;
       }
 
-#if have_different_height_car_circle
-      col_flag = need_cal_obs_dist
-                     ? IsCollisionForPoint(
-                           pt, &car_without_mirror_circles_list_with_buffer_,
-                           &obs_dist, &circle_id)
-                     : IsCollisionForPoint(
-                           pt, &car_without_mirror_circles_list_with_buffer_);
+      if (apa_param.GetParam().enable_multi_height_col_det) {
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(
+                             pt, &car_without_mirror_circles_list_with_buffer_,
+                             &obs_dist, &circle_id)
+                       : IsCollisionForPoint(
+                             pt, &car_without_mirror_circles_list_with_buffer_);
 
-      if (col_flag) {
-        break;
+        if (col_flag) {
+          break;
+        }
+
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(
+                             pt, &car_chassis_circles_list_with_buffer_,
+                             &obs_dist, &circle_id)
+                       : IsCollisionForPoint(
+                             pt, &car_chassis_circles_list_with_buffer_);
+
+        if (col_flag) {
+          break;
+        }
       }
-
-      col_flag =
-          need_cal_obs_dist
-              ? IsCollisionForPoint(pt, &car_chassis_circles_list_with_buffer_,
-                                    &obs_dist, &circle_id)
-              : IsCollisionForPoint(pt, &car_chassis_circles_list_with_buffer_);
-
-      if (col_flag) {
-        break;
-      }
-
-#endif
     }
 
     if (need_cal_obs_dist) {
@@ -610,7 +592,8 @@ const ColResult EDTCollisionDetector::Update(
       }
 
       col_res_.pt_obs_dist_info_vec.emplace_back(geometry_lib::Pt2ObsDistInfo(
-          std::pair<double, geometry_lib::PathPoint>{obs_dist + lat_buffer, pt},
+          std::pair<double, geometry_lib::PathPoint>{obs_dist + body_lat_buffer,
+                                                     pt},
           circle_id, car_safe_pos));
     }
 
