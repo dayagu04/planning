@@ -417,6 +417,45 @@ def update_jlt_online_data(jlt_speed,lon_plan_data):
     's': s,
   })
 
+def update_publish_data(planning,lon_plan_data):
+  # plot jlt optimization data
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(planning.trajectory.trajectory_points)):
+    s.append(planning.trajectory.trajectory_points[i].distance)
+    t.append(planning.trajectory.trajectory_points[i].t)
+    v.append(planning.trajectory.trajectory_points[i].v)
+
+    acc.append(planning.trajectory.trajectory_points[i].a)
+    jerk.append(planning.trajectory.trajectory_points[i].jerk)
+
+    # print('s ', s[i], 't ',
+    #   t[i], 'v ', v[i],
+    #   'acc ', acc[i], 'jerk ', jerk[i])
+
+  lon_plan_data['traj_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
+
+  lon_plan_data['traj_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['traj_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['traj_data_st'].data.update({
+    't': t,
+    's': s,
+  })
+
 def update_record_speed_data(speed,lon_plan_data):
   s =[]
   t =[]
@@ -570,6 +609,12 @@ def create_lon_plan_figure(fig1):
   jlt_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
 
   # offline data
+  traj_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  traj_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  traj_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  traj_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
+  # offline data
   record_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
   record_data_st = ColumnDataSource(data = {'s':[], 't':[]})
   record_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
@@ -600,6 +645,10 @@ def create_lon_plan_figure(fig1):
                    'record_data_st':record_data_st,
                    'record_data_s_acc':record_data_s_acc,
                    'record_data_s_jerk':record_data_s_jerk,
+                   'traj_data_sv':traj_data_sv,
+                   'traj_data_st':traj_data_st,
+                   'traj_data_s_acc':traj_data_s_acc,
+                   'traj_data_s_jerk':traj_data_s_jerk,
   }
 
   columns = [
@@ -656,6 +705,12 @@ def create_lon_plan_figure(fig1):
   f2 = fig_s_time.line('t', 's', source = jlt_data_st, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt_st')
   f6 = fig_as.line('s', 'acc', source = jlt_data_s_acc, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt acc')
   f7 = fig_js.line('s', 'jerk', source=jlt_data_s_jerk, line_width=2, line_color='black', line_dash='solid', legend_label='jlt jerk')
+
+  # publish traj to control data
+  f3 = fig_sv.line('s', 'v', source = traj_data_sv, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'traj sv')
+  f2 = fig_s_time.line('t', 's', source = traj_data_st, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'traj st')
+  f6 = fig_as.line('s', 'acc', source = traj_data_s_acc, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'traj acc')
+  f7 = fig_js.line('s', 'jerk', source=traj_data_s_jerk, line_width=2, line_color='cyan', line_dash='solid', legend_label='traj jerk')
 
   # offline data
   f3 = fig_sv.line('s', 'v', source = record_data_sv, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record sv')

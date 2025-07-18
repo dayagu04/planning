@@ -25,7 +25,7 @@ class Trajectory : public std::vector<TrajectoryPoint> {
 
   size_t QueryLowerBoundPoint(const double absolute_time) const;
   size_t QueryLowerBoundPointByS(const double s) const;
-  size_t QueryNearestPoint(const planning_math::Vec2d& position) const;
+  int QueryNearestPoint(const planning_math::Vec2d& position) const;
   const bool QueryNearestPointWithBuffer(const planning_math::Vec2d& position,
                                          const double buffer,
                                          TrajectoryPoint* point) const;

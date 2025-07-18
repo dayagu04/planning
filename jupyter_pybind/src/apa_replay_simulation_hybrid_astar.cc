@@ -405,68 +405,6 @@ int GetPathFromHybridAstar() {
   return 0;
 }
 
-const void UpdateLocalView(
-    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
-    py::bytes &localization_info_bytes,
-    py::bytes &vehicle_service_output_info_bytes,
-    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
-    py::bytes &ground_line_info_bytes, py::bytes &fus_objs,
-    py::bytes &fus_occ_obj_msg_bytes, bool force_plan,
-    std::vector<double> target_managed_slot_x_vec,
-    std::vector<double> target_managed_slot_y_vec,
-    std::vector<double> target_managed_limiter_x_vec,
-    std::vector<double> target_managed_limiter_y_vec, int current_state) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
-
-  iflyauto::ParkingFusionInfo parking_slot_info =
-      BytesToStruct<iflyauto::ParkingFusionInfo,
-                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
-
-  iflyauto::IFLYLocalization localization_info =
-      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
-          localization_info_bytes);
-
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
-
-  iflyauto::UssPdcIccSendDataType uss_wave_info =
-      BytesToStruct<iflyauto::UssPdcIccSendDataType,
-                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
-
-  iflyauto::FusionObjectsInfo fusion_objs =
-      BytesToStruct<iflyauto::FusionObjectsInfo,
-                    struct_msgs::FusionObjectsInfo>(fus_objs);
-
-  iflyauto::FusionGroundLineInfo ground_line_ =
-      BytesToStruct<iflyauto::FusionGroundLineInfo,
-                    struct_msgs::FusionGroundLineInfo>(ground_line_info_bytes);
-
-  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
-      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
-                    struct_msgs::FusionOccupancyObjectsInfo>(
-          fus_occ_obj_msg_bytes);
-
-  iflyauto::UssPerceptInfo uss_perception_info =
-      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
-          uss_perception_info_bytes);
-
-  local_view.localization = localization_info;
-  local_view.vehicle_service_output_info = vehicle_service_output_info;
-  local_view.parking_fusion_info = parking_slot_info;
-  local_view.uss_wave_info = uss_wave_info;
-  local_view.function_state_machine_info = func_statemachine;
-  local_view.uss_percept_info = uss_perception_info;
-  local_view.ground_line_perception = ground_line_;
-  local_view.fusion_objects_info = fusion_objs;
-  local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
-
-  return;
-}
-
 static const int CopyVirtualWallForPlot(
     const ParkObstacleList &obs_list,
     const planning::apa_planner::EgoInfoUnderSlot &slot) {
@@ -701,50 +639,6 @@ const std::vector<Eigen::Vector3d> &GetAstarPath() {
   // }
 
   return global_astar_path_;
-}
-
-const bool SetFsm(py::bytes &func_statemachine_bytes) {
-  auto func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
-
-  local_view.function_state_machine_info = func_statemachine;
-
-  return true;
-}
-
-const bool SetLocalization(py::bytes &localization_info_bytes) {
-  iflyauto::IFLYLocalization localization_info =
-      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
-          localization_info_bytes);
-
-  local_view.localization = localization_info;
-
-  return true;
-}
-
-const bool SetGroundLine(py::bytes &line) {
-  auto ground_line = BytesToStruct<iflyauto::FusionGroundLineInfo,
-                                   struct_msgs::FusionGroundLineInfo>(line);
-
-  local_view.ground_line_perception = ground_line;
-
-  return true;
-}
-
-const bool SetFusionObject(py::bytes &info) {
-  auto obs = BytesToStruct<iflyauto::FusionObjectsInfo,
-                           struct_msgs::FusionObjectsInfo>(info);
-
-  local_view.fusion_objects_info = obs;
-
-  return true;
-}
-
-const bool SetSlotInfo() {
-  local_view.parking_fusion_info.select_slot_id = 0;
-
-  return true;
 }
 
 const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
@@ -1004,18 +898,13 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
-      .def("UpdateLocalView", &UpdateLocalView)
       .def("PlanOnce", &PlanOnce)
       .def("GetPlanningOutput", &GetPlanningOutput)
       .def("DynamicsUpdate", &DynamicsUpdate)
       .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
       .def("GetReedsShapePath", &GetReedsShapePath)
       .def("GetAstarPath", &GetAstarPath)
-      .def("SetLocalization", &SetLocalization)
-      .def("SetSlotInfo", &SetSlotInfo)
       .def("GetVirtualWall", &GetVirtualWall)
-      .def("SetGroundLine", &SetGroundLine)
-      .def("SetFusionObject", &SetFusionObject)
       .def("GetAstarEndPose", &GetAstarEndPose)
       .def("GetAstarPathCollisionID", &GetAstarPathCollisionID)
       .def("GetAstarAllNodes", &GetAstarAllNodes)

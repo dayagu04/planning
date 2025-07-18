@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250626/20250626-16-40-27/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-26-16-40-28_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250711/20250711-17-42-23/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-11-17-42-24_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -1131,6 +1131,9 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     # jlt data
     jlt_speed_data = replay_simulation_hybrid_astar.GetJLTSpeedData()
     update_jlt_online_data(jlt_speed_data, lon_plan_data)
+
+    # online traj
+    update_publish_data(tuned_planning_output,lon_plan_data)
 
     update_record_speed_data(traj_speed_profile, lon_plan_data)
     non_optimizer_traj.data.update({

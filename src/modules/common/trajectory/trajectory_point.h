@@ -157,9 +157,10 @@ class TrajectoryPoint : public planning_math::PathPoint {
 
   std::string DebugString() const {
     std::stringstream ss;
-    ss << "absolute time:" << absolute_time_ << "\n, x:" << x_ << ",y:" << y_
+    ss << "absolute time:" << absolute_time_ << ", x:" << x_ << ",y:" << y_
        << ",heading:" << theta_ << ",kappa:" << kappa_ << ",dkappa:" << dkappa_
-       << "\n, vel:" << vel_ << ", acc" << acc_ << ",jerk:" << jerk_ << "\n";
+       << ", vel:" << vel_ << ", acc" << acc_ << ",jerk:" << jerk_ << ",s "
+       << s_;
     return ss.str();
   }
 

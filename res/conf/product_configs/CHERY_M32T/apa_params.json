@@ -58,7 +58,7 @@
 
   "fold_mirror_car_vertex_x_vec": [3.259,  3.490,  3.724,  3.724,  3.490,  3.259,  2.121,  2.121,  1.916,  1.916,
                                   -0.530, -0.862, -1.030, -1.030, -0.862, -0.530,  1.916,  1.916,  2.121,  2.121],
-                                  
+
   "fold_mirror_car_vertex_y_vec": [0.934,  0.844,  0.438, -0.438, -0.844, -0.934, -0.934, -1.016, -1.016, -0.934,
                                   -0.934, -0.761, -0.398,  0.398,  0.761,  0.934,  0.934,  1.016,  1.016,  0.934],
 
@@ -382,15 +382,15 @@
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.4,
-  "speed_limit_lower_by_kappa" : 0.9,
-  "speed_limit_by_kappa_switch" : 0.8,
-  "speed_limit_lower_by_obs_dist" : 0.8,
+  "speed_limit_lower_by_kappa" : 1.4,
+  "speed_limit_by_kappa_switch" : 1.4,
+  "speed_limit_lower_by_obs_dist" : 0.55,
   "min_path_dist_for_speed_optimizer" : 0.25,
   "min_path_dist_for_veh_starting" : 0.1,
   "optimizer_time_limit" : 0.4,
   "use_remain_dist" : true,
   "apa_speed_mode" : 0,
-  "fast_cruise_speed" : 2.0,
+  "fast_cruise_speed" : 1.4,
   "middle_cruise_speed" : 1.12,
   "slow_cruise_speed" : 0.84,
 
