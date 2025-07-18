@@ -1880,7 +1880,7 @@ def load_prediction_obstacle(prediction_msg, environment_model_info = None):
       lat_decision = "None"
       is_static = ""
       for obstacle in environment_model_info.obstacle:
-        if obstacle.id == obstacle_list[i].fusion_obstacle.common_info.id:
+        if obstacle.id == obstacle_list[i].fusion_obstacle.additional_info.track_id:
           frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
           if (0 == obstacle.lat_decision):
             lat_decision = "LEFT"
@@ -1959,12 +1959,12 @@ def load_prediction_obstacle(prediction_msg, environment_model_info = None):
     obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
     if frenet_vs == 255 and frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.common_info.id) + ')=' \
+      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
           + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
           + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
           + lat_decision + '\n' + is_static)
     else:
-      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.common_info.id) + ')=' \
+      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
           + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
           + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
           +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
