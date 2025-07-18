@@ -300,11 +300,11 @@
       "default_obstacle_cost_weight": 0.1,
       "obstacle_lateral_risk_distance": 1.2,
       "obstacle_lateral_collision_distance": 0.4,
-      "obstacle_collision_cost_without_lateral_overlap": 5.0e6,
+      "obstacle_collision_cost_without_lateral_overlap": 1.18e5,
 
       "path_l_cost": 3.8e2,
       "path_dl_cost": 8.8e2,
-      "path_ddl_cost": 6.8e3,
+      "path_ddl_cost": 6.8e5,
       "path_l_cost_param_l0": 1.60,
       "path_l_cost_param_b": 0.40,
       "path_l_cost_param_k": 1.60,

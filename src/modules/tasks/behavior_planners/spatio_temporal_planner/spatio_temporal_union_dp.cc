@@ -38,7 +38,7 @@ constexpr double kDynamicObsConsiderTime = 3.0;
 constexpr double kPathCostComputeSampleTime = 0.5;
 constexpr double kDynamicObstacleCostSampleTime = 0.2;
 constexpr double kDynamicObstacleCostLaterSampleTime = 0.4;
-constexpr double kPlanningUpperSpeedLimit = 16.67;
+constexpr double kPlanningUpperSpeedLimit = 13.89;
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kVirtualAgentBuffer = 2.0;
 constexpr double kJerkMin = -2.0;
@@ -70,7 +70,7 @@ constexpr double kDefaultRearObsGenerateCostDistance= 3.0;
 constexpr double kDefaultHalfSamplingRange= 0.90;
 constexpr int kDefaultTrajectoryPointSize = 26;
 constexpr double kConsiderDynamicObstacleCostTimeLength = 3.0;
-constexpr double kSigmoidChangeRateCoefficient = 2.5;
+constexpr double kSigmoidChangeRateCoefficient = 0.5;
 
 
 }
