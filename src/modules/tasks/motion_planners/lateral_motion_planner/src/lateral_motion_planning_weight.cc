@@ -694,7 +694,8 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     }
   }
   if (is_high_priority_back &&
-      is_lane_change_hold_) {
+      (is_lane_change_hold_ ||
+       is_lane_change_back_)) {
     emergency_level_ = P0;
   }
   if (emergency_level_ == P0) {
