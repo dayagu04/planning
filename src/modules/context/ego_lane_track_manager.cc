@@ -72,6 +72,8 @@ constexpr double kAverageThetaDiffCostWeight = 6.0;
 constexpr double kEgoLateralDistanceCostWeight = 0.5;
 constexpr double kUseVirtualLaneProcessSplitCostThd = 1.0;
 constexpr int kDefaultLaneChangeOrderIdDiff = 1;
+constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
+constexpr double kDefaultConsiderVirtualLineLength = 60.0;
 
 }  // namespace
 
@@ -2387,14 +2389,13 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
     if (point.s < ego_s + kLaneLineSegmentLength) {
       continue;
     }
+    if (point.s > ego_s + kDefaultConsiderVirtualLineLength) {
+      break;
+    }
+
     if (point.left_lane_border_type ==
         iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
       left_boundary_exist_virtual_type = true;
-      break;
-    } else {
-      continue;
-    }
-    if (point.s > ego_s + kDefaultMappingConsiderLaneLength) {
       break;
     }
   }
@@ -2405,14 +2406,12 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
     if (point.s < ego_s + kLaneLineSegmentLength) {
       continue;
     }
+    if (point.s > ego_s + kDefaultConsiderVirtualLineLength) {
+      break;
+    }
     if (point.right_lane_border_type ==
         iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
       right_boundary_exist_virtual_type = true;
-      break;
-    } else {
-      continue;
-    }
-    if (point.s > ego_s + kDefaultMappingConsiderLaneLength) {
       break;
     }
   }
