@@ -42,23 +42,24 @@ void ApaSlotManager::Update(
 
   slots_map_.clear();
   dist_id_map_.clear();
-  ILOG_INFO << "parking_fusion_slot_lists_size = "
-            << static_cast<int>(local_view->parking_fusion_info
-                                    .parking_fusion_slot_lists_size);
 
-  for (uint8_t i = 0;
-       i < local_view->parking_fusion_info.parking_fusion_slot_lists_size;
-       ++i) {
-    const auto& fusion_slot =
+  const size_t slot_size =
+      local_view->parking_fusion_info.parking_fusion_slot_lists_size;
+  const size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
+
+  ILOG_INFO << "parking_fusion slot size = " << slot_size
+            << "  select slot id = " << select_slot_id;
+
+  const Eigen::Vector2d car_mirror_pos =
+      0.5 * (measure_data_ptr->GetLeftMirrorPos() +
+             measure_data_ptr->GetRightMirrorPos());
+
+  for (size_t i = 0; i < slot_size; ++i) {
+    const iflyauto::ParkingFusionSlot& fusion_slot =
         local_view->parking_fusion_info.parking_fusion_slot_lists[i];
 
     ApaSlot slot;
     slot.Update(fusion_slot);
-
-    const Eigen::Vector2d car_mirror_pos =
-        (measure_data_ptr->GetLeftMirrorPos() +
-         measure_data_ptr->GetRightMirrorPos()) *
-        0.5;
 
     const double dist =
         (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_center).norm();
@@ -71,7 +72,7 @@ void ApaSlotManager::Update(
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
       if (!dist_id_map_.empty()) {
-        ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
+        ego_info_under_slot_.history_id = ego_info_under_slot_.id;
         ego_info_under_slot_.id = dist_id_map_.begin()->second;
 
         auto it = slots_map_.find(ego_info_under_slot_.id);
@@ -114,26 +115,23 @@ void ApaSlotManager::Update(
   // 泊入
   if (state_machine_ptr->IsParkInStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
-      if (!measure_data_ptr_->GetFoldMirrorFlag() &&
-          apa_param.GetParam().has_intelligent_fold_mirror) {
+      if (apa_param.GetParam().has_intelligent_fold_mirror) {
         col_det_interface_ptr_->Init(true);
       }
+
       ParkingLotCruiseProcess();
-      if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) !=
-          0) {
-        ego_info_under_slot_.history_slot_id = ego_info_under_slot_.id;
-        ego_info_under_slot_.id =
-            local_view->parking_fusion_info.select_slot_id;
-        ego_info_under_slot_.slot_type =
-            slots_map_[ego_info_under_slot_.id].slot_type_;
+
+      if (slots_map_.count(select_slot_id) != 0) {
+        ego_info_under_slot_.history_id = ego_info_under_slot_.id;
+        ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
+        ego_info_under_slot_.id = select_slot_id;
+        ego_info_under_slot_.slot_type = slots_map_[select_slot_id].slot_type_;
       } else {
         ego_info_under_slot_.Reset();
       }
     } else if (state_machine_ptr_->IsParkingStatus()) {
-      // If the selected slot id does not exist during the parking process,
-      // simply reset and exit the parking
-      if (slots_map_.count(local_view->parking_fusion_info.select_slot_id) ==
-          0) {
+      // 泊车过程中锁定车位id和类型, 不进行更新, 选中车位如果消失做特殊处理
+      if (slots_map_.count(ego_info_under_slot_.id) == 0) {
         ILOG_INFO << "the selected slot disappear when parking";
         ego_info_under_slot_.slot_disappear_flag = true;
         if (measure_data_ptr_->GetStaticFlag()) {
@@ -147,8 +145,15 @@ void ApaSlotManager::Update(
   }
 
   ILOG_INFO << "select slot id = " << ego_info_under_slot_.id
-            << ",history_slot_id = " << ego_info_under_slot_.history_slot_id
-            << "  type = " << GetSlotTypeString(ego_info_under_slot_.slot_type);
+            << ", history_slot_id = " << ego_info_under_slot_.history_id
+            << "  type = " << GetSlotTypeString(ego_info_under_slot_.slot_type)
+            << "  history_slot_type = "
+            << GetSlotTypeString(ego_info_under_slot_.history_slot_type);
+
+  if (state_machine_ptr->IsSeachingStatus()) {
+    ego_info_under_slot_.fix_slot = false;
+    ego_info_under_slot_.fix_limiter = false;
+  }
 
   const SlotReleaseState last_geometry_release =
       ego_info_under_slot_.slot.release_info_
@@ -157,11 +162,6 @@ void ApaSlotManager::Update(
   const SlotReleaseState last_astar_release =
       ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
-
-  if (state_machine_ptr->IsSeachingStatus()) {
-    ego_info_under_slot_.fix_slot = false;
-    ego_info_under_slot_.fix_limiter = false;
-  }
 
   if (slots_map_.count(ego_info_under_slot_.id) != 0 &&
       !ego_info_under_slot_.fix_slot) {
@@ -172,7 +172,9 @@ void ApaSlotManager::Update(
   }
 
   // keep last release state here, and would change later when searching
-  if (ego_info_under_slot_.history_slot_id == ego_info_under_slot_.slot.id_) {
+  if (ego_info_under_slot_.id == ego_info_under_slot_.history_id &&
+      ego_info_under_slot_.slot_type ==
+          ego_info_under_slot_.history_slot_type) {
     ego_info_under_slot_.slot.release_info_
         .release_state[GEOMETRY_PLANNING_RELEASE] = last_geometry_release;
     ego_info_under_slot_.slot.release_info_

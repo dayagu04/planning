@@ -142,7 +142,8 @@ void ParkingScenarioManager::UpdateScenarioType() {
 
   if (apa_world_->GetStateMachineManagerPtr()->IsParkingStatus()) {
     scenario_status_ = ParkingScenarioStatus::STATUS_RUNNING;
-  } else if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+  } else if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus() &&
+             ego_info_under_slot.id != 0) {
     scenario_status_ = ParkingScenarioStatus::STATUS_TRY;
   }
 
