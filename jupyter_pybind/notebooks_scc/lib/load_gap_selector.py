@@ -161,13 +161,13 @@ def update_lat_plan_data_with_gap_selector(bag_loader, bag_time, local_view_data
       'hard_lower_bound_y0_vec': hard_lower_bound_y0_vec,
     })
 
-    raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
-      planning_json['raw_refline_y_vec'])
+    # raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
+    #   planning_json['raw_refline_y_vec'])
 
-    lat_plan_data['data_refline'].data.update({
-      'raw_refline_x': raw_refline_x,
-      'raw_refline_y': raw_refline_y,
-    })
+    # lat_plan_data['data_refline'].data.update({
+    #   'raw_refline_x': raw_refline_x,
+    #   'raw_refline_y': raw_refline_y,
+    # })
 
     lat_motion_plan_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output # 加载 plan_debug_msg中的信息
 
@@ -227,10 +227,10 @@ def update_lat_plan_data_with_gap_selector(bag_loader, bag_time, local_view_data
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
 
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
       lat_plan_data['data_planning_n'].data.update({
-        'plan_traj_xn':planning_json['traj_x_vec'],
-        'plan_traj_yn':planning_json['traj_y_vec'],
+        'plan_traj_xn':plan_x,
+        'plan_traj_yn':plan_y,
        })
 
     lat_plan_data['data_planning'].data.update({

@@ -184,8 +184,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(new_cutin_list)):
      cutin_attr_vec.append(plan_debug_json_info[new_cutin_list[ind]])
 
-  v_limit_vec = plan_debug_json_info['limit_v_type']
-  print('v_limit_vec', v_limit_vec)
+  v_limit_vec = [0]
+  # v_limit_vec = plan_debug_json_info['limit_v_type']
+  # print('v_limit_vec', v_limit_vec)
   print('intersection_state', plan_debug_json_info['current_intersection_state'])
   print('last_intersection_state', plan_debug_json_info['last_intersection_state'])
   print('distance_to_stopline', plan_debug_json_info['distance_to_stopline'])
@@ -354,8 +355,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         plan_x.append(trajectory.trajectory_points[i].x)
         plan_y.append(trajectory.trajectory_points[i].y)
 
-      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
+      plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
+      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
 
       # ego_front_agent_traj_x, ego_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_front_agent_traj_x_vec'], planning_json['ego_front_agent_traj_y_vec'])
       # ego_rear_agent_traj_x, ego_rear_agent_traj_y = coord_tf.global_to_local(planning_json['ego_rear_agent_traj_x_vec'], planning_json['ego_rear_agent_traj_y_vec'])
