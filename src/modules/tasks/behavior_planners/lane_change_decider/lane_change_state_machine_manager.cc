@@ -416,6 +416,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
       transition_info_.lane_change_type == CONE_REQUEST;
   if (is_target_lane_merge_to_origin_lane && !is_no_care_mrege) {
     lane_change_stage_info_.lc_back_reason = "target lane is merge region";
+    is_high_priority_back_ = true;
     return true;
   }
 
