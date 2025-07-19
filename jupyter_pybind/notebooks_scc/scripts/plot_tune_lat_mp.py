@@ -259,9 +259,15 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
     print("Cruising")
 
   try:
+    refline_s = 0
+    refline_s_vec = []
+    refline_curvature_vec = planning_json['raw_refline_k_vec']
+    for i in range(len(refline_curvature_vec)):
+      refline_s_vec.append(refline_s)
+      refline_s = refline_s + 2
     refline_kappa_radius.data.update({
-      'refline_s': planning_json['raw_refline_s_vec'],
-      'refline_curvature': planning_json['raw_refline_k_vec'],
+      'refline_s': refline_s_vec,
+      'refline_curvature': refline_curvature_vec,
     })
   except:
     print("no plan debug json: raw_refline_k_vec")

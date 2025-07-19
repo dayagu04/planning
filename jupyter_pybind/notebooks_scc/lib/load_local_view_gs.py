@@ -208,7 +208,7 @@ class LoadCyberbag:
                          "VisionLonBehavior_lead_two_dis", "VisionLonBehavior_lead_two_vel", "solver_condition", "dist_err", "lat_err", "lon_err",
                          "dbw_status"]
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec"]
+      json_vector_list = []
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

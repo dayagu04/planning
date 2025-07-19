@@ -464,22 +464,6 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'hard_lower_bound_type_vec': hard_lower_bound_type_vec,
     })
 
-    if g_is_display_enu:
-      raw_refline_x, raw_refline_y = planning_json['raw_refline_x_vec'], planning_json['raw_refline_y_vec']
-      raw_refline_xn, raw_refline_yn = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
-        planning_json['raw_refline_y_vec'])
-    else:
-      raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
-        planning_json['raw_refline_y_vec'])
-      raw_refline_xn, raw_refline_yn = planning_json['raw_refline_x_vec'], planning_json['raw_refline_y_vec']
-
-    lat_plan_data['data_refline'].data.update({
-      'raw_refline_x': raw_refline_x,
-      'raw_refline_y': raw_refline_y,
-      'raw_refline_xn': raw_refline_xn,
-      'raw_refline_yn': raw_refline_yn,
-    })
-
     lat_motion_plan_output = plan_debug_msg.lateral_motion_planning_output
     # if g_is_display_enu:
     #   x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
@@ -537,11 +521,6 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'expected_steer_deg_vec': expected_steer_deg_vec,
     })
 
-    # assembled_delta = []
-    # assembled_omega = []
-    # for i in range(len(planning_json['assembled_delta'])):
-    #   assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
-    #   assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
     # print("dbw_status = ", planning_json['dbw_status'])
     # print("replan_status = ", planning_json['replan_status'])
     # print("lat_err = ", planning_json['lat_err'])
@@ -569,13 +548,13 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
         plan_y.append(trajectory.trajectory_points[i].y)
 
       if g_is_display_enu:
-        plan_traj_x, plan_traj_y = planning_json['traj_x_vec'], planning_json['traj_y_vec']
+        plan_traj_x, plan_traj_y = plan_x, plan_y
       else:
-        plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
+        plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
 
       lat_plan_data['data_planning_n'].data.update({
-        'plan_traj_xn':planning_json['traj_x_vec'],
-        'plan_traj_yn':planning_json['traj_y_vec'],
+        'plan_traj_xn':plan_x,
+        'plan_traj_yn':plan_y,
        })
 
     lat_plan_data['data_planning'].data.update({
@@ -978,7 +957,6 @@ def load_lat_plan_figure(fig1):
   fig1.line('soft_lower_bound_y0_vec', 'soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = "darkorange", line_dash = 'solid', line_alpha = 0.7, legend_label = 'soft lower bound')
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard upper bound')
   fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard lower bound')
-  fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.circle('y_vec', 'x_vec', source = data_lat_motion_plan_output, size = 6, line_width = 5, line_color = 'red', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'plan path')
   fig1.line('y_vec_t', 'x_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
   # fig1.line('comb_y_vec', 'comb_x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'combined path')
@@ -1063,7 +1041,6 @@ def load_lat_plan_figure(fig1):
   fig7.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig7.line('yn_vec', 'xn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   fig7.line('yn_vec_t', 'xn_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
-  fig7.line('raw_refline_yn', 'raw_refline_xn', source = data_refline, line_width = 3, line_color = 'green', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=True)
   fig7.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
 
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')

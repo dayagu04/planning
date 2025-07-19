@@ -695,7 +695,7 @@ class LoadRosbag:
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
                          "planning_hmi_ldp_state",]
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
+      json_vector_list = ["raw_refline_k_vec", 
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
                          "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
                          "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",
@@ -711,7 +711,7 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec", 'lateral_avoid_ids',
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec',
                          'front_obj_future_v_vec', 'rear_obj_future_v_vec', 'ego_future_v_vec', 'expected_steer_vec', "lat_path_x", "lat_path_y", "ori_lat_path_x", "ori_lat_path_y",
-                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'traj_lat_acc_vec', 'traj_lat_jerk_vec']
+                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec']
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
@@ -743,11 +743,6 @@ class LoadRosbag:
           json_data = {}
           LoadScalarList(json_data, json_value_list, json_struct)
           LoadVectorList(json_data, json_vector_list, json_struct)
-          try:
-            # print(json_struct['assembled_omega'])
-            print(json_struct['limit_v_type'])
-          except Exception as e:
-            pass
           self.plan_debug_msg['json'].append(json_data)
         except json.decoder.JSONDecodeError as jserr:
           print('except',jserr)
@@ -781,11 +776,6 @@ class LoadRosbag:
           json_data = {}
           LoadScalarList(json_data, json_value_list, json_struct)
           LoadVectorList(json_data, json_vector_list, json_struct)
-          try:
-            # print(json_struct['assembled_omega'])
-            print(json_struct['limit_v_type'])
-          except Exception as e:
-            pass
           self.plan_debug_origin_msg['json'].append(json_data)
         except json.decoder.JSONDecodeError as jserr:
           print('except',jserr)
