@@ -486,7 +486,8 @@ bool LateralMotionPlanner::AssembleInput() {
   } else if (split_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
                                                  planning_input_);
-  } else if ((ramp_scene) && (config_.ramp_valid)) {
+  } else if ((ramp_scene) && (config_.ramp_valid) &&
+             (!is_use_spatio_planner_result)) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
                                                  planning_input_);
   } else if (session_->environmental_model()
