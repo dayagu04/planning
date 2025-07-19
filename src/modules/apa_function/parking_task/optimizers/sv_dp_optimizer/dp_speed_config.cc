@@ -12,7 +12,7 @@ void DpSpeedConfig::Init(const double path_length) {
   unit_v_for_long_path = 0.1;
   unit_s_for_long_path = 0.3;
 
-  unit_v_for_short_path = 0.05;
+  unit_v_for_short_path = 0.03;
   unit_s_for_short_path = 0.1;
 
   unit_v_for_extream_short_path = 0.03;
@@ -30,9 +30,9 @@ void DpSpeedConfig::Init(const double path_length) {
 
   deceleration_limit = speed_config.acc_lower;
   advised_acceleration = 0.5;
-  advised_deceleration = -0.2;
+  advised_deceleration = -0.25;
   acceleration_penalty = 15.0;
-  deceleration_penalty = 100.0;
+  deceleration_penalty = 50.0;
 
   // speed cost
   low_speed_limit = 0.3;
@@ -41,7 +41,7 @@ void DpSpeedConfig::Init(const double path_length) {
   ref_speed_gap_penalty = 7.0;
   stopover_penalty = 200.0;
 
-  jerk_penalty = 1.0;
+  jerk_penalty = 0.2;
 
   enter_apa_speed_margin = 10.0;
 

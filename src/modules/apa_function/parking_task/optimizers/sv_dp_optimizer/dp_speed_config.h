@@ -12,6 +12,7 @@ struct DpSpeedConfig {
   double advised_acceleration;
   double advised_deceleration;
 
+  // If acc is not ideal, add a penalty
   double acceleration_penalty;
   double deceleration_penalty;
 

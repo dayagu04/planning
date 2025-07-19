@@ -1132,7 +1132,7 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     jlt_speed_data = replay_simulation_hybrid_astar.GetJLTSpeedData()
     update_jlt_online_data(jlt_speed_data, lon_plan_data)
 
-    # online traj
+    # online traj speed
     update_publish_data(tuned_planning_output,lon_plan_data)
 
     update_record_speed_data(traj_speed_profile, lon_plan_data)

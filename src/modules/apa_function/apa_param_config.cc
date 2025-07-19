@@ -980,6 +980,10 @@ void SyncParkingParameters(const bool is_simulation) {
                   "middle_cruise_speed");
   JSON_READ_VALUE(param.speed_config.slow_cruise_speed, double,
                   "slow_cruise_speed");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.long_path_acc_upper, double,
+                  "long_path_acc_upper");
+  JSON_READ_VALUE(apa_param.SetPram().speed_config.short_path_acc_upper, double,
+                  "short_path_acc_upper");
 
   double cruise_speed;
   if (apa_param.GetParam().speed_config.apa_speed_mode == 0) {

@@ -30,6 +30,7 @@ class SVGraphNode {
   void SetPrePoint(const SVGraphNode* pre_point);
 
   void SetAcc(const double acc) { sv_point_.acc = acc; }
+  void SetJerk(const double jerk) { sv_point_.jerk= jerk; }
 
   void SetTime(const double time) { sv_point_.t = time; }
 
@@ -42,7 +43,7 @@ class SVGraphNode {
 
   void SetZeroCost();
 
-  const DpSpeedCost& ConstCost() { return cost_; }
+  const DpSpeedCost& ConstCost() const { return cost_; }
 
   DpSpeedCost* MutableCost() { return &cost_; }
 
