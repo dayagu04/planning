@@ -519,18 +519,6 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
       'ref_yn': lat_motion_plan_input.ref_y_vec,
     })
 
-    # if g_is_display_enu:
-    #   raw_refline_x, raw_refline_y = planning_json['raw_refline_x_vec'], \
-    #     planning_json['raw_refline_y_vec']
-    # else:
-    #   raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
-    #     planning_json['raw_refline_y_vec'])
-
-    # hybrid_ara_path_data['data_refline'].data.update({
-    #   'raw_refline_x': raw_refline_x,
-    #   'raw_refline_y': raw_refline_y,
-    # })
-
     lat_motion_plan_output = plan_debug_msg.lateral_motion_planning_output
     if g_is_display_enu:
       x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
@@ -874,7 +862,6 @@ def load_hybrid_ara_path_figure(fig1):
 
 
   # hybrid ara path
-  # fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
 
   fig1.line('y_vec', 'x_vec', source = data_arastar, line_width = 5, line_color = 'purple', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hybrid ara path', visible=True)

@@ -722,7 +722,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         plan_y.append(trajectory.trajectory_points[i].y)
 
       plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
 
     lon_plan_data['data_planning'].data.update({
       'plan_traj_y' : plan_traj_y,

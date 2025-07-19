@@ -732,61 +732,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'origin_lane_y':center_line_list[i]['line_y_vec']
           })
 
-    # if loc_mode > 0:
-    #   plan_debug_json = plan_debug_json_msg
-    #   plan_traj_x = plan_debug_json["assembled_x"]
-    #   plan_traj_y = plan_debug_json["assembled_y"]
-    #   plan_traj_theta = plan_debug_json["assembled_theta"]
-    #   plan_traj_s = plan_debug_json["traj_s_vec"]
-    #   local_view_data['data_planning_raw'].data.update({
-    #     'plan_traj_y' : [],
-    #     'plan_traj_x' : [],
-    #     'plan_traj_s': []
-    #   })
-    #   local_view_data['data_car_traj_raw'].data.update({
-    #     'car_yb_traj' : [],
-    #     'car_xb_traj' : [],
-    #   })
-    #   if (len(plan_traj_x) > 0):
-    #     if min(plan_traj_x) != max(plan_traj_x) or min(plan_traj_y) != max(plan_traj_y):
-    #       if not g_is_display_enu:
-    #         plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_traj_x, plan_traj_y)
-    #         cur_yaw = loc_msg.orientation.euler_boot.yaw
-    #         plan_traj_theta_local = []
-    #         for i in range(len(plan_traj_theta)):
-    #           plan_traj_theta_local.append(plan_traj_theta[i] - cur_yaw)
-    #         plan_traj_theta = plan_traj_theta_local
-
-    #       local_view_data['data_planning_raw'].data.update({
-    #         'plan_traj_y' : plan_traj_y,
-    #         'plan_traj_x' : plan_traj_x,
-    #         'plan_traj_s': plan_traj_s
-    #       })
-
-    #       if len(plan_traj_x) == len(plan_traj_y) and len(plan_traj_x) == len(plan_traj_theta):
-    #         car_xb_traj = []
-    #         car_yb_traj = []
-    #         for i in range(len(plan_traj_x) - 1, -1, -1):
-    #           car_xb_traj_point = []
-    #           car_yb_traj_point = []
-    #           for j in range(len(car_xb)):
-    #             tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_traj_theta[i])
-    #             car_xb_traj_point.append(tmp_x)
-    #             car_yb_traj_point.append(tmp_y)
-    #           car_xb_traj.append(car_xb_traj_point)
-    #           car_yb_traj.append(car_yb_traj_point)
-    #         local_view_data['data_car_traj_raw'].data.update({
-    #           'car_yb_traj' : car_yb_traj,
-    #           'car_xb_traj' : car_xb_traj,
-    #         })
-    #       else:
-    #         print("car_traj_raw error!")
-    #         print("raw_plan_traj_x size: ", len(plan_traj_x))
-    #         print("raw_plan_traj_y size: ", len(plan_traj_y))
-    #         print("raw_plan_traj_theta size: ", len(plan_traj_theta))
-    #   else:
-    #     print("no car_traj_raw json debug info!")
-
       lat_init_state = plan_debug_msg.lateral_motion_planning_input.init_state
       init_state_x = lat_init_state.x
       init_state_y = lat_init_state.y
@@ -2102,9 +2047,6 @@ def load_local_view_figure():
                                            'obs_id':[], 'obs_label':[]})
   data_planning_lat = ColumnDataSource(data = {'plan_traj_y':[],
                                       'plan_traj_x':[],})
-  data_planning_raw = ColumnDataSource(data = {'plan_traj_y':[],
-                                      'plan_traj_x':[],
-                                      'plan_traj_s':[],})
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                       'plan_traj_x':[],
                                       'plan_traj_s':[],})
@@ -2395,7 +2337,6 @@ def load_local_view_figure():
                      'data_radar_rr_obj':data_radar_rr_obj, \
                      'data_snrd_obj':data_snrd_obj, \
                      'data_planning_lat':data_planning_lat,\
-                     'data_planning_raw':data_planning_raw,\
                      'data_planning':data_planning,\
                      'data_planning_0':data_planning_0,\
                      'data_planning_1':data_planning_1,\
@@ -2567,7 +2508,6 @@ def load_local_view_figure():
 
   f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
-  # fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig_init_point = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
@@ -2648,7 +2588,6 @@ def load_local_view_figure():
   fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
   fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
-  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_raw, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'raw plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')

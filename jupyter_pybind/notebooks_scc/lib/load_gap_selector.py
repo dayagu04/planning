@@ -161,14 +161,6 @@ def update_lat_plan_data_with_gap_selector(bag_loader, bag_time, local_view_data
       'hard_lower_bound_y0_vec': hard_lower_bound_y0_vec,
     })
 
-    # raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
-    #   planning_json['raw_refline_y_vec'])
-
-    # lat_plan_data['data_refline'].data.update({
-    #   'raw_refline_x': raw_refline_x,
-    #   'raw_refline_y': raw_refline_y,
-    # })
-
     lat_motion_plan_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output # 加载 plan_debug_msg中的信息
 
     x_vec, y_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)  # 将全局坐标系下的点 转移到 局部系
@@ -201,12 +193,6 @@ def update_lat_plan_data_with_gap_selector(bag_loader, bag_time, local_view_data
       'acc_vec': acc_vec,
       'jerk_vec': jerk_vec,
     })
-
-    # assembled_delta = []
-    # assembled_omega = []
-    # for i in range(len(planning_json['assembled_delta'])):
-    #   assembled_delta.append(planning_json['assembled_delta'][i] * 57.3 * 15.7)
-    #   assembled_omega.append(planning_json['assembled_omega'][i] * 57.3 * 15.7)
 
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
@@ -417,7 +403,6 @@ def load_lat_plan_figure(fig1):
   #fig1.line('soft_lower_bound_y0_vec', 'soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = "#90EE90", line_dash = 'solid', line_alpha = 0.7, legend_label = 'soft bound', visible=False)
   #fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard bound', visible=False)
   #fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard bound', visible=False)
-  #fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   #fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
 
   #fig1.multi_line('y_vec', 'x_vec', source = gs_pre_trajs, line_width = 5, line_color = 'purple', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'gs_pre_trajs')
