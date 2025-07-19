@@ -1378,112 +1378,11 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       ego_distance_to_lane_merge_split_point < kDefaultConsiderSplitSelectorDistance) {
     LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      bool last_current_lane_exist_straight = true;
-      bool other_virtual_lane_exist_straight = false;
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
                                         relative_id_lanes, order_ids,
                                         zero_relative_id_order_id_index);
-      for (size_t i = 0; i < order_ids.size(); i++) {
-        if (i == zero_relative_id_order_id_index) {
-          std::shared_ptr<VirtualLane> current_relative_lane =
-              relative_id_lanes[order_ids[i]];
-          if (MakesureVirtualLaneExistOtherDirecton(current_relative_lane)) {
-            last_current_lane_exist_straight = false;
-          }
-        }
-        if (i != zero_relative_id_order_id_index) {
-          std::shared_ptr<VirtualLane> current_other_lane =
-              relative_id_lanes[order_ids[i]];
-          if (MakesureVirtualLaneExistStraightDirecton(current_other_lane)) {
-            other_virtual_lane_exist_straight = true;
-            current_frame_exist_straight_lane_index_set.emplace_back(i);
-          }
-        }
-      }
-      if (!last_current_lane_exist_straight && other_virtual_lane_exist_straight) {
-        enable_using_last_frame_track_ego_lane = false;
-      }
 
-      double current_timestamp = IflyTime::Now_ms();
-      if (!enable_using_last_frame_track_ego_lane &&
-          (std::fabs(current_timestamp - enable_use_lane_mark_valid_timestamp_) > split_select_count_)) {
-        if (!current_frame_exist_straight_lane_index_set.empty()) {
-          double current_lane_min_cost_total = std::numeric_limits<double>::infinity();
-          for (size_t i = 0; i < current_frame_exist_straight_lane_index_set.size(); i++) {
-            int index = current_frame_exist_straight_lane_index_set[i];
-            if (relative_id_lanes.size() > order_ids[index]) {
-              std::shared_ptr<VirtualLane> relative_id_lane =
-                  relative_id_lanes[order_ids[index]];
-              if (relative_id_lane == nullptr) {
-                continue;
-              }
-              if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
-                double heading_angle_cost_total = 0.0;
-                std::shared_ptr<KDPath> frenet_coord =
-                    relative_id_lane->get_lane_frenet_coord();
-                double ego_s = 0.0;
-                double ego_l = 0.0;
-                Point2D ego_frenet_point;
-                if (!frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-                  continue;
-                } else {
-                  ego_s = ego_frenet_point.x;
-                  ego_l = ego_frenet_point.y;
-                }
-                if (ego_s > frenet_coord->Length()) {
-                  continue;
-                }
-                planning_math::PathPoint ego_s_nearest_point =
-                    frenet_coord->GetPathPointByS(ego_s);
-                int large_range_angle_count = 0;
-                int nearby_angle_count = 0;
-                double large_range_heading_angle = 0.0;
-                double nearby_heading_angle = 0.0;
-                for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
-                    s += kLaneLineSegmentLength) {
-                  if (s > kDefaultMappingConsiderLaneLength + ego_s) {
-                    break;
-                  }
-
-                  double heading_angle = frenet_coord->GetPathCurveHeading(s);
-                  double theta = NormalizeAngle(heading_angle);
-                  large_range_heading_angle += std::fabs(theta);
-                  large_range_angle_count++;
-
-                  if (s > kNearPreviewDistanceThd + ego_s) {
-                    continue;
-                  }
-                  double nearby_heading_angle = frenet_coord->GetPathCurveHeading(s);
-                  double nearby_theta = NormalizeAngle(heading_angle);
-                  nearby_heading_angle += std::fabs(theta);
-                  nearby_angle_count++;
-                }
-
-                large_range_angle_count = std::max(1, large_range_angle_count);
-                nearby_angle_count = std::max(1, nearby_angle_count);
-                heading_angle_cost_total =
-                    std::fabs(large_range_heading_angle / large_range_angle_count - nearby_heading_angle / nearby_angle_count);
-                if (heading_angle_cost_total < current_lane_min_cost_total) {
-                  current_lane_min_cost_total = heading_angle_cost_total;
-                  origin_order_id = relative_id_lane->get_order_id();
-                  relative_id_lane->set_relative_id(0);
-                  last_zero_relative_id_order_id_index_ = index;
-                  last_track_ego_lane_ = relative_id_lanes[order_ids[index]];
-                  is_exist_split_on_intersection_ = true;
-                  enable_use_lane_mark_valid_timestamp_ = current_timestamp;
-                }
-              }
-            }
-          }
-
-          for (auto& lane : relative_id_lanes) {
-            int lane_order_id = lane->get_order_id();
-            int lane_relative_id = lane_order_id - origin_order_id;
-            lane->set_relative_id(lane_relative_id);
-          }
-          return;
-        }
-      } else {
+      if (enable_using_last_frame_track_ego_lane) {
         if (zero_relative_id_order_id_index < order_ids.size() &&
             relative_id_lanes.size() >
                 order_ids[zero_relative_id_order_id_index]) {
@@ -2447,8 +2346,8 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
       double total_lateral_offset = 0.0;
       double cumu_lat_dis_cost = 0.0;
       int select_lane_point_interval = 1;
-      for (int j = 0; j < lane_points.size(); j += select_lane_point_interval) {
-        iflyauto::ReferencePoint point = lane_points[j];
+      for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+        iflyauto::ReferencePoint point = lane_points[i];
         if (std::isnan(point.local_point.x) ||
             std::isnan(point.local_point.y)) {
           LOG_ERROR("update_lane_points: skip NaN point");
@@ -2588,9 +2487,7 @@ bool EgoLaneTrackManger::MakesureLastEgoLaneExistStraightDirecton(
           lane_marks[i].lane_mark !=
               iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT &&
           lane_marks[i].lane_mark !=
-              iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE &&
-          lane_marks[i].lane_mark !=
-              iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN) {
+              iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE) {
         return false;
       }
     }
@@ -2643,6 +2540,8 @@ bool EgoLaneTrackManger::MakesureVirtualLaneExistOtherDirecton(
               iflyauto::LaneDrivableDirection_DIRECTION_LEFT_UTURN ||
           lane_marks[i].lane_mark ==
               iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN ||
           lane_marks[i].lane_mark ==
               iflyauto::LaneDrivableDirection_DIRECTION_LEFT_RIGHT ||
           lane_marks[i].lane_mark ==
