@@ -4152,7 +4152,9 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
   if (lat_obs_decision_iter == lat_obstacle_decision.end()){
     return false;
   }
-
+  if (!obstacle->obstacle()->is_normal()) {
+    return false;
+  }
   is_blocked_obstacle_ = IsBlockedObstacleInLaneBorrow(obstacle);
   if (is_blocked_obstacle_) {
     return true;
@@ -4202,7 +4204,9 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   if (lat_obs_decision_iter == lat_obstacle_decision.end()){
     return false;
   }
-
+  if (!obstacle->obstacle()->is_normal()) {
+    return false;
+  }
   is_blocked_obstacle_ = IsBlockedObstacleInLaneBorrow(obstacle);
   if (is_blocked_obstacle_) {
     return true;

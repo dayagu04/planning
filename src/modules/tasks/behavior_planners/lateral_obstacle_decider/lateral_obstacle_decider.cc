@@ -1686,6 +1686,7 @@ void LateralObstacleDecider::Log(
 bool LateralObstacleDecider::CheckSideObstacle(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
     FrenetObstacle &frenet_obstacle) {
+  auto obstacle_manager = session_->mutable_environmental_model()->mutable_obstacle_manager();
   const double KOverlapSThrt = 0.3;
   const double KOverlapLThrt = 0.5;
   const auto ego_frenet_state = reference_path_ptr->get_frenet_ego_state();
@@ -1695,7 +1696,7 @@ bool LateralObstacleDecider::CheckSideObstacle(
   const auto obstacle_boundary_s_end = frenet_obstacle.frenet_obstacle_boundary().s_end;
   const int obstacle_id = frenet_obstacle.id();
   if ((obstacle_boundary_s_end - ego_s_start > 0 &&
-      obstacle_boundary_s_end - ego_s_start <= KOverlapSThrt)) {
+      obstacle_boundary_s_start - ego_s_start < 0)) {
     // 障碍物在自车前方先不考虑
     // (ego_s_end - obstacle_boundary_s_start > 0 &&
     // ego_s_end - obstacle_boundary_s_start <= KOverlapSThrt)
@@ -1709,6 +1710,10 @@ bool LateralObstacleDecider::CheckSideObstacle(
           obstacle_sl_polygon.ComputeOverlap(ego_sl_polygon, &care_overlap_polygon);
       if (b_overlap_with_care) {
         if (care_overlap_polygon.max_y() - care_overlap_polygon.min_y() > KOverlapLThrt) {
+          auto obstacle = obstacle_manager->find_obstacle(frenet_obstacle.id());
+          if (obstacle != nullptr) {
+            obstacle->set_is_normal(false);
+          }
           return false;
         }
       }

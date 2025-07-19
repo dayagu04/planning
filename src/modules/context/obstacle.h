@@ -91,6 +91,10 @@ class Obstacle {
   void set_is_reverse(bool is_reverse) {
     is_reverse_ = is_reverse;
   }
+  bool is_normal() const { return is_normal_; }
+  void set_is_normal(bool is_normal) {
+    is_normal_ = is_normal;
+  }
   bool abnormal_data_dectection(const PredictionObject &prediction_object);
   bool is_oversize_vehicle() const { return is_oversize_vehicle_; }
   bool is_VRU() const { return is_VRU_; }
@@ -156,6 +160,7 @@ class Obstacle {
   bool trajectory_valid_ = false;
   bool is_reverse_ = false;
   double cutin_prob_ = 0.0;
+  bool is_normal_ = true;
   std::vector<PncTrajectoryPoint> trajectory_{};
   // iflyauto::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;
