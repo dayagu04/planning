@@ -1173,7 +1173,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load prediction_obj
   if bag_loader.prediction_msg['enable'] == True:
 
-    obstacles_info_all1 = load_prediction_obstacle(prediction_msg,environment_model_info)
+    obstacles_info_all1 = load_prediction_obstacle(prediction_msg, is_enu_to_car, loc_msg, environment_model_info)
     # 加载自车坐标系下的数据
     local_view_data['data_prediction_obj'].data.update({
             'obstacles_x': [],

@@ -50,10 +50,12 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=800)
+
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
 
 def update_lat_behavior_data(local_view_data):
   lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
+  lane_borrow_decider_info = local_view_data['data_msg']['plan_debug_msg'].lane_borrow_decider_info
   planning_json = local_view_data['data_msg']['plan_debug_json_msg']
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
           'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
@@ -62,7 +64,9 @@ def update_lat_behavior_data(local_view_data):
         'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
           'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
             'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
-              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', 'emergency_avoid_obstacle_ids', 'lon_overtake_avoid', 'potential_dangerous_agent_id','pre_follow_within_lane_ids']
+              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason',\
+                'emergency_avoid_obstacle_ids', 'lon_overtake_avoid', 'potential_dangerous_agent_id','pre_follow_within_lane_ids',\
+                'lane_borrow_decider_status', 'static_blocked_obj_id_vec']
   # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
   names  = []
   datas = []
@@ -98,6 +102,24 @@ def update_lat_behavior_data(local_view_data):
     if name == 'pre_follow_within_lane_ids':
       try:
         datas.append(planning_json[name])
+        names.append(name)
+      except:
+        pass
+
+    if name == 'lane_borrow_decider_status':
+      try:
+        datas.append(getattr(lane_borrow_decider_info,name))
+        names.append(name)
+      except:
+        pass
+      
+    if name == 'static_blocked_obj_id_vec':
+      try:
+        value = getattr(lane_borrow_decider_info, name)
+        data_i = []
+        for value_i in value:
+          data_i.append(value_i)
+        datas.append(data_i)
         names.append(name)
       except:
         pass
