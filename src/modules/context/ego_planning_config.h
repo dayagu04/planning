@@ -1664,6 +1664,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, emergency_avoid_v_limit_max,
                      "general_lateral_decider",
                      "emergency_avoid_v_limit_max");
+    ReadItem<double>(json, static_vru_max_lateral_buffer,
+                     "general_lateral_decider",
+                     "static_vru_max_lateral_buffer");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1764,6 +1767,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double emergency_avoid_safe_space_to_road_soft_bound_thr = 0.0;
   double reverse_obstacle_extra_rear_lon_buffer = 0.0;
   double emergency_avoid_v_limit_max = 80;
+  double static_vru_max_lateral_buffer = 0.55;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

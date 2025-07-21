@@ -1670,20 +1670,45 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
           config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
           ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound,
           config_);
+  double static_nudge_buffer2lane_boundary = 0.0;
   if (!is_in_lane_borrow_status) {
     lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                 extra_lane_type_decrease_buffer,
                             0.);
     if (!in_intersection) {
       if (is_nudge_left) {
+        // 获取自车当前位置右车道线型
+        const auto current_ego_right_boundary_type =
+            CalLaneBoundaryType(RIGHT, ego_frenet_state_.s());
+        // 获取障碍物位置右车道线型
+        const auto care_start_s_right_boundary_type =
+            CalLaneBoundaryType(RIGHT, obstacle->frenet_s());
+        if (current_ego_right_boundary_type !=
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
+            care_start_s_right_boundary_type !=
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+          static_nudge_buffer2lane_boundary = config_.static_nudge_buffer2lane_boundary;
+        }
         double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
-        if (nudge_position < config_.static_nudge_buffer2lane_boundary - 0.5 * lane_width) {
-          lat_buf_dis = overlap_min_y - vehicle_param.width + 0.5 * lane_width - config_.static_nudge_buffer2lane_boundary;
+        if (nudge_position < static_nudge_buffer2lane_boundary - 0.5 * lane_width) {
+          lat_buf_dis = overlap_min_y - vehicle_param.width + 0.5 * lane_width - static_nudge_buffer2lane_boundary;
         }
       } else {
+        // 获取自车当前位置左车道线型
+        const auto current_ego_left_boundary_type =
+            CalLaneBoundaryType(LEFT, ego_frenet_state_.s());
+        // 获取障碍物位置左车道线型
+        const auto care_start_s_left_boundary_type =
+            CalLaneBoundaryType(LEFT, obstacle->frenet_s());
+        if (current_ego_left_boundary_type !=
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
+            care_start_s_left_boundary_type !=
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+          static_nudge_buffer2lane_boundary = config_.static_nudge_buffer2lane_boundary;
+        }
         double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;
-        if (nudge_position > 0.5 * lane_width - config_.static_nudge_buffer2lane_boundary) {
-          lat_buf_dis = 0.5 * lane_width - config_.static_nudge_buffer2lane_boundary - vehicle_param.width - overlap_max_y;
+        if (nudge_position > 0.5 * lane_width - static_nudge_buffer2lane_boundary) {
+          lat_buf_dis = 0.5 * lane_width - static_nudge_buffer2lane_boundary - vehicle_param.width - overlap_max_y;
         }
       }
       if (is_side_obstacle) {

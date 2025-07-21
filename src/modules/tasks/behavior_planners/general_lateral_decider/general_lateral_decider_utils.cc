@@ -69,7 +69,7 @@ double CalDesireStaticLateralDistance(const double base_distance,
                                       iflyauto::ObjectType type,
                                       bool is_update_hard_bound,
                                       GeneralLateralDeciderConfig &config) {
-  const double kStaticVRUMaxExtraLateralBuffer = 0.55;
+  const double kStaticVRUMaxExtraLateralBuffer = config.static_vru_max_lateral_buffer;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.35;
   const double kMaxEgoLCoeff = 0.5;
