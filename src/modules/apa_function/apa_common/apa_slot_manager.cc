@@ -36,6 +36,14 @@ void ApaSlotManager::Update(
     return;
   }
 
+  const iflyauto::FuncStateMachine& fun_state_machine_info =
+      local_view->function_state_machine_info;
+  if (fun_state_machine_info.current_state == iflyauto::FunctionalState_PARK_IN_SEARCHING && fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate &&
+    fun_state_machine_info.parking_req.apa_free_slot_info.is_free_slot_selected
+    != iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED) {
+    ego_info_under_slot_.slot.release_info_.Clear();
+  }
+
   ILOG_INFO << "Update ApaSlotManager";
   measure_data_ptr_ = measure_data_ptr;
   state_machine_ptr_ = state_machine_ptr;

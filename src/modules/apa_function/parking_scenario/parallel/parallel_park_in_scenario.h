@@ -39,6 +39,8 @@ class ParallelParkInScenario : public ParkingScenario {
 
   void GenTBoundaryObstacles();
 
+  void ScenarioTry() override;
+
   const Tlane& GetTlane() { return t_lane_; }
 
   virtual const double CalRealTimeBrakeDist() override;
