@@ -88,8 +88,8 @@ void InitGlog(const char *file) {
   // FLAGS_alsologtostderr = true;
   // FLAGS_colorlogtostderr = true;
   // FLAGS_minloglevel = 0;
-  //  50 Mb
-  FLAGS_max_log_size = 50;
+  //  10 Mb
+  FLAGS_max_log_size = 10;
 
   // Init glog
   if (glog_flag_.is_init == false) {

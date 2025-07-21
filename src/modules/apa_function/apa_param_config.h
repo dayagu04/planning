@@ -84,8 +84,8 @@ struct ParkingSpeedConfig {
 
   // speed limit
   double path_thresh_for_acc_bound = 0.4;
-  double long_path_acc_upper = 0.51;
-  double short_path_acc_upper = 0.15;
+  double long_path_acc_upper = 0.61;
+  double short_path_acc_upper = 0.51;
   double acc_lower = -2.0;
   double jerk_upper = 7.0;
   double jerk_lower = -7.0;

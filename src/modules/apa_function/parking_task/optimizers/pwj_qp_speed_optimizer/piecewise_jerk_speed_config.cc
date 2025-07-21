@@ -8,7 +8,7 @@ void PiecewiseJerkSpeedQPConfig::Init() {
   // jerk_weight = 1e-4;
   jerk_weight = 0.001;
   ref_v_weight = 5.0;
-  ref_s_weight = 0.5;
+  ref_s_weight = 1.0;
 
   const apa_planner::ParkingSpeedConfig& speed_config =
       apa_param.GetParam().speed_config;

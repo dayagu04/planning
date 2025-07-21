@@ -19,7 +19,8 @@ class DPCostGenerator {
   double CalcSpeedUpCost(const double acc, const double node_v,
                          const double speed_limit);
 
-  double CalcSpeedDownCost(const double acc);
+  double CalcSpeedDownCost(const double acc, const double node_v,
+                           const double speed_limit);
 
   void CalcAccCost(SVGraphNode* point);
 

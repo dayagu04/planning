@@ -391,6 +391,8 @@
   "fast_cruise_speed" : 2.0,
   "middle_cruise_speed" : 1.12,
   "slow_cruise_speed" : 0.84,
+  "long_path_acc_upper" : 0.61,
+  "short_path_acc_upper" : 0.51,
 
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 4.5,

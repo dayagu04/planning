@@ -255,7 +255,8 @@ void FuturePathDecider::GetPathByCircle(const Pose2f *start_point_pose,
                                         const float arc, const float radius,
                                         const bool is_forward,
                                         std::vector<Pose2f> *path) {
-  int path_point_num = std::ceil(arc / 0.1);
+  float delta_s = 0.1;
+  int path_point_num = std::ceil(arc / delta_s);
 
   // get vehicle circle
   VehicleCircle veh_circle;
@@ -271,14 +272,13 @@ void FuturePathDecider::GetPathByCircle(const Pose2f *start_point_pose,
   // interpolate
   Pose2f next_pose;
   float inv_radius = std::fabs(1.0 / radius);
-
   float acc_s = 0.0;
 
   path->clear();
   path->push_back(*start_point_pose);
 
   for (int i = 0; i < path_point_num; ++i) {
-    acc_s += 0.1;
+    acc_s += delta_s;
 
     InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s, inv_radius,
                            &next_pose);

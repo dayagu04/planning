@@ -140,7 +140,8 @@ void DpSpeedOptimizer::UpdateSpeedLimitLookUp() {
   double curr_s = 0.0;
   double speed_limit;
   for (int32_t i = 0; i < dimension_s_; ++i) {
-    speed_limit = speed_limit_profile_->GetSpeedLimitByRange(curr_s, 0.1);
+    speed_limit =
+        speed_limit_profile_->GetSpeedLimitByRange(curr_s, config_.unit_s);
     speed_limit_by_index_[i] = speed_limit;
 
     curr_s += config_.unit_s;
@@ -414,6 +415,7 @@ void DpSpeedOptimizer::CalculateTotalCost() {
             pool_node->ConstCost().total_cost) {
           pool_node->SetPrePoint(current_node);
           pool_node->SetAcc(child_node.GetSVPoint().acc);
+          pool_node->SetJerk(child_node.GetSVPoint().jerk);
           pool_node->SetCost(child_node.ConstCost());
           pool_node->SetTime(child_node.GetSVPoint().t);
         }
@@ -485,7 +487,8 @@ void DpSpeedOptimizer::RetrieveSpeedProfile(SpeedData* const speed_data) {
 
 #if DEBUG_RETRIEVE_SPEED_PROFILE
     if (cur_point != nullptr) {
-      cur_point->GetSVPoint().DebugString();
+      cur_point->DebugString();
+      cur_point->ConstCost().DebugCost();
     }
 #endif
 
