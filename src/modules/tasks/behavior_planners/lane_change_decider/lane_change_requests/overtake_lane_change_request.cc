@@ -373,7 +373,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 #ifdef X86
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
-  const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
+  // const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
+  const bool is_trigger_left = is_left_overtake;
+
   static int counter_left = 0;
   if (!is_trigger_left) {
     counter_left = 0;
@@ -384,8 +386,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     trigger_left_overtake = true;
   }
 
-  const bool is_trigger_right =
-      (is_right_overtake && is_right_lane_change_safe_);
+  // const bool is_trigger_right =
+  //     (is_right_overtake && is_right_lane_change_safe_);
+  const bool is_trigger_right = is_right_overtake;      
   static int counter_right = 0;
   if (!is_trigger_right) {
     counter_right = 0;
@@ -397,18 +400,18 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
 #else
   const bool trigger_left_overtake = checkOvertakeTrigger(
-      current_time, is_left_overtake && is_left_lane_change_safe_,
+      current_time, is_left_overtake,
       &left_overtake_valid_timestamp_);
 
   const bool trigger_right_overtake = checkOvertakeTrigger(
-      current_time, is_right_overtake && is_right_lane_change_safe_,
+      current_time, is_right_overtake,
       &right_overtake_valid_timestamp_);
 #endif
 
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
   if (trigger_left_overtake) {
-    if (request_type_ != LEFT_CHANGE && ComputeLcValid(LEFT_CHANGE)) {
+    if (request_type_ != LEFT_CHANGE) {
       if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
            first_merge_direction != RAMP_ON_RIGHT) &&
           (distance_to_first_road_split >=
@@ -440,7 +443,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
                 overtake_vehicle_id_, overtake_vehicle_speed_);
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
-    if (request_type_ != RIGHT_CHANGE && ComputeLcValid(RIGHT_CHANGE)) {
+    if (request_type_ != RIGHT_CHANGE) {
       if ((sum_dis_to_last_merge_point >=
            max_pass_merge_distance_to_surpress_overtake_lane_change) &&
           (dis_to_first_merge >= dis_threshold_to_merged_point ||
@@ -754,10 +757,10 @@ bool OvertakeRequest::checkLeftLaneChangeValid(
     LOG_DEBUG("left invalid since objects");
     return false;
   }
-  if (!checkLaneChangeValidBySuprsSignal(is_left)) {
-    LOG_DEBUG("left invalid since suppression");
-    return false;
-  }
+  // if (!checkLaneChangeValidBySuprsSignal(is_left)) {
+  //   LOG_DEBUG("left invalid since suppression");
+  //   return false;
+  // }
   return true;
 }
 
@@ -767,10 +770,10 @@ bool OvertakeRequest::checkRightLaneChangeValid(
     LOG_DEBUG("right invalid since objects");
     return false;
   }
-  if (!checkLaneChangeValidBySuprsSignal(is_left)) {
-    LOG_DEBUG("right invalid since suppression");
-    return false;
-  }
+  // if (!checkLaneChangeValidBySuprsSignal(is_left)) {
+  //   LOG_DEBUG("right invalid since suppression");
+  //   return false;
+  // }
   return true;
 }
 
@@ -803,20 +806,20 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
   const std::vector<TrackedObject>& front_tracks =
       lateral_obstacle_->front_tracks();
 
-  if (!left_potensial_objects.size()) {
-    return true;
-  }
-  for (const auto& id : left_potensial_objects) {
-    if (tracks_map_[id].d_rel < -kPotensialObjectLonRange ||
-        tracks_map_[id].d_rel > kPotensialObjectLonRange ||
-        tracks_map_[id].l > potensial_max_l || tracks_map_[id].l < 0.0) {
-      continue;
-    }
-    ++potensial_counter;
-    if (potensial_counter >= kPotensialObjectNum) {
-      return false;
-    }
-  }
+  // if (!left_potensial_objects.size()) {
+  //   return true;
+  // }
+  // for (const auto& id : left_potensial_objects) {
+  //   if (tracks_map_[id].d_rel < -kPotensialObjectLonRange ||
+  //       tracks_map_[id].d_rel > kPotensialObjectLonRange ||
+  //       tracks_map_[id].l > potensial_max_l || tracks_map_[id].l < 0.0) {
+  //     continue;
+  //   }
+  //   ++potensial_counter;
+  //   if (potensial_counter >= kPotensialObjectNum) {
+  //     return false;
+  //   }
+  // }
 
   std::vector<TrackedObject> left_front_target_tracks;
   std::vector<TrackedObject> ego_front_target_tracks;
@@ -932,17 +935,17 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
   if (!right_potensial_objects.size()) {
     return true;
   }
-  for (const auto& id : right_potensial_objects) {
-    if (tracks_map_[id].d_rel < -kPotensialObjectLonRange ||
-        tracks_map_[id].d_rel > kPotensialObjectLonRange ||
-        tracks_map_[id].l < potensial_min_l || tracks_map_[id].l > 0.0) {
-      continue;
-    }
-    ++potensial_counter;
-    if (potensial_counter >= kPotensialObjectNum) {
-      return false;
-    }
-  }
+  // for (const auto& id : right_potensial_objects) {
+  //   if (tracks_map_[id].d_rel < -kPotensialObjectLonRange ||
+  //       tracks_map_[id].d_rel > kPotensialObjectLonRange ||
+  //       tracks_map_[id].l < potensial_min_l || tracks_map_[id].l > 0.0) {
+  //     continue;
+  //   }
+  //   ++potensial_counter;
+  //   if (potensial_counter >= kPotensialObjectNum) {
+  //     return false;
+  //   }
+  // }
 
   std::vector<TrackedObject> right_front_target_tracks;
   std::vector<TrackedObject> ego_front_target_tracks;
