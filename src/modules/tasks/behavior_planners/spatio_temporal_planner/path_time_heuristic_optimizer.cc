@@ -227,6 +227,7 @@ void PathTimeHeuristicOptimizer::GetVehicleVertices(
 
 void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs) {
+  const int k_ego_traj_points_nums = 16;
   auto& lateral_obstacle_decision =
       session_->mutable_planning_context()
       ->mutable_lateral_obstacle_decider_output().lat_obstacle_decision;
@@ -244,7 +245,7 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
       continue;
     }
     if (iter != lateral_obstacle_decision.end()) {
-      for (int i = 0; i < ego_box_set_.size(); i++) {
+      for (int i = 0; i < k_ego_traj_points_nums; i++) {
         auto it = agent.agent_boxs_set.find(i);
         if (it != agent.agent_boxs_set.end()) {
           agent_box = it->second;
