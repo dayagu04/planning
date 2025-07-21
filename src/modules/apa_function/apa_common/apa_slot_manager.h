@@ -194,6 +194,7 @@ class ApaSlotManager final {
 
   void Update(
       const LocalView* local_view,
+      const iflyauto::PlanningOutput *planning_output,
       const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
       const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
       const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,

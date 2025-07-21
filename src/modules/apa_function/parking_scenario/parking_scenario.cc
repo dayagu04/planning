@@ -227,15 +227,16 @@ void ParkingScenario::SetPlanningPath() {
     frame_.remain_dist_col_det = 2.68;
   }
 
-  // set fold mirror
+  // set fold and unfold mirror
+  iflyauto::RearViewMirrorCommand* mirror_command =
+      &planning_output_.rear_view_mirror_signal_command;
+  mirror_command->available = true;
   if (frame_.need_fold_mirror) {
-    planning_output_.rear_view_mirror_signal_command.available = true;
-    planning_output_.rear_view_mirror_signal_command.rear_view_mirror_value =
-        iflyauto::RearViewMirrorSignalType::REAR_VIEW_MIRROR_FOLD;
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
+  } else if (frame_.need_unfold_mirror) {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
   } else {
-    planning_output_.rear_view_mirror_signal_command.available = false;
-    planning_output_.rear_view_mirror_signal_command.rear_view_mirror_value =
-        iflyauto::RearViewMirrorSignalType::REAR_VIEW_MIRROR_UNFOLD;
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
   }
 
   auto publish_traj = &(planning_output_.trajectory);
@@ -398,7 +399,10 @@ const double ParkingScenario::CalRemainDistFromPath() {
 
 const double ParkingScenario::CalRemainDistFromObs(
     const double static_lon_buffer, const double static_lat_buffer,
-    const double dynamic_lon_buffer, const double dynamic_lat_buffer) {
+    const double dynamic_lon_buffer, const double dynamic_lat_buffer,
+    const bool only_check_mirror) {
+  const ApaParameters& param = apa_param.GetParam();
+
   if (apa_world_ptr_->GetSlotManagerPtr()
           ->GetEgoInfoUnderSlot()
           .slot_disappear_flag) {
@@ -412,28 +416,39 @@ const double ParkingScenario::CalRemainDistFromObs(
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
       apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
 
-  if (apa_param.GetParam().enable_corner_uss_process) {
+  if (only_check_mirror) {
+    ColResult col_res = gjk_col_det_ptr->Update(
+        apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
+        static_lat_buffer, 0.0,
+        GJKColDetRequest(false, false, CarBodyType::ONLY_MIRROR,
+                         ApaObsMovementType::STATIC));
+
+    return col_res.remain_dist - static_lon_buffer;
+  }
+
+  if (param.enable_corner_uss_process) {
     uss_obstacle_avoider_ptr->Update();
   }
 
-  double uss_remain_dist =
+  const double uss_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
       static_lon_buffer;
 
   // check static obs, it can be radical
   GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
                                        ApaObsMovementType::STATIC);
-  gjl_col_det_request.use_uss_pt = false;
-  if (apa_param.GetParam().uss_config.use_uss_pt_clound &&
-      apa_param.GetParam().uss_config.use_uss_pt_for_speed) {
-    gjl_col_det_request.use_uss_pt = true;
-  }
+
+  gjl_col_det_request.use_uss_pt = param.uss_config.use_uss_pt_clound &&
+                                   param.uss_config.use_uss_pt_for_speed;
+
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       static_lat_buffer, 0.0, gjl_col_det_request);
+
   if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
   }
+
   const double obs_pt_remain_dist_static =
       col_res.remain_dist_static - static_lon_buffer;
 
@@ -443,24 +458,23 @@ const double ParkingScenario::CalRemainDistFromObs(
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_lat_buffer, 0.0, gjl_col_det_request);
+
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
   }
-  ILOG_INFO << "col_res.remain_dist_dynamic = " << col_res.remain_dist_dynamic
-            << "  dynamic_lon_buffer = " << dynamic_lon_buffer
-            << "  dynamic col_res.col_flag = " << col_res.col_flag;
+
   const double obs_pt_remain_dist_dynamic =
       col_res.remain_dist_dynamic - dynamic_lon_buffer;
 
   JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", static_lat_buffer)
 
   ILOG_INFO << "  enable_corner_uss_process = "
-            << apa_param.GetParam().enable_corner_uss_process
+            << param.enable_corner_uss_process
             << "  uss remain dist = " << uss_remain_dist
             << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
             << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
 
-  if (apa_param.GetParam().enable_corner_uss_process) {
+  if (param.enable_corner_uss_process) {
     frame_.stuck_by_dynamic_obs = false;
     return uss_remain_dist;
   } else {
@@ -472,6 +486,26 @@ const double ParkingScenario::CalRemainDistFromObs(
       return obs_pt_remain_dist_static;
     }
   }
+}
+
+const double ParkingScenario::CalRemainDistFromPlanPathDangerous(
+    const double static_lon_buffer, const double static_lat_buffer) {
+  if (current_path_point_global_vec_.empty()) {
+    return 36.8;
+  }
+
+  GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
+                                       ApaObsMovementType::STATIC);
+  gjl_col_det_request.use_uss_pt = false;
+
+  const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
+      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
+
+  ColResult col_res =
+      gjk_col_det_ptr->Update(current_path_point_global_vec_, static_lat_buffer,
+                              static_lon_buffer, gjl_col_det_request);
+
+  return col_res.remain_dist_static;
 }
 
 const bool ParkingScenario::PostProcessPath() {
@@ -774,6 +808,14 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
     return true;
   }
 
+  if (!apa_world_ptr_->GetSimuParam().sim_to_target &&
+      !apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().fix_slot &&
+      CheckPathDangerous()) {
+    ILOG_INFO << "replan by path dangerous!";
+    frame_.replan_reason = ReplanReason::PATH_DANGEROUS;
+    return true;
+  }
+
   return false;
 }
 
@@ -849,6 +891,7 @@ void ParkingScenario::RecordDebugObstacle(
 
   return;
 }
+const bool ParkingScenario::CheckPathDangerous() { return false; }
 
 }  // namespace apa_planner
 }  // namespace planning

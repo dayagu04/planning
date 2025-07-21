@@ -63,6 +63,13 @@ struct CarFootPrintCircle {
   void LocalToGlobal(const geometry_lib::LocalToGlobalTf &l2g_tf) {
     center_global = l2g_tf.GetPos(center_local);
   }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log)
+        << "center_local: " << center_local.transpose()
+        << "   center_global: " << center_global.transpose()
+        << "  radius = " << radius;
+  };
 };
 
 struct CarFootPrintCircleList {
@@ -96,6 +103,16 @@ struct CarFootPrintCircleList {
     for (uint8_t i = 0; i < count; ++i) {
       circles[i].LocalToGlobal(l2g_tf);
     }
+  }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log) << "max_circle: ";
+    max_circle.PrintInfo(enable_log);
+    for (uint8_t i = 0; i < count; ++i) {
+      ILOG_INFO_IF(enable_log) << "circle[" << i << "]: ";
+      circles[i].PrintInfo(enable_log);
+    }
+    ILOG_INFO_IF(enable_log) << "height_type: " << int(height_type);
   }
 };
 

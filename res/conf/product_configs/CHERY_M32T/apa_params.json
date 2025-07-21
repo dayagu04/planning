@@ -35,8 +35,6 @@
   "plan_time": 0.1,
 
   "comment_2": "car params",
-  "has_intelligent_fold_mirror": false,
-  "force_fold_mirror": false,
   "front_overhanging": 0.924,
   "rear_overhanging": 1.03,
   "wheel_base": 2.8,
@@ -198,7 +196,7 @@
   "comment_11": "construce obstacles params",
   "channel_width": 8.68,
   "min_channel_width": 5.68,
-  "channel_length": 18.68,
+  "channel_length": 10.68,
   "max_obs2car_dist_in_slot": 0.0886,
   "max_obs2car_dist_out_slot": 0.1868,
   "max_obs2car_dist_slot_occupied_ratio": 0.086,
@@ -223,7 +221,7 @@
   "enable_side_pass_limiter": true,
   "tlane_safe_dx": 0.1068,
   "min_dynamic_plan_proj_dt": 0.2,
-  "max_dynamic_plan_proj_dt": 0.9,
+  "max_dynamic_plan_proj_dt": 1.3,
   "max_lat_err": 0.086,
   "max_phi_err": 2.68,
   "enable_multi_height_col_det": false,
@@ -234,6 +232,7 @@
   "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
 
   "comment_12": "dynamic update path params",
+  "enable_path_dangerous_replan": false,
   "car_to_limiter_dis": 1.0,
   "pose_y_err": 0.15,
   "pose_heading_err": 18.68,
@@ -286,7 +285,7 @@
   "prepare_directly_use_tangent_heading_err": 1.68,
   "prepare_adjust_drive_max_length": 2.08,
   "prepare_adjust_reverse_max_length": 3.6,
-  "prepare_single_max_allow_time": 186.8,
+  "prepare_single_max_allow_time": 268.8,
   "prepare_max_try_count": 1,
   "third_prepare_heading_threshold": 26.68,
   "static_pos_eps": 0.01,
@@ -406,5 +405,17 @@
   "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
   "use_uss_pt_for_slot_release": true,
-  "point_max_dist" : 0.8
+  "point_max_dist" : 0.8,
+
+  "comment_20": "fold mirror params",
+  "has_smart_fold_mirror": false,
+  "force_fold_mirror": false,
+  "locked_obs_slot_with_fold_mirror": false,
+  "fold_mirror_lat_buffer": 0.12,
+  "fold_mirror_reaction_time": 2.0,
+  "fold_mirror_x_down_offset": 0.0,
+  "fold_mirror_x_up_offset": 3.0,
+  "fold_mirror_x_redunant": 0.3,
+  "fold_mirror_y_offset": 0.06,
+  "fold_mirror_heading_offset": 2.68
 }

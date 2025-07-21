@@ -12,8 +12,8 @@ namespace planning {
 namespace apa_planner {
 
 #define edt_ogm_resolution (0.05)
-#define edt_ogm_grid_x_max (512)
-#define edt_ogm_grid_y_max (800)
+#define edt_ogm_grid_x_max int(20 / edt_ogm_resolution)
+#define edt_ogm_grid_y_max int(36 / edt_ogm_resolution)
 
 // x -> row   y -> column
 // slot coordinate system
@@ -26,12 +26,12 @@ namespace apa_planner {
 //  y <----------|
 
 struct OGMIndex {
-  size_t x{0};
-  size_t y{0};
+  int x{0};
+  int y{0};
 
   OGMIndex() {}
-  OGMIndex(const size_t _x, const size_t _y) : x(_x), y(_y) {}
-  void Set(const size_t _x, const size_t _y) {
+  OGMIndex(const int _x, const int _y) : x(_x), y(_y) {}
+  void Set(const int _x, const int _y) {
     x = _x;
     y = _y;
   }

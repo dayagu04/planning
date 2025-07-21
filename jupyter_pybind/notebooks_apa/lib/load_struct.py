@@ -1,4 +1,5 @@
-import sys
+from enum import Enum, IntEnum
+import sys, math, os
 import numpy as np
 import math
 from lib.load_rotate import *
@@ -9,12 +10,25 @@ load_center_line_in_poly = False
 kRad2Deg = 180.0 / math.pi
 kDeg2Rad = math.pi / 180.0
 
-parking_target_pose_type_dict = {0: 'FAIL', 1: 'NORMAL', 2: 'FOLD_MIRROR'}
-parking_state_machine_dict = {0: 'SEARCH_IN_NO_SELECTED', 1: 'SEARCH_IN_SELECTED_TAIL', 2: 'SEARCH_IN_SELECTED_HEADING', 3: 'ACTIVE_IN_TAIL', 4: 'ACTIVE_IN_HEADING', 5: 'SEARCH_OUT_NO_SELECTED', 6: 'SEARCH_OUT_SELECTED_TAIL', 7: 'SEARCH_OUT_SELECTED_HEADING', 8: 'ACTIVE_OUT_TAIL', 9: 'ACTIVE_OUT_HEADING', 10: 'SUSPEND', 11: 'COMPLETE', 12: 'COUNT', 13: 'INVALID'}
-parking_planning_stm_dict = {0: 'PARKING_IDLE', 1: 'PARKING_RUNNING', 2: 'PARKING_GEARCHANGE', 3: 'PARKING_PLANNING', 4: 'PARKING_FINISHED', 5: 'PARKING_FAILED', 6: 'PARKING_PAUSED'}
-parking_replan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT', 10: 'DYNAMIC_PATH_NOT_SUPERIOR', 11: "NO_TARGET_POSE", 12: "FOLD_MIRROR_FAILED", 13: "SLOT_ID_CHANGED", 14: "SLOT_TYPE_CHANGED", 15: "GEAR_CHANGE_COUNT_TOO_MUCH"}
-parking_replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_OBS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET', 7: "FORCE_PLAN", 8: "SEG_COMPLETED_SLOT_JUMP"}
-parking_process_obs_method_dict = {0: 'DO_NOTHING', 1: 'MOVE_OBS_OUT_SLOT', 2: 'MOVE_OBS_OUT_CAR_SAFE_POS', 3: 'COUNT'}
+all_gear_command_dict = {0: 'gear_command_none', 1: 'gear_command_parking', 2: 'gear_command_reverse', 3: 'gear_command_neutral', 4: 'gear_command_drive', 5: 'gear_command_low'}
+parking_path_gen_request_response_state_dict = {0: 'none', 1: 'has_resquest', 2: 'has_response', 3: 'has_published_response'}
+parking_pre_plan_case_dict = {0: 'failed', 1: 'ego_pose', 2: 'mid_point'}
+parking_pre_plan_status_dict = {0: 'none', 1: 'computing', 2: 'success', 3: 'failed'}
+parking_plan_status_dict = {0: 'none', 1: 'in_progress', 2: 'finished', 3: 'failed'}
+parking_target_pose_type_dict = {0: 'fail', 1: 'normal', 2: 'fold_mirror'}
+parking_fold_mirror_command_dict = {0: 'none', 1: 'fold_mirror', 2: 'unfold_mirror'}
+parking_vs_mirror_status_dict = {0: 'invalid', 1: 'have_folded', 2: 'not_folded'}
+parking_path_thread_status_dict = {0: 'inited', 1: 'running', 2: 'stopped', 3: "max_num"}
+parking_state_machine_dict = {0: 'search_in_no_selected', 1: 'search_in_selected_tail', 2: 'search_in_selected_heading', 3: 'active_in_tail', 4: 'active_in_heading', 5: 'search_out_no_selected', 6: 'search_out_selected_tail', 7: 'search_out_selected_heading', 8: 'active_out_tail', 9: 'active_out_heading', 10: 'suspend', 11: 'complete', 12: 'count', 13: 'invalid'}
+parking_planning_stm_dict = {0: 'park_idle', 1: 'park_running', 2: 'park_gearchange', 3: 'park_planning', 4: 'park_finished', 5: 'park_failed', 6: 'park_paused'}
+parking_replan_fail_reason_dict = {0: 'not_failed', 1: 'pause_failed_time', 2: 'stuck_failed_time', 3: 'update_ego_slot_info', 4: 'post_process_path_point_size', 5: 'post_process_path_point_same', 6: 'set_seg_index', 7: 'check_gear_length', 8: 'path_plan_failed', 9: 'plan_count_exceed_limit', 10: 'dynamic_path_not_superior', 11: "no_target_pose", 12: "fold_mirror_failed", 13: "slot_id_changed", 14: "slot_type_changed", 15: "gear_change_count_too_much", 16: "loss_search_path"}
+parking_replan_reason_dict = {0: 'not_replan', 1: 'first_plan', 2: 'seg_completed_path', 3: 'seg_completed_obs', 4: 'stucked', 5: 'dynamic', 6: 'seg_completed_col_det', 7: "force_plan", 8: "seg_completed_slot_jump", 9: "path_dangerous"}
+parking_process_obs_method_dict = {0: 'do_nothing', 1: 'move_obs_out_slot', 2: 'move_obs_out_car_safe_pos', 3: 'count'}
+
+class CarStruct(IntEnum):
+  WITH_MIRROR = 0
+  WITHOUT_MIRROR = 1
+  CHASSIS = 2
 
 def check_two_number_is_equal(a, b, epsilon=1e-3):
   return abs(a - b) < epsilon
@@ -144,31 +158,80 @@ def load_car_circle_coord():
 
   return circle_x, circle_y, circle_r
 
-def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, fold_mirror_flag=False):
+def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, fold_mirror_flag=False, car_struct=CarStruct.WITH_MIRROR):
   if vehicle_type == JAC_S811:
     circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
     circle_y = [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0]
     circle_r = [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95]
+
   elif vehicle_type == CHERY_T26:
     circle_x = [1.3225, 3.26, 3.26, 2.04, -0.63, -0.63, 2.04, 2.9375, 1.8, 0.9, -0.0375]
     circle_y = [0.0, 0.5, -0.5, -0.912, -0.5, 0.5, 0.912, 0.0, 0.0, 0.0, 0.0]
     circle_r = [2.4075, 0.46, 0.46, 0.18, 0.46, 0.46, 0.18, 0.9595, 0.9595, 0.9595, 0.9595]
+
   elif vehicle_type == CHERY_E0X:
-    circle_x = [1.45, 3.5150, 3.5150, 2.12, -0.5650, -0.5650, 2.12, 2.9375, 1.8, 0.9, -0.0375]
-    circle_y = [0.0, 0.6375, -0.6375, -0.9345, -0.5275, 0.5275, 0.9345, 0.0, 0.0, 0.0, 0.0]
-    circle_r = [2.58, 0.35, 0.35, 0.18, 0.46, 0.46, 0.18, 0.9875, 0.9875, 0.9875, 0.9875]
+    circle_x = [1.45, 3.4650,  3.4650,  2.14,   -0.5650, -0.5650, 2.14,   2.9375, 1.8,    0.9,   -0.0375]
+    circle_y = [0.0,  0.5175, -0.5175, -0.9345, -0.5275,  0.5275, 0.9345, 0.0,    0.0,    0.0,    0.0]
+    circle_r = [2.58, 0.47,    0.47,    0.18,    0.46,    0.46,   0.18,   0.9875, 0.9875, 0.9875, 0.9875]
+    if fold_mirror_flag:
+      circle_x = [1.45,  3.4650,   3.4650,   2.14,    -0.5650,  -0.5650,  2.14,    2.9375,  1.8,    0.9,   -0.0375]
+      circle_y = [0.0,   0.5175,  -0.5175,  -0.8145,  -0.5275,   0.5275,  0.8145,  0.0,     0.0,    0.0,    0.0]
+      circle_r = [2.58,  0.47,     0.47,     0.21,     0.46,     0.46,    0.21,    0.9875,  0.9875, 0.9875, 0.9875]
+
   elif vehicle_type == CHERY_M32T:
-    circle_x = [1.36, 3.3250, 3.3250, 1.95, -0.5650, -0.5650, 1.95, 2.80, 1.8, 0.9, -0.0875]
-    circle_y = [0.0, 0.5475, -0.5475, -0.914, -0.4875, 0.4875, 0.914, 0.0, 0.0, 0.0, 0.0]
-    circle_r = [2.68, 0.3995, 0.3995, 0.18, 0.4595, 0.4595, 0.18, 0.945, 0.945, 0.945, 0.945]
+    circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+    circle_y = [0.0,  0.3875, -0.3875, -0.896,   -0.4075,   0.4075,  0.896,  0.0,   0.0,   0.0,   0.0]
+    circle_r = [2.49, 0.5495,  0.5495,  0.21,     0.5295,   0.5295,  0.21,   0.934, 0.934, 0.934, 0.934]
+    if fold_mirror_flag:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.776,   -0.4075,   0.4075,  0.776,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.24,     0.5295,   0.5295,  0.24,   0.934, 0.934, 0.934, 0.934]
+
+    if car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750,  -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875,  -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,   0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+
   elif vehicle_type == BESTUNE_E541:
     circle_x = [1.45, 3.5150, 3.5150, 2.12, -0.5650, -0.5650, 2.12, 2.9375, 1.8, 0.9, -0.0375]
     circle_y = [0.0, 0.6375, -0.6375, -0.9345, -0.5275, 0.5275, 0.9345, 0.0, 0.0, 0.0, 0.0]
     circle_r = [2.58, 0.35, 0.35, 0.18, 0.46, 0.46, 0.18, 0.9875, 0.9875, 0.9875, 0.9875]
+
   else:
     circle_x = [1.45, 3.5150, 3.5150, 2.12, -0.5650, -0.5650, 2.12, 2.9375, 1.8, 0.9, -0.0375]
     circle_y = [0.0, 0.6375, -0.6375, -0.9345, -0.5275, 0.5275, 0.9345, 0.0, 0.0, 0.0, 0.0]
     circle_r = [2.58, 0.35, 0.35, 0.18, 0.46, 0.46, 0.18, 0.9875, 0.9875, 0.9875, 0.9875]
+
+  if car_struct == CarStruct.WITH_MIRROR:
+    for i in range(1, len(circle_x)):
+      if i == 1 or i == 5:
+        circle_y[i] += car_lat_inflation
+      elif i == 2 or i == 4:
+        circle_y[i] -= car_lat_inflation
+      elif i == 3 or i == 6:
+        circle_r[i] += car_lat_inflation
+      elif i == 7:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] -= car_lat_inflation
+      elif i == 10:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] += car_lat_inflation
+      else:
+        circle_r[i] += car_lat_inflation
+  elif car_struct == CarStruct.WITHOUT_MIRROR:
+    for i in range(1, len(circle_x)):
+      if i == 1 or i == 4:
+        circle_y[i] += car_lat_inflation
+      elif i == 2 or i == 3:
+        circle_y[i] -= car_lat_inflation
+      elif i == 5:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] -= car_lat_inflation
+      elif i == 8:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] += car_lat_inflation
+      else:
+        circle_r[i] += car_lat_inflation
 
   return circle_x, circle_y, circle_r
 

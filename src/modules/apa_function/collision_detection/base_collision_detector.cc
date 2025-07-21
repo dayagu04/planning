@@ -154,6 +154,11 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
         MAX_CAR_FOOTPRINT_CIRCLE_NUM) {
       break;
     }
+
+    if (i == 3 || i == 6) {
+      continue;
+    }
+
     circles[car_without_mirror_circles_list_.count].center_local << circle_x[i],
         circle_y[i];
     circles[car_without_mirror_circles_list_.count].radius = circle_r[i];

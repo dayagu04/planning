@@ -62,14 +62,13 @@ void EDTCollisionDetector::GenOccupancyGridMap(
 
 const OGMIndex EDTCollisionDetector::GetIndexFromOGMPose(
     const Eigen::Vector2d &pt) {
-  return OGMIndex(std::round(pt.x() * resolution_inv_),
-                  std::round(pt.y() * resolution_inv_));
+  return OGMIndex(int(pt.x() * resolution_inv_), int(pt.y() * resolution_inv_));
 }
 
 const OGMIndex EDTCollisionDetector::GetIndexFromSlotPose(
     const Eigen::Vector2d &pt) {
-  return GetIndexFromOGMPose(
-      Eigen::Vector2d(pt.x() - ogm_bound_.min_x, pt.y() - ogm_bound_.min_y));
+  return GetIndexFromOGMPose(Eigen::Vector2d(pt.x() - ogm_bound_.min_x + 1e-6,
+                                             pt.y() - ogm_bound_.min_y + 1e-6));
 }
 
 const bool EDTCollisionDetector::IsIndexValid(const OGMIndex &id) const {
@@ -281,12 +280,23 @@ void EDTCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
 }
 
 void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
-  car_with_mirror_circles_list_buffer_.Reset();
-  car_with_mirror_circles_list_buffer_ = car_with_mirror_circles_list_;
-  car_with_mirror_circles_list_buffer_.max_circle.radius += max_circle_buffer_;
+  car_with_mirror_circles_list_buffer_.count =
+      car_with_mirror_circles_list_.count;
+
+  car_with_mirror_circles_list_buffer_.max_circle.center_local =
+      car_with_mirror_circles_list_.max_circle.center_local;
+
+  car_with_mirror_circles_list_buffer_.max_circle.radius =
+      car_with_mirror_circles_list_.max_circle.radius + max_circle_buffer_;
+
   car_with_mirror_circles_list_buffer_.height_type = ApaObsHeightType::HIGH;
+
   CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
+  CarFootPrintCircle *origin_circles = car_with_mirror_circles_list_.circles;
+
   for (size_t i = 0; i < car_with_mirror_circles_list_buffer_.count; ++i) {
+    circles[i].center_local = origin_circles[i].center_local;
+    circles[i].radius = origin_circles[i].radius;
     if (i == 0 || i == 4) {
       // left front circle, left rear circle, move toward left
       circles[i].center_local.y() += body_lat_buffer_;
@@ -315,32 +325,37 @@ void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
 }
 
 void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
-  car_without_mirror_circles_list_with_buffer_.Reset();
-  car_without_mirror_circles_list_with_buffer_ =
-      car_without_mirror_circles_list_;
-  car_without_mirror_circles_list_with_buffer_.max_circle.radius +=
-      max_circle_buffer_;
-  CarFootPrintCircle *circles =
-      car_without_mirror_circles_list_with_buffer_.circles;
+  car_without_mirror_circles_list_with_buffer_.count =
+      car_without_mirror_circles_list_.count;
+
+  car_without_mirror_circles_list_with_buffer_.max_circle.center_local =
+      car_without_mirror_circles_list_.max_circle.center_local;
+
+  car_without_mirror_circles_list_with_buffer_.max_circle.radius =
+      car_without_mirror_circles_list_.max_circle.radius + max_circle_buffer_;
+
   car_without_mirror_circles_list_with_buffer_.height_type =
       ApaObsHeightType::MID;
+
+  CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
+  CarFootPrintCircle *origin_circles = car_with_mirror_circles_list_.circles;
+
   for (size_t i = 0; i < car_without_mirror_circles_list_with_buffer_.count;
        ++i) {
-    if (i == 0 || i == 4) {
+    circles[i].center_local = origin_circles[i].center_local;
+    circles[i].radius = origin_circles[i].radius;
+    if (i == 0 || i == 3) {
       // left front circle, left rear circle, move toward left
       circles[i].center_local.y() += body_lat_buffer_;
-    } else if (i == 1 || i == 3) {
+    } else if (i == 1 || i == 2) {
       // right front circle, right rear circle, move toward right
       circles[i].center_local.y() -= body_lat_buffer_;
-    } else if (i == 2 || i == 5) {
-      // left and right mirror, increase radius
-      circles[i].radius += mirror_lat_buffer_;
-    } else if (i == 6) {
+    } else if (i == 4) {
       // front circle, increase radius
       circles[i].radius += body_lat_buffer_;
       // move toward down, still tangent to the front lane of the car
       circles[i].center_local.x() -= body_lat_buffer_;
-    } else if (i == 9) {
+    } else if (i == 7) {
       // rear circle, increase radius
       circles[i].radius += body_lat_buffer_;
       // move toward up, still tangent to the rear lane of the car
@@ -354,12 +369,22 @@ void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
 }
 
 void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
-  car_chassis_circles_list_with_buffer_.Reset();
-  car_chassis_circles_list_with_buffer_ = car_chassis_circles_list_;
-  car_chassis_circles_list_with_buffer_.max_circle.radius += max_circle_buffer_;
+  car_chassis_circles_list_with_buffer_.count = car_chassis_circles_list_.count;
+
+  car_chassis_circles_list_with_buffer_.max_circle.center_local =
+      car_chassis_circles_list_.max_circle.center_local;
+
+  car_chassis_circles_list_with_buffer_.max_circle.radius =
+      car_chassis_circles_list_.max_circle.radius + max_circle_buffer_;
+
   car_chassis_circles_list_with_buffer_.height_type = ApaObsHeightType::LOW;
-  CarFootPrintCircle *circles = car_chassis_circles_list_with_buffer_.circles;
+
+  CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
+  CarFootPrintCircle *origin_circles = car_with_mirror_circles_list_.circles;
+
   for (size_t i = 0; i < car_chassis_circles_list_with_buffer_.count; ++i) {
+    circles[i].center_local = origin_circles[i].center_local;
+    circles[i].radius = origin_circles[i].radius;
     if (i == 0 || i == 4) {
       // left front circle, left rear circle, move toward left
       circles[i].center_local.y() += body_lat_buffer_;

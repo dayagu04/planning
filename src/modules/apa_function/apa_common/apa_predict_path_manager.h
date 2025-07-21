@@ -15,7 +15,7 @@ class ApaPredictPathManager final {
 
   void Update(const LocalView* local_view_ptr,
               const iflyauto::PlanningOutput* planning_output,
-              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr);
+              const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr);
 
   void Reset() {
     predict_pt_vec_.clear();
