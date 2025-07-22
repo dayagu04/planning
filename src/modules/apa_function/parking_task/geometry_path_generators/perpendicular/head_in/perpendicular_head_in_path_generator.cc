@@ -859,12 +859,12 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
 
     if (!col_res.collision_flag) {
       ILOG_INFO << "--------use_mono_circle_headin----------";
-      std::cout << "circle center = " << arc.circle_info.center.transpose()
-                << " length_offset = " << length_offset
-                << " arc.pa = " << arc.pA.transpose()
-                << " arc.headingA = " << arc.headingA * kRad2Deg
-                << " arc.pb = " << arc.pB.transpose()
-                << " arc.headingb = " << arc.headingB * kRad2Deg << std::endl;
+      // std::cout << "circle center = " << arc.circle_info.center.transpose()
+      //           << " length_offset = " << length_offset
+      //           << " arc.pa = " << arc.pA.transpose()
+      //           << " arc.headingA = " << arc.headingA * kRad2Deg
+      //           << " arc.pb = " << arc.pB.transpose()
+      //           << " arc.headingb = " << arc.headingB * kRad2Deg << std::endl;
       // const double remain_car_dist = col_res.remain_car_dist;
       // const double remain_obs_dist = col_res.remain_obstacle_dist;
       // const double safe_remain_dist =
@@ -1697,7 +1697,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiPlan() {
     }
 
     if (calc_params_.use_line_arc) {
-      std::cout << "use line arc, break\n";
+      // std::cout << "use line arc, break\n";
       break;
     }
 

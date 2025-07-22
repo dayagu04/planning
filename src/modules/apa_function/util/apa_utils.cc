@@ -74,7 +74,7 @@ void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
   planning_output.planning_status.apa_planning_status = iflyauto::APA_FINISHED;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
-  std::cout << "set finished planning output" << std::endl;
+  // std::cout << "set finished planning output" << std::endl;
 }
 
 void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
@@ -84,7 +84,7 @@ void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
   planning_output.planning_status.apa_planning_status = iflyauto::APA_FAILED;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
-  std::cout << "set failed planning output" << std::endl;
+  // std::cout << "set failed planning output" << std::endl;
 }
 
 void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
@@ -93,7 +93,7 @@ void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
   planning_output.planning_status.apa_planning_status = iflyauto::APA_NONE;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
-  std::cout << "set idle planning output" << std::endl;
+  // std::cout << "set idle planning output" << std::endl;
 }
 
 bool IsValidApaState(const iflyauto::FunctionalState& current_state) {
@@ -105,7 +105,7 @@ bool IsValidApaState(const iflyauto::FunctionalState& current_state) {
 }
 
 bool IsSwitchApaState(const iflyauto::FunctionalState& current_state) {
-  std::cout << "current_state:" << current_state << std::endl;
+  // std::cout << "current_state:" << current_state << std::endl;
 
   if (IsValidApaState(current_state) || IsHppParkingStage(current_state)) {
     return true;

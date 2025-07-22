@@ -156,10 +156,10 @@ uint8_t LateralPathOptimizerProblem::Update(
       planning_input.init_state().k();
 
   if (ilqr_core_ptr_->GetSolverConfigPtr()->c_ilqr_enable) {
-    std::cout << "cilqr" << std::endl;
+    // std::cout << "cilqr" << std::endl;
     ilqr_core_ptr_->SolveForAliLqr(init_state_);
   } else {
-    std::cout << "ilqr" << std::endl;
+    // std::cout << "ilqr" << std::endl;
     ilqr_core_ptr_->Solve(init_state_);
   }
 

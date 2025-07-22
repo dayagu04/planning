@@ -29,8 +29,6 @@ Convex::Convex(const Vector2r *vertices, const uint32_t size)
     interior_point_ = sum * static_cast<real>(1.0 / size_);
   } else {
     interior_point_ = Vector2r(0.0, 0.0);
-    std::cout << __FILE__ << "@" << __func__ << " line: " << __LINE__
-              << "invalid vertices_ " << size_ << std::endl;
   }
 }
 
@@ -46,8 +44,6 @@ void Convex::setConvex(const Vector2r *vertices, const uint32_t size) {
     interior_point_ = sum * static_cast<real>(1.0 / size_);
   } else {
     interior_point_ = Vector2r(0.0, 0.0);
-    std::cout << __FILE__ << "@" << __func__ << " line: " << __LINE__
-              << "invalid vertices_ " << size_ << std::endl;
   }
 }
 
@@ -64,8 +60,6 @@ void Convex::updateConvex(const Transform2r &tf) {
     interior_point_ = sum * static_cast<real>(1.0 / size_);
   } else {
     interior_point_ = Vector2r(0.0, 0.0);
-    std::cout << __FILE__ << "@" << __func__ << " line: " << __LINE__
-              << "invalid vertices_ " << size_ << std::endl;
   }
 }
 

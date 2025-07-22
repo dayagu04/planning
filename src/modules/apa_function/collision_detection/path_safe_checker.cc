@@ -561,6 +561,22 @@ const bool PathSafeChecker::GetPolygonDistance(const Polygon2D* polygon,
   double dist = 10;
 
   for (const auto& pair : obs_manager_->GetObstacles()) {
+    // this class object do not consider speed limit.
+    if (pair.second.GetObsScemanticType() ==
+            apa_planner::ApaObsScemanticType::CURB ||
+        pair.second.GetObsScemanticType() ==
+            apa_planner::ApaObsScemanticType::STEP ||
+        pair.second.GetObsScemanticType() ==
+            apa_planner::ApaObsScemanticType::LIMITER) {
+      continue;
+    }
+    if (pair.second.GetObsAttributeType() ==
+            apa_planner::ApaObsAttributeType::VIRTUAL_POINT_CLOUD ||
+        pair.second.GetObsAttributeType() ==
+            apa_planner::ApaObsAttributeType::MAP_BOUND) {
+      continue;
+    }
+
     // envelop box check
     if (!(pair.second.GetPolygon2DGlobal().IsValid())) {
       continue;
