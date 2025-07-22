@@ -1681,25 +1681,57 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
     return;
   }
 
-  // car pose has big distance with limiter, return
+  // If car pose has big distance with limiter, return;
   // If car pose is nearby of limiter (0.4 meter), do not shrink path to prevent
-  // car speed change too much.
+  // car speed change too much, return;
   double x_diff = std::fabs(ego_info.terminal_err.pos.x());
   double y_diff = std::fabs(ego_info.terminal_err.pos.y());
   if (x_diff > 2.0 || y_diff > 2.0 || x_diff < 0.4) {
     return;
   }
 
-  // shrink path
-  size_t path_size = current_path_point_global_vec_.size();
-  for (size_t i = 0; i < path_size; i++) {
-    Eigen::Vector2d& point_global = current_path_point_global_vec_.back().pos;
+  // find nearby limiter point, but not cross limiter
+  int path_size = current_path_point_global_vec_.size();
+  int path_end_point_id = path_size;
+  double dist_to_limiter = 0.0;
+
+  for (int i = 0; i < path_size; i++) {
+    const Eigen::Vector2d& point_global = current_path_point_global_vec_[i].pos;
     point_local = ego_info.g2l_tf.GetPos(point_global);
-    if (point_local[0] >= limiter_x + 1e-2) {
+    dist_to_limiter = point_local[0] - limiter_x;
+    path_end_point_id = i;
+    if (dist_to_limiter < 0.0) {
       break;
     }
+  }
 
-    current_path_point_global_vec_.pop_back();
+  // delete cross limiter points
+  if (path_end_point_id < path_size - 1 &&
+      current_path_point_global_vec_.size() > 1) {
+    const pnc::geometry_lib::PathPoint& path_end_point =
+        current_path_point_global_vec_[path_end_point_id];
+
+    point_local = ego_info.g2l_tf.GetPos(path_end_point.pos);
+    dist_to_limiter = point_local[0] - limiter_x;
+
+    // If point distance to limiter is big, add an extra point in limiter.
+    if (dist_to_limiter > 0.01) {
+      path_end_point_id++;
+
+      pnc::geometry_lib::PathPoint& limit_point =
+          current_path_point_global_vec_[path_end_point_id];
+      // get local
+      point_local = ego_info.g2l_tf.GetPos(limit_point.pos);
+      point_local[0] = limiter_x;
+      // change to global
+      limit_point.pos = ego_info.l2g_tf.GetPos(point_local);
+      limit_point.s =
+          path_end_point.s + (limit_point.pos - path_end_point.pos).norm();
+    }
+
+    for (int i = path_end_point_id + 1; i < path_size; i++) {
+      current_path_point_global_vec_.pop_back();
+    }
   }
 
   return;
@@ -1746,18 +1778,18 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   // keep from speed change too much.
   double ego_x_diff = std::fabs(ego_info.terminal_err.pos.x());
   double ego_y_diff = std::fabs(ego_info.terminal_err.pos.y());
-  if (ego_x_diff > 1.5 || ego_y_diff > 0.5 || ego_x_diff < 0.5) {
+  if (ego_x_diff > 2.0 || ego_y_diff > 0.5 || ego_x_diff < 0.5) {
     return;
   }
 
   // path end pose has big distance with limiter, return
-  double x_diff = std::fabs(point_local[0] - ego_info.target_pose.pos.x());
-  double y_diff = std::fabs(point_local[1] - ego_info.target_pose.pos.y());
-  if (x_diff > 1.0 || y_diff > 0.5) {
+  double path_end_pt_to_limiter =
+      std::fabs(point_local[0] - ego_info.target_pose.pos.x());
+  double path_y_diff = std::fabs(point_local[1] - ego_info.target_pose.pos.y());
+  if (path_end_pt_to_limiter > 1.5 || path_y_diff > 0.5) {
     return;
   }
 
-  double path_end_pt_to_limiter = x_diff;
   size_t path_point_size = current_path_point_global_vec_.size();
 
   Eigen::Vector2d the_last_but_one =

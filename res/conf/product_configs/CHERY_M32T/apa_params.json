@@ -371,7 +371,7 @@
   "adjust_ego_y_thresh_outside_slot": 0.2,
   "enable_blind_zone" : true,
   "vertical_slot_passage_height_bound" : 10.0,
-  "vertical_slot_passage_length_bound" : 18.0,
+  "vertical_slot_passage_length_bound" : 21.0,
   "max_replan_number": 25,
   "max_replan_number_inside_slot": 15,
   "parallel_passage_width" : 7.0,

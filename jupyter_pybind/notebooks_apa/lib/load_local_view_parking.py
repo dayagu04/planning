@@ -69,7 +69,7 @@ read_uss_wave_version = 2.9
 load_fusion_object_from_occupancy = True
 version_245 = True
 # OD obstacle
-read_fus_obj_msg = False
+read_fus_obj_msg = True
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
