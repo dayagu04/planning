@@ -85,5 +85,5 @@
     "strings": true
   },
   "editor.wordBasedSuggestions": "matchingDocuments",
-  "C_Cpp.intelliSenseEngine": "default"
+  "C_Cpp.intelliSenseEngine": "disabled"
 }
