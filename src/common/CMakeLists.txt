@@ -10,6 +10,30 @@ else()
   message("UNENABLE_NANO_LOG")
 endif()
 
+
+set(MDC_JSON_DEBUG_FLAG False)
+
+if (PLATFORM STREQUAL "X86")
+  add_definitions(-DENABLE_JSON_DEBUG)
+  message("cyber json debug")
+else()
+  if (MDC_JSON_DEBUG_FLAG)
+    add_definitions(-DENABLE_JSON_DEBUG)
+    message("use huawei ap json debug")
+  endif()
+endif()
+
+set(MDC_PROTO_DEBUG_FLAG True)
+if (PLATFORM STREQUAL "X86")
+  add_definitions(-DENABLE_PROTO_DEBUG)
+  message("cyber proto debug")
+else()
+  if (MDC_PROTO_DEBUG_FLAG)
+    add_definitions(-DENABLE_PROTO_DEBUG)
+    message("use huawei ap proto debug")
+  endif()
+endif()
+
 file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )

@@ -1006,7 +1006,7 @@ const bool CollisionDetector::IsObstacleInCar(
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByLineObs(
     const pnc::geometry_lib::LineSegment &line_seg,
     const double heading_start) {
-  DEBUG_PRINT("UpdateByLineObs");
+  // DEBUG_PRINT("UpdateByLineObs");
   if (obs_line_global_vec_.empty()) {
     CollisionResult tmp_result;
     tmp_result.remain_car_dist = line_seg.length;
@@ -1348,10 +1348,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       max_x -= dx_dy;
-      std::cout << "find max x = " << max_x;
+      // std::cout << "find max x = " << max_x;
     } else {
       max_x += dx_dy;
-      std::cout << "finded max x = " << max_x;
+      // std::cout << "finded max x = " << max_x;
     }
   } while (flag);
 
@@ -1373,10 +1373,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       max_y -= dx_dy;
-      std::cout << "find max y = " << max_y;
+      // std::cout << "find max y = " << max_y;
     } else {
       max_y += dx_dy;
-      std::cout << "finded max y = " << max_y;
+      // std::cout << "finded max y = " << max_y;
     }
   } while (flag);
 
@@ -1398,10 +1398,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       min_x += dx_dy;
-      std::cout << "find min x = " << min_x;
+      // std::cout << "find min x = " << min_x;
     } else {
       min_x -= dx_dy;
-      std::cout << "finded min x = " << min_x;
+      // std::cout << "finded min x = " << min_x;
     }
   } while (flag);
 
@@ -1423,10 +1423,10 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     }
     if (flag) {
       min_y += dx_dy;
-      std::cout << "find min y = " << min_y;
+      // std::cout << "find min y = " << min_y;
     } else {
       min_y -= dx_dy;
-      std::cout << "finded min y = " << min_y;
+      // std::cout << "finded min y = " << min_y;
     }
   } while (flag);
 

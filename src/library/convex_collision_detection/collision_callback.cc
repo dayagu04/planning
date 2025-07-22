@@ -52,12 +52,12 @@ std::size_t collide(const CollisionObject *o1, const CollisionObject *o2,
     if (ud1 != nullptr) {
       ct.b1 = ud1->id;
     } else {
-      printf("collision callback ud 1 nullptr.\n");
+      // printf("collision callback ud 1 nullptr.\n");
     }
     if (ud2 != nullptr) {
       ct.b2 = ud2->id;
     } else {
-      printf("collision callback ud 2 nullptr.\n");
+      // printf("collision callback ud 2 nullptr.\n");
     }
 
     result.addContact(ct);

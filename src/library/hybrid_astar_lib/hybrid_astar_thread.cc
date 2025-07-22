@@ -10,7 +10,7 @@
 namespace planning {
 
 HybridAStarThreadSolver::HybridAStarThreadSolver() {
-  printf("HybridAStarThreadSolver init\n");
+  // printf("HybridAStarThreadSolver init\n");
   request_response_state_.store(RequestResponseState::NONE);
 }
 
@@ -279,7 +279,7 @@ void HybridAStarThreadSolver::GetNodeListMessagePublish(
 }
 
 void HybridAStarThreadSolver::Start() {
-  printf("start astar thread\n");
+  // printf("start astar thread\n");
 
   if (!init_) {
     ILOG_INFO << "init fail";
@@ -335,7 +335,7 @@ void HybridAStarThreadSolver::GetRefLine(ParkReferenceLine* ref_line) {
 
 HybridAStarThreadSolver::~HybridAStarThreadSolver() {
   thread_state_.store(AstarThreadState::STOPPED);
-  printf("HybridAStarThreadSolver\n");
+  // printf("HybridAStarThreadSolver\n");
   Stop();
 }
 

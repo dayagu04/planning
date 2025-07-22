@@ -256,7 +256,7 @@ bool iLqr::BackwardPass() {
     // regularization is different
     Quuf_ = Quu_ + lambda_ * Quu_eye_;
     if (!PSDCheck(Quuf_)) {
-      std::cout << "wocao wocao = " << Quuf_ << std::endl;
+      // std::cout << "wocao wocao = " << Quuf_ << std::endl;
       return false;
     }
 

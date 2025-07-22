@@ -284,7 +284,7 @@ void LateralPathOptimizer::Update(
     const uint8_t gear_cmd) {
   // fail protection if path_vec is empty
   if (path_vec.size() < 3) {
-    std::cout << "optimizer input size is too small" << std::endl;
+    // std::cout << "optimizer input size is too small" << std::endl;
     return;
   }
   // assemble input
@@ -293,8 +293,8 @@ void LateralPathOptimizer::Update(
   // run solver
   auto solver_condition =
       planning_problem_ptr_->Update(planning_input_, gear_cmd);
-  std::cout << "lateral path optimizer: solver_condition::"
-            << static_cast<size_t>(solver_condition) << "\n";
+  // std::cout << "lateral path optimizer: solver_condition::"
+  //           << static_cast<size_t>(solver_condition) << "\n";
   // postprocess planning_output
   PostProcessOutput();
   // assemble output to plan debug info

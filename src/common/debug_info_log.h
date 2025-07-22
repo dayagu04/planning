@@ -71,8 +71,6 @@ class DebugInfoManager : public planning::common::Arena {
 #define DEBUG_PRINT(content)
 #endif
 
-#define TMP_DEBUG_PRINT(content) std::cout << content << std::endl
-
 class Utils {
  public:
   Utils(){};

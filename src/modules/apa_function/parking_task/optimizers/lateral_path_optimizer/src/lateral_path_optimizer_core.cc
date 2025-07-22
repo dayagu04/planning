@@ -216,7 +216,7 @@ bool LateralPathOptimizerCore::BackwardPass() {
     // regularization is different
     Quuf_(0, 0) = Quu_(0, 0) + lambda_;
     if (!PSDCheck(Quuf_)) {
-      std::cout << "wocao wocao = " << Quuf_ << std::endl;
+      // std::cout << "wocao wocao = " << Quuf_ << std::endl;
       return false;
     }
 
