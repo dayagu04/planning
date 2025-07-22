@@ -58,6 +58,8 @@ struct LaneBorrowDeciderOutput {
   CarReferenceInfo dp_path_ref;
   LaneBorrowStatus lane_borrow_state;
   std::shared_ptr<planning_math::KDPath> dp_path_coord;
+  bool is_left_solid{false};
+  bool is_right_solid{false};
 };
 
 }  // namespace planning

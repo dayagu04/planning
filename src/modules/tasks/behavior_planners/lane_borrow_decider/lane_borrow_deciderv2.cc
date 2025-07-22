@@ -760,7 +760,8 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {
       break;
     }
   }
-
+  lane_borrow_decider_output_.is_right_solid = (right_lane_boundary_type_== iflyauto::LaneBoundaryType_MARKING_SOLID) ? true:false;
+  lane_borrow_decider_output_.is_left_solid = (left_lane_boundary_type_ == iflyauto::LaneBoundaryType_MARKING_SOLID) ? true:false;
   // If the lane marking is not left dashed/right solid or double dashed, return
   // False.
   // if is_facility_ or in intersection ignore lane type
@@ -1197,7 +1198,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
 
   // 先排除
   if(is_tiny || !is_static){
-    if(frenet_obstacle_sl.l_start * frenet_obstacle_sl.l_end < 0.05){// 异号，压住中心线
+    if(frenet_obstacle_sl.l_start * frenet_obstacle_sl.l_end < 0.0){// 异号，压住中心线
       if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {//滞回逻辑
         obs_direction_map_[obs_id].second += 1;
         return obs_direction_map_[obs_id].first;
