@@ -1044,29 +1044,12 @@ void ParallelParkOutScenario::CalStaticBufferInDiffSteps(
   const auto slot_mgr = apa_world_ptr_->GetSlotManagerPtr();
   const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
 
-  const auto& output = parallel_out_path_planner_.GetOutput();
-
-  const auto& start_pose =
-      output.path_segment_vec[output.path_seg_index.first].GetStartPose();
-
-  const auto& end_pose =
-      output.path_segment_vec[output.path_seg_index.second].GetEndPose();
-
-  const bool is_start_pose_in_slot =
-      CalcSlotOccupiedRatio(start_pose) >= kEnterMultiPlanSlotRatio;
-
-  const bool is_end_pose_in_slot =
-      CalcSlotOccupiedRatio(end_pose) >= kEnterMultiPlanSlotRatio;
-
   const bool is_ego_in_slot =
       ego_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio;
-
-  ILOG_INFO << "is_start_pose_in_slot = " << is_start_pose_in_slot;
-  ILOG_INFO << "is_end_pose_in_slot = " << is_end_pose_in_slot;
   ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
 
   // totally in slot
-  if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
+  if (is_ego_in_slot) {
     ILOG_INFO << " totally in slot!";
     safe_uss_remain_dist =
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
@@ -1075,28 +1058,9 @@ void ParallelParkOutScenario::CalStaticBufferInDiffSteps(
         t_lane_.is_inside_rigid
             ? apa_param.GetParam().safe_lat_buffer_with_wall_in_parallel_slot
             : apa_param.GetParam().safe_lat_buffer_in_parallel_slot;
-    return;
-  }
-
-  // out slot
-  lat_buffer = apa_param.GetParam().safe_lat_buffer_outside_parallel_slot;
-  safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
-
-  const bool is_reverse = output.gear_cmd_vec[output.path_seg_index.first] ==
-                          geometry_lib::SEG_GEAR_REVERSE;
-  // in 1r step
-  if (is_reverse && !is_start_pose_in_slot && is_end_pose_in_slot) {
-    ILOG_INFO << "in 1r step!";
-    lat_buffer =
-        t_lane_.is_inside_rigid
-            ? apa_param.GetParam().safe_lat_buffer_with_wall_in_parallel_slot
-            : apa_param.GetParam().safe_lat_buffer_in_1r_parallel_slot;
-
-    safe_uss_remain_dist =
-        apa_param.GetParam().safe_remain_dist_in_1r_parallel_slot;
-
   } else {
-    ILOG_INFO << "outside slot not 1r step!";
+    lat_buffer = 0.2;
+    safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
   }
 }
 
