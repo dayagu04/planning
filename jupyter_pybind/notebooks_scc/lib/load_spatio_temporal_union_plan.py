@@ -232,17 +232,17 @@ def update_spatio_temporal_union_plan_data(bag_loader, bag_time, local_view_data
       'ref_yn': lat_motion_plan_input.ref_y_vec,
     })
 
-    if g_is_display_enu:
-      raw_refline_x, raw_refline_y = planning_json['raw_refline_x_vec'], \
-        planning_json['raw_refline_y_vec']
-    else:
-      raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
-        planning_json['raw_refline_y_vec'])
+    # if g_is_display_enu:
+    #   raw_refline_x, raw_refline_y = planning_json['raw_refline_x_vec'], \
+    #     planning_json['raw_refline_y_vec']
+    # else:
+    #   raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], \
+    #     planning_json['raw_refline_y_vec'])
 
-    spatio_temporal_union_plan_data['data_refline'].data.update({
-      'raw_refline_x': raw_refline_x,
-      'raw_refline_y': raw_refline_y,
-    })
+    # spatio_temporal_union_plan_data['data_refline'].data.update({
+    #   'raw_refline_x': raw_refline_x,
+    #   'raw_refline_y': raw_refline_y,
+    # })
 
     lat_motion_plan_output = plan_debug_msg.lateral_motion_planning_output
     if g_is_display_enu:
@@ -355,13 +355,13 @@ def update_spatio_temporal_union_plan_data(bag_loader, bag_time, local_view_data
         plan_y.append(trajectory.trajectory_points[i].y)
 
       if not g_is_display_enu:
-        plan_traj_x, plan_traj_y = planning_json['traj_x_vec'], planning_json['traj_y_vec']
+        plan_traj_x, plan_traj_y = plan_x, plan_y
       else:
-        plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
+        plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
 
       spatio_temporal_union_plan_data['data_planning_n'].data.update({
-        'plan_traj_xn':planning_json['traj_x_vec'],
-        'plan_traj_yn':planning_json['traj_y_vec'],
+        'plan_traj_xn':plan_x,
+        'plan_traj_yn':plan_y,
       })
 
     spatio_temporal_union_plan_data['data_planning'].data.update({
@@ -663,7 +663,7 @@ def load_spatio_temporal_union_plan_figure(fig1):
   fig1.line('refline_y', 'refline_x', source = data_spatio_temporal_back, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'origin ref back', visible=True)
   fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
   fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs_back, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref path back', visible=True)
-  fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
+  # fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   # fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
   fig_spatio = fig1.circle('traj_y', 'traj_x', source = data_spatio_temporal_trajs, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'spatio_temporal_plan_point')
