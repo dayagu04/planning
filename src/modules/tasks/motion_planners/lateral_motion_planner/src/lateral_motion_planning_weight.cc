@@ -724,7 +724,6 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   // consider 20 frame
   if (enter_lccnoa_time > 1e-6 &&
       enter_lccnoa_time < 1.0) {
-    emergency_jerk_bound = P2_emergency_jerk_bound;
     extra_jerk_buffer =
         std::min(0.05, extra_jerk_buffer);
   }
