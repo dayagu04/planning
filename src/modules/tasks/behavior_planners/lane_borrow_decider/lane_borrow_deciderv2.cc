@@ -1010,11 +1010,24 @@ void LaneBorrowDecider::CheckBlockingObstaclesIntention(int32 obs_id,bool& is_bo
   BorrowDirection dir_00 = GetPredBypassDirection(sl_00,obs_id);
   BorrowDirection dir_15 = GetPredBypassDirection(sl_15,obs_id);
   BorrowDirection dir_30 = GetPredBypassDirection(sl_30,obs_id);
+  bool is_cut_in;
+  bool is_cut_out;
   if(dir_15 == dir_00 && dir_30 == dir_00 && NO_BORROW!= dir_00){
-    is_borrow = true;
+    is_cut_in = false;
   }else{
-    is_borrow = false;
+    is_cut_in = true;
   }
+  double left_boundary = current_lane_ptr_->width() * 0.5;
+  double right_boundary = - current_lane_ptr_->width() * 0.5;
+
+  if(sl_30.l_end < right_boundary || sl_30.l_start > left_boundary){
+    is_cut_out = true;
+  }else{
+    is_cut_out = false;
+  }
+
+  //summary
+  is_borrow = (is_cut_out||is_cut_in)? false:true;
 }
 // v2
 
