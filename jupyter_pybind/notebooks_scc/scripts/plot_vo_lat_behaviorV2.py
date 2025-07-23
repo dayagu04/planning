@@ -12,7 +12,7 @@ from bokeh.resources import INLINE
 from google.protobuf.descriptor import FieldDescriptor
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250701/20250701-19-08-27/data_collection_CHERY_E0Y_14529_EVENT_FILTER_2025-07-01-19-08-27_no_camera.bag.1751608077.close-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_51406/trigger/20250717/20250717-21-11-26/data_collection_CHERY_M32T_51406_EVENT_FILTER_2025-07-17-21-11-26_no_camera.bag.1752810736.open-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -85,7 +85,7 @@ def update_lane_borrow_data(lane_borrow_common): # update function
   datas = []
   names = []
   vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
-            'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
+            'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','distance_to_stop_line','distance_to_cross_walk','safe_left_borrow',
               'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason','borrow_turn_circle',
               'front_obs_center','front_id','failed_obs_id']
   for name in vars:

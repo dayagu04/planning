@@ -101,6 +101,7 @@ void FollowTarget::GenerateUpperBoundInfo() {
           cipv_info_.is_large_vehicle = agent->length() > kLargeAgentLengthM;
           cipv_info_.type = agent->type();
           cipv_info_.is_tfl_virtual_obs = agent->is_tfl_virtual_obs();
+          cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
         }
       }
       upper_bound_infos_[i].s = upper_bound.s();
@@ -162,6 +163,7 @@ void FollowTarget::GenerateFollowTarget() {
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& stop_destination_decider_output =
       session_->planning_context().stop_destination_decider_output();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
 
   auto lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
@@ -258,6 +260,11 @@ void FollowTarget::GenerateFollowTarget() {
 
     target_value.set_s_target_val(s_target_value);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
+
+    const auto* agent = agent_mgr->GetAgent(agent_id);
+    if (agent && agent->is_lane_borrow_virtual_obs()) {
+      target_value.set_s_target_val(upper_bound_infos_[i].s);
+    }
 
     double s_value = target_value.s_target_val();
     // if (enable_stable_jlt) {

@@ -193,6 +193,7 @@ void StGraphInput::FilterAgentsByDecisionType(
   filtered_agents_.clear();
   filtered_agents_.reserve(origin_agents.size());
   for (const auto agent : origin_agents) {
+    int32_t id = agent->agent_id();
     if (agent == nullptr) {
       continue;
     }

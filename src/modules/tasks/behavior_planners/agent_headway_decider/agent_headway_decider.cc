@@ -121,6 +121,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double init_headway_by_ego =
         CalcAgentInitHeadway(ego_state_manager, agent);
     const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
+    const bool is_lane_borrow_virtual_agent = agent->is_lane_borrow_virtual_obs();
     double first_appear_time_gap = k_first_appear_time_gap;
     if (is_tfl_virtual_agent) {
       gear_headway = kTflVirtualAgentHW;
@@ -158,6 +159,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     //       std::fmin(matched_cut_in_headway + headway_step, gear_headway);
     //   continue;
     // }
+    if(is_lane_borrow_virtual_agent){
+      agents_headway_map_[st_agent_id].current_headway = 0.0;
+      continue;
+    }
 
     if (is_neighbor_target_valid) {
       const double neighbor_target_headway = std::fmin(
