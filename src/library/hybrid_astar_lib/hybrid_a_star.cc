@@ -2490,7 +2490,7 @@ const bool HybridAStar::IsNeedGearDriveSearch(const Pose2f& start) {
     return false;
   }
 
-  if (start.GetX() < 6.0) {
+  if (start.GetX() < 4.0) {
     ILOG_INFO << "start.GetX() =" << start.GetX();
     return false;
   }

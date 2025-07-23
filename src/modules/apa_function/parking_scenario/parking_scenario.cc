@@ -276,9 +276,8 @@ void ParkingScenario::SetPlanningPath() {
     publish_traj->trajectory_points[3].distance = 0.0;
     publish_traj->trajectory_points[4].distance = frame_.remain_dist_col_det;
   } else {
-    size_t N = trajectory_.size();
     publish_traj->trajectory_points_size =
-        std::min(N, size_t(PLANNING_TRAJ_POINTS_MAX_NUM));
+        std::min(trajectory_.size(), size_t(PLANNING_TRAJ_POINTS_MAX_NUM));
 
     for (size_t i = 0; i < publish_traj->trajectory_points_size; ++i) {
       const auto& point = trajectory_[i];
@@ -625,6 +624,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
+  // task: predictor
   std::shared_ptr<RuleBasedPredictor> predictor =
       std::make_shared<RuleBasedPredictor>();
   predictor->Execute(apa_world_ptr_->GetObstacleManagerPtr());

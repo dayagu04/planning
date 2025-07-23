@@ -376,6 +376,7 @@
   "max_replan_number_inside_slot": 15,
   "parallel_passage_width" : 7.0,
   "parallel_passage_length" : 26.0,
+  "head_in_finish_heading_err" : 3.0,
 
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,

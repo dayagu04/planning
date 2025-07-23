@@ -28,6 +28,8 @@ struct AstarParkingConfig {
   double parallel_finish_head_lat_err;
   double parallel_finish_heading_err;
 
+  double head_in_finish_heading_err;
+
   bool cubic_polynomial_pose_adjustment = true;
   // move target point in slot to another point for easy tracking
   double vertical_tail_in_end_straight_dist = 1.0;
