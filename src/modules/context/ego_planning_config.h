@@ -3904,20 +3904,20 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   // weight maker
   struct WeightConfig {
-    double s_weight = 2.0;
+    double s_weight = 1.0;
     double start_s_weight = 5.0;
     double v_weight = 0.0;
     double a_weight = 10.0;
     double jerk_weight = 100.0;
     double cruise_v_weight = 20.0;
-    double follow_s_weight = 2.0;
+    double follow_s_weight = 1.0;
     double overtake_s_weight = 1.0;
     double neighbor_s_weight = 1.0;
     double end_s_weight = 40.0;
     double max_s_weight_time = 3.0;
     double front_lower_weight = 0.5;
     double back_upper_weight = 1.5;
-    double max_s_weight = 3.0;
+    double max_s_weight = 2.0;
     double s_speed_upper_weight_v = 8.33;
     double s_speed_lower_weight_v = 2.78;
     double s_speed_upper_weight = 2.0;

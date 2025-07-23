@@ -319,7 +319,6 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     if (agent != nullptr) {
       agent_acc = agent->accel();
     }
-    const bool is_cipv_sharp_decel = i < 14 && agent_acc < -2.0;
     // const double vel = virtual_acc_curve->Evaluate(1, t);
     const double brake_buffer = init_lon_state_[1] * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
@@ -327,7 +326,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
         target_value.target_type() == TargetType::kNeighborYield ||
         target_value.target_type() == TargetType::kCautionYield) {
       // check s_target by s_safe
-      if (agent_s - brake_buffer < s_safe || is_cipv_sharp_decel) {
+      if (agent_s - brake_buffer < s_safe) {
         is_need_comfortable_decel = false;
         break;
       }

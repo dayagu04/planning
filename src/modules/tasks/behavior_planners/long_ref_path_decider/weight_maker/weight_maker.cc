@@ -177,14 +177,8 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker) {
     //           << std::endl;
     if (target_value.target_type() == TargetType::kCruiseSpeed) {
       s_weight_[i] = default_s_weight;
-      if (start_stop_info == common::StartStopInfo::START) {
-        s_weight_[i] = 5.0;
-      }
     } else if (target_value.target_type() == TargetType::kFollow) {
       s_weight_[i] = follow_s_weight;
-      if (start_stop_info == common::StartStopInfo::START) {
-        s_weight_[i] = 5.0;
-      }
     } else if (target_value.target_type() == TargetType::kOvertake) {
       s_weight_[i] = overtake_s_weight;
     } else if (target_value.target_type() == TargetType::kNeighbor ||

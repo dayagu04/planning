@@ -45,34 +45,20 @@ void LonAccCostTerm::GetGradientHessian(
 }
 
 // longitudinal jerk cost
-double LonJerkCostTerm::GetCost(const ilqr_solver::State &x,
-                                const ilqr_solver::Control &) {
-  return 0.5 * cost_config_ptr_->at(W_JERK) * Square(x[JERK]);
+double LonJerkCostTerm::GetCost(const ilqr_solver::State & /*x*/,
+                                const ilqr_solver::Control &u) {
+  return 0.5 * cost_config_ptr_->at(W_JERK) * Square(u[JERK]);
 }
 
-void LonJerkCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
-  lx(JERK) += cost_config_ptr_->at(W_JERK) * x[JERK];
-  lxx(JERK, JERK) += cost_config_ptr_->at(W_JERK);
-}
-
-// longitudinal djerk cost
-double LonDJerkCostTerm::GetCost(const ilqr_solver::State & /*x*/,
-                                 const ilqr_solver::Control &u) {
-  return 0.5 * cost_config_ptr_->at(W_DJERK) * Square(u[DJERK]);
-}
-
-void LonDJerkCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
-                                          const ilqr_solver::Control &u,
-                                          ilqr_solver::LxMT & /*lx*/,
-                                          ilqr_solver::LuMT &lu,
-                                          ilqr_solver::LxxMT & /*lxx*/,
-                                          ilqr_solver::LxuMT & /*lxu*/,
-                                          ilqr_solver::LuuMT &luu) {
-  lu(DJERK) += cost_config_ptr_->at(W_DJERK) * u[DJERK];
-  luu(DJERK, DJERK) += cost_config_ptr_->at(W_DJERK);
+void LonJerkCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
+                                         const ilqr_solver::Control &u,
+                                         ilqr_solver::LxMT & /*lx*/,
+                                         ilqr_solver::LuMT &lu,
+                                         ilqr_solver::LxxMT & /*lxx*/,
+                                         ilqr_solver::LxuMT & /*lxu*/,
+                                         ilqr_solver::LuuMT &luu) {
+  lu(JERK) += cost_config_ptr_->at(W_JERK) * u[JERK];
+  luu(JERK, JERK) += cost_config_ptr_->at(W_JERK);
 }
 
 // longitudinal pos soft bound cost
@@ -223,69 +209,37 @@ void LonAccBoundCostTerm::GetGradientHessian(
 }
 
 // longitudinal jerk bound cost
-double LonJerkBoundCostTerm::GetCost(const ilqr_solver::State &x,
-                                     const ilqr_solver::Control & /*u*/) {
+double LonJerkBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
+                                     const ilqr_solver::Control &u) {
   double cost = 0.0;
-  if (x[JERK] > cost_config_ptr_->at(JERK_MAX)) {
+  if (u[JERK] > cost_config_ptr_->at(JERK_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) *
-           Square(x[JERK] - cost_config_ptr_->at(JERK_MAX));
-  } else if (x[JERK] < cost_config_ptr_->at(JERK_MIN)) {
+           Square(u[JERK] - cost_config_ptr_->at(JERK_MAX));
+  } else if (u[JERK] < cost_config_ptr_->at(JERK_MIN)) {
     cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) *
-           Square(x[JERK] - cost_config_ptr_->at(JERK_MIN));
+           Square(u[JERK] - cost_config_ptr_->at(JERK_MIN));
   }
 
   return cost;
 }
 
-void LonJerkBoundCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  if (x[JERK] > cost_config_ptr_->at(JERK_MAX)) {
-    lx(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
-                (x[JERK] - cost_config_ptr_->at(JERK_MAX));
+void LonJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
+                                              const ilqr_solver::Control &u,
+                                              ilqr_solver::LxMT & /*lx*/,
+                                              ilqr_solver::LuMT &lu,
+                                              ilqr_solver::LxxMT & /*lxx*/,
+                                              ilqr_solver::LxuMT & /*lxu*/,
+                                              ilqr_solver::LuuMT &luu) {
+  if (u[JERK] > cost_config_ptr_->at(JERK_MAX)) {
+    lu(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
+                (u[JERK] - cost_config_ptr_->at(JERK_MAX));
 
-    lxx(JERK, JERK) += cost_config_ptr_->at(W_JERK_BOUND);
-  } else if (x[JERK] < cost_config_ptr_->at(JERK_MIN)) {
-    lx(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
-                (x[JERK] - cost_config_ptr_->at(JERK_MIN));
+    luu(JERK, JERK) += cost_config_ptr_->at(W_JERK_BOUND);
+  } else if (u[JERK] < cost_config_ptr_->at(JERK_MIN)) {
+    lu(JERK) += cost_config_ptr_->at(W_JERK_BOUND) *
+                (u[JERK] - cost_config_ptr_->at(JERK_MIN));
 
-    lxx(JERK, JERK) += cost_config_ptr_->at(W_JERK_BOUND);
-  }
-}
-
-// longitudinal djerk bound cost
-double LonDJerkBoundCostTerm::GetCost(const ilqr_solver::State & /*x*/,
-                                      const ilqr_solver::Control &u) {
-  double cost = 0.0;
-  if (u[DJERK] > cost_config_ptr_->at(DJERK_MAX)) {
-    cost = 0.5 * cost_config_ptr_->at(W_DJERK_BOUND) *
-           Square(u[DJERK] - cost_config_ptr_->at(DJERK_MAX));
-  } else if (u[DJERK] < cost_config_ptr_->at(DJERK_MIN)) {
-    cost = 0.5 * cost_config_ptr_->at(W_DJERK_BOUND) *
-           Square(u[DJERK] - cost_config_ptr_->at(DJERK_MIN));
-  }
-
-  return cost;
-}
-
-void LonDJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State & /*x*/,
-                                               const ilqr_solver::Control &u,
-                                               ilqr_solver::LxMT & /*lx*/,
-                                               ilqr_solver::LuMT &lu,
-                                               ilqr_solver::LxxMT & /*lxx*/,
-                                               ilqr_solver::LxuMT & /*lxu*/,
-                                               ilqr_solver::LuuMT &luu) {
-  if (u[DJERK] > cost_config_ptr_->at(DJERK_MAX)) {
-    lu(DJERK) += cost_config_ptr_->at(W_DJERK_BOUND) *
-                 (u[DJERK] - cost_config_ptr_->at(DJERK_MAX));
-
-    luu(DJERK, DJERK) += cost_config_ptr_->at(W_DJERK_BOUND);
-  } else if (u[DJERK] < cost_config_ptr_->at(DJERK_MIN)) {
-    lu(DJERK) += cost_config_ptr_->at(W_DJERK_BOUND) *
-                 (u[DJERK] - cost_config_ptr_->at(DJERK_MIN));
-
-    luu(DJERK, DJERK) += cost_config_ptr_->at(W_DJERK_BOUND);
+    luu(JERK, JERK) += cost_config_ptr_->at(W_JERK_BOUND);
   }
 }
 
