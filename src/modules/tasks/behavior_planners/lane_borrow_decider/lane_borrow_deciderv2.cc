@@ -1193,7 +1193,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
   bool is_tiny = agent->is_vru() || agent->width() < 0.5; // 行人在之前就过滤了
   double scale = 1.0; // 兜底感知跳动
   if (lane_borrow_status_ != kNoLaneBorrow) {
-    scale = 0.5;
+    scale = 2;
   }
 
   // 先排除
@@ -1208,7 +1208,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
       }
     }
   }else{ // 大 静态： 右边缘 在中心线右侧 0.25+  并且 左边缘 在中心线左侧 0.25+
-    if(frenet_obstacle_sl.l_start < - kStaticEdgeDistance &&  frenet_obstacle_sl.l_end > kStaticEdgeDistance){//左侧同理
+    if(frenet_obstacle_sl.l_start < - scale * kStaticEdgeDistance &&  frenet_obstacle_sl.l_end > scale * kStaticEdgeDistance){//左侧同理
       if (obs_direction_map_[obs_id].second < config_.centric_obs_frames) {//滞回逻辑
         obs_direction_map_[obs_id].second += 1;
         return obs_direction_map_[obs_id].first;
