@@ -111,7 +111,7 @@ void ParallelPathGenerator::Preprocess() {
       input_.tlane.pt_terminal_pos, target_heading);
 
   //  buffer init
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
 
   ExpandObstacles();
 
@@ -147,9 +147,11 @@ void ParallelPathGenerator::ExpandObstacles() {
     // get nearby obstalces of pin
     for (const auto& tlane_obs_pt : obs_it->second) {
       if (pnc::geometry_lib::CalTwoPointDistSquare(
-              tlane_obs_pt, input_.tlane.obs_pt_inside) <= 0.25) {
+              tlane_obs_pt, input_.tlane.obs_pt_inside) <= 1) {
         calc_params_.front_corner_obs_vec.emplace_back(tlane_obs_pt +
                                                        coord_diff);
+        ILOG_INFO << "VIRTUAL OBS = "
+                  << (tlane_obs_pt + coord_diff).transpose();
       }
     }
   }
@@ -400,7 +402,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
       ego_line.heading = start_pose.heading;
       ego_line.SetPoints(start_pose.pos, diverse_arc_2.pB);
-      if (!CheckEgoLine(ego_line, is_park_out)) {
+      if (!CheckEgoLine(ego_line)) {
         // ILOG_INFO << "CheckEgoLine failed!";
         continue;
       }
@@ -490,7 +492,8 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
   const auto path_end_pose = path_seg_vec.back().GetEndPose();
 
-  if (IsDoubleEqual(path_end_pose.heading, calc_params_.target_pose.heading) &&
+  if (!is_park_out &&
+      IsDoubleEqual(path_end_pose.heading, calc_params_.target_pose.heading) &&
       !IsDoubleEqual(path_end_pose.pos.x(), input_.tlane.pt_terminal_pos.x())) {
     const Eigen::Vector2d fixed_target_pos(input_.tlane.pt_terminal_pos.x(),
                                            path_end_pose.pos.y());
@@ -506,30 +509,28 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 }
 
 const bool ParallelPathGenerator::CheckEgoLine(
-    pnc::geometry_lib::LineSegment& ego_line, const bool is_parking_out) {
+    pnc::geometry_lib::LineSegment& ego_line) {
   using namespace pnc::geometry_lib;
 
-  if (!is_parking_out) {
-    const auto ego_line_gear = CalLineSegGear(ego_line);
-    if (ego_line_gear == SEG_GEAR_DRIVE) {
-      const double heading_mag_deg = std::fabs(ego_line.heading) * kRad2Deg;
-      if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
-          ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
-        return false;
-      }
-    }
-
-    // collision_detector_ptr_->SetParam(
-    //     CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
-
-    auto col_res =
-        collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
-    if (col_res.collision_flag ||
-        col_res.remain_car_dist >
-            col_res.remain_obstacle_dist - kColBufferOutSlot) {
-      // ILOG_INFO << "ego line collided!";
+  const auto ego_line_gear = CalLineSegGear(ego_line);
+  if (ego_line_gear == SEG_GEAR_DRIVE) {
+    const double heading_mag_deg = std::fabs(ego_line.heading) * kRad2Deg;
+    if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
+        ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
       return false;
     }
+  }
+
+  // collision_detector_ptr_->SetParam(
+  //     CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
+
+  auto col_res =
+      collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
+  if (col_res.collision_flag ||
+      col_res.remain_car_dist >
+          col_res.remain_obstacle_dist - kColBufferOutSlot) {
+    // ILOG_INFO << "ego line collided!";
+    return false;
   }
 
   return true;
@@ -1324,7 +1325,7 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
                     slot_side_sgn;
     rac_tlane_bound =
         tlane_outer_y +
-        slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+        slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.6);
   }
 
   double rac_channel_bound =
@@ -2611,8 +2612,7 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
     return false;
   }
 
-  const double arc_length_limit =
-      input_.ego_info_under_slot.slot_occupied_ratio > 0.0 ? 3.5 : 4.5;
+  const double arc_length_limit = 6.0;
   if (!pnc::geometry_lib::CompleteArcInfo(arc, arc_length_limit,
                                           arc.is_anti_clockwise)) {
     return false;
@@ -2664,9 +2664,16 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
   //             << center_to_obs_in -
   //             calc_params_.min_outer_front_corner_radius);
 
-  return (center_to_obs_in >=
-          calc_params_.min_outer_front_corner_radius +
-              apa_param.GetParam().parallel_ego_front_corner_to_obs_in_buffer);
+  const bool corner_safe =
+      center_to_obs_in >=
+      calc_params_.min_outer_front_corner_radius +
+          apa_param.GetParam().parallel_ego_front_corner_to_obs_in_buffer;
+
+  const double theta_deg =
+      first_arc.length / first_arc.circle_info.radius * kRad2Deg;
+  const bool theta_safe = theta_deg > 30.0;
+
+  return corner_safe && theta_safe;
 }
 
 const bool ParallelPathGenerator::TwoSameGearArcPlanToLine(

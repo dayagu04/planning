@@ -164,13 +164,13 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
     obs_vec[i] << obs_x_vec[i], obs_y_vec[i];
   }
   apa_obs.SetPtClout2dGlobal(obs_vec);
+  apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
   apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
   apa_obs.SetId(0);
   std::unordered_map<size_t, ApaObstacle> &obstacles =
       apa_world_ptr->GetObstacleManagerPtr()->GetMutableObstacles();
   obstacles[0] = apa_obs;
 
-  ILOG_INFO << "1";
   SimulationParam simu_param;
   simu_param.sample_ds = path_ds;
   simu_param.is_complete_path = true;
@@ -195,19 +195,14 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
       -half_slot_width;
   ego_info_under_slot.slot.origin_corner_coord_global_.CalExtraCoord();
 
-  ILOG_INFO << "2";
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
-  ILOG_INFO << "3";
   if (!parallel_park_planner.UpdateEgoSlotInfo()) {
     ILOG_INFO << "UpdateEgoSlotInfo failed!";
 
     return false;
   }
-  ILOG_INFO << "4";
   parallel_park_planner.GenTlane();
-  ILOG_INFO << "5";
   parallel_park_planner.GenTBoundaryObstacles();
-  ILOG_INFO << "6";
 
   ILOG_INFO << "ego_info_under_slot ego in pybind = "
             << ego_info_under_slot.cur_pose.pos.transpose();

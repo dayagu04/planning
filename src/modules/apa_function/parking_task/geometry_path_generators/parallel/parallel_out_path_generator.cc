@@ -11,6 +11,10 @@
 namespace planning {
 namespace apa_planner {
 
+static const double kColBufferInSlot = 0.25;       // in slot
+static const double kColSmallBufferInSlot = 0.16;  // in slot
+static const double kLonBufferTrippleStep = 0.2;   // tripple step
+
 void ParallelOutPathGenerator::Reset() {
   output_.Reset();
   debug_info_.Reset();
@@ -19,13 +23,12 @@ void ParallelOutPathGenerator::Reset() {
 
 void ParallelOutPathGenerator::Preprocess() {
   // ego pose, obs, slot coord system, parking direction, ref gear are needed!
-  ILOG_INFO << "--------------------------------park out path planner "
-               "----------------------------------";
   ILOG_INFO << "------------ in Preprocess ------------";
 
   using namespace pnc::geometry_lib;
 
   Reset();
+
   input_.ego_info_under_slot.cur_pose.heading =
       NormalizeAngle(input_.ego_info_under_slot.cur_pose.heading);
   PrintPose("start pose", input_.ego_info_under_slot.cur_pose);
@@ -41,6 +44,13 @@ void ParallelOutPathGenerator::Preprocess() {
   ExpandObstacles();
   MoveChannelObstacles();
   CalcEgoParams();
+
+  calc_params_.lat_outside_slot_buffer = 0.04;
+  if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >= 6.2) {
+    calc_params_.lon_buffer_rev_trials = kColBufferInSlot;
+  } else {
+    calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
+  }
 
   calc_params_.is_left_side =
       (input_.ref_arc_steer == pnc::geometry_lib::SEG_STEER_RIGHT);
@@ -58,6 +68,7 @@ const bool ParallelOutPathGenerator::Update(
   const auto start_time = std::chrono::high_resolution_clock::now();
 
   const bool success = Update();
+  DeletePInVirtualObstacles();
   RecorverChannelObstacles();
   pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
 
@@ -73,22 +84,16 @@ const bool ParallelOutPathGenerator::Update(
 
 const bool ParallelOutPathGenerator::Update() {
   Preprocess();
+  AddPInVirtualObstacles();
+
   bool success = false;
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
   std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
   if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
-    success = InverseSearchLoopInSlot(inversed_path_seg_vec,
-                                      input_.ego_info_under_slot.cur_pose);
-
-    if (success) {
-      const auto &start_seg = inversed_path_seg_vec.front();
-      if (start_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
-          start_seg.Getlength() < apa_param.GetParam().min_path_length) {
-        success = false;
-        ILOG_INFO << "first line is too short!";
-      }
-    } else {
-      ILOG_INFO << "calc InverseSearchLoopInSlot failed!";
-    }
+    success = AdvancedInversedTrialsInSlot(inversed_path_seg_vec,
+                                           input_.ego_info_under_slot.cur_pose);
+    ILOG_INFO << "AdvancedInversedTrialsInSlot  --------------------------";
+    pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
 
     if (!success) {
       inversed_path_seg_vec.clear();
@@ -118,24 +123,25 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "preparing y = " << pt.pos.y();
   }
 
-  std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
   pnc::geometry_lib::PrintPose("park_out_pose", park_out_pose);
 
   calc_params_.valid_target_pt_vec.clear();
   calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
 
+  std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   for (const auto &prepare_pose : preparing_pose_vec) {
-    if (PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
-      ReversePathSegVec(park_out_path_vec);
-      ILOG_INFO << "park_out_path_vec ----------------------";
-      pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
-      ILOG_INFO << "park_out_path_vec end ----------------------";
-      success = true;
-      ILOG_INFO << "plan to preparing line success!";
-      break;
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
+    if (!PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
+      continue;
     }
+
+    ReversePathSegVec(park_out_path_vec);
+    ILOG_INFO << "park_out_path_vec ----------------------";
+    pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
+    success = true;
+    ILOG_INFO << "plan to preparing line success!";
+    break;
   }
 
   if (success) {
