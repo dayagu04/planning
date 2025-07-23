@@ -87,9 +87,9 @@ class Utils {
       return s;
     }
     for (int i = 0; i < (int)vec.size() - 1; i++) {
-      sprintf(s + strlen(s), format1, vec[i]);
+      snprintf(s + strlen(s), LOG_ARRAY_CACHE - strlen(s), format1, vec[i]);
     }
-    sprintf(s + strlen(s), format2, vec.back());
+    snprintf(s + strlen(s), LOG_ARRAY_CACHE - strlen(s), format2, vec.back());
     return s;
   }
 };
