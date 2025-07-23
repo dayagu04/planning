@@ -1535,6 +1535,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    ReadItem<bool>(json, pass_acc_mode, "lat_motion_ilqr",
+                   "pass_acc_mode");
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
     ReadItem<double>(json, delta_t, "lat_motion_ilqr", "delta_t");
@@ -1752,6 +1754,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "max_steer_angle_dot_low_speed");
   }
 
+  bool pass_acc_mode = false;
   bool warm_start_enable = true;
   double curv_factor = 0.35;
   double delta_t = 0.2;
@@ -2707,6 +2710,8 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    ReadItem<bool>(json, use_dynamic_lat_jerk_thr, "result_trajectory_generator",
+                   "use_dynamic_lat_jerk_thr");
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
     ReadItem<double>(json, curv_factor, "result_trajectory_generator",
@@ -2720,6 +2725,7 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
     ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
                      "lon_jerk_thr");
   }
+  bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
@@ -2862,6 +2868,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                           hpp_replan_lat_err_threshold_value);
     read_json_vec<double>(json, "hpp_replan_lon_err_threshold_value",
                           hpp_replan_lon_err_threshold_value);
+    ReadItem<bool>(json, use_yaw_rate_to_delta, "use_yaw_rate_to_delta");
   }
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
@@ -2888,6 +2895,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
 
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
   bool enable_ego_state_compensation = false;
+  bool use_yaw_rate_to_delta = false;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

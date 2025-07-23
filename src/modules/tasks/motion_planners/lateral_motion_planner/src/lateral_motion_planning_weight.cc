@@ -541,8 +541,10 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
-  if (lateral_motion_scene_ == LANE_CHANGE ||
-      lateral_motion_scene_ == LANE_BORROW) {
+  if (lateral_motion_scene_ == AVOID) {
+    jerk_bound = config_.jerk_bound_avoid;  // 0.4,
+  } else if (lateral_motion_scene_ == LANE_CHANGE ||
+             lateral_motion_scene_ == LANE_BORROW) {
     jerk_bound = config_.jerk_bound_lane_change;  // 0.55,
   } else if (lateral_motion_scene_ == SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
@@ -607,7 +609,8 @@ void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
 }
 
 void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
-    const bool is_high_priority_back,
+    const bool is_high_priority_back,  const bool is_in_function,
+    const double enter_lccnoa_time,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     const planning::common::LateralPlanningOutput &last_planning_output,
     planning::common::LateralPlanningInput &planning_input) {
@@ -697,6 +700,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       is_lane_change_hold_) {
     emergency_level_ = P0;
   }
+  if (!is_in_function) {
+    emergency_level_ = NONE;
+  }
   if (emergency_level_ == P0) {
     jerk_bound = P0_emergency_jerk_bound;
     extra_jerk_buffer = 1.0;
@@ -715,6 +721,13 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p2_jerk_buffer);
     jerk_bound = P2_emergency_jerk_bound;
   }
+  // consider 20 frame
+  if (enter_lccnoa_time > 1e-6 &&
+      enter_lccnoa_time < 1.0) {
+    emergency_jerk_bound = P2_emergency_jerk_bound;
+    extra_jerk_buffer =
+        std::min(0.05, extra_jerk_buffer);
+  }
   jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
   // tiny speed
   if (ego_vel_ < 0.2 &&
@@ -730,21 +743,23 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   bool is_need_loosening_lower_jerk_bound = false;
   double new_jerk_ubound = 0;
   double new_jerk_lbound = 0;
-  for (size_t i = 0; i < last_planning_output.jerk_vec_size(); ++i) {
-    double last_jerk_i = last_planning_output.jerk_vec(i);
-    if (i < 20) {  // only use 4s
-      double extra_upper_jerk = last_jerk_i - weight_.jerk_upper_bound[i];
-      double extra_lower_jerk = last_jerk_i - weight_.jerk_lower_bound[i];
-      if (extra_upper_jerk > -1e-3) {
-        is_need_loosening_upper_jerk_bound = true;
-        new_jerk_ubound =
-          std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + extra_jerk_buffer,
-                            new_jerk_ubound), jerk_bound);
-      } else if (extra_lower_jerk < 1e-3) {
-        is_need_loosening_lower_jerk_bound = true;
-        new_jerk_lbound =
-          std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - extra_jerk_buffer,
-                            new_jerk_lbound), -jerk_bound);
+  if (is_in_function) {
+    for (size_t i = 0; i < last_planning_output.jerk_vec_size(); ++i) {
+      double last_jerk_i = last_planning_output.jerk_vec(i);
+      if (i < 20) {  // only use 4s
+        double extra_upper_jerk = last_jerk_i - weight_.jerk_upper_bound[i];
+        double extra_lower_jerk = last_jerk_i - weight_.jerk_lower_bound[i];
+        if (extra_upper_jerk > -1e-3) {
+          is_need_loosening_upper_jerk_bound = true;
+          new_jerk_ubound =
+            std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + extra_jerk_buffer,
+                              new_jerk_ubound), jerk_bound);
+        } else if (extra_lower_jerk < 1e-3) {
+          is_need_loosening_lower_jerk_bound = true;
+          new_jerk_lbound =
+            std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - extra_jerk_buffer,
+                              new_jerk_lbound), -jerk_bound);
+        }
       }
     }
   }
@@ -783,8 +798,8 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{1.0, 5.0, 10.0, 20.0};
   double q_xy = planning::interp(ref_vel_, xp_v, config_.map_qxy);
-  std::vector<double> xp_xy{0.2, 0.4, 0.8, 1.5, 3.0};
-  std::vector<double> fp_ratio_to_xy1{1.0, 0.9,0.8, 0.6, 0.5};
+  std::vector<double> xp_xy{0.2, 0.3, 0.6, 1.2, 2.5};
+  std::vector<double> fp_ratio_to_xy1{1.0, 0.9, 0.8, 0.6, 0.5};
   std::vector<double> xp_theta{0.5, 2.0, 5.0};
   std::vector<double> fp_ratio_to_xy2{1.0, 0.5, 0.3};
   double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
@@ -795,26 +810,31 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   planning_input.set_q_ref_x(q_xy_ratio1 * q_xy_ratio2 * q_xy);
   planning_input.set_q_ref_y(q_xy_ratio1 * q_xy_ratio2 * q_xy);
 
-
-  std::vector<double> fp_ratio_to_theta1{1.0, 1.1, 1.3, 1.5, 1.8};
-  std::vector<double> fp_ratio_to_theta2{1.0, 1.3, 1.8, 2.5, 4.0};
-  std::vector<double> fp_ratio_to_theta3{1.0, 1.5, 3.0};
+  // std::vector<double> fp_ratio_to_theta1{1.0, 1.1, 1.3, 1.5, 1.8};
+  std::vector<double> fp_ratio_to_theta1{1.0, 1.5, 2.0, 2.5, 4.0};
+  std::vector<double> fp_ratio_to_theta2{1.0, 1.5, 3.0};
   double q_theta = planning::interp(ref_vel_, xp_v, config_.map_qtheta);
+  // double q_theta_ratio1 =
+  //   planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy, fp_ratio_to_theta1);
+  // double q_theta_ratio2 =
+  //   planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta2);
   double q_theta_ratio1 =
-    planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy, fp_ratio_to_theta1);
+    planning::interp(lateral_dist, xp_xy, fp_ratio_to_theta1);
   double q_theta_ratio2 =
-    planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta2);
-  double q_theta_ratio3 =
-    planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_theta3);
-  planning_input.set_q_ref_theta(std::max(q_theta_ratio1, q_theta_ratio2) * q_theta_ratio3 * q_theta);
+    planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_theta2);
+  planning_input.set_q_ref_theta(q_theta_ratio1 * q_theta_ratio2 * q_theta);
 
   double q_jerk1 =
       planning::interp(lateral_dist, xp_xy, config_.map_qjerk1);
   double q_jerk2 =
       planning::interp(lateral_dist, xp_xy, config_.map_qjerk2);
-  std::vector<double> fp_ratio_to_jerk{1.5, 1.2, 1.0};
+  std::vector<double> fp_ratio_to_jerk{1.0, 2.0, 4.0};
   double q_jerk_ratio1 =
     planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_jerk);
+  std::vector<double> fp_decay_jerk_ratio{0.3, 0.8, 1.0, 1.0, 1.0};
+  double decay_jerk_ratio =
+    planning::interp(lateral_dist, xp_xy, fp_decay_jerk_ratio);
+  q_jerk_ratio1 = std::max(q_jerk_ratio1 * decay_jerk_ratio, 1.0);
   if (lateral_dist < 0.1) {
     q_jerk2 = q_jerk1;
   }

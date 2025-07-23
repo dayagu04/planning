@@ -60,6 +60,7 @@ class LateralMotionPlanner : public Task {
 
   double avoid_back_time_;
   double enter_split_time_;
+  double enter_lccnoa_time_;
   bool is_divide_lane_into_two_;
 };
 

@@ -77,6 +77,7 @@ void LateralMotionPlanner::Init() {
 
   avoid_back_time_ = 0.0;
   enter_split_time_ = 0.0;
+  enter_lccnoa_time_ = 0.0;
   is_divide_lane_into_two_ = false;
 }
 
@@ -497,8 +498,25 @@ bool LateralMotionPlanner::AssembleInput() {
   // handle big shaking for steer
   const bool is_high_priority_back =
       session_->planning_context().lane_change_decider_output().is_high_priority_back;
+  bool is_in_function =
+      session_->environmental_model().GetVehicleDbwStatus();
+  if (config_.pass_acc_mode) {
+    const auto &function_mode =
+        session_->environmental_model().function_info().function_mode();
+    is_in_function =
+        function_mode == common::DrivingFunctionInfo::SCC ||
+        function_mode == common::DrivingFunctionInfo::NOA;
+  }
+  if (is_in_function) {
+    if (enter_lccnoa_time_ < 3.0) {
+      enter_lccnoa_time_ += 0.1;
+    }
+  } else {
+    enter_lccnoa_time_ = 0;
+  }
   planning_weight_ptr_->CalculateJerkBoundByLastJerk(
-      is_high_priority_back, reference_path_ptr,
+      is_high_priority_back, is_in_function,
+      enter_lccnoa_time_, reference_path_ptr,
       planning_problem_ptr_->GetOutput(), planning_input_);
   // set motion_plan_concerned_end_index
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(

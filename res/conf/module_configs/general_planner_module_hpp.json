@@ -55,6 +55,7 @@
   "enable_delta_stitch_in_replan": true,
   "enable_ego_state_compensation": true,
   "enable_constanct_velocity_in_predicted_vehicle_state": true,
+  "use_yaw_rate_to_delta": false,
   "replan_longitudinal_distance_threshold_speed": [11.111, 22.222],
   "replan_longitudinal_distance_threshold_value": [1.0, 2.0],
   "max_replan_dist_err" : 1.5,
@@ -322,6 +323,7 @@
     "enable_navi_time_distance_control": false
   },
   "lat_motion_ilqr": {
+    "pass_acc_mode": false,
     "warm_start_enable": true,
     "curv_factor": 0.33,
     "delta_t": 0.2,
@@ -474,6 +476,7 @@
     "soft_bound_corridor_t": 0.3
   },
   "result_trajectory_generator": {
+    "use_dynamic_lat_jerk_thr": false,
     "enable_lat_traj": false,
     "curv_factor": 0.33,
     "lat_acc_thr": 3.0,
