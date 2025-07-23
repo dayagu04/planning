@@ -147,10 +147,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   lane_borrow_pb_info->set_dis_to_traffic_lights(dis_to_traffic_lights_);
   lane_borrow_pb_info->set_distance_to_stop_line(distance_to_stop_line_);
   lane_borrow_pb_info->set_distance_to_cross_walk(distance_to_cross_walk_);
-  if (intersection_state_ ==
-    planning::common::IntersectionState::APPROACH_INTERSECTION ||
-    intersection_state_ ==
-    planning::common::IntersectionState::IN_INTERSECTION) {
+  if (intersection_state_ == planning::common::IntersectionState::IN_INTERSECTION) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
     return false;
   }
@@ -895,7 +892,8 @@ bool LaneBorrowDecider::UpdateDynamicBlockingObstacles() {
     const auto& agent = agent_mgr->GetAgent(blocked_obs_id);
     if (agent == nullptr) {
       lane_borrow_decider_output_.lane_borrow_failed_reason = AGENT_MGR_FAILED;
-      return false;
+      // return false;
+      continue;
     }
     double speed = agent->speed();
     bool is_cut_in = false;
