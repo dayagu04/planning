@@ -1939,7 +1939,7 @@ void SpatioTemporalUnionDp::FallbackFunction(
     TrajectoryPoint point;
     for (int i = 0; i < kDefaultTrajectoryPointSize; ++i) {
       if (i == 0) {
-        point.s = ego_frenet_in_last_result.x + ego_init_state.s();
+        point.s = ego_init_state.s();
         point.l = ego_init_state.l();
         point.heading_angle = ego_init_state.heading_angle();
         point.t = 0.0;
