@@ -690,7 +690,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (target_lane_front_node_) {
-    if (target_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+    if (target_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE ||
+        target_lane_front_node_->is_static_type()) {
       const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
       if (!IsLCFeasibleForTrafficConeInTargetLane(target_lane_front_node_,
                                                   target_lane_virtual_id)) {
@@ -721,7 +722,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (ego_lane_front_node_) {
-    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE ||
+        ego_lane_front_node_->is_static_type()) {
       if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
         lc_invalid_track_.set_value(
             ego_lane_front_node_->node_agent_id(),
@@ -2396,7 +2398,8 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
   }
 
   bool lc_safety = true;
-  if (after_filter_agent->type() == agent::AgentType::TRAFFIC_CONE) {
+  if (after_filter_agent->type() == agent::AgentType::TRAFFIC_CONE ||
+      after_filter_agent->is_static_type()) {
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
     if (transition_info_.lane_change_status == kLaneChangePropose) {
       lc_safety = IsLCFeasibleForTrafficConeInTargetLane(
