@@ -814,7 +814,7 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_st
   double virtual_obs_theta = frenet_coord->GetPathCurveHeading(obs_start_s);
   // build virtual obs
   planning::agent::Agent virtual_agent;
-  virtual_agent.set_agent_id(9999);
+  virtual_agent.set_agent_id(999999);
   virtual_agent.set_type(agent::AgentType::VIRTUAL);
   virtual_agent.set_is_lane_borrow_virtual_obs(true);
   virtual_agent.set_x(virtual_obs_x);  //几何中心
