@@ -686,7 +686,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
 
   for (auto avoid_agent : avoid_agents) {
     const bool is_static = avoid_agent->is_static();
-    // const double speed_diff = v_ego - avoid_agent->speed();
+    const double avoid_agent_v = avoid_agent->speed();
 
     // bool is_need_v_hold = false;
     // double speed_buffer = 0.0;
@@ -776,7 +776,9 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     // const double v_limit_lower = avoid_agent->is_static()
     //                                  ? kStaticAgentAvoidLimitedSpeedHigh
     //                                  : kDynamicAgentAvoidLimitedSpeedHigh;
+    double v_limit_lower_tmp = avoid_agent_v + 2.0;
     v_limit = std::max(v_limit, v_limit_lower);
+    v_limit = std::max(v_limit, v_limit_lower_tmp);
 
     SpeedLimitAgent speed_limit_agent;
     speed_limit_agent.id = avoid_agent->agent_id();

@@ -37,8 +37,8 @@ void SccLongitudinalMotionPlannerV3::Init() {
   planning_input_.mutable_s_weights()->Resize(N, 0.0);
   planning_input_.mutable_v_weights()->Resize(N, 0.0);
 
-  planning_input_.mutable_soft_pos_max_vec()->Resize(N, 0.0);
-  planning_input_.mutable_soft_pos_min_vec()->Resize(N, 0.0);
+  // planning_input_.mutable_soft_pos_max_vec()->Resize(N, 0.0);
+  // planning_input_.mutable_soft_pos_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_pos_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_pos_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_vel_max_vec()->Resize(N, 0.0);
@@ -47,8 +47,6 @@ void SccLongitudinalMotionPlannerV3::Init() {
   planning_input_.mutable_acc_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_jerk_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_jerk_min_vec()->Resize(N, 0.0);
-  planning_input_.mutable_djerk_max_vec()->Resize(N, 0.0);
-  planning_input_.mutable_djerk_min_vec()->Resize(N, 0.0);
 }
 
 bool SccLongitudinalMotionPlannerV3::Execute() {
@@ -94,9 +92,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   const auto &s_refs = longitudinal_decider_output.s_refs;
   const auto &v_refs = longitudinal_decider_output.ds_refs;
   const auto &s_bounds = longitudinal_decider_output.hard_bounds_v3;
-  const auto &s_soft_bounds = longitudinal_decider_output.soft_bounds_v3;
+  // const auto &s_soft_bounds = longitudinal_decider_output.soft_bounds_v3;
   // const auto &s_lead_bounds = longitudinal_decider_output.lon_lead_bounds;
-  // const auto &sv_bounds = longitudinal_decider_output.lon_sv_boundary.sv_bounds;
   const auto &v_bounds = longitudinal_decider_output.lon_bound_v;
   const auto &a_bounds = longitudinal_decider_output.lon_bound_a;
   const auto &jerk_bounds = longitudinal_decider_output.lon_bound_jerk;
@@ -132,13 +129,6 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   }
 
   // 2.2. cancle soft bound in V3
-  for (size_t i = 0; i < s_bounds.size(); ++i) {
-    auto s_soft_bound = s_soft_bounds[i];
-    planning_input_.mutable_soft_pos_max_vec()->Set(i, s_soft_bound.upper);
-    planning_input_.mutable_soft_pos_min_vec()->Set(i, s_soft_bound.lower);
-  }
-
-  // 2.3. cancle s-v bounds in V3
 
   // 2.4. set vel bounds
   for (size_t i = 0; i < v_bounds.size(); ++i) {
@@ -158,12 +148,6 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.mutable_jerk_min_vec()->Set(i, jerk_bounds[i].lower);
   }
 
-  // 2.7. djerk bounds
-  for (size_t i = 0; i < jerk_bounds.size(); ++i) {
-    planning_input_.mutable_djerk_max_vec()->Set(i, 5.0);
-    planning_input_.mutable_djerk_min_vec()->Set(i, -5.0);
-  }
-
   // 3. set init state
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -179,8 +163,6 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
       planning_init_point.lon_init_state.v());
   planning_input_.mutable_init_state()->set_a(
       planning_init_point.lon_init_state.a());
-  planning_input_.mutable_init_state()->set_j(
-      planning_init_point.lon_init_state.j());
 
   // 4. set weights
   auto start_stop_info =
@@ -192,7 +174,6 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_ref_vel(config_.q_ref_vel_startmode);
     planning_input_.set_q_acc(config_.q_acc_startmode);
     planning_input_.set_q_jerk(config_.q_jerk_startmode);
-    planning_input_.set_q_djerk(config_.q_djerk_startmode);
     planning_input_.set_q_stop_s(config_.q_stop_s_startmode);
 
     // planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound_startmode);
@@ -201,37 +182,32 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_vel_bound(config_.q_vel_bound_startmode);
     planning_input_.set_q_acc_bound(config_.q_acc_bound_startmode);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound_startmode);
-    planning_input_.set_q_djerk_bound(config_.q_djerk_bound);
   } else if (config_.enable_speed_adjust && lane_change_info.s_search_status) {
     planning_input_.set_q_ref_pos(config_.q_ref_pos_speed_adjust);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
     planning_input_.set_q_acc(config_.q_acc_speed_adjust);
     planning_input_.set_q_jerk(config_.q_jerk_speed_adjust);
-    planning_input_.set_q_djerk(config_.q_djerk);
     planning_input_.set_q_stop_s(config_.q_stop_s);
 
-    planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
+    // planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
     planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
     // planning_input_.set_q_sv_bound(config_.q_sv_bound);
     planning_input_.set_q_vel_bound(config_.q_vel_bound);
     planning_input_.set_q_acc_bound(config_.q_acc_bound);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
-    planning_input_.set_q_djerk_bound(config_.q_djerk_bound);
   } else {
     planning_input_.set_q_ref_pos(config_.q_ref_pos);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
     planning_input_.set_q_acc(config_.q_acc);
     planning_input_.set_q_jerk(config_.q_jerk);
-    planning_input_.set_q_djerk(config_.q_djerk);
     planning_input_.set_q_stop_s(config_.q_stop_s);
 
-    planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
+    // planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
     planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
     // planning_input_.set_q_sv_bound(0.0);
     planning_input_.set_q_vel_bound(config_.q_vel_bound);
     planning_input_.set_q_acc_bound(config_.q_acc_bound);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
-    planning_input_.set_q_djerk_bound(config_.q_djerk_bound);
   }
 
   // what is s_stop?
@@ -267,7 +243,6 @@ void SccLongitudinalMotionPlannerV3::Update() {
   std::vector<double> v_vec(N);
   std::vector<double> a_vec(N);
   std::vector<double> j_vec(N);
-  std::vector<double> djerk_vec(N);
   std::vector<double> t_vec(N);
 
   // assemble proto for pnc tools
@@ -281,7 +256,6 @@ void SccLongitudinalMotionPlannerV3::Update() {
     v_vec[i] = planning_output.vel_vec(i);
     a_vec[i] = planning_output.acc_vec(i);
     j_vec[i] = planning_output.jerk_vec(i);
-    djerk_vec[i] = planning_output.djerk_vec(i);
   }
 
   // generate motion planning output into planning_context
@@ -355,10 +329,10 @@ void SccLongitudinalMotionPlannerV3::Update() {
   motion_planner_output.delta_t_spline.set_points(t_vec, assembled_delta);
   motion_planner_output.omega_t_spline.set_points(t_vec, assembled_omega);
 
-  JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
-  JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
-  JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
-  JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
-  JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
+  // JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
+  // JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
+  // JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
+  // JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
+  // JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
 }
 }  // namespace planning
