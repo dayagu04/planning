@@ -698,11 +698,40 @@
     "pre_accelerate_distance_for_merge": 150.0,
     "straight_ramp_v_limit": 19.44,
     "v_intersection_min_limit": 11.11,
-    "v_limit_one_still_danger_obs": 40.0,
-    "v_limit_more_still_danger_obs": 40.0,
-    "v_rel_limit_for_dynamic_danger_obs": 40.0,
     "min_acc_function_fading_away": -0.9,
-    "function_fading_away_distance_to_intersection": 50.0
+    "function_fading_away_distance_to_intersection": 50.0,
+    "v_limit_one_still_danger_obs": 12.5,
+    "v_limit_more_still_danger_obs": 11.11,
+    "v_rel_limit_for_dynamic_danger_obs": 4.17,
+    "high_speed_scene_ego_v_thred": 16.67,
+    "high_speed_scene_cruise_v_thred": 22.22,
+    "dangerous_obs_lon_dis_high": 40.0,
+    "dangerous_obs_lon_dis_low": 1.7,
+    "enable_dangerous_obs_speed_limit": true,
+    "vehicle_lat_dis_rel_vel_table": {
+      "lat_dis_table": [
+        0.7, 1.0, 1.5
+      ],
+      "rel_vel_table": [
+        4.17, 6.94, 11.11
+      ]
+    },
+    "vru_lat_dis_rel_vel_table": {
+      "lat_dis_table": [
+        1.15, 1.65, 2.15
+      ],
+      "rel_vel_table": [
+        4.17, 6.94, 11.11
+      ]
+    },
+    "static_lat_dis_rel_vel_table": {
+      "lat_dis_table": [
+        0.7, 1.0, 1.5
+      ],
+      "rel_vel_table": [
+        11.11, 12.5, 13.89
+      ]
+    }
   },
 
   "result_trajectory_generator": {

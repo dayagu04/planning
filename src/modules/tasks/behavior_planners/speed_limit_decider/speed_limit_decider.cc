@@ -544,7 +544,21 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto init_point = ego_state_mgr->planning_init_point();
   double v_ego = ego_state_mgr->ego_v();
+  double v_cruise = ego_state_mgr->ego_v_cruise();
+  const auto &function_state_machine_info =
+  environmental_model.get_local_view().function_state_machine_info;
+  double v_cruise_fsm = function_state_machine_info.pilot_req.acc_curise_real_spd;
   double v_target_for_dangerous_obs = 40.0;
+  if (!speed_limit_config_.enable_dangerous_obs_speed_limit) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
+  if (v_ego > speed_limit_config_.high_speed_scene_ego_v_thred ||
+      v_cruise > speed_limit_config_.high_speed_scene_cruise_v_thred ||
+      v_cruise_fsm > speed_limit_config_.high_speed_scene_cruise_v_thred) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   if (agent_manager == nullptr) {
@@ -554,7 +568,10 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
   std::vector<const agent::Agent *> danger_agents;
   const auto &all_current_agents = agent_manager->GetAllCurrentAgents();
   for (const auto agt_ptr: all_current_agents) {
-    if (agt_ptr->is_dangerous() == true) {
+    if (agt_ptr->is_dangerous() == true &&
+        agt_ptr->is_reverse() == false &&
+        (agt_ptr->d_rel() > speed_limit_config_.dangerous_obs_lon_dis_low &&
+        agt_ptr->d_rel() < speed_limit_config_.dangerous_obs_lon_dis_high)) {
       danger_agents.emplace_back(agt_ptr.get());
     }
   }
@@ -571,13 +588,36 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
   }
   if (all_agents_static) {
     if (danger_agents.size() == 1) {
-      v_target_for_dangerous_obs =  speed_limit_config_.v_limit_one_still_danger_obs;
+      double lat_dis_static = danger_agents[0]->d_path();
+      double vel_by_lat_dis = interp(lat_dis_static, speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+                                     speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+      v_target_for_dangerous_obs =  std::max(speed_limit_config_.v_limit_one_still_danger_obs, vel_by_lat_dis);
     } else {
-      v_target_for_dangerous_obs = speed_limit_config_.v_limit_more_still_danger_obs;
+      double min_lat_dis = 100.0;
+      for (const auto agt_ptr: danger_agents) {
+        if (agt_ptr->d_path() < min_lat_dis) {
+          min_lat_dis = agt_ptr->d_path();
+        }
+      }
+      v_target_for_dangerous_obs = interp(min_lat_dis, speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+        speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);;
     }
   } else {
     if (danger_agents.size() == 1) {
-      v_target_for_dangerous_obs = danger_agents[0]->speed() + speed_limit_config_.v_rel_limit_for_dynamic_danger_obs;
+      if (danger_agents[0]->type() == agent::AgentType::PEDESTRIAN ||
+          danger_agents[0]->type() == agent::AgentType::CYCLE_RIDING ||
+          danger_agents[0]->type() == agent::AgentType::MOTORCYCLE_RIDING ||
+          danger_agents[0]->type() == agent::AgentType::TRICYCLE_RIDING) {
+        v_target_for_dangerous_obs = danger_agents[0]->speed() + interp(
+                          danger_agents[0]->d_path(), speed_limit_config_.vru_lat_dis_rel_vel_table.lat_dis_table,
+                           speed_limit_config_.vru_lat_dis_rel_vel_table.rel_vel_table
+                        );
+      } else {
+        v_target_for_dangerous_obs = danger_agents[0]->speed() + interp(
+                            danger_agents[0]->d_path(), speed_limit_config_.vehicle_lat_dis_rel_vel_table.lat_dis_table,
+                           speed_limit_config_.vehicle_lat_dis_rel_vel_table.rel_vel_table
+                        );
+      }
     } else {
     //average vel of dangerous_obs by distance weight
       std::vector<double> dis_vec;
@@ -591,7 +631,32 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
       std::sort(danger_agents.begin(), danger_agents.end(), compare_danger_obs_by_dis);
       int used_num = danger_agents.size() > 4? 4: danger_agents.size();
       for (int i = 0; i < used_num; i++) {
-        vel_vec.emplace_back(danger_agents[i]->speed());
+        double rel_vel = 40.0;
+        if (danger_agents[i]->type() == agent::AgentType::PEDESTRIAN ||
+          danger_agents[i]->type() == agent::AgentType::CYCLE_RIDING ||
+          danger_agents[i]->type() == agent::AgentType::MOTORCYCLE_RIDING ||
+          danger_agents[i]->type() == agent::AgentType::TRICYCLE_RIDING) {
+          if (danger_agents[i]->is_static()) {
+            double vel_by_lat_dis = interp(danger_agents[i]->d_path(), speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+              speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+            rel_vel = vel_by_lat_dis - danger_agents[i]->speed();
+          } else {
+            rel_vel = interp(
+              danger_agents[i]->d_path(), speed_limit_config_.vru_lat_dis_rel_vel_table.lat_dis_table,
+              speed_limit_config_.vru_lat_dis_rel_vel_table.rel_vel_table);
+          }
+        } else {
+          if (danger_agents[i]->is_static()) {
+            double vel_by_lat_dis = interp(danger_agents[i]->d_path(), speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+              speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+            rel_vel = vel_by_lat_dis - danger_agents[i]->speed();
+          } else {
+            rel_vel = interp(
+              danger_agents[i]->d_path(), speed_limit_config_.vehicle_lat_dis_rel_vel_table.lat_dis_table,
+              speed_limit_config_.vehicle_lat_dis_rel_vel_table.rel_vel_table);
+          }
+        }
+        vel_vec.emplace_back(danger_agents[i]->speed() + rel_vel);
         dis_vec.emplace_back(std::max(std::fabs(danger_agents[i]->d_rel()), 0.1));
       }
       for (int i = 0; i < used_num; i++) {
@@ -610,7 +675,7 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
       for (int i = 0; i < used_num; i++) {
         avg_vel = avg_vel + (weight_numerator_vec[i] / weight_denominator) * vel_vec[i];
       }
-      v_target_for_dangerous_obs = avg_vel + speed_limit_config_.v_rel_limit_for_dynamic_danger_obs;
+      v_target_for_dangerous_obs = avg_vel;
 
     }
   }

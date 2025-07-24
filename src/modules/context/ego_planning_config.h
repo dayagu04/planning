@@ -2976,7 +2976,58 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                             "min_acc_function_fading_away");
     ReadItem<double>(json, function_fading_away_distance_to_intersection, "speed_limit_decider",
                         "function_fading_away_distance_to_intersection");
+    ReadItem<double>(json, high_speed_scene_ego_v_thred, "speed_limit_decider",
+                            "high_speed_scene_ego_v_thred");
+    ReadItem<double>(json, high_speed_scene_cruise_v_thred, "speed_limit_decider",
+                              "high_speed_scene_cruise_v_thred");
+    ReadItem<double>(json, dangerous_obs_lon_dis_high, "speed_limit_decider",
+                                "dangerous_obs_lon_dis_high");
+    ReadItem<double>(json, dangerous_obs_lon_dis_low, "speed_limit_decider",
+                                  "dangerous_obs_lon_dis_low");
+    ReadItem<bool>(json, enable_dangerous_obs_speed_limit, "speed_limit_decider",
+                                    "enable_dangerous_obs_speed_limit");
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vehicle_lat_dis_rel_vel_table",
+                                "lat_dis_table"},
+                                vehicle_lat_dis_rel_vel_table.lat_dis_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vehicle_lat_dis_rel_vel_table",
+                                "rel_vel_table"},
+                                vehicle_lat_dis_rel_vel_table.rel_vel_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vru_lat_dis_rel_vel_table",
+                                "lat_dis_table"},
+                                vru_lat_dis_rel_vel_table.lat_dis_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vru_lat_dis_rel_vel_table",
+                                "rel_vel_table"},
+                                vru_lat_dis_rel_vel_table.rel_vel_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","static_lat_dis_rel_vel_table",
+                                "lat_dis_table"},
+                                static_lat_dis_rel_vel_table.lat_dis_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","static_lat_dis_rel_vel_table",
+                                "rel_vel_table"},
+                                static_lat_dis_rel_vel_table.rel_vel_table);
   }
+  struct VehicleLatDisRelVelTable {
+    std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
+    std::vector<double> rel_vel_table{4.17, 6.94, 11.11};
+  };
+  struct VRULatDisRelVelTable {
+    std::vector<double> lat_dis_table{1.15, 1.65, 2.15};
+    std::vector<double> rel_vel_table{4.17, 6.94, 11.11};
+  };
+
+  struct StaticLatDisRelVelTable {
+    std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
+    std::vector<double> rel_vel_table{11.11, 12.5, 13.89};
+  };
+
   int lon_num_step = 25;
   double delta_time = 0.2;
   double preview_x = 80.0;
@@ -2995,6 +3046,15 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double v_rel_limit_for_dynamic_danger_obs = 4.17;
   double min_acc_function_fading_away = -1.0;
   double function_fading_away_distance_to_intersection = 50.0;
+  double high_speed_scene_ego_v_thred = 16.67;
+  double high_speed_scene_cruise_v_thred = 22.22;
+  double dangerous_obs_lon_dis_high = 40.0;
+  double dangerous_obs_lon_dis_low = 1.7;
+  bool enable_dangerous_obs_speed_limit = true;
+
+  VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
+  VRULatDisRelVelTable vru_lat_dis_rel_vel_table;
+  StaticLatDisRelVelTable static_lat_dis_rel_vel_table;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
