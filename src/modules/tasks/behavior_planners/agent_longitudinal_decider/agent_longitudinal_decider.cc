@@ -186,9 +186,9 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
       ((lc_status == "left_lane_change") || (lc_status == "right_lane_change"));
 
   // ignore cutin in lane change
-  if (is_in_lane_change) {
+  /* if (is_in_lane_change) {
     return;
-  }
+  } */
 
   const auto* agent_manager = dynamic_world_->agent_manager();
   auto* mutable_agent_manager = dynamic_world_->mutable_agent_manager();
