@@ -303,6 +303,7 @@ void LaneBorrowDecider::UpdateToDP() {
       double inner_l = (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW)? lateral_dist: - lateral_dist;
       dp_path_decider_->AddLaneBorrowVirtualObstacle(inner_l, obs_start_s_);
       dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
+      lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving; // lock status
     }else{
       lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
     }
