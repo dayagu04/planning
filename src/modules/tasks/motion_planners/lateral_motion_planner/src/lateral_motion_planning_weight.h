@@ -261,7 +261,8 @@ class LateralMotionPlanningWeight {
   double min_q_jerk_;
   double last_path_max_dist2ref_;
   double last_jerk_bound_limit_;
-  double last_remotely_index_;
+  double last_max_omega_;
+  size_t last_remotely_index_;
   bool is_lane_change_hold_;
   bool is_lane_change_back_;
   bool is_in_intersection_;

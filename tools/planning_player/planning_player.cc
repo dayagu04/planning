@@ -1693,6 +1693,10 @@ void PlanningPlayer::UpdateVehicleService(
     compensation_factor = curvature > 0 ? 1.5 : 1;
     steer_ratio = 15.7;
     wheel_base = 2.7;
+  } else if (car_ == "CHERY_M32T") {
+    compensation_factor = 1;
+    steer_ratio = 15.88;
+    wheel_base = 2.8;
   }
   vehi_svc_msg->steering_wheel_angle =
       curvature * wheel_base * steer_ratio * compensation_factor;
