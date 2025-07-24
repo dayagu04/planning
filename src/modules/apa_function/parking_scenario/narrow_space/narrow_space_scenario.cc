@@ -1516,7 +1516,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
   constexpr double kInitialTargetX = 7.0;
   constexpr double kInitialTargetY = 11.0;
   constexpr double kAlternateTargetX = 8.0;
-  constexpr double kAlternateTargetY = 5.0;
+  constexpr double kAlternateTargetY = 4.0;
   constexpr double kPositionThresholdX = 7.0;
   constexpr double kHeadingThresholdRad0 = 60.0 * M_PI / 180.0;
   constexpr double kHeadingThresholdRad1 = 130.0 * M_PI / 180.0;
