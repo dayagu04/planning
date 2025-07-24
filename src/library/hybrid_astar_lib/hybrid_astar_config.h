@@ -71,6 +71,7 @@ struct PlannerOpenSpaceConfig {
   float traj_steer_penalty = 0.0;
   float traj_steer_change_penalty = 0.0;
   float ref_line_heading_penalty = 0.0;
+  float zigzag_penalty = 0.0;
 
   float expect_gear_penalty;
   float expect_dist_penalty;

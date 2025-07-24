@@ -771,10 +771,9 @@ float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
 
 float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
                                          Node3d* next_node) {
-  // evaluate cost on the trajectory and add current cost
-  float piecewise_cost = 0.0;
-  float path_dist = 0.0;
-  path_dist = next_node->GetNodePathDistance();
+  // 1. evaluate cost on the trajectory and add current cost
+  float piecewise_cost = 0.0f;
+  float path_dist = next_node->GetNodePathDistance();
 
   if (next_node->IsForward()) {
     piecewise_cost += path_dist * config_.traj_forward_penalty;
@@ -782,24 +781,47 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     piecewise_cost += path_dist * config_.traj_reverse_penalty;
   }
 
-  // gear punish
+  // 2. gear punish
   if (current_node->IsPathGearChange(next_node->GetGearType())) {
     piecewise_cost += config_.gear_switch_penalty;
   }
 
-  // steering wheel angle cost
-  // for start node, steering angle can be any value
-  if (!current_node->IsStartNode()) {
-    piecewise_cost +=
-        config_.traj_steer_penalty * std::fabs(next_node->GetSteer());
+  // 3. Turning cost (direction size + change amount + zigzag), todo::
+  // currently, it is only targeted at parking out
+  if (!current_node->IsStartNode() &&
+      IsParkingOutRequest(request_.direction_request)) {
+    const float steer_now = next_node->GetSteer();
+    const float steer_last = current_node->GetSteer();
+    const float steer_delta = steer_now - steer_last;
+    const float steer_change = std::fabs(steer_delta);
+    const bool steer_sign_changed = (steer_now * steer_last < 0.0f);
+    const float steer_abs = std::fabs(steer_now);
+    const bool gear_change =
+        (current_node->IsPathGearChange(next_node->GetGearType()));
 
-    // steering wheel change
-    piecewise_cost +=
-        config_.traj_steer_change_penalty *
-        std::fabs(next_node->GetSteer() - current_node->GetSteer());
+    // 3.1 Steering angle penalty (large steering is discouraged, but not
+    // restricted)
+    piecewise_cost += config_.traj_steer_penalty * steer_abs;
+
+    // 3.2 Steering change penalty:
+    // Strong penalty for small changes to control
+    // zigzag; large changes are allowed to avoid penalizing paths with large
+    // curvature and increasing the number of gear shifts
+    if (!gear_change) {
+      constexpr float steer_change_threshold = 0.2f;  // 允许突变的最大变化
+      float effective_change = std::min(steer_change, steer_change_threshold);
+
+      piecewise_cost += config_.traj_steer_change_penalty * effective_change;
+    }
+
+    // 3.3 Zigzag penalty: directional jump change with an angle exceeding a
+    // certain value
+    if (steer_sign_changed && steer_change > 0.1f && !gear_change) {
+      piecewise_cost += config_.zigzag_penalty;
+    }
   }
 
-  // request dist and gear cost
+  // 4. request dist and gear cost
   if (request_.plan_reason == PlanningReason::FIRST_PLAN) {
     if (current_node->GetDistToStart() <
         request_.first_action_request.dist_request) {
