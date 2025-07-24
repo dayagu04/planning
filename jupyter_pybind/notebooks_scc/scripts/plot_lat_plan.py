@@ -39,6 +39,7 @@ fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 
+# behavior
 behavior_data_1 = ColumnDataSource({
   'name':[],
   'data':[]
@@ -74,6 +75,42 @@ def update_lat_behavior_data(lat_behavior_common):
     'data': datas,
   })
 
+# hmi ad info
+hmi_ad_info_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
+columns = [
+        TableColumn(field="name", title="name",),
+        TableColumn(field="data", title="data"),
+    ]
+data_hmi_ad_info_table = DataTable(source=hmi_ad_info_data, columns=columns, width=400, height=600)
+
+def update_hmi_ad_info(hmi_ad_info):
+  vars = ['is_avaliable', 'timestamp', 'lane_change_direction', \
+          'lane_change_status', 'lane_change_reason', 'status_update_reason', \
+          'noa_exit_warning_level_distance', 'avoid_status', 'aovid_id', \
+          'is_curva', 'cutin_track_id', 'cruise_speed', \
+          'avoiddirect', 'distance_to_ramp', 'distance_to_split', \
+          'distance_to_merge', 'distance_to_toll_station', 'distance_to_tunnel', \
+          'is_within_hdmap', 'ramp_direction', 'ramp_pass_sts', \
+          'dis_to_reference_line', 'angle_to_roaddirection', 'is_in_sdmaproad', \
+          'road_type']
+  names  = []
+  datas = []
+  for name in vars:
+    try:
+      datas.append(getattr(hmi_ad_info, name))
+      names.append(name)
+    except:
+      pass
+
+  hmi_ad_info_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+
+# hmi hpp info
 hmi_hpp_info_data = ColumnDataSource({
   'name':[],
   'data':[]
@@ -105,6 +142,7 @@ def update_hmi_hpp_info(hmi_hpp_info):
     'data': datas,
   })
 
+# steer and steer dot
 def get_plan_debug_msg_idx(bag_loader, bag_time):
   plan_debug_msg_idx = 0
   if bag_loader.plan_debug_msg['enable'] == True:
@@ -205,12 +243,14 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
     lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
     update_lat_behavior_data(lat_behavior_common)
   if bag_loader.planning_hmi_msg['enable'] ==True:
+    hmi_ad_info = local_view_data['data_msg']['planning_hmi_msg'].ad_info
+    data_hmi_ad_info_table = update_hmi_ad_info(hmi_ad_info)
     hmi_hpp_info = local_view_data['data_msg']['planning_hmi_msg'].hpp_info
     data_hmi_hpp_info_table = update_hmi_hpp_info(hmi_hpp_info)
   push_notebook()
 
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_12)), title="CurveFigure")
-pan2 = Panel(child=row(column(fig_lat_offset, row(data_behavior_table_1, column(data_hmi_hpp_info_table)))), title="TableInfo")
+pan2 = Panel(child=row(column(fig_lat_offset, row(column(data_behavior_table_1), column(data_hmi_ad_info_table, data_hmi_hpp_info_table)))), title="TableInfo")
 pan3 = Panel(child=row(column(fig7)), title="!Figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3 ])
 if global_fig_plot:

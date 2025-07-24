@@ -459,9 +459,28 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     # else:
     plan_x = []
     plan_y = []
+    plan_lat_acc = []
+    plan_lat_jerk = []
+    plan_omega = 0
     for i in range(len(trajectory.trajectory_points)):
       plan_x.append(trajectory.trajectory_points[i].x)
       plan_y.append(trajectory.trajectory_points[i].y)
+      plan_v = trajectory.trajectory_points[i].v
+      plan_v2 = plan_v * plan_v
+      plan_delta = trajectory.trajectory_points[i].curvature
+      if i % 8 == 0:
+        plan_lat_acc.append(plan_delta * plan_v2)
+        if i < len(trajectory.trajectory_points) - 1:
+          plan_next_delta = trajectory.trajectory_points[i + 8].curvature
+          plan_next_time = trajectory.trajectory_points[i + 8].t
+          plan_time = trajectory.trajectory_points[i].t
+          plan_omega = (plan_next_delta - plan_delta) / (plan_next_time - plan_time)
+        plan_lat_jerk.append(plan_omega * plan_v2)
+    lat_plan_data['data_lat_motion_plan_output'].data.update({
+      'final_acc_vec': plan_lat_acc,
+      'final_jerk_vec': plan_lat_jerk,
+    })
+
 
     if not g_is_display_enu:
       plan_traj_x, plan_traj_y = plan_x, plan_y
@@ -481,6 +500,8 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     # 加载车道线信息
     if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
       is_enu_to_car = False
+
+
 
   not_g_is_display_enu = g_is_display_enu
   if g_is_display_enu :
@@ -802,6 +823,8 @@ def load_lat_plan_figure(fig1, local_view_data):
                                                          'steer_dot_deg_vec':[],
                                                          'acc_vec':[],
                                                          'jerk_vec':[],
+                                                         'final_acc_vec':[],
+                                                         'final_jerk_vec':[],
                                                          'acc_upper_bound':[],
                                                          'acc_lower_bound':[],
                                                          'jerk_upper_bound':[],
@@ -952,11 +975,13 @@ def load_lat_plan_figure(fig1, local_view_data):
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'theta')
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat acc')
+  fig3.line('time_vec', 'final_acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'final lat acc')
   fig3.line('time_vec', 'acc_upper_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lat acc corridor')
   fig3.line('time_vec', 'acc_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lat acc corridor')
   fig3.triangle ('time_vec', 'acc_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat acc corridor')
   fig3.inverted_triangle ('time_vec', 'acc_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat acc corridor')
   f4 = fig4.line('time_vec', 'jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat jerk')
+  fig4.line('time_vec', 'final_jerk_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'final lat jerk')
   fig4.line('time_vec', 'jerk_upper_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lat jerk corridor')
   fig4.line('time_vec', 'jerk_lower_bound', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lat jerk corridor')
   fig4.triangle ('time_vec', 'jerk_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'lat jerk corridor')
