@@ -1506,10 +1506,10 @@ bool LaneBorrowDecider::CheckBackWardObs() {
       double MaxConcernCollisionTime = 1.5;
       if (lane_borrow_decider_output_.lane_borrow_state ==
           kLaneBorrowDriving) {
-        MaxConcernCollisionTime = 2.5;
+        MaxConcernCollisionTime = 3.0;
       } else if (lane_borrow_decider_output_.lane_borrow_state ==
                   kNoLaneBorrow) {
-        MaxConcernCollisionTime = 3.0;
+        MaxConcernCollisionTime = 5.0;
       }
       if (TTC >= MaxConcernCollisionTime) {
         continue;
