@@ -948,7 +948,7 @@ void DPRoadGraph::SetPullOverPath(double end_s, double end_l){ // re-set refined
     init_sl_point_.l, 0, 0, end_l, 0.0, 0.0,
     end_s - init_sl_point_.s);
   double path_s_length = end_s - init_sl_point_.s;
-  double path_resolution = 0.5;
+  double path_resolution = std::min(0.5, (path_s_length/4));
   double current_s = 0.0;
 
   while (current_s + path_resolution * 0.5 < path_s_length) {

@@ -35,7 +35,11 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
+<<<<<<< Updated upstream
                 "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20241218/20241218-16-16-50/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2024-12-18-16-16-50_no_camera.bag",
+=======
+                "/data_cold/abu_zone/autoparse/chery_m32t_51406/trigger/20250723/20250723-12-17-05/data_collection_CHERY_M32T_51406_EVENT_FILTER_2025-07-23-12-17-05_no_camera.bag",
+>>>>>>> Stashed changes
                 "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留
