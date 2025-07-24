@@ -85,3 +85,21 @@ message ApaSpeedDebug {
   repeated ApaStopSign stop_signs = 8;
   optional ParkPredictTrajSet predict_traj_set = 9;
 }
+
+message ObstacleDebug {
+  repeated Point2d points = 1;
+}
+
+message ObstacleListDebug {
+  repeated ObstacleDebug obs = 1;
+}
+
+message ControlBasedPredictTraj {
+  repeated Pose2d points = 1;
+}
+
+message ApaPathDebug {
+  optional AstarNodeList astar_node_list = 1;
+  optional ObstacleListDebug obs_list = 2;
+  optional ControlBasedPredictTraj predict_traj = 3;
+}

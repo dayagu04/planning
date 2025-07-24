@@ -114,7 +114,7 @@ message PlanningDebugInfo {
   repeated TrajectoryPoint refline_info = 26;
   repeated ReferenceLine generated_refline_info = 27;
   optional LateralOffsetDeciderInfo lateral_offset_decider_info = 28;
-  optional AstarNodeList node_list = 29;
+  optional ApaPathDebug apa_path_debug = 29;
   optional StSearchDeciderInfo st_search_decider_info = 30;
   optional StGraphData st_graph_data = 31;
   optional StGraphSearcher st_graph_searcher = 32;

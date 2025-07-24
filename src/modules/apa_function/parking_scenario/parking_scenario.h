@@ -447,6 +447,9 @@ class ParkingScenario {
 
   void CreateTasks();
 
+  void RecordDebugObstacle(const std::vector<double> &obs_x,
+                           const std::vector<double> &obs_y) const;
+
  protected:
   // TODO:
   // 1.

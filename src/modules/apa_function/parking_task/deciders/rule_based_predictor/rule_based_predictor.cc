@@ -79,7 +79,7 @@ void RuleBasedPredictor::RecordDebugInfo(
   common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->clear_predict_traj_set();
 
-  common::ParkPredictTraj debug_traj;
+  common::ParkPredictTraj *debug_traj;
   common::TrajectoryPoint point;
   for (auto& obj : obs_manager->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
@@ -88,7 +88,8 @@ void RuleBasedPredictor::RecordDebugInfo(
       continue;
     }
 
-    debug_traj.Clear();
+    debug_traj = speed_debug->mutable_predict_traj_set()->add_trajs();
+    debug_traj->Clear();
 
     const trajectory::Trajectory& pred_traj = obstacle.GetPredictTraj();
     for (size_t i = 0; i < pred_traj.size(); i++) {
@@ -96,10 +97,8 @@ void RuleBasedPredictor::RecordDebugInfo(
       point.set_y(pred_traj[i].y());
       point.set_heading_angle(pred_traj[i].theta());
 
-      debug_traj.add_point()->CopyFrom(point);
+      debug_traj->add_point()->CopyFrom(point);
     }
-
-    speed_debug->mutable_predict_traj_set()->add_trajs()->CopyFrom(debug_traj);
   }
 
   return;

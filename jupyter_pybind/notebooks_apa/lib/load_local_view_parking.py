@@ -1552,8 +1552,14 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
           'occupied_slot_x': occupied_x_vec,
           })
 
-    obstacle_x = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesX']
-    obstacle_y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['obstaclesY']
+    obstacle_x = []
+    obstacle_y = []
+    obs_list = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].apa_path_debug.obs_list
+    for i in range(len(obs_list.obs)):
+      obs = obs_list.obs[i]
+      for j in range(len(obs.points)):
+        obstacle_x.append(obs.points[j].x)
+        obstacle_y.append(obs.points[j].y)
 
     replan_flag = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']
     correct_path_for_limiter = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']
@@ -1570,9 +1576,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       'y': bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['col_det_path_y'],
     })
 
-    car_predict_x_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_predict_x_vec']
-    car_predict_y_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_predict_y_vec']
-    car_predict_heading_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_predict_heading_vec']
+    car_predict_x_vec = []
+    car_predict_y_vec = []
+    car_predict_heading_vec = []
+    predict_traj = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].apa_path_debug.predict_traj
+    for i in range(len(predict_traj.points)):
+      car_predict_x_vec.append(predict_traj.points[i].x)
+      car_predict_y_vec.append(predict_traj.points[i].y)
+      car_predict_heading_vec.append(predict_traj.points[i].theta)
+
     local_view_data['data_car_prediction_traj'].data.update({
       'x': car_predict_x_vec,
       'y': car_predict_y_vec,
@@ -3718,9 +3730,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               limiter_x_vec.append(limiter.x)
               limiter_y_vec.append(limiter.y)
 
-            car_predict_traj_x = plan_json['car_predict_x_vec']
-            car_predict_traj_y = plan_json['car_predict_y_vec']
-            car_predict_traj_heading = plan_json['car_predict_heading_vec']
+            car_predict_traj_x = []
+            car_predict_traj_y = []
+            car_predict_traj_heading = []
+            predict_traj = dataLoader.plan_debug_msg['data'][plan_debug_msg_idx].apa_path_debug.predict_traj
+            for i in range(len(predict_traj.points)):
+              car_predict_traj_x.append(predict_traj.points[i].x)
+              car_predict_traj_y.append(predict_traj.points[i].y)
+              car_predict_traj_heading.append(predict_traj.points[i].theta)
+
             car_real_time_col_lat_buffer =  plan_json['car_real_time_col_lat_buffer']
             temp_car_xb, temp_car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_real_time_col_lat_buffer)
             car_box_x_vec = []

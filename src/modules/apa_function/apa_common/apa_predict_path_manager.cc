@@ -269,21 +269,26 @@ void ApaPredictPathManager::Update(
                 : pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
-  std::vector<double> car_predict_x_vec;
-  std::vector<double> car_predict_y_vec;
-  std::vector<double> car_predict_heading_vec;
-  car_predict_x_vec.reserve(predict_pt_vec_.size());
-  car_predict_y_vec.reserve(predict_pt_vec_.size());
-  car_predict_heading_vec.reserve(predict_pt_vec_.size());
+  RecordDebugTraj();
+
+  return;
+}
+
+void ApaPredictPathManager::RecordDebugTraj() {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaPathDebug* path_debug = debug->mutable_apa_path_debug();
+  path_debug->clear_predict_traj();
+
+  common::Pose2d proto_point;
   for (const auto& pt : predict_pt_vec_) {
-    car_predict_x_vec.emplace_back(pt.pos.x());
-    car_predict_y_vec.emplace_back(pt.pos.y());
-    car_predict_heading_vec.emplace_back(pt.heading);
+    proto_point.set_x(pt.pos.x());
+    proto_point.set_y(pt.pos.y());
+    proto_point.set_theta(pt.heading);
+
+    path_debug->mutable_predict_traj()->add_points()->CopyFrom(proto_point);
   }
 
-  JSON_DEBUG_VECTOR("car_predict_x_vec", car_predict_x_vec, 3)
-  JSON_DEBUG_VECTOR("car_predict_y_vec", car_predict_y_vec, 3)
-  JSON_DEBUG_VECTOR("car_predict_heading_vec", car_predict_heading_vec, 3)
+  return;
 }
 
 }  // namespace apa_planner

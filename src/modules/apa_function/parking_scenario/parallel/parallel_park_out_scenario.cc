@@ -588,13 +588,6 @@ const bool ParallelParkOutScenario::GenTlane() {
   ILOG_INFO << "channel y =" << tlane_.channel_y;
   ILOG_INFO << "------------------";
 
-  std::vector<double> x_vec = {0.0};
-  std::vector<double> y_vec = {0.0};
-  std::vector<double> phi_vec = {0.0};
-
-  JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
-  JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
-  JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
   return true;
 }
 
@@ -924,8 +917,8 @@ void ParallelParkOutScenario::Log() const {
     obstaclesX.resize(max_count);
     obstaclesY.resize(max_count);
   }
-  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
-  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
+
+  RecordDebugObstacle(obstaclesX, obstaclesY);
 
   std::vector<double> limiter_corner_X = {-2.0, -2.0};
   std::vector<double> limiter_corner_Y = {1.2, -1.2};

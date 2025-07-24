@@ -1108,16 +1108,9 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     return 0;
   }
 
-  std::vector<double> path_x;
-  std::vector<double> path_y;
-  std::vector<double> path_theta;
-  std::vector<double> path_lat_buffer;
-
   size_t i;
   Pose2D local_position;
   Pose2D global_position;
-
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
 
   bool sample_finish = false;
 
@@ -1135,12 +1128,21 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     gl_pt.pos << global_position.x, global_position.y;
     gl_pt.heading = global_position.theta;
     gl_pt.lat_buffer = 0.0;
+    if (IsSearchNode(result.type[i])) {
+      gl_pt.type = 0;
+    } else if (result.type[i] == AstarPathType::LINE_SEGMENT) {
+      gl_pt.type = 1;
+    } else {
+      gl_pt.type = 2;
+    }
     complete_path_point_global_vec_.emplace_back(gl_pt);
   }
 
   // do not publish it.
   if (0) {
-    planning::common::AstarNodeList* list = debug_->mutable_node_list();
+    auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+    planning::common::AstarNodeList* list =
+        debug->mutable_apa_path_debug()->mutable_astar_node_list();
     list->Clear();
 
     thread->GetNodeListMessagePublish(list);
@@ -1163,11 +1165,9 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
 }
 
 const int NarrowSpaceScenario::HybridAstarDebugInfoClear() {
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-
-  // debug_->mutable_refline_info()->Clear();
-
-  planning::common::AstarNodeList* list = debug_->mutable_node_list();
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::AstarNodeList* list =
+      debug->mutable_apa_path_debug()->mutable_astar_node_list();
   list->Clear();
 
   return 0;

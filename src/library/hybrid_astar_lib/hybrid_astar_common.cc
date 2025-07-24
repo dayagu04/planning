@@ -193,4 +193,13 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
   return;
 }
 
+bool IsSearchNode(const AstarPathType type) {
+  if (type == AstarPathType::NODE_SEARCHING ||
+      type == AstarPathType::START_NODE || type == AstarPathType::END_NODE) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace planning

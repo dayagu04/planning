@@ -36,6 +36,9 @@ class ApaPredictPathManager final {
   const bool GetControlErrBig() const { return control_err_big_; }
 
  private:
+  void RecordDebugTraj();
+
+ private:
   std::vector<pnc::geometry_lib::PathPoint> predict_pt_vec_;
   pnc::geometry_lib::PathSegGear gear_{
       pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID};
