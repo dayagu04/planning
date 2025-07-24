@@ -1856,6 +1856,8 @@ void RouteInfo::NewUpdateMLCInfoDecider(
           // exclnum = exchange_arear_lane_num;
           auto& first_merge_region_info = merge_region_info_list[0];
           auto& first_split_region_info = split_region_info_list[0];
+
+          bool is_process_merge_split = false;
           if (is_near_split) {
             // TODO(fengwang31)：暂时先只考虑了右边汇入，左边分叉的case；
             const double err = first_split_region_info.distance_to_split_point -
@@ -1868,49 +1870,57 @@ void RouteInfo::NewUpdateMLCInfoDecider(
             bool is_satisfy_dir_condition =
                 first_merge_region_info.split_direction == SPLIT_RIGHT &&
                 first_split_region_info.split_direction == SPLIT_LEFT;
+            is_process_merge_split = is_satisfiy_dis_condition && is_satisfy_dir_condition;
+          }
 
-            if (is_satisfiy_dis_condition && is_satisfy_dir_condition) {
-              bool is_calculate_split_feasible_lane =
-                  CalculateFeasibleLane(&first_split_region_info);
+          if (is_process_merge_split) {
+            bool is_calculate_split_feasible_lane =
+                CalculateFeasibleLane(&first_split_region_info);
 
-              bool is_calculate_merge_feasible_lane =
-                  CalculateMergeRegionFeasibleLane(&first_merge_region_info);
+            bool is_calculate_merge_feasible_lane =
+                CalculateMergeRegionFeasibleLane(&first_merge_region_info);
 
-              if (!is_calculate_split_feasible_lane ||
-                  !is_calculate_merge_feasible_lane) {
-                // 说明计算可行驶车道失败
-                return;
-              }
-
-              route_info_output_.merge_region_info_list[0] =
-                  first_merge_region_info;
-
-              //后面接着考虑两个区间的交集，继续更新feasible lane
-              const auto& spl_before_feasi_lanes =
-                  first_split_region_info.recommend_lane_num[0];
-
-              std::vector<int> temp1, temp2, temp3;
-
-              temp1 =
-              CommonElements(first_merge_region_info.recommend_lane_num[2]
-                                 .feasible_lane_sequence,
-                             spl_before_feasi_lanes.feasible_lane_sequence);
-
-              if (!temp1.empty()) {
-                temp2 = CommonElements(first_merge_region_info.recommend_lane_num[1]
-                                          .feasible_lane_sequence,
-                                      temp1);
-              }
-
-              if (!temp2.empty()) {
-                route_info_output_.split_region_info_list[0].recommend_lane_num[0].feasible_lane_sequence = temp2;
-                route_info_output_.merge_region_info_list[0].recommend_lane_num[2].feasible_lane_sequence = temp2;
-                route_info_output_.merge_region_info_list[0].recommend_lane_num[1].feasible_lane_sequence = temp2;
-              }
-
-              mlc_decider_route_info_.static_merge_region_info =
-                  route_info_output_.merge_region_info_list[0];
+            if (!is_calculate_split_feasible_lane ||
+                !is_calculate_merge_feasible_lane) {
+              // 说明计算可行驶车道失败
+              return;
             }
+
+            route_info_output_.merge_region_info_list[0] =
+                first_merge_region_info;
+
+            //后面接着考虑两个区间的交集，继续更新feasible lane
+            const auto& spl_before_feasi_lanes =
+                first_split_region_info.recommend_lane_num[0];
+
+            std::vector<int> temp1, temp2, temp3;
+
+            temp1 =
+            CommonElements(first_merge_region_info.recommend_lane_num[2]
+                              .feasible_lane_sequence,
+                          spl_before_feasi_lanes.feasible_lane_sequence);
+
+            if (!temp1.empty()) {
+              temp2 = CommonElements(first_merge_region_info.recommend_lane_num[1]
+                                        .feasible_lane_sequence,
+                                    temp1);
+            }
+
+            if (!temp2.empty()) {
+              route_info_output_.split_region_info_list[0]
+                  .recommend_lane_num[0]
+                  .feasible_lane_sequence = temp2;
+              route_info_output_.merge_region_info_list[0]
+                  .recommend_lane_num[2]
+                  .feasible_lane_sequence = temp2;
+              route_info_output_.merge_region_info_list[0]
+                  .recommend_lane_num[1]
+                  .feasible_lane_sequence = temp2;
+            }
+
+            mlc_decider_route_info_.static_merge_region_info =
+                route_info_output_.merge_region_info_list[0];
+
           } else {
             bool is_calculate_feasible_lane =
                 CalculateMergeRegionFeasibleLane(&first_merge_region_info);
