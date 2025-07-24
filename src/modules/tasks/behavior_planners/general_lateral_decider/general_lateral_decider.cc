@@ -1348,9 +1348,6 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  const auto potential_dangerous_agent_decider_output =
-      session_->planning_context()
-               .potential_dangerous_agent_decider_output();
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
   CalculateExtraLaneWidthDecreaseBuffer();
@@ -1376,21 +1373,6 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
     ResetIsExceedObstacleHysteresisMap();
     ILOG_ERROR << "Ref traj points or ref path points is null!";
     return;
-  }
-
-  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
-      (potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: LEFT_SLIGHTLY_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_SLIGHTLY_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: LEFT_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_NUDGE)) {
-    JSON_DEBUG_VALUE("potential_dangerous_agent_id",
-        potential_dangerous_agent_decider_output.dangerous_agent_info.front().id);
-  } else {
-    JSON_DEBUG_VALUE("potential_dangerous_agent_id", -0.01);
   }
 
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
@@ -2386,9 +2368,6 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  const auto potential_dangerous_agent_decider_output =
-      session_->planning_context()
-               .potential_dangerous_agent_decider_output();
   if (general_lateral_decider_output.lane_change_scene || is_blocked_obstacle_ ||
       obstacle->obstacle()->is_reverse()) {
     // 由于借道障碍物和变道过程中导致的大制动先忽略
@@ -2420,9 +2399,10 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
   // Step 2)  judge emergency_avoid_direction
   if (is_potential_dangerous_obstacle_ &&
       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
-    is_nudge_left = (potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_NUDGE || potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_SLIGHTLY_NUDGE);
+    // hack 不会触发危险障碍物避让
+    // is_nudge_left = (potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
+    //   LateralManeuver :: RIGHT_NUDGE || potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
+    //   LateralManeuver :: RIGHT_SLIGHTLY_NUDGE);
   } else {
     const auto lat_obs_position_iter =
         lat_obstacle_position.find(obstacle->id());
@@ -2910,24 +2890,6 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
   const auto &is_crossing_map = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .is_crossing_map;
-  const auto potential_dangerous_agent_decider_output =
-      session_->planning_context()
-               .potential_dangerous_agent_decider_output();
-  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() && obstacle->id() ==
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().id &&
-      (potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: LEFT_SLIGHTLY_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_SLIGHTLY_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: LEFT_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_NUDGE)) {
-    is_potential_dangerous_obstacle_ = true;
-  } else {
-    is_potential_dangerous_obstacle_ = false;
-  }
-
   const auto lat_obs_decision_iter =
       lat_obstacle_decision.find(obstacle->id());
   if (lat_obs_decision_iter != lat_obstacle_decision.end()) {
@@ -2953,9 +2915,6 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
       !obstacle->is_static() && (obstacle->frenet_s() < ref_traj_points_.back().s) &&
       (cossing_map_iter != is_crossing_map.end() && !cossing_map_iter->second)) {
     // 对向静止的ignore先不考虑
-    return true;
-  }
-  if (is_potential_dangerous_obstacle_) {
     return true;
   }
   return false;
