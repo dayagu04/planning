@@ -133,11 +133,11 @@ bool DPRoadGraph::ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_out
     if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {  // 非视觉忽略
       continue;
     }
-      const auto lat_obs_iter = lat_obstacle_decision.find(id);
-    if (lat_obs_iter != lat_obstacle_decision.end() &&
-        lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
-      continue;
-    }
+    //   const auto lat_obs_iter = lat_obstacle_decision.find(id);
+    // if (lat_obs_iter != lat_obstacle_decision.end() &&
+    //     lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+    //   continue;
+    // }
     // static and dynamic sl current time
     std::vector<planning_math::Vec2d> obs_corners;
     const auto& obs_box = agent->box();
