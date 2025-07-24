@@ -100,6 +100,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   double dynamic_lon_buffer = 0.0;
   CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
 
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
       CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
@@ -491,7 +493,8 @@ const bool ParallelParkInScenario::GenTlane() {
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
                   side_sgn &&
           is_rigid) {
-        ILOG_INFO << "rigid obs = " << obs_pt_local.transpose();
+        ILOG_INFO << "rigid obs = " << obs_pt_local.transpose()
+                  << " type = " << static_cast<int>(obs_scement);
         t_lane_.is_inside_rigid = true;
       }
 

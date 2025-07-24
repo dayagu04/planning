@@ -75,6 +75,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   double dynamic_lon_buffer = 0.0;
   CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
 
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
       CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
@@ -1054,10 +1055,9 @@ void ParallelParkOutScenario::CalStaticBufferInDiffSteps(
     safe_uss_remain_dist =
         apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
 
-    lat_buffer =
-        t_lane_.is_inside_rigid
-            ? apa_param.GetParam().safe_lat_buffer_with_wall_in_parallel_slot
-            : apa_param.GetParam().safe_lat_buffer_in_parallel_slot;
+    lat_buffer = t_lane_.is_inside_rigid
+                     ? 0.0
+                     : apa_param.GetParam().safe_lat_buffer_in_parallel_slot;
   } else {
     lat_buffer = 0.2;
     safe_uss_remain_dist = apa_param.GetParam().safe_uss_remain_dist_out_slot;
@@ -1080,25 +1080,50 @@ void ParallelParkOutScenario::CalDynamicBufferInDiffSteps(
 }
 
 void ParallelParkOutScenario::Log() const {
-  const EgoInfoUnderSlot& ego_info_under_slot =
+  const auto& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const auto& l2g_tf = ego_info_under_slot.l2g_tf;
 
   const auto p0_g = l2g_tf.GetPos(t_lane_.obs_pt_outside);
   const auto p1_g = l2g_tf.GetPos(t_lane_.obs_pt_inside);
-  ILOG_INFO << "pt out = " << p0_g.transpose();
-  ILOG_INFO << "pt in = " << p1_g.transpose();
+  ILOG_INFO << "obs p out = " << p0_g.transpose();
+  ILOG_INFO << "obs p in = " << p1_g.transpose();
+
+  size_t real_obs_size = 0;
+  for (const auto& obs_pair :
+       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap()) {
+    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+      continue;
+    }
+    real_obs_size += obs_pair.second.size();
+  }
+
+  ILOG_INFO << "obs_size = " << real_obs_size;
+  const int count_unit = std::ceil(real_obs_size / 400.0);
+  const size_t simplify_obs_num =
+      std::ceil(real_obs_size / std::max(1, count_unit));
 
   std::vector<double> obstaclesX;
   std::vector<double> obstaclesY;
+  obstaclesX.reserve(simplify_obs_num);
+  obstaclesY.reserve(simplify_obs_num);
   for (const auto& obs_pair :
        apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap()) {
-    for (const auto& obstacle : obs_pair.second) {
-      const auto tmp_obstacle = l2g_tf.GetPos(obstacle);
-      obstaclesX.emplace_back(tmp_obstacle.x());
-      obstaclesY.emplace_back(tmp_obstacle.y());
+    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+      continue;
     }
+    const auto& obs_vec = obs_pair.second;
+
+    for (size_t i = 0; i < obs_vec.size(); i += count_unit) {
+      const auto obs_g = l2g_tf.GetPos(obs_vec[i]);
+      obstaclesX.emplace_back(obs_g.x());
+      obstaclesY.emplace_back(obs_g.y());
+    }
+  }
+  if (obstaclesX.empty()) {
+    obstaclesX = {0.0};
+    obstaclesY = {0.0};
   }
 
   const size_t max_count = 798;
