@@ -150,7 +150,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_ref_y(config_.q_ref_xy_split);
       planning_input.set_q_ref_theta(config_.q_ref_theta_split);
       planning_input.set_q_continuity(0.0);
-      planning_input.set_q_acc(config_.q_acc_lane_change);
+      planning_input.set_q_acc(config_.q_acc);
       planning_input.set_q_jerk(config_.q_jerk_split);
       concerned_start_q_jerk_ = config_.q_jerk_lane_change;
       break;
@@ -175,7 +175,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_ref_y(config_.q_ref_y_lane_change);
       planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
       planning_input.set_q_continuity(0.0);
-      planning_input.set_q_acc(config_.q_acc_lane_change);
+      planning_input.set_q_acc(config_.q_acc);
       planning_input.set_q_jerk(config_.q_jerk_lane_change);
       concerned_start_q_jerk_ = config_.q_jerk_lane_change;
       break;

@@ -634,7 +634,11 @@ bool LateralMotionPlanner::Update() {
     if (std::fabs(planning_output.theta_vec(i) -
                   planning_input_.ref_theta_vec(i)) *
             57.3 >
-        90) {
+        90.0) {
+      is_solver_success = false;
+    }
+    if (std::hypot(planning_output.x_vec(i) - planning_input_.ref_x_vec(i),
+                   planning_output.y_vec(i) - planning_input_.ref_y_vec(i)) > 10.0) {
       is_solver_success = false;
     }
   }
