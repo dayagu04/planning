@@ -100,9 +100,9 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   std::array<double, 3> init_state;
   GenerateInitState(init_point, init_state);
 
-  init_point.DebugString("stitch start point");
-  ILOG_INFO << "smooth init, v = " << init_state[1]
-            << ", a = " << init_state[2];
+  // init_point.DebugString("stitch start point");
+  // ILOG_INFO << "smooth init, v = " << init_state[1]
+  //           << ", a = " << init_state[2];
 
   double total_length = dp_speed_data.back().s;
   const ParkLonDecision* stop_decision = GetCloseStopDecision(speed_decisions);
@@ -121,14 +121,17 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     return;
   }
 
+  // (6,+inf]
   if (total_time > qp_config_.time_horizon) {
     delta_time_ = qp_config_.time_resolution;
     num_of_knots_ = std::ceil(qp_config_.time_horizon / delta_time_);
     total_time = qp_config_.time_horizon;
   } else if (total_time > 1.0) {
+    // (1,6]
     delta_time_ = qp_config_.time_resolution;
     num_of_knots_ = std::ceil(total_time / delta_time_);
   } else {
+    // [0,1]
     num_of_knots_ = 20;
     delta_time_ = total_time / num_of_knots_;
   }

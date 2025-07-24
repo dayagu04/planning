@@ -673,6 +673,10 @@ const SVPoint ApaTrajectoryStitcher::GetStitchSpeed() const {
 
 void ApaTrajectoryStitcher::CopyHistoryTraj(
     const trajectory::Trajectory& history_trajectory) {
+  if (trajectory_.empty()) {
+    return;
+  }
+
   if (trajectory_.back().s() > config_.traj_min_dist - 1e-3 ||
       history_trajectory.empty()) {
     return;
@@ -699,18 +703,21 @@ void ApaTrajectoryStitcher::CopyHistoryTraj(
     }
   }
 
+  const trajectory::TrajectoryPoint& stitch_traj_point = trajectory_[0];
   trajectory::Trajectory tmp_traj;
+  tmp_traj.reserve(interpolate_end_id - interpolate_start_id + 1);
   trajectory::TrajectoryPoint traj_point;
+
   for (int i = interpolate_start_id; i <= interpolate_end_id; i++) {
     traj_point = history_trajectory[i];
 
     traj_point.set_absolute_time(0);
-    traj_point.set_s(-common::DistanceXY(traj_point, trajectory_.front()));
-    traj_point.set_vel(0);
-    traj_point.set_acc(-0.1);
-    traj_point.set_jerk(0);
+    traj_point.set_s(-common::DistanceXY(traj_point, stitch_traj_point));
+    traj_point.set_vel(stitch_traj_point.vel());
+    traj_point.set_acc(stitch_traj_point.acc());
+    traj_point.set_jerk(stitch_traj_point.jerk());
 
-    tmp_traj.push_back(traj_point);
+    tmp_traj.emplace_back(traj_point);
   }
 
   if (!tmp_traj.empty()) {

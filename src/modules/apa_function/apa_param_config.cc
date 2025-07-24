@@ -953,6 +953,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "parallel_passage_width");
   JSON_READ_VALUE(param.astar_config.parallel_passage_length, float,
                   "parallel_passage_length");
+  JSON_READ_VALUE(param.astar_config.head_in_finish_heading_err, double,
+                  "head_in_finish_heading_err");
 
   JSON_READ_VALUE(param.speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");

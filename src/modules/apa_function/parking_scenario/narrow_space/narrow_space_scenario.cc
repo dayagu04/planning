@@ -122,20 +122,21 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
       std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict;
 
   const bool ego_head_lat_condition =
-      ego_center_lat_condition &&
       std::fabs(ego_head_lat_offset) <= apa_param.GetParam().finish_lat_err;
 
+  double heading_thresh = apa_param.GetParam().finish_heading_err;
+  const ApaStateMachine fsm =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+    heading_thresh =
+        apa_param.GetParam().astar_config.head_in_finish_heading_err;
+  }
   const bool heading_condition_1 =
-      std::fabs(ego_info.terminal_err.heading) <=
-      apa_param.GetParam().finish_heading_err * kDeg2Rad;
-
-  const bool heading_condition_2 =
-      std::fabs(ego_info.terminal_err.heading) <=
-      (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
+      std::fabs(ego_info.terminal_err.heading) <= heading_thresh * kDeg2Rad;
 
   const bool lat_condition =
-      (ego_center_lat_condition && heading_condition_1) &&
-      (ego_head_lat_condition && heading_condition_2);
+      ego_center_lat_condition && heading_condition_1 && ego_head_lat_condition;
 
   const bool static_condition =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();

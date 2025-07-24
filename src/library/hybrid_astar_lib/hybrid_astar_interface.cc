@@ -799,12 +799,12 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
   target_regulator_goal_ = target_regulator_result.first;
+  ILOG_INFO << "dist to obs = " << target_regulator_result.second
+            << ", lat buffer inside = " << advised_lat_buffer_inside;
 
   // If target slot is not wide enough, return.
   if (target_regulator_result.second < advised_lat_buffer_inside &&
       !IsParkingOutRequest(request_.direction_request)) {
-    ILOG_INFO << "goal dist = " << target_regulator_result.second
-              << ", lat buffer inside = " << advised_lat_buffer_inside;
     search_state_ = AstarSearchState::FAILURE;
     return;
   }
@@ -824,7 +824,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
                                             lat_buffer_inside, lon_buffer);
 
     // search single shot path.
-    if (advised_lat_buffer_inside > config_.single_shot_path_width_thresh ||
+    if (target_regulator_result.second >
+            config_.single_shot_path_width_thresh ||
         request_.path_generate_method ==
             AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
         request_.path_generate_method ==
@@ -992,26 +993,27 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
 const float HybridAStarInterface::GetLatBufferForInsideSlot(
     const float target_obs_dist, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
-  float safe_buffer = 0.1;
+  float inside_slot_min_obs_dist = 0.0;
+  // ego is inside slot
+  if (is_ego_overlap_with_slot) {
+    inside_slot_min_obs_dist = std::min(ego_obs_dist, target_obs_dist);
+  } else {
+    // ego is outside slot
+    inside_slot_min_obs_dist = target_obs_dist;
+  }
+
   // For searching a solution easily, safe buffer should smaller than obstacle
   // distance.
-  float soft_buffer = 0.15;
+  float search_efficiency_buffer = 0.15;
+  inside_slot_min_obs_dist -= search_efficiency_buffer;
 
+  float safe_buffer = config_.safe_buffer.lat_safe_buffer_inside[0];
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_inside.size();
        i++) {
     safe_buffer = config_.safe_buffer.lat_safe_buffer_inside[i];
 
-    // ego is inside slot
-    if (is_ego_overlap_with_slot) {
-      if (safe_buffer < ego_obs_dist - soft_buffer &&
-          safe_buffer < target_obs_dist - soft_buffer) {
-        break;
-      }
-    } else {
-      // ego is outside slot
-      if (safe_buffer < target_obs_dist - soft_buffer) {
-        break;
-      }
+    if (safe_buffer < inside_slot_min_obs_dist) {
+      break;
     }
   }
 

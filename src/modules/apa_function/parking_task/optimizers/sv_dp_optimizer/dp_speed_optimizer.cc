@@ -96,9 +96,9 @@ void DpSpeedOptimizer::UpdateSearchBoundary() {
   dimension_v_ =
       static_cast<int32_t>(std::ceil(max_search_v_ / config_.unit_v)) + 1;
 
-  ILOG_INFO << "s node size = " << dimension_s_
-            << ", v node size = " << dimension_v_
-            << ", max search v = " << max_search_v_;
+  // ILOG_INFO << "s node size = " << dimension_s_
+  //           << ", v node size = " << dimension_v_
+  //           << ", max search v = " << max_search_v_;
 
   return;
 }

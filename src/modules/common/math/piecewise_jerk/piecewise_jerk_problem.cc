@@ -111,7 +111,7 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter, const double max_time) {
 
   osqp_solve(osqp_work);
 
-  ILOG_INFO << "osqp iter = " << osqp_work->info->iter;
+  // ILOG_INFO << "osqp iter = " << osqp_work->info->iter;
 
   auto status = osqp_work->info->status_val;
 
