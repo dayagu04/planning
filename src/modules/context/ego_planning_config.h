@@ -3288,6 +3288,12 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
             "speed_planning", "longitudinal_decision_decider",
             "lat_distance_close_enough_to_planned_path_thrd"},
         lat_distance_close_enough_to_planned_path_thrd);
+    mute_invade_neighbor_decision = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"speed_planning",
+                                 "longitudinal_decision_decider",
+                                 "mute_invade_neighbor_decision"},
+        mute_invade_neighbor_decision);
   }
 
   double ignore_agent_ttc_to_ego_thrd = 3.0;
@@ -3295,6 +3301,7 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
   double lat_distance_close_enough_to_planned_path_thrd = 0.5;
   double ego_predeceleration_distance_to_front_agent_threshold = 3.5;
   double close_to_same_velocity_difference_buffer = 1.5;
+  bool mute_invade_neighbor_decision = false;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {

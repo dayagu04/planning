@@ -97,9 +97,12 @@ bool LongitudinalDecisionDecider::Execute() {
   }
   DetermineKinematicBoundForCruiseScenario();
 
-  UpdateInvadeNeighborResultsForEgoMotionSimPath();
-
-  UpdateInvadeNeighborResults();
+  if (!config_.mute_invade_neighbor_decision) {
+    UpdateInvadeNeighborResultsForEgoMotionSimPath();
+    UpdateInvadeNeighborResults();
+  } else {
+    LOG_DEBUG("mute invade neighbor decision\n");
+  }
 
   UpdateLaneChangeNeighborResults();
 

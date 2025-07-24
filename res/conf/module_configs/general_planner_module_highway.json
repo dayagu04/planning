@@ -650,7 +650,8 @@
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,
       "ignore_ego_ttc_to_agent_thrd" : 3.3,
-      "lat_distance_close_enough_to_planned_path_thrd": 0.61
+      "lat_distance_close_enough_to_planned_path_thrd": 0.61,
+      "mute_invade_neighbor_decision": true
     },
     "agent_headway_decider": {
       "ego_vel_table": [0.0, 3.33, 10.0, 16.67, 26.67, 36.67],
