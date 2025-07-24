@@ -1486,6 +1486,11 @@ bool LaneBorrowDecider::CheckBackWardObs() {
     // if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
     //   continue;
     // }
+        //risk bound 左右之外的不考虑
+    if (frenet_obstacle_sl.l_start > left_risk_bound ||
+      frenet_obstacle_sl.l_end < right_risk_bound) {
+      continue;
+    }
     if (( obstacle->is_static()||std::fabs(obstacle->velocity()) < 2) && obs_type != iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN){
       continue; // 静态忽略 dp 避让
     }
