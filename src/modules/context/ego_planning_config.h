@@ -605,9 +605,24 @@ struct MLCDeciderConfig: public EgoPlanningConfig {
         json, std::vector<std::string>{
                   "map_lane_change_decider",
                   "default_pre_triggle_merge_to_road_distance_threshold_value"});
+    merge_split_gap_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "merge_split_gap_threshold"});
+    other_merge_split_gap_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "other_merge_split_gap_threshold"});
+    split_split_gap_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "split_split_gap_threshold"});
   }
   double default_pre_triggle_road_to_ramp_distance_threshold_value = 3000.0;
   double default_pre_triggle_merge_to_road_distance_threshold_value = 200;
+  double merge_split_gap_threshold = 200;
+  double other_merge_split_gap_threshold = 500;
+  double split_split_gap_threshold = 300;
 };
 
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {

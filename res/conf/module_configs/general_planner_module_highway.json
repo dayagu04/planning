@@ -1045,7 +1045,10 @@
 },
 "map_lane_change_decider": {
   "default_pre_triggle_road_to_ramp_distance_threshold_value" : 3000 ,
-  "default_pre_triggle_merge_to_road_distance_threshold_value" : 200
+  "default_pre_triggle_merge_to_road_distance_threshold_value" : 200,
+  "merge_split_gap_threshold" : 200,
+  "other_merge_split_gap_threshold" : 500,
+  "split_split_gap_threshold" : 300
 }
 }
 
