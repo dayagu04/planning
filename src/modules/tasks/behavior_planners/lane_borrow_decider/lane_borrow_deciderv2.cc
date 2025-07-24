@@ -296,9 +296,11 @@ void LaneBorrowDecider::UpdateToDP() {
     lane_borrow_decider_output_.is_in_lane_borrow_status = true;
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     if(lane_borrow_decider_output_.lane_borrow_failed_reason == NEARBY_OBSTACLE_TOO_CLOSE||
-        lane_borrow_decider_output_.lane_borrow_failed_reason == BACKWARD_OBSTACLE_TOO_CLOSE){
-      double half_lane_width = current_lane_ptr_->width()*0.25;
-      double inner_l = (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW)? half_lane_width: - half_lane_width;
+        lane_borrow_decider_output_.lane_borrow_failed_reason == BACKWARD_OBSTACLE_TOO_CLOSE||
+         lane_borrow_decider_output_.lane_borrow_failed_reason == AHEAD_COMING_OBS){
+        const auto& vehicle_param = VehicleConfigurationContext::Instance()->get_vehicle_param();
+      double lateral_dist = current_lane_ptr_->width()* 0.5 - vehicle_param.max_width*0.5;
+      double inner_l = (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW)? lateral_dist: - lateral_dist;
       dp_path_decider_->AddLaneBorrowVirtualObstacle(inner_l, obs_start_s_);
       dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
     }else{
@@ -1462,12 +1464,22 @@ bool LaneBorrowDecider::CheckBackWardObs() {
         -current_right_lane_width - neighbor_left_width;
     left_risk_bound = - current_right_lane_width;
   }
+  // TTC设置
+  double MaxConcernCollisionTime = 1.5;
+  if (lane_borrow_decider_output_.lane_borrow_state ==
+      kLaneBorrowDriving) {
+    MaxConcernCollisionTime = 3.0;
+  } else if (lane_borrow_decider_output_.lane_borrow_state ==
+              kNoLaneBorrow) {
+    MaxConcernCollisionTime = 5.0;
+  }
 
   for (const auto& obstacle : obstacles) {
     int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
     const auto& obs_type = obstacle->obstacle()->type();
     double obstacle_v = obstacle->frenet_velocity_s();
+    const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
@@ -1480,53 +1492,89 @@ bool LaneBorrowDecider::CheckBackWardObs() {
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
-    if(obstacle_v < -2.0){
-        continue; // 对向车 不能输出偏移path
-    }
-    const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
-    const auto& first_obstacle_sl = static_blocked_obstacles_[0]->frenet_obstacle_boundary();
-    // 前方车过滤 dp可以避让
-    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {
-      continue;
-    }else if(ego_speed_ > obstacle_v && frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start){//低于自车速速的忽略
-      continue;
-    }
-    //bound 左右之外的不考虑
-    if (frenet_obstacle_sl.l_start > left_risk_bound ||
-      frenet_obstacle_sl.l_end < right_risk_bound) {
-      continue;
-    }
-    // TTC设置
-    double relative_speed = obstacle_v - ego_speed_; // 由于上方过滤，必为正
-    double dist = ego_frenet_boundary_.s_start - frenet_obstacle_sl.s_end;// 后方车头未追上为正  有干涉则为负
-    if(dist < 0){
-      // 动态车干涉
-      lane_borrow_decider_output_.lane_borrow_failed_reason = NEARBY_OBSTACLE_TOO_CLOSE;
-      lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
-      return false;
-    } else {
-      // 后方车头未追上
-      // TTC 计算
-      double TTC = dist / (0.01 + relative_speed);
-      double MaxConcernCollisionTime = 1.5;
-      if (lane_borrow_decider_output_.lane_borrow_state ==
-          kLaneBorrowDriving) {
-        MaxConcernCollisionTime = 3.0;
-      } else if (lane_borrow_decider_output_.lane_borrow_state ==
-                  kNoLaneBorrow) {
-        MaxConcernCollisionTime = 5.0;
+    // 动态车 对向 同向 前方侧方后方
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {// 完全在自车以前
+      if(obstacle_v > .0){
+        continue; // 同向车 不考虑
       }
+      // 在前方 并且 对向车 TTC
+      double relative_speed = ego_speed_ - obstacle_v; // 相对和速度
+      double dist = frenet_obstacle_sl.s_start - ego_frenet_boundary_.s_end;// 后方车头未追上为正  有干涉则为负
+      double TTC = dist / (0.01 + relative_speed);
       if (TTC >= MaxConcernCollisionTime) {
         continue;
       }else{
-        lane_borrow_decider_output_.lane_borrow_failed_reason =
-              BACKWARD_OBSTACLE_TOO_CLOSE;
-          lane_borrow_decider_output_.failed_obs_id =
-              obstacle->obstacle()->id();
-          return false;
+        lane_borrow_decider_output_.lane_borrow_failed_reason =  AHEAD_COMING_OBS;
+        lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+        return false;
       }
+    }else if(frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start){// 完全在自车以后
+      // 在后方 并且 反向车 慢速车 不考虑
+      if(obstacle_v < .0||obstacle_v < ego_speed_){
+        continue;
+      }
+      // 在后方 并且 同向车 高速车
+      double relative_speed = obstacle_v - ego_speed_; // 相对差速度
+      double dist = ego_frenet_boundary_.s_start - frenet_obstacle_sl.s_end;// 后方车头未追上为正  有干涉则为负
+      double TTC = dist / (0.01 + relative_speed);
+      if (TTC >= MaxConcernCollisionTime) {
+        continue;
+      }else{
+        lane_borrow_decider_output_.lane_borrow_failed_reason =  BACKWARD_OBSTACLE_TOO_CLOSE;
+        lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+        return false;
+      }
+    }else{// 当前位置在侧方的 动态的 都关注
+      lane_borrow_decider_output_.lane_borrow_failed_reason = NEARBY_OBSTACLE_TOO_CLOSE;
+      lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+      return false;
     }
-  }
+    // if(obstacle_v < -2.0){
+    //     continue; // 对向车 不能输出偏移path
+    // }
+    // const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
+    // const auto& first_obstacle_sl = static_blocked_obstacles_[0]->frenet_obstacle_boundary();
+    // // 前方车过滤 dp可以避让
+    // if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {
+    //   continue;
+    // }else if(ego_speed_ > obstacle_v && frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start){//低于自车速速的忽略
+    //   continue;
+    // }
+    // //bound 左右之外的不考虑
+    // if (frenet_obstacle_sl.l_start > left_risk_bound ||
+    //   frenet_obstacle_sl.l_end < right_risk_bound) {
+    //   continue;
+    // }
+    // // TTC设置
+    // double relative_speed = obstacle_v - ego_speed_; // 由于上方过滤，必为正
+    // double dist = ego_frenet_boundary_.s_start - frenet_obstacle_sl.s_end;// 后方车头未追上为正  有干涉则为负
+    // if(dist < 0){
+    //   // 动态车干涉
+    //   lane_borrow_decider_output_.lane_borrow_failed_reason = NEARBY_OBSTACLE_TOO_CLOSE;
+    //   lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+    //   return false;
+    // } else {
+    //   // 后方车头未追上
+    //   // TTC 计算
+    //   double TTC = dist / (0.01 + relative_speed);
+    //   double MaxConcernCollisionTime = 1.5;
+    //   if (lane_borrow_decider_output_.lane_borrow_state ==
+    //       kLaneBorrowDriving) {
+    //     MaxConcernCollisionTime = 3.0;
+    //   } else if (lane_borrow_decider_output_.lane_borrow_state ==
+    //               kNoLaneBorrow) {
+    //     MaxConcernCollisionTime = 5.0;
+    //   }
+    //   if (TTC >= MaxConcernCollisionTime) {
+    //     continue;
+    //   }else{
+    //     lane_borrow_decider_output_.lane_borrow_failed_reason =
+    //           BACKWARD_OBSTACLE_TOO_CLOSE;
+    //       lane_borrow_decider_output_.failed_obs_id =
+    //           obstacle->obstacle()->id();
+    //       return false;
+    //   }
+    }
   return true;
 }
 bool LaneBorrowDecider::IfChangeTargetLane() {
