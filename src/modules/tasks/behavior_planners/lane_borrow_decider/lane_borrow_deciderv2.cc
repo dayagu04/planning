@@ -1065,9 +1065,8 @@ bool LaneBorrowDecider::ObstacleDecision() {
   const auto& front_obstacle_sl =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary();
   const auto& front_id = static_blocked_obstacles_[0]->obstacle()->id();
-  const double front_obs_center_l =
-      0.5 * (front_obstacle_sl.l_start + front_obstacle_sl.l_end);
-  lane_borrow_pb_info->set_front_obs_center(front_obs_center_l);
+  // const double front_obs_center_l = front_obstacle_sl.l_end;
+  lane_borrow_pb_info->set_front_obs_center(front_obstacle_sl.l_end);
   BorrowDirection front_obs_bypass_direction =
       GetBypassDirection(front_obstacle_sl, front_id);
   // // borrow more
@@ -1198,7 +1197,7 @@ BorrowDirection LaneBorrowDecider::GetBypassDirection(
   bool is_tiny = agent->is_vru() || agent->width() < 0.5; // 行人在之前就过滤了
   double scale = 1.0; // 兜底感知跳动
   if (lane_borrow_status_ != kNoLaneBorrow) {
-    scale = 2;
+    scale = 2.5;
   }
 
   // 先排除
