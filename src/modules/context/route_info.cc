@@ -274,6 +274,7 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
   split_seg_info.split_direction = RAMP_NONE;
   split_seg_info.split_next_seg_forward_lane_nums = 0;
   split_seg_info.split_seg_forward_lane_nums = 0;
+
   const auto& out_link = split_link.successor_link_ids();
   // fengwang31(TODO):暂时假设在匝道上的分叉口只有两个方向
   if (out_link_size == 2) {
@@ -739,35 +740,6 @@ void RouteInfo::CaculateSplitInfo(
     route_info_output_.first_split_direction = RAMP_NONE;
     std::cout << "split_info.empty()!!!!!!!" << std::endl;
   }
-
-  // if (ego_status_on_route_ == IN_EXCHANGE_AREAR &&
-  //     !route_info_output_.split_region_info_list.empty()) {
-  //   const auto& end_fp =
-  //       route_info_output_.split_region_info_list[0].end_fp_point;
-
-  //   const uint64 end_fp_linkid = end_fp.link_id;
-  //   iflymapdata::sdpro::LinkInfo_Link temp_link = link;
-  //   double dis_to_end_fp = -nearest_s;
-  //   while (end_fp_linkid != temp_link.id()) {
-  //     dis_to_end_fp = dis_to_end_fp + temp_link.length();
-  //     temp_link = *sdpro_map.GetNextLinkOnRoute(temp_link.id());
-  //   }
-
-  //   for (const auto& fp: temp_link.feature_points()) {
-  //     bool is_find_fp = false;
-  //     for (const auto& fp_type: fp.type()) {
-  //       if (fp_type == iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_END) {
-  //         is_find_fp = true;
-  //         break;
-  //       }
-  //     }
-  //     if (is_find_fp) {
-  //       dis_to_end_fp = dis_to_end_fp + fp.projection_percent() * temp_link.length();
-  //       route_info_output_.distance_to_exchange_area_end_point = dis_to_end_fp;
-  //       break;
-  //     }
-  //   }
-  // }
 }
 
 void RouteInfo::CaculateDistanceToLastMergePoint(
@@ -1669,38 +1641,10 @@ void RouteInfo::NewUpdateMLCInfoDecider(
               mlc_decider_route_info_.static_merge_region_info.end_fp_point
                   .fp_distance_to_split_point;
           if (is_triggle_to_ON_MAIN) {
-            // mlc_decider_route_info_.ego_status_on_route_ = ON_MAIN;
-
-            // mlc_decider_route_info_.is_process_split_ = false;
-            // is_process_split_split_ = false;
-            // is_process_other_merge_split_ = false;
-            // is_process_other_merge_ = false;
-            // is_process_merge_ = false;
-
-            // last_frame_dis_to_merge_start_point_ = NL_NMAX;
-            // last_frame_dis_to_merge_point_ = NL_NMAX;
-            // is_triggle_cal_dis_to_last_merge_point_ = false;
-            // static_merge_region_info_.reset();
-            // first_static_split_region_info_.reset();
             mlc_decider_route_info_.reset();
           }
-        }
-
-        if (!mlc_decider_route_info_.is_triggle_cal_dis_to_last_merge_point) {
+        } else {
           if (merge_region_info_list.empty()) {
-            // ego_status_on_route_ = ON_MAIN;
-
-            // is_process_split_ = false;
-            // is_process_split_split_ = false;
-            // is_process_other_merge_split_ = false;
-            // is_process_other_merge_ = false;
-            // is_process_merge_ = false;
-
-            // last_frame_dis_to_merge_start_point_ = NL_NMAX;
-            // last_frame_dis_to_merge_point_ = NL_NMAX;
-            // is_triggle_cal_dis_to_last_merge_point_ = false;
-            // static_merge_region_info_.reset();
-            // first_static_split_region_info_.reset();
             mlc_decider_route_info_.reset();
           } else {
             double dis_to_merge_point = 0;
@@ -1721,21 +1665,6 @@ void RouteInfo::NewUpdateMLCInfoDecider(
     case IN_EXCHANGE_AREAR_REAR: {
       if (route_info_output_.accumulate_dis_ego_to_last_split_point >
           mlc_decider_route_info_.end_fp_dis_to_split) {
-        // ego_status_on_route_ = ON_MAIN;
-
-        // end_fp_dis_to_split_ = 0;
-
-        // is_process_split_ = false;
-        // is_process_split_split_ = false;
-        // is_process_other_merge_split_ = false;
-        // is_process_other_merge_ = false;
-        // is_process_merge_ = false;
-
-        // last_frame_dis_to_merge_start_point_ = NL_NMAX;
-        // last_frame_dis_to_merge_point_ = NL_NMAX;
-        // is_triggle_cal_dis_to_last_merge_point_ = false;
-        // static_merge_region_info_.reset();
-        // first_static_split_region_info_.reset();
         mlc_decider_route_info_.reset();
       }
       break;
@@ -2028,7 +1957,6 @@ void RouteInfo::NewUpdateMLCInfoDecider(
 
     relative_id_lane->set_current_tasks(lc_num_task);
   }
-  // bool is_near_merge = false;
 }
 
 // for HPP function
@@ -2501,6 +2429,10 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       nullptr;
   auto previous_seg = &split_segment;
 
+  if (previous_seg == nullptr) {
+    return split_region_info;
+  }
+
   const auto split_seccessor_link =
       sdpro_map.GetNextLinkOnRoute(previous_seg->id());
 
@@ -2508,6 +2440,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
 
+  if (previous_seg->successor_link_ids().size() < 2) {
+    return split_region_info;
+  }
   auto other_successor_link_ids =
       previous_seg->successor_link_ids()[0] == split_seccessor_link->id()
           ? previous_seg->successor_link_ids()[1]
@@ -2515,6 +2450,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
 
   const auto other_successor_link =
       sdpro_map.GetLinkOnRoute(other_successor_link_ids);
+  if (!other_successor_link) {
+    return split_region_info;
+  }
 
   while (!is_find_split_region_start) {
     int fp_point_size = previous_seg->feature_points_size();
@@ -2549,6 +2487,11 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     if (is_find_split_region_start) {
       split_region_start_pre_link =
           sdpro_map.GetPreviousLinkOnRoute(previous_seg->id());
+
+      if (split_region_start_pre_link == nullptr) {
+        return split_region_info;
+      }
+
       break;
     }
 
@@ -2557,12 +2500,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
 
     previous_seg = sdpro_map.GetPreviousLinkOnRoute(previous_seg->id());
     if (previous_seg == nullptr) {
-      break;
+      return split_region_info;
     }
   }
-
-  // route_info_output_.ramp_region_info.recommend_lane_num.emplace_back(split_region_start_pre_link->lane_num());
-  // route_info_output_.ramp_region_info.recommend_lane_num.emplace_back(previous_seg->lane_num());
 
   double fp_end_length = 0;
   const iflymapdata::sdpro::LinkInfo_Link* split_region_end_link =
@@ -2606,7 +2546,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     split_region_end_link =
         sdpro_map.GetNextLinkOnRoute(split_region_end_link->id());
     if (split_region_end_link == nullptr) {
-      break;
+      return split_region_info;
     }
   }
 
@@ -2652,13 +2592,9 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
       nullptr;
   auto temp_seg = &merge_segment;
 
-  // auto other_successor_link_ids =
-  //     previous_seg->successor_link_ids()[0] == split_seccessor_link->id()
-  //         ? previous_seg->successor_link_ids()[1]
-  //         : previous_seg->successor_link_ids()[0];
-
-  // const auto other_successor_link =
-  //     sdpro_map.GetLinkOnRoute(other_successor_link_ids);
+  if (temp_seg == nullptr) {
+    return merge_region_info;
+  }
 
   while (!is_find_merge_region_start) {
     int fp_point_size = temp_seg->feature_points_size();
@@ -2699,6 +2635,9 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
     if (is_find_merge_region_start) {
       merge_region_start_pre_link =
           sdpro_map.GetPreviousLinkOnRoute(temp_seg->id());
+      if (merge_region_start_pre_link == nullptr) {
+        return merge_region_info;
+      }
       break;
     }
 
@@ -2709,17 +2648,19 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
 
     temp_seg = sdpro_map.GetPreviousLinkOnRoute(temp_seg->id());
     if (temp_seg == nullptr) {
-      break;
+      return merge_region_info;
     }
     fp_start_point_pose_is_rear_merge_point  = true;
   }
 
-  // route_info_output_.ramp_region_info.recommend_lane_num.emplace_back(split_region_start_pre_link->lane_num());
-  // route_info_output_.ramp_region_info.recommend_lane_num.emplace_back(previous_seg->lane_num());
-
   double fp_end_length = 0;
   const iflymapdata::sdpro::LinkInfo_Link* merge_region_end_link =
       &merge_segment;
+
+  if (merge_region_end_link == nullptr) {
+    return merge_region_info;
+  }
+
   while (!is_find_merge_region_end) {
     int fp_point_size = merge_region_end_link->feature_points_size();
     for (int i = 0; i < fp_point_size; i++) {
@@ -2728,12 +2669,9 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
         if (fp_point_type ==
             iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_END) {
           is_find_merge_region_end = true;
-          // 清空原有数据（可选，根据业务需求）
           merge_region_info.end_fp_point.lane_ids.clear();
 
-          // 遍历RepeatedField并逐个转换类型
           for (const auto& id : fp_point.lane_ids()) {
-            // 显式转换类型（注意可能的溢出风险，见下方说明）
             if (!IsEmergencyLane(id, sdpro_map)) {
               merge_region_info.end_fp_point.lane_ids.push_back(
                   id);
@@ -2761,7 +2699,7 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
     merge_region_end_link =
         sdpro_map.GetNextLinkOnRoute(merge_region_end_link->id());
     if (merge_region_end_link == nullptr) {
-      break;
+      return merge_region_info;
     }
   }
 
@@ -2784,6 +2722,9 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
 
   const auto& temp_link =
       sdpro_map.GetLinkOnRoute(merge_region_info.split_link_id);
+  if (temp_link == nullptr) {
+    return merge_region_info;
+  }
   merge_region_info.recommend_lane_num.emplace_back(temp_link->lane_num(),
                                                     std::vector<int>{});
 
@@ -2792,12 +2733,19 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
 
   const auto& predecessor_link =
       sdpro_map.GetPreviousLinkOnRoute(merge_segment.id());
+  if (predecessor_link == nullptr) {
+    return merge_region_info;
+  }
 
   int size = merge_segment.predecessor_link_ids().size();
   int other_lane_num = 0;
   for (int i = 0; i < size; i++) {
     const auto& temp_link =
         sdpro_map.GetLinkOnRoute(merge_segment.predecessor_link_ids(i));
+    if (temp_link == nullptr) {
+      return merge_region_info;
+    }
+
     if (temp_link->id() != predecessor_link->id()) {
       other_lane_num = other_lane_num + temp_link->lane_num();
     }
@@ -2920,13 +2868,18 @@ bool RouteInfo::CalculateFeasibleLane(
 
   int flgs = feasible_lane_groups.size();
 
-
-
   return true;
 }
 
 bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) const {
   // const auto& first_split_region_info = split_region_info_list[0];
+  if (split_region_info == nullptr) {
+    return false;
+  }
+
+  if (split_region_info->recommend_lane_num.size() != 4) {
+    return false;
+  }
   const auto& recommand_lane_num = split_region_info->recommend_lane_num;
 
   const int before_exclnum = recommand_lane_num[0].total_lane_num;
@@ -2995,20 +2948,6 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
         }
       }
     }
-    // if (on_exclnum == successor_exclnum + successor_other_exclnum) {
-    //   if (successor_exclnum <= before_exclnum) {
-    //     for (int i = 0; i < successor_exclnum; ++i) {
-    //       on_excr_feasible_lane.emplace_back(i + 1);
-    //       before_excr_feasible_lane.emplace_back(i + 1);
-    //     }
-    //   }
-    // } else if (on_exclnum == before_exclnum &&
-    //         before_exclnum == successor_exclnum) {
-    //   for (int i = 0; i < successor_exclnum; ++i) {
-    //     on_excr_feasible_lane.emplace_back(i + 1);
-    //     before_excr_feasible_lane.emplace_back(i + 1);
-    //   }
-    // }
   }
 
   for (int i = 0; i < successor_exclnum; ++i) {
@@ -3032,7 +2971,13 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
 }
 
 bool RouteInfo::CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_region_info) const {
-  // const auto& first_split_region_info = split_region_info_list[0];
+  if (split_region_info == nullptr) {
+    return false;
+  }
+
+  if (split_region_info->recommend_lane_num.size() != 4) {
+    return false;
+  }
   const auto& recommand_lane_num = split_region_info->recommend_lane_num;
 
   const int before_exclnum = recommand_lane_num[0].total_lane_num;
@@ -3042,8 +2987,6 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_regio
 
   bool is_merge_right =
       split_region_info->split_direction == SplitDirection::SPLIT_RIGHT;
-  // bool is_split_left =
-  //     split_region_info->split_direction == SplitDirection::SPLIT_LEFT;
 
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
@@ -3060,35 +3003,12 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_regio
       //TODO(fengwang31):后续需要考虑左边的车道是否会收窄，如果会的话，则不能继续往左边汇
       before_excr_feasible_lane.emplace_back(1);
     } else if (on_exclnum > successor_exclnum) {
-      // int err = on_exclnum - successor_exclnum;
       for (int i = 0; i < successor_exclnum; ++i) {
         on_excr_feasible_lane.emplace_back(i + 1);
       }
       before_excr_feasible_lane.emplace_back(1);
     }
   }
-  // } else if (is_split_left) {
-  //   //默认左边都是主路的，后续需要对是否是主路的属性做判断
-  //   if (on_exclnum == successor_exclnum + successor_other_exclnum) {
-  //     if (successor_exclnum == before_exclnum) {
-  //       for (int i = 0; i < successor_exclnum; ++i) {
-  //         on_excr_feasible_lane.emplace_back(before_exclnum + i + 1);
-  //         before_excr_feasible_lane.emplace_back(before_exclnum + i + 1);
-  //       }
-  //     } else if (successor_exclnum < before_exclnum) {
-  //       for (int i = 0; i < successor_exclnum; ++i) {
-  //         on_excr_feasible_lane.emplace_back(before_exclnum + i + 1);
-  //         before_excr_feasible_lane.emplace_back(before_exclnum + i + 1);
-  //       }
-  //     }
-  //   } else if (on_exclnum == before_exclnum &&
-  //           before_exclnum == successor_exclnum) {
-  //     for (int i = 0; i < successor_exclnum; ++i) {
-  //       on_excr_feasible_lane.emplace_back(i + 1);
-  //       before_excr_feasible_lane.emplace_back(i + 1);
-  //     }
-  //   }
-  // }
 
   for (int i = 0; i < successor_exclnum; ++i) {
     succerssor_excr_feasible_lane.emplace_back(i + 1);

@@ -96,22 +96,6 @@ class RouteInfo {
   ad_common::sdpromap::SDProMap sdpro_map_;
   bool sdpromap_valid_{false};
   uint64_t sdpro_map_info_updated_timestamp_ = 0;
-  // EgoStatusOnRoute ego_status_on_route_ = EgoStatusOnRoute::ON_MAIN;
-  // double last_frame_dis_to_split_ = NL_NMAX;
-  // double end_fp_dis_to_split_ = 0;
-  // NOASplitRegionInfo first_static_split_region_info_;
-  // //for merge
-  // double last_frame_dis_to_merge_start_point_ = NL_NMAX;
-  // double last_frame_dis_to_merge_point_ = NL_NMAX;
-  // bool is_triggle_cal_dis_to_last_merge_point_ = false;
-  // NOASplitRegionInfo static_merge_region_info_;
-
-  // bool is_process_split_ = false;
-  // bool is_process_split_split_ = false;
-  // bool is_process_other_merge_split_ = false;
-  // bool is_process_other_merge_ = false;
-  // bool is_process_merge_ = false;
-
   MLCDeciderRouteInfo mlc_decider_route_info_;
 
   // for HPP variables
