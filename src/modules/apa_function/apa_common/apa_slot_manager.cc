@@ -564,7 +564,8 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
           target_x,
           min_limiter_x - apa_param.GetParam().wheel_base -
               apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
-      ILOG_INFO << "limiter in front!";
+      ILOG_INFO << "limiter in front, not release!";
+      return SlotReleaseVoterType::CLEAR;
     }
   }
 

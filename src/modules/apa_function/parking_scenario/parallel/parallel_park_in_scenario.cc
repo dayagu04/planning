@@ -1581,6 +1581,11 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
   const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
 
   const auto& output = parallel_path_planner_.GetOutput();
+  if (output.path_segment_vec.size() == 0) {
+    lat_buffer = 0.0;
+    safe_uss_remain_dist = 0.3;
+    return;
+  }
 
   const auto& start_pose =
       output.path_segment_vec[output.path_seg_index.first].GetStartPose();

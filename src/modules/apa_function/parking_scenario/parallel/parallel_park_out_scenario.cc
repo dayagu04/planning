@@ -58,6 +58,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     SetParkingStatus(PARKING_PAUSED);
     if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
       SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
     }
     return;
   }
