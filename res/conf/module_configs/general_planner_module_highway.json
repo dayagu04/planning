@@ -877,9 +877,9 @@
   "coeff_l_cost":10.0,
   "coeff_dl_cost":20.0,
   "coeff_ddl_cost ":0,
-  "coeff_end_l_cost":50,
-  "coeff_collision_cost":200.0,
-  "collision_distance":1.8,
+  "coeff_end_l_cost":0.0,
+  "coeff_collision_cost":50.0,
+  "collision_distance":0.8,
   "coeff_stitch_cost":30.0,
   "path_resolution":2.0,
 
@@ -888,8 +888,8 @@
   "coeff_dl_cost2":0.0,
   "coeff_ddl_cost2 ":0,
   "coeff_end_l_cost2":0.0,
-  "coeff_collision_cost2":100.0,
-  "collision_distance2":1.8,
+  "coeff_collision_cost2":200.0,
+  "collision_distance2":0.8,
   "coeff_stitch_cost2":30.0,
   "path_resolution2":2.0,
 
@@ -898,12 +898,12 @@
   "coeff_ddl_cost3 ":0,
   "coeff_end_l_cost3":100.0,
   "coeff_collision_cost3":10.0,
-  "collision_distance3":1.8,
+  "collision_distance3":0.8,
   "coeff_stitch_cost3":30.0,
   "path_resolution3":2.0,
 
 
-  "min_sample_distance":20.0,
+  "min_sample_distance":55.0,
   "sample_forward_time":2.0,
   "min_level_distance":10.0,
   "max_level_distance":30.0

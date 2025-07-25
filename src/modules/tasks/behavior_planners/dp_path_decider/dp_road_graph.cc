@@ -470,11 +470,12 @@ bool DPRoadGraph::SetSampleParams(LaneBorrowStatus lane_borrow_status) {
   total_length_ = total_length;  // set_total_length(total_length); // length is
                                  // not update in pybind, same as .logs
 
-  const double level_distance = pnc::mathlib::Clamp(
-      ego_v_ * config_.sample_forward_time, config_.min_level_distance,
-      config_.max_level_distance);  // s_range  is update with v_cruise_ in
-                                    // logs, but not in pybind
-  s_range_ = level_distance;
+  // const double level_distance = pnc::mathlib::Clamp(
+  //     ego_v_ * config_.sample_forward_time, config_.min_level_distance,
+  //     config_.max_level_distance);  // s_range  is update with v_cruise_ in
+  //                                   // logs, but not in pybind
+
+  s_range_ = (total_length - ego_s_)/3.0;
   l_range_ = 0.5;
 
   if (current_lane_ptr_ != nullptr) {
@@ -576,7 +577,7 @@ bool DPRoadGraph::SampleLanes(
       if (lane_borrow_decider_output->lane_borrow_state ==
               kLaneBorrowCrossing ||
           i == 0) {
-        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
+        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.7;
       } else {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
       }
@@ -585,7 +586,7 @@ bool DPRoadGraph::SampleLanes(
       if (lane_borrow_decider_output->lane_borrow_state ==
               kLaneBorrowCrossing ||
           i == 0) {
-        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
+        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.7;
       } else {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;
       }
