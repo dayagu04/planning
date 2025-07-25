@@ -100,10 +100,13 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   double dynamic_lon_buffer = 0.0;
   CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
 
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs =
       CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
                            dynaminc_lat_buffer);
+
   ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // update ego slot info
@@ -490,7 +493,8 @@ const bool ParallelParkInScenario::GenTlane() {
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
                   side_sgn &&
           is_rigid) {
-        ILOG_INFO << "rigid obs = " << obs_pt_local.transpose();
+        ILOG_INFO << "rigid obs = " << obs_pt_local.transpose()
+                  << " type = " << static_cast<int>(obs_scement);
         t_lane_.is_inside_rigid = true;
       }
 
@@ -791,28 +795,29 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
+  const double slot_side_sgn = t_lane_.slot_side_sgn;
+
   // set T-Boundary obstacles
-  const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
-                          0.3 * t_lane_.slot_side_sgn);
+  const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(), 0.3 * slot_side_sgn);
 
   const Eigen::Vector2d A(B.x() - 3.2, B.y());
-  const Eigen::Vector2d E(
-      t_lane_.obs_pt_inside.x(),
-      t_lane_.obs_pt_inside.y() - t_lane_.slot_side_sgn * 0.8);
+
+  const Eigen::Vector2d E(t_lane_.obs_pt_inside.x(),
+                          t_lane_.obs_pt_inside.y() - slot_side_sgn * 0.8);
 
   const Eigen::Vector2d C(
       B.x(), (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset) *
-                 t_lane_.slot_side_sgn);
+                 slot_side_sgn);
+
   const Eigen::Vector2d D(E.x(), C.y());
+
   const Eigen::Vector2d F(t_lane_.channel_x_limit, E.y());
 
   const Eigen::Vector2d channel_point_1(
-      A.x(),
-      apa_param.GetParam().parallel_channel_y_mag * t_lane_.slot_side_sgn);
+      A.x(), apa_param.GetParam().parallel_channel_y_mag * slot_side_sgn);
 
   const Eigen::Vector2d channel_point_2(
-      F.x(),
-      apa_param.GetParam().parallel_channel_y_mag * t_lane_.slot_side_sgn);
+      F.x(), apa_param.GetParam().parallel_channel_y_mag * slot_side_sgn);
 
   const pnc::geometry_lib::LineSegment channel_line(channel_point_1,
                                                     channel_point_2);
@@ -822,6 +827,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   std::vector<Eigen::Vector2d> filtered_channel_obs_vec;
   pnc::geometry_lib::SamplePointSetInLineSeg(channel_line_obs_vec, channel_line,
                                              kChannelSampleDist);
+
   for (const auto& obs : channel_line_obs_vec) {
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs, ego_info_under_slot.cur_pose, kDeletedObsDistOutSlot)) {
@@ -834,17 +840,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     const bool channel_y_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), channel_point_1.x(),
                                 channel_point_2.x()) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(),
-            kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
-            channel_point_1.y());
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                kMinChannelYMagIdentification * slot_side_sgn,
+                                channel_point_1.y());
 
     if (channel_y_condition) {
       filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
 
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
                                   t_lane_.slot_length + 5.0)) {
-        if (t_lane_.slot_side_sgn > 0.0) {
+        if (slot_side_sgn > 0.0) {
           t_lane_.channel_y =
               std::min(obstacle_point_slot.y(), t_lane_.channel_y);
         } else {
@@ -887,9 +892,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     const bool is_rear_tlane_line =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(),
                                 t_lane_.obs_pt_outside.x()) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(), B.y(),
-            kMinChannelYMagIdentification * t_lane_.slot_side_sgn);
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(), B.y(),
+                                kMinChannelYMagIdentification * slot_side_sgn);
 
     if (is_rear_tlane_line) {
       tlane_obstacle_vec.emplace_back(obstacle_point_slot);
@@ -899,9 +903,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     const bool is_front_tlane_line =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(),
                                 t_lane_.obs_pt_inside.x() - 0.3, F.x()) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(), E.y(),
-            kMinChannelYMagIdentification * t_lane_.slot_side_sgn);
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(), E.y(),
+                                kMinChannelYMagIdentification * slot_side_sgn);
 
     if (is_front_tlane_line) {
       tlane_obstacle_vec.emplace_back(obstacle_point_slot);
@@ -942,8 +945,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     }
 
     if (pnc::mathlib::IsInBound(obs_pos.x(), 0.5, t_lane_.slot_length - 0.5) &&
-        pnc::mathlib::IsInBound(obs_pos.y(), -0.4 * t_lane_.slot_side_sgn,
-                                1.2 * t_lane_.slot_side_sgn)) {
+        pnc::mathlib::IsInBound(obs_pos.y(), -0.4 * slot_side_sgn,
+                                1.2 * slot_side_sgn)) {
       // obs noise in slot
       continue;
     }
@@ -956,8 +959,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     const bool is_rear_tlane_obs =
         pnc::mathlib::IsInBound(obs_pos.x(), B.x(),
                                 t_lane_.obs_pt_outside.x()) &&
-        pnc::mathlib::IsInBound(obs_pos.y(), 1.5 * t_lane_.slot_side_sgn,
-                                C_curb.y());
+        pnc::mathlib::IsInBound(obs_pos.y(), 1.5 * slot_side_sgn, C_curb.y());
 
     if (is_front_tlane_obs || is_rear_tlane_obs) {
       tlane_obstacle_vec.emplace_back(obs_pos);
@@ -1579,6 +1581,11 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
   const auto& ego_info = slot_mgr->GetEgoInfoUnderSlot();
 
   const auto& output = parallel_path_planner_.GetOutput();
+  if (output.path_segment_vec.size() == 0) {
+    lat_buffer = 0.0;
+    safe_uss_remain_dist = 0.3;
+    return;
+  }
 
   const auto& start_pose =
       output.path_segment_vec[output.path_seg_index.first].GetStartPose();

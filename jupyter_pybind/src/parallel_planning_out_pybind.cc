@@ -66,6 +66,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
     obs_vec[i] << obs_x_vec[i], obs_y_vec[i];
   }
   apa_obs.SetPtClout2dGlobal(obs_vec);
+  apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
   apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
   apa_obs.SetId(0);
   std::unordered_map<size_t, ApaObstacle> &obstacles =
@@ -117,15 +118,13 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
         pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
-  ILOG_INFO << "2";
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
-  ILOG_INFO << "3";
-  parallel_park_planner.UpdateEgoSlotInfo();
-  ILOG_INFO << "4";
+  if (!parallel_park_planner.UpdateEgoSlotInfo()) {
+    ILOG_INFO << "UpdateEgoSlotInfo failed!";
+    return false;
+  }
   parallel_park_planner.GenTlane();
-  ILOG_INFO << "5";
   parallel_park_planner.GenTBoundaryObstacles();
-  ILOG_INFO << "6";
 
   GeometryPathInput path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
@@ -155,12 +154,9 @@ std::vector<std::vector<double>> GetParkPlannerObs() {
   std::vector<double> obs_x_vec;
   std::vector<double> obs_y_vec;
   for (const auto obs_pair : obs_map) {
-    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
-      continue;
-    }
-    if (obs_pair.first == 1) {
-      ILOG_INFO << "channel size = " << obs_pair.second.size();
-    }
+    // if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+    //   continue;
+    // }
 
     for (const auto pt : obs_pair.second) {
       obs_x_vec.emplace_back(pt.x());

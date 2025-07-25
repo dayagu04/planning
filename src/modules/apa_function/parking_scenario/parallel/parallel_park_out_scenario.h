@@ -23,9 +23,13 @@ class ParallelParkOutScenario : public ParkingScenario {
   virtual const bool CheckFinished() override;
   virtual const uint8_t PathPlanOnce() override;
   virtual const bool UpdateEgoSlotInfo() override;
+
   void GenTBoundaryObstacles();
 
-  const Tlane& GetTlane() const { return tlane_; }
+  const double CalcSlotOccupiedRatio(
+      const pnc::geometry_lib::PathPoint start_pose) const;
+
+  const Tlane& GetTlane() const { return t_lane_; }
   const ParallelOutPathGenerator& GetPathPlanner() const {
     return parallel_out_path_planner_;
   }
@@ -38,8 +42,14 @@ class ParallelParkOutScenario : public ParkingScenario {
   void Log() const override;
   virtual const bool GenObstacles() override;
 
+  void CalStaticBufferInDiffSteps(double& lat_buffer,
+                                  double& safe_uss_remain_dist) const;
+
+  void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
+                                   double& dynamic_lon_buffer) const;
+
  private:
-  Tlane tlane_;
+  Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelOutPathGenerator parallel_out_path_planner_;
 };
