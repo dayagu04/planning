@@ -32,6 +32,7 @@
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
+#include "vec2d.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
 namespace planning {
@@ -68,7 +69,7 @@ constexpr double kManualLaneChangeDisThd = 1.5;
 constexpr double kConsiderManualLength = 80.0;
 
 constexpr double kAverageKappaCostWeight = 2.0;
-constexpr double kAverageThetaDiffCostWeight = 6.0;
+constexpr double kAverageThetaDiffCostWeight = 200.0;
 constexpr double kEgoLateralDistanceCostWeight = 0.5;
 constexpr double kUseVirtualLaneProcessSplitCostThd = 10.0;
 constexpr int kDefaultLaneChangeOrderIdDiff = 1;
@@ -1443,22 +1444,19 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           total_kappa_cost += std::fabs(current_kappa);
           iter_count++;
         }
-        if (virtual_lane_split_point.x - virtual_lane_split_front_point.x == 0) {
-          continue;
-        }
-        double ego_to_split_point_angle =
-            NormalizeAngle((virtual_lane_split_point.y - virtual_lane_split_front_point.y) / (virtual_lane_split_point.x - virtual_lane_split_front_point.x));
-        if (virtual_lane_split_rear_point.x - virtual_lane_split_point.x == 0) {
-          continue;
-        }
 
-        double split_point_to_rear_angle =
-            NormalizeAngle((virtual_lane_split_rear_point.y - virtual_lane_split_point.y) / (virtual_lane_split_rear_point.x - virtual_lane_split_point.x));
+        planning_math::Vec2d ego_to_split_point(
+            virtual_lane_split_point.x - virtual_lane_split_front_point.x,virtual_lane_split_point.y - virtual_lane_split_front_point.y);
+        ego_to_split_point.Normalize();
+        planning_math::Vec2d split_point_to_rear(
+            virtual_lane_split_rear_point.x - virtual_lane_split_point.x, virtual_lane_split_rear_point.y - virtual_lane_split_point.y);
+        split_point_to_rear.Normalize();
 
-
+        double cos_theta = ego_to_split_point.InnerProd(split_point_to_rear);
+        double theta_diff = 1 - cos_theta;
         iter_count = std::max(1, iter_count);
         average_kappa_cost = total_kappa_cost / iter_count;
-        average_heading_angle_cost = std::fabs(NormalizeAngle(ego_to_split_point_angle - split_point_to_rear_angle));
+        average_heading_angle_cost = std::fabs(theta_diff);
         lateral_dis_cost = std::fabs(ego_l);
         total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
             kAverageKappaCostWeight * average_kappa_cost + lateral_dis_cost * kEgoLateralDistanceCostWeight;
