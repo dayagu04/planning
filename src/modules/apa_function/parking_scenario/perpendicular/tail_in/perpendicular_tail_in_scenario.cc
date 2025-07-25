@@ -1572,7 +1572,25 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       const float lon_buffer =
           std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) *
           smart_fold_mirror_params.reaction_time;
-      if (CalRemainDistFromObs(lon_buffer, smart_fold_mirror_params.lat_buffer,
+
+      bool try_fold_mirror = true;
+      if (smart_fold_mirror_params.min_lat_buffer > 1e-3) {
+        float fold_mirror_reduce_width =
+            param.max_car_width - param.fold_mirror_max_car_width;
+        fold_mirror_reduce_width *= 0.5;
+        float lat_buffer =
+            fold_mirror_reduce_width - smart_fold_mirror_params.min_lat_buffer;
+        lat_buffer *= -1.0;
+        if (CalRemainDistFromObs(lon_buffer, lat_buffer, 1.0, 1.0, true) <
+            0.0) {
+          ILOG_INFO << "Even folding the rearview mirror is not safe, so do "
+                       "not fold the rearview mirror";
+          try_fold_mirror = false;
+        }
+      }
+
+      if (try_fold_mirror &&
+          CalRemainDistFromObs(lon_buffer, smart_fold_mirror_params.lat_buffer,
                                1.0, 1.0, true) < 0.0) {
         ILOG_INFO << "need send fold mirror msg";
         frame_.need_fold_mirror = true;

@@ -1029,6 +1029,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "fold_mirror_reaction_time");
   JSON_READ_VALUE(smart_fold_mirror_params.lat_buffer, float,
                   "fold_mirror_lat_buffer");
+  JSON_READ_VALUE(smart_fold_mirror_params.min_lat_buffer, float,
+                  "fold_mirror_min_lat_buffer");
   JSON_READ_VALUE(smart_fold_mirror_params.x_down_offset, float,
                   "fold_mirror_x_down_offset");
   JSON_READ_VALUE(smart_fold_mirror_params.x_up_offset, float,
