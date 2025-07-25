@@ -91,27 +91,35 @@ const ColResult GJKCollisionDetector::Update(
           polygon_vec.emplace_back(polygon_foot_print_global_.body);
           break;
         default:
-          if (gjk_col_det_request.car_body_type == CarBodyType::NORMAL) {
-            polygon_vec.emplace_back(polygon_foot_print_global_.body);
-            polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
-            polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
-          } else if (gjk_col_det_request.car_body_type ==
-                     CarBodyType::EXPAND_MIRROR_TO_FRONT) {
-            polygon_vec.emplace_back(
-                polygon_foot_print_global_
-                    .mirror_to_front_overhang_expand_front);
-            polygon_vec.emplace_back(
-                polygon_foot_print_global_.mirror_to_rear_overhang);
-          } else if (gjk_col_det_request.car_body_type ==
-                     CarBodyType::EXPAND_MIRROR_TO_END) {
-            // todo: should use right polygon for end expansion
-            polygon_vec.emplace_back(
-                polygon_foot_print_global_
-                    .mirror_to_front_overhang_expand_front);
-            polygon_vec.emplace_back(
-                polygon_foot_print_global_.mirror_to_rear_overhang);
+          switch (gjk_col_det_request.car_body_type) {
+            case CarBodyType::NORMAL:
+              polygon_vec.emplace_back(polygon_foot_print_global_.body);
+              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
+              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
+              break;
+            case CarBodyType::ONLY_MAX_POLYGAN:
+              break;
+            case CarBodyType::ONLY_MIRROR:
+              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
+              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
+            case CarBodyType::EXPAND_MIRROR_TO_FRONT:
+              polygon_vec.emplace_back(
+                  polygon_foot_print_global_
+                      .mirror_to_front_overhang_expand_front);
+              polygon_vec.emplace_back(
+                  polygon_foot_print_global_.mirror_to_rear_overhang);
+              break;
+            case CarBodyType::EXPAND_MIRROR_TO_END:
+              // todo: should use right polygon for end expansion
+              polygon_vec.emplace_back(
+                  polygon_foot_print_global_
+                      .mirror_to_front_overhang_expand_front);
+              polygon_vec.emplace_back(
+                  polygon_foot_print_global_.mirror_to_rear_overhang);
+              break;
+            default:
+              break;
           }
-
           break;
       }
 
@@ -127,10 +135,6 @@ const ColResult GJKCollisionDetector::Update(
             // max polygan no col, safe, quit
             break;
           } else {
-            if (gjk_col_det_request.only_check_max_car_polygon) {
-              // if only check max polygon, consider is col
-              break;
-            }
             // max polygan col, should use other polygon to col det
             continue;
           }

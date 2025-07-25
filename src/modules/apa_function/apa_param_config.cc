@@ -141,15 +141,6 @@ void SyncParkingParameters(const bool is_simulation) {
   ILOG_INFO << "car_type_string = " << car_type_string
             << "  car_type = " << car_type_int;
 
-  JSON_READ_VALUE(param.has_intelligent_fold_mirror, bool,
-                  "has_intelligent_fold_mirror");
-
-  JSON_READ_VALUE(param.force_fold_mirror, bool, "force_fold_mirror");
-
-  if (apa_param.GetParam().force_fold_mirror) {
-    param.has_intelligent_fold_mirror = false;
-  }
-
   JSON_READ_VALUE(param.front_overhanging, double, "front_overhanging");
 
   JSON_READ_VALUE(param.rear_overhanging, double, "rear_overhanging");
@@ -563,7 +554,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.max_phi_err, double, "max_phi_err");
 
-  JSON_READ_VALUE(param.enable_multi_height_col_det, bool, "enable_multi_height_col_det");
+  JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
+                  "enable_multi_height_col_det");
 
   JSON_READ_VALUE(param.car_lat_inflation_strict, double,
                   "car_lat_inflation_strict");
@@ -586,6 +578,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.slot_entrance_obs_x, double, "slot_entrance_obs_x");
 
   // dynamic update path params
+  JSON_READ_VALUE(param.enable_path_dangerous_replan, bool,
+                  "enable_path_dangerous_replan");
+
   JSON_READ_VALUE(param.car_to_limiter_dis, double, "car_to_limiter_dis");
 
   JSON_READ_VALUE(param.pose_y_err, double, "pose_y_err");
@@ -1014,6 +1009,36 @@ void SyncParkingParameters(const bool is_simulation) {
                   "head_in_slot_virtual_wall_y_offset");
   JSON_READ_VALUE(param.astar_config.max_replan_number, int,
                   "max_replan_number");
+
+  // fold mirror params
+  SmartFoldMirrorParams& smart_fold_mirror_params =
+      param.smart_fold_mirror_params;
+  JSON_READ_VALUE(smart_fold_mirror_params.has_smart_fold_mirror, bool,
+                  "has_smart_fold_mirror");
+  JSON_READ_VALUE(smart_fold_mirror_params.force_fold_mirror, bool,
+                  "force_fold_mirror");
+  if (smart_fold_mirror_params.force_fold_mirror) {
+    smart_fold_mirror_params.has_smart_fold_mirror = false;
+  }
+  if (smart_fold_mirror_params.has_smart_fold_mirror) {
+    param.car_lat_inflation_normal += 0.02;
+  }
+  JSON_READ_VALUE(smart_fold_mirror_params.locked_obs_slot_with_fold_mirror,
+                  bool, "locked_obs_slot_with_fold_mirror");
+  JSON_READ_VALUE(smart_fold_mirror_params.reaction_time, float,
+                  "fold_mirror_reaction_time");
+  JSON_READ_VALUE(smart_fold_mirror_params.lat_buffer, float,
+                  "fold_mirror_lat_buffer");
+  JSON_READ_VALUE(smart_fold_mirror_params.x_down_offset, float,
+                  "fold_mirror_x_down_offset");
+  JSON_READ_VALUE(smart_fold_mirror_params.x_up_offset, float,
+                  "fold_mirror_x_up_offset");
+  JSON_READ_VALUE(smart_fold_mirror_params.x_redunant, float,
+                  "fold_mirror_x_redunant");
+  JSON_READ_VALUE(smart_fold_mirror_params.y_offset, float,
+                  "fold_mirror_y_offset");
+  JSON_READ_VALUE(smart_fold_mirror_params.heading_offset, float,
+                  "fold_mirror_heading_offset");
   return;
 }
 

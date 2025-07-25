@@ -20,7 +20,7 @@ namespace apa_planner {
 void ApaPredictPathManager::Update(
     const LocalView* local_view,
     const iflyauto::PlanningOutput* planning_output,
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr) {
+    const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr) {
   // 填充车辆基于控制MPC或自车方向盘转角的预测轨迹，
   // 用于后续的碰撞检测和速度规划
 

@@ -947,6 +947,8 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
     }
   }
 
+  JSON_DEBUG_VALUE("prepare_plan_exceed_time", exceed_time_flag)
+
   ILOG_INFO << "there arc " << pair_geometry_path_vec.size()
             << " tangpt can be target\n"
             << "prepare single path plan consume time = "
@@ -3883,56 +3885,58 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
       Eigen::Vector2d end_pos(calc_params_.target_line.pA.x(), start_pos.y());
       geometry_lib::LineSegment line(start_pos, end_pos, pose.heading);
       const uint8_t seg_gear = geometry_lib::CalLineSegGear(line);
+
       if (geometry_lib::IsSameGear(seg_gear, line_gear)) {
         geometry_lib::PathSegment line_seg(seg_gear, line);
 
-        const double slot_x =
-            input_.ego_info_under_slot.slot.GetProcessedCornerCoordLocal()
-                .pt_01_mid.x();
+        const ApaParameters& param = apa_param.GetParam();
+        const double slot_x = input_.ego_info_under_slot.slot
+                                  .processed_corner_coord_local_.pt_01_mid.x();
 
         const double mirror_x =
-            start_pos.x() + apa_param.GetParam().lon_dist_mirror_to_rear_axle;
+            start_pos.x() + param.lon_dist_mirror_to_rear_axle;
 
-        const double lower_x = 0.86, upper_x = 2.68, redundant_x = 0.2;
+        const double lower_x =
+            slot_x + param.smart_fold_mirror_params.x_down_offset;
+
+        const double upper_x =
+            slot_x + param.smart_fold_mirror_params.x_up_offset;
+
+        const double redundant_x = 0.1;
+
+        const bool meet_use_smart_fold_mirror =
+            input_.enable_smart_fold_mirror && mirror_x > lower_x &&
+            ref_gear == geometry_lib::SEG_GEAR_REVERSE;
 
         PathColDetRes res;
 
-        if (input_.need_fold_mirror &&
-            ref_gear == geometry_lib::SEG_GEAR_REVERSE &&
-            mirror_x > slot_x - lower_x) {
-          if (mirror_x > slot_x + upper_x) {
-            const double length = mirror_x - slot_x - upper_x + redundant_x;
+        if (!meet_use_smart_fold_mirror) {
+          res = TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
+        }
+
+        else {
+          // 智能折叠后视镜
+          // 高于upper_x的部分继续特殊使用展开后视镜参数
+          if (mirror_x > upper_x) {
+            const double length = mirror_x - upper_x + redundant_x;
             geometry_lib::PathSegment line_seg_up(
                 seg_gear, geometry_lib::LineSegment(start_pos, pose.heading,
                                                     length, seg_gear));
 
+            col_det_interface_ptr_->Init(false);
             res = TrimPathByObs(line_seg_up, lat_buffer, 0.0, enable_log);
 
             if (res != PathColDetRes::NORMAL) {
               return false;
             }
-
-            geometry_lib::PathSegment line_seg_down(
-                seg_gear,
-                geometry_lib::LineSegment(line_seg_up.GetEndPos(),
-                                          line_seg.GetEndPos(), pose.heading));
-
-            col_det_interface_ptr_->Init(true);
-            res = TrimPathByObs(line_seg_down, lat_buffer, lon_buffer,
-                                enable_log);
-
-            line_seg.line_seg.SetPoints(line_seg_up.GetStartPos(),
-                                        line_seg_down.GetEndPos());
-
-          } else {
-            col_det_interface_ptr_->Init(true);
-            res = TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
           }
-        } else {
-          res = TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
-        }
 
-        col_det_interface_ptr_->Init(false);
+          col_det_interface_ptr_->Init(true);
+
+          res = TrimPathByObs(line_seg, lat_buffer, lon_buffer, enable_log);
+
+          col_det_interface_ptr_->Init(false);
+        }
 
         if (ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
           if (line_seg.Getlength() < kMinSingleGearPathLength + 1e-3) {

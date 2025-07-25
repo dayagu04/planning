@@ -7,11 +7,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apa_measure_data_manager.h"
 #include "apa_obstacle.h"
+#include "apa_state_machine_manager.h"
 #include "geometry_math.h"
 #include "local_view.h"
 #include "session.h"
-#include "apa_state_machine_manager.h"
 
 namespace planning {
 namespace apa_planner {
@@ -24,6 +25,7 @@ class ApaObstacleManager final {
   ~ApaObstacleManager() {}
 
   void Update(const LocalView *local_view,
+              const iflyauto::PlanningOutput *planning_output,
               const std::shared_ptr<ApaStateMachineManager> &state_machine_ptr);
 
   void Reset() {

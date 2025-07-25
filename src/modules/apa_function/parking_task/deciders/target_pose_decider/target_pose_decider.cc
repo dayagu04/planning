@@ -153,6 +153,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   GJKColDetRequest gjl_col_det_request(base_on_slot_, false,
                                        CarBodyType::EXPAND_MIRROR_TO_FRONT);
+
   geometry_lib::PathPoint tmp_pose;
   for (const double lat_buffer : lat_buffer_vec_) {
     for (const double lat_move_dist : lat_dist_vec) {

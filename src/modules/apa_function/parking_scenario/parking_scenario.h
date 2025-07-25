@@ -46,6 +46,7 @@ class ParkingScenario {
     SEG_COMPLETED_COL_DET,
     FORCE_PLAN,
     SEG_COMPLETED_SLOT_JUMP,
+    PATH_DANGEROUS,
   };
 
   struct CheckReplanParams {
@@ -238,9 +239,13 @@ class ParkingScenario {
       slot_jump_heading_err = 0.0;
 
       need_fold_mirror = false;
+
+      need_unfold_mirror = false;
     }
 
     bool need_fold_mirror = false;
+
+    bool need_unfold_mirror = false;
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
 
@@ -416,7 +421,11 @@ class ParkingScenario {
       const double static_lon_buffer = 0.3,
       const double static_lat_buffer = apa_param.GetParam().stop_lat_inflation,
       const double dynamic_lon_buffer = 1.168,
-      const double dynamic_lat_buffer = 0.368);
+      const double dynamic_lat_buffer = 0.368,
+      const bool only_check_mirror = false);
+  virtual const double CalRemainDistFromPlanPathDangerous(
+      const double static_lon_buffer = 0.0,
+      const double static_lat_buffer = 0.0);
   virtual const bool PostProcessPath();
 
   // check if need replan
@@ -437,6 +446,8 @@ class ParkingScenario {
 
   virtual const bool CheckStuckFailed(
       const double stuck_failed_time = apa_param.GetParam().stuck_failed_time);
+
+  virtual const bool CheckPathDangerous();
 
   virtual const bool CheckEgoPoseInBelieveObsArea(
       const double lat_expand, const double lon_expand,

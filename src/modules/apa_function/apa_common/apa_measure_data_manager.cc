@@ -97,7 +97,8 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
 
   acceleration_ = localization_info.acceleration.acceleration_body.ax;
 
-  if (apa_param.GetParam().force_fold_mirror) {
+  // fold_mirror_flag_代表规划是否认为后视镜已经折叠
+  if (apa_param.GetParam().smart_fold_mirror_params.force_fold_mirror) {
     fold_mirror_flag_ = true;
   } else {
     // get signal from vehicle service
@@ -133,7 +134,9 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
                    car_static_timer_by_vel_normal_)
   JSON_DEBUG_VALUE("static_flag", static_flag_)
   JSON_DEBUG_VALUE("fold_mirror_flag", fold_mirror_flag_)
-  JSON_DEBUG_VALUE("force_fold_mirror", apa_param.GetParam().force_fold_mirror)
+  JSON_DEBUG_VALUE(
+      "force_fold_mirror",
+      apa_param.GetParam().smart_fold_mirror_params.force_fold_mirror)
 }
 
 }  // namespace apa_planner

@@ -10,6 +10,7 @@
 #include "apa_param_config.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "local_view.h"
 #include "log_glog.h"
@@ -21,34 +22,46 @@ namespace planning {
 namespace apa_planner {
 void ApaObstacleManager::Update(
     const LocalView* local_view,
+    const iflyauto::PlanningOutput* planning_output,
     const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr) {
-  Reset();
-  if (local_view == nullptr) {
+  if (local_view == nullptr || planning_output == nullptr) {
     ILOG_ERROR << "Update ApaObstacleManager, local_view_ptr is nullptr";
     return;
   }
+
+  const auto& param = apa_param.GetParam();
+
+  if (param.smart_fold_mirror_params.locked_obs_slot_with_fold_mirror &&
+      planning_output->rear_view_mirror_signal_command.available &&
+      planning_output->rear_view_mirror_signal_command.rear_view_mirror_value ==
+          iflyauto::REAR_VIEW_MIRROR_FOLD) {
+    JSON_DEBUG_VALUE("locked_obs_slot_with_fold_mirror", true)
+    return;
+  }
+  JSON_DEBUG_VALUE("locked_obs_slot_with_fold_mirror", false)
+
+  Reset();
 
   state_machine_ptr_ = state_machine_ptr;
 
   ILOG_INFO << "Update ApaObstacleManager";
 
   // 读取超声波扇形距离
-  const double min_uss_dist = apa_param.GetParam().min_uss_origin_dist;
-  if (apa_param.GetParam().is_uss_dist_from_perception) {
+  const double min_uss_dist = param.min_uss_origin_dist;
+  if (param.is_uss_dist_from_perception) {
     const auto& uss_dis_info_buf =
         local_view->uss_percept_info.dis_from_car_to_obj;
 
     //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
     //  upa, fr apa
-    for (const auto& front_uss_idx :
-         apa_param.GetParam().uss_wdis_index_front) {
+    for (const auto& front_uss_idx : param.uss_wdis_index_front) {
       uss_dis_vec_.emplace_back(
           std::max(min_uss_dist, 0.001 * uss_dis_info_buf[front_uss_idx]));
     }
 
     // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4
     // upa, rl apa
-    for (const auto& rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
+    for (const auto& rear_uss_idx : param.uss_wdis_index_back) {
       uss_dis_vec_.emplace_back(
           std::max(min_uss_dist, 0.001 * uss_dis_info_buf[rear_uss_idx]));
     }
@@ -72,13 +85,13 @@ void ApaObstacleManager::Update(
   }
 
   // 读取通用障碍物点云
-  if (apa_param.GetParam().use_fus_occ_obj) {
+  if (param.use_fus_occ_obj) {
     const uint8 fusion_obs_size =
         std::min(local_view->fusion_occupancy_objects_info.fusion_object_size,
                  static_cast<uint8>(FUSION_OCCUPANCY_OBJECTS_MAX_NUM));
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
       // [hack]: need to retire in published version.
-      if (!apa_param.GetParam().use_fus_occ_column) {
+      if (!param.use_fus_occ_column) {
         if (local_view->fusion_occupancy_objects_info.fusion_object[i]
                 .common_occupancy_info.type ==
             iflyauto::OBJECT_TYPE_OCC_COLUMN) {
@@ -115,7 +128,7 @@ void ApaObstacleManager::Update(
               .common_occupancy_info.type;
 
       ApaObstacle apa_obs;
-      if (apa_param.GetParam().enable_use_dynamic_obs) {
+      if (param.enable_use_dynamic_obs) {
         if (obs_type == iflyauto::OBJECT_TYPE_PEDESTRIAN ||
             obs_type == iflyauto::OBJECT_TYPE_UNKNOWN_MOVABLE ||
             obs_type == iflyauto::OBJECT_TYPE_OCC_PEOPLE ||
@@ -147,7 +160,7 @@ void ApaObstacleManager::Update(
       apa_obs.SetObsScemanticType(scemantic_type);
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
-      if (!apa_param.GetParam().enable_multi_height_col_det) {
+      if (!param.enable_multi_height_col_det) {
         apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
       }
       apa_obs.SetBoxGlobal(box);
@@ -159,7 +172,7 @@ void ApaObstacleManager::Update(
     }
   }
 
-  if (apa_param.GetParam().use_object_detect) {
+  if (param.use_object_detect) {
     const uint8 fusion_obs_size =
         std::min(local_view->fusion_objects_info.fusion_object_size,
                  static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
@@ -198,8 +211,7 @@ void ApaObstacleManager::Update(
       GetBoundingBoxByPolygon(&box, &polygon);
       apa_obs.SetBoxGlobal(box);
 
-      if (apa_param.GetParam().enable_use_dynamic_obs &&
-          IsDynamicObjectType(obs.type)) {
+      if (param.enable_use_dynamic_obs && IsDynamicObjectType(obs.type)) {
         apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
       }
 
@@ -220,7 +232,7 @@ void ApaObstacleManager::Update(
 
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
       apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
-      if (!apa_param.GetParam().enable_multi_height_col_det) {
+      if (!param.enable_multi_height_col_det) {
         apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
       }
       apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
@@ -232,7 +244,7 @@ void ApaObstacleManager::Update(
   }
 
   // 读取接地线障碍物点云
-  if (apa_param.GetParam().use_ground_line) {
+  if (param.use_ground_line) {
     const uint8 ground_lines_size =
         std::min(local_view->ground_line_perception.groundline_size,
                  static_cast<uint8>(FUSION_GROUNDLINE_MAX_NUM));
@@ -244,7 +256,7 @@ void ApaObstacleManager::Update(
         continue;
       }
 
-      if (!apa_param.GetParam().use_ground_line_wall_column &&
+      if (!param.use_ground_line_wall_column &&
           (gl.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
            gl.type == iflyauto::GROUND_LINE_TYPE_WALL)) {
         continue;
@@ -298,7 +310,7 @@ void ApaObstacleManager::Update(
       apa_obs.SetObsScemanticType(scemantic_type);
       apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
-      if (!apa_param.GetParam().enable_multi_height_col_det) {
+      if (!param.enable_multi_height_col_det) {
         apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
       }
       apa_obs.SetBoxGlobal(box);
@@ -311,7 +323,7 @@ void ApaObstacleManager::Update(
   }
 
   // 读取超声波障碍物点云
-  if (apa_param.GetParam().uss_config.use_uss_pt_clound) {
+  if (param.uss_config.use_uss_pt_clound) {
     const iflyauto::IFLYLocalization& localization_info =
         local_view->localization;
     Pose2D ego_pose;
@@ -321,8 +333,8 @@ void ApaObstacleManager::Update(
     Transform2d tf;
     tf.SetBasePose(ego_pose);
 
-    if (apa_param.GetParam().uss_config.use_fusion) {
-      const apa_planner::ApaParameters& config = apa_param.GetParam();
+    if (param.uss_config.use_fusion) {
+      const apa_planner::ApaParameters& config = param;
       Polygon2D ego_local;
       GetUpLeftCoordinatePolygonByParam(
           &ego_local,
@@ -371,7 +383,7 @@ void ApaObstacleManager::Update(
         apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
         apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
         apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
-        if (!apa_param.GetParam().enable_multi_height_col_det) {
+        if (!param.enable_multi_height_col_det) {
           apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
         }
         apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
@@ -412,7 +424,7 @@ void ApaObstacleManager::Update(
       apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
       apa_obs.SetObsScemanticType(ApaObsScemanticType::UNKNOWN);
-      if (!apa_param.GetParam().enable_multi_height_col_det) {
+      if (!param.enable_multi_height_col_det) {
         apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
       }
       apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
@@ -426,8 +438,7 @@ void ApaObstacleManager::Update(
   }
 
   // limiters
-  if (apa_param.GetParam().enable_side_pass_limiter &&
-      state_machine_ptr_->IsParkingStatus()) {
+  if (param.enable_side_pass_limiter && state_machine_ptr_->IsParkingStatus()) {
     std::vector<Eigen::Vector2d> limiter_points;
     limiter_points.clear();
     const iflyauto::ParkingFusionInfo* slot_list =
@@ -463,7 +474,7 @@ void ApaObstacleManager::Update(
     apa_obs.SetPtClout2dGlobal(limiter_points);
     apa_obs.SetObsAttributeType(ApaObsAttributeType::SLOT_LIMITER);
     apa_obs.SetObsHeightType(ApaObsHeightType::LOW);
-    if (!apa_param.GetParam().enable_multi_height_col_det) {
+    if (!param.enable_multi_height_col_det) {
       apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
     }
     apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);

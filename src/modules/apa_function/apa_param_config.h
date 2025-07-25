@@ -109,6 +109,22 @@ struct UssConfig {
   double point_max_dist;
 };
 
+struct SmartFoldMirrorParams {
+  bool has_smart_fold_mirror = false;
+  // If set to true, the actual rearview mirror must be in folded state
+  bool force_fold_mirror = false;
+  bool locked_obs_slot_with_fold_mirror = false;
+
+  float reaction_time = 0.0;
+  float lat_buffer = 0.0;
+
+  float x_down_offset = 0.0;
+  float x_up_offset = 0.0;
+  float x_redunant = 0.0;
+  float y_offset = 0.0;
+  float heading_offset = 0.0;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -158,8 +174,6 @@ struct ApaParameters {
   double plan_time = 0.1;
 
   // car params
-  bool has_intelligent_fold_mirror = false;
-  bool force_fold_mirror = false;
   double front_overhanging = 0.924;
   // back edge to rear axis
   double rear_overhanging = 0.94;
@@ -359,6 +373,7 @@ struct ApaParameters {
   double parallel_ego_front_corner_to_obs_in_buffer = 0.2;
 
   // dynamic update path params
+  bool enable_path_dangerous_replan = false;
   double car_to_limiter_dis = 1.0;
   double pose_y_err = 0.15;
   double pose_heading_err = 6.6;
@@ -505,6 +520,8 @@ struct ApaParameters {
   AstarParkingConfig astar_config;
   ParkingSpeedConfig speed_config;
   UssConfig uss_config;
+
+  SmartFoldMirrorParams smart_fold_mirror_params;
 };
 
 class ApaParametersSetting {

@@ -23,13 +23,14 @@ static const uint8_t kMaxSlotReleaseCount = 8;
 
 void ApaSlotManager::Update(
     const LocalView* local_view,
+    const iflyauto::PlanningOutput* planning_output,
     const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
     const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
     const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,
     const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr) {
-  if (local_view == nullptr || state_machine_ptr == nullptr ||
-      measure_data_ptr == nullptr || obstacle_manager_ptr == nullptr ||
-      col_det_interface_ptr == nullptr) {
+  if (local_view == nullptr || planning_output == nullptr ||
+      state_machine_ptr == nullptr || measure_data_ptr == nullptr ||
+      obstacle_manager_ptr == nullptr || col_det_interface_ptr == nullptr) {
     ILOG_ERROR << "Update ApaSlotManager, local_view_ptr is nullptr";
     return;
   }
@@ -115,8 +116,15 @@ void ApaSlotManager::Update(
   // 泊入
   if (state_machine_ptr->IsParkInStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
-      if (apa_param.GetParam().has_intelligent_fold_mirror) {
+      if (measure_data_ptr->GetFoldMirrorFlag()) {
         col_det_interface_ptr_->Init(true);
+      } else {
+        if (apa_param.GetParam()
+                .smart_fold_mirror_params.has_smart_fold_mirror) {
+          col_det_interface_ptr_->Init(true);
+        } else {
+          col_det_interface_ptr_->Init(false);
+        }
       }
 
       ParkingLotCruiseProcess();
@@ -163,12 +171,18 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
 
-  if (slots_map_.count(ego_info_under_slot_.id) != 0 &&
-      !ego_info_under_slot_.fix_slot) {
-    ILOG_INFO << "Update selected slot";
-    ego_info_under_slot_.slot = slots_map_[ego_info_under_slot_.id];
-    ego_info_under_slot_.confidence =
-        slots_map_[ego_info_under_slot_.id].confidence_;
+  if (!(apa_param.GetParam()
+            .smart_fold_mirror_params.locked_obs_slot_with_fold_mirror &&
+        planning_output->rear_view_mirror_signal_command.available &&
+        planning_output->rear_view_mirror_signal_command
+                .rear_view_mirror_value == iflyauto::REAR_VIEW_MIRROR_FOLD)) {
+    if (slots_map_.count(ego_info_under_slot_.id) != 0 &&
+        !ego_info_under_slot_.fix_slot) {
+      ILOG_INFO << "Update selected slot";
+      ego_info_under_slot_.slot = slots_map_[ego_info_under_slot_.id];
+      ego_info_under_slot_.confidence =
+          slots_map_[ego_info_under_slot_.id].confidence_;
+    }
   }
 
   // keep last release state here, and would change later when searching
