@@ -322,6 +322,7 @@ bool EgoStateManager::update(
 
   update_transform();
 
+  adjacent_init_point_.clear();
   // planning init state for realtime & longtime decided by location_valid
   if (session_->environmental_model().location_valid()) {
     UpdatePlanningInitState();
@@ -809,6 +810,19 @@ bool EgoStateManager::LateralStitch() {
     lat_init_state.set_curv(curve_factor * lat_init_state.delta());
     lat_init_state.set_d_curv(0.0);
 
+    adjacent_init_point_.reserve(3);
+    for (size_t i = 0; i < 3; ++i) {
+      double t_xi =
+          motion_planner_output.x_t_spline(planning_loop_dt_ * i);
+      double t_yi =
+          motion_planner_output.y_t_spline(planning_loop_dt_ * i);
+      double t_thetai =
+          motion_planner_output.theta_t_spline(planning_loop_dt_ * i);
+      Eigen::MatrixXd stitch_traj_point;
+      stitch_traj_point.resize(3, 1);
+      stitch_traj_point << t_xi, t_yi, t_thetai;
+      adjacent_init_point_.emplace_back(stitch_traj_point);
+    }
     return true;
   } else {
     return false;

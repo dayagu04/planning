@@ -144,6 +144,10 @@ class EgoStateManager {
   const define::Transform &get_car2enu() const { return car2enu_; };
   const define::Transform &get_enu2car() const { return enu2car_; };
 
+  const std::vector<Eigen::MatrixXd>& GetAdjacentInitPoint() const {
+    return adjacent_init_point_;
+  }
+
  private:
   void update_transform();
   void UpdatePlanningInitState();
@@ -226,8 +230,10 @@ class EgoStateManager {
 
   define::Transform car2enu_;
   define::Transform enu2car_;
-
+  
   double planning_loop_dt_ = 0.1;
+
+  std::vector<Eigen::MatrixXd> adjacent_init_point_;
 };
 }  // namespace planning
 
