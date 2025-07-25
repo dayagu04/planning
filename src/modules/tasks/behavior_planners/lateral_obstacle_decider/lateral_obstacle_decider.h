@@ -58,6 +58,7 @@ class LateralObstacleDecider : public Task {
       const std::shared_ptr<ReferencePath> reference_path_ptr);
   bool CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
       const std::shared_ptr<ReferencePath> reference_path_ptr);
+  bool IsTruck(const FrenetObstacle &frenet_obstacle);
 
  private:
   planning::framework::Session *session_;

@@ -599,6 +599,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
     lat_safety_buffer -= 0.2;
   }
 
+  // hack 感知大车减去后视镜宽度
+  if (IsTruck(frenet_obstacle)) {
+    lat_safety_buffer += config_.extra_truck_lat_buffer;
+  }
+
   // 对向车减小0.2m
   if (obstacle.is_reverse()) {
     lat_safety_buffer -= 0.2;
@@ -1131,6 +1136,11 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
     // 减去大车后视镜
     if (frenet_obstacle.obstacle()->is_oversize_vehicle()) {
       lat_safety_buffer -= 0.2;
+    }
+
+    // hack 感知大车减去后视镜宽度
+    if (IsTruck(frenet_obstacle)) {
+      lat_safety_buffer += config_.extra_truck_lat_buffer;
     }
 
     // 对向车减小0.2m
@@ -1721,4 +1731,12 @@ bool LateralObstacleDecider::CheckSideObstacle(
   }
   return true;
 }
+
+bool LateralObstacleDecider::IsTruck(
+    const FrenetObstacle &frenet_obstacle) {
+  return (frenet_obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+          (frenet_obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
+          frenet_obstacle.length() > 6));
+}
+
 }  // namespace planning

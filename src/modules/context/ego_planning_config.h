@@ -1241,6 +1241,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "emergency_avoid_count_thr", emergency_avoid_count_thr);
     is_use_last_lon_information = read_json_key<bool>(
         json, "is_use_last_lon_information", is_use_last_lon_information);
+    extra_truck_lat_buffer = read_json_key<double>(
+        json, "extra_truck_lat_buffer", extra_truck_lat_buffer);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1278,6 +1280,7 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double emegency_avoid_lareral_area = 0;
   int emergency_avoid_count_thr = 0;
   bool is_use_last_lon_information = true;
+  double extra_truck_lat_buffer = 0.0;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {

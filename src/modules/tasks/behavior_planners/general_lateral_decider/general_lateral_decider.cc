@@ -1654,9 +1654,11 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
           config_);
   double static_nudge_buffer2lane_boundary = 0.0;
   if (!is_in_lane_borrow_status) {
-    lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
-                                extra_lane_type_decrease_buffer,
-                            0.);
+    if (!general_lateral_decider_utils::IsVRU(obstacle->type())) {
+      lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
+                                  extra_lane_type_decrease_buffer,
+                              0.);
+    }
     if (!in_intersection) {
       if (is_nudge_left) {
         // 获取自车当前位置右车道线型
@@ -2590,7 +2592,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
           ego_cart_state_manager_->ego_v(), pred_ts, 0, obstacle,
           is_nudge_left, in_intersection, is_same_side_obstacle_during_lane_change,
           is_update_hard_bound, config_);
-  if (!is_in_lane_borrow_status) {
+  if (!is_in_lane_borrow_status && !general_lateral_decider_utils::IsVRU(obstacle->type())) {
     lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                 extra_lane_type_decrease_buffer,
                             0.);
