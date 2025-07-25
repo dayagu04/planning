@@ -37,6 +37,7 @@ import "spatio_temporal_union_plan.proto";
 import "spatio_temporal_union_dp_input.proto";
 import "simlulation_param.proto";
 import "potential_dangerous_agent_decider_info.proto";
+import "reference_path_smooth.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -148,4 +149,5 @@ message PlanningDebugInfo {
   optional SimulationCoreParam simulation_core_param = 45;
   optional PotentialDangerousAgentDeciderInfo
       potential_dangerous_agent_decider_info = 46;
+  optional ReferencePathSmoothInfo reference_path_smooth_info = 47;
 }

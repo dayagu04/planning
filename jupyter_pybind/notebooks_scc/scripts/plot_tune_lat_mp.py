@@ -288,6 +288,9 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
   lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
   planning_json = plan_debug_json_msg
   lat_behavior_common = plan_debug_msg.lat_behavior_common
+  reference_path_smooth_info = plan_debug_msg.reference_path_smooth_info
+  print("is_smooth_success: ", reference_path_smooth_info.is_smooth_success)
+  print("smooth_refpath_points_cost: ",planning_json["smooth_refpath_points_cost"])
   print("emergency level: ",planning_json["lateral_emergency_level"])
   print("init curv: ",lat_motion_plan_input.init_state.curv)
   print("road curv: ",planning_json["road_radius"])

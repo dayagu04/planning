@@ -681,7 +681,7 @@ class LoadRosbag:
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length", "joint_lead_one_id", "joint_key_agent_ids", "joint_cut_in_agent_ids",
-                          "ego_jerk","merging_rear_id", "min_curve_radius", "curve_type", "is_construction_agent_cluster_success",'is_exist_construction_area','is_pass_construction_area',
+                          "ego_jerk","merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost", "is_construction_agent_cluster_success",'is_exist_construction_area','is_pass_construction_area',
                           'is_current_lane_available','is_right_lane_available','is_left_lane_available','is_left_left_lane_available','is_right_right_lane_available','construction_intrusion_level','traj_available',"rads_planning_status"]
 
 
@@ -729,7 +729,7 @@ class LoadRosbag:
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
                          "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3"]
 
-      json_vector_list = ["raw_refline_k_vec",
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
                          "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
                          "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",

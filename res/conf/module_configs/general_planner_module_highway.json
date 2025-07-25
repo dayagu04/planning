@@ -25,7 +25,6 @@
   "overtake_standard_right_lane_change_speed_threshold": 4.17,
   "overtake_radical_lane_change_speed_threshold": 2.78,
   "overtake_soft_lane_change_speed_threshold": 5.56,
-
   "enable_use_speed_limit_to_suppress_interactive_lane_change": true,
   "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 500,
   "minimum_distance_nearby_split_to_surpress_specific_direction_overtake": 500,
@@ -329,7 +328,6 @@
     "map_resl_z": 0.2,
     "s_back_len": 0.0
   },
-
   "spatio_temporal_planner": {
     "dp_poly_path_config": {
       "sample_points_num_each_level": 4,
@@ -424,7 +422,6 @@
       "is_lane_changing": true
     }
   },
-
   "mrc_condition": {
     "enable_mrc_condition": false,
     "fcw_threshold": 2.5,
@@ -744,7 +741,6 @@
     "acc_lower_bound_in_large_curv": -2.0,
     "jerk_lower_in_large_curv": -2.0
   },
-
   "speed_limit_decider": {
     "preview_x": 80.0,
     "t_curv": 2.0,
@@ -851,7 +847,6 @@
       ]
     }
   },
-
   "result_trajectory_generator": {
     "use_dynamic_lat_jerk_thr": false,
     "enable_lat_traj": false,
@@ -1128,19 +1123,19 @@
       }
     },
     "neighbor_target": {
-        "neighbor_target_min_jerk": -1.0,
-        "neighbor_target_max_jerk": 2.0,
-        "neighbor_target_min_acc": -1.5,
-        "neighbor_target_max_acc_lower": 0.8,
-        "neighbor_target_max_acc_upper": 2.0,
-        "neighbor_target_vel_lower_bound": 5.0,
-        "neighbor_target_vel_upper_bound": 30.0,
-        "neighbor_target_vel_buffer": 3.0,
-        "neighbor_target_p_precision": 0.3,
-        "neighbor_target_kEpsilon": 1e-6,
-        "neighbor_target_neighbor_yield_distance": 8.0,
-        "neighbor_target_neighbor_overtake_distance": 10.0,
-        "neighbor_target_neighbor_limit_velocity": 5.0
+      "neighbor_target_min_jerk": -1.0,
+      "neighbor_target_max_jerk": 2.0,
+      "neighbor_target_min_acc": -1.5,
+      "neighbor_target_max_acc_lower": 0.8,
+      "neighbor_target_max_acc_upper": 2.0,
+      "neighbor_target_vel_lower_bound": 5.0,
+      "neighbor_target_vel_upper_bound": 30.0,
+      "neighbor_target_vel_buffer": 3.0,
+      "neighbor_target_p_precision": 0.3,
+      "neighbor_target_kEpsilon": 1e-6,
+      "neighbor_target_neighbor_yield_distance": 8.0,
+      "neighbor_target_neighbor_overtake_distance": 10.0,
+      "neighbor_target_neighbor_limit_velocity": 5.0
     },
     "bound_maker": {
       "lane_keeping_non_cipv_start_acc_bound": 1.5,
@@ -1183,173 +1178,170 @@
       "cone_min_follow_distance_gap" : 5.0,
       "traffic_light_min_follow_distance_gap" : 2.0
     }
-},
+  },
+  "lane_borrow":{
+    "max_concern_obs_distance":  50.0,
+    "obs_static_vel_thold": 0.2,
+    "observe_frames": 15,
+    "centric_obs_frames":10,
+    "dense_obstacle_dist":8.0,
+    "extend_obs_distance":10.0
+  },
+  "sample_poly_speed_adjust": {
+    "sample_v_nums": 15,
+    "sample_t_nums": 10,
+    "sample_v_upper": 35.0,
+    "sample_v_lower": 0.0,
+    "maximum_speed_adjustment":4.0,
+    "sample_t_upper":5.0,
+    "sample_t_lower":1.0
+  },
+  "dp_path_decider":{
+    "coeff_l_cost":10.0,
+    "coeff_dl_cost":20.0,
+    "coeff_ddl_cost ":0,
+    "coeff_end_l_cost":0.0,
+    "coeff_collision_cost":50.0,
+    "collision_distance":0.8,
+    "coeff_stitch_cost":30.0,
+    "path_resolution":2.0,
 
-"lane_borrow":{
-  "max_concern_obs_distance":  50.0,
-  "obs_static_vel_thold": 0.2,
-  "observe_frames": 15,
-  "centric_obs_frames":10,
-  "dense_obstacle_dist":8.0,
-  "extend_obs_distance":10.0
-},
-"sample_poly_speed_adjust": {
-  "sample_v_nums": 15,
-  "sample_t_nums": 10,
-  "sample_v_upper": 35.0,
-  "sample_v_lower": 0.0,
-  "maximum_speed_adjustment":4.0,
-  "sample_t_upper":5.0,
-  "sample_t_lower":1.0
-},
-"dp_path_decider":{
-  "coeff_l_cost":10.0,
-  "coeff_dl_cost":20.0,
-  "coeff_ddl_cost ":0,
-  "coeff_end_l_cost":0.0,
-  "coeff_collision_cost":50.0,
-  "collision_distance":0.8,
-  "coeff_stitch_cost":30.0,
-  "path_resolution":2.0,
+    "coeff_l_cost2":10.0,
+    "coeff_dl_cost2":0.0,
+    "coeff_ddl_cost2 ":0,
+    "coeff_end_l_cost2":0.0,
+    "coeff_collision_cost2":100.0,
+    "collision_distance2":0.8,
+    "coeff_stitch_cost2":100.0,
+    "path_resolution2":2.0,
 
+    "coeff_l_cost3":60.0,
+    "coeff_dl_cost3":5.0,
+    "coeff_ddl_cost3 ":0,
+    "coeff_end_l_cost3":100.0,
+    "coeff_collision_cost3":10.0,
+    "collision_distance3":0.8,
+    "coeff_stitch_cost3":30.0,
+    "path_resolution3":2.0,
 
-  "coeff_l_cost2":10.0,
-  "coeff_dl_cost2":0.0,
-  "coeff_ddl_cost2 ":0,
-  "coeff_end_l_cost2":0.0,
-  "coeff_collision_cost2":100.0,
-  "collision_distance2":0.8,
-  "coeff_stitch_cost2":100.0,
-  "path_resolution2":2.0,
-
-  "coeff_l_cost3":60.0,
-  "coeff_dl_cost3":5.0,
-  "coeff_ddl_cost3 ":0,
-  "coeff_end_l_cost3":100.0,
-  "coeff_collision_cost3":10.0,
-  "collision_distance3":0.8,
-  "coeff_stitch_cost3":30.0,
-  "path_resolution3":2.0,
-
-
-  "min_sample_distance":55.0,
-  "sample_forward_time":2.0,
-  "min_level_distance":10.0,
-  "max_level_distance":30.0
-},
-"dp_speed_decider":{
-  "total_path_length" : 50.0,
-  "total_time" : 5.0,
-  "matrix_dimension_s" : 2.0,
-  "matrix_dimension_t" : 0.5
-},
-"lane_congestion_decider":{
-  "heavy_density" : 60,
-  "jam_speed" : 12,
-  "speed_deviation" : 1000
-},
-"map_lane_change_decider": {
-  "default_pre_triggle_road_to_ramp_distance_threshold_value" : 3000 ,
-  "default_pre_triggle_merge_to_road_distance_threshold_value" : 200,
-  "merge_split_gap_threshold" : 200,
-  "other_merge_split_gap_threshold" : 500,
-  "split_split_gap_threshold" : 500,
-  "split_region_pre_mlc_threshold" : 130
-},
-"potential_follow_obstacle": {
-  "base_safe_intrusoin_for_dynamic":0.4,
-  "base_safe_intrusoin_for_static":0.7,
-  "extra_buffer_for_truck":-0.1,
-  "extra_buffer_for_vru":-0.1,
-  "follow_hysteresis":0.8,
-  "distacle_to_ego_bp": [0, 30, 60, 90, 120],
-  "distacle_to_ego_bp_factor": [0.1, 0.1, 0.2, 0.5, 0.5],
-  "lane_width_bp": [3.2, 3.5, 3.7, 3.9],
-  "lane_width_factor": [0.8, 1, 1, 1.2]
-},
-"potential_dangerous_agent": {
-  "risk_free_lateral_distance": 8.0,
-  "risk_free_longitudinal_distance": 30.0,
-  "enable_potential_dangerous_agent_decider": true,
-  "default_rss_params": {
-    "response_time": 0.2,
-    "longitudinal_acc_max": 1.7,
-    "longitudinal_brake_min": 3.0,
-    "longitudinal_brake_max": 4.2,
-    "lateral_acc_max": 2.0,
-    "lateral_brake_min": 2.55,
-    "lateral_brake_max": 1.0,
-    "lateral_miu": 0.32
+    "min_sample_distance":55.0,
+    "sample_forward_time":2.0,
+    "min_level_distance":10.0,
+    "max_level_distance":30.0
   },
-  "default_rss_params_reckless": {
-    "response_time": 0.2,
-    "longitudinal_acc_max": 1.2,
-    "longitudinal_brake_min": 3.0,
-    "longitudinal_brake_max": 5.0,
-    "lateral_acc_max": 1.1,
-    "lateral_brake_min": 2.5,
-    "lateral_brake_max": 1.0,
-    "lateral_miu": 0.32
+  "dp_speed_decider":{
+    "total_path_length" : 50.0,
+    "total_time" : 5.0,
+    "matrix_dimension_s" : 2.0,
+    "matrix_dimension_t" : 0.5
   },
-  "vru_rss_params": {
-    "response_time": 0.3,
-    "longitudinal_acc_max": 2.3,
-    "longitudinal_brake_min": 1.5,
-    "longitudinal_brake_max": 5.0,
-    "lateral_acc_max": 1.7,
-    "lateral_brake_min": 1.75,
-    "lateral_brake_max": 1.10,
-    "lateral_miu": 0.32
+  "lane_congestion_decider":{
+    "heavy_density" : 60,
+    "jam_speed" : 12,
+    "speed_deviation" : 1000
   },
-  "vru_rss_params_reckless": {
-    "response_time": 0.2,
-    "longitudinal_acc_max": 1.7,
-    "longitudinal_brake_min": 3.0,
-    "longitudinal_brake_max": 5.0,
-    "lateral_acc_max": 1.1,
-    "lateral_brake_min": 2.05,
-    "lateral_brake_max": 1.10,
-    "lateral_miu": 0.22
+  "map_lane_change_decider": {
+    "default_pre_triggle_road_to_ramp_distance_threshold_value" : 3000,
+    "default_pre_triggle_merge_to_road_distance_threshold_value" : 200,
+    "merge_split_gap_threshold" : 200,
+    "other_merge_split_gap_threshold" : 500,
+    "split_split_gap_threshold" : 500,
+    "split_region_pre_mlc_threshold" : 130
   },
-  "normal_size_vehicle_rss_params": {
-    "response_time": 0.4,
-    "longitudinal_acc_max": 1.1,
-    "longitudinal_brake_min": 3.0,
-    "longitudinal_brake_max": 5.0,
-    "lateral_acc_max": 1.7,
-    "lateral_brake_min": 1.7,
-    "lateral_brake_max": 1.85,
-    "lateral_miu": 0.33
+  "potential_follow_obstacle": {
+    "base_safe_intrusoin_for_dynamic":0.4,
+    "base_safe_intrusoin_for_static":0.7,
+    "extra_buffer_for_truck":-0.1,
+    "extra_buffer_for_vru":-0.1,
+    "follow_hysteresis":0.8,
+    "distacle_to_ego_bp": [0, 30, 60, 90, 120],
+    "distacle_to_ego_bp_factor": [0.1, 0.1, 0.2, 0.5, 0.5],
+    "lane_width_bp": [3.2, 3.5, 3.7, 3.9],
+    "lane_width_factor": [0.8, 1, 1, 1.2]
   },
-  "normal_size_vehicle_rss_params_reckless": {
-    "response_time": 0.2,
-    "longitudinal_acc_max": 1.7,
-    "longitudinal_brake_min": 3.0,
-    "longitudinal_brake_max": 5.0,
-    "lateral_acc_max": 0.6,
-    "lateral_brake_min": 1.85,
-    "lateral_brake_max": 1.85,
-    "lateral_miu": 0.33
-  },
-  "oversize_vehicle_rss_params": {
-    "response_time": 0.3,
-    "longitudinal_acc_max": 1.75,
-    "longitudinal_brake_min": 2.40,
-    "longitudinal_brake_max": 2.9,
-    "lateral_acc_max": 2.0,
-    "lateral_brake_min": 1.9,
-    "lateral_brake_max": 2.0,
-    "lateral_miu": 0.5
-  },
-  "oversize_vehicle_rss_params_reckless": {
-    "response_time": 0.1,
-    "longitudinal_acc_max": 0.85,
-    "longitudinal_brake_min": 3.1,
-    "longitudinal_brake_max": 2.6,
-    "lateral_acc_max": 1.1,
-    "lateral_brake_min": 2.5,
-    "lateral_brake_max": 1.1,
-    "lateral_miu": 0.8
+  "potential_dangerous_agent": {
+    "risk_free_lateral_distance": 8.0,
+    "risk_free_longitudinal_distance": 30.0,
+    "enable_potential_dangerous_agent_decider": true,
+    "default_rss_params": {
+      "response_time": 0.2,
+      "longitudinal_acc_max": 1.7,
+      "longitudinal_brake_min": 3.0,
+      "longitudinal_brake_max": 4.2,
+      "lateral_acc_max": 2.0,
+      "lateral_brake_min": 2.55,
+      "lateral_brake_max": 1.0,
+      "lateral_miu": 0.32
+    },
+    "default_rss_params_reckless": {
+      "response_time": 0.2,
+      "longitudinal_acc_max": 1.2,
+      "longitudinal_brake_min": 3.0,
+      "longitudinal_brake_max": 5.0,
+      "lateral_acc_max": 1.1,
+      "lateral_brake_min": 2.5,
+      "lateral_brake_max": 1.0,
+      "lateral_miu": 0.32
+    },
+    "vru_rss_params": {
+      "response_time": 0.3,
+      "longitudinal_acc_max": 2.3,
+      "longitudinal_brake_min": 1.5,
+      "longitudinal_brake_max": 5.0,
+      "lateral_acc_max": 1.7,
+      "lateral_brake_min": 1.75,
+      "lateral_brake_max": 1.10,
+      "lateral_miu": 0.32
+    },
+    "vru_rss_params_reckless": {
+      "response_time": 0.2,
+      "longitudinal_acc_max": 1.7,
+      "longitudinal_brake_min": 3.0,
+      "longitudinal_brake_max": 5.0,
+      "lateral_acc_max": 1.1,
+      "lateral_brake_min": 2.05,
+      "lateral_brake_max": 1.10,
+      "lateral_miu": 0.22
+    },
+    "normal_size_vehicle_rss_params": {
+      "response_time": 0.4,
+      "longitudinal_acc_max": 1.1,
+      "longitudinal_brake_min": 3.0,
+      "longitudinal_brake_max": 5.0,
+      "lateral_acc_max": 1.7,
+      "lateral_brake_min": 1.7,
+      "lateral_brake_max": 1.85,
+      "lateral_miu": 0.33
+    },
+    "normal_size_vehicle_rss_params_reckless": {
+      "response_time": 0.2,
+      "longitudinal_acc_max": 1.7,
+      "longitudinal_brake_min": 3.0,
+      "longitudinal_brake_max": 5.0,
+      "lateral_acc_max": 0.6,
+      "lateral_brake_min": 1.85,
+      "lateral_brake_max": 1.85,
+      "lateral_miu": 0.33
+    },
+    "oversize_vehicle_rss_params": {
+      "response_time": 0.3,
+      "longitudinal_acc_max": 1.75,
+      "longitudinal_brake_min": 2.40,
+      "longitudinal_brake_max": 2.9,
+      "lateral_acc_max": 2.0,
+      "lateral_brake_min": 1.9,
+      "lateral_brake_max": 2.0,
+      "lateral_miu": 0.5
+    },
+    "oversize_vehicle_rss_params_reckless": {
+      "response_time": 0.1,
+      "longitudinal_acc_max": 0.85,
+      "longitudinal_brake_min": 3.1,
+      "longitudinal_brake_max": 2.6,
+      "lateral_acc_max": 1.1,
+      "lateral_brake_min": 2.5,
+      "lateral_brake_max": 1.1,
+      "lateral_miu": 0.8
+    }
   }
-}
 }

@@ -50,12 +50,21 @@ void LaneReferencePath::update(planning::framework::Session *session) {
 
   // Step 3) update
   if (ok) {
+    // Step 3-1) update ref path
     auto current_time = IflyTime::Now_ms();
     if (session_->is_hpp_scene()) {
       update_refpath_points_in_hpp(ego_projection_length_in_reference_path_,
                                    raw_reference_path_points);
     } else {
-      update_refpath_points(raw_reference_path_points);
+      bool is_need_smooth = false;
+      int current_lane_virtual_id =
+          session_->environmental_model()
+                  .get_virtual_lane_manager()
+                  ->current_lane_virtual_id();
+      if (current_lane_virtual_id == lane_virtual_id_) {
+        is_need_smooth = true;
+      }
+      update_refpath_points(raw_reference_path_points, is_need_smooth);
     }
     valid_ = refined_ref_path_points_.size() >= 3;
     if (!valid_) {
@@ -63,12 +72,13 @@ void LaneReferencePath::update(planning::framework::Session *session) {
     }
     auto end_time = IflyTime::Now_ms();
     ILOG_INFO << "update_refpath_points time:" << end_time - current_time;
+    // Step 3-2) update frenet ego state
     frenet_ego_state_.update(
         frenet_coord_,
         *session_->mutable_environmental_model()->get_ego_state_manager());
+    // Step 3-3) update obstacles
     update_obstacles();
-
-    // Step 4) update virtual_lane speed_limit
+    // Step 3-4) update virtual_lane speed_limit
     virtual_lane->update_speed_limit(
         session->environmental_model().get_ego_state_manager()->ego_v(),
         session->environmental_model().get_ego_state_manager()->ego_v_cruise());
@@ -125,10 +135,15 @@ void LaneReferencePath::update_obstacles() {
 }
 
 bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
+  // get lane
   auto virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto virtual_lane =
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
+  auto &reference_path_manager =
+      session_->environmental_model()
+              .get_reference_path_manager();
+  // get raw ref line
   auto &lane_points = virtual_lane->lane_points();
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
   const double width = virtual_lane->width();

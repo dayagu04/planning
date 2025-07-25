@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package planning.common;
+import "fem_pos_deviation_smoother_config.proto";
+
+message ReferencePathSmoothInfo {
+  optional bool is_smooth_success = 1;
+  optional double bound_val = 2;
+  optional FemPosDeviationSmootherConfig smoother_config = 3;
+  repeated double raw_x_vec = 4;
+  repeated double raw_y_vec = 5;
+  repeated double smooth_x_vec = 6;
+  repeated double smooth_y_vec = 7;
+  repeated double smooth_s_vec = 8;
+}
