@@ -70,10 +70,12 @@ constexpr double kConsiderManualLength = 80.0;
 constexpr double kAverageKappaCostWeight = 2.0;
 constexpr double kAverageThetaDiffCostWeight = 6.0;
 constexpr double kEgoLateralDistanceCostWeight = 0.5;
-constexpr double kUseVirtualLaneProcessSplitCostThd = 1.0;
+constexpr double kUseVirtualLaneProcessSplitCostThd = 10.0;
 constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 60.0;
+constexpr double kDefaultConsiderSplitSelectorDistance = 50.0;
+
 
 }  // namespace
 
@@ -130,6 +132,7 @@ void EgoLaneTrackManger::TrackEgoLane(
   if (zero_relative_id_nums < 2 || !ego_in_split_region_) {
     last_zero_relative_id_order_id_index_ = -1;
     last_track_ego_lane_ = nullptr;
+    lcc_split_select_is_finish_ = false;
   }
   if (!active ||
       function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
@@ -1298,12 +1301,17 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
+  double cos_theta = std::cos(ego_state->heading_angle());
+  double sin_theta = std::sin(ego_state->heading_angle());
+  double x0 = ego_state->ego_pose().x;
+  double y0 = ego_state->ego_pose().y;
   int zero_relative_id_order_id_index = last_zero_relative_id_order_id_index_;
   bool enable_using_last_frame_track_ego_lane = true;
   bool find_last_frame_track_ego_lane = true;
   bool enable_use_virtual_lane_process_split = false;
+  double ego_distance_to_lane_merge_split_point = 0.0;
 
-  if (last_zero_relative_id_nums_ > 1) {
+  if (last_zero_relative_id_nums_ > 1 && lcc_split_select_is_finish_) {
     LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
@@ -1333,8 +1341,49 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
     }
   }
 
+  // Point2D lane_merge_split_point;
+  // VirtualLane split_lane;
+  Point2D virtual_lane_split_local_point;
+  Point2D virtual_lane_split_point;
+  bool find_virtual_lane_split_point = false;
+  for (size_t i = 0; i < order_ids.size(); i++) {
+    if (relative_id_lanes.size() > order_ids[i]) {
+      std::shared_ptr<VirtualLane> relative_id_lane =
+          relative_id_lanes[order_ids[i]];
+      if (relative_id_lane == nullptr) {
+        continue;
+      }
+      if (relative_id_lane->get_lane_merge_split_point().merge_split_point_data_size > 0) {
+        find_virtual_lane_split_point = true;
+        const auto& lane_merge_split_point = relative_id_lane->get_lane_merge_split_point();
+        ego_distance_to_lane_merge_split_point = lane_merge_split_point.merge_split_point_data[0].distance;
+        // lane_merge_split_point.x = lane_merge_split_point.merge_split_point_data[0].point.x;
+        // lane_merge_split_point.y = lane_merge_split_point.merge_split_point_data[0].point.y;
+
+        if (ego_distance_to_lane_merge_split_point > kDefaultConsiderSplitSelectorDistance ||
+            !lane_merge_split_point.merge_split_point_data[0].is_split) {
+          return;
+        }
+        virtual_lane_split_local_point.x =
+            relative_id_lane->get_lane_merge_split_point().merge_split_point_data[0].point.x;
+        virtual_lane_split_local_point.y =
+            relative_id_lane->get_lane_merge_split_point().merge_split_point_data[0].point.y;
+        double tmp_x = virtual_lane_split_local_point.x * cos_theta - virtual_lane_split_local_point.y * sin_theta;
+        double tmp_y = virtual_lane_split_local_point.x * sin_theta + virtual_lane_split_local_point.y * cos_theta;
+        virtual_lane_split_point.x = tmp_x + x0;
+        virtual_lane_split_point.y = tmp_y + y0;
+        break;
+      }
+    }
+  }
+
+  if (!find_virtual_lane_split_point) {
+    return;
+  }
   const double ego_heading_angle = ego_state->heading_angle();
   double clane_min_cost_total = std::numeric_limits<double>::infinity();
+  double split_point_front_distance = 10.0;
+  double split_point_rear_distance = 20.0;
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> relative_id_lane =
@@ -1352,6 +1401,23 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         double lateral_dis_cost = 0.0;
         std::shared_ptr<KDPath> frenet_coord =
             relative_id_lane->get_lane_frenet_coord();
+        
+        Point2D merge_split_frenet_point;
+        Point2D virtual_lane_split_front_point;
+        Point2D virtual_lane_split_rear_point;
+        if (!frenet_coord->XYToSL(virtual_lane_split_point, merge_split_frenet_point)) {
+          continue;
+        }
+        Point2D virtual_lane_split_front_frenet_point(merge_split_frenet_point.x - split_point_front_distance, 0.0);
+        if (!frenet_coord->SLToXY(virtual_lane_split_front_frenet_point, virtual_lane_split_front_point)) {
+          continue;
+        }
+
+        Point2D virtual_lane_split_rear_frenet_point(merge_split_frenet_point.x + split_point_rear_distance, 0.0);
+        if (!frenet_coord->SLToXY(virtual_lane_split_rear_frenet_point, virtual_lane_split_rear_point)) {
+          continue;
+        }
+
         double ego_s = 0.0;
         double ego_l = 0.0;
         Point2D ego_frenet_point;
@@ -1367,8 +1433,6 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
-        int theta_iter_count = 0;
-        int average_angle_count = 0;
         for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
              s += kLaneLineSegmentLength) {
           if (s > kDefaultMappingConsiderLaneLength + ego_s) {
@@ -1378,30 +1442,23 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           frenet_coord->GetKappaByS(s, &current_kappa);
           total_kappa_cost += std::fabs(current_kappa);
           iter_count++;
-
-          double heading_angle = frenet_coord->GetPathCurveHeading(s);
-          double theta = NormalizeAngle(heading_angle);
-          heading_angle_total += std::fabs(theta);
-          theta_iter_count++;
+        }
+        if (virtual_lane_split_point.x - virtual_lane_split_front_point.x == 0) {
+          continue;
+        }
+        double ego_to_split_point_angle =
+            NormalizeAngle((virtual_lane_split_point.y - virtual_lane_split_front_point.y) / (virtual_lane_split_point.x - virtual_lane_split_front_point.x));
+        if (virtual_lane_split_rear_point.x - virtual_lane_split_point.x == 0) {
+          continue;
         }
 
-        for (double s = ego_s_nearest_point.s(); s < frenet_coord->Length();
-             s += kLaneLineSegmentLength) {
-          if (s > kNearPreviewDistanceThd + ego_s) {
-            break;
-          }
+        double split_point_to_rear_angle =
+            NormalizeAngle((virtual_lane_split_rear_point.y - virtual_lane_split_point.y) / (virtual_lane_split_rear_point.x - virtual_lane_split_point.x));
 
-          double heading_angle = frenet_coord->GetPathCurveHeading(s);
-          double theta = NormalizeAngle(heading_angle);
-          average_heading_angle += std::fabs(theta);
-          average_angle_count++;
-        }
 
         iter_count = std::max(1, iter_count);
         average_kappa_cost = total_kappa_cost / iter_count;
-        theta_iter_count = std::max(1, theta_iter_count);
-        average_angle_count = std::max(1, average_angle_count);
-        average_heading_angle_cost = std::fabs(heading_angle_total / theta_iter_count - average_heading_angle / average_angle_count);
+        average_heading_angle_cost = std::fabs(NormalizeAngle(ego_to_split_point_angle - split_point_to_rear_angle));
         lateral_dis_cost = std::fabs(ego_l);
         total_cost = kAverageThetaDiffCostWeight * average_heading_angle_cost +
             kAverageKappaCostWeight * average_kappa_cost + lateral_dis_cost * kEgoLateralDistanceCostWeight;
@@ -1456,6 +1513,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
     lane->set_relative_id(lane_relative_id);
   }
 
+  lcc_split_select_is_finish_ = true;
   return;
 }
 
