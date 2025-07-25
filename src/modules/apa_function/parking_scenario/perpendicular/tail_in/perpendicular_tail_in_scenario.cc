@@ -2389,8 +2389,7 @@ void PerpendicularTailInScenario::Log() const {
     obstaclesX.resize(max_count);
     obstaclesY.resize(max_count);
   }
-  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
-  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
+  RecordDebugObstacle(obstaclesX, obstaclesY);
 
   std::vector<double> slot_corner_X;
   slot_corner_X.clear();

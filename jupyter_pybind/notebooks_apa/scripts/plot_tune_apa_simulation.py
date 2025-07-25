@@ -23,7 +23,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # m32t-otomb10: 40735
 # m32t-otomb12: 40737
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250715/20250715-11-10-07/park_in_data_collection_CHERY_M32T_40737_ALL_FILTER_2025-07-15-11-10-07_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250724/20250724-17-25-22/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-24-17-25-22_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -311,8 +311,13 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     target_managed_slot_y_vec = plan_debug_msg['slot_corner_Y']
     target_managed_limiter_x_vec = plan_debug_msg['limiter_corner_X']
     target_managed_limiter_y_vec = plan_debug_msg['limiter_corner_Y']
-    obs_x_vec = plan_debug_msg['obstaclesX']
-    obs_y_vec = plan_debug_msg['obstaclesY']
+
+    obs_list = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].apa_path_debug.obs_list
+    for i in range(len(obs_list.obs)):
+      obs = obs_list.obs[i]
+      for j in range(len(obs.points)):
+        obstacle_x_list.append(obs.points[j].x)
+        obstacle_y_list.append(obs.points[j].y)
 
   current_ego_x = loc_msg.position.position_boot.x
   current_ego_y = loc_msg.position.position_boot.y
@@ -421,22 +426,21 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
   car_yn = []
   car_box_x_vec = []
   car_box_y_vec = []
-  obstacle_x = []
-  obstacle_y = []
+  obstacle_x_list, obstacle_y_list = [], []
   col_det_path_x = []
   col_det_path_y = []
   col_det_path_phi = []
   limiter_x = []
   limiter_y = []
-  car_predict_x_vec = []
-  car_predict_y_vec = []
-  car_predict_heading_vec = []
   real_col_det_car_inflation = 0.0
   plan_traj_x_vec = []
   plan_traj_y_vec = []
   plan_traj_heading_vec = []
   plan_traj_lat_buffer_vec = []
   complete_x_vec, complete_y_vec = [], []
+  car_predict_x_vec_list = []
+  car_predict_y_vec_list = []
+  car_predict_heading_vec_list = []
 
   if res == True:
     tuned_planning_output = PlanningOutput()
@@ -446,9 +450,12 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     tuned_planning_debug_info = planning_debug_info_pb2.PlanningDebugInfo()
     tuned_planning_debug_info.ParseFromString(apa_simulation_py.GetPlanningDebugInfo())
     data_planning_debug = json.loads(tuned_planning_debug_info.data_json)
-    if "obstaclesX" in data_planning_debug:
-      obstacle_x = data_planning_debug["obstaclesX"]
-      obstacle_y = data_planning_debug["obstaclesY"]
+
+    for i in range(len(tuned_planning_debug_info.apa_path_debug.obs_list.obs)):
+      obs = tuned_planning_debug_info.apa_path_debug.obs_list.obs[i]
+      for j in range(len(obs.points)):
+        obstacle_x_list.append(obs.points[j].x)
+        obstacle_y_list.append(obs.points[j].y)
 
     if "col_det_path_x" in data_planning_debug:
       col_det_path_x = data_planning_debug["col_det_path_x"]
@@ -459,10 +466,13 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
       limiter_x = data_planning_debug["limiter_corner_X"]
       limiter_y = data_planning_debug["limiter_corner_Y"]
 
-    if "car_predict_x_vec" in data_planning_debug:
-      car_predict_x_vec = data_planning_debug["car_predict_x_vec"]
-      car_predict_y_vec = data_planning_debug["car_predict_y_vec"]
-      car_predict_heading_vec = data_planning_debug["car_predict_heading_vec"]
+    predict_traj = tuned_planning_debug_info.apa_path_debug.predict_traj
+    for i in range(len(predict_traj.points)):
+      car_predict_x_vec_list.append(predict_traj.points[i].x)
+      car_predict_y_vec_list.append(predict_traj.points[i].y)
+      car_predict_heading_vec_list.append(predict_traj.points[i].theta)
+
+    if "car_real_time_col_lat_buffer" in data_planning_debug:
       real_col_det_car_inflation =  data_planning_debug["car_real_time_col_lat_buffer"]
 
     if "plan_traj_x" in data_planning_debug:
@@ -470,8 +480,6 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
       plan_traj_y_vec = data_planning_debug["plan_traj_y"]
       plan_traj_heading_vec = data_planning_debug["plan_traj_heading"]
       plan_traj_lat_buffer_vec = data_planning_debug["plan_traj_lat_buffer"]
-
-    # print("obstaclesX = ",data_planning_debug["obstaclesX"])
 
     print("cur_path_points = ", len(tuned_planning_debug_info.cur_path_points))
 
@@ -636,18 +644,6 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     'y' : line_yn,
   })
 
-  obstacle_x_list, obstacle_y_list = [], []
-
-  if isinstance(obstacle_x, str) and len(obstacle_x) > 0:
-    obstacle_x_list = [float(x) for x in obstacle_x.split(',')]
-  elif not isinstance(obstacle_x, str):
-    obstacle_x_list = obstacle_x
-
-  if isinstance(obstacle_y, str) and len(obstacle_y) > 0:
-    obstacle_y_list = [float(y) for y in obstacle_y.split(',')]
-  elif not isinstance(obstacle_y, str):
-    obstacle_y_list = obstacle_y
-
   data_sim_obs.data.update({
     'obs_x': obstacle_x_list,
     'obs_y': obstacle_y_list,
@@ -687,24 +683,6 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     'y': limiter_y_list,
   })
 
-  car_predict_x_vec_list = []
-  car_predict_y_vec_list = []
-  car_predict_heading_vec_list = []
-  if isinstance(car_predict_x_vec, str) and len(car_predict_x_vec) > 0:
-    car_predict_x_vec_list = [float(x) for x in car_predict_x_vec.split(',')]
-  elif not isinstance(car_predict_x_vec, str):
-    car_predict_x_vec_list = car_predict_x_vec
-
-  if isinstance(car_predict_y_vec, str) and len(car_predict_y_vec) > 0:
-    car_predict_y_vec_list = [float(y) for y in car_predict_y_vec.split(',')]
-  elif not isinstance(car_predict_y_vec, str):
-    car_predict_y_vec_list = car_predict_y_vec
-
-  if isinstance(car_predict_heading_vec, str) and len(car_predict_heading_vec) > 0:
-    car_predict_heading_vec_list = [float(heading) for heading in car_predict_heading_vec.split(',')]
-  elif not isinstance(car_predict_heading_vec, str):
-    car_predict_heading_vec_list = car_predict_heading_vec
-
   data_sim_car_predict_traj_path.data.update({
     'x': car_predict_x_vec_list,
     'y': car_predict_y_vec_list,
@@ -723,7 +701,6 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
         car_yn.append(tmp_y)
     car_box_x_vec.append(car_xn)
     car_box_y_vec.append(car_yn)
-
 
   data_sim_car_predict_traj_path_car_box.data.update({
     'x_vec': car_box_x_vec,

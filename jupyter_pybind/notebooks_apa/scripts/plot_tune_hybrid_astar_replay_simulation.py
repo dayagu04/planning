@@ -114,9 +114,7 @@ fig1.js_on_event(Tap, callback)
 # try before sliders
 replay_simulation_hybrid_astar.Init()
 
-data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 # record包中的定位信息
-data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_collision_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -131,9 +129,6 @@ data_record_rs_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
 data_astar_path = ColumnDataSource(data={'plan_path_x': [],
-                                      'plan_path_y': [],
-                                      'plan_path_heading': [], })
-data_record_astar_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
 data_virtual_wall = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
@@ -169,10 +164,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width 
 fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 3, line_color = '#7b0ec4', line_dash = 'solid', line_alpha = 0.5, legend_label = 'astar_path')
 fig1.line('plan_path_y', 'plan_path_x', source = optimizer_traj, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'optimizer_traj')
 fig1.line('plan_path_y', 'plan_path_x', source = non_optimizer_traj, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'non_optimizer_traj')
-fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 3, line_color = 'gray', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path',visible = False)
-fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
-fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
 fig1.multi_line('y_vec', 'x_vec', source=data_record_node_list, line_width=1.0, line_color='green', line_dash='solid', legend_label='record_node_list')
@@ -343,9 +335,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   else:
     control_msg = ControlOutput()
 
-  record_plan_path_x =[]
-  record_plan_path_y =[]
-  record_plan_path_heading =[]
   rs_plan_path_x =[]
   rs_plan_path_y =[]
   rs_plan_path_heading =[]
@@ -353,26 +342,15 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   if index_map['plan_debug_msg_idx'] < len(bag_loader.plan_debug_msg['data']):
     plan_debug_msg = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']]
 
-    for i in range(len(plan_debug_msg.refline_info)):
-      path_point = plan_debug_msg.refline_info[i]
-      record_plan_path_x.append(path_point.x)
-      record_plan_path_y.append(path_point.y)
-      record_plan_path_heading.append(path_point.heading_angle)
-
-      if(path_point.l < 0.0):
+    for i in range(len(plan_debug_msg.complete_path_points)):
+      path_point = plan_debug_msg.complete_path_points[i]
+      if path_point.type == 2:
         rs_plan_path_x.append(path_point.x)
         rs_plan_path_y.append(path_point.y)
         rs_plan_path_heading.append(path_point.heading_angle)
 
     print('speed type',
           plan_debug_msg.apa_speed_debug.speed_type)
-
-    # update value
-    data_record_astar_path.data.update({
-        'plan_path_x': record_plan_path_x,
-        'plan_path_y': record_plan_path_y,
-        'plan_path_heading': record_plan_path_heading,
-    })
 
     # update value
     data_record_rs_path.data.update({
@@ -476,23 +454,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   loc_msg.position.position_boot.x = sim_ego_x
   loc_msg.position.position_boot.y = sim_ego_y
   loc_msg.orientation.euler_boot.yaw = sim_ego_heading
-
-  data_sim_pos.data.update({
-    'x': [sim_ego_x],
-    'y': [sim_ego_y],
-  })
-
-  car_xn = []
-  car_yn = []
-  for i in range(len(car_polygon_x)):
-    tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], sim_ego_x, sim_ego_y, sim_ego_heading)
-    car_xn.append(tmp_x)
-    car_yn.append(tmp_y)
-
-  data_sim_car.data.update({
-    'car_xn': car_xn,
-    'car_yn': car_yn,
-  })
 
   res = False
 

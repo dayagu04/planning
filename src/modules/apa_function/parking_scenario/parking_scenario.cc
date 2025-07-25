@@ -830,5 +830,25 @@ const bool ParkingScenario::CheckStuckTimeEnough(
 
 const bool ParkingScenario::CheckDynamicUpdate() { return false; }
 
+void ParkingScenario::RecordDebugObstacle(
+    const std::vector<double>& obs_x, const std::vector<double>& obs_y) const {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaPathDebug* path_debug = debug->mutable_apa_path_debug();
+  path_debug->clear_obs_list();
+
+  common::ObstacleDebug *obs = path_debug->mutable_obs_list()->add_obs();
+  common::Point2d point;
+
+  size_t size = std::min(obs_x.size(), obs_y.size());
+  for (size_t i = 0; i < size; i++) {
+    point.set_x(obs_x[i]);
+    point.set_y(obs_y[i]);
+
+    obs->add_points()->CopyFrom(point);
+  }
+
+  return;
+}
+
 }  // namespace apa_planner
 }  // namespace planning
