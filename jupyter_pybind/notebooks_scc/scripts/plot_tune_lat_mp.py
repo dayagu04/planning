@@ -4,6 +4,8 @@ sys.path.append("../lib/")
 from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_tune_lat_mp import *
+from lib.load_struct import *
+import lib.load_global_var as global_var
 sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
@@ -14,10 +16,10 @@ from jupyter_pybind import lateral_motion_planning_py
 from bokeh.resources import INLINE
 # bag path and frame dt
 bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
-bag_path = "/data_cold/abu_zone/cailiu2/0802/165_66a1bb682933546a92b11980_66a77fb17af211090bc13d38.bag.PP"
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250724/20250724-23-11-50/data_collection_CHERY_M32T_40737_EVENT_MANUAL_2025-07-24-23-11-50_no_camera.bag"
 
 frame_dt = 0.1 # sec
-steer_ratio = 15.88 # e0y
+
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook(resources=INLINE)
@@ -25,8 +27,7 @@ output_notebook(resources=INLINE)
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 # JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
-global_var.set_value('car_type', 'CHERY_E0X')
-# global_var.set_value('g_is_display_enu', True)
+steer_ratio = load_steer_ratio(global_var.get_value('car_type'))
 fig1, local_view_data = load_local_view_figure()
 fig1.height = 1500
 # init pybind

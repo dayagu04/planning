@@ -22,7 +22,7 @@ from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool
-
+from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def normalize_vector(v):
@@ -44,6 +44,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
   car_type = global_var.get_value('car_type')
   car_xb, car_yb = load_car_params_patch(car_type)
+  steer_ratio = load_steer_ratio(car_type)
   # get msg
   road_msg = find_nearest(bag_loader.road_msg, bag_time)
   # vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
@@ -481,8 +482,8 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
       last_theta_deg_vec.append(lat_motion_plan_input.last_theta_vec[i] * 57.3)
-      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 13.0)
-      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 13.0)
+      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * steer_ratio)
+      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * steer_ratio)
       expected_steer_deg_vec.append(0.0)
 
     if len(planning_json['expected_steer_vec']) > 0 :
