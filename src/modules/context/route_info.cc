@@ -2974,6 +2974,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
         for (int i = 0; i < on_excr_feasible_lane_temp; ++i) {
           on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
         }
+      } else {
+        on_excr_feasible_lane.emplace_back(on_exclnum);
+        before_excr_feasible_lane.emplace_back(before_exclnum);
       }
     } else if (on_exclnum < successor_exclnum + successor_other_exclnum) {
       //认为是右边,交换区终点后新增加了车道
@@ -2986,6 +2989,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
         }
 
         before_excr_feasible_lane.emplace_back(before_exclnum);
+      } else {
+        on_excr_feasible_lane.emplace_back(on_exclnum);
+        before_excr_feasible_lane.emplace_back(before_exclnum);
       }
     }
   } else if (is_split_left) {
@@ -2994,7 +3000,11 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
     //2、交换区前、交换区、交换区后的车道数都相等；
     //3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
     if (successor_exclnum <= on_exclnum) {
-      if (successor_exclnum <= before_exclnum) {
+      if (successor_exclnum == on_exclnum &&
+          on_exclnum == before_exclnum) {
+            on_excr_feasible_lane.emplace_back(1);
+            before_excr_feasible_lane.emplace_back(1);
+      } else if (successor_exclnum <= before_exclnum) {
         for (int i = 0; i < successor_exclnum; ++i) {
           on_excr_feasible_lane.emplace_back(i + 1);
           before_excr_feasible_lane.emplace_back(i + 1);
