@@ -117,6 +117,7 @@ struct SmartFoldMirrorParams {
 
   float reaction_time = 0.0;
   float lat_buffer = 0.0;
+  float min_lat_buffer = 0.0;
 
   float x_down_offset = 0.0;
   float x_up_offset = 0.0;
