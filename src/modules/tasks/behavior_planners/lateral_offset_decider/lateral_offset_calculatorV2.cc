@@ -577,7 +577,7 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
     }
 
     if (lateral_offset_decider::IsTruck(avoid_obstacle)) {
-      base_distance += 0.1;
+      base_distance = base_distance + 0.1 + config_.extra_truck_nudge_lat_offset;
     } else if (lateral_offset_decider::IsVRU(avoid_obstacle)) {
       base_distance += 0.1;
     } else if (lateral_offset_decider::IsCone(avoid_obstacle)) {

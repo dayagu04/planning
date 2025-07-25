@@ -24,7 +24,7 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
 
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
-                                      iflyauto::ObjectType type,
+                                      const std::shared_ptr<FrenetObstacle> obstacle,
                                       bool is_update_hard_bound,
                                       GeneralLateralDeciderConfig &config);
 double GetBoundWeight(

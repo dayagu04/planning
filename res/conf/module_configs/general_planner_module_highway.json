@@ -273,6 +273,7 @@
     "extra_road_decrease_buffer":[0.15, 0.1, 0.06, 0.02, 0.0],
     "extra_lane_type_decrease_buffer":0.05,
     "static_nudge_buffer2lane_boundary": -0.2,
+    "is_cross_solid_lane": true,
     "obstacle_predlonoverlap_up_total_count": 1,
     "obstacle_predlonoverlap_down_total_count": 3,
     "extra_road_buffer_in_big_curvature": 0.15,
@@ -281,7 +282,8 @@
     "reverse_obstacle_base_buffer": 0.5,
     "reverse_obstacle_extra_rear_lon_buffer":7,
     "emergency_avoid_v_limit_max": 80,
-    "static_vru_max_lateral_buffer": 0.7
+    "static_vru_max_lateral_buffer": 0.7,
+    "extra_truck_nudge_buffer": 0.1
 
   },
   "lateral_offset_decider": {
@@ -294,7 +296,8 @@
     "avd_lon_distance_2": 5,
     "avd_lon_distance_3": 20,
     "avd_lon_distance_4": 28,
-    "avd_lon_distance_5": 38
+    "avd_lon_distance_5": 38,
+    "extra_truck_nudge_lat_offset":0.1
   },
   "spatio_temporal_grid_map": {
     "map_size_x": 250,

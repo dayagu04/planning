@@ -1650,7 +1650,7 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
   double lat_buf_dis =
       general_lateral_decider_utils::CalDesireStaticLateralDistance(
           config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
-          ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound,
+          ego_frenet_state_.l(), obstacle, is_update_hard_bound,
           config_);
   double static_nudge_buffer2lane_boundary = 0.0;
   if (!is_in_lane_borrow_status) {
@@ -1665,10 +1665,10 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
         // 获取障碍物位置右车道线型
         const auto care_start_s_right_boundary_type =
             CalLaneBoundaryType(RIGHT, obstacle->frenet_s());
-        if (current_ego_right_boundary_type !=
+        if ((current_ego_right_boundary_type !=
                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
             care_start_s_right_boundary_type !=
-                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) || config_.is_cross_solid_lane) {
           static_nudge_buffer2lane_boundary = config_.static_nudge_buffer2lane_boundary;
         }
         double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
@@ -1682,10 +1682,10 @@ double GeneralLateralDecider::CalStaticNudgeLatBufDis(
         // 获取障碍物位置左车道线型
         const auto care_start_s_left_boundary_type =
             CalLaneBoundaryType(LEFT, obstacle->frenet_s());
-        if (current_ego_left_boundary_type !=
+        if ((current_ego_left_boundary_type !=
                 iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
             care_start_s_left_boundary_type !=
-                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) || config_.is_cross_solid_lane) {
           static_nudge_buffer2lane_boundary = config_.static_nudge_buffer2lane_boundary;
         }
         double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;

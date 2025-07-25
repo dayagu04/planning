@@ -1413,6 +1413,8 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
     care_static_object_t_threshold = read_json_key<double>(
         json, "care_static_object_t_threshold", care_static_object_t_threshold);
     v_limit_max = read_json_key<double>(json, "v_limit_max", v_limit_max);
+    ReadItem<double>(json, extra_truck_nudge_lat_offset, "lateral_offset_decider",
+                     "extra_truck_nudge_lat_offset");
   }
   double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
@@ -1434,6 +1436,7 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   double avd_vrel_bp_5;
   double care_dynamic_object_t_threshold = 0.0;
   double care_static_object_t_threshold = 0.0;
+  double extra_truck_nudge_lat_offset = 0.0;
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -1667,6 +1670,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, static_vru_max_lateral_buffer,
                      "general_lateral_decider",
                      "static_vru_max_lateral_buffer");
+    ReadItem<double>(json, extra_truck_nudge_buffer,
+                     "general_lateral_decider",
+                     "extra_truck_nudge_buffer");
+    ReadItem<bool>(json, is_cross_solid_lane,
+                     "general_lateral_decider",
+                     "is_cross_solid_lane");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1768,6 +1777,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double reverse_obstacle_extra_rear_lon_buffer = 0.0;
   double emergency_avoid_v_limit_max = 80;
   double static_vru_max_lateral_buffer = 0.55;
+  double extra_truck_nudge_buffer = 0.0;
+  bool is_cross_solid_lane = false;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
