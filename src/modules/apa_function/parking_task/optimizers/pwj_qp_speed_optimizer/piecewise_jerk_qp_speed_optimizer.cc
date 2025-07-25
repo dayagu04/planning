@@ -170,6 +170,11 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   std::vector<double> dx_ref;
   std::vector<double> t_ref;
   std::vector<std::pair<double, double>> ds_bounds;
+  x_ref.reserve(num_of_knots_);
+  dx_ref.reserve(num_of_knots_);
+  t_ref.reserve(num_of_knots_);
+  ds_bounds.reserve(num_of_knots_);
+
   SpeedPoint speed_point;
   const double v_lower_bound = 0.0;
   double v_upper_bound;

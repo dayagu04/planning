@@ -116,7 +116,8 @@ void SVGraphNode::Interpolate(const double s_step, const SVGraphNode* successor,
   point.acc = acc;
   point.jerk = 0.0;
 
-  speed_curve.push_back(sv_point_);
+  speed_curve.reserve(interpolate_num);
+  speed_curve.emplace_back(sv_point_);
   for (int32_t i = 1; i < interpolate_num; i++) {
     double interpolate_v = std::sqrt(v_square + 2 * acc * cur_s);
     point.s = sv_point_.s + cur_s;
@@ -136,7 +137,7 @@ void SVGraphNode::Interpolate(const double s_step, const SVGraphNode* successor,
       break;
     }
 
-    speed_curve.push_back(point);
+    speed_curve.emplace_back(point);
 
     cur_s += s_step;
   }

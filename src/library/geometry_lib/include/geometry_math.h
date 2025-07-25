@@ -271,10 +271,13 @@ struct PathPoint {
   double s = 0.0;
   double lat_buffer = 0.0;
   bool col_flag = false;
+
+  // used by parallel
   bool is_drive = true;
   int depth = 0;
   int id = -1;
   int parent_id = -1;
+
   int type = 0;
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
   // Distance from obstacle to vehicle safe buffer border
@@ -1247,6 +1250,8 @@ const PathSegGear GetGearType(const uint8_t gear);
 void SampleInLineSegment(const Eigen::Vector2d &start,
                          const Eigen::Vector2d &end, const double sample_dist,
                          std::vector<Eigen::Vector2d> &points);
+
+void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint> &path);
 
 }  // namespace geometry_lib
 }  // namespace pnc

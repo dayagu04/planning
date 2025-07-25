@@ -63,6 +63,8 @@ struct AstarParkingConfig {
   int max_replan_number = 25;
   // max replan number inside slot
   int max_replan_number_inside_slot = 15;
+
+  double vertical_min_path_length;
 };
 
 struct ParkingSpeedBound {

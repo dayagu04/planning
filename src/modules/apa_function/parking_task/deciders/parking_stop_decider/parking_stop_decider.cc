@@ -55,6 +55,7 @@ void ParkingStopDecider::RecordDebugInfo(
   speed_debug->clear_stop_signs();
 
   DiscretizedPath path_data;
+  path_data.reserve(lateral_path.size());
   planning_math::PathPoint path_point;
   for (size_t i = 0; i < lateral_path.size(); ++i) {
     path_point.set_x(lateral_path[i].pos.x());
@@ -63,7 +64,7 @@ void ParkingStopDecider::RecordDebugInfo(
     path_point.set_s(lateral_path[i].s);
     path_point.set_kappa(lateral_path[i].kappa);
 
-    path_data.push_back(path_point);
+    path_data.emplace_back(path_point);
   }
 
   if (stop_decision_.decision_type == LonDecisionType::STOP) {
@@ -240,7 +241,9 @@ void ParkingStopDecider::GeneratePathFootPrint(
                             &foot_print_big_buffer);
 
   small_buffer_path_polygons_.clear();
+  small_buffer_path_polygons_.reserve(path.size());
   big_buffer_path_polygons_.clear();
+  big_buffer_path_polygons_.reserve(path.size());
   PolygonFootPrint global_polygon;
   Pose2D global_pose;
   Transform2d tf;
@@ -289,6 +292,9 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
       double low_s = std::fmax(0.0, curr_point.s);
       double high_s = end_s;
 
+      lower_points->reserve(2);
+      upper_points->reserve(2);
+
       lower_points->emplace_back(low_s, 0.0);
       lower_points->emplace_back(low_s, max_time);
       upper_points->emplace_back(high_s, 0.0);
@@ -310,6 +316,9 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
     const trajectory::Trajectory& traj = obstacle.GetPredictTraj();
 
     // 2. Go through every point of the predicted obstacle trajectory.
+
+    lower_points->reserve(traj.size());
+    upper_points->reserve(traj.size());
     for (int i = 0; i < traj.size(); ++i) {
       const trajectory::TrajectoryPoint& trajectory_point = traj[i];
       double trajectory_point_time = trajectory_point.absolute_time();

@@ -121,6 +121,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.astar_config.max_replan_number_inside_slot, int,
                   "max_replan_number_inside_slot");
+  JSON_READ_VALUE(param.astar_config.vertical_min_path_length, double,
+                  "vertical_min_path_length");
 
   // car params
   std::string car_type_string;

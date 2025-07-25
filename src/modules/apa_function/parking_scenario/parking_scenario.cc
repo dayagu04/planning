@@ -195,6 +195,56 @@ void ParkingScenario::PublishPlanningTraj() {
   return;
 }
 
+void ParkingScenario::PublishPreparePlanningTraj() {
+  if (complete_path_point_global_vec_.empty()) {
+    ILOG_INFO << "path is null";
+    return;
+  }
+
+  auto publish_traj = &(planning_output_.trajectory);
+  publish_traj->available = true;
+  publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
+  publish_traj->target_reference.target_velocity = 0;
+
+  double total_s = complete_path_point_global_vec_.back().s;
+  double delta_point_s = total_s / PLANNING_TRAJ_POINTS_MAX_NUM;
+  double path_s = 0.0;
+  int path_point_id = 0;
+
+  ILOG_INFO << "prepare plan path size "
+            << complete_path_point_global_vec_.size() << ",s = " << total_s;
+
+  for (const auto& pt : complete_path_point_global_vec_) {
+    if (pt.s < path_s) {
+      continue;
+    }
+
+    publish_traj->trajectory_points[path_point_id].x = pt.pos.x();
+    publish_traj->trajectory_points[path_point_id].y = pt.pos.y();
+    publish_traj->trajectory_points[path_point_id].heading_yaw = pt.heading;
+    publish_traj->trajectory_points[path_point_id].curvature = pt.kappa;
+    publish_traj->trajectory_points[path_point_id].t = 0;
+    publish_traj->trajectory_points[path_point_id].distance = pt.s;
+    publish_traj->trajectory_points[path_point_id].v = 0;
+    publish_traj->trajectory_points[path_point_id].a = 0;
+    publish_traj->trajectory_points[path_point_id].jerk = 0;
+
+    path_s = pt.s + delta_point_s;
+    path_point_id++;
+
+    if (path_point_id >= PLANNING_TRAJ_POINTS_MAX_NUM) {
+      break;
+    }
+  }
+
+  publish_traj->trajectory_points_size =
+      std::min(path_point_id, PLANNING_TRAJ_POINTS_MAX_NUM);
+
+  publish_traj->target_reference.polynomial[0] = 0.0;
+
+  return;
+}
+
 void ParkingScenario::GenPlanningHmiOutput() {
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
@@ -626,7 +676,7 @@ const bool ParkingScenario::PostProcessPath() {
 
 void ParkingScenario::CreateTasks() { return; }
 
-void ParkingScenario::ThreadClear() { return; }
+void ParkingScenario::ThreadClearState() { return; }
 
 void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.

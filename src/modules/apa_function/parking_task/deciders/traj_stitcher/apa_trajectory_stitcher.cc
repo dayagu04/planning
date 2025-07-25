@@ -501,6 +501,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
   }
 
   DiscretizedPath path_data;
+  path_data.reserve(stitch_path_.size());
   planning_math::PathPoint path_point;
   for (size_t i = 0; i < stitch_path_.size(); ++i) {
     path_point.set_x(stitch_path_[i].pos.x());
@@ -509,13 +510,14 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     path_point.set_s(stitch_path_[i].s);
     path_point.set_kappa(stitch_path_[i].kappa);
 
-    path_data.push_back(path_point);
+    path_data.emplace_back(path_point);
   }
 
   const SpeedPoint* speed_point = nullptr;
   trajectory::TrajectoryPoint traj_point;
   bool is_forward = (gear_ == pnc::geometry_lib::SEG_GEAR_DRIVE ? true : false);
   bool is_traj_overshoot = false;
+  trajectory_.reserve(speed_profile.size());
   for (size_t i = 0; i < speed_profile.size(); i++) {
     speed_point = &speed_profile[i];
 
@@ -544,7 +546,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     traj_point.set_kappa(path_point.kappa());
     traj_point.set_jerk(speed_point->da);
 
-    trajectory_.push_back(traj_point);
+    trajectory_.emplace_back(traj_point);
   }
 
   // copy path to trajectory.
@@ -557,6 +559,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
 
     // if traj point speed is not computed in optimizer, default value is 0.0.
     double extend_point_v = 0;
+    trajectory_.reserve(trajectory_.size() + extend_point_size);
     for (size_t i = 0; i < extend_point_size; i++) {
       cur_s = trajectory_.back().s() + delta_s;
       cur_s = std::min(cur_s, path_data.back().s());
@@ -579,7 +582,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
       traj_point.set_theta(path_point.theta());
       traj_point.set_kappa(path_point.kappa());
 
-      trajectory_.push_back(traj_point);
+      trajectory_.emplace_back(traj_point);
     }
   }
 
@@ -597,7 +600,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     traj_point = lon_stitch_point_;
     traj_point.set_acc(-0.3);
     traj_point.set_vel(0.0);
-    trajectory_.push_back(traj_point);
+    trajectory_.emplace_back(traj_point);
   }
 
   // todo: open loop control.

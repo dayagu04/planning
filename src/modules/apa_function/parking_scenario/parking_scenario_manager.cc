@@ -204,6 +204,7 @@ void ParkingScenarioManager::ScenarioRunning() {
   apa_hmi_data_ = current_scenario_->GetAPAHmi();
 
   ILOG_INFO << "scenario running";
+  return;
 }
 
 void ParkingScenarioManager::ScenarioTry() {
@@ -242,7 +243,7 @@ void ParkingScenarioManager::ScenarioTry() {
         ILOG_INFO << "scenario geometry path try success, clear astar";
 
         // A星跑了一半，也要将其清空.
-        temp_narrow_scenario->ThreadClear();
+        temp_narrow_scenario->ThreadClearState();
       } else {
         ILOG_INFO << "scenario geometry path try fail, try astar";
         temp_narrow_scenario->ScenarioTry();
@@ -255,9 +256,11 @@ void ParkingScenarioManager::ScenarioTry() {
       current_scenario_->ScenarioTry();
     }
   } else {
-    // todo: 其他功能
+    // todo: head in, head out, tail out.
     current_scenario_->ScenarioTry();
   }
+
+  planning_output_ = current_scenario_->GetOutput();
 
   ILOG_INFO << "GEOMETRY RELEASE = "
             << GetSlotReleaseStateString(

@@ -134,8 +134,6 @@ data_sim_limiter = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_sim_car_predict_traj_path = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_car_predict_traj_path_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
-# this traj is not computed by optimizer, we fill it by zero speed
-non_optimizer_traj = ColumnDataSource(data={'x': [], 'y': [], 'heading': [], })
 stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
 data_od_traj = ColumnDataSource(data = {'x':[], 'y':[]})
 
@@ -155,7 +153,6 @@ fig1.circle('obs_y', 'obs_x', source = data_sim_obs, size=6.0, color='red', lege
 fig1.circle('y', 'x', source = data_sim_car_predict_traj_path, size=4, color='orange', legend_label = 'sim_car_predict_traj_path', visible = False)
 fig1.line('y', 'x', source = data_sim_car_predict_traj_path, line_width = 6, line_color = 'orange', line_dash = 'dashed', line_alpha = 0.5, legend_label = 'sim_car_predict_traj_path', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_sim_car_predict_traj_path_car_box, fill_color = "#89FB89", fill_alpha = 0.0, line_color = "orange", line_width = 1, legend_label = 'sim_car_predict_traj_path', visible = False)
-fig1.line('y', 'x', source = non_optimizer_traj, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'non_optimizer_traj')
 fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
 fig1.circle('y', 'x', source = data_od_traj, size=4.0, color='black', legend_label='fusion_objects', visible = True)
 
@@ -743,32 +740,6 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
       update_publish_data(tuned_planning_output,lon_plan_data)
 
     update_record_speed_data(traj_speed_profile, lon_plan_data)
-
-    if res == True:
-      non_optimizer_path_x = []
-      non_optimizer_path_y = []
-      non_optimizer_path_theta = []
-      size = len(tuned_planning_output.trajectory.trajectory_points)
-      print('online size = ', size)
-
-      for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
-        id = size - i - 1
-        if id < 0:
-          break
-
-        point = tuned_planning_output.trajectory.trajectory_points[id]
-        if point.v > 0.0 :
-          break
-
-        non_optimizer_path_x.append(point.x)
-        non_optimizer_path_y.append(point.y)
-        non_optimizer_path_theta.append(point.heading_yaw)
-
-      non_optimizer_traj.data.update({
-          'x': non_optimizer_path_x,
-          'y': non_optimizer_path_y,
-          'heading': non_optimizer_path_theta,
-          })
 
     # plot stop signs
     stop_sign_lines = apa_simulation_py.GetStopSigns()

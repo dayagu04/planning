@@ -19,6 +19,7 @@ class ParkingScenarioManager final {
 
   void Process();
 
+  // slot cruise state: reset.
   void Reset();
 
   const iflyauto::PlanningOutput& GetPlanningOutput() const {

@@ -47,6 +47,7 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
 
   speed_limit_profile_.Clear();
   size_t path_point_size = path.size();
+  speed_limit_profile_.Reverse(path_point_size);
   for (size_t i = 0; i < path_point_size; ++i) {
     const double path_s = path.at(i).s;
     const pnc::geometry_lib::PathPoint& point = path[i];

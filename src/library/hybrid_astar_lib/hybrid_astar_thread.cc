@@ -89,7 +89,7 @@ void HybridAStarThreadSolver::SetRequest(const ParkObstacleList& obs_list,
 void HybridAStarThreadSolver::SetResponse() {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  ILOG_INFO << "set output init in thread";
+  // ILOG_INFO << "set output init in thread";
 
   thread_response_data_.result.Clear();
   solver_interface_->GetFullLengthPath(&thread_response_data_.result);

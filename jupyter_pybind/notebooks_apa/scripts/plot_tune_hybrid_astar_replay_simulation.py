@@ -22,7 +22,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250722/20250722-16-46-24/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-22-16-46-25_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250724/20250724-16-05-35/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-24-16-05-36_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -52,7 +52,6 @@ plot_speed = True
 if plot_speed:
   load_lon_global_data_figure(bag_loader)
   pans, lon_plan_data = create_lon_plan_figure(fig1)
-
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
@@ -154,16 +153,15 @@ data_polynomial_path = ColumnDataSource(data = {'plan_path_x':[],
 optimizer_traj = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
-non_optimizer_traj = ColumnDataSource(data={'plan_path_x': [],
-                                      'plan_path_y': [],
-                                      'plan_path_heading': [], })
+prepare_plan_path = ColumnDataSource(data={'plan_path_x': [],
+                                      'plan_path_y': [] })
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 3, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path',visible = False)
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 3, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path',visible = False)
 fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width = 2, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref_line')
 fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 3, line_color = '#7b0ec4', line_dash = 'solid', line_alpha = 0.5, legend_label = 'astar_path')
 fig1.line('plan_path_y', 'plan_path_x', source = optimizer_traj, line_width = 8, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'optimizer_traj')
-fig1.line('plan_path_y', 'plan_path_x', source = non_optimizer_traj, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'non_optimizer_traj')
+fig1.line('plan_path_y', 'plan_path_x', source = prepare_plan_path, line_width = 5, line_color = 'gray', line_dash = 'solid', line_alpha = 0.4, legend_label = 'prepare_plan_path')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
@@ -181,7 +179,6 @@ fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red'
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 fig1.circle('y_vec', 'x_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
 fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
-
 
 ### sliders config
 class LocalViewSlider:
@@ -282,13 +279,11 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     print('fus_parking_msg invalid')
     fus_parking_msg = ParkingFusionInfo()
 
-
   if index_map['wave_msg_idx'] < len(bag_loader.wave_msg['data']):
     wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
     data_valid['wave_msg_idx'] = True
   else:
     print('wave_msg_idx invalid')
-
 
   if index_map['vs_msg_idx'] < len(bag_loader.vs_msg['data']):
     vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
@@ -311,7 +306,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   if index_map['loc_msg_idx'] < len(bag_loader.loc_msg['data']):
     loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
     data_valid['loc_msg_idx'] = True
-
 
   if index_map['plan_debug_msg_idx'] < len(bag_loader.plan_debug_msg['data']):
     slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
@@ -358,8 +352,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
         'plan_path_y': rs_plan_path_y,
         'plan_path_heading': rs_plan_path_heading,
     })
-
-
 
   # if plot_child_node and bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].node_list:
   #   line_list_x_vec, line_list_y_vec = [], []
@@ -429,8 +421,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   print(soc_state_msg.current_state)
   if soc_state_msg.current_state >= 13:
     plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
-
-
     target_managed_slot_x_vec = plan_debug_msg['slot_corner_X']
     target_managed_slot_y_vec = plan_debug_msg['slot_corner_Y']
     target_managed_limiter_x_vec = plan_debug_msg['limiter_corner_X']
@@ -463,9 +453,7 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
       all_data_valid = False
       break
 
-
   end_time = time.time()
-
   print('time, ms ', (end_time - start_time) * 1000)
 
   soc_state_msg_buff = BytesIO()
@@ -499,7 +487,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   uss_perception_msg_buff = BytesIO()
   uss_perception_msg.serialize(uss_perception_msg_buff)
   uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
-
 
   ground_line_perception_msg_buff = BytesIO()
   ground_line_msg.serialize(ground_line_perception_msg_buff)
@@ -548,10 +535,8 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   else:
     print('no plan call')
 
-
   if refresh_thread:
     replay_simulation_hybrid_astar.RefreshThreadResult()
-
 
   end_time2 = time.time()
   print('time2, ms ', (end_time2 - end_time) * 1000)
@@ -559,8 +544,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   current_gear_path_x = []
   current_gear_path_y = []
   current_gear_path_heading = []
-  line_xn = []
-  line_yn = []
   car_xn = []
   car_yn = []
   car_box_x_vec = []
@@ -568,9 +551,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   current_gear_end_x=0
   current_gear_end_y=0
   current_gear_end_theta=0
-  non_optimizer_path_x = []
-  non_optimizer_path_y = []
-  non_optimizer_path_theta = []
 
   if res == True:
     tuned_planning_output = PlanningOutput()
@@ -585,11 +565,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
       current_gear_end_x = tuned_planning_output.trajectory.trajectory_points[i].x
       current_gear_end_y = tuned_planning_output.trajectory.trajectory_points[i].y
       current_gear_end_theta = tuned_planning_output.trajectory.trajectory_points[i].heading_yaw
-
-      if (point.v <= 0.0 and point.distance > 0.0):
-        non_optimizer_path_x.append(point.x)
-        non_optimizer_path_y.append(point.y)
-        non_optimizer_path_theta.append(point.heading_yaw)
 
     if (len(current_gear_path_x) > 1):
       half_car_width = 0.9
@@ -612,8 +587,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
       y1 = last_y + norm_vec_1[1]
       x2 = last_x + norm_vec_2[0]
       y2 = last_y + norm_vec_2[1]
-      line_xn = [x1, x2]
-      line_yn = [y1, y2]
 
     # path ego car
     for k in range(len(tuned_planning_output.trajectory.trajectory_points)):
@@ -628,13 +601,28 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
     print("tuned_gear_command = ", tuned_planning_output.gear_command.gear_command_value)
 
-  # draw current gear path envelop
+  prepare_plan_path.data.update({
+    'plan_path_x': [],
+    'plan_path_y': []
+    })
   optimizer_traj.data.update({
-      'plan_path_x': current_gear_path_x,
-      'plan_path_y': current_gear_path_y,
-      'plan_path_heading': current_gear_path_heading,
+  'plan_path_x': [],
+  'plan_path_y': [],
+  'plan_path_heading': [],
   })
+  if current_state == 14 or current_state == 18:
+    prepare_plan_path.data.update({
+      'plan_path_x': current_gear_path_x,
+      'plan_path_y': current_gear_path_y
+      })
+  else:
+    optimizer_traj.data.update({
+    'plan_path_x': current_gear_path_x,
+    'plan_path_y': current_gear_path_y,
+    'plan_path_heading': current_gear_path_heading,
+    })
 
+  # draw current gear path envelop
   cur_gear_path_box_x_vec = []
   cur_gear_path_box_y_vec = []
   for k in range(len(current_gear_path_x)):
@@ -734,14 +722,11 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     data_real_time_node_list.data.update({
       'x_vec': line_list_x_vec,
       'y_vec': line_list_y_vec,})
-
-
   else:
     data_real_time_node_list.data.update({
           'x_vec': [],
           'y_vec': [],
       })
-
 
   end_time5 = time.time()
   print('time5, ms ', (end_time5 - end_time4) * 1000)
@@ -887,29 +872,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
   # print('envelop')
 
-  # virtual wall line
-  # line_list = replay_simulation_hybrid_astar.GetVirtualWall()
-  # line_list_x_vec, line_list_y_vec = [], []
-
-  # for i in range(len(line_list)):
-  #   obs_point_num = len(line_list[i])
-  #   if obs_point_num < 4:
-  #     continue
-
-  #   # print('start ', line_list[i][0], line_list[i][1],
-  #   #       'end ', line_list[i][2], line_list[i][3])
-
-  #   line_list_x_vec.append([line_list[i][0], line_list[i][2]])
-  #   line_list_y_vec.append([line_list[i][1], line_list[i][3]])
-
-  # data_virtual_wall.data.update({
-  #       'x_vec': [],
-  #       'y_vec': [],
-  #   })
-  # data_virtual_wall.data.update({
-  #   'x_vec': line_list_x_vec,
-  #   'y_vec': line_list_y_vec,})
-
   # circle obs
   obs_pts = replay_simulation_hybrid_astar.GetVirtualWall()
   obs_pt_x, obs_pt_y = [], []
@@ -967,7 +929,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
         'plan_path_x': ref_line_x,
         'plan_path_y': ref_line_y,
   })
-
 
   # open list search sequence path
   data_search_sequence_path.data.update({
@@ -1097,11 +1058,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     update_publish_data(tuned_planning_output,lon_plan_data)
 
     update_record_speed_data(traj_speed_profile, lon_plan_data)
-    non_optimizer_traj.data.update({
-      'plan_path_x': non_optimizer_path_x,
-      'plan_path_y': non_optimizer_path_y,
-      'plan_path_heading': non_optimizer_path_theta,
-      })
 
   push_notebook()
 

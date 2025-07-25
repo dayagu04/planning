@@ -47,6 +47,7 @@ class ParkingScenario {
     FORCE_PLAN,
     SEG_COMPLETED_SLOT_JUMP,
     PATH_DANGEROUS,
+    SLOT_CRUISING,
   };
 
   struct CheckReplanParams {
@@ -352,6 +353,8 @@ class ParkingScenario {
   ParkingScenario(const std::shared_ptr<ApaWorld> &apa_world_ptr);
 
   virtual void Init();
+
+  // slot cruise state: reset.
   virtual void Reset();
   virtual std::string GetName();
 
@@ -380,7 +383,7 @@ class ParkingScenario {
   const iflyauto::APAHMIData &GetAPAHmi() const { return apa_hmi_; }
 
   // clear thread related
-  virtual void ThreadClear();
+  virtual void ThreadClearState();
 
   const std::vector<pnc::geometry_lib::PathPoint> &GetCompletePlanPathPt() {
     return complete_path_point_global_vec_;
@@ -461,15 +464,15 @@ class ParkingScenario {
   void RecordDebugObstacle(const std::vector<double> &obs_x,
                            const std::vector<double> &obs_y) const;
 
+  void PublishPreparePlanningTraj();
+
  protected:
   // TODO:
   // 1.
   // 场景内部，尽量只包含指针，不要创建大的数据，因为一旦场景多了之后，这些数据都是重复继承;
   // 比如：planning_output_，apa_hmi_，frame_，current_path_point_global_vec_,
-  // 这种大的数据（10多Mb）就可以放到apa_world中.
-  // 2. 泊车框架有2个数据流：
-  // A：apa_data，存储处理的上游数据，以及发布给下游的数据；
-  // B: apa_world，存储scenario, task各种内部数据;
+  // 这种大的数据（0.1Mb）就可以放到apa_world中.
+  // 2. apa_world，存储处理的上游数据，以及发布给下游的数据；
   std::shared_ptr<ApaWorld> apa_world_ptr_;
 
   iflyauto::PlanningOutput planning_output_;
