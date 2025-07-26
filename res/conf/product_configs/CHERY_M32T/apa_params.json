@@ -98,8 +98,8 @@
   "finish_parallel_lat_rac_err": 0.7,
   "finish_parallel_lon_err": 0.21,
   "finish_parallel_lon_overhaing_error": 0.22,
-  "finish_parallel_heading_err": 2.7,
-  "finish_parallel_out_heading_mag": 10.0,
+  "finish_parallel_heading_err": 2.0,
+  "finish_parallel_out_heading_mag": 15.0,
 
   "comment_6": "check fail params",
   "stuck_failed_time": 10.0,
