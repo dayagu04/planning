@@ -284,7 +284,8 @@
     "reverse_obstacle_extra_rear_lon_buffer":7,
     "emergency_avoid_v_limit_max": 80,
     "static_vru_max_lateral_buffer": 0.7,
-    "extra_truck_nudge_buffer": 0.2
+    "extra_truck_nudge_buffer": 0.2,
+    "dynamic_vru_nudge_lateral_buffer": 0.9
 
   },
   "lateral_offset_decider": {

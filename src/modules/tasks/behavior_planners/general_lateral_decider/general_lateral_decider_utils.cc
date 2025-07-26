@@ -19,7 +19,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 GeneralLateralDeciderConfig &config) {
   double base_dis = 0.7;
   if (IsVRU(obstacle->type())) {
-    base_dis = 0.9;
+    base_dis = config.dynamic_vru_nudge_lateral_buffer;
   } else if (IsTruck(obstacle)) {
     base_dis = 0.7 + config.extra_truck_nudge_buffer;
   }
