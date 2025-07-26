@@ -2989,6 +2989,13 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
         }
 
         before_excr_feasible_lane.emplace_back(before_exclnum);
+      } else if (before_exclnum == on_exclnum &&
+                 on_exclnum == successor_other_exclnum) {
+        for (int i = 0; i < successor_exclnum; ++i) {
+          on_excr_feasible_lane.emplace_back(on_exclnum + i + 1);
+        }
+        before_excr_feasible_lane.emplace_back(before_exclnum);
+
       } else {
         on_excr_feasible_lane.emplace_back(on_exclnum);
         before_excr_feasible_lane.emplace_back(before_exclnum);
