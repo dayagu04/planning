@@ -659,6 +659,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.avoiddirect =
       static_cast<iflyauto::AvoidObstacleDirection>(
           lat_offset_decider_output.avoid_direction);
+  planning_hmi_info->ad_info.reference_line_msg =
+      session_.planning_context().planning_hmi_info().ad_info.reference_line_msg;
 
   // HMI for hpp
   const bool is_reached_target_slot = session_.environmental_model()

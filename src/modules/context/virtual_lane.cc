@@ -19,6 +19,7 @@ namespace planning {
 VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
+  reference_line_msg_ = lane;
   is_nearing_ramp_mlc_task_ = false;
   is_nearing_split_mlc_task_ = false;
   order_id_ = lane.order_id;

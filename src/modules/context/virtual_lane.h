@@ -59,6 +59,9 @@ class VirtualLane {
   double width_by_s(double s);
   double width(double x);
   double width() { return width_; };
+  const iflyauto::ReferenceLineMsg &get_reference_line_msg() const {
+    return reference_line_msg_;
+  }
 
   // WB：用户设置巡航车速不应与地图限速耦合
   double velocity_limit() const { return v_cruise_; };
@@ -211,6 +214,7 @@ class VirtualLane {
   bool is_in_merge_area_ = false;
   bool is_nearing_ramp_mlc_task_ = false;
   bool is_nearing_split_mlc_task_ = false;
+  iflyauto::ReferenceLineMsg reference_line_msg_;
 };
 }  // namespace planning
 #endif

@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "environmental_model.h"
-#include "modules/tasks/task_interface/lane_change_decider_output.h"
 #include "geometry_math.h"
+#include "modules/tasks/task_interface/lane_change_decider_output.h"
 
 // #include "core/common/trace.h"
 #include "debug_info_log.h"
@@ -576,6 +576,10 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
     ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
   }
+  ad_info.reference_line_msg = session_->environmental_model()
+                                   .get_virtual_lane_manager()
+                                   ->get_current_lane()
+                                   ->get_reference_line_msg();
   ad_info.landing_point.heading = 0.0;
   ad_info.landing_point.relative_pos.x = 0.0;
   ad_info.landing_point.relative_pos.y = 0.0;
@@ -588,9 +592,10 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   iflyauto::LandingPoint landing_point;
   if (!is_time_out && is_lane_keeping) {
     landing_point = CalculateLandingPoint(true, lane_change_decider_output);
-  } else if (curr_state == kLaneChangePropose || curr_state == kLaneChangeExecution ||
-      curr_state == kLaneChangeComplete || curr_state == kLaneChangeCancel ||
-      curr_state == kLaneChangeHold) {
+  } else if (curr_state == kLaneChangePropose ||
+             curr_state == kLaneChangeExecution ||
+             curr_state == kLaneChangeComplete ||
+             curr_state == kLaneChangeCancel || curr_state == kLaneChangeHold) {
     landing_point = CalculateLandingPoint(false, lane_change_decider_output);
     // }
   } else {
