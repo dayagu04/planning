@@ -313,7 +313,6 @@
   "lat_motion_ilqr": {
     "pass_acc_mode": false,
     "warm_start_enable": true,
-    "curv_factor": 0.33,
     "delta_t": 0.2,
     "min_v_cruise": 0.2,
     "min_ego_vel": 1.0,
@@ -536,7 +535,6 @@
   "result_trajectory_generator": {
     "use_dynamic_lat_jerk_thr": false,
     "enable_lat_traj": false,
-    "curv_factor": 0.33,
     "lat_acc_thr": 3.0,
     "lat_jerk_thr": 0.3,
     "ramp_lat_jerk_thr": 0.65,

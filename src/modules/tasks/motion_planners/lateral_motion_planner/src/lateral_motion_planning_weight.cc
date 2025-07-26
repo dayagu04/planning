@@ -264,7 +264,8 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
 }
 
 void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
-    double init_s, double ref_vel, double wheel_base, double steer_ratio,
+    double init_s, double ref_vel, double wheel_base,
+    double steer_ratio, double curv_factor,
     const planning::CoarsePlanningInfo &coarse_planning_info,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     std::vector<double>& expected_steer_vec) {
@@ -290,7 +291,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   double left_bend_s = 0;
   double right_bend_s = 0;
   double ds = ref_vel * config_.delta_t;
-  double kv2 = config_.curv_factor * ref_vel_ * ref_vel_;
+  double kv2 = curv_factor * ref_vel_ * ref_vel_;
   max_jerk_low_speed_ =
       (config_.max_steer_angle_dot_low_speed / steer_ratio / kRad2Deg) * kv2;
   weight_.expected_acc.clear();
@@ -672,7 +673,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   }
   double last_omega_to_jerk =
       std::min(last_max_omega_, last_jerk_bound_limit_) *
-      config_.curv_factor * ref_vel_ * ref_vel_;
+      planning_input.curv_factor() * ref_vel_ * ref_vel_;
   // set upper limit
   double extra_jerk_buffer = 0.1;
   std::vector<double> xp_v{4.167, 8.333, 16.667, 25.0};
@@ -855,7 +856,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   }
   // last_jerk_bound_limit_ = planning_input.jerk_bound();
   last_jerk_bound_limit_ =
-      planning_input.jerk_bound() / (config_.curv_factor * ref_vel_ * ref_vel_);
+      planning_input.jerk_bound() / (planning_input.curv_factor() * ref_vel_ * ref_vel_);
   // when last positive or negative jerk is big, adding zero jerk bound protection for this time
   if (lateral_motion_scene_ == LANE_KEEP) {  // not big curvature
     if (last_planning_output.jerk_vec_size() >= 2) {

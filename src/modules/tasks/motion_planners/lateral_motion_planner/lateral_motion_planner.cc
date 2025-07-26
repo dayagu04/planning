@@ -11,6 +11,7 @@
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
 #include "lateral_obstacle.h"
+#include "math_lib.h"
 #include "planning_context.h"
 #include "spline.h"
 #include "src/lateral_motion_planning_cost.h"
@@ -79,6 +80,7 @@ void LateralMotionPlanner::Init() {
   enter_split_time_ = 0.0;
   enter_lccnoa_time_ = 0.0;
   is_divide_lane_into_two_ = false;
+  curv_factor_ = 0.33;
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -320,7 +322,12 @@ bool LateralMotionPlanner::AssembleInput() {
         i, next_hard_upper_bound.y);
   }
 
-  planning_input_.set_curv_factor(config_.curv_factor);
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double c1 = 1 / std::max(vehicle_param.wheel_base, 1e-6);
+  double c2 = 1.0;  // neutral
+  curv_factor_ = pnc::mathlib::GetCurvFactor(c1, c2, ref_vel);
+  planning_input_.set_curv_factor(curv_factor_);
 
   // set init info
   Point2D cart_ref0(planning_input_.ref_x_vec(0), planning_input_.ref_y_vec(0));
@@ -347,10 +354,8 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetRefVel(ref_vel);
   planning_weight_ptr_->SetInitL(planning_init_point.frenet_state.r);
   planning_weight_ptr_->CalculateLastPathDistToRef(reference_path_ptr, planning_input_);
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kv2 =
-      config_.curv_factor * ref_vel * ref_vel;
+      curv_factor_ * ref_vel * ref_vel;
   double steer_ratio = vehicle_param.steer_ratio;
   double max_steer_angle = vehicle_param.max_steer_angle;  // rad
   double max_steer_angle_rate =
@@ -376,8 +381,8 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
       planning_init_point.frenet_state.s, ref_vel,
       vehicle_param.wheel_base, steer_ratio,
-      coarse_planning_info, reference_path_ptr,
-      expected_steer_vec);
+      curv_factor_, coarse_planning_info,
+      reference_path_ptr, expected_steer_vec);
   JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec, 2)
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
@@ -591,10 +596,10 @@ bool LateralMotionPlanner::Update() {
                                        // [-pi, pi] to avoid incorrect spline
     delta_vec[i + 1] = planning_output.delta_vec(i);
     curv_vec[i + 1] =
-        planning_input_.curv_factor() * planning_output.delta_vec(i);
+        curv_factor_ * planning_output.delta_vec(i);
 
     omega_vec[i + 1] = planning_output.omega_vec(i);
-    d_curv_vec[i + 1] = planning_input_.curv_factor() * omega_vec[i + 1];
+    d_curv_vec[i + 1] = curv_factor_ * omega_vec[i + 1];
 
     if (i == 0) {
       s = 0.0;
@@ -743,7 +748,7 @@ bool LateralMotionPlanner::Update() {
     traj_points[i].x = x_vec[i + 1];
     traj_points[i].y = y_vec[i + 1];
     traj_points[i].heading_angle = theta_vec[i + 1];
-    traj_points[i].curvature = planning_input_.curv_factor() * delta_vec[i + 1];
+    traj_points[i].curvature = curv_factor_ * delta_vec[i + 1];
 
     traj_points[i].v = general_lateral_decider_output.v_cruise;
     traj_points[i].t = planning_output.time_vec(i);
