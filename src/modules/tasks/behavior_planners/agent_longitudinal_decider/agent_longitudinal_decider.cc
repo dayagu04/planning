@@ -31,7 +31,7 @@ constexpr double kKphToMps = 0.2778;
 constexpr double kMpsToKph = 3.6;
 constexpr double kLaneWidth = 3.75;
 constexpr double kLargeAgentLengthM = 8.0;
-constexpr double kLargeSpeedDiff = 3.0;
+constexpr double kLargeSpeedDiff = 5.56;
 
 // Param for cut-in check
 constexpr double kFtpCutInDeactivationSpeedMps = 100.0 * kKphToMps;
