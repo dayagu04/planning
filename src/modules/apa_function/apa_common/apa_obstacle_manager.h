@@ -26,7 +26,8 @@ class ApaObstacleManager final {
 
   void Update(const LocalView *local_view,
               const iflyauto::PlanningOutput *planning_output,
-              const std::shared_ptr<ApaStateMachineManager> &state_machine_ptr);
+              const std::shared_ptr<ApaStateMachineManager> &state_machine_ptr,
+              const size_t ego_slot_id);
 
   void Reset() {
     obs_id_generate_ = 0;

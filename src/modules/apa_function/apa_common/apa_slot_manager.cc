@@ -695,5 +695,9 @@ const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
   return SlotReleaseState::UNKOWN;
 }
 
+const size_t ApaSlotManager::GetEgoSlotInfoID() const {
+  return ego_info_under_slot_.id;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

@@ -347,7 +347,7 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
       if path_point.type == 2:
         rs_plan_path_x.append(path_point.x)
         rs_plan_path_y.append(path_point.y)
-        rs_plan_path_heading.append(path_point.heading_angle)
+        rs_plan_path_heading.append(path_point.heading)
 
     print('speed type',
           plan_debug_msg.apa_speed_debug.speed_type)

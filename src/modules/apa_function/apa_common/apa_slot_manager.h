@@ -226,6 +226,8 @@ class ApaSlotManager final {
 
   const SlotReleaseState GetSlotReleaseState() const;
 
+  const size_t GetEgoSlotInfoID() const;
+
  private:
   void ParkingLotCruiseProcess();
 

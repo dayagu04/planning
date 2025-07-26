@@ -23,7 +23,8 @@ namespace apa_planner {
 void ApaObstacleManager::Update(
     const LocalView* local_view,
     const iflyauto::PlanningOutput* planning_output,
-    const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr) {
+    const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
+    const size_t ego_slot_id) {
   if (local_view == nullptr || planning_output == nullptr) {
     ILOG_ERROR << "Update ApaObstacleManager, local_view_ptr is nullptr";
     return;
@@ -447,7 +448,10 @@ void ApaObstacleManager::Update(
       const iflyauto::ParkingFusionSlot* slot =
           &slot_list->parking_fusion_slot_lists[i];
 
-      if (slot_list->select_slot_id == slot->id) {
+      // For now, do not consider ego slot limiter.
+      // Todo: consider all limiters.
+      if (slot_list->select_slot_id == slot->id ||
+          static_cast<uint32>(ego_slot_id) == slot->id) {
         continue;
       }
 
