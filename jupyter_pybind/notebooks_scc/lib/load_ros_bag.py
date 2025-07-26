@@ -155,6 +155,11 @@ class LoadRosbag:
       if topic == "/iflytek/localization/egomotion":
         global_var.set_value('is_new_loc', True)
 
+    if 'E0Y' in self.bag_path:
+        global_var.set_value('car_type', 'CHERY_E0X')
+    elif 'M32T' in self.bag_path:
+        global_var.set_value('car_type', 'CHERY_M32T')
+
   def load_all_data(self, normal_print = True):
     print('load bag')
     scene_type = 'HIGHWAY'
@@ -695,7 +700,7 @@ class LoadRosbag:
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
                          "planning_hmi_ldp_state",]
 
-      json_vector_list = ["raw_refline_k_vec", 
+      json_vector_list = ["raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
                          "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
                          "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",

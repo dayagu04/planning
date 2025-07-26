@@ -102,6 +102,18 @@ def load_car_circle_coord():
 
   return circle_x, circle_y, circle_r
 
+def load_steer_ratio(car_type = 'CHERY_E0X'):
+  steer_ratio = 13.0
+  if car_type == 'JAC_S811':
+    steer_ratio = 16.5
+  elif car_type == 'CHERY_T26':
+    steer_ratio = 15.3
+  elif car_type == 'CHERY_E0X':
+    steer_ratio = 13.0
+  elif car_type == 'CHERY_M32T':
+    steer_ratio = 15.88
+  return steer_ratio
+
 def load_car_uss_patch():
   apa_x = [3.187342, 3.424531, 3.593071,  3.593071,  3.424531,  3.187342, -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357]
   apa_y = [0.887956, 0.681712, 0.334651, -0.334651, -0.681712, -0.887956, -0.887956, -0.706505, -0.334845,  0.334845,  0.706505,  0.887956]
