@@ -546,8 +546,9 @@ bool DPRoadGraph::SampleLanes(
   sampled_points_.insert(sampled_points_.begin(),
                          std::vector<SLPoint>{init_sl_point_});
   for (size_t i = 0; accumulated_s < total_length_; ++i) {
-    accumulated_s += s_range_;
-    if (accumulated_s + s_range_ / 2.0 > total_length_) {
+    double in_equeal_s_range = (total_length_ - ego_s_)*(i+1)/6;
+    accumulated_s += in_equeal_s_range;
+    if (accumulated_s + in_equeal_s_range / 2.0 > total_length_) {
       accumulated_s = total_length_;
     }
     const double s_step = std::fmin(total_length_, accumulated_s);
@@ -762,7 +763,7 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
   return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));
 }
 
-void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_start_s){
+bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_start_s){
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
 
 /*
@@ -793,12 +794,14 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_st
   */
   // center line
   double distance_to_blocking = obs_start_s - ego_s_;
-
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double mini_gap = 3.0;
+  double mini_gap = 4.0;
   double virtual_length = 1.0;// 1+6 = 7
-  double center_virtual_s = obs_start_s - mini_gap + virtual_length* 0.5;
+  double center_virtual_s = obs_start_s - mini_gap + virtual_length*0.5;
+  if(center_virtual_s - ego_s_ < vehicle_param.front_edge_to_rear_axle + virtual_length*0.5){
+    return false;
+  }
   double virtual_l = obs_inner_l;
   // if (center_virtual_s < 60.0 || center_virtual_s - virtual_length* 0.5 - vehicle_param.front_edge_to_rear_axle - 1.0 < ego_s_){
   //   return;
@@ -858,7 +861,7 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_st
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_length",
                    virtual_agent.length())
 
-  return ;
+  return true;
 
 }
 bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y, double path_ego_theta,BorrowDirection borrow_dir) {

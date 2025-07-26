@@ -301,9 +301,10 @@ void LaneBorrowDecider::UpdateToDP() {
         const auto& vehicle_param = VehicleConfigurationContext::Instance()->get_vehicle_param();
       double lateral_dist = current_lane_ptr_->width()* 0.5 - vehicle_param.max_width*0.5;
       double inner_l = (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW)? lateral_dist: - lateral_dist;
-      dp_path_decider_->AddLaneBorrowVirtualObstacle(inner_l, obs_start_s_);
-      dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
-      lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving; // lock status
+      if(dp_path_decider_->AddLaneBorrowVirtualObstacle(inner_l, obs_start_s_)){
+        dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
+        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving; // lock status
+      }
     }else{
       lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
     }
@@ -837,7 +838,7 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     //  no lon overlap
     // if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end ||
     //     frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
-    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end + 2.0) {
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
       if (lat_obs_iter != lat_obstacle_decision.end() &&
           lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {

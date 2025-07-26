@@ -155,7 +155,7 @@ class DPRoadGraph : public Task {
   void ClearDPInfo();
   std::shared_ptr<planning_math::KDPath> ConstructLaneBorrowKDPath(
       const std::vector<double>& x_vec, const std::vector<double>& y_vec);
-  void AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_start_s);
+  bool AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_start_s);
   bool NudgeOutPose(double path_ego_x, double path_ego_y, double path_ego_theta, BorrowDirection borrow_dir);
   Point2D CarRotattion(const Point2D& Cartesian_point,
                                              double heading_angle, double ego_x,
