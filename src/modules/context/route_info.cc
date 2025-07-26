@@ -1698,7 +1698,11 @@ void RouteInfo::NewUpdateMLCInfoDecider(
                 if (dis_err > mlc_decider_config_.other_merge_split_gap_threshold) {
                   mlc_decider_route_info_.is_process_other_merge = true;
                 } else {
-                  mlc_decider_route_info_.is_process_other_merge_split = true;
+                  if (is_two_splits_close) {
+                    mlc_decider_route_info_.is_process_split_split = true;
+                  } else {
+                    mlc_decider_route_info_.is_process_other_merge_split = true;
+                  }
                 }
               } else {
                 mlc_decider_route_info_.is_process_merge = true;
@@ -1755,14 +1759,28 @@ void RouteInfo::NewUpdateMLCInfoDecider(
           bool is_calculate_first_feasible_lane =
               CalculateFeasibleLane(&first_split_region_info);
 
+          if (!is_calculate_first_feasible_lane) {
+            mlc_decider_route_info_.reset();
+            return;
+          }
+
+          route_info_output_.split_region_info_list[0] =
+              first_split_region_info;
+          mlc_decider_route_info_.first_static_split_region_info =
+              route_info_output_.split_region_info_list[0];
+          
+          //如果找连续的找不到，那么直接返回处理第一个split的场景
+
           bool is_calculate_second_feasible_lane =
               CalculateFeasibleLane(&second_split_region_info);
 
-          if (!is_calculate_first_feasible_lane ||
+          if (is_calculate_first_feasible_lane &&
               !is_calculate_second_feasible_lane) {
             // 说明计算可行驶车道失败
             is_cal_feasible_lane_succeed = false;
-            mlc_decider_route_info_.reset();
+            mlc_decider_route_info_.is_process_split_split = false;
+            mlc_decider_route_info_.is_process_split = true;
+            mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
             return;
           }
 
@@ -1779,7 +1797,10 @@ void RouteInfo::NewUpdateMLCInfoDecider(
                                  .feasible_lane_sequence,
                              sec_spl_before_feasi_lanes.feasible_lane_sequence);
           if (temp1.empty()) {
-            mlc_decider_route_info_.reset();
+            // mlc_decider_route_info_.reset();
+            mlc_decider_route_info_.is_process_split_split = false;
+            mlc_decider_route_info_.is_process_split = true;
+            mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
             return;
           }
 
@@ -1787,7 +1808,10 @@ void RouteInfo::NewUpdateMLCInfoDecider(
                                        .feasible_lane_sequence,
                                    temp1);
           if (temp2.empty()) {
-            mlc_decider_route_info_.reset();
+            //在第一交换区中间和后面没有共同link时，就靠最右边车道行驶
+            mlc_decider_route_info_.is_process_split_split = false;
+            mlc_decider_route_info_.is_process_split = true;
+            mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
             return;
           }
 
@@ -1795,7 +1819,9 @@ void RouteInfo::NewUpdateMLCInfoDecider(
                                        .feasible_lane_sequence,
                                    temp2);
           if (temp3.empty()) {
-            mlc_decider_route_info_.reset();
+            mlc_decider_route_info_.is_process_split_split = false;
+            mlc_decider_route_info_.is_process_split = true;
+            mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
             return;
           }
 
@@ -3009,8 +3035,33 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
     if (successor_exclnum <= on_exclnum) {
       if (successor_exclnum == on_exclnum &&
           on_exclnum == before_exclnum) {
-            on_excr_feasible_lane.emplace_back(1);
-            before_excr_feasible_lane.emplace_back(1);
+        const auto start_link = sdpro_map_.GetLinkOnRoute(
+            split_region_info->start_fp_point.link_id);
+        if (start_link == nullptr) {
+          return false;
+        }
+        const auto start_link_is_ramp =
+            sdpro_map_.isRamp(start_link->link_type());
+
+        const auto& end_fp_point = split_region_info->end_fp_point;
+        const auto end_link = sdpro_map_.GetLinkOnRoute(end_fp_point.link_id);
+        if (end_link == nullptr) {
+          return false;
+        }
+        const auto end_link_is_ramp = sdpro_map_.isRamp(end_link->link_type());
+
+        if (!end_link_is_ramp && !start_link_is_ramp) {
+          //主路上，交换区内、前、后车道都一样
+          for (int i = 0; i < successor_exclnum; ++i) {
+              on_excr_feasible_lane.emplace_back(i + 1);
+              before_excr_feasible_lane.emplace_back(i + 1);
+          }
+        } else {
+          //交换区之后增加车道
+          on_excr_feasible_lane.emplace_back(1);
+          before_excr_feasible_lane.emplace_back(1);
+        }
+
       } else if (successor_exclnum <= before_exclnum) {
         for (int i = 0; i < successor_exclnum; ++i) {
           on_excr_feasible_lane.emplace_back(i + 1);
