@@ -398,7 +398,13 @@ def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
       continue
 
     # 判断是否为主路
-    is_main_road = link.link_type not in (LinkType.LT_IC, LinkType.LT_JCT, LinkType.LT_MAINROAD_CONNECTION)
+
+    # 按位或运算构造掩码（与C++的LT_IC | LT_JCT等价）
+    ramp_mask = LinkType.LT_IC | LinkType.LT_JCT
+    # 按位与运算检查是否包含任一标志（与C++的link_type & (LT_IC | LT_JCT)等价）
+    is_ramp = (link.link_type & ramp_mask) != 0
+    is_main_road = not is_ramp
+    # is_main_road = link.link_type not in (LinkType.LT_IC, LinkType.LT_JCT, LinkType.LT_MAINROAD_CONNECTION)
 
     if is_main_road:
       for point in link.points.boot.points:
