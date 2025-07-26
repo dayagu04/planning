@@ -6,7 +6,7 @@
 #include "refline.h"
 
 static const double kCurvatureThreshold =
-    1 / 750;  // 750m raidus for big curvature
+    1.0 / 750.0;  // 750m raidus for big curvature
 static const double kRad2Deg = 57.3;
 
 namespace pnc {
@@ -287,6 +287,8 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   double min_road_radius = 10000.0;
   double max_road_radius = 1.0;
   double sum_kappa = 0;
+  double left_bend_s = 0;
+  double right_bend_s = 0;
   double ds = ref_vel * config_.delta_t;
   double kv2 = config_.curv_factor * ref_vel_ * ref_vel_;
   max_jerk_low_speed_ =
@@ -316,12 +318,23 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
       continue;
     }
     if (pt_kappa < -kCurvatureThreshold) {
+      left_bend_s += ds;
+    } else {
+      left_bend_s = 0;
+    }
+    if (left_bend_s > (ds + 10.0)) {
       is_left_bend = true;
-    } else if (pt_kappa > kCurvatureThreshold) {
+    }
+    if (pt_kappa > kCurvatureThreshold) {
+      right_bend_s += ds;
+    } else {
+      right_bend_s = 0;
+    }
+    if (right_bend_s > (ds + 10.0)) {
       is_right_bend = true;
     }
     kappa_gap += 1;
-    sum_kappa += pt_kappa;
+    sum_kappa += std::fabs(pt_kappa);
     double expected_delta = std::atan(wheel_base * pt_kappa);  // rad
     double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
     double expected_lat_acc = kv2 * expected_delta;
@@ -606,7 +619,15 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
       }
     }
     if (i < 6) {
-      weight_.expected_acc[i] = expected_average_acc_ * 1.2 - init_dis_to_ref_;
+      weight_.expected_acc[i] = expected_average_acc_ * 1.2;
+      double acc_gain = std::min(std::fabs(init_dis_to_ref_), 0.2);
+      if (expected_average_acc_ > 0.1) {
+        weight_.expected_acc[i] =
+            weight_.expected_acc[i] + acc_gain;
+      } else if (expected_average_acc_ < -0.1) {
+        weight_.expected_acc[i] =
+            weight_.expected_acc[i] - acc_gain;
+      }
     } else {
       weight_.expected_acc[i] = expected_average_acc_ * 1.2;
     }
@@ -902,7 +923,8 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   if ((std::fabs(init_ref_theta_error_) >= config_.big_theta_thr) &&
       // (std::fabs(init_ref_theta_error_) <= 2.0) &&
       // (std::fabs(init_dis_to_ref_) < 0.4) &&
-      (std::fabs(avoid_dist_) < 0.2)) {
+      (std::fabs(avoid_dist_) <= 0.1) &&
+      (ref_vel_ < 15.0)) {
     weight_.complete_follow = true;
   }
 }
@@ -1114,7 +1136,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
         target_road_radius_, xp_road_radius, config_.valid_perception_range);
   for (size_t i = weight_.proximal_index + 1; i < weight_.remotely_index; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
-                        planning_input.ref_y_vec(i));
+                                  planning_input.ref_y_vec(i));
     planning::Point2D frenet_ref_sl;
     if (frenet_coord != nullptr &&
         frenet_coord->XYToSL(cart_ref_xy,
