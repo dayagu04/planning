@@ -976,6 +976,7 @@
         "neighbor_target_neighbor_limit_velocity": 5.0
     },
     "bound_maker": {
+      "lane_keeping_non_cipv_start_acc_bound": 1.5,
       "cruise_acc_bound_table": {
         "vel_table": [
           0.0, 5.0, 10.0, 20.0, 40.0

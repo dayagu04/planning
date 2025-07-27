@@ -4246,6 +4246,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                     "low_speed_follow_accel_release_traj_len");
     ReadItem<bool>(json, enable_speed_adjust, "speed_adjust",
                    "enable_speed_adjust");
+    ReadItem<double>(json, lane_keeping_non_cipv_start_acc_bound, "speed_planning",
+                    "bound_maker", "lane_keeping_non_cipv_start_acc_bound");
 
     // neighbor target
     {
@@ -4377,6 +4379,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double lane_change_upper_speed_limit_kph = 150.0;
   double low_speed_follow_speed_thred_mps = 1.0;
   double low_speed_follow_accel_release_traj_len = 5.0;
+  double lane_keeping_non_cipv_start_acc_bound = 1.5;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;
