@@ -36,21 +36,19 @@ class LdwCore {
   bool ldw_main_switch_ = false;  // LDW功能开关状态 0:Off  1:On
   bool UpdateLdwMainSwitch(void);
 
-
-
   // 车身YawRate满足取消抑制阈值持续时间 单位:s
   double yaw_rate_supp_recover_duration_ = 0.0;
   // 油门踏板变化率满足取消抑制阈值持续时间 单位:s
   double acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
   // 制动踏板表现满足取消抑制阈值持续时间 单位:s
-  double brake_pedal_pressed_supp_recover_duration_ = 0.0;  
+  double brake_pedal_pressed_supp_recover_duration_ = 0.0;
   // 当前道线的弯道半径满足取消抑制阈值持续时间 单位:s
-  double curve_C2_supp_recover_duration_ = 0.0;  
+  double curve_C2_supp_recover_duration_ = 0.0;
   // 当前方向盘转速条件满足取消抑制阈值持续时间 单位:s
   double str_wheel_ang_speed_recover_duration_ = 0.0;
-  //定义当前挡位值
-  iflyauto::ShiftLeverStateEnum shift_lever_state_ = iflyauto::
-      ShiftLeverStateEnum::ShiftLeverState_P;  
+  // 定义当前挡位值
+  iflyauto::ShiftLeverStateEnum shift_lever_state_ =
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
   uint32 ldw_enable_code_ = 255;
   uint32 UpdateLdwEnableCode(void);
 
@@ -61,7 +59,7 @@ class LdwCore {
   double yaw_rate_supp_duration_ = 0.0;
   // 刹车踏板主缸压力满足抑制阈值持续时间 单位:s
   double brake_pedal_pressed_supp_duration_ = 0.0;
-  //雨刮持续时间满足抑制阈值持续时间 单位:s
+  // 雨刮持续时间满足抑制阈值持续时间 单位:s
   double wiper_state_supp_duration_ = 0.0;
   uint32 ldw_disable_code_ = 255;
   uint32 UpdateLdwDisableCode(void);
@@ -71,8 +69,10 @@ class LdwCore {
 
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool left_suppress_repeat_warning_flag_ = false;
-  //LDW报警冷却时间阈值 单位:s
+  // LDW报警冷却时间阈值 单位:s
   double LDW_CoolingTime_duration_ = 0.0;
+  // LDW变道报警抑制条件阈值 单位:s 默认10，避免开始就抑制两秒
+  double LDW_LaneChange_duration_ = 10.0;
   uint32 ldw_left_suppression_code_ = 255;
   uint32 UpdateLdwLeftSuppressionCode(void);
 

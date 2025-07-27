@@ -1,7 +1,7 @@
 {
-  "car_type": "jac_s811",
+  "car_type": "chery_m32t",
   "mark_date": "20241114",
-  "lkas_version":"20250708",
+  "lkas_version":"20250727_1",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,
@@ -61,8 +61,8 @@
     0.00,
     0.05,
     0.15,
-    0.25,
-    0.35
+    0.40,
+    0.70
   ],
   "ldw_enable_speed": 27.555,
   "ldw_tlc_thrd": 1.0,
@@ -80,7 +80,7 @@
   "tsr_main_switch": 0,
   "elk_tlc_thrd": 1.0,
   "elk_roadedge_tlc_thrd": 1.3,
-  "elk_roadedge_offset": 0.4,
+ 
   "tsr_reset_path_length": 10000.0,
   "force_no_sideway_switch": false,
   "force_no_safe_departure_switch": false,
@@ -114,8 +114,8 @@
   "elk_right_kickdown_code_maskcode": 4294967295,
   "ldp_kickdown_lat_v_dur": 3.0,
   "suppression_driver_hand_trq": 2.0,
-  "kickdown_samedir_hand_trq": 2.3,
-  "kickdown_oppodir_hand_trq": 2.5,
+  "kickdown_samedir_hand_trq": 1.8,
+  "kickdown_oppodir_hand_trq": 1.8,
   "kickdown_abs_hand_trq": 1.5,
   "kickdown_hand_trq_dur": 0.5,
   "ihc_main_switch": false,

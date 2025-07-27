@@ -114,6 +114,7 @@ class ElkCore {
   iflyauto::ELKFunctionFSMWorkState ElkStateMachine(void);
 
   double UpdateTlcThreshold(void);
+
 };
 
 }  // namespace elk_core

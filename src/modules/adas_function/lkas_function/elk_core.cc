@@ -426,15 +426,15 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
   // current_lane_curv_enable_flag当前道线曲率是否满足条件
   // 1：满足条件，0：不满足条件,弯道过急，功能退出.
   bool current_lane_curv_enable_flag = true;
-  if (((GetContext.get_road_info()->current_lane.left_line.c2 > 0.5 / 200.0) &&
+  if (((fabs(GetContext.get_road_info()->current_lane.left_line.c2 )> 0.5 / 200.0) &&
        ((GetContext.get_road_info()->current_lane.left_line.valid == true))) ||
-      ((GetContext.get_road_info()->current_lane.right_line.c2 > 0.5 / 200.0) &&
+      ((fabs(GetContext.get_road_info()->current_lane.right_line.c2) > 0.5 / 200.0) &&
        (GetContext.get_road_info()->current_lane.right_line.valid == true))) {
     current_lane_curv_enable_flag = false;
   } else {
     current_lane_curv_enable_flag = true;
   }
-  if (current_lane_curv_enable_flag =
+  if (current_lane_curv_enable_flag ==
           false &&
           (elk_state_ !=
            iflyauto::ELKFunctionFSMWorkState::
@@ -740,8 +740,7 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
   } else {
     LDP_CoolingTime_duration_ = 0.0;
   }
-  if (LDP_CoolingTime_duration_ < 3.0 &&
-      fabs(GetContext.mutable_state_info()->driver_hand_trq >= 0.5)) {
+  if (LDP_CoolingTime_duration_ < 3.0) {
     elk_left_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -784,6 +783,14 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
       GetContext.get_road_info()->current_lane.right_front_car_flag == true) {
     // 右侧有并行车或右前方一定区域内有车、或者正前方一定区域内有车，且有碰撞风险
     elk_left_suppression_code += uint16_bit[9];
+  }
+
+  // bit 10
+  // 压线行驶抑制
+  if (GetContext.get_road_info()->close_to_left_line_flag) {
+    elk_left_suppression_code += uint16_bit[10];
+  } else {
+    /*do nothing*/
   }
 
   return elk_left_suppression_code &
@@ -1076,8 +1083,7 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
   } else {
     LDP_CoolingTime_duration_ = 0.0;
   }
-  if (LDP_CoolingTime_duration_ < 3.0 &&
-      fabs(GetContext.mutable_state_info()->driver_hand_trq >= 0.5)) {
+  if (LDP_CoolingTime_duration_ < 3.0) {
     elk_right_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -1116,11 +1122,18 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
   }
   // bit9
   // 左侧有并行车或左前方一定区域内有车、或者正前方一定区域内有车，且有碰撞风险
-  if (GetContext.get_road_info()
-          ->current_lane.left_parallel_car_flag == true ||GetContext.get_road_info()
-          ->current_lane.left_front_car_flag == true ) {
+  if (GetContext.get_road_info()->current_lane.left_parallel_car_flag == true ||
+      GetContext.get_road_info()->current_lane.left_front_car_flag == true) {
     // 左侧有并行车或左前方一定区域内有车、或者正前方一定区域内有车，且有碰撞风险
     elk_right_suppression_code += uint16_bit[9];
+  }
+
+  // bit 10
+  // 压线行驶抑制
+  if (GetContext.get_road_info()->close_to_right_line_flag) {
+    elk_right_suppression_code += uint16_bit[10];
+  } else {
+    /*do nothing*/
   }
   return elk_right_suppression_code &
          GetContext.get_param()->elk_right_suppression_code_maskcode;
@@ -1580,13 +1593,36 @@ void ElkCore::RunOnce(void) {
   // 更新tlc_to_line_threshold_
   elk_tlc_threshold_ = UpdateTlcThreshold();
 
+  // //更新elk_roadedge_offset,修改为根据横向速度查表
+  double elk_roadedge_offset = 0.0;
+  double elk_roadedge_offset_temp = 0.0;
+  if ((GetContext.get_road_info()->current_lane.left_roadedge.valid) &&
+      (GetContext.get_road_info()->current_lane.left_line.valid)) {
+    elk_roadedge_offset_temp =
+        fabs(GetContext.get_state_info()->veh_left_departure_speed);
+  } else if ((GetContext.get_road_info()->current_lane.right_roadedge.valid) &&
+             (GetContext.get_road_info()->current_lane.right_line.valid)) {
+    elk_roadedge_offset_temp =
+        fabs(GetContext.get_state_info()->veh_right_departure_speed);
+  } else { /*do nothing*/
+  }
+
+  elk_roadedge_offset = pnc::mathlib::Interp1(
+      GetContext.get_param()->elk_roadedge_departure_V_vector,
+      GetContext.get_param()->elk_roadedge_offset_vector,
+      elk_roadedge_offset_temp);
+
   // 更新elk_left_intervention_by_line和elk_left_intervention_by_roadedge
   double preview_left_y_gap =
       adas_function::LkasLineLeftIntervention(elk_tlc_threshold_);
+  // double preview_left_roadedge_y_gap =
+  //     adas_function::LkasRoadedgeLeftIntervention(
+  //         elk_roadedge_tlc_threshold_,
+  //         GetContext.get_param()->elk_roadedge_offset);
   double preview_left_roadedge_y_gap =
-      adas_function::LkasRoadedgeLeftIntervention(
-          elk_roadedge_tlc_threshold_,
-          GetContext.get_param()->elk_roadedge_offset);
+      adas_function::LkasRoadedgeLeftIntervention(elk_roadedge_tlc_threshold_,
+                                                  elk_roadedge_offset);
+
   bool elk_left_intervention_by_line = false;      //
   bool elk_left_intervention_by_roadedge = false;  //
   if (preview_left_y_gap < 0.0) {
@@ -1638,10 +1674,13 @@ void ElkCore::RunOnce(void) {
   // 更新elk_right_intervention_by_line和elk_right_intervention_by_roadedge
   double preview_right_y_gap =
       adas_function::LkasLineRightIntervention(elk_tlc_threshold_);
+  // double preview_right_roadedge_y_gap =
+  //     adas_function::LkasRoadedgeRightIntervention(
+  //         elk_roadedge_tlc_threshold_,
+  //         GetContext.get_param()->elk_roadedge_offset);
   double preview_right_roadedge_y_gap =
-      adas_function::LkasRoadedgeRightIntervention(
-          elk_roadedge_tlc_threshold_,
-          GetContext.get_param()->elk_roadedge_offset);
+      adas_function::LkasRoadedgeRightIntervention(elk_roadedge_tlc_threshold_,
+                                                   elk_roadedge_offset);
   bool elk_right_intervention_by_line = false;
   bool elk_right_intervention_by_roadedge = false;
   if (preview_right_y_gap > 0.0) {
@@ -1758,8 +1797,9 @@ void ElkCore::RunOnce(void) {
                    preview_left_roadedge_y_gap);
   JSON_DEBUG_VALUE("elk_preview_right_roadedge_y_gap",
                    preview_right_roadedge_y_gap);
-  JSON_DEBUG_VALUE("elk_roadedge_offset",
-                   GetContext.get_param()->elk_roadedge_offset);
+
+  // JSON_DEBUG_VALUE("elk_roadedge_offset",
+  //                  GetContext.get_param()->elk_roadedge_offset);
   JSON_DEBUG_VECTOR("elk_preview_ego_pos_vec", preview_ego_pos_vec, 2);
   // JSON_DEBUG_VALUE("elk_fl_risk_code", fl_risk_code);
   // JSON_DEBUG_VALUE("elk_ml_risk_code", ml_risk_code);

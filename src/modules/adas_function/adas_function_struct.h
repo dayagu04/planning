@@ -11,6 +11,7 @@
 #include "spline.h"
 #include "transform_lib.h"
 #include "vehicle_service_c.h"
+// #include <vector>
 
 // using namespace iflyauto;
 namespace adas_function {
@@ -42,6 +43,9 @@ struct Parameters {
   std::vector<double> lka_tlc_dec_by_lane_width_vector = {0.80, 0.60, 0.40,
                                                           0.10, 0.00};
   double safe_departure_ttc = 3.0;
+  // 根据横向速度查表elk 路沿的参数
+  std::vector<double> elk_roadedge_departure_V_vector = {0, 0.2, 0.4, 0.6, 0.8};
+  std::vector<double> elk_roadedge_offset_vector = {0, 0.20, 0.30, 0.40, 0.04};
   double ldw_enable_speed = 27.555;
   double ldw_tlc_thrd = 0.0;
   double ldp_tlc_thrd = 1.0;
@@ -62,7 +66,7 @@ struct Parameters {
   bool ihc_main_switch = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
-  double elk_roadedge_offset = 0.15;
+  // double elk_roadedge_offset = 0.15;
   double lon_distance_buffer0 = 3.0;
   double lon_distance_buffer1 = 60.0;
   double lat_buffer_to_line = 4.0;
@@ -187,6 +191,8 @@ struct StateInfo {
   // 定位模块节点通讯丢失
   //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
   bool localization_info_node_valid = true;
+
+
 };
 
 enum Enum_LineType {
@@ -249,6 +255,7 @@ struct RoadedgeInfo {
   bool valid;
   std::vector<double> all_dx_vec_;  // 左侧路沿所有点x坐标
   std::vector<double> all_dy_vec_;  // 左侧路沿所有点y坐标
+
 };
 
 struct LaneInfo {
@@ -271,6 +278,12 @@ struct LaneInfo {
 
 struct RoadInfo {
   LaneInfo current_lane;
+
+    // 定义左右压线行驶
+  bool close_to_left_line_flag = false;
+  bool close_to_right_line_flag = false;
+  double close_to_right_line_dur = 0.0;
+  double close_to_left_line_dur = 0.0;
 };
 
 struct LastCycleInfo {

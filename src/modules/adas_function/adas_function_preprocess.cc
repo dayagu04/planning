@@ -44,10 +44,10 @@ void Preprocess::SyncParameters(void) {
   if ((int)json_car_type.find("jac_s811") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("jac_s811");
   } else if ((int)json_car_type.find("chery_e0x") != -1) {
-json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
+    json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
   } else if ((int)json_car_type.find("chery_m32t") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_m32t");
-  }else{
+  } else {
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
   }
   auto vehicle_common_json_reader = mjson::Reader(json_vehicle_common_params);
@@ -116,8 +116,9 @@ json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
                        "elk_tlc_thrd");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_tlc_thrd,
                        double, "elk_roadedge_tlc_thrd");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_offset, double,
-                       "elk_roadedge_offset");
+  // ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_offset,
+  // double,
+  //                      "elk_roadedge_offset");
 
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->force_no_sideway_switch,
                        bool, "force_no_sideway_switch");
@@ -616,6 +617,41 @@ void Preprocess::UpdateStateInfo(void) {
       (vehicle_service_output_info_ptr->accelerator_pedal_pos -
        GetContext.get_last_cycle_info()->accelerator_pedal_pos) /
       GetContext.get_param()->dt;
+
+  // 定义长时间压左线行驶
+
+  if (fabs(GetContext.get_state_info()->fl_wheel_distance_to_line) < 0.25) {
+    GetContext.mutable_road_info()->close_to_left_line_dur += GetContext.get_param()->dt;
+    if (GetContext.get_road_info()->close_to_left_line_dur > 60.0) {
+      GetContext.mutable_road_info()->close_to_left_line_dur = 60.0;
+    }
+  } else {
+    GetContext.mutable_road_info()->close_to_left_line_dur = 0.0;
+  }
+  if (GetContext.get_road_info()->close_to_left_line_dur > 2.0 &&
+      fabs(GetContext.get_state_info()->veh_left_departure_speed) < 0.2) {
+    GetContext.mutable_road_info()->close_to_left_line_flag = true;
+  } else {
+    GetContext.mutable_road_info()->close_to_left_line_flag = false;
+  }
+  // 定义长时间压线行驶
+
+  if (fabs(GetContext.get_state_info()->fr_wheel_distance_to_line) < 0.25) {
+    GetContext.mutable_road_info()->close_to_right_line_dur += GetContext.get_param()->dt;
+    if (GetContext.get_road_info()->close_to_right_line_dur > 60.0) {
+      GetContext.mutable_road_info()->close_to_right_line_dur = 60.0;
+    }
+  } else {
+    GetContext.mutable_road_info()->close_to_right_line_dur = 0.0;
+  }
+  if (GetContext.get_road_info()->close_to_right_line_dur > 2.0 &&
+      fabs(GetContext.get_state_info()->veh_right_departure_speed) < 0.2) {
+    GetContext.mutable_road_info()->close_to_right_line_flag = true;
+  } else {
+    GetContext.mutable_road_info()->close_to_right_line_flag = false;
+  }
+
+
 }
 
 void Preprocess::SetLineInfoDefault(
@@ -623,7 +659,6 @@ void Preprocess::SetLineInfoDefault(
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
   uint32 car_points_num = 20;
-
   // set line_type
   line_info_ptr->line_type = context::Enum_LineType::Enum_LineType_SelfSet;
 
@@ -709,11 +744,11 @@ bool Preprocess::SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
     // do nothing
   }
 
-  // set 车道线方程系数
-  line_info_ptr->c0 = lane_boundary_ptr.poly_coefficient[0];
-  line_info_ptr->c1 = lane_boundary_ptr.poly_coefficient[1];
-  line_info_ptr->c2 = lane_boundary_ptr.poly_coefficient[2];
-  line_info_ptr->c3 = lane_boundary_ptr.poly_coefficient[3];
+  // set 车道线方程系数,
+  // line_info_ptr->c0_old = lane_boundary_ptr.poly_coefficient[0];
+  // line_info_ptr->c1_old = lane_boundary_ptr.poly_coefficient[1];
+  // line_info_ptr->c2_old = lane_boundary_ptr.poly_coefficient[2];
+  // line_info_ptr->c3_old = lane_boundary_ptr.poly_coefficient[3];
 
   line_info_ptr->dx_vec_.resize(enu_points_num, 0);
   line_info_ptr->dx_vec_.clear();
@@ -726,6 +761,7 @@ bool Preprocess::SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
   line_info_ptr->s_vec_.clear();
   line_info_ptr->s_vec_.reserve(enu_points_num);
   double s = 0.0;
+
   // Eigen::Matrix2d rotm2d = Eigen::Matrix2d::Identity();
   const auto rotm2d = GetContext.get_state_info()->rotm2d;
   for (uint32 i = 0; i < enu_points_num; i++) {
@@ -736,6 +772,7 @@ bool Preprocess::SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
         (enu_pos_i - GetContext.get_state_info()->current_pos_i);
     line_info_ptr->dx_vec_.emplace_back(transformed_point.x());
     line_info_ptr->dy_vec_.emplace_back(transformed_point.y());
+
     if (i == 0) {
       line_info_ptr->s_vec_.emplace_back(0.0);
     } else {
@@ -746,6 +783,33 @@ bool Preprocess::SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
       line_info_ptr->s_vec_.emplace_back(s);
     }
   }
+
+  //  根据最小二乘法重写道线实时参数
+  leastSquareFitting(line_info_ptr->dx_vec_, line_info_ptr->dy_vec_, 3,
+                     line_info_ptr);
+  // double departure_speed_C1 = line_info_ptr->c1;
+  // // 车辆偏离车道线速度 左正右负
+  // GetContext.mutable_state_info()->veh_left_departure_speed =
+  //     -1.0 * GetContext.get_state_info()->vehicle_speed *
+  //     departure_speed_C1;
+  // GetContext.mutable_state_info()->veh_right_departure_speed =
+  //     -1.0 * GetContext.get_state_info()->vehicle_speed *
+  //     departure_speed_C1;
+  // // 下面这一块测试用，记得删除0721
+
+  // line_info_ptr->dy_vec_new.clear();
+  // line_info_ptr->dy_vec_new.reserve(enu_points_num);
+  // for (uint32 m = 0; m < enu_points_num; m++) {
+  //   const double y =
+  //       line_info_ptr->c0 +
+  //       (line_info_ptr->c1 +
+  //        (line_info_ptr->c2 + line_info_ptr->c3 *
+  //        line_info_ptr->dx_vec_[m]) *
+  //            line_info_ptr->dx_vec_[m]) *
+  //           line_info_ptr->dx_vec_[m];
+  //   line_info_ptr->dy_vec_new.emplace_back(y);
+  // }
+
   line_info_ptr->begin_s = 0.0;
   line_info_ptr->end_s = s;
   line_info_ptr->dx_s_spline_.set_points(line_info_ptr->s_vec_,
@@ -927,7 +991,8 @@ bool Preprocess::SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
   }
 
   // if ((boundary_type_raw == iflyauto::LaneBoundaryType_MARKING_UNKNOWN) ||
-  //     (boundary_type_raw_front == iflyauto::LaneBoundaryType_MARKING_UNKNOWN)
+  //     (boundary_type_raw_front ==
+  //     iflyauto::LaneBoundaryType_MARKING_UNKNOWN)
   //     || (boundary_type_raw_back ==
   //     iflyauto::LaneBoundaryType_MARKING_UNKNOWN)) {
   //   boundary_type_raw = iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
@@ -938,14 +1003,16 @@ bool Preprocess::SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
   //            (boundary_type_raw_back ==
   //             iflyauto::LaneBoundaryType_MARKING_VIRTUAL)) {
   //   boundary_type_raw = iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
-  // } else if ((boundary_type_raw == iflyauto::LaneBoundaryType_MARKING_SOLID)
+  // } else if ((boundary_type_raw ==
+  // iflyauto::LaneBoundaryType_MARKING_SOLID)
   // ||
   //            (boundary_type_raw_front ==
   //             iflyauto::LaneBoundaryType_MARKING_SOLID) ||
   //            (boundary_type_raw_back ==
   //             iflyauto::LaneBoundaryType_MARKING_SOLID)) {
   //   boundary_type_raw = iflyauto::LaneBoundaryType_MARKING_SOLID;
-  // } else if ((boundary_type_raw == iflyauto::LaneBoundaryType_MARKING_DASHED)
+  // } else if ((boundary_type_raw ==
+  // iflyauto::LaneBoundaryType_MARKING_DASHED)
   // &&
   //            (boundary_type_raw_front ==
   //             iflyauto::LaneBoundaryType_MARKING_DASHED) &&
@@ -1457,46 +1524,56 @@ void Preprocess::UpdateObjsInfo(void) {
 }
 
 // 从 iflyauto 到 adas_function::context 的转换函数（严格一对一映射）
-adas_function::context::SuppSignType Preprocess::convertToAdasSuppSign(iflyauto::SuppSignType sign) {
-    using Ifly = iflyauto::SuppSignType;
-    using Ctx = adas_function::context::SuppSignType;
-    
-    // 建立严格的一对一映射（名称相同但值不同）
-    static const std::unordered_map<Ifly, Ctx> mapping = {
-        {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SUPP_SIGN_TYPE_UNKNOWN},
-        {Ifly::SUPP_SIGN_TYPE_NO_ENTRY, Ctx::SUPP_SIGN_TYPE_NO_ENTRY},
-        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING, Ctx::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING},
-        {Ifly::SUPP_SIGN_TYPE_NO_PARKING, Ctx::SUPP_SIGN_TYPE_NO_PARKING},
-        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING, Ctx::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING},
-        {Ifly::SUPP_SIGN_TYPE_NO_OVERTAKING, Ctx::SUPP_SIGN_TYPE_NO_OVERTAKING},
-        {Ifly::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING, Ctx::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING},
-        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT, Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT},
-        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT, Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT},
-        {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_U, Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_U},
-        {Ifly::SUPP_SIGN_TYPE_STOP_SIGN, Ctx::SUPP_SIGN_TYPE_STOP_SIGN},
-        {Ifly::SUPP_SIGN_TYPE_YIELD_SIGN, Ctx::SUPP_SIGN_TYPE_YIELD_SIGN},
-        {Ifly::SUPP_SIGN_TYPE_NO_PASSING, Ctx::SUPP_SIGN_TYPE_NO_PASSING},
-    };
-    
-    auto it = mapping.find(sign);
-    return it != mapping.end() ? it->second : Ctx::SUPP_SIGN_TYPE_UNKNOWN;
+adas_function::context::SuppSignType Preprocess::convertToAdasSuppSign(
+    iflyauto::SuppSignType sign) {
+  using Ifly = iflyauto::SuppSignType;
+  using Ctx = adas_function::context::SuppSignType;
+
+  // 建立严格的一对一映射（名称相同但值不同）
+  static const std::unordered_map<Ifly, Ctx> mapping = {
+      {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SUPP_SIGN_TYPE_UNKNOWN},
+      {Ifly::SUPP_SIGN_TYPE_NO_ENTRY, Ctx::SUPP_SIGN_TYPE_NO_ENTRY},
+      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING,
+       Ctx::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING},
+      {Ifly::SUPP_SIGN_TYPE_NO_PARKING, Ctx::SUPP_SIGN_TYPE_NO_PARKING},
+      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,
+       Ctx::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING},
+      {Ifly::SUPP_SIGN_TYPE_NO_OVERTAKING, Ctx::SUPP_SIGN_TYPE_NO_OVERTAKING},
+      {Ifly::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING,
+       Ctx::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING},
+      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT,
+       Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT},
+      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT,
+       Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT},
+      {Ifly::SUPP_SIGN_TYPE_PROHIBIT_TURN_U,
+       Ctx::SUPP_SIGN_TYPE_PROHIBIT_TURN_U},
+      {Ifly::SUPP_SIGN_TYPE_STOP_SIGN, Ctx::SUPP_SIGN_TYPE_STOP_SIGN},
+      {Ifly::SUPP_SIGN_TYPE_YIELD_SIGN, Ctx::SUPP_SIGN_TYPE_YIELD_SIGN},
+      {Ifly::SUPP_SIGN_TYPE_NO_PASSING, Ctx::SUPP_SIGN_TYPE_NO_PASSING},
+  };
+
+  auto it = mapping.find(sign);
+  return it != mapping.end() ? it->second : Ctx::SUPP_SIGN_TYPE_UNKNOWN;
 }
 
-// 从 iflyauto::SuppSignType 到 adas_function::context::SpeedSignType 的转换函数
-adas_function::context::SpeedSignType Preprocess::convertToAdasSpeedSign(iflyauto::SuppSignType sign) {
-    using Ifly = iflyauto::SuppSignType;
-    using Ctx = adas_function::context::SpeedSignType;
-    
-    static const std::unordered_map<Ifly, Ctx> mapping = {
-        {Ifly::SUPP_SIGN_TYPE_MAXIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MAXIMUM_SPEED},
-        {Ifly::SUPP_SIGN_TYPE_MINIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MINIMUM_SPEED},
-        {Ifly::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT, Ctx::SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT},
-        {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SPEED_SIGN_TYPE_UNKNOWN},
-        // 其他标志映射为 UNKNOWN
-    };
-    
-    auto it = mapping.find(sign);
-    return it != mapping.end() ? it->second : Ctx::SPEED_SIGN_TYPE_UNKNOWN;
+// 从 iflyauto::SuppSignType 到 adas_function::context::SpeedSignType
+// 的转换函数
+adas_function::context::SpeedSignType Preprocess::convertToAdasSpeedSign(
+    iflyauto::SuppSignType sign) {
+  using Ifly = iflyauto::SuppSignType;
+  using Ctx = adas_function::context::SpeedSignType;
+
+  static const std::unordered_map<Ifly, Ctx> mapping = {
+      {Ifly::SUPP_SIGN_TYPE_MAXIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MAXIMUM_SPEED},
+      {Ifly::SUPP_SIGN_TYPE_MINIMUM_SPEED, Ctx::SPEED_SIGN_TYPE_MINIMUM_SPEED},
+      {Ifly::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT,
+       Ctx::SPEED_SIGN_TYPE_END_OF_SPEED_LIMIT},
+      {Ifly::SUPP_SIGN_TYPE_UNKNOWN, Ctx::SPEED_SIGN_TYPE_UNKNOWN},
+      // 其他标志映射为 UNKNOWN
+  };
+
+  auto it = mapping.find(sign);
+  return it != mapping.end() ? it->second : Ctx::SPEED_SIGN_TYPE_UNKNOWN;
 }
 
 // 预处理把辅助标识牌和限速标识牌分开，分别储存类型,并保存到tsr_info中
@@ -1504,28 +1581,34 @@ void Preprocess::UpdateTsrInfo(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   // 获取感知模块的TSR信息
   const auto &perception_tsr_info = &GetContext.get_session()
-                                       ->environmental_model()
-                                       .get_local_view()
-                                       .perception_tsr_info;
+                                         ->environmental_model()
+                                         .get_local_view()
+                                         .perception_tsr_info;
   // 处理后的信息初始化
-  auto &speed_sign_info_vector = GetContext.mutable_tsr_info()->speed_sign_info_vector;
-  auto &supp_sign_info_vector = GetContext.mutable_tsr_info()->supp_sign_info_vector;
+  auto &speed_sign_info_vector =
+      GetContext.mutable_tsr_info()->speed_sign_info_vector;
+  auto &supp_sign_info_vector =
+      GetContext.mutable_tsr_info()->supp_sign_info_vector;
   speed_sign_info_vector.clear();
   supp_sign_info_vector.clear();
-  
+
   // 处理感知到的辅助标志牌信息, 只处理已知类型
   if (perception_tsr_info->supp_signs_size > 0) {
     for (int i = 0; i < perception_tsr_info->supp_signs_size; i++) {
       const auto &supp_sign = perception_tsr_info->supp_signs[i];
       // 如果是感知速度标识类型
-      if (supp_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED ||
-          supp_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MINIMUM_SPEED ||
-          supp_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT) {
+      if (supp_sign.supp_sign_type ==
+              iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED ||
+          supp_sign.supp_sign_type ==
+              iflyauto::SuppSignType::SUPP_SIGN_TYPE_MINIMUM_SPEED ||
+          supp_sign.supp_sign_type ==
+              iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT) {
         adas_function::context::SpeedSignInfo speed_sign_info;
         speed_sign_info.id = supp_sign.id;
         speed_sign_info.isp_timestamp = perception_tsr_info->isp_timestamp;
         // 转换为adasTsr定义
-        speed_sign_info.speed_sign_type = convertToAdasSpeedSign(supp_sign.supp_sign_type);
+        speed_sign_info.speed_sign_type =
+            convertToAdasSpeedSign(supp_sign.supp_sign_type);
         speed_sign_info.supp_sign_x = supp_sign.supp_sign_x;
         speed_sign_info.supp_sign_y = supp_sign.supp_sign_y;
         speed_sign_info.supp_sign_z = supp_sign.supp_sign_z;
@@ -1536,7 +1619,8 @@ void Preprocess::UpdateTsrInfo(void) {
         adas_function::context::SuppSignInfo supp_sign_info;
         supp_sign_info.id = supp_sign.id;
         supp_sign_info.isp_timestamp = perception_tsr_info->isp_timestamp;
-        supp_sign_info.supp_sign_type = convertToAdasSuppSign(supp_sign.supp_sign_type);
+        supp_sign_info.supp_sign_type =
+            convertToAdasSuppSign(supp_sign.supp_sign_type);
         supp_sign_info.supp_sign_x = supp_sign.supp_sign_x;
         supp_sign_info.supp_sign_y = supp_sign.supp_sign_y;
         supp_sign_info.supp_sign_z = supp_sign.supp_sign_z;
@@ -1663,7 +1747,8 @@ void Preprocess::ObjInLaneJudge() {
     //   if ((obj_info.relative_position_y - left_y_relative_line) > 0.0 &&
     //       (obj_info.relative_position_y - left_y_relative_line) <
     //           GetContext.get_param()->lat_buffer_to_line) {
-    //     obj_info.obj_loc_in_lane = context::Enum_LaneLocType::Enum_Left_Lane;
+    //     obj_info.obj_loc_in_lane =
+    //     context::Enum_LaneLocType::Enum_Left_Lane;
     //   } else if (obj_info.relative_position_y - left_y_relative_line >
     //              GetContext.get_param()->lat_buffer_to_line) {
     //     obj_info.obj_loc_in_lane = context::Enum_LaneLocType::Enum_Other;
@@ -2058,7 +2143,8 @@ void Preprocess::SafeDeparturePermissionJudge(void) {
     }
   }
 
-  // if (GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info_valid) {
+  // if (GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info_valid)
+  // {
   //   // 右侧有车并行,且左侧没路沿，允许向左安全偏离
   //   if (GetContext.get_road_info()->current_lane.left_roadedge.valid ==
   //   false) {
@@ -2086,7 +2172,8 @@ void Preprocess::SafeDeparturePermissionJudge(void) {
   //     }
   //   }
   // }
-  // if (GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info_valid) {
+  // if (GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info_valid)
+  // {
   //   // 左侧有车并行且右侧无路沿，允许向右安全偏离
   //   if (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
   //       false) {

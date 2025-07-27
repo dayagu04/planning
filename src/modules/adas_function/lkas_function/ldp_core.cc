@@ -422,15 +422,15 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // current_lane_curv_enable_flag当前道线曲率是否满足条件
   // 1：满足条件，0：不满足条件,弯道过急，功能退出.
   bool current_lane_curv_enable_flag = true;
-  if (((GetContext.get_road_info()->current_lane.left_line.c2 > 0.5 / 200.0) &&
+  if (((fabs(GetContext.get_road_info()->current_lane.left_line.c2) > 0.5 / 200.0) &&
        ((GetContext.get_road_info()->current_lane.left_line.valid == true))) ||
-      ((GetContext.get_road_info()->current_lane.right_line.c2 > 0.5 / 200.0) &&
+      ((fabs(GetContext.get_road_info()->current_lane.right_line.c2) > 0.5 / 200.0) &&
        (GetContext.get_road_info()->current_lane.right_line.valid == true))) {
     current_lane_curv_enable_flag = false;
   } else {
     current_lane_curv_enable_flag = true;
   }
-  if (current_lane_curv_enable_flag =
+  if (current_lane_curv_enable_flag ==
           false &&
           (ldp_state_ !=
            iflyauto::LDPFunctionFSMWorkState::
@@ -741,8 +741,7 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   } else {
     LDP_CoolingTime_duration_ = 0.0;
   }
-  if (LDP_CoolingTime_duration_ < 3.0 &&
-      fabs(GetContext.mutable_state_info()->driver_hand_trq >= 0.5)) {
+  if (LDP_CoolingTime_duration_ < 3.0) {
     ldp_left_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -785,6 +784,28 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
       GetContext.get_road_info()->current_lane.right_front_car_flag == true) {
     // 右侧有并行车或右前方一定区域内有车、或者正前方一定区域内有车，且有碰撞风险
     ldp_left_suppression_code += uint16_bit[9];
+  }
+  // bit 10
+  // 换道之后抑制两秒
+  if (GetContext.get_road_info()->current_lane.lane_changed_flag == false) {
+    LDP_LaneChange_duration_ += GetContext.get_param()->dt;
+    if (LDP_LaneChange_duration_ > 60.0) {
+      LDP_LaneChange_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    LDP_LaneChange_duration_ = 0.0;
+  }
+  if (LDP_LaneChange_duration_ <= 2) {
+    ldp_left_suppression_code += uint16_bit[10];
+  } else {
+    /*do nothing*/
+  }
+  // bit 11
+  // 压线行驶抑制
+  if (GetContext.get_road_info()->close_to_left_line_flag) {
+    ldp_left_suppression_code += uint16_bit[11];
   }
 
   return ldp_left_suppression_code &
@@ -1085,8 +1106,7 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   } else {
     LDP_CoolingTime_duration_ = 0.0;
   }
-  if (LDP_CoolingTime_duration_ < 3.0 &&
-      fabs(GetContext.mutable_state_info()->driver_hand_trq >= 0.5)) {
+  if (LDP_CoolingTime_duration_ < 3.0) {
     ldp_right_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -1129,6 +1149,29 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
       GetContext.get_road_info()->current_lane.left_front_car_flag == true) {
     // 左侧有并行车或左前方一定区域内有车、或者正前方一定区域内有车，且有碰撞风险
     ldp_right_suppression_code += uint16_bit[9];
+  }
+  // bit 10
+  // 换道之后抑制两秒
+  if (GetContext.get_road_info()->current_lane.lane_changed_flag == false) {
+    LDP_LaneChange_duration_ += GetContext.get_param()->dt;
+    if (LDP_LaneChange_duration_ > 60.0) {
+      LDP_LaneChange_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    LDP_LaneChange_duration_ = 0.0;
+  }
+  if (LDP_LaneChange_duration_ <= 2) {
+    ldp_right_suppression_code += uint16_bit[10];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 11
+  // 压线行驶抑制
+  if (GetContext.get_road_info()->close_to_right_line_flag) {
+    ldp_right_suppression_code += uint16_bit[11];
   }
 
   return ldp_right_suppression_code &
@@ -1512,9 +1555,19 @@ void LdpCore::RunOnce(void) {
   // 获取tlc秒后的车辆位置
   std::vector<double> preview_ego_pos_vec;
   PreviewEgoPosisation(ldp_tlc_threshold_, preview_ego_pos_vec);
+  // 若压线行驶，触发线外移
+  double preview_y_gap_Vy_offset = 0.0;
+  if (GetContext.get_road_info()->close_to_right_line_flag ||
+      GetContext.get_road_info()->close_to_left_line_flag) {
+    preview_y_gap_Vy_offset = 0.2;
+  } else {
+    preview_y_gap_Vy_offset = 0.0;
+  }
+
   // 更新ldw_left_intervention_
+  // preview_y_gap_Vy_offset左侧加右侧减是因为考虑了车道线的正负
   double preview_left_y_gap =
-      adas_function::LkasLineLeftIntervention(ldp_tlc_threshold_);
+      adas_function::LkasLineLeftIntervention(ldp_tlc_threshold_)+preview_y_gap_Vy_offset;
   double preview_left_roadedge_y_gap =
       adas_function::LkasRoadedgeLeftIntervention(
           ldp_roadedge_tlc_threshold_,
@@ -1537,7 +1590,7 @@ void LdpCore::RunOnce(void) {
 
   // 更新ldw_right_intervention_
   double preview_right_y_gap =
-      adas_function::LkasLineRightIntervention(ldp_tlc_threshold_);
+      adas_function::LkasLineRightIntervention(ldp_tlc_threshold_)-preview_y_gap_Vy_offset;
   double preview_right_roadedge_y_gap =
       adas_function::LkasRoadedgeRightIntervention(
           ldp_roadedge_tlc_threshold_,
@@ -1618,7 +1671,6 @@ void LdpCore::RunOnce(void) {
   JSON_DEBUG_VALUE("ldp_roadedge_offset",
                    GetContext.get_param()->ldp_roadedge_offset);
   JSON_DEBUG_VECTOR("ldp_preview_ego_pos_vec", preview_ego_pos_vec, 2);
-  
 }
 
 }  // namespace ldp_core

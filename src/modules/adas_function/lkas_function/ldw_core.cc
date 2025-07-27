@@ -701,6 +701,25 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
     /*do nothing*/
   }
 
+  
+    // bit 9
+  // 换道之后抑制两秒
+  if (GetContext.get_road_info()->current_lane.lane_changed_flag == false) {
+    LDW_LaneChange_duration_ += GetContext.get_param()->dt;
+    if (LDW_LaneChange_duration_ > 60.0) {
+      LDW_LaneChange_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    LDW_LaneChange_duration_ = 0.0;
+  }
+  if (LDW_LaneChange_duration_ <= 2) {
+    ldw_left_suppression_code += uint16_bit[9];
+  } else {
+    /*do nothing*/
+  }  
+
   return ldw_left_suppression_code &
          GetContext.get_param()->ldw_left_suppression_code_maskcode;
 }
@@ -951,6 +970,24 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
   } else {
     /*do nothing*/
   }
+
+    // bit 10
+  // 换道之后抑制两秒
+  if (GetContext.get_road_info()->current_lane.lane_changed_flag == false) {
+    LDW_LaneChange_duration_ += GetContext.get_param()->dt;
+    if (LDW_LaneChange_duration_ > 60.0) {
+      LDW_LaneChange_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    LDW_LaneChange_duration_ = 0.0;
+  }
+  if (LDW_LaneChange_duration_ <= 2) {
+    ldw_right_suppression_code += uint16_bit[9];
+  } else {
+    /*do nothing*/
+  }  
 
   return ldw_right_suppression_code &
          GetContext.get_param()->ldw_right_suppression_code_maskcode;

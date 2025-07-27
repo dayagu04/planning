@@ -68,6 +68,8 @@ class LdpCore {
   bool left_suppress_repeat_warning_flag_ = false;
   // LDP纠偏冷却时间阈值 单位:s
   double LDP_CoolingTime_duration_ = 0.0;
+    // LDP变道纠偏抑制时间阈值 单位:s
+  double LDP_LaneChange_duration_ = 10.0;
   // LDP手力矩作用时间阈值 单位:s
   double driver_hand_trq_supp_duration_ = 0.0;
   uint32 ldp_left_suppression_code_ = 255;
