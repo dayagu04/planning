@@ -75,7 +75,7 @@ constexpr double kUseVirtualLaneProcessSplitCostThd = 10.0;
 constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 60.0;
-constexpr double kDefaultConsiderSplitSelectorDistance = 50.0;
+constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
 
