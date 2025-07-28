@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "agent/agent.h"
+#include "basic_types.pb.h"
 #include "common_c.h"
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
@@ -314,6 +315,9 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_virtual_lane_manager =
       st_graph_input_->ptr_virtual_lane_manager();
   const bool is_lane_keeping = st_graph_input_->is_lane_keeping();
+  const auto is_not_in_intersection =
+      ptr_virtual_lane_manager->GetIntersectionState() ==
+      common::NO_INTERSECTION;
   const bool is_in_lane_borrow_status =
       st_graph_input_->is_in_lane_borrow_status();
   const auto ptr_ego_lane = st_graph_input_->ego_lane();
@@ -355,6 +359,7 @@ void STGraph::MakeDynamicAgentStBoundary(
   bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
   bool is_within_ego_lane = false;
+  bool is_within_ego_neighbor_lane = false;
   double nearest_s = 0.0;
   double nearest_l = 0.0;
   const auto& ptr_obj_lane = ptr_virtual_lane_manager->GetNearestLane(
@@ -363,6 +368,10 @@ void STGraph::MakeDynamicAgentStBoundary(
   if (nullptr != ptr_obj_lane) {
     is_within_ego_lane =
         ptr_ego_lane->get_virtual_id() == ptr_obj_lane->get_virtual_id() &&
+        nearest_l < half_ego_lane_width;
+    is_within_ego_neighbor_lane =
+        std::abs(ptr_ego_lane->get_virtual_id() -
+                 ptr_obj_lane->get_virtual_id()) == 1 &&
         nearest_l < half_ego_lane_width;
     is_parallel =
         st_graph_input_->IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
@@ -392,8 +401,10 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   const auto& trajectories = agent.trajectories();
   // only consider 2s traj to reverse vru within ego_lane
+  const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
   const bool is_need_truncate_traj =
-      agent.is_vru() && agent.is_reverse() && is_within_ego_lane;
+      is_not_in_intersection && agent.is_reverse() &&
+      (is_within_ego_lane || is_within_ego_neighbor_lane);
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());

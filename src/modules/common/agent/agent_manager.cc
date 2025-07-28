@@ -48,7 +48,7 @@ void AgentManager::Update(const double start_timestamp_s) {
       session_->environmental_model().get_prediction_info();
   const double HALF_FOV = 25.0;
 
-  constexpr double kTooOldThreshold = 2.0;
+  constexpr double kTooOldThreshold = 0.3;
   for (auto iter = historical_agents_.begin();
        iter != historical_agents_.end();) {
     bool is_too_old = (start_timestamp_s - iter->second.back()->timestamp_s()) >
@@ -177,8 +177,8 @@ void AgentManager::Append(
 
 void AgentManager::DeleteOlderAgent() {
   // pop the oldest obstacle while duration > obstacle_max_duration
-  constexpr double kMaxDurationS = 2.0;
-  constexpr int32_t kMaxNum = 20;
+  constexpr double kMaxDurationS = 0.3;
+  constexpr int32_t kMaxNum = 3;
   for (auto& agent : historical_agents_) {
     if (agent.second.size() < 2) {
       continue;
