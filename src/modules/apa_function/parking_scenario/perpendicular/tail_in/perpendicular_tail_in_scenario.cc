@@ -503,27 +503,27 @@ const bool PerpendicularTailInScenario::GenTlane() {
       }
     }
     bool find_target_pose = false;
-    for (const auto& fold_mirror_flag : fold_mirror_flag_vec) {
+    for (const bool& fold_mirror_flag : fold_mirror_flag_vec) {
       apa_world_ptr_->GetColDetInterfacePtr()->Init(fold_mirror_flag);
       TargetPoseDecider target_pose_decider(
           apa_world_ptr_->GetColDetInterfacePtr());
 
-      double max_lat_buffer = 0.15;
-
-      if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
-        max_lat_buffer += 0.02;
+      double max_lat_buffer, min_lat_buffer, step, lon_buffer;
+      if (true) {
+        max_lat_buffer = move_slot_with_little_buffer ? 0.13 : 0.15;
+        min_lat_buffer = 0.09;
+        step = 0.01;
+        lon_buffer = 0.3;
+        if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
+          max_lat_buffer += 0.02;
+          min_lat_buffer += 0.02;
+        }
       }
 
       if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
           frame_.replan_reason != ReplanReason::FIRST_PLAN) {
         max_lat_buffer =
             std::min(max_lat_buffer, ego_info_under_slot.safe_lat_buffer);
-      }
-
-      double min_lat_buffer = 0.09, step = 0.01;
-
-      if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
-        min_lat_buffer += 0.02;
       }
 
       max_lat_buffer = std::max(max_lat_buffer, min_lat_buffer + step + 1e-3);
@@ -535,16 +535,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
         lat_buffer_vec.emplace_back(lat_buffer);
       }
 
-      if (move_slot_with_little_buffer) {
-        ILOG_INFO << "force use little lat safe buffer";
-        lat_buffer_vec.clear();
-        for (int i = 3; i >= 0; --i) {
-          lat_buffer_vec.emplace_back(min_lat_buffer + i * step);
-        }
-      }
-
       TargetPoseDeciderRequest tar_pose_decider_request(
-          lat_buffer_vec, 0.3,
+          lat_buffer_vec, lon_buffer,
           ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true);
 
       TargetPoseDeciderResult res =
