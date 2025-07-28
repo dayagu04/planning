@@ -1458,33 +1458,45 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
 
   const ApaParameters& param = apa_param.GetParam();
-  double lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
-                          ? param.safe_uss_remain_dist_out_slot
-                          : param.safe_uss_remain_dist_in_slot;
 
-  geometry_lib::GeometryPath geometry_path_brake(all_plan_path_vec_);
-  if (geometry_path_brake.gear_change_count > 0 &&
-      geometry_path_brake.gear_index_vec.size() > 0) {
-    const size_t start_index = geometry_path_brake.gear_index_vec[0];
-    size_t end_index = geometry_path_brake.path_count - 1;
-    if (geometry_path_brake.gear_index_vec.size() > 1) {
-      end_index = geometry_path_brake.gear_index_vec[1] - 1;
+  double lon_buffer;
+  if (true) {
+    lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
+                     ? param.safe_uss_remain_dist_out_slot
+                     : param.safe_uss_remain_dist_in_slot;
+
+    geometry_lib::GeometryPath geometry_path_brake(all_plan_path_vec_);
+    if (geometry_path_brake.gear_change_count > 0 &&
+        geometry_path_brake.gear_index_vec.size() > 0) {
+      const size_t start_index = geometry_path_brake.gear_index_vec[0];
+      size_t end_index = geometry_path_brake.path_count - 1;
+      if (geometry_path_brake.gear_index_vec.size() > 1) {
+        end_index = geometry_path_brake.gear_index_vec[1] - 1;
+      }
+      std::vector<geometry_lib::PathSegment> seg_vec;
+      seg_vec.reserve(end_index - start_index + 1);
+      for (size_t i = start_index; i <= end_index; ++i) {
+        seg_vec.emplace_back(geometry_path_brake.path_segment_vec[i]);
+      }
+      geometry_path_brake.SetPath(seg_vec);
+      if (geometry_path_brake.collide_flag &&
+          geometry_path_brake.total_length < 0.76) {
+        lon_buffer = param.limited_safe_uss_remain_dist;
+        ILOG_INFO
+            << "next path is col and length is short, so this path need be "
+               "more radical";
+      }
     }
-    std::vector<geometry_lib::PathSegment> seg_vec;
-    seg_vec.reserve(end_index - start_index + 1);
-    for (size_t i = start_index; i <= end_index; ++i) {
-      seg_vec.emplace_back(geometry_path_brake.path_segment_vec[i]);
-    }
-    geometry_path_brake.SetPath(seg_vec);
-    if (geometry_path_brake.collide_flag &&
-        geometry_path_brake.total_length < 0.76) {
-      lon_buffer = param.limited_safe_uss_remain_dist;
-      ILOG_INFO << "next path is col and length is short, so this path need be "
-                   "more radical";
+
+    if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
+      if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
+          std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
+        lon_buffer += 0.05;  // extra lon buffer when ref gear in special case
+      }
     }
   }
 
-  // 如果在库外或者在库内，但是车位跳动较大时 横向buffer要更大
+  // 如果在库外 或者 在库内且车位跳动较大时 横向buffer要更大
   const bool increase_lat_err_flag =
       (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
        ego_info_under_slot.cur_pose.pos.x() >
@@ -1499,51 +1511,41 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
   real_time_brake_info_vec.resize(4);
-  RealTimeBrakeInfo real_time_brake_info(
-      RealTimeBrakeType::STOP, param.stop_lat_inflation, param.stop_lon_dist);
-  real_time_brake_info_vec[0] = real_time_brake_info;
 
-  real_time_brake_info.Set(RealTimeBrakeType::HEAVY_BRAKE,
-                           param.heavy_brake_lat_inflation,
-                           param.heavy_brake_lon_dist);
-  real_time_brake_info_vec[1] = real_time_brake_info;
-
-  real_time_brake_info.Set(RealTimeBrakeType::MODERATE_BRAKE,
-                           param.moderate_brake_lat_inflation,
-                           param.moderate_brake_lon_dist);
-  real_time_brake_info_vec[2] = real_time_brake_info;
-
-  real_time_brake_info.Set(RealTimeBrakeType::SLIGHT_BRAKE,
-                           param.slight_brake_lat_inflation,
-                           param.slight_brake_lon_dist);
-  real_time_brake_info_vec[3] = real_time_brake_info;
-
-  for (size_t i = 0;
-       i < real_time_brake_info_vec.size() && increase_lat_err_flag; ++i) {
-    real_time_brake_info_vec[i].lat_buffer =
-        std::max(real_time_brake_info_vec[i].lat_buffer,
-                 param.moderate_brake_lat_inflation);
-  }
-
-  if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
-    if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
-        std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
-      lon_buffer += 0.05;  // extra lon buffer when ref gear in special case
+  if (true) {
+    real_time_brake_info_vec[0].Set(
+        RealTimeBrakeType::STOP, param.stop_lat_inflation,
+        param.stop_lat_inflation, param.stop_lon_dist);
+    real_time_brake_info_vec[1].Set(
+        RealTimeBrakeType::HEAVY_BRAKE, param.heavy_brake_lat_inflation,
+        param.heavy_brake_lat_inflation, param.moderate_brake_lon_dist);
+    real_time_brake_info_vec[2].Set(
+        RealTimeBrakeType::MODERATE_BRAKE, param.moderate_brake_lat_inflation,
+        param.moderate_brake_lat_inflation, param.slight_brake_lon_dist);
+    real_time_brake_info_vec[3].Set(
+        RealTimeBrakeType::SLIGHT_BRAKE, param.slight_brake_lat_inflation,
+        param.slight_brake_lat_inflation, param.slight_brake_lon_dist);
+    if (increase_lat_err_flag) {
+      real_time_brake_info_vec[0].Set(
+          RealTimeBrakeType::STOP, param.moderate_brake_lat_inflation,
+          param.moderate_brake_lat_inflation, param.stop_lon_dist);
     }
   }
 
   double safe_remain_dist = std::numeric_limits<double>::infinity();
   for (const auto& real_time_brake_info : real_time_brake_info_vec) {
     double remain_dist =
-        CalRemainDistFromObs(lon_buffer, real_time_brake_info.lat_buffer);
+        CalRemainDistFromObs(lon_buffer, real_time_brake_info.body_lat_buffer,
+                             real_time_brake_info.mirror_lat_buffer);
     remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
   JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
-                   real_time_brake_info_vec[0].lat_buffer)
+                   real_time_brake_info_vec[0].body_lat_buffer)
 
-  const auto& smart_fold_mirror_params = param.smart_fold_mirror_params;
+  const SmartFoldMirrorParams& smart_fold_mirror_params =
+      param.smart_fold_mirror_params;
   if (smart_fold_mirror_params.has_smart_fold_mirror &&
       !frame_.need_fold_mirror &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
@@ -1577,14 +1579,13 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
       bool try_fold_mirror = true;
       if (smart_fold_mirror_params.min_lat_buffer > 1e-3) {
-        float fold_mirror_reduce_width =
-            param.max_car_width - param.fold_mirror_max_car_width;
-        fold_mirror_reduce_width *= 0.5;
-        float lat_buffer =
-            fold_mirror_reduce_width - smart_fold_mirror_params.min_lat_buffer;
-        lat_buffer *= -1.0;
-        if (CalRemainDistFromObs(lon_buffer, lat_buffer, 1.0, 1.0, true) <
-            0.0) {
+        const float fold_mirror_reduce_width =
+            0.5 * (param.max_car_width - param.fold_mirror_max_car_width);
+        const float lat_buffer =
+            -1.0 * (fold_mirror_reduce_width -
+                    smart_fold_mirror_params.min_lat_buffer);
+        if (CalRemainDistFromObs(lon_buffer, lat_buffer, lat_buffer, 1.0, 0.368,
+                                 0.368, true) < 0.0) {
           ILOG_INFO << "Even folding the rearview mirror is not safe, so do "
                        "not fold the rearview mirror";
           try_fold_mirror = false;
@@ -1593,7 +1594,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
       if (try_fold_mirror &&
           CalRemainDistFromObs(lon_buffer, smart_fold_mirror_params.lat_buffer,
-                               1.0, 1.0, true) < 0.0) {
+                               smart_fold_mirror_params.lat_buffer, 1.0, 0.368,
+                               0.368, true) < 0.0) {
         ILOG_INFO << "need send fold mirror msg";
         frame_.need_fold_mirror = true;
       }
@@ -1602,7 +1604,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
             << "  lon_buffer = " << lon_buffer
-            << "  lat_buffer = " << real_time_brake_info_vec[0].lat_buffer
+            << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
             << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs;
 
   if (frame_.stuck_by_dynamic_obs) {

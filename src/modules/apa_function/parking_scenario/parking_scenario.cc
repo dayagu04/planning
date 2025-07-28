@@ -448,9 +448,10 @@ const double ParkingScenario::CalRemainDistFromPath() {
 }
 
 const double ParkingScenario::CalRemainDistFromObs(
-    const double static_lon_buffer, const double static_lat_buffer,
-    const double dynamic_lon_buffer, const double dynamic_lat_buffer,
-    const bool only_check_mirror) {
+    const double static_lon_buffer, const double static_body_lat_buffer,
+    const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
+    const double dynamic_body_lat_buffer,
+    const double dynamic_mirror_lat_buffer, const bool only_check_mirror) {
   const ApaParameters& param = apa_param.GetParam();
 
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -469,9 +470,10 @@ const double ParkingScenario::CalRemainDistFromObs(
   if (only_check_mirror) {
     ColResult col_res = gjk_col_det_ptr->Update(
         apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-        static_lat_buffer, 0.0,
+        static_body_lat_buffer, 0.0,
         GJKColDetRequest(false, false, CarBodyType::ONLY_MIRROR,
-                         ApaObsMovementType::STATIC));
+                         ApaObsMovementType::STATIC),
+        true, static_mirror_lat_buffer);
 
     return col_res.remain_dist - static_lon_buffer;
   }
@@ -493,7 +495,8 @@ const double ParkingScenario::CalRemainDistFromObs(
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-      static_lat_buffer, 0.0, gjl_col_det_request);
+      static_body_lat_buffer, 0.0, gjl_col_det_request, true,
+      static_mirror_lat_buffer);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
@@ -507,7 +510,8 @@ const double ParkingScenario::CalRemainDistFromObs(
   gjl_col_det_request.use_uss_pt = false;
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-      dynamic_lat_buffer, 0.0, gjl_col_det_request);
+      dynamic_body_lat_buffer, 0.0, gjl_col_det_request, true,
+      dynamic_mirror_lat_buffer);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
@@ -516,7 +520,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   const double obs_pt_remain_dist_dynamic =
       col_res.remain_dist_dynamic - dynamic_lon_buffer;
 
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", static_lat_buffer)
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", static_body_lat_buffer)
 
   ILOG_INFO << "  enable_corner_uss_process = "
             << param.enable_corner_uss_process
@@ -928,7 +932,7 @@ void ParkingScenario::RecordDebugObstacle(
   common::ApaPathDebug* path_debug = debug->mutable_apa_path_debug();
   path_debug->clear_obs_list();
 
-  common::ObstacleDebug *obs = path_debug->mutable_obs_list()->add_obs();
+  common::ObstacleDebug* obs = path_debug->mutable_obs_list()->add_obs();
   common::Point2d point;
 
   size_t size = std::min(obs_x.size(), obs_y.size());
