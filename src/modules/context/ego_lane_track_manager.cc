@@ -1399,29 +1399,42 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         Point2D other_split_lane_perception_split_point_frenet;
         Point2D split_lane_perception_split_point_frenet;
         if (!other_split_lane_frenet_coord->XYToSL(virtual_lane_split_point, other_split_lane_perception_split_point_frenet)) {
+          LOG_DEBUG("virtual_lane_split_point in other_split_lane failed!");
         }
-        
         double perception_split_point_lateral_distance = std::fabs(other_split_lane_perception_split_point_frenet.y);
         Point2D virtual_split_point;
+        // 最大迭代次数
+        const int kMaxIterations = 100;
+        int iteration_count = 0;
         if (perception_split_point_lateral_distance > kDefaultSplitPointExistDistanceThd) {
-          while (perception_split_point_lateral_distance > kDefaultSplitPointExistDistanceThd) {
+          while (perception_split_point_lateral_distance > kDefaultSplitPointExistDistanceThd &&
+                 iteration_count < kMaxIterations) {
             Point2D virtual_split_point_frenet(other_split_lane_perception_split_point_frenet.x - kComputeSplitPointMoveStep, 0.0);
             Point2D next_virtual_split_point_frenet;
-            other_split_lane_frenet_coord->SLToXY(virtual_split_point_frenet, virtual_split_point);
-            split_lane_frenet_coord->XYToSL(virtual_split_point, next_virtual_split_point_frenet);
+            // 转换失败时直接退出循环，避免无效计算
+            if (!other_split_lane_frenet_coord->SLToXY(virtual_split_point_frenet, virtual_split_point) ||
+                !split_lane_frenet_coord->XYToSL(virtual_split_point, next_virtual_split_point_frenet)) {
+              break;
+            }
             perception_split_point_lateral_distance = std::fabs(next_virtual_split_point_frenet.y);
-            other_split_lane_perception_split_point_frenet.x = other_split_lane_perception_split_point_frenet.x - kComputeSplitPointMoveStep;
+            other_split_lane_perception_split_point_frenet.x -= kComputeSplitPointMoveStep;
+            iteration_count++;
           }
           virtual_lane_split_point.x = virtual_split_point.x;
           virtual_lane_split_point.y = virtual_split_point.y;
         } else if (perception_split_point_lateral_distance < kDefaultSplitPointExistDistanceThd) {
-          while (perception_split_point_lateral_distance < kDefaultSplitPointExistDistanceThd) {
+          while (perception_split_point_lateral_distance < kDefaultSplitPointExistDistanceThd &&
+                 iteration_count < kMaxIterations) {
             Point2D virtual_split_point_frenet(other_split_lane_perception_split_point_frenet.x + kComputeSplitPointMoveStep, 0.0);
             Point2D next_virtual_split_point_frenet;
-            other_split_lane_frenet_coord->SLToXY(virtual_split_point_frenet, virtual_split_point);
-            split_lane_frenet_coord->XYToSL(virtual_split_point, next_virtual_split_point_frenet);
+            // 转换失败时直接退出循环
+            if (!other_split_lane_frenet_coord->SLToXY(virtual_split_point_frenet, virtual_split_point) ||
+                !split_lane_frenet_coord->XYToSL(virtual_split_point, next_virtual_split_point_frenet)) {
+              break;
+            }
             perception_split_point_lateral_distance = std::fabs(next_virtual_split_point_frenet.y);
-            other_split_lane_perception_split_point_frenet.x = other_split_lane_perception_split_point_frenet.x + kComputeSplitPointMoveStep;
+            other_split_lane_perception_split_point_frenet.x += kComputeSplitPointMoveStep;
+            iteration_count++;
           }
           virtual_lane_split_point.x = virtual_split_point.x;
           virtual_lane_split_point.y = virtual_split_point.y;
@@ -1451,7 +1464,6 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         double lateral_dis_cost = 0.0;
         std::shared_ptr<KDPath> frenet_coord =
             relative_id_lane->get_lane_frenet_coord();
-        
         Point2D merge_split_frenet_point;
         Point2D virtual_lane_split_front_point;
         Point2D virtual_lane_split_rear_point;
@@ -1459,12 +1471,14 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           continue;
         }
         Point2D virtual_lane_split_front_frenet_point(merge_split_frenet_point.x - split_point_front_distance, 0.0);
-        if (!frenet_coord->SLToXY(virtual_lane_split_front_frenet_point, virtual_lane_split_front_point)) {
+        if (!frenet_coord->SLToXY(
+            virtual_lane_split_front_frenet_point, virtual_lane_split_front_point)) {
           continue;
         }
 
         Point2D virtual_lane_split_rear_frenet_point(merge_split_frenet_point.x + split_point_rear_distance, 0.0);
-        if (!frenet_coord->SLToXY(virtual_lane_split_rear_frenet_point, virtual_lane_split_rear_point)) {
+        if (!frenet_coord->SLToXY(
+            virtual_lane_split_rear_frenet_point, virtual_lane_split_rear_point)) {
           continue;
         }
 
@@ -1502,7 +1516,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         split_point_to_rear.Normalize();
 
         double cos_theta = ego_to_split_point.InnerProd(split_point_to_rear);
-        double theta_diff = 1 - cos_theta;
+        double theta_diff = 1.0 - cos_theta;
         iter_count = std::max(1, iter_count);
         average_kappa_cost = total_kappa_cost / iter_count;
         average_heading_angle_cost = std::fabs(theta_diff);
