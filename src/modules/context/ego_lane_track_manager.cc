@@ -76,7 +76,8 @@ constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 60.0;
 constexpr double kDefaultConsiderSplitSelectorDistance = 50.0;
-
+constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
+constexpr double kComputeSplitPointMoveStep = 2.0;
 
 }  // namespace
 
@@ -1343,10 +1344,11 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   }
 
   // Point2D lane_merge_split_point;
-  // VirtualLane split_lane;
   Point2D virtual_lane_split_local_point;
   Point2D virtual_lane_split_point;
   bool find_virtual_lane_split_point = false;
+  int other_split_lane_index = -1;
+  int split_lane_index = -1;
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> relative_id_lane =
@@ -1355,6 +1357,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         continue;
       }
       if (relative_id_lane->get_lane_merge_split_point().merge_split_point_data_size > 0) {
+        split_lane_index = i;
         find_virtual_lane_split_point = true;
         const auto& lane_merge_split_point = relative_id_lane->get_lane_merge_split_point();
         ego_distance_to_lane_merge_split_point = lane_merge_split_point.merge_split_point_data[0].distance;
@@ -1373,7 +1376,8 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         double tmp_y = virtual_lane_split_local_point.x * sin_theta + virtual_lane_split_local_point.y * cos_theta;
         virtual_lane_split_point.x = tmp_x + x0;
         virtual_lane_split_point.y = tmp_y + y0;
-        break;
+      } else {
+        other_split_lane_index = i;
       }
     }
   }
@@ -1381,6 +1385,51 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   if (!find_virtual_lane_split_point) {
     return;
   }
+  if (other_split_lane_index != -1 && split_lane_index != -1) {
+    std::shared_ptr<VirtualLane> other_split_lane =
+            relative_id_lanes[order_ids[other_split_lane_index]];
+    std::shared_ptr<VirtualLane> split_lane =
+            relative_id_lanes[order_ids[split_lane_index]];
+    if (other_split_lane != nullptr && split_lane != nullptr) {
+      std::shared_ptr<KDPath> other_split_lane_frenet_coord =
+          other_split_lane->get_lane_frenet_coord();
+      std::shared_ptr<KDPath> split_lane_frenet_coord =
+          split_lane->get_lane_frenet_coord();
+      if (other_split_lane_frenet_coord != nullptr && split_lane_frenet_coord != nullptr) {
+        Point2D other_split_lane_perception_split_point_frenet;
+        Point2D split_lane_perception_split_point_frenet;
+        if (!other_split_lane_frenet_coord->XYToSL(virtual_lane_split_point, other_split_lane_perception_split_point_frenet)) {
+        }
+        
+        double perception_split_point_lateral_distance = std::fabs(other_split_lane_perception_split_point_frenet.y);
+        Point2D virtual_split_point;
+        if (perception_split_point_lateral_distance > kDefaultSplitPointExistDistanceThd) {
+          while (perception_split_point_lateral_distance > kDefaultSplitPointExistDistanceThd) {
+            Point2D virtual_split_point_frenet(other_split_lane_perception_split_point_frenet.x - kComputeSplitPointMoveStep, 0.0);
+            Point2D next_virtual_split_point_frenet;
+            other_split_lane_frenet_coord->SLToXY(virtual_split_point_frenet, virtual_split_point);
+            split_lane_frenet_coord->XYToSL(virtual_split_point, next_virtual_split_point_frenet);
+            perception_split_point_lateral_distance = std::fabs(next_virtual_split_point_frenet.y);
+            other_split_lane_perception_split_point_frenet.x = other_split_lane_perception_split_point_frenet.x - kComputeSplitPointMoveStep;
+          }
+          virtual_lane_split_point.x = virtual_split_point.x;
+          virtual_lane_split_point.y = virtual_split_point.y;
+        } else if (perception_split_point_lateral_distance < kDefaultSplitPointExistDistanceThd) {
+          while (perception_split_point_lateral_distance < kDefaultSplitPointExistDistanceThd) {
+            Point2D virtual_split_point_frenet(other_split_lane_perception_split_point_frenet.x + kComputeSplitPointMoveStep, 0.0);
+            Point2D next_virtual_split_point_frenet;
+            other_split_lane_frenet_coord->SLToXY(virtual_split_point_frenet, virtual_split_point);
+            split_lane_frenet_coord->XYToSL(virtual_split_point, next_virtual_split_point_frenet);
+            perception_split_point_lateral_distance = std::fabs(next_virtual_split_point_frenet.y);
+            other_split_lane_perception_split_point_frenet.x = other_split_lane_perception_split_point_frenet.x + kComputeSplitPointMoveStep;
+          }
+          virtual_lane_split_point.x = virtual_split_point.x;
+          virtual_lane_split_point.y = virtual_split_point.y;
+        }
+      }
+    }
+  }
+
   const double ego_heading_angle = ego_state->heading_angle();
   double clane_min_cost_total = std::numeric_limits<double>::infinity();
   double split_point_front_distance = 10.0;
