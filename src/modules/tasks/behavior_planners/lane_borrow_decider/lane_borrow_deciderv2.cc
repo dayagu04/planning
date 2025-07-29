@@ -1170,7 +1170,9 @@ bool LaneBorrowDecider::ObstacleDecision() {
       BorrowDirection obs_bypass_direction =
           GetBypassDirection(frenet_obstacle_sl, id);
 
-      if (obs_bypass_direction == bypass_direction_) {
+      if (obs_bypass_direction == bypass_direction_ &&
+          (id == static_blocked_obstacles_[0]->obstacle()->id() ||
+          frenet_obstacle_sl.s_start - obs_end_s_ <  config_.extend_obs_distance)) {
         obs_left_l_ = std::max(obs_left_l_, frenet_obstacle_sl.l_end);
         obs_right_l_ = std::min(obs_right_l_, frenet_obstacle_sl.l_start);
         obs_start_s_ = std::min(obs_start_s_, frenet_obstacle_sl.s_start);
@@ -1197,9 +1199,9 @@ bool LaneBorrowDecider::ObstacleDecision() {
   }
   //output to dp
   lane_borrow_decider_output_.area_start_s = obs_start_s_;
-  lane_borrow_decider_output_.area_start_s = obs_end_s_;
-  lane_borrow_decider_output_.area_start_s = obs_right_l_;
-  lane_borrow_decider_output_.area_start_s = obs_left_l_;
+  lane_borrow_decider_output_.area_end_s = obs_end_s_;
+  lane_borrow_decider_output_.area_start_l = obs_right_l_;
+  lane_borrow_decider_output_.area_end_l = obs_left_l_;
 
   // if (lane_borrow_status_ == kNoLaneBorrow) {
   //   double left_width =
