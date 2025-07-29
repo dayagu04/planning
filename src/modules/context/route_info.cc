@@ -3033,8 +3033,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) con
     //2、交换区前、交换区、交换区后的车道数都相等；
     //3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
     if (successor_exclnum <= on_exclnum) {
-      if (successor_exclnum == on_exclnum &&
-          on_exclnum == before_exclnum) {
+      if (successor_exclnum <= on_exclnum &&
+          on_exclnum >= before_exclnum) {
         const auto start_link = sdpro_map_.GetLinkOnRoute(
             split_region_info->start_fp_point.link_id);
         if (start_link == nullptr) {
