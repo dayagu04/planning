@@ -1,7 +1,7 @@
 {
   "car_type": "chery_m32t",
   "mark_date": "20241114",
-  "lkas_version":"20250727_1",
+  "lkas_version":"20250729",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,

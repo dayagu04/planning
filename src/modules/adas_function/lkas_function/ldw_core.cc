@@ -17,7 +17,7 @@ bool LdwCore::UpdateLdwMainSwitch(void) {
   if (GetContext.get_param()->ldw_main_switch) {
     return GetContext.get_param()->ldw_main_switch;
   }
-  return function_state_machine_info_ptr->switch_sts.ldp_main_switch;
+  return function_state_machine_info_ptr->switch_sts.ldw_main_switch;
 }
 
 uint32 LdwCore::UpdateLdwEnableCode(void) {
