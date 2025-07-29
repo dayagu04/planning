@@ -102,6 +102,7 @@ const ColResult GJKCollisionDetector::Update(
             case CarBodyType::ONLY_MIRROR:
               polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
               polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
+              break;
             case CarBodyType::EXPAND_MIRROR_TO_FRONT:
               polygon_vec.emplace_back(
                   polygon_foot_print_global_

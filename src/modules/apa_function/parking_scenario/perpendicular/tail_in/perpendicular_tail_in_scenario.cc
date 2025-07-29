@@ -1533,9 +1533,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
-                   real_time_brake_info_vec[0].body_lat_buffer)
-
   const SmartFoldMirrorParams& smart_fold_mirror_params =
       param.smart_fold_mirror_params;
   if (smart_fold_mirror_params.has_smart_fold_mirror &&
@@ -1594,10 +1591,14 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     }
   }
 
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
+                   real_time_brake_info_vec[0].body_lat_buffer)
+
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
             << "  lon_buffer = " << lon_buffer
             << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
-            << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs;
+            << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs
+            << "  increase_lat_err_flag = " << increase_lat_err_flag;
 
   if (frame_.stuck_by_dynamic_obs) {
     frame_.stuck_obs_time = 0.0;

@@ -78,9 +78,9 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
-                           dynaminc_lat_buffer);
+  frame_.remain_dist_obs = CalRemainDistFromObs(
+      safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
+      dynaminc_lat_buffer, dynaminc_lat_buffer);
   ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // update ego slot info
