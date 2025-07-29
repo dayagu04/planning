@@ -114,9 +114,10 @@ bool LateralMotionPlanner::Execute() {
 
 bool LateralMotionPlanner::AssembleInput() {
   // set init state
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto &reference_path_ptr =
+      lane_change_decider_output.coarse_planning_info.reference_path;
   const auto &planning_init_point =
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
   const auto &motion_planner_output =
@@ -247,7 +248,7 @@ bool LateralMotionPlanner::AssembleInput() {
       }
       planning_input_.mutable_last_theta_vec()->Set(i, last_lateral_theta);
     }
-    planning_input_.set_q_continuity(config_.q_continuity);
+    planning_input_.set_q_continuity(0.0);
   } else {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       planning_input_.mutable_last_x_vec()->Set(i, enu_ref_path[i].first);
@@ -373,9 +374,7 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
   const auto &coarse_planning_info =
-      session_->planning_context()
-              .lane_change_decider_output()
-              .coarse_planning_info;
+      lane_change_decider_output.coarse_planning_info;
   std::vector<double> expected_steer_vec;
   expected_steer_vec.resize(26, 0.0);
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
@@ -408,7 +407,7 @@ bool LateralMotionPlanner::AssembleInput() {
     }
 
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LANE_KEEP, planning_input_);
+        pnc::lateral_planning::LateralMotionScene::LANE_KEEP, planning_input_);
     planning_input_.set_complete_follow(complete_follow);
     planning_input_.set_motion_plan_concerned_index(
         config_.motion_plan_concerned_end_index);
@@ -460,9 +459,8 @@ bool LateralMotionPlanner::AssembleInput() {
   }
 
   // lane change back
-  const auto target_state = session_->planning_context()
-                                .lane_change_decider_output()
-                                .coarse_planning_info.target_state;
+  const auto target_state =
+      lane_change_decider_output.coarse_planning_info.target_state;
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
   bool lane_change_hold = target_state == kLaneChangeHold;
@@ -478,32 +476,32 @@ bool LateralMotionPlanner::AssembleInput() {
   // set weight
   if (lane_change_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LANE_CHANGE, planning_input_);
+        pnc::lateral_planning::LateralMotionScene::LANE_CHANGE, planning_input_);
   } else if (lane_borrow_scene) {
     complete_follow = true;
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LANE_BORROW, planning_input_);
+        pnc::lateral_planning::LateralMotionScene::LANE_BORROW, planning_input_);
   } else if (split_scene) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::SPLIT,
                                                  planning_input_);
   } else if ((ramp_scene) && (config_.ramp_valid) &&
              (!is_use_spatio_planner_result)) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::RAMP,
                                                  planning_input_);
   } else if (!is_use_spatio_planner_result &&
              (lateral_offset_decider_output.is_valid ||
               (avoid_back_status &&
                ((ref_vel > config_.avoid_high_vel) ||
                  is_in_intersection)))) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::AVOID,
                                                  planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LANE_KEEP, planning_input_);
+        pnc::lateral_planning::LateralMotionScene::LANE_KEEP, planning_input_);
   }
   // handle big shaking for steer
   const bool is_high_priority_back =
-      session_->planning_context().lane_change_decider_output().is_high_priority_back;
+      lane_change_decider_output.is_high_priority_back;
   bool is_in_function =
       session_->environmental_model().GetVehicleDbwStatus();
   if (config_.pass_acc_mode) {
@@ -520,6 +518,7 @@ bool LateralMotionPlanner::AssembleInput() {
   } else {
     enter_lccnoa_time_ = 0;
   }
+
   planning_weight_ptr_->CalculateJerkBoundByLastJerk(
       is_high_priority_back, is_in_function,
       enter_lccnoa_time_, reference_path_ptr,
@@ -650,11 +649,11 @@ bool LateralMotionPlanner::Update() {
   d_curv_vec[0] = d_curv_vec[1];
   t_vec[0] = -0.2;
 
-  const double concerned_index = 20;  // planning_input_.motion_plan_concerned_index();
-  double concerned_dis_to_ref = std::hypot(
-      x_vec[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index + 1),
-      y_vec[concerned_index + 2] - planning_input_.ref_y_vec(concerned_index + 1));
-  const double end_points_size = concerned_index + 1;
+  // const double concerned_index = 20;  // planning_input_.motion_plan_concerned_index();
+  // double concerned_dis_to_ref = std::hypot(
+  //     x_vec[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index + 1),
+  //     y_vec[concerned_index + 2] - planning_input_.ref_y_vec(concerned_index + 1));
+  // const double end_points_size = concerned_index + 1;
   // if ((!(session_->environmental_model().function_info().function_mode() ==
   //        common::DrivingFunctionInfo_DrivingFunctionMode::
   //            DrivingFunctionInfo_DrivingFunctionMode_RADS)) &&

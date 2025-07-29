@@ -514,8 +514,17 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
                                     .lateral_offset;
   dist_threshold = dist_threshold + std::abs(lateral_offset);
 
-  std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
-  std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
+  const auto &ego_boundary =
+      target_reference_path->get_frenet_ego_state().boundary();
+  double lateral_dist_threshold = 1.5;
+  ReferencePathPoint cur_pos_path_point;
+  if (target_reference_path->get_reference_point_by_lon(ego_s, cur_pos_path_point)) {
+    lateral_dist_threshold =
+      std::max(0.5 * cur_pos_path_point.lane_width, dist_threshold);
+  }
+
+  std::vector<double> angle_thre_v{0.1047, 0.0873, 0.0698, 0.0524, 0.0349};
+  std::vector<double> angle_thre_bp{1.0, 4.167, 8.333, 12.5, 16.667};
   double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 
   const auto &current_reference_path =
@@ -526,12 +535,16 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   double diff_heading_angle = planning_math::NormalizeAngle(
       planning_init_point.heading_angle -
       frenet_coord->GetPathCurveHeading(planning_init_point.frenet_state.s));
+  const auto& general_lateral_decider_output =
+      session_->planning_context().general_lateral_decider_output();
   bool perfect_in_lane = false;
   // perfect_in_lane =
   //     ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
   //      (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
   perfect_in_lane =
-      ((std::fabs(planning_init_point.frenet_state.r) < dist_threshold) &&
+      (((std::fabs(planning_init_point.frenet_state.r) < dist_threshold) ||
+        (std::fabs(ego_boundary.l_start) < lateral_dist_threshold &&
+         std::fabs(ego_boundary.l_end) < lateral_dist_threshold)) &&
        (std::fabs(diff_heading_angle) < angle_threshold));
   return perfect_in_lane;
 }
