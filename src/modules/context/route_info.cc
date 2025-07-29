@@ -9,6 +9,7 @@
 #include "debug_info_log.h"
 #include "define/geometry.h"
 #include "environmental_model.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -1605,8 +1606,43 @@ void RouteInfo::NewUpdateMLCInfoDecider(
           split_region_info_list[0].distance_to_split_point <
           std::abs(split_region_info_list[0]
                        .start_fp_point.fp_distance_to_split_point);
+      
+      //目前都是由右边下匝道的case大多数，由于版本还不稳定，当前优先处理右边split的场景
+      bool is_is_entery_split_region = false;
+      bool is_split_region = session_->planning_context()
+                                        .ego_lane_road_right_decider_output()
+                                        .is_split_region;
+      if (is_split_region) {
+        int split_lane_vitrual_id = session_->planning_context()
+                                        .ego_lane_road_right_decider_output()
+                                        .split_lane_virtual_id;
+        const auto& split_direction = split_region_info_list[0].split_direction;
 
-      if (is_entery_exchange_region) {
+        const auto& virtual_lane_manager =
+            session_->environmental_model().get_virtual_lane_manager();
+
+        if (split_direction == SPLIT_RIGHT) {
+          const auto& rlane = virtual_lane_manager->get_right_lane();
+          if (rlane) {
+            const int rlane_virtual_id = rlane->get_virtual_id();
+            if (rlane_virtual_id == split_lane_vitrual_id) {
+              is_is_entery_split_region = true;
+            }
+          }
+        }
+      }
+
+      //当前先把这个值设为100m，后续可以调整一下
+      bool is_triggle_split_region_mlc_threshold =
+          split_region_info_list[0].distance_to_split_point <
+          mlc_decider_config_.split_region_pre_mlc_threshold;
+
+      bool is_triggle_pre_mlc_in_split_region =
+          is_triggle_split_region_mlc_threshold && is_is_entery_split_region &&
+          mlc_decider_route_info_.is_process_split;
+
+      if (is_entery_exchange_region ||
+          is_triggle_pre_mlc_in_split_region) {
         mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREAR_FRONT;
         mlc_decider_route_info_.end_fp_dis_to_split =
             split_region_info_list[0].end_fp_point.fp_distance_to_split_point;
