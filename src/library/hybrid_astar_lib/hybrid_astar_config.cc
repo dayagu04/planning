@@ -56,6 +56,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   max_search_time_ms = 5000;
   max_search_time_ms_for_no_gear_switch = 100;
+  search_time_ms_scenario_try = 50;
   adjust_dist_inside_slot = 2.5;
 
   // update safe buffer

@@ -1801,7 +1801,8 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
       // in try searching, no need optimal path.
       if (request_.path_generate_method ==
-          AstarPathGenerateType::TRY_SEARCHING) {
+              AstarPathGenerateType::TRY_SEARCHING &&
+          astar_search_time > config_.search_time_ms_scenario_try) {
         break;
       }
 
