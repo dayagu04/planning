@@ -74,6 +74,7 @@ void ApaSlotManager::Update(
     if (state_machine_ptr_->IsSeachingStatus()) {
       if (!dist_id_map_.empty()) {
         ego_info_under_slot_.history_id = ego_info_under_slot_.id;
+        ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = dist_id_map_.begin()->second;
 
         auto it = slots_map_.find(ego_info_under_slot_.id);
