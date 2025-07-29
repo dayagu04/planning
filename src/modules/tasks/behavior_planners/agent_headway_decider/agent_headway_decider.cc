@@ -15,7 +15,7 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.8;
+constexpr double lane_change_decrease_time_gap = 0.3;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = -0.5;

@@ -106,7 +106,8 @@ class AgentLongitudinalDecider : public Task {
   double GetFilterUltraDistanceWithEgoVel(const double ego_vel) const;
 
   bool IsReverseAgent(const agent::Agent* agent,
-                      const std::shared_ptr<VirtualLane> ego_lane) const;
+                      const std::shared_ptr<VirtualLane> ego_lane,
+                      const double consider_distance) const;
 
   bool IsIgnoredLowSpeedReverseAgent(const agent::Agent& agent,
                                      const double init_point_s,
