@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/chery_m32t_51406/trigger/20250723/20250723-11-51-21/data_collection_CHERY_M32T_51406_EVENT_FILTER_2025-07-23-11-51-21_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250605/20250605-10-55-32/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2025-06-05-10-55-32_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
@@ -35,11 +35,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-<<<<<<< Updated upstream
                 "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20241218/20241218-16-16-50/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2024-12-18-16-16-50_no_camera.bag",
-=======
-                "/data_cold/abu_zone/autoparse/chery_m32t_51406/trigger/20250723/20250723-12-17-05/data_collection_CHERY_M32T_51406_EVENT_FILTER_2025-07-23-12-17-05_no_camera.bag",
->>>>>>> Stashed changes
                 "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留

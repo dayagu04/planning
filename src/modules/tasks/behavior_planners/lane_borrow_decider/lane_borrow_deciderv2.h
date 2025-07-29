@@ -78,6 +78,7 @@ class LaneBorrowDecider : public Task {
   void CheckBlockingObstaclesIntention(int32 obs_id, bool& is_borrow);
   Box2d PredictBoxPosition(const agent::Agent* agent, double delta_t);
   FrenetObstacleBoundary GetSLboundaryFromAgent(const Box2d& obs_box);
+
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double forward_solid_start_dis_{1000.0};
