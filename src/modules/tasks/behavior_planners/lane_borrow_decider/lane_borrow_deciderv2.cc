@@ -1195,6 +1195,12 @@ bool LaneBorrowDecider::ObstacleDecision() {
         NO_PASSABLE_OBSTACLE;
     return false;
   }
+  //output to dp
+  lane_borrow_decider_output_.area_start_s = obs_start_s_;
+  lane_borrow_decider_output_.area_start_s = obs_end_s_;
+  lane_borrow_decider_output_.area_start_s = obs_right_l_;
+  lane_borrow_decider_output_.area_start_s = obs_left_l_;
+
   // if (lane_borrow_status_ == kNoLaneBorrow) {
   //   double left_width =
   //       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;

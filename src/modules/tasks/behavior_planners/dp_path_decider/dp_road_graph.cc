@@ -549,6 +549,13 @@ bool DPRoadGraph::SampleLanes(
   double prev_s = accumulated_s;
   sampled_points_.insert(sampled_points_.begin(),
                          std::vector<SLPoint>{init_sl_point_});
+  //前决策信息
+  double area_s_start = lane_borrow_decider_output->area_start_s;
+  double area_s_end = lane_borrow_decider_output->area_end_s;
+  double area_l_start = lane_borrow_decider_output->area_start_l;
+  double area_l_end = lane_borrow_decider_output->area_end_l;
+  LaneBorrowStatus lb_status = lane_borrow_decider_output->lane_borrow_state;
+
   for (size_t i = 0; accumulated_s < total_length_; ++i) {
     double in_equeal_s_range = (total_length_ - ego_s_) * (i + 1) / 6;
     accumulated_s += in_equeal_s_range;

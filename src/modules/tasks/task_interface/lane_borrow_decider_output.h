@@ -50,6 +50,10 @@ struct LaneBorrowDeciderOutput {
   double target_l;
   double left_bounds_l;
   double right_bounds_l;
+  double area_start_s{0.};
+  double area_end_s{0.};
+  double area_start_l{0.};
+  double area_end_l{0.};
   BorrowDirection borrow_direction = NO_BORROW;  // 0--None, 1--left, 2--right
   bool is_in_lane_borrow_status = false;
   bool is_change_target_lane = false;

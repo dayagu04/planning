@@ -888,9 +888,9 @@
   "coeff_dl_cost2":0.0,
   "coeff_ddl_cost2 ":0,
   "coeff_end_l_cost2":0.0,
-  "coeff_collision_cost2":200.0,
+  "coeff_collision_cost2":100.0,
   "collision_distance2":0.8,
-  "coeff_stitch_cost2":30.0,
+  "coeff_stitch_cost2":100.0,
   "path_resolution2":2.0,
 
   "coeff_l_cost3":60.0,
