@@ -208,7 +208,6 @@ void EgoLaneTrackManger::TrackEgoLane(
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
         if (zero_relative_id_nums > 1 && lane_keep_status
-            && !is_in_lane_borrow_status
             && ego_in_split_region_) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
