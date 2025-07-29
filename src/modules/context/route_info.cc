@@ -740,6 +740,19 @@ void RouteInfo::CaculateSplitInfo(
     route_info_output_.first_split_direction = RAMP_NONE;
     std::cout << "split_info.empty()!!!!!!!" << std::endl;
   }
+
+  const auto& split_region_info_list = route_info_output_.split_region_info_list;
+  for (const auto& split_region_info : split_region_info_list) {
+    if (split_region_info.is_ramp_split) {
+      route_info_output_.dis_to_ramp = split_region_info.distance_to_split_point;
+      if (split_region_info.split_direction == SPLIT_LEFT) {
+        route_info_output_.ramp_direction = RAMP_ON_LEFT;
+      } else if (split_region_info.split_direction == SPLIT_RIGHT) {
+        route_info_output_.ramp_direction = RAMP_ON_RIGHT;
+      }
+      break;
+    }
+  }
 }
 
 void RouteInfo::CaculateDistanceToLastMergePoint(
