@@ -272,8 +272,10 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
       *lane_change_type != NO_REQUEST) {
     // const bool is_dashed_line = IsDashLineCurBoundary(*lane_change_direction);
 
-    bool is_ego_in_perfect_pose = IsLatOffsetValid();
-    JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
+    // bool is_ego_in_perfect_pose = IsLatOffsetValid();
+    // JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
+
+    bool is_ego_in_perfect_pose = true;
 
     if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
         *lane_change_type == CONE_REQUEST) {
