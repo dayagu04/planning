@@ -327,7 +327,7 @@ ComparableCost TrajectoryCost::CalObsCartCost(
       0.5 * (front_edge_to_center - back_edge_to_center);
   const double path_resolution = path_resolution_;
   double lateral_buffer = 0.4;
-  double longitudinal_buffer = 0.0;
+  double longitudinal_buffer = 0.6;
   for (double curr_s = start_s; curr_s <= end_s; curr_s += 2.0) {
     const double curr_l = curve.Evaluate(0, curr_s - start_s);
     double tan_local_theta = curve.Evaluate(1, curr_s - start_s);

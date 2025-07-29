@@ -1030,7 +1030,7 @@ void LaneBorrowDecider::CheckBlockingObstaclesIntention(int32 obs_id,bool& is_bo
   }
 
   //summary
-  is_borrow = (is_cut_out||is_cut_in)? false:true;
+  is_borrow = !is_cut_out && !is_cut_in;
 }
 // v2
 
