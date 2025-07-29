@@ -20,6 +20,17 @@ struct AstarResponse {
   // left turn->right turn: true
   // left turn->straight: true
   bool kappa_change_too_much;
+
+  const float GetFirstPathLength() const {
+    return first_seg_path.empty() ? 0.0f : first_seg_path.back().accumulated_s;
+  }
+
+  void Clear() {
+    request.Clear();
+    result.Clear();
+    first_seg_path.clear();
+    return;
+  }
 };
 
 const bool IsResponseNice(const AstarRequest& request,

@@ -50,6 +50,15 @@ struct AstarRequest {
   float slot_length;
 
   bool swap_start_goal;
+
+  void Clear() {
+    path_generate_method = AstarPathGenerateType::NONE;
+    plan_reason = PlanningReason::NONE;
+    slot_id = 0;
+    space_type = ParkSpaceType::NONE;
+    direction_request = ParkingVehDirection::NONE;
+    return;
+  }
 };
 
 void DebugAstarRequestString(const AstarRequest &request);

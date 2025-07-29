@@ -80,5 +80,30 @@ const std::string GetApaScenarioStatusString(
   return status;
 }
 
+const std::string GetRePlanReasonString(const uint8_t type) {
+  switch (type) {
+    case 1:
+      return "FIRST_PLAN";
+    case 2:
+      return "SEG_COMPLETED_PATH";
+    case 3:
+      return "SEG_COMPLETED_OBS";
+    case 4:
+      return "STUCKED";
+    case 5:
+      return "SLOT CHANGE";
+    case 6:
+      return "SEG_COMPLETED_COL_DET";
+    case 7:
+      return "FORCE_PLAN";
+    case 8:
+      return "SEG_COMPLETED_SLOT_JUMP";
+    default:
+      return "NOT_REPLAN";
+  }
+
+  return "NOT_REPLAN";
+}
+
 }  // namespace apa_planner
 }  // namespace planning

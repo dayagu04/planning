@@ -3581,5 +3581,14 @@ void SampleInLineSegment(const Eigen::Vector2d &start,
   return;
 }
 
+void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint> &path) {
+  for (size_t i = 0; i < path.size(); i++) {
+    ILOG_INFO << "i = " << i << ",x = " << path[i].pos.x()
+              << ",y = " << path[i].pos.y() << ", kappa = " << path[i].kappa;
+  }
+
+  return;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

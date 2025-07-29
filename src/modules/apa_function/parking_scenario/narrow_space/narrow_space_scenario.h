@@ -7,15 +7,19 @@
 #include "hybrid_astar_thread.h"
 #include "narrow_space_decider.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
-#include "src/modules/apa_function/parking_scenario/perpendicular/head_out/perpendicular_head_out_scenario.h"
 #include "virtual_wall_decider.h"
 
 namespace planning {
 namespace apa_planner {
 
-// TODO: 默认几何规划无解的场景，就是狭窄场景，调用hybrid astar即可.
-// 后续需要在普通场景中，调用A star.
-// 后续需要普通场景优先调用A星时，再删除narrow space场景,直接在正常场景中调用混合A星算法
+// next scenario use search based method:
+// geometry no solution scenario;
+// head in scenario;
+// head out scenario;
+// tail out scenario;
+// TODO:
+// parallel in;
+// parallel out;
 class NarrowSpaceScenario : public ParkingScenario {
  public:
   NarrowSpaceScenario() = default;
@@ -28,7 +32,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void Reset() override;
 
-  void ThreadClear() override;
+  void ThreadClearState() override;
 
   virtual std::string GetName() override { return typeid(this).name(); }
 
@@ -59,11 +63,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   virtual const uint8_t PathPlanOnce() override;
 
-  const PerpendicularHeadOutScenario::SlotObsType CalSlotObsType(
-      const Eigen::Vector2d& obs_slot);
-
-  const std::string GetPlanReason(const uint8_t type);
-
   /**
    *      upper-left system, system is from slot space
    *                   x
@@ -80,8 +79,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   PathPlannerResult PlanBySearchBasedMethod(const bool is_scenario_try);
 
   const int PathOptimizationByCILRQ(
-      const std::vector<pnc::geometry_lib::PathPoint>& local_path,
-      Transform2d* tf);
+      const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf);
 
   const void GenerateFallBackPath();
 
@@ -92,7 +90,6 @@ class NarrowSpaceScenario : public ParkingScenario {
   const int UpdatePreparePlanFlag(const bool prepare_success);
 
   const int PublishHybridAstarDebugInfo(const HybridAStarResult& result,
-                                        HybridAStarThreadSolver* thread,
                                         Transform2d* tf);
 
   const int HybridAstarDebugInfoClear();
@@ -121,8 +118,6 @@ class NarrowSpaceScenario : public ParkingScenario {
       const std::vector<pnc::geometry_lib::PathPoint>& path,
       const Pose2D& pose);
 
-  void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint>& path);
-
   const bool UpdateParallelSlotInfo();
 
   const bool NeedBlindZonePlanning(const EgoInfoUnderSlot& ego_info);
@@ -135,25 +130,50 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckDynamicHeadOut();
 
-  const bool CheckDynamicParkingIn();
+  const bool ReplanBySlotRefresh();
 
   void FillPlanningReason(AstarRequest& cur_request);
 
   void FillGearRequest(const bool is_scenario_try, AstarRequest& cur_request);
 
+  void FillPlanningMethod(const bool is_scenario_try,
+                          AstarRequest& cur_request);
+
+  ParkingVehDirection GetDirection();
+
+  ParkSpaceType GetSlotType(const SlotType slot_type);
+
+  double GetStraightLength(const ParkingVehDirection dir,
+                           const ParkSpaceType slot_type);
+
+  Pose2D GenerateStitchPoint();
+
+  void RecordSearchNode(Transform2d* tf);
+
+  const PathPlannerResult PubResponseForScenarioRunning(
+      const EgoInfoUnderSlot& ego_info, const AstarRequest& cur_request,
+      const ParkObstacleList& obs);
+
+  const PathPlannerResult PubResponseForScenarioTry(
+      const EgoInfoUnderSlot& ego_info, const AstarRequest& cur_request,
+      const ParkObstacleList& obs);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
+  // do not clear it every frame in cruise state.
+  AstarResponse response_;
 
   AstarPathGear current_gear_;
   int replan_number_inside_slot_;
-  // path connected with goal
+  // If path connected with goal, and no gear switch, True.
   bool is_path_connected_to_goal_;
 
   // offset to slot center.
   double lateral_offset_;
   double lon_offset_;
 
+  // used by park out
   double current_path_last_heading_;
   bool dynamic_flag_head_out_;
   size_t count_frame_from_last_dynamic_;

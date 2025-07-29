@@ -43,7 +43,7 @@ void NarrowScenarioDecider::UpdateNarrowScenario(
   is_narrow_space_ = true;
   is_need_astar_ = true;
 
-  ILOG_INFO << "geometry fail, and will call astar";
+  // ILOG_INFO << "geometry fail, and will call astar";
 
   return;
 }

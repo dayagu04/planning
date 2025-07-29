@@ -35,11 +35,22 @@ const bool IsResponseNice(const AstarRequest& request,
   }
 
   if (response.request.path_generate_method ==
-      AstarPathGenerateType::TRY_SEARCHING) {
-    if (request.path_generate_method != AstarPathGenerateType::TRY_SEARCHING) {
-      ILOG_INFO << "plan method is change";
-      return false;
-    }
+          AstarPathGenerateType::TRY_SEARCHING &&
+      request.path_generate_method != AstarPathGenerateType::TRY_SEARCHING) {
+    ILOG_INFO << "plan method is change";
+    return false;
+  }
+
+  if (request.path_generate_method == AstarPathGenerateType::TRY_SEARCHING &&
+      response.request.path_generate_method !=
+          AstarPathGenerateType::TRY_SEARCHING) {
+    ILOG_INFO << "plan method is change";
+    return false;
+  }
+
+  if (request.direction_request != response.request.direction_request) {
+    ILOG_INFO << "parking direction is changed";
+    return false;
   }
 
   return true;

@@ -106,5 +106,7 @@ void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
 const std::string GetApaScenarioStatusString(
     const ParkingScenarioStatus scenario_status);
 
+const std::string GetRePlanReasonString(const uint8_t type);
+
 }  // namespace apa_planner
 }  // namespace planning

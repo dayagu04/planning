@@ -27,6 +27,11 @@ class SpeedLimitProfile {
   // return lowest speed
   double GetSpeedLimitByRange(const double s, const double buffer) const;
 
+  void Reverse(const size_t size) {
+    speed_limit_points_.reserve(size);
+    return ;
+  }
+
  private:
   void DebugString();
 

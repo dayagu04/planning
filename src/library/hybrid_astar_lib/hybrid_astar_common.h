@@ -104,6 +104,7 @@ enum class PlanningReason {
   ADJUST_SELF_CAR_POSE,
   SIMULATION_TRIGGER,
   GEOMETRY_CURVE_FAIL,
+  SLOT_CRUISING,
 };
 
 enum class AstarPathSteer {

@@ -61,6 +61,8 @@ void PerpendicularTailInScenario::ScenarioTry() {
     release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
         SlotReleaseState::NOT_RELEASE;
   }
+
+  PublishPreparePlanningTraj();
   return;
 }
 
