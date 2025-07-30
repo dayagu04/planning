@@ -317,6 +317,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
   const bool CheckStuckedByInside(const geometry_lib::PathPoint &start_pose,
                                   const geometry_lib::PathPoint &end_pose,
+                                  const bool consider_car_lat_inflation = false,
                                   const bool enable_log = true);
 
   const double CalOccupiedRatio(const geometry_lib::PathPoint &current_pose);
