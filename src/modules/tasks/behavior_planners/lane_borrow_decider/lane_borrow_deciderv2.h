@@ -78,6 +78,7 @@ class LaneBorrowDecider : public Task {
   void CheckBlockingObstaclesIntention(int32 obs_id, bool& is_borrow);
   Box2d PredictBoxPosition(const agent::Agent* agent, double delta_t);
   FrenetObstacleBoundary GetSLboundaryFromAgent(const Box2d& obs_box);
+  void SendObserveToLatFlag();
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
@@ -114,6 +115,7 @@ class LaneBorrowDecider : public Task {
   int observe_frame_num_{0};
   int dp_observe_frame_num_{0};
   std::unordered_map<int, std::pair<BorrowDirection, int>> obs_direction_map_;
+  std::unordered_map<int32_t, int32_t> lat_flag_map_;
   int lane_change_state_{0};
 
   std::vector<int> static_blocked_obj_id_vec_;  // after decision

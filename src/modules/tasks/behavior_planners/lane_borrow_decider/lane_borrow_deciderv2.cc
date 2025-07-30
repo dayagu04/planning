@@ -212,6 +212,7 @@ bool LaneBorrowDecider::LaneBorrowPreCheck() {
   //     is_first_frame_to_lane_borrow_ = false;
   //   }
   // }
+
   observe_frame_num_++;
   if (observe_frame_num_ < config_.observe_frames) {
     lane_borrow_decider_output_.lane_borrow_failed_reason =
@@ -248,6 +249,7 @@ void LaneBorrowDecider::UpdateToDP() {
     session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
         lane_borrow_decider_output_;  // 输出赋值
     observe_frame_num_ = 0;
+    lane_borrow_decider_output_.lat_flag_map.clear();
     return;
   }
 
@@ -621,7 +623,8 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   } else {
     lane_borrow_decider_output_.borrow_direction = bypass_direction_;
   }
-
+  //get blocking obs
+  SendObserveToLatFlag();
   observe_frame_num_++;
   if (observe_frame_num_ < config_.observe_frames) {
     lane_borrow_decider_output_.lane_borrow_failed_reason =
@@ -1794,6 +1797,32 @@ FrenetObstacleBoundary LaneBorrowDecider::GetSLboundaryFromAgent(
     sl_bd.s_end = std::fmax(sl_bd.s_end, project_s);      // s end
   }
   return sl_bd;
+}
+void LaneBorrowDecider::SendObserveToLatFlag(){
+  if(static_blocked_obj_id_vec_.empty()){
+    lat_flag_map_.clear();
+    lane_borrow_decider_output_.lat_flag_map.clear();
+    return;
+  }
+  for(const auto &id: static_blocked_obj_id_vec_){
+      if (lat_flag_map_.empty() || lat_flag_map_.find(id) == lat_flag_map_.end()) {  // add
+      lat_flag_map_[id] = 0;// fist appear
+    }
+    lat_flag_map_[id] += 1;
+    lat_flag_map_[id] = std::min(50, lat_flag_map_[id]);
+  // delete disappear obs
+    for (auto it = lat_flag_map_.begin(); it != lat_flag_map_.end();) {
+      if (std::find(static_blocked_obj_id_vec_.begin(),
+                    static_blocked_obj_id_vec_.end(),
+                    it->first) == static_blocked_obj_id_vec_.end()) {
+        it = lat_flag_map_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+  lane_borrow_decider_output_.lat_flag_map = lat_flag_map_;
+  return;
 }
 void LaneBorrowDecider::LogDebugInfo() {
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
