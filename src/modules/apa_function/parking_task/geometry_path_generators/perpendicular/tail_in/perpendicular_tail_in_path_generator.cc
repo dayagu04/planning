@@ -1800,7 +1800,7 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
         if (geometry_path.collide_flag &&
             geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE) {
           if (CheckStuckedByInside(geometry_path.start_pose,
-                                   geometry_path.end_pose, enable_log)) {
+                                   geometry_path.end_pose, true, enable_log)) {
             reverse_1arc_safe = false;
             ILOG_INFO_IF(enable_log) << "reverse_1arc is not safe";
             break;
@@ -2113,7 +2113,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
             geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
             compensate_line_try_count < max_compensate_line_try_count) {
           if (CheckStuckedByInside(geometry_path.start_pose,
-                                   geometry_path.end_pose)) {
+                                   geometry_path.end_pose, true)) {
             ILOG_INFO << "try use a reverse gear straight line to cast off "
                          "inside stuck";
             i = -1;
@@ -4034,7 +4034,8 @@ const bool PerpendicularTailInPathGenerator::InsertLineInGeometryPath(
 
 const bool PerpendicularTailInPathGenerator::CheckStuckedByInside(
     const geometry_lib::PathPoint& start_pose,
-    const geometry_lib::PathPoint& end_pose, const bool enable_log) {
+    const geometry_lib::PathPoint& end_pose,
+    const bool consider_car_lat_inflation, const bool enable_log) {
   const bool case1 =
       (end_pose.pos.y() - calc_params_.target_line.pA.y()) *
           (start_pose.pos.y() - calc_params_.target_line.pA.y()) >
@@ -4044,7 +4045,19 @@ const bool PerpendicularTailInPathGenerator::CheckStuckedByInside(
   const bool case3 = std::fabs(end_pose.heading * kRad2Deg) > 6.8;
   ILOG_INFO_IF(enable_log) << "case1 = " << case1 << "  case2 = " << case2
                            << "  case3 = " << case3;
-  return case1 && case2 && case3;
+
+  if (case1 && case2 && case3) {
+    if (!consider_car_lat_inflation) {
+      return true;
+    }
+    return col_det_interface_ptr_->GetGJKColDetPtr()
+        ->Update(std::vector<geometry_lib::PathPoint>{end_pose},
+                 apa_param.GetParam().car_lat_inflation_strict + 0.1268, 0.0,
+                 GJKColDetRequest())
+        .col_flag;
+  }
+
+  return false;
 }
 
 const bool PerpendicularTailInPathGenerator::ConstructReverseVaildPathSeg(
@@ -4341,7 +4354,7 @@ const bool PerpendicularTailInPathGenerator::FindPtCanReverseToSlot(
 
       if (success) {
         if (CheckStuckedByInside(geometry_path.start_pose,
-                                 geometry_path.end_pose, false)) {
+                                 geometry_path.end_pose, false, false)) {
           auto& arc_seg = geometry_path.path_segment_vec.back();
           CalcObsDistConsiderSlotForPathSeg(arc_seg);
           const double stuck_y =
