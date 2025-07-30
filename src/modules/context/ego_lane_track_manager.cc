@@ -51,7 +51,7 @@ constexpr double kLaneChangeExecutionWeightRatio = 0.5;
 constexpr double kLaneChangeOrderidDiffWeight = 1.0;
 
 constexpr int32_t kLaneCenterMinPointsThr = 3;
-constexpr double kLaneLineSegmentLength = 5.0;
+constexpr double kLaneLineSegmentLength = 3.0;
 constexpr double kConsiderLaneLineLength = 50.0;
 constexpr double kDefaultRoadRadius = 750.0;
 constexpr int32_t kDefaultPointNums = 40;
@@ -74,7 +74,7 @@ constexpr double kEgoLateralDistanceCostWeight = 0.5;
 constexpr double kUseVirtualLaneProcessSplitCostThd = 10.0;
 constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
-constexpr double kDefaultConsiderVirtualLineLength = 60.0;
+constexpr double kDefaultConsiderVirtualLineLength = 65.0;
 constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
@@ -1312,40 +1312,11 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   bool enable_use_virtual_lane_process_split = false;
   double ego_distance_to_lane_merge_split_point = 0.0;
 
-  if (last_zero_relative_id_nums_ > 1 && lcc_split_select_is_finish_) {
-    LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
-    if (last_zero_relative_id_order_id_index_ != -1) {
-      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
-                                        relative_id_lanes, order_ids,
-                                        zero_relative_id_order_id_index);
-
-      if (enable_using_last_frame_track_ego_lane) {
-        if (zero_relative_id_order_id_index < order_ids.size() &&
-            relative_id_lanes.size() >
-                order_ids[zero_relative_id_order_id_index]) {
-          last_track_ego_lane_ =
-              relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-          last_zero_relative_id_order_id_index_ =
-              zero_relative_id_order_id_index;
-          for (auto& lane : relative_id_lanes) {
-            int lane_order_id = lane->get_order_id();
-            int lane_relative_id =
-                lane_order_id - order_ids[zero_relative_id_order_id_index];
-            lane->set_relative_id(lane_relative_id);
-          }
-          is_exist_split_on_intersection_ = true;
-          return;
-        } else {
-          return;
-        }
-      }
-    }
-  }
-
   // Point2D lane_merge_split_point;
   Point2D virtual_lane_split_local_point;
   Point2D virtual_lane_split_point;
   bool find_virtual_lane_split_point = false;
+  std::vector<int> other_split_lane_index_set;
   int other_split_lane_index = -1;
   int split_lane_index = -1;
   for (size_t i = 0; i < order_ids.size(); i++) {
@@ -1376,7 +1347,38 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         virtual_lane_split_point.x = tmp_x + x0;
         virtual_lane_split_point.y = tmp_y + y0;
       } else {
-        other_split_lane_index = i;
+        other_split_lane_index_set.emplace_back(i);
+      }
+    }
+  }
+
+  if (last_zero_relative_id_nums_ > 1 && lcc_split_select_is_finish_ &&
+      ego_distance_to_lane_merge_split_point < kDefaultConsiderSplitSelectorDistance) {
+    LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
+    if (last_zero_relative_id_order_id_index_ != -1) {
+      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                        relative_id_lanes, order_ids,
+                                        zero_relative_id_order_id_index);
+
+      if (enable_using_last_frame_track_ego_lane) {
+        if (zero_relative_id_order_id_index < order_ids.size() &&
+            relative_id_lanes.size() >
+                order_ids[zero_relative_id_order_id_index]) {
+          last_track_ego_lane_ =
+              relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_zero_relative_id_order_id_index_ =
+              zero_relative_id_order_id_index;
+          for (auto& lane : relative_id_lanes) {
+            int lane_order_id = lane->get_order_id();
+            int lane_relative_id =
+                lane_order_id - order_ids[zero_relative_id_order_id_index];
+            lane->set_relative_id(lane_relative_id);
+          }
+          is_exist_split_on_intersection_ = true;
+          return;
+        } else {
+          return;
+        }
       }
     }
   }
@@ -1384,8 +1386,52 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   if (!find_virtual_lane_split_point) {
     return;
   }
+
+  other_split_lane_index = other_split_lane_index_set[0];
+  double split_point_lateral_max_distance = 0.0;
+  if (other_split_lane_index_set.size() > 1) {
+    std::shared_ptr<VirtualLane> split_lane1 =
+            relative_id_lanes[order_ids[split_lane_index]];
+    if (split_lane1 != nullptr) {
+      std::shared_ptr<KDPath> split_lane_frenet =
+          split_lane1->get_lane_frenet_coord();
+      if (split_lane_frenet != nullptr) {
+        Point2D split_lane_perception_split_point_frenet1;
+        Point2D split_lane_perception_split_point1;
+        if(!split_lane_frenet->XYToSL(virtual_lane_split_point, split_lane_perception_split_point_frenet1)) {
+          return;
+        }
+        Point2D split_lane_perception_split_point_frenet2(split_lane_perception_split_point_frenet1.x, 0.0);
+        if(!split_lane_frenet->SLToXY(split_lane_perception_split_point_frenet2, split_lane_perception_split_point1)) {
+          return;
+        }
+        virtual_lane_split_point.x = split_lane_perception_split_point1.x;
+        virtual_lane_split_point.y = split_lane_perception_split_point1.y;
+      }
+    }
+
+    for (int i = 0; i < other_split_lane_index_set.size(); ++i) {
+      std::shared_ptr<VirtualLane> other_split_lane1 =
+          relative_id_lanes[order_ids[other_split_lane_index_set[i]]];
+      if (other_split_lane1 != nullptr) {
+        std::shared_ptr<KDPath> other_split_lane_frenet_coord1 =
+            other_split_lane1->get_lane_frenet_coord();
+        if (other_split_lane_frenet_coord1 != nullptr) {
+          Point2D other_split_lane_perception_split_point_frenet1;
+          if (!other_split_lane_frenet_coord1->XYToSL(virtual_lane_split_point, other_split_lane_perception_split_point_frenet1)) {
+            continue;
+          }
+          if (std::fabs(other_split_lane_perception_split_point_frenet1.y) > split_point_lateral_max_distance) {
+            split_point_lateral_max_distance = std::fabs(other_split_lane_perception_split_point_frenet1.y);
+            other_split_lane_index = other_split_lane_index_set[i];
+          }
+        }
+      }
+    }
+  }
+
   if (other_split_lane_index != -1 && split_lane_index != -1) {
-    std::shared_ptr<VirtualLane> other_split_lane =
+        std::shared_ptr<VirtualLane> other_split_lane =
             relative_id_lanes[order_ids[other_split_lane_index]];
     std::shared_ptr<VirtualLane> split_lane =
             relative_id_lanes[order_ids[split_lane_index]];
