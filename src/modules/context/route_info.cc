@@ -2064,6 +2064,19 @@ void RouteInfo::NewUpdateMLCInfoDecider(
       feasible_lane_sequence =
           mlc_decider_route_info_.static_merge_region_info.recommend_lane_num[0]
               .feasible_lane_sequence;
+
+      std::vector<int> merge_lane;
+      if (CalculateMergeLaneInfo(merge_lane) && !merge_lane.empty()) {
+        for (int element : merge_lane) {
+          auto it = std::find(feasible_lane_sequence.begin(),
+                              feasible_lane_sequence.end(), element);
+
+          if (it != feasible_lane_sequence.end()) {
+            feasible_lane_sequence.erase(it);
+          }
+        }
+      }
+
     } else if (mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
       // feasible_lane_sequence =
       //     split_region_info_list.recommend_lane_num[0].feasible_lane_sequence;
@@ -3267,4 +3280,147 @@ std::vector<char> RouteInfo::SortRaysByDirection(const std::vector<RayInfo>& ray
     }
     return result;
 }
+
+bool RouteInfo::CalculateMergeLaneInfo(
+  std::vector<int>& merge_lane_sequence) {
+  iflymapdata::sdpro::FeaturePoint find_fp;
+  iflymapdata::sdpro::FeaturePoint last_fp;
+  uint64 fp_link_id;
+  double ego_s_in_cur_link;
+
+  if (!CalculateFP(&find_fp, &fp_link_id)) {
+      return false;
+  }
+
+  if (!CalculateLastFp(&last_fp, ego_s_in_cur_link, fp_link_id, find_fp)) {
+      merge_lane_sequence.emplace_back(1);
+      return true;
+  }
+
+  for (const auto& lane_id : find_fp.lane_ids()) {
+    const auto& lane_info = sdpro_map_.GetLaneInfoByID(lane_id);
+    if (lane_info == nullptr) {
+        continue;
+    }
+    // 暂时先处理左边的merge lane
+    if (lane_info->change_type() ==
+      iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
+      bool is_lane_num_satisfy =
+          find_fp.lane_ids_size() + 1 == last_fp.lane_ids_size();
+      // 默认是车道的前继车道左边为汇入车道
+      if (is_lane_num_satisfy) {
+        merge_lane_sequence.emplace_back(lane_info->sequence());
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool RouteInfo::CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* fp_link_id) {
+  //后续需要把这部分代码封装一下#######################################
+  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  //获取当前的segment
+  ad_common::math::Vec2d current_point;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  double temp_nearest_s = 0;
+  double nearest_l = 0;
+  const double ego_heading_angle = ego_state->heading_angle();
+
+  const iflymapdata::sdpro::LinkInfo_Link* current_link =
+      sdpro_map_.GetNearestLinkWithHeading(current_point, search_distance,
+                                          ego_heading_angle, max_heading_diff,
+                                          temp_nearest_s, nearest_l);
+  route_info_output_.current_segment_passed_distance = temp_nearest_s;
+  LOG_DEBUG("current_segment_passed_distance:%f\n",
+            route_info_output_.current_segment_passed_distance);
+  if (!current_link) {
+    return false;
+  }
+  //############################################
+
+  double itera_dis = 0;
+  const auto& merge_region_info_list = route_info_output_.merge_region_info_list;
+  if (merge_region_info_list.size() == 0) {
+    return false;
+  } 
+
+  while (itera_dis < merge_region_info_list[0].distance_to_split_point) {
+    for (const auto& fp: current_link->feature_points()) {
+      for (const auto& fp_type: fp.type()) {
+        if (fp_type == iflymapdata::sdpro::FeaturePointType::LANE_COUNT_CHANGE) {
+          itera_dis = itera_dis +
+                      fp.projection_percent() * current_link->length() * 0.01 -
+                      temp_nearest_s;
+          if (itera_dis < kEpsilon) {
+              continue;
+          }
+          *find_fp = fp;
+          *fp_link_id = current_link->id();
+          return true;
+        }
+      }
+    }
+    itera_dis = itera_dis + current_link->length() * 0.01;
+    current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
+  }
+  return true;                 
+}
+
+bool RouteInfo::CalculateLastFp(
+    iflymapdata::sdpro::FeaturePoint* last_fp, const double ego_s_in_cur_link,
+    const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint& find_fp) {
+  const auto& fp_link = sdpro_map_.GetLinkOnRoute(fp_link_id);
+  if (fp_link == nullptr || fp_link->feature_points().empty()) {
+    return false;
+  }
+
+  int fp_index = -1;
+  for (int i = 0; i < fp_link->feature_points_size(); i++) {
+    const auto& fp = fp_link->feature_points()[i];
+    if (fp.id() == find_fp.id()) {
+      fp_index = i;
+    }
+  }
+
+  if (fp_index < kEpsilon) {
+    return false;
+  }
+
+  if (fp_index == 0) {
+    const iflymapdata::sdpro::LinkInfo_Link* fp_pre_link =
+        sdpro_map_.GetPreviousLinkOnRoute(fp_link_id);
+
+    if (fp_pre_link == nullptr) {
+      return false;
+    }
+
+    double itear_dis = 0.0;
+    while (fp_pre_link->feature_points_size() == 0) {
+      fp_pre_link = sdpro_map_.GetPreviousLinkOnRoute(fp_pre_link->id());
+      itear_dis = itear_dis + fp_pre_link->length() * 0.01;
+      if (fp_pre_link == nullptr || itear_dis > 500.0) {
+        return false;
+      }
+    }
+
+    *last_fp = fp_pre_link->feature_points()[0];
+    return true;
+  } else {
+    if (fp_index - 1 >= fp_link->feature_points_size()) {
+      return false;
+    }
+
+    *last_fp = fp_link->feature_points()[fp_index - 1];
+    return true;
+  }
+  return true;
+}
+
 }  // namespace planning
