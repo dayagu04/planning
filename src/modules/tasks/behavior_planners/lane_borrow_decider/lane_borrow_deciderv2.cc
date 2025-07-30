@@ -1661,17 +1661,20 @@ bool LaneBorrowDecider::IfChangeTargetLane() {
     }
   }
 
-  if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-      left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_SOLID &&
-      left_lane_boundary_type !=
-          iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED &&
-      left_lane_boundary_type !=
-          iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED &&
-      left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_VIRTUAL &&
-      left_lane_boundary_type !=
-          iflyauto::
-              LaneBoundaryType_MARKING_DECELERATION) {  //左侧是对向车道不可切换
-    return false;
+  // if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+  //     left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_SOLID &&
+  //     left_lane_boundary_type !=
+  //         iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED &&
+  //     left_lane_boundary_type !=
+  //         iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED &&
+  //     left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_VIRTUAL &&
+  //     left_lane_boundary_type !=
+  //         iflyauto::
+  //             LaneBoundaryType_MARKING_DECELERATION) {  //左侧是对向车道不可切换
+  //   return false;
+  // }
+    if(left_lane_ptr_->get_lane_type() == iflyauto::LANETYPE_OPPOSITE){
+    return false;//左侧是对向车道不可切换
   }
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
