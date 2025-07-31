@@ -206,8 +206,7 @@ class RouteInfo {
     const iflymapdata::sdpro::LinkInfo_Link& split_segment,
       const ad_common::sdpromap::SDProMap& sdpro_map);
   bool CalculateMergeLaneInfo(std::vector<int>& merge_lane_sequence);
-  bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp,
-                       const double ego_s_in_cur_link, const uint64 fp_link_id,
+  bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, const uint64 fp_link_id,
                        const iflymapdata::sdpro::FeaturePoint& find_fp);
 
   bool CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* fp_link_id);

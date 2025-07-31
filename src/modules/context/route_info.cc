@@ -2612,6 +2612,8 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
 
+  iflymapdata::sdpro::FeaturePoint last_fp;
+  bool is_find_last_fp = false;
   while (!is_find_split_region_start) {
     int fp_point_size = previous_seg->feature_points_size();
     for (int i = fp_point_size - 1; i >= 0; i--) {
@@ -2619,13 +2621,14 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       for (const auto fp_point_type : fp_point.type()) {
         if (fp_point_type ==
             iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_START) {
+          
+          if (CalculateLastFp(&last_fp, previous_seg->id(), fp_point)){
+            is_find_last_fp = true;
+          }
           is_find_split_region_start = true;
-          // 清空原有数据（可选，根据业务需求）
           split_region_info.start_fp_point.lane_ids.clear();
 
-          // 遍历RepeatedField并逐个转换类型
           for (const auto& id : fp_point.lane_ids()) {
-            // 显式转换类型（注意可能的溢出风险，见下方说明）
             if (!IsEmergencyLane(id, sdpro_map)) {
               split_region_info.start_fp_point.lane_ids.push_back(id);
             }
@@ -2720,7 +2723,19 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   split_region_info.recommend_lane_num.emplace_back(
       split_region_start_pre_link->lane_num(), std::vector<int>{});
 
-  split_region_info.recommend_lane_num.emplace_back(previous_seg->lane_num(),
+  //在交换区内部，可能存在车道数变化，因此交换区的车道数以交换区终点的前一个fp的车道数为准
+  int lane_num = 0;
+  if (is_find_last_fp) {
+    for (const auto& id : last_fp.lane_ids()) {
+      if (!IsEmergencyLane(id, sdpro_map)) {
+        lane_num++;
+      }
+    }
+  } else {
+    lane_num = previous_seg->lane_num();
+  }
+
+  split_region_info.recommend_lane_num.emplace_back(lane_num,
                                                     std::vector<int>{});
 
   split_region_info.recommend_lane_num.emplace_back(
@@ -3292,7 +3307,7 @@ bool RouteInfo::CalculateMergeLaneInfo(
       return false;
   }
 
-  if (!CalculateLastFp(&last_fp, ego_s_in_cur_link, fp_link_id, find_fp)) {
+  if (!CalculateLastFp(&last_fp, fp_link_id, find_fp)) {
       merge_lane_sequence.emplace_back(1);
       return true;
   }
@@ -3374,10 +3389,12 @@ bool RouteInfo::CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* f
 }
 
 bool RouteInfo::CalculateLastFp(
-    iflymapdata::sdpro::FeaturePoint* last_fp, const double ego_s_in_cur_link,
+    iflymapdata::sdpro::FeaturePoint* last_fp,
     const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint& find_fp) {
   const auto& fp_link = sdpro_map_.GetLinkOnRoute(fp_link_id);
-  if (fp_link == nullptr || fp_link->feature_points().empty()) {
+  if (last_fp == nullptr || 
+      fp_link == nullptr || 
+      fp_link->feature_points().empty()) {
     return false;
   }
 
@@ -3410,7 +3427,8 @@ bool RouteInfo::CalculateLastFp(
       }
     }
 
-    *last_fp = fp_pre_link->feature_points()[0];
+    //注：因为上面while计算，所以在这个地方feature_points_size不为0
+    *last_fp = *fp_pre_link->feature_points().rbegin();
     return true;
   } else {
     if (fp_index - 1 >= fp_link->feature_points_size()) {
