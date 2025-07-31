@@ -961,12 +961,14 @@ void DPRoadGraph::SetPullOverPath(double end_s,
   if (end_s - init_sl_point_.s < 0) {
     return;
   }
+  // 记录原有长度
+  double path_s_end = total_length_;
   const auto& current_frenet_coord = current_lane_ptr_->get_lane_frenet_coord();
   refined_paths_.clear();
   planning_math::QuinticPolynomialCurve1d curve(
       init_sl_point_.l, 0, 0, end_l, 0.0, 0.0, end_s - init_sl_point_.s);
   double path_s_length = end_s - init_sl_point_.s;
-  double path_resolution = std::min(0.5, (path_s_length / 4));
+  double path_resolution = std::min(1.0, (path_s_length / 5));
   double current_s = 0.0;
 
   while (current_s + path_resolution * 0.5 < path_s_length) {
@@ -981,6 +983,29 @@ void DPRoadGraph::SetPullOverPath(double end_s,
     const double numerator1 = dddl;
     const double numerator2 = 3 * ddl * dl * ddl / std::pow(1 + dl * dl, 2.5);
     const double dkappa = numerator1 / denominator - numerator2;
+    const double ddkappa = 0.;
+
+    const SLPoint sl_point(init_sl_point_.s + current_s, l);
+
+    Point2D sl_cart(0, 0);  // nonsene
+    // donnot delete, discard for pybind
+    current_frenet_coord->SLToXY(init_sl_point_.s + current_s, l, &sl_cart.x,
+                                 &sl_cart.y);
+    planning_math::PathPoint path_point{sl_cart.x,  sl_cart.y, sl_point.s,
+                                        sl_point.l, theta,     kappa,
+                                        dkappa,     ddkappa};
+    refined_paths_.emplace_back(path_point);
+    current_s += path_resolution;
+  }
+  // 已有dp path 剩余长度为直线部分
+  while(current_s + path_resolution * 0.5 < path_s_end - init_sl_point_.s){
+    const double l = end_l;
+    const double dl = 0;
+    const double ddl = 0;
+    const double dddl =0;
+    const double theta = 0;  // 计算heading角度 不是全局的
+    const double kappa = 0;  // 获取曲率
+    const double dkappa =0;
     const double ddkappa = 0.;
 
     const SLPoint sl_point(init_sl_point_.s + current_s, l);
