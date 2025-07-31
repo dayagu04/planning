@@ -44,11 +44,11 @@ static const double kColLargeLatBufferOutSlot = 0.3;   // out slot
 static const double kColSmallLatBufferOutSlot = 0.15;  // outslot
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
-static const size_t kMaxPathNumsInSlot = 5;
+static const size_t kMaxPathNumsInSlot = 8;
 static const size_t kMaxMultiStepNums = 8;
 static const size_t kMaxParallelShiftNums = 6;
 
-static const double kChannelYMoveDist = 0.1;
+static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
 static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
@@ -2138,8 +2138,8 @@ const bool ParallelPathGenerator::InverseSearchLoopInSlot(
       break;
     }
 
-    // ILOG_INFO <<"forward limit pose is valid\n");
-    // ILOG_INFO <<"------ backward step --------");
+    ILOG_INFO << "forward limit pose is valid\n";
+    ILOG_INFO << "------ backward step --------";
 
     pnc::geometry_lib::Arc backward_arc;
     backward_arc.pA = forward_arc.pB;
@@ -2178,6 +2178,8 @@ const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     const pnc::geometry_lib::PathPoint& target_pose) {
   ILOG_INFO << "---------AdvancedInversedTrialsInSlot --------------";
+  ILOG_INFO << "calc_params_.lon_buffer_rev_trials = "
+            << calc_params_.lon_buffer_rev_trials;
   using namespace pnc::geometry_lib;
 
   std::vector<Eigen::Vector2d> line_step_vec;
@@ -2473,8 +2475,8 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
     const pnc::geometry_lib::PathPoint& start_pose,
     const uint8_t current_gear) {
   using namespace pnc::geometry_lib;
-  // ILOG_INFO <<"InversedTrialsByGivenGear, start_pos"
-  //             << start_pose.pos.transpose());
+  // ILOG_INFO << "InversedTrialsByGivenGear, start_pos"
+  //           << start_pose.pos.transpose();
   uint8_t ref_gear = current_gear;
   uint8_t ref_steer = SEG_STEER_RIGHT;
   if ((ref_gear == SEG_GEAR_DRIVE && input_.tlane.slot_side_sgn > 0.0) ||
@@ -2482,9 +2484,9 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
     ref_steer = SEG_STEER_LEFT;
   }
 
-  // ILOG_INFO <<"slot side sgn = " << input_.tlane.slot_side_sgn);
-  // ILOG_INFO <<"current_gear = " << static_cast<int>(ref_gear));
-  // ILOG_INFO <<"current_steer = " << static_cast<int>(ref_steer));
+  // ILOG_INFO << "slot side sgn = " << input_.tlane.slot_side_sgn;
+  // ILOG_INFO << "current_gear = " << static_cast<int>(ref_gear);
+  // ILOG_INFO << "current_steer = " << static_cast<int>(ref_steer);
 
   // check if ego is able to park out at start pose
   pnc::geometry_lib::Arc arc;
@@ -2499,7 +2501,7 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
   for (size_t i = 0; i <= kMaxPathNumsInSlot + 1; i += 1) {
     if (!CalcArcStepLimitPose(arc, ref_gear, ref_steer,
                               calc_params_.lon_buffer_rev_trials)) {
-      // ILOG_INFO <<"calc arc limit error!");
+      ILOG_INFO << "calc arc limit error!";
       break;
     }
 
@@ -2507,7 +2509,7 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
         pnc::geometry_lib::PathSegment(ref_steer, ref_gear, arc));
 
     if (ref_gear == SEG_GEAR_DRIVE && CheckParkOutCornerSafeWithObsPin(arc)) {
-      // ILOG_INFO <<"is_dirve_out_safe success");
+      ILOG_INFO << "is_dirve_out_safe success";
       success = true;
       break;
     }
@@ -2521,7 +2523,10 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
   }
 
   if (success) {
+    ILOG_INFO << "success !";
     path_seg_vec = search_out_res;
+  } else {
+    ILOG_INFO << "failed !";
   }
 
   return success;
@@ -2615,6 +2620,7 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
   const double arc_length_limit = 6.0;
   if (!pnc::geometry_lib::CompleteArcInfo(arc, arc_length_limit,
                                           arc.is_anti_clockwise)) {
+    // ILOG_INFO << "CompleteArcInfo error!";
     return false;
   }
 
@@ -2626,7 +2632,9 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
   arc.is_ignored = true;
   // get updated arc info of collision free
   if (col_res == PATH_COL_NORMAL || col_res == PATH_COL_SHORTEN) {
-    if (arc_path.GetArcSeg().length >= 0.1) {
+    // ILOG_INFO << "arc_path.GetArcSeg().length = "
+    //           << arc_path.GetArcSeg().length;
+    if (arc_path.GetArcSeg().length >= 0.05) {
       arc.is_ignored = false;
       arc.pB = arc_path.GetArcSeg().pB;
       arc.headingB = arc_path.GetArcSeg().headingB;
@@ -2643,7 +2651,7 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
     arc.headingB = arc.headingA;
     arc.length = 0.0;
   }
-
+  ILOG_INFO << "arc.is_ignored = " << arc.is_ignored;
   return (!arc.is_ignored);
 }
 
@@ -2655,25 +2663,48 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
   // ILOG_INFO <<
   //     "max_corner_radius = " <<
   //     calc_params_.min_outer_front_corner_radius);
+
+  double virtual_obs_y_lim = input_.tlane.pt_inside.y();
+
   for (const auto& virtual_obs_pt : calc_params_.front_corner_obs_vec) {
     center_to_obs_in =
         std::min(center_to_obs_in,
                  (virtual_obs_pt - first_arc.circle_info.center).norm());
+
+    if (calc_params_.is_left_side) {
+      virtual_obs_y_lim = std::min(virtual_obs_y_lim, virtual_obs_pt.y());
+    } else {
+      virtual_obs_y_lim = std::max(virtual_obs_y_lim, virtual_obs_pt.y());
+    }
   }
-  // ILOG_INFO <<"actual corner safe dist = "
-  //             << center_to_obs_in -
-  //             calc_params_.min_outer_front_corner_radius);
+  ILOG_INFO << "corner remain dist = "
+            << center_to_obs_in - calc_params_.min_outer_front_corner_radius;
 
   const bool corner_safe =
       center_to_obs_in >=
       calc_params_.min_outer_front_corner_radius +
           apa_param.GetParam().parallel_ego_front_corner_to_obs_in_buffer;
 
-  const double theta_deg =
-      first_arc.length / first_arc.circle_info.radius * kRad2Deg;
-  const bool theta_safe = theta_deg > 30.0;
+  ILOG_INFO << "corner_safe = " << corner_safe;
 
-  return corner_safe && theta_safe;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf(first_arc.pB, first_arc.headingB);
+
+  auto park_out_corner = calc_params_.v_ego_farest_front_corner;
+  park_out_corner.y() *= -calc_params_.slot_side_sgn;
+
+  park_out_corner = l2g_tf.GetPos(park_out_corner);
+
+  const bool is_corner_out =
+      park_out_corner.y() * calc_params_.slot_side_sgn >
+              virtual_obs_y_lim * calc_params_.slot_side_sgn
+          ? true
+          : false;
+
+  ILOG_INFO << "park_out_corner.y() = " << park_out_corner.y()
+            << "   virtual_obs_y_lim = " << virtual_obs_y_lim;
+  ILOG_INFO << "is_corner_out = " << is_corner_out;
+
+  return corner_safe && is_corner_out;
 }
 
 const bool ParallelPathGenerator::TwoSameGearArcPlanToLine(
