@@ -42,13 +42,15 @@ constexpr double kOvertakeMaintainCountSpeedDiffThreshold = 1.39;  // 5km/h
 constexpr double kOvertakeUpdateCountRatioThreshold = 0.10;
 constexpr double kOvertakeUpdateCountRatioThresholdRainMode = 0.15;
 constexpr double kOvertakeMaintainCountRatioThreshold = 0.05;
-constexpr double kOvertakeUpdateCountSpeedRatioThreshold = 0.2;
-constexpr int kOvertakeUpdateCountTruckTypeThreshold = 4;
-constexpr int kOvertakeUpdateCountCarTypeThreshold = 2;
+constexpr double kOvertakeUpdateCountSpeedRatioThreshold = 0.4;
+constexpr int kOvertakeUpdateCountTruckTypeThreshold = 8;
+constexpr int kOvertakeUpdateCountCarTypeThreshold = 4;
 constexpr double kOvertakeLeadingVehicleHighSpeedThreshold = 22.22;  // 80km/h
 constexpr double kOvertakeLeadingVehicleLowSpeedThreshold = 16.67;   // 60km/h
 constexpr double kOvertakeLeadingVehicleHighSpeedDiffThreshold = 1.94;  // 7km/h
 constexpr double kOvertakeLeadingVehicleLowSpeedDiffThreshold = 3.89;  // 14km/h
+constexpr double kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold = 2.78;  // 10km/h
+
 constexpr double kOvertakeRightTurnExtraSpeedThreshold = 1.39;         // 5km/h
 constexpr int kOvertakeInhibitExtraSpeedTotalLaneNum = 3;
 constexpr double kOvertakeMinSpeedDiffThreshold = 0.01;
@@ -151,8 +153,8 @@ void OvertakeRequest::Update(int lc_status) {
   }
 
   double current_timestamp = IflyTime::Now_s();
-  enable_l_ = llane && left_reference_path_;
-  enable_r_ = rlane && right_reference_path_;
+  enable_l_ = llane && left_reference_path_ && llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  enable_r_ = rlane && right_reference_path_ && rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
   const bool is_lane_changing =
       lc_status == kLaneChangeExecution || lc_status == kLaneChangeComplete;
 
@@ -388,7 +390,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   // const bool is_trigger_right =
   //     (is_right_overtake && is_right_lane_change_safe_);
-  const bool is_trigger_right = is_right_overtake;      
+  const bool is_trigger_right = is_right_overtake;
   static int counter_right = 0;
   if (!is_trigger_right) {
     counter_right = 0;
@@ -691,10 +693,10 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
     speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
   } else if (leading_vehicle_speed <=
              kOvertakeLeadingVehicleLowSpeedThreshold) {
-    speed_threshold = kOvertakeLeadingVehicleLowSpeedDiffThreshold;
+    speed_threshold = kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold;
   } else {
     speed_threshold = planning_math::lerp(
-        kOvertakeLeadingVehicleLowSpeedDiffThreshold,
+        kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold,
         kOvertakeLeadingVehicleLowSpeedThreshold,
         kOvertakeLeadingVehicleHighSpeedDiffThreshold,
         kOvertakeLeadingVehicleHighSpeedThreshold, leading_vehicle_speed);
@@ -703,9 +705,9 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   const bool inhibit_extra_speed =
       (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum &&
        0 == left_lane_nums);
-  if (!is_left && !inhibit_extra_speed) {
-    speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
-  }
+  // if (!is_left && !inhibit_extra_speed) {
+  //   speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
+  // }
   JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
