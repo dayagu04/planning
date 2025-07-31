@@ -368,7 +368,8 @@ def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
         f"link_type: {link_type_name}, "
         f"link_class: {link_class_name}, "
         f"lane_num: {link.lane_num}, "
-        f"main_action: {route_link_dict[link.id].main_action}"
+        f"main_action: {route_link_dict[link.id].main_action}, "
+        f"assi_action: {route_link_dict[link.id].assi_action}, "
     )
     for point in link.points.boot.points:
         ehr_x, ehr_y = point.x, point.y
