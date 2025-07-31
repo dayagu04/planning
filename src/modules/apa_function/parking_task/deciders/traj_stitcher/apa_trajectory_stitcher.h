@@ -32,7 +32,8 @@ class ApaTrajectoryStitcher {
                const double front_wheel_angle, const SVPoint& ego_lon_point,
                const double predict_horizon,
                const trajectory::Trajectory& history_trajectory,
-               const pnc::geometry_lib::PathSegGear gear);
+               const pnc::geometry_lib::PathSegGear plan_gear,
+               const pnc::geometry_lib::PathSegGear veh_gear);
 
   const std::vector<pnc::geometry_lib::PathPoint>& GetConstStitchPath() const;
 
@@ -107,12 +108,12 @@ class ApaTrajectoryStitcher {
 
   void SmoothLonDelay();
 
-  // If vehicle is overshooting, use history path end state to generate stitch
-  // point.
   void GenePathPointFromPath(const pnc::geometry_lib::PathPoint& point);
 
   // If current traj is short, copy history traj.
   void CopyHistoryTraj(const trajectory::Trajectory& history_trajectory);
+
+  void GeneSpeedPointFromZeroState();
 
  private:
   SVPoint ego_lon_state_;
@@ -123,7 +124,9 @@ class ApaTrajectoryStitcher {
   trajectory::TrajectoryPoint lon_stitch_point_;
   // future traj, no collision with obstacles.
   trajectory::Trajectory trajectory_;
-  pnc::geometry_lib::PathSegGear gear_;
+  // traj gear
+  pnc::geometry_lib::PathSegGear traj_gear_;
+  pnc::geometry_lib::PathSegGear veh_gear_;
 
   TrajectoryStitchConfig config_;
 };

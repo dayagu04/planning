@@ -79,6 +79,7 @@ struct EgoInfoUnderSlot {
   geometry_lib::SlotSide slot_side = geometry_lib::SLOT_SIDE_INVALID;
   uint32 confidence = 0;
 
+  // slot coordinates
   geometry_lib::PathPoint cur_pose;
   geometry_lib::PathPoint origin_target_pose;
   geometry_lib::PathPoint target_pose;

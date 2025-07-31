@@ -858,6 +858,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     global_point.lat_buffer = path_point.lat_buffer;
     global_point.s = path_point.s;
     global_point.kappa = path_point.kappa;
+    global_point.gear = path_point.gear;
     complete_path_point_global_vec_.emplace_back(global_point);
   }
 
@@ -1029,6 +1030,11 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
   const ApaParameters& param = apa_param.GetParam();
 
   proj_pt = ego_info_under_slot.cur_pose;
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+    proj_pt = GetCurrentPathTerminal(true);
+    return;
+  }
 
   if (frame_.replan_reason != ReplanReason::DYNAMIC &&
       frame_.replan_reason != ReplanReason::PATH_DANGEROUS) {

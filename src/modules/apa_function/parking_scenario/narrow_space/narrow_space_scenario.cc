@@ -577,9 +577,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.slot_width = ego_info.slot.GetWidth();
   cur_request.slot_length = ego_info.slot.GetLength();
   cur_request.history_gear = current_gear_;
-  frame_.current_gear = current_gear_ == AstarPathGear::DRIVE
-                            ? geometry_lib::SEG_GEAR_DRIVE
-                            : geometry_lib::SEG_GEAR_REVERSE;
+  frame_.current_gear = GetGear(current_gear_);
   cur_request.goal_ = Pose2f(end.x, end.y, end.theta);
   FillPlanningReason(cur_request);
 
@@ -627,6 +625,8 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     gl_pt.lat_buffer = 0.0;
     gl_pt.kappa = result.kappa[i];
     gl_pt.s = result.accumulated_s[i];
+    gl_pt.gear = GetGear(result.gear[i]);
+
     if (IsSearchNode(result.type[i])) {
       gl_pt.type = 0;
     } else if (result.type[i] == AstarPathType::LINE_SEGMENT) {
@@ -721,6 +721,7 @@ const int NarrowSpaceScenario::PathOptimizationByCILRQ(
     point = pnc::geometry_lib::PathPoint(Eigen::Vector2d(path_pt.x, path_pt.y),
                                          path_pt.phi, path_pt.kappa);
     point.s = path_pt.accumulated_s;
+    point.gear = GetGear(path_pt.gear);
 
     if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus()) {
       const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
@@ -1950,6 +1951,9 @@ void NarrowSpaceScenario::FillPlanningReason(AstarRequest& cur_request) {
     case ReplanReason::SLOT_CRUISING:
       cur_request.plan_reason = PlanningReason::SLOT_CRUISING;
       break;
+    case ReplanReason::DYNAMIC_GEAR_SWITCH:
+      cur_request.plan_reason = PlanningReason::DYNAMIC_GEAR_SWITCH;
+      break;
     default:
       cur_request.plan_reason = PlanningReason::NONE;
       break;
@@ -2184,7 +2188,8 @@ Pose2D NarrowSpaceScenario::GenerateStitchPoint() {
         current_path_point_global_vec_,
         apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
         init_point, 0.2, trajectory_,
-        pnc::geometry_lib::GetGearType(frame_.current_gear));
+        pnc::geometry_lib::GetGearType(frame_.current_gear),
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear());
 
     const pnc::geometry_lib::PathPoint& stitch_point =
         traj_stitcher.GetStitchPathPoint();
@@ -2192,6 +2197,20 @@ Pose2D NarrowSpaceScenario::GenerateStitchPoint() {
 
     start = Pose2D(local_pos.x(), local_pos.y(),
                    ego_info.g2l_tf.GetHeading(stitch_point.heading));
+  } else if (frame_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+    if (!current_path_point_global_vec_.empty()) {
+      const pnc::geometry_lib::PathPoint& back =
+          current_path_point_global_vec_.back();
+
+      Eigen::Vector2d local = ego_info.g2l_tf.GetPos(back.pos);
+      start.x = local[0];
+      start.y = local[1];
+      start.theta = ego_info.g2l_tf.GetHeading(back.heading);
+    } else {
+      start.x = ego_info.cur_pose.pos[0];
+      start.y = ego_info.cur_pose.pos[1];
+      start.theta = ego_info.cur_pose.heading;
+    }
   } else {
     start = Pose2D(ego_info.cur_pose.pos[0], ego_info.cur_pose.pos[1],
                    ego_info.cur_pose.heading);
@@ -2292,11 +2311,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
     // if planning success, update gear
     if (path_search_valid) {
       current_gear_ = response_.first_seg_path[0].gear;
-      if (current_gear_ == AstarPathGear::DRIVE) {
-        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-      } else if (current_gear_ == AstarPathGear::REVERSE) {
-        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-      }
+      frame_.current_gear = GetGear(current_gear_);
     }
 
     ThreadClearState();
@@ -2380,6 +2395,12 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   PublishPreparePlanningTraj();
 
   return res;
+}
+
+const pnc::geometry_lib::PathSegGear NarrowSpaceScenario::GetGear(
+    const AstarPathGear gear) {
+  return (gear == AstarPathGear::DRIVE) ? pnc::geometry_lib::SEG_GEAR_DRIVE
+                                        : pnc::geometry_lib::SEG_GEAR_REVERSE;
 }
 
 }  // namespace apa_planner

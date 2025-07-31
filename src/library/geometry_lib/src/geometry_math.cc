@@ -3134,6 +3134,10 @@ const std::vector<PathPoint> SamplePathSegVec(
     if (i < path_seg_vec.size() - 1) {
       pt_set.pop_back();
     }
+
+    for (auto &point: pt_set) {
+      point.gear = path_seg.seg_gear;
+    }
     path_pt_vec.insert(path_pt_vec.end(), pt_set.begin(), pt_set.end());
   }
   return path_pt_vec;
@@ -3588,6 +3592,36 @@ void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint> &path) {
   }
 
   return;
+}
+
+const double GetSecondGearPathLength(
+    const std::vector<pnc::geometry_lib::PathPoint> &path) {
+  if (path.empty()) {
+    return 0.0;
+  }
+
+  uint8_t current_gear = path[0].gear;
+  bool found_gear_switch_path = false;
+  double gear_switch_path_s = 0.0;
+  double first_path_len = 0.0;
+  for (size_t i = 1; i < path.size(); i++) {
+    // check first path s
+    if (path[i].gear == current_gear) {
+      if (!found_gear_switch_path) {
+        first_path_len = path[i].s;
+      } else {
+        break;
+      }
+    }
+
+    // check next path s
+    if (path[i].gear != current_gear) {
+      found_gear_switch_path = true;
+      gear_switch_path_s = path[i].s;
+    }
+  }
+
+  return gear_switch_path_s - first_path_len;
 }
 
 }  // namespace geometry_lib

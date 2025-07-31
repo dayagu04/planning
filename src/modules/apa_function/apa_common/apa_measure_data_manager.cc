@@ -106,6 +106,24 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
                          iflyauto::RearviewMirrorSts::Rearview_Mirror_Fold);
   }
 
+  switch (vehicle_service_output_info.shift_lever_state) {
+    case 0:
+      gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_PARK;
+      break;
+    case 1:
+      gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE;
+      break;
+    case 2:
+      gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_NEUTRAL;
+      break;
+    case 3:
+      gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE;
+      break;
+    default:
+      gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID;
+      break;
+  }
+
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
   ILOG_INFO << "pos = " << pos_.transpose()
             << "  heading = " << heading_ * kRad2Deg << "  vel = " << vel_
