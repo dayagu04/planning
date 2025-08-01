@@ -66,6 +66,7 @@ class EnvironmentalModelManager {
                               common::VehicleStatus &vehicle_status);
   void truncate_prediction_info(
       const iflyauto::PredictionResult &prediction_result,
+      const iflyauto::FusionObjectsInfo &fusion_objects_result,
       double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set);
   bool transform_fusion_to_prediction(
       const iflyauto::FusionObject &fusion_object, double timestamp,

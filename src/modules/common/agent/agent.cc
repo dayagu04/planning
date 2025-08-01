@@ -1,6 +1,9 @@
 #include "agent.h"
 
+#include <cassert>
 #include <cstddef>
+#include <utility>
+#include <vector>
 
 #include "common.h"
 #include "config/basic_type.h"
@@ -23,27 +26,28 @@ Agent::Agent(const Agent& agent)
     : agent_id_(agent.agent_id()),
       box_(agent.box().center(), agent.box().heading(), agent.box().length(), agent.box().width()),
       is_static_(agent.is_static()) {
-    x_ = agent.x();
-    y_ = agent.y();
-    theta_ = agent.theta();
-    speed_ = agent.speed();
-    accel_ = agent.accel();
-    length_ = agent.length();
-    width_ = agent.width();
-    type_ = agent.type();
-    fusion_source_ = agent.fusion_source();
-    timestamp_us_ = agent.timestamp_us();
-    timestamp_s_ = agent.timestamp_s();
+  x_ = agent.x();
+  y_ = agent.y();
+  theta_ = agent.theta();
+  speed_ = agent.speed();
+  accel_ = agent.accel();
+  accel_fusion_ = agent.accel_fusion();
+  length_ = agent.length();
+  width_ = agent.width();
+  type_ = agent.type();
+  fusion_source_ = agent.fusion_source();
+  timestamp_us_ = agent.timestamp_us();
+  timestamp_s_ = agent.timestamp_s();
 
-    is_vru_ = agent.is_vru();
-    is_tfl_virtual_obs_ = agent.is_tfl_virtual_obs();
-    is_lane_borrow_virtual_obs_ = agent.is_lane_borrow_virtual_obs();
-    time_range_ = agent.time_range();
+  is_vru_ = agent.is_vru();
+  is_tfl_virtual_obs_ = agent.is_tfl_virtual_obs();
+  is_lane_borrow_virtual_obs_ = agent.is_lane_borrow_virtual_obs();
+  time_range_ = agent.time_range();
 
-    // 当前默认trajectories_中只存一条轨迹
-    trajectories_.clear();
-    trajectories_ = agent.trajectories();
-
+  // 当前默认trajectories_中只存一条轨迹
+  trajectories_.clear();
+  trajectories_ = agent.trajectories();
+  trajectories_used_by_st_graph_ = agent.trajectories_used_by_st_graph();
 }
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
@@ -60,6 +64,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   theta_ = prediction_object.theta;
   speed_ = prediction_object.speed;
   accel_ = prediction_object.acc;
+  accel_fusion_ = prediction_object.acc_fusion;
   length_ = prediction_object.length;
   width_ = prediction_object.width;
   type_ = static_cast<AgentType>(prediction_object.type);
@@ -82,6 +87,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   }
   // 当前默认trajectories_中只存一条轨迹
   trajectories_.clear();
+  trajectories_used_by_st_graph_.clear();
   trajectory::Trajectory trajectory;
   double cumulative_s = 0.0;
   for (size_t i = 0; i < prediction_trajectory.size(); ++i) {
@@ -108,6 +114,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   }
   trajectory.traj_elements_vec_ready_flag_ = true;
   trajectories_.emplace_back(trajectory);
+  trajectories_used_by_st_graph_.emplace_back(trajectory);
 }
 
 const int32_t Agent::agent_id() const { return agent_id_; }
@@ -137,6 +144,11 @@ void Agent::set_speed(const double speed) { speed_ = speed; }
 const double Agent::accel() const { return accel_; }
 void Agent::set_accel(const double accel) { accel_ = accel; }
 
+const double Agent::accel_fusion() const { return accel_fusion_; }
+void Agent::set_accel_fusion(const double accel_fusion) {
+  accel_fusion_ = accel_fusion;
+}
+
 const planning_math::Box2d& Agent::box() const { return box_; }
 void Agent::set_box(const planning_math::Box2d& box) { box_.set_box(box.center(), box.heading(), box.length(),  box.width()); }
 
@@ -160,19 +172,18 @@ void Agent::add_trajectory(const trajectory::Trajectory& trajectory) {
   trajectories_.emplace_back(trajectory);
 }
 
-// const std::vector<trajectory::Trajectory>&
-// Agent::trajectories_used_by_st_graph() const {
-//   return trajectories_used_by_st_graph_;
-// }
-// void Agent::set_trajectories_used_by_st_graph(
-//     const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph)
-//     {
-//   trajectories_used_by_st_graph_ = trajectories_used_by_st_graph;
-// }
-// void Agent::add_trajectories_used_by_st_graph(const trajectory::Trajectory&
-// trajectory) {
-//   trajectories_used_by_st_graph_.emplace_back(trajectory);
-// }
+const std::vector<trajectory::Trajectory>&
+Agent::trajectories_used_by_st_graph() const {
+  return trajectories_used_by_st_graph_;
+}
+void Agent::set_trajectories_used_by_st_graph(
+    const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph) {
+  trajectories_used_by_st_graph_ = trajectories_used_by_st_graph;
+}
+void Agent::add_trajectories_used_by_st_graph(
+    const trajectory::Trajectory& trajectory) {
+  trajectories_used_by_st_graph_.emplace_back(trajectory);
+}
 
 const AgentDecision& Agent::agent_decision() const { return agent_decision_; }
 AgentDecision* const Agent::mutable_agent_decision() {
@@ -326,7 +337,6 @@ void Agent::set_is_stop_destination_virtual_obs(
     const bool is_stop_destination_virtual_obs) {
   is_stop_destination_virtual_obs_ = is_stop_destination_virtual_obs;
 }
-
 
 const bool Agent::is_lane_borrow_virtual_obs() const {
   return is_lane_borrow_virtual_obs_;

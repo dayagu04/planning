@@ -67,6 +67,10 @@ struct AgentDefaultInfo {
       kRadsVirtualAgentId_Base + 1;
 };
 
+struct TmpPathPoint {
+  double x, y, theta;
+};
+
 class Agent {
  public:
   Agent() = default;
@@ -101,6 +105,9 @@ class Agent {
   const double accel() const;
   void set_accel(const double accel);
 
+  const double accel_fusion() const;
+  void set_accel_fusion(const double accel_fusion);
+
   const AgentType type() const;
   void set_type(const AgentType type);
 
@@ -124,12 +131,12 @@ class Agent {
       const std::vector<trajectory::Trajectory>& trajectories);
   void add_trajectory(const trajectory::Trajectory& trajectory);
 
-  // const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph()
-  // const; void set_trajectories_used_by_st_graph(
-  //     const std::vector<trajectory::Trajectory>&
-  //     trajectories_used_by_st_graph);
-  // void add_trajectories_used_by_st_graph(const trajectory::Trajectory&
-  // trajectory);
+  const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph()
+      const;
+  void set_trajectories_used_by_st_graph(
+      const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph);
+  void add_trajectories_used_by_st_graph(
+      const trajectory::Trajectory& trajectory);
 
   const AgentDecision& agent_decision() const;
   AgentDecision* const mutable_agent_decision();
@@ -237,13 +244,14 @@ class Agent {
   double theta_ = 0.0;
   double speed_ = 0.0;
   double accel_ = 0.0;
+  double accel_fusion_ = 0.0;
   planning_math::Box2d box_;
 
   double d_path_ = std::numeric_limits<double>::max();
   double d_rel_ = std::numeric_limits<double>::max();
 
   std::vector<trajectory::Trajectory> trajectories_;
-  // std::vector<trajectory::Trajectory> trajectories_used_by_st_graph_;
+  std::vector<trajectory::Trajectory> trajectories_used_by_st_graph_;
 
   int32_t top_probability_index_ = 0;
   double top_probability_ = 0.0;

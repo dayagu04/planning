@@ -21,6 +21,7 @@
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "frenet_ego_state.h"
+#include "fusion_objects_c.h"
 #include "general_planning_context.h"
 #include "history_obstacle_manager.h"
 #include "ifly_localization_c.h"
@@ -466,8 +467,9 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
                          ? local_view.localization_estimate.header.timestamp
                          : local_view.localization.meta.timestamp;
     if (!session_->is_hpp_scene()) {
-      truncate_prediction_info(local_view.prediction_result, timestamp,
-        prediction_obj_id_set);
+      truncate_prediction_info(local_view.prediction_result,
+                               local_view.fusion_objects_info, timestamp,
+                               prediction_obj_id_set);
     } else {
       // hack:hpp暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size; i++) {
@@ -760,6 +762,7 @@ static inline float32 y_turn(float32 inputx, float32 inputy, float32 theta) {
 
 void EnvironmentalModelManager::truncate_prediction_info(
     const iflyauto::PredictionResult &prediction_result,
+    const iflyauto::FusionObjectsInfo &fusion_objects_result,
     double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set) {
   assert(session_ != nullptr);
   double current_time =
@@ -771,6 +774,27 @@ void EnvironmentalModelManager::truncate_prediction_info(
   auto &prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
+
+  // HACK: store fusion object info
+  // <key: Perception id, value: fusion obj acc>
+  std::unordered_map<int32_t, double> fusion_objects_acc_map;
+  for (int i = 0; i < fusion_objects_result.fusion_object_size; i++) {
+    const auto &fusion_obj = fusion_objects_result.fusion_object[i];
+    double obj_yaw = fusion_obj.common_info.heading_angle;
+    // double ego_yaw = ego_state->heading_angle();
+    if ((int)obj_yaw == 255) {
+      obj_yaw = ego_state->heading_angle();
+    }
+    Eigen::Vector2f obj_heading_vec(cos(obj_yaw), sin(obj_yaw));
+    Eigen::Vector2f fusion_obj_acc_vec(fusion_obj.common_info.acceleration.x,
+                                       fusion_obj.common_info.acceleration.y);
+    double fusion_acc = fusion_obj_acc_vec.dot(obj_heading_vec);
+    int32_t obj_fusion_source = fusion_obj.additional_info.fusion_source;
+    if (obj_fusion_source & OBSTACLE_SOURCE_CAMERA) {
+      fusion_objects_acc_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0], fusion_acc});
+    }
+  }
 
   for (int i = 0; i < prediction_result.prediction_obstacle_list_size; i++) {
     const auto &prediction_object =
@@ -867,6 +891,15 @@ void EnvironmentalModelManager::truncate_prediction_info(
 
     if ((int)cur_predicion_obj.relative_theta == 255) {
       cur_predicion_obj.relative_theta = 0;
+    }
+
+    auto iter = fusion_objects_acc_map.find(cur_predicion_obj.id);
+    if (iter != fusion_objects_acc_map.end()) {
+      cur_predicion_obj.acc_fusion = iter->second;
+    } else {
+      cur_predicion_obj.acc_fusion = std::hypot(
+          prediction_object.fusion_obstacle.common_info.acceleration.x,
+          prediction_object.fusion_obstacle.common_info.acceleration.y);
     }
     cur_predicion_obj.acc = std::hypot(
         prediction_object.fusion_obstacle.common_info.acceleration.x,

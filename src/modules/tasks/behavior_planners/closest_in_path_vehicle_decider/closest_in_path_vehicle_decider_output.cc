@@ -24,6 +24,14 @@ void ClosestInPathVehicleDeciderOutput::set_acceleration(
   acceleration_ = acceleration;
 }
 
+double ClosestInPathVehicleDeciderOutput::acceleration_fusion() const {
+  return acceleration_fusion_;
+}
+void ClosestInPathVehicleDeciderOutput::set_acceleration_fusion(
+    const double acceleration_fusion) {
+  acceleration_fusion_ = acceleration_fusion;
+}
+
 double ClosestInPathVehicleDeciderOutput::relative_s() const {
   return relative_s_;
 }

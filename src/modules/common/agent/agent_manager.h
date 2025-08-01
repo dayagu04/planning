@@ -44,6 +44,13 @@ class AgentManager {
  private:
   void DeleteOlderAgent();
 
+  void DeleteOlderAgentInfo();
+
+  void RecalculateDecelTrajectories(
+      const std::shared_ptr<Agent>& agent,
+      const std::unordered_map<int32_t, std::list<std::shared_ptr<Agent>>>&
+          historical_agents_info);
+
  private:
   planning::framework::Session* session_ = nullptr;
   EgoPlanningObstacleManagerConfig config_;
@@ -51,6 +58,8 @@ class AgentManager {
   std::unordered_set<int32_t> current_agents_ids_;
   std::unordered_map<int32_t, std::list<std::shared_ptr<Agent>>>
       historical_agents_;
+  std::unordered_map<int32_t, std::list<std::shared_ptr<Agent>>>
+      historical_agents_info_;
 };
 
 }  // namespace agent
