@@ -128,6 +128,15 @@ void ParallelPathGenerator::Preprocess() {
   } else {
     calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
   }
+
+  calc_params_.weights = {kGearSwitchPenalty,
+                          kGearFirstPenalty,
+                          kPathLengthPenalty,
+                          kPathLengthFristPenalty,
+                          kPathLengthShortPenalty,
+                          kParkingHeadingDegPenalty,
+                          kMaxXPenalty,
+                          kMaxYPenalty};
 }
 
 void ParallelPathGenerator::ExpandObstacles() {
@@ -1422,66 +1431,18 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine(
 const bool ParallelPathGenerator::SelectBestPathOutsideSlot(
     const std::vector<GeometryPath>& path_vec, size_t& best_path_idx) {
   best_path_idx = std::numeric_limits<size_t>::max();
-
-  if (path_vec.size() == 0) {
+  if (path_vec.empty()) {
     ILOG_INFO << "no path in path pool!";
     return false;
   }
 
-  // for min gear
-  std::vector<std::size_t> index_vec;
-  size_t min_gear_shift_cnt = std::numeric_limits<size_t>::max();
+  double min_cost = std::numeric_limits<double>::max();
+
   for (size_t i = 0; i < path_vec.size(); i++) {
-    if (path_vec[i].gear_change_count < min_gear_shift_cnt) {
-      min_gear_shift_cnt = path_vec[i].gear_change_count;
-      index_vec.clear();
-      index_vec.emplace_back(i);
-    } else if (path_vec[i].gear_change_count == min_gear_shift_cnt) {
-      index_vec.emplace_back(i);
+    if (path_vec[i].cost_total < min_cost) {
+      min_cost = path_vec[i].cost_total;
+      best_path_idx = i;
     }
-  }
-
-  if (index_vec.size() == 0) {
-    ILOG_INFO << "calc min gear shift cnt error!";
-    return false;
-  }
-  ILOG_INFO << "min_gear_shift_cnt = " << min_gear_shift_cnt;
-
-  // for min length
-  double min_length = std::numeric_limits<double>::max();
-  for (const auto idx : index_vec) {
-    const auto& path = path_vec[idx];
-    // ILOG_INFO <<"path length = " << path.length);
-
-    if (path.length < min_length) {
-      bool is_pass = false;
-      for (const auto& path_seg : path.path_segment_vec) {
-        if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
-            path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-          const double line_length = path_seg.Getlength();
-          const double line_heading_deg =
-              path_seg.GetLineSeg().heading * kRad2Deg;
-
-          if (line_length > 6.0 &&
-              calc_params_.slot_side_sgn * line_heading_deg < 0 &&
-              std::abs(line_heading_deg) > 5.0) {
-            is_pass = true;
-            break;
-          }
-        }
-      }
-
-      if (is_pass) {
-        continue;
-      }
-
-      min_length = path.length;
-      best_path_idx = idx;
-    }
-  }
-
-  if (best_path_idx >= path_vec.size()) {
-    return false;
   }
 
   return true;
@@ -1492,36 +1453,97 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
     const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec) const {
   geometry_path.Reset();
 
-  if (path_seg_vec.empty()) {
+  if (path_seg_vec.size() == 0) {
     return false;
   }
-
   geometry_path.path_segment_vec = path_seg_vec;
-  const auto& first_gear = path_seg_vec.front().seg_gear;
 
-  int gear_change_count = 0;
-  double total_length = 0.0;
-  double first_path_length = 0.0;
-  auto prev_gear = first_gear;
+  double max_x = 0.0;
+  double max_y_mag = 0.0;
+  double min_heading = 0.0;
 
-  for (const auto& seg : path_seg_vec) {
-    const auto seg_length = seg.Getlength();
-    total_length += seg_length;
-    geometry_path.gear_cmd_vec.push_back(seg.seg_gear);
+  for (size_t i = 0; i < path_seg_vec.size(); i++) {
+    const auto& current_path_seg = path_seg_vec[i];
+    const auto current_gear = current_path_seg.seg_gear;
 
-    if (seg.seg_gear != prev_gear) {
-      ++gear_change_count;
+    geometry_path.length += current_path_seg.Getlength();
+    geometry_path.gear_cmd_vec.emplace_back(current_path_seg.seg_gear);
+
+    if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      max_x = std::max(max_x, current_path_seg.GetEndPos().x());
+      max_y_mag =
+          std::max(max_y_mag, std::fabs(current_path_seg.GetEndPos().y()));
     }
-    prev_gear = seg.seg_gear;
 
-    if (seg.seg_gear == first_gear && gear_change_count == 0) {
-      first_path_length += seg_length;
+    if (i > 0 && path_seg_vec[i].seg_gear != path_seg_vec[i - 1].seg_gear) {
+      geometry_path.gear_change_count++;
+
+      const auto& start_pose = path_seg_vec[i].GetStartPose();
+      const bool is_overslot = start_pose.pos.x() > input_.tlane.slot_length;
+      if (is_overslot) {
+        geometry_path.preparing_line_heading_deg =
+            start_pose.heading * kRad2Deg;
+      }
     }
   }
 
-  geometry_path.length = total_length;
-  geometry_path.first_path_length = first_path_length;
-  geometry_path.gear_change_count = gear_change_count;
+  double current_length = 0.0f;
+  uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+  for (size_t i = 0; i < geometry_path.path_segment_vec.size(); ++i) {
+    const auto& seg = geometry_path.path_segment_vec[i];
+    if (i == 0) {
+      current_gear = seg.seg_gear;
+      current_length = seg.Getlength();
+    } else {
+      if (seg.seg_gear == current_gear) {
+        current_length += seg.Getlength();
+      } else {
+        geometry_path.path_length_vec.emplace_back(current_length);
+        current_gear = seg.seg_gear;
+        current_length = seg.Getlength();
+      }
+    }
+  }
+  if (!geometry_path.path_segment_vec.empty()) {
+    geometry_path.path_length_vec.emplace_back(current_length);
+  }
+
+  geometry_path.first_path_length = geometry_path.path_length_vec.front();
+
+  double min_path_length = 100.0;
+  for (const double& path_length : geometry_path.path_length_vec) {
+    if (min_path_length < path_length) {
+      min_path_length = path_length;
+    }
+  }
+  geometry_path.shortest_path_length = min_path_length;
+
+  geometry_path.cost[COST_WEIGHT_GEAR_SWITCH] = geometry_path.gear_change_count;
+  geometry_path.cost[COST_WEIGHT_GEAR_FIRST] = 0.0;
+  geometry_path.cost[COST_WEIGHT_LENGTH] = geometry_path.length;
+  geometry_path.cost[COST_WEIGHT_FIRST_PATH_LENGTH] =
+      geometry_path.first_path_length;
+
+  if (geometry_path.shortest_path_length < 0.3) {
+    geometry_path.cost[COST_WEIGHT_SHORT_DIST] = 1;
+  }
+
+  // is heading neg
+  if (geometry_path.preparing_line_heading_deg * calc_params_.slot_side_sgn <
+      -1e-3) {
+    geometry_path.cost[COST_WEIGHT_ANGLE] =
+        std::fabs(geometry_path.preparing_line_heading_deg);
+  } else {
+    geometry_path.cost[COST_WEIGHT_ANGLE] = 0.0;
+  }
+
+  geometry_path.cost[COST_WEIGHT_DIST_MAX_X] = max_x - input_.tlane.slot_length;
+
+  geometry_path.cost[COST_WEIGHT_DIST_MAX_Y] = std::min(max_y_mag - 3.5, 0.0);
+  geometry_path.cost_total = 0.0;
+  for (size_t i = 0; i < COST_WEIGHT::COST_WEIGHT_MAX; i++) {
+    geometry_path.cost_total += geometry_path.cost[i] * calc_params_.weights[i];
+  }
 
   return true;
 }
