@@ -55,7 +55,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   parallel_slot_node_step = 0.3;
 
   max_search_time_ms = 5000;
-  max_search_time_ms_for_no_gear_switch = 100;
+  max_search_time_ms_for_no_gear_switch = 120;
   search_time_ms_scenario_try = 50;
   adjust_dist_inside_slot = 2.5;
 

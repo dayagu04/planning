@@ -771,7 +771,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       std::make_shared<ParkSpeedLimitDecider>(
           apa_world_ptr_->GetColDetInterfacePtr(),
           apa_world_ptr_->GetMeasureDataManagerPtr(),
-          apa_world_ptr_->GetObstacleManagerPtr());
+          apa_world_ptr_->GetObstacleManagerPtr(),
+          apa_world_ptr_->GetPredictPathManagerPtr());
   speed_limit_decider->Execute(traj_stitcher->GetMutableStitchPath(),
                                &speed_decisions);
 

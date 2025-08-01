@@ -24,10 +24,12 @@ class ParkSpeedLimitDecider : public ParkingTask {
           col_det_interface_ptr,
       const std::shared_ptr<apa_planner::ApaMeasureDataManager>&
           measure_data_ptr,
-      const std::shared_ptr<ApaObstacleManager>& obs_manager_ptr)
+      const std::shared_ptr<ApaObstacleManager>& obs_manager_ptr,
+      const std::shared_ptr<ApaPredictPathManager>& pred_path_manager)
       : col_det_interface_ptr_(col_det_interface_ptr),
         measure_data_ptr_(measure_data_ptr),
-        obs_manager_(obs_manager_ptr) {}
+        obs_manager_(obs_manager_ptr),
+        pred_path_manager_(pred_path_manager) {}
 
   ~ParkSpeedLimitDecider() = default;
 
@@ -73,6 +75,7 @@ class ParkSpeedLimitDecider : public ParkingTask {
       col_det_interface_ptr_;
   std::shared_ptr<apa_planner::ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager_;
+  std::shared_ptr<ApaPredictPathManager> pred_path_manager_;
 
   SpeedLimitProfile speed_limit_profile_;
 
