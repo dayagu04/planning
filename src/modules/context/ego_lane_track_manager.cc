@@ -1387,9 +1387,10 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
     return;
   }
 
-  other_split_lane_index = other_split_lane_index_set[0];
   double split_point_lateral_max_distance = 0.0;
-  if (other_split_lane_index_set.size() > 1) {
+  if (other_split_lane_index_set.size() == 1) {
+    other_split_lane_index = other_split_lane_index_set[0];
+  } else if (other_split_lane_index_set.size() > 1) {
     std::shared_ptr<VirtualLane> split_lane1 =
             relative_id_lanes[order_ids[split_lane_index]];
     if (split_lane1 != nullptr) {
