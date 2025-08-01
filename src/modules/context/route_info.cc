@@ -2648,12 +2648,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
         if (fp_point_type ==
             iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_END) {
           is_find_split_region_end = true;
-          // 清空原有数据（可选，根据业务需求）
           split_region_info.end_fp_point.lane_ids.clear();
 
-          // 遍历RepeatedField并逐个转换类型
           for (const auto& id : fp_point.lane_ids()) {
-            // 显式转换类型（注意可能的溢出风险，见下方说明）
             if (!IsEmergencyLane(id, sdpro_map)) {
               split_region_info.end_fp_point.lane_ids.push_back(id);
             }
@@ -2810,8 +2807,8 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
                   id);
             }
           }
-          merge_region_info.end_fp_point.link_id =
-              sdpro_map.GetNextLinkOnRoute(merge_region_end_link->id())->id();
+
+          merge_region_info.end_fp_point.link_id = merge_region_end_link->id();
           break;
         }
       }
