@@ -2167,6 +2167,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool has_trusted_predicted_polygon = false;
   bool is_care_reverse_ignore_obj = false;
   bool is_care_lon_overtake_obj = false;
+  bool is_care_intersection_scene = false;
   if (obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ && !in_intersection &&
       !is_avoid_lon_overtake_obj && !general_lateral_decider_output.lane_change_scene &&
       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
@@ -2186,6 +2187,11 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
         0, trusted_predicted_sl_polygon);
     is_care_lon_overtake_obj = true;
+  } else if (in_intersection) {
+    // 调整路口预测使用时间
+    has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
+      int(config_.trust_prediction_t_threshold_in_intersection * 10), trusted_predicted_sl_polygon);
+    is_care_intersection_scene = true;
   } else {
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
         int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
@@ -2225,6 +2231,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     double care_t = config_.trust_prediction_t_threshold;
     if (is_care_reverse_ignore_obj || is_care_lon_overtake_obj) {
       care_t = 0;
+    } else if (is_care_intersection_scene) {
+      care_t = config_.trust_prediction_t_threshold_in_intersection;
     }
     if (t <= care_t ||
         !has_trusted_predicted_polygon) {
@@ -2301,11 +2309,11 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         has_lon_decision =
             has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
       }
-      if (!is_blocked_obstacle_) {
-        lat_buf_dis = AdjustBufferForSideObstacleInIntersection(
-            obstacle, overlap_min_y, overlap_max_y, lat_buf_dis, is_nudge_left,
-            rear_lon_buf_dis, front_lon_buf_dis, lat_decision, i);
-      }
+      // if (!is_blocked_obstacle_) {
+      //   lat_buf_dis = AdjustBufferForSideObstacleInIntersection(
+      //       obstacle, overlap_min_y, overlap_max_y, lat_buf_dis, is_nudge_left,
+      //       rear_lon_buf_dis, front_lon_buf_dis, lat_decision, i);
+      // }
       AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                overlap_max_y, lat_buf_dis, lat_decision,
                                lon_decision, obstacle_decision,
@@ -2322,10 +2330,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
           if (is_limit_buffer_for_side_obstacle) {
             lat_buf_dis = std::fmin(lat_buf_dis, config_.side_obstacle_lat_buffer_limit);
           }
-          lat_buf_dis = AdjustBufferForSideObstacleInIntersection(
-              obstacle, overlap_min_y, overlap_max_y, lat_buf_dis,
-              is_nudge_left, rear_lon_buf_dis, front_lon_buf_dis, lat_decision,
-              i);
+          // lat_buf_dis = AdjustBufferForSideObstacleInIntersection(
+          //     obstacle, overlap_min_y, overlap_max_y, lat_buf_dis,
+          //     is_nudge_left, rear_lon_buf_dis, front_lon_buf_dis, lat_decision,
+          //     i);
         }
         for (auto index : indexes) {
           GenerateObstaclePreliminaryDecision(
@@ -2352,6 +2360,7 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     ObstacleDecision &obstacle_decision) {
   using namespace planning_math;
+  const int obstacle_id = obstacle->id();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lat_obstacle_decision = session_->planning_context()
@@ -2435,8 +2444,8 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
   double limit_overlap_max_y = 1000;
   Polygon2d trusted_predicted_sl_polygon;
   bool has_trusted_predicted_polygon = false;
-  has_trusted_predicted_polygon = obstacle->get_polygon_at_time(config_.trust_emergency_avoid_prediction_t_threshold, reference_path_ptr_,
-                                              trusted_predicted_sl_polygon);
+  has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
+      int(config_.trust_emergency_avoid_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -2460,8 +2469,8 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
     double pred_ts = 0;
     bool ok = false;
     Polygon2d obstacle_sl_polygon_t;
-    ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
-                                                obstacle_sl_polygon_t);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon_t);
+
     if (!ok) {
       // TBD add log
       return;
@@ -4215,7 +4224,7 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
 bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
     bool is_nudge_left,
     const std::shared_ptr<FrenetObstacle> obstacle) {
-
+  const int obstacle_id = obstacle->id();
   // 检测自车周围是否有紧急避让空间
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
   const auto &coarse_planning_info = session_->planning_context()
@@ -4305,8 +4314,8 @@ bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
       }
       Polygon2d obstacle_sl_polygon;
       bool ok = false;
-      ok = obj->get_polygon_at_time(t, reference_path_ptr_,
-                                          obstacle_sl_polygon);
+      ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon);
+
       if (!ok) {
         continue;
       }
