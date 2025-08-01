@@ -228,8 +228,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   speed_decisions.decisions.emplace_back(stop_decider.GetStopDecision());
 
   // update speed limit decision
-  ParkSpeedLimitDecider speed_limit_decider =
-      ParkSpeedLimitDecider(col_det_interface_ptr, localization_ptr, obstacles);
+  ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider(
+      col_det_interface_ptr, localization_ptr, obstacles, predict_path);
   speed_limit_decider.Execute(path2, &speed_decisions);
 
   // use boken obs dist, need retire

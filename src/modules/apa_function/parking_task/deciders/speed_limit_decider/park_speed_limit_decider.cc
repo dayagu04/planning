@@ -45,9 +45,18 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
   ParkLonDecision speed_limit_decision;
   speed_limit_decision.decision_type = LonDecisionType::CAUTION;
 
+  // check control error
+  bool has_control_error_speed_limit = false;
+  double control_error_speed_limit = 10.0;
+  if (std::fabs(pred_path_manager_->GetLatErr()) > 0.05 ||
+      std::fabs(pred_path_manager_->GetPhiErr()) > 3.0) {
+    control_error_speed_limit = 0.55;
+    has_control_error_speed_limit = true;
+  }
+
   speed_limit_profile_.Clear();
   size_t path_point_size = path.size();
-  speed_limit_profile_.Reverse(path_point_size);
+  speed_limit_profile_.Reserve(path_point_size);
   for (size_t i = 0; i < path_point_size; ++i) {
     const double path_s = path.at(i).s;
     const pnc::geometry_lib::PathPoint& point = path[i];
@@ -93,6 +102,15 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
       speed_limit = std::min(speed_limit, config_.speed_limit_lower_by_kappa);
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code = LonDecisionReason::PATH_KAPPA;
+      speed_limit_decision.path_s = path_s;
+
+      speed_decisions->decisions.emplace_back(speed_limit_decision);
+    }
+
+    if (has_control_error_speed_limit) {
+      speed_limit = std::min(speed_limit, control_error_speed_limit);
+      speed_limit_decision.decision_speed = speed_limit;
+      speed_limit_decision.reason_code = LonDecisionReason::PATH_CONTROL_ERROR;
       speed_limit_decision.path_s = path_s;
 
       speed_decisions->decisions.emplace_back(speed_limit_decision);

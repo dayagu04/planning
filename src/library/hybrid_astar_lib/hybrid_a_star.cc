@@ -2518,7 +2518,7 @@ const bool HybridAStar::IsNeedGearDriveSearch(const Pose2f& start) {
     return false;
   }
 
-  if (start.GetY() < -5.0 || start.GetY() > 5.0) {
+  if (start.GetY() < -9.0 || start.GetY() > 9.0) {
     ILOG_INFO << "start.GetY() =" << start.GetY();
     return false;
   }
@@ -2536,7 +2536,7 @@ const bool HybridAStar::IsNeedGearReverseSearch(const Pose2f& start) {
     return false;
   }
 
-  if (start.GetY() < -5.0 || start.GetY() > 5.0) {
+  if (start.GetY() < -8.0 || start.GetY() > 8.0) {
     ILOG_INFO << "start.GetY() =" << start.GetY();
     return false;
   }
