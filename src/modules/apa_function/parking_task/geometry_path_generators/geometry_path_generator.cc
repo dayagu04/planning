@@ -17,6 +17,7 @@ const bool GeometryPathGenerator::Update(
 
 const bool GeometryPathGenerator::SetCurrentPathSegIndex() {
   if (!output_.path_available) {
+    ILOG_INFO << "path is not available";
     return false;
   }
 

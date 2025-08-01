@@ -156,7 +156,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
                             pair_geometry_path_vec)) {
     // if is in searching stage, directly quit
     if (calc_params_.is_searching_stage) {
-      return true;
+      // return true;
     }
 
     // if is in parking stage, choose a better path
@@ -491,6 +491,23 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
 
     geometry_lib::GeometryPath optimal_rough_geometry_path =
         pair_geometry_path_vec[better_index].second;
+
+    if (calc_params_.is_searching_stage) {
+      output_.path_available = true;
+      for (const auto& seg : optimal_dubins_geometry_path.path_segment_vec) {
+        output_.path_segment_vec.emplace_back(seg);
+        output_.steer_vec.emplace_back(seg.seg_steer);
+        output_.gear_cmd_vec.emplace_back(seg.seg_gear);
+        output_.length += seg.Getlength();
+      }
+      for (const auto& seg : optimal_rough_geometry_path.path_segment_vec) {
+        output_.path_segment_vec.emplace_back(seg);
+        output_.steer_vec.emplace_back(seg.seg_steer);
+        output_.gear_cmd_vec.emplace_back(seg.seg_gear);
+        output_.length += seg.Getlength();
+      }
+      return output_.path_segment_vec.size() > 0;
+    }
 
     if (optimal_dubins_geometry_path.path_count < 1) {
       ILOG_INFO << "use ego pose to multi_adjust plan";

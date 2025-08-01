@@ -29,6 +29,7 @@ namespace apa_planner {
 
 void PerpendicularTailInScenario::Reset() {
   current_plan_path_vec_.clear();
+  all_plan_path_vec_.clear();
   ParkingScenario::Reset();
 }
 
@@ -36,6 +37,7 @@ void PerpendicularTailInScenario::ScenarioTry() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
     return;
   }
+
   Reset();
 
   SlotReleaseInfo& release_info = apa_world_ptr_->GetSlotManagerPtr()
@@ -63,6 +65,7 @@ void PerpendicularTailInScenario::ScenarioTry() {
   }
 
   PublishPreparePlanningTraj();
+
   return;
 }
 
@@ -680,11 +683,12 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   const bool path_plan_success = per_path_planner_ptr->Update();
 
   if (input.is_searching_stage) {
-    if (path_plan_success) {
-      return PathPlannerResult::PLAN_UPDATE;
-    } else {
+    if (!path_plan_success) {
       return PathPlannerResult::PLAN_FAILED;
     }
+    // if (path_plan_success) {
+    //   return PathPlannerResult::PLAN_UPDATE;
+    // }
   }
 
   PathPlannerResult plan_result = PathPlannerResult::PLAN_UPDATE;
