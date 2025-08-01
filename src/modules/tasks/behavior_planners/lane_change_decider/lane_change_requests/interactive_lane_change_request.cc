@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "common.pb.h"
+#include "common_c.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "interactive_lane_change_request.h"
@@ -148,7 +149,7 @@ void IntRequest::Update(int lc_status) {
     if (counter_left_ > count_threshold_ || is_in_diverted_lane_change_) {
       auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
           target_lane_virtual_id_tmp);
-      if (tlane != nullptr) {
+      if (tlane != nullptr && tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
         GenerateRequest(LEFT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
@@ -216,7 +217,7 @@ void IntRequest::Update(int lc_status) {
     if (counter_right_ > count_threshold_ || is_in_diverted_lane_change_) {
       auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
           target_lane_virtual_id_tmp);
-      if (tlane != nullptr) {
+      if (tlane != nullptr && tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
         GenerateRequest(RIGHT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(

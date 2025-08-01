@@ -170,14 +170,14 @@ void MapRequest::GenerateMLCRequest() {
   // lc_map_decision 小于0表示左转，大于0表示右转
   if (lc_map_decision < 0) {
     const auto& target_lane = virtual_lane_mgr_->get_left_lane();
-    if (request_type_ != LEFT_CHANGE && target_lane) {
+    if (request_type_ != LEFT_CHANGE && target_lane && target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane->get_virtual_id());
       LOG_DEBUG("[MapRequest::update] Ask for map changing lane to left\n");
     }
   } else {
     const auto& target_lane = virtual_lane_mgr_->get_right_lane();
-    if (request_type_ != RIGHT_CHANGE && target_lane) {
+    if (request_type_ != RIGHT_CHANGE && target_lane && target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane->get_virtual_id());
       LOG_DEBUG("[MapRequest::update] Ask for map changing lane to right\n");
