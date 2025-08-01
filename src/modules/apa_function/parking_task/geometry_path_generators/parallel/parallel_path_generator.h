@@ -238,6 +238,11 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const uint8_t ref_steer,
       const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3);
 
+  const bool SearchToRootPoseVec(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &start_pose, const double radius,
+      const double lon_buffer);
+
   const bool SearchToTargetLineVecV2(
       std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
       const pnc::geometry_lib::PathPoint &start_pose, const double radius,
