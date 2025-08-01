@@ -3,6 +3,8 @@ sys.path.append("..")
 from io import BytesIO
 # from lib.load_cyberbag import *
 from lib.load_local_view_parking import *
+from bokeh.models import Spacer
+from bokeh.layouts import column, row
 from lib.load_lon_plan import *
 from lib.load_common import *
 from bokeh.events import Tap
@@ -1078,8 +1080,14 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
   print('pybind end')
 
+# 加 spacer，让 pans 底部与 fig1 底部对齐
+pans_bottom_aligned = column(
+    Spacer(height=400),  # fig1 高 1200, pans 高 800 → 差值
+    pans
+)
+
 if plot_speed:
-  bkp.show(row(fig1, pans), notebook_handle=True)
+  bkp.show(row(fig1, pans_bottom_aligned), notebook_handle=True)
 else:
   bkp.show(row(fig1), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

@@ -979,16 +979,72 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");
-  JSON_READ_VALUE(param.speed_config.default_cruise_speed, double,
-                  "default_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.slow_mode.default_cruise_speed,
+                  double, "slow_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.middle_mode.default_cruise_speed,
+                  double, "middle_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.fast_mode.default_cruise_speed,
+                  double, "fast_cruise_speed");
   JSON_READ_VALUE(param.speed_config.min_cruise_speed, double,
                   "min_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.speed_limit_by_obs_dist.lower, double,
-                  "speed_limit_lower_by_obs_dist");
-  JSON_READ_VALUE(param.speed_config.speed_limit_by_kappa.lower, double,
-                  "speed_limit_lower_by_kappa");
-  JSON_READ_VALUE(param.speed_config.speed_limit_by_kappa_switch.lower, double,
-                  "speed_limit_by_kappa_switch");
+
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_obs_dist.lower, double,
+      "slow_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_obs_dist.upper, double,
+      "slow_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_obs_dist.lower,
+      double, "mid_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_obs_dist.upper,
+      double, "middle_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_obs_dist.lower, double,
+      "fast_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_obs_dist.upper, double,
+      "fast_cruise_speed");
+
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa.lower, double,
+      "slow_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa.upper, double,
+      "slow_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa.lower, double,
+      "mid_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa.upper, double,
+      "middle_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa.lower, double,
+      "fast_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa.upper, double,
+      "fast_cruise_speed");
+
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa_switch.lower,
+      double, "slow_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa_switch.upper,
+      double, "slow_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa_switch.lower,
+      double, "mid_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa_switch.upper,
+      double, "middle_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa_switch.lower,
+      double, "fast_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa_switch.upper,
+      double, "fast_cruise_speed");
+
   JSON_READ_VALUE(param.speed_config.min_path_dist_for_speed_optimizer, double,
                   "min_path_dist_for_speed_optimizer");
   JSON_READ_VALUE(param.speed_config.min_path_dist_for_veh_starting, double,
@@ -996,7 +1052,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.speed_config.optimizer_time_limit, double,
                   "optimizer_time_limit");
   JSON_READ_VALUE(param.speed_config.use_remain_dist, bool, "use_remain_dist");
-  JSON_READ_VALUE(param.speed_config.apa_speed_mode, int, "apa_speed_mode");
   JSON_READ_VALUE(param.speed_config.fast_cruise_speed, double,
                   "fast_cruise_speed");
   JSON_READ_VALUE(param.speed_config.middle_cruise_speed, double,
@@ -1007,19 +1062,6 @@ void SyncParkingParameters(const bool is_simulation) {
                   "long_path_acc_upper");
   JSON_READ_VALUE(apa_param.SetParam().speed_config.short_path_acc_upper,
                   double, "short_path_acc_upper");
-
-  double cruise_speed;
-  if (apa_param.GetParam().speed_config.apa_speed_mode == 0) {
-    cruise_speed = apa_param.GetParam().speed_config.fast_cruise_speed;
-  } else if (apa_param.GetParam().speed_config.apa_speed_mode == 1) {
-    cruise_speed = apa_param.GetParam().speed_config.middle_cruise_speed;
-  } else {
-    cruise_speed = apa_param.GetParam().speed_config.slow_cruise_speed;
-  }
-  param.speed_config.default_cruise_speed = cruise_speed;
-  param.speed_config.speed_limit_by_obs_dist.upper = cruise_speed;
-  param.speed_config.speed_limit_by_kappa.upper = cruise_speed;
-  param.speed_config.speed_limit_by_kappa_switch.upper = cruise_speed;
 
   // hybrid a star params
   JSON_READ_VALUE(param.astar_config.tail_in_slot_virtual_wall_x_offset, float,
@@ -1323,6 +1365,19 @@ void PrintAnalyticExpansionType(const AnalyticExpansionType type,
                                 const bool enable_log) {
   ILOG_INFO_IF(enable_log) << "analytic_expansion_type = "
                            << GetAnalyticExpansionTypeString(type);
+}
+const SpeedModeParams& ParkingSpeedConfig::GetSpeedParams(
+    const ParkingSpeedMode& park_speed_mode) const {
+  switch (park_speed_mode) {
+    case ParkingSpeedMode::FAST:
+      return fast_mode;
+    case ParkingSpeedMode::SLOW:
+      return slow_mode;
+    case ParkingSpeedMode::NORMAL:
+      return middle_mode;
+    default:
+      return middle_mode;
+  }
 }
 
 }  // namespace apa_planner

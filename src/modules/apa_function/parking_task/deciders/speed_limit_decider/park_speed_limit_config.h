@@ -1,5 +1,7 @@
 #pragma once
 
+#include "apa_param_config.h"
+#include "apa_state_machine_manager.h"
 namespace planning {
 namespace apa_planner {
 
@@ -22,7 +24,7 @@ struct ParkSpeedLimitConfig {
   double first_order_param_by_obs;
   double zero_order_param_by_obs;
 
-  void Init();
+  void Init(const ParkingSpeedMode& park_speed_mode);
 };
 
 }  // namespace apa_planner

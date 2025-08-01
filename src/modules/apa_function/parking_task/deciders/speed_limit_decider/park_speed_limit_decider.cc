@@ -16,12 +16,12 @@ namespace apa_planner {
 
 void ParkSpeedLimitDecider::Execute(
     std::vector<pnc::geometry_lib::PathPoint>& path,
-    SpeedDecisions* speed_decisions) {
+    SpeedDecisions* speed_decisions, const ParkingSpeedMode& park_speed_mode) {
   if (path.size() <= 1) {
     return;
   }
 
-  config_.Init();
+  config_.Init(park_speed_mode);
 
   Pose2D ego_pose = measure_data_ptr_->GetPose();
   col_det_interface_ptr_->GetPathSafeCheckPtr()->Excute(

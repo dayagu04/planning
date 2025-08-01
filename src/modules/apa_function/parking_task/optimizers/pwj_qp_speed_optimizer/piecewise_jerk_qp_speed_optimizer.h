@@ -1,5 +1,6 @@
 #pragma once
 
+#include "apa_state_machine_manager.h"
 #include "dp_speed_common.h"
 #include "parking_task.h"
 #include "piecewise_jerk_speed_config.h"
@@ -7,7 +8,6 @@
 #include "src/modules/apa_function/parking_task/deciders/speed_limit_decider/speed_limit_profile.h"
 #include "src/modules/common/math/piecewise_jerk/piecewise_jerk_speed_problem.h"
 #include "src/modules/common/speed/speed_data.h"
-#include "speed/apa_speed_decision.h"
 
 namespace planning {
 namespace apa_planner {
@@ -24,7 +24,8 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
   void Execute(const SVPoint& init_point,
                const SpeedLimitProfile* speed_limit_profile,
                const SpeedData& dp_speed_data,
-               const SpeedDecisions* speed_decisions);
+               const SpeedDecisions* speed_decisions,
+               const ParkingSpeedMode& park_speed_mode);
 
   const SpeedData& GetSpeedData() const { return qp_speed_data_; }
 
@@ -61,6 +62,8 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
   double delta_time_;
 
   SpeedData qp_speed_data_;
+
+  ParkingSpeedMode park_speed_mode_ = ParkingSpeedMode::FAST;
 };
 }  // namespace apa_planner
 }  // namespace planning

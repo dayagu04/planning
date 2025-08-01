@@ -162,7 +162,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   // generate path
   global_path_.clear();
 
-  apa_param.SetParam().speed_config.default_cruise_speed = max_cruise_speed;
+  apa_param.SetParam().speed_config.middle_mode.default_cruise_speed =
+      max_cruise_speed;
 
   const ApaParameters &param = apa_param.GetParam();
 
@@ -213,6 +214,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   init_point.acc = ego_acc;
   init_point.t = 0.0;
 
+  planning::ParkingSpeedMode park_speed_mode = planning::ParkingSpeedMode::FAST;
+
   // collision check
   planning::SpeedDecisions speed_decisions;
   ParkingStopDecider stop_decider =
@@ -230,7 +233,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   // update speed limit decision
   ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider(
       col_det_interface_ptr, localization_ptr, obstacles, predict_path);
-  speed_limit_decider.Execute(path2, &speed_decisions);
+  speed_limit_decider.Execute(path2, &speed_decisions, park_speed_mode);
 
   // use boken obs dist, need retire
   UpdatePathObsDistance(path2, obs_s, dist_to_obs);
@@ -243,17 +246,18 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   DpSpeedOptimizer dp_speed_optimizer;
   dp_speed_optimizer.Excute(
       path2, planning::Pose2D(start_pose.x, start_pose.y, start_pose.theta),
-      init_point, &speed_decisions, &speed_limit);
+      init_point, &speed_decisions, &speed_limit, park_speed_mode);
 
   dp_speed_profile_ = dp_speed_optimizer.SpeedProfile();
 
   PiecewiseJerkSpeedQPOptimizer qp_speed_optimizer;
   qp_speed_optimizer.Execute(init_point, &speed_limit, dp_speed_profile_,
-                             &speed_decisions);
+                             &speed_decisions, park_speed_mode);
   qp_speed_profile_ = qp_speed_optimizer.GetSpeedData();
 
   JerkLimitedTrajOptimizer jlt_optimizer;
-  jlt_optimizer.Execute(init_point, init_point, path2, &speed_decisions);
+  jlt_optimizer.Execute(init_point, init_point, path2, &speed_decisions,
+                        park_speed_mode);
   jlt_speed_profile_ = jlt_optimizer.GetSpeedData();
 
   return global_path_;

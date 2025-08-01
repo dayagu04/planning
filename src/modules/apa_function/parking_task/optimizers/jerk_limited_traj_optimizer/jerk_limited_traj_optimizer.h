@@ -38,7 +38,8 @@ class JerkLimitedTrajOptimizer : public ParkingTask {
   void Execute(const SVPoint& stitch_speed_point,
                const SVPoint& ego_speed_point,
                const std::vector<pnc::geometry_lib::PathPoint>& path,
-               const SpeedDecisions* speed_decisions);
+               const SpeedDecisions* speed_decisions,
+               const ParkingSpeedMode& park_speed_mode);
 
   const SpeedData& GetSpeedData() const { return speed_data_; }
 
@@ -87,6 +88,8 @@ class JerkLimitedTrajOptimizer : public ParkingTask {
   JLTFailCode fail_code_;
 
   const ParkLonDecision* stop_decision_;
+
+  ParkingSpeedMode park_speed_mode_ = ParkingSpeedMode::FAST;
 };
 }  // namespace apa_planner
 }  // namespace planning

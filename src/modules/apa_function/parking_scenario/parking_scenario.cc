@@ -311,12 +311,15 @@ void ParkingScenario::SetPlanningPath() {
   }
 
   ILOG_INFO << "plan mirror = " << static_cast<int>(frame_.mirror_command);
+  const ParkingSpeedMode& park_speed_mode =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkingSpeedMode();
+  const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
 
   auto publish_traj = &(planning_output_.trajectory);
   publish_traj->available = true;
   publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
   publish_traj->target_reference.target_velocity =
-      apa_param.GetParam().speed_config.default_cruise_speed;
+      speed_config.GetSpeedParams(park_speed_mode).default_cruise_speed;
 
   if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
     double total_s = current_path_point_global_vec_.back().s;
@@ -807,8 +810,11 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
           apa_world_ptr_->GetMeasureDataManagerPtr(),
           apa_world_ptr_->GetObstacleManagerPtr(),
           apa_world_ptr_->GetPredictPathManagerPtr());
+
+  const ParkingSpeedMode& park_speed_mode =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkingSpeedMode();
   speed_limit_decider->Execute(traj_stitcher->GetMutableStitchPath(),
-                               &speed_decisions);
+                               &speed_decisions, park_speed_mode);
 
   // task: generate dp speed
   std::shared_ptr<DpSpeedOptimizer> dp_speed_optimizer =
@@ -816,7 +822,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   dp_speed_optimizer->Excute(
       traj_stitcher->GetConstStitchPath(),
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(), stitch_init_speed,
-      &speed_decisions, &speed_limit_decider->GetSpeedLimitProfile());
+      &speed_decisions, &speed_limit_decider->GetSpeedLimitProfile(),
+      park_speed_mode);
 
   // task: generate qp speed
   std::shared_ptr<PiecewiseJerkSpeedQPOptimizer> qp_speed_optimizer =
@@ -824,7 +831,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   const SpeedData& dp_speed = dp_speed_optimizer->SpeedProfile();
   qp_speed_optimizer->Execute(stitch_init_speed,
                               &speed_limit_decider->GetSpeedLimitProfile(),
-                              dp_speed, &speed_decisions);
+                              dp_speed, &speed_decisions, park_speed_mode);
 
   // task: generate jlt speed
   if (dp_speed_optimizer->GetExcuteState() != TaskExcuteState::SUCCESS ||
@@ -833,7 +840,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
         std::make_shared<JerkLimitedTrajOptimizer>();
     jlt_optimizer->Execute(stitch_init_speed, ego_speed_point,
                            traj_stitcher->GetConstStitchPath(),
-                           &speed_decisions);
+                           &speed_decisions, park_speed_mode);
     traj_stitcher->CombineTrajBasedOnTime(jlt_optimizer->GetSpeedData(),
                                           trajectory_);
   } else {

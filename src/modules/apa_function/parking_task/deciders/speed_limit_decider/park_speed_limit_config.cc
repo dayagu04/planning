@@ -1,13 +1,16 @@
 #include "park_speed_limit_config.h"
+
 #include <cmath>
+
 #include "apa_param_config.h"
 #include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
 
-void ParkSpeedLimitConfig::Init() {
-  const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
+void ParkSpeedLimitConfig::Init(const ParkingSpeedMode& park_speed_mode) {
+  const SpeedModeParams& speed_config =
+      apa_param.GetParam().speed_config.GetSpeedParams(park_speed_mode);
 
   default_cruise_speed = speed_config.default_cruise_speed;
 

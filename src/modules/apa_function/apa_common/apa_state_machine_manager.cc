@@ -174,10 +174,28 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       slot_lat_pos_preference_ = ApaSlotLatPosPreference::MID;
       break;
   }
+  switch (fun_state_machine_info.parking_req.parking_speed_set) {
+    case iflyauto::PARKING_SPEED_SET_NONE:
+      parking_speed_mode_ = ParkingSpeedMode::INVALID;
+      break;
+    case iflyauto::PARKING_SPEED_SET_SLOW:
+      parking_speed_mode_ = ParkingSpeedMode::SLOW;
+      break;
+    case iflyauto::PARKING_SPEED_SET_NORMAL:
+      parking_speed_mode_ = ParkingSpeedMode::NORMAL;
+      break;
+    case iflyauto::PARKING_SPEED_SET_FAST:
+      parking_speed_mode_ = ParkingSpeedMode::FAST;
+      break;
+    default:
+      parking_speed_mode_ = ParkingSpeedMode::FAST;
+      break;
+  }
 
   PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
   PrintApaSlotLatPosPreference(slot_lat_pos_preference_);
+  PrintParkingSpeedMode(parking_speed_mode_);
 
   JSON_DEBUG_VALUE("apa_state_machine", static_cast<int>(state_machine_))
   JSON_DEBUG_VALUE("apa_out_direction", static_cast<int>(out_direction_))
@@ -379,6 +397,31 @@ void ApaStateMachineManager::PrintApaSlotLatPosPreference(
   ILOG_INFO << "slot_lat_pos_preference = "
             << GetApaSlotLatPosPreferenceString(slot_lat_pos_preference);
 }
+std::string ApaStateMachineManager::GetParkingSpeedModeString(
+    const ParkingSpeedMode parking_speed_mode) {
+  std::string speed_mode = "INVALID";
+  switch (parking_speed_mode) {
+    case ParkingSpeedMode::SLOW:
+      speed_mode = "SLOW";
+      break;
+    case ParkingSpeedMode::NORMAL:
+      speed_mode = "NORMAL";
+      break;
+    case ParkingSpeedMode::FAST:
+      speed_mode = "FAST";
+      break;
+    case ParkingSpeedMode::INVALID:
+    default:
+      speed_mode = "INVALID";
+      break;
+  }
+  return speed_mode;
+};
+
+void ApaStateMachineManager::PrintParkingSpeedMode(
+    const ParkingSpeedMode parking_speed_mode) {
+  ILOG_INFO << "speed_mode = " << GetParkingSpeedModeString(parking_speed_mode);
+};
 
 const bool ApaStateMachineManager::IsParkSuspendStatus() const {
   if (state_machine_ == ApaStateMachine::SUSPEND) {
