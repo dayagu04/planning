@@ -91,6 +91,7 @@ void ParkingScenarioManager::UpdateScenarioType() {
         }
       } else {
         // only use astar
+        JSON_DEBUG_VALUE("geometry_path_release", false);
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
     } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
