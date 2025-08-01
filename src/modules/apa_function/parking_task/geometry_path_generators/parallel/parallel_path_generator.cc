@@ -261,6 +261,7 @@ const bool ParallelPathGenerator::Update() {
               calc_params_.park_out_path_in_slot.back().GetStartHeading() *
               kRad2Deg) > 0.2) {
         calc_params_.park_out_path_in_slot.pop_back();
+
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
       }
@@ -1113,6 +1114,17 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   ILOG_INFO << "best_path_idx = " << best_path_idx;
   AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
   debug_info_.debug_all_path_vec = geo_path_vec;
+
+  const auto end_pose =
+      geo_path_vec[best_path_idx].path_segment_vec.back().GetEndPose();
+
+  calc_params_.park_out_path_in_slot.clear();
+  for (size_t i = 0; i < calc_params_.valid_target_pt_vec.size(); i++) {
+    if (CheckSamePose(end_pose, calc_params_.valid_target_pt_vec[i])) {
+      calc_params_.park_out_path_in_slot =
+          calc_params_.inversed_path_vec_in_slot[i].path_segment_vec;
+    }
+  }
   return true;
 }
 
@@ -2196,6 +2208,51 @@ const bool ParallelPathGenerator::InverseSearchLoopInSlot(
   return loop_success;
 }
 
+const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
+    const std::vector<GeometryPath>& total_path_vec,
+    std::vector<GeometryPath>& sorted_path_vec) {
+  if (total_path_vec.empty()) {
+    ILOG_INFO << "input path vector is empty!";
+    return false;
+  }
+
+  // 复制路径向量用于排序
+  sorted_path_vec = total_path_vec;
+
+  // 为每个路径计算停车时的航向角（度）
+  for (auto& path : sorted_path_vec) {
+    path.park_out_heading_deg =
+        std::fabs(path.path_segment_vec.back().GetStartHeading() * kRad2Deg);
+  }
+
+  // 按照以下优先级排序：
+  // 1. 换挡次数少的优先
+  // 2. 停车时航向角小的优先（相差1度以内视为相同优先级）
+  // 3. 路径总长度短的优先
+  std::sort(sorted_path_vec.begin(), sorted_path_vec.end(),
+            [](const GeometryPath& path_a, const GeometryPath& path_b) {
+              // 首先比较换挡次数
+              if (path_a.gear_change_count != path_b.gear_change_count) {
+                return path_a.gear_change_count < path_b.gear_change_count;
+              }
+
+              // 换挡次数相同时，比较停车时的航向角（允许1度的误差）
+              const double heading_diff = std::fabs(
+                  path_a.park_out_heading_deg - path_b.park_out_heading_deg);
+              if (heading_diff > 1.0) {
+                return path_a.park_out_heading_deg <
+                       path_b.park_out_heading_deg;
+              }
+
+              // 航向角相近时，比较路径总长度
+              return path_a.length < path_b.length;
+            });
+
+  ILOG_INFO << "sort paths completed, total path count: "
+            << sorted_path_vec.size();
+  return true;
+}
+
 const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     const pnc::geometry_lib::PathPoint& target_pose) {
@@ -2306,87 +2363,21 @@ const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
     return false;
   }
 
-  // // for debug
-  // for (const auto x : success_x_vec) {
-  //   ILOG_INFO << x << ", ";
-  // }
-  // ILOG_INFO ;
-
-  // min gear shifting
-  std::vector<size_t> min_gear_idx_vec;
-  size_t min_shifting_cnt = kInvalidInteger;
-  for (size_t i = 0; i < total_path_vec.size(); i++) {
-    auto& path = total_path_vec[i];
-
-    path.park_out_heading_deg =
-        std::fabs(path.path_segment_vec.back().GetStartHeading() * kRad2Deg);
-
-    if (path.gear_change_count < min_shifting_cnt) {
-      min_shifting_cnt = path.gear_change_count;
-      min_gear_idx_vec.clear();
-      min_gear_idx_vec.emplace_back(i);
-    } else if (path.gear_change_count == min_shifting_cnt) {
-      min_gear_idx_vec.emplace_back(i);
-    }
-  }
-  ILOG_INFO << "path size =  " << min_gear_idx_vec.size()
-            << " after gear filtered!";
-
-  if (min_gear_idx_vec.size() == 0) {
-    ILOG_INFO << "select min gear shifting cnt failed!";
+  if (!SortPathByGearShiftHeadingAndLength(
+          total_path_vec, calc_params_.inversed_path_vec_in_slot)) {
+    ILOG_INFO << "sort failed!";
     return false;
   }
 
-  double min_heading = std::numeric_limits<double>::max();
-  for (const auto& idx : min_gear_idx_vec) {
-    const double current_heading_deg = total_path_vec[idx].park_out_heading_deg;
-    if (current_heading_deg < min_heading) {
-      min_heading = current_heading_deg;
-    }
-  }
+  path_seg_vec =
+      calc_params_.inversed_path_vec_in_slot.front().path_segment_vec;
 
-  std::vector<size_t> min_heading_idx_vec;
-  min_heading_idx_vec.reserve(min_gear_idx_vec.size());
-  for (const auto& idx : min_gear_idx_vec) {
-    if (total_path_vec[idx].park_out_heading_deg < min_heading + 1.0) {
-      min_heading_idx_vec.emplace_back(idx);
-    }
-  }
-
-  if (min_heading_idx_vec.size() == 0) {
-    ILOG_INFO << "select min heading failed!";
-    return false;
-  }
-
-  bool success = false;
-  size_t best_idx = kInvalidInteger;
-  double min_length = std::numeric_limits<double>::max();
-  for (const auto& idx : min_heading_idx_vec) {
-    if (total_path_vec[idx].length < min_length) {
-      success = true;
-      best_idx = idx;
-      min_length = total_path_vec[idx].length;
-    }
-  }
-
-  if (success) {
-    path_seg_vec = total_path_vec[best_idx].path_segment_vec;
-
+  for (const auto& path : calc_params_.inversed_path_vec_in_slot) {
     calc_params_.valid_target_pt_vec.emplace_back(
-        path_seg_vec.back().GetStartPose());
-
-    for (size_t i = 0; i < total_path_vec.size(); i++) {
-      if (i != best_idx) {
-        calc_params_.valid_target_pt_vec.emplace_back(
-            total_path_vec[i].path_segment_vec.back().GetStartPose());
-      }
-    }
-
-    // // for path debug
-    // path_seg_vec = total_path_vec[debug_path_idx].path_segment_vec;
+        path.path_segment_vec.back().GetStartPose());
   }
 
-  return success;
+  return true;
 }
 
 const size_t ParallelPathGenerator::CalPathGearChangeCounts(
@@ -3976,6 +3967,17 @@ const bool ParallelPathGenerator::StartNodeGenerator() {
 
   AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
   debug_info_.debug_all_path_vec = geo_path_vec;
+
+  const auto end_pose =
+      geo_path_vec[best_path_idx].path_segment_vec.back().GetEndPose();
+
+  calc_params_.park_out_path_in_slot.clear();
+  for (size_t i = 0; i < calc_params_.valid_target_pt_vec.size(); i++) {
+    if (CheckSamePose(end_pose, calc_params_.valid_target_pt_vec[i])) {
+      calc_params_.park_out_path_in_slot =
+          calc_params_.inversed_path_vec_in_slot[i].path_segment_vec;
+    }
+  }
 
   return true;
 }
