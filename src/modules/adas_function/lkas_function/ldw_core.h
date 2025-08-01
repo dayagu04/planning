@@ -18,12 +18,12 @@ struct LdwParameters {
   double disable_vehspd_display_max =
       155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
 
-  double earliest_warning_line = 1.5;          // 触发的最早报警线，单位：m
-  double latest_warning_line = -0.3;           // 触发的最晚报警线，单位：m
-  double reset_warning_line = 0.15;            // 触发的报警重置线，单位：m
+  double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
+  double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
+  double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s
-  double warning_time_min = 1.0;               // 单次最大报警时长，单位：s
-  double warning_time_max = 2.0;               // 单次最大报警时长，单位：s
+  double warning_time_min = 1.0;  // 单次最大报警时长，单位：s
+  double warning_time_max = 2.0;  // 单次最大报警时长，单位：s
 };
 
 class LdwCore {
@@ -89,9 +89,9 @@ class LdwCore {
   uint32 ldw_right_kickdown_code_ = 255;
   uint32 UpdateLdwRightKickDownCode(void);
 
-  double ldw_tlc_far_ = 1.0;     // 针对道线触发报警的高灵敏度阈值，单位：s
+  double ldw_tlc_far_ = 1.0;  // 针对道线触发报警的高灵敏度阈值，单位：s
   double ldw_tlc_medium_ = 0.6;  // 针对道线触发报警的中灵敏度阈值，单位：s
-  double ldw_tlc_near_ = 0.2;    // 针对道线触发报警的低灵敏度阈值，单位：s
+  double ldw_tlc_near_ = 0.2;  // 针对道线触发报警的低灵敏度阈值，单位：s
   double ldw_tlc_threshold_ = 0.6;
   double UpdateTlcThreshold(void);
 

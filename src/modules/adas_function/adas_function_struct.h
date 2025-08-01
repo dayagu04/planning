@@ -5,6 +5,7 @@
 
 #include "camera_perception_tsr_c.h"
 #include "common_c.h"
+#include "common_platform_type_soc.h"
 #include "func_state_machine_c.h"
 #include "fusion_road_c.h"
 #include "planning_hmi_c.h"
@@ -22,21 +23,32 @@ struct Parameters {
 
   // 车辆参数
   std::string car_type = "Unknow";
-  double wheel_base = 2.72;    // 轴距，单位：m
+  double wheel_base = 2.72;  // 轴距，单位：m
   double steer_ratio = 15.04;  // 转向传动比，即方向盘转角/前轮转角
-  double ego_length = 4.605;   // 本车车长，单位：m
-  double ego_width = 1.89;     // 本车车宽，单位：m
+  double ego_length = 4.605;                    // 本车车长，单位：m
+  double ego_width = 1.89;                      // 本车车宽，单位：m
   double origin_2_front_bumper = 0.950 + 2.72;  // 后轴中心到前保的距离 单位：m
-  double origin_2_rear_bumper = 0.950;          // 后轴中心到后保的距离 单位：m
+  double origin_2_rear_bumper = 0.950;  // 后轴中心到后保的距离 单位：m
 
   // LKAS_Function 参数
   std::vector<double> lka_vel_vector = {40.0, 60.0, 80.0, 100.0, 120.0, 140.0};
   std::vector<double> lka_tlc_vector = {1.0, 1.0, 0.9, 0.8, 0.7, 0.7};
 
   // 根据曲率查表tlc的参数
-  std::vector<double> lka_c2_vector = {0.00025, 0.000333, 0.0005, 0.001,
-                                       0.0025};  // R2000,R1500,R1000,R500,R200
-  std::vector<double> lka_dec_tlc_by_c2_vector = {0.0, 0.05, 0.15, 0.25, 0.35};
+
+  std::vector<double> lka_dec_tlc_by_c2_vector = {0.70, 0.40, 0.15, 0.05, 0.00};
+  std::vector<double> lka_dec_y_gap_by_c2_vector = {0.20, 0.10, 0.00, 0.00,
+                                                    0.00};
+  std::vector<double> roadedge_dec_y_gap_by_c2_vector = {0.00, 0.00, 0.00, 0.00,
+                                                    0.00};
+  std::vector<double> elk_roadedge_earliest_line_c2_vector = {0.00, 0.00, 0.00,
+                                                              0.00, 0.00};
+  // 根据横向速度查表触发线offset
+  std::vector<double> y_gap_vy_vector = {0.0001, 0.20, 0.40, 0.60, 0.70, 0.90};
+  std::vector<double> dec_y_gap_by_vy_vector = {0.00, 0.00, 0.00,
+                                                0.00, 0.00, 0.00};
+
+  std::vector<double> lka_r_vector = {200.0, 500.0, 1000.0, 1500.0, 2000.0};
 
   // 根据道宽查表tlc的参数
   std::vector<double> lka_lane_width_vector = {2.50, 2.75, 3.00, 3.25, 3.50};
@@ -44,8 +56,8 @@ struct Parameters {
                                                           0.10, 0.00};
   double safe_departure_ttc = 3.0;
   // 根据横向速度查表elk 路沿的参数
-  std::vector<double> elk_roadedge_departure_V_vector = {0, 0.2, 0.4, 0.6, 0.8};
-  std::vector<double> elk_roadedge_offset_vector = {0, 0.20, 0.30, 0.40, 0.04};
+  std::vector<double> elk_roadedge_departure_V_vector = {0.0, 0.2, 0.4, 0.6, 0.8};
+  std::vector<double> elk_roadedge_offset_vector = {0.40, 0.40, 0.40, 0.40, 0.40};
   double ldw_enable_speed = 27.555;
   double ldw_tlc_thrd = 0.0;
   double ldp_tlc_thrd = 1.0;
@@ -128,6 +140,13 @@ struct Parameters {
   double ELK_kickdown_abs_hand_trq = 1.5;
   // 打断纠偏的手力矩绝对值持续时间，单位：S
   double ELK_kickdown_hand_trq_dur = 0.5;
+
+  // 抑制冷却时间力矩条件的手力矩值 单位：Nm
+  double LDP_supp_CoolingTime_handtrq_thr = 0.5;
+  // 抑制冷却时间力矩条件的手力矩值 单位：Nm
+  double ELK_supp_CoolingTime_handtrq_thr = 0.5;
+  // test value
+  int meb_request_status_const = 0;
 };
 
 struct StateInfo {
@@ -191,8 +210,6 @@ struct StateInfo {
   // 定位模块节点通讯丢失
   //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
   bool localization_info_node_valid = true;
-
-
 };
 
 enum Enum_LineType {
@@ -217,10 +234,10 @@ struct LineInfo {
   // 0:未知 1:虚线 2:实线 3~10:其他类型
   iflyauto::LaneBoundaryType boundary_type;  // 感知提供的结果
 
-  double c0;                    // 车道线方程系数c0 y=c0+c1*x+c2*x*x +c3*x*x*x
-  double c1;                    // 车道线方程系数c1
-  double c2;                    // 车道线方程系数c3
-  double c3;                    // 车道线方程系数c3
+  double c0;  // 车道线方程系数c0 y=c0+c1*x+c2*x*x +c3*x*x*x
+  double c1;  // 车道线方程系数c1
+  double c2;  // 车道线方程系数c3
+  double c3;  // 车道线方程系数c3
   std::vector<double> dx_vec_;  // 存储车道线散点 x坐标值
   std::vector<double> dy_vec_;  // 存储车道线散点 y坐标值
   std::vector<double> s_vec_;   // 存储车道线散点 起始点s值为0
@@ -255,7 +272,10 @@ struct RoadedgeInfo {
   bool valid;
   std::vector<double> all_dx_vec_;  // 左侧路沿所有点x坐标
   std::vector<double> all_dy_vec_;  // 左侧路沿所有点y坐标
-
+  double c0;  // 车道线方程系数c0 y=c0+c1*x+c2*x*x +c3*x*x*x
+  double c1;  // 车道线方程系数c1
+  double c2;  // 车道线方程系数c2
+  double c3;  // 车道线方程系数c3
 };
 
 struct LaneInfo {
@@ -279,7 +299,7 @@ struct LaneInfo {
 struct RoadInfo {
   LaneInfo current_lane;
 
-    // 定义左右压线行驶
+  // 定义左右压线行驶
   bool close_to_left_line_flag = false;
   bool close_to_right_line_flag = false;
   double close_to_right_line_dur = 0.0;
@@ -287,10 +307,10 @@ struct RoadInfo {
 };
 
 struct LastCycleInfo {
-  bool left_turn_light_state = false;   // 左转向灯状态  false:关闭 true:开启
+  bool left_turn_light_state = false;  // 左转向灯状态  false:关闭 true:开启
   bool right_turn_light_state = false;  // 右转向灯状态  false:关闭 true:开启
   double yaw_rad = 0.0;                 // 定位yaw角
-  double accelerator_pedal_pos = 0.0;   // 实际加速踏板开度百分比 范围:[0-100]
+  double accelerator_pedal_pos = 0.0;  // 实际加速踏板开度百分比 范围:[0-100]
 };
 
 typedef enum {
@@ -302,8 +322,8 @@ typedef enum {
 
 // 限速标识牌信息，包括限速，解除限速
 struct SpeedSignInfo {
-  uint64 isp_timestamp;           // 图像曝光中间时刻时间戳    (微秒)
-  uint8_t id;                     // 跟踪id号
+  uint64 isp_timestamp;  // 图像曝光中间时刻时间戳    (微秒)
+  uint8_t id;            // 跟踪id号
   SpeedSignType speed_sign_type;  // 限速标志牌类型
   // 是否为匝道限速牌
   bool ramp_flag = false;
@@ -406,6 +426,8 @@ struct AdasOutputInfo {
   ElkOutputInfo elk_output_info_;
   TSROutputInfo tsr_output_info_;
   IHCOutputInfo ihc_output_info_;
+  iflyauto::AMAPOutputInfoStr amap_output_info_;
+  iflyauto::MEBOutputInfoStr meb_output_info_;
 };
 
 enum Enum_LaneLocType {

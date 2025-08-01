@@ -629,6 +629,44 @@ void leastSquareFitting(const std::vector<double> &points_x_vec,
     line_info_ptr->c1 = ret[1];
     line_info_ptr->c2 = ret[2];
     line_info_ptr->c3 = ret[3];
+    return;
+  }
+
+  int points_num = points_x_vec.size();
+  Eigen::MatrixXd X(points_num, order + 1);
+  Eigen::MatrixXd Y(points_num, 1);
+
+  for (size_t i = 0; i < points_num; ++i) {
+    for (size_t j = 0; j < order + 1; ++j) {
+      X(i, j) = integer_power(points_x_vec[i], j);
+    }
+    Y(i, 0) = points_y_vec[i];
+  }
+
+  Eigen::MatrixXd XT_X = X.transpose() * X;
+  Eigen::VectorXd XT_Y = X.transpose() * Y;
+  Eigen::VectorXd beta = XT_X.ldlt().solve(XT_Y);
+
+  for (int i = 0; i <= order; ++i) {
+    ret[i] = std::isnan(beta[i]) ? 0.0 : beta[i];
+  }
+  line_info_ptr->c0 = ret[0];
+  line_info_ptr->c1 = ret[1];
+  line_info_ptr->c2 = ret[2];
+  line_info_ptr->c3 = ret[3];
+}
+
+void leastSquareFittingForRoadedge(const std::vector<double> &points_x_vec,
+                        const std::vector<double> &points_y_vec,
+                        const int &order,
+                        adas_function::context::RoadedgeInfo *line_info_ptr) {
+  std::vector<double> ret(order + 1, 0.0);
+  if (points_x_vec.empty() || points_x_vec.size() < order + 1) {
+    line_info_ptr->c0 = ret[0];
+    line_info_ptr->c1 = ret[1];
+    line_info_ptr->c2 = ret[2];
+    line_info_ptr->c3 = ret[3];
+    return;
   }
 
   int points_num = points_x_vec.size();

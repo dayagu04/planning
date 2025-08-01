@@ -129,7 +129,7 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
       str_wheel_ang_speed_recover_duration_ = 60.0;
     }
   } else {
-    /*do nothing*/
+    str_wheel_ang_speed_recover_duration_ = 0.0;
   }
   if (str_wheel_ang_speed_recover_duration_ > 1.0) {
     enable_code += uint16_bit[7];
@@ -1128,17 +1128,25 @@ double LdwCore::UpdateTlcThreshold(void) {
   // 定义弯道tlc减少
   double tlc_dec_by_curv = 0.0;
   double C2_temp_thr = 0.0;
+  double R_temp_thr = 0.0;
   if (GetContext.get_road_info()->current_lane.left_line.valid == true) {
     C2_temp_thr = GetContext.get_road_info()->current_lane.left_line.c2;
-  } else if (GetContext.get_road_info()->current_lane.right_line.valid ==
-             true) {
+  }
+  else if (GetContext.get_road_info()->current_lane.right_line.valid == true) {
     C2_temp_thr = GetContext.get_road_info()->current_lane.right_line.c2;
-  } else {
+  }
+  else {
     C2_temp_thr = 0.00005;
   }
+  if (fabs(C2_temp_thr) < 0.00005) {
+    R_temp_thr = 10000.0;
+  } else {
+    R_temp_thr = 0.5 / fabs(C2_temp_thr);
+  }
+
   tlc_dec_by_curv = pnc::mathlib::Interp1(
-      GetContext.get_param()->lka_c2_vector,
-      GetContext.get_param()->lka_dec_tlc_by_c2_vector, fabs(C2_temp_thr));
+      GetContext.get_param()->lka_r_vector,
+      GetContext.get_param()->lka_dec_tlc_by_c2_vector, R_temp_thr);
 
   // 定义窄道tlc减少
   double tlc_dec_by_narrowroad = 0.0;

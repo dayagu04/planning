@@ -175,7 +175,7 @@ bool PlanningScheduler::RunOnce(
     }
   }
 
-    // adas_function step
+  // adas_function step
   bool adas_function_sucess = false;
   adas_function_sucess = adas_function_->Plan();
   if (!adas_function_sucess) {
@@ -588,7 +588,23 @@ void PlanningScheduler::FillPlanningHmiInfo(
       GetContext.get_output_info()->tsr_output_info_.tsr_speed_limit_;
   planning_hmi_info->tsr_output_info.tsr_supp_sign_type =
       GetContext.get_output_info()->tsr_output_info_.supp_sign_type;
-  
+
+  // HMI for meb
+  planning_hmi_info->meb_output_info.meb_state =
+      GetContext.get_output_info()->meb_output_info_.meb_state;
+  planning_hmi_info->meb_output_info.meb_request_status =
+      GetContext.get_output_info()->meb_output_info_.meb_request_status;
+  planning_hmi_info->meb_output_info.meb_request_value =
+      GetContext.get_output_info()->meb_output_info_.meb_request_value;
+
+  // HMI for amap
+  planning_hmi_info->amap_output_info.amap_state =
+      GetContext.get_output_info()->amap_output_info_.amap_state;
+  planning_hmi_info->amap_output_info.amap_request_flag =
+      GetContext.get_output_info()->amap_output_info_.amap_request_flag;
+  planning_hmi_info->amap_output_info.amap_trq_limit_max =
+      GetContext.get_output_info()->amap_output_info_.amap_trq_limit_max;
+
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
   const auto &cipv_info =
@@ -720,9 +736,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
     }
   }
 
-  JSON_DEBUG_VALUE("planning_hmi_ldw_state", (int)planning_hmi_info->ldw_output_info.ldw_state);
-  JSON_DEBUG_VALUE("planning_hmi_ldp_state", (int)planning_hmi_info->ldp_output_info.ldp_state);
-  JSON_DEBUG_VALUE("planning_hmi_elk_state", (int)planning_hmi_info->elk_output_info.elk_state);
+  JSON_DEBUG_VALUE("planning_hmi_ldw_state",
+                   (int)planning_hmi_info->ldw_output_info.ldw_state);
+  JSON_DEBUG_VALUE("planning_hmi_ldp_state",
+                   (int)planning_hmi_info->ldp_output_info.ldp_state);
+  JSON_DEBUG_VALUE("planning_hmi_elk_state",
+                   (int)planning_hmi_info->elk_output_info.elk_state);
 
   return;
 }

@@ -150,10 +150,26 @@ void Preprocess::SyncParameters(void) {
                        std::vector<double>, "lka_vel_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_tlc_vector,
                        std::vector<double>, "lka_tlc_vector");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_c2_vector,
-                       std::vector<double>, "lka_c2_vector");
+
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_r_vector,
+                       std::vector<double>, "lka_r_vector");
+
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_dec_tlc_by_c2_vector,
                        std::vector<double>, "lka_dec_tlc_by_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_dec_y_gap_by_c2_vector,
+                       std::vector<double>, "lka_dec_y_gap_by_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->roadedge_dec_y_gap_by_c2_vector,
+                       std::vector<double>, "roadedge_dec_y_gap_by_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_offset_vector,
+                       std::vector<double>, "elk_roadedge_offset_vector");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_roadedge_earliest_line_c2_vector,
+      std::vector<double>, "elk_roadedge_earliest_line_c2_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->y_gap_vy_vector,
+                       std::vector<double>, "y_gap_vy_vector");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->dec_y_gap_by_vy_vector,
+                       std::vector<double>, "dec_y_gap_by_vy_vector");
+
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_fault_code_maskcode, int,
                        "ldp_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_enable_code_maskcode,
@@ -236,6 +252,14 @@ void Preprocess::SyncParameters(void) {
                        double, "kickdown_abs_hand_trq");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ELK_kickdown_hand_trq_dur,
                        double, "kickdown_hand_trq_dur");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
+                       int, "meb_request_status_const");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->LDP_supp_CoolingTime_handtrq_thr, double,
+      "supp_CoolingTime_handtrq_thr");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ELK_supp_CoolingTime_handtrq_thr, double,
+      "supp_CoolingTime_handtrq_thr");
 
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
@@ -621,7 +645,8 @@ void Preprocess::UpdateStateInfo(void) {
   // 定义长时间压左线行驶
 
   if (fabs(GetContext.get_state_info()->fl_wheel_distance_to_line) < 0.25) {
-    GetContext.mutable_road_info()->close_to_left_line_dur += GetContext.get_param()->dt;
+    GetContext.mutable_road_info()->close_to_left_line_dur +=
+        GetContext.get_param()->dt;
     if (GetContext.get_road_info()->close_to_left_line_dur > 60.0) {
       GetContext.mutable_road_info()->close_to_left_line_dur = 60.0;
     }
@@ -637,7 +662,8 @@ void Preprocess::UpdateStateInfo(void) {
   // 定义长时间压线行驶
 
   if (fabs(GetContext.get_state_info()->fr_wheel_distance_to_line) < 0.25) {
-    GetContext.mutable_road_info()->close_to_right_line_dur += GetContext.get_param()->dt;
+    GetContext.mutable_road_info()->close_to_right_line_dur +=
+        GetContext.get_param()->dt;
     if (GetContext.get_road_info()->close_to_right_line_dur > 60.0) {
       GetContext.mutable_road_info()->close_to_right_line_dur = 60.0;
     }
@@ -650,8 +676,6 @@ void Preprocess::UpdateStateInfo(void) {
   } else {
     GetContext.mutable_road_info()->close_to_right_line_flag = false;
   }
-
-
 }
 
 void Preprocess::SetLineInfoDefault(
@@ -1210,6 +1234,9 @@ void Preprocess::SetRoadedgeInfo(void) {
           (enu_pos_i - GetContext.get_state_info()->current_pos_i);
       double car_point_x = transformed_point.x();
       double car_point_y = transformed_point.y();
+      if (car_point_x > 100.00 || car_point_x < -100.00) {
+        continue;
+      }
       current_point_dx_in_order = car_point_x;
       current_point_dy_in_order =
           car_point_y +
@@ -1264,6 +1291,10 @@ void Preprocess::SetRoadedgeInfo(void) {
     } else {
       left_roadedge_info.valid = false;
     }
+    leastSquareFittingForRoadedge(left_roadedge_info.dx_vec_,
+                                  left_roadedge_info.dy_vec_, 3,
+                                  &left_roadedge_info);
+
     // 设置右侧路沿信息
     right_roadedge_info.dx_vec_.clear();
     // right_roadedge_info.dx_vec_.resize(car_points_num, 0.0);
@@ -1294,6 +1325,9 @@ void Preprocess::SetRoadedgeInfo(void) {
           (enu_pos_i - GetContext.get_state_info()->current_pos_i);
       double car_point_x = transformed_point.x();
       double car_point_y = transformed_point.y();
+      if (car_point_x > 100.00 || car_point_x < -100.00) {
+        continue;
+      }
       current_point_dx_in_order = car_point_x;
       current_point_dy_in_order =
           car_point_y -
@@ -1348,6 +1382,10 @@ void Preprocess::SetRoadedgeInfo(void) {
     } else {
       right_roadedge_info.valid = false;
     }
+
+    leastSquareFittingForRoadedge(right_roadedge_info.dx_vec_,
+                                  right_roadedge_info.dy_vec_, 3,
+                                  &right_roadedge_info);
   } else {
     left_roadedge_info.valid = false;
     right_roadedge_info.valid = false;

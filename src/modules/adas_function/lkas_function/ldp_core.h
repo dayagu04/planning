@@ -18,15 +18,14 @@ struct LdpParameters {
   double disable_vehspd_display_max =
       155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
 
-  double earliest_warning_line = 1.5;           // 触发的最早报警线，单位：m
-  double latest_warning_line = -0.3;            // 触发的最晚报警线，单位：m
-  double reset_warning_line = 0.15;             // 触发的报警重置线，单位：m
+  double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
+  double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
+  double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double roadedge_earliest_warning_line = 1.8;  // 触发的最早报警线，单位：m
-  double roadedge_latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
-  double roadedge_reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
-  double supp_turn_light_recovery_time = 2.0;   // 转向灯抑制恢复时长，单位：s
-  double warning_time_max = 8.0;                // 单次最大报警时长，单位：s
-
+  double roadedge_latest_warning_line = -0.3;  // 触发的最晚报警线，单位：m
+  double roadedge_reset_warning_line = 0.15;  // 触发的报警重置线，单位：m
+  double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s
+  double warning_time_max = 8.0;  // 单次最大报警时长，单位：s
 };
 
 class LdpCore {
@@ -68,7 +67,7 @@ class LdpCore {
   bool left_suppress_repeat_warning_flag_ = false;
   // LDP纠偏冷却时间阈值 单位:s
   double LDP_CoolingTime_duration_ = 0.0;
-    // LDP变道纠偏抑制时间阈值 单位:s
+  // LDP变道纠偏抑制时间阈值 单位:s
   double LDP_LaneChange_duration_ = 10.0;
   // LDP手力矩作用时间阈值 单位:s
   double driver_hand_trq_supp_duration_ = 0.0;
@@ -76,9 +75,9 @@ class LdpCore {
   uint32 UpdateLdpLeftSuppressionCode(void);
 
   double ldp_left_warning_time_ = 0.0;  // 处于左侧报警状态的时长，单位:s
-// 持续手力矩打断报警的时长，单位:s
-  double ldp_left_handtrq_kickdown_duration_ =0.0;  
-    // 横向速度小打断条件的时长，单位:s
+  // 持续手力矩打断报警的时长，单位:s
+  double ldp_left_handtrq_kickdown_duration_ = 0.0;
+  // 横向速度小打断条件的时长，单位:s
   double ldp_left_kickdown_lat_v_duration_ = 0.0;
   uint32 ldp_left_kickdown_code_ = 255;
   uint32 UpdateLdpLeftKickDownCode(void);
@@ -90,7 +89,7 @@ class LdpCore {
 
   double ldp_right_warning_time_ = 0.0;  // 处于右侧报警状态的时长，单位:s
   // 持续手力矩打断报警的时长，单位:s
-  double ldp_right_handtrq_kickdown_duration_ =0.0; 
+  double ldp_right_handtrq_kickdown_duration_ = 0.0;
   // 横向速度小打断条件的时长，单位:s
   double ldp_right_kickdown_lat_v_duration_ = 0.0;
   uint32 ldp_right_kickdown_code_ = 255;

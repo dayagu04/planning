@@ -6,6 +6,7 @@
 #include "debug_info_log.h"
 #include "general_planning_context.h"
 #include "planning_context.h"
+#include "planning_hmi_c.h"
 
 namespace planning {
 
@@ -34,7 +35,8 @@ void AdasFunction::Init(void) {
   // srCore
   tsr_core_ptr_ = std::make_shared<adas_function::tsr_core::TsrCore>();
   // IhcCore
-  ihc_core_ptr_ = std::make_shared<adas_function::ihc_core::IntelligentHeadlightControl>();
+  ihc_core_ptr_ =
+      std::make_shared<adas_function::ihc_core::IntelligentHeadlightControl>();
 }
 
 void AdasFunction::StoreInfoForNextCycle(void) {
@@ -126,6 +128,19 @@ bool AdasFunction::Plan() {
   //     session_->mutable_planning_context()->traffic_sign_recognition_function();
   // tsr_function_ptr->RunOnce();
   // double end_time_tsr = IflyTime::Now_ms();
+
+  // meb
+  GetContext.mutable_output_info()->meb_output_info_.meb_state =
+      iflyauto::MEB_FUNCTION_FSM_WORK_STATE_OFF;
+  GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+      GetContext.get_param()->meb_request_status_const;
+  GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
+
+  // amap
+  GetContext.mutable_output_info()->amap_output_info_.amap_state =
+      iflyauto::AMAP_FUNCTION_FSM_WORK_STATE_OFF;
+  GetContext.mutable_output_info()->amap_output_info_.amap_request_flag = false;
+  GetContext.mutable_output_info()->amap_output_info_.amap_trq_limit_max = 0.0;
 
   Log();
   // 存储数据用于下一次循环
@@ -509,12 +524,12 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE(
       "road_right_sideway_exist_flag",
       GetContext.get_road_info()->current_lane.right_sideway_exist_flag);
-//   JSON_DEBUG_VALUE("road_left_departure_permission_flag",
-//                    GetContext.get_road_info()
-//                        ->current_lane.left_safe_departure_permission_flag);
-//   JSON_DEBUG_VALUE("road_right_departure_permission_flag",
-//                    GetContext.get_road_info()
-//                        ->current_lane.right_safe_departure_permission_flag);
+  //   JSON_DEBUG_VALUE("road_left_departure_permission_flag",
+  //                    GetContext.get_road_info()
+  //                        ->current_lane.left_safe_departure_permission_flag);
+  //   JSON_DEBUG_VALUE("road_right_departure_permission_flag",
+  //                    GetContext.get_road_info()
+  //                        ->current_lane.right_safe_departure_permission_flag);
   JSON_DEBUG_VALUE(
       "road_left_parallel_car_flag",
       GetContext.get_road_info()->current_lane.left_parallel_car_flag);

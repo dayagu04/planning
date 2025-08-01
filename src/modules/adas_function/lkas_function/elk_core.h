@@ -26,6 +26,9 @@ struct ElkParameters {
   double roadedge_reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double supp_turn_light_recovery_time = 2.0;   // 转向灯抑制恢复时长，单位：s
   double warning_time_max = 8.0;                // 单次最大报警时长，单位：s
+
+  double roadegge_earliest_warning_line_curv =
+      1.5;  // 路沿触发的最早报警线，单位：m
 };
 
 class ElkCore {
@@ -114,7 +117,6 @@ class ElkCore {
   iflyauto::ELKFunctionFSMWorkState ElkStateMachine(void);
 
   double UpdateTlcThreshold(void);
-
 };
 
 }  // namespace elk_core
