@@ -124,7 +124,8 @@ class LateralMotionPlanningWeight {
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &hard_bounds_info);
 
   void CalculateExpectedLatAccAndSteerAngle(
-      double init_s, double ref_vel, double wheel_base, double steer_ratio,
+      double init_s, double ref_vel, double wheel_base,
+      double steer_ratio, double curv_factor,
       const planning::CoarsePlanningInfo &coarse_planning_info,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       std::vector<double>& expected_steer_vec);

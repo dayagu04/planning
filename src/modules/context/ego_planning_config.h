@@ -1540,7 +1540,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
     ReadItem<double>(json, delta_t, "lat_motion_ilqr", "delta_t");
-    ReadItem<double>(json, curv_factor, "lat_motion_ilqr", "curv_factor");
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
@@ -1759,7 +1758,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   bool pass_acc_mode = false;
   bool warm_start_enable = true;
-  double curv_factor = 0.35;
   double delta_t = 0.2;
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
@@ -1894,7 +1892,6 @@ struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {
                    "warm_start_enable");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
     ReadItem<double>(json, jerk_bound, "lat_motion_ilqr", "jerk_bound");
-    ReadItem<double>(json, curv_factor, "lat_motion_ilqr", "curv_factor");
     ReadItem<double>(json, q_ref_x, "lat_motion_ilqr", "q_ref_x");
     ReadItem<double>(json, q_ref_y, "lat_motion_ilqr", "q_ref_y");
     ReadItem<double>(json, q_ref_theta, "lat_motion_ilqr", "q_ref_theta");
@@ -1914,7 +1911,6 @@ struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {
   bool warm_start_enable = true;
   double acc_bound = 6.0;
   double jerk_bound = 3.5;
-  double curv_factor = 0.35;
 
   double q_ref_x = 20.0;
   double q_ref_y = 20.0;
@@ -2718,8 +2714,6 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                    "use_dynamic_lat_jerk_thr");
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
-    ReadItem<double>(json, curv_factor, "result_trajectory_generator",
-                     "curv_factor");
     ReadItem<double>(json, lat_acc_thr, "result_trajectory_generator",
                      "lat_acc_thr");
     ReadItem<double>(json, lat_jerk_thr, "result_trajectory_generator",
@@ -2735,7 +2729,6 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
-  double curv_factor = 0.35;
   double lat_acc_thr = 3.0;
   double lat_jerk_thr = 0.3;
   double ramp_lat_jerk_thr = 0.65;

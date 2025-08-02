@@ -59,6 +59,12 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   std::copy(traj_points.begin(), traj_points.end(),
             ego_planning_result.raw_traj_points.begin());
   // const auto &num_point = traj_points.size();
+  const auto &lateral_motion_planning_input =
+      DebugInfoManager::GetInstance()
+          .GetDebugInfoPb()
+          ->lateral_motion_planning_input();
+  double curv_factor =
+      lateral_motion_planning_input.curv_factor();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
   pnc::mathlib::spline s_t_spline;
@@ -114,13 +120,13 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     double tp_delta =
         motion_planner_output.delta_s_spline(traj_points[i].s - tp_init_s);
     double tp_lat_acc =
-        config_.curv_factor * traj_points[i].v * traj_points[i].v * tp_delta;
+        curv_factor * traj_points[i].v * traj_points[i].v * tp_delta;
     lat_acc_vec[i] = tp_lat_acc;
     traj_max_lat_acc = std::max(std::fabs(tp_lat_acc), traj_max_lat_acc);
     double tp_omega =
         motion_planner_output.omega_s_spline(traj_points[i].s - tp_init_s);
     double tp_lat_jerk =
-        config_.curv_factor * traj_points[i].v * traj_points[i].v * tp_omega;
+        curv_factor * traj_points[i].v * traj_points[i].v * tp_omega;
     lat_jerk_vec[i] = tp_lat_jerk;
     traj_max_lat_jerk = std::max(std::fabs(tp_lat_jerk), traj_max_lat_jerk);
     traj_max_lon_acc = std::max(std::fabs(traj_points[i].a), traj_max_lon_acc);
@@ -146,10 +152,6 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   }
   // dynamic lat jerk thr
   if (config_.use_dynamic_lat_jerk_thr) {
-    const auto &lateral_motion_planning_input =
-        DebugInfoManager::GetInstance()
-            .GetDebugInfoPb()
-            ->lateral_motion_planning_input();
     lat_jerk_thr =
         lateral_motion_planning_input.jerk_bound();
   }
