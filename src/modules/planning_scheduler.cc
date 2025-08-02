@@ -239,6 +239,8 @@ void PlanningScheduler::FillPlanningTrajectory(
   const bool active = session_.environmental_model().GetVehicleDbwStatus();
   auto virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
+  const auto &speed_limit_decider_output =
+      session_.planning_context().speed_limit_decider_output();
 
   // 更新输出
   iflyauto::strcpy_array(planning_output->meta.plan_strategy_name,
@@ -493,6 +495,25 @@ void PlanningScheduler::FillPlanningTrajectory(
       planning_status->rads_planning_status = iflyauto::RADS_RUNNING_FAILED;
     }
   }
+
+  // planning request
+  if (speed_limit_decider_output.is_function_fading_away()) {
+    planning_output->planning_request.take_over_req_level =
+        iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
+    planning_output->planning_request.request_reason =
+        speed_limit_decider_output.request_reason();
+  } else {
+    planning_output->planning_request.take_over_req_level =
+        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
+    planning_output->planning_request.request_reason =
+        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
+  }
+  JSON_DEBUG_VALUE(
+      "take_over_request",
+      static_cast<int>(planning_output->planning_request.take_over_req_level));
+  JSON_DEBUG_VALUE(
+      "request_reason",
+      static_cast<int>(planning_output->planning_request.request_reason));
 }
 
 void PlanningScheduler::GenerateStopTrajectory(

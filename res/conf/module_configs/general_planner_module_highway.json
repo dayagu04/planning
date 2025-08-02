@@ -700,7 +700,9 @@
     "v_intersection_min_limit": 11.11,
     "v_limit_one_still_danger_obs": 40.0,
     "v_limit_more_still_danger_obs": 40.0,
-    "v_rel_limit_for_dynamic_danger_obs": 40.0
+    "v_rel_limit_for_dynamic_danger_obs": 40.0,
+    "min_acc_function_fading_away": -0.9,
+    "function_fading_away_distance_to_intersection": 50.0
   },
 
   "result_trajectory_generator": {

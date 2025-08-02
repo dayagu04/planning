@@ -2972,6 +2972,10 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                         "v_limit_more_still_danger_obs");
     ReadItem<double>(json, v_rel_limit_for_dynamic_danger_obs, "speed_limit_decider",
                           "v_rel_limit_for_dynamic_danger_obs");
+    ReadItem<double>(json, min_acc_function_fading_away, "speed_limit_decider",
+                            "min_acc_function_fading_away");
+    ReadItem<double>(json, function_fading_away_distance_to_intersection, "speed_limit_decider",
+                        "function_fading_away_distance_to_intersection");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -2989,6 +2993,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double v_limit_one_still_danger_obs = 12.5;
   double v_limit_more_still_danger_obs = 11.11;
   double v_rel_limit_for_dynamic_danger_obs = 4.17;
+  double min_acc_function_fading_away = -1.0;
+  double function_fading_away_distance_to_intersection = 50.0;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {

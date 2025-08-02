@@ -242,7 +242,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                           "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path',
                           "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s",
+                          "take_over_request", "request_reason",'cur_lane_ego_s',"cur_lane_ego_front_edge_s","cur_lane_mark_plan","cur_lane_mark_origin","cur_lane_mark_begin","cur_lane_mark_end",'v_target_func_fade_away', 'current_intersection_state',"distance_to_stopline","distance_to_crosswalk"
                           ]
+
+  # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
+                          # "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path']
 
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 

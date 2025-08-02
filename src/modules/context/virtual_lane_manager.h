@@ -190,6 +190,11 @@ class VirtualLaneManager {
   }
   bool is_continuous_ramp() const { return is_continuous_ramp_; }
 
+  iflyauto::LaneDrivableDirection lane_mark_at_ego_front_edge_pos_current()
+      const {
+    return lane_mark_at_ego_front_edge_pos_current_;
+  }
+
   // bool is_local_valid() const { return is_local_valid_; }
 
   int origin_relative_id_zero_nums() const {
@@ -228,6 +233,7 @@ class VirtualLaneManager {
   bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);
   bool UpdateIntersectionState();
   bool IsEgoBothSidesHaveRoadBorder();
+  void UpdateEgoCurrentPoseLaneMark();
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -278,6 +284,10 @@ class VirtualLaneManager {
   std::deque<double> crosswalk_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   planning::common::IntersectionState Intersection_state_ =
       planning::common::NO_INTERSECTION;
+
+  // ego position lane mark
+  iflyauto::LaneDrivableDirection lane_mark_at_ego_front_edge_pos_current_ =
+      iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_UNKNOWN;
 
   // rads relevance
   iflyauto::FunctionalState last_fsm_state_ =
