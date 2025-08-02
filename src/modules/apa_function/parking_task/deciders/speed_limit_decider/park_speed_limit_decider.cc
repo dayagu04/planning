@@ -41,6 +41,10 @@ void ParkSpeedLimitDecider::Execute(
 void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     const std::vector<pnc::geometry_lib::PathPoint>& path,
     SpeedDecisions* speed_decisions) {
+  if (path.empty()) {
+    return;
+  }
+
   double speed_limit;
   ParkLonDecision speed_limit_decision;
   speed_limit_decision.decision_type = LonDecisionType::CAUTION;
@@ -53,6 +57,9 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     control_error_speed_limit = 0.55;
     has_control_error_speed_limit = true;
   }
+
+  double terminal_speed_limit = 0.5;
+  double terminal_speed_limit_s_range = path.back().s - 0.41;
 
   speed_limit_profile_.Clear();
   size_t path_point_size = path.size();
@@ -111,6 +118,16 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
       speed_limit = std::min(speed_limit, control_error_speed_limit);
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code = LonDecisionReason::PATH_CONTROL_ERROR;
+      speed_limit_decision.path_s = path_s;
+
+      speed_decisions->decisions.emplace_back(speed_limit_decision);
+    }
+
+    if (path_s > terminal_speed_limit_s_range) {
+      speed_limit = std::min(speed_limit, terminal_speed_limit);
+      speed_limit_decision.decision_speed = speed_limit;
+      speed_limit_decision.reason_code =
+          LonDecisionReason::SPEED_LIMIT_BY_TERMINAL;
       speed_limit_decision.path_s = path_s;
 
       speed_decisions->decisions.emplace_back(speed_limit_decision);

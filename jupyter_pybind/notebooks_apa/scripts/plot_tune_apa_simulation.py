@@ -23,7 +23,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # m32t-otomb10: 40735
 # m32t-otomb12: 40737
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250724/20250724-17-25-22/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-24-17-25-22_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_51482/trigger/20250723/20250723-20-40-36/park_in_data_collection_CHERY_M32T_51482_ALL_FILTER_2025-07-23-20-40-37_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -735,11 +735,17 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
         speed_point.append(point.jerk)
         traj_speed_profile.append(speed_point)
 
+    update_record_speed_data(traj_speed_profile, lon_plan_data)
+
     # online traj speed
     if res == True:
       update_publish_data(tuned_planning_output,lon_plan_data)
 
-    update_record_speed_data(traj_speed_profile, lon_plan_data)
+    veh_speed = []
+    vel = abs(loc_msg.velocity.velocity_body.vx)
+    veh_speed.append([0, vel])
+    veh_speed.append([5, vel])
+    update_veh_speed_data(veh_speed, lon_plan_data)
 
     # plot stop signs
     stop_sign_lines = apa_simulation_py.GetStopSigns()
