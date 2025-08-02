@@ -49,7 +49,7 @@ void RouteInfo::Update() {
     // } else {
     //   std::cout << "UpdateSdMap failed!!!" << std::endl;
     // }
-    if (UpdateSdProMap(local_view_)) {
+    if (UpdateSdProMap(local_view_) && UpdateSdMap(local_view_)) {
       UpdateRouteInfoForNOA(sdpro_map_);
     } else {
       std::cout << "UpdateSdMap failed!!!" << std::endl;
@@ -103,6 +103,13 @@ void RouteInfo::UpdateRouteInfoForNOA(
     const ad_common::sdpromap::SDProMap& sdpro_map) {
   double nearest_s;
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+
+  const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map_, &nearest_s);
+  if (segment == nullptr) {
+    std::cout << "ego link not in expressway failed!!!" << std::endl;
+    return;
+  }
+
   const iflymapdata::sdpro::LinkInfo_Link* link =
       UpdateEgoLinkInfo(sdpro_map, &nearest_s);
   if (!link) {
@@ -1151,16 +1158,21 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   JSON_DEBUG_VALUE("forward_lane_num", current_segment->forward_lane_num());
 
   //判断自车当前是否在高速或者高架上
-  if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
-      current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
-    route_info_output_.is_ego_on_expressway = true;
-    if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY) {
-      route_info_output_.is_ego_on_expressway_hmi = true;
+  if (current_segment->has_priority()) {
+    if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
+        current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+      route_info_output_.is_ego_on_expressway = true;
+      if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY) {
+        route_info_output_.is_ego_on_expressway_hmi = true;
+      } else {
+        route_info_output_.is_ego_on_city_expressway_hmi = true;
+      }
     } else {
-      route_info_output_.is_ego_on_city_expressway_hmi = true;
+      std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+      return segment;
     }
   } else {
-    std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+    std::cout << "update ego link info failed!!!" << std::endl;
     return segment;
   }
 
@@ -1169,10 +1181,10 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   *nearest_s = temp_nearest_s;
   route_info_output_.is_on_highway =
       current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
-  route_info_output_.is_on_ramp =
-      current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
-  route_info_output_.cur_seg_forward_lane_num =
-      current_segment->forward_lane_num();
+  // route_info_output_.is_on_ramp =
+  //     current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
+  // route_info_output_.cur_seg_forward_lane_num =
+  //     current_segment->forward_lane_num();
   route_info_output_.is_update_segment_success = true;
   return segment;
 }
@@ -1221,29 +1233,29 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
   JSON_DEBUG_VALUE("current_segment_id", current_link->id());
   JSON_DEBUG_VALUE("forward_lane_num", current_link->lane_num());
 
-  //判断自车当前是否在高速或者高架上
-  if (current_link->link_class() ==
-          iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
-      current_link->link_class() ==
-          iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY) {
-    route_info_output_.is_ego_on_expressway = true;
-    if (current_link->link_class() ==
-        iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
-      route_info_output_.is_ego_on_expressway_hmi = true;
-    } else {
-      route_info_output_.is_ego_on_city_expressway_hmi = true;
-    }
-  } else {
-    std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
-    return link;
-  }
+  // //判断自车当前是否在高速或者高架上
+  // if (current_link->link_class() ==
+  //         iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+  //     current_link->link_class() ==
+  //         iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY) {
+  //   route_info_output_.is_ego_on_expressway = true;
+  //   if (current_link->link_class() ==
+  //       iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
+  //     route_info_output_.is_ego_on_expressway_hmi = true;
+  //   } else {
+  //     route_info_output_.is_ego_on_city_expressway_hmi = true;
+  //   }
+  // } else {
+  //   std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+  //   return link;
+  // }
 
-  route_info_output_.is_in_sdmaproad = true;
+  // route_info_output_.is_in_sdmaproad = true;
   link = current_link;
   *nearest_s = temp_nearest_s;
-  route_info_output_.is_on_highway =
-      current_link->link_class() ==
-      iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
+  // route_info_output_.is_on_highway =
+  //     current_link->link_class() ==
+  //     iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
   route_info_output_.is_on_ramp = sdpro_map.isRamp(current_link->link_type());
   route_info_output_.cur_seg_forward_lane_num = current_link->lane_num();
   route_info_output_.is_update_segment_success = true;
