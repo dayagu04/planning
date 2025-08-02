@@ -304,10 +304,12 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
   const auto start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
 
   // Hack: add jerk bound if s_target is safety
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   bool is_need_comfortable_decel = true;
+  bool is_cipv_has_sharp_decel = false;
   for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
     const double t = i * dt_;
     const double s_safe = max_deceleration_curve.Evaluate(0, t);
@@ -317,7 +319,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     double agent_acc = corridor_upper_point.acceleration();
     const auto agent = agent_mgr->GetAgent(agent_id);
     if (agent != nullptr) {
-      agent_acc = agent->accel();
+      agent_acc = agent->accel_fusion();
     }
     // const double vel = virtual_acc_curve->Evaluate(1, t);
     const double brake_buffer = init_lon_state_[1] * kBrakeDelayTimeBuffer;
@@ -336,9 +338,12 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
       continue;
     }
   }
-  if (is_need_comfortable_decel &&
-      start_stop_decider_output.ego_start_stop_info().state() ==
-          common::StartStopInfo::CRUISE) {
+
+  if (cipv_info.acceleration_fusion() < -2.0) {
+    is_cipv_has_sharp_decel = true;
+  }
+
+  if (is_need_comfortable_decel && !is_cipv_has_sharp_decel) {
     jerk_lower_bound_ =
         std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
   }
