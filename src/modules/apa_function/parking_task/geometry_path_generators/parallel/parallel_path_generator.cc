@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+// #include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -2250,6 +2251,57 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
 
   ILOG_INFO << "sort paths completed, total path count: "
             << sorted_path_vec.size();
+
+  // 为了降低运算，此处选择最优和最靠后的路径，来解决短通道无法行驶到最优路径的问题。
+  if (sorted_path_vec.size() > 1) {
+    const double base_x =
+        sorted_path_vec.front().path_segment_vec.back().GetStartPos().x();
+    double min_x = base_x;
+    size_t min_x_idx = 0;
+
+    for (size_t i = 1; i < sorted_path_vec.size(); ++i) {
+      const double curr_x =
+          sorted_path_vec[i].path_segment_vec.back().GetStartPos().x();
+      if (curr_x < min_x) {
+        min_x = curr_x;
+        min_x_idx = i;
+      }
+    }
+
+    constexpr double kXDiffThreshold = 0.4;
+    if ((base_x - min_x) > kXDiffThreshold) {
+      sorted_path_vec = {sorted_path_vec.front(), sorted_path_vec[min_x_idx]};
+    } else {
+      sorted_path_vec = {sorted_path_vec.front()};
+    }
+  }
+
+  // std::cout << std::endl;
+  // std::cout << "gear    = ";
+  // for (const auto& path : sorted_path_vec) {
+  //   std::cout << std::setw(10) << path.gear_change_count;
+  // }
+  // std::cout << std::endl;
+
+  // std::cout << "heading = ";
+  // for (const auto& path : sorted_path_vec) {
+  //   std::cout << std::setw(10) << path.park_out_heading_deg;
+  // }
+  // std::cout << std::endl;
+
+  // std::cout << "x       = ";
+  // for (const auto& path : sorted_path_vec) {
+  //   std::cout << std::setw(10)
+  //             << path.path_segment_vec.back().GetStartPose().pos.x();
+  // }
+  // std::cout << std::endl;
+
+  // std::cout << "y       = ";
+  // for (const auto& path : sorted_path_vec) {
+  //   std::cout << std::setw(10)
+  //             << path.path_segment_vec.back().GetStartPose().pos.y();
+  // }
+  // std::cout << std::endl;
   return true;
 }
 
@@ -2498,8 +2550,8 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
     const pnc::geometry_lib::PathPoint& start_pose,
     const uint8_t current_gear) {
   using namespace pnc::geometry_lib;
-  // ILOG_INFO << "InversedTrialsByGivenGear, start_pos"
-  //           << start_pose.pos.transpose();
+  ILOG_INFO << "InversedTrialsByGivenGear, start_pos"
+            << start_pose.pos.transpose();
   uint8_t ref_gear = current_gear;
   uint8_t ref_steer = SEG_STEER_RIGHT;
   if ((ref_gear == SEG_GEAR_DRIVE && input_.tlane.slot_side_sgn > 0.0) ||
@@ -2674,7 +2726,7 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
     arc.headingB = arc.headingA;
     arc.length = 0.0;
   }
-  ILOG_INFO << "arc.is_ignored = " << arc.is_ignored;
+  // ILOG_INFO << "arc.is_ignored = " << arc.is_ignored;
   return (!arc.is_ignored);
 }
 
@@ -2700,15 +2752,16 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
       virtual_obs_y_lim = std::max(virtual_obs_y_lim, virtual_obs_pt.y());
     }
   }
-  ILOG_INFO << "corner remain dist = "
-            << center_to_obs_in - calc_params_.min_outer_front_corner_radius;
+  // ILOG_INFO << "corner remain dist = "
+  //           << center_to_obs_in -
+  //           calc_params_.min_outer_front_corner_radius;
 
   const bool corner_safe =
       center_to_obs_in >=
       calc_params_.min_outer_front_corner_radius +
           apa_param.GetParam().parallel_ego_front_corner_to_obs_in_buffer;
 
-  ILOG_INFO << "corner_safe = " << corner_safe;
+  // ILOG_INFO << "corner_safe = " << corner_safe;
 
   pnc::geometry_lib::LocalToGlobalTf l2g_tf(first_arc.pB, first_arc.headingB);
 
@@ -2723,9 +2776,9 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
           ? true
           : false;
 
-  ILOG_INFO << "park_out_corner.y() = " << park_out_corner.y()
-            << "   virtual_obs_y_lim = " << virtual_obs_y_lim;
-  ILOG_INFO << "is_corner_out = " << is_corner_out;
+  // ILOG_INFO << "park_out_corner.y() = " << park_out_corner.y()
+  //           << "   virtual_obs_y_lim = " << virtual_obs_y_lim;
+  // ILOG_INFO << "is_corner_out = " << is_corner_out;
 
   return corner_safe && is_corner_out;
 }
