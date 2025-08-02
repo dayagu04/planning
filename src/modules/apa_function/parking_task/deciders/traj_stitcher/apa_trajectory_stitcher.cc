@@ -94,20 +94,24 @@ void ApaTrajectoryStitcher::SmoothLonDelay() {
   double v_error = lon_stitch_point_.vel() - ego_lon_state_.v;
   double acc_error = lon_stitch_point_.acc() - ego_lon_state_.acc;
 
-  if (v_error > 0.1) {
-    lon_stitch_point_.set_vel(ego_lon_state_.v + 0.1);
-  } else if (v_error < -0.1) {
-    lon_stitch_point_.set_vel(ego_lon_state_.v - 0.1);
+  if (v_error > config_.vel_stitch_error_for_closeloop) {
+    lon_stitch_point_.set_vel(ego_lon_state_.v +
+                              config_.vel_stitch_error_for_closeloop);
+  } else if (v_error < -config_.vel_stitch_error_for_closeloop) {
+    lon_stitch_point_.set_vel(ego_lon_state_.v -
+                              config_.vel_stitch_error_for_closeloop);
   }
 
   double v = lon_stitch_point_.vel();
   v = std::max(0.0, v);
   lon_stitch_point_.set_vel(v);
 
-  if (acc_error > 0.1) {
-    lon_stitch_point_.set_acc(ego_lon_state_.acc + 0.1);
-  } else if (acc_error < -0.1) {
-    lon_stitch_point_.set_acc(ego_lon_state_.acc - 0.1);
+  if (acc_error > config_.acc_stitch_error_for_closeloop) {
+    lon_stitch_point_.set_acc(ego_lon_state_.acc +
+                              config_.acc_stitch_error_for_closeloop);
+  } else if (acc_error < -config_.acc_stitch_error_for_closeloop) {
+    lon_stitch_point_.set_acc(ego_lon_state_.acc -
+                              config_.acc_stitch_error_for_closeloop);
   }
   return;
 }

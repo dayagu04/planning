@@ -494,6 +494,21 @@ def update_record_speed_data(speed,lon_plan_data):
     's': s,
   })
 
+def update_veh_speed_data(speed,lon_plan_data):
+  s =[]
+  v =[]
+  for i in range(len(speed)):
+    s.append(speed[i][0])
+    v.append(speed[i][1])
+
+    # print('s ', s[i], 't ',
+    #   t[i], 'v ', v[i],
+    #   'acc ', acc[i], 'jerk ', jerk[i])
+
+  lon_plan_data['veh_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
 
 # plot 离线所有帧数据
 def load_lon_global_data_figure(bag_loader):
@@ -620,6 +635,8 @@ def create_lon_plan_figure(fig1):
   record_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
   record_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
 
+  veh_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+
   lon_plan_data = {'data_text':data_text, \
                    'data_s_vref':data_s_vref, \
                    'dp_data_sv':dp_data_sv, \
@@ -649,6 +666,7 @@ def create_lon_plan_figure(fig1):
                    'traj_data_st':traj_data_st,
                    'traj_data_s_acc':traj_data_s_acc,
                    'traj_data_s_jerk':traj_data_s_jerk,
+                   'veh_data_sv':veh_data_sv,
   }
 
   columns = [
@@ -717,6 +735,7 @@ def create_lon_plan_figure(fig1):
   f2 = fig_s_time.line('t', 's', source = record_data_st, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record_st')
   f6 = fig_as.line('s', 'acc', source = record_data_s_acc, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record acc')
   f7 = fig_js.line('s', 'jerk', source=record_data_s_jerk, line_width=2, line_color='gray', line_dash='solid', legend_label='record jerk')
+  fig_sv.line('s', 'v', source=veh_data_sv, line_width=2, line_color='yellow', line_dash='solid', legend_label='ego_v')
 
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')

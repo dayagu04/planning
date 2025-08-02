@@ -27,6 +27,7 @@ enum class LonDecisionReason {
   PATH_KAPPA = 15,
   // will be retired
   REMAIN_DIST = 16,
+  SPEED_LIMIT_BY_TERMINAL = 17,
 };
 
 enum class LonDecisionType {

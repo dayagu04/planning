@@ -16,6 +16,9 @@ struct TrajectoryStitchConfig {
   // If traj dist is small, enter open loop control.
   double min_dist_for_open_loop_control;
 
+  double vel_stitch_error_for_closeloop;
+  double acc_stitch_error_for_closeloop;
+
   void Init();
 };
 

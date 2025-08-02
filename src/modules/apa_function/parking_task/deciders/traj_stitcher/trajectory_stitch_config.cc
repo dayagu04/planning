@@ -8,6 +8,9 @@ void TrajectoryStitchConfig::Init() {
   enable_openloop_control = true;
   min_dist_for_open_loop_control = 0.1;
 
+  vel_stitch_error_for_closeloop = 0.25;
+  acc_stitch_error_for_closeloop = 0.2;
+
   return;
 };
 
