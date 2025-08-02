@@ -411,7 +411,7 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
     }
   } else {
     if (!history.emergency_avoid) {
-      if (history.front_car) {
+      if (history.front_car && !history.side_car && !history.rear_car) {
         // 根据纵向ttc和制动力筛选避让障碍物
         lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
         bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||

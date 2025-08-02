@@ -2005,7 +2005,14 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-
+  const auto &coarse_planning_info = session_->planning_context()
+                                          .lane_change_decider_output()
+                                          .coarse_planning_info;
+  const auto lane_width =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
+          ->width();
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
 
@@ -2168,8 +2175,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_care_reverse_ignore_obj = false;
   bool is_care_lon_overtake_obj = false;
   bool is_care_intersection_scene = false;
-  if (obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ && !in_intersection &&
-      !is_avoid_lon_overtake_obj && !general_lateral_decider_output.lane_change_scene &&
+  if (obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
+      !is_avoid_lon_overtake_obj &&
       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
     // 对向ignore的障碍物按当前位置避让, s用预测，l按照当前位置
     // if (obstacle->frenet_l() < 0) {
@@ -2182,7 +2189,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         0, trusted_predicted_sl_polygon);
     bound_type = BoundType::REVERSE_AGENT;
     is_care_reverse_ignore_obj = true;
-  } else if (is_avoid_lon_overtake_obj && !is_blocked_obstacle_ && !general_lateral_decider_output.lane_change_scene) {
+  } else if (is_avoid_lon_overtake_obj && !is_blocked_obstacle_) {
     // 纵向overtake的障碍物按当前位置避让, s用预测，l按照当前位置
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
         0, trusted_predicted_sl_polygon);
@@ -2196,9 +2203,18 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
         int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
   }
-
+  // 对向车ignore减少buffer
+  double intrusion_distance = 0;
+  if (obstacle->d_max_cpath() < 0) {
+    intrusion_distance =  lane_width * 0.5 - std::fabs(obstacle->d_max_cpath());
+  } else if (obstacle->d_min_cpath() > 0) {
+    intrusion_distance =  lane_width * 0.5 - obstacle->d_min_cpath();
+  }
+  double extra_reverse_obj_decrease_buffer = interp(intrusion_distance, config_.reverse_obstacle_intrusion_distance_bp,
+                              config_.extra_reverse_obstacle_decrease_buffer);
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
+  double last_t_lat_buf_dis = 0.0;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -2267,10 +2283,11 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         limit_overlap_min_y, limit_overlap_max_y,
         pred_ts, extra_lane_type_decrease_buffer,
         is_same_side_obstacle_during_lane_change,
-        is_update_hard_bound,
-        is_care_reverse_ignore_obj,
+        is_update_hard_bound, extra_reverse_obj_decrease_buffer,
+        is_care_reverse_ignore_obj, last_t_lat_buf_dis,
         overlap_min_y, overlap_max_y);
 
+    last_t_lat_buf_dis = lat_buf_dis;
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -2567,8 +2584,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     double limit_overlap_min_y, double limit_overlap_max_y,
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
-    bool is_update_hard_bound,
-    bool is_care_reverse_ignore_obj,
+    bool is_update_hard_bound, double extra_reverse_obj_decrease_buffer,
+    bool is_care_reverse_ignore_obj, double last_t_lat_buf_dis,
     double &updated_overlap_min_y, double &updated_overlap_max_y) {
   const auto &coarse_planning_info = session_->planning_context()
                                           .lane_change_decider_output()
@@ -2606,14 +2623,6 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
                                 extra_lane_type_decrease_buffer,
                             0.);
   } else if (is_care_reverse_ignore_obj) {
-    double intrusion_distance = 0;
-    if (obstacle->d_max_cpath() < 0) {
-      intrusion_distance =  lane_width * 0.5 - std::fabs(obstacle->d_max_cpath());
-    } else if (obstacle->d_min_cpath() > 0) {
-      intrusion_distance =  lane_width * 0.5 - obstacle->d_min_cpath();
-    }
-    double extra_reverse_obj_decrease_buffer = interp(intrusion_distance, config_.reverse_obstacle_intrusion_distance_bp,
-                                config_.extra_reverse_obstacle_decrease_buffer);
     lat_buf_dis = std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, 0.);
   }
   // Step 3: 更新历史 overlap 用于下一次比较
@@ -2625,6 +2634,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   } else {
     last_overlap_max_y_ = updated_overlap_max_y - extra_pred_ts_decrease_buffer;
   }
+  // 防止buffer减少过多
+  lat_buf_dis = std::fmax(lat_buf_dis, last_t_lat_buf_dis);
   return lat_buf_dis;
 }
 
@@ -2901,6 +2912,12 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
   const auto &is_crossing_map = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .is_crossing_map;
+  const auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
+  const bool in_intersection = session_->planning_context()
+                                    .lateral_obstacle_decider_output()
+                                    .in_intersection;
   const auto lat_obs_decision_iter =
       lat_obstacle_decision.find(obstacle->id());
   if (lat_obs_decision_iter != lat_obstacle_decision.end()) {
@@ -2917,16 +2934,17 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
           lat_obs_position_iter->second.lon_overtake_avoid)) {
         return true;
       }
+      const auto cossing_map_iter =
+          is_crossing_map.find(obstacle->id());
+      if (obstacle->obstacle()->is_reverse() &&
+          (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
+          !obstacle->is_static() && (obstacle->frenet_s() < ref_traj_points_.back().s) &&
+          (cossing_map_iter != is_crossing_map.end() && !cossing_map_iter->second) &&
+          !general_lateral_decider_output.lane_change_scene && !in_intersection) {
+        // 对向静止的ignore先不考虑
+        return true;
+      }
     }
-  }
-  const auto cossing_map_iter =
-      is_crossing_map.find(obstacle->id());
-  if (obstacle->obstacle()->is_reverse() &&
-      (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
-      !obstacle->is_static() && (obstacle->frenet_s() < ref_traj_points_.back().s) &&
-      (cossing_map_iter != is_crossing_map.end() && !cossing_map_iter->second)) {
-    // 对向静止的ignore先不考虑
-    return true;
   }
   return false;
 }
@@ -4314,7 +4332,7 @@ bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
       }
       Polygon2d obstacle_sl_polygon;
       bool ok = false;
-      ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon);
+      ok = reference_path_ptr_->get_polygon_at_time(obj->id(), int(t * 10), obstacle_sl_polygon);
 
       if (!ok) {
         continue;

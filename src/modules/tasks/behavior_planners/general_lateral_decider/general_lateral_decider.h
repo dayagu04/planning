@@ -201,8 +201,8 @@ class GeneralLateralDecider : public Task {
     double limit_overlap_min_y, double limit_overlap_max_y,
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
-    bool is_update_hard_bound,
-    bool is_care_reverse_ignore_obj,
+    bool is_update_hard_bound, double extra_reverse_obj_decrease_buffer,
+    bool is_care_reverse_ignore_obj, double last_t_lat_buf_dis,
     double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);
