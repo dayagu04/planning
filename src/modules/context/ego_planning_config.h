@@ -201,6 +201,20 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json,
                             "use_overtake_lane_change_request_instead_of_"
                             "active_lane_change_request");
+
+    overtake_standard_left_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_standard_left_lane_change_speed_threshold");
+    overtake_standard_right_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_standard_right_lane_change_speed_threshold");
+    overtake_radical_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_radical_lane_change_speed_threshold");
+    overtake_soft_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_soft_lane_change_speed_threshold");
+
     enable_use_speed_limit_to_suppress_interactive_lane_change =
         read_json_key<bool>(json,
                             "enable_use_speed_limit_to_suppress_interactive_lane_change");
@@ -251,6 +265,10 @@ struct EgoPlanningConfig : public Config {
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
       true;
+  double overtake_standard_left_lane_change_speed_threshold = 3.61;
+  double overtake_standard_right_lane_change_speed_threshold = 4.17;
+  double overtake_radical_lane_change_speed_threshold = 2.78;
+  double overtake_soft_lane_change_speed_threshold = 5.56;
   bool enable_use_speed_limit_to_suppress_interactive_lane_change =
       true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;

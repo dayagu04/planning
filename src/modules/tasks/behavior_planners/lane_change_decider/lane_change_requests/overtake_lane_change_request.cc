@@ -636,6 +636,9 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   if (!base_ref_line || !target_ref_line) {
     return false;
   }
+  const auto &lane_change_style = session_->environmental_model()
+                                  .get_local_view()
+                                  .function_state_machine_info.pilot_req.lane_change_style;
   bool ramp_on_left = false;
   bool ramp_on_Right = false;
   bool is_on_highway = session_->environmental_model().is_on_highway();
@@ -673,19 +676,30 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
       }
     }
   }
-  double speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
-  if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
-    speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
-  } else if (leading_vehicle_speed <=
-             kOvertakeLeadingVehicleLowSpeedThreshold) {
-    speed_threshold = kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold;
+  double speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold;
+  if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_ASSISTIVE) {
+    speed_threshold = config_.overtake_soft_lane_change_speed_threshold;
+  } else if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_AGILE) {
+    speed_threshold = config_.overtake_radical_lane_change_speed_threshold;
   } else {
-    speed_threshold = planning_math::lerp(
-        kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold,
-        kOvertakeLeadingVehicleLowSpeedThreshold,
-        kOvertakeLeadingVehicleHighSpeedDiffThreshold,
-        kOvertakeLeadingVehicleHighSpeedThreshold, leading_vehicle_speed);
+    if (is_left) {
+      speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold;
+    } else {
+      speed_threshold = config_.overtake_standard_right_lane_change_speed_threshold;
+    }
   }
+  // if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
+  //   speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
+  // } else if (leading_vehicle_speed <=
+  //           kOvertakeLeadingVehicleLowSpeedThreshold) {
+  //   speed_threshold = kOvertakeLeadingVehicleLowSpeedDiffThreshold;
+  // } else {
+  //   speed_threshold = planning_math::lerp(
+  //       kOvertakeLeadingVehicleLowSpeedDiffThreshold,
+  //       kOvertakeLeadingVehicleLowSpeedThreshold,
+  //       kOvertakeLeadingVehicleHighSpeedDiffThreshold,
+  //       kOvertakeLeadingVehicleHighSpeedThreshold, leading_vehicle_speed);
+  // }
   const int total_lane_nums = left_lane_nums + right_lane_nums + 1;
   const bool inhibit_extra_speed =
       (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum &&
