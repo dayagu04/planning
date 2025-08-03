@@ -1125,6 +1125,7 @@ void PerpendicularTailInScenario::SwitchProcessObsMethod() {
 
 const bool PerpendicularTailInScenario::CheckFinished() {
   const ApaParameters& param = apa_param.GetParam();
+  const CheckFinishParams& finish_params = param.check_finish_params;
 
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
@@ -1135,41 +1136,50 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
 
   const double lon_err = cur_pose.pos.x() - target_pose.pos.x();
-  const double lat_err1 = cur_pose.pos.y() - target_pose.pos.y();
-  const double lat_err2 = front_pose.pos.y() - target_pose.pos.y();
+  const double lat_err = cur_pose.pos.y() - target_pose.pos.y();
+  const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
   const double heading_err =
       (cur_pose.heading - target_pose.heading) * kRad2Deg;
 
   JSON_DEBUG_VALUE("terminal_error_x", lon_err)
-  JSON_DEBUG_VALUE("terminal_error_y", lat_err1)
-  JSON_DEBUG_VALUE("terminal_error_y_front", lat_err2)
+  JSON_DEBUG_VALUE("terminal_error_y", lat_err)
+  JSON_DEBUG_VALUE("terminal_error_y_front", front_lat_err)
   JSON_DEBUG_VALUE("terminal_error_heading", heading_err * kDeg2Rad)
   ILOG_INFO << "terminal_error_x = " << lon_err
-            << "  terminal_error_y = " << lat_err1
-            << "  lat_err2 = " << lat_err2 << "  heading_err = " << heading_err;
+            << "  terminal_error_y = " << lat_err
+            << "  front_lat_err = " << front_lat_err
+            << "  heading_err = " << heading_err;
 
-  const bool lon_condition = lon_err < param.finish_lon_err;
+  const CarSlotRelationship ship = CalCarSlotRelationship(cur_pose);
 
-  const bool lat_condition_1 = std::fabs(lat_err1) <= param.finish_lat_err;
+  ILOG_INFO << "check finish ship = " << static_cast<int>(ship);
 
-  const bool lat_condition_2 =
-      std::fabs(lat_err1) <= param.finish_lat_err_strict &&
-      std::fabs(lat_err2) <= param.finish_lat_err_strict;
+  if (ship == CarSlotRelationship::TOUCHING) {
+    ILOG_INFO << "car press line, not allow finish";
+    return false;
+  }
 
-  const bool heading_condition_1 =
-      std::fabs(heading_err) <= param.finish_heading_err;
+  const double finish_lon_err = finish_params.lon_err;
 
-  const bool heading_condition_2 =
-      std::fabs(heading_err) <= (param.finish_heading_err + 1.988);
+  const double finish_lat_err =
+      (ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                          : finish_params.lat_err_strict);
+  const double finish_heading_err =
+      (ship == CarSlotRelationship::IDEAL ? finish_params.heading_err
+                                          : finish_params.heading_err_strict);
 
-  const bool lat_condition = (lat_condition_1 && heading_condition_1) &&
-                             (lat_condition_2 && heading_condition_2);
+  const bool lon_condition = lon_err < finish_lon_err;
+
+  const bool lat_condition = std::fabs(lat_err) < finish_lat_err &&
+                             std::fabs(front_lat_err) < finish_lat_err;
+
+  const bool heading_condition = std::fabs(heading_err) < finish_heading_err;
 
   const bool static_condition =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
-      frame_.remain_dist_path < param.max_replan_remain_dist;
+      frame_.remain_dist_path < finish_params.max_remain_path_dist;
 
   bool parking_finish =
       lon_condition && lat_condition && static_condition && remain_s_condition;
@@ -1178,11 +1188,11 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     return true;
   }
 
-  // stucked by directly behind uss
+  // stucked by directly behind obs
   const bool enter_slot_condition = ego_info_under_slot.slot_occupied_ratio >
-                                    param.finish_uss_slot_occupied_ratio;
-  const bool remain_uss_condition =
-      frame_.remain_dist_obs < param.max_replan_remain_dist;
+                                    finish_params.obs_stuck_slot_occupied_ratio;
+  const bool remain_obs_condition =
+      frame_.remain_dist_obs < finish_params.max_remain_obs_dist;
 
   GJKColDetRequest gjl_col_det_request(true, false);
 
@@ -1219,13 +1229,15 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   }
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_uss_condition && end_pos_has_obs_condition;
+                   remain_obs_condition && end_pos_has_obs_condition;
 
   // Consider whether there are really obstacles at target pos. If so, finish
   // it is indeed impossible to reach the target pos, if not, try replan again
   if (parking_finish) {
     return true;
   }
+
+  return false;
 
   // stucked by dynamic col det
   const bool remain_dist_col_det_condition =
@@ -1274,9 +1286,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (!(dist_ego_limiter < car_to_limiter_dis &&
         std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
-            param.finish_heading_err * 1.05 &&
+            param.check_finish_params.heading_err * 1.05 &&
         std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
-            param.finish_lat_err_strict * 1.05)) {
+            param.check_finish_params.lat_err * 1.05)) {
     return false;
   }
 
@@ -1500,7 +1512,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                2.168) ||
       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-       frame_.slot_jump_lat_err > param.finish_lat_err_strict - 0.02) ||
+       frame_.slot_jump_lat_err >
+           param.check_finish_params.lat_err_strict - 0.0168) ||
       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig());
 
@@ -1657,11 +1670,12 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   const auto& param = apa_param.GetParam();
 
   std::vector<double> fail_count_tab{3.0, 4.0, 5.0, 6.0, 7.0};
-  const double dlat =
-      (param.should_stop_lat_err - (param.finish_lat_err_strict - 1e-3)) /
-      (fail_count_tab.size() - 1);
+  const double dlat = (param.should_stop_lat_err -
+                       (param.check_finish_params.lat_err_strict - 1e-3)) /
+                      (fail_count_tab.size() - 1);
   const double dheading =
-      (param.should_stop_heading_err - (param.finish_heading_err - 1e-3)) /
+      (param.should_stop_heading_err -
+       (param.check_finish_params.heading_err_strict - 1e-3)) /
       (fail_count_tab.size() - 1);
   std::vector<double> lat_err_tab{};
   std::vector<double> heading_err_tab{};
@@ -1768,8 +1782,10 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   const auto& param = apa_param.GetParam();
 
-  if (frame_.slot_jump_lat_err < param.finish_lat_err_strict - 1e-3 &&
-      frame_.slot_jump_heading_err < param.finish_heading_err - 1e-2) {
+  if (frame_.slot_jump_lat_err <
+          param.check_finish_params.lat_err_strict - 1e-3 &&
+      frame_.slot_jump_heading_err <
+          param.check_finish_params.heading_err_strict - 1e-2) {
     frame_.car_already_move_dist = 0.0;
     frame_.ego_should_stop_by_slot_jump = false;
     return 5.01;
@@ -1989,19 +2005,44 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     return true;
   }
 
-  bool bef_path_meet_finish = true;
-  if (std::fabs(lat_err_bef) > param.finish_lat_err ||
-      std::fabs(front_lat_err_bef) > param.finish_lat_err ||
-      std::fabs(heading_err_bef) > param.finish_heading_err) {
-    bef_path_meet_finish = false;
+  const CheckFinishParams& finish_params = param.check_finish_params;
+  bool bef_path_meet_finish = false;
+  const CarSlotRelationship bef_ship = CalCarSlotRelationship(tar_pose_bef);
+  if (bef_ship != CarSlotRelationship::TOUCHING) {
+    const double finish_lat_err =
+        (bef_ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                                : finish_params.lat_err_strict);
+
+    const double finish_heading_err = (bef_ship == CarSlotRelationship::IDEAL
+                                           ? finish_params.heading_err
+                                           : finish_params.heading_err_strict);
+
+    bef_path_meet_finish = std::fabs(lat_err_bef) < finish_lat_err &&
+                           std::fabs(front_lat_err_bef) < finish_lat_err &&
+                           std::fabs(heading_err_bef) < finish_heading_err;
   }
 
-  bool now_path_meet_finish = true;
-  if (std::fabs(lat_err_now) > param.finish_lat_err ||
-      std::fabs(front_lat_err_now) > param.finish_lat_err ||
-      std::fabs(heading_err_now) > param.finish_heading_err) {
-    now_path_meet_finish = false;
+  const CarSlotRelationship now_ship = CalCarSlotRelationship(tar_pose_now);
+  bool now_path_meet_finish = false;
+  if (now_ship != CarSlotRelationship::TOUCHING) {
+    const double finish_lat_err =
+        (now_ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                                : finish_params.lat_err_strict);
+
+    const double finish_heading_err = (now_ship == CarSlotRelationship::IDEAL
+                                           ? finish_params.heading_err
+                                           : finish_params.heading_err_strict);
+
+    now_path_meet_finish = std::fabs(lat_err_now) < finish_lat_err &&
+                           std::fabs(front_lat_err_now) < finish_lat_err &&
+                           std::fabs(heading_err_now) < finish_heading_err;
   }
+
+  ILOG_INFO << "check dynamic path optimal, bef_ship = "
+            << static_cast<int>(bef_ship)
+            << "  now_ship = " << static_cast<int>(now_ship)
+            << "  bef_path_meet_finish = " << bef_path_meet_finish
+            << "  now_path_meet_finish = " << now_path_meet_finish;
 
   if (!bef_path_meet_finish && now_path_meet_finish) {
     return true;
@@ -2456,6 +2497,46 @@ const bool PerpendicularTailInScenario::CheckPathDangerous() {
   }
 
   return true;
+}
+
+const PerpendicularTailInScenario::CarSlotRelationship
+PerpendicularTailInScenario::CalCarSlotRelationship(
+    const geometry_lib::PathPoint& cur_pose) {
+  const ApaParameters& params = apa_param.GetParam();
+  const CheckFinishParams& finish_params = params.check_finish_params;
+  // 暂且需要输入的pt航向误差都比较小, 输入的点需要为车位坐标系
+  if (std::fabs(cur_pose.heading * kRad2Deg) > finish_params.heading_err) {
+    return CarSlotRelationship::TOUCHING;
+  }
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const geometry_lib::PathPoint front_pose =
+      GetCarFrontPoseFromCarPose(cur_pose);
+
+  // 暂且简易化计算  忽略航向误差
+  const std::vector<double> car_border_ys = {
+      cur_pose.pos.y() + 0.5 * params.car_width,
+      cur_pose.pos.y() - 0.5 * params.car_width,
+      front_pose.pos.y() + 0.5 * params.car_width,
+      front_pose.pos.y() - 0.5 * params.car_width};
+
+  const double half_slot_width = 0.5 * ego_info_under_slot.slot.slot_width_;
+
+  for (const double& y : car_border_ys) {
+    if (half_slot_width - std::fabs(y) < finish_params.min_car2line_dist) {
+      return CarSlotRelationship::TOUCHING;
+    }
+  }
+
+  for (const double& y : car_border_ys) {
+    if (half_slot_width - std::fabs(y) < finish_params.max_car2line_dist) {
+      return CarSlotRelationship::MARGINAL;
+    }
+  }
+
+  return CarSlotRelationship::IDEAL;
 }
 
 void PerpendicularTailInScenario::Log() const {

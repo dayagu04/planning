@@ -253,6 +253,25 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.finish_parallel_out_heading_mag, double,
                   "finish_parallel_out_heading_mag");
 
+  CheckFinishParams& finish_param = param.check_finish_params;
+  JSON_READ_VALUE(finish_param.lon_err, float, "check_finish_lon_err");
+  JSON_READ_VALUE(finish_param.lat_err, float, "check_finish_lat_err");
+  JSON_READ_VALUE(finish_param.lat_err_strict, float,
+                  "check_finish_lat_err_strict");
+  JSON_READ_VALUE(finish_param.heading_err, float, "check_finish_heading_err");
+  JSON_READ_VALUE(finish_param.heading_err_strict, float,
+                  "check_finish_heading_err_strict");
+  JSON_READ_VALUE(finish_param.obs_stuck_slot_occupied_ratio, float,
+                  "check_finish_obs_stuck_slot_occupied_ratio");
+  JSON_READ_VALUE(finish_param.min_car2line_dist, float,
+                  "check_finish_min_car2line_dist");
+  JSON_READ_VALUE(finish_param.max_car2line_dist, float,
+                  "check_finish_max_car2line_dist");
+  JSON_READ_VALUE(finish_param.max_remain_path_dist, float,
+                  "check_finish_max_remain_path_dist");
+  JSON_READ_VALUE(finish_param.max_remain_obs_dist, float,
+                  "check_finish_max_remain_obs_dist");
+
   // check fail params
   JSON_READ_VALUE(param.stuck_failed_time, double, "stuck_failed_time");
 

@@ -50,6 +50,12 @@ class ParkingScenario {
     SLOT_CRUISING,
   };
 
+  enum class CarSlotRelationship : uint8_t {
+    TOUCHING,
+    MARGINAL,
+    IDEAL,
+  };
+
   struct CheckReplanParams {
     double replan_dist_path = apa_param.GetParam().max_replan_remain_dist;
     double wait_time_path = 0.068;
@@ -471,6 +477,9 @@ class ParkingScenario {
                            const std::vector<double> &obs_y) const;
 
   void PublishPreparePlanningTraj();
+
+  virtual const CarSlotRelationship CalCarSlotRelationship(
+      const geometry_lib::PathPoint &cur_pose);
 
  protected:
   // TODO:
