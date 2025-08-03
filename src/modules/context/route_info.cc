@@ -3299,7 +3299,7 @@ std::vector<char> RouteInfo::SortRaysByDirection(const std::vector<RayInfo>& ray
 }
 
 bool RouteInfo::CalculateMergeLaneInfo(
-  std::vector<int>& merge_lane_sequence) {
+  std::vector<int>& merge_lane_sequence_vec) {
   iflymapdata::sdpro::FeaturePoint find_fp;
   iflymapdata::sdpro::FeaturePoint last_fp;
   uint64 fp_link_id;
@@ -3310,7 +3310,7 @@ bool RouteInfo::CalculateMergeLaneInfo(
   }
 
   if (!CalculateLastFp(&last_fp, fp_link_id, find_fp)) {
-      merge_lane_sequence.emplace_back(1);
+      merge_lane_sequence_vec.emplace_back(1);
       return true;
   }
 
@@ -3322,12 +3322,27 @@ bool RouteInfo::CalculateMergeLaneInfo(
     // 暂时先处理左边的merge lane
     std::cout << "change_type_: " << lane_info->has_change_type() << std::endl;
     std::cout << "change_type: " << lane_info->change_type() << std::endl;
-    if (lane_info->change_type() == iflymapdata::sdpro::LaneChangeType::LeftTurnExpandingLane) {
+    if (lane_info->change_type() == iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
+      int find_fp_lane_num = 0;
+      int last_fp_lane_num = 0;
+      for (const auto& lane_id : find_fp.lane_ids()) {
+        if (!IsEmergencyLane(lane_id, sdpro_map_)) {
+          find_fp_lane_num++;
+        }
+      }
+
+      for (const auto& lane_id : last_fp.lane_ids()) {
+        if (!IsEmergencyLane(lane_id, sdpro_map_)) {
+          last_fp_lane_num++;
+        }
+      }
+      
       bool is_lane_num_satisfy =
-          find_fp.lane_ids_size() + 1 == last_fp.lane_ids_size();
+          find_fp_lane_num + 1 == last_fp_lane_num;
       // 默认是车道的前继车道左边为汇入车道
       if (is_lane_num_satisfy) {
-        merge_lane_sequence.emplace_back(lane_info->sequence());
+        int merge_lane_sequence = find_fp.lane_ids_size() - lane_info->sequence() + 1;
+        merge_lane_sequence_vec.emplace_back(merge_lane_sequence);
         return true;
       }
     }
