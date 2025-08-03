@@ -64,72 +64,6 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     COST_WEIGHT_MAX
   } COST_WEIGHT;
 
-  struct PlannerParams {
-    bool is_left_side = false;
-    double slot_side_sgn = 1.0;  // 1.0 in right slot
-    pnc::geometry_lib::PathPoint target_pose;
-    pnc::geometry_lib::PathPoint park_out_pose;
-    pnc::geometry_lib::PathPoint safe_circle_root_pose;
-    pnc::geometry_lib::Circle safe_circle;
-    pnc::geometry_lib::LineSegment target_line;
-    pnc::geometry_lib::LineSegment prepare_line;  // pA is tag point
-    Eigen::Vector2d v_target_line = Eigen::Vector2d::Zero();
-    Eigen::Vector2d v_prepare_line = Eigen::Vector2d::Zero();
-
-    double lon_buffer_rev_trials = 0.25;
-
-    double min_outer_front_corner_radius = 5.5;
-    double min_inner_rear_corner_radius = 5.5;
-    double min_outer_front_corner_deta_y = 0.8;
-    Eigen::Vector2d v_ego_farest_front_corner = Eigen::Vector2d::Zero();
-    Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
-
-    double lat_outside_slot_buffer = 0.3;
-    std::vector<Eigen::Vector2d> front_corner_obs_vec;
-    std::vector<Eigen::Vector2d> channel_obs_vec;
-    std::vector<Eigen::Vector2d> virtual_channel_obs_vec;
-    std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
-    std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
-
-    std::vector<std::vector<pnc::geometry_lib::PathSegment>>
-        suc_rev_parking_out_vec;
-
-    std::vector<pnc::geometry_lib::PathPoint> ego_start_pose_space;
-
-    std::array<double, COST_WEIGHT::COST_WEIGHT_MAX> weights{0.0};
-    void Reset() {
-      is_left_side = true;
-      slot_side_sgn = 1.0;
-      target_pose.Reset();
-      park_out_pose.Reset();
-      safe_circle_root_pose.Reset();
-      safe_circle.Reset();
-      target_line.Reset();
-      prepare_line.Reset();
-      v_target_line.setZero();
-      v_prepare_line.setZero();
-      park_out_path_in_slot.clear();
-      park_out_path_in_slot.reserve(10);
-      valid_target_pt_vec.clear();
-      valid_target_pt_vec.reserve(20);
-      front_corner_obs_vec.clear();
-      front_corner_obs_vec.reserve(20);
-      channel_obs_vec.clear();
-      channel_obs_vec.reserve(50);
-      virtual_channel_obs_vec.clear();
-      virtual_channel_obs_vec.reserve(50);
-      lon_buffer_rev_trials = 0.25;
-      lat_outside_slot_buffer = 0.3;
-      min_outer_front_corner_radius = 5.5;
-      min_inner_rear_corner_radius = 5.5;
-      min_outer_front_corner_deta_y = 0.8;
-      v_ego_farest_front_corner = Eigen::Vector2d::Zero();
-      v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
-      weights.fill(0.0);
-      ego_start_pose_space.clear();
-    }
-  };
-
   struct GeometryPath {
     void Reset() {
       //   max_x_mag = 0.0;
@@ -177,6 +111,76 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
     double cost_total{0.0f};
     std::array<double, COST_WEIGHT_MAX> cost{};
+  };
+
+  struct PlannerParams {
+    bool is_left_side = false;
+    double slot_side_sgn = 1.0;  // 1.0 in right slot
+    pnc::geometry_lib::PathPoint target_pose;
+    pnc::geometry_lib::PathPoint park_out_pose;
+    pnc::geometry_lib::PathPoint safe_circle_root_pose;
+    pnc::geometry_lib::Circle safe_circle;
+    pnc::geometry_lib::LineSegment target_line;
+    pnc::geometry_lib::LineSegment prepare_line;  // pA is tag point
+    Eigen::Vector2d v_target_line = Eigen::Vector2d::Zero();
+    Eigen::Vector2d v_prepare_line = Eigen::Vector2d::Zero();
+
+    double lon_buffer_rev_trials = 0.25;
+
+    double min_outer_front_corner_radius = 5.5;
+    double min_inner_rear_corner_radius = 5.5;
+    double min_outer_front_corner_deta_y = 0.8;
+    Eigen::Vector2d v_ego_farest_front_corner = Eigen::Vector2d::Zero();
+    Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
+
+    double lat_outside_slot_buffer = 0.3;
+    std::vector<Eigen::Vector2d> front_corner_obs_vec;
+    std::vector<Eigen::Vector2d> channel_obs_vec;
+    std::vector<Eigen::Vector2d> virtual_channel_obs_vec;
+    std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
+    std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
+
+    std::vector<GeometryPath> inversed_path_vec_in_slot;
+
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+        suc_rev_parking_out_vec;
+
+    std::vector<pnc::geometry_lib::PathPoint> ego_start_pose_space;
+
+    std::array<double, COST_WEIGHT::COST_WEIGHT_MAX> weights{0.0};
+    void Reset() {
+      is_left_side = true;
+      slot_side_sgn = 1.0;
+      target_pose.Reset();
+      park_out_pose.Reset();
+      safe_circle_root_pose.Reset();
+      safe_circle.Reset();
+      target_line.Reset();
+      prepare_line.Reset();
+      v_target_line.setZero();
+      v_prepare_line.setZero();
+      park_out_path_in_slot.clear();
+      park_out_path_in_slot.reserve(10);
+      valid_target_pt_vec.clear();
+      valid_target_pt_vec.reserve(20);
+      inversed_path_vec_in_slot.clear();
+      inversed_path_vec_in_slot.reserve(20);
+      front_corner_obs_vec.clear();
+      front_corner_obs_vec.reserve(20);
+      channel_obs_vec.clear();
+      channel_obs_vec.reserve(50);
+      virtual_channel_obs_vec.clear();
+      virtual_channel_obs_vec.reserve(50);
+      lon_buffer_rev_trials = 0.25;
+      lat_outside_slot_buffer = 0.3;
+      min_outer_front_corner_radius = 5.5;
+      min_inner_rear_corner_radius = 5.5;
+      min_outer_front_corner_deta_y = 0.8;
+      v_ego_farest_front_corner = Eigen::Vector2d::Zero();
+      v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
+      weights.fill(0.0);
+      ego_start_pose_space.clear();
+    }
   };
 
   struct DebugInfo {
@@ -237,6 +241,11 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const double max_search_angle, const uint8_t ref_gear,
       const uint8_t ref_steer,
       const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3);
+
+  const bool SearchToRootPoseVec(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &start_pose, const double radius,
+      const double lon_buffer);
 
   const bool SearchToTargetLineVecV2(
       std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
@@ -366,6 +375,10 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const bool ReduceRootPoseHeadingInSlot(
       std::vector<pnc::geometry_lib::PathSegment> &search_out_res);
+
+  const bool SortPathByGearShiftHeadingAndLength(
+      const std::vector<GeometryPath> &total_path_vec,
+      std::vector<GeometryPath> &sorted_path_vec);
 
   const bool AdvancedInversedTrialsInSlot(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
