@@ -1852,6 +1852,7 @@ void RouteInfo::NewUpdateMLCInfoDecider(
               second_split_region_info.recommend_lane_num[0];
 
           std::vector<int> temp1, temp2, temp3;
+          bool is_on_road_continue = true;//表示split_split场景是在主路上的场景。
 
           temp1 =
               CommonElements(first_split_region_info.recommend_lane_num[2]
@@ -1864,40 +1865,89 @@ void RouteInfo::NewUpdateMLCInfoDecider(
             mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
             return;
           }
+          // temp1为第一交换区的结束区域与第二交换区的起始区域。
+          // 如果都是在主路上，两个区域会有相同的lane_sequence
+          // 如果不是在在主路上，那么可能存在没有共同的lane，那么此时就用判断是否在最边上的车道上，是的话往最边上行驶即可
 
           temp2 = CommonElements(first_split_region_info.recommend_lane_num[1]
                                        .feasible_lane_sequence,
                                    temp1);
           if (temp2.empty()) {
-            //在第一交换区中间和后面没有共同link时，就靠最右边车道行驶
-            mlc_decider_route_info_.is_process_split_split = false;
-            mlc_decider_route_info_.is_process_split = true;
-            mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
-            return;
+            if (temp1.empty() || first_split_region_info.recommend_lane_num[1]
+                                     .feasible_lane_sequence.empty()) {
+              mlc_decider_route_info_.is_process_split_split = false;
+              mlc_decider_route_info_.is_process_split = true;
+              mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
+              return;
+            }
+
+            const int common_region_lane_num =
+                first_split_region_info.recommend_lane_num[2].total_lane_num;
+            if (temp1.front() >= common_region_lane_num) {
+              is_on_road_continue = false;
+              temp2.emplace_back(first_split_region_info.recommend_lane_num[1]
+                                     .feasible_lane_sequence.back());
+            } else {
+              // 在第一交换区中间和后面没有共同link时，就靠最右边车道行驶
+              mlc_decider_route_info_.is_process_split_split = false;
+              mlc_decider_route_info_.is_process_split = true;
+              mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
+              return;
+            }
           }
 
           temp3 = CommonElements(first_split_region_info.recommend_lane_num[0]
                                        .feasible_lane_sequence,
                                    temp2);
           if (temp3.empty()) {
-            mlc_decider_route_info_.is_process_split_split = false;
-            mlc_decider_route_info_.is_process_split = true;
-            mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
-            return;
+            if (temp2.empty() || first_split_region_info.recommend_lane_num[0]
+                                     .feasible_lane_sequence.empty()) {
+              mlc_decider_route_info_.is_process_split_split = false;
+              mlc_decider_route_info_.is_process_split = true;
+              mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
+              return;
+            }
+
+            int common_region_lane_num =
+                first_split_region_info.recommend_lane_num[1].total_lane_num;
+            if (temp2.front() >= common_region_lane_num) {
+              temp3.emplace_back(first_split_region_info.recommend_lane_num[0]
+                                     .feasible_lane_sequence.back());
+            } else {
+              mlc_decider_route_info_.is_process_split_split = false;
+              mlc_decider_route_info_.is_process_split = true;
+              mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
+              return;
+            }
           }
 
-          route_info_output_.split_region_info_list[1]
-              .recommend_lane_num[0]
-              .feasible_lane_sequence = temp3;
-          route_info_output_.split_region_info_list[0]
-              .recommend_lane_num[2]
-              .feasible_lane_sequence = temp3;
-          route_info_output_.split_region_info_list[0]
-              .recommend_lane_num[1]
-              .feasible_lane_sequence = temp3;
-          route_info_output_.split_region_info_list[0]
-              .recommend_lane_num[0]
-              .feasible_lane_sequence = temp3;
+          if (is_on_road_continue) {
+            route_info_output_.split_region_info_list[1]
+                .recommend_lane_num[0]
+                .feasible_lane_sequence = temp3;
+            route_info_output_.split_region_info_list[0]
+                .recommend_lane_num[2]
+                .feasible_lane_sequence = temp3;
+            route_info_output_.split_region_info_list[0]
+                .recommend_lane_num[1]
+                .feasible_lane_sequence = temp3;
+            route_info_output_.split_region_info_list[0]
+                .recommend_lane_num[0]
+                .feasible_lane_sequence = temp3;
+          } else {
+            route_info_output_.split_region_info_list[1]
+                .recommend_lane_num[0]
+                .feasible_lane_sequence = temp1;
+            route_info_output_.split_region_info_list[0]
+                .recommend_lane_num[2]
+                .feasible_lane_sequence = temp1;
+            route_info_output_.split_region_info_list[0]
+                .recommend_lane_num[1]
+                .feasible_lane_sequence = temp2;
+            route_info_output_.split_region_info_list[0]
+                .recommend_lane_num[0]
+                .feasible_lane_sequence = temp3;
+          }
 
           mlc_decider_route_info_.first_static_split_region_info =
               route_info_output_.split_region_info_list[0];
