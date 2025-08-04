@@ -517,7 +517,7 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
         speed_limit_config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
       v_limit_with_intersection_ =
-          std::max(v_ego - 3.0, speed_limit_config_.v_intersection_min_limit);
+          std::max(v_ego - speed_limit_config_.v_reduce_intersection, speed_limit_config_.v_intersection_min_limit);
     }
     v_target_intersection = v_limit_with_intersection_;
   } else {

@@ -2987,6 +2987,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, acc_to_ramp, "speed_limit_decider", "acc_to_ramp");
     ReadItem<double>(json, v_intersection_min_limit, "speed_limit_decider",
                      "v_intersection_min_limit");
+    ReadItem<double>(json, v_reduce_intersection, "speed_limit_decider",
+                      "v_reduce_intersection");
     ReadItem<double>(json, v_limit_one_still_danger_obs, "speed_limit_decider",
                       "v_limit_one_still_danger_obs");
     ReadItem<double>(json, v_limit_more_still_danger_obs, "speed_limit_decider",
@@ -3062,6 +3064,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double brake_dis_near_ramp_zone = 700.0;
   double acc_to_ramp = -0.7;
   double v_intersection_min_limit = 11.11;
+  double v_reduce_intersection = 0.0;
   double v_limit_one_still_danger_obs = 12.5;
   double v_limit_more_still_danger_obs = 11.11;
   double v_rel_limit_for_dynamic_danger_obs = 4.17;
