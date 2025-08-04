@@ -73,6 +73,7 @@ class SpeedLimitDecider : public Task {
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map);
+  bool JudgeCurvBySDProMap();
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
@@ -101,7 +102,7 @@ class SpeedLimitDecider : public Task {
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
-  
+
   std::map<int32_t, VRURoundInfo> vru_round_map_;
   std::map<int32_t, VRURoundInfo> historical_vru_round_map_;
   VRURoundInfo triggered_vru_;

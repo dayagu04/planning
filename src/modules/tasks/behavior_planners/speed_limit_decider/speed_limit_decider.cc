@@ -275,6 +275,54 @@ bool SpeedLimitDecider::IsSSharpBend(
   return false;
 }
 
+bool SpeedLimitDecider::JudgeCurvBySDProMap() {
+  if (!speed_limit_config_.enable_sdmap_curv_v_adjust) {
+    return true;
+  }
+  if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
+    std::cout << "sd_map is invalid!!!" << std::endl;
+    return true;
+  }
+  ad_common::math::Vec2d current_point;
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &pose = ego_state->location_enu();
+  std::cout << "ego_pose_x_:" << pose.position.x
+            << "ego_pose_y_:" << pose.position.y << std::endl;
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  const auto &sdpro_map =
+      session_->environmental_model().get_route_info()->get_sdpro_map();
+  double nearest_s = 0;
+  double nearest_l = 0;
+  // const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
+      current_point, search_distance, ego_heading_angle, max_heading_diff,
+      nearest_s, nearest_l);
+  if (!current_segment) {
+    return true;  // 返回true,代表判断出弯道，不加速，有异常就不加速
+  }
+  std::vector<std::pair<double, double>> curv_list;
+  curv_list = sdpro_map.GetCurvatureList(current_segment->id(), nearest_s,
+  speed_limit_config_.search_sdmap_curv_dis);
+  double min_curv_radius = 10000.0;
+  bool has_curv = true;
+  for (int i = 0; i < curv_list.size(); i++) {
+    double one_curv_radius = 1.0 / (std::abs(curv_list[i].second));
+    if (one_curv_radius < min_curv_radius) {
+      min_curv_radius = one_curv_radius;
+    }
+  }
+  if (min_curv_radius > speed_limit_config_.sdmap_curv_thred) {
+    has_curv = false;
+  }
+  JSON_DEBUG_VALUE("sdpromap_min_curv_radius", min_curv_radius)
+  return has_curv;
+}
+
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   ILOG_DEBUG << "----CalculateCurveSpeedLimit---";
   const auto &vehicle_param =
@@ -453,7 +501,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
   double pre_acc_dis = speed_limit_config_.pre_accelerate_distance_for_merge;
-  bool sdmap_has_curv = true;  // 先不考虑匝道内小曲率的情况，后面补充
+  bool sdmap_has_curv = JudgeCurvBySDProMap();  // 先不考虑匝道内小曲率的情况，后面补充
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
