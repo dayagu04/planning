@@ -76,8 +76,6 @@ class PathPoint : public Vec2d {
   PathPoint GetInterpolateByLinearApproximation(const PathPoint& p,
                                                 const double s) const;
 
-  std::string DebugString() const;
-
  protected:
   double z_ = 0.0;
   double s_ = -1.0;

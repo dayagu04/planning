@@ -923,5 +923,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetPolynomialPath", &GetPolynomialPath)
+      .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
       .def("GetDynamicState", &GetDynamicState);
 }

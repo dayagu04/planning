@@ -28,6 +28,7 @@ def GetTrajSpeed(planning):
     speed_point.append(point.a)
     speed_point.append(point.jerk)
     traj_speed_profile.append(speed_point)
+    # print('k', point.curvature)
 
   return traj_speed_profile
 
