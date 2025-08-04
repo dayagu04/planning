@@ -105,10 +105,10 @@ void RouteInfo::UpdateRouteInfoForNOA(
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
 
   const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map_, &nearest_s);
-  if (segment == nullptr) {
-    std::cout << "ego link not in expressway failed!!!" << std::endl;
-    return;
-  }
+  // if (segment == nullptr) {
+  //   std::cout << "ego link not in expressway failed!!!" << std::endl;
+  //   return;
+  // }
 
   const iflymapdata::sdpro::LinkInfo_Link* link =
       UpdateEgoLinkInfo(sdpro_map, &nearest_s);
@@ -1233,6 +1233,25 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
   JSON_DEBUG_VALUE("current_segment_id", current_link->id());
   JSON_DEBUG_VALUE("forward_lane_num", current_link->lane_num());
 
+  if (!route_info_output_.is_in_sdmaproad) {
+    //判断自车当前是否在高速或者高架上
+    if (current_link->link_class() ==
+            iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+        current_link->link_class() ==
+            iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY) {
+      route_info_output_.is_ego_on_expressway = true;
+      if (current_link->link_class() ==
+          iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
+        route_info_output_.is_ego_on_expressway_hmi = true;
+      } else {
+        route_info_output_.is_ego_on_city_expressway_hmi = true;
+      }
+      route_info_output_.is_in_sdmaproad = true;
+    } else {
+      std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+      return link;
+    }
+  }
   // //判断自车当前是否在高速或者高架上
   // if (current_link->link_class() ==
   //         iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
