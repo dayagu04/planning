@@ -71,7 +71,7 @@
   "normal_slot_width": 2.475,
   "slot_compare_to_car_length": 0.3,
   "slot_compare_to_car_width": 0.26,
-  "car2line_dist_threshold": -0.12,
+  "car2line_dist_threshold": 0.0,
 
   "comment_4": "terminal pose params",
   "terminal_target_x": 1.15,
@@ -100,6 +100,17 @@
   "finish_parallel_lon_overhaing_error": 0.22,
   "finish_parallel_heading_err": 1.68,
   "finish_parallel_out_heading_mag": 10.0,
+
+  "check_finish_lon_err": 0.25,
+  "check_finish_lat_err": 0.2,
+  "check_finish_lat_err_strict": 0.1,
+  "check_finish_heading_err": 2.5,
+  "check_finish_heading_err_strict": 1.8,
+  "check_finish_obs_stuck_slot_occupied_ratio": 0.798,
+  "check_finish_min_car2line_dist": -0.02,
+  "check_finish_max_car2line_dist": 0.1,
+  "check_finish_max_remain_path_dist": 1.068,
+  "check_finish_max_remain_obs_dist": 0.2,
 
   "comment_6": "check fail params",
   "stuck_failed_time": 10.0,

@@ -111,6 +111,24 @@ struct UssConfig {
   double point_max_dist;
 };
 
+struct CheckFinishParams {
+  float min_car2line_dist;
+  float max_car2line_dist;
+
+  float lon_err;
+
+  float lat_err_strict;
+  float heading_err_strict;
+
+  float lat_err;
+  float heading_err;
+
+  float obs_stuck_slot_occupied_ratio;
+
+  float max_remain_path_dist;
+  float max_remain_obs_dist;
+};
+
 struct SmartFoldMirrorParams {
   bool has_smart_fold_mirror = false;
   // If set to true, the actual rearview mirror must be in folded state
@@ -238,6 +256,7 @@ struct ApaParameters {
   double finish_parallel_heading_err = 2.3;
   double finish_parallel_out_heading_mag = 0.55;
   double finish_parallel_lat_rac_err = 0.35;
+  CheckFinishParams check_finish_params;
 
   // check fail params
   double stuck_failed_time = 9.0;
