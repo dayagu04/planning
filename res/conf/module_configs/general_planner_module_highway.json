@@ -356,6 +356,8 @@
   "lat_motion_ilqr": {
     "pass_acc_mode": true,
     "warm_start_enable": true,
+    "use_index_clip": true,
+    "use_acc_compensation": true,
     "delta_t": 0.2,
     "min_v_cruise": 0.2,
     "min_ego_vel": 1.5,

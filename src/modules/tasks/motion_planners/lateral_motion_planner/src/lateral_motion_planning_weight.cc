@@ -621,13 +621,9 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     }
     if (i < 6) {
       weight_.expected_acc[i] = expected_average_acc_ * 1.2;
-      double acc_gain = std::min(std::fabs(init_dis_to_ref_), 0.2);
-      if (expected_average_acc_ > 0.1) {
-        weight_.expected_acc[i] =
-            weight_.expected_acc[i] + acc_gain;
-      } else if (expected_average_acc_ < -0.1) {
-        weight_.expected_acc[i] =
-            weight_.expected_acc[i] - acc_gain;
+      if (config_.use_acc_compensation) {
+        double acc_gain = std::max(std::min(init_dis_to_ref_, 0.2), -0.2);
+        weight_.expected_acc[i] -= acc_gain;
       }
     } else {
       weight_.expected_acc[i] = expected_average_acc_ * 1.2;
@@ -1164,6 +1160,14 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
       is_s_bend_) {
     weight_.remotely_index = 20;
     planning_input.set_q_acc(0.0);
+  }
+
+  // limit large diff
+  if (config_.use_index_clip) {
+    int d_index = clip((weight_.remotely_index - last_remotely_index_), -2, 2);
+    weight_.remotely_index =
+        std::max(last_remotely_index_ + d_index,
+                weight_.proximal_index);
   }
 
   // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
