@@ -2075,7 +2075,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     const auto& seg = geometry_path_now.path_segment_vec[i];
     if (seg.seg_steer == geometry_lib::SEG_TYPE_LINE &&
         seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
-      line_length += geometry_path_now.path_segment_vec[i].Getlength();
+      line_length += geometry_path_now.path_segment_vec[i].GetLength();
     } else {
       break;
     }

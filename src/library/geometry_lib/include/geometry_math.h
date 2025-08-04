@@ -568,7 +568,7 @@ struct PathSegment {
 
   PathSegment() = default;
 
-  const double Getlength() const {
+  const double GetLength() const {
     if (seg_type == SEG_TYPE_LINE) {
       return line_seg.length;
     } else if (seg_type == SEG_TYPE_ARC) {

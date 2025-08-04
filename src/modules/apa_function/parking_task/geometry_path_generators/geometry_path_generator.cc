@@ -102,7 +102,7 @@ const bool GeometryPathGenerator::CheckCurrentGearLength() {
   double length = 0.0;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
-    length += output_.path_segment_vec[i].Getlength();
+    length += output_.path_segment_vec[i].GetLength();
   }
 
   return (length > 0.2) ? true : false;
@@ -130,7 +130,7 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
   double length = 0.0;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
-    length += output_.path_segment_vec[i].Getlength();
+    length += output_.path_segment_vec[i].GetLength();
     cur_gear_path_segment_vec.emplace_back(output_.path_segment_vec[i]);
   }
   double sample_ds = input_.sample_ds;

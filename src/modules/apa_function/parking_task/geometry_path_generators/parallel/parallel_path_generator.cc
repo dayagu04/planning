@@ -1571,7 +1571,7 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
     const auto& current_path_seg = path_seg_vec[i];
     const auto current_gear = current_path_seg.seg_gear;
 
-    geometry_path.length += current_path_seg.Getlength();
+    geometry_path.length += current_path_seg.GetLength();
     geometry_path.gear_cmd_vec.emplace_back(current_path_seg.seg_gear);
 
     if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
@@ -1598,14 +1598,14 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
     const auto& seg = geometry_path.path_segment_vec[i];
     if (i == 0) {
       current_gear = seg.seg_gear;
-      current_length = seg.Getlength();
+      current_length = seg.GetLength();
     } else {
       if (seg.seg_gear == current_gear) {
-        current_length += seg.Getlength();
+        current_length += seg.GetLength();
       } else {
         geometry_path.path_length_vec.emplace_back(current_length);
         current_gear = seg.seg_gear;
-        current_length = seg.Getlength();
+        current_length = seg.GetLength();
       }
     }
   }
@@ -1942,7 +1942,7 @@ void ParallelPathGenerator::AddLastArc() {
     return;
   }
 
-  output_.length += last_path_seg.Getlength();
+  output_.length += last_path_seg.GetLength();
   output_.steer_vec.emplace_back(last_path_seg.seg_steer);
   output_.gear_cmd_vec.emplace_back(last_path_seg.seg_gear);
   output_.path_segment_vec.emplace_back(last_path_seg);
@@ -1992,7 +1992,7 @@ void ParallelPathGenerator::AddPathSegToOutPut(
       }
     }
     output_.path_segment_vec.emplace_back(seg);
-    output_.length += seg.Getlength();
+    output_.length += seg.GetLength();
     output_.gear_cmd_vec.emplace_back(seg.seg_gear);
     output_.steer_vec.emplace_back(seg.seg_steer);
   }
@@ -3288,7 +3288,7 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
     for (const auto& path_seg : path_seg_vec) {
       pnc::geometry_lib::PrintSegmentInfo(path_seg);
       if (path_seg.seg_gear == path_seg_vec.front().seg_gear) {
-        first_path_length += path_seg.Getlength();
+        first_path_length += path_seg.GetLength();
       }
     }
 
@@ -3836,13 +3836,13 @@ const bool ParallelPathGenerator::SearchToTargetLine(
         continue;
       }
 
-      if (aligned_seg.Getlength() < 0.15) {
+      if (aligned_seg.GetLength() < 0.15) {
         // ILOG_INFO << "max avaliable path length < 0.15m";
         continue;
       }
 
       const double max_search_lenth =
-          std::min(kMaxSearchArcLength, aligned_seg.Getlength());
+          std::min(kMaxSearchArcLength, aligned_seg.GetLength());
 
       const int max_step_num =
           std::max(static_cast<int>(max_search_lenth / kMinSearchArcStep), 1);
@@ -4174,7 +4174,7 @@ const bool ParallelPathGenerator::SearchLineNode(
     return false;
   }
 
-  max_search_dist_mag = std::min(max_search_dist_mag, line_seg.Getlength());
+  max_search_dist_mag = std::min(max_search_dist_mag, line_seg.GetLength());
   max_search_dist_mag = std::min(max_search_dist_mag, 2.5);
   ILOG_INFO << "max_search_dist_mag after trim = " << max_search_dist_mag;
   if (kSamplingLineStep > max_search_dist_mag) {
@@ -4258,7 +4258,7 @@ const bool ParallelPathGenerator::SearchArcNode(
 
   max_search_angle_rad_mag =
       std::min(max_search_angle_rad_mag,
-               arc_seg.Getlength() / arc_seg.GetArcSeg().circle_info.radius);
+               arc_seg.GetLength() / arc_seg.GetArcSeg().circle_info.radius);
 
   ILOG_INFO << "max available angle = " << max_search_angle_rad_mag * kRad2Deg;
 
@@ -5178,7 +5178,7 @@ const bool ParallelPathGenerator::CalSinglePathInAdjust(
     double length = 0.0;
     for (const auto& path_seg : path_seg_vec) {
       pnc::geometry_lib::PrintSegmentInfo(path_seg);
-      length += path_seg.Getlength();
+      length += path_seg.GetLength();
     }
     if (length < 0.1) {
       ILOG_INFO << "this gear path is too small, lose it";
@@ -5463,7 +5463,7 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   double current_path_len = 0.0;
   for (size_t i = output_.path_seg_index.first;
        i < output_.path_seg_index.second; i++) {
-    current_path_len += output_.path_segment_vec[i].Getlength();
+    current_path_len += output_.path_segment_vec[i].GetLength();
   }
 
   const pnc::geometry_lib::PathPoint current_path_end =
@@ -5497,7 +5497,7 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   double path_len = 0.0;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; i++) {
-    path_len += output_.path_segment_vec[i].Getlength();
+    path_len += output_.path_segment_vec[i].GetLength();
   }
 
   if (extend_distance > 0.0) {
@@ -5580,7 +5580,7 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   }
 
   else {
-    const auto path_seg_length = path_seg.Getlength();
+    const auto path_seg_length = path_seg.GetLength();
     const double min_path_seg_length = 0.2;
     if (path_seg_length < min_path_seg_length) {
       return;
@@ -5613,7 +5613,7 @@ void ParallelPathGenerator::ExtendCurrentFollowLastPath(
   }
 
   auto& path_seg = output_.path_segment_vec[output_.path_seg_index.second];
-  const auto path_seg_length = path_seg.Getlength();
+  const auto path_seg_length = path_seg.GetLength();
   const double min_path_seg_length = 0.2;
   if (extend_distance < 0.0) {
     if (path_seg_length < min_path_seg_length) {
@@ -5830,7 +5830,7 @@ void ParallelPathGenerator::AddPathSegToOutPut(
     const pnc::geometry_lib::PathSegment& path_seg) {
   output_.path_available = true;
   output_.path_segment_vec.emplace_back(path_seg);
-  output_.length += path_seg.Getlength();
+  output_.length += path_seg.GetLength();
   output_.gear_cmd_vec.emplace_back(path_seg.seg_gear);
   output_.steer_vec.emplace_back(path_seg.seg_steer);
 }
