@@ -493,7 +493,7 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obs
   bool ok = false;
   for (auto &i : timestamps) {
     Polygon2d obstacle_sl_polygon;
-    ok = reference_path->get_polygon_at_time(obstacle_id, int(i * 10), obstacle_sl_polygon);
+    ok = reference_path->get_polygon_at_time(obstacle_id, false, int(i * 10), obstacle_sl_polygon);
     if (ok) {
       obstacke_start_s = obstacle_sl_polygon.min_x();
     }

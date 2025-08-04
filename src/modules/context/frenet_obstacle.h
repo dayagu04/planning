@@ -84,6 +84,11 @@ class FrenetObstacle {
       const std::shared_ptr<ReferencePath>& reference_path,
       planning_math::Polygon2d& obstacle_polygon) const;
 
+  bool get_static_polygon_at_time_tmp(
+      const double relative_time,
+      const std::shared_ptr<ReferencePath>& reference_path,
+      planning_math::Polygon2d& obstacle_polygon) const;
+
  private:
   void compute_frenet_obstacle(const ReferencePath& reference_path);
 

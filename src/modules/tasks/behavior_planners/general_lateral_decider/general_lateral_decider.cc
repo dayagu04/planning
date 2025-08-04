@@ -1548,8 +1548,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     // }
   //   is_care_reverse_ignore_obj = true;
   // }
-  ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
-
+  ok = obstacle->get_static_polygon_at_time_tmp(0, reference_path_ptr_,
+                                      obstacle_sl_polygon);
   if (!ok) {
     // TBD add log
     return;
