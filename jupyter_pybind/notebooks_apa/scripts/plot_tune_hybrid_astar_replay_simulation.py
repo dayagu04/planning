@@ -4,6 +4,7 @@ from io import BytesIO
 # from lib.load_cyberbag import *
 from lib.load_local_view_parking import *
 from lib.load_lon_plan import *
+from lib.load_common import *
 from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../build')
@@ -155,6 +156,7 @@ optimizer_traj = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_heading': [], })
 prepare_plan_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [] })
+stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
 
 fig1.line('plan_path_y', 'plan_path_x', source = data_rs_path, line_width = 3, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path',visible = False)
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_rs_path, line_width = 3, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_rs_path',visible = False)
@@ -179,6 +181,7 @@ fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red'
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 fig1.circle('y_vec', 'x_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
 fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
+fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
 
 ### sliders config
 class LocalViewSlider:
@@ -386,19 +389,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   #           'x_vec': [],
   #           'y_vec': [],
   #       })
-
-  traj_speed_profile = []
-  if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
-    for i in range(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points_size):
-      point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
-
-      speed_point = []
-      speed_point.append(point.distance)
-      speed_point.append(point.t)
-      speed_point.append(point.v)
-      speed_point.append(point.a)
-      speed_point.append(point.jerk)
-      traj_speed_profile.append(speed_point)
 
   target_managed_slot_x_vec = []
   target_managed_slot_y_vec = []
@@ -1057,6 +1047,10 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     # online traj speed
     update_publish_data(tuned_planning_output,lon_plan_data)
 
+    traj_speed_profile = []
+    if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
+      traj_speed_profile = GetTrajSpeed(bag_loader.plan_msg['data']
+                    [index_map['plan_msg_idx']])
     update_record_speed_data(traj_speed_profile, lon_plan_data)
 
     veh_speed = []
@@ -1064,6 +1058,13 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     veh_speed.append([0, vel])
     veh_speed.append([5, vel])
     update_veh_speed_data(veh_speed, lon_plan_data)
+
+    if res == True:
+      stop_sign_lines_x,stop_sign_lines_y = GetProtoStopSigns(tuned_planning_debug_info)
+      stop_signs.data.update({
+          'x': stop_sign_lines_x,
+          'y': stop_sign_lines_y,
+      })
 
   push_notebook()
 

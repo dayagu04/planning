@@ -7,6 +7,8 @@ from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTa
 from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../')
+from lib.load_lon_plan import *
+from lib.load_common import *
 
 # e0y1:  10034
 # e0y2:  04228
@@ -14,7 +16,7 @@ sys.path.append('../../../')
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250731/20250731-12-33-25/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-07-31-12-33-25_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250804/20250804-10-51-08/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-08-04-10-51-08_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -29,6 +31,8 @@ print("max_time = ", max_time)
 fig1, local_view_data = load_local_view_figure_parking()
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
+stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
+
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
 line_source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
@@ -37,6 +41,8 @@ fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='ce
 
 data_obs_slm_filtered = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=2, source=data_obs_slm_filtered, color='blue', legend_label='obs after filtered by slm')
+fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
+
 # Define the JavaScript callback code
 callback_code = """
     var x = cb_obj.x;
@@ -88,7 +94,8 @@ callback = CustomJS(args=dict(source=source, line_source=line_source, text_sourc
 fig1.js_on_event(Tap, callback)
 
 if plot_ctrl_flag:
-  fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table = load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, 0.02)
+  pan1 = load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, 0.02)
+  pan2, lon_plan_data = create_lon_offline_plan_figure()
 
 def get_next_filename(folder):
   # 获取文件夹中的所有文件
@@ -275,10 +282,37 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
     with open(file_path, "w") as json_file:
       json.dump(data, json_file)
 
+  if plot_ctrl_flag:
+    # plot speed
+    traj_speed_profile = []
+    if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
+      traj_speed_profile = GetTrajSpeed(bag_loader.plan_msg['data']
+                  [index_map['plan_msg_idx']])
+
+    update_record_speed_data(traj_speed_profile, lon_plan_data)
+
+    # plot ego speed
+    if bag_loader.loc_msg['enable'] == True:
+      loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
+      veh_speed = []
+      vel = abs(loc_msg.velocity.velocity_body.vx)
+      veh_speed.append([0, vel])
+      veh_speed.append([5, vel])
+      update_veh_speed_data(veh_speed, lon_plan_data)
+
+    # plot stop signs
+    planning_proto = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']]
+    stop_sign_lines_x,stop_sign_lines_y = GetProtoStopSigns(planning_proto)
+    stop_signs.data.update({
+          'x': stop_sign_lines_x,
+          'y': stop_sign_lines_y,
+      })
+
   push_notebook()
 
 if plot_ctrl_flag:
-  bkp.show(row(fig1, column(fig2, fig3, fig4, fig5), column(fig6, fig7, data_ctrl_debug_table)), notebook_handle=True)
+  pans = Tabs(tabs=[pan1,pan2])
+  bkp.show(row(fig1, pans), notebook_handle=True)
 else:
   bkp.show(fig1, notebook_handle=True)
 
