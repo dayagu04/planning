@@ -69,6 +69,9 @@ class RouteInfo {
   bool get_sdmap_valid() const { return sdmap_valid_; }
   const ad_common::sdmap::SDMap& get_sd_map() const { return sd_map_; }
   const ad_common::hdmap::HDMap& get_hd_map() const { return hd_map_; }
+  bool get_sdpromap_valid() const { return sdpromap_valid_; }
+
+  const ad_common::sdpromap::SDProMap& get_sdpro_map() const { return sdpro_map_; }
 
   const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
 
