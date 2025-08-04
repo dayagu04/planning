@@ -213,6 +213,8 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   path_planner_input.is_replan_first = true;
   path_planner_input.is_complete_path = true;
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
+  path_planner_input.ref_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+  path_planner_input.ref_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
 
   pBase->SetInput(path_planner_input);
   ILOG_INFO << "7";

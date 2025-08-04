@@ -3195,8 +3195,9 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
 }
 
 const bool ParallelPathGenerator::MultiAlignBody() {
-  ILOG_INFO << "-----MultiAlignBodyPlan-----\n";
-  // set init state
+  ILOG_INFO << "-----MultiAlignBodyPlan-----";
+
+  // 初始化状态
   uint8_t current_gear = input_.ref_gear;
   ILOG_INFO << "ref gear = " << static_cast<int>(current_gear);
 
@@ -3205,7 +3206,7 @@ const bool ParallelPathGenerator::MultiAlignBody() {
   pnc::geometry_lib::PrintPose("start pose", current_pose);
 
   if (!pnc::geometry_lib::IsValidGear(current_gear)) {
-    ILOG_INFO << "ref_gear error!";
+    ILOG_ERROR << "ref_gear error!";
     return false;
   }
 
@@ -3216,74 +3217,63 @@ const bool ParallelPathGenerator::MultiAlignBody() {
 
   std::vector<pnc::geometry_lib::PathSegment> single_aligned_path;
   std::vector<pnc::geometry_lib::PathSegment> path_res;
-  path_res.clear();
   path_res.reserve(kMaxMultiStepNums);
 
-  size_t i = 0;
-  bool success = false;
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
-  while (std::fabs(current_pose.heading * kRad2Deg) > 1.0) {
-    ILOG_INFO << "-------No. " << i++;
+
+  bool success = false;
+  const int max_iter = 20;
+  int i = 0;
+
+  while (std::fabs(current_pose.heading * kRad2Deg) > 1.0 && i++ < max_iter) {
+    ILOG_INFO << "-------No. " << i;
     single_aligned_path.clear();
     single_aligned_path.reserve(1);
 
-    double max_length = 0.0;
-    if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-        std::fabs(current_pose.heading * kRad2Deg) > kMinInclineHeadingDeg) {
-      max_length = kMaxDriveLengthInclineInSlot;
+    const double heading_deg = std::fabs(current_pose.heading * kRad2Deg);
+    double max_length = (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+                         heading_deg > kMinInclineHeadingDeg)
+                            ? kMaxDriveLengthInclineInSlot
+                            : 10.0;
+
+    if (!AlignBodyPlan(single_aligned_path, current_pose,
+                       calc_params_.target_pose.heading, current_gear,
+                       max_length)) {
+      ILOG_ERROR << "AlignBodyPlan failed, exiting";
+      break;
+    }
+
+    // 两次 buffer 尝试
+    auto col_res =
+        TrimPathByCollisionDetection(single_aligned_path.back(), 0.15);
+    if (col_res == PATH_COL_INVALID) {
+      ILOG_WARN << "first buffer failed, trying fallback buffer";
+      col_res = TrimPathByCollisionDetection(single_aligned_path.back(), 0.1);
+    }
+
+    if (col_res == PATH_COL_SHORTEN || col_res == PATH_COL_NORMAL) {
+      path_res.emplace_back(single_aligned_path.back());
+      current_pose = single_aligned_path.back().GetEndPose();
+      current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+      success = true;
     } else {
-      max_length = 10.0;
+      ILOG_ERROR << "Collision check failed twice, exiting";
+      success = false;
+      break;
     }
-
-    if (AlignBodyPlan(single_aligned_path, current_pose,
-                      calc_params_.target_pose.heading, current_gear,
-                      max_length)) {
-      auto col_res =
-          TrimPathByCollisionDetection(single_aligned_path.back(), 0.15);
-
-      if (col_res == PATH_COL_SHORTEN) {
-        success = true;
-        path_res.emplace_back(single_aligned_path.back());
-
-      } else if (col_res == PATH_COL_NORMAL) {
-        success = true;
-        path_res.emplace_back(single_aligned_path.back());
-        break;
-      } else if (col_res == PATH_COL_INVALID) {
-        success = false;
-      }
-
-      if (!success) {
-        ILOG_INFO << "normal buffer failed";
-        col_res = TrimPathByCollisionDetection(single_aligned_path.back(), 0.1);
-
-        if (col_res == PATH_COL_SHORTEN) {
-          success = true;
-          path_res.emplace_back(single_aligned_path.back());
-
-        } else if (col_res == PATH_COL_NORMAL) {
-          success = true;
-          path_res.emplace_back(single_aligned_path.back());
-          break;
-        } else if (col_res == PATH_COL_INVALID) {
-          success = false;
-          break;
-        }
-      }
-    }
-    current_pose = single_aligned_path.back().GetEndPose();
-    current_gear = pnc::geometry_lib::ReverseGear(current_gear);
   }
 
-  if (success) {
-    const Eigen::Vector2d last_pt_start = path_res.back().GetEndPos();
-    const Eigen::Vector2d last_pt_end(calc_params_.target_pose.pos.x(),
-                                      last_pt_start.y());
-    const pnc::geometry_lib::LineSegment last_line(
-        last_pt_start, last_pt_end, calc_params_.target_pose.heading);
-    const pnc::geometry_lib::PathSegment last_line_path(
+  if (success && !path_res.empty()) {
+    // 添加最终 heading 对齐 segment（横向拉直）
+    Eigen::Vector2d last_pt_start = path_res.back().GetEndPos();
+    Eigen::Vector2d last_pt_end(calc_params_.target_pose.pos.x(),
+                                last_pt_start.y());
+    pnc::geometry_lib::LineSegment last_line(last_pt_start, last_pt_end,
+                                             calc_params_.target_pose.heading);
+    pnc::geometry_lib::PathSegment last_line_path(
         pnc::geometry_lib::CalLineSegGear(last_line), last_line);
-    if ((last_line_path.seg_gear == path_res.back().seg_gear) ||
+
+    if (last_line_path.seg_gear == path_res.back().seg_gear ||
         (last_line_path.seg_gear != path_res.back().seg_gear &&
          last_line_path.GetLineSeg().length >=
              apa_param.GetParam().min_line_length)) {
@@ -3293,7 +3283,7 @@ const bool ParallelPathGenerator::MultiAlignBody() {
     output_.Reset();
     AddPathSegToOutPut(path_res);
   } else {
-    ILOG_INFO << "small buffer failed";
+    ILOG_INFO << "MultiAlign failed or no valid path generated.";
   }
 
   return success;
