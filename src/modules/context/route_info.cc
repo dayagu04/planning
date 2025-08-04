@@ -2147,6 +2147,12 @@ void RouteInfo::NewUpdateMLCInfoDecider(
       }
     }
 
+    if (relative_id_lane->get_relative_id() == 0) {
+      JSON_DEBUG_VALUE("left_lane_num", left_lane_num);
+      JSON_DEBUG_VALUE("minVal_seq", minVal_seq);
+      JSON_DEBUG_VALUE("maxVal_seq", maxVal_seq);
+    }
+
     int ego_seq = left_lane_num + 1;
     std::vector<int> lc_num_task;
     if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
