@@ -66,6 +66,17 @@ void PerpendicularTailInScenario::ScenarioTry() {
 
   PublishPreparePlanningTraj();
 
+  frame_.Reset();
+  current_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.clear();
+  current_plan_path_vec_.clear();
+  all_plan_path_vec_.clear();
+  trajectory_.clear();
+
+  ILOG_INFO << "publish_traj->trajectory_points_size = "
+            << static_cast<int>(
+                   planning_output_.trajectory.trajectory_points_size);
+
   return;
 }
 
