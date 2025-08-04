@@ -4,6 +4,7 @@
 
 #include "math_lib.h"
 #include "refline.h"
+#include "utils/pose2d_utils.h"
 
 static const double kCurvatureThreshold =
     1.0 / 750.0;  // 750m raidus for big curvature
@@ -1164,7 +1165,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
 
   // limit large diff
   if (config_.use_index_clip) {
-    int d_index = clip((weight_.remotely_index - last_remotely_index_), -2, 2);
+    int d_index = planning::clip((int)(weight_.remotely_index - last_remotely_index_), 2, -2);
     weight_.remotely_index =
         std::max(last_remotely_index_ + d_index,
                 weight_.proximal_index);
