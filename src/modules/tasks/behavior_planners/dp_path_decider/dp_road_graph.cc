@@ -775,7 +775,7 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
 }
 
 bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
-                                               double obs_start_s) {
+                                               double obs_start_s,double speed) {
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
 
   /*
@@ -830,6 +830,22 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   double virtual_obs_x = cart_point.x;
   double virtual_obs_y = cart_point.y;
   double virtual_obs_theta = frenet_coord->GetPathCurveHeading(obs_start_s);
+
+  // construct trajectory for virtual obs
+  std::vector<trajectory::Trajectory> trajectories;
+  trajectories.reserve(1);
+  trajectory::Trajectory trajectory;
+  for (int i = 0; i < 25; ++ i) {
+    Point2D end_sl_point(center_virtual_s + speed * 0.2 * i, virtual_l);
+    Point2D cart_point;
+    frenet_coord->SLToXY(end_sl_point, cart_point);
+    auto point = trajectory::TrajectoryPoint(
+        cart_point.x, cart_point.y, virtual_obs_theta, speed, 0.0,
+        i * 0.2, 0.0, 0.0, center_virtual_s + speed * 0.2 * i, 0.0);
+    trajectory.emplace_back(point);
+  }
+  trajectories.emplace_back(trajectory);
+
   // build virtual obs
   planning::agent::Agent virtual_agent;
   virtual_agent.set_agent_id(999999);
@@ -840,12 +856,15 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   virtual_agent.set_length(virtual_length);
   virtual_agent.set_width(7.0);
   virtual_agent.set_fusion_source(1);
-  virtual_agent.set_is_static(true);
+  bool is_static = (speed < 0.3) ? true:false;
+  virtual_agent.set_is_static(is_static);
 
-  virtual_agent.set_speed(0.0);
+  virtual_agent.set_speed(speed);
   virtual_agent.set_theta(virtual_obs_theta);
   virtual_agent.set_accel(0.0);
   virtual_agent.set_time_range({0.0, 5.0});
+  virtual_agent.set_trajectories(trajectories);
+  virtual_agent.set_trajectories_used_by_st_graph(std::move(trajectories));
 
   planning::planning_math::Box2d box(
       planning::planning_math::Vec2d(virtual_agent.x(), virtual_agent.y()),

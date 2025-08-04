@@ -306,6 +306,8 @@ void LaneBorrowDecider::UpdateToDP() {
             AHEAD_COMING_OBS) {
       const auto& vehicle_param =
           VehicleConfigurationContext::Instance()->get_vehicle_param();
+      double virtual_v = static_blocked_obstacles_[0]->velocity();
+      virtual_v = std::max(0.0,virtual_v);
       double lateral_dist =
           current_lane_ptr_->width() * 0.5 - vehicle_param.max_width * 0.5;
       double inner_l =
@@ -313,7 +315,7 @@ void LaneBorrowDecider::UpdateToDP() {
               ? lateral_dist
               : -lateral_dist;
       if (dp_path_decider_->AddLaneBorrowVirtualObstacle(inner_l,
-                                                         obs_start_s_)) {
+                                                         obs_start_s_,virtual_v)) {
         dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
         lane_borrow_status_ =
             LaneBorrowStatus::kLaneBorrowDriving;  // lock status
