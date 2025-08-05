@@ -144,6 +144,8 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
     vehicle_type = 'CHERY_E0X'
   elif vehicle_type == 3:
     vehicle_type = 'CHERY_M32T'
+  elif vehicle_type == 4:
+    vehicle_type = 'BESTUNE_E541'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag)
   # print("bag_time:", bag_time)

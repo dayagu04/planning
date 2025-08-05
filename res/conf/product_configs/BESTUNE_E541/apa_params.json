@@ -389,7 +389,7 @@
   "head_in_finish_heading_err" : 3.0,
   "vertical_min_path_length" : 0.3,
 
-  "enable_apa_speed_plan" : true,
+  "enable_apa_speed_plan" : false,
   "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.4,
   "speed_limit_lower_by_kappa" : 1.20,

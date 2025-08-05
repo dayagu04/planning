@@ -227,6 +227,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     vehicle_type = 'CHERY_E0X'
   elif vehicle_type == 3:
     vehicle_type = 'CHERY_M32T'
+  elif vehicle_type == 4:
+    vehicle_type = 'BESTUNE_E541'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
   car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)

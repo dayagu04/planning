@@ -274,6 +274,9 @@ def load_uss_angle_patch(vehicle_type = JAC_S811):
   elif vehicle_type == CHERY_M32T:
     # for CHERY_M32T
     uss_angle = [169.998, 125.019, 97.046, 82.954, 54.981, 10.002,354.78, 298.086, 277.369, 262.631, 241.9914, 185.22]
+  elif vehicle_type == BESTUNE_E541:
+    # for BESTUNE_E541
+    uss_angle = [169.998, 125.019, 97.046, 82.954, 54.981, 10.002,354.78, 298.086, 277.369, 262.631, 241.9914, 185.22]
 
   return uss_angle
 

@@ -43,7 +43,7 @@ def process_file(file_path):
 
 # 获取命令行参数
 if len(sys.argv) != 4 and len(sys.argv) != 3:
-    print("请依次提供命令、路径、车辆类型(JAC_S811, CHERY_T26, CHERY_E0X, CHERY_M32T)")
+    print("请依次提供命令、路径、车辆类型(JAC_S811, CHERY_T26, CHERY_E0X, CHERY_M32T, BESTUNE_E541)")
     sys.exit(1)
 
 # 获取命令行传递的命令和路径参数
