@@ -325,7 +325,7 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double c1 = 1 / std::max(vehicle_param.wheel_base, 1e-6);
-  double c2 = 1.0;  // neutral
+  double c2 = 0.0;  // neutral
   curv_factor_ = pnc::mathlib::GetCurvFactor(c1, c2, ref_vel);
   planning_input_.set_curv_factor(curv_factor_);
 
