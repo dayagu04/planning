@@ -490,7 +490,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
                                        ApaObsMovementType::STATIC);
 
-  gjl_col_det_request.use_uss_pt = param.uss_config.use_uss_pt_clound &&
+  gjl_col_det_request.use_uss_pt = param.uss_config.use_uss_pt_cloud &&
                                    param.uss_config.use_uss_pt_for_speed;
 
   ColResult col_res = gjk_col_det_ptr->Update(

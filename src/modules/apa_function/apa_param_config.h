@@ -102,13 +102,15 @@ struct ParkingSpeedConfig {
 };
 
 struct UssConfig {
-  bool use_uss_pt_clound = false;
+  bool use_uss_pt_cloud = false;
   bool use_uss_pt_for_path = false;
   bool use_uss_pt_for_speed = false;
   bool use_uss_pt_for_slot_release = false;
   bool use_fusion = true;
   // If dist is bigger, ignore it.
-  double point_max_dist;
+  double uss_lat_attention_dist;
+  double uss_lon_attention_dist;
+  double uss_dist_coefficient_by_vel;
 };
 
 struct CheckFinishParams {

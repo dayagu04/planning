@@ -4,6 +4,7 @@ from io import BytesIO
 from lib.load_local_view_parking import *
 from lib.load_lon_plan import *
 from bokeh.events import Tap
+from lib.load_common import *
 sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
@@ -23,7 +24,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # m32t-otomb10: 40735
 # m32t-otomb12: 40737
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_51482/trigger/20250723/20250723-20-40-36/park_in_data_collection_CHERY_M32T_51482_ALL_FILTER_2025-07-23-20-40-37_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250803/20250803-15-33-17/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-08-03-15-33-17_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -309,12 +310,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     target_managed_limiter_x_vec = plan_debug_msg['limiter_corner_X']
     target_managed_limiter_y_vec = plan_debug_msg['limiter_corner_Y']
 
-    obs_list = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].apa_path_debug.obs_list
-    for i in range(len(obs_list.obs)):
-      obs = obs_list.obs[i]
-      for j in range(len(obs.points)):
-        obstacle_x_list.append(obs.points[j].x)
-        obstacle_y_list.append(obs.points[j].y)
+    obs_x_vec,obs_y_vec = GetProtoObstacles(bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']])
 
   current_ego_x = loc_msg.position.position_boot.x
   current_ego_y = loc_msg.position.position_boot.y
@@ -448,11 +444,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     tuned_planning_debug_info.ParseFromString(apa_simulation_py.GetPlanningDebugInfo())
     data_planning_debug = json.loads(tuned_planning_debug_info.data_json)
 
-    for i in range(len(tuned_planning_debug_info.apa_path_debug.obs_list.obs)):
-      obs = tuned_planning_debug_info.apa_path_debug.obs_list.obs[i]
-      for j in range(len(obs.points)):
-        obstacle_x_list.append(obs.points[j].x)
-        obstacle_y_list.append(obs.points[j].y)
+    obstacle_x_list,obstacle_y_list = GetProtoObstacles(tuned_planning_debug_info)
 
     if "col_det_path_x" in data_planning_debug:
       col_det_path_x = data_planning_debug["col_det_path_x"]
@@ -721,19 +713,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
 
     traj_speed_profile = []
     if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
-      print('traj size = ', bag_loader.plan_msg['data']
-            [index_map['plan_msg_idx']].trajectory.trajectory_points_size)
-
-      for i in range(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points_size):
-        point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
-
-        speed_point = []
-        speed_point.append(point.distance)
-        speed_point.append(point.t)
-        speed_point.append(point.v)
-        speed_point.append(point.a)
-        speed_point.append(point.jerk)
-        traj_speed_profile.append(speed_point)
+      traj_speed_profile = GetTrajSpeed(bag_loader.plan_msg['data']
+                  [index_map['plan_msg_idx']])
 
     update_record_speed_data(traj_speed_profile, lon_plan_data)
 
@@ -748,23 +729,12 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     update_veh_speed_data(veh_speed, lon_plan_data)
 
     # plot stop signs
-    stop_sign_lines = apa_simulation_py.GetStopSigns()
-    stop_sign_lines_x = []
-    stop_sign_lines_y = []
-    for k in range(len(stop_sign_lines)):
-      stop_sign = stop_sign_lines[k]
-      stop_sign_lines_x.append([stop_sign[0], stop_sign[2]])
-      stop_sign_lines_y.append([stop_sign[1], stop_sign[3]])
-
-      print(stop_sign[0])
-      print(stop_sign[1])
-      print(stop_sign[2])
-      print(stop_sign[3])
-
-    stop_signs.data.update({
-        'x': stop_sign_lines_x,
-        'y': stop_sign_lines_y,
-    })
+    if res == True:
+      stop_sign_lines_x,stop_sign_lines_y = GetProtoStopSigns(tuned_planning_debug_info)
+      stop_signs.data.update({
+          'x': stop_sign_lines_x,
+          'y': stop_sign_lines_y,
+      })
 
     # plot od
     trajs_x = []

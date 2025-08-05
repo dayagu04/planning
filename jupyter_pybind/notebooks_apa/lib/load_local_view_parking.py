@@ -2871,7 +2871,9 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, d
   fig6.legend.click_policy = 'hide'
   fig7.legend.click_policy = 'hide'
 
-  return fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table
+  pan1 = Panel(child=row(column(fig2, fig3, fig4, fig5), column(fig6, fig7, data_ctrl_debug_table)), title="control")
+
+  return pan1
 
 
 # HTML

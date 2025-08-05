@@ -529,15 +529,20 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.use_fus_occ_column, bool, "use_fus_occ_column");
 
-  JSON_READ_VALUE(param.uss_config.use_uss_pt_clound, bool,
-                  "use_uss_pt_clound");
+  JSON_READ_VALUE(param.uss_config.use_uss_pt_cloud, bool,
+                  "use_uss_pt_cloud");
   JSON_READ_VALUE(param.uss_config.use_uss_pt_for_path, bool,
                   "use_uss_pt_for_path");
   JSON_READ_VALUE(param.uss_config.use_uss_pt_for_slot_release, bool,
                   "use_uss_pt_for_slot_release");
   JSON_READ_VALUE(param.uss_config.use_uss_pt_for_speed, bool,
                   "use_uss_pt_for_speed");
-  JSON_READ_VALUE(param.uss_config.point_max_dist, double, "point_max_dist");
+  JSON_READ_VALUE(param.uss_config.uss_lat_attention_dist, double,
+                  "uss_lat_attention_dist");
+  JSON_READ_VALUE(param.uss_config.uss_lon_attention_dist, double,
+                  "uss_lon_attention_dist");
+  JSON_READ_VALUE(param.uss_config.uss_dist_coefficient_by_vel, double,
+                  "uss_dist_coefficient_by_vel");
 
   JSON_READ_VALUE(param.use_ground_line, bool, "use_ground_line");
 

@@ -25,213 +25,6 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 
 coord_tf = coord_transformer()
 
-def update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-
-  planning_json_value_list = []
-
-  plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-  plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-  # behavior planning
-  t_vec = list(plan_debug_info.long_ref_path.t_list)
-
-  t_long_vec = []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-    t_long_vec.append(item.t)
-  s_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-    s_plan_vec.append(item.distance)
-  v_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-     v_plan_vec.append(item.v)
-  s_ref_vec = []
-  for item in (plan_debug_info.long_ref_path.s_refs):
-    s_ref_vec.append(item.first)
-  s_soft_upper_bound_vec = []
-  s_soft_lower_bound_vec = []
-  try:
-    for idx in range(len(plan_debug_info.long_ref_path.soft_bounds)):
-      high_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].upper
-      low_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].lower
-      try:
-        for one_soft_bound in plan_debug_info.long_ref_path.soft_bounds[idx].bound:
-           high_bound = min(high_bound, one_soft_bound.upper)
-           low_bound = max(low_bound, one_soft_bound.lower)
-        s_soft_upper_bound_vec.append(high_bound)
-        s_soft_lower_bound_vec.append(low_bound)
-      except:
-        print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
-  except:
-        print("there is no long_ref_path.soft_bounds")
-
-  obs_low_vec = []
-  obs_high_vec = []
-  obs_low_id_vec = []
-  obs_high_id_vec = []
-  obs_low_type_vec = []
-  obs_high_type_vec = []
-  obs_st_dict = {'-1':dict({'t':[], 's':[]})}
-  for idx in range(len(plan_debug_info.long_ref_path.bounds)):
-     low_bound = plan_debug_info.long_ref_path.bounds[idx].bound[0].lower
-     high_bound = plan_debug_info.long_ref_path.bounds[idx].bound[0].upper
-     low_bound_type = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.type
-     high_bound_type = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.type
-     low_bound_id = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.id
-     high_bound_id = plan_debug_info.long_ref_path.bounds[idx].bound[0].bound_info.id
-     for one_bound in plan_debug_info.long_ref_path.bounds[idx].bound:
-        if one_bound.lower > low_bound:
-           low_bound = one_bound.lower
-           low_bound_type = one_bound.bound_info.type
-           low_bound_id = one_bound.bound_info.id
-        if one_bound.upper < high_bound:
-           high_bound = one_bound.upper
-           high_bound_type = one_bound.bound_info.type
-           high_bound_id = one_bound.bound_info.id
-        if one_bound.bound_info.type == 'obstacle':
-           if(str(one_bound.bound_info.id) in obs_st_dict.keys()):
-              obs_st_dict[str(one_bound.bound_info.id)]['t'].append(t_vec[idx])
-              obs_st_dict[str(one_bound.bound_info.id)]['s'].append(one_bound.upper)
-           else:
-              ons_obs_st = dict({'t':[], 's':[]})
-              ons_obs_st['t'].append(t_vec[idx])
-              ons_obs_st['s'].append(one_bound.upper)
-              obs_st_dict[str(one_bound.bound_info.id)] = ons_obs_st
-     obs_low_vec.append(low_bound)
-     obs_high_vec.append(high_bound)
-     if low_bound_type == 'default':
-        low_bound_id = -1
-     if high_bound_type == 'default':
-        high_bound_id = -1
-     obs_low_id_vec.append(low_bound_id)
-     obs_high_id_vec.append(high_bound_id)
-     obs_low_type_vec.append(low_bound_type)
-     obs_high_type_vec.append(high_bound_type)
-
-  v_ref_vec = []
-  for item in (plan_debug_info.long_ref_path.ds_refs):
-     v_ref_vec.append(item.first)
-
-  v_bound_low_vec = []
-  try:
-    for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
-      v_bound_low_vec.append(item.lower)
-    v_bound_high_vec = []
-    for item in (plan_debug_info.long_ref_path.lon_bound_v.bound):
-      v_bound_high_vec.append(item.upper)
-  except:
-    print("there is no lon_ref_path.lon_bound_v.bound")
-
-  # get sv_bound:
-  sv_bound_s_vec = []
-  sv_bound_v_vec = []
-  try:
-    for item in (plan_debug_info.long_ref_path.lon_sv_boundary.sv_bounds):
-      sv_bound_s_vec.append(item.s)
-      sv_bound_v_vec.append(item.v_bound.upper)
-  except:
-    print("there is no lon_ref_path.lon_sv_boundary.sv_bounds")
-
-  a_bound_low_vec = []
-  for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
-     a_bound_low_vec.append(item.lower)
-
-  a_bound_high_vec = []
-  for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
-     a_bound_high_vec.append(item.upper)
-
-  vision_lon_attr_vec = []
-  for i in range(len(planning_json_value_list)):
-     vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[i]])
-
-  # lon_plan_data['offline_data_st'].data.update({
-  #   't': t_vec,
-  #   's': s_ref_vec,
-  #   's_soft_ub': s_soft_upper_bound_vec,
-  #   's_soft_lb': s_soft_lower_bound_vec,
-  #   'obs_low': obs_low_vec,
-  #   'obs_high': obs_high_vec,
-  #   'obs_low_id': obs_low_id_vec,
-  #   'obs_high_id': obs_high_id_vec,
-  #   'obs_low_type': obs_low_type_vec,
-  #   'obs_high_type': obs_high_type_vec
-  # })
-
-  lon_plan_data['offline_st_curve'].data.update({
-    't_long': t_long_vec,
-    's_plan': s_plan_vec,
-    'v_plan': v_plan_vec
-  })
-
-  lon_plan_data['offline_sv_curve'].data.update({
-    's_ref': s_ref_vec,
-    'v_ref': v_ref_vec,
-    'sv_bound_s': sv_bound_s_vec,
-    'sv_bound_v': sv_bound_v_vec,
-  })
-
-  lon_plan_data['data_text'].data.update({
-    'VisionLonAttr': planning_json_value_list,
-    'VisionLonVal': vision_lon_attr_vec
-  })
-
-  lon_plan_data['data_lon_motion_plan'].data.update({
-    'time_vec': [],
-    'ref_pos_vec_origin': [],
-    'ref_pos_vec': [],
-    'ref_vel_vec': [],
-    'soft_pos_max_vec': [],
-    'soft_pos_min_vec': [],
-    'vel_max_vec': [],
-    'vel_min_vec': [],
-    'acc_max_vec': [],
-    'acc_min_vec': [],
-    'jerk_max_vec': [],
-    'jerk_min_vec': [],
-    'pos_vec': [],
-    'vel_vec': [],
-    'acc_vec': [],
-    'jerk_vec': [],
-  })
-
-  if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-
-    try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
-      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    except:
-      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
-
-   #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
-
-  if bag_loader.plan_msg['enable'] == True:
-    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
-    try:
-      planning_polynomial = trajectory.target_reference.polynomial
-      plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
-
-    except:
-      plan_x = []
-      plan_y = []
-      for i in range(len(trajectory.trajectory_points)):
-        plan_x.append(trajectory.trajectory_points[i].x)
-        plan_y.append(trajectory.trajectory_points[i].y)
-
-      # plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_x, plan_y)
-      plan_traj_x, plan_traj_y = coord_tf.global_to_local(planning_json['traj_x_vec'], planning_json['traj_y_vec'])
-
-    lon_plan_data['data_planning'].data.update({
-      'plan_traj_y' : plan_traj_y,
-      'plan_traj_x' : plan_traj_x,
-      })
-
 def update_lon_plan_online_data(dp_speed_constraints,qp_speed_constraints, ref_cruise_speed,dp_speed,qp_speed,lon_plan_data):
 
   # get dp sv_bound:
@@ -928,5 +721,86 @@ def create_online_lon_plan_figure(fig1):
 
   return pans, lon_plan_data
 
+# offline data
+def create_lon_offline_plan_figure():
+  # offline data
+  record_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  record_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  record_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  record_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
 
+  veh_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  online_data_sobs = ColumnDataSource(data = {'online_s':[], 'online_obs_dist':[]})
+
+
+  lon_plan_data = {
+                   'record_data_sv':record_data_sv,
+                   'record_data_st':record_data_st,
+                   'record_data_s_acc':record_data_s_acc,
+                   'record_data_s_jerk':record_data_s_jerk,
+                   'veh_data_sv':veh_data_sv,
+                   'online_data_sobs':online_data_sobs,
+  }
+
+  columns = [
+        TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
+        TableColumn(field="VisionLonVal", title="VisionLonVal"),
+    ]
+  hover = HoverTool(tooltips = [
+     ('index','$index'),
+     ('id_low','@obs_low_id'),
+     ('id_high','@obs_high_id'),
+     ('low_type','@obs_low_type'),
+     ('high_type','@obs_high_type'),
+  ])
+
+  # fig2 S-T
+  fig_s_time = bkp.figure(x_axis_label='t', y_axis_label='s',x_range = [-0.1, 10.0], y_range = [-0.1, 10.0], width=400, height=400, match_aspect = True, aspect_scale=1)
+
+  # fig3 S-V
+  fig_sv = bkp.figure(x_axis_label='s', y_axis_label='v',x_range = [-0.1, 6.0], y_range = [-0.1, 1.5], width=400, height=400, match_aspect = True, aspect_scale=1)
+  # fig5 s-dist to obs
+  fig_sobs = bkp.figure(x_axis_label='s', y_axis_label='dist',x_range = [-0.1, 6], y_range = [-0.1, 20.0], width=400, height=300)
+  # fig6 a-s
+  fig_as = bkp.figure(x_axis_label='s', y_axis_label='acc',x_range = [-0.1, 6], y_range = [-3, 1], width=400, height=300)
+  # fig7 j-s
+  fig_js = bkp.figure(x_axis_label='s', y_axis_label='jerk',x_range = [-0.1, 6],y_range = [-10, 10], width=400, height=300)
+
+  # obs dist
+  f5 = fig_sobs.line('online_s', 'online_obs_dist', source = online_data_sobs, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'obs dist')
+
+  # offline data
+  f3 = fig_sv.line('s', 'v', source = record_data_sv, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record sv')
+  f2 = fig_s_time.line('t', 's', source = record_data_st, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record_st')
+  f6 = fig_as.line('s', 'acc', source = record_data_s_acc, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record acc')
+  f7 = fig_js.line('s', 'jerk', source=record_data_s_jerk, line_width=2, line_color='gray', line_dash='solid', legend_label='record jerk')
+  fig_sv.line('s', 'v', source=veh_data_sv, line_width=2, line_color='yellow', line_dash='solid', legend_label='ego_v')
+
+
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
+  hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
+
+  # fig_sobs.add_tools(hover5)
+  fig_as.add_tools(hover6)
+  fig_js.add_tools(hover7)
+
+  fig_sv.toolbar.active_scroll = fig_sv.select_one(WheelZoomTool)
+  fig_sv.legend.click_policy = 'hide'
+
+  fig_sobs.toolbar.active_scroll = fig_sobs.select_one(WheelZoomTool)
+  fig_sobs.legend.click_policy = 'hide'
+
+  fig_as.toolbar.active_scroll = fig_as.select_one(WheelZoomTool)
+  fig_as.legend.click_policy = 'hide'
+
+  fig_js.toolbar.active_scroll = fig_js.select_one(WheelZoomTool)
+  fig_js.legend.click_policy = 'hide'
+
+  fig_s_time.toolbar.active_scroll = fig_s_time.select_one(WheelZoomTool)
+  fig_s_time.legend.click_policy = 'hide'
+
+  pan1 = Panel(child=row(column(fig_sv, fig_s_time), column(fig_sobs, fig_as, fig_js)), title="speed plan")
+
+  return pan1, lon_plan_data
 
