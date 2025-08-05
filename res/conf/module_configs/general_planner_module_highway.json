@@ -707,6 +707,7 @@
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
     "v_reduce_intersection": 0.0,
+    "v_reduce_rate_intersection": 0.05,
     "v_limit_one_still_danger_obs": 12.5,
     "v_limit_more_still_danger_obs": 11.11,
     "v_rel_limit_for_dynamic_danger_obs": 4.17,
