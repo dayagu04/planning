@@ -640,14 +640,18 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
         weight_.q_acc[i] = config_.q_acc_ramp;
       }
     }
-    if (i < 6) {
-      weight_.expected_acc[i] = expected_average_acc_ * 1.2;
-      if (config_.use_acc_compensation) {
-        double acc_gain = std::max(std::min(init_dis_to_ref_, 0.2), -0.2);
-        weight_.expected_acc[i] -= acc_gain;
-      }
+    weight_.expected_acc[i] = expected_average_acc_ * 1.2;
+    if (expected_average_acc_ > 1e-6) {
+      weight_.expected_acc[i] =
+          std::min(weight_.expected_acc[i], expected_average_acc_ + 0.2);
     } else {
-      weight_.expected_acc[i] = expected_average_acc_ * 1.2;
+      weight_.expected_acc[i] =
+          std::max(weight_.expected_acc[i], expected_average_acc_ - 0.2);
+    }
+    if (i < 6 &&
+        config_.use_acc_compensation) {
+      double acc_gain = std::max(std::min(init_dis_to_ref_ * 0.25, 0.1), -0.1);
+      weight_.expected_acc[i] -= acc_gain;
     }
   }
 
