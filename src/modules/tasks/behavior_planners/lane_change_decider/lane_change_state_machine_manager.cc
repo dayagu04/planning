@@ -48,7 +48,10 @@ LaneChangeStateMachineManager::LaneChangeStateMachineManager(
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : session_(session),
       lc_req_mgr_(lane_change_req_mgr),
-      lc_lane_mgr_(lane_change_lane_mgr) {
+      lc_lane_mgr_(lane_change_lane_mgr),
+      lc_request_(session,
+                  session->environmental_model().get_virtual_lane_manager(),
+                  lane_change_lane_mgr) {
   config_ = config_builder->cast<ScenarioStateMachineConfig>();
   speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
   congestion_detection_config_ = config_builder->cast<CongestionDetectionConfig>();}
@@ -405,6 +408,13 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   execution_time_out = false;
   if (execution_time_out) {
     lane_change_stage_info_.lc_back_reason = "time out";
+    return true;
+  }
+
+  if (!lc_request_.IsDashEnoughForRepeatSegments(
+          lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
+          transition_info_.lane_change_status)) {
+    lane_change_stage_info_.lc_back_reason = "dash line length not satisfy";
     return true;
   }
 

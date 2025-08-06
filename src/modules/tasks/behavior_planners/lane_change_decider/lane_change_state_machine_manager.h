@@ -220,6 +220,7 @@ class LaneChangeStateMachineManager {
   framework::Session* session_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
+  LaneChangeRequest lc_request_;
   StateTransitionInfo transition_info_;
   LaneChangeTimer lc_timer_;
   LaneChangeStageInfo lane_change_stage_info_;

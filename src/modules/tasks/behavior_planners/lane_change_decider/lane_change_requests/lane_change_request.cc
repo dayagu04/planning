@@ -20,7 +20,7 @@ constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kInputBoundaryLenLimit = 145.;
 constexpr double kDefaultBoundaryLen = 5000.;
 // https://yf2ljykclb.xfchat.iflytek.com/wiki/MXjXwlCjni6g7nkjgKGrfwGwzPb
-constexpr double kLaneChangeSolidLineTTC = 0.75;  // todo(ldh): 从配置中读取
+constexpr double kLaneChangeSolidLineTTC = 1.75;  // todo(ldh): 从配置中读取
 constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
 }  // namespace
 LaneChangeRequest::LaneChangeRequest(
@@ -289,6 +289,10 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
   const std::shared_ptr<VirtualLane> current_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+
+  if (current_lane == nullptr) {
+    return false;
+  }
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
 
