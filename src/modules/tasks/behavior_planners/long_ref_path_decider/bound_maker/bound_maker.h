@@ -115,7 +115,7 @@ class BoundMaker {
   const double _A_MAX = 1.5;
   planning::common::MaxDecelTarget max_decel_target_pb_;
 
-  const double _A_MIN = -4.0;
+  const double _A_MIN = -5.0;
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};
   const std::vector<double> _P_SLOPE_BP{0., 40.0};

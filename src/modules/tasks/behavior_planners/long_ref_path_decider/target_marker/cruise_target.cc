@@ -52,19 +52,19 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
   const auto& speed_limit_decider_output =
       session_->planning_context().speed_limit_decider_output();
   MakeSpeedLimitKinematicTable(init_lon_state_[1], speed_limit_decider_output);
-  if (speed_limit_kinematics_bound_table_.count(SpeedLimitType::CRUISE) > 0) {
-    auto& kinematic_bound =
-        speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
-    const double determined_cruise_acc_bound =
-        session_->planning_context()
-            .longitudinal_decision_decider_output()
-            .determined_cruise_bound()
-            .acc_positive_mps2;
-    kinematic_bound.acc_positive_mps2 =
-        kinematic_bound.acc_positive_mps2 < determined_cruise_acc_bound
-            ? determined_cruise_acc_bound
-            : kinematic_bound.acc_positive_mps2;
-  }
+  // if (speed_limit_kinematics_bound_table_.count(SpeedLimitType::CRUISE) > 0) {
+  //   auto& kinematic_bound =
+  //       speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
+  //   const double determined_cruise_acc_bound =
+  //       session_->planning_context()
+  //           .longitudinal_decision_decider_output()
+  //           .determined_cruise_bound()
+  //           .acc_positive_mps2;
+  //   kinematic_bound.acc_positive_mps2 =
+  //       kinematic_bound.acc_positive_mps2 < determined_cruise_acc_bound
+  //           ? determined_cruise_acc_bound
+  //           : kinematic_bound.acc_positive_mps2;
+  // }
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
