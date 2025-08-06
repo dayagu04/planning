@@ -670,6 +670,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
       continue;
     }
 
+    if (relative_id_lane->get_lane_type() == iflyauto::LANETYPE_OPPOSITE) {
+      continue;
+    }
     if (relative_id_lane->get_relative_id() == 0) {
       origin_order_id = relative_id_lane->get_order_id();
     }
