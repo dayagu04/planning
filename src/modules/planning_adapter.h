@@ -43,7 +43,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   }
   
   void Feed_IflytekCameraPerceptionDrivableSpaceGrid(
-    const iflyauto::CameraPerceptionOccGridInfo&
+    const iflyauto::CameraPerceptionDrivableSpaceGridInfo&
         occupancy_grid_info_msg) override {
   }
 
