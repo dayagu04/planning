@@ -399,7 +399,8 @@ void STGraph::MakeDynamicAgentStBoundary(
   // const double obs_diagonal = agent.box().diagonal();
   // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
-  const auto& trajectories = agent.trajectories();
+  // const auto& trajectories = agent.trajectories();
+  const auto& trajectories = agent.trajectories_used_by_st_graph();
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
   const bool is_need_truncate_traj =
@@ -1286,6 +1287,29 @@ void STGraph::AddStGraphDataToProto() {
       p->set_y(point.y());
     }
   }
+
+  const auto& agents = st_graph_input_->filtered_agents();
+  for (const auto agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    auto* agents_trajectory = st_graph_data_pb_.add_agents_trajectory();
+    agents_trajectory->set_agent_id(agent->agent_id());
+    auto agent_processed_trajectories = agent->trajectories_used_by_st_graph();
+    if (agent_processed_trajectories.empty()) {
+      continue;
+    }
+    auto agent_processed_trajectory = agent_processed_trajectories[0];
+    if (agent_processed_trajectory.empty()) {
+      continue;
+    }
+    for (const auto& trajectory_point : agent_processed_trajectory) {
+      auto* agent_trajectory = agents_trajectory->add_agent_trajectory();
+      agent_trajectory->set_x(trajectory_point.x());
+      agent_trajectory->set_y(trajectory_point.y());
+    }
+  }
+
   mutable_st_graph_data->CopyFrom(st_graph_data_pb_);
 }
 

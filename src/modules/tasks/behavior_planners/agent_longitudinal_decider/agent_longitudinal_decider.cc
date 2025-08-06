@@ -1371,9 +1371,14 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     }
 
     const auto agent_box_center = agent->box().center();
+    const double considered_lon_distance =
+        std::fmax(planning_init_point_s + kMinFilterDistance,
+                  std::fmin(planning_init_point_s +
+                                planning_init_point.v * kLongitudalTtc,
+                            current_lane_coord->Length()));
 
     // only consider reverse agent
-    if (!IsReverseAgent(agent.get(), current_lane)) {
+    if (!IsReverseAgent(agent.get(), current_lane, considered_lon_distance)) {
       continue;
     }
     mutable_agent->set_is_reverse(true);
@@ -1451,11 +1456,6 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     }
 
     // 3. ignore far reverse agent by vel
-    const double considered_lon_distance =
-        std::fmax(planning_init_point_s + kMinFilterDistance,
-                  std::fmin(planning_init_point_s +
-                                planning_init_point.v * kLongitudalTtc,
-                            current_lane_coord->Length()));
     if (considered_lon_distance < agent_s_in_ego_lane) {
       mutable_agent->mutable_agent_decision()->set_agent_decision_type(
           agent::AgentDecisionType::IGNORE);
@@ -1500,7 +1500,8 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
 
 bool AgentLongitudinalDecider::IsReverseAgent(
     const agent::Agent* agent,
-    const std::shared_ptr<VirtualLane> ego_lane) const {
+    const std::shared_ptr<VirtualLane> ego_lane,
+    const double consider_distance) const {
   double agent_s = 0.0;
   double agent_l = 0.0;
   const auto agent_box_center = agent->box().center();
@@ -1524,7 +1525,14 @@ bool AgentLongitudinalDecider::IsReverseAgent(
     ego_lane_coord->XYToSL(end_point.x(), end_point.y(), &end_s, &end_l);
     is_prediction_reverse = end_s < agent_s;
   }
-  return is_perception_reverse && is_prediction_reverse;
+
+  bool is_reverse = false;
+  if (agent_s < consider_distance) {
+    is_reverse = is_perception_reverse && is_prediction_reverse;
+  } else {
+    is_reverse = is_perception_reverse || is_prediction_reverse;
+  }
+  return is_reverse;
 }
 
 bool AgentLongitudinalDecider::IsIgnoredLowSpeedReverseAgent(

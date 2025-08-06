@@ -28,6 +28,9 @@ class ClosestInPathVehicleDeciderOutput {
   double acceleration() const;
   void set_acceleration(const double acceleration);
 
+  double acceleration_fusion() const;
+  void set_acceleration_fusion(const double acceleration_fusion);
+
   double dangerous_level() const;
   void set_dangerous_level(const double dangerous_level);
   bool is_virtual() const;
@@ -39,6 +42,7 @@ class ClosestInPathVehicleDeciderOutput {
   double relative_s_ = 0.0;
   double v_frenet_ = 0.0;
   double acceleration_ = 0.0;
+  double acceleration_fusion_ = 0.0;
   double ttc_ = 100.0;
   int32_t dangerous_level_ = -1;
   bool is_virtual_ = false;

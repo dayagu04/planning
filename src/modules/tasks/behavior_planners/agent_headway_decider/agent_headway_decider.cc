@@ -15,7 +15,7 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.8;
+constexpr double lane_change_decrease_time_gap = 0.3;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = -0.5;
@@ -172,13 +172,13 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       continue;
     }
 
-    if (is_in_lane_change_execution) {
-      const double lane_change_headway = std::fmin(
-          (user_time_gap - lane_change_decrease_time_gap), current_headway);
-      agents_headway_map_[st_agent_id].current_headway =
-          std::fmin(lane_change_headway + headway_step, gear_headway);
-      continue;
-    }
+    // if (is_in_lane_change_execution) {
+    //   const double lane_change_headway = std::fmin(
+    //       (user_time_gap - lane_change_decrease_time_gap), current_headway);
+    //   agents_headway_map_[st_agent_id].current_headway =
+    //       std::fmin(lane_change_headway + headway_step, gear_headway);
+    //   continue;
+    // }
 
     // if (is_need_reset) {
     //   const double lane_change_headway = user_time_gap -

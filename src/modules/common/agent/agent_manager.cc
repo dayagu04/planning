@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "agent/agent.h"
 #include "common_c.h"
@@ -129,6 +130,7 @@ void AgentManager::Update(const double start_timestamp_s) {
     }
   }
   DeleteOlderAgent();
+  DeleteOlderAgentInfo();
 }
 
 // void AgentManager::Update(
@@ -171,6 +173,13 @@ void AgentManager::Append(
     }
     current_agents_.emplace_back(agent);
     current_agents_ids_.insert(agent->agent_id());
+
+    if (historical_agents_info_.find(agent->agent_id()) ==
+        historical_agents_info_.end()) {
+      historical_agents_info_[agent->agent_id()] = {};
+    }
+    historical_agents_info_[agent->agent_id()].emplace_back(agent);
+    RecalculateDecelTrajectories(agent, historical_agents_info_);
     historical_agents_[agent->agent_id()].emplace_back(std::move(agent));
   }
 }
@@ -194,6 +203,34 @@ void AgentManager::DeleteOlderAgent() {
     }
     while (agent.second.size() > kMaxNum) {
       agent.second.pop_front();
+    }
+  }
+}
+
+void AgentManager::DeleteOlderAgentInfo() {
+  constexpr int32_t kMaxHistoryNum = 3;
+  std::vector<int32_t> ids_to_remove;
+  for (const auto& entry : historical_agents_info_) {
+    int32_t agent_id = entry.first;
+
+    if (current_agents_ids_.find(agent_id) == current_agents_ids_.end()) {
+      ids_to_remove.push_back(agent_id);
+    }
+  }
+
+  for (int32_t id : ids_to_remove) {
+    historical_agents_info_.erase(id);
+  }
+
+  for (auto& entry : historical_agents_info_) {
+    auto& history_list = entry.second;
+
+    if (history_list.size() > kMaxHistoryNum) {
+      size_t excess_count = history_list.size() - kMaxHistoryNum;
+
+      auto it = history_list.begin();
+      std::advance(it, excess_count);
+      history_list.erase(history_list.begin(), it);
     }
   }
 }
@@ -230,6 +267,187 @@ const Agent* AgentManager::GetHistoryAgentByIndex(
     counter++;
   }
   return nullptr;
+}
+
+void AgentManager::RecalculateDecelTrajectories(
+    const std::shared_ptr<Agent>& agent,
+    const std::unordered_map<int32_t, std::list<std::shared_ptr<Agent>>>&
+        historical_agents_info) {
+  if (!agent || agent->trajectories().empty() ||
+      agent->trajectories().front().empty()) {
+    return;
+  }
+
+  if (!agent->is_vehicle_type()) {
+    return;
+  }
+
+  constexpr int kPlanPoints = 26;
+  constexpr double kTimeStep = 0.2;
+  const double kAlpha = config_.processed_trajectory_filter_alpha;
+  const double kDecelThreshold = config_.processed_trajectory_acc_thr;
+  constexpr int kMinContinuousFrames = 3;
+
+  const int32_t agent_id = agent->agent_id();
+  auto hist_iter = historical_agents_info.find(agent_id);
+  if (hist_iter == historical_agents_info.end() ||
+      hist_iter->second.size() < kMinContinuousFrames) {
+    return;
+  }
+
+  bool has_continuous_decel = true;
+  int frame_count = 0;
+  for (auto agent_iter = hist_iter->second.rbegin();
+       agent_iter != hist_iter->second.rend() &&
+       frame_count < kMinContinuousFrames;
+       ++agent_iter, ++frame_count) {
+    if ((*agent_iter)->accel_fusion() > kDecelThreshold) {
+      has_continuous_decel = false;
+      break;
+    }
+  }
+
+  if (!has_continuous_decel) {
+    return;
+  }
+
+  const auto& trajectory = agent->trajectories().front();
+  const double init_accel = agent->accel_fusion();
+  const double init_speed = std::max(agent->speed(), 0.0);
+
+  std::vector<double> kin_positions, kin_speeds, kin_accels;
+  kin_positions.reserve(kPlanPoints);
+  kin_speeds.reserve(kPlanPoints);
+  kin_accels.reserve(kPlanPoints);
+
+  const double stop_time = (init_accel < 0)
+                               ? -init_speed / init_accel
+                               : std::numeric_limits<double>::max();
+
+  for (int i = 0; i < kPlanPoints; ++i) {
+    const double t = i * kTimeStep;
+
+    if (init_accel < 0 && t >= stop_time) {
+      kin_positions.push_back((init_speed * init_speed) /
+                              (2 * std::fabs(init_accel)));
+      kin_speeds.push_back(0.0);
+      kin_accels.push_back(0.0);
+    } else {
+      kin_positions.push_back(init_speed * t + 0.5 * init_accel * t * t);
+      kin_speeds.push_back(init_speed + init_accel * t);
+      kin_accels.push_back(init_accel);
+    }
+  }
+
+  std::vector<double> model_positions, model_speeds, model_accels;
+  model_positions.reserve(kPlanPoints);
+  model_speeds.reserve(kPlanPoints);
+  model_accels.reserve(kPlanPoints);
+
+  for (int i = 0; i < kPlanPoints; ++i) {
+    const auto& point = trajectory.Evaluate(i * kTimeStep);
+    model_positions.push_back(point.s());
+    model_speeds.push_back(point.vel());
+    model_accels.push_back(point.acc());
+  }
+
+  if (std::abs(model_positions.back() - kin_positions.back()) <
+      0.2 * init_speed) {
+    trajectory::Trajectory result;
+    std::vector<trajectory::Trajectory> result_vec;
+    result.reserve(kPlanPoints);
+
+    for (int i = 0; i < kPlanPoints; ++i) {
+      result.push_back(trajectory.Evaluate(i * kTimeStep));
+    }
+    result_vec.emplace_back(result);
+
+    agent->set_trajectories_used_by_st_graph(std::move(result_vec));
+    return;
+  }
+
+  std::vector<double> last_positions, last_speeds, last_accels;
+  last_positions.reserve(kPlanPoints);
+  last_speeds.reserve(kPlanPoints);
+  last_accels.reserve(kPlanPoints);
+
+  if (hist_iter->second.size() >= 2) {
+    auto prev_frame_iter = hist_iter->second.end();
+    std::advance(prev_frame_iter, -2);
+    const auto& prev_frame_trajectories =
+        (*prev_frame_iter)->trajectories_used_by_st_graph();
+    if (!prev_frame_trajectories.empty()) {
+      const auto& last_processed_trajectory = prev_frame_trajectories.front();
+      for (int i = 0; i < kPlanPoints; ++i) {
+        const auto& point = last_processed_trajectory.Evaluate(i * kTimeStep);
+        last_positions.push_back(point.s());
+        last_speeds.push_back(point.vel());
+        last_accels.push_back(point.acc());
+      }
+    }
+  }
+
+  std::vector<double> fused_positions, fused_speeds, fused_accels;
+  fused_positions.reserve(kPlanPoints);
+  fused_speeds.reserve(kPlanPoints);
+  fused_accels.reserve(kPlanPoints);
+
+  for (int i = 0; i < kPlanPoints; ++i) {
+    fused_positions.push_back(kAlpha * last_positions[i] +
+                              (1 - kAlpha) * kin_positions[i]);
+    fused_speeds.push_back(kAlpha * last_speeds[i] +
+                           (1 - kAlpha) * kin_speeds[i]);
+    fused_accels.push_back(kAlpha * last_accels[i] +
+                           (1 - kAlpha) * kin_accels[i]);
+  }
+
+  trajectory::Trajectory result_trajectory;
+  std::vector<trajectory::Trajectory> result_trajectory_vec;
+  result_trajectory.reserve(kPlanPoints);
+
+  std::map<double, TmpPathPoint> path_cache;
+  for (const auto& point : trajectory) {
+    path_cache[point.s()] = {point.x(), point.y(), point.theta()};
+  }
+
+  for (int i = 0; i < kPlanPoints; ++i) {
+    const double s = fused_positions[i];
+    auto it_upper = path_cache.upper_bound(s);
+
+    if (it_upper == path_cache.begin()) {
+      const auto& point = path_cache.begin()->second;
+      result_trajectory.emplace_back(point.x, point.y, point.theta,
+                                     fused_speeds[i], fused_accels[i],
+                                     i * kTimeStep, 0.0, 0.0, s, 0.0);
+      continue;
+    }
+
+    auto it_lower = std::prev(it_upper);
+    if (it_upper == path_cache.end()) {
+      const auto& point = it_lower->second;
+      result_trajectory.emplace_back(point.x, point.y, point.theta,
+                                     fused_speeds[i], fused_accels[i],
+                                     i * kTimeStep, 0.0, 0.0, s, 0.0);
+      continue;
+    }
+
+    const double s0 = it_lower->first;
+    const double s1 = it_upper->first;
+    const double ratio = (s - s0) / (s1 - s0);
+
+    const auto& p0 = it_lower->second;
+    const auto& p1 = it_upper->second;
+
+    const double x = p0.x + ratio * (p1.x - p0.x);
+    const double y = p0.y + ratio * (p1.y - p0.y);
+    const double theta = p0.theta + ratio * (p1.theta - p0.theta);
+
+    result_trajectory.emplace_back(x, y, theta, fused_speeds[i],
+                                   fused_accels[i], i * kTimeStep, 0.0, 0.0, s,
+                                   0.0);
+  }
+  result_trajectory_vec.emplace_back(result_trajectory);
+  agent->set_trajectories_used_by_st_graph(std::move(result_trajectory_vec));
 }
 
 }  // namespace agent

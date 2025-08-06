@@ -52,19 +52,19 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
   const auto& speed_limit_decider_output =
       session_->planning_context().speed_limit_decider_output();
   MakeSpeedLimitKinematicTable(init_lon_state_[1], speed_limit_decider_output);
-  if (speed_limit_kinematics_bound_table_.count(SpeedLimitType::CRUISE) > 0) {
-    auto& kinematic_bound =
-        speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
-    const double determined_cruise_acc_bound =
-        session_->planning_context()
-            .longitudinal_decision_decider_output()
-            .determined_cruise_bound()
-            .acc_positive_mps2;
-    kinematic_bound.acc_positive_mps2 =
-        kinematic_bound.acc_positive_mps2 < determined_cruise_acc_bound
-            ? determined_cruise_acc_bound
-            : kinematic_bound.acc_positive_mps2;
-  }
+  // if (speed_limit_kinematics_bound_table_.count(SpeedLimitType::CRUISE) > 0) {
+  //   auto& kinematic_bound =
+  //       speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
+  //   const double determined_cruise_acc_bound =
+  //       session_->planning_context()
+  //           .longitudinal_decision_decider_output()
+  //           .determined_cruise_bound()
+  //           .acc_positive_mps2;
+  //   kinematic_bound.acc_positive_mps2 =
+  //       kinematic_bound.acc_positive_mps2 < determined_cruise_acc_bound
+  //           ? determined_cruise_acc_bound
+  //           : kinematic_bound.acc_positive_mps2;
+  // }
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
@@ -206,22 +206,22 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
 
   auto cipv_agent_id = cipv_decider_output.cipv_id();
   double cipv_relative_s = cipv_decider_output.relative_s();
-  auto* agent =
-            session_->environmental_model().get_agent_manager()->GetAgent(
-              cipv_agent_id);
+  auto* agent = session_->environmental_model().get_agent_manager()->GetAgent(
+      cipv_agent_id);
   if (agent == nullptr) {
     return false;
   }
-  if (agent->trajectories().empty()) {
+  if (agent->trajectories_used_by_st_graph().empty()) {
     return false;
   }
-  if (agent->trajectories()[0].x_vec_.empty() ||
-      agent->trajectories()[0].y_vec_.empty()) {
+  const auto& trajectory = agent->trajectories_used_by_st_graph().front();
+  if (trajectory.empty()) {
     return false;
   }
 
-  const auto& ego_lane =
-      session_->environmental_model().get_virtual_lane_manager()->get_current_lane();
+  const auto& ego_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
 
   if (ego_lane == nullptr) {
     return false;
@@ -238,20 +238,13 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
 
   double first_traj_pt_s, first_traj_pt_l;
   double last_traj_pt_s, last_traj_pt_l;
-  int traj_x_size = agent->trajectories()[0].x_vec_.size();
-  int traj_y_size = agent->trajectories()[0].y_vec_.size();
-  if (traj_x_size != traj_y_size) {
+  const auto& first_point = trajectory.front();
+  const auto& end_point = trajectory.back();
+  if (!ego_lane_coord->XYToSL(first_point.x(), first_point.y(),
+                              &first_traj_pt_s, &first_traj_pt_l)) {
     return false;
   }
-  if (!ego_lane_coord->XYToSL(agent->trajectories()[0].x_vec_[0],
-                              agent->trajectories()[0].y_vec_[0],
-                              &first_traj_pt_s,
-                              &first_traj_pt_l)) {
-    return false;
-  }
-  if (!ego_lane_coord->XYToSL(agent->trajectories()[0].x_vec_[traj_x_size - 1],
-                              agent->trajectories()[0].y_vec_[traj_y_size - 1],
-                              &last_traj_pt_s,
+  if (!ego_lane_coord->XYToSL(end_point.x(), end_point.y(), &last_traj_pt_s,
                               &last_traj_pt_l)) {
     return false;
   }
@@ -265,12 +258,14 @@ bool CruiseTarget::CalcLowSpeedFollowAccAndJerk(double* acc, double* jerk) {
         ego_v > config_.low_speed_follow_speed_thred_mps) {
       *acc = 0.0;
     } else {
-      *acc = interp(cipv_traj_length, config_.low_speed_follow_acc_traj_table.traj_table,
+      *acc = interp(cipv_traj_length,
+                    config_.low_speed_follow_acc_traj_table.traj_table,
                     config_.low_speed_follow_acc_traj_table.acc_table);
     }
     //*jerk = (cipv_traj_length < kLowSpeedFollowTrajLengthThres) ?
     //        kLowSpeedFollowJerkPosBoundLow:  kLowSpeedFollowJerkPosBoundHigh;
-    *jerk = interp(cipv_traj_length, config_.low_speed_follow_jerk_traj_table.traj_table,
+    *jerk = interp(cipv_traj_length,
+                   config_.low_speed_follow_jerk_traj_table.traj_table,
                    config_.low_speed_follow_jerk_traj_table.jerk_table);
     return true;
   } else {

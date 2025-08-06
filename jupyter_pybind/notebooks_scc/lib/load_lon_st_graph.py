@@ -170,7 +170,53 @@ def load_st_polygen_lower_upper_point(st_graph_data):
 
   return st_info
 
+def load_processed_trajectory(st_graph_data):
+  agents_trajectories_info = []
+  agents_trajectories = st_graph_data.agents_trajectory
+  agents_size = len(agents_trajectories)
+
+  vec_size = int(st_graph_data.end_time // 0.2) + 1
+  default_x_vec = [0 for _ in range(vec_size)]
+  default_y_vec = [0 for _ in range(vec_size)]
+
+  for i in range(20):
+    if i < agents_size:
+      agent_trajectories = agents_trajectories[i]
+      agent_trajectory_info = {'x_vec': [], 'y_vec': []}
+
+      x_vec = []
+      y_vec = []
+      for point in agent_trajectories.agent_trajectory:
+        x_vec.append(point.x)
+        y_vec.append(point.y)
+
+      agent_trajectory_info['x_vec'] = x_vec
+      agent_trajectory_info['y_vec'] = y_vec
+      agents_trajectories_info.append(agent_trajectory_info)
+
+    else:
+      agent_trajectory_info = {'x_vec': [], 'y_vec': []}
+      agent_trajectory_info['x_vec'] = default_x_vec
+      agent_trajectory_info['y_vec'] = default_y_vec
+      agents_trajectories_info.append(agent_trajectory_info)
+
+  return agents_trajectories_info
+
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
+  if bag_loader.loc_msg['enable'] == True:
+    cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
+    cur_pos_yn = local_view_data['data_msg']['loc_msg'].position.position_boot.y
+    cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
+    planning_json = local_view_data['data_msg']['plan_debug_json_msg']
+
+    try:
+      json_pos_x = planning_json['ego_pos_x']
+      json_pos_y = planning_json['ego_pos_y']
+      json_yaw = planning_json['ego_pos_yaw']
+      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    except:
+      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
@@ -192,7 +238,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
-                          "cipv_vel_frenet","traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
+                          "cipv_vel_frenet",'cipv_acc', 'cipv_acc_fusion', "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
                           "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path',
                           "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s",
@@ -208,10 +254,20 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_info_all = load_st_polygen_points(plan_debug_info.st_graph_data)
   st_point_all = load_st_polygen_lower_upper_point(plan_debug_info.st_graph_data)
   st_label_all = load_st_label(plan_debug_info.st_graph_data)
+  processed_trajectory_all = load_processed_trajectory(plan_debug_info.st_graph_data)
 
   data_st_boundaries = {i: lon_plan_data[f'st_boundary_{i}'] for i in range(20)}
   data_st_points = {i: lon_plan_data[f'st_point_{i}'] for i in range(20)}
   data_st_labels = {i: lon_plan_data[f'st_label_{i}'] for i in range(20)}
+  data_processed_trajectories = {i: lon_plan_data[f'processed_trajectory_{i}'] for i in range(20)}
+
+  for i in range(20):
+    data_processed_trajectory = data_processed_trajectories[i]
+    x_vec, y_vec = coord_tf.global_to_local(processed_trajectory_all[i]['x_vec'], processed_trajectory_all[i]['y_vec'])
+    data_processed_trajectory.data.update({
+      'x_vec_{}'.format(i): x_vec,
+      'y_vec_{}'.format(i): y_vec,
+    })
 
   for i in range(20):
     data_st_boundary = data_st_boundaries[i]
@@ -681,25 +737,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'jerk_vec': jerk_vec,
   })
 
-  if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
-    cur_pos_yn = local_view_data['data_msg']['loc_msg'].position.position_boot.y
-    cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
-    planning_json = local_view_data['data_msg']['plan_debug_json_msg']
-
-    print("dbw_status = ", planning_json['dbw_status'])
-    print("lat_err = ", planning_json['lat_err'])
-    print("theta_err = ", planning_json['theta_err'])
-    print("dist_err = ", planning_json['dist_err'])
-
-    try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
-      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    except:
-      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
-
    #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_msg['enable'] == True:
@@ -909,12 +946,14 @@ def load_lon_global_figure(bag_loader):
   acc_min_vec = []
   acc_max_vec = []
   cipv_acc = []
+  cipv_acc_fusion = []
 
   t_vs_vec = bag_loader.vs_msg['t']
-  # for ind in range(len(bag_loader.plan_debug_msg['json'])):
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
   #   acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
   #   acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-  #   cipv_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc'], 2))
+      cipv_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc'], 2))
+      cipv_acc_fusion.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc_fusion'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -924,8 +963,10 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_acc',color="blue")
   # acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
   #                             legend_label='acc_max', color="red")
-  # acc_fig.line(t_plan_vec, cipv_acc, line_width=2,
-  #                             legend_label='cipv_acc', color="green")
+  acc_fig.line(t_plan_vec, cipv_acc, line_width=2,
+                              legend_label='cipv_acc', color="green")
+  acc_fig.line(t_plan_vec, cipv_acc_fusion, line_width=2,
+                              legend_label='cipv_acc_fusion', color="red")
   acc_fig.legend.click_policy = 'hide'
 
   # 各阶段耗时
@@ -1281,13 +1322,20 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
       f'center_point_{i}_t': [],
       f'agent_{i}_id': [],
     }
+    data4 = {
+      f'x_vec_{i}': [],
+      f'y_vec_{i}': [],
+    }
     lon_plan_data[f'st_boundary_{i}'] = ColumnDataSource(data=data1)
     lon_plan_data[f'st_point_{i}'] = ColumnDataSource(data=data2)
     lon_plan_data[f'st_label_{i}'] = ColumnDataSource(data=data3)
+    lon_plan_data[f'processed_trajectory_{i}'] = ColumnDataSource(data=data4)
+
 
   boundaries = [lon_plan_data[f'st_boundary_{i}'] for i in range(0, 20)]
   st_points = [lon_plan_data[f'st_point_{i}'] for i in range(0, 20)]
   st_labels = [lon_plan_data[f'st_label_{i}'] for i in range(0, 20)]
+  processed_trajectories = [lon_plan_data[f'processed_trajectory_{i}'] for i in range(0, 20)]
 
   columns = [
         TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
@@ -1308,7 +1356,14 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
      ('low_type','@obs_low_type'),
      ('high_type','@obs_high_type')
   ])
+
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  for i, source in enumerate(processed_trajectories):
+    x_vec = f'x_vec_{i}'
+    y_vec = f'y_vec_{i}'
+
+    fig1.line(y_vec, x_vec, source = source, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'processed agent traj', visible=False)
+    fig1.circle(y_vec, x_vec, source=source, size=3, color='yellow', legend_label='processed agent traj', visible=False)
 
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)

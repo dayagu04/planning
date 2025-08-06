@@ -2798,6 +2798,10 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
         json, "supper_limit_for_OD_straight", supper_limit_for_OD_straight);
     supper_limit_for_OD_bend = read_json_key<double>(
         json, "supper_limit_for_OD_bend", supper_limit_for_OD_bend);
+    processed_trajectory_filter_alpha =
+        read_json_key<double>(json, "processed_trajectory_filter_alpha");
+    processed_trajectory_acc_thr =
+        read_json_key<double>(json, "processed_trajectory_acc_thr");
   }
   double frenet_obstacle_range_s_min = -50.0;
   double frenet_obstacle_range_s_max = 180.0;
@@ -2807,6 +2811,8 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
   double max_speed_static_obstacle = 0.5;
   double supper_limit_for_OD_straight = 6.0;
   double supper_limit_for_OD_bend = 6.0;
+  double processed_trajectory_filter_alpha = 0.4;
+  double processed_trajectory_acc_thr = -0.5;
 };
 
 struct EgoPlanningEdtManagerConfig : public EgoPlanningConfig {

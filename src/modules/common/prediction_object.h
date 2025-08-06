@@ -79,6 +79,7 @@ struct PredictionObject {
   float yaw;    // for obj
   float theta;  // for velocity
   float acc;
+  float acc_fusion;
   iflyauto::ObjectMotionType motion_pattern_current;
   bool is_oversize_vehicle{false};
   bool is_VRU{false};
