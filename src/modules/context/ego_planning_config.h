@@ -1539,6 +1539,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                    "pass_acc_mode");
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
+    ReadItem<bool>(json, use_index_clip, "lat_motion_ilqr",
+                   "use_index_clip");
+    ReadItem<bool>(json, use_acc_compensation, "lat_motion_ilqr",
+                   "use_acc_compensation");
     ReadItem<double>(json, delta_t, "lat_motion_ilqr", "delta_t");
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
@@ -1758,6 +1762,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   bool pass_acc_mode = false;
   bool warm_start_enable = true;
+  bool use_index_clip = true;
+  bool use_acc_compensation = true;
   double delta_t = 0.2;
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;

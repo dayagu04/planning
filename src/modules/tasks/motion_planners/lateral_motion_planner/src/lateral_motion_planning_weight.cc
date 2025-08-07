@@ -4,6 +4,7 @@
 
 #include "math_lib.h"
 #include "refline.h"
+#include "utils/pose2d_utils.h"
 
 static const double kCurvatureThreshold =
     1.0 / 750.0;  // 750m raidus for big curvature
@@ -621,13 +622,9 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     }
     if (i < 6) {
       weight_.expected_acc[i] = expected_average_acc_ * 1.2;
-      double acc_gain = std::min(std::fabs(init_dis_to_ref_), 0.2);
-      if (expected_average_acc_ > 0.1) {
-        weight_.expected_acc[i] =
-            weight_.expected_acc[i] + acc_gain;
-      } else if (expected_average_acc_ < -0.1) {
-        weight_.expected_acc[i] =
-            weight_.expected_acc[i] - acc_gain;
+      if (config_.use_acc_compensation) {
+        double acc_gain = std::max(std::min(init_dis_to_ref_, 0.2), -0.2);
+        weight_.expected_acc[i] -= acc_gain;
       }
     } else {
       weight_.expected_acc[i] = expected_average_acc_ * 1.2;
@@ -1166,6 +1163,14 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     planning_input.set_q_acc(0.0);
   }
 
+  // limit large diff
+  if (config_.use_index_clip) {
+    int d_index = planning::clip((int)(weight_.remotely_index - last_remotely_index_), 2, -2);
+    weight_.remotely_index =
+        std::max(last_remotely_index_ + d_index,
+                weight_.proximal_index);
+  }
+
   // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
   if ((lateral_motion_scene_ == LANE_CHANGE) &&
       (!is_lane_change_back_) &&
@@ -1227,7 +1232,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
   // set low speed protection
   SetMinJerkWeightByVel(planning_input);
   // set large pos diff protection
-  if (last_path_max_dist2ref_ > 10.0) {
+  if (last_path_max_dist2ref_ > 10.0 && weight_.remotely_index > 17) {
     planning_input.set_q_continuity(config_.q_continuity_lane_change);
   }
 }
