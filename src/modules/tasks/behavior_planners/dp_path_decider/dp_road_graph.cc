@@ -775,7 +775,8 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
 }
 
 bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
-                                               double obs_start_s,double speed) {
+                                               double obs_start_s,
+                                               double speed) {
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
 
   /*
@@ -835,13 +836,13 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   std::vector<trajectory::Trajectory> trajectories;
   trajectories.reserve(1);
   trajectory::Trajectory trajectory;
-  for (int i = 0; i < 25; ++ i) {
+  for (int i = 0; i < 25; ++i) {
     Point2D end_sl_point(center_virtual_s + speed * 0.2 * i, virtual_l);
     Point2D cart_point;
     frenet_coord->SLToXY(end_sl_point, cart_point);
     auto point = trajectory::TrajectoryPoint(
-        cart_point.x, cart_point.y, virtual_obs_theta, speed, 0.0,
-        i * 0.2, 0.0, 0.0, center_virtual_s + speed * 0.2 * i, 0.0);
+        cart_point.x, cart_point.y, virtual_obs_theta, speed, 0.0, i * 0.2, 0.0,
+        0.0, center_virtual_s + speed * 0.2 * i, 0.0);
     trajectory.emplace_back(point);
   }
   trajectories.emplace_back(trajectory);
@@ -856,7 +857,7 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   virtual_agent.set_length(virtual_length);
   virtual_agent.set_width(7.0);
   virtual_agent.set_fusion_source(1);
-  bool is_static = (speed < 0.3) ? true:false;
+  bool is_static = (speed < 0.3) ? true : false;
   virtual_agent.set_is_static(is_static);
 
   virtual_agent.set_speed(speed);
@@ -1017,14 +1018,14 @@ void DPRoadGraph::SetPullOverPath(double end_s,
     current_s += path_resolution;
   }
   // 已有dp path 剩余长度为直线部分
-  while(current_s + path_resolution * 0.5 < path_s_end - init_sl_point_.s){
+  while (current_s + path_resolution * 0.5 < path_s_end - init_sl_point_.s) {
     const double l = end_l;
     const double dl = 0;
     const double ddl = 0;
-    const double dddl =0;
+    const double dddl = 0;
     const double theta = 0;  // 计算heading角度 不是全局的
     const double kappa = 0;  // 获取曲率
-    const double dkappa =0;
+    const double dkappa = 0;
     const double ddkappa = 0.;
 
     const SLPoint sl_point(init_sl_point_.s + current_s, l);
