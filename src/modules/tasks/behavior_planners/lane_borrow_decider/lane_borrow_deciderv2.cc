@@ -148,7 +148,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   lane_borrow_pb_info->set_distance_to_stop_line(distance_to_stop_line_);
   lane_borrow_pb_info->set_distance_to_cross_walk(distance_to_cross_walk_);
   if (intersection_state_ ==
-      planning::common::IntersectionState::IN_INTERSECTION) {
+      planning::common::IntersectionState::IN_INTERSECTION && lane_borrow_status_== kNoLaneBorrow) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
     return false;
   }
