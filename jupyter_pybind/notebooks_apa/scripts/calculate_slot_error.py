@@ -7,6 +7,8 @@ import json
 import sys, copy
 import math
 import time
+import os
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -18,6 +20,174 @@ from lib.load_local_view_parking import (
     load_local_view_figure_parking,
     update_local_view_data_parking,
 )
+
+JAC_S811 = 'JAC_S811'
+CHERY_T26 = 'CHERY_T26'
+CHERY_E0X = 'CHERY_E0X'
+CHERY_M32T = 'CHERY_M32T'
+BESTUNE_E541 = 'BESTUNE_E541'
+
+
+def load_car_params_patch_parking(vehicle_type=CHERY_M32T,
+                                  car_lat_inflation=0.0,
+                                  fold_mirror_flag=False):
+    if vehicle_type == JAC_S811:
+        # for JAC_S811
+        car_x = [
+            3.187, 3.424, 3.624, 3.624, 3.424, 3.187, 2.177, 2.177, 1.977,
+            1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977,
+            2.177, 2.177
+        ]
+        car_y = [
+            0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055,
+            -0.945, -0.945, -0.795, -0.645, 0.645, 0.795, 0.945, 0.945, 1.055,
+            1.055, 0.945
+        ]
+        wheel_base = 2.7
+        car_width = 1.89
+        if fold_mirror_flag:
+            car_x = [
+                3.187, 3.424, 3.624, 3.624, 3.424, 3.187, 2.177, 2.177, 1.977,
+                1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977,
+                1.977, 2.177, 2.177
+            ]
+            car_y = [
+                0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055,
+                -1.055, -0.945, -0.945, -0.795, -0.645, 0.645, 0.795, 0.945,
+                0.945, 1.055, 1.055, 0.945
+            ]
+    elif vehicle_type == CHERY_T26:
+        # for CHERY_T26
+        car_x = [
+            3.2980, 3.5800, 3.7180, 3.7180, 3.5800, 3.2980, 2.0920, 2.092,
+            1.892, 1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020,
+            1.892, 1.892, 2.092, 2.092
+        ]
+        car_y = [
+            0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -1.092,
+            -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595, 0.8095, 0.9595,
+            0.9595, 1.092, 1.092, 0.9595
+        ]
+        wheel_base = 2.796
+        car_width = 1.919
+        if fold_mirror_flag:
+            car_x = [
+                3.2980, 3.5800, 3.7180, 3.7180, 3.5800, 3.2980, 2.0920, 2.092,
+                1.892, 1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970,
+                -0.6020, 1.892, 1.892, 2.092, 2.092
+            ]
+            car_y = [
+                0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595,
+                -1.092, -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,
+                0.8095, 0.9595, 0.9595, 1.092, 1.092, 0.9595
+            ]
+    elif vehicle_type == CHERY_E0X:
+        # for CHERY_E0X
+        car_x = [
+            3.5815, 3.8330, 3.9250, 3.9250, 3.8330, 3.5815, 2.2350, 2.2350,
+            2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960,
+            -0.4690, 2.0350, 2.0350, 2.2350, 2.2350
+        ]
+        car_y = [
+            0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.1145,
+            -1.1145, -0.9875, -0.9875, -0.8617, -0.4696, 0.4696, 0.8617, 0.9875,
+            0.9875, 1.1145, 1.1145, 0.9875
+        ]
+        wheel_base = 3.0
+        car_width = 1.975
+        if fold_mirror_flag:
+            car_x = [
+                3.5815, 3.8330, 3.9250, 3.9250, 3.8330, 3.5815, 2.2350, 2.2350,
+                2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960,
+                -0.4690, 2.0350, 2.0350, 2.2350, 2.2350
+            ]
+            car_y = [
+                0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875,
+                -1.0245, -1.0245, -0.9875, -0.9875, -0.8617, -0.4696, 0.4696,
+                0.8617, 0.9875, 0.9875, 1.0245, 1.0245, 0.9875
+            ]
+
+    elif vehicle_type == CHERY_M32T:
+        car_x = [
+            3.259, 3.490, 3.724, 3.724, 3.490, 3.259, 2.121, 2.121, 1.916,
+            1.916, -0.530, -0.862, -1.030, -1.030, -0.862, -0.530, 1.916, 1.916,
+            2.121, 2.121
+        ]
+        car_y = [
+            0.934, 0.844, 0.438, -0.438, -0.844, -0.934, -0.934, -1.106, -1.106,
+            -0.934, -0.934, -0.761, -0.398, 0.398, 0.761, 0.934, 0.934, 1.106,
+            1.106, 0.934
+        ]
+        wheel_base = 2.8
+        car_width = 1.868
+        if fold_mirror_flag:
+            car_x = [
+                3.259, 3.490, 3.724, 3.724, 3.490, 3.259, 2.121, 2.121, 1.916,
+                1.916, -0.530, -0.862, -1.030, -1.030, -0.862, -0.530, 1.916,
+                1.916, 2.121, 2.121
+            ]
+            car_y = [
+                0.934, 0.844, 0.438, -0.438, -0.844, -0.934, -0.934, -1.016,
+                -1.016, -0.934, -0.934, -0.761, -0.398, 0.398, 0.761, 0.934,
+                0.934, 1.016, 1.016, 0.934
+            ]
+
+    elif vehicle_type == BESTUNE_E541:
+        car_x = [
+            3.5815, 3.8330, 3.9250, 3.9250, 3.8330, 3.5815, 2.2350, 2.2350,
+            2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960,
+            -0.4690, 2.0350, 2.0350, 2.2350, 2.2350
+        ]
+        car_y = [
+            0.9875, 0.8375, 0.6875, -0.6875, -0.8375, -0.9875, -0.9875, -1.1145,
+            -1.1145, -0.9875, -0.9875, -0.8375, -0.6875, 0.6875, 0.8375, 0.9875,
+            0.9875, 1.1145, 1.1145, 0.9875
+        ]
+        wheel_base = 3.0
+        car_width = 1.975
+        if fold_mirror_flag:
+            car_x = [
+                3.5815, 3.8330, 3.9250, 3.9250, 3.8330, 3.5815, 2.2350, 2.2350,
+                2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960,
+                -0.4690, 2.0350, 2.0350, 2.2350, 2.2350
+            ]
+            car_y = [
+                0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875,
+                -1.0245, -1.0245, -0.9875, -0.9875, -0.8617, -0.4696, 0.4696,
+                0.8617, 0.9875, 0.9875, 1.0245, 1.0245, 0.9875
+            ]
+    else:
+        car_x = [
+            3.5815, 3.8330, 3.9250, 3.9250, 3.8330, 3.5815, 2.2350, 2.2350,
+            2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960,
+            -0.4690, 2.0350, 2.0350, 2.2350, 2.2350
+        ]
+        car_y = [
+            0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.1145,
+            -1.1145, -0.9875, -0.9875, -0.8617, -0.4696, 0.4696, 0.8617, 0.9875,
+            0.9875, 1.1145, 1.1145, 0.9875
+        ]
+        wheel_base = 3.0
+        car_width = 1.975
+        if fold_mirror_flag:
+            car_x = [
+                3.5815, 3.8330, 3.9250, 3.9250, 3.8330, 3.5815, 2.2350, 2.2350,
+                2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960,
+                -0.4690, 2.0350, 2.0350, 2.2350, 2.2350
+            ]
+            car_y = [
+                0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875,
+                -1.0245, -1.0245, -0.9875, -0.9875, -0.8617, -0.4696, 0.4696,
+                0.8617, 0.9875, 0.9875, 1.0245, 1.0245, 0.9875
+            ]
+
+    for i in range(len(car_x)):
+        if car_y[i] > 0.0:
+            car_y[i] = car_y[i] + car_lat_inflation
+        else:
+            car_y[i] = car_y[i] - car_lat_inflation
+
+    return car_x, car_y, wheel_base
 
 
 def rotate(x, y, theta):
@@ -35,107 +205,78 @@ def load_ego_car_box(ego_x, ego_y, ego_heading, car_xb, car_yb):
     car_xn = []
     car_yn = []
     for i in range(len(car_xb)):
-        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y, ego_heading)
+        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y,
+                                    ego_heading)
         car_xn.append(tmp_x)
         car_yn.append(tmp_y)
     return car_xn, car_yn
 
 
-def round_values_in_dict(data, precision=4):
-    # 如果是字典，递归处理每个键值对
+## 分别保留字典、list和值固定若干位精度
+def round_values_in_dict(data, precision=3):
     if isinstance(data, dict):
         return {
-            key: round_values_in_dict(value, precision) for key, value in data.items()
+            key: round_values_in_dict(value, precision)
+            for key, value in data.items()
         }
-    # 如果是列表，递归处理每个元素
     elif isinstance(data, list):
         return [round_values_in_dict(item, precision) for item in data]
-    # 如果是浮点数，四舍五入
     elif isinstance(data, float):
         return round(data, precision)
     else:
-        return data  # 如果既不是字典、列表或浮点数，直接返回原值
+        return data
+
+
+def GetResultFile(bag_path):
+    filename = os.path.basename(bag_path)
+    match = re.search(r"20\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}", filename)
+
+    if not match:
+        return "data.json"
+    else:
+        return match.group() + ".json"
 
 
 ## 先实现的功能：以真实车位坐标系为基准，计算泊车终点的相对位置，把所有定位全局转局部坐标系（真实车位坐标系）
 class ParkingSlotEvaluator:
+
     def __init__(self):
-        self.true_slot_width_ = 2.2
-        self.true_slot_length_ = 6.0
+        self.true_slot_width_ = 2.0
+        self.true_slot_length_ = 5.85
 
-        self.ego_vertex_x_vec_ = [
-            3.5815,
-            3.8330,
-            3.9250,
-            3.9250,
-            3.8330,
-            3.5815,
-            2.2350,
-            2.2350,
-            2.0350,
-            2.0350,
-            -0.4690,
-            -0.8960,
-            -1.0250,
-            -1.0250,
-            -0.8960,
-            -0.4690,
-            2.0350,
-            2.0350,
-            2.2350,
-            2.2350,
-        ]
-        self.ego_vertex_y_vec_ = [
-            0.9875,
-            0.6755,
-            0.2545,
-            -0.2545,
-            -0.6755,
-            -0.9875,
-            -0.9875,
-            -1.1145,
-            -1.1145,
-            -0.9875,
-            -0.9875,
-            -0.8617,
-            -0.4696,
-            0.4696,
-            0.8617,
-            0.9875,
-            0.9875,
-            1.1145,
-            1.1145,
-            0.9875,
-        ]
-        self.wheel_base_ = 3.0
+        self.ego_vertex_x_vec_, self.ego_vertex_y_vec_, self.wheel_base_ = load_car_params_patch_parking(
+        )
+        self.ego_half_width_ = 0.5 * self.ego_vertex_y_vec_[
+            0]  ## half width of ego car
 
-        self.ego_half_width_ = 1.0
-
-        self.measured_terminal_lat_error_ = [0.0, 0.0]  ## 外侧前后轮与外侧车位内线的横向相对距离，向内为正
-        self.measured_terminal_lon_error_ = [0.0, 0.0]  ## 保险杠与前后车位线的相对距离 向内为正
-
+        ## 外侧前后轮与外侧车位内线的横向相对距离，向内为正
+        self.measured_terminal_lat_error_ = [0.0, 0.0]
+        ## 保险杠与前后车位线的相对距离 向内为正
+        self.measured_terminal_lon_error_ = [0.0, 0.0]
+        ## 转化到车位坐标系下的偏移
         self.measured_terminal_x_offset = [0.0, 0.0]
         self.measured_terminal_y_offset = [0.0, 0.0]
 
-        self.terminal_pose_in_true_slot_ = [0.0, 0.0, 0.0]  ## true slot坐标系
-        self.terminal_pose_in_bag_ = [0.0, 0.0, 0.0]
+        self.terminal_pose_in_bag_ = [0.0, 0.0, 0.0]  ## boot sys
+        self.terminal_pose_in_true_slot_ = [0.0, 0.0, 0.0]  ## true sys
+
+        self.cos_dtheta = 0.0  ## rotated heading from boot sys to true slot sys
+        self.sin_dtheta = 0.0
 
         self.slot_message_info_ = []  ## in boot sys
         self.ego_pose_message_info_ = []  ## in boot sys
-        self.planning_message_info_ = []
+        self.planning_message_info_ = []  ## in boot sys
         self.occ_obstacle_message_info_ = []  ## in boot sys
 
-        self.slot_message_true_slot_ = []
-        self.ego_pose_message_true_slot_ = []
-        self.planning_message_true_slot_ = []
-        self.occ_obstacle_message_true_slot_ = []
+        self.slot_message_true_slot_ = []  ## in true sys
+        self.ego_pose_message_true_slot_ = []  ## in true sys
+        self.planning_message_true_slot_ = []  ## in true sys
+        self.occ_obstacle_message_true_slot_ = []  ## in true sys
 
-        self.cos_dtheta = 0.0
-        self.sin_dtheta = 0.0
+        self.target_file = ""
 
-    def set_measured_error(
-        self, front_lat_err, rear_lat_err, front_lon_err, rear_lon_err
-    ):
+    def set_measured_error(self, front_lat_err, rear_lat_err, front_lon_err,
+                           rear_lon_err):
         self.measured_terminal_lat_error_ = [front_lat_err, rear_lat_err]
         self.measured_terminal_lon_error_ = [front_lon_err, rear_lon_err]
 
@@ -166,20 +307,24 @@ class ParkingSlotEvaluator:
     def calc_terminal_pose_in_true_slot(self):
         self.ego_half_width_ = self.ego_vertex_y_vec_[0]
 
-        if (
-            len(self.measured_terminal_x_offset) != 2
-            or len(self.measured_terminal_y_offset) != 2
-        ):
-            return False
+        if (len(self.measured_terminal_x_offset) != 2 or
+                len(self.measured_terminal_y_offset) != 2):
+            raise ValueError("none measured error")
 
         self.terminal_pose_in_true_slot_ = [0.0, 0.0, 0.0]
         # calc relative heading
-        dy = self.measured_terminal_y_offset[0] - self.measured_terminal_y_offset[1]
-        dx = math.sqrt(self.wheel_base_ * self.wheel_base_ - dy * dy)
-        self.terminal_pose_in_true_slot_[2] = math.atan(dy / dx)
-        print("heading offset = ", np.rad2deg(self.terminal_pose_in_true_slot_[2]))
+        dy = self.measured_terminal_y_offset[
+            0] - self.measured_terminal_y_offset[1]
 
+        dx = math.sqrt(self.wheel_base_ * self.wheel_base_ - dy * dy)
+
+        self.terminal_pose_in_true_slot_[2] = math.atan(dy / dx)
+        print("heading offset = ",
+              np.rad2deg(self.terminal_pose_in_true_slot_[2]))
+
+        ## 将后轴外侧轮子旋转heading后，看看相对后轴的y方向偏移
         rear_outer_wheel_pos = [0.0, self.ego_half_width_]
+
         rear_outer_wheel_pos = local2global(
             rear_outer_wheel_pos[0],
             rear_outer_wheel_pos[1],
@@ -189,10 +334,8 @@ class ParkingSlotEvaluator:
         )
 
         self.terminal_pose_in_true_slot_[1] = (
-            self.true_slot_width_
-            - rear_outer_wheel_pos[1]
-            + self.measured_terminal_y_offset[1]
-        )
+            self.true_slot_width_ - rear_outer_wheel_pos[1] +
+            self.measured_terminal_y_offset[1])
 
         tmp_ego_x_vec, tmp_ego_y_vec = load_ego_car_box(
             0.0,
@@ -202,20 +345,21 @@ class ParkingSlotEvaluator:
             self.ego_vertex_y_vec_,
         )
 
+        ego_front_mid_x = 0.5 * (tmp_ego_x_vec[2] + tmp_ego_x_vec[3])
+
         self.terminal_pose_in_true_slot_[0] = (
-            self.true_slot_length_
-            - max(tmp_ego_x_vec)
-            + self.measured_terminal_x_offset[0]
-        )
+            self.true_slot_length_ - ego_front_mid_x +
+            self.measured_terminal_x_offset[0])
 
     def transfer_pose_to_true_slot_sys(self, pose_in_bag):
+        """
+        将 bag 系下的 pose 坐标变换到 true slot 系下。
+        """
         x_bag, y_bag, theta_bag = pose_in_bag
+
         terminal_x_bag, terminal_y_bag, terminal_theta_bag = self.terminal_pose_in_bag_
-        (
-            terminal_x_true_slot,
-            terminal_y_true_slot,
-            terminal_theta_true_slot,
-        ) = self.terminal_pose_in_true_slot_
+
+        terminal_x_true_slot, terminal_y_true_slot, terminal_theta_true_slot = self.terminal_pose_in_true_slot_
 
         dx = x_bag - terminal_x_bag
         dy = y_bag - terminal_y_bag
@@ -223,17 +367,14 @@ class ParkingSlotEvaluator:
         x_prime = terminal_x_true_slot + self.cos_dtheta * dx - self.sin_dtheta * dy
         y_prime = terminal_y_true_slot + self.sin_dtheta * dx + self.cos_dtheta * dy
 
-        theta_prime = terminal_theta_true_slot + (theta_bag - terminal_theta_bag)
+        theta_prime = terminal_theta_true_slot + (theta_bag -
+                                                  terminal_theta_bag)
         return [x_prime, y_prime, theta_prime]
 
     def transfer_pos_to_true_slot_sys(self, pos_in_bag):
         x_bag, y_bag = pos_in_bag
         terminal_x_bag, terminal_y_bag, terminal_theta_bag = self.terminal_pose_in_bag_
-        (
-            terminal_x_true_slot,
-            terminal_y_true_slot,
-            terminal_theta_true_slot,
-        ) = self.terminal_pose_in_true_slot_
+        terminal_x_true_slot, terminal_y_true_slot, terminal_theta_true_slot = self.terminal_pose_in_true_slot_
 
         dx = x_bag - terminal_x_bag
         dy = y_bag - terminal_y_bag
@@ -245,32 +386,34 @@ class ParkingSlotEvaluator:
 
     def transfer_all_message_to_true_slot_sys(self):
         self.slot_message_true_slot_ = []
+        self.planning_message_true_slot_ = []
         self.ego_pose_message_true_slot_ = []
         self.occ_obstacle_message_true_slot_ = []
-        self.planning_message_true_slot_ = []
-
         self.terminal_pose_in_bag_ = self.ego_pose_message_info_[-1]
 
-        dtheta = self.terminal_pose_in_true_slot_[2] - self.terminal_pose_in_bag_[2]
+        dtheta = self.terminal_pose_in_true_slot_[
+            2] - self.terminal_pose_in_bag_[2]
+
         self.cos_dtheta = math.cos(dtheta)
         self.sin_dtheta = math.sin(dtheta)
 
         ## localization
         for pose in self.ego_pose_message_info_:
             self.ego_pose_message_true_slot_.append(
-                self.transfer_pose_to_true_slot_sys(pose)
-            )
+                self.transfer_pose_to_true_slot_sys(pose))
         ## occ
         for pos_vec in self.occ_obstacle_message_info_:
             obs_vec_true_slot = []
             for pos in pos_vec:
-                obs_vec_true_slot.append(self.transfer_pos_to_true_slot_sys(pos))
+                obs_vec_true_slot.append(
+                    self.transfer_pos_to_true_slot_sys(pos))
             self.occ_obstacle_message_true_slot_.append(obs_vec_true_slot)
 
         for planning_path in self.planning_message_info_:
             path_pt_vec = []
             for planning_pt in planning_path:
-                path_pt_vec.append(self.transfer_pos_to_true_slot_sys(planning_pt))
+                path_pt_vec.append(
+                    self.transfer_pos_to_true_slot_sys(planning_pt))
             self.planning_message_true_slot_.append(path_pt_vec)
 
         ## vis slot
@@ -279,27 +422,14 @@ class ParkingSlotEvaluator:
             all_zero = all(point == [0, 0] for point in slot_pt_vec)
 
             if all_zero:
-                slot_pt_vec_true_slot.append(slot_pt_vec)
+                slot_pt_vec_true_slot = slot_pt_vec
             else:
                 for pt in slot_pt_vec:
-                    slot_pt_vec_true_slot.append(self.transfer_pos_to_true_slot_sys(pt))
-
-                slot_center_x = sum(x_i for x_i, y_i in slot_pt_vec_true_slot) / 4.0
-                slot_center_y = sum(y_i for x_i, y_i in slot_pt_vec_true_slot) / 4.0
-                center = np.array([slot_center_x, slot_center_y])
-
-                corrected_slot_pt_vec_true_slot = [[0, 0] for _ in range(4)]
-                for pt in slot_pt_vec_true_slot:
-                    v_oa = np.array(pt) - center
-                    if v_oa[0] > 0.0 and v_oa[1] > 0.0:
-                        corrected_slot_pt_vec_true_slot[0] = pt
-                    elif v_oa[0] < 0.0 and v_oa[1] > 0.0:
-                        corrected_slot_pt_vec_true_slot[1] = pt
-                    elif v_oa[0] > 0.0 and v_oa[1] < 0.0:
-                        corrected_slot_pt_vec_true_slot[2] = pt
-                    elif v_oa[0] < 0.0 and v_oa[1] < 0.0:
-                        corrected_slot_pt_vec_true_slot[3] = pt
-                self.slot_message_true_slot_.append(corrected_slot_pt_vec_true_slot)
+                    slot_pt_vec_true_slot.append(
+                        self.transfer_pos_to_true_slot_sys(pt))
+                _, slot_pt_vec_true_slot = self.process_rectangle_points(
+                    slot_pt_vec_true_slot)
+            self.slot_message_true_slot_.append(slot_pt_vec_true_slot)
 
     def set_input(
         self,
@@ -315,7 +445,8 @@ class ParkingSlotEvaluator:
         if len(slot_info) != 2:
             return False
 
-        self.set_measured_error(error_vec[0], error_vec[1], error_vec[2], error_vec[3])
+        self.set_measured_error(error_vec[0], error_vec[1], error_vec[2],
+                                error_vec[3])
         self.set_true_slot_info(slot_info[0], slot_info[1])
 
         self.set_ego_pos_message(ego_pose_vec)
@@ -330,16 +461,13 @@ class ParkingSlotEvaluator:
         self.calc_terminal_pose_in_true_slot()
         self.transfer_all_message_to_true_slot_sys()
 
-        ideal_points = [
-            [self.true_slot_length_, self.true_slot_width_],
-            [0.0, self.true_slot_width_],
-            [self.true_slot_length_, 0.0],
-            [0.0, 0.0]
-        ]
+        ideal_points = [[0.0, 0.0], [self.true_slot_length_, 0.0],
+                        [self.true_slot_length_, self.true_slot_width_],
+                        [0.0, self.true_slot_width_]]
 
         start_idx = 0
         ego_pose_vec = np.array(self.ego_pose_message_true_slot_)
-        for i in range(1, len(ego_pose_vec) -1):
+        for i in range(1, len(ego_pose_vec) - 1):
             pos_0 = ego_pose_vec[i - 1][:2]
             pos_1 = ego_pose_vec[i][:2]
             pos_2 = ego_pose_vec[i + 1][:2]
@@ -347,13 +475,13 @@ class ParkingSlotEvaluator:
             v_01 = pos_1 - pos_0
             v_12 = pos_2 - pos_1
 
-            if np.dot(v_01, v_12) > 0.0 and v_01[0] < 0.0 and v_01[1] < 0.0 and pos_1[1] < self.true_slot_width_ + 2:
+            if (np.dot(v_01, v_12) > 0.0 and v_01[0] < 0.0 and v_01[1] < 0.0 and
+                    pos_1[1] < self.true_slot_width_ + 2):
                 start_idx = i
                 break
         if start_idx == 0:
             print("find start idx failed")
             return False
-
 
         lat_err_vec = []
         lon_err_vec = []
@@ -366,27 +494,33 @@ class ParkingSlotEvaluator:
             ego_heading_deg_vec.append(math.degrees(ego_pose_vec[i][2]))
 
             slot_points = np.array(self.slot_message_true_slot_[i])
-            err = slot_points - ideal_points
+            err = slot_points - np.array(ideal_points)
 
-            lat_err_vec.append([err[0][1], err[1][1]])
-            lon_err_vec.append([err[0][0], err[1][0]])
+            lat_err_vec.append([err[2][1], err[3][1]])
+            lon_err_vec.append([err[2][0], err[3][0]])
 
-            v_01 = slot_points[0] - slot_points[1]
-            heading_deg = np.degrees(np.arctan2(v_01[1], v_01[0]))
+            v_23 = slot_points[2] - slot_points[3]
+            heading_deg = np.degrees(np.arctan2(v_23[1], v_23[0]))
             heading_deg_err_vec.append(heading_deg)
 
-        print("heading = ", max(heading_deg_err_vec), min(heading_deg_err_vec), np.mean(heading_deg_err_vec))
+        print(
+            "heading = ",
+            max(heading_deg_err_vec),
+            min(heading_deg_err_vec),
+            np.mean(heading_deg_err_vec),
+        )
 
         ## plot
-        ego_heading_deg_vec = np.array(ego_heading_deg_vec)       # (N,)
-        lat_err_vec = np.array(lat_err_vec)                       # (N,4)
-        lon_err_vec = np.array(lon_err_vec)                       # (N,4)
-        heading_deg_err_vec = np.array(heading_deg_err_vec)       # (N,)
+        ego_heading_deg_vec = np.array(ego_heading_deg_vec)  # (N,)
+        lat_err_vec = np.array(lat_err_vec)  # (N,4)
+        lon_err_vec = np.array(lon_err_vec)  # (N,4)
+        heading_deg_err_vec = np.array(heading_deg_err_vec)  # (N,)
 
         N = len(ego_heading_deg_vec)
 
         # 展平成一维，便于画散点图
-        ego_heading_for_err = np.repeat(ego_heading_deg_vec, 2)   # 每个角点都对应同一帧heading
+        ego_heading_for_err = np.repeat(ego_heading_deg_vec,
+                                        2)  # 每个角点都对应同一帧heading
         lat_err_flat = lat_err_vec.flatten()
         lon_err_flat = lon_err_vec.flatten()
 
@@ -394,71 +528,72 @@ class ParkingSlotEvaluator:
 
         plt.subplot(1, 3, 1)
         plt.scatter(ego_heading_for_err, lat_err_flat, s=8, alpha=0.7)
-        plt.xlabel('Ego Heading (deg)')
-        plt.ylabel('Lat Error (m)')
-        plt.title('Ego Heading vs. Lat Error')
+        plt.xlabel("Ego Heading (deg)")
+        plt.ylabel("Lat Error (m)")
+        plt.title("Ego Heading vs. Lat Error")
 
         plt.subplot(1, 3, 2)
         plt.scatter(ego_heading_for_err, lon_err_flat, s=8, alpha=0.7)
-        plt.xlabel('Ego Heading (deg)')
-        plt.ylabel('Lon Error (m)')
-        plt.title('Ego Heading vs. Lon Error')
+        plt.xlabel("Ego Heading (deg)")
+        plt.ylabel("Lon Error (m)")
+        plt.title("Ego Heading vs. Lon Error")
 
         plt.subplot(1, 3, 3)
         plt.scatter(ego_heading_deg_vec, heading_deg_err_vec, s=8, alpha=0.7)
-        plt.xlabel('Ego Heading (deg)')
-        plt.ylabel('Heading Error (deg)')
-        plt.title('Ego Heading vs. Heading Error')
+        plt.xlabel("Ego Heading (deg)")
+        plt.ylabel("Heading Error (deg)")
+        plt.title("Ego Heading vs. Heading Error")
 
         plt.tight_layout()
-        plt.savefig('checker.svg')
+        plt.savefig("checker.svg")
         plt.close()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def process_rectangle_points(self, corner_points):
-        # 计算矩形四个角点的中心
+        """
+        矫正矩形车位角点顺序，左下角点为起点（定义为相对中心 x<0 且 y<0），沿逆时针方向
+        """
+        # 计算中心点
         center_x = sum(point[0] for point in corner_points) / 4
         center_y = sum(point[1] for point in corner_points) / 4
         center = [center_x, center_y]
 
-        # 按照每个点相对于中心的角度进行排序
+        # 按逆时针排序
         sorted_points = sorted(
             corner_points,
-            key=lambda point: math.atan2(point[1] - center_y, point[0] - center_x),
+            key=lambda point: math.atan2(point[1] - center_y, point[0] -
+                                         center_x),
         )
 
-        # 返回排序后的角点和中心点
-        final_fus_slot = [[point[0], point[1]] for point in sorted_points]
+        # 找到“左下角”点：相对中心 x<0 且 y<0，如果多个取最靠近左下的
+        def offset(point):
+            dx = point[0] - center_x
+            dy = point[1] - center_y
+            return (dx < 0) and (dy < 0), (dy, dx)  # dy优先，再dx
+
+        # 过滤所有“左下角”点
+        candidates = [i for i, p in enumerate(sorted_points) if offset(p)[0]]
+        if candidates:
+            # 多个候选就选 y 最小，再 x 最小
+            min_idx = min(candidates,
+                          key=lambda i:
+                          (sorted_points[i][1], sorted_points[i][0]))
+        else:
+            # 极端情况没有“左下”点，取 y 最小再 x 最小
+            min_idx = min(range(4),
+                          key=lambda i:
+                          (sorted_points[i][1], sorted_points[i][0]))
+
+        # 循环移位
+        final_fus_slot = sorted_points[min_idx:] + sorted_points[:min_idx]
 
         return center, final_fus_slot
 
     def record_bags(
         self,
-        dt = 0.2,
+        dt=0.2,
         bag_path="/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20250620/20250620-16-29-47/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2025-06-20-16-29-48_no_camera.bag",
+        mes_slot_info=[6.0, 2.4],
+        mes_error=[0.0, 0.0, 0.0, 0.0],
     ):
         start_time = time.time()
         bag_loader = LoadCyberbag(bag_path, True)
@@ -484,57 +619,57 @@ class ParkingSlotEvaluator:
         occ_obstacles_vec = []
 
         success = False
+        ## get final_fus_slot
         for bag_time in np.arange(max_time, 0.0, -dt):
             index_map = bag_loader.get_msg_index(bag_time)
             fus_msg = bag_loader.fus_parking_msg["data"][
-                index_map["fus_parking_msg_idx"]
-            ]
+                index_map["fus_parking_msg_idx"]]
             plan_msg = bag_loader.plan_msg["data"][index_map["plan_msg_idx"]]
-            apa_plan_status = plan_msg.planning_status.apa_planning_status
 
-            if apa_plan_status != 1:
+            if plan_msg.planning_status.apa_planning_status != 1:
                 continue
 
-            select_slot_id = fus_msg.select_slot_id
-            if select_slot_id == 0:
+            if fus_msg.select_slot_id == 0:
                 continue
 
             fus_slot_lists = fus_msg.parking_fusion_slot_lists
             for i in range(fus_msg.parking_fusion_slot_lists_size):
                 slot = fus_slot_lists[i]
-                if select_slot_id == slot.id:
+                if fus_msg.select_slot_id == slot.id:
                     success = True
                     final_fus_slot = [
                         [point.x, point.y] for point in slot.corner_points
                     ]
-
                     break
+
             if success:
                 break
-        print("final_fus_slot = ", final_fus_slot)
+        print("find final slot sucess = ", success)
+        print("final_fus_slot without correction = ", final_fus_slot)
+
+        if not success:
+            return False
 
         final_fus_slot_center, final_fus_slot = self.process_rectangle_points(
-            final_fus_slot
-        )
+            final_fus_slot)
+
+        print("final_fus_slot after correction = ", final_fus_slot)
 
         for bag_time in np.arange(0.0, max_time, dt):
             index_map = bag_loader.get_msg_index(bag_time)
 
             soc_state_msg = bag_loader.soc_state_msg["data"][
-                index_map["soc_state_msg_idx"]
-            ]
+                index_map["soc_state_msg_idx"]]
 
             plan_msg = bag_loader.plan_msg["data"][index_map["plan_msg_idx"]]
-            plan_debug_json = bag_loader.plan_debug_msg["json"][
-                index_map["plan_debug_msg_idx"]
-            ]
+            # plan_debug_json = bag_loader.plan_debug_msg["json"][
+            #     index_map["plan_debug_msg_idx"]
+            # ]
 
             vis_msg = bag_loader.vis_parking_msg["data"][
-                index_map["vis_parking_msg_idx"]
-            ]
+                index_map["vis_parking_msg_idx"]]
             occ_msg = bag_loader.fus_occupancy_objects_msg["data"][
-                index_map["fus_occupancy_objects_msg_idx"]
-            ]
+                index_map["fus_occupancy_objects_msg_idx"]]
 
             current_state = soc_state_msg.current_state
             apa_plan_status = plan_msg.planning_status.apa_planning_status
@@ -548,20 +683,29 @@ class ParkingSlotEvaluator:
 
                 if bag_loader.loc_msg["enable"] == True:
                     loc_msg = copy.deepcopy(
-                        bag_loader.loc_msg["data"][index_map["loc_msg_idx"]]
-                    )
+                        bag_loader.loc_msg["data"][index_map["loc_msg_idx"]])
+
                     current_ego_x = loc_msg.position.position_boot.x
                     current_ego_y = loc_msg.position.position_boot.y
                     current_ego_heading = loc_msg.orientation.euler_boot.yaw
+
                     ego_pos_vec.append(
-                        [current_ego_x, current_ego_y, current_ego_heading]
-                    )
+                        [current_ego_x, current_ego_y, current_ego_heading])
 
                 gear_command_value = plan_msg.gear_command.gear_command_value
-                if gear_command_value in (2, 4) and gear_command_value != last_gear:
+                if gear_command_value in (
+                        2, 4) and gear_command_value != last_gear:
                     gear_vec.append(gear_command_value)
 
-                    planning_path = [[pt.x, pt.y] for pt in trajectory_points]
+                    ## get path after 2 step
+
+                    tmp_index_map = bag_loader.get_msg_index(bag_time + 0.4)
+                    tmp_plan_msg = bag_loader.plan_msg["data"][
+                        tmp_index_map["plan_msg_idx"]]
+
+                    planning_path = [[
+                        pt.x, pt.y
+                    ] for pt in tmp_plan_msg.trajectory.trajectory_points]
                     planning_path_vec.append(planning_path)
 
                     obs_pt_vec = []
@@ -569,9 +713,8 @@ class ParkingSlotEvaluator:
                         obj = occ_msg.fusion_object[k]
 
                         polygon_points = obj.additional_occupancy_info.polygon_points
-                        for n in range(
-                            obj.additional_occupancy_info.polygon_points_size
-                        ):
+                        for n in range(obj.additional_occupancy_info.
+                                       polygon_points_size):
                             x = polygon_points[n].x
                             y = polygon_points[n].y
                             obs_pt_vec.append([x, y])
@@ -591,38 +734,36 @@ class ParkingSlotEvaluator:
                 for j in range(parking_slots_size):
                     slot = parking_slots[j]
 
-                    single_slot_x_vec, single_slot_y_vec = zip(
-                        *[
-                            local2global(
-                                slot.corner_points[k].x,
-                                slot.corner_points[k].y,
-                                current_ego_x,
-                                current_ego_y,
-                                current_ego_heading,
-                            )
-                            for k in range(4)
-                        ]
-                    )
+                    single_slot_x_vec, single_slot_y_vec = zip(*[
+                        local2global(
+                            slot.corner_points[k].x,
+                            slot.corner_points[k].y,
+                            current_ego_x,
+                            current_ego_y,
+                            current_ego_heading,
+                        ) for k in range(4)
+                    ])
 
                     single_slot_x_vec = np.array(single_slot_x_vec)
                     single_slot_y_vec = np.array(single_slot_y_vec)
-                    single_slot_center = np.array(
-                        [np.mean(single_slot_x_vec), np.mean(single_slot_y_vec)]
-                    )
+                    single_slot_center = np.array([
+                        np.mean(single_slot_x_vec),
+                        np.mean(single_slot_y_vec)
+                    ])
 
-                    dist = np.linalg.norm(single_slot_center - final_fus_slot_center)
+                    dist = np.linalg.norm(single_slot_center -
+                                          final_fus_slot_center)
                     if dist < 3.0 and dist < min_dist:
                         min_dist = dist
                         matched_slot_x_vec = single_slot_x_vec
                         matched_slot_y_vec = single_slot_y_vec
 
                 if len(matched_slot_x_vec) > 0:
-                    matched_slot_coords = [
-                        [x, y] for x, y in zip(matched_slot_x_vec, matched_slot_y_vec)
-                    ]
+                    matched_slot_coords = [[
+                        x, y
+                    ] for x, y in zip(matched_slot_x_vec, matched_slot_y_vec)]
                     _, matched_slot_coords = self.process_rectangle_points(
-                        matched_slot_coords
-                    )
+                        matched_slot_coords)
                     vis_slot_vec.append(matched_slot_coords)
                 else:
                     vis_slot_vec.append([(0, 0), [0, 0], [0, 0], [0, 0]])
@@ -635,10 +776,14 @@ class ParkingSlotEvaluator:
             "final_fus_slot": final_fus_slot,
             "vis_slot": vis_slot_vec,
             "occ_obstacle": occ_obstacles_vec,
+            "slot_info": mes_slot_info,
+            "error": mes_error,
         }
 
         result = round_values_in_dict(result, precision=3)
-        with open("data.json", "w") as f:
+
+        self.target_file = GetResultFile(bag_path)
+        with open(self.target_file, "w") as f:
             json.dump(result, f)
 
         print("gear_vec = ", gear_vec)
@@ -653,30 +798,27 @@ class ParkingSlotEvaluator:
         occ_obs_vec,
         save_path="corrected_data.svg",
     ):
-        plt.rcParams.update(
-            {
-                "font.family": "Times New Roman",
-                "font.size": 9,
-                "axes.labelsize": 9,
-                "axes.titlesize": 9,
-                "legend.fontsize": 9,
-                "xtick.labelsize": 9,
-                "ytick.labelsize": 9,
-                "lines.linewidth": 1.2,
-            }
-        )
+        plt.rcParams.update({
+            "font.family": "Times New Roman",
+            "font.size": 9,
+            "axes.labelsize": 9,
+            "axes.titlesize": 9,
+            "legend.fontsize": 9,
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
+            "lines.linewidth": 1.2,
+        })
 
         fig, ax = plt.subplots(figsize=(10, 6), dpi=800)
 
         if len(vis_slot_vec) > 0:
             vis_rectangles = np.array(vis_slot_vec)
-            vis_x_vec, vis_y_vec = vis_rectangles[:, :, 0], vis_rectangles[:, :, 1]
-            vis_x_vec = np.concatenate(
-                [vis_x_vec, vis_x_vec[:, [0]]], axis=1
-            )  # 添加第一个点到最后，确保闭合
-            vis_y_vec = np.concatenate(
-                [vis_y_vec, vis_y_vec[:, [0]]], axis=1
-            )  # 同样添加第一个点到最后，确保闭合
+            vis_x_vec, vis_y_vec = vis_rectangles[:, :, 0], vis_rectangles[:, :,
+                                                                           1]
+            vis_x_vec = np.concatenate([vis_x_vec, vis_x_vec[:, [0]]],
+                                       axis=1)  # 添加第一个点到最后，确保闭合
+            vis_y_vec = np.concatenate([vis_y_vec, vis_y_vec[:, [0]]],
+                                       axis=1)  # 同样添加第一个点到最后，确保闭合
             ax.plot(
                 vis_x_vec.T,
                 vis_y_vec.T,
@@ -716,13 +858,12 @@ class ParkingSlotEvaluator:
             )
 
         if len(planning_path_vec) > 0:
-            lc = LineCollection(
-                planning_path_vec, colors="red", linewidths=1.0, label="Planning"
-            )
+            lc = LineCollection(planning_path_vec,
+                                colors="red",
+                                linewidths=1.0,
+                                label="Planning")
 
             ax.add_collection(lc)
-
-
 
         ax.set_xlabel("X (m)")
         ax.set_ylabel("Y (m)")
@@ -759,41 +900,30 @@ class ParkingSlotEvaluator:
 
         vis_rectangles = np.array(vis_slot_vec)
         vis_x_vec, vis_y_vec = vis_rectangles[:, :, 0], vis_rectangles[:, :, 1]
-        vis_x_vec = np.concatenate(
-            [vis_x_vec, vis_x_vec[:, [0]]], axis=1
-        )  # 添加第一个点到最后，确保闭合
-        vis_y_vec = np.concatenate(
-            [vis_y_vec, vis_y_vec[:, [0]]], axis=1
-        )  # 同样添加第一个点到最后，确保闭合
+        vis_x_vec = np.concatenate([vis_x_vec, vis_x_vec[:, [0]]],
+                                   axis=1)  # 添加第一个点到最后，确保闭合
+        vis_y_vec = np.concatenate([vis_y_vec, vis_y_vec[:, [0]]],
+                                   axis=1)  # 同样添加第一个点到最后，确保闭合
 
-        plt.rcParams.update(
-            {
-                "font.family": "Times New Roman",
-                "font.size": 9,
-                "axes.labelsize": 9,
-                "axes.titlesize": 9,
-                "legend.fontsize": 9,
-                "xtick.labelsize": 9,
-                "ytick.labelsize": 9,
-                "lines.linewidth": 1.2,
-            }
-        )
+        plt.rcParams.update({
+            "font.family": "Times New Roman",
+            "font.size": 9,
+            "axes.labelsize": 9,
+            "axes.titlesize": 9,
+            "legend.fontsize": 9,
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
+            "lines.linewidth": 1.2,
+        })
 
         fig, ax = plt.subplots(figsize=(10, 6), dpi=800)
 
-        lc = LineCollection(
-            planning_path_vec, colors="red", linewidths=1.0, label="Planning"
-        )
-
-        ax.add_collection(lc)
-
         ax.plot(
-            control_x_vec,
-            control_y_vec,
-            linestyle="--",
-            color="black",
-            linewidth=1.2,
-            label="Control",
+            vis_x_vec.T,
+            vis_y_vec.T,
+            linestyle="-",
+            color="gray",
+            linewidth=0.5,
         )
 
         ax.plot(
@@ -805,17 +935,23 @@ class ParkingSlotEvaluator:
             label="terminal fus slot",
         )
 
-        ax.scatter(
-            occ_obs_x, occ_obs_y, color="gray", marker="o", s=3
-        )  # s=50 表示圆点的大小，color='b' 表示蓝色
+        lc = LineCollection(planning_path_vec,
+                            colors="red",
+                            linewidths=1.0,
+                            label="Planning")
+        ax.add_collection(lc)
 
         ax.plot(
-            vis_x_vec.T,
-            vis_y_vec.T,
-            linestyle="-",
-            color="gray",
-            linewidth=0.5,
+            control_x_vec,
+            control_y_vec,
+            linestyle="--",
+            color="black",
+            linewidth=1.2,
+            label="Control",
         )
+
+        ax.scatter(occ_obs_x, occ_obs_y, color="gray", marker="o",
+                   s=3)  # s=50 表示圆点的大小，color='b' 表示蓝色
 
         ax.set_xlabel("X (m)")
         ax.set_ylabel("Y (m)")
@@ -837,41 +973,78 @@ class ParkingSlotEvaluator:
 if __name__ == "__main__":
     parking_slot_eva = ParkingSlotEvaluator()
 
-    parking_slot_eva.record_bags(dt = 0.2)
+    ## 1. record bags
+    bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_72215/trigger/20250804/20250804-20-40-49/park_in_data_collection_CHERY_M32T_72215_ALL_FILTER_2025-08-04-20-40-49_no_camera.bag"
+    # parking_slot_eva.record_bags(dt=0.2, bag_path=bag_path)
 
-    with open("data.json", "r") as f:
+    # 0 - corp, 1 - private
+    env = 1
+    target_file = GetResultFile(
+        bag_path) if env == 0 else "2025-08-04-20-40-49.json"
+
+    with open(target_file, "r") as f:
         result = json.load(f)
-    # parking_slot_eva.draw_points(result, "my_points.svg")
 
-    error_vec = [0.12, 0.15, 0.6, 1.1]
-    slot_info = [6.2, 2.4]
+    parking_slot_eva.draw_points(result, "original_data_before_coord_tf.svg")
 
+    ## 2. evaluation
     parking_slot_eva.set_input(
-        error_vec,
-        slot_info,
+        result["error"],
+        result["slot_info"],
         result["ego_pose_vec"],
         result["vis_slot"],
         result["occ_obstacle"],
         result["planning_path_vec"],
     )
-
     parking_slot_eva.update()
 
+    ## in evaluation mode use measured slot info, else use final fusion slot as true value
+
+    # is_use_measured_slot = True
+
+    # if is_use_measured_slot == True:
     slot_length = parking_slot_eva.true_slot_length_
     slot_width = parking_slot_eva.true_slot_width_
+    ego_pose_vec = parking_slot_eva.ego_pose_message_true_slot_
+    planning_path_vec = parking_slot_eva.planning_message_true_slot_
+    slot_vec = parking_slot_eva.slot_message_true_slot_
+    obs_vec = parking_slot_eva.occ_obstacle_message_true_slot_
 
-    final_fus_slot = [[slot_length, slot_width], [0.0, slot_width],  [0.0, 0.0], [slot_length, 0.0]]
+    # else:
+    #     final_fus_slot = result['final_fus_slot'] ## final_fus_slot is corrected in anti-clock wise dir
+    #     p0 = np.array(final_fus_slot[0])
+    #     p1 = np.array(final_fus_slot[1])
+    #     p2 = np.array(final_fus_slot[2])
+
+    #     p3 = np.array(final_fus_slot[3])
+
+    #     d01 = np.linalg.norm(p1 - p0)
+    #     d03 = np.linalg.norm(p3 - p0)
+
+    #     d23 = np.linalg.norm(p2 - p3)
+
+    #     d12 = np.linalg.norm(p2 - p1)
+
+    #     print("edge = ", d01, d12, d03, d23)
+    #     slot_length = max(d01, d03)
+    #     slot_width = min(d01, d03)
+    #     print("slot_length = ", slot_length)
+    #     print("slot_width = ", slot_width)
+
+    final_fus_slot = [[0.0, 0.0], [slot_length, 0.0], [slot_length, slot_width],
+                      [0.0, slot_width]]
 
     parking_slot_eva.draw_messages(
-        parking_slot_eva.ego_pose_message_true_slot_,
-        parking_slot_eva.planning_message_true_slot_,
+        ego_pose_vec,
+        planning_path_vec,
         final_fus_slot,
-        parking_slot_eva.slot_message_true_slot_,
-        parking_slot_eva.occ_obstacle_message_true_slot_[0],
+        slot_vec,
+        obs_vec[2],
         save_path="corrected_data.svg",
     )
 
     print("len(slot) = ", len(parking_slot_eva.slot_message_true_slot_))
-    print("len(ego pose vec) = ", len(parking_slot_eva.ego_pose_message_true_slot_))
+    print("len(ego pose vec) = ",
+          len(parking_slot_eva.ego_pose_message_true_slot_))
 
     ## evaluation
