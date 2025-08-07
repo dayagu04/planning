@@ -10,6 +10,7 @@
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
 #include "longitudinal_motion_planner.pb.h"
+#include "map_data.pb.h"
 #include "mjson/mjson.hpp"
 #include "planning_def.h"
 #include "spline.h"
@@ -195,6 +196,8 @@ struct RouteInfoOutput {
   std::vector<NOASplitRegionInfo> split_region_info_list;
   EgoStatusOnRoute ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
   std::vector<NOASplitRegionInfo> merge_region_info_list;
+  iflymapdata::sdpro::MapVendorType map_vendor =
+      iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -250,6 +253,7 @@ struct RouteInfoOutput {
     split_region_info_list.clear();
     ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
     merge_region_info_list.clear();
+    map_vendor = iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

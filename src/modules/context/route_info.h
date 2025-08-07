@@ -60,7 +60,7 @@ class RouteInfo {
   void UpdateMLCInfoDecider(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
 
-  void NewUpdateMLCInfoDecider(
+  void UpdateMLCInfoDeciderBaseTencent(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
 
   void UpdateVisionInfo() const;

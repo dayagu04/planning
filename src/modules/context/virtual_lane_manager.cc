@@ -816,12 +816,15 @@ bool VirtualLaneManager::update(
         route_info_output_.distance_to_route_end <
             cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
-      // route_info->UpdateMLCInfoDecider(relative_id_lanes_);
-      // for (const auto& relative_id_lane : relative_id_lanes_) {
-      //   relative_id_lane->update_lane_tasks(
-      //       route_info->get_route_info_output());
-      // }
-      route_info->NewUpdateMLCInfoDecider(relative_id_lanes_);
+      if (route_info_output_.map_vendor == iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+        route_info->UpdateMLCInfoDecider(relative_id_lanes_);
+        for (const auto& relative_id_lane : relative_id_lanes_) {
+          relative_id_lane->update_lane_tasks(
+              route_info->get_route_info_output());
+        }
+      } else {
+        route_info->UpdateMLCInfoDeciderBaseTencent(relative_id_lanes_);
+      }
     }
   } else {
     route_info->ResetMLCInfoDecider();
@@ -1050,12 +1053,15 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
         route_info_output_.distance_to_route_end <
             cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
-      // route_info->UpdateMLCInfoDecider(relative_id_lanes_);
-      // for (const auto& relative_id_lane : relative_id_lanes_) {
-      //   relative_id_lane->update_lane_tasks(
-      //       route_info->get_route_info_output());
-      // }
-      route_info->NewUpdateMLCInfoDecider(relative_id_lanes_);
+      if (route_info_output_.map_vendor == iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+        route_info->UpdateMLCInfoDecider(relative_id_lanes_);
+        for (const auto& relative_id_lane : relative_id_lanes_) {
+          relative_id_lane->update_lane_tasks(
+              route_info->get_route_info_output());
+        }
+      } else {
+        route_info->UpdateMLCInfoDeciderBaseTencent(relative_id_lanes_);
+      }
     }
   } else {
     route_info->ResetMLCInfoDecider();

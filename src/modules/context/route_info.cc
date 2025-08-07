@@ -118,6 +118,8 @@ void RouteInfo::UpdateRouteInfoForNOA(
   }
   const iflymapdata::sdpro::LinkInfo_Link& current_link = *link;
 
+  route_info_output_.map_vendor = local_view_.sdpro_map_info.data_source();
+
   //计算ramp信息
   // CaculateRampInfo(sdpro_map, current_link, nearest_s, max_search_length);
 
@@ -1566,7 +1568,7 @@ void RouteInfo::UpdateMLCInfoDecider(
       need_continue_lc_num_on_off_ramp_region;
 }
 
-void RouteInfo::NewUpdateMLCInfoDecider(
+void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
   if (relative_id_lanes.empty()) {
     mlc_decider_route_info_.reset();
