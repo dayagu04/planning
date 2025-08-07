@@ -513,11 +513,12 @@ bool LateralMotionPlanner::AssembleInput() {
              (!is_use_spatio_planner_result)) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::RAMP,
                                                  planning_input_);
-  } else if (!is_use_spatio_planner_result &&
+  } else if (general_lateral_decider_output.bound_avoid ||
+             (!is_use_spatio_planner_result &&
              (lateral_offset_decider_output.is_valid ||
               (avoid_back_status &&
                ((ref_vel > config_.avoid_high_vel) ||
-                 is_in_intersection)))) {
+                 is_in_intersection))))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::AVOID,
                                                  planning_input_);
   } else {

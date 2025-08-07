@@ -3825,6 +3825,9 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
   auto &lateral_offset_decider_output =
       session_->mutable_planning_context()
           ->mutable_lateral_offset_decider_output();
+  auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
   const double planning_init_point_l =
       ego_frenet_state_.planning_init_point().frenet_state.r;
   auto check_and_add_avoid_id = [&](const BoundInfo& bound_info, double bound_value, bool is_upper) {
@@ -3859,6 +3862,7 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
     check_and_add_avoid_id(soft_bounds_info[i].first, frenet_soft_bounds[i].first, false); // lower
     check_and_add_avoid_id(soft_bounds_info[i].second, frenet_soft_bounds[i].second, true);  // upper
   }
+  general_lateral_decider_output.bound_avoid = !lateral_offset_decider_output.avoid_ids.empty();
   std::vector<double> avoid_ids_double(lateral_offset_decider_output.avoid_ids.begin(),
       lateral_offset_decider_output.avoid_ids.end());
   JSON_DEBUG_VECTOR("lateral_avoid_ids", avoid_ids_double, 0);
