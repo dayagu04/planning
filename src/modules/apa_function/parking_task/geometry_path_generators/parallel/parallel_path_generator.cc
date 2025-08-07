@@ -1044,6 +1044,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   std::vector<pnc::geometry_lib::PathPoint> target2prepare_line;
   std::vector<std::pair<int, pnc::geometry_lib::PathPoint>> car2line;
   std::unordered_map<double, int> tiled_success_cnt_map;
+  bool short_channel_flag = calc_params_.slot_side_sgn *
+      (input_.tlane.obs_pt_inside.y() - input_.tlane.corner_inside_slot.y()) > 0.5;
   for (size_t i = 0; i < preparing_pose_vec.size(); i++) {
     ILOG_INFO << "No. " << i;
     geometry_lib::PrintPose("prepare pose", preparing_pose_vec[i]);
@@ -1051,12 +1053,13 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     (parallel_line_size <= i && i < tiled_line_size && tiled_success_cnt > 1)) {
       continue;
     }
-    if (i >= tiled_line_size && aligned_success_cnt + parallel_success_cnt + tiled_success_cnt > 0) {
+    if ((i >= tiled_line_size && aligned_success_cnt + parallel_success_cnt + tiled_success_cnt > 0)
+        && !short_channel_flag) {
       ILOG_INFO << "commonly prepare success, so skip!";
       break;
     }
     if (tiled_success_cnt_map[preparing_pose_vec[i].heading] >= 1 ||
-       (tiled_line_size <= i && i < big_ang_tiled_line_size && big_ang_tiled_success_cnt > 5)) {
+       (tiled_line_size <= i && i < big_ang_tiled_line_size && big_ang_tiled_success_cnt > 2)) {
       continue;
     }
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
@@ -1489,7 +1492,7 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
   std::vector<double> heading_vec = {47.5, 50.0, 60.0, 40.0, 55.0};
 
   const double step = 0.2;
-  size_t max_num = 5;
+  size_t max_num = 10;
 
   for (const auto& heading_deg : heading_vec) {
     const double heading_rad = heading_deg * kDeg2Rad;
@@ -1518,19 +1521,6 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
 
         if (std::fabs(start_pos.x()) - 2.0 <
             std::fabs(input_.tlane.obs_pt_outside.x())) {
-          break;
-        }
-
-        preparing_pose_vec.emplace_back(
-            pnc::geometry_lib::PathPoint(start_pos, heading_rad));
-      }
-
-      x_tmp << 1.0, 0.0;
-      for (size_t i = 0; i < max_num; i++) {
-        auto start_pos = tp + x_tmp * input_.tlane.slot_side_sgn * i * step + y_tmp * 2;
-
-        if (std::fabs(start_pos.x()) + 1.0 >
-            std::fabs(input_.tlane.obs_pt_inside.x())) {
           break;
         }
 
