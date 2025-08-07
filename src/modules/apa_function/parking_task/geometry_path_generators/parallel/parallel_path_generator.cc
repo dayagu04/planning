@@ -1020,15 +1020,43 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
 
   GenTiltedPreparingLine(preparing_pose_vec);
   ILOG_INFO << "total preparing line size= " << preparing_pose_vec.size();
+  const double tiled_line_size = preparing_pose_vec.size();
+
+  bool ret = GenTiltedPreparingLine2ShortChannel(preparing_pose_vec);
+  if (!ret) {
+    ILOG_WARN << "GenTiltedPreparingLine2ShortChannel failed!";
+  }
+  ILOG_INFO << "total2 preparing line size= " << preparing_pose_vec.size();
+  const double big_ang_tiled_line_size = preparing_pose_vec.size();
+  for ( int k = tiled_line_size; k < big_ang_tiled_line_size; k++) {
+    pnc::geometry_lib::LineSegment line_seg(preparing_pose_vec[k].pos,
+      preparing_pose_vec[k].heading, 1, 1);
+    debug_info_.debug_line_vec.emplace_back(line_seg);
+  }
+  ILOG_INFO << "big_ang_tiled_line_size = " << debug_info_.debug_line_vec.size();
 
   size_t aligned_success_cnt = 0;
   size_t total_success_cnt = 0;
   size_t parallel_success_cnt = 0;
+  size_t tiled_success_cnt = 0;
+  size_t big_ang_tiled_success_cnt = 0;
+  std::vector<std::pair<int, pnc::geometry_lib::PathPoint>> target2line;
+  std::vector<pnc::geometry_lib::PathPoint> target2prepare_line;
+  std::vector<std::pair<int, pnc::geometry_lib::PathPoint>> car2line;
+  std::unordered_map<double, int> tiled_success_cnt_map;
   for (size_t i = 0; i < preparing_pose_vec.size(); i++) {
     ILOG_INFO << "No. " << i;
     geometry_lib::PrintPose("prepare pose", preparing_pose_vec[i]);
-    if (i >= aligned_size && i < parallel_line_size &&
-        parallel_success_cnt > 1) {
+    if ((i >= aligned_size && i < parallel_line_size && parallel_success_cnt > 1)||
+    (parallel_line_size <= i && i < tiled_line_size && tiled_success_cnt > 1)) {
+      continue;
+    }
+    if (i >= tiled_line_size && aligned_success_cnt + parallel_success_cnt + tiled_success_cnt > 0) {
+      ILOG_INFO << "commonly prepare success, so skip!";
+      break;
+    }
+    if (tiled_success_cnt_map[preparing_pose_vec[i].heading] >= 1 ||
+       (tiled_line_size <= i && i < big_ang_tiled_line_size && big_ang_tiled_success_cnt > 5)) {
       continue;
     }
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
@@ -1053,6 +1081,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     const auto prepare_pose = inversed_park_out_path.front().GetStartPose();
     const auto prepare_line = pnc::geometry_lib::BuildLineSegByPose(
         prepare_pose.pos, prepare_pose.heading);
+    target2line.emplace_back(std::make_pair(i, preparing_pose_vec[i]));
+    target2prepare_line.emplace_back(prepare_pose);
 
     // search min dist of ego corner to obs, which is used the minimal value
     // with
@@ -1092,14 +1122,21 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       aligned_success_cnt++;
     } else if (i < parallel_line_size) {
       parallel_success_cnt++;
+    } else if (i < tiled_line_size) {
+      tiled_success_cnt++;
+    } else if (i < big_ang_tiled_line_size) {
+      big_ang_tiled_success_cnt++;
     }
     ILOG_INFO << "calc success!";
     total_success_cnt++;
-    // ILOG_INFO <<"calc success!");
+    tiled_success_cnt_map[preparing_pose_vec[i].heading]++;
+    car2line.emplace_back(std::make_pair(i, preparing_pose_vec[i]));
     geo_path_vec.emplace_back(tmp_geo_path);
   }
   ILOG_INFO << "aligned_success_cnt = " << aligned_success_cnt;
   ILOG_INFO << "parallel_success_cnt = " << parallel_success_cnt;
+  ILOG_INFO << "tiled_success_cnt = " << tiled_success_cnt;
+  ILOG_INFO << "big_ang_tiled_success_cnt = " << big_ang_tiled_success_cnt;
 
   ILOG_INFO << "path size = " << geo_path_vec.size();
   if (geo_path_vec.size() == 0) {
@@ -1439,6 +1476,71 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine(
   }
 
   return true;
+}
+
+const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
+  const double slot_side_sgn = calc_params_.slot_side_sgn;
+  const double half_car_width = 0.5 * apa_param.GetParam().car_width;
+
+  const double channel_width =
+      std::fabs(input_.tlane.channel_y) - 0.5 * input_.tlane.slot_width;
+
+  std::vector<double> heading_vec = {47.5, 50.0, 60.0, 40.0, 55.0};
+
+  const double step = 0.2;
+  size_t max_num = 5;
+
+  for (const auto& heading_deg : heading_vec) {
+    const double heading_rad = heading_deg * kDeg2Rad;
+    const auto v_preparing_line_heading =
+        pnc::geometry_lib::GenHeadingVec(heading_rad);
+
+    const Eigen::Vector2d v_preparing_line_norm(-v_preparing_line_heading.y(),
+                                                v_preparing_line_heading.x());
+
+    Eigen::Vector2d tp(0.0, 0.0);
+    for (int k = 0; k < calc_params_.inversed_path_vec_in_slot.size(); k++) {
+      std::vector<Eigen::Vector2d> tangent_points;
+      bool ret = pnc::geometry_lib::CalTangentLineFromHeadingAndArc(heading_rad,
+        calc_params_.inversed_path_vec_in_slot[k].path_segment_vec.back().GetArcSeg(),
+        tangent_points);
+      if (!ret) {
+        ILOG_INFO << "CalTangentLineFromHeadingAndArc failed!";
+        continue;
+      }
+      tp = tangent_points[0];
+      Eigen::Vector2d x_tmp(-1.0, 0.0);
+      Eigen::Vector2d y_tmp(0.0, 1.0);
+      ILOG_INFO << "tangent_points_0: " << tangent_points[0].transpose();
+      for (size_t i = 0; i < max_num; i++) {
+        auto start_pos = tp + x_tmp * input_.tlane.slot_side_sgn * i * step + y_tmp * 2;
+
+        if (std::fabs(start_pos.x()) - 2.0 <
+            std::fabs(input_.tlane.obs_pt_outside.x())) {
+          break;
+        }
+
+        preparing_pose_vec.emplace_back(
+            pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+      }
+
+      x_tmp << 1.0, 0.0;
+      for (size_t i = 0; i < max_num; i++) {
+        auto start_pos = tp + x_tmp * input_.tlane.slot_side_sgn * i * step + y_tmp * 2;
+
+        if (std::fabs(start_pos.x()) + 1.0 >
+            std::fabs(input_.tlane.obs_pt_inside.x())) {
+          break;
+        }
+
+        preparing_pose_vec.emplace_back(
+            pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+      }
+    }
+  }
+
+  return preparing_pose_vec.empty() ? false : true;
 }
 
 const bool ParallelPathGenerator::SelectBestPathOutsideSlot(
@@ -2253,6 +2355,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
             << sorted_path_vec.size();
 
   // 为了降低运算，此处选择最优和最靠后的路径，来解决短通道无法行驶到最优路径的问题。
+  std::vector<GeometryPath> selected_path_vec;
   if (sorted_path_vec.size() > 1) {
     const double base_x =
         sorted_path_vec.front().path_segment_vec.back().GetStartPos().x();
@@ -2268,14 +2371,26 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
       }
     }
 
+    const double kMaxHeadingDeg = 65.0;
+    int max_heading_id = 0;
+    double base_heading = sorted_path_vec.front().park_out_heading_deg;
+    for (int i = 1; i < sorted_path_vec.size(); ++i) {
+      double cur_heading = sorted_path_vec[i].park_out_heading_deg;
+      if (cur_heading > base_heading && cur_heading < kMaxHeadingDeg) {
+        max_heading_id = i;
+      }
+    }
+
     constexpr double kXDiffThreshold = 0.4;
     if ((base_x - min_x) > kXDiffThreshold) {
-      sorted_path_vec = {sorted_path_vec.front(), sorted_path_vec[min_x_idx]};
+      selected_path_vec = {sorted_path_vec.front(), sorted_path_vec[min_x_idx]};
     } else {
-      sorted_path_vec = {sorted_path_vec.front()};
+      selected_path_vec = {sorted_path_vec.front()};
+    }
+    if (sorted_path_vec[max_heading_id].park_out_heading_deg - sorted_path_vec.front().park_out_heading_deg > 1.0) {
+      selected_path_vec.emplace_back(sorted_path_vec[max_heading_id]);
     }
   }
-
   // std::cout << std::endl;
   // std::cout << "gear    = ";
   // for (const auto& path : sorted_path_vec) {
@@ -2283,6 +2398,8 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   // }
   // std::cout << std::endl;
 
+  debug_info_.debug_inslot_path_vec = selected_path_vec;
+  sorted_path_vec = selected_path_vec;
   // std::cout << "heading = ";
   // for (const auto& path : sorted_path_vec) {
   //   std::cout << std::setw(10) << path.park_out_heading_deg;
@@ -2300,6 +2417,11 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   // for (const auto& path : sorted_path_vec) {
   //   std::cout << std::setw(10)
   //             << path.path_segment_vec.back().GetStartPose().pos.y();
+  // }
+  // std::cout << std::endl;
+  // std::cout << "heading = ";
+  // for (const auto& path : selected_path_vec) {
+  //   std::cout << std::setw(10) << path.park_out_heading_deg;
   // }
   // std::cout << std::endl;
   return true;

@@ -141,6 +141,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
 
     std::vector<GeometryPath> inversed_path_vec_in_slot;
+    std::vector<double> ang_inversed_vec;
 
     std::vector<std::vector<pnc::geometry_lib::PathSegment>>
         suc_rev_parking_out_vec;
@@ -189,6 +190,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
     std::vector<pnc::geometry_lib::PathPoint> point_vec;
     std::vector<std::vector<Eigen::Vector2d>> line_pt_vec;
+    std::vector<pnc::geometry_lib::LineSegment> debug_line_vec;
+    std::vector<GeometryPath> debug_inslot_path_vec;
 
     void Reset() {
       debug_arc_vec.clear();
@@ -360,6 +363,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const bool GenTiltedPreparingLine(
       std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
+
+const bool GenTiltedPreparingLine2ShortChannel(
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec);
 
   const bool CheckEgoInSlot() const;
   const bool CalMinSafeCircle();

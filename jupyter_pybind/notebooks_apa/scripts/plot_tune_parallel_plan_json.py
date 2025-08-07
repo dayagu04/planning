@@ -46,6 +46,8 @@ data_in_slot_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 data_tra_search_out_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_debug_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_all_prepare_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_car_in_slot_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 data_slot = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
@@ -92,8 +94,8 @@ fig1.xaxis.major_label_text_font = 'Times New Roman'      # 设置字体类型
 fig1.yaxis.major_label_text_font_size = '18pt'
 fig1.yaxis.major_label_text_font = 'Times New Roman'
 
-fig1.xaxis.ticker = SingleIntervalTicker(interval = 4, num_minor_ticks=0)
-fig1.yaxis.ticker = SingleIntervalTicker(interval = 4, num_minor_ticks=0)
+fig1.xaxis.ticker = SingleIntervalTicker(interval = 1, num_minor_ticks=0)
+fig1.yaxis.ticker = SingleIntervalTicker(interval = 1, num_minor_ticks=0)
 
 fig1.xgrid.grid_line_color = None
 fig1.ygrid.grid_line_color = None
@@ -168,7 +170,10 @@ fig1.js_on_event(Tap, callback)
 
 # start drawing debug info
 fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible = False)
-fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = True)
+fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = True)
+fig1.multi_line('x_vec', 'y_vec', source = data_car_in_slot_path, line_width = 1.0, line_color = 'blue', line_dash = 'solid',legend_label = 'car in slot line', visible = True)
+# fig1.scatter("x_vec", "y_vec", source=data_all_prepare_path, size=1, color='grey',legend_label = 'all prepare line pt')
+fig1.multi_line('x_vec', 'y_vec', source = data_all_prepare_path, line_width = 1.0, line_color = 'pink', line_dash = 'dashed',legend_label = 'all prepare line pt', visible = True)
 fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'Car Path', visible = True)
 
 # target slot
@@ -225,18 +230,18 @@ class LocalViewSlider:
     self.is_rear_occupied_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is rear occupied",min=0, max=1, value= 1, step=1)
     self.is_all_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "all debug path",min=0, max=1, value= 0, step=1)
     # ego pose
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 2.22, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 3.88, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= -24.3, step=0.1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= -1.11, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 2.33, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 0, step=0.1)
     # slot pt
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot length",min=5.0, max=8.0, value=6.0, step=0.01)
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "width",min=2.0, max=3.0, value=2.2, step=0.01)
     # obs
     self.lon_space_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lon_space_dx",min=-1.0, max=4.0, value=0.79, step=0.01)
     self.curb_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb offset ",min=-1.0, max=1.0, value=0.3, step=0.01)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=3.3, step=0.01)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel width",min=2.5, max=10.0, value=6.25, step=0.01)
 
-    self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=0.19, step=0.01)
+    self.front_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs y",min=-2.0, max=4.0, value=2.16, step=0.01)
     self.front_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
 
     self.rear_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs y",min=-2.0, max=4.0, value=0.0, step=0.01)
@@ -375,6 +380,14 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
         'x_vec': [],
         'y_vec': [],
   })
+  data_all_prepare_path.data.update({
+        'x_vec': [],
+        'y_vec': [],
+  })
+  data_car_in_slot_path.data.update({
+      'x_vec': [],
+      'y_vec': [],
+  })
 
   if parallel_planning_py.UpdateByJson(obs_x_vec, obs_y_vec, slot_width, slot_length, ego_x, ego_y,
                 ego_heading_rad, ds):
@@ -498,6 +511,18 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
       'x_vec': tra_search_out_path[0],
       'y_vec': tra_search_out_path[1],
     })
+
+  # prepare_pat = parallel_planning_py.GetPreparePath()
+  # print(f"len: {len(prepare_pat)} x: {prepare_pat[0][0]} y: {prepare_pat[1][0]}")
+  # data_all_prepare_path.data.update({
+  #   'x_vec': [list(x_path) for x_path in prepare_pat[0]],
+  #   'y_vec': [list(y_path) for y_path in prepare_pat[1]],
+  # })
+  car_in_slot_path = parallel_planning_py.GetDebugInSlotPath()
+  data_car_in_slot_path.data.update({
+    'x_vec': [list(x_path) for x_path in car_in_slot_path[0]],
+    'y_vec': [list(y_path) for y_path in car_in_slot_path[1]],
+  })
 
   obs_in_tboundary = parallel_planning_py.GetParkPlannerObs()
   # obstacles

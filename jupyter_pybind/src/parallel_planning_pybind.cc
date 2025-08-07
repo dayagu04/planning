@@ -424,6 +424,49 @@ std::vector<std::vector<double>> GetTraSearchOutPath() {
   res.emplace_back(path_heading_vec);
   return res;
 }
+
+std::vector<std::vector<std::vector<double>>> GetPreparePath() {
+  std::vector<std::vector<double>> resx;
+  std::vector<std::vector<double>> resy;
+  for (const auto &path: pBase->GetDebugInfo().debug_line_vec){
+    std::vector<double> path_x_vec;
+    std::vector<double> path_y_vec;
+    std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
+    pnc::geometry_lib::SamplePointSetInLineSeg(path_point_vec, path, 0.2, 0.0);
+    for (const auto &path_point : path_point_vec) {
+      path_x_vec.emplace_back(path_point.pos.x());
+      path_y_vec.emplace_back(path_point.pos.y());
+    }
+    resx.emplace_back(path_x_vec);
+    resy.emplace_back(path_y_vec);
+  }
+  std::vector<std::vector<std::vector<double>>> res;
+  res.emplace_back(resx);
+  res.emplace_back(resy);
+  return res;
+}
+
+std::vector<std::vector<std::vector<double>>> GetDebugInSlotPath() {
+  std::vector<std::vector<double>> resx;
+  std::vector<std::vector<double>> resy;
+  for (const auto &path: pBase->GetDebugInfo().debug_inslot_path_vec){
+    std::vector<double> path_x_vec;
+    std::vector<double> path_y_vec;
+    std::vector<pnc::geometry_lib::PathPoint> path_point_vec =
+        pnc::geometry_lib::SamplePathSegVec(path.path_segment_vec, 0.02);
+    for (const auto &path_point : path_point_vec) {
+      path_x_vec.emplace_back(path_point.pos.x());
+      path_y_vec.emplace_back(path_point.pos.y());
+    }
+    resx.emplace_back(path_x_vec);
+    resy.emplace_back(path_y_vec);
+  }
+  std::vector<std::vector<std::vector<double>>> res;
+  res.emplace_back(resx);
+  res.emplace_back(resy);
+  return res;
+}
+
 std::vector<std::vector<double>> GetDebugPathsX() { return debug_paths_x; }
 std::vector<std::vector<double>> GetDebugPathsY() { return debug_paths_y; }
 
@@ -532,5 +575,7 @@ PYBIND11_MODULE(parallel_planning_py, m) {
       .def("GetObsY", &GetObsY)
       .def("GetVirtualObsX", &GetVirtualObsX)
       .def("GetVirtualObsY", &GetVirtualObsY)
-      .def("GetInverseArcVec", &GetInverseArcVec);
+      .def("GetInverseArcVec", &GetInverseArcVec)
+      .def("GetPreparePath", &GetPreparePath)
+      .def("GetDebugInSlotPath", &GetDebugInSlotPath);
 }
