@@ -175,7 +175,8 @@ class GeneralLateralDecider : public Task {
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
-                                bool is_update_hard_bound = false);
+                                bool is_update_hard_bound = false,
+                                bool is_avoid_side_ignore_obj = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -312,9 +313,9 @@ class GeneralLateralDecider : public Task {
   bool enable_emergency_avoid_ = false;
   HysteresisDecision has_enough_speed_bound_recurrence_hysteresis_;
   bool is_use_recurrence_ = false;
-
   RoadCurvatureInfo ref_curve_info_;
   double last_compensation_buffer_ = 0.0;
+  std::unordered_map<uint32_t, double> desire_final_nudge_l_map_;
 };
 
 }  // namespace planning

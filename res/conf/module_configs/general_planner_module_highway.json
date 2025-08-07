@@ -173,6 +173,8 @@
   "is_use_last_lon_information": false,
   "extra_truck_lat_buffer": 0.1,
   "start_nudge_ttc": 5,
+  "side_2_front_count_thr": 10,
+  "side_2_front_max_count": 20,
   "expand_ego_vel": [0, 10],
   "expand_obs_rel_vel": [0, 1],
   "base_nudge_distance": 0.85,
@@ -291,7 +293,9 @@
     "nudge_buffer2lane_boundary_buffer": 0.1,
     "max_care_time_for_roadborder":3.5,
     "curv_bp":[50, 200, 400, 600],
-    "lat_compensation_buffer":[0.2, 0.15, 0.1, 0.0]
+    "lat_compensation_buffer":[0.2, 0.15, 0.1, 0.0],
+    "max_nudge_buffer2side_car": 0.6
+
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,

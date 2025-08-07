@@ -1766,6 +1766,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "lat_compensation_buffer"},
         lat_compensation_buffer);
+    ReadItem<double>(json, max_nudge_buffer2side_car,
+                     "general_lateral_decider",
+                     "max_nudge_buffer2side_car");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1877,6 +1880,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double max_care_time_for_roadborder = 3;
   std::vector<double> curv_bp{50, 150, 400, 600};
   std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0, 0.0};
+  double max_nudge_buffer2side_car = 0.3;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

@@ -265,6 +265,24 @@ bool LateralObstacleDecider::Execute() {
         history.side_car = false;
         history.rear_car = true;
       }
+      if (history.side_car) {
+        // 针对侧方->前方位置的转化，为了避免障碍物长时间在自车侧方导致不合理限制避让幅度从而引入记时操作
+        if (std:: fabs(frenet_obs->d_s_rel()) <= history.overlap_ego_head_thr) {
+          history.side_2_front_count = std::min(history.side_2_front_count + 1, side_2_front_max_count);
+        } else {
+          history.side_2_front_count = std::max(history.side_2_front_count - 1, 0);
+        }
+        if (history.side_2_front_count > side_2_front_count_thr) {
+          history.front_car = true;
+          history.rear_car = false;
+          history.overlap_ego_head_thr = 2.5;
+        } else {
+          history.overlap_ego_head_thr = 2;
+        }
+      } else {
+        history.side_2_front_count = 0;
+        history.overlap_ego_head_thr = 2;
+      }
       if (CalculateCutInAndCross(*frenet_obs, reference_path_ptr, lane_width)) {
         // history.is_avd_car = false;
         // history.ncar_count = 0;
