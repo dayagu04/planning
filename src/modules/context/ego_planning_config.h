@@ -1301,6 +1301,13 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                           std::vector<std::string>{"potential_follow_obstacle",
                                                    "lane_width_factor"},
                           lane_width_factor);
+    side_2_front_count_thr = read_json_key<int>(
+        json, "side_2_front_count_thr", side_2_front_count_thr);
+    side_2_front_max_count = read_json_key<int>(
+        json, "side_2_front_max_count", side_2_front_max_count);
+    open_side_lat_offset_nudge = read_json_key<bool>(
+        json, "open_side_lat_offset_nudge", open_side_lat_offset_nudge);
+
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1349,6 +1356,9 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   std::vector<double> distacle_to_ego_bp_factor{0.5, 0.5, 0.5, 0.5, 0.5};
   std::vector<double> lane_width_bp{3.2, 3.5, 3.8};
   std::vector<double> lane_width_factor{1, 1, 1};
+  int side_2_front_count_thr = 3;
+  int side_2_front_max_count = 5;
+  bool open_side_lat_offset_nudge = false;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -1486,6 +1496,8 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
     v_limit_max = read_json_key<double>(json, "v_limit_max", v_limit_max);
     ReadItem<double>(json, extra_truck_nudge_lat_offset,
                      "lateral_offset_decider", "extra_truck_nudge_lat_offset");
+    open_side_lat_offset_nudge = read_json_key<bool>(
+        json, "open_side_lat_offset_nudge", open_side_lat_offset_nudge);
   }
   double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
@@ -1508,6 +1520,7 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   double care_dynamic_object_t_threshold = 0.0;
   double care_static_object_t_threshold = 0.0;
   double extra_truck_nudge_lat_offset = 0.0;
+  bool open_side_lat_offset_nudge = false;
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
