@@ -4,6 +4,7 @@
 
 #include "camera_perception_tsr_c.h"
 #include "camera_perception_scene_c.h"
+#include "camera_perception_occupancy_grid_c.h"
 #include "component_intf.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
@@ -67,6 +68,11 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::CameraPerceptionTsrInfo &data) = 0;
   virtual void Feed_IflytekCameraPerceptionScene(
       const iflyauto::CameraPerceptionScene &data) = 0;
+  virtual void Feed_IflytekCameraPerceptionOccGrid(
+      const iflyauto::CameraPerceptionOccGridInfo &data) = 0;
+    
+  virtual void Feed_IflytekCameraPerceptionDrivableSpaceGrid(
+      const iflyauto::CameraPerceptionDrivableSpaceGridInfo &data) = 0;
   virtual void Feed_IflytekFusionObjects(
       const iflyauto::FusionObjectsInfo &data) = 0;
   virtual void Feed_IflytekFusionOccupancyObjects(
