@@ -472,6 +472,8 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->prediction_result.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->prediction_result.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
@@ -480,9 +482,13 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   if (IsSwitchApaState(state_machine.current_state)) {
     msg_meta.input_list[input_list_count].seq =
         local_view_ptr_->parking_fusion_info.msg_header.seq;
+    msg_meta.input_list[input_list_count].stamp =
+        local_view_ptr_->parking_fusion_info.msg_header.stamp;
   } else {
     msg_meta.input_list[input_list_count].seq =
         local_view_ptr_->road_info.msg_header.seq;
+    msg_meta.input_list[input_list_count].stamp =
+        local_view_ptr_->road_info.msg_header.stamp;
   }
   input_list_count += 1;
 
@@ -490,60 +496,88 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->localization.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->localization.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->fusion_objects_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->fusion_objects_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_VIHECLE_SERVICES;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->vehicle_service_output_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->vehicle_service_output_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CONTROL;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->control_output.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->control_output.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->hmi_inner_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->hmi_inner_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->function_state_machine_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->function_state_machine_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_WAVE;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->uss_wave_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->uss_wave_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_PERCEPTION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->uss_percept_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->uss_percept_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->static_map_info.header().seq();
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->static_map_info.header().timestamp();
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->sd_map_info.header().seq();
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->sd_map_info.header().timestamp();
+  input_list_count += 1;
+
+  msg_meta.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
+  msg_meta.input_list[input_list_count].seq =
+      local_view_ptr_->perception_tsr_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->perception_tsr_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list_size = input_list_count;
