@@ -3659,17 +3659,17 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
-  bool bound_avoid = false;
+  // bool bound_avoid = false;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
-        ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
-      bound_avoid = true;
-    }
+    // if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
+    //     ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
+    //   bound_avoid = true;
+    // }
     ref_traj_points_[i].l =
         std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
                  frenet_soft_bounds[i].second);
   }
-  general_lateral_decider_output.bound_avoid = bound_avoid;
+  // general_lateral_decider_output.bound_avoid = bound_avoid;
 }
 
 void GeneralLateralDecider::GenerateLateralDeciderOutput(
