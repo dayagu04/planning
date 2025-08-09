@@ -71,6 +71,7 @@ class SpeedLimitDecider : public Task {
   double v_avoid_hold_ = 0.0;
   pnc::filters::SlopeFilter vel_slope_filter_function_fading_away_;
   double last_vel_function_fading_away_;
+  double v_cruise_limit_;//kph
 
   // used in intersection speed limit
   planning::common::IntersectionState last_intersection_state_ =

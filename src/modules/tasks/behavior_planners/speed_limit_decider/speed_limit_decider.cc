@@ -199,6 +199,9 @@ bool SpeedLimitDecider::Execute() {
   } else {
     ad_info.is_curva = false;
   }
+  v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
+  JSON_DEBUG_VALUE("v_cruise_limit", v_cruise_limit_);
+  ad_info.cruise_speed = v_cruise_limit_;
   return true;
 }
 
@@ -372,11 +375,41 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
   ILOG_DEBUG << "----CalculateMapSpeedLimit for ramp---";
   const auto &environmental_model = session_->environmental_model();
+  const auto &function_state_machine_info =
+              environmental_model.get_local_view().function_state_machine_info;
+  double v_cruise_fsm = function_state_machine_info.pilot_req.acc_curise_real_spd;
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
+  //set v_cruise_limit by map info
+  if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
+    std::cout << "sd_map is invalid!!!" << std::endl;
+    //map info invalid, using fsm cruise speed
+    v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+  }
+  ad_common::math::Vec2d current_point;
+  const auto &ego_state = environmental_model.get_ego_state_manager();
+  const auto &pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+  double nearest_s = 0;
+  double nearest_l = 0;
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
+      current_point, search_distance, ego_heading_angle, max_heading_diff,
+      nearest_s, nearest_l);
+  if (current_segment == nullptr) {
+    //get ego link failed, using fsm cruise speed
+    v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+  } else {
+    v_cruise_limit_ = current_segment->speed_limit();//kph
+  }
+
   const auto virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
@@ -430,6 +463,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         }
       }
     }
+    v_cruise_limit_ = 80;//80kph in ramp in first version
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
       v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
