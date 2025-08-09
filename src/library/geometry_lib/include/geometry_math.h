@@ -57,6 +57,8 @@ enum PathSegGear {
   SEG_GEAR_INVALID,
   SEG_GEAR_DRIVE,
   SEG_GEAR_REVERSE,
+  SEG_GEAR_PARK,
+  SEG_GEAR_NEUTRAL,
   SEG_GEAR_COUNT,
 };
 
@@ -282,6 +284,7 @@ struct PathPoint {
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
   // Distance from obstacle to vehicle safe buffer border
   double dist_to_obs = 26.8;
+  uint8_t gear = SEG_GEAR_DRIVE;
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
@@ -1252,6 +1255,9 @@ void SampleInLineSegment(const Eigen::Vector2d &start,
                          std::vector<Eigen::Vector2d> &points);
 
 void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint> &path);
+
+const double GetSecondGearPathLength(
+    const std::vector<pnc::geometry_lib::PathPoint> &path);
 
 }  // namespace geometry_lib
 }  // namespace pnc

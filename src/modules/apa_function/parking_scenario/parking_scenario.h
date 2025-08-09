@@ -48,6 +48,7 @@ class ParkingScenario {
     SEG_COMPLETED_SLOT_JUMP,
     PATH_DANGEROUS,
     SLOT_CRUISING,
+    DYNAMIC_GEAR_SWITCH,
   };
 
   enum class CarSlotRelationship : uint8_t {
@@ -305,6 +306,7 @@ class ParkingScenario {
     // will be retired
     EgoSlotInfo ego_slot_info;
 
+    // cur traj gear
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
 
@@ -312,6 +314,7 @@ class ParkingScenario {
     bool dynamic_plan_fail_flag = false;
     bool dynamic_plan_path_superior = false;
 
+    // cur traj gear
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
     bool stuck_by_dynamic_obs = false;
@@ -480,6 +483,10 @@ class ParkingScenario {
 
   virtual const CarSlotRelationship CalCarSlotRelationship(
       const geometry_lib::PathPoint &cur_pose);
+
+  virtual const bool CheckDynamicGearSwitch();
+
+  geometry_lib::PathPoint GetCurrentPathTerminal(const bool is_slot_coordinate);
 
  protected:
   // TODO:

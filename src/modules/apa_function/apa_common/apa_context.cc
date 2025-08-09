@@ -98,6 +98,12 @@ const std::string GetRePlanReasonString(const uint8_t type) {
       return "FORCE_PLAN";
     case 8:
       return "SEG_COMPLETED_SLOT_JUMP";
+    case 9:
+      return "PATH_DANGEROUS";
+    case 10:
+      return "SLOT_CRUISING";
+    case 11:
+      return "DYNAMIC_GEAR_SWITCH";
     default:
       return "NOT_REPLAN";
   }

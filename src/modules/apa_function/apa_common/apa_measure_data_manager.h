@@ -2,6 +2,7 @@
 #include "Eigen/Core"
 #include "local_view.h"
 #include "pose2d.h"
+#include "geometry_math.h"
 
 namespace planning {
 namespace apa_planner {
@@ -63,6 +64,8 @@ class ApaMeasureDataManager final {
 
   const Pose2D GetPose() { return Pose2D(pos_[0], pos_[1], heading_); }
 
+  const pnc::geometry_lib::PathSegGear GetGear() const { return gear_; }
+
  private:
   // drive gear, vel is positive
   // reverse gear, vel is negative
@@ -88,6 +91,8 @@ class ApaMeasureDataManager final {
   bool fold_mirror_flag_ = false;
 
   double acceleration_ = 0.0;
+
+  pnc::geometry_lib::PathSegGear gear_;
 };
 }  // namespace apa_planner
 }  // namespace planning

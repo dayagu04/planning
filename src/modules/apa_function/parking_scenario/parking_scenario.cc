@@ -732,7 +732,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       current_path_point_global_vec_,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
       ego_speed_point, 0.0, trajectory_,
-      pnc::geometry_lib::GetGearType(frame_.gear_command));
+      pnc::geometry_lib::GetGearType(frame_.gear_command),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear());
 
   const SVPoint stitch_init_speed = traj_stitcher->GetStitchSpeed();
 
@@ -871,6 +872,12 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
     return true;
   }
 
+  if (CheckDynamicGearSwitch()) {
+    ILOG_INFO << "replan by dynamic gear switch!";
+    frame_.replan_reason = ReplanReason::DYNAMIC_GEAR_SWITCH;
+    return true;
+  }
+
   return false;
 }
 
@@ -953,5 +960,88 @@ ParkingScenario::CalCarSlotRelationship(const geometry_lib::PathPoint& cur_pose)
   return CarSlotRelationship::TOUCHING;
 }
 
+const bool ParkingScenario::CheckDynamicGearSwitch() {
+  auto& param = apa_param.GetParam().gear_switch_config;
+  if (!param.enable_dynamic_gear_switch) {
+    return false;
+  }
+
+  if (frame_.remain_dist_obs < frame_.remain_dist_path) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  if (frame_.current_path_length < param.dist_thresh_for_current_path) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  double next_gear_path_len =
+      GetSecondGearPathLength(complete_path_point_global_vec_);
+  if (next_gear_path_len < param.dist_thresh_for_next_path) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  if (frame_.remain_dist_path > param.dist_thresh_for_gear_switch_point) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  if (std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) >
+      param.vel_thresh_for_gear_switch_point) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  if (apa_world_ptr_->GetSlotManagerPtr()
+          ->GetEgoInfoUnderSlot()
+          .slot_occupied_ratio >
+      param.slot_occupied_ratio_for_gear_switch_point) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  if (std::fabs(apa_world_ptr_->GetPredictPathManagerPtr()->GetLatErr()) >
+          param.lat_error_for_dynamic_gear_switch ||
+      std::fabs(apa_world_ptr_->GetPredictPathManagerPtr()->GetPhiErr()) >
+          param.theta_error_for_dynamic_gear_switch) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  // check around obs
+  double dist =
+      CalRemainDistFromObs(param.cur_path_lon_buffer, param.cur_path_lat_buffer,
+                           param.cur_path_lat_buffer);
+  if (dist < frame_.remain_dist_path) {
+    ILOG_INFO << "false";
+    return false;
+  }
+
+  return true;
+}
+
+geometry_lib::PathPoint ParkingScenario::GetCurrentPathTerminal(
+    const bool is_slot_coordinate) {
+  geometry_lib::PathPoint point;
+  if (current_path_point_global_vec_.empty()) {
+    return point;
+  }
+
+  const pnc::geometry_lib::PathPoint& back =
+      current_path_point_global_vec_.back();
+
+  if (is_slot_coordinate) {
+    const EgoInfoUnderSlot& ego_info =
+        apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+    point.pos = ego_info.g2l_tf.GetPos(back.pos);
+    point.heading = ego_info.g2l_tf.GetHeading(back.heading);
+  } else {
+    point = back;
+  }
+
+  return point;
+}
 }  // namespace apa_planner
 }  // namespace planning

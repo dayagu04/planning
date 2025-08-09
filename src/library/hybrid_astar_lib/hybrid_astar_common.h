@@ -105,6 +105,7 @@ enum class PlanningReason {
   SIMULATION_TRIGGER,
   GEOMETRY_CURVE_FAIL,
   SLOT_CRUISING,
+  DYNAMIC_GEAR_SWITCH,
 };
 
 enum class AstarPathSteer {

@@ -24,9 +24,15 @@ void ApaTrajectoryStitcher::Execute(
     const double front_wheel_angle, const SVPoint& ego_lon_point,
     const double predict_horizon,
     const trajectory::Trajectory& history_trajectory,
-    const pnc::geometry_lib::PathSegGear gear) {
+    const pnc::geometry_lib::PathSegGear plan_gear,
+    const pnc::geometry_lib::PathSegGear veh_gear) {
   ego_lon_state_ = ego_lon_point;
-  gear_ = gear;
+  traj_gear_ = plan_gear;
+  veh_gear_ = veh_gear;
+
+  ILOG_INFO << "traj gear = " << static_cast<int>(traj_gear_)
+            << ", veh gear = " << static_cast<int>(veh_gear_);
+
   stitch_path_.clear();
   trajectory_.clear();
   config_.Init();
@@ -35,53 +41,61 @@ void ApaTrajectoryStitcher::Execute(
     return;
   }
 
-  double kappa = std::tan(front_wheel_angle) / apa_param.GetParam().wheel_base;
-  double sign_v = std::abs(ego_lon_point.v);
-  if (gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
-    sign_v = -sign_v;
-  }
+  if (veh_gear_ == traj_gear_) {
+    double kappa =
+        std::tan(front_wheel_angle) / apa_param.GetParam().wheel_base;
+    double sign_v = std::abs(ego_lon_point.v);
+    if (veh_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+      sign_v = -sign_v;
+    }
 
-  Pose2D predict_pose =
-      ComputeTrajPointByPrediction(ego_pose, sign_v, kappa, predict_horizon);
+    Pose2D predict_pose =
+        ComputeTrajPointByPrediction(ego_pose, sign_v, kappa, predict_horizon);
 
-  // evaluate path
-  size_t min_dist_id = 0;
-  size_t min_dist_neioghbour_id = 0;
-  if (QueryNearestPoint(predict_pose, lateral_path, &min_dist_id,
-                        &min_dist_neioghbour_id)) {
-    EvaluateStitchPath(predict_pose, lateral_path, min_dist_id,
-                       min_dist_neioghbour_id);
+    // evaluate path
+    size_t min_dist_id = 0;
+    size_t min_dist_neioghbour_id = 0;
+    if (QueryNearestPoint(predict_pose, lateral_path, &min_dist_id,
+                          &min_dist_neioghbour_id)) {
+      EvaluateStitchPath(predict_pose, lateral_path, min_dist_id,
+                         min_dist_neioghbour_id);
+    } else {
+      GenePathPointFromVehicleState(ego_pose);
+    }
+
+    // evaluate speed
+    bool same_traj_gear = false;
+    if (history_trajectory.GetGear() == 1 &&
+        traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+      same_traj_gear = true;
+    } else if (history_trajectory.GetGear() == 2 &&
+               traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
+      same_traj_gear = true;
+    }
+
+    bool lon_stitch_success = false;
+    if (same_traj_gear) {
+      lon_stitch_success = history_trajectory.QueryNearestPointWithBuffer(
+          planning_math::Vec2d(predict_pose.x, predict_pose.y), 0.0,
+          &lon_stitch_point_);
+    }
+
+    if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
+        lon_stitch_point_.vel() <= 0.01) {
+      // ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
+      //           << " lon stitch v = " << lon_stitch_point_.vel()
+      //           << ", a = " << lon_stitch_point_.acc()
+      //           << ", s = " << lon_stitch_point_.s();
+      GeneSpeedPointFromVehicleState(ego_lon_point);
+    }
+
+    SmoothLonDelay();
   } else {
-    GenePathPointFromVehicleState(ego_pose);
+    const pnc::geometry_lib::PathPoint& front = lateral_path.front();
+    Pose2D pose = Pose2D(front.pos[0], front.pos[1], front.heading);
+    EvaluateStitchPath(pose, lateral_path, 0, 0);
+    GeneSpeedPointFromZeroState();
   }
-
-  // evaluate speed
-  bool same_gear = false;
-  if (history_trajectory.GetGear() == 1 &&
-      gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
-    same_gear = true;
-  } else if (history_trajectory.GetGear() == 2 &&
-             gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
-    same_gear = true;
-  }
-
-  bool lon_stitch_success = false;
-  if (same_gear) {
-    lon_stitch_success = history_trajectory.QueryNearestPointWithBuffer(
-        planning_math::Vec2d(predict_pose.x, predict_pose.y), 0.0,
-        &lon_stitch_point_);
-  }
-
-  if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
-      lon_stitch_point_.vel() <= 0.01) {
-    // ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
-    //           << " lon stitch v = " << lon_stitch_point_.vel()
-    //           << ", a = " << lon_stitch_point_.acc()
-    //           << ", s = " << lon_stitch_point_.s();
-    GeneSpeedPointFromVehicleState(ego_lon_point);
-  }
-
-  SmoothLonDelay();
 
 #if DEBUG_TASK
   TaskDebug(lateral_path, history_trajectory);
@@ -519,7 +533,6 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
 
   const SpeedPoint* speed_point = nullptr;
   trajectory::TrajectoryPoint traj_point;
-  bool is_forward = (gear_ == pnc::geometry_lib::SEG_GEAR_DRIVE ? true : false);
   bool is_traj_overshoot = false;
   trajectory_.reserve(speed_profile.size());
   for (size_t i = 0; i < speed_profile.size(); i++) {
@@ -590,9 +603,9 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
     }
   }
 
-  if (gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
+  if (traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
     trajectory_.SetGear(2);
-  } else if (gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+  } else if (traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
     trajectory_.SetGear(1);
   } else {
     trajectory_.SetGear(0);
@@ -651,7 +664,7 @@ void ApaTrajectoryStitcher::TaskDebug(
     ILOG_INFO << "origin path s = " << path.back().s;
   }
 
-  ILOG_INFO << "gear = " << static_cast<int>(gear_)
+  ILOG_INFO << "gear = " << static_cast<int>(traj_gear_)
             << ", ego v = " << ego_lon_state_.v
             << ", ego a = " << ego_lon_state_.acc;
   ILOG_INFO << "lon stitch v = " << lon_stitch_point_.vel()
@@ -730,6 +743,22 @@ void ApaTrajectoryStitcher::CopyHistoryTraj(
   if (!tmp_traj.empty()) {
     trajectory_.insert(trajectory_.begin(), tmp_traj.begin(), tmp_traj.end());
   }
+
+  return;
+}
+
+void ApaTrajectoryStitcher::GeneSpeedPointFromZeroState() {
+  lon_stitch_point_.set_x(stitch_path_point_.pos[0]);
+  lon_stitch_point_.set_y(stitch_path_point_.pos[1]);
+  lon_stitch_point_.set_theta(stitch_path_point_.heading);
+  lon_stitch_point_.set_kappa(0.0);
+  lon_stitch_point_.set_dkappa(0.0);
+  lon_stitch_point_.set_s(0);
+
+  lon_stitch_point_.set_absolute_time(0);
+  lon_stitch_point_.set_vel(0);
+  lon_stitch_point_.set_acc(0);
+  lon_stitch_point_.set_jerk(0);
 
   return;
 }

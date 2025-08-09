@@ -148,6 +148,21 @@ struct SmartFoldMirrorParams {
   float heading_offset = 0.0;
 };
 
+struct DynamicGearSwitchConfig {
+  bool enable_dynamic_gear_switch;
+  double dist_thresh_for_current_path;
+  double dist_thresh_for_next_path;
+  double dist_thresh_for_gear_switch_point;
+  double vel_thresh_for_gear_switch_point;
+  double slot_occupied_ratio_for_gear_switch_point;
+
+  double cur_path_lat_buffer;
+  double cur_path_lon_buffer;
+
+  double lat_error_for_dynamic_gear_switch;
+  double theta_error_for_dynamic_gear_switch;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -546,6 +561,8 @@ struct ApaParameters {
   UssConfig uss_config;
 
   SmartFoldMirrorParams smart_fold_mirror_params;
+
+  DynamicGearSwitchConfig gear_switch_config;
 };
 
 class ApaParametersSetting {

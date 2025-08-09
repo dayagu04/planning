@@ -433,5 +433,16 @@
   "fold_mirror_x_up_offset": 3.0,
   "fold_mirror_x_redunant": 0.3,
   "fold_mirror_y_offset": 0.06,
-  "fold_mirror_heading_offset": 2.68
+  "fold_mirror_heading_offset": 2.68,
+
+  "enable_dynamic_gear_switch": false,
+  "dist_thresh_for_current_path": 1.0,
+  "dist_thresh_for_next_path": 2.0,
+  "vel_thresh_for_gear_switch_point": 0.40,
+  "dist_thresh_for_gear_switch_point" : 0.15,
+  "slot_occupied_ratio_for_gear_switch_point" : 0.01,
+  "lat_error_for_dynamic_gear_switch" : 0.05,
+  "theta_error_for_dynamic_gear_switch" : 5.0,
+  "cur_path_lat_buffer" : 0.5,
+  "cur_path_lon_buffer" : 0.5
 }

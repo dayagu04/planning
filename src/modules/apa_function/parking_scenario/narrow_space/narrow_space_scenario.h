@@ -158,6 +158,8 @@ class NarrowSpaceScenario : public ParkingScenario {
       const EgoInfoUnderSlot& ego_info, const AstarRequest& cur_request,
       const ParkObstacleList& obs);
 
+  const pnc::geometry_lib::PathSegGear GetGear(const AstarPathGear gear);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
