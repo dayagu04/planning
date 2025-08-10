@@ -189,19 +189,20 @@ bool SpeedLimitDecider::Execute() {
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
-  auto &ad_info = session_->mutable_planning_context()
+  auto ad_info = &(session_->mutable_planning_context()
                       ->mutable_planning_hmi_info()
-                      ->ad_info;
+                      ->ad_info);
   speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
   speed_limit_output->set_request_reason(request_reason_);
+  
   if (SpeedLimitType::CURVATURE == v_target_type_) {
-    ad_info.is_curva = true;
+    ad_info->is_curva = true;
   } else {
-    ad_info.is_curva = false;
+    ad_info->is_curva = false;
   }
   v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
   JSON_DEBUG_VALUE("v_cruise_limit", v_cruise_limit_);
-  ad_info.cruise_speed = v_cruise_limit_;
+  ad_info->cruise_speed = v_cruise_limit_;
   return true;
 }
 
