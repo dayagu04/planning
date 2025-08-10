@@ -2821,7 +2821,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   iflymapdata::sdpro::FeaturePoint end_last_fp;
   if (CalculateLastFp(&end_last_fp, split_region_info.end_fp_point.link_id,
                       end_fp)) {
-    for (const auto& id : last_fp.lane_ids()) {
+    for (const auto& id : end_last_fp.lane_ids()) {
       if (!IsEmergencyLane(id, sdpro_map)) {
         temp_lane_num2++;
       }
