@@ -80,8 +80,8 @@ void MergeRequest::Update(int lc_status) {
   } else {
     right_reference_path_ = nullptr;
   }
-  enable_l_ = llane && left_reference_path_;
-  enable_r_ = rlane && right_reference_path_;
+  enable_l_ = llane && left_reference_path_ && llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  enable_r_ = rlane && right_reference_path_ && rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
 
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();

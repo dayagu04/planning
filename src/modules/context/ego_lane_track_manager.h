@@ -185,6 +185,7 @@ class EgoLaneTrackManger {
   EgoPlanningConfig config_;
   // int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
+  bool lcc_split_select_is_finish_ = false;
   std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;
   std::shared_ptr<VirtualLane> last_zero_relative_id_lane_ = nullptr;
   std::shared_ptr<VirtualLane> current_zero_relative_id_lane_ = nullptr;

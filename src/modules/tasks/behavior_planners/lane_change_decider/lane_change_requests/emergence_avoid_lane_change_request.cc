@@ -119,8 +119,8 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   } else {
     right_reference_path_ = nullptr;
   }
-  bool enable_left = llane && left_reference_path_;
-  bool enable_right = rlane && right_reference_path_;
+  bool enable_left = llane && left_reference_path_ && llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  bool enable_right = rlane && right_reference_path_ && rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
   const bool is_left_lane_change_safe =
       enable_left &&
       !IsRoadBorderSurpressDuringLaneChange(
