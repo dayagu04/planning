@@ -216,6 +216,7 @@ class RouteInfo {
   bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info, const ad_common::sdpromap::SDProMap& sdpro_map) const;
   bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) const;
   bool CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_region_info) const;
+  bool CalculateOtherMergeRoadFeasibleLane(NOASplitRegionInfo* split_region_info) const;
 
   std::vector<int> CommonElements(const std::vector<int>& A,
                                   const std::vector<int>& B) {

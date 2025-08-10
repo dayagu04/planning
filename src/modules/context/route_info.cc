@@ -1,5 +1,6 @@
 #include "route_info.h"
 #include <linux/limits.h>
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <memory>
@@ -1706,9 +1707,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             merge_region_info_list[0].start_fp_point.fp_distance_to_split_point;
       }
 
+      //当dis_to_merge_start_point < 0，说明已经经过start fp了，那么应该直接进入交换区了
       bool is_entery_exchange_region =
           dis_to_merge_start_point >
-          mlc_decider_route_info_.last_frame_dis_to_merge_start_point;
+          mlc_decider_route_info_.last_frame_dis_to_merge_start_point ||
+          dis_to_merge_start_point < 0.0;
+
       mlc_decider_route_info_.is_triggle_cal_dis_to_last_merge_point =
           dis_to_merge_point >
           mlc_decider_route_info_.last_frame_dis_to_merge_point;
@@ -1732,7 +1736,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             mlc_decider_route_info_.last_frame_dis_to_split) {
           mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREAR_REAR;
         }
-      } else if (mlc_decider_route_info_.is_process_merge) {
+      } else if (mlc_decider_route_info_.is_process_merge ||
+                 mlc_decider_route_info_.is_process_other_merge) {
         if (mlc_decider_route_info_.is_triggle_cal_dis_to_last_merge_point) {
           bool is_triggle_to_ON_MAIN =
               route_info_output_.sum_dis_to_last_merge_point >
@@ -1977,6 +1982,26 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           //
         } else if (mlc_decider_route_info_.is_process_other_merge) {
           //
+          if (merge_region_info_list.empty()) {
+            mlc_decider_route_info_.reset();
+            return;
+          }
+
+          auto& first_merge_region_info = merge_region_info_list[0];
+
+          bool is_calculate_feasible_lane =
+              CalculateOtherMergeRoadFeasibleLane(&first_merge_region_info);
+
+          if (!is_calculate_feasible_lane) {
+            mlc_decider_route_info_.reset();
+            return;
+          }
+
+          route_info_output_.merge_region_info_list[0] =
+              first_merge_region_info;
+          mlc_decider_route_info_.static_merge_region_info =
+              route_info_output_.merge_region_info_list[0];
+
         } else if (mlc_decider_route_info_.is_process_merge) {
           // exclnum = exchange_arear_lane_num;
           if (merge_region_info_list.empty()) {
@@ -2084,7 +2109,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_decider_route_info_.is_process_split_split ||
           mlc_decider_route_info_.is_process_other_merge_split) {
         mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
-      } else if (mlc_decider_route_info_.is_process_merge) {
+      } else if (mlc_decider_route_info_.is_process_merge ||
+                 mlc_decider_route_info_.is_process_other_merge) {
         mlc_decider_route_info_.ego_status_on_route = NEARING_MERGE;
       }
       break;
@@ -3378,6 +3404,58 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_regio
   return true;
 }
 
+bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(NOASplitRegionInfo* split_region_info) const {
+  if (split_region_info == nullptr) {
+    return false;
+  }
+
+  if (split_region_info->recommend_lane_num.size() != 4) {
+    return false;
+  }
+  const auto& recommand_lane_num = split_region_info->recommend_lane_num;
+
+  const int before_exclnum = recommand_lane_num[0].total_lane_num;
+  const int on_exclnum = recommand_lane_num[1].total_lane_num;
+  const int successor_exclnum = recommand_lane_num[2].total_lane_num;
+  const int predecessor_other_exclnum = recommand_lane_num[3].total_lane_num;
+
+  bool is_other_merge_left =
+      split_region_info->split_direction == SplitDirection::SPLIT_LEFT;
+
+  std::vector<int> on_excr_feasible_lane;
+  std::vector<int> before_excr_feasible_lane;
+  std::vector<int> succerssor_excr_feasible_lane;
+  //TODO(fengwang31:目前只考虑了其他路从右边进入交汇区的case)
+  if (is_other_merge_left) {
+    if (on_exclnum >= successor_exclnum) {
+      int min_lane = std::min(before_exclnum, successor_exclnum);
+      for (int i = 0; i < min_lane - 1; ++i) {
+        on_excr_feasible_lane.emplace_back(i + 1);
+        before_excr_feasible_lane.emplace_back(i + 1);
+      }
+    }
+  }
+
+  for (int i = 0; i < successor_exclnum; ++i) {
+    succerssor_excr_feasible_lane.emplace_back(i + 1);
+  }
+
+  if (before_excr_feasible_lane.empty() ||
+      on_excr_feasible_lane.empty() ||
+      succerssor_excr_feasible_lane.empty()) {
+    return false;
+  }
+
+  split_region_info->recommend_lane_num[0].feasible_lane_sequence =
+      before_excr_feasible_lane;
+  split_region_info->recommend_lane_num[1].feasible_lane_sequence =
+      on_excr_feasible_lane;
+  split_region_info->recommend_lane_num[2].feasible_lane_sequence =
+      succerssor_excr_feasible_lane;
+
+  return true;
+}
+
 bool RouteInfo::IsEmergencyLane(
     const uint64 lane_id,
     const ad_common::sdpromap::SDProMap& sdpro_map) const {
@@ -3536,7 +3614,7 @@ bool RouteInfo::CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* f
     itera_dis = itera_dis + current_link->length() * 0.01;
     current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
   }
-  return true;
+  return false;
 }
 
 bool RouteInfo::CalculateLastFp(
