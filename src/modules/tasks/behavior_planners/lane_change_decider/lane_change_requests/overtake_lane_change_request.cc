@@ -205,19 +205,41 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const double min_distance_nearby_split_to_surpress_specific_direction_overtake =
       config_
           .minimum_distance_nearby_split_to_surpress_specific_direction_overtake;
-  const double max_pass_merge_distance_to_surpress_overtake_lane_change =
-      virtual_lane_mgr_->dis_threshold_to_last_merge_point();
-  double sum_dis_to_last_merge_point =
-      route_info_output.sum_dis_to_last_merge_point;
+  // const double max_pass_merge_distance_to_surpress_overtake_lane_change =
+  //     virtual_lane_mgr_->dis_threshold_to_last_merge_point();
+  double distance_to_first_road_split = NL_NMAX;
+  SplitDirection first_split_direction = SplitDirection::SPLIT_NONE;
+  double dis_to_first_merge = NL_NMAX;
+  SplitDirection first_merge_direction = SplitDirection::SPLIT_NONE;
+  // double sum_dis_to_last_merge_point =
+  //     route_info_output.sum_dis_to_last_merge_point;
   const double dis_threshold_to_merged_point =
       virtual_lane_mgr_->dis_threshold_to_merged_point();
-  const double dis_to_first_merge =
-      route_info_output.distance_to_first_road_merge;
-  const double distance_to_first_road_split =
-      route_info_output.distance_to_first_road_split;
-  const auto& first_merge_direction = route_info_output.first_merge_direction;
-  const auto& first_split_direction = route_info_output.first_split_direction;
-
+  const auto& split_region_info_list = route_info_output.split_region_info_list;
+  const auto& merge_region_info_list = route_info_output.merge_region_info_list;
+  if (!split_region_info_list.empty()) {
+    if (split_region_info_list[0].is_valid) {
+      distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
+      first_split_direction = split_region_info_list[0].split_direction;
+      if (distance_to_first_road_split <= config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
+          split_region_info_list[0].is_ramp_split) {
+        return;
+      }
+    }
+  }
+  if (!merge_region_info_list.empty()) {
+    if (merge_region_info_list[0].is_valid) {
+      dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
+      first_merge_direction = merge_region_info_list[0].split_direction;
+    }
+  }
+  if (distance_to_first_road_split >= dis_to_first_merge) {
+    distance_to_first_road_split = NL_NMAX;
+    first_split_direction = SplitDirection::SPLIT_NONE;
+  } else {
+    dis_to_first_merge = NL_NMAX;
+    first_merge_direction = SplitDirection::SPLIT_NONE;
+  }
   int base_lane_virtual_id{current_lane_virtual_id};
 
   if (lane_change_lane_mgr_->has_origin_lane()) {
@@ -238,10 +260,20 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
       virtual_lane_mgr_->get_virtual_lanes();
-  int lane_nums = relative_id_lanes.size();
-  int lane_index = virtual_lane_mgr_->get_lane_index(clane);
-  int right_lane_nums = std::max((int)lane_nums - lane_index - 1, 0);
-  int left_lane_nums = lane_index;
+  auto lane_nums = clane->get_lane_nums();
+  int right_lane_nums = 0;
+  int left_lane_nums = 0;
+  Point2D sl;
+  if (clane->get_lane_frenet_coord()->XYToSL(
+          {ego_state->ego_pose().x, ego_state->ego_pose().y}, sl)) {
+    auto iter =
+        std::find_if(lane_nums.begin(), lane_nums.end(),
+                     [&sl](const iflyauto::LaneNumMsg& lane_num) {
+                       return lane_num.begin <= sl.x && lane_num.end > sl.x;
+                     });
+    left_lane_nums = iter->left_lane_num;
+    right_lane_nums = iter->right_lane_num;
+  }
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -411,10 +443,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   if (trigger_left_overtake) {
     if (request_type_ != LEFT_CHANGE) {
       if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
-           first_merge_direction != RAMP_ON_RIGHT) &&
+           first_merge_direction != SplitDirection::SPLIT_RIGHT) &&
           (distance_to_first_road_split >=
                min_distance_nearby_split_to_surpress_specific_direction_overtake ||
-           first_split_direction != RAMP_ON_RIGHT)) {
+           first_split_direction != SplitDirection::SPLIT_RIGHT)) {
         target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
         GenerateRequest(LEFT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -440,13 +472,11 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
     if (request_type_ != RIGHT_CHANGE) {
-      if ((sum_dis_to_last_merge_point >=
-           max_pass_merge_distance_to_surpress_overtake_lane_change) &&
-          (dis_to_first_merge >= dis_threshold_to_merged_point ||
-           first_merge_direction != RAMP_ON_LEFT) &&
+      if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
+           first_merge_direction != SplitDirection::SPLIT_LEFT) &&
           (distance_to_first_road_split >=
                min_distance_nearby_split_to_surpress_specific_direction_overtake ||
-           first_split_direction != RAMP_ON_LEFT)) {
+           first_split_direction != SplitDirection::SPLIT_LEFT)) {
         target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
         GenerateRequest(RIGHT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -639,43 +669,6 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   const auto &lane_change_style = session_->environmental_model()
                                   .get_local_view()
                                   .function_state_machine_info.pilot_req.lane_change_style;
-  bool ramp_on_left = false;
-  bool ramp_on_Right = false;
-  bool is_on_highway = session_->environmental_model().is_on_highway();
-  const auto& route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
-  if (is_on_highway) {
-    ramp_on_left =
-        route_info_output.ramp_direction == RampDirection::RAMP_ON_LEFT ? true
-                                                                        : false;
-    ramp_on_Right =
-        route_info_output.ramp_direction == RampDirection::RAMP_ON_RIGHT
-            ? true
-            : false;
-    const double distance_to_next_ramp = route_info_output.dis_to_ramp;
-    const double distance_to_next_split =
-        route_info_output.distance_to_first_road_split;
-    double dis_between_first_road_split_and_ramp =
-        distance_to_next_split - distance_to_next_ramp;
-    if (distance_to_next_ramp < kSplitTriggleDistance &&
-        dis_between_first_road_split_and_ramp <
-            kDisancebetweenRoadSplitAndRampAllowError) {
-      if ((is_left && ramp_on_Right) || (!is_left && ramp_on_left)) {
-        return false;
-      }
-    }
-    // TODO:靠近分流口，分流口类型不是匝道，考虑反方向变道抑制(城区智能驾驶领航)
-
-    if (target_lane->get_lane_merge_split_point().merge_split_point_data_size >
-        0) {
-      const auto& target_lane_merge_info =
-          target_lane->get_lane_merge_split_point().merge_split_point_data[0];
-      if (!target_lane_merge_info.is_split) {
-        ILOG_DEBUG << "Not trigger overtake since target route has merge lane, is left lane:" << is_left;
-        return false;
-      }
-    }
-  }
   double speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold;
   if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_ASSISTIVE) {
     speed_threshold = config_.overtake_soft_lane_change_speed_threshold;

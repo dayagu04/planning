@@ -176,9 +176,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (route_info_output.is_on_ramp ||
-          route_info_output.dis_to_ramp <=
-              minimum_distance_nearby_ramp_to_surpress_overtake_lane_change) {
+      if (route_info_output.is_on_ramp) {
         overtake_request_.Reset();
         ILOG_INFO << "cann't generate overtake lane change on ramp or near ramp or near merge";
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
