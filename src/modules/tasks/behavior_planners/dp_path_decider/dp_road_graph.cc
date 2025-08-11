@@ -17,8 +17,8 @@
 #include "log.h"
 #include "math/curve1d/quintic_polynomial_curve1d.h"
 #include "math_lib.h"
-#include "task_interface/lane_borrow_decider_output.h"
 #include "modules/context/planning_context.h"
+#include "task_interface/lane_borrow_decider_output.h"
 namespace {
 constexpr double kMaxLateralRange = 5.0;
 constexpr double kMaxLongitRange = 70.0;
@@ -43,7 +43,8 @@ bool DPRoadGraph::Execute() {
 
   return true;
 }
-bool DPRoadGraph::ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_output) {
+bool DPRoadGraph::ProcessEnvInfos(
+    const LaneBorrowDeciderOutput* lane_borrow_output) {
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& agents = dynamic_world->agent_manager()->GetAllCurrentAgents();
@@ -105,10 +106,8 @@ bool DPRoadGraph::ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_out
   double concerned_right_l = 0.;
   BorrowDirection dir = lane_borrow_output->borrow_direction;
   if (current_lane_ptr_ != nullptr) {
-    concerned_left_l =
-        current_lane_ptr_->width() * 0.5;
-    concerned_right_l =
-        -current_lane_ptr_->width() * 0.5;
+    concerned_left_l = current_lane_ptr_->width() * 0.5;
+    concerned_right_l = -current_lane_ptr_->width() * 0.5;
   }
   if (left_lane_ptr_ != nullptr && dir == LEFT_BORROW) {
     concerned_left_l += left_lane_ptr_->width();
@@ -117,8 +116,8 @@ bool DPRoadGraph::ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_out
     concerned_right_l -= right_lane_ptr_->width();
   }
   const auto& lat_obstacle_decision = session_->planning_context()
-                                        .lateral_obstacle_decider_output()
-                                        .lat_obstacle_decision;
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
   for (const auto& obstacle : obstacles) {
     const auto& id = obstacle->obstacle()->id();
     const auto& agent = agent_mgr->GetAgent(id);
@@ -133,11 +132,11 @@ bool DPRoadGraph::ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_out
     if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {  // 非视觉忽略
       continue;
     }
-      const auto lat_obs_iter = lat_obstacle_decision.find(id);
-    if (lat_obs_iter != lat_obstacle_decision.end() &&
-        lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
-      continue;
-    }
+    //   const auto lat_obs_iter = lat_obstacle_decision.find(id);
+    // if (lat_obs_iter != lat_obstacle_decision.end() &&
+    //     lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+    //   continue;
+    // }
     // static and dynamic sl current time
     std::vector<planning_math::Vec2d> obs_corners;
     const auto& obs_box = agent->box();
@@ -152,13 +151,18 @@ bool DPRoadGraph::ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_out
       current_frenet_coord->XYToSL(
           obs_corners[i].x(), obs_corners[i].y(), &project_s,
           &project_l);  // 这是投影在路径上的 障碍物角点
-      agent_sl_boundary.at(3) = std::fmin(agent_sl_boundary.at(3), project_l);// l right
-      agent_sl_boundary.at(2) = std::fmax(agent_sl_boundary.at(2), project_l);// l left
-      agent_sl_boundary.at(1) = std::fmin(agent_sl_boundary.at(1), project_s);// s start
-      agent_sl_boundary.at(0) = std::fmax(agent_sl_boundary.at(0), project_s);// s end
+      agent_sl_boundary.at(3) =
+          std::fmin(agent_sl_boundary.at(3), project_l);  // l right
+      agent_sl_boundary.at(2) =
+          std::fmax(agent_sl_boundary.at(2), project_l);  // l left
+      agent_sl_boundary.at(1) =
+          std::fmin(agent_sl_boundary.at(1), project_s);  // s start
+      agent_sl_boundary.at(0) =
+          std::fmax(agent_sl_boundary.at(0), project_s);  // s end
     }
     // lateral filter
-    if(agent_sl_boundary.at(3) > concerned_left_l || agent_sl_boundary.at(2) < concerned_right_l){
+    if (agent_sl_boundary.at(3) > concerned_left_l ||
+        agent_sl_boundary.at(2) < concerned_right_l) {
       continue;
     }
     if (agent->is_static()) {
@@ -415,7 +419,7 @@ bool DPRoadGraph::FinedReferencePath() {
 
       const SLPoint sl_point(accumulated_s + current_s, l);
 
-      frenet_dp_path.emplace_back(sl_point);// no use?
+      frenet_dp_path.emplace_back(sl_point);  // no use?
 
       Point2D sl_cart(0, 0);  // nonsene
       // donnot delete, discard for pybind
@@ -470,11 +474,12 @@ bool DPRoadGraph::SetSampleParams(LaneBorrowStatus lane_borrow_status) {
   total_length_ = total_length;  // set_total_length(total_length); // length is
                                  // not update in pybind, same as .logs
 
-  const double level_distance = pnc::mathlib::Clamp(
-      ego_v_ * config_.sample_forward_time, config_.min_level_distance,
-      config_.max_level_distance);  // s_range  is update with v_cruise_ in
-                                    // logs, but not in pybind
-  s_range_ = level_distance;
+  // const double level_distance = pnc::mathlib::Clamp(
+  //     ego_v_ * config_.sample_forward_time, config_.min_level_distance,
+  //     config_.max_level_distance);  // s_range  is update with v_cruise_ in
+  //                                   // logs, but not in pybind
+
+  s_range_ = (total_length - ego_s_) / 3.0;
   l_range_ = 0.5;
 
   if (current_lane_ptr_ != nullptr) {
@@ -544,9 +549,17 @@ bool DPRoadGraph::SampleLanes(
   double prev_s = accumulated_s;
   sampled_points_.insert(sampled_points_.begin(),
                          std::vector<SLPoint>{init_sl_point_});
+  //前决策信息
+  double area_s_start = lane_borrow_decider_output->area_start_s;
+  double area_s_end = lane_borrow_decider_output->area_end_s;
+  double area_l_start = lane_borrow_decider_output->area_start_l;
+  double area_l_end = lane_borrow_decider_output->area_end_l;
+  LaneBorrowStatus lb_status = lane_borrow_decider_output->lane_borrow_state;
+
   for (size_t i = 0; accumulated_s < total_length_; ++i) {
-    accumulated_s += s_range_;
-    if (accumulated_s + s_range_ / 2.0 > total_length_) {
+    double in_equeal_s_range = (total_length_ - ego_s_) * (i + 1) / 6;
+    accumulated_s += in_equeal_s_range;
+    if (accumulated_s + in_equeal_s_range / 2.0 > total_length_) {
       accumulated_s = total_length_;
     }
     const double s_step = std::fmin(total_length_, accumulated_s);
@@ -576,7 +589,7 @@ bool DPRoadGraph::SampleLanes(
       if (lane_borrow_decider_output->lane_borrow_state ==
               kLaneBorrowCrossing ||
           i == 0) {
-        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 1.0;
+        sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.7;
       } else {
         sample_left_boundary += left_lane_ptr_->width_by_s(s_step) * 0.5;
       }
@@ -585,7 +598,7 @@ bool DPRoadGraph::SampleLanes(
       if (lane_borrow_decider_output->lane_borrow_state ==
               kLaneBorrowCrossing ||
           i == 0) {
-        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 1.0;
+        sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.7;
       } else {
         sample_right_boundary -= right_lane_ptr_->width_by_s(s_step) * 0.5;
       }
@@ -761,57 +774,79 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
   return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));
 }
 
-void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_start_s){
+bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
+                                               double obs_start_s,
+                                               double speed) {
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
 
-/*
-  if (min_cost_path_.size() <= 1) { // No Dp path add on center line
-    return;
-  }
-  // along dp path to crossing lane boundary
-  double dp_virtual_obs_s = 0;
-  double dp_virtual_obs_x = 0;
-  double dp_virtual_obs_y = 0;
-  double dp_virtual_obs_theta = 0.;
-  for(const auto& path_point: refined_paths_){
-    if(path_point.s() > 120.0){
+  /*
+    if (min_cost_path_.size() <= 1) { // No Dp path add on center line
       return;
     }
-    double path_x = path_point.x();
-    double path_y = path_point.y();
-    double path_s = path_point.s();
-    double path_theta_cart = path_point.theta() + frenet_coord->GetPathCurveHeading(path_s);
-    if(NudgeOutPose(path_x, path_y,path_theta_cart,borrow_dir)){
-      dp_virtual_obs_x = path_x;
-      dp_virtual_obs_y = path_y;
-      dp_virtual_obs_theta = path_theta_cart;
-      dp_virtual_obs_s = path_s;
-      break;
+    // along dp path to crossing lane boundary
+    double dp_virtual_obs_s = 0;
+    double dp_virtual_obs_x = 0;
+    double dp_virtual_obs_y = 0;
+    double dp_virtual_obs_theta = 0.;
+    for(const auto& path_point: refined_paths_){
+      if(path_point.s() > 120.0){
+        return;
+      }
+      double path_x = path_point.x();
+      double path_y = path_point.y();
+      double path_s = path_point.s();
+      double path_theta_cart = path_point.theta() +
+    frenet_coord->GetPathCurveHeading(path_s); if(NudgeOutPose(path_x,
+    path_y,path_theta_cart,borrow_dir)){ dp_virtual_obs_x = path_x;
+        dp_virtual_obs_y = path_y;
+        dp_virtual_obs_theta = path_theta_cart;
+        dp_virtual_obs_s = path_s;
+        break;
+      }
     }
-  }
-  */
+    */
   // center line
   double distance_to_blocking = obs_start_s - ego_s_;
-
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double mini_gap = 3.0;
-  double virtual_length = 1.0;// 1+6 = 7
-  double center_virtual_s = obs_start_s - mini_gap + virtual_length* 0.5;
+  double mini_gap = 4.0;
+  double virtual_length = 1.0;  // 1+6 = 7
+  double center_virtual_s = obs_start_s - mini_gap + virtual_length * 0.5;
+  if (center_virtual_s - ego_s_ <
+      vehicle_param.front_edge_to_rear_axle + virtual_length * 0.5) {
+    return false;
+  }
   double virtual_l = obs_inner_l;
-  // if (center_virtual_s < 60.0 || center_virtual_s - virtual_length* 0.5 - vehicle_param.front_edge_to_rear_axle - 1.0 < ego_s_){
+  // if (center_virtual_s < 60.0 || center_virtual_s - virtual_length* 0.5 -
+  // vehicle_param.front_edge_to_rear_axle - 1.0 < ego_s_){
   //   return;
   // }
-  Point2D end_sl_point(center_virtual_s,virtual_l);
-  Point2D  cart_point;
+  Point2D end_sl_point(center_virtual_s, virtual_l);
+  Point2D cart_point;
   frenet_coord->SLToXY(end_sl_point, cart_point);
   // ReferencePathPoint refpath_pt;
-  // current_reference_path_ptr_->get_reference_point_by_lon(center_virtual_s, refpath_pt);
-  // double virtual_obs_x = refpath_pt.path_point.x();
-  // double virtual_obs_y = refpath_pt.path_point.y();
+  // current_reference_path_ptr_->get_reference_point_by_lon(center_virtual_s,
+  // refpath_pt); double virtual_obs_x = refpath_pt.path_point.x(); double
+  // virtual_obs_y = refpath_pt.path_point.y();
   double virtual_obs_x = cart_point.x;
   double virtual_obs_y = cart_point.y;
   double virtual_obs_theta = frenet_coord->GetPathCurveHeading(obs_start_s);
+
+  // construct trajectory for virtual obs
+  std::vector<trajectory::Trajectory> trajectories;
+  trajectories.reserve(1);
+  trajectory::Trajectory trajectory;
+  for (int i = 0; i < 25; ++i) {
+    Point2D end_sl_point(center_virtual_s + speed * 0.2 * i, virtual_l);
+    Point2D cart_point;
+    frenet_coord->SLToXY(end_sl_point, cart_point);
+    auto point = trajectory::TrajectoryPoint(
+        cart_point.x, cart_point.y, virtual_obs_theta, speed, 0.0, i * 0.2, 0.0,
+        0.0, center_virtual_s + speed * 0.2 * i, 0.0);
+    trajectory.emplace_back(point);
+  }
+  trajectories.emplace_back(trajectory);
+
   // build virtual obs
   planning::agent::Agent virtual_agent;
   virtual_agent.set_agent_id(999999);
@@ -822,12 +857,15 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_st
   virtual_agent.set_length(virtual_length);
   virtual_agent.set_width(7.0);
   virtual_agent.set_fusion_source(1);
-  virtual_agent.set_is_static(true);
+  bool is_static = (speed < 0.3) ? true : false;
+  virtual_agent.set_is_static(is_static);
 
-  virtual_agent.set_speed(0.0);
+  virtual_agent.set_speed(speed);
   virtual_agent.set_theta(virtual_obs_theta);
   virtual_agent.set_accel(0.0);
   virtual_agent.set_time_range({0.0, 5.0});
+  virtual_agent.set_trajectories(trajectories);
+  virtual_agent.set_trajectories_used_by_st_graph(std::move(trajectories));
 
   planning::planning_math::Box2d box(
       planning::planning_math::Vec2d(virtual_agent.x(), virtual_agent.y()),
@@ -836,16 +874,15 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_st
   virtual_agent.set_box(box);
   virtual_agent.set_timestamp_s(0.0);
   virtual_agent.set_timestamp_us(0.0);
-  auto *agent_manager = session_->environmental_model()
+  auto* agent_manager = session_->environmental_model()
                             .get_dynamic_world()
                             ->mutable_agent_manager();
   std::unordered_map<int32_t, planning::agent::Agent> agent_table;
   agent_table.insert({virtual_agent.agent_id(), virtual_agent});
   agent_manager->Append(agent_table);
 
-
   // reset path
-  SetPullOverPath(obs_start_s,obs_inner_l);
+  SetPullOverPath(obs_start_s, obs_inner_l);
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_pos_x", virtual_agent.x())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_pos_y", virtual_agent.y())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_theta",
@@ -857,15 +894,16 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l, double obs_st
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_length",
                    virtual_agent.length())
 
-  return ;
-
+  return true;
 }
-bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y, double path_ego_theta,BorrowDirection borrow_dir) {
+bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y,
+                               double path_ego_theta,
+                               BorrowDirection borrow_dir) {
   const auto& current_frenet_coord = current_lane_ptr_->get_lane_frenet_coord();
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double heading_angle = path_ego_theta;
-      // session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
+  // session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
   double ego_x = path_ego_x;
   double ego_y = path_ego_y;
 
@@ -883,10 +921,10 @@ bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y, double path
       corner_rear_right;
 
   if (borrow_dir == LEFT_BORROW) {
-    Point2D corner_front_left_xy = CarRotattion(
-        corner_front_left_point_xy, heading_angle, ego_x, ego_y);
-    Point2D corner_rear_left_xy = CarRotattion(
-        corner_rear_left_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_front_left_xy =
+        CarRotattion(corner_front_left_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_rear_left_xy =
+        CarRotattion(corner_rear_left_point_xy, heading_angle, ego_x, ego_y);
 
     // Back to the SL coordinate system and compare with the lane lines.
     current_frenet_coord->XYToSL(corner_front_left_xy.x, corner_front_left_xy.y,
@@ -898,17 +936,17 @@ bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y, double path
         current_lane_ptr_->width_by_s(corner_front_left.s) * 0.5;
     const double current_rear_left_lane_l =
         current_lane_ptr_->width_by_s(corner_rear_left.s) * 0.5;
-    if (corner_front_left.l > current_front_left_lane_l&&
+    if (corner_front_left.l > current_front_left_lane_l &&
         corner_rear_left.l > current_rear_left_lane_l) {
       return true;
-    }else{
+    } else {
       return false;
     }
   } else {
-    Point2D corner_front_right_xy = CarRotattion(
-        corner_front_right_point_xy, heading_angle, ego_x, ego_y);
-    Point2D corner_rear_right_xy = CarRotattion(
-        corner_rear_right_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_front_right_xy =
+        CarRotattion(corner_front_right_point_xy, heading_angle, ego_x, ego_y);
+    Point2D corner_rear_right_xy =
+        CarRotattion(corner_rear_right_point_xy, heading_angle, ego_x, ego_y);
 
     current_frenet_coord->XYToSL(corner_front_right_xy.x,
                                  corner_front_right_xy.y, &corner_front_right.s,
@@ -921,64 +959,88 @@ bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y, double path
     const double current_rear_right_lane_l =
         current_lane_ptr_->width_by_s(corner_rear_right.s) * 0.5;
 
-    if (corner_front_right.l < -current_front_right_lane_l&&
+    if (corner_front_right.l < -current_front_right_lane_l &&
         corner_rear_right.l < -current_rear_right_lane_l) {
       return true;
-    }else{
+    } else {
       return false;
     }
   }
 }
 Point2D DPRoadGraph::CarRotattion(const Point2D& Cartesian_point,
-                                             double heading_angle, double ego_x,
-                                             double ego_y) {
+                                  double heading_angle, double ego_x,
+                                  double ego_y) {
   double cos_theta = cos(heading_angle);
   double sin_theta = sin(heading_angle);
   return {
       Cartesian_point.x * cos_theta - Cartesian_point.y * sin_theta + ego_x,
       Cartesian_point.x * sin_theta + Cartesian_point.y * cos_theta + ego_y};
 };
-void DPRoadGraph::SetPullOverPath(double end_s, double end_l){ // re-set refined_paths_
-  if(end_s - init_sl_point_.s < 0){
+void DPRoadGraph::SetPullOverPath(double end_s,
+                                  double end_l) {  // re-set refined_paths_
+  if (end_s - init_sl_point_.s < 0) {
     return;
   }
+  // 记录原有长度
+  double path_s_end = total_length_;
   const auto& current_frenet_coord = current_lane_ptr_->get_lane_frenet_coord();
   refined_paths_.clear();
   planning_math::QuinticPolynomialCurve1d curve(
-    init_sl_point_.l, 0, 0, end_l, 0.0, 0.0,
-    end_s - init_sl_point_.s);
+      init_sl_point_.l, 0, 0, end_l, 0.0, 0.0, end_s - init_sl_point_.s);
   double path_s_length = end_s - init_sl_point_.s;
-  double path_resolution = 0.5;
+  double path_resolution = std::min(1.0, (path_s_length / 5));
   double current_s = 0.0;
 
   while (current_s + path_resolution * 0.5 < path_s_length) {
-      // current_s += path_resolution;
-      const double l = curve.Evaluate(0, current_s);
-      const double dl = curve.Evaluate(1, current_s);
-      const double ddl = curve.Evaluate(2, current_s);
-      const double dddl = curve.Evaluate(3, current_s);
-      const double theta = std::atan2(dl, 1);  // 计算heading角度 不是全局的
-      const double kappa = curve.EvaluateKappa(current_s);  // 获取曲率
-      const double denominator = std::pow(1 + dl * dl, 1.5);
-      const double numerator1 = dddl;
-      const double numerator2 = 3 * ddl * dl * ddl / std::pow(1 + dl * dl, 2.5);
-      const double dkappa = numerator1 / denominator - numerator2;
-      const double ddkappa = 0.;
+    // current_s += path_resolution;
+    const double l = curve.Evaluate(0, current_s);
+    const double dl = curve.Evaluate(1, current_s);
+    const double ddl = curve.Evaluate(2, current_s);
+    const double dddl = curve.Evaluate(3, current_s);
+    const double theta = std::atan2(dl, 1);  // 计算heading角度 不是全局的
+    const double kappa = curve.EvaluateKappa(current_s);  // 获取曲率
+    const double denominator = std::pow(1 + dl * dl, 1.5);
+    const double numerator1 = dddl;
+    const double numerator2 = 3 * ddl * dl * ddl / std::pow(1 + dl * dl, 2.5);
+    const double dkappa = numerator1 / denominator - numerator2;
+    const double ddkappa = 0.;
 
-      const SLPoint sl_point(init_sl_point_.s + current_s, l);
+    const SLPoint sl_point(init_sl_point_.s + current_s, l);
 
-      Point2D sl_cart(0, 0);  // nonsene
-      // donnot delete, discard for pybind
-      current_frenet_coord->SLToXY(init_sl_point_.s + current_s, l, &sl_cart.x,
-                                   &sl_cart.y);
-      planning_math::PathPoint path_point{sl_cart.x,  sl_cart.y, sl_point.s,
-                                          sl_point.l, theta,     kappa,
-                                          dkappa,     ddkappa};
-      refined_paths_.emplace_back(path_point);
-      current_s += path_resolution;
-    }
+    Point2D sl_cart(0, 0);  // nonsene
+    // donnot delete, discard for pybind
+    current_frenet_coord->SLToXY(init_sl_point_.s + current_s, l, &sl_cart.x,
+                                 &sl_cart.y);
+    planning_math::PathPoint path_point{sl_cart.x,  sl_cart.y, sl_point.s,
+                                        sl_point.l, theta,     kappa,
+                                        dkappa,     ddkappa};
+    refined_paths_.emplace_back(path_point);
+    current_s += path_resolution;
+  }
+  // 已有dp path 剩余长度为直线部分
+  while (current_s + path_resolution * 0.5 < path_s_end - init_sl_point_.s) {
+    const double l = end_l;
+    const double dl = 0;
+    const double ddl = 0;
+    const double dddl = 0;
+    const double theta = 0;  // 计算heading角度 不是全局的
+    const double kappa = 0;  // 获取曲率
+    const double dkappa = 0;
+    const double ddkappa = 0.;
+
+    const SLPoint sl_point(init_sl_point_.s + current_s, l);
+
+    Point2D sl_cart(0, 0);  // nonsene
+    // donnot delete, discard for pybind
+    current_frenet_coord->SLToXY(init_sl_point_.s + current_s, l, &sl_cart.x,
+                                 &sl_cart.y);
+    planning_math::PathPoint path_point{sl_cart.x,  sl_cart.y, sl_point.s,
+                                        sl_point.l, theta,     kappa,
+                                        dkappa,     ddkappa};
+    refined_paths_.emplace_back(path_point);
+    current_s += path_resolution;
+  }
 }
-
 
 void DPRoadGraph::LogDebugInfo() {
   auto dp_road_pb_info =

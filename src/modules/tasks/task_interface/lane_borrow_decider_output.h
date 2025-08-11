@@ -39,7 +39,8 @@ enum LaneBorrowFailedReason {
   CHANGE_TARGET_LANE,
   FRONT_OBS_NOT_BORROWING,
   NOT_DBW_STATUS,
-  SPEED_TOO_HIGH
+  SPEED_TOO_HIGH,
+  AHEAD_COMING_OBS
 };
 enum BorrowDirection { NO_BORROW = 0, LEFT_BORROW, RIGHT_BORROW };
 
@@ -49,6 +50,10 @@ struct LaneBorrowDeciderOutput {
   double target_l;
   double left_bounds_l;
   double right_bounds_l;
+  double area_start_s{0.};
+  double area_end_s{0.};
+  double area_start_l{0.};
+  double area_end_l{0.};
   BorrowDirection borrow_direction = NO_BORROW;  // 0--None, 1--left, 2--right
   bool is_in_lane_borrow_status = false;
   bool is_change_target_lane = false;
@@ -58,6 +63,9 @@ struct LaneBorrowDeciderOutput {
   CarReferenceInfo dp_path_ref;
   LaneBorrowStatus lane_borrow_state;
   std::shared_ptr<planning_math::KDPath> dp_path_coord;
+  bool is_left_solid{false};
+  bool is_right_solid{false};
+  std::unordered_map<int32_t, int32_t> lat_flag_map;
 };
 
 }  // namespace planning
