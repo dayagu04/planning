@@ -548,8 +548,8 @@ const bool ParallelParkInScenario::GenTlane() {
     }
 
     const bool curb_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 1.0,
-                                slot_length - 1.0) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.0,
+                                slot_length - 0.0) &&
         (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
 
     if (curb_condition) {
