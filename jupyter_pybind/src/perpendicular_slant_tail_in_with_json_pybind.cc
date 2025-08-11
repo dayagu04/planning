@@ -62,7 +62,7 @@ void UpdateSimuParams(int is_path_optimization, int is_cilqr_enable,
   g_simu_param.sample_ds = sample_ds;
   g_simu_param.process_obs_method = process_obs_method;
 
-  ApaParameters& muable_param = apa_param.SetPram();
+  ApaParameters& muable_param = apa_param.SetParam();
   SyncParkingParameters(true);
   if (set_obs == 1) {
     muable_param.channel_width = channel_width;

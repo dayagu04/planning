@@ -1410,8 +1410,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
   const double lat_err = apa_param.GetParam().target_pos_err;
   const double heading_err = apa_param.GetParam().target_heading_err;
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    apa_param.SetPram().target_pos_err = lat_err * 0.5;
-    apa_param.SetPram().target_heading_err = heading_err * 0.5;
+    apa_param.SetParam().target_pos_err = lat_err * 0.5;
+    apa_param.SetParam().target_heading_err = heading_err * 0.5;
   }
 
   auto temp_pose = current_pose;
@@ -1545,8 +1545,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
   //   calc_params_.use_adjust = true;
   // }
 
-  apa_param.SetPram().target_pos_err = lat_err;
-  apa_param.SetPram().target_heading_err = heading_err;
+  apa_param.SetParam().target_pos_err = lat_err;
+  apa_param.SetParam().target_heading_err = heading_err;
 
   // collison detection
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
@@ -1741,7 +1741,7 @@ const bool PerpendicularPathHeadingInPlanner::CheckAdjustPlanSuitable(
   if (calc_params_.is_inside_occupied && calc_params_.is_outside_occupied) {
     if (heading_error <=
         apa_param.GetParam().headin_adjust_plan_max_heading1_err * kDeg2Rad) {
-      apa_param.SetPram().headin_sturn_steer_ratio_dist =
+      apa_param.SetParam().headin_sturn_steer_ratio_dist =
           std::fabs(current_pose.pos.y()) + 1e-6;
       return true;
     }
@@ -2578,8 +2578,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
   const double lat_err = apa_param.GetParam().target_pos_err;
   const double heading_err = apa_param.GetParam().target_heading_err;
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    apa_param.SetPram().target_pos_err = lat_err * 0.5;
-    apa_param.SetPram().target_heading_err = heading_err * 0.5;
+    apa_param.SetParam().target_pos_err = lat_err * 0.5;
+    apa_param.SetParam().target_heading_err = heading_err * 0.5;
   }
 
   auto temp_pose = current_pose;
@@ -2671,8 +2671,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     }
   }
 
-  apa_param.SetPram().target_pos_err = lat_err;
-  apa_param.SetPram().target_heading_err = heading_err;
+  apa_param.SetParam().target_pos_err = lat_err;
+  apa_param.SetParam().target_heading_err = heading_err;
 
   // collision detect
   bool only_s_turn = false;

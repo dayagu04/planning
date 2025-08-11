@@ -4420,7 +4420,7 @@ const bool PerpendicularTailInPathGenerator::ItervativeUpdatePb(
   calc_params_.first_multi_plan = true;
   calc_params_.adjust_fail_count = 0;
   calc_params_.pre_plan_case = PrePlanCase::FAIL;
-  apa_param.SetPram().actual_mono_plan_enable = true;
+  apa_param.SetParam().actual_mono_plan_enable = true;
 
   if (CheckReachTargetPose()) {
     ILOG_INFO << "init pose is already at target pose";

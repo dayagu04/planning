@@ -29,7 +29,7 @@ void SyncParkingParameters(const bool is_simulation) {
   std::string config_file = planning::common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
-  ApaParameters& param = apa_param.SetPram();
+  ApaParameters& param = apa_param.SetParam();
 
   // schedule params
   JSON_READ_VALUE(param.plan_time, double, "plan_time");
@@ -1003,9 +1003,9 @@ void SyncParkingParameters(const bool is_simulation) {
                   "middle_cruise_speed");
   JSON_READ_VALUE(param.speed_config.slow_cruise_speed, double,
                   "slow_cruise_speed");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.long_path_acc_upper, double,
+  JSON_READ_VALUE(apa_param.SetParam().speed_config.long_path_acc_upper, double,
                   "long_path_acc_upper");
-  JSON_READ_VALUE(apa_param.SetPram().speed_config.short_path_acc_upper, double,
+  JSON_READ_VALUE(apa_param.SetParam().speed_config.short_path_acc_upper, double,
                   "short_path_acc_upper");
 
   double cruise_speed;
