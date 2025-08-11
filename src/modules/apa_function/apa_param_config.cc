@@ -529,8 +529,7 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.use_fus_occ_column, bool, "use_fus_occ_column");
 
-  JSON_READ_VALUE(param.uss_config.use_uss_pt_cloud, bool,
-                  "use_uss_pt_cloud");
+  JSON_READ_VALUE(param.uss_config.use_uss_pt_cloud, bool, "use_uss_pt_cloud");
   JSON_READ_VALUE(param.uss_config.use_uss_pt_for_path, bool,
                   "use_uss_pt_for_path");
   JSON_READ_VALUE(param.uss_config.use_uss_pt_for_slot_release, bool,
@@ -1005,8 +1004,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "slow_cruise_speed");
   JSON_READ_VALUE(apa_param.SetParam().speed_config.long_path_acc_upper, double,
                   "long_path_acc_upper");
-  JSON_READ_VALUE(apa_param.SetParam().speed_config.short_path_acc_upper, double,
-                  "short_path_acc_upper");
+  JSON_READ_VALUE(apa_param.SetParam().speed_config.short_path_acc_upper,
+                  double, "short_path_acc_upper");
 
   double cruise_speed;
   if (apa_param.GetParam().speed_config.apa_speed_mode == 0) {
@@ -1069,33 +1068,33 @@ void SyncParkingParameters(const bool is_simulation) {
                   "fold_mirror_heading_offset");
 
   JSON_READ_VALUE(
-      apa_param.SetPram().gear_switch_config.enable_dynamic_gear_switch, bool,
+      apa_param.SetParam().gear_switch_config.enable_dynamic_gear_switch, bool,
       "enable_dynamic_gear_switch");
   JSON_READ_VALUE(
-      apa_param.SetPram().gear_switch_config.dist_thresh_for_current_path,
+      apa_param.SetParam().gear_switch_config.dist_thresh_for_current_path,
       double, "dist_thresh_for_current_path");
   JSON_READ_VALUE(
-      apa_param.SetPram().gear_switch_config.dist_thresh_for_next_path,
-      double, "dist_thresh_for_next_path");
+      apa_param.SetParam().gear_switch_config.dist_thresh_for_next_path, double,
+      "dist_thresh_for_next_path");
   JSON_READ_VALUE(
-      apa_param.SetPram().gear_switch_config.vel_thresh_for_gear_switch_point,
+      apa_param.SetParam().gear_switch_config.vel_thresh_for_gear_switch_point,
       double, "vel_thresh_for_gear_switch_point");
   JSON_READ_VALUE(
-      apa_param.SetPram().gear_switch_config.dist_thresh_for_gear_switch_point,
+      apa_param.SetParam().gear_switch_config.dist_thresh_for_gear_switch_point,
       double, "dist_thresh_for_gear_switch_point");
   JSON_READ_VALUE(
-      apa_param.SetPram()
+      apa_param.SetParam()
           .gear_switch_config.slot_occupied_ratio_for_gear_switch_point,
       double, "slot_occupied_ratio_for_gear_switch_point");
   JSON_READ_VALUE(
-      apa_param.SetPram().gear_switch_config.lat_error_for_dynamic_gear_switch,
+      apa_param.SetParam().gear_switch_config.lat_error_for_dynamic_gear_switch,
       double, "lat_error_for_dynamic_gear_switch");
-  JSON_READ_VALUE(apa_param.SetPram()
+  JSON_READ_VALUE(apa_param.SetParam()
                       .gear_switch_config.theta_error_for_dynamic_gear_switch,
                   double, "theta_error_for_dynamic_gear_switch");
-  JSON_READ_VALUE(apa_param.SetPram().gear_switch_config.cur_path_lat_buffer,
+  JSON_READ_VALUE(apa_param.SetParam().gear_switch_config.cur_path_lat_buffer,
                   double, "cur_path_lat_buffer");
-  JSON_READ_VALUE(apa_param.SetPram().gear_switch_config.cur_path_lon_buffer,
+  JSON_READ_VALUE(apa_param.SetParam().gear_switch_config.cur_path_lon_buffer,
                   double, "cur_path_lon_buffer");
   return;
 }
