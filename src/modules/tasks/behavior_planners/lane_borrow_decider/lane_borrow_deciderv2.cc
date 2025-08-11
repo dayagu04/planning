@@ -1029,39 +1029,49 @@ void LaneBorrowDecider::CheckKeyObstaclesIntention(const agent::Agent* agent,
   }
 }
 // v2
-void LaneBorrowDecider::CheckBlockingObstaclesIntention(int32 obs_id,
-                                                        bool& is_borrow) {
+void LaneBorrowDecider::CheckBlockingObstaclesIntention(int32 obs_id, bool& will_keep_borrow) {
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
   const auto& agent = agent_mgr->GetAgent(obs_id);
-  const auto box_00 = agent->box();
-  const auto box_15 = PredictBoxPosition(agent, 1.5);
-  const auto box_30 = PredictBoxPosition(agent, 3.0);
-  auto sl_00 = GetSLboundaryFromAgent(box_00);
-  auto sl_15 = GetSLboundaryFromAgent(box_15);
-  auto sl_30 = GetSLboundaryFromAgent(box_30);
 
-  BorrowDirection dir_00 = GetPredBypassDirection(sl_00, obs_id);
-  BorrowDirection dir_15 = GetPredBypassDirection(sl_15, obs_id);
-  BorrowDirection dir_30 = GetPredBypassDirection(sl_30, obs_id);
-  bool is_cut_in;
-  bool is_cut_out;
-  if (dir_15 == dir_00 && dir_30 == dir_00 && NO_BORROW != dir_00) {
-    is_cut_in = false;
+  // 预测障碍物在 0s / 1.5s / 3.0s 时刻的位置
+  const auto box_at_0s   = agent->box();
+  const auto box_at_1_5s = PredictBoxPosition(agent, 1.5);
+  const auto box_at_3s   = PredictBoxPosition(agent, 3.0);
+
+  auto sl_at_0s   = GetSLboundaryFromAgent(box_at_0s);
+  auto sl_at_1_5s = GetSLboundaryFromAgent(box_at_1_5s);
+  auto sl_at_3s   = GetSLboundaryFromAgent(box_at_3s);
+
+  // 各时刻的借道方向
+  BorrowDirection direction_at_0s   = GetPredBypassDirection(sl_at_0s, obs_id);
+  BorrowDirection direction_at_1_5s = GetPredBypassDirection(sl_at_1_5s, obs_id);
+  BorrowDirection direction_at_3s   = GetPredBypassDirection(sl_at_3s, obs_id);
+
+  bool will_cut_in;
+  bool will_cut_out;
+
+  // 判断是否会切入
+  if (direction_at_1_5s == direction_at_0s &&
+      direction_at_3s   == direction_at_0s &&
+      direction_at_0s   != NO_BORROW) {
+    will_cut_in = false;
   } else {
-    is_cut_in = true;
+    will_cut_in = true;
   }
-  double left_boundary = current_lane_ptr_->width() * 0.5;
+
+  // 判断是否会切出
+  double left_boundary  = current_lane_ptr_->width() * 0.5;
   double right_boundary = -current_lane_ptr_->width() * 0.5;
-
-  if (sl_30.l_end < right_boundary || sl_30.l_start > left_boundary) {
-    is_cut_out = true;
+  if (sl_at_3s.l_end < right_boundary || sl_at_3s.l_start > left_boundary) {
+    will_cut_out = true;
   } else {
-    is_cut_out = false;
+    will_cut_out = false;
   }
 
-  // summary
-  is_borrow = !is_cut_out && !is_cut_in;
+  // 最终是否保持借道状态
+  will_keep_borrow = !will_cut_out && !will_cut_in;
 }
+
 // v2
 
 bool LaneBorrowDecider::ObstacleDecision() {
