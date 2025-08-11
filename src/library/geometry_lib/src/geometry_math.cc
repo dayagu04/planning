@@ -418,6 +418,45 @@ const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
   return (cos_AOC > cos_AOB && cos_BOC > cos_AOB);
 }
 
+const bool CalTangentLineFromHeadingAndArc(const double line_heading,
+                                           const pnc::geometry_lib::Arc& arc,
+                                           std::vector<Eigen::Vector2d>& tangent_points) {
+  tangent_points.clear();
+
+  // 获取圆心和半径
+  const Eigen::Vector2d& center = arc.circle_info.center;
+  const double radius = arc.circle_info.radius;
+
+  // 计算直线的单位方向向量
+  Eigen::Vector2d line_direction = GenHeadingVec(line_heading);
+  // Eigen::Vector2d line_direction(std::cos(line_heading), std::sin(line_heading));
+
+  // 构造垂直于方向向量的法向量（两种可能的方向）
+  Eigen::Vector2d normal1(-line_direction.y(), line_direction.x());
+  Eigen::Vector2d normal2(line_direction.y(), -line_direction.x());
+
+  // 计算两条与给定方向平行且与圆相切的直线
+  // 切线到圆心的距离应该等于半径
+  Eigen::Vector2d point1 = center + normal1 * radius;
+  Eigen::Vector2d point2 = center + normal2 * radius;
+
+  bool point1_on_arc = CheckPointLiesOnArc(arc, point1);
+  bool point2_on_arc = CheckPointLiesOnArc(arc, point2);
+
+  if (point1_on_arc) {
+    tangent_points.push_back(point1);
+  }
+
+  if (point2_on_arc) {
+    tangent_points.push_back(point2);
+  }
+  if (tangent_points.empty()) {
+    return false;
+  }
+
+  return true;
+}
+
 const bool GetArcLineSegIntersection(
     Eigen::Vector2d &intersection, const pnc::geometry_lib::Arc &arc,
     const pnc::geometry_lib::LineSegment &line_seg) {
