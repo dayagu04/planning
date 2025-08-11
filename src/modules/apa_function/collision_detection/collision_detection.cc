@@ -847,7 +847,7 @@ const bool CollisionDetector::IsObstacleInPath(
   std::vector<pnc::geometry_lib::PathPoint> pose_vec;
   pose_vec.emplace_back(path_seg.GetStartPose());
   const double car_length = apa_param.GetParam().car_length + long_safe_dist;
-  for (double length = car_length; length < path_seg.Getlength();
+  for (double length = car_length; length < path_seg.GetLength();
        length += car_length) {
     if (pnc::geometry_lib::CalPtFromPathSeg(pose, path_seg, length)) {
       pose_vec.emplace_back(pose);
@@ -910,7 +910,7 @@ const bool CollisionDetector::IsObstacleInPath(
   using namespace pnc;
   double length = 0.0;
   for (const auto &path_seg : path_seg_vec) {
-    length += path_seg.Getlength();
+    length += path_seg.GetLength();
   }
 
   geometry_lib::PathPoint pose;
@@ -918,7 +918,7 @@ const bool CollisionDetector::IsObstacleInPath(
   pose_vec.reserve(length / sample_ds + path_seg_vec.size() + 3);
   for (size_t i = 0; i < path_seg_vec.size(); ++i) {
     const geometry_lib::PathSegment &path_seg = path_seg_vec[i];
-    for (double s = 0; s < path_seg.Getlength(); s += sample_ds) {
+    for (double s = 0; s < path_seg.GetLength(); s += sample_ds) {
       geometry_lib::CalPtFromPathSeg(pose, path_seg, s);
       pose_vec.emplace_back(pose);
     }
@@ -1659,7 +1659,7 @@ const std::vector<Eigen::Vector2d> CollisionDetector::CalPathSegBound(
   } else {
     pnc::geometry_lib::PathPoint pose;
     double length = 0.0;
-    while (length < path_seg.Getlength() - 3e-2) {
+    while (length < path_seg.GetLength() - 3e-2) {
       CalPtFromPathSeg(pose, path_seg, length);
       pose_vec.emplace_back(pose);
       length += 30 * kDeg2Rad * path_seg.arc_seg.circle_info.radius;

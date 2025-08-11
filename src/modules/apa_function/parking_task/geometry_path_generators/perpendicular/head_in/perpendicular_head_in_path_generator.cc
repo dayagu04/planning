@@ -307,7 +307,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirst() {
       output_.gear_cmd_vec.emplace_back(line_seg.seg_gear);
       output_.steer_vec.emplace_back(line_seg.seg_steer);
       output_.path_segment_vec.emplace_back(line_seg);
-      output_.length += line_seg.Getlength();
+      output_.length += line_seg.GetLength();
       input_.ego_info_under_slot.cur_pose = start_pose;
     }
   }
@@ -1410,8 +1410,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
   const double lat_err = apa_param.GetParam().target_pos_err;
   const double heading_err = apa_param.GetParam().target_heading_err;
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    apa_param.SetPram().target_pos_err = lat_err * 0.5;
-    apa_param.SetPram().target_heading_err = heading_err * 0.5;
+    apa_param.SetParam().target_pos_err = lat_err * 0.5;
+    apa_param.SetParam().target_heading_err = heading_err * 0.5;
   }
 
   auto temp_pose = current_pose;
@@ -1545,8 +1545,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
   //   calc_params_.use_adjust = true;
   // }
 
-  apa_param.SetPram().target_pos_err = lat_err;
-  apa_param.SetPram().target_heading_err = heading_err;
+  apa_param.SetParam().target_pos_err = lat_err;
+  apa_param.SetParam().target_heading_err = heading_err;
 
   // collison detection
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
@@ -1591,7 +1591,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
     for (const auto& path_seg : path_seg_vec) {
       // PrintSegmentInfo(path_seg);
       if (path_seg.seg_gear == current_gear) {
-        length += path_seg.Getlength();
+        length += path_seg.GetLength();
         collision_flag = path_seg.collision_flag;
       }
     }
@@ -1651,7 +1651,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiPlan() {
     if (tmp_path_seg_vec.size() > 0) {
       for (const auto& tmp_path_seg : tmp_path_seg_vec) {
         multi_output.path_segment_vec.emplace_back(tmp_path_seg);
-        multi_output.length += tmp_path_seg.Getlength();
+        multi_output.length += tmp_path_seg.GetLength();
         multi_output.gear_cmd_vec.emplace_back(tmp_path_seg.seg_gear);
         multi_output.steer_vec.emplace_back(tmp_path_seg.seg_steer);
       }
@@ -1741,7 +1741,7 @@ const bool PerpendicularPathHeadingInPlanner::CheckAdjustPlanSuitable(
   if (calc_params_.is_inside_occupied && calc_params_.is_outside_occupied) {
     if (heading_error <=
         apa_param.GetParam().headin_adjust_plan_max_heading1_err * kDeg2Rad) {
-      apa_param.SetPram().headin_sturn_steer_ratio_dist =
+      apa_param.SetParam().headin_sturn_steer_ratio_dist =
           std::fabs(current_pose.pos.y()) + 1e-6;
       return true;
     }
@@ -1901,7 +1901,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
           plan_output.gear_cmd_vec.emplace_back(arc_seg_0.seg_gear);
           plan_output.steer_vec.emplace_back(arc_seg_0.seg_steer);
           plan_output.path_segment_vec.emplace_back(arc_seg_0);
-          plan_output.length += arc_seg_0.Getlength();
+          plan_output.length += arc_seg_0.GetLength();
           current_pose = plan_output.path_segment_vec.back().GetEndPose();
           is_arc_success = true;
         }
@@ -1983,7 +1983,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
       plan_output.gear_cmd_vec.emplace_back(arc_seg.seg_gear);
       plan_output.steer_vec.emplace_back(arc_seg.seg_steer);
       plan_output.path_segment_vec.emplace_back(arc_seg);
-      plan_output.length += arc_seg.Getlength();
+      plan_output.length += arc_seg.GetLength();
       current_pose = plan_output.path_segment_vec.back().GetEndPose();
     }
 
@@ -2052,7 +2052,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
       plan_output.gear_cmd_vec.emplace_back(line_seg.seg_gear);
       plan_output.steer_vec.emplace_back(line_seg.seg_steer);
       plan_output.path_segment_vec.emplace_back(line_seg);
-      plan_output.length += line_seg.Getlength();
+      plan_output.length += line_seg.GetLength();
     }
 
     // arc seg
@@ -2137,7 +2137,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     plan_output.gear_cmd_vec.emplace_back(arc_seg_2.seg_gear);
     plan_output.steer_vec.emplace_back(arc_seg_2.seg_steer);
     plan_output.path_segment_vec.emplace_back(arc_seg_2);
-    plan_output.length += arc_seg_2.Getlength();
+    plan_output.length += arc_seg_2.GetLength();
     current_pose = plan_output.path_segment_vec.back().GetEndPose();
 
     // add line seg if pose is on target_line
@@ -2158,7 +2158,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
       plan_output.gear_cmd_vec.emplace_back(line_seg.seg_gear);
       plan_output.steer_vec.emplace_back(line_seg.seg_steer);
       plan_output.path_segment_vec.emplace_back(line_seg);
-      plan_output.length += line_seg.Getlength();
+      plan_output.length += line_seg.GetLength();
     }
     current_pose = plan_output.path_segment_vec.back().GetEndPose();
 
@@ -2578,8 +2578,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
   const double lat_err = apa_param.GetParam().target_pos_err;
   const double heading_err = apa_param.GetParam().target_heading_err;
   if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    apa_param.SetPram().target_pos_err = lat_err * 0.5;
-    apa_param.SetPram().target_heading_err = heading_err * 0.5;
+    apa_param.SetParam().target_pos_err = lat_err * 0.5;
+    apa_param.SetParam().target_heading_err = heading_err * 0.5;
   }
 
   auto temp_pose = current_pose;
@@ -2671,8 +2671,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     }
   }
 
-  apa_param.SetPram().target_pos_err = lat_err;
-  apa_param.SetPram().target_heading_err = heading_err;
+  apa_param.SetParam().target_pos_err = lat_err;
+  apa_param.SetParam().target_heading_err = heading_err;
 
   // collision detect
   bool only_s_turn = false;
@@ -2727,7 +2727,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     for (const auto& path_seg : path_seg_vec) {
       // PrintSegmentInfo(path_seg);
       if (path_seg.seg_gear == current_gear) {
-        length += path_seg.Getlength();
+        length += path_seg.GetLength();
         collision_flag = path_seg.collision_flag;
       }
     }
@@ -2828,7 +2828,7 @@ const bool PerpendicularPathHeadingInPlanner::AdjustPlan() {
     if (tmp_path_seg_vec.size() > 0) {
       for (const auto& tmp_path_seg : tmp_path_seg_vec) {
         output_.path_segment_vec.emplace_back(tmp_path_seg);
-        output_.length += tmp_path_seg.Getlength();
+        output_.length += tmp_path_seg.GetLength();
         output_.gear_cmd_vec.emplace_back(tmp_path_seg.seg_gear);
         output_.steer_vec.emplace_back(tmp_path_seg.seg_steer);
       }
@@ -2869,7 +2869,7 @@ const bool PerpendicularPathHeadingInPlanner::AdjustPlan() {
         if (last_segment.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
             last_segment.seg_gear != pnc::geometry_lib::SEG_GEAR_DRIVE) {
           ILOG_INFO << "last line is not drive, should lose";
-          output_.length -= last_segment.Getlength();
+          output_.length -= last_segment.GetLength();
           output_.path_segment_vec.pop_back();
           output_.gear_cmd_vec.pop_back();
           output_.steer_vec.pop_back();
@@ -2999,7 +2999,7 @@ void PerpendicularPathHeadingInPlanner::InsertLineSegAfterCurrentFollowLastPath(
   double length = 0.0;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
-    length += output_.path_segment_vec[i].Getlength();
+    length += output_.path_segment_vec[i].GetLength();
   }
 
   int insert_case = -1;
@@ -3072,7 +3072,7 @@ void PerpendicularPathHeadingInPlanner::InsertLineSegAfterCurrentFollowLastPath(
         min_path_length = std::min(min_path_length, max_x - init_x);
       }
       if (length + extend_distance < min_path_length) {
-        extend_distance = min_path_length - path_seg.Getlength();
+        extend_distance = min_path_length - path_seg.GetLength();
       }
       // for outside occupied and inside not occupied in multi line arc
       if (output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
@@ -3123,7 +3123,7 @@ void PerpendicularPathHeadingInPlanner::InsertLineSegAfterCurrentFollowLastPath(
     const PathColDetRes path_col_res = TrimPathByCollisionDetection(
         new_line, apa_param.GetParam().col_obs_safe_dist_strict);
 
-    if (new_line.Getlength() < 0.02168) {
+    if (new_line.GetLength() < 0.02168) {
       return;
     }
 
@@ -3150,7 +3150,7 @@ void PerpendicularPathHeadingInPlanner::InsertLineSegAfterCurrentFollowLastPath(
   }
 
   else {
-    const auto path_seg_length = path_seg.Getlength();
+    const auto path_seg_length = path_seg.GetLength();
     const double min_path_seg_length = 0.2;
     if (path_seg_length < min_path_seg_length) {
       return;

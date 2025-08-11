@@ -152,7 +152,7 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
     output_.path_available = true;
     for (const auto& tmp_path_seg : path_seg_vec) {
       output_.path_segment_vec.emplace_back(tmp_path_seg);
-      output_.length += tmp_path_seg.Getlength();
+      output_.length += tmp_path_seg.GetLength();
       output_.gear_cmd_vec.emplace_back(tmp_path_seg.seg_gear);
       output_.steer_vec.emplace_back(tmp_path_seg.seg_steer);
     }
@@ -425,7 +425,7 @@ const bool PerpendicularPathOutPlanner::AdjustPlan() {
     output_.path_available = true;
     for (const auto& tmp_path_seg : tmp_path_seg_vec) {
       output_.path_segment_vec.emplace_back(tmp_path_seg);
-      output_.length += tmp_path_seg.Getlength();
+      output_.length += tmp_path_seg.GetLength();
       output_.gear_cmd_vec.emplace_back(tmp_path_seg.seg_gear);
       output_.steer_vec.emplace_back(tmp_path_seg.seg_steer);
     }
@@ -659,7 +659,7 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
     output_.path_available = true;
     for (const auto& tmp_path_seg : path_seg_vec) {
       output_.path_segment_vec.emplace_back(tmp_path_seg);
-      output_.length += tmp_path_seg.Getlength();
+      output_.length += tmp_path_seg.GetLength();
       output_.gear_cmd_vec.emplace_back(tmp_path_seg.seg_gear);
       output_.steer_vec.emplace_back(tmp_path_seg.seg_steer);
     }

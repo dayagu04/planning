@@ -1117,7 +1117,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   double current_path_length = 0.0;
   for (size_t i = path_planner_output.path_seg_index.first;
        i <= path_planner_output.path_seg_index.second; i++) {
-    current_path_length += path_planner_output.path_segment_vec[i].Getlength();
+    current_path_length += path_planner_output.path_segment_vec[i].GetLength();
   }
 
   // enter slot

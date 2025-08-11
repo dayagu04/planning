@@ -2952,7 +2952,7 @@ void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {
 
   ILOG_INFO << "seg_steer: " << static_cast<int>(seg.seg_steer);
   ILOG_INFO << "seg_type: " << static_cast<int>(seg.seg_type);
-  ILOG_INFO << "length: " << seg.Getlength();
+  ILOG_INFO << "length: " << seg.GetLength();
 
   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
     ILOG_INFO << "start_pos: " << seg.GetLineSeg().pA.transpose();
@@ -3086,7 +3086,7 @@ const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
     pose.pos = path_seg.GetStartPos();
     pose.heading = path_seg.GetStartHeading();
     return true;
-  } else if (length > path_seg.Getlength() - 1e-3) {
+  } else if (length > path_seg.GetLength() - 1e-3) {
     pose.pos = path_seg.GetEndPos();
     pose.heading = path_seg.GetEndHeading();
     return true;
@@ -3225,11 +3225,11 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
     for (const PathSegment &path_seg : path_segment_vec) {
       gear_cmd_vec.emplace_back(path_seg.seg_gear);
       steer_cmd_vec.emplace_back(path_seg.seg_steer);
-      total_length += path_seg.Getlength();
+      total_length += path_seg.GetLength();
       if (path_seg.collision_flag) {
         collide_flag = true;
       }
-      if (cur_steer == SEG_STEER_INVALID && path_seg.Getlength() > 0.168) {
+      if (cur_steer == SEG_STEER_INVALID && path_seg.GetLength() > 0.168) {
         cur_steer = path_seg.seg_steer;
       }
     }
@@ -3237,7 +3237,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
     for (int i = 0; i < path_count; ++i) {
       if (gear_cmd_vec[i] == cur_gear) {
         cur_gear_path_segments_vec.emplace_back(path_segment_vec[i]);
-        cur_gear_length += path_segment_vec[i].Getlength();
+        cur_gear_length += path_segment_vec[i].GetLength();
       } else {
         break;
       }
@@ -3299,7 +3299,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
                              path_segment_vec[i].arc_seg.circle_info.radius);
 
         if ((i == 0 || change_gear_path) &&
-            path_segment_vec[i].Getlength() < min_length) {
+            path_segment_vec[i].GetLength() < min_length) {
           steer_change_count += 5;
         }
       }
@@ -3517,7 +3517,7 @@ const bool SeparatePathSegByS(const PathSegment &total_seg, PathSegment &seg1,
   }
   seg1 = total_seg;
   seg2 = total_seg;
-  const double total_length = total_seg.Getlength();
+  const double total_length = total_seg.GetLength();
   if (total_seg.seg_type == SEG_TYPE_LINE) {
     LineSegment &line1 = seg1.line_seg;
     LineSegment &line2 = seg2.line_seg;

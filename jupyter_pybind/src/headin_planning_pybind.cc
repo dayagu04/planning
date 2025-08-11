@@ -285,9 +285,9 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   // to adjust monoplan circle center
   const double slot_inside_obs_x = obs_params[5];
   const double slot_inside_obs_y = obs_params[6];
-  apa_param.SetPram().max_pt_inside_drop_dx_mono_headin = slot_inside_obs_x;
-  apa_param.SetPram().max_pt_inside_drop_dx_multi_headin = slot_inside_obs_x;
-  apa_param.SetPram().headin_max_pt_inside_drop_dy = slot_inside_obs_y;
+  apa_param.SetParam().max_pt_inside_drop_dx_mono_headin = slot_inside_obs_x;
+  apa_param.SetParam().max_pt_inside_drop_dx_multi_headin = slot_inside_obs_x;
+  apa_param.SetParam().headin_max_pt_inside_drop_dy = slot_inside_obs_y;
   const double channel_length = apa_param.GetParam().channel_length;
   std::cout << " channel_length = " << channel_length << std::endl;
 
@@ -563,7 +563,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       static_cast<pnc::geometry_lib::SlotSide>(slot_t_lane.slot_side);
   pBase->SetInput(new_input);
 
-  apa_param.SetPram().radius_add = radius_add;
+  apa_param.SetParam().radius_add = radius_add;
 
   // std::cout << "input.ref_gear = " << input.ref_gear << std::endl;
   // std::cout << "input.ref_arc_steer = " << input.ref_arc_steer << std::endl;

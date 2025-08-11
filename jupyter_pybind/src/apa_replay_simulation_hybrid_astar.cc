@@ -467,11 +467,11 @@ const bool PlanOnce(
 
   switch (path_plan_method) {
     case 0:
-      apa_param.SetPram().path_generator_type =
+      apa_param.SetParam().path_generator_type =
           ParkPathGenerationType::GEOMETRY_BASED;
       break;
     case 1:
-      apa_param.SetPram().path_generator_type =
+      apa_param.SetParam().path_generator_type =
           ParkPathGenerationType::SEARCH_BASED;
       break;
     default:

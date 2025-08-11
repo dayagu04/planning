@@ -378,13 +378,13 @@ const bool PerpendicularTailInScenario::CalcPtInside() {
     }
   }
 
-  apa_param.SetPram().actual_mono_plan_enable = param.mono_plan_enable;
+  apa_param.SetParam().actual_mono_plan_enable = param.mono_plan_enable;
   // 如果保守的话  两侧全空才开启一把进 无意义 这个保守泊入已关闭
   frame_.is_left_empty = left_pq_for_x.empty();
   frame_.is_right_empty = right_pq_for_x.empty();
   if (param.conservative_mono_enable &&
       (!frame_.is_left_empty || !frame_.is_right_empty)) {
-    apa_param.SetPram().actual_mono_plan_enable = false;
+    apa_param.SetParam().actual_mono_plan_enable = false;
   }
 
   // 加入左右侧的虚拟障碍物
@@ -669,7 +669,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   }
 
   if (input.is_simulation) {
-    apa_param.SetPram().use_average_obs_dist =
+    apa_param.SetParam().use_average_obs_dist =
         apa_world_ptr_->GetSimuParam().use_average_obs_dist;
   }
 
@@ -2075,7 +2075,7 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     const auto& seg = geometry_path_now.path_segment_vec[i];
     if (seg.seg_steer == geometry_lib::SEG_TYPE_LINE &&
         seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
-      line_length += geometry_path_now.path_segment_vec[i].Getlength();
+      line_length += geometry_path_now.path_segment_vec[i].GetLength();
     } else {
       break;
     }

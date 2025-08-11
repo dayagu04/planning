@@ -162,7 +162,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   // generate path
   global_path_.clear();
 
-  apa_param.SetPram().speed_config.default_cruise_speed = max_cruise_speed;
+  apa_param.SetParam().speed_config.default_cruise_speed = max_cruise_speed;
 
   const ApaParameters &param = apa_param.GetParam();
 

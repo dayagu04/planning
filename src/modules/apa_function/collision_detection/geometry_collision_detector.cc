@@ -17,8 +17,8 @@ const ColResult GeometryCollisionDetector::Update(
     return col_res_;
   }
 
-  col_res_.remain_car_dist = path_seg.Getlength();
-  col_res_.remain_dist = path_seg.Getlength();
+  col_res_.remain_car_dist = path_seg.GetLength();
+  col_res_.remain_dist = path_seg.GetLength();
 
   UpdateSafeBuffer(body_lat_buffer, lon_buffer, special_process_mirror,
                    mirror_lat_buffer);
@@ -302,7 +302,7 @@ void GeometryCollisionDetector::CalPathSegBound(
   } else {
     geometry_lib::PathPoint pose;
     double length = 0.0;
-    while (length < path_seg.Getlength() - 3e-2) {
+    while (length < path_seg.GetLength() - 3e-2) {
       CalPtFromPathSeg(pose, path_seg, length);
       pose_vec.emplace_back(pose);
       length += 30 * kDeg2Rad * path_seg.arc_seg.circle_info.radius;

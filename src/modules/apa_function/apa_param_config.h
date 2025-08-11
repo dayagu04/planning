@@ -574,7 +574,7 @@ class ApaParametersSetting {
 
   // planning parameters
   const ApaParameters &GetParam() const { return param_; }
-  ApaParameters &SetPram() { return param_; }
+  ApaParameters &SetParam() { return param_; }
 
  private:
   ApaParametersSetting(){};
