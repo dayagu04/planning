@@ -512,13 +512,18 @@ void SpeedLimitDecider::CalculateStaticAgentLimit() {}
 
 void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   ILOG_DEBUG << "----calc_speed_limit_from_tfl_dis---";
+  const auto &local_view = session_->environmental_model().get_local_view();
+  auto fsm_state = local_view.function_state_machine_info.current_state;
+  bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+
   double v_limit_tfl_dis = 40.0;
   const auto &environmental_model = session_->environmental_model();
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
   double dis_tfl = tfl_manager->GetNearestTFLDis();
-  if (dis_tfl < kTFLSpeedLimitDis) {
+  if (dis_tfl < kTFLSpeedLimitDis && (!noa_mode)) {
     v_limit_tfl_dis = 55 / 3.6;
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
         traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
