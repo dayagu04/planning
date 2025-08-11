@@ -1219,6 +1219,7 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
   LOG_DEBUG("current_segment_passed_distance:%f\n",
             route_info_output_.current_segment_passed_distance);
   if (!current_link) {
+    route_info_output_.reset();
     return link;
   }
 
@@ -1639,7 +1640,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           split_region_info_list[0].distance_to_split_point <
           std::abs(split_region_info_list[0]
                        .start_fp_point.fp_distance_to_split_point);
-      
+
       //目前都是由右边下匝道的case大多数，由于版本还不稳定，当前优先处理右边split的场景
       bool is_is_entery_split_region = false;
       bool is_split_region = session_->planning_context()
@@ -1850,7 +1851,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               first_split_region_info;
           mlc_decider_route_info_.first_static_split_region_info =
               route_info_output_.split_region_info_list[0];
-          
+
           //如果找连续的找不到，那么直接返回处理第一个split的场景
 
           bool is_calculate_second_feasible_lane =
@@ -2752,7 +2753,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
             iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_END) {
           end_fp = fp_point;
           is_find_split_region_end = true;
-          
+
           split_region_info.end_fp_point.lane_ids.clear();
 
           for (const auto& id : fp_point.lane_ids()) {
@@ -3469,7 +3470,7 @@ bool RouteInfo::CalculateMergeLaneInfo(
           last_fp_lane_num++;
         }
       }
-      
+
       bool is_lane_num_satisfy =
           find_fp_lane_num + 1 == last_fp_lane_num;
       // 默认是车道的前继车道左边为汇入车道
@@ -3515,7 +3516,7 @@ bool RouteInfo::CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* f
   const auto& merge_region_info_list = route_info_output_.merge_region_info_list;
   if (merge_region_info_list.size() == 0) {
     return false;
-  } 
+  }
 
   while (itera_dis < merge_region_info_list[0].distance_to_split_point) {
     for (const auto& fp: current_link->feature_points()) {
@@ -3535,15 +3536,15 @@ bool RouteInfo::CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* f
     itera_dis = itera_dis + current_link->length() * 0.01;
     current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
   }
-  return true;                 
+  return true;
 }
 
 bool RouteInfo::CalculateLastFp(
     iflymapdata::sdpro::FeaturePoint* last_fp,
     const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint& find_fp) {
   const auto& fp_link = sdpro_map_.GetLinkOnRoute(fp_link_id);
-  if (last_fp == nullptr || 
-      fp_link == nullptr || 
+  if (last_fp == nullptr ||
+      fp_link == nullptr ||
       fp_link->feature_points().empty()) {
     return false;
   }
