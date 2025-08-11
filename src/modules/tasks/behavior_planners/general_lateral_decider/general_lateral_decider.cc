@@ -1031,7 +1031,7 @@ void GeneralLateralDecider::PostProcessRoadSoftBoundary() {
   // 先只延申靠近自车的一侧soft bound
   // 处理lower_bound
   ExtendRoadSoftBound(num_rear_extended_points, 0, true, bound_size);
-  // 处理hard_bound
+  // 处理upper_bound
   ExtendRoadSoftBound(num_rear_extended_points, 0, false, bound_size);
 }
 
@@ -1039,34 +1039,69 @@ void GeneralLateralDecider::ExtendRoadSoftBound(
     int num_rear_extended_points,
     int num_front_extended_points, // 暂未使用，可后续扩展
     bool is_lower, int bound_size) {
-  if (num_rear_extended_points < 0) {
+  if (num_rear_extended_points <= 0) {
     return;
   }
-  for (int i = 0; i < bound_size - num_rear_extended_points; ++i) {
-    if (is_lower) {
-      int max_lower_idx = i;
-      double max_lower_val = soft_bounds_[i][0].lower;
-      for (int j = i; j < i + num_rear_extended_points; ++j) {
-        if (soft_bounds_[j][0].lower > max_lower_val) {
-          max_lower_val = soft_bounds_[j][0].lower;
-          max_lower_idx = j;
+  std::deque<int> index_dq;  // 存索引，保持对应值单调
+  if (is_lower) {
+    for (int i = 0; i < bound_size; ++i) {
+      // 弹出窗口外的元素
+      while (!index_dq.empty() && index_dq.front() <= i - num_rear_extended_points) {
+          index_dq.pop_front();
+      }
+      // 保证队列单调递减，弹出所有小于等于当前值的元素
+      while (!index_dq.empty() && soft_bounds_[index_dq.back()][0].lower <= soft_bounds_[i][0].lower) {
+          index_dq.pop_back();
+      }
+      index_dq.push_back(i);
+      if (i >= num_rear_extended_points - 1) {
+        soft_bounds_[i - num_rear_extended_points + 1][0].lower = soft_bounds_[index_dq.front()][0].lower;
+      }
+      if (i == bound_size - 1 ) {
+        int start_index = std::max(i - num_rear_extended_points + 1, 0);
+        for (int j = start_index; j < bound_size; ++j) {
+          soft_bounds_[j][0].lower = soft_bounds_[index_dq.front()][0].lower;
         }
       }
-      for (int j = i; j < max_lower_idx; ++j) {
-        soft_bounds_[j][0].lower = max_lower_val;
+      // int max_lower_idx = i;
+      // double max_lower_val = soft_bounds_[i][0].lower;
+      // for (int j = i + 1 ; j < i + num_rear_extended_points && j < bound_size; ++j) {
+      //   if (soft_bounds_[j][0].lower > max_lower_val) {
+      //     max_lower_val = soft_bounds_[j][0].lower;
+      //     max_lower_idx = j;
+      //   }
+      // }
+      // soft_bounds_[i][0].lower = max_lower_val;
+    }
+  } else {
+    for (int i = 0; i < bound_size; ++i) {
+      // 弹出窗口外的元素
+      while (!index_dq.empty() && index_dq.front() <= i - num_rear_extended_points) {
+          index_dq.pop_front();
       }
-    } else {
-      int min_upper_idx  = i;
-      double min_upper_val = soft_bounds_[i][0].upper;
-      for (int j = i; j < i + num_rear_extended_points; ++j) {
-        if (soft_bounds_[j][0].upper < min_upper_val) {
-          min_upper_val = soft_bounds_[j][0].upper;
-          min_upper_idx = j;
+      // 保持队列单调递增，弹出所有大于等于当前值的元素
+      while (!index_dq.empty() && soft_bounds_[index_dq.back()][0].upper >= soft_bounds_[i][0].upper) {
+          index_dq.pop_back();
+      }
+      index_dq.push_back(i);
+      if (i >= num_rear_extended_points - 1) {
+        soft_bounds_[i - num_rear_extended_points + 1][0].upper = soft_bounds_[index_dq.front()][0].upper;
+      }
+      if (i == bound_size - 1 ) {
+        int start_index = std::max(i - num_rear_extended_points + 1, 0);
+        for (int j = start_index; j < bound_size; ++j) {
+          soft_bounds_[j][0].upper = soft_bounds_[index_dq.front()][0].upper;
         }
       }
-      for (int j = i; j < min_upper_idx ; ++j) {
-        soft_bounds_[j][0].upper = min_upper_val;
-      }
+      // int min_upper_idx  = i;
+      // double min_upper_val = soft_bounds_[i][0].upper;
+      // for (int j = i + 1; j < i + num_rear_extended_points && j < bound_size; ++j) {
+      //   if (soft_bounds_[j][0].upper < min_upper_val) {
+      //     min_upper_val = soft_bounds_[j][0].upper;
+      //     min_upper_idx = j;
+      //   }
+      // }
+      // soft_bounds_[i][0].upper = min_upper_val;
     }
   }
 }
