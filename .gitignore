@@ -3,6 +3,7 @@ install
 bin
 .cache
 tools/pybind/**/python_proto
+jupyter_pybind/notebooks_apa/scenario
 jupyter_pybind/notebooks_apa/scripts/struct_msgs
 jupyter_pybind/notebooks_apa/scripts/python_proto/*.py
 jupyter_pybind/notebooks_apa/**/__pycache__

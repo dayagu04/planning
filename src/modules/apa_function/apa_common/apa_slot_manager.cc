@@ -204,11 +204,15 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
     return;
   }
   release_slot_id_vec_.clear();
-  for (const auto& pair : slots_map_) {
-    if (pair.first != ego_info_under_slot_.id) {
-      if (pair.second.release_info_.release_state[RULE_BASED_RELEASE] ==
+  for (const auto& pair : dist_id_map_) {
+    if (slots_map_.count(pair.second) == 0) {
+      continue;
+    }
+    const ApaSlot& slot = slots_map_[pair.second];
+    if (slot.id_ != ego_info_under_slot_.id) {
+      if (slot.release_info_.release_state[RULE_BASED_RELEASE] ==
           SlotReleaseState::RELEASE) {
-        release_slot_id_vec_.emplace_back(pair.first);
+        release_slot_id_vec_.emplace_back(slot.id_);
       }
     } else {
       if (ego_info_under_slot_.slot.release_info_
@@ -220,14 +224,14 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
            ego_info_under_slot_.slot.release_info_
                    .release_state[ASTAR_PLANNING_RELEASE] ==
                SlotReleaseState::RELEASE)) {
-        release_slot_id_vec_.emplace_back(pair.first);
+        release_slot_id_vec_.emplace_back(slot.id_);
       } else if (ego_info_under_slot_.slot.release_info_
                          .release_state[RULE_BASED_RELEASE] ==
                      SlotReleaseState::RELEASE &&
                  ego_info_under_slot_.slot.release_info_
                          .release_state[ASTAR_PLANNING_RELEASE] ==
                      SlotReleaseState::COMPUTING) {
-        release_slot_id_vec_.emplace_back(pair.first);
+        release_slot_id_vec_.emplace_back(slot.id_);
       }
     }
   }
