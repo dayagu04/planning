@@ -47,7 +47,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
         occupancy_grid_info_msg) override {
   }
 
-
   void Feed_IflytekFusionRoadFusion(
       const iflyauto::RoadInfo& road_info_msg) override {
     std::lock_guard<std::mutex> lock(road_info_msg_mutex_);

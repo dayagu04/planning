@@ -13,7 +13,6 @@
 #include "map_data.pb.h"
 #include "mjson/mjson.hpp"
 #include "planning_def.h"
-#include "route_info.h"
 #include "spline.h"
 #include "trajectory1d/trajectory1d.h"
 #include "utils/cartesian_coordinate_system.h"
@@ -141,6 +140,39 @@ struct NOASplitRegionInfo {
 //   bool is_nearing_merge_redion = false;
 //   bool
 // }
+struct MLCDeciderRouteInfo {
+  EgoStatusOnRoute ego_status_on_route = ON_MAIN;
+  bool is_process_split = false;
+  bool is_process_split_split = false;
+  bool is_process_other_merge_split = false;
+  bool is_process_other_merge = false;
+  bool is_process_merge = false;
+  double last_frame_dis_to_merge_start_point = NL_NMAX;
+  double last_frame_dis_to_merge_point = NL_NMAX;
+  double last_frame_dis_to_split = NL_NMAX;
+  double end_fp_dis_to_split = 0;
+  bool is_triggle_cal_dis_to_last_merge_point = false;
+  NOASplitRegionInfo static_merge_region_info;
+  NOASplitRegionInfo first_static_split_region_info;
+  std::vector<int> feasible_lane_sequence;
+
+  void reset () {
+    ego_status_on_route = ON_MAIN;
+    is_process_split = false;
+    is_process_split_split = false;
+    is_process_other_merge_split = false;
+    is_process_other_merge = false;
+    is_process_merge = false;
+    last_frame_dis_to_merge_start_point = NL_NMAX;
+    last_frame_dis_to_merge_point = NL_NMAX;
+    last_frame_dis_to_split = NL_NMAX;
+    end_fp_dis_to_split = 0;
+    is_triggle_cal_dis_to_last_merge_point = false;
+    static_merge_region_info.reset();
+    first_static_split_region_info.reset();
+    feasible_lane_sequence.clear();
+  }
+};
 
 
 struct RouteInfoOutput {
