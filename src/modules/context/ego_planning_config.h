@@ -2012,6 +2012,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, high_risk_jerk_bound,
                      "general_lateral_decider",
                      "high_risk_jerk_bound");
+    ReadItem<double>(json, limit_nudge_change_rate,
+                     "general_lateral_decider",
+                     "limit_nudge_change_rate");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -2126,6 +2129,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double max_nudge_buffer2side_car = 0.3;
   double lower_risk_jerk_bound = 0.4;
   double high_risk_jerk_bound = 0.4;
+  double limit_nudge_change_rate = 0.1;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

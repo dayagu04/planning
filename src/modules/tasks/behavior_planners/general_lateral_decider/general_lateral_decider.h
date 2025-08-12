@@ -176,7 +176,8 @@ class GeneralLateralDecider : public Task {
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
                                 bool is_update_hard_bound = false,
-                                bool is_avoid_side_ignore_obj = false);
+                                bool is_avoid_side_ignore_obj = false,
+                                bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -266,7 +267,8 @@ class GeneralLateralDecider : public Task {
       std::vector<std::pair<double, double>> &frenet_bounds);
   void GenerateRecommendJerk(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      bool is_avoid_side_ignore_obj);
+      bool is_avoid_side_ignore_obj,
+      bool &is_high_dangerous);
 
  private:
   GeneralLateralDeciderConfig config_;

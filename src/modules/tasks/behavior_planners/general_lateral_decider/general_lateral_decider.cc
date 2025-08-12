@@ -2834,7 +2834,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       interp(intrusion_distance, config_.reverse_obstacle_intrusion_distance_bp,
              config_.extra_reverse_obstacle_decrease_buffer);
   // 生成推荐jerk
-  GenerateRecommendJerk(obstacle, is_avoid_side_ignore_obj);
+  bool is_high_dangerous = false;
+  GenerateRecommendJerk(obstacle, is_avoid_side_ignore_obj, is_high_dangerous);
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
   double last_t_lat_buf_dis = 0.0;
@@ -2958,7 +2959,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                overlap_max_y, lat_buf_dis, lat_decision,
                                lon_decision, obstacle_decision,
-                               is_update_hard_bound, is_avoid_side_ignore_obj);
+                               is_update_hard_bound, is_avoid_side_ignore_obj, is_high_dangerous);
     } else {
       for (int k = 0; k < 2; k++) {
         if (k == 0) {
@@ -2993,7 +2994,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                  overlap_max_y, lat_buf_dis, lat_decision,
                                  lon_decision, obstacle_decision,
-                                 is_update_hard_bound, is_avoid_side_ignore_obj);
+                                 is_update_hard_bound, is_avoid_side_ignore_obj,
+                                 is_high_dangerous);
       }
     }
   }
@@ -3001,7 +3003,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
 void GeneralLateralDecider::GenerateRecommendJerk(
     const std::shared_ptr<FrenetObstacle> obstacle,
-    bool is_avoid_side_ignore_obj) {
+    bool is_avoid_side_ignore_obj,
+    bool &is_high_dangerous) {
   const auto potential_dangerous_agent_decider_output =
       session_->planning_context()
                .potential_dangerous_agent_decider_output();
@@ -3019,6 +3022,7 @@ void GeneralLateralDecider::GenerateRecommendJerk(
       general_lateral_decider_output.recommended_bound_avoid_jerk = config_.lower_risk_jerk_bound;
     } else if (risk_level == RiskLevel::HIGH_RISK) {
       general_lateral_decider_output.recommended_bound_avoid_jerk = config_.high_risk_jerk_bound;
+      is_high_dangerous = true;
     }
   }
 }
@@ -3559,7 +3563,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     int id, double t, BoundType bound_type, double overlap_min_y,
     double overlap_max_y, double lat_buf_dis,
     LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision,
-    ObstacleDecision &obstacle_decision, bool is_update_hard_bound, bool is_avoid_side_ignore_obj) {
+    ObstacleDecision &obstacle_decision, bool is_update_hard_bound,
+    bool is_avoid_side_ignore_obj, bool is_high_dangerous) {
   const double l_offset_limit = 10.0;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -3569,7 +3574,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
   Bound bound{-l_offset_limit, l_offset_limit};
   double limit_nudge_max_l = 20;
   double limit_nudge_min_l = -20;
-  double limit_nudge_change_rate = 0.15;
+  double limit_nudge_change_rate = config_.limit_nudge_change_rate;
+  limit_nudge_change_rate = is_high_dangerous ? limit_nudge_change_rate * 2 : limit_nudge_change_rate;
 
   if (lat_decision == LatObstacleDecisionType::LEFT) {
     bound.lower = overlap_max_y + lat_buf_dis + half_ego_width;

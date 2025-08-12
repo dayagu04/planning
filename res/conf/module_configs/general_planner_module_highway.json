@@ -297,7 +297,8 @@
     "lat_compensation_buffer":[0.2, 0.15, 0.1, 0.0],
     "max_nudge_buffer2side_car": 0.6,
     "lower_risk_jerk_bound": 0.7,
-    "high_risk_jerk_bound": 0.9
+    "high_risk_jerk_bound": 0.9,
+    "limit_nudge_change_rate": 0.15
 
   },
   "lateral_offset_decider": {
