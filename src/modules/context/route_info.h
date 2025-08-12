@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include "config/basic_type.h"
 #include "ego_lane_track_manager.h"
 #include "ego_planning_config.h"
@@ -30,6 +31,7 @@ struct MLCDeciderRouteInfo {
   bool is_triggle_cal_dis_to_last_merge_point = false;
   NOASplitRegionInfo static_merge_region_info;
   NOASplitRegionInfo first_static_split_region_info;
+  std::vector<int> feasible_lane_sequence;
 
   void reset () {
     ego_status_on_route = ON_MAIN;
@@ -45,6 +47,7 @@ struct MLCDeciderRouteInfo {
     is_triggle_cal_dis_to_last_merge_point = false;
     static_merge_region_info.reset();
     first_static_split_region_info.reset();
+    feasible_lane_sequence.clear();
   }
 };
 class RouteInfo {

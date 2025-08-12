@@ -13,6 +13,7 @@
 #include "map_data.pb.h"
 #include "mjson/mjson.hpp"
 #include "planning_def.h"
+#include "route_info.h"
 #include "spline.h"
 #include "trajectory1d/trajectory1d.h"
 #include "utils/cartesian_coordinate_system.h"
@@ -198,6 +199,7 @@ struct RouteInfoOutput {
   std::vector<NOASplitRegionInfo> merge_region_info_list;
   iflymapdata::sdpro::MapVendorType map_vendor =
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
+  MLCDeciderRouteInfo mlc_decider_route_info;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -254,6 +256,7 @@ struct RouteInfoOutput {
     ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
     merge_region_info_list.clear();
     map_vendor = iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
+    mlc_decider_route_info.reset();
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;
