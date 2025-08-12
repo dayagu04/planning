@@ -275,13 +275,13 @@ bool LateralObstacleDecider::Execute() {
         if (history.side_2_front_count > side_2_front_count_thr) {
           history.front_car = true;
           history.rear_car = false;
-          history.overlap_ego_head_thr = 4.5;
+          history.overlap_ego_head_thr = 2.5;
         } else {
-          history.overlap_ego_head_thr = 4;
+          history.overlap_ego_head_thr = 2;
         }
       } else {
         history.side_2_front_count = 0;
-        history.overlap_ego_head_thr = 4;
+        history.overlap_ego_head_thr = 2;
       }
       if (CalculateCutInAndCross(*frenet_obs, reference_path_ptr, lane_width)) {
         // history.is_avd_car = false;
