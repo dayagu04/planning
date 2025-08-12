@@ -1098,7 +1098,7 @@ void SyncParkingParameters(const bool is_simulation) {
                   double, "cur_path_lon_buffer");
 
   JSON_READ_VALUE(
-      apa_param.SetPram().prepare_plan_config.enable_stable_prepare_route,
+      apa_param.SetParam().prepare_plan_config.enable_stable_prepare_route,
       bool, "enable_stable_prepare_route");
   return;
 }
