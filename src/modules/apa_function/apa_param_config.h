@@ -163,6 +163,14 @@ struct DynamicGearSwitchConfig {
   double theta_error_for_dynamic_gear_switch;
 };
 
+// Do not publish path to HMI per frame for stable display.
+// If path is changed too much, publish it.
+struct PreparePlanConfig {
+  bool enable_stable_prepare_route;
+  double start_point_error = 0.15;
+  double terminal_point_error = 0.15;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -563,6 +571,7 @@ struct ApaParameters {
   SmartFoldMirrorParams smart_fold_mirror_params;
 
   DynamicGearSwitchConfig gear_switch_config;
+  PreparePlanConfig prepare_plan_config;
 };
 
 class ApaParametersSetting {

@@ -443,5 +443,7 @@
   "lat_error_for_dynamic_gear_switch" : 0.05,
   "theta_error_for_dynamic_gear_switch" : 5.0,
   "cur_path_lat_buffer" : 0.5,
-  "cur_path_lon_buffer" : 0.5
+  "cur_path_lon_buffer" : 0.5,
+
+  "enable_stable_prepare_route": true
 }

@@ -43,4 +43,6 @@ bool IsValidApaState(const iflyauto::FunctionalState& current_state);
 // check need slot searching, or need parking in apa or hpp.
 bool IsSlotSearchingOrParking(const iflyauto::FunctionalState& current_state);
 
+const bool IsTrajValid(const iflyauto::Trajectory& traj);
+
 }  // namespace  planning

@@ -49,7 +49,7 @@ class ParkingScenarioManager final {
     return current_scenario_;
   }
 
-  void GenerateHmiSlotReleaseState();
+  void PubPreparePlanState();
 
   void RecommendParkingDirection();
 
@@ -60,8 +60,14 @@ class ParkingScenarioManager final {
   void ScenarioRunning();
 
   const bool IsSlotReleaseByHybridAstar();
+  void ClearPlanningOutput();
+
+  // Do not publish path to HMI per frame for stable display.
+  // If path is changed too much, publish it.
+  const bool PubPreparePathByStableStrategy();
 
  private:
+  // reset if scenario is null or slot is not release.
   iflyauto::PlanningOutput planning_output_;
   iflyauto::APAHMIData apa_hmi_data_;
   std::shared_ptr<ParkingScenario> current_scenario_;

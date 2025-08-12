@@ -195,7 +195,7 @@ void ParkingScenario::PublishPlanningTraj() {
   return;
 }
 
-void ParkingScenario::PublishPreparePlanningTraj() {
+void ParkingScenario::TansformPreparePlanningTraj() {
   if (complete_path_point_global_vec_.empty()) {
     ILOG_INFO << "path is null";
     return;
@@ -358,30 +358,7 @@ void ParkingScenario::SetPlanningPath() {
   ILOG_INFO << "gear command in planning output = "
             << static_cast<int>(gear_command->gear_command_value);
 
-  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  debug_info->mutable_cur_path_points()->Clear();
-  debug_info->mutable_complete_path_points()->Clear();
-
-  for (const auto& pt : current_path_point_global_vec_) {
-    planning::common::ApaPathPoint* point = debug_info->add_cur_path_points();
-    point->set_x(pt.GetX());
-    point->set_y(pt.GetY());
-    point->set_heading(pt.GetHeading());
-    point->set_kappa(pt.kappa);
-    point->set_lat_buffer(pt.lat_buffer);
-    point->set_type(pt.type);
-  }
-
-  for (const auto& pt : complete_path_point_global_vec_) {
-    planning::common::ApaPathPoint* point =
-        debug_info->add_complete_path_points();
-    point->set_x(pt.GetX());
-    point->set_y(pt.GetY());
-    point->set_heading(pt.GetHeading());
-    point->set_kappa(pt.kappa);
-    point->set_lat_buffer(pt.lat_buffer);
-    point->set_type(pt.type);
-  }
+  RecordDebugPath();
 
   return;
 }
@@ -1042,6 +1019,35 @@ geometry_lib::PathPoint ParkingScenario::GetCurrentPathTerminal(
   }
 
   return point;
+}
+
+void ParkingScenario::RecordDebugPath() {
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug_info->mutable_cur_path_points()->Clear();
+  debug_info->mutable_complete_path_points()->Clear();
+
+  for (const auto& pt : current_path_point_global_vec_) {
+    planning::common::ApaPathPoint* point = debug_info->add_cur_path_points();
+    point->set_x(pt.GetX());
+    point->set_y(pt.GetY());
+    point->set_heading(pt.GetHeading());
+    point->set_kappa(pt.kappa);
+    point->set_lat_buffer(pt.lat_buffer);
+    point->set_type(pt.type);
+  }
+
+  for (const auto& pt : complete_path_point_global_vec_) {
+    planning::common::ApaPathPoint* point =
+        debug_info->add_complete_path_points();
+    point->set_x(pt.GetX());
+    point->set_y(pt.GetY());
+    point->set_heading(pt.GetHeading());
+    point->set_kappa(pt.kappa);
+    point->set_lat_buffer(pt.lat_buffer);
+    point->set_type(pt.type);
+  }
+
+  return;
 }
 }  // namespace apa_planner
 }  // namespace planning

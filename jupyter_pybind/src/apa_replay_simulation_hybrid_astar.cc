@@ -141,9 +141,8 @@ int Init() {
   ILOG_INFO << "replay init success";
 
   global_astar_path_.clear();
-
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  debug_->Clear();
+  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug->Clear();
 
   return 0;
 }

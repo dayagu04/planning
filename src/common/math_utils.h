@@ -56,4 +56,10 @@ inline float ifly_cvt_ms_to_kmh(float vel) { return vel * 3.6; }
 #define IFLY_SQRT_PI (1.77245385090551602729)
 #define IFLY_SQRT_PI_INV (0.56418958354775628695)
 
+template <typename T>
+inline double DistanceTo(const T& p0, const T& p1) {
+  return std::sqrt((p0.x - p1.x) * (p0.x - p1.x) +
+                   (p0.y - p1.y) * (p0.y - p1.y));
+}
+
 }  // namespace planning
