@@ -368,8 +368,8 @@ def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
         f"link_type: {link_type_name}, "
         f"link_class: {link_class_name}, "
         f"lane_num: {link.lane_num}, "
-        f"main_action: {route_link_dict[link.id].main_action}, "
-        f"assi_action: {route_link_dict[link.id].assi_action}, "
+        # f"main_action: {route_link_dict[link.id].main_action}, "
+        # f"assi_action: {route_link_dict[link.id].assi_action}, "
     )
     for point in link.points.boot.points:
         ehr_x, ehr_y = point.x, point.y
@@ -425,6 +425,8 @@ def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
     for inlink_id in link.predecessor_link_ids:
       if inlink_id in route_link_ids:
         continue
+      if inlink_id not in link_dict:
+        continue
       in_link = link_dict[inlink_id]
       # 构建inlink的信息
       link_class_name = link_class_map.get(in_link.link_class, f"未知类型({in_link.link_class})")
@@ -445,6 +447,8 @@ def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
 
     for outlink_id in link.successor_link_ids:
       if outlink_id in route_link_ids:
+        continue
+      if outlink_id not in link_dict:
         continue
       out_link = link_dict[outlink_id]
       # 构建当前link的信息
