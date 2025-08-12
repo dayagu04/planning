@@ -1035,7 +1035,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
                  min_follow_distance_m);
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
-    double d_rel = min_s_by_lat_path - ego_s - 0.5 * vehicle_param.length;
+    double d_rel = min_s_by_lat_path - ego_s - vehicle_param.front_edge_to_rear_axle;
     double v_follow_desired =
         CalcDesiredVelocity(d_rel, s_desired, avoid_agent->speed(), v_ego);
     double invade_dis = avoid_agent->is_static() ? 0.8 : 0.4;
@@ -1066,7 +1066,6 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     double v_limit_lower_tmp = avoid_agent_v + 2.0;
     v_limit = std::max(v_limit, v_limit_lower);
     v_limit = std::max(v_limit, v_limit_lower_tmp);
-    v_limit = std::min(v_limit, init_point.v);
 
     SpeedLimitAgent speed_limit_agent;
     speed_limit_agent.id = avoid_agent->agent_id();
