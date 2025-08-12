@@ -193,9 +193,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
       const auto& ego_state =
           session_->environmental_model().get_ego_state_manager();
-      if (ego_state->ego_v() < trigger_overtake_min_ego_speed_threshold ||
-          ego_state->ego_v_cruise() <
-              minimum_ego_cruise_speed_for_active_lane_change) {
+      if (ego_state->ego_v() < trigger_overtake_min_ego_speed_threshold) {
         ILOG_INFO << "cann't generate overtake lane change since ego speed is less than min speed threshold";
         overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
