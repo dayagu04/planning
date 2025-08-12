@@ -371,7 +371,8 @@ def draw_overtake_lc_data_view(dataLoader, layer_manager):
       vars_lc = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
                  "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
                  "trigger_right_overtake", "overtake_vehicle_id",  "dash_line_len",
-                 "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold"]
+                 "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold",
+                 "left_lane_is_on_navigation_route", "right_lane_is_on_navigation_route"]
       for name in vars_lc:
         try:
           datas.append((plan_debug[name]))

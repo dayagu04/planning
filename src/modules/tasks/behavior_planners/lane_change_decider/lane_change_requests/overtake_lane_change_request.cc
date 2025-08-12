@@ -7,6 +7,7 @@
 #include <cmath>
 #include <complex>
 #include <limits>
+#include <vector>
 
 #include "agent/agent.h"
 #include "common.pb.h"
@@ -198,6 +199,7 @@ void OvertakeRequest::Update(int lc_status) {
 void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto& feasible_lane_sequence = route_info_output.mlc_decider_route_info.feasible_lane_sequence;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const int current_lane_virtual_id =
@@ -258,21 +260,28 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
 
-  const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
-      virtual_lane_mgr_->get_virtual_lanes();
-  auto lane_nums = clane->get_lane_nums();
+  auto lane_nums_msg = clane->get_lane_nums();
   int right_lane_nums = 0;
   int left_lane_nums = 0;
-  Point2D sl;
-  if (clane->get_lane_frenet_coord()->XYToSL(
-          {ego_state->ego_pose().x, ego_state->ego_pose().y}, sl)) {
-    auto iter =
-        std::find_if(lane_nums.begin(), lane_nums.end(),
-                     [&sl](const iflyauto::LaneNumMsg& lane_num) {
-                       return lane_num.begin <= sl.x && lane_num.end > sl.x;
-                     });
-    left_lane_nums = iter->left_lane_num;
-    right_lane_nums = iter->right_lane_num;
+  Point2D ego_frenet;
+  if (clane != nullptr) {
+    const auto& cur_lane_frenet_coord = clane->get_lane_frenet_coord();
+    if (cur_lane_frenet_coord != nullptr) {
+      if (cur_lane_frenet_coord->XYToSL(
+              {ego_state->ego_pose().x, ego_state->ego_pose().y}, ego_frenet)) {
+        auto iter =
+            std::find_if(lane_nums_msg.begin(), lane_nums_msg.end(),
+                        [&ego_frenet](const iflyauto::LaneNumMsg& lane_num) {
+                          return lane_num.begin <= ego_frenet.x && lane_num.end > ego_frenet.x;
+                        });
+        left_lane_nums = iter->left_lane_num;
+        right_lane_nums = iter->right_lane_num;
+      }
+    } else {
+      return;
+    }
+  } else {
+    return;
   }
 
   const auto& vehicle_param =
@@ -404,7 +413,15 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
   // const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
-  const bool is_trigger_left = is_left_overtake;
+  bool left_lane_is_on_navigation_route = true;
+  if (feasible_lane_sequence.size() > 0) {
+    int current_lane_order_num = left_lane_nums + 1;
+    int target_lane_order_num = current_lane_order_num - 1;
+    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+      left_lane_is_on_navigation_route = false;
+    }
+  }
+  const bool is_trigger_left = is_left_overtake && left_lane_is_on_navigation_route;
 
   static int counter_left = 0;
   if (!is_trigger_left) {
@@ -418,7 +435,16 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   // const bool is_trigger_right =
   //     (is_right_overtake && is_right_lane_change_safe_);
-  const bool is_trigger_right = is_right_overtake;
+  bool right_lane_is_on_navigation_route = true;
+  if (feasible_lane_sequence.size() > 0) {
+    int current_lane_order_num = left_lane_nums + 1;
+    int target_lane_order_num = current_lane_order_num + 1;
+    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+      right_lane_is_on_navigation_route = false;
+    }
+  }
+
+  const bool is_trigger_right = is_right_overtake && right_lane_is_on_navigation_route;
   static int counter_right = 0;
   if (!is_trigger_right) {
     counter_right = 0;
@@ -438,20 +464,19 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       &right_overtake_valid_timestamp_);
 #endif
 
+  JSON_DEBUG_VALUE("left_lane_is_on_navigation_route", left_lane_is_on_navigation_route);
+  JSON_DEBUG_VALUE("right_lane_is_on_navigation_route", right_lane_is_on_navigation_route);
+
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
   if (trigger_left_overtake) {
     if (request_type_ != LEFT_CHANGE) {
-      if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
-           first_merge_direction != SplitDirection::SPLIT_RIGHT) &&
-          (distance_to_first_road_split >=
-               min_distance_nearby_split_to_surpress_specific_direction_overtake ||
-           first_split_direction != SplitDirection::SPLIT_RIGHT)) {
-        target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
-        GenerateRequest(LEFT_CHANGE);
-        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        ILOG_DEBUG << "[OvertakeRequest::update] Ask for overtake changing lane to left";
-      }
+      target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+      GenerateRequest(LEFT_CHANGE);
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      LOG_DEBUG(
+          "[OvertakeRequest::update] Ask for overtake changing lane to left "
+          "\n");
     }
     if (!IsDashEnoughForRepeatSegments(
             LEFT_CHANGE, origin_lane_virtual_id_,
@@ -472,16 +497,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
     if (request_type_ != RIGHT_CHANGE) {
-      if ((dis_to_first_merge >= dis_threshold_to_merged_point ||
-           first_merge_direction != SplitDirection::SPLIT_LEFT) &&
-          (distance_to_first_road_split >=
-               min_distance_nearby_split_to_surpress_specific_direction_overtake ||
-           first_split_direction != SplitDirection::SPLIT_LEFT)) {
-        target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
-        GenerateRequest(RIGHT_CHANGE);
-        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        ILOG_DEBUG << "[OvertakeRequest::update] Ask for overtake changing lane to right";
-      }
+      target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+      GenerateRequest(RIGHT_CHANGE);
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      LOG_DEBUG(
+          "[OvertakeRequest::update] Ask for overtake changing lane to right "
+          "\n");
     }
     if (!IsDashEnoughForRepeatSegments(
             RIGHT_CHANGE, origin_lane_virtual_id_,
