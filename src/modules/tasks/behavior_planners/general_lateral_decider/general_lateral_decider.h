@@ -261,9 +261,12 @@ class GeneralLateralDecider : public Task {
   bool CheckLateralEmergencyAvoidSpace(
       bool is_nudge_left, const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsObstacleOutsideRoadBoundary(
-    const std::shared_ptr<FrenetObstacle> obstacle);
+      const std::shared_ptr<FrenetObstacle> obstacle);
   void LimitFrenetLateralSlope(
-    std::vector<std::pair<double, double>> &frenet_bounds);
+      std::vector<std::pair<double, double>> &frenet_bounds);
+  void GenerateRecommendJerk(
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      bool is_avoid_side_ignore_obj);
 
  private:
   GeneralLateralDeciderConfig config_;

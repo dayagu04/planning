@@ -171,7 +171,8 @@ class LateralMotionPlanningWeight {
 
   void SetLateralMotionWeight(
       const LateralMotionScene scene,
-      planning::common::LateralPlanningInput &planning_input);
+      planning::common::LateralPlanningInput &planning_input,
+      double recommended_jerk = 0);
 
   void SetInitDisToRef(const double init_dis_to_ref) {
     init_dis_to_ref_ = init_dis_to_ref;
@@ -258,7 +259,7 @@ class LateralMotionPlanningWeight {
 
  private:
   void SetAccJerkBoundAndWeight(
-      planning::common::LateralPlanningInput &planning_input);
+      planning::common::LateralPlanningInput &planning_input, double recommended_jerk);
 
   void SetMinJerkWeightByVel(
       planning::common::LateralPlanningInput &planning_input);

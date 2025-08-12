@@ -76,7 +76,8 @@ void LateralMotionPlanningWeight::Init() {
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
     const LateralMotionScene scene,
-    planning::common::LateralPlanningInput &planning_input) {
+    planning::common::LateralPlanningInput &planning_input,
+    double recommended_jerk) {
   lateral_motion_scene_ = scene;
   weight_.proximal_index = config_.motion_plan_concerned_start_index;
   weight_.remotely_index = config_.motion_plan_concerned_end_index;
@@ -84,7 +85,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
   end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
   end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
   end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
-  SetAccJerkBoundAndWeight(planning_input);
+  SetAccJerkBoundAndWeight(planning_input, recommended_jerk);
   MakeDynamicPosBoundWeight(planning_input);
   if (lateral_motion_scene_ != LateralMotionScene::RAMP) {
     std::fill(weight_.expected_acc.begin(), weight_.expected_acc.end(), 0.0);
@@ -889,7 +890,7 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
 }
 
 void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
-    planning::common::LateralPlanningInput &planning_input) {
+    planning::common::LateralPlanningInput &planning_input, double recommended_jerk) {
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
   if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {

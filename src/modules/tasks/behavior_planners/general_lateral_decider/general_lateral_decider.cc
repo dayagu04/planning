@@ -22,6 +22,7 @@
 #include "utils/kd_path.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
+#include "modules/tasks/task_interface/potential_dangerous_agent_decider_output.h"
 
 namespace planning {
 
@@ -2832,6 +2833,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const double extra_reverse_obj_decrease_buffer =
       interp(intrusion_distance, config_.reverse_obstacle_intrusion_distance_bp,
              config_.extra_reverse_obstacle_decrease_buffer);
+  // 生成推荐jerk
+  GenerateRecommendJerk(obstacle, is_avoid_side_ignore_obj);
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
   double last_t_lat_buf_dis = 0.0;
@@ -2992,6 +2995,30 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
                                  lon_decision, obstacle_decision,
                                  is_update_hard_bound, is_avoid_side_ignore_obj);
       }
+    }
+  }
+}
+
+void GeneralLateralDecider::GenerateRecommendJerk(
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    bool is_avoid_side_ignore_obj) {
+  const auto potential_dangerous_agent_decider_output =
+      session_->planning_context()
+               .potential_dangerous_agent_decider_output();
+  auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
+  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() && obstacle->id() ==
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front().id &&
+      is_avoid_side_ignore_obj) {
+    const auto risk_level = potential_dangerous_agent_decider_output
+                                .dangerous_agent_info.front().risk_level;
+    if (risk_level == RiskLevel::NO_RISK) {
+      general_lateral_decider_output.recommended_bound_avoid_jerk = 0.4;
+    } else if (risk_level == RiskLevel::LOW_RISK) {
+      general_lateral_decider_output.recommended_bound_avoid_jerk = config_.lower_risk_jerk_bound;
+    } else if (risk_level == RiskLevel::HIGH_RISK) {
+      general_lateral_decider_output.recommended_bound_avoid_jerk = config_.high_risk_jerk_bound;
     }
   }
 }
