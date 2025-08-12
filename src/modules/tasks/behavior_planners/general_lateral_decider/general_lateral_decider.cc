@@ -3563,6 +3563,7 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
       } else {
         limit_nudge_max_l = std::fmin(limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
       }
+      limit_nudge_min_l = std::fmin(limit_nudge_max_l, limit_nudge_min_l);
       bound.lower = clip(bound.lower, limit_nudge_max_l, limit_nudge_min_l);
     }
 
@@ -3592,6 +3593,7 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
       } else {
         limit_nudge_min_l = std::fmin(limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
       }
+      limit_nudge_max_l = std::fmax(limit_nudge_max_l, limit_nudge_min_l);
       bound.upper = clip(bound.upper, limit_nudge_max_l, limit_nudge_min_l);
     }
     if (!is_update_hard_bound) {
