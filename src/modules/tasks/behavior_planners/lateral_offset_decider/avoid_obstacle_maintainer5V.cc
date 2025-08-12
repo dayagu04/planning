@@ -356,6 +356,9 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
           .lateral_obstacle_history_info;
   if (lateral_obstacle->front_tracks_copy().size() > 0) {
     for (auto &tr : lateral_obstacle->front_tracks_copy()) {
+      if (tr->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+        continue;
+      }
       bool is_avd_car = false;
       auto lateral_obstacle_iter =
           lateral_obstacle_history_info.find(tr->id());
