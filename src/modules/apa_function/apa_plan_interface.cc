@@ -79,9 +79,9 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   // run planner
   scenario_manager_.UpdateScenarioType();
   scenario_manager_.Process();
-  planning_output_ = scenario_manager_.GetPlanningOutput();
-  scenario_manager_.GenerateHmiSlotReleaseState();
+  scenario_manager_.PubPreparePlanState();
   scenario_manager_.RecommendParkingDirection();
+  planning_output_ = scenario_manager_.GetPlanningOutput();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
 
   AddReleasedSlotInfo(planning_output_);

@@ -64,7 +64,7 @@ void PerpendicularTailInScenario::ScenarioTry() {
         SlotReleaseState::NOT_RELEASE;
   }
 
-  PublishPreparePlanningTraj();
+  TansformPreparePlanningTraj();
 
   frame_.Reset();
   current_path_point_global_vec_.clear();

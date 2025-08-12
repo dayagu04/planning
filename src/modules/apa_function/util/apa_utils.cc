@@ -141,4 +141,12 @@ bool IsSlotSearchingOrParking(const iflyauto::FunctionalState& current_state) {
   return false;
 }
 
+const bool IsTrajValid(const iflyauto::Trajectory& traj) {
+  if (traj.trajectory_points_size <= 0 ||
+      traj.trajectory_points_size > PLANNING_TRAJ_POINTS_MAX_NUM) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace  planning

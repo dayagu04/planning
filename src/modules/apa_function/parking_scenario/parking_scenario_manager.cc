@@ -23,6 +23,7 @@
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_scenario.h"
 #include "planning_plan_c.h"
+#include "src/modules/apa_function/util/apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -165,7 +166,6 @@ void ParkingScenarioManager::Process() {
 }
 
 void ParkingScenarioManager::Reset() {
-  memset(&planning_output_, 0, sizeof(planning_output_));
   memset(&apa_hmi_data_, 0, sizeof(apa_hmi_data_));
 
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
@@ -214,7 +214,6 @@ void ParkingScenarioManager::ScenarioTry() {
   }
 
   if (!apa_world_->GetSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
-    ILOG_INFO << "not release by rule";
     return;
   }
 
@@ -261,7 +260,9 @@ void ParkingScenarioManager::ScenarioTry() {
     current_scenario_->ScenarioTry();
   }
 
-  planning_output_ = current_scenario_->GetOutput();
+  if (current_scenario_ != nullptr) {
+    current_scenario_->RecordDebugPath();
+  }
 
   ILOG_INFO << "GEOMETRY RELEASE = "
             << GetSlotReleaseStateString(
@@ -302,7 +303,12 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
   return false;
 }
 
-void ParkingScenarioManager::GenerateHmiSlotReleaseState() {
+void ParkingScenarioManager::PubPreparePlanState() {
+  if (!apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
+    return;
+  }
+
   SlotReleaseState state =
       apa_world_->GetSlotManagerPtr()->GetSlotReleaseState();
   switch (state) {
@@ -318,6 +324,10 @@ void ParkingScenarioManager::GenerateHmiSlotReleaseState() {
     default:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_COMPUTING;
       break;
+  }
+
+  if (PubPreparePathByStableStrategy()) {
+    planning_output_ = current_scenario_->GetOutput();
   }
 
   ILOG_INFO << "release state = " << apa_hmi_data_.prepare_plan_state;
@@ -344,6 +354,53 @@ void ParkingScenarioManager::RecommendParkingDirection() {
   ILOG_INFO << "dir = " << apa_hmi_data_.planning_park_dir;
 
   return;
+}
+
+void ParkingScenarioManager::ClearPlanningOutput() {
+  memset(&planning_output_, 0, sizeof(planning_output_));
+  return;
+}
+
+const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
+  if (current_scenario_ == nullptr) {
+    ClearPlanningOutput();
+    return false;
+  }
+
+  if (!apa_param.GetParam().prepare_plan_config.enable_stable_prepare_route) {
+    return true;
+  }
+
+  auto &history_path = planning_output_.trajectory;
+  auto &new_path = current_scenario_->GetOutput().trajectory;
+
+  // If scenario planning fail, update path
+  if (!IsTrajValid(new_path)) {
+    return true;
+  }
+
+  // If history is invalid, update path
+  if (!IsTrajValid(history_path)) {
+    return true;
+  }
+
+  // If distance is big, update path.
+  double dist = DistanceTo(history_path.trajectory_points[0],
+                           new_path.trajectory_points[0]);
+  if (dist > apa_param.GetParam().prepare_plan_config.start_point_error) {
+    ILOG_INFO << "start point error is big" << dist;
+    return true;
+  }
+
+  dist = DistanceTo(
+      history_path.trajectory_points[history_path.trajectory_points_size - 1],
+      new_path.trajectory_points[new_path.trajectory_points_size - 1]);
+  if (dist > apa_param.GetParam().prepare_plan_config.terminal_point_error) {
+    ILOG_INFO << "terminal error is big" << dist;
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace apa_planner

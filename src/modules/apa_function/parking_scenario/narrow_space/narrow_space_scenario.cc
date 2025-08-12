@@ -1767,6 +1767,8 @@ void NarrowSpaceScenario::ScenarioTry() {
     }
   }
 
+  TansformPreparePlanningTraj();
+
   return;
 }
 
@@ -2391,8 +2393,6 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
     res = PathPlannerResult::WAIT_PATH;
     ILOG_INFO << "has input";
   }
-
-  PublishPreparePlanningTraj();
 
   return res;
 }

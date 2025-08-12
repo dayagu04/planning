@@ -905,6 +905,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   target_regulator_goal_ = target_regulator_result.first;
   hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                              &traj_candidates_[0]);
+  ExtendPathToRealParkSpacePoint(&traj_candidates_[0], request_.real_goal);
 
   best_traj_ = &traj_candidates_[0];
   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;

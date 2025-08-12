@@ -406,6 +406,8 @@ class ParkingScenario {
     return perferred_geometry_path_vec_;
   }
 
+  void RecordDebugPath();
+
  protected:
   virtual const bool CheckFinished() = 0;
   virtual void Log() const = 0;
@@ -479,7 +481,7 @@ class ParkingScenario {
   void RecordDebugObstacle(const std::vector<double> &obs_x,
                            const std::vector<double> &obs_y) const;
 
-  void PublishPreparePlanningTraj();
+  void TansformPreparePlanningTraj();
 
   virtual const CarSlotRelationship CalCarSlotRelationship(
       const geometry_lib::PathPoint &cur_pose);
