@@ -339,5 +339,13 @@ void ApaStateMachineManager::PrintApaSlotLatPosPreference(
             << GetApaSlotLatPosPreferenceString(slot_lat_pos_preference);
 }
 
+const bool ApaStateMachineManager::IsParkSuspendStatus() const {
+  if (state_machine_ == ApaStateMachine::SUSPEND) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

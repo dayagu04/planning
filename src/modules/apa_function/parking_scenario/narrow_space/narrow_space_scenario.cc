@@ -265,7 +265,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   CheckReplanParams replan_params(
       apa_param.GetParam().max_replan_remain_dist, 0.068,
       apa_param.GetParam().max_replan_remain_dist,
-      apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time,
+      apa_param.GetParam().astar_config.deadend_replan_time_by_obs,
       apa_param.GetParam().max_replan_remain_dist, 0.168,
       apa_param.GetParam().stuck_replan_time);
 
@@ -279,9 +279,6 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
   bool update_thread_path = UpdateThreadPath();
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
-
-  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_obs_time
-            << " ,is_replan = " << is_replan;
 
   if (is_replan) {
     dynamic_flag_head_out_ =
@@ -315,8 +312,8 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
         if (frame_.replan_fail_time >
             apa_param.GetParam().max_replan_failed_time) {
           SetParkingStatus(PARKING_FAILED);
-          frame_.plan_fail_reason = PATH_PLAN_FAILED;
         }
+        frame_.plan_fail_reason = PATH_PLAN_FAILED;
         break;
       default:
         SetParkingStatus(PARKING_RUNNING);

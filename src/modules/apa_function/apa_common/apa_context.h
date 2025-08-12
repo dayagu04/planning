@@ -49,6 +49,7 @@ enum class ParkingScenarioStatus {
   // 表示点击车位，尝试计算这个场景
   STATUS_TRY = 3,
   STATUS_FAIL = 4,
+  STATUS_SUSPEND = 5,
 };
 
 enum PathPlannerResult {

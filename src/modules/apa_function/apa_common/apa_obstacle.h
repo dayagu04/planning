@@ -229,6 +229,10 @@ class ApaObstacle final {
 
   const trajectory::Trajectory& GetPredictTraj() const { return predict_traj_; }
 
+  void SetObsScemanticType(const iflyauto::ObjectType obs_type);
+
+  const bool IsMovableStaticObs() const;
+
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
   ApaObsAttributeType obs_attribute_type_{ApaObsAttributeType::UNKNOWN};

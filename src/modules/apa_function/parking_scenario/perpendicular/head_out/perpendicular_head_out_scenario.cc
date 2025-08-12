@@ -550,18 +550,19 @@ const bool PerpendicularHeadOutScenario::GenTlane() {
 
   obs_tlane.CalcBound();
 
-  ILOG_INFO
-      << "cur pose = " << ego_info_under_slot.cur_pose.pos.transpose() << "  "
-      << ego_info_under_slot.cur_pose.heading * kRad2Deg
-      << "  tar_pose = " << ego_info_under_slot.target_pose.pos.transpose()
-      << "  " << ego_info_under_slot.target_pose.heading * kRad2Deg
-      << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.transpose()
-      << "  " << ego_info_under_slot.terminal_err.heading * kRad2Deg
-      << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
-      << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
-      << "  stuck time(s) = " << frame_.stuck_time
-      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time << "  slot side = "
-      << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
+  ILOG_INFO << "cur pose = " << ego_info_under_slot.cur_pose.pos.transpose()
+            << "  " << ego_info_under_slot.cur_pose.heading * kRad2Deg
+            << "  tar_pose = "
+            << ego_info_under_slot.target_pose.pos.transpose() << "  "
+            << ego_info_under_slot.target_pose.heading * kRad2Deg
+            << "  terminal_err = "
+            << ego_info_under_slot.terminal_err.pos.transpose() << "  "
+            << ego_info_under_slot.terminal_err.heading * kRad2Deg
+            << "  slot occupied ratio = "
+            << ego_info_under_slot.slot_occupied_ratio
+            << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
+            << "  stuck time(s) = " << frame_.stuck_time << "  slot side = "
+            << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
 }

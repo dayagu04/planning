@@ -161,6 +161,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
       SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
@@ -169,10 +170,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
       SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
     SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = PATH_PLAN_FAILED;
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);

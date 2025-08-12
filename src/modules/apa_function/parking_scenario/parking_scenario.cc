@@ -1110,5 +1110,68 @@ void ParkingScenario::RecordDebugPath() {
 
   return;
 }
+
+const bool ParkingScenario::IsStopByDynamicObs() const {
+  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    return false;
+  }
+
+  if (frame_.stuck_by_dynamic_obs) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ParkingScenario::IsStopByStaticMovableObs() const {
+  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    return false;
+  }
+
+  if (frame_.stuck_by_dynamic_obs) {
+    return false;
+  }
+
+  if (frame_.replan_fail_time < 1.0) {
+    return false;
+  }
+
+  if (!(frame_.remain_dist_obs < frame_.remain_dist_path)) {
+    return false;
+  }
+
+  // TODO: If the obs is static, check it could be movable, such as
+  // traffic_cone, water_safety_barrier, static bicycle, static vehicle.
+  ObjectDetectObsConfig od_config;
+  od_config.use_dynamic_obs = false;
+  od_config.use_specificationer = false;
+  od_config.use_movable_static_obs = true;
+  auto obs_manager = apa_world_ptr_->GetObstacleManagerPtr();
+  obs_manager->GenerateObsByOD(apa_world_ptr_->GetLocalViewPtr(), od_config);
+
+  PathSafeChecker checker(obs_manager);
+  if (checker.IsCollisionByStaticMavableOD(
+          apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(), 0.06, 0.3,
+          current_path_point_global_vec_)) {
+    return true;
+  }
+
+  return false;
+}
+
+void ParkingScenario::ScenarioSuspend() {
+  ClearTimeBySuspendStatus();
+
+  return;
+}
+
+void ParkingScenario::ClearTimeBySuspendStatus() {
+  frame_.stuck_time = 0.0;
+  frame_.stuck_obs_time  = 0.0;
+  frame_.dynamic_plan_time = 0.0;
+  frame_.replan_fail_time = 0.0;
+  return;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

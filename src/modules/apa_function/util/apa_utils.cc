@@ -187,4 +187,79 @@ const ParkingVehDirection GetParkDir(const int dir) {
   return res;
 }
 
+const bool IsODVeh(const iflyauto::ObjectType type) {
+  if (type >= iflyauto::OBJECT_TYPE_PICKUP &&
+      type <= iflyauto::OBJECT_TYPE_ENGINEERING_VEHICLE) {
+    return true;
+  }
+  if (type >= iflyauto::OBJECT_TYPE_COUPE &&
+      type <= iflyauto::OBJECT_TYPE_TRICYCLE) {
+    return true;
+  }
+  if (type >= iflyauto::OBJECT_TYPE_CYCLE_RIDING &&
+      type <= iflyauto::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsODSpecificationer(const iflyauto::ObjectType type) {
+  if (type == iflyauto::OBJECT_TYPE_SPECIFICATIONER) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsODLivingThings(const iflyauto::ObjectType type) {
+  if (type == iflyauto::OBJECT_TYPE_PEDESTRIAN) {
+    return true;
+  }
+  if (type == iflyauto::OBJECT_TYPE_ANIMAL) {
+    return true;
+  }
+  if (type == iflyauto::OBJECT_TYPE_ADULT) {
+    return true;
+  }
+  if (type == iflyauto::OBJECT_TYPE_CHILD) {
+    return true;
+  }
+  if (type == iflyauto::OBJECT_TYPE_TRAFFIC_POLICE) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsDynamicOD(const double v, const iflyauto::ObjectType type) {
+  if (v > 0.2 && IsODVeh(type)) {
+    return true;
+  }
+
+  if (IsODLivingThings(type)) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsMovableStaticOD(const double v, const iflyauto::ObjectType type) {
+  if (v < 0.1 && IsODVeh(type)) {
+    return true;
+  }
+
+  if (type == iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
+    return true;
+  }
+  if (type == iflyauto::OBJECT_TYPE_TRAFFIC_BARREL) {
+    return true;
+  }
+  if (type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace  planning

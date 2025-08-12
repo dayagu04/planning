@@ -81,6 +81,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   scenario_manager_.Process();
   scenario_manager_.PubPreparePlanState();
   scenario_manager_.RecommendParkingDirection();
+  scenario_manager_.PubStopReason();
   planning_output_ = scenario_manager_.GetPlanningOutput();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
 

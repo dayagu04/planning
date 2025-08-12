@@ -13,6 +13,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "session.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 namespace apa_planner {
@@ -62,9 +63,10 @@ class ApaObstacleManager final {
   void TransformCoordFromGlobalToLocal(
       const pnc::geometry_lib::GlobalToLocalTf &g2l_tf);
 
-  const bool IsConsideredODType(const iflyauto::ObjectType type);
+  const bool IsOccType(const iflyauto::ObjectType type);
 
-  const bool IsDynamicObjectType(const iflyauto::ObjectType type);
+  void GenerateObsByOD(const LocalView *local_view,
+                       const ObjectDetectObsConfig &od_config);
 
  private:
   size_t obs_id_generate_{0};
