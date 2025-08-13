@@ -267,7 +267,6 @@ class GeneralLateralDecider : public Task {
       std::vector<std::pair<double, double>> &frenet_bounds);
   void GenerateRecommendJerk(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      bool is_avoid_side_ignore_obj,
       bool &is_high_dangerous);
 
  private:
