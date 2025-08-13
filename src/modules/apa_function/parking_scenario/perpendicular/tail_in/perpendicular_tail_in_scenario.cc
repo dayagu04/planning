@@ -1402,7 +1402,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
     const ColResult col_res =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
-            extend_pt_vec, apa_param.GetParam().stop_lat_inflation + 2e-3,
+            extend_pt_vec, apa_param.GetParam().stop_lat_inflation + 0.016,
             apa_param.GetParam().col_obs_safe_dist_normal,
             GJKColDetRequest(false));
 
@@ -1451,6 +1451,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
   pnc::geometry_lib::PathPoint path_point;
   for (size_t i = 0; i < N; ++i) {
     path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
+    path_point.s = s_vec[i];
     current_path_point_global_vec_.emplace_back(path_point);
   }
   complete_path_point_global_vec_ = current_path_point_global_vec_;
@@ -1469,6 +1470,19 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   ego_info_under_slot.fix_limiter = true;
   frame_.correct_path_for_limiter = true;
+
+  if (complete_path_point_global_vec_.size() > 0) {
+    geometry_lib::PathPoint end_pose = complete_path_point_global_vec_.back();
+    end_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
+    ego_info_under_slot.target_pose.pos.x() = end_pose.pos.x();
+    ego_info_under_slot.target_pose.PrintInfo();
+    ego_info_under_slot.lon_move_dist_every_replan =
+        ego_info_under_slot.target_pose.pos.x() -
+        ego_info_under_slot.origin_target_pose.pos.x();
+    ego_info_under_slot.lon_move_dist_replan_success =
+        ego_info_under_slot.lon_move_dist_every_replan;
+  }
+  ILOG_INFO << "adjust path according to limiter complete";
 
   return true;
 }
