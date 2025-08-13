@@ -13,6 +13,16 @@
 
 namespace planning {
 
+// 安全模型参数结构体
+struct SafetyModelParams {
+  double s_0 = 4.0;        // 静止安全距离 (m)
+  double a_comfort = 2.0;  // 自车舒适减速度 (m/s²)
+  double max_tau = 1.2;    // 跟车时距 (s)
+  double b_max = 4.0;      // 前车最大制动能力 (m/s²)
+  double a_max = 4.0;      // 自车执行器最大制动能力 (m/s²)
+  double min_safety_distance = 4.0;  // 最小安全距离 (m)
+};
+
 class BoundMaker {
  public:
   BoundMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -39,6 +49,8 @@ class BoundMaker {
 
   double rss_bound(const double t) const;
 
+  double safety_bound(const double t) const;
+
   struct UpperBoundInfo {
     double s = 0.0;
     double t = 0.0;
@@ -61,6 +73,14 @@ class BoundMaker {
   void MakeJerkBound(const TargetMaker& target_maker);
 
   void MakeRSSBound();
+
+  void MakeSafetyBound();
+
+  void MakeSafetyBoundOptimized();
+
+  double CalculateSafetyDistance(const double v_ego, const double v_lead,
+                                 const double s_current, const double tau,
+                                 const SafetyModelParams& params);
 
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string& lc_request);
@@ -106,6 +126,7 @@ class BoundMaker {
   std::vector<double> jerk_upper_bound_;
   std::vector<double> jerk_lower_bound_;
   std::vector<double> rss_upper_bound_;
+  std::vector<double> safety_upper_bound_;  // 安全边界向量
 
   double acc_upper_bound_with_speed_ = 0.0;
 

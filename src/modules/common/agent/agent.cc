@@ -96,7 +96,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
     auto& traj_point = prediction_trajectory[i];
     trajectory::TrajectoryPoint tp;
     tp.set_vel(traj_point.speed);
-    tp.set_acc(0.0);
+    tp.set_acc(accel_fusion_);
     tp.set_x(traj_point.x);
     tp.set_y(traj_point.y);
     // TODO：绝对时间 or 相对时间?

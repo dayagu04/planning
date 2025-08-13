@@ -448,16 +448,14 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   init_state = lon_motion_plan_input.init_state
   ref_pos_vec = lon_motion_plan_input.ref_pos_vec
   ref_vel_vec = lon_motion_plan_input.ref_vel_vec
-  # soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
-  # soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
+  soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
+  soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec
   acc_min_vec = lon_motion_plan_input.acc_min_vec
   jerk_max_vec = lon_motion_plan_input.jerk_max_vec
   jerk_min_vec = lon_motion_plan_input.jerk_min_vec
-  djerk_max_vec = lon_motion_plan_input.djerk_max_vec
-  djerk_min_vec = lon_motion_plan_input.djerk_min_vec
   s_stop = lon_motion_plan_input.s_stop
 
   # time_vec = []
@@ -469,28 +467,24 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   vel_vec = lon_motion_plan_output.vel_vec
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
-  djerk_vec = lon_motion_plan_output.djerk_vec
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,
     'ref_pos_vec_origin': s_ref_vec,
     'ref_pos_vec': ref_pos_vec,
     'ref_vel_vec': ref_vel_vec,
-    # 'soft_pos_max_vec': soft_pos_max_vec,
-    # 'soft_pos_min_vec': soft_pos_min_vec,
+    'soft_pos_max_vec': soft_pos_max_vec,
+    'soft_pos_min_vec': soft_pos_min_vec,
     'vel_max_vec': vel_max_vec,
     'vel_min_vec': vel_min_vec,
     'acc_max_vec': acc_max_vec,
     'acc_min_vec': acc_min_vec,
     'jerk_max_vec': jerk_max_vec,
     'jerk_min_vec': jerk_min_vec,
-    'djerk_max_vec': djerk_max_vec,
-    'djerk_min_vec': djerk_min_vec,
     'pos_vec': pos_vec,
     'vel_vec': vel_vec,
     'acc_vec': acc_vec,
     'jerk_vec': jerk_vec,
-    'djerk_vec': djerk_vec,
   })
 
   if bag_loader.loc_msg['enable'] == True:
@@ -620,18 +614,14 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
                                                   'acc_min_vec':[],
                                                   'jerk_max_vec':[],
                                                   'jerk_min_vec':[],
-                                                  'djerk_max_vec':[],
-                                                  'djerk_min_vec':[],
                                                   'pos_vec':[],
                                                   'vel_vec':[],
                                                   'acc_vec':[],
                                                   'jerk_vec':[],
-                                                  'djerk_vec':[],
                                                   'pos_vec_t':[],
                                                   'vel_vec_t':[],
                                                   'acc_vec_t':[],
                                                   'jerk_vec_t':[],
-                                                  'djerk_vec_t':[],
                                                    })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -713,8 +703,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig6 = bkp.figure(x_axis_label='time', y_axis_label='acc',x_range = fig5.x_range, width=600, height=200)
   # fig7 j-t
   fig7 = bkp.figure(x_axis_label='time', y_axis_label='jerk',x_range = fig6.x_range, width=600, height=200)
-  # fig8 j-t
-  fig8 = bkp.figure(x_axis_label='time', y_axis_label='djerk',x_range = fig6.x_range, width=600, height=200)
 
   f2 = fig2.line('t', 's', source = data_st, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'raw s_ref')
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
@@ -783,10 +771,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig4.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'origin s_plan')
   fig4.line('time_vec', 'pos_vec_t', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned s_plan')
 
-  # fig4.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_soft_lb')
-  # fig4.triangle ('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_soft_lb')
-  # fig4.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_soft_ub')
-  # fig4.inverted_triangle ('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_soft_ub')
+  fig4.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_soft_lb')
+  fig4.triangle ('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_soft_lb')
+  fig4.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 's_soft_ub')
+  fig4.inverted_triangle ('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_soft_ub')
 
   # vel
   f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
@@ -814,25 +802,15 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
 
-  # djerk
-  f8 = fig8.line('time_vec', 'djerk_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'origin dj_plan')
-  fig8.line('time_vec', 'djerk_vec_t', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned dj_plan')
-  fig8.line('time_vec', 'djerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'dj_lb')
-  fig8.triangle ('time_vec', 'djerk_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'dj_lb')
-  fig8.line('time_vec', 'djerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'dj_ub')
-  fig8.inverted_triangle ('time_vec', 'djerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'dj_ub')
-
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('s_lb', '@soft_pos_min_vec'), ('raw s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('origin s_plan', '@pos_vec'), ('tuned s_plan', '@pos_vec_t')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('origin v_plan', '@vel_vec'), ('tuned v_plan', '@vel_vec_t'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('origin a_plan', '@acc_vec'), ('tuned a_plan', '@acc_vec_t'), ('a_ub', '@acc_max_vec')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('origin j_plan', '@jerk_vec'), ('tuned j_plan', '@jerk_vec_t'), ('j_ub', '@jerk_max_vec')], mode='vline')
-  hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time_vec'), ('dj_lb', '@djerk_min_vec'), ('origin dj_plan', '@djerk_vec'), ('tuned dj_plan', '@djerk_vec_t'), ('dj_ub', '@djerk_max_vec')], mode='vline')
 
   fig4.add_tools(hover4)
   fig5.add_tools(hover5)
   fig6.add_tools(hover6)
   fig7.add_tools(hover7)
-  fig8.add_tools(hover8)
 
   fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
   fig2.legend.click_policy = 'hide'
@@ -852,10 +830,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
   fig7.legend.click_policy = 'hide'
 
-  fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
-  fig8.legend.click_policy = 'hide'
-
-  pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7, fig8)), title="Longtime")
+  pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7)), title="Longtime")
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=1000)
 

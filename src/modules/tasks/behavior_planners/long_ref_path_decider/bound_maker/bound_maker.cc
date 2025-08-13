@@ -61,6 +61,9 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
   // 5. RSS safety bound
   MakeRSSBound();
 
+  // 6. Safety bound (IDM + CAH)
+  MakeSafetyBound();
+
   return common::Status::OK();
 }
 
@@ -113,8 +116,12 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   acc_upper_bound_.resize(plan_points_num_);
   acc_lower_bound_.resize(plan_points_num_);
   // cruise acc target
-  acc_target.first = interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table, speed_planning_config_.cruise_dec_bound_table.acc_table);
-  acc_target.second = interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table, speed_planning_config_.cruise_acc_bound_table.acc_table);
+  acc_target.first =
+      interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table,
+             speed_planning_config_.cruise_dec_bound_table.acc_table);
+  acc_target.second =
+      interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table,
+             speed_planning_config_.cruise_acc_bound_table.acc_table);
 
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   const auto& agent_headway_decider_output =
@@ -132,7 +139,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-      acc_upper_bound_[i] =  std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+      acc_upper_bound_[i] =
+          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
       continue;
     }
 
@@ -160,7 +168,6 @@ void BoundMaker::MakeAccBound(const double& v_ego,
         common::StartStopInfo::START) {
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
     }
-
   }
 }
 
@@ -369,6 +376,74 @@ void BoundMaker::MakeRSSBound() {
     rss_upper_bound_[i] =
         std::max(s_upper_bound_[i] - std::max(rss_bound, 3.5), 3.5);
   }
+}
+
+void BoundMaker::MakeSafetyBound() {
+  const auto& ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  const double v_ego = ego_state_mgr->ego_v();
+  const double acc_ego = ego_state_mgr->ego_acc();
+  const auto& agents_headway_Info = session_->planning_context()
+                                        .agent_headway_decider_output()
+                                        .agents_headway_Info();
+
+  // 初始化安全边界向量
+  std::vector<double> safety_upper_bound(plan_points_num_, 200.0);
+
+  // 模型参数定义
+  constexpr double s_0 = 4.0;        // 静止安全距离 (m)
+  constexpr double a_comfort = 2.0;  // 自车舒适减速度 (m/s²)
+  constexpr double max_tau = 1.2;    // 最大跟车时距 (s)
+  constexpr double b_max = 5.0;      // 前车最大制动能力 (m/s²)
+  constexpr double a_max = 4.0;      // 自车执行器最大制动能力 (m/s²)
+
+  for (int32_t i = 0; i < plan_points_num_; ++i) {
+    const auto& upper_bound_info = upper_bound_infos_[i];
+
+    if (upper_bound_info.agent_id == -1) {
+      safety_upper_bound[i] = s_upper_bound_[i];
+      continue;
+    }
+
+    // 获取前车信息
+    const int32_t lead_id = upper_bound_info.agent_id;
+    const double v_lead = upper_bound_info.v;
+    const double a_lead = upper_bound_info.a;
+    const double s_current = upper_bound_info.s;
+    auto iter = agents_headway_Info.find(lead_id);
+    double tau = max_tau;
+    if (iter != agents_headway_Info.end()) {
+      tau = std::min(iter->second.current_headway, max_tau);
+    }
+
+    // 计算相对速度
+    const double v_rel = std::max(v_ego - v_lead, 0.0);
+
+    // 计算安全跟车距离
+    double s_comfort = s_0 + v_ego * tau + v_ego * v_rel / (2.0 * a_comfort);
+    double s_max_decel = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
+    double s_safety = 0.0;
+    if (s_current > s_comfort) {
+      s_safety = s_0 + tau * v_ego;
+    } else if (s_current > s_max_decel) {
+      s_safety = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
+    } else {
+      s_safety = s_0 + tau * v_ego +
+                 std::max(v_ego * v_rel / (2.0 * a_max),
+                          v_ego * v_ego / (2.0 * a_max) -
+                              v_lead * v_lead / (2.0 * b_max));
+    }
+
+    // 输出安全距离
+    const double soft_safety_distance = std::max(s_safety, 4.0);
+    safety_upper_bound[i] =
+        std::max(0.0, s_upper_bound_[i] - soft_safety_distance);
+  }
+
+  // 将计算结果存储到成员变量中
+  safety_upper_bound_ = safety_upper_bound;
+  JSON_DEBUG_VALUE("soft_safety_distance",
+                   s_upper_bound_[0] - safety_upper_bound_[0]);
 }
 
 SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve()
@@ -670,6 +745,11 @@ double BoundMaker::jerk_upper_bound(const double t) const {
 double BoundMaker::rss_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
   return rss_upper_bound_[index];
+}
+
+double BoundMaker::safety_bound(const double t) const {
+  int32_t index = static_cast<int32_t>(std::round(t / dt_));
+  return safety_upper_bound_[index];
 }
 
 }  // namespace planning

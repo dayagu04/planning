@@ -104,7 +104,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
 
     WeightedBound s_soft_bound;
     s_soft_bound.lower = 0.0;
-    s_soft_bound.upper = bound_maker_->rss_bound(t);
+    s_soft_bound.upper = bound_maker_->safety_bound(t);
     s_soft_bound.weight = 10;
     s_soft_bound.bound_info.id =
         st_corridor_upper_bound.agent_id();  // hack: 后续在bound_maker_中查询
