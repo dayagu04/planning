@@ -409,10 +409,6 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   };
 
-#ifdef X86
-  bool trigger_left_overtake = false;
-  bool trigger_right_overtake = false;
-  // const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
   bool left_lane_is_on_navigation_route = true;
   if (feasible_lane_sequence.size() > 0) {
     int current_lane_order_num = left_lane_nums + 1;
@@ -421,7 +417,22 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       left_lane_is_on_navigation_route = false;
     }
   }
-  const bool is_trigger_left = is_left_overtake && left_lane_is_on_navigation_route;
+
+  bool right_lane_is_on_navigation_route = true;
+  if (feasible_lane_sequence.size() > 0) {
+    int current_lane_order_num = left_lane_nums + 1;
+    int target_lane_order_num = current_lane_order_num + 1;
+    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+      right_lane_is_on_navigation_route = false;
+    }
+  }
+  
+#ifdef X86
+  bool trigger_left_overtake = false;
+  bool trigger_right_overtake = false;
+  // const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
+  const bool is_trigger_left =
+      is_left_overtake && left_lane_is_on_navigation_route;
 
   static int counter_left = 0;
   if (!is_trigger_left) {
@@ -435,16 +446,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   // const bool is_trigger_right =
   //     (is_right_overtake && is_right_lane_change_safe_);
-  bool right_lane_is_on_navigation_route = true;
-  if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums + 1;
-    int target_lane_order_num = current_lane_order_num + 1;
-    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
-      right_lane_is_on_navigation_route = false;
-    }
-  }
-
-  const bool is_trigger_right = is_right_overtake && right_lane_is_on_navigation_route;
+  const bool is_trigger_right =
+      is_right_overtake && right_lane_is_on_navigation_route;
   static int counter_right = 0;
   if (!is_trigger_right) {
     counter_right = 0;
@@ -456,11 +459,11 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
 #else
   const bool trigger_left_overtake = checkOvertakeTrigger(
-      current_time, is_left_overtake,
+      current_time, is_left_overtake && left_lane_is_on_navigation_route,
       &left_overtake_valid_timestamp_);
 
   const bool trigger_right_overtake = checkOvertakeTrigger(
-      current_time, is_right_overtake,
+      current_time, is_right_overtake && right_lane_is_on_navigation_route,
       &right_overtake_valid_timestamp_);
 #endif
 
