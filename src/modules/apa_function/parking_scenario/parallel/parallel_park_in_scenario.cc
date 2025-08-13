@@ -44,6 +44,7 @@ static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.8;
 static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
+static double kTBoundaryXdiff = 0.5;
 static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
@@ -141,7 +142,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   const double max_replan_path_dist = 0.15;
-  const double stuck_replan_wait_time = 1.5;
+  const double stuck_replan_wait_time = 4.0;
 
   CheckReplanParams replan_params(
       max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
@@ -548,8 +549,8 @@ const bool ParallelParkInScenario::GenTlane() {
     }
 
     const bool curb_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.0,
-                                slot_length - 0.0) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.5,
+                                slot_length - 0.5) &&
         (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
 
     if (curb_condition) {
@@ -798,11 +799,12 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   const double slot_side_sgn = t_lane_.slot_side_sgn;
 
   // set T-Boundary obstacles
-  const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(), 0.3 * slot_side_sgn);
+  const Eigen::Vector2d B(t_lane_.obs_pt_outside.x() - kTBoundaryXdiff,
+                          0.3 * slot_side_sgn);
 
   const Eigen::Vector2d A(B.x() - 3.2, B.y());
 
-  const Eigen::Vector2d E(t_lane_.obs_pt_inside.x(),
+  const Eigen::Vector2d E(t_lane_.obs_pt_inside.x() + kTBoundaryXdiff,
                           t_lane_.obs_pt_inside.y() - slot_side_sgn * 0.8);
 
   const Eigen::Vector2d C(

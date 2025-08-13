@@ -984,6 +984,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   output_.Reset();
   std::vector<GeometryPath> geo_path_vec;
   debug_info_.debug_all_path_vec.clear();
+  calc_params_.suc_rev_parking_out_vec.clear();
 
   if (input_.ego_info_under_slot.cur_pose.pos.x() >
       input_.tlane.slot_length - 2.0) {
@@ -1075,6 +1076,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
                 << inversed_park_out_path.size();
       continue;
     }
+
+    calc_params_.suc_rev_parking_out_vec.emplace_back(inversed_park_out_path);
 
     if (inversed_park_out_path.front().seg_type ==
         pnc::geometry_lib::SEG_TYPE_LINE) {
@@ -4068,6 +4071,9 @@ const bool ParallelPathGenerator::StartNodeGenerator() {
 
   ILOG_INFO << "current_idx = " << current_idx;
 
+  ILOG_INFO << "calc_params_.suc_rev_parking_out_vec size = "
+            << calc_params_.suc_rev_parking_out_vec.size();
+
   if (path_vec.size() < kMaxPathSize) {
     for (size_t i = current_idx + 1; i < node_space.size(); i++) {
       bool success = SearchToTargetLineVecV2(
@@ -4375,9 +4381,9 @@ const bool ParallelPathGenerator::SearchToTargetLineVecV2(
     const pnc::geometry_lib::PathPoint& start_pose, const double radius,
     const double lon_buffer) {
   for (const auto& inv_park_out_path : calc_params_.suc_rev_parking_out_vec) {
-    ILOG_INFO << "\n";
+    // ILOG_INFO << "\n";
     const auto& preparation_pose = inv_park_out_path.front().GetStartPose();
-    pnc::geometry_lib::PrintPose("preparation pose", preparation_pose);
+    // pnc::geometry_lib::PrintPose("preparation pose", preparation_pose);
 
     const auto preparation_line = pnc::geometry_lib::BuildLineSegByPose(
         preparation_pose.pos, preparation_pose.heading);
@@ -4417,7 +4423,7 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
   success = false;
   std::vector<std::vector<pnc::geometry_lib::PathSegment>> tmp_path_vec;
   if (std::fabs(ego_pose.kappa) <= 1e-5) {
-    ILOG_INFO << "ego last step is line!";
+    // ILOG_INFO << "ego last step is line!";
     tmp_path_vec.clear();
     success =
         TwoArcPath(tmp_path_vec, ego_pose, prepare_line,
