@@ -17,6 +17,7 @@ message TargetMaker {
   optional OvertakeTarget overtake_target = 5;
   optional CautionTarget caution_target = 6;
   optional MaxDecelTarget max_decel_target = 7;
+  optional SafetyTarget safety_target = 8;
 }
 
 message WeightMaker {
@@ -49,6 +50,10 @@ message CautionTarget {
 
 message MaxDecelTarget {
   repeated TargetPoint max_decel_s_ref = 1;
+}
+
+message SafetyTarget {
+  repeated TargetPoint safety_target_s_ref = 1;
 }
 
 message WeightMakerReplayInfo {

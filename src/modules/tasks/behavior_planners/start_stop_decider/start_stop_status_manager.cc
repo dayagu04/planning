@@ -29,7 +29,8 @@ void StartStopStatusManager::Update() {
     const bool ego_cruise_condition =
         planning_init_state_velocity() > ego_vel_start_mode_threshold;
     if (ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
-        ego_start_condition) {
+        ego_start_condition &&
+        cipv_relative_s() > cipv_relative_s_start_threshold_) {
       ego_start_stop_info_.set_state(common::StartStopInfo::START);
     } else if (ego_start_stop_info_.state() == common::StartStopInfo::START &&
                ego_cruise_condition) {
@@ -117,7 +118,9 @@ void StartStopStatusManager::Update() {
               std::numeric_limits<double>::max());
         }
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
-                 traffic_light_start_condition) {
+                 traffic_light_start_condition &&
+                 cipv_relative_s() >
+                     cipv_relative_s_start_threshold_) {
         // STOP --> START
         ego_start_stop_info_.set_state(common::StartStopInfo::START);
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::START &&
@@ -170,7 +173,9 @@ void StartStopStatusManager::Update() {
         ego_start_stop_info_.set_cipv_relative_s_when_ego_stopped(
             cipv_relative_s());
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
-                 ego_start_condition) {
+                 ego_start_condition &&
+                 cipv_relative_s() >
+                     cipv_relative_s_start_threshold_) {
         // STOP --> START
         ego_start_stop_info_.set_state(common::StartStopInfo::START);
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::START &&

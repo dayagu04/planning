@@ -387,15 +387,13 @@ void BoundMaker::MakeSafetyBound() {
                                         .agent_headway_decider_output()
                                         .agents_headway_Info();
 
-  // 初始化安全边界向量
   std::vector<double> safety_upper_bound(plan_points_num_, 200.0);
 
-  // 模型参数定义
-  constexpr double s_0 = 4.0;        // 静止安全距离 (m)
-  constexpr double a_comfort = 2.0;  // 自车舒适减速度 (m/s²)
-  constexpr double max_tau = 1.2;    // 最大跟车时距 (s)
-  constexpr double b_max = 5.0;      // 前车最大制动能力 (m/s²)
-  constexpr double a_max = 4.0;      // 自车执行器最大制动能力 (m/s²)
+  constexpr double s_0 = 3.5;        
+  constexpr double a_comfort = 2.0;  
+  constexpr double max_tau = 1.2;    
+  constexpr double b_max = 5.0;      
+  constexpr double a_max = 4.0;     
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const auto& upper_bound_info = upper_bound_infos_[i];
@@ -405,7 +403,6 @@ void BoundMaker::MakeSafetyBound() {
       continue;
     }
 
-    // 获取前车信息
     const int32_t lead_id = upper_bound_info.agent_id;
     const double v_lead = upper_bound_info.v;
     const double a_lead = upper_bound_info.a;
@@ -416,10 +413,8 @@ void BoundMaker::MakeSafetyBound() {
       tau = std::min(iter->second.current_headway, max_tau);
     }
 
-    // 计算相对速度
     const double v_rel = std::max(v_ego - v_lead, 0.0);
 
-    // 计算安全跟车距离
     double s_comfort = s_0 + v_ego * tau + v_ego * v_rel / (2.0 * a_comfort);
     double s_max_decel = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
     double s_safety = 0.0;
@@ -434,13 +429,11 @@ void BoundMaker::MakeSafetyBound() {
                               v_lead * v_lead / (2.0 * b_max));
     }
 
-    // 输出安全距离
-    const double soft_safety_distance = std::max(s_safety, 4.0);
+    const double soft_safety_distance = std::max(s_safety, s_0);
     safety_upper_bound[i] =
         std::max(0.0, s_upper_bound_[i] - soft_safety_distance);
   }
 
-  // 将计算结果存储到成员变量中
   safety_upper_bound_ = safety_upper_bound;
   JSON_DEBUG_VALUE("soft_safety_distance",
                    s_upper_bound_[0] - safety_upper_bound_[0]);

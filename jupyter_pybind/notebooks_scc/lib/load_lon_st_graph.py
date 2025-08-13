@@ -236,7 +236,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["soft_safety_distance", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
+  st_search_value_list = ["soft_safety_distance", "safety_target_vel", "safety_dynamic_vel", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
                           "cipv_vel_frenet","cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
                           "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
@@ -445,6 +445,17 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_target_s_max_decel'].data.update({
     't_max_decel': t_max_decel_vec,
     's_max_decel': s_max_decel_vec})
+
+  ## safety target
+  t_safety_target_vec = []
+  s_safety_target_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.safety_target.safety_target_s_ref):
+    t_safety_target_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.safety_target.safety_target_s_ref):
+    s_safety_target_vec.append(item.s)
+  lon_plan_data['data_target_s_safety'].data.update({
+    't_safety_target': t_safety_target_vec,
+    's_safety_target': s_safety_target_vec})
 
   lon_plan_data['data_target'].data.update({
     't_final_target': t_final_target_vec,
@@ -853,6 +864,7 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
   for item in (lon_ref_path.lon_bound_a.bound):
      a_bound_high_vec.append(item.upper)
 
+  # 更新 ST 图数据源，确保包含所有必要字段
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
@@ -863,7 +875,15 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
     'obs_low_id': obs_low_id_vec,
     'obs_high_id': obs_high_id_vec,
     'obs_low_type': obs_low_type_vec,
-    'obs_high_type': obs_high_type_vec
+    'obs_high_type': obs_high_type_vec,
+    # 同步更新与 data_lon_motion_plan 一致的字段
+    'time_vec': t_vec,
+    'ref_pos_vec': s_ref_vec,
+    'pos_vec': s_ref_vec,  # 使用参考位置作为计划位置
+    'soft_pos_max_vec': s_soft_upper_bound_vec,
+    'soft_pos_min_vec': s_soft_lower_bound_vec,
+    'hard_pos_max_vec': obs_high_vec,
+    'hard_pos_min_vec': obs_low_vec
   })
 
   #lon_plan_data['data_obs_st'].clear()
@@ -1224,7 +1244,16 @@ def load_lon_global_figure(bag_loader):
   return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig
 
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig):
-  data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
+  data_st = ColumnDataSource(data = {
+    't':[], 's':[],
+    's_soft_ub':[], 's_soft_lb':[],
+    'obs_low':[], 'obs_high':[],
+    'obs_low_id':[], 'obs_high_id':[],
+    'obs_low_type':[], 'obs_high_type':[],
+    'time_vec':[], 'ref_pos_vec':[], 'pos_vec':[],
+    'soft_pos_max_vec':[], 'soft_pos_min_vec':[],
+    'hard_pos_max_vec':[], 'hard_pos_min_vec':[]
+  })
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
@@ -1256,6 +1285,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
   data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
+  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -1305,6 +1335,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_target_s_overtake': data_target_s_overtake, \
                    'data_target_s_caution': data_target_s_caution, \
                    'data_target_s_max_decel': data_target_s_max_decel, \
+                   'data_target_s_safety': data_target_s_safety, \
                    'data_st_search_text' : data_st_search_text, \
   }
 
@@ -1354,14 +1385,16 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
       TableColumn(field="cutinAttr", title="cutinAttr"),
       TableColumn(field="cutinVal", title="cutinVal")
   ]
+  # 悬停工具配置，使用 data_lon_motion_plan 数据源中的字段
   hover = HoverTool(tooltips = [
      ('index','$index'),
-     ('id_low','@obs_low_id'),
-     ('id_high','@obs_high_id'),
-     ('low_type','@obs_low_type'),
-     ('high_type','@obs_high_type'),
-     ('s_soft_ub','@s_soft_ub'),
-     ('s_soft_lb','@s_soft_lb')
+     ('time','@time_vec'),
+     ('s_ref','@ref_pos_vec'),
+     ('s_plan','@pos_vec'),
+     ('s_soft_ub','@soft_pos_max_vec'),
+     ('s_soft_lb','@soft_pos_min_vec'),
+     ('s_hard_ub','@hard_pos_max_vec'),
+     ('s_hard_lb','@hard_pos_min_vec')
   ])
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
@@ -1459,12 +1492,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('t_caution_target', 's_caution_target', source = data_target_s_caution, line_width = 3.0, line_color = 'yellow', line_dash = 'solid', legend_label = 's_caution_target')
   fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
   fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel')
+  fig3.line('t_safety_target', 's_safety_target', source = data_target_s_safety, line_width = 3.0, line_color = 'orange', line_dash = 'solid', legend_label = 's_safety_target')
 
-  hover3 = HoverTool(tooltips=[('node_s', '@s_search'),
-                               ('node_vel', '@vel_search'),
-                               ('node_acc', '@acc_search'),
-                               ('node_jerk', '@jerk_search'),])
-  fig3.add_tools(hover3)
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'
 

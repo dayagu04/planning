@@ -1,14 +1,15 @@
 #include "target_maker.h"
 
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
+#include "caution_target.h"
 #include "common/math/common_utils.h"
 #include "cruise_target.h"
 #include "debug_info_log.h"
 #include "follow_target.h"
 #include "neighbor_target.h"
 #include "overtake_target.h"
-#include "caution_target.h"
 #include "planning_context.h"
+#include "safety_target.h"
 
 namespace planning {
 
@@ -38,7 +39,10 @@ common::Status TargetMaker::Run() {
   // 5. caution target @国朋
   CautionTarget caution_target(speed_planning_config_, session_);
 
-  // 6. decider final target values
+  // 6. safety target @华文
+  SafetyTarget safety_target(speed_planning_config_, session_);
+
+  // 7. decider final target values
   const auto& start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
   const auto& stop_speed_decision_info =
@@ -51,8 +55,8 @@ common::Status TargetMaker::Run() {
         overtake_target.target_value(relative_t);
     TargetValue neighbor_target_value =
         neighbor_target.target_value(relative_t);
-    TargetValue caution_target_value =
-      caution_target.target_value(relative_t);
+    TargetValue caution_target_value = caution_target.target_value(relative_t);
+    TargetValue safety_target_value = safety_target.target_value(relative_t);
 
     TargetValue upper_target_value(0.0, false,
                                    std::numeric_limits<double>::max(), 0.0,
@@ -60,6 +64,16 @@ common::Status TargetMaker::Run() {
     TargetValue lower_target_value(0.0, false,
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
+
+    // 0. fusion follow_target and safety_target, take the min value as new follow_target
+    if (follow_target_value.has_target() && safety_target_value.has_target()) {
+      if (safety_target_value.s_target_val() <
+          follow_target_value.s_target_val()) {
+        follow_target_value = safety_target_value;
+        follow_target_value.set_target_type(
+            TargetType::kFollow);
+      }
+    } 
 
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
@@ -88,7 +102,7 @@ common::Status TargetMaker::Run() {
     // TBD: 国朋合入caution
     // 2.update upper value by caution yield target
     if (caution_target_value.has_target()) {
-       upper_target_value =
+      upper_target_value =
           Target::TargetMin(caution_target_value, upper_target_value);
     }
 
@@ -133,6 +147,7 @@ common::Status TargetMaker::Run() {
     // final_lower_bound_value = cruise_target_value;
     auto final_lower_bound_value =
         Target::TargetMax(lower_target_value, cruise_target_value);
+
     auto final_target_value =
         Target::TargetMin(final_lower_bound_value, upper_target_value);
     target_values_.push_back(std::move(final_target_value));

@@ -89,5 +89,6 @@ class StartStopStatusManager {
   double cipv_relative_s_ = 0.0;
   int32_t cipv_id_ = -1;
   bool is_ego_reverse_ = false;
+  double cipv_relative_s_start_threshold_ = 3.5;
 };
 }  // namespace planning
