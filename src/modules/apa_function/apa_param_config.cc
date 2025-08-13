@@ -543,6 +543,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.uss_config.uss_dist_coefficient_by_vel, double,
                   "uss_dist_coefficient_by_vel");
 
+  JSON_DEBUG_VALUE("use_uss_pt_cloud", param.uss_config.use_uss_pt_cloud);
+
   JSON_READ_VALUE(param.use_ground_line, bool, "use_ground_line");
 
   JSON_READ_VALUE(param.use_ground_line_wall_column, bool,
