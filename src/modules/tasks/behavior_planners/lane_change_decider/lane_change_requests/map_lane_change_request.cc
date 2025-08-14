@@ -76,8 +76,10 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   // 4、判断虚线长度是否满足变道条件
   const RequestType target_direction =
       lc_map_decision < 0 ? LEFT_CHANGE : RIGHT_CHANGE;
+
   bool is_dash_enough = IsDashEnoughForRepeatSegments(
-      target_direction, current_lane->get_virtual_id());
+      target_direction, current_lane->get_virtual_id(),
+      static_cast<StateMachineLaneChangeStatus>(lc_status));
   if (!is_dash_enough) {
     return false;
   }

@@ -27,7 +27,8 @@ class LaneChangeRequest {
   void Finish();
   bool AggressiveChange() const;
   bool IsDashedLineEnough(RequestType direction, const double ego_vel,
-                          std::shared_ptr<VirtualLaneManager> virtual_lane_mgr);
+                          std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+                          const StateMachineLaneChangeStatus& lc_status);
 
   RequestType request_type() const { return request_type_; }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
@@ -38,8 +39,9 @@ class LaneChangeRequest {
   double tstart() const { return tstart_; }
   double tfinish() const { return tfinish_; }
   bool ComputeLcValid(RequestType direction);
-  bool IsDashEnoughForRepeatSegments(const RequestType lc_request,
-                                     const int origin_lane_id) const;
+  bool IsDashEnoughForRepeatSegments(
+      const RequestType& lc_request, const int origin_lane_id,
+      const StateMachineLaneChangeStatus& lc_status) const;
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request, const int origin_lane_id) const;
   bool IsRoadBorderSurpressLaneChange(const RequestType lc_request,
@@ -49,6 +51,9 @@ class LaneChangeRequest {
   bool IsRoadBorderSurpressDuringLaneChange(const RequestType lc_direction,
                                             const int origin_lane_id,
                                             const int target_lane_id);
+
+  double CalculatePressLineRatio(const int origin_lane_id,
+                                 const RequestType& lc_request) const;
 
  protected:
   TrackInfo lc_invalid_track_;

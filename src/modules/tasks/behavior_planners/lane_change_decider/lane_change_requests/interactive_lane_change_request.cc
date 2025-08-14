@@ -113,7 +113,7 @@ void IntRequest::Update(int lc_status) {
     // 判断虚线长度是否满足变道条件
     const RequestType target_direction = LEFT_CHANGE;
     bool is_dash_enough = IsDashEnoughForRepeatSegments(
-        target_direction, current_lane_virtual_id);
+        target_direction, current_lane_virtual_id, static_cast<StateMachineLaneChangeStatus>(lc_status));
     if (!is_dash_enough) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = RIGHT_CHANGE;
@@ -181,7 +181,8 @@ void IntRequest::Update(int lc_status) {
     // 判断虚线长度是否满足变道条件
     const RequestType target_direction = RIGHT_CHANGE;
     bool is_dash_enough = IsDashEnoughForRepeatSegments(
-        target_direction, current_lane_virtual_id);
+        target_direction, current_lane_virtual_id,
+        static_cast<StateMachineLaneChangeStatus>(lc_status));
     if (!is_dash_enough) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = RIGHT_CHANGE;

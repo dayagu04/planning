@@ -1,4 +1,5 @@
 #include "lane_change_request.h"
+
 #include <sys/param.h>
 
 #include <algorithm>
@@ -16,7 +17,12 @@
 namespace planning {
 namespace {
 constexpr double kLargeAgentLengthM = 8.0;
-}
+constexpr double kInputBoundaryLenLimit = 145.;
+constexpr double kDefaultBoundaryLen = 5000.;
+// https://yf2ljykclb.xfchat.iflytek.com/wiki/MXjXwlCjni6g7nkjgKGrfwGwzPb
+constexpr double kLaneChangeSolidLineTTC = 1.75;  // todo(ldh): 从配置中读取
+constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
+}  // namespace
 LaneChangeRequest::LaneChangeRequest(
     framework::Session *session,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
@@ -79,15 +85,63 @@ bool LaneChangeRequest::AggressiveChange() const {
   return aggressive_change && (request_type_ != NO_CHANGE);
 }
 
+double LaneChangeRequest::CalculatePressLineRatio(
+    const int origin_lane_id, const RequestType &lc_request) const {
+  double press_line_ratio = 0.0;
+
+  // press_line_ratio = target_lane->press_line_ratio();
+  auto origin_reference_path =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(origin_lane_id, false);
+  auto origin_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+
+  if (nullptr == origin_lane || origin_reference_path == nullptr) {
+    return 0.0;
+  }
+  const auto &ego_frenent_boundary =
+      origin_reference_path->get_ego_frenet_boundary();
+  const double ego_center_s =
+      ego_frenent_boundary.s_start +
+      (ego_frenent_boundary.s_end - ego_frenent_boundary.s_start) / 2.0;
+  const double frenent_ego_width =
+      ego_frenent_boundary.l_end - ego_frenent_boundary.l_start;
+  double lane_width = origin_lane->width_by_s(ego_center_s);
+  double half_lane_width = lane_width * 0.5;
+  if (lc_request == LEFT_CHANGE) {
+    if (ego_frenent_boundary.l_end < half_lane_width) {
+      press_line_ratio = 0.0;
+    } else if (ego_frenent_boundary.l_end > half_lane_width) {
+      press_line_ratio =
+          (ego_frenent_boundary.l_end - half_lane_width) / frenent_ego_width;
+    } else {
+      press_line_ratio = 0.0;
+    }
+  } else if (lc_request == RIGHT_CHANGE) {
+    if (ego_frenent_boundary.l_start > -half_lane_width) {
+      press_line_ratio = 0.0;
+    } else if (ego_frenent_boundary.l_start < -half_lane_width) {
+      press_line_ratio =
+          (-ego_frenent_boundary.l_start + half_lane_width) / frenent_ego_width;
+    } else {
+      press_line_ratio = 0.0;
+    }
+  } else {
+    press_line_ratio = 0.0;
+  }
+  return press_line_ratio;
+}
+
 bool LaneChangeRequest::IsDashedLineEnough(
     RequestType direction, const double ego_vel,
-    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr) {
+    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+    const StateMachineLaneChangeStatus &lc_status) {
   LOG_DEBUG("dashed_enough: direction: %d \n", static_cast<int>(direction));
   LOG_DEBUG("dashed_enough: vel: %.2f \n", ego_vel);
-  const double kInputBoundaryLenLimit = 145.;
-  const double kDefaultBoundaryLen = 5000.;
+
   double dash_length = 80;
-  const double kNeedLaneChangeTime = 4.0;
+
   double right_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
       RIGHT_CHANGE, origin_lane_virtual_id_);
   double left_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
@@ -99,27 +153,35 @@ bool LaneChangeRequest::IsDashedLineEnough(
             << std::endl;
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-
+  double press_line_ratio =
+      CalculatePressLineRatio(origin_lane_virtual_id_, direction);
   // HACK RUI
+
   if (route_info_output.dis_to_ramp < 500.) return true;
-  if (direction == LEFT_CHANGE && left_dash_line_len > 0.) {
-    if (left_dash_line_len > ego_vel * kNeedLaneChangeTime) {
+  if (direction == LEFT_CHANGE) {
+    if (left_dash_line_len > ego_vel * kLaneChangeSolidLineTTC) {
       return true;
     } else {
-      dash_length = left_dash_line_len;
+      if (lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution &&
+          press_line_ratio >= kIgnoreLineTypeThreshold) {
+        return true;
+      } else {
+        dash_length = right_dash_line_len;
+      }
     }
-  } else if (direction == RIGHT_CHANGE && right_dash_line_len > 0.) {
-    if (right_dash_line_len > ego_vel * kNeedLaneChangeTime) {
-      LOG_DEBUG("dashed_enough: right_dash_line_len > ego_vel * 4 \n");
+  } else if (direction == RIGHT_CHANGE) {
+    if (right_dash_line_len > ego_vel * kLaneChangeSolidLineTTC) {
       return true;
     } else {
-      LOG_DEBUG("dashed_enough: right_dash_line_len <= ego_vel * 4 \n");
-      dash_length = right_dash_line_len;
+      if (lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution &&
+          press_line_ratio >= kIgnoreLineTypeThreshold) {
+        return true;
+      } else {
+        dash_length = right_dash_line_len;
+      }
     }
-  } else {
-    LOG_ERROR("!dashed_enough \n");
-    return false;
   }
+
   dash_length = (dash_length > kInputBoundaryLenLimit) ? kDefaultBoundaryLen
                                                        : dash_length;
   double error_buffer = std::fmin(ego_vel * 0.5, 5);
@@ -213,7 +275,8 @@ bool LaneChangeRequest::ComputeLcValid(RequestType direction) {
   return true;
 }
 bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
-    const RequestType lc_request, const int origin_lane_id) const {
+    const RequestType& lc_request, const int origin_lane_id,
+    const StateMachineLaneChangeStatus &lc_status) const {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double ego_v = ego_state->ego_v();
@@ -223,10 +286,13 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   int current_segment_count = 0;
   bool all_lane_boundary_types_are_dashed = true;
   double default_lc_boundary_length = 100.0;
-  double need_lane_change_time = 4.0;
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
   const std::shared_ptr<VirtualLane> current_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+
+  if (current_lane == nullptr) {
+    return false;
+  }
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
 
@@ -310,7 +376,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     dash_length = std::max(0.0, dash_length);
   }
 
-  double lc_response_dist = ego_v * need_lane_change_time;  // hack
+  double lc_response_dist = ego_v * kLaneChangeSolidLineTTC;  // hack
   JSON_DEBUG_VALUE("dash_line_len", dash_length);
   std::cout << "dash_length:" << dash_length
             << ",lc_response_dist:" << lc_response_dist << std::endl;
@@ -344,7 +410,18 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       }
     }
   }
-  std::cout << "dash lengh less than lc response dist!!!!" << std::endl;
+  //
+  if (lc_status == StateMachineLaneChangeStatus::kLaneChangeComplete ||
+      lc_status == StateMachineLaneChangeStatus::kLaneKeeping) {
+    return true;
+  }
+  double press_line_ratio = CalculatePressLineRatio(origin_lane_id, lc_request);
+  if (lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution) {
+    if (press_line_ratio > kIgnoreLineTypeThreshold) {
+      return true;
+    }
+  }
+  // std::cout << "dash lengh less than lc response dist!!!!" << std::endl;
   return false;
 }
 

@@ -427,7 +427,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
             "\n");
       }
     }
-    if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, origin_lane_virtual_id_) &&
+    if (!IsDashEnoughForRepeatSegments(
+            LEFT_CHANGE, origin_lane_virtual_id_,
+            static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
         request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
          (lc_status == kLaneChangeCancel &&
@@ -461,7 +463,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
             "\n");
       }
     }
-    if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, origin_lane_virtual_id_) &&
+    if (!IsDashEnoughForRepeatSegments(
+            RIGHT_CHANGE, origin_lane_virtual_id_,
+            static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
         request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
          (lc_status == kLaneChangeCancel &&

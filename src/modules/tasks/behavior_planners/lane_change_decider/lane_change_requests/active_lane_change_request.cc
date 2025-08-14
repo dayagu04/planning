@@ -259,7 +259,9 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
       //   act_request_source_ = "avd_merge_from_right";
       // }
     }
-    if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
+    if (!IsDashedLineEnough(
+            LEFT_CHANGE, v_ego, virtual_lane_mgr_,
+            static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
          (lc_status == kLaneChangeCancel &&
@@ -300,7 +302,9 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
               "[ActRequest::update] Ask for active changing lane to left \n");
         }
       }
-      if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
+      if (!IsDashedLineEnough(
+              LEFT_CHANGE, v_ego, virtual_lane_mgr_,
+              static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
           curr_direct_exist && request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
@@ -315,8 +319,7 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
       }
     } else if (right_alc_car.size() > 0) {
       // 存在需要从右避让的车
-      if (request_type_ != RIGHT_CHANGE &&
-          ComputeLcValid(RIGHT_CHANGE)) {
+      if (request_type_ != RIGHT_CHANGE && ComputeLcValid(RIGHT_CHANGE)) {
         // if (is_on_highway &&
         //     ((map_info.lanes_merge_type(right_lane_index) ==
         //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
@@ -344,7 +347,9 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
                          (lc_request_direction == RIGHT_CHANGE);
       bool is_LC_RBACK = (state == kLaneChangeCancel) &&
                          (lc_request_direction == RIGHT_CHANGE);
-      if (!IsDashedLineEnough(RIGHT_CHANGE, v_ego, virtual_lane_mgr_) &&
+      if (!IsDashedLineEnough(
+              RIGHT_CHANGE, v_ego, virtual_lane_mgr_,
+              static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
           curr_direct_exist && request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || is_LC_RWAIT ||
            (is_LC_RBACK && (lane_change_lane_mgr_->has_origin_lane() &&
