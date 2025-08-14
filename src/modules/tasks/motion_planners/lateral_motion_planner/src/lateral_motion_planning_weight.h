@@ -259,7 +259,7 @@ class LateralMotionPlanningWeight {
 
  private:
   void SetAccJerkBoundAndWeight(
-      planning::common::LateralPlanningInput &planning_input, double recommended_jerk);
+      planning::common::LateralPlanningInput &planning_input);
 
   void SetMinJerkWeightByVel(
       planning::common::LateralPlanningInput &planning_input);
@@ -344,6 +344,7 @@ class LateralMotionPlanningWeight {
   pnc::mathlib::spline soft_ubound_l_s_spline_;
   pnc::mathlib::spline hard_lbound_l_s_spline_;
   pnc::mathlib::spline hard_ubound_l_s_spline_;
+  double recommended_jerk_;
 };
 
 }  // namespace lateral_planning

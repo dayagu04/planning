@@ -2693,25 +2693,11 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     bound_type = BoundType::ADJACENT_AGENT;
   }
 
+  // judge side cut_in nudge
   bool is_avoid_side_ignore_obj = false;
-  if (is_find_lat_obs_position_iter) {
-    if (lat_obs_position_iter->second.side_car) {
-      is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
-                        (!lat_obs_position_iter->second.front_car);
-      if (lat_obstacle_decision.at(obstacle->id()) ==
-              LatObstacleDecisionType::IGNORE ||
-          lat_obstacle_decision.at(obstacle->id()) ==
-              LatObstacleDecisionType::FOLLOW) {
-        // if (obstacle->frenet_l() < 0) {
-        //   is_nudge_left = false;
-        // } else if (obstacle->frenet_l() > 0) {
-        //   is_nudge_left = true;
-        // }
-        is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
-        bound_type = is_side_obstacle ? BoundType::ADJACENT_AGENT : BoundType::DYNAMIC_AGENT;
-        is_avoid_side_ignore_obj = true;
-      }
-    }
+  if (!CheckObstacleSideCutinNudgeCondition(obstacle, is_nudge_left,
+      bound_type, is_avoid_side_ignore_obj, is_side_obstacle)) {
+    return;
   }
 
   if (is_find_lat_obs_position_iter &&
@@ -3270,6 +3256,47 @@ bool GeneralLateralDecider::HackYawSideObstacle(
     return true;
   }
   return false;
+}
+
+bool GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
+    BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle) {
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+  const auto &lat_obstacle_position = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
+  const auto lat_obs_position_iter =
+      lat_obstacle_position.find(obstacle->id());
+  const double care_lateral_distacle = 2;
+  const bool is_find_lat_obs_position_iter = lat_obs_position_iter != lat_obstacle_position.end();
+  if (is_find_lat_obs_position_iter) {
+    if (lat_obs_position_iter->second.side_car) {
+      is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
+                        (!lat_obs_position_iter->second.front_car);
+      if (lat_obstacle_decision.at(obstacle->id()) ==
+        LatObstacleDecisionType::IGNORE) {
+        is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+        if (is_nudge_left && (care_lateral_distacle <
+            obstacle->frenet_obstacle_boundary().l_start - ego_frenet_state_.boundary().l_end)) {
+          return false;
+        } else if (!is_nudge_left && (care_lateral_distacle <
+            ego_frenet_state_.boundary().l_start - obstacle->frenet_obstacle_boundary().s_end)) {
+          return false;
+        } else {
+          // if (obstacle->frenet_l() < 0) {
+          //   is_nudge_left = false;
+          // } else if (obstacle->frenet_l() > 0) {
+          //   is_nudge_left = true;
+          // }
+          bound_type = is_side_obstacle ? BoundType::ADJACENT_AGENT : BoundType::DYNAMIC_AGENT;
+          is_avoid_side_ignore_obj = true;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
