@@ -238,7 +238,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
-                          "cipv_vel_frenet",'cipv_acc', 'cipv_acc_fusion', "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
+                          "cipv_vel_frenet","cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
                           "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path',
                           "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s",
@@ -910,10 +910,8 @@ def load_lon_global_figure(bag_loader):
                 y_axis_label='velocity/(m/s)',width=600,height=300)
 
   ego_velocity_vec = []
-  target_velocity_vec = []
-  ref_velocity_vec = []
-  leadone_velocity_vec = []
-  leadtwo_velocity_vec = []
+  cipv_vel_vec = []
+  cipv_vel_fusion_vec = []
   t_plan_vec = bag_loader.plan_debug_msg['t']
   t_loc_vec = bag_loader.loc_msg['t']
   t_vehicle_service_vec = bag_loader.vs_msg['t']
@@ -926,10 +924,17 @@ def load_lon_global_figure(bag_loader):
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_velocity_vec.append(round(bag_loader.vs_msg['data'][ind].vehicle_speed, 2))
 
-  # velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
-  #                             legend_label='target_velocity', color="green")
-  # velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
-  #                             legend_label='ref_velocity', color="gray")
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    cipv_vel = round(bag_loader.plan_debug_msg['json'][ind]['cipv_vel_frenet'], 2)
+    if cipv_vel > 40.0:
+      cipv_vel = 0.0
+    cipv_vel_vec.append(cipv_vel)
+    cipv_vel_fusion_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_vel_fusion'], 2))
+
+  velocity_fig.line(t_plan_vec, cipv_vel_vec, line_width=1,
+                              legend_label='cipv_vel', color="green")
+  velocity_fig.line(t_plan_vec, cipv_vel_fusion_vec, line_width=1,
+                              legend_label='cipv_vel_fusion', color="red")
   velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
                                 legend_label='ego_velocity',color="blue")
   # velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,

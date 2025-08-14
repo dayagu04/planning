@@ -313,7 +313,7 @@ void AgentManager::RecalculateDecelTrajectories(
 
   const auto& trajectory = agent->trajectories().front();
   const double init_accel = agent->accel_fusion();
-  const double init_speed = std::max(agent->speed(), 0.0);
+  const double init_speed = std::max(agent->speed_fusion(), 0.0);
 
   std::vector<double> kin_positions, kin_speeds, kin_accels;
   kin_positions.reserve(kPlanPoints);

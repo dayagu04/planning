@@ -102,6 +102,9 @@ class Agent {
   const double speed() const;
   void set_speed(const double speed);
 
+  const double speed_fusion() const;
+  void set_speed_fusion(const double speed_fusion);
+
   const double accel() const;
   void set_accel(const double accel);
 
@@ -243,6 +246,7 @@ class Agent {
   double y_ = 0.0;
   double theta_ = 0.0;
   double speed_ = 0.0;
+  double speed_fusion_ = 0.0;
   double accel_ = 0.0;
   double accel_fusion_ = 0.0;
   planning_math::Box2d box_;

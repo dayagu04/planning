@@ -22,6 +22,9 @@ class ClosestInPathVehicleDeciderOutput {
   double v_frenet() const;
   void set_v_frenet(const double v_frenet);
 
+  double v_fusion_frenet() const;
+  void set_v_fusion_frenet(const double v_fusion_frenet);
+
   double ttc() const;
   void set_ttc(const double ttc);
 
@@ -41,6 +44,7 @@ class ClosestInPathVehicleDeciderOutput {
   int32_t cipv_id_ = -1;
   double relative_s_ = 0.0;
   double v_frenet_ = 0.0;
+  double v_fusion_frenet_ = 0.0;
   double acceleration_ = 0.0;
   double acceleration_fusion_ = 0.0;
   double ttc_ = 100.0;
