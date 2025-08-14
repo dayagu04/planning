@@ -4122,6 +4122,25 @@ bool GeneralLateralDecider::IsFarObstacle(
   return true;
 }
 
+
+bool GeneralLateralDecider::IsObstacleOutsideRoadLimits(
+    const std::shared_ptr<FrenetObstacle> obstacle) {
+  // 过滤道路边缘之外的障碍物避让
+  ReferencePathPoint refpath_pt{};
+  double extra_buffer_for_road = 0.5;
+  if (reference_path_ptr_->get_reference_point_by_lon(obstacle->frenet_s(),
+                                                     refpath_pt)) {
+    if (obstacle->frenet_l() > 0 && (obstacle->frenet_obstacle_boundary().l_start >
+        refpath_pt.distance_to_left_road_border  + extra_buffer_for_road)) {
+      return true;
+    } else if (obstacle->frenet_l() < 0 && (obstacle->frenet_obstacle_boundary().l_end <
+        -refpath_pt.distance_to_right_road_border - extra_buffer_for_road)) {
+      return true;
+    }
+    return false;
+  }
+}
+
 bool GeneralLateralDecider::IsRearObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   return reference_path_ptr_->get_ego_frenet_boundary().s_start >
@@ -4184,6 +4203,11 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
     return false;
   }
 
+  // filter outside road object
+  if (IsObstacleOutsideRoadLimits(obstacle)) {
+    return false;
+  }
+
   // filter rear object without care
   if (IsRearObstacle(obstacle)) {
     return false;
@@ -4236,6 +4260,11 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   // filter far away object
   if (!IsFarObstacle(obstacle)) {
     ResetIsExceedObstacleHysteresisMap(obstacle->id());
+    return false;
+  }
+
+  // filter outside road object
+  if (IsObstacleOutsideRoadLimits(obstacle)) {
     return false;
   }
 
