@@ -78,7 +78,7 @@ class NarrowSpaceScenario : public ParkingScenario {
    */
   PathPlannerResult PlanBySearchBasedMethod(const bool is_scenario_try);
 
-  const int PathOptimizationByCILRQ(
+  const int PathOptimizationByCILQR(
       const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf);
 
   const void GenerateFallBackPath();

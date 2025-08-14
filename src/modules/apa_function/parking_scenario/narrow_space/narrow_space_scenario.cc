@@ -700,12 +700,12 @@ const void NarrowSpaceScenario::GenerateFallBackPath() {
   return;
 }
 
-const int NarrowSpaceScenario::PathOptimizationByCILRQ(
+const int NarrowSpaceScenario::PathOptimizationByCILQR(
     const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf) {
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
-  constexpr float kHeadHeadingStartDeg = 85.0f;
+  constexpr float kHeadHeadingStartDeg = 80.0f;
   constexpr float kTailHeadingStartDeg = 95.0f;
   constexpr float kHeadingEndDeg = 89.9f;
   constexpr float kHeadingDiffThresh = 1e-3f;
@@ -2276,7 +2276,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
       Transform2d response_tf;
       response_tf.SetBasePose(response_.request.base_pose_);
       PublishHybridAstarDebugInfo(response_.result, &response_tf);
-      PathOptimizationByCILRQ(response_.first_seg_path, &response_tf);
+      PathOptimizationByCILQR(response_.first_seg_path, &response_tf);
 
       if (response_.request.plan_reason != PlanningReason::SLOT_REFRESHED) {
         frame_.total_plan_count++;
