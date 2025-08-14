@@ -67,7 +67,8 @@ SafetyTarget::SafetyTarget(const SpeedPlannerConfig& config,
   idm_params_.delta = 4.0;
   idm_params_.b_hard = 2.0;
   idm_params_.front_b_hard = 5.0;
-  idm_params_.max_jerk = 1.0;
+  idm_params_.max_a_jerk = 5.0;
+  idm_params_.max_b_jerk = 1.0;
   idm_params_.virtual_front_s = 200.0;
   idm_params_.min_distance = 0.5;
 
@@ -237,17 +238,23 @@ double SafetyTarget::CalculateSafetyAcceleration(
                              current_vel * tau);
 
   double s_desired = std::max(0.0, front_s - (s0 + current_vel * tau));
-  double dynamic_v0 =
-      CalcDesiredVelocity(current_s, s_desired, front_vel, current_vel);
+  double dynamic_v0 = CalcDesiredVelocity(front_s - current_s, s_desired,
+                                          front_vel, current_vel);
   JSON_DEBUG_VALUE("safety_dynamic_vel", dynamic_v0);
   double final_v0 = std::max(front_vel, std::min(v0, dynamic_v0));
   JSON_DEBUG_VALUE("safety_target_vel", final_v0);
   double s_alpha = s_desired;
   double v0_safe = std::max(1e-3, final_v0);
 
+  if (current_s < s_desired) {
+    final_v0 = v0;
+  } else {
+    final_v0 = v0_safe;
+  }
+
   double a_free;
   if (current_vel <= final_v0) {
-    a_free = a * (1 - std::pow(current_vel / v0_safe, delta));
+    a_free = a * (1 - std::pow(current_vel / final_v0, delta));
   } else if (current_vel > final_v0 && current_s < s_desired) {
     double s_progress = std::max(0.0, std::min(1.0, current_s / s_desired));
     double vel_ratio = current_vel / std::max(final_v0, 1e-6);
@@ -265,7 +272,7 @@ double SafetyTarget::CalculateSafetyAcceleration(
 
   double z = s_star / s_alpha;
   double acc_idm;
-  if (current_vel <= v0_safe) {
+  if (current_vel <= final_v0) {
     if (z >= 1.0) {
       acc_idm = a * (1 - z * z);
     } else {
@@ -301,14 +308,19 @@ double SafetyTarget::CalculateSafetyAcceleration(
     final_acc = acc_cah;
   }
 
-  double kMaxJerk = idm_params_.max_jerk;
-  double kMaxAccChange = kMaxJerk * dt_;
+  double max_a_jerk = idm_params_.max_a_jerk;
+  double max_b_jerk = idm_params_.max_b_jerk;
+
   double acc_change = final_acc - current_acc;
-  if (std::abs(acc_change) > kMaxAccChange) {
-    if (acc_change > 0) {
-      final_acc = current_acc + kMaxAccChange;
-    } else {
-      final_acc = current_acc - kMaxAccChange;
+  if (acc_change > 0) {
+    double max_acc_increase = max_a_jerk * dt_;
+    if (acc_change > max_acc_increase) {
+      final_acc = current_acc + max_acc_increase;
+    }
+  } else if (acc_change < 0) {
+    double max_acc_decrease = max_b_jerk * dt_;
+    if (std::abs(acc_change) > max_acc_decrease) {
+      final_acc = current_acc - max_acc_decrease;
     }
   }
 

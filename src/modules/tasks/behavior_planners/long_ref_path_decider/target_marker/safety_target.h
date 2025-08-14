@@ -37,7 +37,8 @@ class SafetyTarget : public Target {
     double delta = 4.0;
     double b_hard = 2.0;
     double front_b_hard = 5.0;
-    double max_jerk = 1.0;
+    double max_a_jerk = 5.0;
+    double max_b_jerk = 1.0;
     double virtual_front_s = 200.0;
     double min_distance = 0.5;
   };
