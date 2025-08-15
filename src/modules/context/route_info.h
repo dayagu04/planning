@@ -86,7 +86,6 @@ class RouteInfo {
   MLCDeciderConfig mlc_decider_config_;
 
   RouteInfoOutput route_info_output_;
-  LocalView local_view_;
 
   // for NOA variables
   ad_common::sdmap::SDMap sd_map_;
