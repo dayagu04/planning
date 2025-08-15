@@ -293,7 +293,10 @@ struct PathPoint {
 
   const double GetX() const { return pos.x(); }
   const double GetY() const { return pos.y(); }
-  const double GetHeading() const { return heading; }
+  const double GetTheta() const { return heading; }
+  const Eigen::Vector2d GetPos() const { return pos; }
+  const Eigen::Vector2d GetDir() const { return heading_vec; }
+  const double GetKappa() const { return kappa; }
 
   void Reset() {
     pos.setZero();
@@ -781,9 +784,9 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
 const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
                                const Eigen::Vector2d &pC);
 
-const bool CalTangentLineFromHeadingAndArc(const double line_heading,
-                                           const pnc::geometry_lib::Arc& arc,
-                                           std::vector<Eigen::Vector2d>& tangent_points);
+const bool CalTangentLineFromHeadingAndArc(
+    const double line_heading, const pnc::geometry_lib::Arc &arc,
+    std::vector<Eigen::Vector2d> &tangent_points);
 
 const bool GetArcLineSegIntersection(
     Eigen::Vector2d &intersection, const pnc::geometry_lib::Arc &arc,

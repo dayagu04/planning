@@ -33,6 +33,12 @@ void PerpendicularTailInScenario::Reset() {
   ParkingScenario::Reset();
 }
 
+void PerpendicularTailInScenario::Clear() {
+  current_plan_path_vec_.clear();
+  all_plan_path_vec_.clear();
+  ParkingScenario::Clear();
+}
+
 void PerpendicularTailInScenario::ScenarioTry() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
     return;
@@ -66,16 +72,7 @@ void PerpendicularTailInScenario::ScenarioTry() {
 
   TansformPreparePlanningTraj();
 
-  frame_.Reset();
-  current_path_point_global_vec_.clear();
-  complete_path_point_global_vec_.clear();
-  current_plan_path_vec_.clear();
-  all_plan_path_vec_.clear();
-  trajectory_.clear();
-
-  ILOG_INFO << "publish_traj->trajectory_points_size = "
-            << static_cast<int>(
-                   planning_output_.trajectory.trajectory_points_size);
+  Clear();
 
   return;
 }
@@ -1368,13 +1365,13 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
     x_vec.emplace_back(current_path_point_global_vec_[i].GetX());
     y_vec.emplace_back(current_path_point_global_vec_[i].GetY());
-    heading_vec.emplace_back(current_path_point_global_vec_[i].GetHeading());
+    heading_vec.emplace_back(current_path_point_global_vec_[i].GetTheta());
     s_vec.emplace_back(s);
   }
 
   if (s < s_proj) {
     ILOG_INFO << "path shoule be extended because of limiter";
-    if (std::fabs(g2l_tf.GetHeading(pt.GetHeading())) * kRad2Deg > 1.08) {
+    if (std::fabs(g2l_tf.GetHeading(pt.GetTheta())) * kRad2Deg > 1.08) {
       ILOG_INFO << "ego heading is big, not allow extend path";
       return false;
     }
@@ -1384,7 +1381,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     pt.s = temp_s;
     // reverse gear
     const Eigen::Vector2d unit_heading_vec =
-        geometry_lib::GenHeadingVec(pt.GetHeading()) * -1.0;
+        geometry_lib::GenHeadingVec(pt.GetTheta()) * -1.0;
     std::vector<geometry_lib::PathPoint> extend_pt_vec{pt};
     do {
       temp_s += temp_ds;

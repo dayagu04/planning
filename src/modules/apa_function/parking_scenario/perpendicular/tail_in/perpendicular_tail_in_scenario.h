@@ -19,6 +19,7 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
     SetApaWorldPtr(apa_world_ptr);
   }
   virtual void Reset() override;
+  virtual void Clear() override;
   virtual std::string GetName() override { return typeid(this).name(); }
 
   void ScenarioTry() override;

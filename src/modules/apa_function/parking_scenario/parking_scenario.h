@@ -365,6 +365,7 @@ class ParkingScenario {
 
   // slot cruise state: reset.
   virtual void Reset();
+  virtual void Clear();
   virtual std::string GetName();
 
   void SetApaWorldPtr(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
