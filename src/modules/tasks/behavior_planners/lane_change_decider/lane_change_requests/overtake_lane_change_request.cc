@@ -274,8 +274,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
                         [&ego_frenet](const iflyauto::LaneNumMsg& lane_num) {
                           return lane_num.begin <= ego_frenet.x && lane_num.end > ego_frenet.x;
                         });
-        left_lane_nums = iter->left_lane_num;
-        right_lane_nums = iter->right_lane_num;
+        if (iter != lane_nums_msg.end()) {
+          left_lane_nums = iter->left_lane_num;
+          right_lane_nums = iter->right_lane_num;
+        } else {
+          return;
+        }
       }
     } else {
       return;
