@@ -70,6 +70,7 @@ class RouteInfo {
   bool sdpromap_valid_{false};
   uint64_t sdpro_map_info_updated_timestamp_ = 0;
   MLCDeciderRouteInfo mlc_decider_route_info_;
+  const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;
@@ -182,11 +183,22 @@ class RouteInfo {
   bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, const uint64 fp_link_id,
                        const iflymapdata::sdpro::FeaturePoint& find_fp);
 
-  bool CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp, uint64* fp_link_id);
-  bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info, const ad_common::sdpromap::SDProMap& sdpro_map) const;
+  bool CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
+                        uint64* fp_link_id, double* dis_to_merge_fp);
+  bool CalculateFeasibleLane(
+      NOASplitRegionInfo* split_region_info,
+      const ad_common::sdpromap::SDProMap& sdpro_map) const;
   bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) const;
-  bool CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_region_info) const;
-  bool CalculateOtherMergeRoadFeasibleLane(NOASplitRegionInfo* split_region_info) const;
+  bool CalculateMergeRegionFeasibleLane(
+      NOASplitRegionInfo* split_region_info) const;
+  bool CalculateOtherMergeRoadFeasibleLane(
+      NOASplitRegionInfo* split_region_info) const;
+  bool IsMergeFP(const iflymapdata::sdpro::FeaturePoint& fp) const;
+  const iflymapdata::sdpro::LinkInfo_Link* CalculateCurrentLink(double* s,
+                                                                double* l);
+  bool CalculateLastFPInCurrentLink(
+      iflymapdata::sdpro::FeaturePoint* find_fp,
+      const iflymapdata::sdpro::LinkInfo_Link* const cur_link, const double s);
 
   std::vector<int> CommonElements(const std::vector<int>& A,
                                   const std::vector<int>& B) {
@@ -200,15 +212,17 @@ class RouteInfo {
     return commonElements;
   }
 
-  bool IsEmergencyLane(const uint64 lane_id, const ad_common::sdpromap::SDProMap& sdpro_map) const;
-  double CalculateAngle(const Point2D & o, const Point2D& p) {
-      double dx = p.x - o.x;
-      double dy = p.y - o.y;
-      double angle = std::atan2(dy, dx);  // 相对于x轴正方向的夹角
-      if (angle < 0) {
-          angle += 2 * M_PI;  // 转换到0到2π
-      }
-      return angle;
+  bool IsEmergencyLane(const uint64 lane_id,
+                       const ad_common::sdpromap::SDProMap& sdpro_map) const;
+                       
+  double CalculateAngle(const Point2D& o, const Point2D& p) {
+    double dx = p.x - o.x;
+    double dy = p.y - o.y;
+    double angle = std::atan2(dy, dx);  // 相对于x轴正方向的夹角
+    if (angle < 0) {
+      angle += 2 * M_PI;  // 转换到0到2π
+    }
+    return angle;
   }
 
   // 正确排序跨越π的射线

@@ -38,6 +38,7 @@ void RouteInfo::SetConfig(const EgoPlanningConfigBuilder* config_builder) {
 
 void RouteInfo::Update() {
   route_info_output_.reset();
+  current_link_ = nullptr;
 
   const auto& local_view = session_->environmental_model().get_local_view();
   if (local_view.localization.status.status_info.mode ==
@@ -1226,33 +1227,23 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
     const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s) {
   const iflymapdata::sdpro::LinkInfo_Link* link = nullptr;
   if (!nearest_s) {
+    route_info_output_.reset();
     return link;
   }
-  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
-  const double search_distance = 50.0;
-  const double max_heading_diff = PI / 4;
-  // 获取当前的segment
-  ad_common::math::Vec2d current_point;
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
-  const auto& pose = ego_state->location_enu();
-  current_point.set_x(pose.position.x);
-  current_point.set_y(pose.position.y);
-  double temp_nearest_s = 0;
-  double nearest_l = 0;
-  const double ego_heading_angle = ego_state->heading_angle();
 
-  const iflymapdata::sdpro::LinkInfo_Link* current_link =
-      sdpro_map.GetNearestLinkWithHeading(current_point, search_distance,
-                                          ego_heading_angle, max_heading_diff,
-                                          temp_nearest_s, nearest_l);
-  route_info_output_.current_segment_passed_distance = temp_nearest_s;
-  LOG_DEBUG("current_segment_passed_distance:%f\n",
-            route_info_output_.current_segment_passed_distance);
+  double s = 0.0;
+  double l = 0.0;
+  auto current_link =  CalculateCurrentLink(&s, &l);
   if (!current_link) {
     route_info_output_.reset();
     return link;
   }
+
+  current_link_ = current_link;
+
+  route_info_output_.current_segment_passed_distance = s;
+  LOG_DEBUG("current_segment_passed_distance:%f\n",
+            route_info_output_.current_segment_passed_distance);
 
   // debug当前segment的经纬度信息
   if (current_link->llh_points().points().size() > 0) {
@@ -1283,29 +1274,13 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
       route_info_output_.is_in_sdmaproad = true;
     } else {
       std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+      route_info_output_.reset();
       return link;
     }
   }
-  // //判断自车当前是否在高速或者高架上
-  // if (current_link->link_class() ==
-  //         iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
-  //     current_link->link_class() ==
-  //         iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY) {
-  //   route_info_output_.is_ego_on_expressway = true;
-  //   if (current_link->link_class() ==
-  //       iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
-  //     route_info_output_.is_ego_on_expressway_hmi = true;
-  //   } else {
-  //     route_info_output_.is_ego_on_city_expressway_hmi = true;
-  //   }
-  // } else {
-  //   std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
-  //   return link;
-  // }
 
-  // route_info_output_.is_in_sdmaproad = true;
   link = current_link;
-  *nearest_s = temp_nearest_s;
+  *nearest_s = s;
   // route_info_output_.is_on_highway =
   //     current_link->link_class() ==
   //     iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
@@ -2159,6 +2134,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       "ego_status_on_route",
       static_cast<int>(mlc_decider_route_info_.ego_status_on_route));
 
+  bool is_exist_merge_fp = false;
+
   //计算feasible_lane_sequence
   std::vector<int> feasible_lane_sequence;
 
@@ -2190,12 +2167,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     std::vector<int> merge_lane;
     if (CalculateMergeLaneInfo(merge_lane) && !merge_lane.empty()) {
-      for (int element : merge_lane) {
-        auto it = std::find(feasible_lane_sequence.begin(),
-                            feasible_lane_sequence.end(), element);
+      bool dis_condition_satisfy = route_info_output_.dis_to_merge_fp <
+          mlc_decider_route_info_.static_merge_region_info
+              .distance_to_split_point;
 
-        if (it != feasible_lane_sequence.end()) {
-          feasible_lane_sequence.erase(it);
+      if (dis_condition_satisfy) {
+        for (int element : merge_lane) {
+          auto it = std::find(feasible_lane_sequence.begin(),
+                              feasible_lane_sequence.end(), element);
+
+          if (it != feasible_lane_sequence.end()) {
+            feasible_lane_sequence.erase(it);
+          }
         }
       }
     }
@@ -2203,13 +2186,49 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   } else if (mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
     // feasible_lane_sequence =
     //     split_region_info_list.recommend_lane_num[0].feasible_lane_sequence;
+    if (current_link_ == nullptr) {
+      return;
+    }
+
+    iflymapdata::sdpro::FeaturePoint last_fp;
+    const double s = route_info_output_.current_segment_passed_distance;
+    if (CalculateLastFPInCurrentLink(&last_fp, current_link_, s)) {
+
+      int find_fp_lane_num = 0;
+      for (const auto& lane_id : last_fp.lane_ids()) {
+        if (!IsEmergencyLane(lane_id, sdpro_map_)) {
+          find_fp_lane_num++;
+        }
+      }
+
+      for (int i = 0; i < find_fp_lane_num; i++) {
+        feasible_lane_sequence.emplace_back(i + 1);
+      }
+    }
+
+    std::vector<int> merge_lane;
+    if (CalculateMergeLaneInfo(merge_lane) && !merge_lane.empty()) {
+      for (int element : merge_lane) {
+        auto it = std::find(feasible_lane_sequence.begin(),
+                            feasible_lane_sequence.end(), element);
+
+        if (it != feasible_lane_sequence.end()) {
+          feasible_lane_sequence.erase(it);
+          is_exist_merge_fp = true;
+        }
+      }
+    }
   }
 
-  if (feasible_lane_sequence.empty()) {
-    return;
-  }
+
   mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
 
+  if (feasible_lane_sequence.empty() ||
+      (!is_exist_merge_fp &&
+       mlc_decider_route_info_.ego_status_on_route == ON_MAIN)) {
+    return;
+  }
+  
   int minVal_seq = feasible_lane_sequence[0];
   int maxVal_seq = feasible_lane_sequence[0];
   for (int num : feasible_lane_sequence) {
@@ -3558,105 +3577,80 @@ std::vector<char> RouteInfo::SortRaysByDirection(
 bool RouteInfo::CalculateMergeLaneInfo(
     std::vector<int>& merge_lane_sequence_vec) {
   iflymapdata::sdpro::FeaturePoint find_fp;
-  iflymapdata::sdpro::FeaturePoint last_fp;
   uint64 fp_link_id;
   double ego_s_in_cur_link;
+  double dis_to_merge_fp = 0.0;
 
-  if (!CalculateFP(&find_fp, &fp_link_id)) {
-    return false;
+  if (!CalculateMergeFP(&find_fp, &fp_link_id, &dis_to_merge_fp)) {
+      return false;
   }
 
-  if (!CalculateLastFp(&last_fp, fp_link_id, find_fp)) {
-    merge_lane_sequence_vec.emplace_back(1);
-    return true;
-  }
+  route_info_output_.dis_to_merge_fp = dis_to_merge_fp;
+
+  // if (!CalculateLastFp(&last_fp, fp_link_id, find_fp)) {
+  //     return false;
+  // }
 
   for (const auto& lane_id : find_fp.lane_ids()) {
     const auto& lane_info = sdpro_map_.GetLaneInfoByID(lane_id);
     if (lane_info == nullptr) {
       continue;
     }
-    // 暂时先处理左边的merge lane
-    std::cout << "change_type_: " << lane_info->has_change_type() << std::endl;
-    std::cout << "change_type: " << lane_info->change_type() << std::endl;
+
+    int find_fp_lane_num = 0;
+    for (const auto& lane_id : find_fp.lane_ids()) {
+      if (!IsEmergencyLane(lane_id, sdpro_map_)) {
+        find_fp_lane_num++;
+      }
+    }
+
     if (lane_info->change_type() ==
         iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
-      int find_fp_lane_num = 0;
-      int last_fp_lane_num = 0;
-      for (const auto& lane_id : find_fp.lane_ids()) {
-        if (!IsEmergencyLane(lane_id, sdpro_map_)) {
-          find_fp_lane_num++;
-        }
-      }
-
-      for (const auto& lane_id : last_fp.lane_ids()) {
-        if (!IsEmergencyLane(lane_id, sdpro_map_)) {
-          last_fp_lane_num++;
-        }
-      }
-
-      bool is_lane_num_satisfy = find_fp_lane_num + 1 == last_fp_lane_num;
-      // 默认是车道的前继车道左边为汇入车道
-      if (is_lane_num_satisfy) {
-        int merge_lane_sequence =
-            find_fp.lane_ids_size() - lane_info->sequence() + 1;
-        merge_lane_sequence_vec.emplace_back(merge_lane_sequence);
-        return true;
-      }
+      merge_lane_sequence_vec.emplace_back(1);
+      return true;
+    } else if (lane_info->change_type() ==
+               iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane) {
+      merge_lane_sequence_vec.emplace_back(find_fp_lane_num + 1);
+      return true;
+    } else if (lane_info->change_type() ==
+               iflymapdata::sdpro::LaneChangeType::BothDirectionMergingLane) {
+      merge_lane_sequence_vec.emplace_back(1);
+      merge_lane_sequence_vec.emplace_back(find_fp_lane_num + 1);
+      return true;
     }
   }
   return false;
 }
 
-bool RouteInfo::CalculateFP(iflymapdata::sdpro::FeaturePoint* find_fp,
-                            uint64* fp_link_id) {
-  // 后续需要把这部分代码封装一下#######################################
-  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
-  const double search_distance = 50.0;
-  const double max_heading_diff = PI / 4;
-  // 获取当前的segment
-  ad_common::math::Vec2d current_point;
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
-  const auto& pose = ego_state->location_enu();
-  current_point.set_x(pose.position.x);
-  current_point.set_y(pose.position.y);
-  double temp_nearest_s = 0;
-  double nearest_l = 0;
-  const double ego_heading_angle = ego_state->heading_angle();
+bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
+                                 uint64* fp_link_id, double* dis_to_merge_fp) {
+  double s = 0.0;
+  double l = 0.0;
+  auto current_link =  CalculateCurrentLink(&s, &l);
 
-  const iflymapdata::sdpro::LinkInfo_Link* current_link =
-      sdpro_map_.GetNearestLinkWithHeading(current_point, search_distance,
-                                           ego_heading_angle, max_heading_diff,
-                                           temp_nearest_s, nearest_l);
-  route_info_output_.current_segment_passed_distance = temp_nearest_s;
-  LOG_DEBUG("current_segment_passed_distance:%f\n",
-            route_info_output_.current_segment_passed_distance);
   if (!current_link) {
     return false;
   }
-  // ############################################
 
-  double itera_dis = -temp_nearest_s;
-  const auto& merge_region_info_list =
-      route_info_output_.merge_region_info_list;
-  if (merge_region_info_list.size() == 0) {
-    return false;
-  }
+  double itera_dis = -s;
+  const double check_merge_fp_dis = 500.0;
 
-  while (itera_dis < merge_region_info_list[0].distance_to_split_point) {
-    for (const auto& fp : current_link->feature_points()) {
-      for (const auto& fp_type : fp.type()) {
-        if (fp_type ==
-            iflymapdata::sdpro::FeaturePointType::LANE_COUNT_CHANGE) {
+  while (itera_dis < check_merge_fp_dis) {
+    for (const auto& fp: current_link->feature_points()) {
+      for (const auto& fp_type: fp.type()) {
+        if (fp_type == iflymapdata::sdpro::FeaturePointType::LANE_COUNT_CHANGE) {
           itera_dis = itera_dis +
                       fp.projection_percent() * current_link->length() * 0.01;
           if (itera_dis < kEpsilon) {
             continue;
           }
-          *find_fp = fp;
-          *fp_link_id = current_link->id();
-          return true;
+
+          if (IsMergeFP(fp)) {
+            *find_fp = fp;
+            *fp_link_id = current_link->id();
+            *dis_to_merge_fp = itera_dis;
+            return true;
+          }
         }
       }
     }
@@ -3730,4 +3724,82 @@ bool RouteInfo::CalculateLastFp(
   return false;
 }
 
+bool RouteInfo::IsMergeFP(const iflymapdata::sdpro::FeaturePoint& fp) const {
+  for (const auto& lane_id : fp.lane_ids()) {
+    const auto& lane_info = sdpro_map_.GetLaneInfoByID(lane_id);
+    if (lane_info == nullptr) {
+      continue;
+    }
+
+    if (lane_info->change_type() ==
+        iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane ||
+        lane_info->change_type() ==
+        iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane ||
+        lane_info->change_type() ==
+        iflymapdata::sdpro::LaneChangeType::BothDirectionMergingLane) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(double* s, double* l) {
+  if (s == nullptr || l == nullptr) {
+    return nullptr;
+  }
+
+  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  //获取当前的segment
+  ad_common::math::Vec2d current_point;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  double temp_nearest_s = 0;
+  double nearest_l = 0;
+  const double ego_heading_angle = ego_state->heading_angle();
+
+  const iflymapdata::sdpro::LinkInfo_Link* current_link =
+      sdpro_map_.GetNearestLinkWithHeading(current_point, search_distance,
+                                          ego_heading_angle, max_heading_diff,
+                                          temp_nearest_s, nearest_l);
+  if (!current_link) {
+    return nullptr;
+  }
+
+  *s = temp_nearest_s;
+  *l = nearest_l;
+  return current_link;
+}
+
+bool RouteInfo::CalculateLastFPInCurrentLink(
+    iflymapdata::sdpro::FeaturePoint* find_fp,
+    const iflymapdata::sdpro::LinkInfo_Link* const cur_link, const double s) {
+  if (cur_link == nullptr || find_fp == nullptr) {
+    return false;
+  }
+
+  std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+  for (const auto& fp : cur_link->feature_points()) {
+    fp_vec.emplace_back(fp);
+  }
+
+  std::sort(fp_vec.begin(), fp_vec.end(),
+            [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+               const iflymapdata::sdpro::FeaturePoint& fp_b) {
+              return fp_a.projection_percent() < fp_b.projection_percent();
+            });
+
+  for (int i = fp_vec.size() - 1; i >= 0; i--) {
+    const auto& fp = fp_vec[i];
+    if (fp.projection_percent() * cur_link->length() * 0.01 < s) {
+      *find_fp = fp;
+      return true;
+    }
+  }
+  return false;
+}
 }  // namespace planning

@@ -232,6 +232,7 @@ struct RouteInfoOutput {
   iflymapdata::sdpro::MapVendorType map_vendor =
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
   MLCDeciderRouteInfo mlc_decider_route_info;
+  double dis_to_merge_fp = NL_NMAX;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -290,6 +291,7 @@ struct RouteInfoOutput {
     merge_region_info_list.clear();
     map_vendor = iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
     mlc_decider_route_info.reset();
+    dis_to_merge_fp = NL_NMAX;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;
