@@ -434,6 +434,7 @@
   "fold_mirror_y_offset": 0.06,
   "fold_mirror_heading_offset": 2.68,
 
+  "comment_21": "dynamic gear switch params",
   "enable_dynamic_gear_switch": false,
   "dist_thresh_for_current_path": 1.0,
   "dist_thresh_for_next_path": 2.0,
@@ -445,5 +446,6 @@
   "cur_path_lat_buffer" : 0.5,
   "cur_path_lon_buffer" : 0.5,
 
+  "comment_22": "prepare path plan params",
   "enable_stable_prepare_route": true
 }

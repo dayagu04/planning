@@ -260,10 +260,6 @@ void ParkingScenarioManager::ScenarioTry() {
     current_scenario_->ScenarioTry();
   }
 
-  if (current_scenario_ != nullptr) {
-    current_scenario_->RecordDebugPath();
-  }
-
   ILOG_INFO << "GEOMETRY RELEASE = "
             << GetSlotReleaseStateString(
                    ego_info_under_slot.slot.release_info_
@@ -366,6 +362,8 @@ const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
     ClearPlanningOutput();
     return false;
   }
+
+  current_scenario_->RecordDebugPath();
 
   if (!apa_param.GetParam().prepare_plan_config.enable_stable_prepare_route) {
     return true;

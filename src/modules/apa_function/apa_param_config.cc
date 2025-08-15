@@ -1069,39 +1069,34 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(smart_fold_mirror_params.heading_offset, float,
                   "fold_mirror_heading_offset");
 
+  DynamicGearSwitchConfig& dynamic_gear_switch_config =
+      param.gear_switch_config;
+  JSON_READ_VALUE(dynamic_gear_switch_config.enable_dynamic_gear_switch, bool,
+                  "enable_dynamic_gear_switch");
+  JSON_READ_VALUE(dynamic_gear_switch_config.dist_thresh_for_current_path,
+                  double, "dist_thresh_for_current_path");
+  JSON_READ_VALUE(dynamic_gear_switch_config.dist_thresh_for_next_path, double,
+                  "dist_thresh_for_next_path");
+  JSON_READ_VALUE(dynamic_gear_switch_config.vel_thresh_for_gear_switch_point,
+                  double, "vel_thresh_for_gear_switch_point");
+  JSON_READ_VALUE(dynamic_gear_switch_config.dist_thresh_for_gear_switch_point,
+                  double, "dist_thresh_for_gear_switch_point");
   JSON_READ_VALUE(
-      apa_param.SetParam().gear_switch_config.enable_dynamic_gear_switch, bool,
-      "enable_dynamic_gear_switch");
-  JSON_READ_VALUE(
-      apa_param.SetParam().gear_switch_config.dist_thresh_for_current_path,
-      double, "dist_thresh_for_current_path");
-  JSON_READ_VALUE(
-      apa_param.SetParam().gear_switch_config.dist_thresh_for_next_path, double,
-      "dist_thresh_for_next_path");
-  JSON_READ_VALUE(
-      apa_param.SetParam().gear_switch_config.vel_thresh_for_gear_switch_point,
-      double, "vel_thresh_for_gear_switch_point");
-  JSON_READ_VALUE(
-      apa_param.SetParam().gear_switch_config.dist_thresh_for_gear_switch_point,
-      double, "dist_thresh_for_gear_switch_point");
-  JSON_READ_VALUE(
-      apa_param.SetParam()
-          .gear_switch_config.slot_occupied_ratio_for_gear_switch_point,
+      dynamic_gear_switch_config.slot_occupied_ratio_for_gear_switch_point,
       double, "slot_occupied_ratio_for_gear_switch_point");
+  JSON_READ_VALUE(dynamic_gear_switch_config.lat_error_for_dynamic_gear_switch,
+                  double, "lat_error_for_dynamic_gear_switch");
   JSON_READ_VALUE(
-      apa_param.SetParam().gear_switch_config.lat_error_for_dynamic_gear_switch,
-      double, "lat_error_for_dynamic_gear_switch");
-  JSON_READ_VALUE(apa_param.SetParam()
-                      .gear_switch_config.theta_error_for_dynamic_gear_switch,
-                  double, "theta_error_for_dynamic_gear_switch");
-  JSON_READ_VALUE(apa_param.SetParam().gear_switch_config.cur_path_lat_buffer,
-                  double, "cur_path_lat_buffer");
-  JSON_READ_VALUE(apa_param.SetParam().gear_switch_config.cur_path_lon_buffer,
-                  double, "cur_path_lon_buffer");
+      dynamic_gear_switch_config.theta_error_for_dynamic_gear_switch, double,
+      "theta_error_for_dynamic_gear_switch");
+  JSON_READ_VALUE(dynamic_gear_switch_config.cur_path_lat_buffer, double,
+                  "cur_path_lat_buffer");
+  JSON_READ_VALUE(dynamic_gear_switch_config.cur_path_lon_buffer, double,
+                  "cur_path_lon_buffer");
 
-  JSON_READ_VALUE(
-      apa_param.SetParam().prepare_plan_config.enable_stable_prepare_route,
-      bool, "enable_stable_prepare_route");
+  PreparePlanConfig& prepare_plan_config = param.prepare_plan_config;
+  JSON_READ_VALUE(prepare_plan_config.enable_stable_prepare_route, bool,
+                  "enable_stable_prepare_route");
   return;
 }
 

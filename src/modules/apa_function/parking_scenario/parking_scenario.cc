@@ -56,6 +56,15 @@ void ParkingScenario::Reset() {
   return;
 }
 
+void ParkingScenario::Clear() {
+  frame_.Reset();
+  current_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.clear();
+  trajectory_.clear();
+
+  return;
+}
+
 void ParkingScenario::ScenarioRunning() {
   // run plan core
   ExcutePathPlanningTask();
@@ -1030,7 +1039,7 @@ void ParkingScenario::RecordDebugPath() {
     planning::common::ApaPathPoint* point = debug_info->add_cur_path_points();
     point->set_x(pt.GetX());
     point->set_y(pt.GetY());
-    point->set_heading(pt.GetHeading());
+    point->set_heading(pt.GetTheta());
     point->set_kappa(pt.kappa);
     point->set_lat_buffer(pt.lat_buffer);
     point->set_type(pt.type);
@@ -1041,7 +1050,7 @@ void ParkingScenario::RecordDebugPath() {
         debug_info->add_complete_path_points();
     point->set_x(pt.GetX());
     point->set_y(pt.GetY());
-    point->set_heading(pt.GetHeading());
+    point->set_heading(pt.GetTheta());
     point->set_kappa(pt.kappa);
     point->set_lat_buffer(pt.lat_buffer);
     point->set_type(pt.type);
