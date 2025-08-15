@@ -81,7 +81,7 @@
   "terminal_parallel_y_offset": 0.0,
   "terminal_parallel_y_offset_with_curb": 0.21,
   "terminal_parallel_y_offset_with_wall": 0.45,
-  "parallel_max_ego_x_offset_with_invasion": 1.0,
+  "parallel_max_ego_x_offset_with_invasion": 1.5,
   "parallel_ego_ac_x_offset_with_limiter": 0.3,
   "parallel_terminal_x_offset_with_obs": 0.3,
 
