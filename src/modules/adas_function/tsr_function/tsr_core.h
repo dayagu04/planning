@@ -53,7 +53,7 @@ class TsrCore {
 
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);
-  bool tsr_speed_limit_valid_ =false;
+  bool tsr_speed_limit_valid_ = false; // 视觉感知限速信息标志位
 
   // 限速标识牌信息 (视觉信息)
   uint32 tsr_speed_limit_ = 0;  // 限速值 单位:kph

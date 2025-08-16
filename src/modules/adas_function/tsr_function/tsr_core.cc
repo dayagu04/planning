@@ -318,6 +318,7 @@ void TsrCore::UpdateTsrSuppInfo(void) {
   return;
 }
 
+// 更新限速信息
 void TsrCore::UpdateTsrSpeedLimit(void) {
   // 需要从规划拿数据
   // 奇瑞要求功能关闭时也显示限速值,只是不会报警
@@ -334,11 +335,11 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   // sd_map信息，获取限速
   if (GetContext.get_session()->environmental_model()
                                 .get_route_info()
-                                ->get_sdmap_valid()) {
-    const auto &sd_map_info_ptr = GetContext.get_session()
+                                ->get_sdpromap_valid()) {
+    const auto &sd_pro_map_info_ptr = GetContext.get_session()
                                   ->environmental_model()
                                   .get_route_info()
-                                  ->get_sd_map();
+                                  ->get_sdpro_map();
     
     // 获取当前道路限速值
     // ego_motion信息
@@ -349,24 +350,24 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     current_point.set_y(localization_info->location_enu().position.y); // enu实际上是boot
     const double search_distance = 50.0;
     const double max_heading_diff = PI / 4;
-    double nearest_s = 0;
+    double temp_nearest_s = 0;
     double nearest_l = 0;
     const double ego_heading_angle = localization_info->heading_angle();
-    const auto current_segment = sd_map_info_ptr.GetNearestRoadWithHeading(
+    const iflymapdata::sdpro::LinkInfo_Link* current_link = sd_pro_map_info_ptr.GetNearestLinkWithHeading(
         current_point, search_distance, ego_heading_angle, max_heading_diff,
-        nearest_s, nearest_l);
-    if (!current_segment) {
+        temp_nearest_s, nearest_l);
+    if (!current_link) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
-      LOG_WARNING("current_segment is invalid!!!");
+      LOG_WARNING("current_link is invalid!!!");
     } else {
-      current_map_speed_limit_ = current_segment->speed_limit();
+      current_map_speed_limit_ = current_link->speed_limit();
       current_map_speed_limit_valid_ = true;
     }
   } else {
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
-    LOG_WARNING("sd_map is invalid!!!");
+    LOG_WARNING("sd_pro_map is invalid!!!");
   }
 
   // 判断限速标识牌是否需要抑制显示
@@ -388,6 +389,9 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   uint32 lane_speed_limit_value = tsr_speed_limit_;
   uint32 tsr_speed_limit_last = tsr_speed_limit_;
   bool end_of_speed_sign_vald = false; // 是否实时感知到解除限速牌
+  // 获取自车表显速度 (km/h)
+  double ego_speed_kph = vehicle_service_output_info_ptr->vehicle_speed_display * 3.6;
+  
   for (int i = 0; i < supp_signs_array_size; i++) {
     auto single_sign = supp_signs_array[i];
     // 只取限速相关标识牌
@@ -396,6 +400,24 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
       continue;
     } else {
       if (single_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED) {
+        // 使用自车表显速度判断感知限速牌真实性
+        bool speed_limit_valid = false;
+        if (ego_speed_kph < 40.0) {
+          // 自车车速＜40kph，任意限速标志都可以接受
+          speed_limit_valid = true;
+        } else if (ego_speed_kph >= 40.0 && ego_speed_kph <= 80.0) {
+          // 40kph≤自车车速≤80kph，限速标志的限速值>10kph才可以接受
+          speed_limit_valid = (single_sign.speed_limit > 10);
+        } else {
+          // 80kph＜自车车速，限速标志的限速值>40kph才可以接受
+          speed_limit_valid = (single_sign.speed_limit > 40);
+        }
+        
+        if (!speed_limit_valid) {
+          // 限速标志不符合真实性判断，跳过此标志
+          continue;
+        }
+        
         // 限速标识,取最大限速值
         if (sign_vald == false) {
           lane_speed_limit_value = single_sign.speed_limit;
@@ -414,8 +436,8 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
           end_of_speed_sign_vald = true;
           continue;
         } else {
-          if (single_sign.speed_limit > lane_speed_limit_value) {
-            lane_speed_limit_value = single_sign.speed_limit;
+          if (single_sign.speed_limit > end_of_speed_sign_value_) {
+            end_of_speed_sign_value_ = single_sign.speed_limit;
           }
         }
       }
@@ -456,8 +478,8 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   if (tsr_speed_limit_valid_ == false) {
-    // 没有视觉限速有效值
-    tsr_speed_limit_ = 0;
+    // 没有视觉限速有效值, 采用地图限速信息
+    tsr_speed_limit_ = current_map_speed_limit_;
   } else {
     if (tsr_speed_limit_last != tsr_speed_limit_) {
       tsr_speed_limit_change_flag_ = true;
@@ -470,18 +492,18 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     // 2. 显示解除显示标识
     if (tsr_speed_limit_valid_ == true && tsr_speed_limit_ <= end_of_speed_sign_value_) {
       tsr_speed_limit_valid_ = false;
-      tsr_speed_limit_ = 0;
+      tsr_speed_limit_ = current_map_speed_limit_;
       end_of_speed_sign_display_flag_ = true;
       end_of_speed_sign_display_time_ = 0.0;
     }
   }
 
   if (new_road_flag_ == true) {
-    // 进入新道路, 则清掉视觉限速信息与视觉解除限速信息
+    // 进入新道路, 则清掉视觉限速信息与视觉解除限速信息, 采用地图限速信息
     speed_limit_exist_in_view_flag_ = false;
     speed_limit_exist_in_view_ = 0;
     tsr_speed_limit_valid_ = false;
-    tsr_speed_limit_ = 0;
+    tsr_speed_limit_ = current_map_speed_limit_;
     end_of_speed_sign_vald = false;
     end_of_speed_sign_value_ = 0;
     end_of_speed_sign_display_time_ = 0.0;
@@ -491,16 +513,15 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   if (accumulated_path_length_ >
       GetContext.get_param()->tsr_reset_path_length) {
-    // 行驶距离过长，则清掉视觉限速信息
+    // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
     tsr_speed_limit_valid_ = false;
-    tsr_speed_limit_ = 0;
+    tsr_speed_limit_ = current_map_speed_limit_;
   }
 
   if (tsr_speed_limit_valid_ == false && end_of_speed_sign_display_flag_ == false) {
     // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
     if (current_map_speed_limit_valid_ == true) {
       tsr_speed_limit_ = current_map_speed_limit_;
-      tsr_speed_limit_valid_ = true;
     }
   }
   return;
@@ -625,9 +646,9 @@ void TsrCore::UpdateTsrWarning(void) {
                                               .vehicle_service_output_info;
 
   // 更新overspeed_status_
-  if (((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >
-       tsr_speed_limit_) &&
-      (tsr_speed_limit_valid_ == true)) {
+  if (tsr_speed_limit_ != 0 && (vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >
+       tsr_speed_limit_ + 1) {
+    // +1是为了避免巡航速度正好与限速值一致, 导致超速报警
     overspeed_status_ = true;
   } else {
     overspeed_status_ = false;
@@ -641,29 +662,29 @@ void TsrCore::UpdateTsrWarning(void) {
   }
 
   // 更新tsr_warning_image_
-  if (overspeed_duration_time_ >= 1.5) {
+  if (overspeed_duration_time_ > 0.5) {
     tsr_warning_image_ = true;
   } else {
     tsr_warning_image_ = false;
   }
 
   // 发起声音报警需要的确认时长
-  double image2voice_confirm_time;
-  if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
-      (tsr_speed_limit_ * 1.3)) {
-    image2voice_confirm_time = 3.0;
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
-             (tsr_speed_limit_ * 1.2)) {
-    image2voice_confirm_time = 4.0;
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
-             (tsr_speed_limit_ * 1.1)) {
-    image2voice_confirm_time = 5.0;
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
-             (tsr_speed_limit_ * 1.0)) {
-    image2voice_confirm_time = 6.0;
-  } else {
-    image2voice_confirm_time = 6.0;
-  }
+  double image2voice_confirm_time = 0.5;
+  // if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
+  //     (tsr_speed_limit_ * 1.3)) {
+  //   image2voice_confirm_time = 3.0;
+  // } else if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
+  //            (tsr_speed_limit_ * 1.2)) {
+  //   image2voice_confirm_time = 4.0;
+  // } else if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
+  //            (tsr_speed_limit_ * 1.1)) {
+  //   image2voice_confirm_time = 5.0;
+  // } else if ((vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >=
+  //            (tsr_speed_limit_ * 1.0)) {
+  //   image2voice_confirm_time = 6.0;
+  // } else {
+  //   image2voice_confirm_time = 6.0;
+  // }
 
   // 更新tsr_warning_voice_
   if (tsr_warning_voice_ == false) {
@@ -690,7 +711,7 @@ void TsrCore::UpdateTsrWarning(void) {
     // do nothing
   }
   // 声音报警超过最大时长时取消声音报警
-  if (overspeed_duration_time_ >= (image2voice_confirm_time + 5.0)) {
+  if (overspeed_duration_time_ >= (image2voice_confirm_time + 1.0)) {
     tsr_warning_voice_ = false;
   } else {
     // do nothing
@@ -709,9 +730,9 @@ void TsrCore::UpdateTsrWarning(void) {
   } else {
     // do nothing
   }
-  if (tsr_speed_limit_change_flag_ == true) {
-    tsr_speed_limit_change_flag_ = false;
-  }
+  // if (tsr_speed_limit_change_flag_ == true) {
+  //   tsr_speed_limit_change_flag_ = false;
+  // }
   return;
 }
 
@@ -768,7 +789,6 @@ void TsrCore::SetTsrOutputInfo() {
   } else {
     GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ = false;
     GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = 0;
-    GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
   }
   return;
 }
@@ -833,6 +853,7 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("tsr_speed_limit_", tsr_speed_limit_);
   JSON_DEBUG_VALUE("end_of_speed_sign_display_flag_", end_of_speed_sign_display_flag_);
   JSON_DEBUG_VALUE("current_map_speed_limit_", current_map_speed_limit_);
+  JSON_DEBUG_VALUE("current_map_speed_limit_valid_", current_map_speed_limit_valid_);
   JSON_DEBUG_VALUE("speed_limit_suppression_flag_", speed_limit_suppression_flag_);
 
   JSON_DEBUG_VALUE("tsr_speed_limit_valid_", tsr_speed_limit_valid_);
