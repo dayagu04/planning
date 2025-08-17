@@ -614,6 +614,13 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
   complete_path_point_global_vec_.reserve(result.x.size());
 
   for (size_t i = 0; i < result.x.size(); i++) {
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus() &&
+        i > 0) {
+      if (IsNeedClipping(result, i)) {
+        break;
+      }
+    }
+
     local_position.x = result.x[i];
     local_position.y = result.y[i];
     local_position.theta = result.phi[i];
@@ -2131,7 +2138,7 @@ ParkingVehDirection NarrowSpaceScenario::GetDirection() {
         dir_type = ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
         break;
       default:
-        dir_type = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
+        dir_type = ParkingVehDirection::NONE;
         break;
     }
   } else {
@@ -2395,6 +2402,31 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   }
 
   return res;
+}
+
+const bool NarrowSpaceScenario::IsNeedClipping(const HybridAStarResult& result,
+                                               const size_t i) {
+  constexpr float kHeadHeadingStartDeg = 80.0f;
+  constexpr float kTailHeadingStartDeg = 95.0f;
+  constexpr float kHeadingEndDeg = 89.9f;
+  constexpr float kHeadingDiffThresh = 1e-3f;
+  constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
+
+  bool heading_flag = true;
+  bool sample_finish = false;
+  const float heading_deg = std::abs(result.phi[i] * kRad2Deg);
+
+  if (heading_deg > kHeadHeadingStartDeg && i > 0) {
+    float heading_diff = result.phi[i] - result.phi[i - 1];
+    heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
+  }
+
+  if (std::abs(result.phi[i]) * kRad2Deg <= kHeadingEndDeg && !sample_finish &&
+      heading_flag) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 const pnc::geometry_lib::PathSegGear NarrowSpaceScenario::GetGear(

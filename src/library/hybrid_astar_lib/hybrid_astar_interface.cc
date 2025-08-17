@@ -205,7 +205,8 @@ void HybridAStarInterface::UpdateOutput() {
     PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
                                  is_ego_overlap_with_slot);
   } else if (request_.path_generate_method ==
-             AstarPathGenerateType::TRY_SEARCHING) {
+                 AstarPathGenerateType::TRY_SEARCHING &&
+             request_.direction_request != ParkingVehDirection::NONE) {
     PathSearchForScenarioTry(target_pose_regulator);
   } else if (IsSamplingBasedPlanning(request_.path_generate_method)) {
     PathSamplingForScenarioRunning();
