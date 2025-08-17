@@ -1029,6 +1029,11 @@ void SpeedLimitDecider::CalculateFunctionFadingAwaySpeedLimit() {
   const auto current_ego_lane_mark =
       virtual_lane_manager->lane_mark_at_ego_front_edge_pos_current();
 
+  if (!speed_limit_config_.left_right_turn_func_fading_away_switch) {
+    JSON_DEBUG_VALUE("v_target_func_fade_away", v_target_)
+    return;
+  }
+
   is_function_fading_away_ = false;
   request_reason_ = iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
   static bool is_first_time_funciton_fading_away = true;

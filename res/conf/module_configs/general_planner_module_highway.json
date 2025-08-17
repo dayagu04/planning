@@ -198,7 +198,8 @@
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,
   "processed_trajectory_filter_alpha": 0.4,
-  "processed_trajectory_acc_thr": 0.5,
+  "processed_trajectory_acc_thr": -0.5,
+  "left_right_turn_func_fading_away_switch": false,
   "general_lateral_decider": {
     "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,

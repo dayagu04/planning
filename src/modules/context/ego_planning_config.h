@@ -236,6 +236,8 @@ struct EgoPlanningConfig : public Config {
     raw_ref_extend_buff =
         read_json_key<double>(json, "raw_ref_extend_buff", raw_ref_extend_buff);
     enable_lane_borrow_deciderV2 = read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
+    left_right_turn_func_fading_away_switch =
+        read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -267,6 +269,7 @@ struct EgoPlanningConfig : public Config {
   double hpp_min_search_range = 20;
   double raw_ref_extend_buff = 0;
   bool enable_lane_borrow_deciderV2 =  true;
+  bool left_right_turn_func_fading_away_switch = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {

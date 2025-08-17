@@ -497,7 +497,8 @@ void PlanningScheduler::FillPlanningTrajectory(
   }
 
   // planning request
-  if (speed_limit_decider_output.is_function_fading_away()) {
+  if (speed_limit_decider_output.is_function_fading_away() &&
+      config_.left_right_turn_func_fading_away_switch) {
     planning_output->planning_request.take_over_req_level =
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
@@ -681,7 +682,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
       static_cast<iflyauto::AvoidObstacleDirection>(
           lat_offset_decider_output.avoid_direction);
   planning_hmi_info->ad_info.reference_line_msg =
-      session_.planning_context().planning_hmi_info().ad_info.reference_line_msg;
+      session_.planning_context()
+          .planning_hmi_info()
+          .ad_info.reference_line_msg;
 
   // HMI for hpp
   const bool is_reached_target_slot = session_.environmental_model()
