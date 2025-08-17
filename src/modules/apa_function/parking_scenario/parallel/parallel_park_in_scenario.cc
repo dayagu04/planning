@@ -142,7 +142,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   const double max_replan_path_dist = 0.15;
-  const double stuck_replan_wait_time = 4.0;
+  const double stuck_replan_wait_time = 1.0;
 
   CheckReplanParams replan_params(
       max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
@@ -671,7 +671,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
   // ego target x is already set according to middle of slot and limiter in
   // gentlane, it's time to set target x and y considering obstacles
-  double upper_bound = std::min(
+  double ori_upper_bound = std::min(
       t_lane_.obs_pt_inside.x(),
       t_lane_.slot_length +
           apa_param.GetParam().parallel_max_ego_x_offset_with_invasion);
@@ -681,18 +681,18 @@ const bool ParallelParkInScenario::GenTlane() {
   ILOG_INFO << "slot length +  parallel_max_ego_x_offset_with_invasion = "
             << t_lane_.slot_length +
                    apa_param.GetParam().parallel_max_ego_x_offset_with_invasion;
-  ILOG_INFO << "upper_bound min of them = " << upper_bound;
+  ILOG_INFO << "upper_bound min of them = " << ori_upper_bound;
 
-  upper_bound -= (apa_param.GetParam().front_overhanging +
-                  apa_param.GetParam().wheel_base);
-
+  ori_upper_bound -= (apa_param.GetParam().front_overhanging +
+                      apa_param.GetParam().wheel_base);
+  double upper_bound = ori_upper_bound;
   if (!front_vacant) {
     ILOG_INFO << "FRONT occupied! need to reduce extra buffer";
     upper_bound -= apa_param.GetParam().parallel_terminal_x_offset_with_obs;
   }
   ILOG_INFO << "final upper_bound = " << upper_bound;
 
-  double lower_bound =
+  double ori_lower_bound =
       std::max(t_lane_.obs_pt_outside.x(),
                -apa_param.GetParam().parallel_max_ego_x_offset_with_invasion);
   ILOG_INFO << "debug for target y ---------";
@@ -701,7 +701,8 @@ const bool ParallelParkInScenario::GenTlane() {
       << "--apa_param.GetParam().parallel_max_ego_x_offset_with_invasion = "
       << -apa_param.GetParam().parallel_max_ego_x_offset_with_invasion;
 
-  lower_bound += apa_param.GetParam().rear_overhanging;
+  ori_lower_bound += apa_param.GetParam().rear_overhanging;
+  double lower_bound = ori_lower_bound;
 
   if (!rear_vacant) {
     ILOG_INFO << "rear occupied, need extra buffer!";
@@ -709,15 +710,28 @@ const bool ParallelParkInScenario::GenTlane() {
   }
   ILOG_INFO << "lower_bound max of them = " << lower_bound;
   if (lower_bound > upper_bound) {
-    ILOG_ERROR << "lower_bound > upper_bound!";
-    return false;
+    const double small_obs_buffer = 0.2;
+    lower_bound = ori_lower_bound + (rear_vacant ? 0.0 : small_obs_buffer);
+    upper_bound = ori_upper_bound - (front_vacant ? 0.0 : small_obs_buffer);
+    ILOG_INFO << "new upper bound = " << upper_bound;
+    ILOG_INFO << "new lowwer bound = " << lower_bound;
+
+    if (lower_bound > upper_bound) {
+      ILOG_ERROR << "lower_bound > upper_bound, too much failed!";
+      return false;
+    } else {
+      ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
+          ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
+    }
+
+  } else {
+    ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
+        ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
   }
 
   ILOG_INFO << "ego_info_under_slot.target_pose.pos.x() before = "
             << ego_info_under_slot.target_pose.pos.x();
   ILOG_INFO << "bound = [ " << lower_bound << ", " << upper_bound << " ]";
-  ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
-      ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
 
   ILOG_INFO << "t_lane_.is_inside_rigid = " << t_lane_.is_inside_rigid;
   // set target y with curb
@@ -729,10 +743,15 @@ const bool ParallelParkInScenario::GenTlane() {
   const double target_y_with_curb =
       curb_y_limit + side_sgn * (y_offset_with_obs_type +
                                  0.5 * apa_param.GetParam().car_width);
+  ILOG_INFO << "curb_y_limit = " << curb_y_limit
+            << " target_y_with_curb = " << target_y_with_curb;
 
   ego_info_under_slot.target_pose.pos.y() =
-      (side_sgn > 0.0 ? std::max(0.0, target_y_with_curb)
-                      : std::min(0.0, target_y_with_curb));
+      (side_sgn > 0.0
+           ? std::max(-apa_param.GetParam().terminal_parallel_y_offset,
+                      target_y_with_curb)
+           : std::min(apa_param.GetParam().terminal_parallel_y_offset,
+                      target_y_with_curb));
 
   ILOG_INFO << "ego pose = " << ego_info_under_slot.cur_pose.pos.transpose();
 
@@ -1160,7 +1179,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
                            0.75 * t_lane_.slot_length) &&
         heading_deg_diff_mag > 5.0) {
       extend_lenth = 0.5;
-      lon_buffer = 0.3;
+      lon_buffer = 0.1;
     }
 
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(extend_lenth,

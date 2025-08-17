@@ -578,7 +578,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       l2g_tf.GetPos(Eigen::Vector2d(target_x, 0.0));
 
   // avoid foreach obs or establish tlane, so use rough try.
-  const std::vector<double> lat_mov_dist_vec{0.0, -0.5, 0.5};
+  const std::vector<double> lat_mov_dist_vec{0.0, -0.4, 0.4};
 
   std::vector<double> lon_mov_dist_vec{0.0};
 
@@ -588,7 +588,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       apa_param.GetParam().parallel_max_ego_x_offset_with_invasion -
       0.5 * apa_param.GetParam().car_length;
 
-  const double step = 0.2;
+  const double step = 0.05;
   double x_diff = step;
 
   while (x_diff < invade_x_limit) {
@@ -603,7 +603,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
 
   bool is_slot_occupied = true;
   const double lat_buffer = 0.1;
-  const double lon_buffer = 0.25;
+  const double lon_buffer = 0.3;
 
   for (const double lat_move_dist : lat_mov_dist_vec) {
     for (const double lon_move_dist : lon_mov_dist_vec) {

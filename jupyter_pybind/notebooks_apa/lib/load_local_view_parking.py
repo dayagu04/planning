@@ -63,7 +63,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-read_uss_per_msg = True
+read_uss_per_msg = False
 # valeo uss point cloud type
 read_uss_wave_version = 2.9
 load_fusion_object_from_occupancy = True
