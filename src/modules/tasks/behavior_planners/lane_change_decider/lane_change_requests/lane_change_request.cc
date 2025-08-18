@@ -21,7 +21,7 @@ constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kInputBoundaryLenLimit = 145.;
 constexpr double kDefaultBoundaryLen = 5000.;
 // https://yf2ljykclb.xfchat.iflytek.com/wiki/MXjXwlCjni6g7nkjgKGrfwGwzPb
-constexpr double kLaneChangeSolidLineTTC = 1.75;  // todo(ldh): 从配置中读取
+constexpr double kLaneChangeSolidLineTTC = 3;  // todo(ldh): 从配置中读取
 constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
 constexpr double kStandardLaneWidth = 3.8;
 constexpr double kEps = 1e-6;
@@ -413,8 +413,11 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     }
   }
   //
-  if (lc_status == StateMachineLaneChangeStatus::kLaneChangeComplete ||
-      lc_status == StateMachineLaneChangeStatus::kLaneKeeping) {
+  // if (lc_status == StateMachineLaneChangeStatus::kLaneChangeComplete ||
+  //     lc_status == StateMachineLaneChangeStatus::kLaneKeeping) {
+  //   return true;
+  // }
+  if (lc_status == StateMachineLaneChangeStatus::kLaneChangeComplete) {
     return true;
   }
   double press_line_ratio = CalculatePressLineRatio(origin_lane_id, lc_request);
