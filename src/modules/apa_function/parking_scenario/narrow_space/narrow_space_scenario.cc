@@ -542,7 +542,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   virtual_wall_decider_.Process(
       obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
       static_cast<float>(ego_info.slot.slot_length_), start, real_end,
-      slot_type, ego_info.slot_side, parking_dir_type, passage_height);
+      slot_type, ego_info.slot_side, parking_dir_type, passage_height,
+      path_planning_fail_num_);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);

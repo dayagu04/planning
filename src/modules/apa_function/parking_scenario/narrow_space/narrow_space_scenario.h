@@ -40,10 +40,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void ScenarioTry() override;
 
-  VirtualWallDecider* MutableVirtualWallDecider() {
-    return &virtual_wall_decider_;
-  }
-
  private:
   virtual const bool CheckFinished() override;
 

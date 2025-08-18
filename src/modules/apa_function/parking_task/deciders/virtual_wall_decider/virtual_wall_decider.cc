@@ -44,14 +44,12 @@ const bool VirtualWallDecider::IsVirtualWallPointCollision(
   return false;
 }
 
-void VirtualWallDecider::Process(std::vector<Position2D>& points,
-                                 const double slot_width,
-                                 const double slot_length,
-                                 const Pose2D& ego_pose, const Pose2D& end,
-                                 const ParkSpaceType slot_type,
-                                 const pnc::geometry_lib::SlotSide slot_side,
-                                 const ParkingVehDirection parking_type,
-                                 const double head_out_passage_height) {
+void VirtualWallDecider::Process(
+    std::vector<Position2D>& points, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
+    const ParkSpaceType slot_type, const pnc::geometry_lib::SlotSide slot_side,
+    const ParkingVehDirection parking_type,
+    const double head_out_passage_height, const int path_fail_num) {
   start_ = ego_pose;
   end_ = end;
   slot_type_ = slot_type;
@@ -65,6 +63,9 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
       slot_type == ParkSpaceType::SLANTING) {
     double virtual_wall_x_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
+    if (path_fail_num > 0) {
+      virtual_wall_x_offset = 2.5;
+    }
 
     double virtual_wall_y_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;

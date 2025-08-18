@@ -63,6 +63,7 @@ struct SimulationParam {
 
   bool enable_debug_swap_start_goal = false;
   bool swap_start_goal = false;
+  ParkingVehDirection dir;
 };
 
 class ApaWorld {

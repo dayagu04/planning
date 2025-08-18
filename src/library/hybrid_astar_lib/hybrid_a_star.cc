@@ -1550,8 +1550,10 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     BackwardPassByNode(result, &rs_node_to_goal, &rs_path_, poly_path);
   } else if (BestNodeIsNice(best_node)) {
     BackwardPassByNode(result, best_node, nullptr, poly_path);
-  } else {
-    result->fail_type = AstarFailType::SEARCH_TOO_MUCH_NODE;
+  }
+  result->fail_type = AstarFailType::TIME_OUT;
+  if (open_pq_.size() <= 0) {
+    result->fail_type = AstarFailType::NODE_POOL_IS_NULL;
   }
 
   ILOG_INFO << "explored node num is " << explored_node_num
@@ -2015,8 +2017,11 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   // todo, use all astar node, maybe no need use rs path.
   if (best_rs_node.IsNodeValid()) {
     BackwardPassByNode(result, &best_rs_node, &best_rs_path, poly_path);
-  } else {
-    result->fail_type = AstarFailType::SEARCH_TOO_MUCH_NODE;
+  }
+
+  result->fail_type = AstarFailType::TIME_OUT;
+  if (open_pq_.size() <= 0) {
+    result->fail_type = AstarFailType::NODE_POOL_IS_NULL;
   }
 
   ILOG_INFO << "explored node num is " << explored_node_num
